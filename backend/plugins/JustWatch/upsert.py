@@ -282,7 +282,7 @@ class UpsertMixin(HelperMixin, register=False):
                 name=season_episode.content.title,
                 description=season_episode.content.short_description,
                 duration=season_episode.content.runtime * 60,
-                sort_order=season_episode.content.episode_number,
+                sort_order=index,
                 episode_number=season_episode.content.episode_number,
                 data_timestamp=self.episode_data_timestamp(
                     season_episode.id,

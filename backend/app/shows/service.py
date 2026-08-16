@@ -98,6 +98,79 @@ def list_tmdb_episode_groups(
 
 
 # TODO: Validate
+def update_show_extra(
+    session: Session,
+    show: Show,
+    extra: dict[str, Any] | None,
+) -> None:
+    """Store `extra` on `show`, and read the title again where the order changed.
+
+    The one way of setting what a plugin keeps about a title, so that whatever
+    setting it has to drag along happens wherever it is set from.
+
+    Changing the episode order is the case that drags something along. The order
+    decides which season an episode sits in and what it is numbered, and a copy
+    is matched to an episode by exactly those, so a link made under the old order
+    was made against numbering that no longer exists. The title is read again so
+    the new order is written down, and then every copy of it is matched afresh.
+
+    Only the links nobody settled are dropped. One a `User` locked was decided by
+    hand and is no more wrong under one order than another.
+    """
+    validate_extra(session, show, extra)
+
+    # Imported here rather than at the top of the module because the plugin is
+    # built on the base every plugin is, which reads this module in turn.
+    from plugins.TMDB.episode_groups import chosen_group_id  # noqa: PLC0415
+
+    reordered = chosen_group_id(show.extra) != chosen_group_id(extra)
+    show.extra = extra or {}
+    session.add(show)
+
+    if reordered:
+        _reread_in_new_order(session, show)
+        _relink_copies(session, show)
+    session.commit()
+
+
+# TODO: Validate
+def update_show_episode_group(
+    session: Session,
+    show: Show,
+    group_id: str | None,
+) -> None:
+    """Read `show` in the episode order `group_id` names, or in its own for none."""
+    # Imported here rather than at the top of the module because the plugin is
+    # built on the base every plugin is, which reads this module in turn.
+    from plugins.TMDB.episode_groups import dump_extra  # noqa: PLC0415
+
+    update_show_extra(session, show, dump_extra(group_id))
+
+
+# TODO: Validate
+def _reread_in_new_order(session: Session, show: Show) -> None:
+    """Read `show` again so its seasons and numbering are the chosen order's."""
+    # Imported here for the same reason as above.
+    from plugins.TMDB import TMDB  # noqa: PLC0415
+
+    TMDB(session).update_show(show, force=True)
+
+
+# TODO: Validate
+def _relink_copies(session: Session, canonical_show: Show) -> None:
+    """Match every copy of `canonical_show` against it again."""
+    for link in list(canonical_show.non_canonical_shows):
+        copy = link.show
+        for season in copy.active_children:
+            for episode in season.active_children:
+                if episode.canonical_episode_locked:
+                    continue
+                episode.canonical_episode = None
+                episode.canonical_episode_note = None
+        EpisodeLinker(session, copy).link()
+
+
+# TODO: Validate
 def validate_extra(
     session: Session,
     show: Show,

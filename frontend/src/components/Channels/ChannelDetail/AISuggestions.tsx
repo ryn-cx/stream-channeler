@@ -3,14 +3,20 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Check, Copy, ExternalLink, Loader2, Sparkles } from "lucide-react"
 import { useState } from "react"
 
-import { ChannelsService, type ShowPublic } from "@/client"
+import { ChannelsService, type ShowPublic, UsersService } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { isLoggedIn } from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
+
+const OTHER_SOURCE_KEY = "Other"
+
+type SuggestionMediaType = "tv" | "movie" | "video"
 
 interface Suggestion {
   title: string
+  media_type?: SuggestionMediaType
   similar_to?: string[]
   description?: string
   year?: number | string
@@ -35,12 +41,19 @@ function isYouTubeUrl(url: string): boolean {
 }
 
 // TODO: Validate
-function isWikipediaUrl(url: string): boolean {
+function isTmdbUrl(url: string): boolean {
   try {
-    return new URL(url).hostname.endsWith("wikipedia.org")
+    const parsed = new URL(url)
+    if (!parsed.hostname.toLowerCase().endsWith("themoviedb.org")) return false
+    return /^\/(tv|movie)\/\d+/.test(parsed.pathname)
   } catch {
     return false
   }
+}
+
+// TODO: Validate
+function isImportableUrl(url: string): boolean {
+  return isYouTubeUrl(url) || isTmdbUrl(url)
 }
 
 // TODO: Validate
@@ -65,21 +78,13 @@ async function findMissingImages(
   suggestions: Suggestion[],
 ): Promise<Suggestion[]> {
   const results = await Promise.all(
-    suggestions.map(async (s) => {
-      if (s.image_url) {
-        return s
+    suggestions.map(async (suggestion) => {
+      if (suggestion.image_url) {
+        return suggestion
       }
 
-      let image_url: string | undefined
-      if (s.url && isWikipediaUrl(s.url)) {
-        const match = s.url.match(/wikipedia\.org\/wiki\/([^#?]+)/)
-        if (match) {
-          const pageTitle = decodeURIComponent(match[1]).replace(/_/g, " ")
-          image_url = await fetchWikipediaThumbnail(pageTitle)
-        }
-      }
-
-      return { ...s, image_url }
+      const image_url = await fetchWikipediaThumbnail(suggestion.title)
+      return { ...suggestion, image_url }
     }),
   )
   return results
@@ -110,6 +115,7 @@ function buildGroupedSections(
 // TODO: Validate
 function buildPrompt(
   showsByType: Record<string, ShowPublic[]>,
+  enabledServices: string[],
   alreadySuggested: Suggestion[] = [],
 ): string {
   const groupedSections = buildGroupedSections(showsByType)
@@ -125,8 +131,19 @@ function buildPrompt(
   const exclusionSection =
     alreadySuggested.length > 0
       ? `# Already suggested — do not repeat these\n\n${alreadySuggested
-          .map((s) => `- ${s.title}${s.year ? ` (${s.year})` : ""}`)
+          .map(
+            (suggestion) =>
+              `- ${suggestion.title}${suggestion.year ? ` (${suggestion.year})` : ""}`,
+          )
           .join("\n")}`
+      : ""
+
+  const availabilityRule =
+    enabledServices.length > 0
+      ? `\nAvailability rule:
+  - Only suggest "tv" and "movie" titles that are currently available to stream in the USA on one of these services the user has enabled: ${enabledServices.join(", ")}.
+  - If a title is not on one of those services in the USA, leave it out and suggest something else instead. This rule does not apply to "video" (YouTube) suggestions.
+`
       : ""
 
   return `You are recommending ${mediaTypesPhrase} to add to a media channel based on what is already there.
@@ -135,29 +152,34 @@ The user already follows the items below, grouped by type. Suggest 10 new items 
 
 Respond with a JSON array of objects only. No prose before or after. Each object must have:
   - "title": string (the name of the show / movie / channel)
+  - "media_type": string — exactly one of "tv", "movie", or "video" ("video" means a YouTube channel)
   - "year": number (release year if known, otherwise omit)
   - "similar_to": array of strings (1 to 10 entries) (names taken from the existing list above — list as many as genuinely apply)
   - "description": string (one or two sentences describing what the suggestion itself is, so the user knows what it is)
   - "url": string (see URL rules below)
   - "image_url": string (optional, see image URL rules below)
 
-URL rules:
-  - If the suggestion is a YouTube channel, return its real YouTube channel URL (e.g. https://www.youtube.com/@handle or https://www.youtube.com/channel/UCxxxx). This URL will be used directly to add the channel.
-  - For anything else (TV show, movie, anime, etc.), prefer the Wikipedia article URL (e.g. https://en.wikipedia.org/wiki/Title). Only use another source (IMDb, official site) if you are confident there is no Wikipedia article for it.
-
+URL rules — the URL is used directly to import the suggestion, so it must match the media_type:
+  - "tv": the TMDB TV page URL using the numeric TMDB TV id, e.g. https://www.themoviedb.org/tv/1396
+  - "movie": the TMDB movie page URL using the numeric TMDB movie id, e.g. https://www.themoviedb.org/movie/27205
+  - "video": the real YouTube channel URL, e.g. https://www.youtube.com/@handle or https://www.youtube.com/channel/UCxxxx
+  - Anime and other TV/film content still uses TMDB — never Wikipedia, IMDb, or an official site.
+  - Only include a suggestion whose TMDB id (or YouTube channel URL) you are confident is correct.
+${availabilityRule}
 Image URL rules:
-  - Provide the direct Wikipedia thumbnail URL for the article's main image if you know it, e.g. https://upload.wikimedia.org/wikipedia/en/thumb/.../220px-....jpg
-  - For YouTube channels provide the channel avatar URL if known.
-  - If you are not confident the image URL is real and publicly accessible, omit the field — the app will fall back to the Wikipedia API automatically.
+  - For "tv" and "movie" provide the TMDB poster URL if you know the poster path, e.g. https://image.tmdb.org/t/p/w342/{POSTER_PATH}.jpg
+  - For "video" provide the channel avatar URL if known.
+  - If you are not confident the image URL is real and publicly accessible, omit the field — the app falls back to looking up an image by title automatically.
 
 Example:
 [
   {
     "title": "{TITLE}",
+    "media_type": "tv",
     "year": {YEAR},
     "similar_to": ["{EXISTING SHOW 1}", "{EXISTING SHOW 2}", "{EXISTING SHOW 3}", "{EXISTING SHOW 4}", "{EXISTING SHOW 5}", "{EXISTING SHOW 6}", "{EXISTING SHOW 7}", "{EXISTING SHOW 8}", "{EXISTING SHOW 9}", "{EXISTING SHOW 10}"],
     "description": "{ONE OR TWO SENTENCES DESCRIBING THE SUGGESTION ITSELF}",
-    "url": "{WIKIPEDIA OR YOUTUBE URL}",
+    "url": "https://www.themoviedb.org/tv/{TMDB ID}",
     "image_url": "{DIRECT IMAGE URL IF CONFIDENT, OTHERWISE OMIT}"
   }
 ]
@@ -232,9 +254,22 @@ export function AISuggestions({
     refetchOnWindowFocus: false,
   })
 
+  const { data: sourcePreferences } = useQuery({
+    queryKey: ["source-preferences"],
+    queryFn: () => UsersService.readSourcePreferences(),
+    enabled: isLoggedIn(),
+  })
+
+  const enabledServices = (sourcePreferences ?? [])
+    .filter(
+      (preference) =>
+        preference.enabled && preference.source_key !== OTHER_SOURCE_KEY,
+    )
+    .map((preference) => preference.name ?? preference.source_key)
+
   const shows = channelShows?.shows ?? []
   const grouped = shows.length > 0 ? groupShows(shows) : null
-  const prompt = grouped ? buildPrompt(grouped) : ""
+  const prompt = grouped ? buildPrompt(grouped, enabledServices) : ""
 
   // TODO: Validate
   const onReadFromClipboard = async (text: string) => {
@@ -253,7 +288,11 @@ export function AISuggestions({
   const onCopyMorePrompt = async () => {
     if (!grouped) return
     try {
-      const morePrompt = buildPrompt(grouped, suggestions ?? [])
+      const morePrompt = buildPrompt(
+        grouped,
+        enabledServices,
+        suggestions ?? [],
+      )
       await navigator.clipboard.writeText(morePrompt)
       setCopiedMore(true)
       setTimeout(() => setCopiedMore(false), 1500)
@@ -297,7 +336,7 @@ export function AISuggestions({
 
   // TODO: Validate
   const onSuggestionClick = async (suggestion: Suggestion) => {
-    if (suggestion.url && isYouTubeUrl(suggestion.url)) {
+    if (suggestion.url && isImportableUrl(suggestion.url)) {
       await addUrlToChannel(suggestion.url, suggestion.title)
       return
     }
@@ -363,14 +402,15 @@ export function AISuggestions({
         <div className="space-y-2">
           <Label className="text-sm">Suggestions</Label>
           <p className="text-xs text-muted-foreground">
-            Click a card to add it. YouTube links add directly; everything else
-            jumps to the Search tab so you can find the real URL.
+            Click a card to add it. TMDB and YouTube links add directly;
+            everything else jumps to the Search tab so you can find the real
+            URL.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {" "}
             {suggestions.map((suggestion, index) => {
-              const isYouTube = suggestion.url
-                ? isYouTubeUrl(suggestion.url)
+              const isImportable = suggestion.url
+                ? isImportableUrl(suggestion.url)
                 : false
               const isAdding = addingTitle === suggestion.title
               return (
@@ -461,7 +501,7 @@ export function AISuggestions({
                     <div className="flex items-center gap-1 mt-auto pt-1 text-xs text-muted-foreground">
                       {isAdding ? (
                         <Loader2 className="size-3 animate-spin" />
-                      ) : isYouTube ? (
+                      ) : isImportable ? (
                         <ExternalLink className="size-3" />
                       ) : (
                         <Sparkles className="size-3" />
@@ -469,7 +509,7 @@ export function AISuggestions({
                       <span>
                         {isAdding
                           ? "Adding…"
-                          : isYouTube
+                          : isImportable
                             ? "Add directly"
                             : "Search"}
                       </span>

@@ -3183,8 +3183,15 @@ export const EpisodeListOutputSchema = {
             title: 'Season Id'
         },
         canonical_episode_id: {
-            type: 'string',
-            format: 'uuid',
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Canonical Episode Id'
         },
         tmdb_id: {
@@ -3281,7 +3288,7 @@ export const EpisodeListOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'id', 'season_id', 'canonical_episode_id', 'username', 'season_name', 'show_id', 'show_name', 'source_id', 'source_name', 'plugin_id', 'plugin_name'],
+    required: ['key', 'id', 'season_id', 'username', 'season_name', 'show_id', 'show_name', 'source_id', 'source_name', 'plugin_id', 'plugin_name'],
     title: 'EpisodeListOutput',
     description: 'Schema for returning a list of `Episode`s, with parent information.'
 } as const;
@@ -3451,8 +3458,15 @@ export const EpisodeOutputSchema = {
             title: 'Season Id'
         },
         canonical_episode_id: {
-            type: 'string',
-            format: 'uuid',
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Canonical Episode Id'
         },
         tmdb_id: {
@@ -3479,7 +3493,7 @@ export const EpisodeOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'id', 'season_id', 'canonical_episode_id'],
+    required: ['key', 'id', 'season_id'],
     title: 'EpisodeOutput',
     description: 'Schema for returning an `Episode`.'
 } as const;
@@ -3888,8 +3902,15 @@ export const EpisodeWithDetailsSchema = {
             title: 'Season Id'
         },
         canonical_episode_id: {
-            type: 'string',
-            format: 'uuid',
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Canonical Episode Id'
         },
         tmdb_id: {
@@ -4008,7 +4029,7 @@ export const EpisodeWithDetailsSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'id', 'season_id', 'canonical_episode_id', 'channel_id'],
+    required: ['key', 'id', 'season_id', 'channel_id'],
     title: 'EpisodeWithDetails'
 } as const;
 
@@ -8187,6 +8208,34 @@ export const UnmatchedEpisodeOutputSchema = {
     description: 'An episode no TMDB record was found for, beside the closest TMDB episode.'
 } as const;
 
+export const UnmatchedEpisodesPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/UnmatchedEpisodeOutput'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        total_count: {
+            type: 'integer',
+            title: 'Total Count'
+        },
+        filtered_count: {
+            type: 'integer',
+            title: 'Filtered Count'
+        },
+        is_server_side: {
+            type: 'boolean',
+            title: 'Is Server Side'
+        }
+    },
+    type: 'object',
+    required: ['data', 'total_count', 'filtered_count', 'is_server_side'],
+    title: 'UnmatchedEpisodesPublic',
+    description: 'Schema for returning a page of episodes waiting on a TMDB match.'
+} as const;
+
 export const UpdatePasswordSchema = {
     properties: {
         current_password: {
@@ -9587,6 +9636,9 @@ export const WhitelistSourceOutputSchema = {
             ],
             title: 'Favicon Url'
         },
+        show: {
+            '$ref': '#/components/schemas/ShowPublic'
+        },
         filtered: {
             type: 'boolean',
             title: 'Filtered'
@@ -9598,7 +9650,7 @@ export const WhitelistSourceOutputSchema = {
         }
     },
     type: 'object',
-    required: ['show_id', 'source_id', 'source_name', 'favicon_url', 'filtered'],
+    required: ['show_id', 'source_id', 'source_name', 'favicon_url', 'show', 'filtered'],
     title: 'WhitelistSourceOutput',
     description: "One website's row for the show, and whether it is filtered."
 } as const;

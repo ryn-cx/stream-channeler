@@ -304,6 +304,9 @@ class WhitelistSourceOutput(BaseModel):
     source_id: uuid.UUID
     source_name: str | None
     favicon_url: str | None
+    # The row itself, so a site carrying the title under more than one row can
+    # name each of them, and so one can be edited without being fetched again.
+    show: ShowPublic
     filtered: bool
     # TMDB is where the media is catalogued rather than a website it can be
     # watched on, so a row names it for the seasons it has a record of and never
@@ -332,6 +335,9 @@ class WhitelistEpisodeLinkOutput(BaseModel):
 
 # TODO: Validate
 class WhitelistEpisodeOutput(EpisodeOutput):
+    # What a filter names, which is the episode itself where the row is one, so
+    # every row served here carries one however it was stored.
+    canonical_episode_id: uuid.UUID
     filtered: bool
     expires_at: datetime | None = Field(default=None)
     # The `Show` ids of the websites' rows that carry this episode.

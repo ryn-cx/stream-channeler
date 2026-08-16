@@ -15,13 +15,14 @@ from collections import defaultdict
 from collections.abc import Callable, Collection, Sequence
 from difflib import SequenceMatcher
 from functools import lru_cache
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
-from sqlalchemy.orm import aliased, selectinload
+from sqlalchemy.orm import aliased, contains_eager, selectinload
 from sqlalchemy.orm.attributes import instance_state, set_committed_value
 from sqlalchemy.sql.expression import ColumnElement
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, func, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from app.canonical_media.filters import is_canonical
 from app.canonical_media.keys import (
@@ -30,6 +31,7 @@ from app.canonical_media.keys import (
     is_tmdb_key,
     tmdb_id_of,
     tmdb_key_clause,
+    tmdb_media_type_of,
 )
 from app.canonical_media.service import add_canonical_show
 from app.episodes.models import (
@@ -41,6 +43,7 @@ from app.episodes.schemas import (
     TmdbEpisodeChoice,
     UnlockedEpisodeOutput,
     UnmatchedEpisodeOutput,
+    UnmatchedEpisodesPublic,
 )
 from app.media.canonical_metadata import (
     tmdb_episode_url,
@@ -51,7 +54,9 @@ from app.media.identifiers import TMDB_PLUGIN_KEY, YOUTUBE_PLUGIN_KEY
 from app.media.media_type import MediaType
 from app.media.name_forms import plaintext_forms
 from app.plugins.models import Plugin
+from app.schemas import ReadOptions
 from app.seasons.models import Season
+from app.service import _apply_filter_options, _apply_sort_options
 from app.shows.models import Show, ShowCanonicalShow
 from app.sources.models import Source
 
@@ -267,17 +272,44 @@ def _has_tmdb_title() -> ColumnElement[bool]:
 
 
 # TODO: Validate
-def _unmatched_rows(
-    session: Session,
-    limit: int,
-) -> list[tuple[Episode, Season, Show, Source]]:
-    statement = (
-        select(Episode, Season, Show, Source)
+# Which joined column each sortable name is, since a name a copy is not sorted
+# by on its own row - the show it is under, the source that carries it - has no
+# column of `Episode` to be read off.
+_UNMATCHED_COLUMNS: dict[str, Any] = {
+    "show_name": Show.name,
+    "show_year": Show.year,
+    "source_name": Source.name,
+    "plugin_name": Plugin.name,
+    "season_name": Season.name,
+    "season_number": Season.season_number,
+    "episode_name": Episode.name,
+    "episode_number": Episode.episode_number,
+    "identifier_note": Episode.canonical_episode_note,
+}
+
+
+# TODO: Validate
+def _unmatched_base() -> SelectOfScalar[Episode]:
+    """Every canonical episode of a plugin other than TMDB and YouTube.
+
+    The rows the page is drawn from, before anything is sorted, filtered or
+    counted. `contains_eager` carries the season, show and source back with each
+    episode, since every one of them is read for every row and reaching them
+    through the relationships would be three queries a row.
+    """
+    return (
+        select(Episode)
         .select_from(Episode)
         .join(Season, onclause=col(Episode.season_id) == Season.id)
         .join(Show, onclause=col(Season.show_id) == Show.id)
         .join(Source, onclause=col(Show.source_id) == Source.id)
         .join(Plugin, onclause=col(Source.plugin_id) == Plugin.id)
+        .options(
+            contains_eager(Episode.season)  # type: ignore[arg-type]
+            .contains_eager(Season.show)  # type: ignore[arg-type]
+            .contains_eager(Show.source)  # type: ignore[arg-type]
+            .contains_eager(Source.plugin),  # type: ignore[arg-type]
+        )
         .where(
             # TMDB's own episodes are what everything else is matched against,
             # and YouTube's are nothing TMDB carries, so neither is waiting on a
@@ -288,14 +320,7 @@ def _unmatched_rows(
             col(Season.deleted_at).is_(None),
             col(Show.deleted_at).is_(None),
         )
-        .order_by(
-            col(Show.name),
-            col(Season.season_number),
-            col(Episode.episode_number),
-        )
-        .limit(limit)
     )
-    return list(session.exec(statement).all())
 
 
 # TODO: Validate
@@ -407,16 +432,60 @@ def _source_absolute_numbers(
 # TODO: Validate
 def list_unmatched_episodes(
     session: Session,
-    limit: int,
-) -> list[UnmatchedEpisodeOutput]:
-    """Return every canonical episode of a plugin other than TMDB and YouTube.
+    params: ReadOptions,
+) -> UnmatchedEpisodesPublic:
+    """Return a page of the canonical episodes outside TMDB and YouTube.
 
-    A canonical episode is one pointing at no other, so these are the episodes
-    nothing has been matched to yet, whatever the reason. The closest TMDB
-    episode is given for each where the show it belongs to is linked to a TMDB
-    show; where it is not there is nothing to choose from and none is given.
+    Sorted, filtered and paged by the database rather than in the browser. There
+    are far more of these than a page shows, so ordering a page of them would
+    order only the ones already fetched: sorting by name would answer with the
+    first names of whichever rows came back, not the first names there are.
+
+    Always server-side, unlike the hybrid tables. The closest TMDB episode is
+    worked out by comparing names in Python, which is worth doing for the twenty
+    rows being shown and not for every row there is.
     """
-    rows = _unmatched_rows(session, limit)
+    filtered = _apply_filter_options(
+        _unmatched_base(),
+        params.filter_options,
+        _UNMATCHED_COLUMNS,
+    )
+    total_count = session.exec(
+        select(func.count()).select_from(_unmatched_base().subquery()),
+    ).one()
+    filtered_count = session.exec(
+        select(func.count()).select_from(filtered.subquery()),
+    ).one()
+    page = (
+        _apply_sort_options(
+            filtered,
+            params.sort_options,
+            _UNMATCHED_COLUMNS,
+            Episode.created_at,
+            Episode.id,
+        )
+        .offset(params.offset)
+        .limit(params.limit)
+    )
+    episodes = list(session.exec(page).all())
+    return UnmatchedEpisodesPublic(
+        data=_unmatched_outputs(session, episodes),
+        total_count=total_count,
+        filtered_count=filtered_count,
+        is_server_side=True,
+    )
+
+
+# TODO: Validate
+def _unmatched_outputs(
+    session: Session,
+    episodes: list[Episode],
+) -> list[UnmatchedEpisodeOutput]:
+    """Describe each episode of a page, beside the TMDB episode closest to it."""
+    rows = [
+        (episode, episode.season, episode.season.show, episode.season.show.source)
+        for episode in episodes
+    ]
     candidates, candidate_numbers = _candidates_for_shows(
         session,
         {show for _episode, _season, show, _source in rows},
@@ -861,21 +930,31 @@ def mark_episode_absent_from_tmdb(session: Session, episode: Episode) -> Episode
 
 
 # TODO: Validate
+def _own_episode_numbers(tmdb_episode: Episode) -> Collection[int]:
+    """The number a TMDB episode carries in the order its title is read in."""
+    if tmdb_episode.episode_number is None:
+        return ()
+    return (tmdb_episode.episode_number,)
+
+
+# TODO: Validate
 def _canonical_episodes_by_name_and_number(
     canonical_episodes: Collection[Episode],
     name_of: Callable[[Episode], str | None],
+    numbers_of: Callable[[Episode], Collection[int]],
 ) -> dict[tuple[str, int], Episode]:
     candidates: dict[tuple[str, int], Episode] = {}
     ambiguous: set[tuple[str, int]] = set()
     for tmdb_episode in canonical_episodes:
         name = name_of(tmdb_episode)
-        if not name or tmdb_episode.episode_number is None:
+        if not name:
             continue
-        pairing = (name, tmdb_episode.episode_number)
-        if pairing in candidates:
-            ambiguous.add(pairing)
-            continue
-        candidates[pairing] = tmdb_episode
+        for episode_number in numbers_of(tmdb_episode):
+            pairing = (name, episode_number)
+            if pairing in candidates:
+                ambiguous.add(pairing)
+                continue
+            candidates[pairing] = tmdb_episode
     # Two TMDB episodes sharing a name and a number say nothing about which of
     # them an episode is, so neither is offered.
     for pairing in ambiguous:
@@ -936,6 +1015,21 @@ def _translated_forms_cache(session: Session) -> dict[uuid.UUID, frozenset[str]]
 
 
 # TODO: Validate
+def _alternate_numbers_cache(session: Session) -> dict[int, dict[int, frozenset[int]]]:
+    """Every number each TMDB episode carries in another order, by title.
+
+    Kept on the session for the same reason the translations are: a linker is
+    built afresh for every show that is read, and every copy of one title asks
+    for the same title's orders.
+    """
+    cache: dict[int, dict[int, frozenset[int]]] = session.info.setdefault(
+        "alternate_tmdb_episode_numbers",
+        {},
+    )
+    return cache
+
+
+# TODO: Validate
 class EpisodeLinker:
     """Points a show's episodes at the canonical TMDB episodes they answer to.
 
@@ -974,6 +1068,9 @@ class EpisodeLinker:
         # Read off the TMDB plugin the first time a matcher asks for them, since
         # two of them want the same translations and neither always runs.
         self._translated_forms: dict[uuid.UUID, frozenset[str]] | None = None
+        # Read off the TMDB plugin the same way and for the same reason: three
+        # matchers read the other orders and none of them always runs.
+        self._alternate_numbers: dict[uuid.UUID, frozenset[int]] | None = None
 
     # TODO: Validate
     def _load_existing_links(self, episodes: Sequence[Episode]) -> None:
@@ -1015,14 +1112,26 @@ class EpisodeLinker:
 
     # TODO: Validate
     def link(self) -> None:
-        """Link each of the show's episodes to its canonical episode, where one is."""
+        """Link each of the show's episodes to its canonical episode, where one is.
+
+        The numbering matchers are read twice over: once against the numbering
+        the title is stored in, and once against every other order TMDB holds for
+        it. A website following the DVD order numbers an episode where that order
+        puts it, which is a number the title's own seasons never gave it, so the
+        pair only ever line up once the other orders are read too. The title's own
+        numbering is read first either way, since an episode that lines up under
+        the order the title is stored in is not one another order gets a say in.
+        """
         self._link_to_movie()
         self._link_by_name_and_episode_number()
         self._link_by_plaintext_name_and_episode_number()
+        self._link_by_name_and_alternate_number()
+        self._link_by_plaintext_name_and_alternate_number()
         self._link_by_name()
         self._link_by_plaintext_name()
         self._link_by_translated_name()
         self._link_by_similar_name_and_episode_number()
+        self._link_by_similar_name_and_alternate_number()
 
     # TODO: Validate
     def _drop_linked(self) -> None:
@@ -1104,6 +1213,56 @@ class EpisodeLinker:
         return self._translated_forms
 
     # TODO: Validate
+    def _alternate_episode_numbers(self) -> dict[uuid.UUID, frozenset[int]]:
+        """Return every number each canonical episode carries in another order.
+
+        The orders are TMDB's own and are read off the plugin, since a row holds
+        the numbering of the one order its title is stored in and nothing of the
+        rest. Every title the show is a copy of is read, so a listing that mixes
+        titles is matched against the orders of each of them.
+
+        Read once per title per session and remembered there, so a run that reads
+        one title over and over reads its orders the first time and takes them
+        off the session after that.
+
+        Imported here rather than at the top of the module because the TMDB
+        plugin is built on the base every plugin is, which reads this module in
+        turn.
+        """
+        if self._alternate_numbers is not None:
+            return self._alternate_numbers
+
+        from plugins.TMDB import TMDB  # noqa: PLC0415
+
+        cache = _alternate_numbers_cache(self.session)
+        tmdb = TMDB(self.session)
+        by_tmdb_id: dict[int, frozenset[int]] = {}
+        for canonical_show in self.show.canonical_shows:
+            tmdb_show_id = tmdb_id_of(canonical_show.key, SHOW_LEVEL)
+            media_type = tmdb_media_type_of(canonical_show.key, SHOW_LEVEL)
+            # A film is one episode of one season however it is read, so there is
+            # no other order for it to be in.
+            if tmdb_show_id is None or media_type is not MediaType.tv:
+                continue
+            if tmdb_show_id not in cache:
+                cache[tmdb_show_id] = tmdb.alternate_episode_numbers(tmdb_show_id)
+            by_tmdb_id |= cache[tmdb_show_id]
+
+        self._alternate_numbers = {}
+        for tmdb_episode in self.canonical_episodes:
+            tmdb_episode_id = tmdb_id_of(tmdb_episode.key, EPISODE_LEVEL)
+            if tmdb_episode_id is None:
+                continue
+            if numbers := by_tmdb_id.get(tmdb_episode_id):
+                self._alternate_numbers[tmdb_episode.id] = numbers
+        return self._alternate_numbers
+
+    # TODO: Validate
+    def _alternate_numbers_of(self, tmdb_episode: Episode) -> Collection[int]:
+        """The numbers a TMDB episode carries in TMDB's other orders of its title."""
+        return self._alternate_episode_numbers().get(tmdb_episode.id, frozenset())
+
+    # TODO: Validate
     @staticmethod
     def _episode_numbering(tmdb_episode: Episode) -> tuple[int, int, int] | None:
         """What TMDB is asked about one episode by, where it can be asked at all.
@@ -1168,17 +1327,32 @@ class EpisodeLinker:
         self.episodes = []
 
     # TODO: Validate
-    def _link_by_name_and_episode_number(self) -> None:
-        """Point each episode at the TMDB episode of the same name and number."""
+    def _link_by_name_and_number(
+        self,
+        name_of: Callable[[Episode], str | None],
+        numbers_of: Callable[[Episode], Collection[int]],
+        note: str,
+    ) -> None:
+        """Point each episode at the TMDB episode of its name and one of its numbers."""
         sorted_canonical_episodes = _canonical_episodes_by_name_and_number(
             self.canonical_episodes,
-            lambda tmdb_episode: tmdb_episode.name,
+            name_of,
+            numbers_of,
         )
         for episode in self.episodes:
-            pairing = (episode.name, episode.episode_number)
+            pairing = (name_of(episode), episode.episode_number)
             if match := sorted_canonical_episodes.get(pairing):  # pyright: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
-                self._claim(episode, match, "Automatic: Name and number match")
+                self._claim(episode, match, note)
         self._drop_linked()
+
+    # TODO: Validate
+    def _link_by_name_and_episode_number(self) -> None:
+        """Point each episode at the TMDB episode of the same name and number."""
+        self._link_by_name_and_number(
+            lambda tmdb_episode: tmdb_episode.name,
+            _own_episode_numbers,
+            "Automatic: Name and number match",
+        )
 
     # TODO: Validate
     def _link_by_plaintext_name_and_episode_number(self) -> None:
@@ -1189,19 +1363,43 @@ class EpisodeLinker:
         name they are both a spelling of and the episode is matched rather than
         left waiting.
         """
-        sorted_canonical_episodes = _canonical_episodes_by_name_and_number(
-            self.canonical_episodes,
+        self._link_by_name_and_number(
             lambda tmdb_episode: _plaintext(tmdb_episode.name),
+            _own_episode_numbers,
+            "Automatic: Plaintext name and number match",
         )
-        for episode in self.episodes:
-            pairing = (_plaintext(episode.name), episode.episode_number)
-            if match := sorted_canonical_episodes.get(pairing):  # pyright: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
-                self._claim(
-                    episode,
-                    match,
-                    "Automatic: Plaintext name and number match",
-                )
-        self._drop_linked()
+
+    # TODO: Validate
+    def _link_by_name_and_alternate_number(self) -> None:
+        """Point each episode at the TMDB episode of its name, in any other order.
+
+        The number the website wrote down is read against every order TMDB holds
+        for the title rather than against the one the title is stored in, so an
+        episode numbered by the DVD order or counted straight through the run is
+        matched by the number that order gives it.
+        """
+        if not self.episodes:
+            return
+        self._link_by_name_and_number(
+            lambda tmdb_episode: tmdb_episode.name,
+            self._alternate_numbers_of,
+            "Automatic: Name and alternate order number match",
+        )
+
+    # TODO: Validate
+    def _link_by_plaintext_name_and_alternate_number(self) -> None:
+        """Point each episode at the TMDB episode of its name, in any other order.
+
+        The same as matching on a name and another order's number, with the case,
+        punctuation and spacing of the name taken out of it.
+        """
+        if not self.episodes:
+            return
+        self._link_by_name_and_number(
+            lambda tmdb_episode: _plaintext(tmdb_episode.name),
+            self._alternate_numbers_of,
+            "Automatic: Plaintext name and alternate order number match",
+        )
 
     # TODO: Validate
     def _link_by_name(self) -> None:
@@ -1272,6 +1470,21 @@ class EpisodeLinker:
         self._drop_linked()
 
     # TODO: Validate
+    def _link_by_similar_name_and_alternate_number(self) -> None:
+        """Point each episode at the closest named TMDB episode of another order.
+
+        The same as matching on a similar name and a number, with the number read
+        against every order TMDB holds for the title rather than against the one
+        the title is stored in.
+        """
+        if not self.episodes:
+            return
+        self._link_by_similar_name(
+            self._alternate_numbers_of,
+            "Automatic: Similar name and alternate order number match",
+        )
+
+    # TODO: Validate
     def _link_by_similar_name_and_episode_number(self) -> None:
         """Point each episode at the closest named TMDB episode of its number.
 
@@ -1286,6 +1499,18 @@ class EpisodeLinker:
         something and has to be clearly ahead of the next best, or the episode is
         left waiting.
         """
+        self._link_by_similar_name(
+            _own_episode_numbers,
+            "Automatic: Similar name and number match",
+        )
+
+    # TODO: Validate
+    def _link_by_similar_name(
+        self,
+        numbers_of: Callable[[Episode], Collection[int]],
+        note: str,
+    ) -> None:
+        """Point each episode at the closest named TMDB episode carrying its number."""
         numbered_episodes = [
             episode for episode in self.episodes if episode.episode_number is not None
         ]
@@ -1305,7 +1530,7 @@ class EpisodeLinker:
                         tmdb_episode,
                     )
                     for tmdb_episode in self.canonical_episodes
-                    if tmdb_episode.episode_number == episode.episode_number
+                    if episode.episode_number in numbers_of(tmdb_episode)
                 ),
                 key=lambda scoring: scoring[0],
                 reverse=True,
@@ -1315,9 +1540,5 @@ class EpisodeLinker:
             if len(scored) > 1 and scored[0][0] - scored[1][0] < _SIMILAR_NAME_LEAD:
                 continue
 
-            self._claim(
-                episode,
-                scored[0][1],
-                "Automatic: Similar name and number match",
-            )
+            self._claim(episode, scored[0][1], note)
         self._drop_linked()

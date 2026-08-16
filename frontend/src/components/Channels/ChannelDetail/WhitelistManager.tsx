@@ -8,15 +8,21 @@ import type {
   WhitelistShowInput,
 } from "@/client"
 import { ChannelsService } from "@/client"
-import { ShowInformationPanel } from "@/components/ChannelCommon/ShowInformationDialog"
+import EditSeason from "@/components/Seasons/Edit"
 import { Button } from "@/components/ui/button"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import { EpisodeExpiryDialog } from "./EpisodeExpiryDialog"
 import { isExpired, isoToLocalInput, localInputToIso } from "./expiry"
+import {
+  AdminOnly,
+  ExternalMediaLink,
+  MediaPageButton,
+} from "./MediaPageButton"
 import { episodeLabel, SeasonEpisodes } from "./SeasonEpisodes"
 import { SourceFavicons } from "./SourceFavicons"
+import { groupBySource, SourceGroupRow } from "./SourceGroupRow"
 
 /**
  * A change the user has made to one episode's entry, before it is saved.
@@ -277,11 +283,6 @@ export function WhitelistManager({
     return enabled ? "Remove from Blacklist" : "Add to Blacklist"
   }
 
-  // A source entry reads the same way a season entry does: in whitelist mode it is
-  // one of the sites the show is watched on, in blacklist mode one of the sites it
-  // is skipped on.
-  const getSourceActionLabel = getSeasonActionLabel
-
   // TODO: Validate
   const getEpisodeActionLabel = (
     episodeEnabled: boolean,
@@ -313,9 +314,14 @@ export function WhitelistManager({
       .filter((source) => source.is_tmdb)
       .map((source) => source.show_id),
   )
-  const watchableSources = whitelistData.sources.filter(
-    (source) => !source.is_tmdb,
-  )
+  // TMDB is listed with the sites rather than left out, so the title it was
+  // catalogued under can be seen and opened from here. It carries nothing to
+  // watch, so it is shown without a mark and `handleSave` never sends one.
+  const listedSources = whitelistData.sources
+  // A site carries a title under one row most of the time and under several
+  // where it splits the title up, so the rows are gathered under the site and
+  // a site with one of them is read without a level in between.
+  const sourceGroups = groupBySource(listedSources)
   const anySeasonHasNumber = whitelistData.seasons.some(
     (season) => season.season_number != null,
   )
@@ -358,9 +364,16 @@ export function WhitelistManager({
                       : "All episodes except blacklisted ones will be shown"}
                   </p>
                 </div>
-                <Button onClick={toggleIsWhitelist} variant="outline">
-                  Switch to {isWhitelist ? "Blacklist" : "Whitelist"} Mode
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button onClick={toggleIsWhitelist} variant="outline">
+                    Switch to {isWhitelist ? "Blacklist" : "Whitelist"} Mode
+                  </Button>
+                  <MediaPageButton
+                    to="/show/$showKey"
+                    params={{ showKey: canonicalShowId }}
+                    label="Edit this show"
+                  />
+                </div>
               </div>
 
               <div className="border rounded shrink-0">
@@ -387,65 +400,22 @@ export function WhitelistManager({
                 </div>
                 {sourcesExpanded && (
                   <div className="p-2 space-y-1 border-t">
-                    {watchableSources.length === 0 ? (
+                    {listedSources.length === 0 ? (
                       <p className="text-sm text-muted-foreground text-center py-4">
                         No sources found for this show
                       </p>
                     ) : (
-                      watchableSources.map((source) => {
-                        const sourceEnabled = enabledSourceIds.has(
-                          source.show_id,
-                        )
-                        return (
-                          <div key={source.show_id}>
-                            <div className="flex items-center gap-2 p-2 hover:bg-accent/30 rounded">
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                onClick={() =>
-                                  toggleShowInformation(source.show_id)
-                                }
-                              >
-                                {informationShowId === source.show_id ? (
-                                  <ChevronDown className="h-4 w-4" />
-                                ) : (
-                                  <ChevronRight className="h-4 w-4" />
-                                )}
-                              </Button>
-                              {source.favicon_url && (
-                                <img
-                                  src={source.favicon_url}
-                                  alt=""
-                                  className="size-6 shrink-0"
-                                />
-                              )}
-                              <button
-                                type="button"
-                                className="flex-1 text-left text-sm hover:underline"
-                                onClick={() =>
-                                  toggleShowInformation(source.show_id)
-                                }
-                              >
-                                {source.source_name ?? "Unknown source"}
-                              </button>
-                              <Button
-                                variant={sourceEnabled ? "default" : "outline"}
-                                size="sm"
-                                onClick={() =>
-                                  toggleSourceEnabled(source.show_id)
-                                }
-                              >
-                                {getSourceActionLabel(sourceEnabled)}
-                              </Button>
-                            </div>
-                            {informationShowId === source.show_id && (
-                              <div className="rounded border bg-muted/30 p-4">
-                                <ShowInformationPanel showId={source.show_id} />
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })
+                      sourceGroups.map((group) => (
+                        <SourceGroupRow
+                          key={group.sourceId}
+                          group={group}
+                          isWhitelist={isWhitelist}
+                          enabledSourceIds={enabledSourceIds}
+                          informationShowId={informationShowId}
+                          onToggleInformation={toggleShowInformation}
+                          onToggleEnabled={toggleSourceEnabled}
+                        />
+                      ))
                     )}
                   </div>
                 )}
@@ -540,6 +510,18 @@ export function WhitelistManager({
                               >
                                 {getSeasonActionLabel(seasonEnabled)}
                               </Button>
+                              <ExternalMediaLink
+                                url={season.url}
+                                label="Open this season on its site"
+                              />
+                              <AdminOnly>
+                                <EditSeason season={season} />
+                              </AdminOnly>
+                              <MediaPageButton
+                                to="/season/$seasonKey"
+                                params={{ seasonKey: season.id }}
+                                label="Open this season here"
+                              />
                             </div>
 
                             {expandedSeasons.has(season.id) && (

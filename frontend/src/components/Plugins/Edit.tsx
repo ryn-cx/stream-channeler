@@ -5,7 +5,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { PluginsService, type PluginUpdate } from "@/client"
+import { type PluginOutput, PluginsService, type PluginUpdate } from "@/client"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
@@ -33,8 +33,6 @@ import {
 } from "@/lib/formSchemas"
 import { VISIBILITY_OPTIONS, visibilityLabel } from "@/lib/visibility"
 
-import type { PluginTableData } from "./columns"
-
 const formSchema = z.object({
   key: requiredKey,
   name: optionalString,
@@ -49,11 +47,12 @@ type FormInput = z.input<typeof formSchema>
 type FormOutput = z.output<typeof formSchema>
 
 interface EditPluginProps {
-  plugin: PluginTableData
+  plugin: PluginOutput
+  size?: React.ComponentProps<typeof TooltipIconButton>["size"]
 }
 
 // TODO: Validate
-const EditPlugin = ({ plugin }: EditPluginProps) => {
+const EditPlugin = ({ plugin, size }: EditPluginProps) => {
   const [isOpen, setIsOpen] = useState(false)
 
   const form = useForm<FormInput, unknown, FormOutput>({
@@ -76,6 +75,7 @@ const EditPlugin = ({ plugin }: EditPluginProps) => {
       PluginsService.updatePlugin({ pluginId: plugin.id, requestBody: data }),
     rowId: plugin.id,
     successMessage: "Plugin updated successfully",
+    extraInvalidateKeys: [["plugins", plugin.id]],
   })
 
   // TODO: Validate
@@ -92,6 +92,7 @@ const EditPlugin = ({ plugin }: EditPluginProps) => {
         <TooltipIconButton
           label="Edit Plugin"
           icon={<Pencil />}
+          size={size}
           onClick={() => setIsOpen(true)}
         />
       }

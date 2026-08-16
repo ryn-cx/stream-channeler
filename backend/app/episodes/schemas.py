@@ -37,9 +37,11 @@ class EpisodeOutput(BaseEpisode):
 
     id: uuid.UUID
     season_id: uuid.UUID
-    # The episode this is a copy of, which is what the record is served as and
-    # what a watch, a channel filter and a saved position all name.
-    canonical_episode_id: uuid.UUID
+    # The episode this is a link to, which is what the record is served as and
+    # what a watch, a channel filter and a saved position all name. Nothing when
+    # the row is the episode itself, which is what the admin lists serve
+    # alongside the links.
+    canonical_episode_id: uuid.UUID | None = None
     # The TMDB episode behind that, when TMDB has a record of it.
     tmdb_id: int | None = None
     # What the episode is, said the same way wherever it turns up. Two rows
@@ -191,6 +193,16 @@ class UnmatchedEpisodeOutput(BaseModel):
     plugin_name: str | None
     url: str | None
     best_match: TmdbEpisodeChoice | None
+
+
+# TODO: Validate
+class UnmatchedEpisodesPublic(BaseModel):
+    """Schema for returning a page of episodes waiting on a TMDB match."""
+
+    data: list[UnmatchedEpisodeOutput]
+    total_count: int
+    filtered_count: int
+    is_server_side: bool
 
 
 # TODO: Validate

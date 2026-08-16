@@ -29,12 +29,21 @@ export function episodeGroupIdOf(
 }
 
 // TODO: Validate
-/** Write an episode order back into what a TMDB `Show` keeps in `extra`. */
-export function extraForEpisodeGroupId(
+/**
+ * Set the episode order on what a `Show` already keeps in `extra`.
+ *
+ * Written onto whatever else is stored rather than over it, since `extra` is one
+ * column holding everything a plugin says about a title and the order is one
+ * key of it. Put back to TMDB's own order the key goes rather than being stored
+ * as empty, so a title never moved off it and one moved back read alike.
+ */
+export function withEpisodeGroupId(
+  extra: Record<string, unknown>,
   groupId: string,
 ): Record<string, unknown> {
-  if (groupId === TMDB_OWN_ORDER) return {}
-  return { tmdb_episode_group_id: groupId }
+  const { tmdb_episode_group_id: _removed, ...rest } = extra
+  if (groupId === TMDB_OWN_ORDER) return rest
+  return { ...rest, tmdb_episode_group_id: groupId }
 }
 
 interface TmdbEpisodeOrderFieldProps {

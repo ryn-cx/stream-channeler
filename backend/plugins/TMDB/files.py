@@ -681,6 +681,12 @@ class FileMixin(BasePlugin, register=False):
         seasons: list[SeasonSource] = []
         for season in self.show_detail_file(tmdb_id).parsed().seasons:
             season_file = self.season_detail_file(tmdb_id, season.season_number)
+            # Downloaded here rather than left to the caller for the same reason
+            # the orders are: what says which seasons a title has is the title's
+            # own file, so nothing can name a season file before that has been
+            # read, and a title being imported for the first time has none of
+            # them stored to be read out of.
+            season_file.download_if_outdated()
             # A season the title lists but TMDB has no detail for is stored
             # empty, and an empty file has nothing to read a season out of.
             if not season_file.database_record.content:

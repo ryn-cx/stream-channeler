@@ -636,7 +636,7 @@ export type EpisodeListOutput = {
     canonical_episode_note?: (string | null);
     id: string;
     season_id: string;
-    canonical_episode_id: string;
+    canonical_episode_id?: (string | null);
     tmdb_id?: (number | null);
     canonical_key?: (string | null);
     username: (string | null);
@@ -672,7 +672,7 @@ export type EpisodeOutput = {
     canonical_episode_note?: (string | null);
     id: string;
     season_id: string;
-    canonical_episode_id: string;
+    canonical_episode_id?: (string | null);
     tmdb_id?: (number | null);
     canonical_key?: (string | null);
 };
@@ -748,7 +748,7 @@ export type EpisodeWithDetails = {
     canonical_episode_note?: (string | null);
     id: string;
     season_id: string;
-    canonical_episode_id: string;
+    canonical_episode_id?: (string | null);
     tmdb_id?: (number | null);
     canonical_key?: (string | null);
     watch_date?: (string | null);
@@ -1586,6 +1586,16 @@ export type UnmatchedEpisodeOutput = {
     best_match: (TmdbEpisodeChoice | null);
 };
 
+/**
+ * Schema for returning a page of episodes waiting on a TMDB match.
+ */
+export type UnmatchedEpisodesPublic = {
+    data: Array<UnmatchedEpisodeOutput>;
+    total_count: number;
+    filtered_count: number;
+    is_server_side: boolean;
+};
+
 export type UpdatePassword = {
     current_password: string;
     new_password: string;
@@ -1882,6 +1892,7 @@ export type WhitelistSourceOutput = {
     source_id: string;
     source_name: (string | null);
     favicon_url: (string | null);
+    show: ShowPublic;
     filtered: boolean;
     is_tmdb?: boolean;
 };
@@ -2288,10 +2299,13 @@ export type EpisodesGetEpisodesData = {
 export type EpisodesGetEpisodesResponse = (EpisodesPublic);
 
 export type EpisodesAdminGetUnmatchedEpisodesData = {
+    filterOptions?: string;
     limit?: number;
+    offset?: number;
+    sortOptions?: string;
 };
 
-export type EpisodesAdminGetUnmatchedEpisodesResponse = (Array<UnmatchedEpisodeOutput>);
+export type EpisodesAdminGetUnmatchedEpisodesResponse = (UnmatchedEpisodesPublic);
 
 export type EpisodesAdminGetUnlockedEpisodesData = {
     limit?: number;

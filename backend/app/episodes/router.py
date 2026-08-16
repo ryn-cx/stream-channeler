@@ -37,7 +37,7 @@ from app.episodes.schemas import (
     EpisodeUpdate,
     TmdbEpisodeChoice,
     UnlockedEpisodeOutput,
-    UnmatchedEpisodeOutput,
+    UnmatchedEpisodesPublic,
 )
 from app.episodes.service import (
     link_episode,
@@ -257,10 +257,10 @@ def get_show_episodes(
 )
 def admin_get_unmatched_episodes(
     session: SessionDep,
-    limit: Annotated[int, Query(ge=1, le=1000)] = 200,
-) -> list[UnmatchedEpisodeOutput]:
-    """Get every canonical `Episode` outside TMDB and YouTube, and its closest match."""
-    return list_unmatched_episodes(session, limit)
+    read_options: Annotated[ReadOptions, Query()],
+) -> UnmatchedEpisodesPublic:
+    """Get a page of the canonical `Episode`s outside TMDB and YouTube."""
+    return list_unmatched_episodes(session, read_options)
 
 
 # TODO: Validate

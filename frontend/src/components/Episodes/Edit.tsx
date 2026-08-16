@@ -6,10 +6,12 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { EpisodesService, type EpisodeUpdate } from "@/client"
+import { FormCheckboxField } from "@/components/Common/FormCheckboxField"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { useEditTableRow } from "@/components/Common/useEditTableRow"
+import { extraText, parseExtraText } from "@/lib/extra"
 import {
   nullifyBlanks,
   optionalInt,
@@ -20,7 +22,32 @@ import {
 
 import type { EpisodeTableData } from "./columns"
 
+/** What the form reads, so any row carrying these can be edited. */
+export type EditableEpisodeFields = Pick<
+  EpisodeTableData,
+  | "id"
+  | "key"
+  | "name"
+  | "url"
+  | "description"
+  | "image_url"
+  | "air_date"
+  | "episode_number"
+  | "duration"
+  | "sort_order"
+  | "canonical_episode_locked"
+  | "canonical_episode_note"
+  | "data_timestamp"
+  | "update_at"
+  | "deleted_at"
+  | "extra"
+>
+
 const formSchema = z.object({
+  canonical_episode_locked: z.boolean(),
+  canonical_episode_note: optionalString,
+  deleted_at: optionalString,
+  extra: optionalString,
   name: optionalString,
   episode_number: optionalInt,
   url: optionalString,
@@ -38,7 +65,7 @@ type FormInput = z.input<typeof formSchema>
 type FormOutput = z.output<typeof formSchema>
 
 interface EditEpisodeProps {
-  episode: EpisodeTableData
+  episode: EditableEpisodeFields
 }
 
 // TODO: Validate
@@ -50,6 +77,10 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
+      canonical_episode_locked: episode.canonical_episode_locked ?? false,
+      canonical_episode_note: episode.canonical_episode_note ?? "",
+      deleted_at: episode.deleted_at?.slice(0, 16) ?? "",
+      extra: extraText(episode.extra),
       name: episode.name ?? "",
       episode_number: episode.episode_number ?? "",
       url: episode.url ?? "",
@@ -77,7 +108,10 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
   // TODO: Validate
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
-    mutation.mutate(nullifyBlanks(data))
+    mutation.mutate({
+      ...nullifyBlanks(data),
+      extra: parseExtraText(data.extra ?? ""),
+    })
   }
 
   return (
@@ -169,6 +203,51 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
         />
         <div className="sm:col-span-2">
           <FormTextField control={form.control} label="Key" type="text" />
+          <FormTextField
+            control={form.control}
+            label="Canonical Episode Note"
+            type="text"
+          />
+          <FormCheckboxField
+            control={form.control}
+            label="Canonical Episode Locked"
+          />
+          <FormTextField
+            control={form.control}
+            label="Deleted At"
+            type="datetime-local"
+          />
+          <FormTextField control={form.control} label="Extra" type="text" />
+          <FormTextField
+            control={form.control}
+            label="Episode Number"
+            type="number"
+          />
+          <FormTextField
+            control={form.control}
+            label="Sort Order"
+            type="number"
+          />
+          <FormTextField
+            control={form.control}
+            label="Duration"
+            type="number"
+          />
+          <FormTextField
+            control={form.control}
+            label="Canonical Episode Note"
+            type="text"
+          />
+          <FormCheckboxField
+            control={form.control}
+            label="Canonical Episode Locked"
+          />
+          <FormTextField
+            control={form.control}
+            label="Deleted At"
+            type="datetime-local"
+          />
+          <FormTextField control={form.control} label="Extra" type="text" />
         </div>
       </div>
     </FormModal>

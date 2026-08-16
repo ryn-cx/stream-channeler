@@ -5,7 +5,13 @@ import { useState } from "react"
 import type { WhitelistEpisodeOutput, WhitelistSourceOutput } from "@/client"
 import { ChannelsService } from "@/client"
 import { EpisodeInformationPanel } from "@/components/ChannelCommon/EpisodeInformationDialog"
+import EditEpisode from "@/components/Episodes/Edit"
 import { Button } from "@/components/ui/button"
+import {
+  AdminOnly,
+  ExternalMediaLink,
+  MediaPageButton,
+} from "./MediaPageButton"
 import { SourceFavicons } from "./SourceFavicons"
 
 // How many of a season's episodes the server serves at once, which is what the
@@ -193,6 +199,18 @@ export function SeasonEpisodes({
               >
                 {episodeActionLabel(episodeEnabled, seasonEnabled)}
               </Button>
+              <ExternalMediaLink
+                url={episode.url}
+                label="Open this episode on its site"
+              />
+              <AdminOnly>
+                <EditEpisode episode={episode} />
+              </AdminOnly>
+              <MediaPageButton
+                to="/season/$seasonKey"
+                params={{ seasonKey: seasonId }}
+                label="Open this episode's season here"
+              />
             </div>
             {informationEpisodeId === episode.id && (
               <div className="ml-16 space-y-1">

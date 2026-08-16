@@ -5,16 +5,17 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { SourcesService, type SourceUpdate } from "@/client"
+import { type SourcePublic, SourcesService, type SourceUpdate } from "@/client"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { useEditTableRow } from "@/components/Common/useEditTableRow"
+import { extraText, parseExtraText } from "@/lib/extra"
 import { nullifyBlanks, optionalString, requiredKey } from "@/lib/formSchemas"
 
-import type { SourceTableData } from "./columns"
-
 const formSchema = z.object({
+  deleted_at: optionalString,
+  extra: optionalString,
   key: requiredKey,
   name: optionalString,
   favicon_url: optionalString,
@@ -27,11 +28,12 @@ type FormInput = z.input<typeof formSchema>
 type FormOutput = z.output<typeof formSchema>
 
 interface EditSourceProps {
-  source: SourceTableData
+  source: SourcePublic
+  size?: React.ComponentProps<typeof TooltipIconButton>["size"]
 }
 
 // TODO: Validate
-const EditSource = ({ source }: EditSourceProps) => {
+const EditSource = ({ source, size }: EditSourceProps) => {
   const [isOpen, setIsOpen] = useState(false)
 
   const form = useForm<FormInput, unknown, FormOutput>({
@@ -39,6 +41,8 @@ const EditSource = ({ source }: EditSourceProps) => {
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
+      deleted_at: source.deleted_at?.slice(0, 16) ?? "",
+      extra: extraText(source.extra),
       key: source.key ?? "",
       name: source.name ?? "",
       favicon_url: source.favicon_url ?? "",
@@ -53,12 +57,16 @@ const EditSource = ({ source }: EditSourceProps) => {
       SourcesService.updateSource({ sourceId: source.id, requestBody: data }),
     rowId: source.id,
     successMessage: "Source updated successfully",
+    extraInvalidateKeys: [["sources", source.id]],
   })
 
   // TODO: Validate
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
-    mutation.mutate(nullifyBlanks(data))
+    mutation.mutate({
+      ...nullifyBlanks(data),
+      extra: parseExtraText(data.extra ?? ""),
+    })
   }
 
   return (
@@ -69,6 +77,7 @@ const EditSource = ({ source }: EditSourceProps) => {
         <TooltipIconButton
           label="Edit Source"
           icon={<Pencil />}
+          size={size}
           onClick={() => setIsOpen(true)}
         />
       }
@@ -108,6 +117,18 @@ const EditSource = ({ source }: EditSourceProps) => {
         showNowButton
       />
       <FormTextField control={form.control} label="Key" type="text" />
+      <FormTextField
+        control={form.control}
+        label="Deleted At"
+        type="datetime-local"
+      />
+      <FormTextField control={form.control} label="Extra" type="text" />
+      <FormTextField
+        control={form.control}
+        label="Deleted At"
+        type="datetime-local"
+      />
+      <FormTextField control={form.control} label="Extra" type="text" />
     </FormModal>
   )
 }

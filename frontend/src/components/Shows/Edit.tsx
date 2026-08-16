@@ -5,24 +5,35 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { ShowsService, type ShowUpdate } from "@/client"
+import { type ShowPublic, ShowsService, type ShowUpdate } from "@/client"
 import { AdminZone } from "@/components/Common/AdminZone"
+import { FormCheckboxField } from "@/components/Common/FormCheckboxField"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { useEditTableRow } from "@/components/Common/useEditTableRow"
 import useAuth from "@/hooks/useAuth"
-import { nullifyBlanks, optionalString, requiredKey } from "@/lib/formSchemas"
+import { extraText, parseExtraText } from "@/lib/extra"
+import {
+  nullifyBlanks,
+  optionalInt,
+  optionalString,
+  requiredKey,
+} from "@/lib/formSchemas"
 
-import type { ShowTableData } from "./columns"
 import {
   episodeGroupIdOf,
-  extraForEpisodeGroupId,
   TMDB_EPISODE_ORDER_PLUGIN,
   TmdbEpisodeOrderField,
+  withEpisodeGroupId,
 } from "./TmdbEpisodeOrderField"
 
 const formSchema = z.object({
+  year: optionalInt,
+  canonical_show_locked: z.boolean(),
+  canonical_show_note: optionalString,
+  deleted_at: optionalString,
+  extra: optionalString,
   key: requiredKey,
   name: optionalString,
   media_type: optionalString,
@@ -37,11 +48,12 @@ type FormInput = z.input<typeof formSchema>
 type FormOutput = z.output<typeof formSchema>
 
 interface EditShowProps {
-  show: ShowTableData
+  show: ShowPublic & { plugin_name?: string | null }
+  size?: React.ComponentProps<typeof TooltipIconButton>["size"]
 }
 
 // TODO: Validate
-const EditShow = ({ show }: EditShowProps) => {
+const EditShow = ({ show, size }: EditShowProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const { user } = useAuth()
   // Only TMDB's own rows carry an episode order, and only an admin sets one.
@@ -57,6 +69,11 @@ const EditShow = ({ show }: EditShowProps) => {
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
+      year: show.year == null ? "" : String(show.year),
+      canonical_show_locked: show.canonical_show_locked ?? false,
+      canonical_show_note: show.canonical_show_note ?? "",
+      deleted_at: show.deleted_at?.slice(0, 16) ?? "",
+      extra: extraText(show.extra),
       key: show.key ?? "",
       name: show.name ?? "",
       media_type: show.media_type ?? "",
@@ -73,19 +90,22 @@ const EditShow = ({ show }: EditShowProps) => {
       ShowsService.updateShow({ showId: show.id, requestBody: data }),
     rowId: show.id,
     successMessage: "Show updated successfully",
+    extraInvalidateKeys: [["shows", show.id]],
   })
 
   // TODO: Validate
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
-    // `extra` is only sent where the order is being edited, since another
-    // plugin keeps its own things there and a blank would write them away.
-    const update = nullifyBlanks(data)
-    mutation.mutate(
-      showsEpisodeOrder
-        ? { ...update, extra: extraForEpisodeGroupId(episodeGroupId) }
-        : update,
-    )
+    // The order is written onto whatever else `extra` holds rather than over
+    // it, since the box above edits the same column and a plugin keeps its own
+    // things there too.
+    const extra = parseExtraText(data.extra ?? "")
+    mutation.mutate({
+      ...nullifyBlanks(data),
+      extra: showsEpisodeOrder
+        ? withEpisodeGroupId(extra, episodeGroupId)
+        : extra,
+    })
   }
 
   return (
@@ -96,6 +116,7 @@ const EditShow = ({ show }: EditShowProps) => {
         <TooltipIconButton
           label="Edit Show"
           icon={<Pencil />}
+          size={size}
           onClick={() => setIsOpen(true)}
         />
       }
@@ -153,6 +174,32 @@ const EditShow = ({ show }: EditShowProps) => {
         showNowButton
       />
       <FormTextField control={form.control} label="Key" type="text" />
+      <FormTextField control={form.control} label="Year" type="number" />
+      <FormTextField
+        control={form.control}
+        label="Canonical Show Note"
+        type="text"
+      />
+      <FormCheckboxField control={form.control} label="Canonical Show Locked" />
+      <FormTextField
+        control={form.control}
+        label="Deleted At"
+        type="datetime-local"
+      />
+      <FormTextField control={form.control} label="Extra" type="text" />
+      <FormTextField control={form.control} label="Year" type="number" />
+      <FormTextField
+        control={form.control}
+        label="Canonical Show Note"
+        type="text"
+      />
+      <FormCheckboxField control={form.control} label="Canonical Show Locked" />
+      <FormTextField
+        control={form.control}
+        label="Deleted At"
+        type="datetime-local"
+      />
+      <FormTextField control={form.control} label="Extra" type="text" />
       {showsEpisodeOrder && (
         <AdminZone>
           <TmdbEpisodeOrderField

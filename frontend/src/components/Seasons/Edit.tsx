@@ -5,11 +5,12 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { SeasonsService, type SeasonUpdate } from "@/client"
+import { type SeasonOutput, SeasonsService, type SeasonUpdate } from "@/client"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { useEditTableRow } from "@/components/Common/useEditTableRow"
+import { extraText, parseExtraText } from "@/lib/extra"
 import {
   nullifyBlanks,
   optionalInt,
@@ -17,9 +18,9 @@ import {
   requiredKey,
 } from "@/lib/formSchemas"
 
-import type { SeasonTableData } from "./columns"
-
 const formSchema = z.object({
+  deleted_at: optionalString,
+  extra: optionalString,
   name: optionalString,
   season_number: optionalInt,
   url: optionalString,
@@ -34,11 +35,12 @@ type FormInput = z.input<typeof formSchema>
 type FormOutput = z.output<typeof formSchema>
 
 interface EditSeasonProps {
-  season: SeasonTableData
+  season: SeasonOutput
+  size?: React.ComponentProps<typeof TooltipIconButton>["size"]
 }
 
 // TODO: Validate
-const EditSeason = ({ season }: EditSeasonProps) => {
+const EditSeason = ({ season, size }: EditSeasonProps) => {
   const [isOpen, setIsOpen] = useState(false)
 
   const form = useForm<FormInput, unknown, FormOutput>({
@@ -46,6 +48,8 @@ const EditSeason = ({ season }: EditSeasonProps) => {
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
+      deleted_at: season.deleted_at?.slice(0, 16) ?? "",
+      extra: extraText(season.extra),
       name: season.name ?? "",
       season_number: season.season_number ?? "",
       url: season.url ?? "",
@@ -62,12 +66,16 @@ const EditSeason = ({ season }: EditSeasonProps) => {
       SeasonsService.updateSeason({ seasonId: season.id, requestBody: data }),
     rowId: season.id,
     successMessage: "Season updated successfully",
+    extraInvalidateKeys: [["seasons", season.id]],
   })
 
   // TODO: Validate
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
-    mutation.mutate(nullifyBlanks(data))
+    mutation.mutate({
+      ...nullifyBlanks(data),
+      extra: parseExtraText(data.extra ?? ""),
+    })
   }
 
   return (
@@ -78,6 +86,7 @@ const EditSeason = ({ season }: EditSeasonProps) => {
         <TooltipIconButton
           label="Edit Season"
           icon={<Pencil />}
+          size={size}
           onClick={() => setIsOpen(true)}
         />
       }
@@ -130,6 +139,24 @@ const EditSeason = ({ season }: EditSeasonProps) => {
         showNowButton
       />
       <FormTextField control={form.control} label="Key" type="text" />
+      <FormTextField
+        control={form.control}
+        label="Deleted At"
+        type="datetime-local"
+      />
+      <FormTextField control={form.control} label="Extra" type="text" />
+      <FormTextField
+        control={form.control}
+        label="Season Number"
+        type="number"
+      />
+      <FormTextField control={form.control} label="Sort Order" type="number" />
+      <FormTextField
+        control={form.control}
+        label="Deleted At"
+        type="datetime-local"
+      />
+      <FormTextField control={form.control} label="Extra" type="text" />
     </FormModal>
   )
 }

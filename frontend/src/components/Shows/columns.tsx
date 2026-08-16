@@ -125,6 +125,35 @@ export const showColumns: ColumnDef<ShowTableData>[] = [
     cell: ({ row }) => <DateCell value={row.original.deleted_at} />,
   },
   {
+    accessorKey: "year",
+    header: "Year",
+    cell: ({ row }) => (
+      <span className="tabular-nums">{row.original.year ?? ""}</span>
+    ),
+  },
+  {
+    accessorFn: (row) => (row.canonical_show_locked ? "true" : "false"),
+    id: "canonical_show_locked",
+    header: "Link Locked",
+    meta: {
+      filterVariant: "select",
+      filterOptions: [
+        { label: "Yes", value: "true" },
+        { label: "No", value: "false" },
+      ],
+    },
+    cell: ({ row }) => (
+      <span>{row.original.canonical_show_locked ? "Yes" : "No"}</span>
+    ),
+  },
+  {
+    accessorKey: "canonical_show_note",
+    header: "Link Note",
+    cell: ({ row }) => (
+      <TruncatedCell value={row.original.canonical_show_note} />
+    ),
+  },
+  {
     accessorKey: "extra",
     header: "Extra",
     cell: ({ row }) => <TruncatedCell value={extraText(row.original.extra)} />,

@@ -192,6 +192,46 @@ class LookupMixin(FileMixin, register=False):
         ]
 
     # TODO: Validate
+    def alternate_episode_numbers(self, tmdb_id: int) -> dict[int, frozenset[int]]:
+        """Return every number each episode of a title carries in some other order.
+
+        TMDB keeps the other ways of ordering a title - the DVD order, the story
+        order, an absolute count of the whole run - beside the title's own, and
+        the same episode is numbered differently in each of them. A website that
+        follows one of those numbers an episode by where that order puts it, so
+        the number it wrote down matches none of the title's own and the episode
+        is only ever recognised by reading the orders as well.
+
+        Every order is read rather than the chosen one, since the order a
+        website follows is not the order the title is stored in and nothing says
+        which of them it is. The numbers are keyed by TMDB's own episode id,
+        which is what the episode is the same episode by whichever order it is
+        read in.
+
+        A title TMDB holds no orders for, and an order stored empty, both read as
+        nothing rather than raising: an order is something a title may simply not
+        have.
+        """
+        groups_file = self.episode_groups_file(tmdb_id)
+        groups_file.download_if_outdated()
+        if not groups_file.database_record.content:
+            return {}
+
+        numbers: dict[int, set[int]] = {}
+        for option in groups_file.parsed().results:
+            detail_file = self.episode_group_detail_file(option.id)
+            detail_file.download_if_outdated()
+            if not detail_file.database_record.content:
+                continue
+            for group in detail_file.parsed().groups:
+                for number, episode in enumerate(group.episodes, start=1):
+                    numbers.setdefault(episode.id, set()).add(number)
+        return {
+            episode_id: frozenset(episode_numbers)
+            for episode_id, episode_numbers in numbers.items()
+        }
+
+    # TODO: Validate
     def show_seasons(self, tmdb_id: int) -> Sequence[TvSeriesSeason]:
         """Return the seasons of a title, downloading the title if needed.
 

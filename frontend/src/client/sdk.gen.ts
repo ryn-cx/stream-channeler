@@ -1383,10 +1383,13 @@ export class EpisodesService {
     
     /**
      * Admin Get Unmatched Episodes
-     * Get every canonical `Episode` outside TMDB and YouTube, and its closest match.
+     * Get a page of the canonical `Episode`s outside TMDB and YouTube.
      * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
      * @param data.limit
-     * @returns UnmatchedEpisodeOutput Successful Response
+     * @returns UnmatchedEpisodesPublic Successful Response
      * @throws ApiError
      */
     public static adminGetUnmatchedEpisodes(data: EpisodesAdminGetUnmatchedEpisodesData = {}): CancelablePromise<EpisodesAdminGetUnmatchedEpisodesResponse> {
@@ -1394,6 +1397,9 @@ export class EpisodesService {
             method: 'GET',
             url: '/api/v1/episodes/tmdb-matches',
             query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
                 limit: data.limit
             },
             errors: {
@@ -2914,9 +2920,10 @@ export class ShowsService {
      * linker's to work out during an import, or a `User`'s to settle through the
      * TMDB matching screens, so there is nothing to repoint here.
      *
-     * `extra` is checked before it is written, since what a TMDB row keeps there is
-     * the episode order the title is read in and an order naming nothing would
-     * leave the title with no seasons.
+     * `extra` goes through its own service rather than being written with the rest,
+     * since what a TMDB row keeps there is the episode order the title is read in
+     * and changing that means reading the title again and matching every copy of it
+     * afresh.
      * @param data The data for the request.
      * @param data.showId
      * @param data.requestBody

@@ -1130,6 +1130,7 @@ def get_channel_whitelist(
             source_id=show.source.id,
             source_name=show.source.name,
             favicon_url=show.source.favicon_url,
+            show=ShowPublic.model_validate(show),
             filtered=show.id in enabled_sources,
             is_tmdb=show.source.plugin.key == TMDB_PLUGIN_KEY,
         )

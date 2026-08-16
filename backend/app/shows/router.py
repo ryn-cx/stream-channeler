@@ -43,7 +43,7 @@ from app.shows.schemas import (
     ShowUpdate,
     TmdbEpisodeGroupOption,
 )
-from app.shows.service import list_tmdb_episode_groups, validate_extra
+from app.shows.service import list_tmdb_episode_groups, update_show_extra
 from app.sources.dependencies import EditableSource, ReadableSource
 from app.sources.models import Source
 from app.users.dependencies import OptionalUser
@@ -230,12 +230,16 @@ def update_show(
     linker's to work out during an import, or a `User`'s to settle through the
     TMDB matching screens, so there is nothing to repoint here.
 
-    `extra` is checked before it is written, since what a TMDB row keeps there is
-    the episode order the title is read in and an order naming nothing would
-    leave the title with no seasons.
+    `extra` goes through its own service rather than being written with the rest,
+    since what a TMDB row keeps there is the episode order the title is read in
+    and changing that means reading the title again and matching every copy of it
+    afresh.
     """
+    # Before the rest of the update, because what it does depends on the order
+    # the title is read in now and the general write would already have replaced
+    # it. The same value going down twice writes nothing the second time.
     if "extra" in show_input.model_fields_set:
-        validate_extra(session, show, show_input.extra)
+        update_show_extra(session, show, show_input.extra)
     return _show_output(show_input.update(session, show))
 
 
