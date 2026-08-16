@@ -421,10 +421,16 @@ class Detail(JSONFile[dict[str, Any]]):
         ]
 
     # TODO: Validate
+    def _episode_list(self) -> dict[str, Any]:
+        """Return the episode list, which a title with no episodes has none of."""
+        episode_list: dict[str, Any] = self._btf_state().get("episodeList") or {}
+        return episode_list
+
+    # TODO: Validate
     def _episode_page_entries(self) -> list[dict[str, Any]]:
         """Return every page the season's episode list is split over."""
-        actions = self._btf_state()["episodeList"]["actions"]
-        return list(actions["episodePages"]) if actions else []
+        actions = self._episode_list().get("actions") or {}
+        return list(actions.get("episodePages") or [])
 
     # TODO: Validate
     def episode_page_token(self, page_index: int) -> str:
@@ -449,6 +455,10 @@ class Detail(JSONFile[dict[str, Any]]):
     # TODO: Validate
     def _page_episodes(self) -> list[AmazonEpisode]:
         """Return the episodes the season's own page carries."""
+        card_title_ids = self._episode_list().get("cardTitleIds") or []
+        if not card_title_ids:
+            return []
+
         state = self._btf_state()
         details = state["detail"]["detail"]
         compact_keys = state["self"]
@@ -458,7 +468,7 @@ class Detail(JSONFile[dict[str, Any]]):
                 details[title_id],
                 compact_keys[title_id]["compactGTI"],
             )
-            for title_id in state["episodeList"]["cardTitleIds"] or []
+            for title_id in card_title_ids
         ]
 
     # TODO: Validate
