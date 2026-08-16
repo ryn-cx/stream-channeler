@@ -599,6 +599,10 @@ def _unmatched_outputs(
         session,
         {show.id for _episode, _season, show, _source in rows},
     )
+    used = _tmdb_ids_used_by_shows(
+        session,
+        {show.id for _episode, _season, show, _source in rows},
+    )
 
     return [
         UnmatchedEpisodeOutput(
@@ -620,22 +624,54 @@ def _unmatched_outputs(
             source_name=source.name,
             plugin_name=source.plugin.name,
             url=episode.url,
-            best_match=_best_match(
-                episode,
-                season,
-                candidates.get(show.id, []),
-                candidate_numbers.get(show.id, {}),
+            best_match=_marked_used(
+                _best_match(
+                    episode,
+                    season,
+                    candidates.get(show.id, []),
+                    candidate_numbers.get(show.id, {}),
+                ),
+                episode.id,
+                used.get(show.id, {}),
             ),
-            number_match=_number_match(
-                episode,
-                season,
-                candidates.get(show.id, []),
-                candidate_numbers.get(show.id, {}),
-                source_numbers.get(episode.id),
+            number_match=_marked_used(
+                _number_match(
+                    episode,
+                    season,
+                    candidates.get(show.id, []),
+                    candidate_numbers.get(show.id, {}),
+                    source_numbers.get(episode.id),
+                ),
+                episode.id,
+                used.get(show.id, {}),
             ),
         )
         for episode, season, show, source in rows
     ]
+
+
+# TODO: Validate
+def _marked_used(
+    choice: TmdbEpisodeChoice | None,
+    episode_id: uuid.UUID,
+    used: dict[int, list[EpisodeUsingTmdb]],
+) -> TmdbEpisodeChoice | None:
+    """Say which of the show's other episodes already point at `choice`.
+
+    Suggested to one episode and taken by another is what a suggestion worth
+    doubting looks like, since two episodes of one listing are rarely the same
+    TMDB episode. The episode being suggested to is left out, as an episode
+    already pointing at what it is being offered is not competing with itself.
+    """
+    if choice is None:
+        return None
+    choice.used_by = [
+        entry
+        for entry in used.get(choice.tmdb_episode_id, [])
+        if entry.id != episode_id
+    ]
+    choice.already_used = bool(choice.used_by)
+    return choice
 
 
 # TODO: Validate
@@ -741,21 +777,28 @@ def list_unlocked_episodes(
 
 
 # TODO: Validate
-def _tmdb_ids_used_by_show(
+def _tmdb_ids_used_by_shows(
     session: Session,
-    episode: Episode,
-) -> dict[int, list[EpisodeUsingTmdb]]:
-    """Return the episodes of `episode`'s show using each TMDB episode already.
+    show_ids: set[uuid.UUID],
+    /,
+) -> dict[uuid.UUID, dict[int, list[EpisodeUsingTmdb]]]:
+    """Return the episodes of each show using each TMDB episode already.
 
-    Only the show the episode belongs to is read, since another website's copy
-    of the same title has its own episodes pointing at the same TMDB ones and
-    says nothing about which of them this show still has going spare. The
-    episode being linked is left out so the record it already points at is not
-    counted as somebody else's.
+    Only the show an episode belongs to is read, since another website's copy of
+    the same title has its own episodes pointing at the same TMDB ones and says
+    nothing about which of them this show still has going spare.
+
+    Every show of a page at once, rather than one query per episode: a page of
+    episodes of the same show asks the same question twenty times over. The
+    episode doing the using is named, so a caller working on one of them can
+    leave it out of its own answer.
     """
+    if not show_ids:
+        return {}
+
     canonical_episode = aliased(Episode)
     statement = (
-        select(canonical_episode.key, Episode, Season)  # type: ignore[call-overload]
+        select(Season.show_id, canonical_episode.key, Episode, Season)  # type: ignore[call-overload]
         .select_from(Episode)
         .join(
             canonical_episode,
@@ -764,19 +807,20 @@ def _tmdb_ids_used_by_show(
         .join(Season, onclause=col(Episode.season_id) == Season.id)
         .where(
             is_canonical(canonical_episode),
-            Season.show_id == episode.season.show_id,
-            col(Episode.id) != episode.id,
+            col(Season.show_id).in_(show_ids),
             tmdb_key_clause(col(canonical_episode.key)),
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
         )
     )
-    using: dict[int, list[EpisodeUsingTmdb]] = defaultdict(list)
-    for key, used_by, season in session.exec(statement).all():
+    using: dict[uuid.UUID, dict[int, list[EpisodeUsingTmdb]]] = defaultdict(
+        lambda: defaultdict(list),
+    )
+    for show_id, key, used_by, season in session.exec(statement).all():
         tmdb_id = tmdb_id_of(key, EPISODE_LEVEL)
         if tmdb_id is None:
             continue
-        using[tmdb_id].append(
+        using[show_id][tmdb_id].append(
             EpisodeUsingTmdb(
                 id=used_by.id,
                 name=used_by.name,
@@ -786,6 +830,25 @@ def _tmdb_ids_used_by_show(
             ),
         )
     return using
+
+
+# TODO: Validate
+def _tmdb_ids_used_by_show(
+    session: Session,
+    episode: Episode,
+) -> dict[int, list[EpisodeUsingTmdb]]:
+    """Return the episodes of `episode`'s show using each TMDB episode already.
+
+    The episode being linked is left out so the record it already points at is
+    not counted as somebody else's.
+    """
+    show_id = episode.season.show_id
+    return {
+        tmdb_id: [entry for entry in entries if entry.id != episode.id]
+        for tmdb_id, entries in _tmdb_ids_used_by_shows(session, {show_id})
+        .get(show_id, {})
+        .items()
+    }
 
 
 # TODO: Validate
@@ -1114,6 +1177,32 @@ def _canonical_episodes_by_name_and_number(
 
 
 # TODO: Validate
+def _canonical_episodes_by_numbering(
+    canonical_episodes: Collection[Episode],
+    name_of: Callable[[Episode], str | None],
+    season_number_of: Callable[[Episode], int | None],
+) -> dict[tuple[str, int, int], Episode]:
+    candidates: dict[tuple[str, int, int], Episode] = {}
+    ambiguous: set[tuple[str, int, int]] = set()
+    for tmdb_episode in canonical_episodes:
+        name = name_of(tmdb_episode)
+        season_number = season_number_of(tmdb_episode)
+        episode_number = tmdb_episode.episode_number
+        if not name or season_number is None or episode_number is None:
+            continue
+        numbering = (name, season_number, episode_number)
+        if numbering in candidates:
+            ambiguous.add(numbering)
+            continue
+        candidates[numbering] = tmdb_episode
+    # Two TMDB episodes filed under one name in one place say nothing about which
+    # of them an episode is, so neither is offered.
+    for numbering in ambiguous:
+        del candidates[numbering]
+    return candidates
+
+
+# TODO: Validate
 def _canonical_episodes_by_name(
     canonical_episodes: Collection[Episode],
     name_of: Callable[[Episode], str | None],
@@ -1219,6 +1308,16 @@ class EpisodeLinker:
             for episode in season.active_children
             if is_tmdb_key(episode.key)
         ]
+        # Which season each episode of either side is under, read off the seasons
+        # already in hand rather than back off each episode, since walking to a
+        # season from the episode is a read apiece for rows that were reached
+        # through that very season.
+        self.season_numbers = {
+            episode.id: season.season_number
+            for parent in (show, *show.canonical_shows)
+            for season in parent.active_children
+            for episode in season.active_children
+        }
         self._load_existing_links([*self.episodes, *self.canonical_episodes])
         # Read off the TMDB plugin the first time a matcher asks for them, since
         # two of them want the same translations and neither always runs.
@@ -1278,6 +1377,8 @@ class EpisodeLinker:
         the order the title is stored in is not one another order gets a say in.
         """
         self._link_to_movie()
+        self._link_by_name_and_numbering()
+        self._link_by_plaintext_name_and_numbering()
         self._link_by_name_and_episode_number()
         self._link_by_plaintext_name_and_episode_number()
         self._link_by_name_and_alternate_number()
@@ -1511,6 +1612,60 @@ class EpisodeLinker:
             if match := sorted_canonical_episodes.get(pairing):  # pyright: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
                 self._claim(episode, match, note)
         self._drop_linked()
+
+    # TODO: Validate
+    def _season_number_of(self, episode: Episode) -> int | None:
+        """The season an episode of either side is filed under."""
+        return self.season_numbers.get(episode.id)
+
+    # TODO: Validate
+    def _link_by_numbering(
+        self,
+        name_of: Callable[[Episode], str | None],
+        note: str,
+    ) -> None:
+        """Point each episode at the TMDB episode of its name, season and number."""
+        sorted_canonical_episodes = _canonical_episodes_by_numbering(
+            self.canonical_episodes,
+            name_of,
+            self._season_number_of,
+        )
+        for episode in self.episodes:
+            numbering = (
+                name_of(episode),
+                self._season_number_of(episode),
+                episode.episode_number,
+            )
+            if match := sorted_canonical_episodes.get(numbering):  # pyright: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
+                self._claim(episode, match, note)
+        self._drop_linked()
+
+    # TODO: Validate
+    def _link_by_name_and_numbering(self) -> None:
+        """Point each episode at the TMDB episode of its name, season and number.
+
+        A title whose episodes are called nothing but where they are - "Episode
+        4" - has that name once a season, so the name and the episode number
+        together still pick out one episode per season and none of the matchers
+        reading those two alone can say which season's it is. Read the season as
+        well and the pair line up: same name, same place, same episode.
+        """
+        self._link_by_numbering(
+            lambda tmdb_episode: tmdb_episode.name,
+            "Automatic: Name and full numbering match",
+        )
+
+    # TODO: Validate
+    def _link_by_plaintext_name_and_numbering(self) -> None:
+        """Point each episode at the TMDB episode of its name, season and number.
+
+        The same as matching on a name and a full numbering, with the case,
+        punctuation and spacing of the name taken out of it.
+        """
+        self._link_by_numbering(
+            lambda tmdb_episode: _plaintext(tmdb_episode.name),
+            "Automatic: Plaintext name and full numbering match",
+        )
 
     # TODO: Validate
     def _link_by_name_and_episode_number(self) -> None:

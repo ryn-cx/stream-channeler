@@ -126,6 +126,7 @@ const EditShow = ({ show, size }: EditShowProps) => {
       form={form}
       onSubmit={onSubmit}
       isPending={mutation.isPending}
+      size="3xl"
     >
       <FormTextField
         control={form.control}

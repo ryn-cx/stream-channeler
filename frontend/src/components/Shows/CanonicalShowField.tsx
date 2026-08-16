@@ -111,7 +111,17 @@ export function CanonicalShowField({
       ),
   })
 
-  const offered = (results?.data ?? []).filter((show) => show.id !== linked?.id)
+  // A listing short enough to be sent whole comes back unfiltered and unpaged,
+  // so the name is matched here as well as asked for above, and only then cut
+  // down to what the box holds.
+  const wanted = search.trim().toLowerCase()
+  const offered = (results?.data ?? [])
+    .filter(
+      (show) =>
+        show.id !== linked?.id &&
+        (show.name ?? "").toLowerCase().includes(wanted),
+    )
+    .slice(0, SEARCH_RESULT_COUNT)
 
   return (
     <div className="space-y-2">

@@ -137,10 +137,12 @@ function SummaryLink({
 function MatchSummary({
   record,
   counterpart,
+  note,
   action,
 }: {
   record: Summarised
   counterpart: Numbered | null
+  note?: ReactNode
   action?: ReactNode
 }) {
   const agreement = numberingAgreement(
@@ -213,8 +215,45 @@ function MatchSummary({
         </span>{" "}
         {record.name ?? "Unnamed"}
       </SummaryLink>
+      {note}
       {action}
     </WrappingCell>
+  )
+}
+
+// TODO: Validate
+/**
+ * Which of the listing's other episodes already point at this TMDB episode.
+ *
+ * A suggestion another episode of the same listing has already been settled on
+ * is one to doubt, since two episodes of one listing are rarely the same TMDB
+ * episode, and the one already using it is named so the pair can be compared
+ * rather than only counted.
+ */
+function AlreadyUsedNote({
+  match,
+}: {
+  match: NonNullable<UnmatchedEpisodeOutput["best_match"]>
+}) {
+  if (!match.already_used || !match.used_by?.length) {
+    return null
+  }
+  return (
+    <span className="mt-0.5 block text-xs text-destructive">
+      Already used by{" "}
+      {match.used_by
+        .map((episode) =>
+          [
+            episode.season_number === null
+              ? null
+              : `S${episode.season_number}E${episode.episode_number ?? "?"}`,
+            episode.name,
+          ]
+            .filter(Boolean)
+            .join(" "),
+        )
+        .join(", ")}
+    </span>
   )
 }
 
@@ -273,6 +312,7 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
         <MatchSummary
           record={match}
           counterpart={row.original}
+          note={<AlreadyUsedNote match={nameMatch} />}
           action={
             <TmdbMatchConfirmButton
               episodeId={row.original.id}
@@ -303,6 +343,7 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
         <MatchSummary
           record={match}
           counterpart={row.original}
+          note={<AlreadyUsedNote match={numberMatch} />}
           action={
             <TmdbMatchConfirmButton
               episodeId={row.original.id}
