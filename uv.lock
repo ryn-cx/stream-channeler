@@ -531,7 +531,7 @@ wheels = [
 [[package]]
 name = "deforestation"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/deforestation#9288bb1e1456639cef874d6745d4ed648b89ddc4" }
+source = { git = "https://github.com/ryn-cx/deforestation#a274ae4814c427e24bb3ed2ab8f46a7c0def0a8e" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },

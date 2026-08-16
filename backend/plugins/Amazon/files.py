@@ -16,7 +16,7 @@ from typing import Any, override
 
 import httpx
 from deforestation import USER_AGENT, Deforestation
-from deforestation.constants import MARKETPLACES
+from deforestation.constants import MARKETPLACES, REGION_WEB_PATHS
 from deforestation.detail.models import (
     AtfItem,
     DetailItem,
@@ -82,10 +82,16 @@ def deforestation() -> Deforestation:
     because a title is named by an id of one of two kinds and only this one
     answers for both: Amazon's own marketplace answers a link written with the
     id Prime Video writes by pointing at the id it uses itself instead.
+
+    North America is named rather than left to be worked out, because a page
+    asked for without a region is answered by pointing at the same page under
+    whichever region the request came from, and which region that is depends on
+    where this is running.
     """
     return Deforestation(
         get_around_client=get_around_client(),
         host=MARKETPLACES["ROW"],
+        web_path=REGION_WEB_PATHS["NA"],
     )
 
 
