@@ -70,6 +70,94 @@ interface ShowInformationPanelProps {
 }
 
 // TODO: Validate
+function useShowInformation(showId: string, enabled: boolean) {
+  const queryKey = ["show-information", showId]
+  const query = useQuery({
+    queryKey,
+    queryFn: () => ShowsService.getShowInformation({ showId }),
+    enabled,
+    staleTime: 5 * 60 * 1000,
+  })
+  return { queryKey, ...query }
+}
+
+// TODO: Validate
+function showHero(data: ShowInformationOutput, facts: string[]) {
+  return (
+    <InformationHero
+      title={data.tmdb?.name ?? data.source.name ?? "Unnamed show"}
+      subtitle={
+        data.tmdb && data.source.name !== data.tmdb.name
+          ? data.source.name
+          : null
+      }
+      description={data.tmdb?.description ?? data.source.description}
+      imageUrl={data.tmdb?.image_url ?? data.source.image_url}
+      facts={facts}
+      links={heroLinks(data)}
+    />
+  )
+}
+
+// TODO: Validate
+/**
+ * What the title is, without whether it reached TMDB.
+ *
+ * Read where the title itself is what is open rather than the match between two
+ * accounts of it, and where the row being read may be TMDB's own: a canonical
+ * row is a copy of nothing, which the linked/not-linked fact would report as
+ * having failed to reach the very record it is.
+ */
+function summaryFacts(data: ShowInformationOutput) {
+  const facts = [
+    data.tmdb?.media_type ?? data.source.media_type,
+    data.source.label,
+  ]
+  return facts.filter((fact): fact is string => !!fact)
+}
+
+// TODO: Validate
+/**
+ * The title as it reads at a glance with the issues reported against it, for
+ * whatever is already open on that title and has no room for the comparison.
+ */
+export function ShowInformationSummary({
+  showId,
+  enabled = true,
+}: ShowInformationPanelProps) {
+  const { queryKey, data, isLoading, error } = useShowInformation(
+    showId,
+    enabled,
+  )
+
+  if (isLoading) {
+    return (
+      <p className="text-sm text-muted-foreground">Loading show information…</p>
+    )
+  }
+  if (error || !data) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Couldn't load the show information.
+      </p>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {showHero(data, summaryFacts(data))}
+
+      <IssueReportsSection
+        target="show"
+        mediaId={showId}
+        reports={data.issue_reports}
+        informationQueryKey={queryKey}
+      />
+    </div>
+  )
+}
+
+// TODO: Validate
 /**
  * The title's own account of itself beside TMDB's, without a dialog around it,
  * so it can be read inside whatever is already open.
@@ -78,13 +166,10 @@ export function ShowInformationPanel({
   showId,
   enabled = true,
 }: ShowInformationPanelProps) {
-  const queryKey = ["show-information", showId]
-  const { data, isLoading, error } = useQuery({
-    queryKey,
-    queryFn: () => ShowsService.getShowInformation({ showId }),
+  const { queryKey, data, isLoading, error } = useShowInformation(
+    showId,
     enabled,
-    staleTime: 5 * 60 * 1000,
-  })
+  )
 
   if (isLoading) {
     return (
@@ -101,18 +186,7 @@ export function ShowInformationPanel({
 
   return (
     <div className="flex flex-col gap-6">
-      <InformationHero
-        title={data.tmdb?.name ?? data.source.name ?? "Unnamed show"}
-        subtitle={
-          data.tmdb && data.source.name !== data.tmdb.name
-            ? data.source.name
-            : null
-        }
-        description={data.tmdb?.description ?? data.source.description}
-        imageUrl={data.tmdb?.image_url ?? data.source.image_url}
-        facts={heroFacts(data)}
-        links={heroLinks(data)}
-      />
+      {showHero(data, heroFacts(data))}
 
       <CollapsibleSection title="Field comparison">
         <div className="overflow-x-auto">

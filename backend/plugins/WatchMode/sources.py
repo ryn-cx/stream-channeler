@@ -3,17 +3,10 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
-
 from wampi.title_id import tmdb_movie_title_id, tmdb_tv_title_id
 
 from app.media.media_type import MediaType
-from app.utils import tz_datetime
 from plugins.WatchMode.files import FileMixin
-
-# How long a title's listing stands before it is asked for again. What a service
-# carries moves slowly, and every lookup of a TMDB id costs two API credits.
-_LISTING_MAX_AGE = timedelta(days=7)
 
 
 # TODO: Validate
@@ -37,7 +30,7 @@ class SourcesMixin(FileMixin, register=False):
         subscription and also for sale - is listed once per way.
         """
         listing_file = self.title_sources_file(title_key(media_type, tmdb_id))
-        listing_file.download_if_outdated(tz_datetime.now() - _LISTING_MAX_AGE)
+        listing_file.download_if_outdated()
         # Empty when Watchmode does not carry the title, which is written as a
         # file with no content rather than raised.
         if not listing_file.database_record.content:

@@ -170,7 +170,7 @@ class UpsertMixin(HelperMixin, register=False):
         seasons_file = self.seasons_file(show.key)
         for index, season_data in enumerate(seasons_file.parsed().data):
             season = Season.get_from_memory(self.session, show, season_data.id)
-            if self._season_is_outdated(season, force=force):
+            if self._season_is_outdated(season, show.key, force=force):
                 new_season = Season(
                     key=season_data.id,
                     name=season_data.title,
@@ -238,7 +238,12 @@ class UpsertMixin(HelperMixin, register=False):
         episodes_data = self.season_episodes_file(season.key).parsed()
         for index, episode_data in enumerate(episodes_data.data):
             episode = Episode.get_from_memory(self.session, season, episode_data.id)
-            if not self._episode_is_outdated(episode, force=force):
+            if not self._episode_is_outdated(
+                episode,
+                season.key,
+                show_key,
+                force=force,
+            ):
                 continue
             new_episode = Episode(
                 key=episode_data.id,

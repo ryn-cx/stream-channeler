@@ -53,7 +53,7 @@ class UpsertMixin(FileMixin, register=False):
         force: bool = False,
     ) -> None:
         season = Season.get_from_memory(self.session, show, show_key)
-        if self._season_is_outdated(season, force=force):
+        if self._season_is_outdated(season, show_key, force=force):
             new_season = Season(
                 key=show_key,
                 sort_order=0,
@@ -84,7 +84,12 @@ class UpsertMixin(FileMixin, register=False):
             season.set_update_at(item.video.expired_at)
 
             episode = Episode.get_from_memory(self.session, season, item.id)
-            if not self._episode_is_outdated(episode, force=force):
+            if not self._episode_is_outdated(
+                episode,
+                season.key,
+                show_key,
+                force=force,
+            ):
                 continue
 
             video = item.video

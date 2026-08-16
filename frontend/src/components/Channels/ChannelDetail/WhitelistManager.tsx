@@ -8,6 +8,7 @@ import type {
   WhitelistShowInput,
 } from "@/client"
 import { ChannelsService } from "@/client"
+import { ShowInformationSummary } from "@/components/ChannelCommon/ShowInformationDialog"
 import EditSeason from "@/components/Seasons/Edit"
 import { Button } from "@/components/ui/button"
 import { LoadingButton } from "@/components/ui/loading-button"
@@ -344,6 +345,8 @@ export function WhitelistManager({
             <ChevronUp className="h-4 w-4 mr-1" /> Collapse
           </Button>
         </div>
+
+        <ShowInformationSummary showId={canonicalShowId} />
 
         {isLoading ? (
           <div className="flex items-center justify-center py-8">

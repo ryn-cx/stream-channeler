@@ -416,6 +416,11 @@ def _unmatched_base() -> SelectOfScalar[Episode]:
             # match the way the rest are.
             col(Plugin.key).not_in((TMDB_PLUGIN_KEY, YOUTUBE_PLUGIN_KEY)),
             is_canonical(Episode),
+            # An episode settled as one TMDB has no record of points at nothing
+            # and is locked there, which reads as canonical the same way one
+            # nothing has worked out yet does. The lock is what tells them
+            # apart, and a settled episode is waiting on nobody.
+            col(Episode.canonical_episode_locked).is_(False),
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
             col(Show.deleted_at).is_(None),

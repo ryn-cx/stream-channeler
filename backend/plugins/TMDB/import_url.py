@@ -7,6 +7,7 @@ from typing import Any, override
 
 from app.media.media_type import MediaType
 from app.shows.models import Show
+from plugins.JustWatch import JustWatch
 from plugins.TMDB.files import title_page_url
 from plugins.TMDB.keys import parse_show_key, show_key
 from plugins.TMDB.lookup import LookupMixin
@@ -47,7 +48,7 @@ class ImportURLMixin(
     ) -> list[URLImportResult]:
         show_key = handler.show_key
         stored = self._preload_show(show_key).one_or_none()
-        if stored is not None and not force:
+        if stored and not force:
             return handler.import_results(stored)
 
         # This title's own rows are written before anything is handed on. A
@@ -59,31 +60,53 @@ class ImportURLMixin(
         show = self.upsert_show(self.source, show_key, force=force)
 
         if canonical_show is None:
-            self._import_watchmode_sources(show_key, show, force=force)
+            self._import_listed_sources(show_key, show, force=force)
 
         return handler.import_results(show)
 
     # TODO: Validate
-    def _import_watchmode_sources(
+    def _import_listed_sources(
         self,
         show_key: str,
         show: Show,
         *,
         force: bool = False,
     ) -> None:
-        """Import the title from every service Watchmode says carries it.
+        """Import the title from every service Watchmode or JustWatch lists it on.
 
-        Watchmode names each service by a link to the title on it, so the
-        listing a website carries is reached by the address of that listing
-        rather than by searching the website for the title's name and taking
-        whichever result looks closest.
+        Both name each service by a link to the title on it, so the listing a
+        website carries is reached by the address of that listing rather than by
+        searching the website for the title's name and taking whichever result
+        looks closest.
         """
-        media_type, tmdb_id = parse_show_key(show_key)
-        for url in WatchMode(self.session).source_urls(media_type, tmdb_id):
+        for url in self._listed_source_urls(show_key):
             plugin_class = self._plugin_for_url(url)
             if plugin_class is None:
                 continue
             plugin_class(self.session).import_url(url, show, force=force)
+
+    # TODO: Validate
+    def _listed_source_urls(self, show_key: str) -> list[str]:
+        """Return every address either lookup gives for the title, without repeats."""
+        media_type, tmdb_id = parse_show_key(show_key)
+        urls = WatchMode(self.session).source_urls(media_type, tmdb_id)
+
+        # TMDB's page for a title links to JustWatch's page for the same title,
+        # so the listing is read straight off that address rather than JustWatch
+        # being searched for the title's name.
+        page_url = self._justwatch_page_url(media_type, tmdb_id)
+        if page_url is not None:
+            for url in JustWatch(self.session).source_urls(page_url):
+                if url not in urls:
+                    urls.append(url)
+        return urls
+
+    # TODO: Validate
+    def _justwatch_page_url(self, media_type: MediaType, tmdb_id: int) -> str | None:
+        """Return the JustWatch address TMDB's page for the title links to."""
+        page = self.title_page_file(media_type, tmdb_id).parsed()
+        link = page.select_one('a[href*="justwatch.com"]')
+        return None if link is None else str(link["href"])
 
     # TODO: Validate
     @staticmethod

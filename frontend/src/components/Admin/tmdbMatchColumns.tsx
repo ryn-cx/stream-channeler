@@ -7,7 +7,7 @@ import type { ReactNode } from "react"
 import type { UnlockedEpisodeOutput, UnmatchedEpisodeOutput } from "@/client"
 import { TmdbLink } from "@/components/ChannelCommon/TmdbLink"
 import { cn } from "@/lib/utils"
-import { TmdbMatchActions } from "./TmdbMatchActions"
+import { TmdbMatchActions, TmdbMatchConfirmButton } from "./TmdbMatchActions"
 import { type Numbered, numberingAgreement } from "./tmdbNumbering"
 
 // TODO: Validate
@@ -137,9 +137,11 @@ function SummaryLink({
 function MatchSummary({
   record,
   counterpart,
+  action,
 }: {
   record: Summarised
   counterpart: Numbered | null
+  action?: ReactNode
 }) {
   const agreement = numberingAgreement(
     record,
@@ -211,6 +213,7 @@ function MatchSummary({
         </span>{" "}
         {record.name ?? "Unnamed"}
       </SummaryLink>
+      {action}
     </WrappingCell>
   )
 }
@@ -257,15 +260,28 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
     header: "TMDB by name",
     meta: { serverBacked: false },
     cell: ({ row }) => {
-      const match = choiceSummarised(row.original.best_match)
-      if (!match) {
+      const nameMatch = row.original.best_match
+      const match = choiceSummarised(nameMatch)
+      if (!nameMatch || !match) {
         return (
           <WrappingCell className="max-w-72 text-muted-foreground">
             No match
           </WrappingCell>
         )
       }
-      return <MatchSummary record={match} counterpart={row.original} />
+      return (
+        <MatchSummary
+          record={match}
+          counterpart={row.original}
+          action={
+            <TmdbMatchConfirmButton
+              episodeId={row.original.id}
+              match={nameMatch}
+              kind="name"
+            />
+          }
+        />
+      )
     },
   },
   {
@@ -274,15 +290,28 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
     header: "TMDB by number",
     meta: { serverBacked: false },
     cell: ({ row }) => {
-      const match = choiceSummarised(row.original.number_match)
-      if (!match) {
+      const numberMatch = row.original.number_match
+      const match = choiceSummarised(numberMatch)
+      if (!numberMatch || !match) {
         return (
           <WrappingCell className="max-w-72 text-muted-foreground">
             No match
           </WrappingCell>
         )
       }
-      return <MatchSummary record={match} counterpart={row.original} />
+      return (
+        <MatchSummary
+          record={match}
+          counterpart={row.original}
+          action={
+            <TmdbMatchConfirmButton
+              episodeId={row.original.id}
+              match={numberMatch}
+              kind="number"
+            />
+          }
+        />
+      )
     },
   },
   {

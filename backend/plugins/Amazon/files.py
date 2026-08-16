@@ -12,23 +12,11 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from functools import cache
-from typing import Any, override
+from typing import Any, cast, override
 
 import httpx
 from deforestation import USER_AGENT, Deforestation
 from deforestation.constants import MARKETPLACES, REGION_WEB_PATHS
-from deforestation.detail.models import (
-    AtfItem,
-    DetailItem,
-    DetailModel,
-    EpisodePage,
-    HeaderDetailItem,
-    State,
-    State1,
-    Subscription,
-)
-from deforestation.detail.models import Payload1 as ExpandingCardPayload
-from deforestation.detail.models import Payload2 as CardOptionPayload
 from deforestation.detail_widgets.models import DetailWidgetsModel
 from deforestation.detail_widgets.models import Episode as WidgetEpisode
 from deforestation.exceptions import TitleNotFoundError
@@ -38,7 +26,12 @@ from sqlmodel import Session
 
 from app.plugins.models import Plugin
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import GAPIJSON, BaseFile, PartialGAPIJSON
+from plugins.utils.base_plugin.files import (
+    GAPIJSON,
+    BaseFile,
+    JSONFile,
+    PartialGAPIJSON,
+)
 from plugins.utils.get_around_client import get_around_client
 
 # Where a share link is written, which is its own domain rather than a path on
@@ -167,17 +160,29 @@ def _channel_name(label: str) -> str:
 
 
 # TODO: Validate
-def _episode_from_detail(item: DetailItem, compact_key: str) -> AmazonEpisode:
+def _pick_raw_image(images: dict[str, Any]) -> str | None:
+    for name in _IMAGE_PREFERENCE:
+        if url := images.get(name):
+            return str(url)
+    return None
+
+
+# TODO: Validate
+def _episode_from_detail(
+    title_id: str,
+    item: dict[str, Any],
+    compact_key: str,
+) -> AmazonEpisode:
     """Return an episode read off the page of the season it belongs to."""
     return AmazonEpisode(
-        key=item.title_id,
+        key=title_id,
         compact_key=compact_key,
-        title=item.title,
-        episode_number=item.episode_number,
-        synopsis=item.synopsis,
-        duration=item.duration,
-        release_date=item.release_date,
-        image_url=_pick_image(item.images),
+        title=item["title"],
+        episode_number=item.get("episodeNumber"),
+        synopsis=item["synopsis"],
+        duration=item.get("duration"),
+        release_date=item["releaseDate"],
+        image_url=_pick_raw_image(item["images"]),
     )
 
 
@@ -258,38 +263,47 @@ class ShareLinkRedirect(BaseFile[str]):
 
 
 # TODO: Validate
-class Detail(GAPIJSON[DetailModel]):
+class Detail(JSONFile[dict[str, Any]]):
     """A title's own page.
 
     A series has no page of its own on Prime Video: every page is one season of
     it, and each of them lists every season there is.
-    """
 
-    API_ENDPOINT = deforestation().detail
+    Read as the raw payload rather than through a Deforestation model, because
+    Amazon keeps hanging fields the model has never seen off this page and a
+    model built to forbid them fails the whole page over a field nothing here
+    reads. What is read out of it is a handful of values, so they are picked out
+    by name and the rest is left alone.
+
+    That leaves the page as Amazon writes it, which is not the shape a model of
+    it has: what a model turns into a list keyed by `titleId` is a map keyed by
+    the title id here, and it is read by looking the id up rather than by
+    searching a list for it.
+    """
 
     # TODO: Validate
     def __init__(self, session: Session, plugin: Plugin, title_key: str) -> None:
         """Initialize the file."""
         self.title_key = title_key
+        self.unique_identifier = title_key
         self.session = session
         self.plugin = plugin
-        super().__init__(session, plugin, title_key)
+        super().__init__(session, plugin)
 
     # TODO: Validate
     @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        # Occurs when a user puts in an invalid URL.
-        return isinstance(error, TitleNotFoundError)
-
-    # TODO: Validate
-    @override
-    def acceptable_error_extra_value(self) -> str:
-        return f"Invalid title {self.title_key}"
+    def _parse(self, raw: Any) -> dict[str, Any]:
+        return cast("dict[str, Any]", raw)
 
     # TODO: Validate
     @override
     def _download(self) -> None:
-        super()._download()
+        with self._log_download(self.title_key):
+            try:
+                self.write(deforestation().detail.download(self.title_key))
+            except TitleNotFoundError:
+                # Occurs when a user puts in an invalid URL.
+                self.write(None, f"Invalid title {self.title_key}")
 
         # The episode list is only ever read alongside the page it belongs to, so
         # the pages of it come down with the page rather than being asked for by
@@ -307,12 +321,14 @@ class Detail(GAPIJSON[DetailModel]):
         return any(page.is_outdated() for page in self.episode_pages())
 
     # TODO: Validate
-    def _atf_state(self) -> State:
-        return self.parsed().body.atf.state
+    def _atf_state(self) -> dict[str, Any]:
+        state: dict[str, Any] = self.parsed()["body"]["atf"]["state"]
+        return state
 
     # TODO: Validate
-    def _btf_state(self) -> State1:
-        return self.parsed().body.btf.state
+    def _btf_state(self) -> dict[str, Any]:
+        state: dict[str, Any] = self.parsed()["body"]["btf"]["state"]
+        return state
 
     # TODO: Validate
     def page_key(self) -> str:
@@ -321,111 +337,99 @@ class Detail(GAPIJSON[DetailModel]):
         The id a URL carries is not always the id of the title it opens, since a
         title can be reached by any of the ids of the copies Amazon sells of it.
         """
-        return self._atf_state().page_title_id
+        return str(self._atf_state()["pageTitleId"])
 
     # TODO: Validate
     def compact_key(self) -> str:
         """Return the id of this title that a link to it is written with."""
-        page_key = self.page_key()
-        for item in self._atf_state().self:
-            if item.title_id == page_key:
-                return item.compact_gti
-        msg = f"No id for {page_key} on its own page"
-        raise ValueError(msg)
+        return str(self._atf_state()["self"][self.page_key()]["compactGTI"])
 
     # TODO: Validate
-    def _header(self) -> HeaderDetailItem:
-        page_key = self.page_key()
-        for item in self._atf_state().detail.header_detail:
-            if item.title_id == page_key:
-                return item
-        msg = f"No details for {page_key} on its own page"
-        raise ValueError(msg)
+    def _header(self) -> dict[str, Any]:
+        header: dict[str, Any] = self._atf_state()["detail"]["headerDetail"][
+            self.page_key()
+        ]
+        return header
 
     # TODO: Validate
     def entity_type(self) -> str:
         """Return whether the title is a film or part of a series."""
-        return self._header().entity_type
+        return str(self._header()["entityType"])
 
     # TODO: Validate
     def title(self) -> str:
         """Return the name of the title itself, season and all."""
-        return self._header().title
+        return str(self._header()["title"])
 
     # TODO: Validate
     def series_title(self) -> str:
         """Return the name of the series, for a page that is a season of one."""
         header = self._header()
-        return header.parent_title or header.title
+        return str(header.get("parentTitle") or header["title"])
 
     # TODO: Validate
     def synopsis(self) -> str | None:
         """Return what the title is about."""
-        return self._header().synopsis
+        synopsis: str | None = self._header()["synopsis"]
+        return synopsis
 
     # TODO: Validate
     def image_url(self) -> str | None:
         """Return the image the title is pictured by."""
-        return _pick_image(self._header().images)
+        return _pick_raw_image(self._header()["images"])
 
     # TODO: Validate
     def release_date(self) -> str | None:
         """Return the day the title came out, as Prime Video writes it."""
-        return self._header().release_date
+        release_date: str | None = self._header()["releaseDate"]
+        return release_date
 
     # TODO: Validate
     def release_year(self) -> int | None:
         """Return the year the title came out."""
-        return self._header().release_year
+        release_year: int | None = self._header()["releaseYear"]
+        return release_year
 
     # TODO: Validate
     def season_number(self) -> int | None:
         """Return which season of its series the page is."""
-        return self._header().season_number
+        return self._header().get("seasonNumber")
 
     # TODO: Validate
     def duration(self) -> int | None:
         """Return how long the title runs for, in seconds."""
-        return self._header().duration
+        return self._header().get("duration")
 
     # TODO: Validate
     def genres(self) -> list[str]:
         """Return the genres the title is filed under."""
-        return [genre.text for genre in self._header().genres]
+        return [genre["text"] for genre in self._header()["genres"]]
 
     # TODO: Validate
     def seasons(self) -> list[AmazonSeason]:
         """Return every season of the series this page is a season of."""
-        seasons = self._atf_state().seasons
-        # A title that is a season of nothing carries no seasons at all, which
-        # is written as an empty object rather than as an empty list.
-        if not isinstance(seasons, list):
-            return []
-        page_key = self.page_key()
         return [
             AmazonSeason(
                 # Keyed by the id its own page is addressed by rather than by
                 # the id the listing names it with, so that a season is the same
                 # season whichever way in it was found.
-                key=_compact_key_from_link(entry.season_link),
-                name=entry.display_name,
-                season_number=entry.sequence_number,
+                key=_compact_key_from_link(entry["seasonLink"]),
+                name=entry["displayName"],
+                season_number=entry["sequenceNumber"],
             )
-            for season in seasons
-            if season.title_id == page_key
-            for entry in season.value
+            for entry in self._atf_state()["seasons"].get(self.page_key(), [])
         ]
 
     # TODO: Validate
-    def _episode_page_entries(self) -> list[EpisodePage]:
+    def _episode_page_entries(self) -> list[dict[str, Any]]:
         """Return every page the season's episode list is split over."""
-        actions = self._btf_state().episode_list.actions
-        return list(actions.episode_pages) if actions else []
+        actions = self._btf_state()["episodeList"]["actions"]
+        return list(actions["episodePages"]) if actions else []
 
     # TODO: Validate
     def episode_page_token(self, page_index: int) -> str:
         """Return the token the page of the episode list at `page_index` is asked for by."""
-        return self._episode_page_entries()[page_index].token
+        return str(self._episode_page_entries()[page_index]["token"])
 
     # TODO: Validate
     def episode_pages(self) -> list[EpisodeList]:
@@ -439,21 +443,22 @@ class Detail(GAPIJSON[DetailModel]):
         return [
             EpisodeList(self.session, self.plugin, self.title_key, index)
             for index, page in enumerate(self._episode_page_entries())
-            if not page.is_selected
+            if not page["isSelected"]
         ]
 
     # TODO: Validate
     def _page_episodes(self) -> list[AmazonEpisode]:
         """Return the episodes the season's own page carries."""
         state = self._btf_state()
-        details = {item.title_id: item for item in state.detail.detail}
-        compact_keys = {
-            item.title_id: item.compact_gti
-            for item in self.raise_if_not_is_instance(state.self, list)
-        }
+        details = state["detail"]["detail"]
+        compact_keys = state["self"]
         return [
-            _episode_from_detail(details[title_id], compact_keys[title_id])
-            for title_id in state.episode_list.card_title_ids or []
+            _episode_from_detail(
+                title_id,
+                details[title_id],
+                compact_keys[title_id]["compactGTI"],
+            )
+            for title_id in state["episodeList"]["cardTitleIds"] or []
         ]
 
     # TODO: Validate
@@ -465,7 +470,7 @@ class Detail(GAPIJSON[DetailModel]):
 
         episodes: list[AmazonEpisode] = []
         for index, entry in enumerate(entries):
-            if entry.is_selected:
+            if entry["isSelected"]:
                 episodes += self._page_episodes()
             else:
                 page = EpisodeList(self.session, self.plugin, self.title_key, index)
@@ -473,35 +478,33 @@ class Detail(GAPIJSON[DetailModel]):
         return episodes
 
     # TODO: Validate
-    def _offer_payloads(self) -> list[ExpandingCardPayload | CardOptionPayload]:
+    def _offer_payloads(self) -> list[dict[str, Any]]:
         """Return everything the page says about how the title can be watched.
 
         Every way to watch is an action on a card, and a card is laid out either
         as the one offer the page leads with or as one of a set to pick from.
         """
-        payloads: list[ExpandingCardPayload | CardOptionPayload] = []
+        payloads: list[dict[str, Any]] = []
         for action in self._offer_actions():
-            for primary_action in action.primary_actions:
-                payload = primary_action.payload
-                if card := payload.expanding_card:
-                    payloads += [option.payload for option in card.actions]
-                for card_option in payload.card_options or []:
-                    payloads += [option.payload for option in card_option.actions]
+            for primary_action in action["primaryActions"]:
+                payload = primary_action["payload"]
+                if card := payload.get("expandingCard"):
+                    payloads += [option["payload"] for option in card["actions"]]
+                for card_option in payload.get("cardOptions") or []:
+                    payloads += [option["payload"] for option in card_option["actions"]]
         return payloads
 
     # TODO: Validate
-    def _offer_actions(self) -> list[AtfItem]:
-        page_key = self.page_key()
-        return [
-            item for item in self._atf_state().action.atf if item.title_id == page_key
-        ]
+    def _offer_actions(self) -> list[dict[str, Any]]:
+        action = self._atf_state()["action"]["atf"].get(self.page_key())
+        return [action] if action else []
 
     # TODO: Validate
-    def _subscriptions(self) -> list[Subscription]:
+    def _subscriptions(self) -> list[dict[str, Any]]:
         return [
-            payload.subscription
+            payload["subscription"]
             for payload in self._offer_payloads()
-            if payload.subscription
+            if payload.get("subscription")
         ]
 
     # TODO: Validate
@@ -514,12 +517,12 @@ class Detail(GAPIJSON[DetailModel]):
         channels: list[AmazonChannel] = []
         seen: set[str] = set()
         for subscription in self._subscriptions():
-            benefit_id = subscription.benefit_id
+            benefit_id = subscription["benefitId"]
             if benefit_id == _PRIME_BENEFIT_ID or benefit_id in seen:
                 continue
             seen.add(benefit_id)
             channels.append(
-                AmazonChannel(benefit_id, _channel_name(subscription.label)),
+                AmazonChannel(benefit_id, _channel_name(subscription["label"])),
             )
         return channels
 
@@ -527,7 +530,7 @@ class Detail(GAPIJSON[DetailModel]):
     def included_with_prime(self) -> bool:
         """Report whether a Prime subscription is enough to watch this title."""
         return any(
-            subscription.benefit_id == _PRIME_BENEFIT_ID
+            subscription["benefitId"] == _PRIME_BENEFIT_ID
             for subscription in self._subscriptions()
         )
 
@@ -538,7 +541,7 @@ class Detail(GAPIJSON[DetailModel]):
         A title can be offered both ways, such as with a channel subscription and
         as a purchase, so this is asked on top of the other ways to watch it.
         """
-        return any(payload.transaction for payload in self._offer_payloads())
+        return any(payload.get("transaction") for payload in self._offer_payloads())
 
 
 # TODO: Validate

@@ -19,17 +19,70 @@ import { TMDB_MATCHES_QUERY_KEY } from "./tmdbMatchesQuery"
 
 // TODO: Validate
 /**
- * Settle one row: take either suggestion, or go and choose.
+ * Take the suggestion one of the TMDB columns is offering.
  *
- * The two suggestions are the two ways a row can be read - the episode TMDB
- * names the same, and the one it numbers the same - and each has a button of
- * its own so the one that is right can be taken without opening anything. They
- * are the same episode often enough that most rows are settled either way, and
- * where they differ the columns beside them are what says which to trust.
+ * Beneath the suggestion rather than in the actions column, because the two
+ * suggestions are two different episodes and a button away from the episode it
+ * links to says nothing about which one it takes. They are the same episode
+ * often enough that most rows are settled either way, and where they differ it
+ * is the summary above the button that says which to trust.
+ */
+export function TmdbMatchConfirmButton({
+  episodeId,
+  match,
+  kind,
+}: {
+  episodeId: string
+  match: NonNullable<UnmatchedEpisodeOutput["best_match"]>
+  kind: "name" | "number"
+}) {
+  const { showSuccessToast, showErrorToast } = useCustomToast()
+  const queryClient = useQueryClient()
+
+  const confirmMutation = useMutation({
+    mutationFn: () =>
+      EpisodesService.adminLinkEpisodeToTmdb({
+        episodeId,
+        canonicalEpisodeId: match.canonical_episode_id,
+      }),
+    onSuccess: () => {
+      showSuccessToast(`Linked to ${match.name ?? "the suggested episode"}`)
+      queryClient.invalidateQueries({ queryKey: TMDB_MATCHES_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: ["admin-tmdb-choices"] })
+    },
+    onError: (error: unknown) =>
+      handleError.call(
+        showErrorToast,
+        error as Parameters<typeof handleError>[0],
+      ),
+  })
+
+  const Icon = kind === "name" ? Check : Hash
+  const label = kind === "name" ? "Name Match" : "Number Match"
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="mt-1"
+      disabled={confirmMutation.isPending}
+      title={`Link to ${match.name ?? `the episode matched by ${kind}`}`}
+      onClick={() => confirmMutation.mutate()}
+    >
+      <Icon className="h-4 w-4" />
+      {label}
+    </Button>
+  )
+}
+
+// TODO: Validate
+/**
+ * Settle one row by going and choosing, or by saying there is nothing to choose.
  *
  * Choosing opens the same picker an episode's own page carries, so the one
  * place that knows how to offer TMDB episodes and link one is the place doing
- * it here too.
+ * it here too. Taking one of the two suggestions is done from the column
+ * offering it instead, by `TmdbMatchConfirmButton`.
  *
  * A settled episode is no longer waiting on anybody, so the row leaves the table
  * as soon as any way of settling it succeeds.
@@ -42,31 +95,6 @@ export function TmdbMatchActions({
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
   const [isPicking, setIsPicking] = useState(false)
-
-  const nameMatch = episode.best_match
-  const numberMatch = episode.number_match
-
-  const confirmMutation = useMutation({
-    mutationFn: ({ canonicalEpisodeId }: { canonicalEpisodeId: string }) =>
-      EpisodesService.adminLinkEpisodeToTmdb({
-        episodeId: episode.id,
-        canonicalEpisodeId,
-      }),
-    onSuccess: (_result, { canonicalEpisodeId }) => {
-      const linked =
-        canonicalEpisodeId === numberMatch?.canonical_episode_id
-          ? numberMatch
-          : nameMatch
-      showSuccessToast(`Linked to ${linked?.name ?? "the suggested episode"}`)
-      queryClient.invalidateQueries({ queryKey: TMDB_MATCHES_QUERY_KEY })
-      queryClient.invalidateQueries({ queryKey: ["admin-tmdb-choices"] })
-    },
-    onError: (error: unknown) =>
-      handleError.call(
-        showErrorToast,
-        error as Parameters<typeof handleError>[0],
-      ),
-  })
 
   const absentMutation = useMutation({
     mutationFn: () =>
@@ -85,44 +113,6 @@ export function TmdbMatchActions({
 
   return (
     <div className="flex items-center gap-1">
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={!nameMatch || confirmMutation.isPending}
-        title={
-          nameMatch
-            ? `Link to ${nameMatch.name ?? "the episode matched by name"}`
-            : "Nothing was matched by name for this episode"
-        }
-        onClick={() =>
-          nameMatch &&
-          confirmMutation.mutate({
-            canonicalEpisodeId: nameMatch.canonical_episode_id,
-          })
-        }
-      >
-        <Check className="h-4 w-4" />
-        Name Match
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={!numberMatch || confirmMutation.isPending}
-        title={
-          numberMatch
-            ? `Link to ${numberMatch.name ?? "the episode matched by number"}`
-            : "Nothing was matched by number for this episode"
-        }
-        onClick={() =>
-          numberMatch &&
-          confirmMutation.mutate({
-            canonicalEpisodeId: numberMatch.canonical_episode_id,
-          })
-        }
-      >
-        <Hash className="h-4 w-4" />
-        Number Match
-      </Button>
       <Button
         variant="outline"
         size="sm"

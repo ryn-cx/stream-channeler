@@ -36,7 +36,7 @@ class TMDBValidatorAlt(PluginValidatorAlt[TMDB]):
 
 
 # TODO: Validate
-class TestTVSeries1(
+class TestTV1(
     URLTestsAlt[TMDB],
     UpdatePluginTestsAlt[TMDB],
     UpdateTestsAlt[TMDB],
@@ -56,6 +56,28 @@ class TestTVSeries1(
         *TMDBValidatorAlt.urls,
         # Only a show has seasons, so the page listing them is a sub-page a
         # movie's URLs cannot carry.
+        "/{media_type}/{parse_url_response}/seasons?language=en-US",
+    )
+
+
+# TODO: Validate
+class TestTV2(
+    URLTestsAlt[TMDB],
+    UpdatePluginTestsAlt[TMDB],
+    UpdateTestsAlt[TMDB],
+    TMDBValidatorAlt,
+):
+    """Tests a TV series.
+
+    The series is available on Crunchyroll, Hulu, Netflix, and Crunchyroll on Amazon
+    Prime Video.
+    """
+
+    media_type = "tv"
+    parse_url_response = "57041"
+    show_slug = "gintama"
+    urls = (
+        *TMDBValidatorAlt.urls,
         "/{media_type}/{parse_url_response}/seasons?language=en-US",
     )
 
