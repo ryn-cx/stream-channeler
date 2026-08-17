@@ -669,7 +669,7 @@ export function EpisodeFilters({
   // reviewed and tweaked before being applied. The channel therefore stores the
   // resulting options rather than a reference to the order.
   // TODO: Validate
-  const loadOrderConfig = (config: string) => {
+  const loadOrderConfig = (config: string, orderPresetId: string) => {
     const parsedConfig = JSON.parse(config)
 
     form.reset({
@@ -713,7 +713,10 @@ export function EpisodeFilters({
     )
 
     setActiveTab("filtering")
-    showSuccessToast("Order loaded")
+    mutation.mutate({
+      randomSeed: parsedConfig.randomSeed ?? currentRandomSeed(),
+      orderPresetId,
+    })
   }
 
   // TODO: Validate
@@ -1452,7 +1455,10 @@ export function EpisodeFilters({
                               (order) => order.id === selectedSavedOrderId,
                             )
                             if (selectedOrder)
-                              loadOrderConfig(selectedOrder.config)
+                              loadOrderConfig(
+                                selectedOrder.config,
+                                selectedOrder.id,
+                              )
                           }}
                           disabled={selectedSavedOrderId === ""}
                         >
@@ -1466,7 +1472,7 @@ export function EpisodeFilters({
                       Public orders
                     </Label>
                     <PublicOrderPickerDialog
-                      onUse={(order) => loadOrderConfig(order.config)}
+                      onUse={(order) => loadOrderConfig(order.config, order.id)}
                     />
                   </div>
                 </TabsContent>
