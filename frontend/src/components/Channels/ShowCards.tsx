@@ -232,7 +232,7 @@ export function ShowCards({
         const canonicalShow = canonicalShows[canonicalShowId]
         // The title's own name, falling back to a website's for a title nothing
         // catalogued, which is the only name there is to read it under.
-        const name = canonicalShow?.name ?? firstShow.name ?? ""
+        const name = (canonicalShow ? canonicalShow.name : firstShow.name) ?? ""
         const showGroup: ShowGroup = { canonicalShowId, name }
         // The title's own artwork, for the same reason as its name: a card is
         // one title, and a website's listing of it is only what is left when

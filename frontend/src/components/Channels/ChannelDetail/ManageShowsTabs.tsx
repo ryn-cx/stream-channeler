@@ -147,14 +147,13 @@ export function ManageShowsTabs({
   // A card is read under the title's own name, so that is the name the list is
   // in the order of.
   // TODO: Validate
+  const titleName = (show: Show) =>
+    (show.canonical_show_id
+      ? canonicalShows[show.canonical_show_id]?.name
+      : show.name) ?? ""
+  // TODO: Validate
   const byTitleName = (first: Show, second: Show) =>
-    (
-      canonicalShows[first.canonical_show_id ?? ""]?.name ??
-      first.name ??
-      ""
-    ).localeCompare(
-      canonicalShows[second.canonical_show_id ?? ""]?.name ?? second.name ?? "",
-    )
+    titleName(first).localeCompare(titleName(second))
   const showsList = (showsData?.shows ?? []).sort(byTitleName)
   const filterOnlyShowsList = (showsData?.filter_only_shows ?? []).sort(
     byTitleName,

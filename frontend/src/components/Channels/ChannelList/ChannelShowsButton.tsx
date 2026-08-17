@@ -44,9 +44,10 @@ export function ChannelShowsButton({
   const groups = (data?.groups ?? [])
     .map((group) => ({
       ...group,
-      shows: (group.shows ?? []).filter(
-        (show) =>
-          !!(show.name ?? canonicalShows[show.canonical_show_id ?? ""]?.name),
+      shows: (group.shows ?? []).filter((show) =>
+        show.canonical_show_id
+          ? !!canonicalShows[show.canonical_show_id]?.name
+          : !!show.name,
       ),
     }))
     .filter((group) => group.shows.length > 0)

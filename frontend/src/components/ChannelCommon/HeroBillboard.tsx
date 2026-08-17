@@ -35,11 +35,7 @@ export function HeroBillboard({
   menuItems,
   topLeftBadge,
 }: HeroBillboardProps) {
-  const imageUrl =
-    episode.image_url ||
-    episode.season.image_url ||
-    episode.show.image_url ||
-    ""
+  const imageUrl = episode.image_url || ""
 
   return (
     <div className="relative w-full md:aspect-video md:max-h-[65vh]">

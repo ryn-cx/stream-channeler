@@ -30,8 +30,8 @@ export function primarySide(
 // TODO: Validate
 function heroSubtitle(data: EpisodeInformationOutput, preferSource: boolean) {
   const side = primarySide(data, preferSource)
-  const seasonNumber = side.season_number ?? data.source.season_number
-  const episodeNumber = side.episode_number ?? data.source.episode_number
+  const seasonNumber = side.season_number
+  const episodeNumber = side.episode_number
   const placement = [
     seasonNumber != null ? `Season ${seasonNumber}` : side.season_name,
     episodeNumber != null ? `Episode ${episodeNumber}` : null,
@@ -43,8 +43,8 @@ function heroSubtitle(data: EpisodeInformationOutput, preferSource: boolean) {
 function heroFacts(data: EpisodeInformationOutput, preferSource: boolean) {
   const side = primarySide(data, preferSource)
   const facts = [
-    formatDuration(side.duration ?? data.source.duration),
-    formatInformationDate(side.air_date ?? data.source.air_date),
+    formatDuration(side.duration),
+    formatInformationDate(side.air_date),
     // What TMDB has to do with the episode is no part of one website's own
     // account of it, so it is left out where the website's row is what was
     // opened.
@@ -126,10 +126,10 @@ export function EpisodeInformationHero({
 
   return (
     <InformationHero
-      title={side.name ?? data.source.name ?? "Unnamed episode"}
+      title={side.name ?? "Unnamed episode"}
       subtitle={heroSubtitle(data, preferSource)}
-      description={side.description ?? data.source.description}
-      imageUrl={side.image_url ?? data.source.image_url}
+      description={side.description}
+      imageUrl={side.image_url}
       facts={heroFacts(data, preferSource)}
       links={heroLinks(data, preferSource)}
     />

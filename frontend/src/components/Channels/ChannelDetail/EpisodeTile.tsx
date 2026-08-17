@@ -149,11 +149,7 @@ export function EpisodeTile({
   }
 
   const watched = !!episode.watch_date
-  const imageUrl =
-    episode.image_url ||
-    episode.season.image_url ||
-    episode.show.image_url ||
-    ""
+  const imageUrl = episode.image_url || ""
 
   const tileMenuItems: ActionMenuItem[] = [
     {
@@ -324,8 +320,7 @@ export function EpisodeTile({
         {!hovered && (
           <div className="mt-1 px-0.5">
             <p className="text-xs text-muted-foreground truncate">
-              {episode.name ||
-                `Episode ${episode.tmdb_episode_number ?? episode.episode_number ?? ""}`}
+              {episode.name || `Episode ${episode.episode_number ?? ""}`}
             </p>
           </div>
         )}

@@ -47,13 +47,13 @@ export default function TVShowCardOverlay({ episode }: CardOverlayProps) {
         lines={[
           formatNumberedLine(
             "Season",
-            episode.tmdb_season_number ?? episode.season.season_number,
-            episode.tmdb_season_name ?? episode.season.name,
+            episode.season.season_number,
+            episode.season.name,
           ),
           {
             ...formatNumberedLine(
               "Episode",
-              episode.tmdb_episode_number ?? episode.episode_number,
+              episode.episode_number,
               episode.name,
             ),
             valueClassName: "font-bold",
