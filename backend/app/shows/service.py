@@ -5,9 +5,10 @@ import uuid
 from typing import Any
 
 from fastapi import HTTPException
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
 from app.canonical_media.service import add_canonical_show
+from app.channels.models import ChannelShow
 from app.episodes.linker import EpisodeLinker
 from app.media.identifiers import TMDB_PLUGIN_KEY
 from app.media.media_type import MediaType
@@ -122,6 +123,61 @@ def unset_canonical_show(
     session.commit()
     session.refresh(show)
     return show
+
+
+# TODO: Validate
+def canonicalize_show(session: Session, show: Show) -> Show:
+    if not show.canonical_show_links:
+        message = "This show is already a canonical show."
+        raise HTTPException(status_code=409, detail=message)
+
+    _add_channel_shows(session, show, show.canonical_show_ids)
+
+    for link in list(show.canonical_show_links):
+        session.delete(link)
+    session.flush()
+    session.expire(show, ["canonical_show_links"])
+
+    _unlink_unlisted_episodes(session, show)
+    show.is_canonical = True
+    show.canonical_show_locked = True
+    session.add(show)
+    session.commit()
+    session.refresh(show)
+    return show
+
+
+# TODO: Validate
+def _add_channel_shows(
+    session: Session,
+    show: Show,
+    previous_canonical_show_ids: list[uuid.UUID],
+) -> None:
+    channel_ids = set(
+        session.exec(
+            select(ChannelShow.channel_id).where(
+                ChannelShow.canonical_show_id == show.id,
+            ),
+        ).all(),
+    )
+    previous_channel_shows = session.exec(
+        select(ChannelShow).where(
+            col(ChannelShow.canonical_show_id).in_(previous_canonical_show_ids),
+        ),
+    ).all()
+    for channel_show in previous_channel_shows:
+        if channel_show.channel_id in channel_ids:
+            continue
+        channel_ids.add(channel_show.channel_id)
+        session.add(
+            ChannelShow(
+                channel_id=channel_show.channel_id,
+                canonical_show_id=show.id,
+                is_whitelist=False,
+                is_blacklist_only=False,
+            ),
+        )
+    session.flush()
 
 
 # TODO: Validate

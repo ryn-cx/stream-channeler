@@ -12,6 +12,7 @@ import {
 } from "@/components/Common/VariantTrigger"
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -76,7 +77,7 @@ export function ChannelShowsButton({
             All shows included in this channel.
           </DialogDescription>
         </DialogHeader>
-        <div className="overflow-y-auto flex-1 min-h-0">
+        <DialogBody>
           {isLoading ? (
             <p className="text-sm text-muted-foreground py-4">Loading...</p>
           ) : !hasShows ? (
@@ -107,7 +108,7 @@ export function ChannelShowsButton({
               ))}
             </div>
           )}
-        </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   )

@@ -44,6 +44,7 @@ from app.shows.schemas import (
     TmdbEpisodeGroupOption,
 )
 from app.shows.service import (
+    canonicalize_show,
     list_tmdb_episode_groups,
     set_canonical_show,
     unset_canonical_show,
@@ -283,6 +284,15 @@ def admin_unlink_show_from_canonical(
 ) -> ShowPublic:
     """Take one canonical show off what a `Show` stands for."""
     return _show_output(unset_canonical_show(session, show, canonical_show))
+
+
+# TODO: Validate
+@shows_router.post(
+    "/{show_id}/canonicalize",  # noqa: FAST003 - Used by EditableShow.
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def admin_canonicalize_show(session: SessionDep, show: EditableShow) -> ShowPublic:
+    return _show_output(canonicalize_show(session, show))
 
 
 # TODO: Validate

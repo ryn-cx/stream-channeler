@@ -104,7 +104,10 @@ function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-body"
-      className={cn("min-h-0 flex-1 overflow-y-auto", className)}
+      className={cn(
+        "no-scrollbar -mx-6 max-h-[50vh] min-h-0 overflow-y-auto px-6",
+        className
+      )}
       {...props}
     />
   )

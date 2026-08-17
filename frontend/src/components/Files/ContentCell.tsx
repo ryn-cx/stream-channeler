@@ -8,6 +8,7 @@ import { JsonViewer } from "@/components/Common/JsonViewer"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -67,15 +68,17 @@ export function FileContentCell({ fileId, fileName }: FileContentCellProps) {
             </Button>
           </div>
         </DialogHeader>
-        {isFetching ? (
-          <span className="text-muted-foreground text-sm">Loading...</span>
-        ) : parsedJson ? (
-          <JsonViewer value={parsedJson.value} />
-        ) : (
-          <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap wrap-break-word rounded-md bg-muted p-4 text-sm">
-            {content ?? "-"}
-          </pre>
-        )}
+        <DialogBody>
+          {isFetching ? (
+            <span className="text-muted-foreground text-sm">Loading...</span>
+          ) : parsedJson ? (
+            <JsonViewer value={parsedJson.value} />
+          ) : (
+            <pre className="whitespace-pre-wrap wrap-break-word rounded-md bg-muted p-4 text-sm">
+              {content ?? "-"}
+            </pre>
+          )}
+        </DialogBody>
       </DialogContent>
     </Dialog>
   )

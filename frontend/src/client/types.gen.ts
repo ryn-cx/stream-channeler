@@ -2812,6 +2812,12 @@ export type ShowsAdminUnlinkShowFromCanonicalData = {
 
 export type ShowsAdminUnlinkShowFromCanonicalResponse = (ShowPublic);
 
+export type ShowsAdminCanonicalizeShowData = {
+    showId: string;
+};
+
+export type ShowsAdminCanonicalizeShowResponse = (ShowPublic);
+
 export type ShowsGetShowTmdbEpisodeGroupsData = {
     showId: string;
 };

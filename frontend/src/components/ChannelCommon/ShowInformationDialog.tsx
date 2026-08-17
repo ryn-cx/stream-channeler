@@ -125,10 +125,7 @@ export function ShowInformationSummary({
   showId,
   enabled = true,
 }: ShowInformationPanelProps) {
-  const { queryKey, data, isLoading, error } = useShowInformation(
-    showId,
-    enabled,
-  )
+  const { data, isLoading, error } = useShowInformation(showId, enabled)
 
   if (isLoading) {
     return (
@@ -146,14 +143,31 @@ export function ShowInformationSummary({
   return (
     <div className="flex flex-col gap-2">
       {showHero(data, summaryFacts(data))}
-
-      <IssueReportsSection
-        target="show"
-        mediaId={showId}
-        reports={data.issue_reports}
-        informationQueryKey={queryKey}
-      />
     </div>
+  )
+}
+
+// TODO: Validate
+export function ShowIssueReports({
+  showId,
+  enabled = true,
+}: ShowInformationPanelProps) {
+  const { queryKey, data, isLoading, error } = useShowInformation(
+    showId,
+    enabled,
+  )
+
+  if (isLoading || error || !data) {
+    return null
+  }
+
+  return (
+    <IssueReportsSection
+      target="show"
+      mediaId={showId}
+      reports={data.issue_reports}
+      informationQueryKey={queryKey}
+    />
   )
 }
 

@@ -13,6 +13,7 @@ import { DataTable, serializeTableQuery } from "@/components/Common/DataTable"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -79,7 +80,7 @@ export function PublicOrderPickerDialog({
             Pick a public order to load into this channel's options.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex-1 min-h-0 overflow-y-auto">
+        <DialogBody>
           {ordersQuery.data === undefined ? (
             <p className="text-sm text-muted-foreground">
               Loading public orders...
@@ -111,7 +112,7 @@ export function PublicOrderPickerDialog({
               />
             </div>
           )}
-        </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   )

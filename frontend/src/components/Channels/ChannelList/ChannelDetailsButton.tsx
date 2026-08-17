@@ -9,6 +9,7 @@ import { ShowCards } from "@/components/Channels/ShowCards"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -61,7 +62,7 @@ export function ChannelDetailsButton({
             The channel's description and every show it includes.
           </DialogDescription>
         </DialogHeader>
-        <div className="overflow-y-auto flex-1 min-h-0 space-y-4 py-2">
+        <DialogBody className="space-y-4 py-2">
           {channel.description && (
             <ChannelDescriptionMarkdown description={channel.description} />
           )}
@@ -94,7 +95,7 @@ export function ChannelDetailsButton({
               </div>
             ))
           )}
-        </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   )

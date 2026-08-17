@@ -8,6 +8,7 @@ import { EpisodesService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -140,20 +141,22 @@ export function TmdbMatchActions({
         for the whole catalogue just to draw the table.
       */}
       <Dialog open={isPicking} onOpenChange={setIsPicking}>
-        <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>
               {episode.show_name ?? "Unnamed show"} — TMDB episode link
             </DialogTitle>
           </DialogHeader>
-          <TmdbLinkPicker
-            episodeId={episode.id}
-            name={episode.name}
-            seasonNumber={episode.season_number}
-            episodeNumber={episode.episode_number}
-            informationQueryKey={TMDB_MATCHES_QUERY_KEY}
-            onLinked={() => setIsPicking(false)}
-          />
+          <DialogBody>
+            <TmdbLinkPicker
+              episodeId={episode.id}
+              name={episode.name}
+              seasonNumber={episode.season_number}
+              episodeNumber={episode.episode_number}
+              informationQueryKey={TMDB_MATCHES_QUERY_KEY}
+              onLinked={() => setIsPicking(false)}
+            />
+          </DialogBody>
         </DialogContent>
       </Dialog>
     </div>

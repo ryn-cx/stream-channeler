@@ -6,6 +6,7 @@ import { ChannelsService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -100,7 +101,7 @@ export function BulkImport() {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="overflow-y-auto py-4 flex-1 min-h-0 space-y-2">
+        <DialogBody className="py-4 space-y-2">
           <textarea
             value={jsonInput}
             onChange={(event) => {
@@ -114,7 +115,7 @@ export function BulkImport() {
           {parseError && (
             <p className="text-sm text-destructive">{parseError}</p>
           )}
-        </div>
+        </DialogBody>
 
         <DialogFooter>
           <Button

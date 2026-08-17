@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -90,7 +91,7 @@ interface ManageShowsTabsProps {
 // TODO: Validate
 export function ManageShowsTabs({
   channelId,
-  contentClassName = "overflow-y-auto flex-1 min-h-0 py-4",
+  contentClassName = "no-scrollbar -mx-6 max-h-[50vh] overflow-y-auto px-6 py-4",
   tabsListClassName,
   queueRefetchInterval,
   combinedChannels,
@@ -407,14 +408,14 @@ export function ManageShowsTabs({
                 </DialogTitle>
               </DialogHeader>
               {selectedTitle && (
-                <div className="min-h-0 flex-1 overflow-y-auto">
+                <DialogBody>
                   <WhitelistManager
                     channelId={channelId}
                     canonicalShowId={selectedTitle.canonicalShowId}
                     showName={selectedTitle.name || "Unknown Show"}
                     onClose={() => setSelectedTitle(null)}
                   />
-                </div>
+                </DialogBody>
               )}
             </DialogContent>
           </Dialog>

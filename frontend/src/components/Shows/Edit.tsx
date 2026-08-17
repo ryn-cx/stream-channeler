@@ -6,12 +6,18 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { type ShowPublic, ShowsService, type ShowUpdate } from "@/client"
-import { AdminZone } from "@/components/Common/AdminZone"
+import { ShowInformationSummary } from "@/components/ChannelCommon/ShowInformationDialog"
 import { FormCheckboxField } from "@/components/Common/FormCheckboxField"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { useEditTableRow } from "@/components/Common/useEditTableRow"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import useAuth from "@/hooks/useAuth"
 import { extraText, parseExtraText } from "@/lib/extra"
 import {
@@ -20,7 +26,7 @@ import {
   optionalString,
   requiredKey,
 } from "@/lib/formSchemas"
-
+import { CanonicalizeShowButton } from "./CanonicalizeShowButton"
 import { CanonicalShowField } from "./CanonicalShowField"
 import {
   episodeGroupIdOf,
@@ -128,80 +134,93 @@ const EditShow = ({ show, size }: EditShowProps) => {
       isPending={mutation.isPending}
       size="3xl"
     >
-      <FormTextField
-        control={form.control}
-        label="Name"
-        placeholder="Show name"
-        type="text"
-      />
-      <FormTextField
-        control={form.control}
-        label="Media Type"
-        placeholder="e.g. anime, series"
-        type="text"
-      />
-      <FormTextField
-        control={form.control}
-        label="Description"
-        placeholder="Description"
-        type="text"
-      />
-      <FormTextField
-        control={form.control}
-        label="URL"
-        placeholder="https://..."
-        type="url"
-      />
-      <FormTextField
-        control={form.control}
-        label="Image URL"
-        placeholder="https://..."
-        type="url"
-      />
-      <FormTextField
-        control={form.control}
-        label="Data Timestamp"
-        type="datetime-local"
-      />
-      <FormTextField
-        control={form.control}
-        label="Update At"
-        type="datetime-local"
-        showNowButton
-      />
-      <FormTextField control={form.control} label="Key" type="text" />
-      <FormTextField control={form.control} label="Year" type="number" />
-      <FormTextField
-        control={form.control}
-        label="Canonical Show Note"
-        type="text"
-      />
-      <FormCheckboxField control={form.control} label="Canonical Show Locked" />
-      <FormTextField
-        control={form.control}
-        label="Deleted At"
-        type="datetime-local"
-      />
-      <FormTextField control={form.control} label="Extra" type="text" />
+      <ShowInformationSummary showId={show.id} enabled={isOpen} />
       {user?.is_superuser && (
-        <AdminZone>
+        <div className="space-y-3">
           <CanonicalShowField
             showId={show.id}
             canonicalShowIds={show.canonical_show_ids ?? []}
             enabled={isOpen}
           />
-        </AdminZone>
+          <CanonicalizeShowButton
+            showId={show.id}
+            canonicalShowIds={show.canonical_show_ids ?? []}
+          />
+        </div>
       )}
       {showsEpisodeOrder && (
-        <AdminZone>
-          <TmdbEpisodeOrderField
-            showId={show.id}
-            value={episodeGroupId}
-            onChange={setEpisodeGroupId}
-            enabled={isOpen}
-          />
-        </AdminZone>
+        <TmdbEpisodeOrderField
+          showId={show.id}
+          value={episodeGroupId}
+          onChange={setEpisodeGroupId}
+          enabled={isOpen}
+        />
       )}
+      <Accordion type="single" collapsible>
+        <AccordionItem value="fields">
+          <AccordionTrigger>Show Fields</AccordionTrigger>
+          <AccordionContent className="grid gap-4">
+            <FormTextField
+              control={form.control}
+              label="Name"
+              placeholder="Show name"
+              type="text"
+            />
+            <FormTextField
+              control={form.control}
+              label="Media Type"
+              placeholder="e.g. anime, series"
+              type="text"
+            />
+            <FormTextField
+              control={form.control}
+              label="Description"
+              placeholder="Description"
+              type="text"
+            />
+            <FormTextField
+              control={form.control}
+              label="URL"
+              placeholder="https://..."
+              type="url"
+            />
+            <FormTextField
+              control={form.control}
+              label="Image URL"
+              placeholder="https://..."
+              type="url"
+            />
+            <FormTextField
+              control={form.control}
+              label="Data Timestamp"
+              type="datetime-local"
+            />
+            <FormTextField
+              control={form.control}
+              label="Update At"
+              type="datetime-local"
+              showNowButton
+            />
+            <FormTextField control={form.control} label="Key" type="text" />
+            <FormTextField control={form.control} label="Year" type="number" />
+            <FormTextField
+              control={form.control}
+              label="Canonical Show Note"
+              type="text"
+            />
+            <FormCheckboxField
+              control={form.control}
+              label="Canonical Show Locked"
+            />
+            <FormTextField
+              control={form.control}
+              label="Deleted At"
+              type="datetime-local"
+            />
+            <FormTextField control={form.control} label="Extra" type="text" />
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </FormModal>
   )
 }

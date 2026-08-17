@@ -8,7 +8,10 @@ import type {
   WhitelistShowInput,
 } from "@/client"
 import { ChannelsService } from "@/client"
-import { ShowInformationSummary } from "@/components/ChannelCommon/ShowInformationDialog"
+import {
+  ShowInformationSummary,
+  ShowIssueReports,
+} from "@/components/ChannelCommon/ShowInformationDialog"
 import EditSeason from "@/components/Seasons/Edit"
 import { Button } from "@/components/ui/button"
 import { LoadingButton } from "@/components/ui/loading-button"
@@ -347,6 +350,8 @@ export function WhitelistManager({
         </div>
 
         <ShowInformationSummary showId={canonicalShowId} />
+
+        <ShowIssueReports showId={canonicalShowId} />
 
         {isLoading ? (
           <div className="flex items-center justify-center py-8">

@@ -792,7 +792,7 @@ export function EpisodeFilters({
               </TabsList>
               <TabsContent
                 value="filtering"
-                className="space-y-4 flex-1 min-h-0 overflow-y-auto"
+                className="space-y-4 no-scrollbar -mx-6 max-h-[50vh] overflow-y-auto px-6"
               >
                 {/* grid - Use a grid layout */}
                 {/* md:grid-cols-2 - 2 column grid */}
@@ -1007,7 +1007,7 @@ export function EpisodeFilters({
               </TabsContent>
               <TabsContent
                 value="sorting"
-                className="space-y-4 flex-1 min-h-0 overflow-y-auto"
+                className="space-y-4 no-scrollbar -mx-6 max-h-[50vh] overflow-y-auto px-6"
               >
                 <div className="space-y-4">
                   <h3>Sort Options</h3>
@@ -1276,7 +1276,7 @@ export function EpisodeFilters({
               {!isOrderMode && (
                 <TabsContent
                   value="sources"
-                  className="space-y-4 flex-1 min-h-0 overflow-y-auto"
+                  className="space-y-4 no-scrollbar -mx-6 max-h-[50vh] overflow-y-auto px-6"
                 >
                   <FormField
                     control={form.control}
@@ -1404,7 +1404,7 @@ export function EpisodeFilters({
               {loggedIn && !isOrderMode && (
                 <TabsContent
                   value="saved"
-                  className="space-y-4 flex-1 min-h-0 overflow-y-auto"
+                  className="space-y-4 no-scrollbar -mx-6 max-h-[50vh] overflow-y-auto px-6"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-sm text-muted-foreground">
@@ -1475,7 +1475,7 @@ export function EpisodeFilters({
               {isOrderMode && (
                 <TabsContent
                   value="details"
-                  className="space-y-4 flex-1 min-h-0 overflow-y-auto"
+                  className="space-y-4 no-scrollbar -mx-6 max-h-[50vh] overflow-y-auto px-6"
                 >
                   <div className="flex items-end gap-3">
                     <div className="flex-1 space-y-1.5">

@@ -128,3 +128,10 @@
 .scrollbar-hide {
   scrollbar-width: none;
 }
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

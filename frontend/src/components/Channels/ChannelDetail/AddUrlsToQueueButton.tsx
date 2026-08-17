@@ -70,7 +70,7 @@ export function ManageShowsButton({
 
         <ManageShowsTabs
           channelId={channelId}
-          contentClassName="overflow-y-auto flex-1 min-h-0 px-8 py-4"
+          contentClassName="no-scrollbar max-h-[50vh] overflow-y-auto px-8 py-4"
           tabsListClassName="mx-8 flex-wrap h-auto"
           combinedChannels={combinedChannels}
           onRequestClose={() => setIsOpen(false)}
