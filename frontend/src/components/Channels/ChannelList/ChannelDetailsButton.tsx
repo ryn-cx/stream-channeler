@@ -56,7 +56,7 @@ export function ChannelDetailsButton({
           showLabel={showLabel}
         />
       </DialogTrigger>
-      <DialogContent className="max-h-[80vh] flex flex-col">
+      <DialogContent className="sm:max-w-[calc(100%-2rem)] max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{channel.name ?? "Channel"}</DialogTitle>
           <DialogDescription>

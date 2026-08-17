@@ -33,9 +33,10 @@ from app.users.models import User
 from app.users.service import get_or_create_plugin_user
 from app.watches.exceptions import WatchAlreadyExistsError
 from app.watches.identifiers import (
-    canonical_id_by_identifier,
-    identifiers_of_canonical_ids,
+    canonical_id_by_watch,
+    watch_names,
     watched_canonical_ids,
+    watches_of_canonical_ids,
 )
 from app.watches.models import Watch
 from app.watches.schemas import (
@@ -150,10 +151,7 @@ def _episode_watch_base_statement(user_id: uuid.UUID) -> SelectOfScalar[Watch]:
     # it as is picked.
     return (
         select(Watch)
-        .join(
-            IdentifiedEpisode,
-            col(IdentifiedEpisode.watch_identifier) == col(Watch.watch_identifier),
-        )
+        .join(IdentifiedEpisode, watch_names(IdentifiedEpisode))
         .outerjoin(identified_link, links_of(IdentifiedEpisode, identified_link))
         .join(
             representative,
@@ -206,11 +204,38 @@ def get_watched_episodes(
 
 
 # TODO: Validate
-def _representative_episodes_by_watch_identifier(
+def _own_visible_episodes_by_watch(
     session: Session,
     user_id: uuid.UUID,
-    watch_identifiers: set[str],
-) -> dict[str, Episode]:
+    watches: Sequence[Watch],
+) -> dict[uuid.UUID, Episode]:
+    watch_ids = {watch.id for watch in watches}
+    if not watch_ids:
+        return {}
+    rows = session.exec(
+        select(col(Watch.id), Episode)  # type: ignore[call-overload]
+        .select_from(Watch)
+        .join(Episode, col(Episode.id) == col(Watch.episode_id))
+        .join(Season, col(Season.id) == col(Episode.season_id))
+        .join(Show, col(Show.id) == col(Season.show_id))
+        .join(Source, col(Source.id) == col(Show.source_id))
+        .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
+        .where(
+            col(Watch.id).in_(watch_ids),
+            col(Episode.deleted_at).is_(None),
+            _visible_plugin_condition(user_id),
+            col(Plugin.key) != TMDB_PLUGIN_KEY,
+        ),
+    ).all()
+    return dict(rows)
+
+
+# TODO: Validate
+def _representative_episodes_by_watch(
+    session: Session,
+    user_id: uuid.UUID,
+    watches: Sequence[Watch],
+) -> dict[uuid.UUID, Episode]:
     """Load the representative visible `Episode` for each watched identifier.
 
     An identifier is a link's own, so it is read to the episode that link is of and the
@@ -218,16 +243,17 @@ def _representative_episodes_by_watch_identifier(
     media is reached two ways and so has a row under each, either stands for the
     identifier; they are links to one episode either way.
     """
-    canonical_ids_by_identifier = canonical_id_by_identifier(
+    episodes = _own_visible_episodes_by_watch(session, user_id, watches)
+    canonical_ids_by_watch = canonical_id_by_watch(
         session,
-        watch_identifiers,
+        [watch for watch in watches if watch.id not in episodes],
     )
-    if not canonical_ids_by_identifier:
-        return {}
+    if not canonical_ids_by_watch:
+        return episodes
     representative = _representative_episode_subquery(
         user_id,
         select(col(Episode.id)).where(
-            col(Episode.id).in_(set(canonical_ids_by_identifier.values())),
+            col(Episode.id).in_(set(canonical_ids_by_watch.values())),
         ),
     )
     rows = session.exec(
@@ -236,11 +262,11 @@ def _representative_episodes_by_watch_identifier(
         .join(representative, col(Episode.id) == representative.c.episode_id),
     ).all()
     episode_by_canonical_id = dict(rows)
-    return {
-        watch_identifier: episode_by_canonical_id[canonical_id]
-        for watch_identifier, canonical_id in canonical_ids_by_identifier.items()
-        if canonical_id in episode_by_canonical_id
-    }
+    for watch_id, canonical_id in canonical_ids_by_watch.items():
+        episode = episode_by_canonical_id.get(canonical_id)
+        if episode is not None:
+            episodes[watch_id] = episode
+    return episodes
 
 
 # TODO: Validate
@@ -256,14 +282,14 @@ def _format_watched_episodes_data(
     plugins_dict: dict[uuid.UUID, PluginOutput] = {}
     watches: list[WatchItem] = []
 
-    episode_by_watch_identifier = _representative_episodes_by_watch_identifier(
+    episode_by_watch = _representative_episodes_by_watch(
         session,
         user_id,
-        {watch.watch_identifier for watch in episode_watches},
+        episode_watches,
     )
 
     for episode_watch in episode_watches:
-        episode = episode_by_watch_identifier.get(episode_watch.watch_identifier)
+        episode = episode_by_watch.get(episode_watch.id)
         if episode is None:
             continue
         season = episode.season
@@ -324,11 +350,8 @@ def create_watch(
     # back out, where the identifier is read to the episode the link is of and
     # every other link to that episode counts too.
     canonical_id = canonical_id_of(episode)
-    group = identifiers_of_canonical_ids(session, [canonical_id])[canonical_id]
 
-    unverified_watch_query = select(Watch).where(
-        Watch.user_id == user_id,
-        col(Watch.watch_identifier).in_(group),
+    unverified_watch_query = watches_of_canonical_ids(user_id, [canonical_id]).where(
         col(Watch.verified) == False,  # noqa: E712 - SQLAlchemy syntax
     )
     if session.exec(unverified_watch_query).first():
