@@ -80,10 +80,10 @@ export function HeroBillboard({
           <div className="flex flex-col gap-2">
             <p className="text-sm md:text-lg font-medium text-zinc-300 line-clamp-1">
               {episode.show.name}
-              {episode.season.name ? ` - ${episode.season.name}` : ""}
+              {episode.tmdb_season_name ? ` - ${episode.tmdb_season_name}` : ""}
             </p>
             <h2 className="text-2xl md:text-5xl lg:text-6xl font-bold text-white leading-tight line-clamp-2">
-              {episode.name || `Episode ${episode.episode_number || ""}`}
+              {episode.name || `Episode ${episode.tmdb_episode_number || ""}`}
             </h2>
           </div>
 

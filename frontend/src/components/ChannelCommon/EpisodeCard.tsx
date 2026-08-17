@@ -128,7 +128,7 @@ export function EpisodeCard({
 }: EpisodeCardProps) {
   const imageUrl = episode.image_url || ""
 
-  const episodeNumber = episode.episode_number
+  const episodeNumber = episode.tmdb_episode_number
   const altText = [
     episodeNumber != null ? `Episode ${episodeNumber}` : null,
     episode.name,

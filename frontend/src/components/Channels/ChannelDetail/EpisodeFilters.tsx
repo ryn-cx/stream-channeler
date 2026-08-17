@@ -748,7 +748,7 @@ export function EpisodeFilters({
           <VariantTrigger
             variant={variant}
             icon={Filter}
-            label="Channel Options"
+            label="Episode Order"
             menuLabel="Filters"
           />
         </DialogTrigger>
