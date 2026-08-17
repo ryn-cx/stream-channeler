@@ -430,9 +430,9 @@ class EpisodeLinker:
     def _alternate_numbers_cache(self) -> dict[int, dict[int, frozenset[int]]]:
         """Every number each TMDB episode carries in another order, by title.
 
-        Kept on the session for the same reason the translations are: a linker is
-        built afresh for every show that is read, and every copy of one title asks
-        for the same title's orders.
+        Kept on the session for the same reason the translations are: a linker is built
+        afresh for every show that is read, and every non-canonical row of one title
+        asks for the same title's orders.
         """
         cache: dict[int, dict[int, frozenset[int]]] = self.session.info.setdefault(
             "alternate_tmdb_episode_numbers",
@@ -450,12 +450,11 @@ class EpisodeLinker:
     def _claim(self, episode: Episode, tmdb_episode: Episode, note: str) -> None:
         """Point the episode at the canonical episode and take it off the table.
 
-        A canonical episode another of the show's episodes already names is
-        handed to this one too. A listing carries the same episode twice often
-        enough - Hulu's dubbed row and subtitled row of every episode of a title
-        are both that episode - that the second row to answer to a record is
-        another copy of it rather than a clash, and saying so is the answer a
-        matcher worked out.
+        A canonical episode another of the show's episodes already names is handed to
+        this one too. A listing carries the same episode twice often enough - Hulu's
+        dubbed row and subtitled row of every episode of a title are both that episode -
+        that the second row to answer to a record is another non-canonical row of it
+        rather than a clash, and saying so is the answer a matcher worked out.
 
         The link is added to whatever the episode already stands for rather than
         put in its place: a matcher answering with a second record has found
@@ -468,9 +467,9 @@ class EpisodeLinker:
         matched episode read as one still waiting: it was handed on to the
         matchers after, each of which gave it another canonical episode.
 
-        Where the copy sits is carried onto the link, which is what a copy is
-        ordered by once it has one; the column it was read off says where one
-        website filed the row and cannot say where it sits under each of the
+        Where the non-canonical row sits is carried onto the link, which is what a
+        non-canonical row is ordered by once it has one; the column it was read off says
+        where one website filed the row and cannot say where it sits under each of the
         episodes it stands for.
         """
         link = EpisodeCanonicalEpisode(
@@ -547,7 +546,7 @@ class EpisodeLinker:
 
         The orders are TMDB's own and are read off the plugin, since a row holds
         the numbering of the one order its title is stored in and nothing of the
-        rest. Every title the show is a copy of is read, so a listing that mixes
+        rest. Every title the show is linked to is read, so a listing that mixes
         titles is matched against the orders of each of them.
 
         Read once per title per session and remembered there, so a run that reads
@@ -1047,7 +1046,7 @@ def link_episode_using_tmdb_url(
     Only a film's page and a series episode's page are taken, since they are the
     addresses that name one record: a series page names a title rather than any
     of its episodes, and a season's names a run of them, so neither says what
-    `episode` is a copy of. Which of the two was given is settled here, and the
+    `episode` is linked to. Which of the two was given is settled here, and the
     address is handed on to whichever reads it.
     """
     address = url.strip()

@@ -152,10 +152,10 @@ def add_results_to_channel(
 
     A plugin says what a URL imported by the keys of the records it just wrote.
     A channel holds the media itself, so each key is resolved to the row that
-    record is a copy of first, and a result naming a record that reached no
+    record is linked to first, and a result naming a record that reached no
     canonical row is left for a later run.
 
-    A listing that mixes titles is a copy of each of them, so it goes on the
+    A listing that mixes titles is linked to each of them, so it goes on the
     channel as every title it brought in, each holding only the seasons and
     episodes that belong to it. A title the result names nothing of is left off
     when the result is a whitelist, since a whitelist naming none of a title's
@@ -199,8 +199,8 @@ def add_results_to_channel(
 class _CanonicalIds:
     """What each record key in a batch of results resolves to, at every level.
 
-    A show key resolves to every title that listing is a copy of, since a listing
-    that mixes titles is a copy of each of them. A season or an episode key
+    A show key resolves to every title that listing is linked to, since a listing
+    that mixes titles is linked to each of them. A season or an episode key
     resolves to the one row it is, along with the title that row is under, which
     is what says which of a mixed listing's titles it belongs to.
     """
@@ -274,7 +274,7 @@ def _titles_by_season(
     """Map each season to the titles holding it.
 
     A season of a title is held by that title alone. A season a website filed
-    under its own listing is held by every title the listing is a copy of, since
+    under its own listing is held by every title the listing is linked to, since
     a listing that mixes titles is as much each of them as any other.
     """
     if not season_ids:
@@ -312,7 +312,7 @@ def _titles_by_episode(
     """Map each canonical episode to the titles holding it.
 
     An episode of a title is held by that title alone. An episode a website filed
-    under its own listing is held by every title the listing is a copy of, since
+    under its own listing is held by every title the listing is linked to, since
     a listing that mixes titles is as much each of them as any other.
     """
     if not canonical_episode_ids:

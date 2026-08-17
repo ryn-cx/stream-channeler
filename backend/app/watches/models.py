@@ -32,8 +32,9 @@ class BaseWatch(SQLModel):
 # TODO: Validate
 class Watch(TimestampIdAndHashMixin, BaseWatch, table=True):
     __table_args__ = (
-        # Keyed on the episode itself rather than on the copy, so a watch keeps
-        # its identity after the copy it was recorded against is deleted.
+        # Keyed on the episode itself rather than on the non-canonical row, so a watch
+        # keeps its identity after the non-canonical row it was recorded against is
+        # deleted.
         PrimaryKeyConstraint("id"),
         # Used in episode_selector and watch services to look up a user's watches.
         Index("Watch-user_id-episode_id-index", "user_id", "episode_id"),

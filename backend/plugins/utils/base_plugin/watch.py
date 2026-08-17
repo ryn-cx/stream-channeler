@@ -24,8 +24,8 @@ class WatchMixin(ABC):
     def _get_episodes_by_key(self, episode_keys: list[str]) -> dict[str, Episode]:
         """Load this plugin's `Episode` for each key.
 
-        A watch is of the episode itself rather than of one website's copy, so
-        recording a single watch per key is enough - no per-source duplication is
+        A watch is of the episode itself rather than of one website's non-canonical row,
+        so recording a single watch per key is enough - no per-source duplication is
         needed.
         """
         if not episode_keys:

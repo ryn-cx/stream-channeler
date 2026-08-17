@@ -102,10 +102,10 @@ canonical_episodes_router = APIRouter(
     tags=["canonical-episodes"],
 )
 
-# Every column the canonical list is sorted and filtered by that an `Episode`
-# does not answer to under the name it is served as. `canonical_season_id` is
-# among them now that an episode hangs off its season by `season_id` like any
-# copy: without it here the column is silently unsortable.
+# Every column the canonical list is sorted and filtered by that an `Episode` does not
+# answer to under the name it is served as. `canonical_season_id` is among them now that
+# an episode hangs off its season by `season_id` like any non-canonical row: without it
+# here the column is silently unsortable.
 CANONICAL_EPISODE_EXTRA_COLUMNS: dict[str, Any] = {
     "canonical_season_id": Episode.season_id,
     "canonical_season_name": Season.name,
@@ -308,10 +308,10 @@ def admin_link_episode_by_tmdb_url(
 ) -> EpisodeOutput:
     """Point an `Episode` at the TMDB record a themoviedb.org address names.
 
-    Read here rather than in the browser so that the title is imported on the
-    way, which is what turns the numbering in an episode's address into the
-    record the episode is pointed at, and so that a title the show was not a
-    copy of is linked to it as well.
+    Read here rather than in the browser so that the title is imported on the way, which
+    is what turns the numbering in an episode's address into the record the episode is
+    pointed at, and so that a title the show was not a non-canonical row of is linked to
+    it as well.
     """
     return _episode_output(
         session,
@@ -436,10 +436,10 @@ def get_episode_information(
     show = season.show
     source = show.source
 
-    # The episode itself, beside the website's account of it. Named for TMDB
-    # because that is where a canonical row's values come from when TMDB has a
-    # record; media it has never heard of is described by its one copy, so the
-    # two sides read alike and the comparison is empty rather than misleading.
+    # The episode itself, beside the website's account of it. Named for TMDB because
+    # that is where a canonical row's values come from when TMDB has a record; media it
+    # has never heard of is described by its one non-canonical row, so the two sides
+    # read alike and the comparison is empty rather than misleading.
     counterpart = canonical_episode_of(session, episode.sole_canonical_episode_id)
     tmdb: EpisodeInformationSide | None = None
     if counterpart:
@@ -484,7 +484,7 @@ def update_episode(
 ) -> EpisodeOutput:
     """Update and return an `Episode` if it's editable by the `User`.
 
-    Which episode this is a copy of is settled by the TMDB matching screens
+    Which episode this is linked to is settled by the TMDB matching screens
     rather than written here, so there is nothing to check.
     """
     return _episode_output(session, episode_input.update(session, episode))

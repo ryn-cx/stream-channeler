@@ -936,7 +936,8 @@ export function DetailTablePage<TData extends { id: string }>({
 // resolved server-side against the owning plugin.
 export type OwnerView = MediaScope
 
-// The canonical rows share a table with the copies of them but have no owner, so
+// The canonical rows share a table with the non-canonical rows of them but have
+// no owner, so
 // they are a tab of their own rather than one of the ownership scopes.
 export const CANONICAL_TAB = "canonical"
 
@@ -985,7 +986,8 @@ const SCOPE_TABS: { value: MediaTab; label: string }[] = [
 ]
 
 // The canonical tab of a media list: the same page, reading the canonical rows
-// of the table instead of the copies, so it needs its own columns and fetcher.
+// of the table instead of the non-canonical rows, so it needs its own columns
+// and fetcher.
 interface CanonicalTab<TCanonical extends { id: string }> {
   columns: ColumnDef<TCanonical>[]
   defaultHidden?: VisibilityState

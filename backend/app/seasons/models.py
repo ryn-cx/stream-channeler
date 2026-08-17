@@ -40,12 +40,12 @@ CANONICAL_SORTABLE_FIELDS = [
 
 # TODO: Validate
 class BaseSeason(BaseMediaMixin):
-    """The columns a season carries, and so a copy of one carries too."""
+    """The columns a season carries, and so a non-canonical row of one carries too."""
 
     name: str | None = Field(default=None)
-    # The season's own page, as against a copy's `url`, which is where that
-    # one website streams it. TMDB's row points at themoviedb.org; a row only
-    # one website knows about points wherever that website put it.
+    # The season's own page, as against a non-canonical row's `url`, which is where that
+    # one website streams it. TMDB's row points at themoviedb.org; a row only one
+    # website knows about points wherever that website put it.
     url: str | None = Field(default=None)
     season_number: int | None = Field(default=None)
     image_url: str | None = Field(default=None)
@@ -54,10 +54,10 @@ class BaseSeason(BaseMediaMixin):
 
 # TODO: Validate
 class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
-    """Model representing a season, and a website's copy of one.
+    """Model representing a season, and a website's non-canonical row of one.
 
-    The season itself hangs off the title the way a copy hangs off the listing,
-    by the same `show_id`, so one primary key covers both: a `show_id` names
+    The season itself hangs off the title the way a non-canonical row hangs off the
+    listing, by the same `show_id`, so one primary key covers both: a `show_id` names
     either a title or a listing and never both at once.
     """
 

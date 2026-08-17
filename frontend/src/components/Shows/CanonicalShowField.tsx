@@ -60,7 +60,7 @@ function CanonicalShowName({ show }: { show: CanonicalShowOutput }) {
 /**
  * Which canonical shows this row stands for, and the choosing of another.
  *
- * A row is linked to the titles it is a copy of by the import that read it,
+ * A row is linked to its titles by the import that read it,
  * which is a guess made off the name and the year and is wrong often enough to
  * be worth settling by hand. Choosing here adds to what the row already stands
  * for rather than replacing it, since one page holding two titles - a channel

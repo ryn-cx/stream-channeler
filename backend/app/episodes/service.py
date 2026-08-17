@@ -1,5 +1,5 @@
 # TODO: Validate
-"""Which TMDB episode an `Episode` is a copy of, and the ones it could be.
+"""Which TMDB episode an `Episode` is linked to, and the ones it could be.
 
 An import points an episode at TMDB by name, and an episode whose name matched
 nothing is left standing only for itself. Those are what is gathered here, each
@@ -249,10 +249,10 @@ def _number_match(
 
 # TODO: Validate
 def _has_tmdb_title() -> ColumnElement[bool]:
-    """Whether TMDB holds any of the titles the outer `Show` is a copy of.
+    """Whether TMDB holds any of the titles the outer `Show` is linked to.
 
     Any of them rather than one picked out of them, since a listing that mixes
-    titles is as much a copy of the second as of the first and an episode of
+    titles is as much linked to the second as of the first and an episode of
     either is one there are TMDB episodes to match it against.
     """
     canonical_show = aliased(Show)
@@ -274,8 +274,8 @@ def _has_tmdb_title() -> ColumnElement[bool]:
 
 
 # TODO: Validate
-# Which joined column each sortable name is, since a name a copy is not sorted
-# by on its own row - the show it is under, the source that carries it - has no
+# Which joined column each sortable name is, since a name a non-canonical row is not
+# sorted by on its own row - the show it is under, the source that carries it - has no
 # column of `Episode` to be read off.
 _UNMATCHED_COLUMNS: dict[str, Any] = {
     # The combined column reads as the show it is under first, so that is what
@@ -377,7 +377,7 @@ def _candidates_for_shows(
 ) -> tuple[dict[uuid.UUID, list[_Candidate]], dict[uuid.UUID, dict[uuid.UUID, int]]]:
     """Return the TMDB episodes each listing can be matched against, and their count.
 
-    Every title a listing is a copy of contributes its episodes, since a listing
+    Every title a listing is linked to contributes its episodes, since a listing
     that mixes titles has episodes of each of them and nothing but the match says
     which episode is which. Each title is counted through on its own, so an
     episode's place in a title is where that title puts it rather than where the
@@ -689,8 +689,8 @@ def _tmdb_ids_used_by_shows(
 ) -> dict[uuid.UUID, dict[int, list[EpisodeUsingTmdb]]]:
     """Return the episodes of each show using each TMDB episode already.
 
-    Only the show an episode belongs to is read, since another website's copy of
-    the same title has its own episodes pointing at the same TMDB ones and says
+    Only the show an episode belongs to is read, since another website's non-canonical
+    row of the same title has its own episodes pointing at the same TMDB ones and says
     nothing about which of them this show still has going spare.
 
     Every show of a page at once, rather than one query per episode: a page of

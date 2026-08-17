@@ -2818,6 +2818,12 @@ export type ShowsAdminCanonicalizeShowData = {
 
 export type ShowsAdminCanonicalizeShowResponse = (ShowPublic);
 
+export type ShowsAdminRelinkShowEpisodesData = {
+    showId: string;
+};
+
+export type ShowsAdminRelinkShowEpisodesResponse = (ShowPublic);
+
 export type ShowsGetShowTmdbEpisodeGroupsData = {
     showId: string;
 };

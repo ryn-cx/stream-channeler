@@ -85,7 +85,7 @@ const AddEpisode = ({ seasonKey }: AddEpisodeProps) => {
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
     form.reset()
-    // A manually-added episode is a copy of nothing but itself; the canonical
+    // A manually-added episode is linked to nothing but itself; the canonical
     // row it stands for is created for it as it is stored.
     mutation.mutate(data)
   }

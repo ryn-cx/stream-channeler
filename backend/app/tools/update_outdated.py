@@ -57,10 +57,10 @@ def _channel_season_exists(
 ) -> ColumnElement[bool]:
     """EXISTS clause requiring `season` to be included in some channel.
 
-    A channel holds a title rather than one website's copy of it, and which title
-    an episode belongs to is its canonical episode's answer, since a listing that
-    mixes titles holds seasons of each of them. An episode that is a copy of
-    nothing sits where its own listing filed it, under that listing's title.
+    A channel holds a title rather than one website's non-canonical row of it, and which
+    title an episode belongs to is its canonical episode's answer, since a listing that
+    mixes titles holds seasons of each of them. An episode that is linked to nothing
+    sits where its own listing filed it, under that listing's title.
 
     `condition` is handed the listing the season is on, which is what ties the
     clause to the row it is being asked about.
@@ -93,14 +93,14 @@ def _channel_season_exists(
             col(canonical_episode.season_id) == col(canonical_season.id),
         )
         .join(copy_show, col(copy_show.id) == col(season.show_id))
-        # An episode with no canonical row of its own belongs to every title its
-        # listing is a copy of, since a listing is no more a copy of one than of
+        # An episode with no canonical row of its own belongs to every title its listing
+        # is linked to, since a listing is no more a non-canonical row of one than of
         # another, so the clause holds where any of them is on a channel.
         .outerjoin(
             copy_show_link,
             col(copy_show_link.show_id) == col(copy_show.id),
         )
-        # A listing that is a copy of nothing is the title itself and answers for
+        # A listing that is linked to nothing is the title itself and answers for
         # itself, the same way an episode standing for nothing is the episode, so
         # a channel naming it names it by its own id and the last fallback is what
         # reaches those rows.

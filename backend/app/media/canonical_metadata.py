@@ -1,19 +1,18 @@
 # TODO: Validate
-"""Serve a copy of an episode as the episode itself.
+"""Serve a non-canonical row of an episode as the episode itself.
 
-A plugin stores only what its own website reported, so anything that site had no
-value for stays unset on the stored record, and what it did report is one
-website's account of a thing every other website also has an account of. The
-canonical row is the single answer for all of them — TMDB's where TMDB has a
-record, and the one copy's own where it does not — so a record is served by
-reading the row it points at.
+A plugin stores only what its own website reported, so anything that site had no value
+for stays unset on the stored record, and what it did report is one website's account of
+a thing every other website also has an account of. The canonical row is the single
+answer for all of them — TMDB's where TMDB has a record, and the one non-canonical row's
+own where it does not — so a record is served by reading the row it points at.
 
-Only episodes are served this way. A listing is a copy of however many titles a
+Only episodes are served this way. A listing is linked to however many titles a
 website mixed into one page, and no one of them is the title its name and artwork
 belong to, so a listing is served as the website stored it.
 
-Nothing is written back. A copy follows the canonical row as it is served rather
-than being rewritten whenever that row changes.
+Nothing is written back. A non-canonical row follows the canonical row as it is served
+rather than being rewritten whenever that row changes.
 
 This is the whole of what `tmdb_fallback.py` did, without the identifier-string
 lookup or the special case for media TMDB has never heard of: a YouTube video
@@ -41,10 +40,10 @@ from app.shows.models import Show
 # something to pass rather than something to branch on.
 type MediaModel = type[MediaMixin[Any, Any]]
 
-# What each level's canonical row answers for. Anything else belongs to the copy
-# alone — `url` above all, which says where rather than what.
+# What each level's canonical row answers for. Anything else belongs to the
+# non-canonical row alone — `url` above all, which says where rather than what.
 #
-# There is no such list for a show. A listing is a copy of however many titles a
+# There is no such list for a show. A listing is linked to however many titles a
 # website mixed into it, so there is no one row to read a listing's name or
 # artwork off, and a listing is served as the website stored it.
 EPISODE_FIELDS = (
@@ -129,9 +128,9 @@ def _prefer[RowT](
 ) -> Sequence[RowT]:
     """Replace every `fields` value on `rows` with their canonical row's.
 
-    What the canonical row holds is what the media is served as, and what the
-    website said is kept only where the canonical row has nothing of its own to
-    say. A copy that is not yet of anything is served entirely as it stored
+    What the canonical row holds is what the media is served as, and what the website
+    said is kept only where the canonical row has nothing of its own to say. A
+    non-canonical row that is not yet of anything is served entirely as it stored
     itself.
     """
     canonical_rows = _canonical_rows(session, rows, id_field, model)
@@ -215,9 +214,9 @@ def _seasons_of(
 def fill_tmdb_urls[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
     """Set each `Episode` row's page on themoviedb.org, where it has one.
 
-    TMDB has no page for an episode id on its own, so the address is built from
-    the title it belongs to and the numbering the episode itself carries, which
-    is not always the numbering the website gave its own copy. Media TMDB has no
+    TMDB has no page for an episode id on its own, so the address is built from the
+    title it belongs to and the numbering the episode itself carries, which is not
+    always the numbering the website gave its own non-canonical row. Media TMDB has no
     record of has no page, and is left with none rather than a broken one.
     """
     canonical_rows = _canonical_rows(session, rows, EPISODE_ID_FIELD, Episode)
@@ -316,11 +315,11 @@ def canonical_episode_of(
     session: Session,
     canonical_episode_id: UUID | None,
 ) -> tuple[Episode, Season, Show] | None:
-    """Return the episode a copy is of, with the season and title above it.
+    """Return the episode a non-canonical row is of, with the season and title above it.
 
-    A copy that is not of anything yet has nothing to return, which is the one
-    case a caller has to handle; media TMDB has never heard of has a canonical
-    row like any other.
+    A non-canonical row that is not of anything yet has nothing to return, which is the
+    one case a caller has to handle; media TMDB has never heard of has a canonical row
+    like any other.
     """
     if canonical_episode_id is None:
         return None
@@ -347,11 +346,11 @@ def canonical_season_of(
     session: Session,
     season_id: UUID,
 ) -> tuple[Season, Show] | None:
-    """Return the season a copy's episodes are of, with the title above it.
+    """Return the season a non-canonical row's episodes are of, with the title above it.
 
-    A season is not a copy of anything itself, so the answer is the season its
-    episodes' canonical episodes are under, which is nothing when none of them
-    is a copy of anything.
+    A season is not a non-canonical row of anything itself, so the answer is the season
+    its episodes' canonical episodes are under, which is nothing when none of them is
+    linked to anything.
     """
     copy_episode = aliased(Episode)
     canonical_episode = aliased(Episode)
@@ -376,9 +375,9 @@ def canonical_season_of(
 
 # TODO: Validate
 def canonical_show_of(session: Session, show: Show) -> Show | None:
-    """Return the one title `show` is a copy of, where it is a copy of one.
+    """Return the one title `show` is linked to, where it is linked to one.
 
-    A listing that mixes titles is as much a copy of each of them as of any
+    A listing that mixes titles is as much linked to each of them as of any
     other, so there is no one title to set beside it and it is answered for with
     none.
     """

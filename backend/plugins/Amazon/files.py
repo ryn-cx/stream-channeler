@@ -334,8 +334,8 @@ class Detail(JSONFile[dict[str, Any]]):
     def page_key(self) -> str:
         """Return the id of the title the page settled on.
 
-        The id a URL carries is not always the id of the title it opens, since a
-        title can be reached by any of the ids of the copies Amazon sells of it.
+        The id a URL carries is not always the id of the title it opens, since a title
+        can be reached by any of the ids of the non-canonical rows Amazon sells of it.
         """
         return str(self._atf_state()["pageTitleId"])
 

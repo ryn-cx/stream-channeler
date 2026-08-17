@@ -50,7 +50,7 @@ class TMDBLinker:
 
         Without a `media_type` both halves of the catalogue are searched and the
         best match is taken. A search across both turns up people as well as
-        media, and a person is not something to be a copy of.
+        media, and a person is not something to be linked to.
         """
         if media_type is not None:
             results = (

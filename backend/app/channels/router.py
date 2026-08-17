@@ -468,7 +468,7 @@ def get_channel_episodes(
             "channel_id": result.channel_id,
             "channel_ids": result.channel_ids,
         }
-        # An episode nothing was minted for it to be a copy of is the episode
+        # An episode nothing was minted for it to be linked to is the episode
         # itself, so it is served under its own id rather than under nothing.
         fields = episode.model_dump()
         fields["canonical_episode_id"] = canonical_id_of(episode)
@@ -493,11 +493,11 @@ def get_channel_episodes(
         if source.plugin_id not in output.plugins:
             output.plugins[source.plugin_id] = PluginOutput.model_validate(plugin)
 
-    # An episode is the media rather than one website's copy of it, so every row
-    # reads as TMDB has it, with the website standing in only where TMDB has
-    # nothing of its own to say. A listing is a copy of however many titles a
-    # website mixed into it and has no one title to read as, so it is served as
-    # the website stored it.
+    # An episode is the media rather than one website's non-canonical row of it, so
+    # every row reads as TMDB has it, with the website standing in only where TMDB has
+    # nothing of its own to say. A listing is linked to however many titles a website
+    # mixed into it and has no one title to read as, so it is served as the website
+    # stored it.
     fill_episodes(session, output.episodes)
     fill_tmdb_urls(session, output.episodes)
     prefer_canonical_episodes(session, output.episodes)
@@ -507,7 +507,8 @@ def get_channel_episodes(
 
 
 # One row of a channel's show list: the title it is listed under and the website's
-# copy standing for it, since a copy that mixes titles is a row under each of them.
+# non-canonical row standing for it, since a non-canonical row that mixes titles is a
+# row under each of them.
 ChannelShowRow = tuple[uuid.UUID, uuid.UUID]
 
 
@@ -531,26 +532,27 @@ def get_channel_shows(
     channel_shows = session.exec(
         select(ChannelShow).where(col(ChannelShow.channel_id).in_(channel_ids)),
     ).all()
-    # A `ChannelShow` is a title, so each one stands for every website's copy of it.
+    # A `ChannelShow` is a title, so each one stands for every website's non-canonical
+    # row of it.
     canonical_show_ids = {
         channel_show.canonical_show_id for channel_show in channel_shows
     }
-    copies = service.shows_by_canonical_id(session, canonical_show_ids)
+    non_canonical_shows = service.shows_by_canonical_id(session, canonical_show_ids)
 
-    # A title no website carries has only TMDB's own copy of it, and leaving that
-    # out would leave the title out of the list it was added to, which is the one
-    # place it would have shown that it is there at all.
+    # A title no website carries has only TMDB's own non-canonical row of it, and
+    # leaving that out would leave the title out of the list it was added to, which is
+    # the one place it would have shown that it is there at all.
     unwatchable = {
         canonical_show_id
         for canonical_show_id in canonical_show_ids
-        if not copies[canonical_show_id]
+        if not non_canonical_shows[canonical_show_id]
     }
-    copies.update(service.tmdb_shows_by_canonical_id(session, unwatchable))
+    non_canonical_shows.update(service.tmdb_shows_by_canonical_id(session, unwatchable))
 
-    # A show can appear in several of the combined channels; deduplicate by the
-    # title it is listed under and the copy it is. A show counts as a regular show
-    # if any channel includes it normally, even when another channel only uses it
-    # for filtering.
+    # A show can appear in several of the combined channels; deduplicate by the title it
+    # is listed under and the non-canonical row it is. A show counts as a regular show
+    # if any channel includes it normally, even when another channel only uses it for
+    # filtering.
     regular_shows: dict[ChannelShowRow, ShowPublic] = {}
     filter_only_shows: dict[ChannelShowRow, ShowPublic] = {}
     # Regular shows kept per channel so they can be grouped by where they come from.
@@ -558,12 +560,12 @@ def get_channel_shows(
     channel_names: dict[uuid.UUID, str | None] = {}
     for channel_show in channel_shows:
         canonical_show_id = channel_show.canonical_show_id
-        for show in copies[canonical_show_id]:
+        for show in non_canonical_shows[canonical_show_id]:
             source = show.source
             plugin = source.plugin
 
-            # TMDB's plugin is private because its media is never browsed on its
-            # own, but a title it is the only copy of is one the viewer put on
+            # TMDB's plugin is private because its media is never browsed on its own,
+            # but a title it is the only non-canonical row of is one the viewer put on
             # the channel themselves, so it is theirs to see here.
             if plugin.key != TMDB_PLUGIN_KEY and not plugin.is_readable(
                 session,
@@ -571,11 +573,11 @@ def get_channel_shows(
             ):
                 continue
 
-            # A copy is read as the title the channel holds rather than as any
-            # other title it is of, since a listing that mixes titles is on a
-            # channel under whichever of them was added. That is what gathers the copies
-            # of one title into the one row, and what the row's own totals and
-            # missing fields are then filled in from.
+            # A non-canonical row is read as the title the channel holds rather than as
+            # any other title it is of, since a listing that mixes titles is on a
+            # channel under whichever of them was added. That is what gathers the
+            # non-canonical rows of one title into the one row, and what the row's own
+            # totals and missing fields are then filled in from.
             key = (canonical_show_id, show.id)
             update = {"canonical_show_id": canonical_show_id}
 
@@ -599,11 +601,10 @@ def get_channel_shows(
                     channel_show.channel.name,
                 )
 
-            # TMDB is not somewhere a title can be watched, so it is not one of
-            # the sources the list is filtered by and its icon does not stand
-            # beside a title as though it were. A title it is the only copy of
-            # is left with no icon, which is what having nowhere to watch it
-            # looks like.
+            # TMDB is not somewhere a title can be watched, so it is not one of the
+            # sources the list is filtered by and its icon does not stand beside a title
+            # as though it were. A title it is the only non-canonical row of is left
+            # with no icon, which is what having nowhere to watch it looks like.
             if source.id not in output.sources and plugin.key != TMDB_PLUGIN_KEY:
                 output.sources[source.id] = SourcePublic.model_validate(source)
 
@@ -630,9 +631,9 @@ def get_channel_shows(
         for group_channel_id in sorted(shows_by_channel, key=group_sort_key)
     ]
 
-    # Every title the channel holds rather than every title its copies are of,
-    # since a copy that mixes titles is listed under whichever of them the
-    # channel was told to hold.
+    # Every title the channel holds rather than every title its non-canonical rows are
+    # of, since a non-canonical row that mixes titles is listed under whichever of them
+    # the channel was told to hold.
     output.stats = _channel_show_stats(session, canonical_show_ids)
     output.canonical_sources = _canonical_sources(session, canonical_show_ids)
     output.canonical_shows = _canonical_shows(session, canonical_show_ids)
@@ -671,7 +672,7 @@ def _canonical_sources(
     """Return the source each title itself was written by, keyed by the title.
 
     Which is TMDB wherever TMDB has a record of the title, and nothing where a
-    website's listing is a copy of a row minted for it to point at rather than of
+    website's listing is linked to a row minted for it to point at rather than of
     a title anything catalogued. Every row has a source now, including the minted
     ones, so what tells the two apart is who issued the key.
     """
@@ -702,7 +703,7 @@ def _channel_show_stats(
     records holding them. Which title an episode counts towards is the episode's
     own answer, so a listing that mixes titles counts each of its episodes only
     towards the title that episode belongs to. An episode nothing was minted for
-    it to be a copy of has no such answer and counts towards the title its
+    it to be linked to has no such answer and counts towards the title its
     website's listing is linked to, under that website's own season.
     """
     if not canonical_show_ids:
@@ -767,10 +768,10 @@ def _standalone_show_stats(
 ) -> Sequence[tuple[uuid.UUID, int, int]]:
     """Return what a title that is its own listing holds.
 
-    A title nothing else has a record of is the row that is the record, and that
-    row is where it is watched, so its seasons and episodes are its own rather
-    than copies of anything and no link reaches them. TMDB's rows are left out:
-    a title TMDB wrote is counted by what the websites carrying it hold.
+    A title nothing else has a record of is the row that is the record, and that row is
+    where it is watched, so its seasons and episodes are its own rather than
+    non-canonical rows of anything and no link reaches them. TMDB's rows are left out: a
+    title TMDB wrote is counted by what the websites carrying it hold.
     """
     return session.exec(
         select(
@@ -841,12 +842,12 @@ def get_channel_sources(
 ) -> list[SourcePublic]:
     """Read all unique sources for a channel."""
     sources: dict[uuid.UUID, SourcePublic] = {}
-    copies = service.shows_by_canonical_id(
+    non_canonical_shows = service.shows_by_canonical_id(
         session,
         {channel_show.canonical_show_id for channel_show in channel.shows},
     )
     for channel_show in channel.shows:
-        for show in copies[channel_show.canonical_show_id]:
+        for show in non_canonical_shows[channel_show.canonical_show_id]:
             source = show.source
             plugin = source.plugin
 
@@ -1003,10 +1004,10 @@ def _whitelist_media(
     """Gather the websites' rows for the title `channel_show` is about."""
     shows = service.shows_for_channel_show(session, channel_show)
     # TMDB is not a website the title can be watched on, so it is not one of the
-    # copies rows are built from and only stands for the seasons it has a record
-    # of, which is all an announced season no site has filled yet can be named by.
-    # A title no website carries at all has nothing else to be listed from, so
-    # there its record is the whole of what there is rather than the remainder.
+    # non-canonical rows the rows are built from, and only stands for the seasons it has
+    # a record of, which is all an announced season no site has filled yet can be named
+    # by. A title no website carries at all has nothing else to be listed from, so there
+    # its record is the whole of what there is rather than the remainder.
     tmdb_shows = service.tmdb_shows_for_channel_show(session, channel_show)
     if not shows and not tmdb_shows:
         raise HTTPException(status_code=404, detail="Show was not found on channel")
@@ -1030,12 +1031,12 @@ def _whitelist_media(
     # a site can file an episode under a season the canonical hierarchy does not,
     # which is what puts a site's finale in another site's specials.
     episode_seasons = season_ids_by_episode(session, all_episodes)
-    # Where a website files two titles under one listing it carries another
-    # title's episodes as well. What a channel offers is the title's own
-    # episodes, so a copy's episode is listed only where the episode it is a copy
-    # of is one of them. An episode that is a copy of nothing is one the title had
-    # no record of to match it against, and the link its listing carries is the
-    # only word there is on what title it belongs to, so it is listed too.
+    # Where a website files two titles under one listing it carries another title's
+    # episodes as well. What a channel offers is the title's own episodes, so a
+    # non-canonical row's episode is listed only where the episode it is linked to is
+    # one of them. An episode that is linked to nothing is one the title had no record
+    # of to match it against, and the link its listing carries is the only word there is
+    # on what title it belongs to, so it is listed too.
     title_episode_ids = _title_episode_ids(session, channel_show.canonical_show_id)
     site_season_ids = {season.id for season in site_seasons}
     listed_episode_ids = {
@@ -1077,9 +1078,9 @@ def _episode_source_filters(
 
 # TODO: Validate
 def _preload_canonical_episodes(session: Session, episodes: Sequence[Episode]) -> None:
-    """Read in the episode each of `episodes` is a copy of, in one query.
+    """Read in the episode each of `episodes` is linked to, in one query.
 
-    `Episode.tmdb_id` walks from a row to the episode it is a copy of, which is a
+    `Episode.tmdb_id` walks from a row to the episode it is linked to, which is a
     query apiece where the rows are read one at a time. An `Episode` is keyed on
     its season and its own key rather than on `id`, so the walk cannot be
     answered out of the session and has to be asked for together up front.
@@ -1105,11 +1106,11 @@ def _canonical_orders(
 ) -> dict[uuid.UUID, float]:
     """Read where each canonical episode sits, keyed by its id.
 
-    A row is listed under the number the episode itself carries rather than the
-    number the website gave its copy, so it is ordered on that same number. Two
-    websites number an episode differently, and one of them numbering a recap or
-    a double-length episode its own way is what puts a copy's own order out of
-    step with the episode being listed.
+    A row is listed under the number the episode itself carries rather than the number
+    the website gave its non-canonical row, so it is ordered on that same number. Two
+    websites number an episode differently, and one of them numbering a recap or a
+    double-length episode its own way is what puts a non-canonical row's own order out
+    of step with the episode being listed.
     """
     if not canonical_episode_ids:
         return {}
@@ -1153,10 +1154,11 @@ def get_channel_whitelist(
 ) -> WhitelistShowOutput:
     """Read the sites and seasons of a title's filters in a channel.
 
-    A filter is about the media rather than one website's copy of it, so every
-    copy's seasons are listed, with the copies of the same season collapsed into
-    the one row the filter applies to. The episodes are read separately, a season
-    at a time, since a title's whole catalogue is far more than the page opens on.
+    A filter is about the media rather than one website's non-canonical row of it, so
+    every non-canonical row's seasons are listed, with the non-canonical rows of the
+    same season collapsed into the one row the filter applies to. The episodes are read
+    separately, a season at a time, since a title's whole catalogue is far more than the
+    page opens on.
     """
     enabled_sources = {x.show_id for x in channel_show.source_filters}
     enabled_seasons = {x.season_id for x in channel_show.season_filters}
@@ -1183,11 +1185,11 @@ def get_channel_whitelist(
         for show in [*media.shows, *media.tmdb_shows]
     ]
 
-    # The rows are the title's own seasons rather than the websites' copies of
-    # them: a filter names a season of the title, and the title holds seasons no
-    # website carries - one TMDB has announced, one only another site fills - which
-    # are still seasons for the user to see rather than rows to leave out for
-    # having nothing under them yet.
+    # The rows are the title's own seasons rather than the websites' non-canonical rows
+    # of them: a filter names a season of the title, and the title holds seasons no
+    # website carries - one TMDB has announced, one only another site fills - which are
+    # still seasons for the user to see rather than rows to leave out for having nothing
+    # under them yet.
     title_seasons = session.exec(
         select(Season).where(
             Season.show_id == channel_show.canonical_show_id,
@@ -1249,9 +1251,9 @@ def get_channel_whitelist_episodes(
 ) -> WhitelistEpisodesOutput:
     """Read one page of a season's episodes, as the filter page expands it.
 
-    A filter is about the media rather than one website's copy of it, so the
-    copies of an episode are collapsed into the one row the filter applies to,
-    and each copy is carried alongside as a link of its own.
+    A filter is about the media rather than one website's non-canonical row of it, so
+    the non-canonical rows of an episode are collapsed into the one row the filter
+    applies to, and each non-canonical row is carried alongside as a link of its own.
     """
     enabled_episodes = {x.canonical_episode_id for x in channel_show.episode_filters}
     episode_expiries = {
@@ -1261,8 +1263,8 @@ def get_channel_whitelist_episodes(
 
     media = _whitelist_media(session, channel_show)
 
-    # An episode is listed once under every season row carrying it, since two
-    # seasons sharing an episode each have it to filter on. Only the copies of it
+    # An episode is listed once under every season row carrying it, since two seasons
+    # sharing an episode each have it to filter on. Only the non-canonical rows of it
     # under the same row are folded together.
     rows: list[tuple[Episode, uuid.UUID]] = []
     seen_episodes: set[uuid.UUID] = set()
@@ -1319,8 +1321,8 @@ def get_channel_whitelist_episodes(
         episode_output.links = episode_links[episode_output.canonical_episode_id]
 
     fill_episodes(session, page)
-    # A filter is about the media rather than one website's copy of it, so the
-    # rows read as TMDB has the media, with the website only standing in for what
+    # A filter is about the media rather than one website's non-canonical row of it, so
+    # the rows read as TMDB has the media, with the website only standing in for what
     # TMDB has no record of.
     prefer_canonical_episodes(session, page)
 
@@ -1505,8 +1507,8 @@ def delete_channel_show(
 ) -> Message:
     """Remove a title, on every website it is on, from a `Channel`."""
     shows = service.shows_for_channel_show(session, channel_show)
-    # The title's own name is what is left to say when no website's copy of it
-    # carries one, which is the case for a title only TMDB has a record of.
+    # The title's own name is what is left to say when no website's non-canonical row of
+    # it carries one, which is the case for a title only TMDB has a record of.
     canonical_show = session.exec(
         select(Show).where(Show.id == channel_show.canonical_show_id),
     ).first()

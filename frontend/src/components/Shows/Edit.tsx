@@ -28,6 +28,7 @@ import {
 } from "@/lib/formSchemas"
 import { CanonicalizeShowButton } from "./CanonicalizeShowButton"
 import { CanonicalShowField } from "./CanonicalShowField"
+import { RelinkShowButton } from "./RelinkShowButton"
 import {
   episodeGroupIdOf,
   TMDB_EPISODE_ORDER_PLUGIN,
@@ -133,6 +134,9 @@ const EditShow = ({ show, size }: EditShowProps) => {
       onSubmit={onSubmit}
       isPending={mutation.isPending}
       size="3xl"
+      footerStart={
+        user?.is_superuser ? <RelinkShowButton showId={show.id} /> : null
+      }
     >
       <ShowInformationSummary showId={show.id} enabled={isOpen} />
       {user?.is_superuser && (

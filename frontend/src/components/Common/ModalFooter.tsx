@@ -1,4 +1,6 @@
 // TODO: Validate
+import type { ReactNode } from "react"
+
 import { Button } from "@/components/ui/button"
 import { DialogClose, DialogFooter } from "@/components/ui/dialog"
 import type { ButtonProps } from "@/components/ui/loading-button"
@@ -13,6 +15,7 @@ interface ModalFooterProps {
   /** Variant of the submit button, e.g. `destructive` for delete dialogs. */
   submitVariant?: ButtonProps["variant"]
   className?: string
+  start?: ReactNode
 }
 
 // TODO: Validate
@@ -27,9 +30,11 @@ export function ModalFooter({
   submitLabel = "Save",
   submitVariant,
   className,
+  start,
 }: ModalFooterProps) {
   return (
     <DialogFooter className={cn(className)}>
+      {start ? <div className="sm:mr-auto">{start}</div> : null}
       <DialogClose asChild>
         <Button variant="outline" disabled={isPending}>
           {cancelLabel}

@@ -29,9 +29,9 @@ class BaseIssueReport(SQLModel):
 class IssueReportMixin(BaseIssueReport, TimestampIdAndHashMixin):
     """Mixin for the report tables hanging off each kind of media record.
 
-    A report is about one website's copy of the media rather than the media
-    itself, since what is wrong is normally what that site reported, so each kind
-    of record has a table of its own rather than all three sharing one.
+    A report is about one website's non-canonical row of the media rather than the media
+    itself, since what is wrong is normally what that site reported, so each kind of
+    record has a table of its own rather than all three sharing one.
 
     Anyone reading the media can report what is wrong with it, so a report left
     by a visitor with no account has no `user_id` and nobody but a superuser can

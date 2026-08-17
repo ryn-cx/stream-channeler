@@ -125,9 +125,9 @@ class SortExpressionBuilder:
             # together, which is what a random sort on a channel is asking for.
             return self.random_hash(channel_expr) if field == "random" else channel_expr
         if field == "random":
-            # The media a copy is of rather than the copy, so every website's copy
-            # of one episode is shuffled to the same place and a title stays
-            # together however many websites carry it.
+            # The media a non-canonical row is of rather than the non-canonical row, so
+            # every website's non-canonical row of one episode is shuffled to the same
+            # place and a title stays together however many websites carry it.
             random_ids: dict[str, Any] = {
                 "episode": episode_id(),
                 "season": self._fallbacks.episode_season_id(),
@@ -204,8 +204,8 @@ class SortExpressionBuilder:
         if agg_func is None:
             msg = f"Unsupported aggregation '{sort_key.aggregation}'"
             raise ValueError(msg)
-        # Aggregated over the title rather than over one website's copy of it, so
-        # a channel carrying a title twice reads one number for it either way.
+        # Aggregated over the title rather than over one website's non-canonical row of
+        # it, so a channel carrying a title twice reads one number for it either way.
         return agg_func(episode_field).over(partition_by=self._fallbacks.show_id())
 
     # TODO: Validate
@@ -223,12 +223,11 @@ class SortExpressionBuilder:
         full table.
 
         Two websites number the same media differently, so the order goes by the
-        numbering the canonical row carries and by nothing else. Ranking runs
-        over the whole title rather than one website's copy of it, since a
-        website that carries only a later season would otherwise have its first
-        season rank alongside another website's first. A canonical row with no
-        number of its own follows every row that has one, ordered by where the
-        row itself says it sits.
+        numbering the canonical row carries and by nothing else. Ranking runs over the
+        whole title rather than one website's non-canonical row of it, since a website
+        that carries only a later season would otherwise have its first season rank
+        alongside another website's first. A canonical row with no number of its own
+        follows every row that has one, ordered by where the row itself says it sits.
 
         Which season an episode belongs to is the canonical answer as well, taken
         from the episode's own canonical row rather than from the season the
@@ -282,12 +281,12 @@ class SortExpressionBuilder:
     def _started_show_expr(self) -> ColumnElement[Any]:
         """Whether the `User` has watched anything of the title this episode is of.
 
-        A watch names the copy that played it, which is read back to the episode
-        that copy is of, so a title counts as started whichever website it was
-        started on. An episode nothing was minted for it to be a copy of hangs off
-        a website's own listing, so the titles it counts towards are the ones that
-        listing is a copy of - all of them, since a listing is no more a copy of
-        one title than of another.
+        A watch names the non-canonical row that played it, which is read back to the
+        episode that non-canonical row is of, so a title counts as started whichever
+        website it was started on. An episode nothing was minted for it to be linked to
+        hangs off a website's own listing, so the titles it counts towards are the ones
+        that listing is linked to - all of them, since a listing is no more
+        linked to one title than to another.
         """
         if not self._user or not self._started_shows:
             return literal_column("0")

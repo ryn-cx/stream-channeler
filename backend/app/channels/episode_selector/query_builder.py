@@ -72,7 +72,7 @@ MAX_EPISODES_RETURNED = 1000
 
 # TODO: Validate
 def _media_id(episode: Episode) -> UUID:
-    """Return the media `episode` is a copy of, for grouping the copies by."""
+    """Return the media `episode` is linked to, for grouping its rows by."""
     return canonical_id_of(episode)
 
 
@@ -170,21 +170,22 @@ class EpisodeQueryBuilder:
 
     # TODO: Validate
     def _fetch_holds_copied_titles(self) -> bool:
-        """Whether the channel can be holding a title as more than one copy.
+        """Whether the channel can hold a title as more than one non-canonical row.
 
-        Collapsing the copies of an episode means reading every episode the channel
-        offers before any of them can be returned, since a copy the row limit never
-        reached may be the one that wins. A channel with no title to collapse skips
-        the ranking and lets the limit stop it early instead.
+        Collapsing the non-canonical rows of an episode means reading every episode the
+        channel offers before any of them can be returned, since a non-canonical row the
+        row limit never reached may be the one that wins. A channel with no title to
+        collapse skips the ranking and lets the limit stop it early instead.
 
-        Asked of the titles rather than of their episodes, which is what keeps it
-        cheap: a channel holds tens of titles where it offers thousands of episodes.
-        One website carrying a title twice counts as much as two websites carrying
-        it once, since either leaves an episode with a copy to be ranked against.
+        Asked of the titles rather than of their episodes, which is what keeps it cheap:
+        a channel holds tens of titles where it offers thousands of episodes. One
+        website carrying a title twice counts as much as two websites carrying it once,
+        since either leaves an episode with a non-canonical row to be ranked against.
         """
         # A title nothing else holds a record of is watched on the row that is the
-        # record, so it is its own copy and there is no link to reach it by.
-        # Outer-joined so those titles are still counted, as the one copy they are.
+        # record, so it is its own non-canonical row and there is no link to reach it
+        # by. Outer-joined so those titles are still counted, as the one non-canonical
+        # row they are.
         totals = (
             select(
                 func.count(distinct(col(Show.source_id))),
@@ -207,8 +208,8 @@ class EpisodeQueryBuilder:
             )
             .where(col(ChannelShow.channel_id).in_(self._channel_ids))
             .where(col(ChannelShow.is_blacklist_only).is_(False))
-            # A title TMDB wrote and no website carries is watched nowhere, so it
-            # is no copy of anything and nothing has to be ranked against it.
+            # A title TMDB wrote and no website carries is watched nowhere, so it is no
+            # non-canonical row of anything and nothing has to be ranked against it.
             .where(
                 or_(
                     is_non_canonical(Show),
@@ -286,8 +287,9 @@ class EpisodeQueryBuilder:
 
     # TODO: Validate
     def _base_query(self) -> Select[tuple[Episode, UUID]]:
-        # A channel holds titles rather than one website's copy of them, so every
-        # copy of a title the channel holds is joined to the same `ChannelShow`.
+        # A channel holds titles rather than one website's non-canonical row of them, so
+        # every non-canonical row of a title the channel holds is joined to the same
+        # `ChannelShow`.
         #
         # Which title an episode belongs to is read off the episode rather than
         # off the listing holding it, because a listing can hold more than one:
@@ -322,7 +324,7 @@ class EpisodeQueryBuilder:
                 CANONICAL_SEASON,
                 col(CANONICAL_EPISODE.season_id) == col(CANONICAL_SEASON.id),
             )
-            # An episode nothing was minted for it to be a copy of is the episode
+            # An episode nothing was minted for it to be linked to is the episode
             # itself, so there is no canonical row to read the title off and the
             # title is the one its website's listing is linked to instead. Joined
             # only for those episodes, since a listing linked to more than one
@@ -504,9 +506,9 @@ class EpisodeQueryBuilder:
     ) -> Select[tuple[Episode, UUID]]:
         """Filter out episodes that only stand in for a website's missing metadata.
 
-        TMDB is imported so other websites can borrow what they left out, never so
-        its own copy of an episode is watched, so it is never one of the results.
-        `Plugin` is already joined by `_filter_by_plugin_visibility`.
+        TMDB is imported so other websites can borrow what they left out, never so its
+        own non-canonical row of an episode is watched, so it is never one of the
+        results. `Plugin` is already joined by `_filter_by_plugin_visibility`.
         """
         return query.where(Plugin.key != TMDB_PLUGIN_KEY)
 
@@ -644,10 +646,11 @@ class EpisodeQueryBuilder:
 
     # TODO: Validate
     def _source_rank_column(self) -> ColumnElement[Any]:
-        """Rank every copy of an episode against the other copies of it.
+        """Rank every non-canonical row of an episode against the others of it.
 
-        Ties rather than numbers the rows so that a copy held by several channels
-        keeps one row per channel, which is what names the channels it came from.
+        Ties rather than numbers the rows so that a non-canonical row held by several
+        channels keeps one row per channel, which is what names the channels it came
+        from.
         """
         priority = case(
             self._source_config.priority,
@@ -668,7 +671,7 @@ class EpisodeQueryBuilder:
         self,
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[Episode, UUID]]:
-        """Collapse the copies of an episode when nothing has asked for an order."""
+        """Collapse an episode's non-canonical rows when nothing asked for an order."""
         if not self._holds_copied_titles:
             return query
         subquery = query.add_columns(self._source_rank_column()).subquery()

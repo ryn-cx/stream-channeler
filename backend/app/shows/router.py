@@ -236,9 +236,9 @@ def update_show(
     linker's to work out during an import, or a `User`'s to settle through the
     TMDB matching screens, so there is nothing to repoint here.
 
-    `extra` goes through its own service rather than being written with the rest,
-    since what a TMDB row keeps there is the episode order the title is read in
-    and changing that means reading the title again and matching every copy of it
+    `extra` goes through its own service rather than being written with the rest, since
+    what a TMDB row keeps there is the episode order the title is read in and changing
+    that means reading the title again and matching every non-canonical row of it
     afresh.
     """
     # Before the rest of the update, because what it does depends on the order
@@ -318,10 +318,10 @@ def delete_show(session: SessionDep, show: EditableShow) -> Message:
     return delete_record(session, show)
 
 
-# The admin-only mirror of the show endpoints. A non-canonical `Show` is one
-# website's row and is served to whoever may see that website's media; a
-# canonical `Show` is the show itself, which every row standing for it resolves
-# to, and is served to admins alone.
+# The admin-only mirror of the show endpoints. A non-canonical `Show` is one website's
+# row and is served to whoever may see that website's media; a canonical `Show` is the
+# show itself, which every row standing for it resolves to, and is served to admins
+# alone.
 # TODO: Validate
 @canonical_shows_router.get("")
 def get_canonical_shows(

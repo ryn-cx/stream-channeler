@@ -180,11 +180,10 @@ def add_canonical_show(
 ) -> ShowCanonicalShow:
     """Record that `show` stands for the canonical show `canonical_show`.
 
-    A non-canonical row stands for every canonical show linked to it and no more
-    for one than for another, so this adds one to the set and settles nothing
-    about which of them the row is chiefly about. Nothing else is settled either:
-    what a listing stands for as a whole, and the reading of its episodes against
-    it, is `settle_show`.
+    A non-canonical row stands for every canonical show linked to it and no more for one
+    than for another, so this adds one to the set and settles nothing about which of
+    them the row is chiefly about. Nothing else is settled either: what a listing stands
+    for as a whole, and the reading of its episodes against it, is `settle_show`.
     """
     # If this show is not canonical
     if not canonical_show.is_canonical:
@@ -219,15 +218,14 @@ def canonical_ids_by_key(
 ) -> dict[str, uuid.UUID]:
     """Map each episode key to the canonical episode that row stands for.
 
-    An episode nothing else holds a record of is the record, so it stands for
-    itself and answers with its own id. A row that is a copy answers with the
-    episode it is a copy of, and is preferred where both are stored, since the
-    copy is the one the canonical row was minted for.
+    An episode nothing else holds a record of is the record, so it stands for itself and
+    answers with its own id. A non-canonical row answers with the episode it is linked
+    to, and is preferred where both are stored, since the non-canonical row is the one
+    the canonical row was minted for.
 
     Only episodes answer this way. A non-canonical show stands for however many
-    canonical shows a website mixed into it and names none of them in a column,
-    so a show key is asked of `canonical_show_ids_by_key` and answered with all
-    of them.
+    canonical shows a website mixed into it and names none of them in a column, so a
+    show key is asked of `canonical_show_ids_by_key` and answered with all of them.
     """
     if not keys:
         return {}

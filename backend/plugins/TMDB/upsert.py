@@ -2,12 +2,11 @@
 """Store what TMDB holds the way every other plugin stores what its website holds.
 
 TMDB is a plugin like any other: it has a `Source`, and it writes its own `Show`,
-`Season` and `Episode` rows through the same upsert every website's plugin uses.
-What is different is what those rows are. TMDB is the record of what a title is
-rather than a website carrying it, so its rows are the canonical rows themselves
-and point at nothing, which is what every other plugin's copy points at instead.
-Nothing can be watched on TMDB, so its records are left out wherever media is
-being chosen to play.
+`Season` and `Episode` rows through the same upsert every website's plugin uses. What is
+different is what those rows are. TMDB is the record of what a title is rather than a
+website carrying it, so its rows are the canonical rows themselves and point at nothing,
+which is what every other plugin's non-canonical row points at instead. Nothing can be
+watched on TMDB, so its records are left out wherever media is being chosen to play.
 """
 
 from __future__ import annotations

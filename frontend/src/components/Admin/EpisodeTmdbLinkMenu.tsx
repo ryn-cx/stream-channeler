@@ -125,7 +125,7 @@ function compareNumbers(left: number | null, right: number | null): number {
 /**
  * The TMDB episode an `Episode` stands for, and the ones it could stand for instead.
  *
- * The choices are every episode of every title the show is a copy of, which is
+ * The choices are every episode of every title the show is linked to, which is
  * reached by going from the episode up to its show and back down through the
  * titles that show is linked to. They read in the order the title runs by
  * default, since that is how a website numbers its own episodes, and by how

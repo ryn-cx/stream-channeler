@@ -28,10 +28,9 @@ def get_canonical_episode(
     Looked up rather than asked of the session, since an episode is named by the
     season above it and its own key and an id on its own is no such name.
 
-    An episode is what every website's copy of it resolves to, so it is the same
-    for everybody and belongs to nobody. There is no owner to check and no
-    visibility to honour, which leaves one rule: only an admin may look at it at
-    all.
+    An episode is what every website's non-canonical row of it resolves to, so it is the
+    same for everybody and belongs to nobody. There is no owner to check and no
+    visibility to honour, which leaves one rule: only an admin may look at it at all.
     """
     canonical_episode = session.exec(
         select(Episode).where(

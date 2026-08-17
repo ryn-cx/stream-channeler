@@ -104,7 +104,7 @@ function showHero(
  *
  * Read where the title itself is what is open rather than the match between two
  * accounts of it, and where the row being read may be TMDB's own: a canonical
- * row is a copy of nothing, which the linked/not-linked fact would report as
+ * row is linked to nothing, which the linked/not-linked fact would report as
  * having failed to reach the very record it is.
  */
 function summaryFacts(data: ShowInformationOutput) {

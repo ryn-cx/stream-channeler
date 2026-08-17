@@ -41,11 +41,11 @@ class URLHandler[PluginT](ABC):
     def import_results(self, show: Show) -> list[URLImportResult]:
         """Return what importing the URL added: the listing and its titles.
 
-        A listing is one website's copy of a title, and what a channel is being
-        asked for is the title. Both are returned, since a URL naming a listing
-        names the title it is of just as much, and a listing that mixes titles
-        is a copy of every one of them. A record that is the title itself has
-        none to add and stands alone.
+        A listing is one website's non-canonical row of a title, and what a channel is
+        being asked for is the title. Both are returned, since a URL naming a listing
+        names the title it is of just as much, and a listing that mixes titles is linked
+        to every one of them. A record that is the title itself has none to add and
+        stands alone.
         """
         results = [URLImportResult.for_show(show)]
         results += [

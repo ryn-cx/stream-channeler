@@ -34,9 +34,9 @@ if TYPE_CHECKING:
     from app.issue_reports.models import ShowIssueReport
     from app.seasons.models import Season
 
-# The canonical row is the one a channel sorts on, so these name its columns and
-# no non-canonical row's. Those are only ever ordered by the admin tables, which
-# order by any column they show and so are no reason to index these two.
+# The canonical row is the one a channel sorts on, so these name its columns and no
+# non-canonical row's. Those are only ever ordered by the admin tables, which order by
+# any column they show and so are no reason to index these two.
 CANONICAL_SORTABLE_FIELDS = ["media_type", "name"]
 
 
@@ -67,12 +67,11 @@ class BaseShow(BaseCanonicalShow):
 class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     """Model representing a show, canonical or not.
 
-    A row is the canonical show itself, or one website's non-canonical row
-    standing for however many canonical shows that website mixed into it. The two
-    are the same shape and are read the same way, so they are one table, and
-    `is_canonical` is the whole of what tells them apart. Which canonical shows a
-    non-canonical row stands for is stored in `ShowCanonicalShow` alone, where no
-    one of them stands above the rest.
+    A row is the canonical show itself, or one website's non-canonical row standing for
+    however many canonical shows that website mixed into it. The two are the same shape
+    and are read the same way, so they are one table, and `is_canonical` is the whole of
+    what tells them apart. Which canonical shows a non-canonical row stands for is
+    stored in `ShowCanonicalShow` alone, where no one of them stands above the rest.
     """
 
     PARENT_ID_FIELD: ClassVar[str] = "source_id"
@@ -88,14 +87,14 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     )
 
     __table_args__ = (
-        # A source names each of its rows once, of either kind: a canonical show
-        # is written by the plugin that minted it the same way a non-canonical
-        # row is written by the plugin that read it off a website, and the two
-        # never share a key under one source. A canonical show minted for a
-        # listing to point at carries the plugin's key ahead of the listing's,
-        # and TMDB writes canonical shows and nothing else. That pair is the
-        # identity `Season` and `Episode` carry too, so the identity map answers
-        # to it and `get_from_memory` needs nothing of its own.
+        # A source names each of its rows once, of either kind: a canonical show is
+        # written by the plugin that minted it the same way a non-canonical row is
+        # written by the plugin that read it off a website, and the two never share a
+        # key under one source. A canonical show minted for a listing to point at
+        # carries the plugin's key ahead of the listing's, and TMDB writes canonical
+        # shows and nothing else. That pair is the identity `Season` and `Episode` carry
+        # too, so the identity map answers to it and `get_from_memory` needs nothing of
+        # its own.
         PrimaryKeyConstraint("source_id", "key"),
         UniqueConstraint("id"),
         # Looking a canonical show up by its key. Not unique: a plugin that
@@ -115,27 +114,26 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
         ),
     )
 
-    # Whether this row is the show itself rather than one website's row standing
-    # for it. Which canonical shows a non-canonical row stands for is stored in
-    # `ShowCanonicalShow` and nowhere else, since a website that files two shows
-    # under one page - a YouTube channel whose uploads are two series, a service
-    # that sells a sequel as another season - stands for each of them equally,
-    # and a column could only hold one.
+    # Whether this row is the show itself rather than one website's row standing for it.
+    # Which canonical shows a non-canonical row stands for is stored in
+    # `ShowCanonicalShow` and nowhere else, since a website that files two shows under
+    # one page - a YouTube channel whose uploads are two series, a service that sells a
+    # sequel as another season - stands for each of them equally, and a column could
+    # only hold one.
     is_canonical: bool = Field(default=True)
 
-    # Every canonical show this stands for. Nothing about a non-canonical row
-    # says which of them a caller with room for one means, so nothing here puts
-    # one ahead of another.
+    # Every canonical show this stands for. Nothing about a non-canonical row says which
+    # of them a caller with room for one means, so nothing here puts one ahead of
+    # another.
     canonical_show_links: list[ShowCanonicalShow] = Relationship(
         back_populates="show",
         cascade_delete=True,
         sa_relationship_kwargs={"foreign_keys": "ShowCanonicalShow.show_id"},
     )
 
-    # The other end of the same table: every non-canonical row standing for this
-    # one, which only a canonical show ever has. A row with both stands for
-    # something and is stood for by something, which is the one shape the levels
-    # never take.
+    # The other end of the same table: every non-canonical row standing for this one,
+    # which only a canonical show ever has. A row with both stands for something and is
+    # stood for by something, which is the one shape the levels never take.
     non_canonical_shows: list[ShowCanonicalShow] = Relationship(
         back_populates="canonical_show",
         cascade_delete=True,
@@ -198,25 +196,24 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
         """The TMDB id of the canonical show this stands for, where there is one.
 
         Read out of the canonical row's key rather than stored beside it, so a
-        non-canonical row and the row it stands for can never disagree about
-        which TMDB record that is.
+        non-canonical row and the row it stands for can never disagree about which TMDB
+        record that is.
         """
         canonical_show = self.sole_canonical_show
         if canonical_show is None:
             return None
         return tmdb_id_of(canonical_show.key, SHOW_LEVEL)
 
-    # What wrote this row. A non-canonical row has the website it was read off,
-    # and a canonical show has the plugin that minted it, which is TMDB wherever
-    # TMDB has a record of the title and the reading plugin itself where nothing
-    # catalogued it. Either way a row was written by something, so this is never
-    # absent and neither kind of row is told from the other by it.
+    # What wrote this row. A non-canonical row has the website it was read off, and a
+    # canonical show has the plugin that minted it, which is TMDB wherever TMDB has a
+    # record of the title and the reading plugin itself where nothing catalogued it.
+    # Either way a row was written by something, so this is never absent and neither
+    # kind of row is told from the other by it.
     source_id: uuid.UUID = Field(foreign_key="source.id", ondelete="CASCADE")
     source: Source = Relationship(back_populates="shows")
 
-    # The seasons of either kind of row, by the same column: a canonical season
-    # hangs off a canonical show the way a non-canonical season hangs off a
-    # non-canonical one.
+    # The seasons of either kind of row, by the same column: a canonical season hangs
+    # off a canonical show the way a non-canonical season hangs off a non-canonical one.
     seasons: list[Season] = Relationship(
         back_populates="show",
         cascade_delete=True,
@@ -246,10 +243,10 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     @classmethod
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
-        # Every row has a source and is listed under it, whether it is the record
-        # of the media or a copy of one. A row is not hidden for being the record:
-        # that is what a title nothing else catalogued looks like, and it is where
-        # the media is watched.
+        # Every row has a source and is listed under it, whether it is the record of the
+        # media or a non-canonical row of one. A row is not hidden for being the record:
+        # that is what a title nothing else catalogued looks like, and it is where the
+        # media is watched.
         return select(cls).join(Source).join(Plugin)
 
     # TODO: Validate
@@ -353,9 +350,9 @@ class ShowCanonicalShow(BaseShowCanonicalShow, TimestampIdAndHashMixin, table=Tr
     """
 
     __table_args__ = (
-        # Each canonical show is linked to a non-canonical row at most once; the
-        # leading column also serves lookups of a row's canonical shows and
-        # cascade deletion with it.
+        # Each canonical show is linked to a non-canonical row at most once; the leading
+        # column also serves lookups of a row's canonical shows and cascade deletion
+        # with it.
         PrimaryKeyConstraint("show_id", "canonical_show_id"),
         # Used to find every non-canonical row standing for a canonical show.
         Index("ShowCanonicalShow-canonical_show_id-index", "canonical_show_id"),

@@ -248,9 +248,9 @@ class PlaylistItems(GAPIJSONNoGet[PlaylistItemsModel]):
                 _merge_pages(endpoint.download_all_pages(self.unique_identifier)),
             )
 
-        # If the entry is over a year old download a fresh copy to clean out deleted
-        # videos. Album playlists are auto-generated and never change, so re-paging
-        # them would spend quota to rediscover the same tracks.
+        # If the entry is over a year old download a fresh non-canonical row to clean
+        # out deleted videos. Album playlists are auto-generated and never change, so
+        # re-paging them would spend quota to rediscover the same tracks.
         year_ago_datetime = tz_datetime.now() - timedelta(days=365)
         if (
             not is_music_playlist_key(self.unique_identifier)

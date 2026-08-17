@@ -79,8 +79,8 @@ class Amazon(
         results: list[URLImportResult] = []
         for source in self.title_sources(show_key):
             show = self.upsert_show(source, show_key, canonical_show, force=force)
-            # The title the first listing was found to be a copy of is the title
-            # the rest of them are copies of too, so it is handed to them rather
+            # The title the first listing was found to be linked to is the title
+            # the rest of them are linked to too, so it is handed to them rather
             # than searched for once for each way of watching the same title.
             canonical_show = canonical_show or _canonical_show(show)
             results += handler.import_results(show)
@@ -89,7 +89,7 @@ class Amazon(
 
 # TODO: Validate
 def _canonical_show(show: Show) -> Show | None:
-    """Return the title `show` was found to be a copy of, where there is one."""
+    """Return the title `show` was found to be linked to, where there is one."""
     if show.canonical_shows:
         return show.canonical_shows[0]
     return None

@@ -54,10 +54,10 @@ if TYPE_CHECKING:
 # holds.
 WatchedEpisode = aliased(Episode)
 
-# The row carrying the identifier a watch holds, which is the copy that played
-# it. Reads read it back to the episode that copy is of, so a watch counts
-# across every source carrying that episode and goes on counting once the copy
-# it was made against is gone.
+# The row carrying the identifier a watch holds, which is the non-canonical row that
+# played it. Reads read it back to the episode that non-canonical row is of, so a watch
+# counts across every source carrying that episode and goes on counting once the
+# non-canonical row it was made against is gone.
 IdentifiedEpisode = aliased(Episode)
 
 
@@ -80,17 +80,17 @@ def _representative_episode_subquery(
     user_id: uuid.UUID,
     canonical_ids: SelectOfScalar[uuid.UUID],
 ) -> Subquery:
-    """One representative visible copy per canonical episode.
+    """One representative visible non-canonical row per canonical episode.
 
-    A watch names the episode itself, which every website carrying it has a copy
-    of. This picks a single visible copy per episode so a watch can be joined to
-    concrete media for display and visibility filtering. Restricted to
-    `canonical_ids` so it only resolves the episodes actually in play instead of
-    the whole episode catalog.
+    A watch names the episode itself, which every website carrying it has a
+    non-canonical row of. This picks a single visible non-canonical row per episode so a
+    watch can be joined to concrete media for display and visibility filtering.
+    Restricted to `canonical_ids` so it only resolves the episodes actually in play
+    instead of the whole episode catalog.
 
-    TMDB is what a website's media is filled in from rather than a website an
-    episode can be watched on, so its own copy is never what a watch is shown
-    as, however the episodes happen to be ordered.
+    TMDB is what a website's media is filled in from rather than a website an episode
+    can be watched on, so its own non-canonical row is never what a watch is shown as,
+    however the episodes happen to be ordered.
     """
     canonical_link = canonical_episode_link()
     return (
@@ -117,9 +117,9 @@ def _representative_episode_subquery(
 def _own_visible_episode_subquery(user_id: uuid.UUID) -> ScalarSelect[uuid.UUID]:
     """The episode a watch was recorded against, when it is one the `User` can see.
 
-    A watch is made against one website's copy of an episode, which is the copy
-    it should be shown as. It is only stood in for by another source's copy when
-    the one it was made against is not the `User`'s to see.
+    A watch is made against one website's non-canonical row of an episode, which is the
+    non-canonical row it should be shown as. It is only stood in for by another source's
+    non-canonical row when the one it was made against is not the `User`'s to see.
     """
     return (
         select(col(WatchedEpisode.id))
@@ -143,11 +143,11 @@ def _episode_watch_base_statement(user_id: uuid.UUID) -> SelectOfScalar[Watch]:
         _watched_canonical_subquery(user_id),
     )
     identified_link = canonical_episode_link()
-    # Joined on the identifier the watch carries rather than through the link it
-    # was recorded against, so a watch whose link has since been deleted is still
-    # listed under another website's link to the same episode. The identifier is
-    # a link's own, so it is read to the episode that link is of before the copy
-    # to show it as is picked.
+    # Joined on the identifier the watch carries rather than through the link it was
+    # recorded against, so a watch whose link has since been deleted is still listed
+    # under another website's link to the same episode. The identifier is a link's own,
+    # so it is read to the episode that link is of before the non-canonical row to show
+    # it as is picked.
     return (
         select(Watch)
         .join(
@@ -213,10 +213,10 @@ def _representative_episodes_by_watch_identifier(
 ) -> dict[str, Episode]:
     """Load the representative visible `Episode` for each watched identifier.
 
-    An identifier is a link's own, so it is read to the episode that link is of
-    and the copy to show it as is picked from that episode's links. Where the
-    same media is reached two ways and so has a row under each, either stands
-    for the identifier; they are links to one episode either way.
+    An identifier is a link's own, so it is read to the episode that link is of and the
+    non-canonical row to show it as is picked from that episode's links. Where the same
+    media is reached two ways and so has a row under each, either stands for the
+    identifier; they are links to one episode either way.
     """
     canonical_ids_by_identifier = canonical_id_by_identifier(
         session,

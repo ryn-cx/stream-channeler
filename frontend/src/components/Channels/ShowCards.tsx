@@ -120,9 +120,10 @@ function useSourceDisabled(): (source: Source | undefined) => boolean {
 /**
  * Group shows that are the same title, keeping the order they arrived in.
  *
- * `canonical_show_id` names the title itself rather than one service's copy of
- * it, so it is the whole of the grouping. A copy that has no title yet stands
- * for itself under its own id, rather than every such copy reading as one title.
+ * `canonical_show_id` names the title itself rather than one service's
+ * non-canonical row of it, so it is the whole of the grouping. A non-canonical
+ * row that has no title yet stands for itself under its own id, rather than
+ * every such row reading as one title.
  */
 export function groupShows(shows: Show[]): Show[][] {
   const groups = new Map<string, Show[]>()
@@ -252,7 +253,8 @@ export function ShowCards({
 
         return (
           // A card is one title, and the same listing can be a card under each of
-          // the titles it mixes, so the title names the card rather than the copy.
+          // the titles it mixes, so the title names the card rather than the
+          // non-canonical row.
           <Fragment key={showGroup.canonicalShowId}>
             <Card className="relative gap-0 overflow-hidden py-0 hover:border-primary">
               {/* The whole card opens the title, since everything on it is about

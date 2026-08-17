@@ -321,11 +321,11 @@ class BasePlugin(
         *,
         force: bool = False,
     ) -> None:
-        """Read a stored listing again, and settle what its episodes are copies of.
+        """Read a stored listing again, and settle what its episodes are linked to.
 
         An update writes the same episodes an import does, so which TMDB episode
         each of them is is worked out here too. Only the matching, and not the
-        rest of what an import settles: which title a listing is a copy of is
+        rest of what an import settles: which title a listing is linked to is
         read off a website's own account of itself, which an update is not
         reading, and a canonical row has no title to point at at all.
         """
@@ -446,7 +446,7 @@ class BasePlugin(
         """Store the listing `show_key` names, and settle what it stands for.
 
         Every plugin ends this by handing what it wrote to `settle_show`, which is
-        what settles the title the listing is a copy of. Done there rather than
+        what settles the title the listing is linked to. Done there rather than
         by whatever called, because it is part of writing a listing, and done at
         the end rather than as the row is written, since the episodes read
         against the title are the ones the write has just put there.
@@ -586,7 +586,7 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
         asking for, and it is the handler that says what the URL named.
 
         A title that is already stored is only reconciled against the title it
-        was told it is a copy of, there being nothing else to read. `force` is
+        was told it is linked to, there being nothing else to read. `force` is
         what says to write it out again anyway.
         """
         show_key = handler.show_key

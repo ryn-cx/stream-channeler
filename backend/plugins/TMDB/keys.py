@@ -1,10 +1,10 @@
 # TODO: Validate
 """What TMDB's own records are keyed by.
 
-TMDB's records are the canonical rows themselves rather than copies of them, so
-they carry the canonical key exactly as it is written: `TMDB tv 1399`. That is
-what every other plugin's copy of the title is looked up under, and a copy is
-pointed at the row that key names.
+TMDB's records are the canonical rows themselves rather than non-canonical rows of them,
+so they carry the canonical key exactly as it is written: `TMDB tv 1399`. That is what
+every other plugin's non-canonical row of the title is looked up under, and a
+non-canonical row is pointed at the row that key names.
 
 A film is one record at every level, so its title, its season and its episode
 are all keyed `TMDB movie 27205`. A season and an episode of a series are keyed by

@@ -137,12 +137,12 @@ def hide_partially_watched_condition(user: User) -> ColumnElement[bool]:
 def started_show_ids(user: User) -> SelectOfScalar[UUID]:
     """The titles the `User` has watched anything of.
 
-    The titles themselves rather than the websites' listings of them, since a
-    watch is of the episode rather than of the copy that played it and a title
-    started on one website is started wherever else it is carried. An episode
-    nothing was minted for it to be a copy of hangs off a website's own listing,
-    so the titles it counts towards are the ones that listing is a copy of - all
-    of them, since a listing is no more a copy of one title than of another.
+    The titles themselves rather than the websites' listings of them, since a watch is
+    of the episode rather than of the non-canonical row that played it and a title
+    started on one website is started wherever else it is carried. An episode nothing
+    was minted for it to be linked to hangs off a website's own listing, so the titles
+    it counts towards are the ones that listing is linked to - all of them, since a
+    listing is no more linked to one title than to another.
     """
     named_episode = aliased(Episode)
     named_link = canonical_episode_link()
@@ -176,7 +176,7 @@ def started_show_ids(user: User) -> SelectOfScalar[UUID]:
         )
         .join(watched_show, col(watched_season.show_id) == col(watched_show.id))
         # A title has no links and stands for itself; a listing has one row per
-        # title it is a copy of and stands for each.
+        # title it is linked to and stands for each.
         .outerjoin(watched_link, col(watched_link.show_id) == col(watched_show.id))
         .where(Watch.user_id == user.id)
         .distinct()

@@ -119,9 +119,10 @@ function WatchesTableContent() {
     placeholderData: keepPreviousData,
   })
 
-  // A watch names the episode itself, and the listing carries one visible copy
+  // A watch names the episode itself, and the listing carries one visible
+  // non-canonical row
   // of each, so that is what the rest of the row is read from. A watch whose
-  // episode has no copy the viewer can see has no row to show.
+  // episode has no non-canonical row the viewer can see has no row to show.
   const watchesWithDetails: WatchWithDetails[] = watches
     ? watches.watches.flatMap((watch) => {
         const episode = watch.canonical_episode_id

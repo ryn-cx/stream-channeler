@@ -177,10 +177,10 @@ class YouTube(
                 force=force,
             )
 
-        # Before `import_results`, which names what the URL brought in by the keys
-        # of the listing's own rows: a channel resolves each of those to the row it
-        # is a copy of, so the copies have to exist before it is asked. A branch
-        # that wrote the listing settled it as it wrote; this is for the one that
+        # Before `import_results`, which names what the URL brought in by the keys of
+        # the listing's own rows: a channel resolves each of those to the row it is
+        # linked to, so the non-canonical rows have to exist before it is asked. A
+        # branch that wrote the listing settled it as it wrote; this is for the one that
         # found it already stored and read nothing.
         if canonical_show:
             add_canonical_show(self.session, show, canonical_show)

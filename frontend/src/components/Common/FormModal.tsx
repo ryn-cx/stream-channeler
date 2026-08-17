@@ -34,6 +34,7 @@ interface FormModalProps<
   isPending?: boolean
   submitLabel?: string
   size?: ModalSize
+  footerStart?: ReactNode
   /** The form fields rendered inside the standard `grid gap-4 py-4` body. */
   children: ReactNode
 }
@@ -60,6 +61,7 @@ export function FormModal<
   isPending,
   submitLabel,
   size,
+  footerStart,
   children,
 }: FormModalProps<TFieldValues, TContext, TTransformedValues>) {
   return (
@@ -78,7 +80,11 @@ export function FormModal<
               ) : null}
             </DialogHeader>
             <DialogBody className="grid gap-4 py-4">{children}</DialogBody>
-            <ModalFooter isPending={isPending} submitLabel={submitLabel} />
+            <ModalFooter
+              isPending={isPending}
+              submitLabel={submitLabel}
+              start={footerStart}
+            />
           </form>
         </Form>
       </ModalContent>

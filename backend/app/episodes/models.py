@@ -48,9 +48,10 @@ if TYPE_CHECKING:
 MANUAL_NOTE_PREFIX = "Manual: "
 
 
-# The canonical row is the one a channel sorts on, so these name its columns and
-# no copy's. A copy's own columns are only ever ordered by the admin tables, which
-# order by any column they show and so are no reason to index these five.
+# The canonical row is the one a channel sorts on, so these name its columns and no
+# non-canonical row's. A non-canonical row's own columns are only ever ordered by the
+# admin tables, which order by any column they show and so are no reason to index these
+# five.
 CANONICAL_SORTABLE_FIELDS = [
     "air_date",
     "duration",
@@ -62,7 +63,7 @@ CANONICAL_SORTABLE_FIELDS = [
 
 # TODO: Validate
 class BaseCanonicalEpisode(BaseMediaMixin):
-    """The columns an episode carries, and so a copy of one carries too."""
+    """The columns an episode carries, and so a non-canonical row of one carries too."""
 
     url: str | None = Field(default=None)
     name: str | None = Field(default=None)
@@ -84,13 +85,13 @@ class BaseEpisode(BaseCanonicalEpisode):
 
 # TODO: Validate
 class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
-    """Model representing an episode, and a website's copy of one.
+    """Model representing an episode, and a website's non-canonical row of one.
 
-    A row is the episode itself, or one website's copy standing for however many
-    episodes that website ran together. The episode itself hangs off the season
-    itself the way a copy hangs off the season's copy, by the same `season_id`,
-    so one primary key covers both, and `is_canonical` is the whole of what tells
-    the two apart. Which episodes a copy stands for is stored in
+    A row is the episode itself, or one website's non-canonical row standing for however
+    many episodes that website ran together. The episode itself hangs off the season
+    itself the way a non-canonical row hangs off the season's non-canonical row, by the
+    same `season_id`, so one primary key covers both, and `is_canonical` is the whole of
+    what tells the two apart. Which episodes a non-canonical row stands for is stored in
     `EpisodeCanonicalEpisode` alone, where no one of them stands above the rest.
     """
 
@@ -140,17 +141,15 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         ),
     )
 
-    # Whether this row is the episode itself rather than one website's row
-    # standing for it. Which episodes a non-canonical row stands for is stored in
-    # `EpisodeCanonicalEpisode` and nowhere else, since a website that runs two
-    # episodes together - a double-length first airing, a recap paired with the
-    # episode it recaps - stands for each of them equally, and a column could
-    # only hold one.
+    # Whether this row is the episode itself rather than one website's row standing for
+    # it. Which episodes a non-canonical row stands for is stored in
+    # `EpisodeCanonicalEpisode` and nowhere else, since a website that runs two episodes
+    # together - a double-length first airing, a recap paired with the episode it recaps
+    # - stands for each of them equally, and a column could only hold one.
     is_canonical: bool = Field(default=True)
 
-    # Every episode this stands for. Nothing about a non-canonical row says which
-    # of them a caller with room for one means, so nothing here puts one ahead of
-    # another.
+    # Every episode this stands for. Nothing about a non-canonical row says which of
+    # them a caller with room for one means, so nothing here puts one ahead of another.
     canonical_episode_links: list[EpisodeCanonicalEpisode] = Relationship(
         back_populates="episode",
         cascade_delete=True,
@@ -159,8 +158,8 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         },
     )
 
-    # The other end of the same table: every non-canonical row standing for this
-    # one, which only a canonical episode ever has.
+    # The other end of the same table: every non-canonical row standing for this one,
+    # which only a canonical episode ever has.
     non_canonical_episodes: list[EpisodeCanonicalEpisode] = Relationship(
         back_populates="canonical_episode",
         cascade_delete=True,
@@ -214,10 +213,10 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     def linked_sort_order(self) -> int | None:
         """Where this sits, as the link that was made for it says.
 
-        A copy's place is the link's rather than the row's: the same row stands
-        in a different place under each episode it was linked to, and only the
-        link knows which of them is being read. A row with no link, and the
-        episode itself, are ordered by the column they carry.
+        A non-canonical row's place is the link's rather than the row's: the same row
+        stands in a different place under each episode it was linked to, and only the
+        link knows which of them is being read. A row with no link, and the episode
+        itself, are ordered by the column they carry.
         """
         links = self.canonical_episode_links
         if len(links) != 1 or links[0].sort_order is None:
@@ -227,7 +226,7 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     # TODO: Validate
     @property
     def tmdb_id(self) -> int | None:
-        """The TMDB episode this is a copy of, if TMDB has a record of it."""
+        """The TMDB episode this is linked to, if TMDB has a record of it."""
         canonical_episode = self.sole_canonical_episode
         if canonical_episode is None:
             return None
@@ -271,8 +270,8 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     @classmethod
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
-        # Listed whether the row is the record of the media or a copy of one: a
-        # row is not hidden for being the record.
+        # Listed whether the row is the record of the media or a non-canonical row of
+        # one: a row is not hidden for being the record.
         return (
             select(cls)
             .join(Season, col(cls.season_id) == col(Season.id))
@@ -324,8 +323,8 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         themselves are rows of their own and are no part of what an upsert
         writes, so nothing here has to hold them off.
 
-        `is_canonical` is protected for the same reason a link is: a row that has
-        been made a copy of something stays one, and an import writing the row
+        `is_canonical` is protected for the same reason a link is: a row that has been
+        made a non-canonical row of something stays one, and an import writing the row
         again says nothing about that either way.
 
         `watch_identifier` is set here rather than by each plugin that builds an
@@ -357,10 +356,10 @@ class BaseEpisodeCanonicalEpisode(SQLModel):
         foreign_key="episode.id",
         ondelete="CASCADE",
     )
-    # Where the copy sits under the episode this link names. The copy's own
-    # column says where the website filed the row, which is one answer for a row
-    # that stands in a different place under each episode it was linked to, so
-    # the place is the link's and the column is only what a row with no link
+    # Where the non-canonical row sits under the episode this link names. The
+    # non-canonical row's own column says where the website filed the row, which is one
+    # answer for a row that stands in a different place under each episode it was linked
+    # to, so the place is the link's and the column is only what a row with no link
     # falls back on.
     sort_order: int | None = Field(default=None)
 
@@ -382,9 +381,8 @@ class EpisodeCanonicalEpisode(
     """
 
     __table_args__ = (
-        # Each episode is linked to a non-canonical row at most once; the leading
-        # column also serves lookups of a row's episodes and cascade deletion
-        # with it.
+        # Each episode is linked to a non-canonical row at most once; the leading column
+        # also serves lookups of a row's episodes and cascade deletion with it.
         PrimaryKeyConstraint("episode_id", "canonical_episode_id"),
         # Used to find every non-canonical row standing for an episode.
         Index(

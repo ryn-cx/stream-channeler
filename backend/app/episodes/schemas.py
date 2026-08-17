@@ -167,9 +167,9 @@ class TmdbEpisodeChoice(BaseModel):
     """A TMDB episode, as one of the episodes an `Episode` can be linked to."""
 
     canonical_episode_id: uuid.UUID
-    # The rows themselves, so the match can be opened on its own page here the
-    # same way the episode beside it can. TMDB's records are canonical rows, so
-    # these are the ids of the very rows, not of copies of them.
+    # The rows themselves, so the match can be opened on its own page here the same way
+    # the episode beside it can. TMDB's records are canonical rows, so these are the ids
+    # of the very rows, not of non-canonical rows of them.
     season_id: uuid.UUID
     show_id: uuid.UUID
     tmdb_episode_id: int
@@ -271,8 +271,8 @@ class EpisodesPublic(BaseModel):
 class CanonicalEpisodeOutput(BaseCanonicalEpisode):
     """Schema for returning a `Episode`.
 
-    An episode hangs off its season by the same column a copy hangs off the
-    copy's season by, so what is served as the canonical season is read off
+    An episode hangs off its season by the same column a non-canonical row hangs off the
+    non-canonical row's season by, so what is served as the canonical season is read off
     `season_id`. The name it is served under does not change.
     """
 

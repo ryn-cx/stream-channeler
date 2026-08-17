@@ -36,12 +36,11 @@ def find_and_add_canonical_show(
     show: Show,
     canonical_show: Show | None = None,
 ) -> None:
-    """Link `show` to the canonical show it is a copy of, and read its episodes.
+    """Link `show` to the canonical show it is linked to, and read its episodes.
 
-    A show TMDB has no match for is the canonical show, which is what it already
-    is when it is written, so there is nothing to do for it here. One TMDB does
-    have a match for is linked to that match, and `add_canonical_show` is what
-    makes it non-canonical.
+    A show TMDB has no match for is the canonical show, which is what it already is when
+    it is written, so there is nothing to do for it here. One TMDB does have a match for
+    is linked to that match, and `add_canonical_show` is what makes it non-canonical.
 
     A show already linked to a canonical show is left alone, since that may have
     been settled by hand and writing the show again is no reason to overrule it.
@@ -250,11 +249,11 @@ def update_show_extra(
     The one way of setting what a plugin keeps about a title, so that whatever
     setting it has to drag along happens wherever it is set from.
 
-    Changing the episode order is the case that drags something along. The order
-    decides which season an episode sits in and what it is numbered, and a copy
-    is matched to an episode by exactly those, so a link made under the old order
-    was made against numbering that no longer exists. The title is read again so
-    the new order is written down, and then every copy of it is matched afresh.
+    Changing the episode order is the case that drags something along. The order decides
+    which season an episode sits in and what it is numbered, and a non-canonical row is
+    matched to an episode by exactly those, so a link made under the old order was made
+    against numbering that no longer exists. The title is read again so the new order is
+    written down, and then every non-canonical row of it is matched afresh.
 
     Only the links nobody settled are dropped. One a `User` locked was decided by
     hand and is no more wrong under one order than another.
@@ -271,7 +270,7 @@ def update_show_extra(
 
     if reordered:
         _reread_in_new_order(session, show)
-        _relink_copies(session, show)
+        _relink_non_canonical_shows(session, show)
     session.commit()
 
 
@@ -299,20 +298,40 @@ def _reread_in_new_order(session: Session, show: Show) -> None:
 
 
 # TODO: Validate
-def _relink_copies(session: Session, canonical_show: Show) -> None:
-    """Match every copy of `canonical_show` against it again."""
+def _relink_non_canonical_shows(session: Session, canonical_show: Show) -> None:
+    """Match every non-canonical row of `canonical_show` against it again."""
     for link in list(canonical_show.non_canonical_shows):
-        copy = link.show
-        for season in copy.active_children:
-            for episode in season.active_children:
-                if episode.canonical_episode_locked:
-                    continue
-                for episode_link in list(episode.canonical_episode_links):
-                    session.delete(episode_link)
-                episode.is_canonical = True
-                episode.canonical_episode_note = None
-            session.flush()
-        EpisodeLinker(session, copy).link_show()
+        _relink_non_canonical_show(session, link.show)
+
+
+# TODO: Validate
+def _relink_non_canonical_show(
+    session: Session,
+    non_canonical_show: Show,
+) -> None:
+    for season in non_canonical_show.active_children:
+        for episode in season.active_children:
+            if episode.canonical_episode_locked:
+                continue
+            for episode_link in list(episode.canonical_episode_links):
+                session.delete(episode_link)
+            episode.is_canonical = True
+            episode.canonical_episode_note = None
+        session.flush()
+        for episode in season.active_children:
+            session.expire(episode, ["canonical_episode_links"])
+    EpisodeLinker(session, non_canonical_show).link_show()
+
+
+# TODO: Validate
+def relink_show(session: Session, show: Show) -> Show:
+    if show.is_canonical:
+        _relink_non_canonical_shows(session, show)
+    else:
+        _relink_non_canonical_show(session, show)
+    session.commit()
+    session.refresh(show)
+    return show
 
 
 # TODO: Validate

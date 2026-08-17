@@ -41,8 +41,8 @@ def sources_by_key(session: Session) -> dict[str, Source]:
 # TODO: Validate
 def episode_counts_by_source_id(session: Session) -> dict[uuid.UUID, int]:
     """Return the number of live episodes each `Source` provides, keyed by source id."""
-    # Every row belongs to the source that wrote it, whether it is the record of
-    # the media or a copy of one, so both are counted under it.
+    # Every row belongs to the source that wrote it, whether it is the record of the
+    # media or a non-canonical row of one, so both are counted under it.
     rows = session.exec(
         select(Source.id, func.count(col(Episode.id)))
         .select_from(Show)

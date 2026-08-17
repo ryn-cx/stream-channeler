@@ -116,14 +116,14 @@ class AbstractPlugin(ABC):
 
         Args:
             url: The URL to import.
-            canonical_show: The title `url` is known to be a copy of, when the
+            canonical_show: The title `url` is known to be linked to, when the
                 caller already knows it. A plugin otherwise has to find the title
                 by searching its name, which is a guess; being told is not.
                 Passed down whenever one import hands off to another, so the
                 whole chain works from the one title the import started at, and
-                added to what the listing is a copy of whether or not the listing
+                added to what the listing is linked to whether or not the listing
                 is chiefly of it - a series listing that also carries the film of
-                it is a copy of both.
+                it is linked to both.
             force: Write every record again even where nothing about it has
                 changed, rather than leaving a title that is already stored
                 alone. Passed down to every import the import hands off to, since
@@ -396,8 +396,8 @@ class AbstractPlugin(ABC):
     def search_url(cls, query: str) -> str | None:  # noqa: ARG003 - `query` is used by overrides.
         """Return the plugin website's own search-page URL for `query`.
 
-        Lets a user open the source site's search directly to find and copy an
-        importable URL. Returns None when the site has no such search page.
+        Lets a user open the source site's search directly to find and non-canonical row
+        an importable URL. Returns None when the site has no such search page.
         """
         return None
 
@@ -439,7 +439,7 @@ class URLImportResult(BaseModel):
     A channel holds the media itself rather than one website's records, so a
     result names what was imported by the keys of the records the plugin just
     wrote, and `add_results_to_channel` resolves each one to the canonical row
-    that record is a copy of.
+    that record is linked to.
 
     Example outputs:
 
@@ -509,10 +509,10 @@ class URLImportResult(BaseModel):
 class PluginSearchResult(BaseModel):
     """Search result from a plugin.
 
-    Every plugin searches its own catalogue, so a result maps directly to an
-    importable URL and carries the identifier that plugin files the title
-    under. Details for the result are read back from the same plugin under that
-    identifier rather than being matched onto some other service's copy.
+    Every plugin searches its own catalogue, so a result maps directly to an importable
+    URL and carries the identifier that plugin files the title under. Details for the
+    result are read back from the same plugin under that identifier rather than being
+    matched onto some other service's non-canonical row.
     """
 
     title: str

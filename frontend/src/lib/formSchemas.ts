@@ -33,7 +33,7 @@ export const optionalNonNegativeInt = z
 /** Required identifier ("key") field. */
 export const requiredKey = z.string().min(1, "Key is required")
 
-/** Required identifier shared by every copy of the same media. */
+/** Required identifier shared by every non-canonical row of the same media. */
 export const requiredIdentifier = z.string().min(1, "Identifier is required")
 
 /** Visibility selector shared by plugin and channel forms. */

@@ -1,11 +1,11 @@
 # TODO: Validate
 """Point detached watches back at an episode.
 
-Deleting an episode leaves its watches behind with no `episode_id`. A watch
-still names what it watched, so once an episode carrying that
-copy of that episode exists again the watch can be attached to it. An episode
-usually has a copy on several sources, so the one the `User` ranked highest is
-chosen, exactly as playback would.
+Deleting an episode leaves its watches behind with no `episode_id`. A watch still names
+what it watched, so once an episode carrying that non-canonical row of that episode
+exists again the watch can be attached to it. An episode usually has a non-canonical row
+on several sources, so the one the `User` ranked highest is chosen, exactly as playback
+would.
 """
 
 from collections import defaultdict
@@ -97,8 +97,8 @@ def _preferred_episode(
 ) -> Episode:
     """Return the candidate whose source the `User` ranked highest.
 
-    Ties break on the episode id so a rerun makes the same choice, matching how
-    playback collapses the copies of one episode.
+    Ties break on the episode id so a rerun makes the same choice, matching how playback
+    collapses the non-canonical rows of one episode.
     """
     episode, _ = min(
         candidates,
