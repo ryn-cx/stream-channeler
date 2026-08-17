@@ -310,6 +310,11 @@ CHANGES_OVERLAP = timedelta(days=2)
 
 
 # TODO: Validate
+def change_datetime(changed_at: str) -> datetime:
+    return tz_datetime.fromisoformat(changed_at.replace(" UTC", "+00:00"))
+
+
+# TODO: Validate
 class ShowChanges(_TMDBEndpointFile[TvSeriesChangesModel]):
     API_ENDPOINT = tminidb_client().tv_series_changes
 
@@ -339,26 +344,10 @@ class ShowChanges(_TMDBEndpointFile[TvSeriesChangesModel]):
         )
 
     # TODO: Validate
-    def _changes(self) -> Sequence[Any]:
+    def changes(self) -> Sequence[Any]:
         if not self.database_record.content:
             return []
         return self.parsed().changes
-
-    # TODO: Validate
-    def has_changes(self) -> bool:
-        return any(change.items for change in self._changes())
-
-    # TODO: Validate
-    def changed_season_ids(self) -> list[int]:
-        identifiers: list[int] = []
-        for change in self._changes():
-            if change.key != "season":
-                continue
-            for item in change.items:
-                identifier = getattr(item.value, "season_id", None)
-                if identifier is not None and identifier not in identifiers:
-                    identifiers.append(identifier)
-        return identifiers
 
 
 # TODO: Validate
@@ -564,6 +553,49 @@ class FileMixin(BasePlugin, register=False):
             self.changes_since(show_key),
             downloaded_to,
         )
+
+    # TODO: Validate
+    def incomplete_show_changes_files(self, show_key: str) -> list[ShowChanges]:
+        """Returns every ShowChanges file for a title not yet read to the end."""
+        _, tmdb_id = parse_show_key(show_key)
+        since = self.changes_since(show_key)
+        return self.get_incomplete_files(
+            ShowChanges,
+            lambda stored: self._file(
+                ShowChanges,
+                tmdb_id,
+                since,
+                date.fromisoformat(
+                    ShowChanges.file_key_to_unique_identifier(stored.key).split("/")[-1],
+                ),
+            ),
+            key_prefix=f"{tmdb_id}/",
+        )
+
+    # TODO: Validate
+    def stored_episode_translations_files(
+        self,
+        tmdb_show_id: int,
+    ) -> list[EpisodeTranslations]:
+        """Returns every EpisodeTranslations file already held for a title."""
+        statement = select(File).where(
+            File.plugin == self.plugin,
+            col(File.key).startswith(
+                f"{EpisodeTranslations.__name__}/{tmdb_show_id}/",
+            ),
+        )
+        files: list[EpisodeTranslations] = []
+        for stored in self.session.exec(statement).all():
+            identifier = EpisodeTranslations.file_key_to_unique_identifier(stored.key)
+            _, season_number, episode_number = identifier.split("/")
+            files.append(
+                self.episode_translations_file(
+                    tmdb_show_id,
+                    int(season_number),
+                    int(episode_number),
+                ),
+            )
+        return files
 
     # TODO: Validate
     def episode_groups_file(self, tmdb_id: int) -> EpisodeGroups:
