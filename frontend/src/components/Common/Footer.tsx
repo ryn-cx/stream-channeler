@@ -20,13 +20,13 @@ export function Footer() {
         <p className="text-muted-foreground text-sm">
           Stream Channeler - {currentYear}
         </p>
+        <Link
+          to="/credits"
+          className="text-muted-foreground hover:text-foreground text-xs transition-colors"
+        >
+          Data from TMDB/JustWatch/WatchMode
+        </Link>
         <div className="flex items-center gap-4">
-          <Link
-            to="/credits"
-            className="text-muted-foreground hover:text-foreground text-sm transition-colors"
-          >
-            Credits
-          </Link>
           {socialLinks.map(({ icon: Icon, href, label }) => (
             <a
               key={label}
