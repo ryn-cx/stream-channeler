@@ -250,6 +250,7 @@ class EpisodeLinker:
         least, each handed only what the one before it could not place, so the
         looser and costlier a matcher is the fewer episodes it has to read.
         """
+        episodes = self._unlinked(episodes)
         episodes = self._link_movie(episodes)
         episodes = self._link_name_and_numbering(episodes)
         episodes = self._link_plaintext_name_and_numbering(episodes)
@@ -275,6 +276,7 @@ class EpisodeLinker:
         left is where the episode sits and what it is about, which the website
         wrote down as truly as anybody.
         """
+        episodes = self._unlinked(episodes)
         episodes = self._link_movie(episodes)
         episodes = self._link_place_alone(episodes)
         episodes = self._link_description_and_episode_number(episodes)
@@ -640,8 +642,7 @@ class EpisodeLinker:
 
         episode = episodes[0]
         canonical_episode = self.canonical_episodes[0]
-        if not episode.canonical_episode_locked:
-            self._claim(episode, canonical_episode, "Automatic: Movie match")
+        self._claim(episode, canonical_episode, "Automatic: Movie match")
         return []
 
     # TODO: Validate
