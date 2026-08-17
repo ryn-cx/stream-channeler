@@ -45,7 +45,7 @@ const ROW_LABELS = ["Name", "Media type", "Description", "Link", "Image", "Key"]
 
 // TODO: Validate
 function heroFacts(data: ShowInformationOutput) {
-  const facts = [data.tmdb?.media_type ?? data.source.media_type]
+  const facts = [data.source.media_type]
   facts.push(data.tmdb ? "Linked to TMDB" : "Not linked to TMDB")
   facts.push(data.source.label)
   return facts.filter((fact): fact is string => !!fact)
@@ -82,19 +82,18 @@ function useShowInformation(showId: string, enabled: boolean) {
 }
 
 // TODO: Validate
-function showHero(data: ShowInformationOutput, facts: string[]) {
+function showHero(
+  data: ShowInformationOutput,
+  facts: string[],
+  links: { label: string; href: string }[],
+) {
   return (
     <InformationHero
-      title={data.tmdb?.name ?? data.source.name ?? "Unnamed show"}
-      subtitle={
-        data.tmdb && data.source.name !== data.tmdb.name
-          ? data.source.name
-          : null
-      }
-      description={data.tmdb?.description ?? data.source.description}
-      imageUrl={data.tmdb?.image_url ?? data.source.image_url}
+      title={data.source.name ?? "Unnamed show"}
+      description={data.source.description}
+      imageUrl={data.source.image_url}
       facts={facts}
-      links={heroLinks(data)}
+      links={links}
     />
   )
 }
@@ -118,15 +117,7 @@ function summaryHero(data: ShowInformationOutput) {
   const links = data.source.url
     ? [{ label: data.source.label, href: data.source.url }]
     : []
-  return (
-    <InformationHero
-      title={data.source.name ?? "Unnamed show"}
-      description={data.source.description}
-      imageUrl={data.source.image_url}
-      facts={summaryFacts(data)}
-      links={links}
-    />
-  )
+  return showHero(data, summaryFacts(data), links)
 }
 
 // TODO: Validate
@@ -209,7 +200,7 @@ export function ShowInformationPanel({
 
   return (
     <div className="flex flex-col gap-6">
-      {showHero(data, heroFacts(data))}
+      {showHero(data, heroFacts(data), heroLinks(data))}
 
       <CollapsibleSection title="Field comparison">
         <div className="overflow-x-auto">
@@ -253,7 +244,8 @@ export function ShowInformationDialog({
           <DialogTitle>Show Information</DialogTitle>
           <DialogDescription>
             What the source and TMDB each say about this title. The title is
-            shown as TMDB has it wherever TMDB has anything to say.
+            shown as this source has it, with TMDB's account beside it in the
+            comparison below.
           </DialogDescription>
         </DialogHeader>
 
