@@ -109,11 +109,24 @@ function showHero(data: ShowInformationOutput, facts: string[]) {
  * having failed to reach the very record it is.
  */
 function summaryFacts(data: ShowInformationOutput) {
-  const facts = [
-    data.tmdb?.media_type ?? data.source.media_type,
-    data.source.label,
-  ]
+  const facts = [data.source.media_type, data.source.label]
   return facts.filter((fact): fact is string => !!fact)
+}
+
+// TODO: Validate
+function summaryHero(data: ShowInformationOutput) {
+  const links = data.source.url
+    ? [{ label: data.source.label, href: data.source.url }]
+    : []
+  return (
+    <InformationHero
+      title={data.source.name ?? "Unnamed show"}
+      description={data.source.description}
+      imageUrl={data.source.image_url}
+      facts={summaryFacts(data)}
+      links={links}
+    />
+  )
 }
 
 // TODO: Validate
@@ -140,11 +153,7 @@ export function ShowInformationSummary({
     )
   }
 
-  return (
-    <div className="flex flex-col gap-2">
-      {showHero(data, summaryFacts(data))}
-    </div>
-  )
+  return <div className="flex flex-col gap-2">{summaryHero(data)}</div>
 }
 
 // TODO: Validate
