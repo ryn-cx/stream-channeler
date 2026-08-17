@@ -56,7 +56,7 @@ def find_and_add_canonical_show(
         canonical_show = _searched_show(session, show)
     if canonical_show:
         add_canonical_show(session, show, canonical_show)
-    EpisodeLinker(session, show).link()
+    EpisodeLinker(session, show).link_show()
 
 
 # TODO: Validate
@@ -85,7 +85,7 @@ def set_canonical_show(
     show.canonical_show_locked = True
     session.add(show)
 
-    EpisodeLinker(session, show).link()
+    EpisodeLinker(session, show).link_show()
     session.commit()
     session.refresh(show)
     return show
@@ -118,7 +118,7 @@ def unset_canonical_show(
     session.expire(show, ["canonical_show_links"])
 
     _unlink_unlisted_episodes(session, show)
-    EpisodeLinker(session, show).link()
+    EpisodeLinker(session, show).link_show()
     session.commit()
     session.refresh(show)
     return show
@@ -256,7 +256,7 @@ def _relink_copies(session: Session, canonical_show: Show) -> None:
                 episode.is_canonical = True
                 episode.canonical_episode_note = None
             session.flush()
-        EpisodeLinker(session, copy).link()
+        EpisodeLinker(session, copy).link_show()
 
 
 # TODO: Validate

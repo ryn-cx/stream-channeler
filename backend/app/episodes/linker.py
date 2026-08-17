@@ -144,15 +144,14 @@ class EpisodeLinker:
     SIMILAR_NAME_FLOOR: ClassVar[float] = 0.5
     SIMILAR_NAME_LEAD: ClassVar[float] = 0.1
 
-    # A name that is the number and nothing else - "Episode 5", "Ep. 5", "#5" -
-    # is where the episode is rather than what it is called. A website that names
-    # its episodes that way has said nothing about them a name can be read
-    # against, and the name it did write is the one thing that must not be: TMDB
-    # holds the real names, so comparing them pairs an episode with whichever
-    # real name happens to read closest to the word "Episode".
-    PLACEHOLDER_NAME: ClassVar[re.Pattern[str]] = re.compile(
-        rf"^\s*{_NUMBERED_NAME}\s*$",
-        re.IGNORECASE,
+    # The names that are no name at all. A name that is the number and nothing
+    # else - "Episode 5", "Ep. 5", "#5" - is where the episode is rather than
+    # what it is called, and a website that names its episodes that way has said
+    # nothing about them a name can be read against. Read once, when the episodes
+    # are gathered, and the ones answering to it are matched on everything but
+    # their names.
+    NAME_BLACKLIST: ClassVar[tuple[re.Pattern[str], ...]] = (
+        re.compile(rf"^\s*{_NUMBERED_NAME}\s*$", re.IGNORECASE),
     )
 
     # TODO: Validate
@@ -160,10 +159,18 @@ class EpisodeLinker:
         """Gather the show's episodes and the canonical ones they are read against."""
         self.session = session
         self.show = show
-        self.episodes = [
+        episodes = [
             episode
             for season in show.active_children
             for episode in season.active_children
+        ]
+        # Split here and nowhere else, so what counts as a name is settled once
+        # and each half is handed only the matchers that suit it.
+        self.episodes = [
+            episode for episode in episodes if not self._has_blacklisted_name(episode)
+        ]
+        self.unnamed_episodes = [
+            episode for episode in episodes if self._has_blacklisted_name(episode)
         ]
         self.canonical_episodes = [
             episode
@@ -182,7 +189,9 @@ class EpisodeLinker:
             for season in parent.active_children
             for episode in season.active_children
         }
-        self._load_existing_links([*self.episodes, *self.canonical_episodes])
+        self._load_existing_links(
+            [*self.episodes, *self.unnamed_episodes, *self.canonical_episodes],
+        )
         # Read off the TMDB plugin the first time a matcher asks for them, since
         # two of them want the same translations and neither always runs.
         self._translated_forms: dict[uuid.UUID, frozenset[str]] | None = None
@@ -228,38 +237,57 @@ class EpisodeLinker:
         ).all()
 
     # TODO: Validate
-    def link(self) -> None:
-        """Link each of the show's episodes to its canonical episode, where one is.
+    def link_show(self) -> None:
+        """Link all of the show's `Episode`s to canonical TMDB `Episode`s."""
+        self.link_named_episodes(self.episodes)
+        self.link_unnamed_episodes(self.unnamed_episodes)
 
-        The numbering matchers are read twice over: once against the numbering
-        the title is stored in, and once against every other order TMDB holds for
-        it. A website following the DVD order numbers an episode where that order
-        puts it, which is a number the title's own seasons never gave it, so the
-        pair only ever line up once the other orders are read too. The title's own
-        numbering is read first either way, since an episode that lines up under
-        the order the title is stored in is not one another order gets a say in.
+    # TODO: Validate
+    def link_named_episodes(self, episodes: list[Episode]) -> list[Episode]:
+        """Read the episodes a website named through every matcher in turn.
+
+        From the matcher that asks the most of a pair to the one that asks the
+        least, each handed only what the one before it could not place, so the
+        looser and costlier a matcher is the fewer episodes it has to read.
         """
-        self._link_to_movie()
-        self._link_by_place_alone()
-        self._link_by_name_and_numbering()
-        self._link_by_plaintext_name_and_numbering()
-        self._link_by_name_and_episode_number()
-        self._link_by_plaintext_name_and_episode_number()
-        self._link_by_description_and_episode_number()
-        self._link_by_name_and_alternate_number()
-        self._link_by_plaintext_name_and_alternate_number()
-        self._link_by_similar_name_and_episode_number()
-        self._link_by_similar_name_and_alternate_number()
-        self._link_by_name()
-        self._link_by_plaintext_name()
-        self._link_by_description()
-        self._link_by_translated_name()
+        episodes = self._link_movie(episodes)
+        episodes = self._link_name_and_numbering(episodes)
+        episodes = self._link_plaintext_name_and_numbering(episodes)
+        episodes = self._link_name_and_episode_number(episodes)
+        episodes = self._link_plaintext_name_and_episode_number(episodes)
+        episodes = self._link_description_and_episode_number(episodes)
+        episodes = self._link_name_and_alternate_number(episodes)
+        episodes = self._link_plaintext_name_and_alternate_number(episodes)
+        episodes = self._link_similar_name_and_episode_number(episodes)
+        episodes = self._link_similar_name_and_alternate_number(episodes)
+        episodes = self._link_name(episodes)
+        episodes = self._link_plaintext_name(episodes)
+        episodes = self._link_description(episodes)
+        return self._link_translated_name(episodes)
+
+    # TODO: Validate
+    def link_unnamed_episodes(self, episodes: list[Episode]) -> list[Episode]:
+        """Read the episodes a website only numbered through the matchers left.
+
+        Every matcher weighing a name is no use here and worse than none: a name
+        that says nothing is as alike to one real name as to the next, and the
+        closest of them is whichever happens to carry the word "Episode". What is
+        left is where the episode sits and what it is about, which the website
+        wrote down as truly as anybody.
+        """
+        episodes = self._link_movie(episodes)
+        episodes = self._link_place_alone(episodes)
+        episodes = self._link_description_and_episode_number(episodes)
+        return self._link_description(episodes)
 
     # TODO: Validate
     @classmethod
-    def _is_placeholder_name(cls, name: str | None) -> bool:
-        """Whether a name says only where the episode is rather than what it is."""
-        return bool(name and cls.PLACEHOLDER_NAME.match(name))
+    def _has_blacklisted_name(cls, episode: Episode) -> bool:
+        """Whether the website named the episode at all."""
+        name = episode.name
+        if not name:
+            return True
+        return any(pattern.match(name) for pattern in cls.NAME_BLACKLIST)
 
     # TODO: Validate
     @staticmethod
@@ -411,11 +439,10 @@ class EpisodeLinker:
         return cache
 
     # TODO: Validate
-    def _drop_linked(self) -> None:
+    @staticmethod
+    def _unlinked(episodes: list[Episode]) -> list[Episode]:
         """Leave only the episodes still waiting on a canonical episode."""
-        self.episodes = [
-            episode for episode in self.episodes if not episode.canonical_episode_links
-        ]
+        return [episode for episode in episodes if not episode.canonical_episode_links]
 
     # TODO: Validate
     def _claim(self, episode: Episode, tmdb_episode: Episode, note: str) -> None:
@@ -600,89 +627,66 @@ class EpisodeLinker:
             for form in plaintext_forms(name)
         )
 
-    # TODO: Validate
-    def _link_to_movie(self) -> None:
-        """Point a lone episode at a lone TMDB episode, and leave nothing for the rest.
-
-        A film is one episode of one season on both sides, so a row with a single
-        episode against a canonical show with a single episode is matched
-        outright: there is nothing else either of them could be, whatever the two
-        are named. Once that has been read the episode is settled either way, so
-        nothing is left for the matchers that follow to read a second time.
-        """
-        if len(self.episodes) != 1 or len(self.canonical_episodes) != 1:
-            self._drop_linked()
-            return
-
-        only_episode = self.episodes[0]
+    def _link_movie(self, episodes: list[Episode]) -> list[Episode]:
+        """Link movies."""
         if (
-            not only_episode.canonical_episode_links
-            and not only_episode.canonical_episode_locked
+            len(episodes) != 1
+            or len(self.canonical_episodes) != 1
+            or episodes[0].season.show.media_type is None
+            or episodes[0].season.show.media_type.lower() != MediaType.movie
+            or self.canonical_episodes[0].season.show.media_type != MediaType.movie
         ):
-            self._claim(
-                only_episode,
-                self.canonical_episodes[0],
-                "Automatic: Movie match",
-            )
-        self.episodes = []
+            return episodes
+
+        episode = episodes[0]
+        canonical_episode = self.canonical_episodes[0]
+        if not episode.canonical_episode_locked:
+            self._claim(episode, canonical_episode, "Automatic: Movie match")
+        return []
 
     # TODO: Validate
-    def _link_by_place_alone(self) -> None:
-        """Point each episode a website only numbered at the one filed where it is.
+    def _link_place_alone(self, episodes: list[Episode]) -> list[Episode]:
+        """Point each episode at the one filed where it is.
 
-        A website that calls its episodes nothing but "Episode 5" has written
-        down where the episode is and nothing about what it is, so where it is
-        is the whole of what there is to match on: the episode of the same
-        season and the same number is it. TMDB's own name for that episode is no
-        part of the reading, since the two were never going to agree on a name
-        this website never had.
-
-        Read before every matcher that weighs a name, because a name that says
-        nothing is the one a loose reading goes wrong on: "Episode 5" is as alike
-        to one real name as to the next, and the closest of them is whichever
-        happens to carry the word.
+        Where the episode sits is the whole of what there is to match on: the
+        episode of the same season and the same number is it. TMDB's own name for
+        that episode is no part of the reading, since the two were never going to
+        agree on a name this website never had.
 
         Two TMDB episodes filed in one place, or none at all, leaves the episode
         where it was for the matchers below to read.
         """
-        placeheld = [
-            episode
-            for episode in self.episodes
-            if self._is_placeholder_name(episode.name)
-        ]
-        if not placeheld:
-            return
-
         by_place = self._canonical_episodes_by_place(
             self.canonical_episodes,
             self._season_number_of,
         )
-        for episode in placeheld:
+        for episode in episodes:
             season_number = self._season_number_of(episode)
             if season_number is None or episode.episode_number is None:
                 continue
             if match := by_place.get((season_number, episode.episode_number)):
                 self._claim(episode, match, "Automatic: Numbering match")
-        self._drop_linked()
+        return self._unlinked(episodes)
 
     # TODO: Validate
-    def _link_by_name_and_number(
+    def _link_name_and_number(
         self,
+        episodes: list[Episode],
         name_of: Callable[[Episode], str | None],
         numbers_of: Callable[[Episode], Collection[int]],
         note: str,
-    ) -> None:
+    ) -> list[Episode]:
         """Point each episode at the TMDB episode of its name and one of its numbers."""
         sorted_canonical_episodes = self._canonical_episodes_by_name_and_number(
             self.canonical_episodes,
             name_of,
             numbers_of,
         )
-        for episode in self.episodes:
+        for episode in episodes:
             pairing = (name_of(episode), episode.episode_number)
             if match := sorted_canonical_episodes.get(pairing):  # pyright: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
                 self._claim(episode, match, note)
-        self._drop_linked()
+        return self._unlinked(episodes)
 
     # TODO: Validate
     def _season_number_of(self, episode: Episode) -> int | None:
@@ -690,18 +694,19 @@ class EpisodeLinker:
         return self.season_numbers.get(episode.id)
 
     # TODO: Validate
-    def _link_by_numbering(
+    def _link_numbering(
         self,
+        episodes: list[Episode],
         name_of: Callable[[Episode], str | None],
         note: str,
-    ) -> None:
+    ) -> list[Episode]:
         """Point each episode at the TMDB episode of its name, season and number."""
         sorted_canonical_episodes = self._canonical_episodes_by_numbering(
             self.canonical_episodes,
             name_of,
             self._season_number_of,
         )
-        for episode in self.episodes:
+        for episode in episodes:
             numbering = (
                 name_of(episode),
                 self._season_number_of(episode),
@@ -709,10 +714,10 @@ class EpisodeLinker:
             )
             if match := sorted_canonical_episodes.get(numbering):  # pyright: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
                 self._claim(episode, match, note)
-        self._drop_linked()
+        return self._unlinked(episodes)
 
     # TODO: Validate
-    def _link_by_name_and_numbering(self) -> None:
+    def _link_name_and_numbering(self, episodes: list[Episode]) -> list[Episode]:
         """Point each episode at the TMDB episode of its name, season and number.
 
         A title whose episodes are called nothing but where they are - "Episode
@@ -721,34 +726,41 @@ class EpisodeLinker:
         reading those two alone can say which season's it is. Read the season as
         well and the pair line up: same name, same place, same episode.
         """
-        self._link_by_numbering(
+        return self._link_numbering(
+            episodes,
             lambda tmdb_episode: tmdb_episode.name,
             "Automatic: Name and full numbering match",
         )
 
     # TODO: Validate
-    def _link_by_plaintext_name_and_numbering(self) -> None:
+    def _link_plaintext_name_and_numbering(
+        self, episodes: list[Episode]
+    ) -> list[Episode]:
         """Point each episode at the TMDB episode of its name, season and number.
 
         The same as matching on a name and a full numbering, with the case,
         punctuation and spacing of the name taken out of it.
         """
-        self._link_by_numbering(
+        return self._link_numbering(
+            episodes,
             lambda tmdb_episode: plaintext(tmdb_episode.name),
             "Automatic: Plaintext name and full numbering match",
         )
 
     # TODO: Validate
-    def _link_by_name_and_episode_number(self) -> None:
+    def _link_name_and_episode_number(self, episodes: list[Episode]) -> list[Episode]:
         """Point each episode at the TMDB episode of the same name and number."""
-        self._link_by_name_and_number(
+        return self._link_name_and_number(
+            episodes,
             lambda tmdb_episode: tmdb_episode.name,
             self._own_episode_numbers,
             "Automatic: Name and number match",
         )
 
     # TODO: Validate
-    def _link_by_plaintext_name_and_episode_number(self) -> None:
+    def _link_plaintext_name_and_episode_number(
+        self, episodes: list[Episode]
+    ) -> list[Episode]:
         """Point each episode at the TMDB episode of the same name and number.
 
         The names are compared with their case, punctuation and spacing taken
@@ -756,14 +768,17 @@ class EpisodeLinker:
         name they are both a spelling of and the episode is matched rather than
         left waiting.
         """
-        self._link_by_name_and_number(
+        return self._link_name_and_number(
+            episodes,
             lambda tmdb_episode: plaintext(tmdb_episode.name),
             self._own_episode_numbers,
             "Automatic: Plaintext name and number match",
         )
 
     # TODO: Validate
-    def _link_by_description_and_episode_number(self) -> None:
+    def _link_description_and_episode_number(
+        self, episodes: list[Episode]
+    ) -> list[Episode]:
         """Point each episode at the TMDB episode described the same under its number.
 
         A website that renames an episode - translating it, shortening it, or
@@ -779,14 +794,15 @@ class EpisodeLinker:
         the same paragraph on every one of them - say nothing about which of them
         an episode is, so neither is offered.
         """
-        self._link_by_name_and_number(
+        return self._link_name_and_number(
+            episodes,
             lambda tmdb_episode: plaintext(tmdb_episode.description),
             self._own_episode_numbers,
             "Automatic: Description and number match",
         )
 
     # TODO: Validate
-    def _link_by_name_and_alternate_number(self) -> None:
+    def _link_name_and_alternate_number(self, episodes: list[Episode]) -> list[Episode]:
         """Point each episode at the TMDB episode of its name, in any other order.
 
         The number the website wrote down is read against every order TMDB holds
@@ -794,31 +810,35 @@ class EpisodeLinker:
         episode numbered by the DVD order or counted straight through the run is
         matched by the number that order gives it.
         """
-        if not self.episodes:
-            return
-        self._link_by_name_and_number(
+        if not episodes:
+            return episodes
+        return self._link_name_and_number(
+            episodes,
             lambda tmdb_episode: tmdb_episode.name,
             self._alternate_numbers_of,
             "Automatic: Name and alternate order number match",
         )
 
     # TODO: Validate
-    def _link_by_plaintext_name_and_alternate_number(self) -> None:
+    def _link_plaintext_name_and_alternate_number(
+        self, episodes: list[Episode]
+    ) -> list[Episode]:
         """Point each episode at the TMDB episode of its name, in any other order.
 
         The same as matching on a name and another order's number, with the case,
         punctuation and spacing of the name taken out of it.
         """
-        if not self.episodes:
-            return
-        self._link_by_name_and_number(
+        if not episodes:
+            return episodes
+        return self._link_name_and_number(
+            episodes,
             lambda tmdb_episode: plaintext(tmdb_episode.name),
             self._alternate_numbers_of,
             "Automatic: Plaintext name and alternate order number match",
         )
 
     # TODO: Validate
-    def _link_by_name(self) -> None:
+    def _link_name(self, episodes: list[Episode]) -> list[Episode]:
         """Point each episode at the TMDB episode of the same name.
 
         The numbering is no part of it, so an episode a website filed under a
@@ -829,13 +849,13 @@ class EpisodeLinker:
             self.canonical_episodes,
             lambda tmdb_episode: tmdb_episode.name,
         )
-        for episode in self.episodes:
+        for episode in episodes:
             if match := sorted_canonical_episodes.get(episode.name):  # pyright: ignore[reportArgumentType]  # ty: ignore[invalid-argument-type]
                 self._claim(episode, match, "Automatic: Name match")
-        self._drop_linked()
+        return self._unlinked(episodes)
 
     # TODO: Validate
-    def _link_by_plaintext_name(self) -> None:
+    def _link_plaintext_name(self, episodes: list[Episode]) -> list[Episode]:
         """Point each episode at the TMDB episode of the same name.
 
         Neither the numbering nor the case, punctuation and spacing of the name
@@ -846,13 +866,13 @@ class EpisodeLinker:
             self.canonical_episodes,
             lambda tmdb_episode: plaintext(tmdb_episode.name),
         )
-        for episode in self.episodes:
+        for episode in episodes:
             if match := sorted_canonical_episodes.get(plaintext(episode.name)):
                 self._claim(episode, match, "Automatic: Plaintext name match")
-        self._drop_linked()
+        return self._unlinked(episodes)
 
     # TODO: Validate
-    def _link_by_description(self) -> None:
+    def _link_description(self, episodes: list[Episode]) -> list[Episode]:
         """Point each episode at the TMDB episode described the same.
 
         The numbering is no part of it, so an episode a website filed under a
@@ -865,13 +885,13 @@ class EpisodeLinker:
             self.canonical_episodes,
             lambda tmdb_episode: plaintext(tmdb_episode.description),
         )
-        for episode in self.episodes:
+        for episode in episodes:
             if match := sorted_canonical_episodes.get(plaintext(episode.description)):
                 self._claim(episode, match, "Automatic: Description match")
-        self._drop_linked()
+        return self._unlinked(episodes)
 
     # TODO: Validate
-    def _link_by_translated_name(self) -> None:
+    def _link_translated_name(self, episodes: list[Episode]) -> list[Episode]:
         """Point each episode at the TMDB episode named that in any language.
 
         A website carries the name the episode is known by where it is watched,
@@ -886,11 +906,11 @@ class EpisodeLinker:
         name the two of them are. Two TMDB episodes answering to the same name
         say nothing about which of them an episode is, so neither is taken.
         """
-        if not self.episodes:
-            return
+        if not episodes:
+            return episodes
 
         forms_by_tmdb_episode = self._translated_name_forms()
-        for episode in self.episodes:
+        for episode in episodes:
             if not (targets := plaintext_forms(episode.name)):
                 continue
 
@@ -902,25 +922,31 @@ class EpisodeLinker:
             if len(matches) != 1:
                 continue
             self._claim(episode, matches[0], "Automatic: Translated name match")
-        self._drop_linked()
+        return self._unlinked(episodes)
 
     # TODO: Validate
-    def _link_by_similar_name_and_alternate_number(self) -> None:
+    def _link_similar_name_and_alternate_number(
+        self, episodes: list[Episode]
+    ) -> list[Episode]:
         """Point each episode at the closest named TMDB episode of another order.
 
         The same as matching on a similar name and a number, with the number read
         against every order TMDB holds for the title rather than against the one
         the title is stored in.
         """
-        if not self.episodes:
-            return
-        self._link_by_similar_name(
+        if not episodes:
+            return episodes
+        return self._link_similar_name(
+            episodes,
             self._alternate_numbers_of,
             "Automatic: Similar name and alternate order number match",
         )
 
     # TODO: Validate
-    def _link_by_similar_name_and_episode_number(self) -> None:
+    def _link_similar_name_and_episode_number(
+        self,
+        episodes: list[Episode],
+    ) -> list[Episode]:
         """Point each episode at the closest named TMDB episode of its number.
 
         The name a website wrote down is the name of the episode as somebody
@@ -934,23 +960,25 @@ class EpisodeLinker:
         something and has to be clearly ahead of the next best, or the episode is
         left waiting.
         """
-        self._link_by_similar_name(
+        return self._link_similar_name(
+            episodes,
             self._own_episode_numbers,
             "Automatic: Similar name and number match",
         )
 
     # TODO: Validate
-    def _link_by_similar_name(
+    def _link_similar_name(
         self,
+        episodes: list[Episode],
         numbers_of: Callable[[Episode], Collection[int]],
         note: str,
-    ) -> None:
+    ) -> list[Episode]:
         """Point each episode at the closest named TMDB episode carrying its number."""
         numbered_episodes = [
-            episode for episode in self.episodes if episode.episode_number is not None
+            episode for episode in episodes if episode.episode_number is not None
         ]
         if not numbered_episodes:
-            return
+            return episodes
 
         forms_by_tmdb_episode = self._translated_name_forms()
         for episode in numbered_episodes:
@@ -976,7 +1004,7 @@ class EpisodeLinker:
                 continue
 
             self._claim(episode, scored[0][1], note)
-        self._drop_linked()
+        return self._unlinked(episodes)
 
 
 # What a person settles by hand, rather than what the matchers work out.

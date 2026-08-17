@@ -14,7 +14,7 @@ logger = logger.bind(source="updater")
 def run(stop_event: threading.Event) -> None:  # noqa: D103
     with ThreadPoolExecutor(max_workers=2) as executor:
         futures = [
-            executor.submit(update_outdated.run_forever, stop_event),
+            executor.submit(update_outdated._update_outdated_forever),
             executor.submit(import_queue.run_forever, stop_event),
         ]
         for future in as_completed(futures):

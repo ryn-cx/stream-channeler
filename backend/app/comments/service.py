@@ -317,9 +317,8 @@ def mark_notifications_read(
     if comment_id is not None:
         statement = statement.where(CommentNotification.comment_id == comment_id)
 
-    now = tz_datetime.now()
     for notification in session.exec(statement).all():
-        notification.read_at = now
+        notification.read_at = tz_datetime.now()
         session.add(notification)
     session.commit()
     return Message(message="Notifications marked as read")

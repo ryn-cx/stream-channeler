@@ -68,23 +68,6 @@ class ImportURLMixin(
         return handler.import_results(show)
 
     # TODO: Validate
-    @override
-    def update_show(self, show: Show, *, force: bool = False) -> None:
-        """Read the title again, and import whatever now lists it.
-
-        An update is the only way a title stored before a lookup was added hears
-        about it, since the import that would have asked is long done.
-
-        The listings are never imported forced, however this update was asked
-        for: a website's own listing is updated by that website's plugin, and
-        writing it out again from here in the middle of a run is what leaves the
-        same season being written twice. What is wanted is the listings that are
-        not stored yet, and an import of one that is returns straight back.
-        """
-        super().update_show(show, force=force)
-        self._import_listed_sources(show.key, show)
-
-    # TODO: Validate
     def _import_listed_sources(
         self,
         show_key: str,

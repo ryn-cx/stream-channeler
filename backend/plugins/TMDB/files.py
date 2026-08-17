@@ -1,12 +1,12 @@
 # TODO: Validate
 from collections.abc import Sequence
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from functools import cache
 from http import HTTPStatus
 from typing import Any, ClassVar, Literal, NamedTuple, overload, override
 
 from pydantic import BaseModel
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 from tminidb import TMiniDB
 from tminidb.exceptions import HTTPError
 from tminidb.movie_details.models import MovieDetailsModel
@@ -18,11 +18,13 @@ from tminidb.tv_episode_details.models import TvEpisodeDetailsModel
 from tminidb.tv_episode_group_details.models import TvEpisodeGroupDetailsModel
 from tminidb.tv_episode_translations.models import TvEpisodeTranslationsModel
 from tminidb.tv_season_details.models import TvSeasonDetailsModel
+from tminidb.tv_series_changes.models import TvSeriesChangesModel
 from tminidb.tv_series_details.models import TvSeriesDetailsModel
 from tminidb.tv_series_episode_groups.models import TvSeriesEpisodeGroupsModel
 from tminidb.tv_watch_providers.models import TvWatchProvidersModel
 
 from app.config import settings
+from app.files.models import File
 from app.media.media_type import MediaType
 from app.plugins.models import Plugin
 from app.shows.models import Show
@@ -303,6 +305,62 @@ class EpisodeTranslations(_TMDBEndpointFile[TvEpisodeTranslationsModel]):
         )
 
 
+
+CHANGES_OVERLAP = timedelta(days=2)
+
+
+# TODO: Validate
+class ShowChanges(_TMDBEndpointFile[TvSeriesChangesModel]):
+    API_ENDPOINT = tminidb_client().tv_series_changes
+
+    # TODO: Validate
+    def __init__(
+        self,
+        session: Session,
+        plugin: Plugin,
+        tmdb_show_id: int,
+        since: date,
+        downloaded_to: date,
+    ) -> None:
+        self.tmdb_show_id = tmdb_show_id
+        self.since = since
+        super().__init__(
+            session,
+            plugin,
+            f"{tmdb_show_id}/{downloaded_to.isoformat()}",
+        )
+
+    # TODO: Validate
+    @override
+    def _get(self) -> TvSeriesChangesModel:
+        return self.API_ENDPOINT.download_and_parse_since(
+            self.tmdb_show_id,
+            self.since,
+        )
+
+    # TODO: Validate
+    def _changes(self) -> Sequence[Any]:
+        if not self.database_record.content:
+            return []
+        return self.parsed().changes
+
+    # TODO: Validate
+    def has_changes(self) -> bool:
+        return any(change.items for change in self._changes())
+
+    # TODO: Validate
+    def changed_season_ids(self) -> list[int]:
+        identifiers: list[int] = []
+        for change in self._changes():
+            if change.key != "season":
+                continue
+            for item in change.items:
+                identifier = getattr(item.value, "season_id", None)
+                if identifier is not None and identifier not in identifiers:
+                    identifiers.append(identifier)
+        return identifiers
+
+
 # TODO: Validate
 class MultiSearch(_TMDBEndpointFile[SearchMultiModel]):
     """Multi search file."""
@@ -467,6 +525,47 @@ class FileMixin(BasePlugin, register=False):
         return self._file(ShowDetail, tmdb_id)
 
     # TODO: Validate
+    def changes_since(self, show_key: str) -> date:
+        show = Show.get(self.session, self.source, show_key)
+        reference = show.update_at if show and show.update_at else tz_datetime.now()
+        return (reference - CHANGES_OVERLAP).date()
+
+    # TODO: Validate
+    def _latest_show_changes_date(self, tmdb_show_id: int) -> date | None:
+        statement = (
+            select(File)
+            .where(
+                File.plugin == self.plugin,
+                col(File.key).startswith(f"{ShowChanges.__name__}/{tmdb_show_id}/"),
+            )
+            .order_by(col(File.data_timestamp).desc())
+        )
+        stored = self.session.exec(statement).first()
+        if stored is None:
+            return None
+        identifier = ShowChanges.file_key_to_unique_identifier(stored.key)
+        return date.fromisoformat(identifier.split("/")[-1])
+
+    # TODO: Validate
+    def show_changes_file(
+        self,
+        show_key: str,
+        downloaded_to: date | None = None,
+    ) -> ShowChanges:
+        """Returns ShowChanges file."""
+        _, tmdb_id = parse_show_key(show_key)
+        if downloaded_to is None:
+            downloaded_to = (
+                self._latest_show_changes_date(tmdb_id) or tz_datetime.now().date()
+            )
+        return self._file(
+            ShowChanges,
+            tmdb_id,
+            self.changes_since(show_key),
+            downloaded_to,
+        )
+
+    # TODO: Validate
     def episode_groups_file(self, tmdb_id: int) -> EpisodeGroups:
         """Returns the EpisodeGroups file for a title."""
         return self._file(EpisodeGroups, tmdb_id)
@@ -600,17 +699,10 @@ class FileMixin(BasePlugin, register=False):
         media_type, tmdb_id = parse_show_key(show_key)
         if media_type == MediaType.movie:
             return [self.movie_detail_file(tmdb_id)]
-
-        # `ShowDetail` downloads every season and episode file along with itself.
-        # Every episode order comes down too, and the episodes of every one of
-        # them, so whichever order is chosen later is already here to be read
-        # rather than waiting on an import of its own.
         groups_file = self.episode_groups_file(tmdb_id)
-        # Downloaded here rather than left to the caller, because what it lists
-        # is what says which order files there are, and a list of files cannot
-        # name them before it has been read.
         groups_file.download_if_outdated()
         return [
+            self.show_changes_file(show_key),
             self.show_detail_file(tmdb_id),
             groups_file,
             *(
@@ -712,10 +804,12 @@ class FileMixin(BasePlugin, register=False):
         media_type, tmdb_id = parse_show_key(show_key)
         if media_type == MediaType.movie:
             return [self.movie_detail_file(tmdb_id)]
+        changes_file = self.show_changes_file(show_key)
         group_id = self._chosen_group_id(show_key)
         if group_id is not None:
-            return [self.episode_group_detail_file(group_id)]
+            return [changes_file, self.episode_group_detail_file(group_id)]
         return [
+            changes_file,
             self.season_detail_file(
                 tmdb_id,
                 self._native_season_number(season_key, show_key),

@@ -314,7 +314,7 @@ class BasePlugin(
             raise RuntimeError(msg)
 
     # TODO: Validate
-    def _preload_and_upsert_show(
+    def _update_and_upsert_show(
         self,
         show: Show,
         update_at: datetime | None = None,
@@ -337,22 +337,16 @@ class BasePlugin(
     @override
     def update_show(self, show: Show, *, force: bool = False) -> None:
         logger.info("Updating show: {}", show.key)
-        show = self._preload_show(
-            show.key,
-            source_key=show.source.key,
-        ).one()
-        self._preload_and_upsert_show(show, show.update_at, force=force)
+        show = self._preload_show(show.key, source_key=show.source.key).one()
+        self._update_and_upsert_show(show, show.update_at, force=force)
 
     # TODO: Validate
     @override
     def update_season(self, season: Season) -> None:
         logger.info("Updating season: {}", season.key)
-        season = self._preload_season(
-            season.id,
-            preload_show=True,
-        ).one()
+        season = self._preload_season(season.id, preload_show=True).one()
         self._download_season_files_and_children(season, update_at=season.update_at)
-        self._preload_and_upsert_show(season.show)
+        self._update_and_upsert_show(season.show)
 
     # TODO: Validate
     @override
@@ -360,7 +354,7 @@ class BasePlugin(
         logger.info("Updating episode: {}", episode.key)
         episode = self._preload_episode(episode.id, preload_source=True).one()
         self._download_episode_files(episode, update_at=episode.update_at)
-        self._preload_and_upsert_show(episode.season.show)
+        self._update_and_upsert_show(episode.season.show)
 
     # TODO: Validate
     @override

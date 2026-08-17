@@ -250,6 +250,7 @@ function ChannelRow({
             />
             <ManageShowsButton
               channelId={channel.id}
+              channelName={channel.name}
               variant="icon"
               showLabel={SHOW_BUTTON_LABELS}
             />

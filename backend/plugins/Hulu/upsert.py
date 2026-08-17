@@ -153,10 +153,9 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> None:
-        now = tz_datetime.now()
         for sort_order, item in enumerate(self._season_items(show_key, season_number)):
             start_date = item.bundle.availability.start_date
-            if start_date > now:
+            if start_date > tz_datetime.now():
                 season.set_update_at(start_date)
                 continue
 

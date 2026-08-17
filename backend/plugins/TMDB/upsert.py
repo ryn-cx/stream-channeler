@@ -47,8 +47,11 @@ from plugins.TMDB.keys import (
     season_key,
 )
 
-# How long a record stands for before TMDB is read again.
-_REFRESH_INTERVAL = timedelta(days=1)
+# How long a title stands for before TMDB is asked what has changed about it.
+# Only a title is on a timer: what its seasons and episodes are is settled by
+# what that ask comes back with, so one of those is read again when TMDB says it
+# moved and is left alone when it says nothing.
+CHANGES_INTERVAL = timedelta(days=7)
 
 
 # TODO: Validate
@@ -151,7 +154,7 @@ class UpsertMixin(HelperMixin, register=False):
                 year=release_year(series.first_air_date),
                 media_type="TV Show",
                 data_timestamp=data_timestamp,
-                update_at=data_timestamp + _REFRESH_INTERVAL,
+                update_at=data_timestamp + CHANGES_INTERVAL,
                 source_id=source.id,
             )
             show = self._upsert_show_object(new_show, source, show, show_key)
@@ -183,7 +186,7 @@ class UpsertMixin(HelperMixin, register=False):
                     url=title_page_url(MediaType.tv, tmdb_id),
                     image_url=poster_image_url(source.poster_path),
                     data_timestamp=data_timestamp,
-                    update_at=data_timestamp + _REFRESH_INTERVAL,
+                    update_at=None,
                     show_id=show.id,
                 )
                 season = self._upsert_season_object(
@@ -233,7 +236,7 @@ class UpsertMixin(HelperMixin, register=False):
                 episode_number=number,
                 sort_order=sort_order,
                 data_timestamp=data_timestamp,
-                update_at=data_timestamp + _REFRESH_INTERVAL,
+                update_at=None,
                 season_id=season.id,
             )
             self._upsert_episode_object(new_episode, season, episode, show_key)
@@ -261,7 +264,7 @@ class UpsertMixin(HelperMixin, register=False):
                 year=release_year(movie.release_date),
                 media_type="Movie",
                 data_timestamp=data_timestamp,
-                update_at=data_timestamp + _REFRESH_INTERVAL,
+                update_at=data_timestamp + CHANGES_INTERVAL,
                 source_id=source.id,
             )
             show = self._upsert_show_object(new_show, source, show, show_key)
@@ -291,7 +294,7 @@ class UpsertMixin(HelperMixin, register=False):
                 url=title_page_url(MediaType.movie, tmdb_id),
                 image_url=poster_image_url(movie.poster_path),
                 data_timestamp=data_timestamp,
-                update_at=data_timestamp + _REFRESH_INTERVAL,
+                update_at=None,
                 show_id=show.id,
             )
             season = self._upsert_season_object(new_season, show, season, show_key)
@@ -325,7 +328,7 @@ class UpsertMixin(HelperMixin, register=False):
             episode_number=MOVIE_EPISODE_NUMBER,
             sort_order=MOVIE_EPISODE_NUMBER,
             data_timestamp=data_timestamp,
-            update_at=data_timestamp + _REFRESH_INTERVAL,
+            update_at=None,
             season_id=season.id,
         )
         self._upsert_episode_object(new_episode, season, episode, show_key)

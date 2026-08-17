@@ -215,7 +215,7 @@ class YouTube(
                 season,
                 update_at=season.update_at,
             )
-            self._preload_and_upsert_show(season.show)
+            self._update_and_upsert_show(season.show)
             season.update_at = tz_datetime.now() + _VIDEO_SEASON_UPDATE_DELAY
             return
 
@@ -238,7 +238,7 @@ class YouTube(
                 "PlaylistFeed for season {} is unavailable, skipping new video check.",
                 season.key,
             )
-            self._preload_and_upsert_show(season.show)
+            self._update_and_upsert_show(season.show)
             season.update_at = tz_datetime.now() + timedelta(hours=1)
             return
 
@@ -256,7 +256,7 @@ class YouTube(
                 season,
                 update_at=tz_datetime.now(),
             )
-        self._preload_and_upsert_show(season.show)
+        self._update_and_upsert_show(season.show)
         season.update_at = playlist_feed.data_timestamp + timedelta(hours=1)
 
     # TODO: Validate

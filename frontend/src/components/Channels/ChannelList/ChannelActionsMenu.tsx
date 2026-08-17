@@ -14,7 +14,11 @@ export const ChannelActionsMenu = ({ channel }: ChannelActionsMenuProps) => {
   return (
     <ActionsMenu>
       <EditChannel channel={channel} />
-      <ManageShowsButton channelId={channel.id} variant="icon" />
+      <ManageShowsButton
+        channelId={channel.id}
+        channelName={channel.name}
+        variant="icon"
+      />
       <DeleteChannel id={channel.id} />
     </ActionsMenu>
   )

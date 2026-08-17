@@ -45,19 +45,22 @@ function heroFacts(data: EpisodeInformationOutput, preferSource: boolean) {
   const facts = [
     formatDuration(side.duration ?? data.source.duration),
     formatInformationDate(side.air_date ?? data.source.air_date),
-    data.tmdb ? "Linked to TMDB" : "Not linked to TMDB",
+    // What TMDB has to do with the episode is no part of one website's own
+    // account of it, so it is left out where the website's row is what was
+    // opened.
+    preferSource ? null : data.tmdb ? "Linked to TMDB" : "Not linked to TMDB",
     data.source.label,
   ]
   return facts.filter((fact): fact is string => !!fact)
 }
 
 // TODO: Validate
-function heroLinks(data: EpisodeInformationOutput) {
+function heroLinks(data: EpisodeInformationOutput, preferSource: boolean) {
   const links = []
   if (data.source.url) {
     links.push({ label: data.source.label, href: data.source.url })
   }
-  if (data.tmdb?.url) {
+  if (!preferSource && data.tmdb?.url) {
     links.push({ label: data.tmdb.label, href: data.tmdb.url })
   }
   return links
@@ -74,8 +77,10 @@ interface EpisodeInformationHeroProps {
   /** Whether the information is wanted yet, so a closed window fetches nothing. */
   enabled?: boolean
   /**
-   * Whether the website's own row is what was opened, in which case that is what
-   * is shown rather than TMDB's account of the episode it was matched to.
+   * Whether the website's own row is what was opened, in which case its own
+   * account is the whole of what is shown: TMDB's stands beside the episode
+   * rather than beside one website's listing of it, and reading it here would
+   * put words in the website's mouth.
    */
   preferSource?: boolean
 }
@@ -126,7 +131,7 @@ export function EpisodeInformationHero({
       description={side.description ?? data.source.description}
       imageUrl={side.image_url ?? data.source.image_url}
       facts={heroFacts(data, preferSource)}
-      links={heroLinks(data)}
+      links={heroLinks(data, preferSource)}
     />
   )
 }

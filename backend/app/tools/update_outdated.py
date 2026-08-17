@@ -347,14 +347,13 @@ def _next_update_at(session: Session) -> datetime | None:
     to come due. Media that no channel includes is excluded so the wait is not cut short
     by an item that the update run would skip.
     """
-    now = tz_datetime.now()
     soonest: datetime | None = None
     for media_class in MEDIA_CLASSES_IN_ORDER:
         statement = (
             _restrict_to_media_in_channel(
                 _restrict_to_plugin_user(
                     media_class.select_with_plugin().where(
-                        col(media_class.update_at) > now,
+                        col(media_class.update_at) > tz_datetime.now(),
                         col(media_class.deleted_at).is_(None),
                     ),
                 ),

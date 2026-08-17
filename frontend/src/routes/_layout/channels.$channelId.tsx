@@ -321,6 +321,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
               {isOwner ? (
                 <ManageShowsButton
                   channelId={channelId}
+                  channelName={channel?.name}
                   variant="menu"
                   combinedChannels={{ isLoggedIn: !!user }}
                 />
@@ -389,6 +390,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
           {isOwner ? (
             <ManageShowsButton
               channelId={channelId}
+              channelName={channel?.name}
               combinedChannels={{ isLoggedIn: !!user }}
             />
           ) : (

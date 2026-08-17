@@ -131,14 +131,19 @@ export function EpisodeInformationPanel({
         preferSource={preferSource}
       />
 
-      <CollapsibleSection title="Field comparison">
+      {/*
+        One website's row is read on its own rather than against TMDB's account
+        of the episode: what is being looked at there is what that website says,
+        and a column of TMDB's answers beside it reads as the website's own.
+      */}
+      <CollapsibleSection title={preferSource ? "Fields" : "Field comparison"}>
         <div className="overflow-x-auto">
           <InformationTable
             sourceLabel={data.source.label}
             tmdbLabel={data.tmdb ? data.tmdb.label : "TMDB (not linked)"}
             rowLabels={ROW_LABELS}
             sourceRows={sideRows(data.source)}
-            tmdbRows={data.tmdb ? sideRows(data.tmdb) : null}
+            tmdbRows={preferSource || !data.tmdb ? null : sideRows(data.tmdb)}
           />
         </div>
       </CollapsibleSection>

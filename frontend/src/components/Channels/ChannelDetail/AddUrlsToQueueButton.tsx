@@ -18,6 +18,7 @@ import { ManageShowsTabs } from "./ManageShowsTabs"
 
 interface ManageShowsButtonProps {
   channelId: string
+  channelName?: string | null
   variant?: "button" | "menu" | "icon"
   showLabel?: boolean
   /** When provided, adds an owner-only "Combined Channels" tab to the modal. */
@@ -29,6 +30,7 @@ interface ManageShowsButtonProps {
 // TODO: Validate
 export function ManageShowsButton({
   channelId,
+  channelName,
   variant = "button",
   showLabel,
   combinedChannels,
@@ -58,7 +60,9 @@ export function ManageShowsButton({
       </DialogTrigger>
       <DialogContent className="sm:max-w-5xl max-h-[85vh] flex flex-col">
         <DialogHeader className="px-8">
-          <DialogTitle>Manage Shows</DialogTitle>
+          <DialogTitle>
+            {channelName ? `Manage ${channelName} Shows` : "Manage Shows"}
+          </DialogTitle>
           <DialogDescription>
             Search, import, and manage shows in your channel.
           </DialogDescription>
