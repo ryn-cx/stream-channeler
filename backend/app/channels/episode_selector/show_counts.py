@@ -16,10 +16,8 @@ from uuid import UUID
 from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, func, select
 
-from app.canonical_media.filters import (
-    canonical_id_of,
-    is_canonical,
-)
+from app.canonical_media.episodes import canonical_id_of
+from app.canonical_media.filters import is_canonical
 from app.channels.episode_selector.watch_filters import started_show_ids
 from app.channels.schemas import ChannelOptions
 from app.episodes.models import Episode

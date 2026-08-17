@@ -10,7 +10,7 @@ from sqlmodel import Session, col, select
 
 from app.canonical_media.filters import is_canonical, is_non_canonical
 from app.canonical_media.keys import watch_identifier
-from app.episodes.models import Episode
+from app.episodes.models import Episode, EpisodeCanonicalEpisode
 from app.seasons.models import Season
 from app.shows.models import Show, ShowCanonicalShow
 from app.sources.models import Source
@@ -241,10 +241,13 @@ def canonical_ids_by_key(
     )
     copy_rows: dict[str, uuid.UUID] = dict(
         session.exec(
-            select(Episode.key, Episode.canonical_episode_id).where(
-                col(Episode.key).in_(keys),
-                col(Episode.canonical_episode_id).is_not(None),
-            ),
+            select(Episode.key, EpisodeCanonicalEpisode.canonical_episode_id)
+            .select_from(Episode)
+            .join(
+                EpisodeCanonicalEpisode,
+                col(EpisodeCanonicalEpisode.episode_id) == col(Episode.id),
+            )
+            .where(col(Episode.key).in_(keys)),
         ).all(),
     )
     return own_rows | copy_rows

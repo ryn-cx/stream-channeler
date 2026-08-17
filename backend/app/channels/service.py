@@ -9,8 +9,12 @@ from fastapi import HTTPException
 from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, delete, select
 
+from app.canonical_media.episodes import (
+    canonical_episode_id_column,
+    canonical_episode_link,
+    links_of,
+)
 from app.canonical_media.filters import (
-    canonical_id_column,
     is_canonical,
     is_non_canonical,
 )
@@ -138,12 +142,14 @@ def shows_by_canonical_id(
     copy_season = aliased(Season)
     canonical_episode = aliased(Episode)
     canonical_season = aliased(Season)
+    canonical_link = canonical_episode_link()
     carried = session.exec(
         select(canonical_season.show_id, Show)  # type: ignore[call-overload]
         .select_from(Episode)
+        .join(canonical_link, links_of(Episode, canonical_link))
         .join(
             canonical_episode,
-            col(canonical_episode.id) == col(Episode.canonical_episode_id),
+            col(canonical_episode.id) == col(canonical_link.canonical_episode_id),
         )
         .join(
             canonical_season,
@@ -465,11 +471,20 @@ def update_whitelist(
 def _canonical_episode_id(session: Session, episode_id: UUID) -> UUID | None:
     """Return the canonical episode `episode_id` stands for, which a filter names.
 
-    A row standing for nothing is the episode itself, so it names itself.
+    A row standing for nothing is the episode itself, so it names itself. A row
+    standing for more than one names none of them, since a filter holds one
+    episode and there is no saying which of them was meant.
     """
-    return session.exec(
-        select(canonical_id_column(Episode)).where(Episode.id == episode_id),  # type: ignore[call-overload]
-    ).one()
+    canonical_link = canonical_episode_link()
+    named = session.exec(
+        select(canonical_episode_id_column(Episode, canonical_link))  # type: ignore[call-overload]
+        .select_from(Episode)
+        .outerjoin(canonical_link, links_of(Episode, canonical_link))
+        .where(Episode.id == episode_id),
+    ).all()
+    if len(named) != 1:
+        return None
+    return named[0]
 
 
 # TODO: Validate

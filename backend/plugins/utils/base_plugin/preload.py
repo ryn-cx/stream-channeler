@@ -9,7 +9,7 @@ from sqlalchemy.engine.result import ScalarResult
 from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, col, select
 
-from app.episodes.models import Episode
+from app.episodes.models import Episode, EpisodeCanonicalEpisode
 from app.files.models import File
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -80,7 +80,8 @@ class PreloadMixin(ABC):
             options.append(
                 selectinload(Show.seasons)  # type: ignore[arg-type]
                 .selectinload(Season.episodes)  # type: ignore[arg-type]
-                .selectinload(Episode.canonical_episode),  # type: ignore[arg-type]
+                .selectinload(Episode.canonical_episode_links)  # type: ignore[arg-type]
+                .selectinload(EpisodeCanonicalEpisode.canonical_episode),  # type: ignore[arg-type]
             )
         elif preload_seasons:
             options.append(selectinload(Show.seasons))  # type: ignore[arg-type]

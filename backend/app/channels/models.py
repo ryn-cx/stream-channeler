@@ -17,6 +17,7 @@ from sqlmodel import (
     SQLModel,
 )
 
+from app.canonical_media.episodes import canonical_id_of
 from app.episodes.models import Episode
 from app.models import (
     DateTimeField,
@@ -434,7 +435,7 @@ class ChannelEpisodeFilter(
 
         """
         canonical_id = (
-            episode.canonical_episode_id if isinstance(episode, Episode) else episode
+            canonical_id_of(episode) if isinstance(episode, Episode) else episode
         )
         return session.get(
             cls,
@@ -522,7 +523,7 @@ class ChannelEpisodeSourceFilter(
 
         """
         canonical_id = (
-            episode.canonical_episode_id if isinstance(episode, Episode) else episode
+            canonical_id_of(episode) if isinstance(episode, Episode) else episode
         )
         show_id = show.id if isinstance(show, Show) else show
         return session.get(

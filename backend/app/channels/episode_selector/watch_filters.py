@@ -28,9 +28,11 @@ from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, col, desc, func, or_, select
 from sqlmodel.sql.expression import Select, SelectOfScalar
 
-from app.canonical_media.filters import (
-    canonical_id_column,
+from app.canonical_media.episodes import (
+    canonical_episode_id_column,
+    canonical_episode_link,
     canonical_id_of,
+    links_of,
 )
 from app.channels.episode_selector.canonical_entities import episode_id
 from app.episodes.models import Episode
@@ -66,8 +68,11 @@ def watched_canonical_episodes(user: User) -> SelectOfScalar[UUID]:
     other website carrying it.
     """
     watched_episode = aliased(Episode)
+    watched_link = canonical_episode_link()
     return (
-        select(canonical_id_column(watched_episode))
+        select(canonical_episode_id_column(watched_episode, watched_link))
+        .select_from(watched_episode)
+        .outerjoin(watched_link, links_of(watched_episode, watched_link))
         .join(
             Watch,
             col(Watch.watch_identifier) == col(watched_episode.watch_identifier),
@@ -140,6 +145,7 @@ def started_show_ids(user: User) -> SelectOfScalar[UUID]:
     of them, since a listing is no more a copy of one title than of another.
     """
     named_episode = aliased(Episode)
+    named_link = canonical_episode_link()
     watched_episode = aliased(Episode)
     watched_season = aliased(Season)
     watched_show = aliased(Show)
@@ -158,9 +164,11 @@ def started_show_ids(user: User) -> SelectOfScalar[UUID]:
             named_episode,
             col(named_episode.watch_identifier) == col(Watch.watch_identifier),
         )
+        .outerjoin(named_link, links_of(named_episode, named_link))
         .join(
             watched_episode,
-            col(watched_episode.id) == canonical_id_column(named_episode),
+            col(watched_episode.id)
+            == canonical_episode_id_column(named_episode, named_link),
         )
         .join(
             watched_season,
@@ -186,9 +194,12 @@ def join_last_watched(
     reach these columns as raw SQL rather than through the subquery object.
     """
     watched_episode = aliased(Episode)
+    watched_link = canonical_episode_link()
     last_watched = (
         select(
-            canonical_id_column(watched_episode).label("canonical_episode_id"),
+            canonical_episode_id_column(watched_episode, watched_link).label(
+                "canonical_episode_id",
+            ),
             func.max(
                 case((col(Watch.verified).is_(True), Watch.watch_date)),
             ).label(EPISODE_LAST_WATCH_COMPLETED_COLUMN),
@@ -201,8 +212,9 @@ def join_last_watched(
             watched_episode,
             col(watched_episode.watch_identifier) == col(Watch.watch_identifier),
         )
+        .outerjoin(watched_link, links_of(watched_episode, watched_link))
         .where(col(Watch.user_id) == user.id)
-        .group_by(canonical_id_column(watched_episode))
+        .group_by(canonical_episode_id_column(watched_episode, watched_link))
         .subquery(EPISODE_LAST_WATCHED_SUBQUERY)
     )
 
@@ -224,7 +236,8 @@ def latest_watch_by_identifier(
 
     identifiers = [canonical_id_of(episode) for episode in episodes]
     watched_episode = aliased(Episode)
-    canonical_id = canonical_id_column(watched_episode)
+    watched_link = canonical_episode_link()
+    canonical_id = canonical_episode_id_column(watched_episode, watched_link)
     rows = session.exec(
         select(canonical_id, Watch)  # type: ignore[call-overload]
         .select_from(Watch)
@@ -232,6 +245,7 @@ def latest_watch_by_identifier(
             watched_episode,
             col(watched_episode.watch_identifier) == col(Watch.watch_identifier),
         )
+        .outerjoin(watched_link, links_of(watched_episode, watched_link))
         .where(
             canonical_id.in_(identifiers),
             Watch.user_id == user.id,

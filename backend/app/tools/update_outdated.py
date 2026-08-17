@@ -13,6 +13,7 @@ from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import SelectOfScalar
 
+from app.canonical_media.episodes import canonical_episode_link, links_of
 from app.channels.models import ChannelSeasonFilter, ChannelShow
 from app.database import engine, load_models
 from app.episodes.models import Episode
@@ -66,6 +67,7 @@ def _channel_season_exists(
     """
     copy_episode = aliased(Episode)
     canonical_episode = aliased(Episode)
+    copy_link = canonical_episode_link()
     canonical_season = aliased(Season)
     copy_show = aliased(Show)
     copy_show_link = aliased(ShowCanonicalShow)
@@ -81,9 +83,10 @@ def _channel_season_exists(
             col(copy_episode.season_id) == col(season.id),
         )
     return (
-        statement.outerjoin(
+        statement.outerjoin(copy_link, links_of(copy_episode, copy_link))
+        .outerjoin(
             canonical_episode,
-            col(copy_episode.canonical_episode_id) == col(canonical_episode.id),
+            col(copy_link.canonical_episode_id) == col(canonical_episode.id),
         )
         .outerjoin(
             canonical_season,

@@ -5,7 +5,14 @@ import uuid
 from datetime import datetime
 from typing import Self
 
-from pydantic import AliasPath, BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    AliasChoices,
+    AliasPath,
+    BaseModel,
+    ConfigDict,
+    Field,
+    model_validator,
+)
 
 from app.canonical_media.keys import EPISODE_LEVEL, tmdb_id_of
 from app.episodes.models import BaseCanonicalEpisode, BaseEpisode, Episode
@@ -35,13 +42,29 @@ class EpisodeUpdate(
 class EpisodeOutput(BaseEpisode):
     """Schema for returning an `Episode`."""
 
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)  # type: ignore[assignment]
+
     id: uuid.UUID
     season_id: uuid.UUID
     # The episode this is a link to, which is what the record is served as and
     # what a watch, a channel filter and a saved position all name. Nothing when
     # the row is the episode itself, which is what the admin lists serve
     # alongside the links.
-    canonical_episode_id: uuid.UUID | None = None
+    canonical_episode_id: uuid.UUID | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "canonical_episode_id",
+            "sole_canonical_episode_id",
+        ),
+    )
+    # Every episode it stands for, which is what the screens that settle the
+    # links by hand work on: one of them is what the field above reads as, and a
+    # row standing for two has none to read there at all.
+    canonical_episode_ids: list[uuid.UUID] = Field(default_factory=list)
+    # Where the row sits, as the link that was made for it says. `sort_order` is
+    # the row's own column, which is what a website filed it under and what a row
+    # with no link is ordered by; this is what the link holding it says instead.
+    linked_sort_order: int | None = None
     # The TMDB episode behind that, when TMDB has a record of it.
     tmdb_id: int | None = None
     # What the episode is, said the same way wherever it turns up. Two rows

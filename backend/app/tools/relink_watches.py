@@ -16,7 +16,12 @@ from loguru import logger
 from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, select
 
-from app.canonical_media.filters import canonical_id_column, is_non_canonical
+from app.canonical_media.episodes import (
+    canonical_episode_id_column,
+    canonical_episode_link,
+    links_of,
+)
+from app.canonical_media.filters import is_non_canonical
 from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.seasons.models import Season
@@ -57,15 +62,20 @@ def _candidates_by_watch_identifier(
         return {}
 
     named_episode = aliased(Episode)
+    named_link = canonical_episode_link()
+    canonical_link = canonical_episode_link()
     rows = session.exec(
         select(named_episode.watch_identifier, Episode, Source.key)  # type: ignore[call-overload]
         .select_from(Episode)
         .join(Season, col(Season.id) == col(Episode.season_id))
         .join(Show, col(Show.id) == col(Season.show_id))
         .join(Source, col(Source.id) == col(Show.source_id))
+        .join(canonical_link, links_of(Episode, canonical_link))
+        .outerjoin(named_link, links_of(named_episode, named_link))
         .join(
             named_episode,
-            canonical_id_column(named_episode) == col(Episode.canonical_episode_id),
+            canonical_episode_id_column(named_episode, named_link)
+            == col(canonical_link.canonical_episode_id),
         )
         .where(
             is_non_canonical(Episode),
@@ -124,13 +134,18 @@ def _report_unresolvable(session: Session, watch_identifiers: set[str]) -> None:
         return
 
     named_episode = aliased(Episode)
+    named_link = canonical_episode_link()
+    canonical_link = canonical_episode_link()
     soft_deleted = set(
         session.exec(
             select(named_episode.watch_identifier)
             .select_from(Episode)
+            .join(canonical_link, links_of(Episode, canonical_link))
+            .outerjoin(named_link, links_of(named_episode, named_link))
             .join(
                 named_episode,
-                col(Episode.canonical_episode_id) == canonical_id_column(named_episode),
+                col(canonical_link.canonical_episode_id)
+                == canonical_episode_id_column(named_episode, named_link),
             )
             .where(
                 is_non_canonical(Episode),

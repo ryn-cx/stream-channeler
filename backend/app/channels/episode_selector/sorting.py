@@ -10,7 +10,11 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement, UnaryExpression
 from sqlmodel import and_, col, desc, func, select
 
-from app.canonical_media.filters import canonical_id_column
+from app.canonical_media.episodes import (
+    canonical_episode_id_column,
+    canonical_episode_link,
+    links_of,
+)
 from app.channels.episode_selector.canonical_columns import CanonicalColumns
 from app.channels.episode_selector.canonical_entities import (
     CANONICAL_EPISODE,
@@ -297,6 +301,7 @@ class SortExpressionBuilder:
         if not self._user:
             return literal_column("0")
         named_episode = aliased(Episode)
+        named_link = canonical_episode_link()
         watched_episode = aliased(Episode)
         watched_season = aliased(Season)
         watched_show = aliased(Show)
@@ -309,9 +314,11 @@ class SortExpressionBuilder:
                 named_episode,
                 col(named_episode.watch_identifier) == col(Watch.watch_identifier),
             )
+            .outerjoin(named_link, links_of(named_episode, named_link))
             .join(
                 watched_episode,
-                col(watched_episode.id) == canonical_id_column(named_episode),
+                col(watched_episode.id)
+                == canonical_episode_id_column(named_episode, named_link),
             )
             .join(
                 watched_season,

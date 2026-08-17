@@ -13,7 +13,8 @@ from sqlmodel import and_, col, func, or_, select
 from sqlmodel.sql.expression import Select
 
 from app.auth.dependencies import CurrentUser, SessionDep
-from app.canonical_media.filters import canonical_id_of, is_canonical, is_non_canonical
+from app.canonical_media.episodes import canonical_id_of, links_of
+from app.canonical_media.filters import is_canonical, is_non_canonical
 from app.canonical_media.keys import not_tmdb_key_clause, same_issuer_clause
 from app.channel_orders.models import ChannelOrder
 from app.channels.channel_scope import (
@@ -24,6 +25,7 @@ from app.channels.channel_scope import (
 from app.channels.episode_selector.canonical_columns import CanonicalColumns
 from app.channels.episode_selector.canonical_entities import (
     CANONICAL_EPISODE,
+    CANONICAL_EPISODE_LINK,
     CANONICAL_SEASON,
     CANONICAL_SHOW,
     episode_id,
@@ -286,10 +288,19 @@ class EpisodeQueryBuilder:
             .select_from(Episode)
             .join(Season, col(Episode.season_id) == col(Season.id))
             .join(Show, col(Season.show_id) == col(Show.id))
+            # A listing stands for every episode it was linked to, so one that
+            # runs two episodes together is read once under each of them: the
+            # channel holds episodes rather than listings, and a listing standing
+            # for two of them answers for both.
+            .outerjoin(
+                CANONICAL_EPISODE_LINK,
+                links_of(Episode, CANONICAL_EPISODE_LINK),
+            )
             .outerjoin(
                 CANONICAL_EPISODE,
                 and_(
-                    col(Episode.canonical_episode_id) == col(CANONICAL_EPISODE.id),
+                    col(CANONICAL_EPISODE_LINK.canonical_episode_id)
+                    == col(CANONICAL_EPISODE.id),
                     is_canonical(CANONICAL_EPISODE),
                 ),
             )

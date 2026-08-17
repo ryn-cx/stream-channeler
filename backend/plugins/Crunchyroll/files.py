@@ -273,30 +273,28 @@ class FileMixin(BasePlugin, register=False):
             browse = BrowseMusic.file_key_to_unique_identifier(browse.key)
         return self._file(BrowseMusic, str(browse))
 
-    # TODO: Validate
     def find_newest_browse_music_file(self) -> BrowseMusic | None:
         """Returns newest data for all of the music, or None when there is none."""
         if file := self.preload_latest_file(BrowseMusic):
             return self.browse_music_file(file)
         return None
 
-    # TODO: Validate
     def get_newest_music_browse_file(self) -> BrowseMusic:
-        """Returns newest data for all of the music."""
+        """Returns the newest music browse file. Raises if one does not exist."""
         if file := self.find_newest_browse_music_file():
             return file
 
         msg = "No music browse file found."
         raise FileNotFoundError(msg)
 
-    # TODO: Validate
     def _music_source_files(self) -> Sequence[BrowseMusic]:
-        """Returns the files the music `Source` is dated by."""
+        """Returns the `Source` files for Crunchyroll music."""
         return [self.get_newest_music_browse_file()]
 
     # TODO: Validate
     @override
     def _source_files(self) -> Sequence[BrowseSeries]:
+        """Returns the `Source` files for Crunchyroll video."""
         return [self.get_newest_browse_series_file()]
 
     # TODO: Validate

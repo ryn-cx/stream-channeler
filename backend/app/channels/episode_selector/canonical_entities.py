@@ -22,7 +22,10 @@ from uuid import UUID
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement
 
-from app.canonical_media.filters import canonical_id_column
+from app.canonical_media.episodes import (
+    canonical_episode_id_column,
+    canonical_episode_link,
+)
 from app.canonical_media.seasons import season_id_column
 from app.episodes.models import Episode
 from app.seasons.models import Season
@@ -31,6 +34,10 @@ from app.shows.models import Show
 CANONICAL_EPISODE = aliased(Episode)
 CANONICAL_SEASON = aliased(Season)
 CANONICAL_SHOW = aliased(Show)
+# What says which episodes a listing stands for. The canonical episode is reached
+# through it rather than off the listing, so it is joined once here too and every
+# module reading the canonical episode reads it past this.
+CANONICAL_EPISODE_LINK = canonical_episode_link()
 
 
 # TODO: Validate
@@ -41,9 +48,9 @@ def episode_id() -> ColumnElement[UUID]:
     was ever minted for them to stand for and they are the episode themselves.
     They are still episodes of the canonical show the website's row is linked to,
     so everything
-    keyed by the canonical episode reads this rather than the pointer.
+    keyed by the canonical episode reads this rather than the link.
     """
-    return canonical_id_column(Episode)
+    return canonical_episode_id_column(Episode, CANONICAL_EPISODE_LINK)
 
 
 # TODO: Validate

@@ -3,7 +3,7 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 
-from app.canonical_media.filters import canonical_id_of
+from app.canonical_media.episodes import canonical_id_of
 from app.users.models import User
 from app.watches.models import Watch
 from app.watches.schemas import WatchImportResult, WatchImportResults

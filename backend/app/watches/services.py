@@ -8,7 +8,12 @@ from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, func, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.canonical_media.filters import canonical_id_column, canonical_id_of
+from app.canonical_media.episodes import (
+    canonical_episode_id_column,
+    canonical_episode_link,
+    canonical_id_of,
+    links_of,
+)
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
 from app.media.identifiers import TMDB_PLUGIN_KEY
@@ -87,11 +92,13 @@ def _representative_episode_subquery(
     episode can be watched on, so its own copy is never what a watch is shown
     as, however the episodes happen to be ordered.
     """
+    canonical_link = canonical_episode_link()
     return (
         select(
-            col(Episode.canonical_episode_id).label("canonical_episode_id"),
+            col(canonical_link.canonical_episode_id).label("canonical_episode_id"),
             col(Episode.id).label("episode_id"),
         )
+        .join(canonical_link, links_of(Episode, canonical_link))
         .join(Season, col(Season.id) == col(Episode.season_id))
         .join(Show, col(Show.id) == col(Season.show_id))
         .join(Source, col(Source.id) == col(Show.source_id))
@@ -99,9 +106,9 @@ def _representative_episode_subquery(
         .where(col(Episode.deleted_at).is_(None))
         .where(_visible_plugin_condition(user_id))
         .where(col(Plugin.key) != TMDB_PLUGIN_KEY)
-        .where(col(Episode.canonical_episode_id).in_(canonical_ids))
-        .distinct(col(Episode.canonical_episode_id))
-        .order_by(col(Episode.canonical_episode_id), col(Episode.id))
+        .where(col(canonical_link.canonical_episode_id).in_(canonical_ids))
+        .distinct(col(canonical_link.canonical_episode_id))
+        .order_by(col(canonical_link.canonical_episode_id), col(Episode.id))
         .subquery()
     )
 
@@ -135,6 +142,7 @@ def _episode_watch_base_statement(user_id: uuid.UUID) -> SelectOfScalar[Watch]:
         user_id,
         _watched_canonical_subquery(user_id),
     )
+    identified_link = canonical_episode_link()
     # Joined on the identifier the watch carries rather than through the link it
     # was recorded against, so a watch whose link has since been deleted is still
     # listed under another website's link to the same episode. The identifier is
@@ -146,10 +154,11 @@ def _episode_watch_base_statement(user_id: uuid.UUID) -> SelectOfScalar[Watch]:
             IdentifiedEpisode,
             col(IdentifiedEpisode.watch_identifier) == col(Watch.watch_identifier),
         )
+        .outerjoin(identified_link, links_of(IdentifiedEpisode, identified_link))
         .join(
             representative,
             representative.c.canonical_episode_id
-            == canonical_id_column(IdentifiedEpisode),
+            == canonical_episode_id_column(IdentifiedEpisode, identified_link),
         )
         .join(
             Episode,
@@ -262,8 +271,9 @@ def _format_watched_episodes_data(
         source = show.source
         plugin = source.plugin
 
-        if episode.canonical_episode_id not in episodes_dict:
-            episodes_dict[episode.canonical_episode_id] = EpisodeOutput.model_validate(
+        canonical_episode_id = canonical_id_of(episode)
+        if canonical_episode_id not in episodes_dict:
+            episodes_dict[canonical_episode_id] = EpisodeOutput.model_validate(
                 episode,
             )
         if season.id not in seasons_dict:
@@ -279,7 +289,7 @@ def _format_watched_episodes_data(
             WatchItem(
                 id=episode_watch.id,
                 episode_id=episode_watch.episode_id,
-                canonical_episode_id=episode.canonical_episode_id,
+                canonical_episode_id=canonical_episode_id,
                 watch_identifier=episode_watch.watch_identifier,
                 watch_date=episode_watch.watch_date,
                 verified=episode_watch.verified,

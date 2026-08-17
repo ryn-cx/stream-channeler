@@ -322,8 +322,13 @@ class WhitelistSeasonOutput(SeasonOutput):
 
 
 # TODO: Validate
-class WhitelistEpisodeLinkOutput(BaseModel):
-    """One website's row for an episode, and whether it is filtered on its own."""
+class WhitelistEpisodeLinkOutput(EpisodeOutput):
+    """One website's row for an episode, and whether it is filtered on its own.
+
+    The row's own columns come with it, since this is the website's account of
+    the episode and the one thing an admin editing it edits. `episode_id` names
+    the same row as `id` and is kept as what the filters are keyed by.
+    """
 
     show_id: uuid.UUID
     episode_id: uuid.UUID

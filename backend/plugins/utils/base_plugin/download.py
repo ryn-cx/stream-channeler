@@ -63,16 +63,6 @@ class DownloadMixin(ABC):
         return files[0].data_timestamp
 
     # TODO: Validate
-    def plugin_data_timestamp(self) -> datetime:
-        """Return the data timestamp for the plugin's files."""
-        return self._file_timestamp(self._plugin_files())
-
-    # TODO: Validate
-    def source_data_timestamp(self) -> datetime:
-        """Return the data timestamp for the source's files."""
-        return self._file_timestamp(self._source_files())
-
-    # TODO: Validate
     def show_data_timestamp(self, show_key: str) -> datetime:
         """Return the data timestamp for the show's files."""
         return self._file_timestamp(self._show_files(show_key))

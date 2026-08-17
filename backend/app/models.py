@@ -190,12 +190,9 @@ class MediaMixin[
     # the first foreign key, since a model can hold more than one and which of
     # them is the parent is not something the columns say.
     PARENT_ID_FIELD: ClassVar[str]
-    # The column holding the canonical row this stands for, for the models that
-    # hold both kinds of row in one table.
-    CANONICAL_ID_FIELD: ClassVar[str]
     # The column saying outright whether this row is the media itself, for the
-    # models that stand for more than one row and so name none of them in a
-    # column. Those models carry `is_canonical` as a column of their own.
+    # models that hold both kinds of row in one table. Those models carry
+    # `is_canonical` as a column of their own; the rest leave this unset.
     CANONICAL_FLAG_FIELD: ClassVar[str | None] = None
 
     """Mixin for media models.

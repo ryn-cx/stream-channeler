@@ -22,6 +22,12 @@ from app.episodes.dependencies import (
     ExistingEpisode,
     ReadableEpisode,
 )
+from app.episodes.linker import (
+    link_episode,
+    link_episode_using_tmdb_url,
+    mark_episode_absent_from_tmdb,
+    unlink_episode,
+)
 from app.episodes.models import Episode
 from app.episodes.schemas import (
     CanonicalEpisodeListOutput,
@@ -40,13 +46,9 @@ from app.episodes.schemas import (
     UnmatchedEpisodesPublic,
 )
 from app.episodes.service import (
-    link_episode,
-    link_episode_using_tmdb_url,
     list_tmdb_episode_choices,
     list_unlocked_episodes,
     list_unmatched_episodes,
-    mark_episode_absent_from_tmdb,
-    unlink_episode,
 )
 from app.issue_reports.service import list_episode_issue_reports
 from app.media.canonical_metadata import (
@@ -327,14 +329,35 @@ def admin_link_episode_to_tmdb(
     episode: ExistingEpisode,
     canonical_episode: AdminCanonicalEpisode,
 ) -> EpisodeOutput:
-    """Point an `Episode` at the episode an admin chose for it.
+    """Add the episode an admin chose to what an `Episode` stands for.
 
     The episode chosen is one already stored, since the choices are read off the
     stored rows, so it is named by its own id and there is nothing to read in.
+
+    Added to whatever the row already stands for rather than put in its place,
+    since a website running two episodes together in one listing is a thing
+    websites do. Taking one off is `admin_unlink_episode_from_canonical`.
     """
     return _episode_output(
         session,
         link_episode(session, episode, canonical_episode),
+    )
+
+
+# TODO: Validate
+@episodes_router.delete(
+    "/{episode_id}/canonical/{canonical_episode_id}",  # noqa: FAST003 - Used by the dependencies.
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def admin_unlink_episode_from_canonical(
+    session: SessionDep,
+    episode: ExistingEpisode,
+    canonical_episode: AdminCanonicalEpisode,
+) -> EpisodeOutput:
+    """Take one episode off what an `Episode` stands for."""
+    return _episode_output(
+        session,
+        unlink_episode(session, episode, canonical_episode),
     )
 
 
@@ -417,7 +440,7 @@ def get_episode_information(
     # because that is where a canonical row's values come from when TMDB has a
     # record; media it has never heard of is described by its one copy, so the
     # two sides read alike and the comparison is empty rather than misleading.
-    counterpart = canonical_episode_of(session, episode.canonical_episode_id)
+    counterpart = canonical_episode_of(session, episode.sole_canonical_episode_id)
     tmdb: EpisodeInformationSide | None = None
     if counterpart:
         canonical_episode, canonical_season, canonical_show = counterpart

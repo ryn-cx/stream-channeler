@@ -13,6 +13,33 @@ import { handleError } from "@/utils"
 
 export type IssueReportTarget = "episode" | "season" | "show"
 
+/**
+ * What each kind of record is usually reported for, and what it is called.
+ *
+ * The box is mostly filled in by whoever is watching rather than by whoever
+ * imports, so the example is the thing that actually gets reported here: a show
+ * is reported for being on a website nothing lists it under, and an episode for
+ * being paired with the wrong one. Said in the words somebody watching would use
+ * rather than in the ones the database uses.
+ */
+const TARGET_WORDING: Record<
+  IssueReportTarget,
+  { noun: string; placeholder: string }
+> = {
+  show: {
+    noun: "show",
+    placeholder: "This show is also on another website…",
+  },
+  season: {
+    noun: "season",
+    placeholder: "This season has the wrong episodes in it…",
+  },
+  episode: {
+    noun: "episode",
+    placeholder: "This is paired with the wrong episode…",
+  },
+}
+
 interface IssueReportsSectionProps {
   target: IssueReportTarget
   mediaId: string
@@ -102,6 +129,7 @@ export function IssueReportsSection({
   const { user } = useAuth()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
+  const wording = TARGET_WORDING[target]
 
   // TODO: Validate
   const invalidate = () => {
@@ -148,7 +176,7 @@ export function IssueReportsSection({
 
       {reports.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Nothing has been reported against this record yet.
+          Nothing has been reported against this {wording.noun} yet.
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
@@ -226,7 +254,7 @@ export function IssueReportsSection({
           rows={3}
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder="Matched to the wrong TMDB record…"
+          placeholder={wording.placeholder}
         />
         <Button
           className="self-start"

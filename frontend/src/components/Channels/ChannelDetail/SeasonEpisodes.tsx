@@ -244,6 +244,13 @@ export function SeasonEpisodes({
                         >
                           {linkSource?.source_name ?? "Unknown source"}
                         </button>
+                        <ExternalMediaLink
+                          url={link.url}
+                          label="Open this episode on its site"
+                        />
+                        <AdminOnly>
+                          <EditEpisode episode={link} />
+                        </AdminOnly>
                       </div>
                       {informationLinkEpisodeId === link.episode_id && (
                         <div className="ml-8 rounded border bg-muted/30 p-4">

@@ -637,6 +637,8 @@ export type EpisodeListOutput = {
     id: string;
     season_id: string;
     canonical_episode_id?: (string | null);
+    canonical_episode_ids?: Array<(string)>;
+    linked_sort_order?: (number | null);
     tmdb_id?: (number | null);
     canonical_key?: (string | null);
     username: (string | null);
@@ -673,6 +675,8 @@ export type EpisodeOutput = {
     id: string;
     season_id: string;
     canonical_episode_id?: (string | null);
+    canonical_episode_ids?: Array<(string)>;
+    linked_sort_order?: (number | null);
     tmdb_id?: (number | null);
     canonical_key?: (string | null);
 };
@@ -749,6 +753,8 @@ export type EpisodeWithDetails = {
     id: string;
     season_id: string;
     canonical_episode_id?: (string | null);
+    canonical_episode_ids?: Array<(string)>;
+    linked_sort_order?: (number | null);
     tmdb_id?: (number | null);
     canonical_key?: (string | null);
     watch_date?: (string | null);
@@ -1771,8 +1777,36 @@ export type WhitelistEntryInput = {
 
 /**
  * One website's row for an episode, and whether it is filtered on its own.
+ *
+ * The row's own columns come with it, since this is the website's account of
+ * the episode and the one thing an admin editing it edits. `episode_id` names
+ * the same row as `id` and is kept as what the filters are keyed by.
  */
 export type WhitelistEpisodeLinkOutput = {
+    key: string;
+    data_timestamp?: (string | null);
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
+    url?: (string | null);
+    name?: (string | null);
+    description?: (string | null);
+    image_url?: (string | null);
+    air_date?: (string | null);
+    episode_number?: (number | null);
+    duration?: (number | null);
+    sort_order?: (number | null);
+    canonical_episode_locked?: boolean;
+    canonical_episode_note?: (string | null);
+    id: string;
+    season_id: string;
+    canonical_episode_id?: (string | null);
+    canonical_episode_ids?: Array<(string)>;
+    linked_sort_order?: (number | null);
+    tmdb_id?: (number | null);
+    canonical_key?: (string | null);
     show_id: string;
     episode_id: string;
     filtered: boolean;
@@ -1800,6 +1834,8 @@ export type WhitelistEpisodeOutput = {
     id: string;
     season_id: string;
     canonical_episode_id: string;
+    canonical_episode_ids?: Array<(string)>;
+    linked_sort_order?: (number | null);
     tmdb_id?: (number | null);
     canonical_key?: (string | null);
     filtered: boolean;
@@ -2338,6 +2374,13 @@ export type EpisodesAdminLinkEpisodeToTmdbData = {
 };
 
 export type EpisodesAdminLinkEpisodeToTmdbResponse = (EpisodeOutput);
+
+export type EpisodesAdminUnlinkEpisodeFromCanonicalData = {
+    canonicalEpisodeId: string;
+    episodeId: string;
+};
+
+export type EpisodesAdminUnlinkEpisodeFromCanonicalResponse = (EpisodeOutput);
 
 export type EpisodesAdminUnlinkEpisodeFromTmdbData = {
     episodeId: string;

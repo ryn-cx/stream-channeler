@@ -17,7 +17,12 @@ from app.auth.dependencies import (
     SuperUser,
     get_current_active_superuser,
 )
-from app.canonical_media.filters import canonical_id_of, is_canonical, is_non_canonical
+from app.canonical_media.episodes import (
+    canonical_episode_link,
+    canonical_id_of,
+    links_to,
+)
+from app.canonical_media.filters import is_canonical, is_non_canonical
 from app.canonical_media.keys import same_issuer_clause, tmdb_key_clause
 from app.canonical_media.seasons import season_ids_by_episode
 from app.channels import service
@@ -72,7 +77,7 @@ from app.channels.schemas import (
     WhitelistShowOutput,
     WhitelistSourceOutput,
 )
-from app.episodes.models import Episode
+from app.episodes.models import Episode, EpisodeCanonicalEpisode
 from app.media.canonical_metadata import (
     fill_episodes,
     fill_tmdb_urls,
@@ -704,6 +709,7 @@ def _channel_show_stats(
         return {}
 
     canonical_episode = aliased(Episode)
+    canonical_link = canonical_episode_link()
     rows = session.exec(
         select(
             Season.show_id,
@@ -715,10 +721,8 @@ def _channel_show_stats(
             canonical_episode,
             col(canonical_episode.season_id) == col(Season.id),
         )
-        .join(
-            Episode,
-            col(Episode.canonical_episode_id) == col(canonical_episode.id),
-        )
+        .join(canonical_link, links_to(canonical_episode, canonical_link))
+        .join(Episode, col(Episode.id) == col(canonical_link.episode_id))
         .where(
             is_canonical(canonical_episode),
             col(Season.show_id).in_(canonical_show_ids),
@@ -910,15 +914,19 @@ def _episode_links_by_canonical_id(
                     (episode_id, show.id),
                 )
                 episode_links[episode_id].append(
-                    WhitelistEpisodeLinkOutput(
-                        show_id=show.id,
-                        episode_id=episode.id,
-                        filtered=episode_source_filter is not None,
-                        expires_at=(
-                            episode_source_filter.expires_at
-                            if episode_source_filter
-                            else None
-                        ),
+                    WhitelistEpisodeLinkOutput.model_validate(
+                        episode,
+                        update={
+                            "show_id": show.id,
+                            "episode_id": episode.id,
+                            "filtered": episode_source_filter is not None,
+                            "expires_at": (
+                                episode_source_filter.expires_at
+                                if episode_source_filter
+                                else None
+                            ),
+                        },
+                        from_attributes=True,
                     ),
                 )
     return episode_show_ids, episode_links
@@ -1035,7 +1043,7 @@ def _whitelist_media(
         for episode in all_episodes
         if canonical_id_of(episode) in title_episode_ids
         or (
-            episode.canonical_episode_id is None
+            not episode.canonical_episode_links
             and episode.season_id in site_season_ids
         )
     }
@@ -1082,7 +1090,11 @@ def _preload_canonical_episodes(session: Session, episodes: Sequence[Episode]) -
     session.exec(
         select(Episode)
         .where(col(Episode.id).in_(episode_ids))
-        .options(selectinload(Episode.canonical_episode)),
+        .options(
+            selectinload(Episode.canonical_episode_links).selectinload(  # type: ignore[arg-type]
+                EpisodeCanonicalEpisode.canonical_episode,  # type: ignore[arg-type]
+            ),
+        ),
     ).all()
 
 

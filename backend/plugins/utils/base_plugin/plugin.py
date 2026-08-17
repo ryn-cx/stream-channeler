@@ -428,16 +428,13 @@ class BasePlugin(
     ) -> Episode:
         """Store the website's own `Episode` against the files it was read out of.
 
-        The episode the stored record is a copy of is carried over for the same
-        reason the show's title is, and the note travels with it: how a link came
-        to be made is most of what says whether it should be kept, so an episode
-        that keeps its link keeps the reason for it too.
+        The links the stored record carries are rows of their own and stay where
+        they are, so nothing here has to carry them over. The note travels with
+        them: how a link came to be made is most of what says whether it should
+        be kept, so an episode that keeps its links keeps the reason for them
+        too.
         """
-        if existing_episode and (
-            existing_episode.canonical_episode_locked
-            or not episode.canonical_episode_id
-        ):
-            episode.canonical_episode_id = existing_episode.canonical_episode_id
+        if existing_episode:
             episode.canonical_episode_note = existing_episode.canonical_episode_note
         episode_files = self._episode_files(episode.key, season.key, show_key)
         return episode.upsert_and_set_update_at(season, existing_episode, episode_files)

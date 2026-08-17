@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from sqlmodel import Session
 
 from app.canonical_media.service import add_canonical_show
-from app.episodes.service import EpisodeLinker
+from app.episodes.linker import EpisodeLinker
 from app.media.identifiers import TMDB_PLUGIN_KEY
 from app.media.media_type import MediaType
 from app.shows.models import Show
@@ -130,16 +130,18 @@ def _unlink_unlisted_episodes(session: Session, show: Show) -> None:
     canonical_show_ids = {linked.id for linked in show.canonical_shows}
     for season in show.active_children:
         for episode in season.active_children:
-            canonical_episode = episode.canonical_episode
-            if canonical_episode is None:
-                continue
-            if canonical_episode.season.show_id in canonical_show_ids:
-                continue
+            for link in list(episode.canonical_episode_links):
+                if link.canonical_episode.season.show_id in canonical_show_ids:
+                    continue
+                session.delete(link)
+            session.flush()
+            session.expire(episode, ["canonical_episode_links"])
 
-            episode.canonical_episode = None
-            episode.canonical_episode_locked = False
-            episode.canonical_episode_note = None
-            session.add(episode)
+            if not episode.canonical_episode_links:
+                episode.is_canonical = True
+                episode.canonical_episode_locked = False
+                episode.canonical_episode_note = None
+                session.add(episode)
     session.flush()
 
 
@@ -249,8 +251,11 @@ def _relink_copies(session: Session, canonical_show: Show) -> None:
             for episode in season.active_children:
                 if episode.canonical_episode_locked:
                     continue
-                episode.canonical_episode = None
+                for episode_link in list(episode.canonical_episode_links):
+                    session.delete(episode_link)
+                episode.is_canonical = True
                 episode.canonical_episode_note = None
+            session.flush()
         EpisodeLinker(session, copy).link()
 
 

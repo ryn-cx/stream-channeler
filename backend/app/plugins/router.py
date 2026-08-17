@@ -75,7 +75,7 @@ def get_plugins(
 
 
 # TODO: Validate
-@plugins_router.patch(  # noqa: FAST003 - Used by EditablePlugin.
+@plugins_router.patch(
     "/{plugin_id}",
     response_model=PluginOutput,
     dependencies=[Depends(get_current_active_superuser)],
@@ -90,7 +90,7 @@ def update_plugin(
 
 
 # TODO: Validate
-@plugins_router.delete(  # noqa: FAST003 - Used by EditablePlugin.
+@plugins_router.delete(
     "/{plugin_id}",
     dependencies=[Depends(get_current_active_superuser)],
 )
@@ -258,7 +258,7 @@ def media_info(
 
 # Registered after the literal paths above so that they are matched first.
 # TODO: Validate
-@plugins_router.get(  # noqa: FAST003 - Used by ReadablePlugin.
+@plugins_router.get(
     "/{plugin_id}",
     response_model=PluginOutput,
     dependencies=[Depends(get_current_active_superuser)],

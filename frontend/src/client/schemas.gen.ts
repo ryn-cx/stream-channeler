@@ -3194,6 +3194,25 @@ export const EpisodeListOutputSchema = {
             ],
             title: 'Canonical Episode Id'
         },
+        canonical_episode_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Canonical Episode Ids'
+        },
+        linked_sort_order: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Linked Sort Order'
+        },
         tmdb_id: {
             anyOf: [
                 {
@@ -3468,6 +3487,25 @@ export const EpisodeOutputSchema = {
                 }
             ],
             title: 'Canonical Episode Id'
+        },
+        canonical_episode_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Canonical Episode Ids'
+        },
+        linked_sort_order: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Linked Sort Order'
         },
         tmdb_id: {
             anyOf: [
@@ -3912,6 +3950,25 @@ export const EpisodeWithDetailsSchema = {
                 }
             ],
             title: 'Canonical Episode Id'
+        },
+        canonical_episode_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Canonical Episode Ids'
+        },
+        linked_sort_order: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Linked Sort Order'
         },
         tmdb_id: {
             anyOf: [
@@ -8918,6 +8975,221 @@ export const WhitelistEntryInputSchema = {
 
 export const WhitelistEpisodeLinkOutputSchema = {
     properties: {
+        key: {
+            type: 'string',
+            minLength: 1,
+            title: 'Key'
+        },
+        data_timestamp: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Extra'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        image_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Image Url'
+        },
+        air_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Air Date'
+        },
+        episode_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Episode Number'
+        },
+        duration: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Duration'
+        },
+        sort_order: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Sort Order'
+        },
+        canonical_episode_locked: {
+            type: 'boolean',
+            title: 'Canonical Episode Locked',
+            default: false
+        },
+        canonical_episode_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Episode Note'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        season_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Season Id'
+        },
+        canonical_episode_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Episode Id'
+        },
+        canonical_episode_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Canonical Episode Ids'
+        },
+        linked_sort_order: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Linked Sort Order'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
+        },
+        canonical_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Key'
+        },
         show_id: {
             type: 'string',
             format: 'uuid',
@@ -8946,9 +9218,13 @@ export const WhitelistEpisodeLinkOutputSchema = {
         }
     },
     type: 'object',
-    required: ['show_id', 'episode_id', 'filtered'],
+    required: ['key', 'id', 'season_id', 'show_id', 'episode_id', 'filtered'],
     title: 'WhitelistEpisodeLinkOutput',
-    description: "One website's row for an episode, and whether it is filtered on its own."
+    description: `One website's row for an episode, and whether it is filtered on its own.
+
+The row's own columns come with it, since this is the website's account of
+the episode and the one thing an admin editing it edits. \`episode_id\` names
+the same row as \`id\` and is kept as what the filters are keyed by.`
 } as const;
 
 export const WhitelistEpisodeOutputSchema = {
@@ -9119,6 +9395,25 @@ export const WhitelistEpisodeOutputSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Canonical Episode Id'
+        },
+        canonical_episode_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Canonical Episode Ids'
+        },
+        linked_sort_order: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Linked Sort Order'
         },
         tmdb_id: {
             anyOf: [

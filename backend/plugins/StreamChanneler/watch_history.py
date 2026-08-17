@@ -9,8 +9,12 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import col, func, or_, select
 
+from app.canonical_media.episodes import (
+    canonical_episode_id_column,
+    canonical_episode_link,
+    links_of,
+)
 from app.canonical_media.filters import (
-    canonical_id_column,
     is_canonical,
     is_non_canonical,
 )
@@ -74,6 +78,7 @@ class WatchHistoryMixin(BaseWatchHistoryMixin):
         named by, so that is what it is exported as.
         """
         named_episode = aliased(Episode)
+        named_link = canonical_episode_link()
         watched_episode = aliased(Episode)
         statement = (
             select(
@@ -89,9 +94,11 @@ class WatchHistoryMixin(BaseWatchHistoryMixin):
                 named_episode,
                 col(named_episode.watch_identifier) == col(Watch.watch_identifier),
             )
+            .outerjoin(named_link, links_of(named_episode, named_link))
             .outerjoin(
                 watched_episode,
-                col(watched_episode.id) == canonical_id_column(named_episode),
+                col(watched_episode.id)
+                == canonical_episode_id_column(named_episode, named_link),
             )
             .where(Watch.user_id == user.id)
             .distinct()
@@ -157,14 +164,17 @@ class WatchHistoryMixin(BaseWatchHistoryMixin):
         # The episode a link is of is the same table reached again, so which of
         # the two each side means is said outright rather than left to the join.
         canonical_episode = aliased(Episode)
+        canonical_link = canonical_episode_link()
         links = self._by_named_episode(
             wanted,
             self.session.exec(
                 select(Episode, canonical_episode)  # type: ignore[call-overload]
                 .select_from(Episode)
+                .join(canonical_link, links_of(Episode, canonical_link))
                 .join(
                     canonical_episode,
-                    col(Episode.canonical_episode_id) == col(canonical_episode.id),
+                    col(canonical_link.canonical_episode_id)
+                    == col(canonical_episode.id),
                 )
                 .where(
                     is_non_canonical(Episode),

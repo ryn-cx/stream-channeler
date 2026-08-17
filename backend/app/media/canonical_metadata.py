@@ -28,6 +28,7 @@ from uuid import UUID
 from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, select
 
+from app.canonical_media.episodes import canonical_episode_link, links_of
 from app.canonical_media.filters import is_canonical
 from app.canonical_media.keys import SHOW_LEVEL, parse_tmdb_key
 from app.episodes.models import Episode
@@ -354,12 +355,14 @@ def canonical_season_of(
     """
     copy_episode = aliased(Episode)
     canonical_episode = aliased(Episode)
+    copy_link = canonical_episode_link()
     return session.exec(
         select(Season, Show)
         .select_from(copy_episode)
+        .join(copy_link, links_of(copy_episode, copy_link))
         .join(
             canonical_episode,
-            onclause=col(copy_episode.canonical_episode_id) == canonical_episode.id,
+            onclause=col(copy_link.canonical_episode_id) == canonical_episode.id,
         )
         .join(Season, onclause=col(canonical_episode.season_id) == Season.id)
         .join(Show, onclause=col(Season.show_id) == Show.id)

@@ -1,10 +1,14 @@
 // TODO: Validate
 import { useQuery } from "@tanstack/react-query"
-import type { EpisodeInformationOutput, EpisodeInformationSide } from "@/client"
+import type { EpisodeInformationSide } from "@/client"
 import { EpisodesService } from "@/client"
 import { EpisodeTmdbLinkMenu } from "@/components/Admin/EpisodeTmdbLinkMenu"
 import { CollapsibleSection } from "@/components/ChannelCommon/CollapsibleSection"
-import { InformationHero } from "@/components/ChannelCommon/InformationHero"
+import {
+  EpisodeInformationHero,
+  episodeInformationQueryKey,
+  formatDuration,
+} from "@/components/ChannelCommon/EpisodeInformationHero"
 import {
   ExternalAnchor,
   formatInformationDate,
@@ -27,14 +31,6 @@ interface EpisodeInformationDialogProps {
   episodeId: string
   open: boolean
   onOpenChange: (open: boolean) => void
-}
-
-// TODO: Validate
-function formatDuration(value: number | null) {
-  if (value == null) return null
-  const minutes = Math.floor(value / 60)
-  const seconds = value % 60
-  return `${value}s (${minutes}m ${seconds}s)`
 }
 
 // TODO: Validate
@@ -83,55 +79,6 @@ const ROW_LABELS = [
   "Modified at",
 ]
 
-// TODO: Validate
-/**
- * The side the episode is shown as, which is TMDB's account of it wherever TMDB
- * has one, and the website's own where the website's row is what was opened.
- */
-function primarySide(
-  data: EpisodeInformationOutput,
-  preferSource: boolean,
-): EpisodeInformationSide {
-  if (preferSource) return data.source
-  return data.tmdb ?? data.source
-}
-
-// TODO: Validate
-function heroSubtitle(data: EpisodeInformationOutput, preferSource: boolean) {
-  const side = primarySide(data, preferSource)
-  const seasonNumber = side.season_number ?? data.source.season_number
-  const episodeNumber = side.episode_number ?? data.source.episode_number
-  const placement = [
-    seasonNumber != null ? `Season ${seasonNumber}` : side.season_name,
-    episodeNumber != null ? `Episode ${episodeNumber}` : null,
-  ].filter(Boolean)
-  return [side.show_name, ...placement].filter(Boolean).join(" · ")
-}
-
-// TODO: Validate
-function heroFacts(data: EpisodeInformationOutput, preferSource: boolean) {
-  const side = primarySide(data, preferSource)
-  const facts = [
-    formatDuration(side.duration ?? data.source.duration),
-    formatInformationDate(side.air_date ?? data.source.air_date),
-    data.tmdb ? "Linked to TMDB" : "Not linked to TMDB",
-    data.source.label,
-  ]
-  return facts.filter((fact): fact is string => !!fact)
-}
-
-// TODO: Validate
-function heroLinks(data: EpisodeInformationOutput) {
-  const links = []
-  if (data.source.url) {
-    links.push({ label: data.source.label, href: data.source.url })
-  }
-  if (data.tmdb?.url) {
-    links.push({ label: data.tmdb.label, href: data.tmdb.url })
-  }
-  return links
-}
-
 interface EpisodeInformationPanelProps {
   episodeId: string
   /** Whether the information is wanted yet, so a collapsed panel fetches nothing. */
@@ -153,7 +100,7 @@ export function EpisodeInformationPanel({
   enabled = true,
   preferSource = false,
 }: EpisodeInformationPanelProps) {
-  const queryKey = ["episode-information", episodeId]
+  const queryKey = episodeInformationQueryKey(episodeId)
   const { data, isLoading, error } = useQuery({
     queryKey,
     queryFn: () => EpisodesService.getEpisodeInformation({ episodeId }),
@@ -176,17 +123,12 @@ export function EpisodeInformationPanel({
     )
   }
 
-  const side = primarySide(data, preferSource)
-
   return (
     <div className="flex flex-col gap-6">
-      <InformationHero
-        title={side.name ?? data.source.name ?? "Unnamed episode"}
-        subtitle={heroSubtitle(data, preferSource)}
-        description={side.description ?? data.source.description}
-        imageUrl={side.image_url ?? data.source.image_url}
-        facts={heroFacts(data, preferSource)}
-        links={heroLinks(data)}
+      <EpisodeInformationHero
+        episodeId={episodeId}
+        enabled={enabled}
+        preferSource={preferSource}
       />
 
       <CollapsibleSection title="Field comparison">

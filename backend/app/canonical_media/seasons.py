@@ -14,6 +14,7 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, col, func, select
 
+from app.canonical_media.episodes import canonical_episode_link, links_of
 from app.episodes.models import Episode
 from app.seasons.models import Season
 
@@ -35,16 +36,21 @@ def season_ids_by_episode(
     session: Session,
     episodes: Sequence[Episode],
 ) -> dict[uuid.UUID, uuid.UUID]:
-    """Return the season each of `episodes` belongs to, keyed by the episode."""
+    """Return the season each of `episodes` belongs to, keyed by the episode.
+
+    A row standing for more than one episode belongs to no one of their seasons
+    more than another, so it is left under the season its own website filed it
+    under rather than handed whichever season came first.
+    """
     canonical_ids = {
-        episode.canonical_episode_id
+        canonical_id
         for episode in episodes
-        if episode.canonical_episode_id is not None
+        if (canonical_id := episode.sole_canonical_episode_id) is not None
     }
     canonical_seasons = _season_ids(session, canonical_ids)
     return {
         episode.id: canonical_seasons.get(
-            episode.canonical_episode_id,
+            episode.sole_canonical_episode_id,
             episode.season_id,
         )
         for episode in episodes
@@ -75,6 +81,7 @@ def season_ids_by_key(
     if not season_keys:
         return {}
     canonical_episode = aliased(Episode)
+    canonical_link = canonical_episode_link()
     rows = session.exec(
         select(  # type: ignore[call-overload]
             Season.key,
@@ -83,9 +90,10 @@ def season_ids_by_key(
         )
         .select_from(Season)
         .join(Episode, col(Episode.season_id) == col(Season.id))
+        .outerjoin(canonical_link, links_of(Episode, canonical_link))
         .outerjoin(
             canonical_episode,
-            col(Episode.canonical_episode_id) == col(canonical_episode.id),
+            col(canonical_link.canonical_episode_id) == col(canonical_episode.id),
         )
         .where(col(Season.key).in_(season_keys)),
     ).all()

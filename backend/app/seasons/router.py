@@ -223,7 +223,7 @@ def get_season_information(
 
 
 # TODO: Validate
-@seasons_router.get(  # noqa: FAST003 - Used by ReadableSeason.
+@seasons_router.get(
     "/{season_id}",
     dependencies=[Depends(get_current_active_superuser)],
 )
@@ -233,7 +233,7 @@ def get_season(season: ReadableSeason) -> SeasonOutput:
 
 
 # TODO: Validate
-@seasons_router.patch(  # noqa: FAST003 - Used by EditableSeason.
+@seasons_router.patch(
     "/{season_id}",
     dependencies=[Depends(get_current_active_superuser)],
 )
@@ -247,7 +247,7 @@ def update_season(
 
 
 # TODO: Validate
-@seasons_router.delete(  # noqa: FAST003 - Used by EditableSeason.
+@seasons_router.delete(
     "/{season_id}",
     dependencies=[Depends(get_current_active_superuser)],
 )
