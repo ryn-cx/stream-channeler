@@ -168,18 +168,14 @@ function useShowGroups(shows: Show[], sources: Record<string, Source>) {
  * nothing to say here.
  */
 function showFacts(
-  mediaType: string | null | undefined,
-  isLinked: boolean,
+  canonicalShow: Show | undefined,
   stats: ChannelShowStats | undefined,
 ): string[] {
-  const facts = isLinked ? [] : ["Not linked to TMDB"]
-  if (mediaType) {
-    facts.unshift(mediaType)
-  }
+  const facts = [canonicalShow?.media_type ?? "Not linked to TMDB"]
   // A movie is one episode of one season by construction, so counting them says
   // nothing the "Movie" note has not already said.
   const countsAreImplied =
-    mediaType === "Movie" &&
+    canonicalShow?.media_type === "Movie" &&
     stats?.season_count === 1 &&
     stats?.episode_count === 1
   if (countsAreImplied) {
@@ -236,13 +232,12 @@ export function ShowCards({
         const canonicalShow = canonicalShows[canonicalShowId]
         // The title's own name, falling back to a website's for a title nothing
         // catalogued, which is the only name there is to read it under.
-        const name = group.find((show) => show.name)?.name ?? ""
+        const name = canonicalShow?.name ?? firstShow.name ?? ""
         const showGroup: ShowGroup = { canonicalShowId, name }
         // The title's own artwork, for the same reason as its name: a card is
         // one title, and a website's listing of it is only what is left when
         // nothing catalogued the title or the cataloguer held no image.
-        const artwork = group.find((show) => show.image_url)?.image_url
-        const mediaType = group.find((show) => show.media_type)?.media_type
+        const artwork = canonicalShow?.image_url
         const expanded = renderExpanded?.(showGroup)
         const actions = renderActions?.(showGroup)
         // A favicon is how a card names a site, so a listing whose site has none
@@ -290,15 +285,13 @@ export function ShowCards({
                 </div>
                 <div className="flex flex-col gap-2 p-3">
                   <div className="flex flex-wrap items-center gap-1">
-                    {showFacts(
-                      mediaType,
-                      Boolean(canonicalShow),
-                      stats[canonicalShowId],
-                    ).map((fact) => (
-                      <Badge key={fact} variant="secondary">
-                        {fact}
-                      </Badge>
-                    ))}
+                    {showFacts(canonicalShow, stats[canonicalShowId]).map(
+                      (fact) => (
+                        <Badge key={fact} variant="secondary">
+                          {fact}
+                        </Badge>
+                      ),
+                    )}
                   </div>
                   <div
                     className={`flex flex-wrap items-center gap-1${actions ? " pr-8" : ""}`}
