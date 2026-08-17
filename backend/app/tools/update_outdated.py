@@ -1,7 +1,7 @@
 # TODO: Validate
 # pyright: reportArgumentType=false
 
-import threading
+import time
 from collections.abc import Callable
 from datetime import datetime
 from typing import Any
@@ -100,12 +100,17 @@ def _channel_season_exists(
             copy_show_link,
             col(copy_show_link.show_id) == col(copy_show.id),
         )
+        # A listing that is a copy of nothing is the title itself and answers for
+        # itself, the same way an episode standing for nothing is the episode, so
+        # a channel naming it names it by its own id and the last fallback is what
+        # reaches those rows.
         .join(
             ChannelShow,
             col(ChannelShow.canonical_show_id)
             == func.coalesce(
                 col(canonical_season.show_id),
                 col(copy_show_link.canonical_show_id),
+                col(copy_show.id),
             ),
         )
         .outerjoin(
@@ -238,7 +243,6 @@ def _process_outdated_items(
     media_class: MediaClass,
     plugin_key: str,
     plugin_class: type[AbstractPlugin],
-    stop_event: threading.Event,
 ) -> None:
     media_type_name = media_class.__name__.lower()
     update_method_name = f"update_{media_type_name}"
@@ -257,32 +261,30 @@ def _process_outdated_items(
     statement = _restrict_to_media_in_channel(statement, media_class)
 
     outdated_items = session.exec(statement).all()
-    logger.info(
-        f"[{plugin_key}] Found {len(outdated_items)} outdated {media_type_name}",
-    )
+    if not outdated_items:
+        return
+
+    log_msg = f"[{plugin_key}] Found {len(outdated_items)} outdated {media_type_name}"
+    logger.info(log_msg)
 
     plugin_instance = plugin_class(session)
     updated_count = 0
     for item in outdated_items:
-        if stop_event.is_set():
-            logger.info(
-                f"[{plugin_key}] Stop requested; skipping remaining {media_type_name}",
-            )
-            break
-        logger.info(f"[{plugin_key}] Updating {media_type_name}: {item.key}")
+        log_msg = f"[{plugin_key}] Updating {media_type_name}: {item.key}"
+        logger.info(log_msg)
         try:
             getattr(plugin_instance, update_method_name)(item)
 
-            logger.info(
-                f"[{plugin_key}] Successfully updated {media_type_name}: {item.key}",
+            log_msg = (
+                f"[{plugin_key}] Successfully updated {media_type_name}: {item.key}"
             )
+            logger.info(log_msg)
             updated_count += 1
 
             session.commit()
         except Exception as error:
-            logger.exception(
-                f"[{plugin_key}] Failed to update {media_type_name}: {item.key}",
-            )
+            log_msg = f"[{plugin_key}] Failed to update {media_type_name}: {item.key}"
+            logger.exception(log_msg)
             # Roll back partial changes, then let the plugin decide how to
             # reschedule the failed item.
             session.rollback()
@@ -296,32 +298,31 @@ def _process_outdated_items(
                 item.update_at = tz_datetime.max()
             session.commit()
 
-    logger.info(
+    log_msg = (
         f"[{plugin_key}] Updated {updated_count} out of {len(outdated_items)} "
-        f"outdated {media_type_name}",
+        f"outdated {media_type_name}"
     )
+    logger.info(log_msg)
 
 
 # TODO: Validate
 def _update_plugin(
     plugin_key: str,
     plugin_class: type[AbstractPlugin],
-    stop_event: threading.Event,
 ) -> None:
     """Run the full update sequence for a single plugin in its own session."""
-    logger.info(f"[{plugin_key}] Starting update run")
+    log_msg = f"[{plugin_key}] Starting update run"
+    logger.info(log_msg)
     with Session(engine) as session:
         for media_class in MEDIA_CLASSES_IN_ORDER:
-            if stop_event.is_set():
-                break
             _process_outdated_items(
                 session,
                 media_class,
                 plugin_key,
                 plugin_class,
-                stop_event,
             )
-    logger.info(f"[{plugin_key}] Finished update run")
+    log_msg = f"[{plugin_key}] Finished update run"
+    logger.info(log_msg)
 
 
 # TODO: Validate
@@ -388,46 +389,34 @@ def _seconds_until_next_update() -> float:
 
 
 # TODO: Validate
-def _update_outdated(stop_event: threading.Event) -> None:
-    # The work is grouped by the `Plugin` rows in the database (not the installed plugin
-    # files); the installed plugin class is only used to execute the updates. Plugins run
-    # one after another rather than at the same time, and ordering is preserved within a
-    # plugin (see MEDIA_CLASSES_IN_ORDER).
+def update_outdated() -> None:
+    """Update all outdated entries."""
     plugin_classes_by_key = {plugin.plugin_key(): plugin for plugin in plugins}
 
     for plugin_key in _plugin_user_plugin_keys():
-        if stop_event.is_set():
-            break
         plugin_class = plugin_classes_by_key.get(plugin_key)
         if plugin_class is None:
-            logger.error(
-                f"[{plugin_key}] No installed plugin matches this database entry",
-            )
+            log_msg = f"[{plugin_key}] No installed plugin matches this database entry"
+            logger.error(log_msg)
             continue
         try:
-            _update_plugin(plugin_key, plugin_class, stop_event)
+            _update_plugin(plugin_key, plugin_class)
         except Exception:
             # Log the plugin-level failure and let the other plugins finish.
-            logger.exception(f"[{plugin_key}] Plugin update run crashed")
+            log_msg = f"[{plugin_key}] Plugin update run crashed"
+            logger.exception(log_msg)
 
 
 # TODO: Validate
-def run_forever(stop_event: threading.Event) -> None:  # noqa: D103
-    while not stop_event.is_set():
-        _update_outdated(stop_event)
-        if stop_event.is_set():
-            break
-
+def _update_outdated_forever() -> None:
+    while True:
+        update_outdated()
         wait_seconds = _seconds_until_next_update()
-        logger.info(f"Next update due in {wait_seconds:.0f}s; waiting")
-
-        # Interruptible sleep: returns immediately if a stop is requested mid-wait.
-        if stop_event.wait(timeout=wait_seconds):
-            break
+        log_msg = f"Next update due in {wait_seconds:.0f}s; waiting"
+        logger.info(log_msg)
+        time.sleep(wait_seconds)
 
 
 if __name__ == "__main__":
     configure_logging()
-
-    run_forever(threading.Event())
-    logger.info("Outdated source update process stopped")
+    _update_outdated_forever()
