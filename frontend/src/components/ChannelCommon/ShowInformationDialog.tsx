@@ -2,6 +2,7 @@
 import { useQuery } from "@tanstack/react-query"
 import type { ShowInformationOutput, ShowInformationSide } from "@/client"
 import { ShowsService } from "@/client"
+import { AddToChannelButton } from "@/components/ChannelCommon/AddToChannelButton"
 import { CollapsibleSection } from "@/components/ChannelCommon/CollapsibleSection"
 import { InformationHero } from "@/components/ChannelCommon/InformationHero"
 import {
@@ -144,7 +145,12 @@ export function ShowInformationSummary({
     )
   }
 
-  return <div className="flex flex-col gap-2">{summaryHero(data)}</div>
+  return (
+    <div className="flex flex-col gap-2">
+      {summaryHero(data)}
+      <AddToChannelButton showId={data.show_id} showUrl={data.source.url} />
+    </div>
+  )
 }
 
 // TODO: Validate

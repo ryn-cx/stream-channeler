@@ -1,6 +1,6 @@
 // TODO: Validate
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ChevronDown, ChevronRight, ChevronUp } from "lucide-react"
+import { ChevronDown, ChevronRight } from "lucide-react"
 import { useEffect, useState } from "react"
 import type {
   WhitelistEpisodeOutput,
@@ -50,6 +50,13 @@ interface WhitelistManagerProps {
   canonicalShowId: string
   showName: string
   onClose: () => void
+  /**
+   * Whether the filters are only being read, which is what somebody who does not
+   * own the channel gets. The title, its sites, its seasons and their episodes
+   * are all still listed; what the channel carries of them is the owner's to
+   * set, so nothing that would set it is shown.
+   */
+  readOnly?: boolean
 }
 
 // TODO: Validate
@@ -70,6 +77,7 @@ export function WhitelistManager({
   canonicalShowId,
   showName,
   onClose,
+  readOnly = false,
 }: WhitelistManagerProps) {
   const [isWhitelist, setIsWhitelist] = useState(false)
   // The `Show` ids of the websites' links that carry a filter entry.
@@ -336,7 +344,7 @@ export function WhitelistManager({
         <div className="flex items-start justify-between gap-2">
           <div>
             <h2 className="text-lg font-semibold">
-              Manage Whitelist - {showName}
+              {readOnly ? showName : `Manage Whitelist - ${showName}`}
             </h2>
             <p className="text-sm text-muted-foreground">
               {isWhitelist
@@ -344,9 +352,6 @@ export function WhitelistManager({
                 : "All episodes are shown by default. New episodes are automatically added."}
             </p>
           </div>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <ChevronUp className="h-4 w-4 mr-1" /> Collapse
-          </Button>
         </div>
 
         <ShowInformationSummary showId={canonicalShowId} />
@@ -373,9 +378,11 @@ export function WhitelistManager({
                   </p>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button onClick={toggleIsWhitelist} variant="outline">
-                    Switch to {isWhitelist ? "Blacklist" : "Whitelist"} Mode
-                  </Button>
+                  {!readOnly && (
+                    <Button onClick={toggleIsWhitelist} variant="outline">
+                      Switch to {isWhitelist ? "Blacklist" : "Whitelist"} Mode
+                    </Button>
+                  )}
                   <MediaPageButton
                     to="/show/$showKey"
                     params={{ showKey: canonicalShowId }}
@@ -509,15 +516,22 @@ export function WhitelistManager({
                                   sourcesByShowId={sourcesByShowId}
                                 />
                               )}
-                              <Button
-                                variant={seasonEnabled ? "default" : "outline"}
-                                size="sm"
-                                onClick={() =>
-                                  toggleSeasonEnabled(season.id, seasonEnabled)
-                                }
-                              >
-                                {getSeasonActionLabel(seasonEnabled)}
-                              </Button>
+                              {!readOnly && (
+                                <Button
+                                  variant={
+                                    seasonEnabled ? "default" : "outline"
+                                  }
+                                  size="sm"
+                                  onClick={() =>
+                                    toggleSeasonEnabled(
+                                      season.id,
+                                      seasonEnabled,
+                                    )
+                                  }
+                                >
+                                  {getSeasonActionLabel(seasonEnabled)}
+                                </Button>
+                              )}
                               <ExternalMediaLink
                                 url={season.url}
                                 label="Open this season on its site"
@@ -546,6 +560,7 @@ export function WhitelistManager({
                                   handleEpisodeClick(episode, seasonEnabled)
                                 }
                                 episodeActionLabel={getEpisodeActionLabel}
+                                readOnly={readOnly}
                               />
                             )}
                           </div>
@@ -557,21 +572,23 @@ export function WhitelistManager({
               </div>
             </div>
 
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={onClose}
-                disabled={saveMutation.isPending}
-              >
-                Cancel
-              </Button>
-              <LoadingButton
-                onClick={handleSave}
-                loading={saveMutation.isPending}
-              >
-                Save Changes
-              </LoadingButton>
-            </div>
+            {!readOnly && (
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={onClose}
+                  disabled={saveMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <LoadingButton
+                  onClick={handleSave}
+                  loading={saveMutation.isPending}
+                >
+                  Save Changes
+                </LoadingButton>
+              </div>
+            )}
           </>
         )}
       </div>

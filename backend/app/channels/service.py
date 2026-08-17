@@ -712,6 +712,28 @@ def blacklist_episode_on_channel(
 
 
 # TODO: Validate
+def add_show_to_channel(session: Session, channel: Channel, show: Show) -> None:
+    canonical_show_ids = set(show.canonical_show_ids) or {show.id}
+
+    channel_shows: list[ChannelShow] = []
+    for canonical_show_id in canonical_show_ids:
+        channel_show = ChannelShow.get(session, channel, canonical_show_id)
+        if channel_show is None:
+            channel_show = ChannelShow(
+                channel_id=channel.id,
+                canonical_show_id=canonical_show_id,
+                is_whitelist=False,
+                is_blacklist_only=False,
+            )
+            session.add(channel_show)
+        else:
+            channel_show.is_blacklist_only = False
+        channel_shows.append(channel_show)
+
+    session.commit()
+
+
+# TODO: Validate
 def set_channel_order(
     session: Session,
     channel: Channel,

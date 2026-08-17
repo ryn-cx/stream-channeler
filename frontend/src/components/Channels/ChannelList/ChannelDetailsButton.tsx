@@ -5,7 +5,7 @@ import { Info } from "lucide-react"
 import { useState } from "react"
 import { ChannelsService } from "@/client"
 import { ChannelDescriptionMarkdown } from "@/components/Channels/ChannelDetail/ChannelDescription"
-import { ShowCards } from "@/components/Channels/ShowCards"
+import { ShowCardsWithInformation } from "@/components/Channels/ShowCardsWithInformation"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import {
   Dialog,
@@ -86,7 +86,8 @@ export function ChannelDetailsButton({
                     {group.channel_name || "Unnamed Channel"}
                   </Link>
                 </h3>
-                <ShowCards
+                <ShowCardsWithInformation
+                  channelId={group.channel_id}
                   shows={group.shows}
                   sources={data?.sources ?? {}}
                   canonicalShows={data?.canonical_shows ?? {}}

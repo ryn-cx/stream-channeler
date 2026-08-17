@@ -51,6 +51,8 @@ interface SeasonEpisodesProps {
     episodeEnabled: boolean,
     seasonEnabled: boolean,
   ) => string
+  /** Whether the filters are only being read, which leaves the marks off. */
+  readOnly?: boolean
 }
 
 // TODO: Validate
@@ -71,6 +73,7 @@ export function SeasonEpisodes({
   episodeExpiry,
   onEpisodeClick,
   episodeActionLabel,
+  readOnly = false,
 }: SeasonEpisodesProps) {
   const [offset, setOffset] = useState(0)
   // The record whose information panel is open, if any.
@@ -190,15 +193,17 @@ export function SeasonEpisodes({
                 showIds={watchableShowIds(episode.show_ids)}
                 sourcesByShowId={sourcesByShowId}
               />
-              <Button
-                variant={
-                  episodeEnabled !== seasonEnabled ? "default" : "outline"
-                }
-                size="sm"
-                onClick={() => onEpisodeClick(episode)}
-              >
-                {episodeActionLabel(episodeEnabled, seasonEnabled)}
-              </Button>
+              {!readOnly && (
+                <Button
+                  variant={
+                    episodeEnabled !== seasonEnabled ? "default" : "outline"
+                  }
+                  size="sm"
+                  onClick={() => onEpisodeClick(episode)}
+                >
+                  {episodeActionLabel(episodeEnabled, seasonEnabled)}
+                </Button>
+              )}
               <ExternalMediaLink
                 url={episode.url}
                 label="Open this episode on its site"

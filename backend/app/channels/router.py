@@ -36,6 +36,7 @@ from app.channels.dependencies import (
     EditableChannelCanonicalShow,
     ExistingChannel,
     ReadableChannel,
+    ReadableChannelCanonicalShow,
 )
 from app.channels.episode_selector import EpisodeQueryBuilder
 from app.channels.models import (
@@ -91,6 +92,7 @@ from app.plugins.schemas import PluginOutput
 from app.schemas import Message
 from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
+from app.shows.dependencies import ReadableShow
 from app.shows.models import Show, ShowCanonicalShow
 from app.shows.schemas import ShowPublic
 from app.sources.models import Source
@@ -1145,12 +1147,12 @@ def _episode_sort_key(
     return order, str(episode.id)
 
 
-# FAST003 - Parameter is used by EditableChannelCanonicalShow.
+# FAST003 - Parameter is used by ReadableChannelCanonicalShow.
 # TODO: Validate
 @channels_router.get("/{channel_id}/whitelist/{canonical_show_id}")  # noqa: FAST003
 def get_channel_whitelist(
     session: SessionDep,
-    channel_show: EditableChannelCanonicalShow,
+    channel_show: ReadableChannelCanonicalShow,
 ) -> WhitelistShowOutput:
     """Read the sites and seasons of a title's filters in a channel.
 
@@ -1235,14 +1237,14 @@ def get_channel_whitelist(
     )
 
 
-# FAST003 - Parameters are used by EditableChannelCanonicalShow.
+# FAST003 - Parameters are used by ReadableChannelCanonicalShow.
 # TODO: Validate
 @channels_router.get(
     "/{channel_id}/whitelist/{canonical_show_id}/seasons/{season_id}/episodes",  # noqa: FAST003
 )
 def get_channel_whitelist_episodes(
     session: SessionDep,
-    channel_show: EditableChannelCanonicalShow,
+    channel_show: ReadableChannelCanonicalShow,
     season_id: uuid.UUID,
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=WHITELIST_EPISODE_PAGE)] = (
@@ -1496,6 +1498,19 @@ def update_channel_order(
     service.set_channel_order(session, channel, order_input.episode_ids)
     session.refresh(channel)
     return channel
+
+
+# FAST003 - Parameters are used by EditableChannel and ReadableShow.
+# TODO: Validate
+@channels_router.post("/{channel_id}/add-show/{show_id}")  # noqa: FAST003
+def add_channel_show(
+    session: SessionDep,
+    channel: EditableChannel,
+    show: ReadableShow,
+) -> Message:
+    """Put a title, on every website it is on, onto a `Channel`."""
+    service.add_show_to_channel(session, channel, show)
+    return Message(message=f"{show.name} added to channel successfully")
 
 
 # FAST003 - Parameters are used by EditableChannelCanonicalShow.

@@ -490,8 +490,8 @@ export const CanonicalEpisodeOutputSchema = {
     title: 'CanonicalEpisodeOutput',
     description: `Schema for returning a \`Episode\`.
 
-An episode hangs off its season by the same column a copy hangs off the
-copy's season by, so what is served as the canonical season is read off
+An episode hangs off its season by the same column a non-canonical row hangs off the
+non-canonical row's season by, so what is served as the canonical season is read off
 \`season_id\`. The name it is served under does not change.`
 } as const;
 
@@ -5307,10 +5307,10 @@ export const PluginSearchResultSchema = {
     title: 'PluginSearchResult',
     description: `Search result from a plugin.
 
-Every plugin searches its own catalogue, so a result maps directly to an
-importable URL and carries the identifier that plugin files the title
-under. Details for the result are read back from the same plugin under that
-identifier rather than being matched onto some other service's copy.`
+Every plugin searches its own catalogue, so a result maps directly to an importable
+URL and carries the identifier that plugin files the title under. Details for the
+result are read back from the same plugin under that identifier rather than being
+matched onto some other service's non-canonical row.`
 } as const;
 
 export const PluginSearchResultsSchema = {
