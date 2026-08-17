@@ -25,7 +25,7 @@ const NUMBERED_EPISODE_NAME = /^(?:episode|ep\.?)?\s*0*(\d+)$/i
 // TODO: Validate
 export function episodeLabel(episode: WhitelistEpisodeOutput) {
   const episodeName = episode.name ?? ""
-  const episodeNumber = episode.episode_number
+  const episodeNumber = episode.tmdb_episode_number
   if (episodeNumber == null) {
     return episodeName
   }

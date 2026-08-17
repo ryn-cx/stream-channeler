@@ -45,6 +45,7 @@ from app.channels.episode_selector.watch_filters import (
     hide_watched_condition,
     join_last_watched,
     latest_watch_by_identifier,
+    started_show_ids,
 )
 from app.channels.models import (
     Channel,
@@ -116,7 +117,20 @@ class EpisodeQueryBuilder:
                 if any(key.model == "channel" for key in self._channel_options.sort_by)
                 else {}
             ),
+            # Read once rather than per candidate row: the titles a user has
+            # started are the same set however many episodes are being ordered.
+            started_shows=self._fetch_started_shows(),
         )
+
+    # TODO: Validate
+    def _fetch_started_shows(self) -> set[UUID]:
+        needs_started = any(
+            key.field == "started" and key.model == "show"
+            for key in self._channel_options.sort_by
+        )
+        if not needs_started or not self._user:
+            return set()
+        return set(self._session.exec(started_show_ids(self._user)).all())
 
     # TODO: Validate
     def _set_channel_options(self, channel_options: ChannelOptions) -> None:

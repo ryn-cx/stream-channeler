@@ -6,20 +6,13 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import String, case, literal, literal_column
-from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement, UnaryExpression
-from sqlmodel import and_, col, desc, func, select
+from sqlmodel import and_, col, desc, func
 
-from app.canonical_media.episodes import (
-    canonical_episode_id_column,
-    canonical_episode_link,
-    links_of,
-)
 from app.channels.episode_selector.canonical_columns import CanonicalColumns
 from app.channels.episode_selector.canonical_entities import (
     CANONICAL_EPISODE,
     CANONICAL_SEASON,
-    CANONICAL_SHOW,
     episode_id,
 )
 from app.channels.episode_selector.watch_filters import (
@@ -28,15 +21,11 @@ from app.channels.episode_selector.watch_filters import (
 )
 from app.channels.models import ChannelSavedEpisodeOrder, ChannelShow
 from app.channels.schemas import SortKeyInput
-from app.episodes.models import Episode
 from app.models import ZERO_LAST_SUFFIX
 from app.plugins.models import Plugin
-from app.seasons.models import Season
-from app.shows.models import Show, ShowCanonicalShow
 from app.sources.models import Source
 from app.users.models import User
 from app.utils import tz_datetime
-from app.watches.models import Watch
 
 # Stands in for 0 in the `_zero_last` sorts, past any season or episode number a
 # website or TMDB issues while still fitting the integer columns it is compared to.
@@ -65,12 +54,14 @@ class SortExpressionBuilder:
         user: User | None,
         fallbacks: CanonicalColumns,
         channel_attribution: dict[UUID, UUID] | None = None,
+        started_shows: set[UUID] | None = None,
     ) -> None:
         """Build the sort expressions for one read of one channel."""
         self._random_seed = random_seed
         self._user = user
         self._fallbacks = fallbacks
         self._channel_attribution = channel_attribution or {}
+        self._started_shows = started_shows or set()
 
     # TODO: Validate
     def expression(self, sort_key: SortKeyInput) -> ColumnElement[Any]:
@@ -298,47 +289,9 @@ class SortExpressionBuilder:
         listing is a copy of - all of them, since a listing is no more a copy of
         one title than of another.
         """
-        if not self._user:
+        if not self._user or not self._started_shows:
             return literal_column("0")
-        named_episode = aliased(Episode)
-        named_link = canonical_episode_link()
-        watched_episode = aliased(Episode)
-        watched_season = aliased(Season)
-        watched_show = aliased(Show)
-        watched_link = aliased(ShowCanonicalShow)
-        started_query = (
-            select(Watch.id)
-            # The row the watch names, which is whichever link played it, read
-            # back to the episode that link is of before the title is walked to.
-            .join(
-                named_episode,
-                col(named_episode.watch_identifier) == col(Watch.watch_identifier),
-            )
-            .outerjoin(named_link, links_of(named_episode, named_link))
-            .join(
-                watched_episode,
-                col(watched_episode.id)
-                == canonical_episode_id_column(named_episode, named_link),
-            )
-            .join(
-                watched_season,
-                col(watched_episode.season_id) == col(watched_season.id),
-            )
-            .join(watched_show, col(watched_season.show_id) == col(watched_show.id))
-            # A title has no links and stands for itself; a listing has one row
-            # per title it is a copy of and stands for each.
-            .outerjoin(watched_link, col(watched_link.show_id) == col(watched_show.id))
-            .where(
-                and_(
-                    func.coalesce(
-                        col(watched_link.canonical_show_id),
-                        col(watched_show.id),
-                    )
-                    == self._fallbacks.show_id(),
-                    Watch.user_id == self._user.id,
-                ),
-            )
-            .correlate(CANONICAL_SHOW)
-            .limit(1)
+        return case(
+            (self._fallbacks.show_id().in_(self._started_shows), 1),
+            else_=0,
         )
-        return case((started_query.exists(), 1), else_=0)

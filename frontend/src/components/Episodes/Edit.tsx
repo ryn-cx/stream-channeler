@@ -141,15 +141,6 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
       isPending={mutation.isPending}
       size="3xl"
     >
-      <CanonicalEpisodeField
-        episodeId={episode.id}
-        canonicalEpisodeIds={episode.canonical_episode_ids ?? []}
-        name={episode.name ?? null}
-        seasonNumber={null}
-        episodeNumber={episode.episode_number ?? null}
-        enabled={isOpen}
-      />
-
       {/*
         The website's own account of the episode rather than TMDB's, since this
         window edits the website's row and what it says is what is being read
@@ -159,6 +150,15 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
         episodeId={episode.id}
         enabled={isOpen}
         preferSource
+      />
+
+      <CanonicalEpisodeField
+        episodeId={episode.id}
+        canonicalEpisodeIds={episode.canonical_episode_ids ?? []}
+        name={episode.name ?? null}
+        seasonNumber={null}
+        episodeNumber={episode.episode_number ?? null}
+        enabled={isOpen}
       />
 
       {/*
