@@ -436,6 +436,20 @@ export type ChannelShowGroup = {
     shows?: Array<ShowPublic>;
 };
 
+/**
+ * One of the `User`'s `Channel`s, and whether it already holds a title.
+ *
+ * What a channel picker needs and nothing else. Reading it off the channels'
+ * show lists means a request and a whole catalogue per channel, when the only
+ * question being asked of each is yes or no.
+ */
+export type ChannelShowMembership = {
+    id: string;
+    name: (string | null);
+    channel_number: (number | null);
+    carries_show: boolean;
+};
+
 export type ChannelShowsOutput = {
     shows?: Array<ShowPublic>;
     filter_only_shows?: Array<ShowPublic>;
@@ -2212,6 +2226,12 @@ export type ChannelsUpdateChannelOrderData = {
 };
 
 export type ChannelsUpdateChannelOrderResponse = (ChannelOutput);
+
+export type ChannelsGetChannelsForShowData = {
+    showId: string;
+};
+
+export type ChannelsGetChannelsForShowResponse = (Array<ChannelShowMembership>);
 
 export type ChannelsAddChannelShowData = {
     channelId: string;

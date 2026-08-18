@@ -2239,6 +2239,50 @@ export const ChannelShowGroupSchema = {
     description: 'The regular shows contributed by one channel within a combined channel.'
 } as const;
 
+export const ChannelShowMembershipSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        channel_number: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Channel Number'
+        },
+        carries_show: {
+            type: 'boolean',
+            title: 'Carries Show'
+        }
+    },
+    type: 'object',
+    required: ['id', 'name', 'channel_number', 'carries_show'],
+    title: 'ChannelShowMembership',
+    description: `One of the \`User\`'s \`Channel\`s, and whether it already holds a title.
+
+What a channel picker needs and nothing else. Reading it off the channels'
+show lists means a request and a whole catalogue per channel, when the only
+question being asked of each is yes or no.`
+} as const;
+
 export const ChannelShowStatsSchema = {
     properties: {
         season_count: {

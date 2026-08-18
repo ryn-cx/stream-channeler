@@ -103,6 +103,24 @@ class ChannelPublicListOutput(BaseModel):
 
 
 # TODO: Validate
+class ChannelShowMembership(BaseModel):
+    """One of the `User`'s `Channel`s, and whether it already holds a title.
+
+    What a channel picker needs and nothing else. Reading it off the channels'
+    show lists means a request and a whole catalogue per channel, when the only
+    question being asked of each is yes or no.
+    """
+
+    id: uuid.UUID
+    name: str | None
+    channel_number: float | None
+    # A row the channel holds only to filter episodes out is not carrying the
+    # title, so it reads as false: adding is what turns that row into one the
+    # channel carries.
+    carries_show: bool
+
+
+# TODO: Validate
 class ChannelsPublic(BaseModel):
     """Schema for returning a page of `Channel`s."""
 

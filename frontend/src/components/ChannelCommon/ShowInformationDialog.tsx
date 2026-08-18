@@ -148,7 +148,7 @@ export function ShowInformationSummary({
   return (
     <div className="flex flex-col gap-2">
       {summaryHero(data)}
-      <AddToChannelButton showId={data.show_id} showUrl={data.source.url} />
+      <AddToChannelButton showId={data.show_id} />
     </div>
   )
 }

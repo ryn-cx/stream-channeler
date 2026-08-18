@@ -37,6 +37,7 @@ from app.channels.schemas import (
     ChannelCreate,
     ChannelListOutput,
     ChannelOutput,
+    ChannelShowMembership,
     ChannelsPublic,
     CombinedChannelInput,
     SortKeyInput,
@@ -709,6 +710,49 @@ def blacklist_episode_on_channel(
     for channel_show in channel_shows:
         session.refresh(channel_show)
     return channel_shows
+
+
+# TODO: Validate
+def channels_with_show_membership(
+    session: Session,
+    user: User,
+    show: Show,
+) -> list[ChannelShowMembership]:
+    """Every `Channel` `user` owns, and whether it already holds `show`'s title.
+
+    The title is what a channel holds rather than the one website's row asked
+    about, so the row is read to the canonical shows it stands for first and a
+    channel holding any of them is holding the title. A row that stands for
+    nothing is the title itself, under its own id.
+
+    One query rather than one per channel: the picker only needs a yes or no of
+    each, which reading every channel's catalogue back answers the long way
+    round.
+    """
+    canonical_show_ids = set(show.canonical_show_ids) or {show.id}
+
+    carrying_channel_ids = set(
+        session.exec(
+            select(col(ChannelShow.channel_id)).where(
+                col(ChannelShow.canonical_show_id).in_(canonical_show_ids),
+                col(ChannelShow.is_blacklist_only).is_(False),
+            ),
+        ).all(),
+    )
+    channels = session.exec(
+        select(Channel)
+        .where(col(Channel.user_id) == user.id)
+        .order_by(col(Channel.channel_number), col(Channel.name), col(Channel.id)),
+    ).all()
+    return [
+        ChannelShowMembership(
+            id=channel.id,
+            name=channel.name,
+            channel_number=channel.channel_number,
+            carries_show=channel.id in carrying_channel_ids,
+        )
+        for channel in channels
+    ]
 
 
 # TODO: Validate

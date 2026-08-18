@@ -62,6 +62,7 @@ from app.channels.schemas import (
     ChannelQueueOutput,
     ChannelReadOptions,
     ChannelShowGroup,
+    ChannelShowMembership,
     ChannelShowsOutput,
     ChannelShowStats,
     ChannelsPublic,
@@ -1498,6 +1499,18 @@ def update_channel_order(
     service.set_channel_order(session, channel, order_input.episode_ids)
     session.refresh(channel)
     return channel
+
+
+# FAST003 - Parameter is used by ReadableShow.
+# TODO: Validate
+@channels_router.get("/for-show/{show_id}")  # noqa: FAST003
+def get_channels_for_show(
+    session: SessionDep,
+    current_user: CurrentUser,
+    show: ReadableShow,
+) -> list[ChannelShowMembership]:
+    """List the `User`'s `Channel`s, saying which already hold a title."""
+    return service.channels_with_show_membership(session, current_user, show)
 
 
 # FAST003 - Parameters are used by EditableChannel and ReadableShow.
