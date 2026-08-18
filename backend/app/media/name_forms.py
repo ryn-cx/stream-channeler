@@ -26,6 +26,11 @@ from pykakasi.kanji import Kanwa
 # kept.
 _MAX_READING_COMBINATIONS = 32
 
+_JAPANESE = re.compile(
+    "[×々-〆぀-ヿㇰ-ㇿ㐀-䶿"
+    "一-鿿豈-﫿！-ﾟ𠀀-𮯯]",
+)
+
 
 # TODO: Validate
 @cache
@@ -63,6 +68,9 @@ def _readings(segment: str) -> frozenset[str]:
 # TODO: Validate
 @cache
 def _romanizations(name: str) -> frozenset[str]:
+    if not _JAPANESE.search(name):
+        return frozenset()
+
     readings_per_segment = [
         frozenset({part["hira"], *_readings(part["orig"])})
         for part in _converter().convert(name)
@@ -103,6 +111,7 @@ def _folded(plaintext_name: str) -> str:
 
 
 # TODO: Validate
+@cache
 def plaintext_forms(name: str | None) -> frozenset[str]:
     """Return every spelling `name` could be written in, reduced to plaintext.
 

@@ -52,6 +52,7 @@ _POSTER_BASE_URL = "https://image.tmdb.org/t/p/w342"
 _BACKDROP_BASE_URL = "https://image.tmdb.org/t/p/original"
 _STILL_BASE_URL = "https://image.tmdb.org/t/p/original"
 _LOGO_BASE_URL = "https://image.tmdb.org/t/p/w92"
+_LATEST_SHOW_CHANGES_DATES = "tmdb_latest_show_changes_dates"
 
 
 # TODO: Validate
@@ -520,7 +521,19 @@ class FileMixin(BasePlugin, register=False):
         return (reference - CHANGES_OVERLAP).date()
 
     # TODO: Validate
+    def _latest_show_changes_dates(self) -> dict[int, date | None]:
+        cached: dict[int, date | None] = self.session.info.setdefault(
+            _LATEST_SHOW_CHANGES_DATES,
+            {},
+        )
+        return cached
+
+    # TODO: Validate
     def _latest_show_changes_date(self, tmdb_show_id: int) -> date | None:
+        cached = self._latest_show_changes_dates()
+        if tmdb_show_id in cached:
+            return cached[tmdb_show_id]
+
         statement = (
             select(File)
             .where(
@@ -531,9 +544,12 @@ class FileMixin(BasePlugin, register=False):
         )
         stored = self.session.exec(statement).first()
         if stored is None:
+            cached[tmdb_show_id] = None
             return None
         identifier = ShowChanges.file_key_to_unique_identifier(stored.key)
-        return date.fromisoformat(identifier.split("/")[-1])
+        latest = date.fromisoformat(identifier.split("/")[-1])
+        cached[tmdb_show_id] = latest
+        return latest
 
     # TODO: Validate
     def show_changes_file(
@@ -547,6 +563,8 @@ class FileMixin(BasePlugin, register=False):
             downloaded_to = (
                 self._latest_show_changes_date(tmdb_id) or tz_datetime.now().date()
             )
+        else:
+            self._latest_show_changes_dates().pop(tmdb_id, None)
         return self._file(
             ShowChanges,
             tmdb_id,

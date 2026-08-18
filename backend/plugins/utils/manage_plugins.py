@@ -67,3 +67,19 @@ def sorted_plugins() -> list[type[AbstractPlugin]]:
     """Return the registered plugins sorted by their plugin_key."""
     import_plugins()
     return sorted(plugins, key=lambda plugin: plugin.plugin_key())
+
+
+# TODO: Validate
+def plugin_for_url(
+    url: str,
+    exclude: type[AbstractPlugin] | None = None,
+) -> type[AbstractPlugin] | None:
+    """Return the plugin that imports `url` itself, if there is one."""
+    for plugin_class in sorted_plugins():
+        if (
+            plugin_class is not exclude
+            and plugin_class.implements("import_url")
+            and plugin_class.is_valid_url_format(url)
+        ):
+            return plugin_class
+    return None

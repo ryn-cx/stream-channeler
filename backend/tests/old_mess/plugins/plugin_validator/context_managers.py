@@ -250,6 +250,10 @@ def serve_downloads_from_disk() -> Generator[list[str]]:
             # that a recording run records the time it ran while every run after
             # it reads the stored value, which is a mismatch in every test.
             restore_stored_metadata(self.database_record, owner_key, path)
+            own_record_is_stale = BaseFile.is_outdated(self, update_at)
+            if own_record_is_stale or not self.is_outdated(update_at):
+                return
+            original_download_if_outdated(self, update_at)
             return
 
         original_download_if_outdated(self, update_at)

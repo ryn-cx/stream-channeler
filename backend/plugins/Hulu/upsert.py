@@ -169,13 +169,14 @@ class UpsertMixin(HelperMixin, register=False):
             ):
                 continue
 
+            hero_artwork = item.artwork.video_horizontal_hero
             new_episode = Episode(
                 key=episode_key,
                 name=item.name,
                 episode_number=int(item.number),
                 url=self._episode_url(episode_key),
                 description=item.description,
-                image_url=self._image_url(item.artwork.video_horizontal_hero.path),
+                image_url=self._image_url(hero_artwork.path) if hero_artwork else None,
                 duration=item.duration,
                 air_date=item.premiere_date,
                 sort_order=sort_order,

@@ -2,6 +2,7 @@
 """Episode models."""
 
 import uuid
+from collections.abc import Collection
 from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar, Never, Self, override
 
@@ -207,6 +208,14 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
         if len(canonical_episode_ids) != 1:
             return None
         return canonical_episode_ids[0]
+
+    # TODO: Validate
+    def own_episode_numbers(self) -> Collection[int]:
+        """The number this carries in the order its title is read in."""
+        if self.episode_number is None:
+            msg = f"Episode {self.id} has no episode number."
+            raise ValueError(msg)
+        return (self.episode_number,)
 
     # TODO: Validate
     @property

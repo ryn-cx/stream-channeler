@@ -11,12 +11,15 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import freezegun
 import pyinstrument
 from loguru import logger
 from sqlalchemy import Engine, event
 
 if TYPE_CHECKING:
     from tests.old_mess.plugins.plugin_validator import PluginValidator
+
+freezegun.configure(extend_ignore_list=["pyinstrument"])
 
 
 # How much worse than the best a metric may get before it is reported. Every extra

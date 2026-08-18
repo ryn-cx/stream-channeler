@@ -45,11 +45,6 @@ class AbstractPlugin(ABC):
     # has no icon of its own.
     FAVICON_URL: ClassVar[str | None] = None
 
-    # Whether the plugin is offered in the UI's list of what can be added by URL.
-    # A plugin that is reached through another one sets this False: a URL a `User`
-    # pastes still imports, it is just not advertised as a way in.
-    LISTED_FOR_IMPORT_URL: ClassVar[bool] = True
-
     # Whether a `User` may search this plugin to find media to add. Off unless a
     # plugin says otherwise, because every other plugin's search exists to cross
     # reference a title against what a service carries, not to be searched

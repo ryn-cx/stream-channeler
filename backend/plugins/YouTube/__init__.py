@@ -124,6 +124,7 @@ class YouTube(
         *,
         force: bool = False,
     ) -> list[URLImportResult]:
+        self._set_current_show(url)
         handler = self.get_url_handler(url)
         handler.raise_if_invalid()
         return self._import_handler(handler, canonical_show, force=force)
@@ -205,6 +206,7 @@ class YouTube(
     # TODO: Validate
     @override
     def update_season(self, season: Season) -> None:
+        self._set_current_show(season.show.key)
         logger.info("Updating season: {}", season.key)
         season = self._preload_season(season.id, preload_show=True).one()
         # A season that is a single video has no feed to check for new videos.

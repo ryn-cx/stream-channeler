@@ -134,7 +134,7 @@ def import_url_information(
             favicon_url=plugin_cls.FAVICON_URL,
         )
         for plugin_cls in sorted_plugins()
-        if plugin_cls.implements("import_url") and plugin_cls.LISTED_FOR_IMPORT_URL
+        if plugin_cls.implements("import_url")
     ]
 
 

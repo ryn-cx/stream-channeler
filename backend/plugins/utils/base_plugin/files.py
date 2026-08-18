@@ -80,7 +80,7 @@ class BaseFile[T](ABC):
         """
         record = self._existing_database_record
         if record is None:
-            msg = f"{self.file_key()} has not been downloaded."
+            msg = f"{self.__class__.__name__}/{self.file_key()} has not been downloaded."
             raise ValueError(msg)
         return record
 

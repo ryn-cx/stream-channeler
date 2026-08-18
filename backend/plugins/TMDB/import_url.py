@@ -16,13 +16,12 @@ from plugins.TMDB.lookup import LookupMixin
 from plugins.TMDB.upsert import UpsertMixin
 from plugins.TMDB.url_handlers import TMDBURLHandler
 from plugins.utils.abstract_plugin import (
-    AbstractPlugin,
     InvalidURLError,
     URLImportResult,
 )
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 from plugins.utils.base_plugin.url import URLHandler
-from plugins.utils.manage_plugins import sorted_plugins
+from plugins.utils.manage_plugins import plugin_for_url
 from plugins.WatchMode import WatchMode
 
 # Which half of the catalogue a search of both says a result came from. A multi
@@ -88,7 +87,7 @@ class ImportURLMixin(
         like that is a shop page rather than a listing anything watches.
         """
         for url in self._listed_source_urls(show_key):
-            plugin_class = self._plugin_for_url(url)
+            plugin_class = plugin_for_url(url)
             if plugin_class is None:
                 continue
             try:
@@ -96,21 +95,38 @@ class ImportURLMixin(
             except InvalidURLError:
                 logger.info("Nothing to import at {}", url)
 
+        self._import_justwatch_listing(show_key, show, force=force)
+
+    # TODO: Validate
+    def _import_justwatch_listing(
+        self,
+        show_key: str,
+        show: Show,
+        *,
+        force: bool = False,
+    ) -> None:
+        """Hand the title's JustWatch page to JustWatch to import.
+
+        JustWatch is given the page rather than asked for the addresses on it,
+        because it carries the services no plugin of this project scrapes. A
+        service with a plugin is imported by that plugin from the address above;
+        one without is stored by JustWatch out of what its own listing says,
+        which is the only account of it there is.
+        """
+        media_type, tmdb_id = parse_show_key(show_key)
+        page_url = self._justwatch_page_url(media_type, tmdb_id)
+        if page_url is None:
+            return
+        try:
+            JustWatch(self.session).import_url(page_url, show, force=force)
+        except InvalidURLError:
+            logger.info("Nothing to import at {}", page_url)
+
     # TODO: Validate
     def _listed_source_urls(self, show_key: str) -> list[str]:
         """Return every address either lookup gives for the title, without repeats."""
         media_type, tmdb_id = parse_show_key(show_key)
-        urls = WatchMode(self.session).source_urls(media_type, tmdb_id)
-
-        # TMDB's page for a title links to JustWatch's page for the same title,
-        # so the listing is read straight off that address rather than JustWatch
-        # being searched for the title's name.
-        page_url = self._justwatch_page_url(media_type, tmdb_id)
-        if page_url is not None:
-            for url in JustWatch(self.session).source_urls(page_url):
-                if url not in urls:
-                    urls.append(url)
-        return urls
+        return WatchMode(self.session).source_urls(media_type, tmdb_id)
 
     # TODO: Validate
     def _justwatch_page_url(self, media_type: MediaType, tmdb_id: int) -> str | None:
@@ -127,17 +143,6 @@ class ImportURLMixin(
 
         link = page_file.parsed().select_one('a[href*="justwatch.com"]')
         return None if link is None else str(link["href"])
-
-    # TODO: Validate
-    @staticmethod
-    def _plugin_for_url(url: str) -> type[AbstractPlugin] | None:
-        """Return the plugin that imports `url`, where one accepts it."""
-        for plugin_class in sorted_plugins():
-            if not plugin_class.implements("import_url"):
-                continue
-            if plugin_class.is_valid_url_format(url):
-                return plugin_class
-        return None
 
     # TODO: Validate
     def _download_title_files(self, show_key: str) -> None:

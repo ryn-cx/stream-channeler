@@ -5,13 +5,13 @@ import re
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from datetime import datetime, timedelta
-from functools import wraps
 from typing import Any, ClassVar, cast, override
 
 from loguru import logger
 from sqlmodel import Session
 
 from app.canonical_media.service import add_canonical_show
+from app.episodes.linker import preload_episodes
 from app.episodes.models import Episode
 from app.models import BaseMediaMixin, Visibility
 from app.plugins.models import Plugin
@@ -31,34 +31,6 @@ from plugins.utils.base_plugin.files import INITIAL_FILE_IDENTIFIER, BaseFile
 from plugins.utils.base_plugin.preload import PreloadMixin
 from plugins.utils.base_plugin.url import URLHandler, URLMixin
 from plugins.utils.base_plugin.watch import WatchMixin
-
-# The entry points that work on a single show, mapped to the name of their first
-# argument and how the show is read off it. `import_url` has no show until the
-# plugin has parsed the URL, so the URL stands in for it.
-_ENTRY_POINTS: dict[str, tuple[str, Callable[[Any], str]]] = {
-    "import_url": ("url", lambda url: url),
-    "update_show": ("show", lambda show: show.key),
-    "update_season": ("season", lambda season: season.show.key),
-    "update_episode": ("episode", lambda episode: episode.season.show.key),
-}
-
-
-# TODO: Validate
-def _tracks_show(
-    entry_point: Callable[..., Any],
-    argument: str,
-    show_of: Callable[[Any], str],
-) -> Callable[..., Any]:
-    """Return `entry_point` wrapped so it records the show it was called for."""
-
-    # TODO: Validate
-    @wraps(entry_point)
-    def tracked(self: BasePlugin, *args: Any, **kwargs: Any) -> Any:  # noqa: ANN401 - Forwarded verbatim.
-        entity = args[0] if args else kwargs[argument]
-        self._set_current_show(show_of(entity))
-        return entry_point(self, *args, **kwargs)
-
-    return tracked
 
 
 # TODO: Validate
@@ -104,28 +76,6 @@ class BasePlugin(
     Everything else is dropped by `_reset_show_state`, so an attribute only
     survives a change of show by being named here.
     """
-
-    # TODO: Validate
-    @override
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        """Wrap the entry points a subclass declares so they record the show."""
-        super().__init_subclass__(**kwargs)
-        cls._track_show_on_entry_points()
-
-    # TODO: Validate
-    @classmethod
-    def _track_show_on_entry_points(cls) -> None:
-        """Wrap the entry points this class declares so they record the show.
-
-        Only the definitions in `cls` itself are wrapped, so each one is wrapped
-        exactly once and an inherited entry point keeps the wrapper of the class
-        that declared it.
-        """
-        for name, (argument, show_of) in _ENTRY_POINTS.items():
-            entry_point = cls.__dict__.get(name)
-            if entry_point is None:
-                continue
-            setattr(cls, name, _tracks_show(entry_point, argument, show_of))
 
     # TODO: Validate
     def _set_current_show(self, show: str) -> None:
@@ -282,8 +232,8 @@ class BasePlugin(
         return tz_datetime.now()
 
     # TODO: Validate
-    @staticmethod
     def _set_weekly_updates_from_episodes(
+        self,
         show: Show,
         *,
         update_show: bool = True,
@@ -294,6 +244,7 @@ class BasePlugin(
         `update_at` will be set to be a week after the latest `Episode.air_date` if
         that is a better `update_at` value than the current `update_at` value.
         """
+        preload_episodes(self.session, [show])
         for season in show.active_children:
             for episode in season.active_children:
                 if episode.air_date:
@@ -337,6 +288,7 @@ class BasePlugin(
     @override
     def update_show(self, show: Show, *, force: bool = False) -> None:
         logger.info("Updating show: {}", show.key)
+        self._set_current_show(show.key)
         show = self._preload_show(show.key, source_key=show.source.key).one()
         self._update_and_upsert_show(show, show.update_at, force=force)
 
@@ -344,6 +296,7 @@ class BasePlugin(
     @override
     def update_season(self, season: Season) -> None:
         logger.info("Updating season: {}", season.key)
+        self._set_current_show(season.show.key)
         season = self._preload_season(season.id, preload_show=True).one()
         self._download_season_files_and_children(season, update_at=season.update_at)
         self._update_and_upsert_show(season.show)
@@ -352,6 +305,7 @@ class BasePlugin(
     @override
     def update_episode(self, episode: Episode) -> None:
         logger.info("Updating episode: {}", episode.key)
+        self._set_current_show(episode.season.show.key)
         episode = self._preload_episode(episode.id, preload_source=True).one()
         self._download_episode_files(episode, update_at=episode.update_at)
         self._update_and_upsert_show(episode.season.show)
@@ -495,6 +449,7 @@ class BasePlugin(
 
     # TODO: Validate
     def _soft_delete_missing(self, show_key: str) -> None:
+        _cache = self._preload_show(show_key, preload_episodes=True).all()
         self.soft_delete_missing_seasons(show_key)
         for season_key in self._season_keys_from_file(show_key):
             self.soft_delete_missing_episodes(season_key, show_key)
@@ -613,12 +568,7 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
         *,
         force: bool = False,
     ) -> list[URLImportResult]:
+        self._set_current_show(url)
         handler = self.get_url_handler(url)
         handler.raise_if_invalid()
         return self._import_handler(handler, canonical_show, force=force)
-
-
-# `__init_subclass__` only runs for subclasses, so the entry points `BasePlugin`
-# declares itself are wrapped here instead. Every other class, this file's
-# `URLHandlerPlugin` included, is a subclass and is wrapped as it is declared.
-BasePlugin._track_show_on_entry_points()  # noqa: SLF001 - Declared just above.

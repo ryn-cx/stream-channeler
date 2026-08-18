@@ -25,9 +25,6 @@ class WatchMode(SourcesMixin, register=True):
     _VERSION = "0.0.1"
     FAVICON_URL = "https://www.watchmode.com/favicon.ico"
 
-    # Nothing is imported from Watchmode, so it is not offered as a way in.
-    LISTED_FOR_IMPORT_URL = False
-
     # TODO: Validate
     @classmethod
     @override

@@ -112,6 +112,7 @@ class UpdateMixin(ImportURLMixin, register=False):
     # TODO: Validate
     @override
     def update_show(self, show: Show, *, force: bool = False) -> None:
+        self._set_current_show(show.key)
         media_type, _ = parse_show_key(show.key)
         if media_type == MediaType.movie:
             # Movie ignores changes because there is only a single file so i is more

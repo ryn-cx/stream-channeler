@@ -99,6 +99,7 @@ def _untitled_number(name: str) -> str:
 
 
 # TODO: Validate
+@lru_cache(maxsize=65536)
 def similarity(name: str | None, other_name: str | None) -> float:
     stripped = plaintext(name)
     other_stripped = plaintext(other_name)
@@ -120,6 +121,25 @@ def similarity(name: str | None, other_name: str | None) -> float:
     # containment can only ever help.
     shorter, longer = sorted((stripped, other_stripped), key=len)
     return max(ratio, len(shorter) / len(longer))
+
+
+# TODO: Validate
+def preload_episodes(session: Session, shows: Sequence[Show]) -> None:
+    unread = [
+        show.id
+        for show in shows
+        if "seasons" in instance_state(show).unloaded
+        or any("episodes" in instance_state(season).unloaded for season in show.seasons)
+    ]
+    if not unread:
+        return
+    session.exec(
+        select(Season)
+        .where(col(Season.show_id).in_(unread))
+        .options(
+            selectinload(Season.episodes),  # type: ignore[arg-type]
+        ),
+    ).all()
 
 
 # TODO: Validate
@@ -159,6 +179,7 @@ class EpisodeLinker:
         """Gather the show's episodes and the canonical ones they are read against."""
         self.session = session
         self.show = show
+        preload_episodes(session, [show, *show.canonical_shows])
         episodes = [
             episode
             for season in show.active_children
@@ -293,14 +314,6 @@ class EpisodeLinker:
 
     # TODO: Validate
     @staticmethod
-    def _own_episode_numbers(tmdb_episode: Episode) -> Collection[int]:
-        """The number a TMDB episode carries in the order its title is read in."""
-        if tmdb_episode.episode_number is None:
-            return ()
-        return (tmdb_episode.episode_number,)
-
-    # TODO: Validate
-    @staticmethod
     def _canonical_episodes_by_name_and_number(
         canonical_episodes: Collection[Episode],
         name_of: Callable[[Episode], str | None],
@@ -397,18 +410,38 @@ class EpisodeLinker:
         return candidates
 
     # TODO: Validate
-    @staticmethod
     def _best_namesimilarity(
+        self,
         episode: Episode,
         tmdb_episode: Episode,
         translated_forms: frozenset[str],
     ) -> float:
         """Return how alike the two are read across every name either carries."""
+        cache = self._name_similarity_cache()
+        cache_key = (episode.name, tmdb_episode.id)
+        if (cached := cache.get(cache_key)) is not None:
+            return cached
+
         best = similarity(episode.name, tmdb_episode.name)
-        for form in plaintext_forms(episode.name):
-            for translated_form in translated_forms:
-                best = max(best, similarity(form, translated_form))
+        if best < 1.0:
+            for form in plaintext_forms(episode.name):
+                for translated_form in translated_forms:
+                    best = max(best, similarity(form, translated_form))
+                    if best >= 1.0:
+                        break
+                if best >= 1.0:
+                    break
+
+        cache[cache_key] = best
         return best
+
+    # TODO: Validate
+    def _name_similarity_cache(self) -> dict[tuple[str | None, uuid.UUID], float]:
+        cache: dict[tuple[str | None, uuid.UUID], float] = self.session.info.setdefault(
+            "episode_name_similarity",
+            {},
+        )
+        return cache
 
     # TODO: Validate
     def _translated_forms_cache(self) -> dict[uuid.UUID, frozenset[str]]:
@@ -754,7 +787,7 @@ class EpisodeLinker:
         return self._link_name_and_number(
             episodes,
             lambda tmdb_episode: tmdb_episode.name,
-            self._own_episode_numbers,
+            Episode.own_episode_numbers,
             "Automatic: Name and number match",
         )
 
@@ -772,7 +805,7 @@ class EpisodeLinker:
         return self._link_name_and_number(
             episodes,
             lambda tmdb_episode: plaintext(tmdb_episode.name),
-            self._own_episode_numbers,
+            Episode.own_episode_numbers,
             "Automatic: Plaintext name and number match",
         )
 
@@ -798,7 +831,7 @@ class EpisodeLinker:
         return self._link_name_and_number(
             episodes,
             lambda tmdb_episode: plaintext(tmdb_episode.description),
-            self._own_episode_numbers,
+            Episode.own_episode_numbers,
             "Automatic: Description and number match",
         )
 
@@ -963,7 +996,7 @@ class EpisodeLinker:
         """
         return self._link_similar_name(
             episodes,
-            self._own_episode_numbers,
+            Episode.own_episode_numbers,
             "Automatic: Similar name and number match",
         )
 

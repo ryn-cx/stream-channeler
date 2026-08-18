@@ -25,7 +25,7 @@ def _local_tz() -> Any:  # noqa: ANN401
 def now(*args: Any, **kwargs: Any) -> datetime:  # noqa: ANN401
     """Construct a timezone-aware datetime from time.time()."""
     if not args and "tz" not in kwargs:
-        kwargs["tz"] = _local_tz()
+        return datetime.now(UTC).astimezone()
     return datetime.now(*args, **kwargs)  # noqa: DTZ005
 
 

@@ -22,7 +22,8 @@ class DisneyPlus(
     MediaInfoMixin,
     SourceMixin,
     URLHandlerPlugin[DisneyPlusURLHandler],
-    register=True,
+    # Temporarily disabled until a solution is found to get episodes past episode 24
+    register=False,
 ):
     """Disney+ plugin."""
 

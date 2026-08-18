@@ -14,6 +14,7 @@ dependencies = [
   "fastapi[standard]<0.129.0,>=0.128.0",
   "httpx<1.0.0,>=0.25.1",
   "jinja2<4.0.0,>=3.1.4",
+  "just-scrape",
   "kneeminus",
   "loguru>=0.7.3",
   "lxml>=5.0.0",
@@ -99,14 +100,13 @@ ignore = [
 
   # Allow all TODO comments
   "TD",
-  "FIX002"
+  "FIX002",
+
+  "D",
 ]
 
-[tool.ruff.lint.pydocstyle]
-convention = "google"
-
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101", "D"]  # Asserts and missing docstrings allowed in tests.
+"tests/**/*.py" = ["S101"]  # Asserts allowed in tests.
 
 [tool.ty.terminal]
 error-on-warning = true
@@ -127,4 +127,5 @@ trivial-minus = { git = "https://github.com/ryn-cx/trivial-minus" }
 nana = { git = "https://github.com/ryn-cx/nana" }
 plugi = { git = "https://github.com/ryn-cx/plugi" }
 notaplanet = { git = "https://github.com/ryn-cx/notaplanet" }
+just-scrape = { git = "https://github.com/ryn-cx/just-scrape" }
 wampi = { git = "https://github.com/ryn-cx/wampi" }
