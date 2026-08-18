@@ -171,6 +171,7 @@ class SeasonEpisodes(
         ]
 
 
+# TODO: Validate
 class BuyBoxOffers(GAPIJSON[buy_box_offers_models.BuyBoxOffersResponse]):
     API_ENDPOINT = just_scrape().buy_box_offers
 

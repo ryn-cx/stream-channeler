@@ -60,6 +60,7 @@ _SERIES_EPISODE_URL = re.compile(
 # Held onto because a page of matches compares every episode against every
 # candidate of its title, so the same handful of names are stripped down again
 # for each pair - once per candidate per episode rather than once each.
+# TODO: Validate
 @lru_cache(maxsize=16384)
 def plaintext(name: str | None) -> str:
     if not name:
@@ -661,6 +662,7 @@ class EpisodeLinker:
             for form in plaintext_forms(name)
         )
 
+    # TODO: Validate
     def _link_movie(self, episodes: list[Episode]) -> list[Episode]:
         """Link movies."""
         if (

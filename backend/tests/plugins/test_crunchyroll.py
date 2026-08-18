@@ -233,6 +233,7 @@ class TestEpisodeGroupNameMatching(
         raise AssertionError(message)
 
     # TODO: This test should be generalized to be a generic service test
+    # TODO: Validate
     def test_watch_survives_an_episode_group_change(
         self,
         session_with_files: Session,

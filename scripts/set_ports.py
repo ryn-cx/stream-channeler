@@ -1,3 +1,4 @@
+# TODO: Validate
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -22,6 +23,7 @@ BASE_PORTS = {
 }
 
 
+# TODO: Validate
 def read_project_number() -> int:
     raw = dotenv_values(ENV_PATH).get("PROJECT_NUMBER")
     if not raw:
@@ -29,6 +31,7 @@ def read_project_number() -> int:
     return int(raw)
 
 
+# TODO: Validate
 def calculate_offset(project_number: int) -> int:
     if project_number < 0:
         raise ValueError("PROJECT_NUMBER must be a non-negative integer")
@@ -43,6 +46,7 @@ def calculate_offset(project_number: int) -> int:
     return offset
 
 
+# TODO: Validate
 def get_urls(ports: dict[str, int]) -> dict[str, str]:
     # Host-side test tooling (playwright privateApi, mailcatcher reader) targets
     # the test stack so frontend tests don't touch the dev `app` database.
@@ -53,10 +57,12 @@ def get_urls(ports: dict[str, int]) -> dict[str, str]:
     }
 
 
+# TODO: Validate
 def render_block(pairs: Mapping[str, object]) -> str:
     return "\n".join(f"{name}={value}" for name, value in pairs.items())
 
 
+# TODO: Validate
 def strip_managed(text: str, managed_keys: set[str]) -> str:
     return "\n".join(
         line
@@ -65,6 +71,7 @@ def strip_managed(text: str, managed_keys: set[str]) -> str:
     )
 
 
+# TODO: Validate
 def upsert_block(path: Path, block: str, managed_keys: set[str]) -> None:
     text = path.read_text() if path.exists() else ""
     before = strip_managed(text, managed_keys).rstrip("\n")

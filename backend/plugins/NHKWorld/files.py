@@ -19,6 +19,7 @@ from plugins.utils.base_plugin.files import GAPIJSON, BaseFile, GAPIListJSON
 from plugins.utils.get_around_client import get_around_client
 
 
+# TODO: Validate
 @cache
 def naphki() -> Naphki:
     """Returns a cached Naphki client."""

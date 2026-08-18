@@ -36,6 +36,7 @@ from plugins.utils.base_plugin.files import INITIAL_FILE_IDENTIFIER
 class UpsertMixin(HelperMixin, register=False):
     """Mixin containing all upsert functions."""
 
+    # TODO: Validate
     def _upsert_anime_source(self) -> Source:
         return self._upsert_source(
             VIDEO_SOURCE,
@@ -44,6 +45,7 @@ class UpsertMixin(HelperMixin, register=False):
             timedelta(days=1),
         )
 
+    # TODO: Validate
     def _upsert_music_source(self) -> Source:
         return self._upsert_source(
             MUSIC_SOURCE,
@@ -53,6 +55,7 @@ class UpsertMixin(HelperMixin, register=False):
             timedelta(days=7),
         )
 
+    # TODO: Validate
     @override
     def _upsert_source(
         self,

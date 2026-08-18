@@ -1,3 +1,4 @@
+# TODO: Validate
 """JustWatch plugin."""
 
 from __future__ import annotations
@@ -9,6 +10,7 @@ from plugins.JustWatch.upsert import UpsertMixin
 from plugins.JustWatch.url_handlers import TitleURLHandler
 
 
+# TODO: Validate
 class JustWatch(SourceMixin, ImportURLMixin, UpsertMixin, HelperMixin, register=True):
     """JustWatch plugin."""
 
