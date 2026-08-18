@@ -58,7 +58,7 @@ export function ManageShowsButton({
           />
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-5xl max-h-[85vh] flex flex-col">
+      <DialogContent className="sm:max-w-[calc(100%-2rem)] h-[calc(100dvh-2rem)] flex flex-col">
         <DialogHeader className="px-8">
           <DialogTitle>
             {channelName ? `Manage ${channelName} Shows` : "Manage Shows"}
@@ -70,7 +70,7 @@ export function ManageShowsButton({
 
         <ManageShowsTabs
           channelId={channelId}
-          contentClassName="no-scrollbar max-h-[50vh] overflow-y-auto px-8 py-4"
+          contentClassName="no-scrollbar flex-1 min-h-0 overflow-y-auto px-8 py-4"
           tabsListClassName="mx-8 flex-wrap h-auto"
           combinedChannels={combinedChannels}
           onRequestClose={() => setIsOpen(false)}
