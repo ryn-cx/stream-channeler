@@ -47,8 +47,11 @@ class UpsertMixin(HelperMixin, register=False):
         # TMDB is searched on.
         if is_video_key(show_key):
             show = self._upsert_movie_show(show_key, force=force)
+            if self.is_free_movie(show_key):
+                find_and_add_canonical_show(self.session, show, canonical_show)
         elif is_show_key(show_key):
             show = self._upsert_series_show(show_key, force=force)
+            find_and_add_canonical_show(self.session, show, canonical_show)
         elif is_music_playlist_key(show_key):
             show = self._upsert_music_show(show_key, force=force)
         elif self.is_topic_channel(show_key):

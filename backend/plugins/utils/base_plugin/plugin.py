@@ -11,8 +11,8 @@ from loguru import logger
 from sqlmodel import Session
 
 from app.canonical_media.service import add_canonical_show
-from app.episodes.linker import preload_episodes
 from app.episodes.models import Episode
+from app.episodes.preload import preload_episodes
 from app.models import BaseMediaMixin, Visibility
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -530,8 +530,7 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
     def url_regex(cls) -> str:
         domain_regex = cls._domain_regex()
         alternatives = "|".join(
-            handler_class.url_regex(domain_regex)
-            for handler_class in cls._URL_HANDLERS
+            handler_class.url_regex(domain_regex) for handler_class in cls._URL_HANDLERS
         )
         return f"(?:{alternatives})"
 

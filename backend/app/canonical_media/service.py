@@ -10,6 +10,7 @@ from sqlmodel import Session, col, select
 
 from app.canonical_media.filters import is_canonical, is_non_canonical
 from app.canonical_media.keys import watch_identifier
+from app.channels.models import ChannelShow
 from app.episodes.models import Episode, EpisodeCanonicalEpisode
 from app.seasons.models import Season
 from app.shows.models import Show, ShowCanonicalShow
@@ -193,6 +194,9 @@ def add_canonical_show(
         message = f"{show} has other shows linked to it."
         raise ValueError(message)
 
+    if show.is_canonical:
+        _follow_show_to_canonical_show(session, show, canonical_show)
+
     show.is_canonical = False
     for existing_canonical_show in show.canonical_show_links:
         # By the row where the link is already stored, and by the object itself
@@ -209,6 +213,42 @@ def add_canonical_show(
     )
     session.add(existing_canonical_show)
     return existing_canonical_show
+
+
+# TODO: Validate
+def _follow_show_to_canonical_show(
+    session: Session,
+    show: Show,
+    canonical_show: Show,
+) -> None:
+    holding_channel_ids = set(
+        session.exec(
+            select(ChannelShow.channel_id).where(
+                ChannelShow.canonical_show_id == show.id,
+            ),
+        ).all(),
+    )
+    if not holding_channel_ids:
+        return
+
+    already_holding = set(
+        session.exec(
+            select(ChannelShow.channel_id).where(
+                ChannelShow.canonical_show_id == canonical_show.id,
+                col(ChannelShow.channel_id).in_(holding_channel_ids),
+            ),
+        ).all(),
+    )
+    for channel_id in holding_channel_ids - already_holding:
+        session.add(
+            ChannelShow(
+                channel_id=channel_id,
+                canonical_show_id=canonical_show.id,
+                is_whitelist=False,
+                is_blacklist_only=False,
+            ),
+        )
+    session.flush()
 
 
 # TODO: Validate

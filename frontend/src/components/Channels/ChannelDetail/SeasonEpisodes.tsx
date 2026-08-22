@@ -155,15 +155,17 @@ export function SeasonEpisodes({
         const expiry = episodeExpiry(episode)
         const episodeTmdbShowIds = catalogueShowIds(episode.show_ids)
         return (
-          <div key={episode.id}>
+          <div key={episode.canonical_episode_id}>
             <div className="flex items-center gap-2 p-2 hover:bg-accent/30 rounded">
               <Button
                 className="ml-8"
                 variant="ghost"
                 size="icon-sm"
-                onClick={() => toggleEpisodeInformation(episode.id)}
+                onClick={() =>
+                  toggleEpisodeInformation(episode.canonical_episode_id)
+                }
               >
-                {informationEpisodeId === episode.id ? (
+                {informationEpisodeId === episode.canonical_episode_id ? (
                   <ChevronDown className="h-4 w-4" />
                 ) : (
                   <ChevronRight className="h-4 w-4" />
@@ -180,7 +182,9 @@ export function SeasonEpisodes({
               <button
                 type="button"
                 className="flex-1 text-left text-sm hover:underline"
-                onClick={() => toggleEpisodeInformation(episode.id)}
+                onClick={() =>
+                  toggleEpisodeInformation(episode.canonical_episode_id)
+                }
               >
                 {episodeLabel(episode)}
                 {episodeEnabled && expiry && (
@@ -217,7 +221,7 @@ export function SeasonEpisodes({
                 label="Open this episode's season here"
               />
             </div>
-            {informationEpisodeId === episode.id && (
+            {informationEpisodeId === episode.canonical_episode_id && (
               <div className="ml-16 space-y-1">
                 {episode.links.map((link) => {
                   const linkSource = sourcesByShowId.get(link.show_id)

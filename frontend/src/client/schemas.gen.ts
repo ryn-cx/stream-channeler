@@ -6955,6 +6955,18 @@ export const ShowPublicSchema = {
     description: 'Schema for returning a `Show`.'
 } as const;
 
+export const ShowTmdbUrlInputSchema = {
+    properties: {
+        url: {
+            type: 'string',
+            title: 'Url'
+        }
+    },
+    type: 'object',
+    required: ['url'],
+    title: 'ShowTmdbUrlInput'
+} as const;
+
 export const ShowUpdateSchema = {
     properties: {
         key: {

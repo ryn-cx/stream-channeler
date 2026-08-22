@@ -132,6 +132,11 @@ class ShowInformationOutput(BaseModel):
 
 
 # TODO: Validate
+class ShowTmdbUrlInput(BaseModel):
+    url: str
+
+
+# TODO: Validate
 class ShowsPublic(BaseModel):
     """Schema for returning a list of `Show`s."""
 

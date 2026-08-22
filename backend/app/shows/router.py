@@ -40,14 +40,17 @@ from app.shows.schemas import (
     ShowListPublic,
     ShowPublic,
     ShowsPublic,
+    ShowTmdbUrlInput,
     ShowUpdate,
     TmdbEpisodeGroupOption,
 )
 from app.shows.service import (
     canonicalize_show,
+    force_update_show,
     list_tmdb_episode_groups,
     relink_show,
     set_canonical_show,
+    set_canonical_show_using_tmdb_url,
     unset_canonical_show,
     update_show_extra,
 )
@@ -274,6 +277,19 @@ def admin_link_show_to_canonical(
 
 
 # TODO: Validate
+@shows_router.put(
+    "/{show_id}/canonical-by-tmdb-url",  # noqa: FAST003 - Used by the dependencies.
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def admin_link_show_by_tmdb_url(
+    session: SessionDep,
+    show: EditableShow,
+    url_input: ShowTmdbUrlInput,
+) -> ShowPublic:
+    return _show_output(set_canonical_show_using_tmdb_url(session, show, url_input.url))
+
+
+# TODO: Validate
 @shows_router.delete(
     "/{show_id}/canonical/{canonical_show_id}",  # noqa: FAST003 - Used by the dependencies.
     dependencies=[Depends(get_current_active_superuser)],
@@ -307,6 +323,15 @@ def admin_relink_show_episodes(
 ) -> ShowPublic:
     """Work out every unsettled episode link on a `Show` again from scratch."""
     return _show_output(relink_show(session, show))
+
+
+# TODO: Validate
+@shows_router.post(
+    "/{show_id}/force-update",  # noqa: FAST003 - Used by EditableShow.
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def admin_force_update_show(session: SessionDep, show: EditableShow) -> ShowPublic:
+    return _show_output(force_update_show(session, show))
 
 
 # TODO: Validate

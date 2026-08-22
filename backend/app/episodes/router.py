@@ -16,17 +16,17 @@ from app.auth.dependencies import (
 )
 from app.canonical_media.filters import is_canonical
 from app.canonical_media.read import canonical_list_response
+from app.episodes.canonical_links import (
+    link_episode,
+    link_episode_using_tmdb_url,
+    mark_episode_absent_from_tmdb,
+    unlink_episode,
+)
 from app.episodes.dependencies import (
     AdminCanonicalEpisode,
     EditableEpisode,
     ExistingEpisode,
     ReadableEpisode,
-)
-from app.episodes.linker import (
-    link_episode,
-    link_episode_using_tmdb_url,
-    mark_episode_absent_from_tmdb,
-    unlink_episode,
 )
 from app.episodes.models import Episode
 from app.episodes.schemas import (

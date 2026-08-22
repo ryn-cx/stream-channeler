@@ -7,7 +7,7 @@ from typing import Annotated, Any, NamedTuple
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from loguru import logger
-from sqlalchemy import and_, case, distinct, exists, func, or_
+from sqlalchemy import and_, distinct, exists, func, or_
 from sqlalchemy.orm import aliased, selectinload
 from sqlalchemy.orm.attributes import set_committed_value
 from sqlmodel import Session, col, select
@@ -20,6 +20,7 @@ from app.auth.dependencies import (
     get_current_active_superuser,
 )
 from app.canonical_media.episodes import (
+    canonical_episode_id_column,
     canonical_episode_link,
     canonical_id_of,
     links_of,
@@ -868,9 +869,11 @@ def get_channel_sources(
 
 # TODO: Validate
 class _EpisodeListingColumns(NamedTuple):
+    link: Any
+    canonical_episode: Any
     canonical_episode_id: Any
     listed_season_id: Any
-    link_count: Any
+    unlinked: Any
 
 
 # TODO: Validate
@@ -881,43 +884,17 @@ def _episode_listing_columns() -> _EpisodeListingColumns:
     the season holding it; a row standing for none or for several answers for
     itself, since neither of the others is an episode it can be folded into.
     """
-    counted_link = canonical_episode_link()
-    link_count = (
-        select(func.count())
-        .select_from(counted_link)
-        .where(links_of(Episode, counted_link))
-        .correlate(Episode)
-        .scalar_subquery()
-    )
-    sole_link = canonical_episode_link()
-    sole_canonical_episode_id = (
-        select(col(sole_link.canonical_episode_id))
-        .where(links_of(Episode, sole_link))
-        .correlate(Episode)
-        .limit(1)
-        .scalar_subquery()
-    )
-    season_link = canonical_episode_link()
+    link = canonical_episode_link()
     canonical_episode = aliased(Episode)
-    sole_canonical_season_id = (
-        select(col(canonical_episode.season_id))
-        .select_from(season_link)
-        .join(canonical_episode, links_to(canonical_episode, season_link))
-        .where(links_of(Episode, season_link))
-        .correlate(Episode)
-        .limit(1)
-        .scalar_subquery()
-    )
     return _EpisodeListingColumns(
-        canonical_episode_id=case(
-            (link_count == 1, sole_canonical_episode_id),
-            else_=col(Episode.id),
+        link=link,
+        canonical_episode=canonical_episode,
+        canonical_episode_id=canonical_episode_id_column(Episode, link),
+        listed_season_id=func.coalesce(
+            col(canonical_episode.season_id),
+            col(Episode.season_id),
         ),
-        listed_season_id=case(
-            (link_count == 1, sole_canonical_season_id),
-            else_=col(Episode.season_id),
-        ),
-        link_count=link_count,
+        unlinked=col(link.canonical_episode_id).is_(None),
     )
 
 
@@ -946,6 +923,11 @@ def _listed_season_show_ids(
         select(columns.listed_season_id, Season.show_id)
         .select_from(Episode)
         .join(Season, col(Episode.season_id) == col(Season.id))
+        .outerjoin(columns.link, links_of(Episode, columns.link))
+        .outerjoin(
+            columns.canonical_episode,
+            links_to(columns.canonical_episode, columns.link),
+        )
         .where(
             col(Season.show_id).in_(show_order),
             col(Season.deleted_at).is_(None),
@@ -955,7 +937,7 @@ def _listed_season_show_ids(
                     _title_episode_id_query(channel_show.canonical_show_id),
                 ),
                 and_(
-                    columns.link_count == 0,
+                    columns.unlinked,
                     col(Season.show_id).in_(site_show_ids),
                 ),
             ),
@@ -1409,9 +1391,15 @@ def _season_episode_rows(
             Episode.sort_order,
             Season.show_id,
             columns.canonical_episode_id,
-            columns.link_count,
+            columns.unlinked,
         )
+        .select_from(Episode)
         .join(Season, col(Episode.season_id) == col(Season.id))
+        .outerjoin(columns.link, links_of(Episode, columns.link))
+        .outerjoin(
+            columns.canonical_episode,
+            links_to(columns.canonical_episode, columns.link),
+        )
         .where(
             col(Season.show_id).in_(show_order),
             col(Season.deleted_at).is_(None),
@@ -1423,10 +1411,16 @@ def _season_episode_rows(
     title_episode_ids = _title_episode_ids(session, channel_show.canonical_show_id)
     listed = [
         _SeasonEpisodeRow(episode_id, canonical_id, show_id, sort_order)
-        for episode_id, sort_order, show_id, canonical_id, links in rows
-        if canonical_id in title_episode_ids or (not links and show_id in site_show_ids)
+        for episode_id, sort_order, show_id, canonical_id, unlinked in rows
+        if canonical_id in title_episode_ids or (unlinked and show_id in site_show_ids)
     ]
-    listed.sort(key=lambda row: (show_order[row.show_id], str(row.id)))
+    listed.sort(
+        key=lambda row: (
+            show_order[row.show_id],
+            str(row.id),
+            str(row.canonical_episode_id),
+        ),
+    )
     return listed
 
 

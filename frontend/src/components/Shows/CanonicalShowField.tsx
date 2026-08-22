@@ -80,6 +80,7 @@ export function CanonicalShowField({
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
   const [search, setSearch] = useState("")
+  const [urlDraft, setUrlDraft] = useState("")
 
   const linkedQueries = useQueries({
     queries: canonicalShowIds.map((canonicalShowId) => ({
@@ -119,6 +120,24 @@ export function CanonicalShowField({
     onSuccess: () => {
       showSuccessToast("Show linked to canonical show")
       setSearch("")
+      rereadShow()
+    },
+    onError: (error: unknown) =>
+      handleError.call(
+        showErrorToast,
+        error as Parameters<typeof handleError>[0],
+      ),
+  })
+
+  const urlMutation = useMutation({
+    mutationFn: () =>
+      ShowsService.adminLinkShowByTmdbUrl({
+        showId,
+        requestBody: { url: urlDraft },
+      }),
+    onSuccess: () => {
+      showSuccessToast("Show linked to canonical show")
+      setUrlDraft("")
       rereadShow()
     },
     onError: (error: unknown) =>
@@ -231,6 +250,28 @@ export function CanonicalShowField({
           )}
         </div>
       ) : null}
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          value={urlDraft}
+          onChange={(event) => setUrlDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return
+            event.preventDefault()
+            if (urlDraft.trim().length > 0) urlMutation.mutate()
+          }}
+          placeholder="themoviedb.org address of a film or series"
+          aria-label="TMDB address"
+          className="min-w-48 flex-1"
+        />
+        <Button
+          type="button"
+          variant="outline"
+          disabled={urlDraft.trim().length === 0 || urlMutation.isPending}
+          onClick={() => urlMutation.mutate()}
+        >
+          Link by address
+        </Button>
+      </div>
     </div>
   )
 }

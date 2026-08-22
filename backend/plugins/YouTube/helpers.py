@@ -55,9 +55,13 @@ class HelperMixin(FileMixin, register=False):
         return items[0].snippet.channel_id if items else None
 
     # TODO: Validate
-    def paid_or_free_source(self, show_key: str) -> Source:
+    def is_free_movie(self, show_key: str) -> bool:
         channel_key = self.show_channel_key(show_key)
-        if channel_key is not None and is_free_movies_channel(channel_key):
+        return channel_key is not None and is_free_movies_channel(channel_key)
+
+    # TODO: Validate
+    def paid_or_free_source(self, show_key: str) -> Source:
+        if self.is_free_movie(show_key):
             return self.free_source
         return self.paid_source
 

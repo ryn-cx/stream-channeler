@@ -7,7 +7,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import case, distinct
-from sqlalchemy.orm import Mapped, aliased
+from sqlalchemy.orm import Mapped, aliased, selectinload
 from sqlalchemy.sql.expression import ColumnElement, Subquery, UnaryExpression
 from sqlmodel import and_, col, func, or_, select
 from sqlmodel.sql.expression import Select
@@ -98,6 +98,7 @@ class EpisodeQueryBuilder:
         self._session = session
         self._channel = channel
         self._user = user
+        self._episode_entity: Any = Episode
         self._set_channel_options(channel_options)
 
         self._channel_ids = self._fetch_channel_ids()
@@ -233,6 +234,7 @@ class EpisodeQueryBuilder:
     # TODO: Validate
     def get_episodes(self) -> list[EpisodeResult]:
         """Get filtered, sorted episodes with channel IDs and latest watch data."""
+        self._episode_entity = Episode
         query = self._base_query()
         query = self._join_whitelist(query)
         query = self._join_last_watched(query)
@@ -247,6 +249,12 @@ class EpisodeQueryBuilder:
         query = self._filter_by_ranges(query)
         query = self._sort_and_deduplicate(query)
         query = self._apply_limit(query)
+        query = query.options(
+            selectinload(self._episode_entity.season)
+            .selectinload(Season.show)  # type: ignore[arg-type]
+            .selectinload(Show.source)  # type: ignore[arg-type]
+            .selectinload(Source.plugin),  # type: ignore[arg-type]
+        )
 
         ordered_episodes: list[Episode] = []
         channels_by_media: dict[UUID, list[UUID]] = {}
@@ -675,8 +683,9 @@ class EpisodeQueryBuilder:
         if not self._holds_copied_titles:
             return query
         subquery = query.add_columns(self._source_rank_column()).subquery()
+        self._episode_entity = aliased(Episode, subquery)
         return select(  # type: ignore[return-value]
-            aliased(Episode, subquery),
+            self._episode_entity,
             subquery.c.channel_id,
         ).where(subquery.c.source_rank == 1)
 
@@ -789,8 +798,9 @@ class EpisodeQueryBuilder:
 
         order_by.extend([subquery.c.show_id, subquery.c.id])
 
+        self._episode_entity = aliased(Episode, subquery)
         outer: Select[tuple[Episode, UUID]] = select(  # type: ignore[assignment]
-            aliased(Episode, subquery),
+            self._episode_entity,
             subquery.c.channel_id,
         )
         if self._holds_copied_titles:

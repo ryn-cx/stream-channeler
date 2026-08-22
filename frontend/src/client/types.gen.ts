@@ -1363,6 +1363,10 @@ export type ShowsPublic = {
     is_server_side: boolean;
 };
 
+export type ShowTmdbUrlInput = {
+    url: string;
+};
+
 /**
  * Schema for updating a `Show`.
  */
@@ -2865,6 +2869,13 @@ export type ShowsAdminUnlinkShowFromCanonicalData = {
 
 export type ShowsAdminUnlinkShowFromCanonicalResponse = (ShowPublic);
 
+export type ShowsAdminLinkShowByTmdbUrlData = {
+    requestBody: ShowTmdbUrlInput;
+    showId: string;
+};
+
+export type ShowsAdminLinkShowByTmdbUrlResponse = (ShowPublic);
+
 export type ShowsAdminCanonicalizeShowData = {
     showId: string;
 };
@@ -2876,6 +2887,12 @@ export type ShowsAdminRelinkShowEpisodesData = {
 };
 
 export type ShowsAdminRelinkShowEpisodesResponse = (ShowPublic);
+
+export type ShowsAdminForceUpdateShowData = {
+    showId: string;
+};
+
+export type ShowsAdminForceUpdateShowResponse = (ShowPublic);
 
 export type ShowsGetShowTmdbEpisodeGroupsData = {
     showId: string;

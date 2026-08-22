@@ -230,7 +230,7 @@ export function WhitelistManager({
     setEpisodeChanges((previous) => {
       const next = new Map(previous)
       next.set(episode.canonical_episode_id, {
-        episodeId: episode.id,
+        episodeId: episode.canonical_episode_id,
         marked,
         expiry,
       })

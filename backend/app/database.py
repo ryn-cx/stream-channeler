@@ -9,7 +9,13 @@ from app.users import service as user_service
 from app.users.models import User
 from app.users.schemas import UserCreate
 
-engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
+engine = create_engine(
+    str(settings.SQLALCHEMY_DATABASE_URI),
+    pool_size=15,
+    max_overflow=5,
+    pool_pre_ping=True,
+    pool_recycle=1800,
+)
 
 
 # TODO: Validate

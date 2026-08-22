@@ -161,3 +161,23 @@ class TestPaidMovie(StandardTestsAlt[YouTube], VideoValidatorAlt):
 # TODO: Validate
 class TestFreeMovie(StandardTestsAlt[YouTube], VideoValidatorAlt):
     video_key = "zKQGAv8gtBA"
+
+
+# TODO: Validate
+class TestAnotherPaidMovie(StandardTestsAlt[YouTube], VideoValidatorAlt):
+    video_key = "NdYRsrRptco"
+
+
+# TODO: Validate
+class TestTopicAlbumPlaylist(StandardTestsAlt[YouTube], PlaylistValidatorAlt):
+    playlist_key = "OLAK5uy_kiAyq0iiYYIPvqybBkpxFvNai3lAw3fyU"
+
+
+# TODO: Validate
+class TopicChannelValidatorAlt(YouTubeValidatorAlt):
+    urls = ("youtube.com/channel/{channel_key}",)
+
+
+# TODO: Validate
+class TestTopicChannel(StandardTestsAlt[YouTube], TopicChannelValidatorAlt):
+    channel_key = "UCvYD4mt2SEikFlX0iJmTKvw"

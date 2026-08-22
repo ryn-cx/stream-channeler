@@ -26,7 +26,6 @@ from app.canonical_media.keys import (
     tmdb_id_of,
     tmdb_key_clause,
 )
-from app.episodes.linker import plaintext, similarity
 from app.episodes.models import (
     Episode,
 )
@@ -44,6 +43,7 @@ from app.media.canonical_metadata import (
 )
 from app.media.identifiers import TMDB_PLUGIN_KEY, YOUTUBE_PLUGIN_KEY
 from app.media.media_type import MediaType
+from app.media.name_matching import plaintext, similarity
 from app.plugins.models import Plugin
 from app.schemas import ReadOptions
 from app.seasons.models import Season

@@ -61,6 +61,9 @@ _CHANNEL_LABEL_PREFIXES = (
 # What splits the two lines of an offer's label.
 _LABEL_LINE_BREAK = "{lineBreak}"
 
+# What a card writes the name of what it offers as.
+_HEADING_TEXT_TYPE = "HEADING"
+
 # What a search lays its matches out as, which is what tells them apart from the
 # rows of titles like them that it suggests alongside.
 _GRID_CONTAINER_TYPE = "Grid"
@@ -134,6 +137,31 @@ def _pick_image(images: BaseModel) -> str | None:
 def _compact_key_from_link(link: str) -> str:
     """Return the id a link to a title carries, which is how its URL names it."""
     return link.split("?", 1)[0].rsplit("/", 1)[-1]
+
+
+# TODO: Validate
+def _card_texts(card: dict[str, Any]) -> list[dict[str, Any]]:
+    texts: list[dict[str, Any]] = []
+    for component in (card.get("components") or {}).values():
+        payload = component["componentPayload"]
+        if collection := payload.get("textComponentCollection"):
+            texts += collection["textList"]
+        if text := payload.get("textComponent"):
+            texts.append(text)
+    return texts
+
+
+# TODO: Validate
+def _card_channel_name(card: dict[str, Any]) -> str | None:
+    """Return the channel's own name as the card it is offered on heads it.
+
+    The button on the card is labelled with what pressing it does rather than
+    with the channel, so more than one channel is offered under the same label.
+    """
+    for text in _card_texts(card):
+        if text["textType"] == _HEADING_TEXT_TYPE:
+            return text["text"].strip()
+    return None
 
 
 # TODO: Validate
@@ -476,21 +504,33 @@ class Detail(JSONFile[dict[str, Any]]):
         return episodes
 
     # TODO: Validate
+    def _offer_cards(self) -> list[dict[str, Any]]:
+        """Return every card the page offers a way to watch the title on.
+
+        A card is laid out either as the one offer the page leads with or as one
+        of a set to pick from.
+        """
+        cards: list[dict[str, Any]] = []
+        for action in self._offer_actions():
+            for primary_action in action["primaryActions"]:
+                payload = primary_action["payload"]
+                if card := payload.get("expandingCard"):
+                    cards.append(card)
+                cards += payload.get("cardOptions") or []
+        return cards
+
+    # TODO: Validate
     def _offer_payloads(self) -> list[dict[str, Any]]:
         """Return everything the page says about how the title can be watched.
 
         Every way to watch is an action on a card, and a card is laid out either
         as the one offer the page leads with or as one of a set to pick from.
         """
-        payloads: list[dict[str, Any]] = []
-        for action in self._offer_actions():
-            for primary_action in action["primaryActions"]:
-                payload = primary_action["payload"]
-                if card := payload.get("expandingCard"):
-                    payloads += [option["payload"] for option in card["actions"]]
-                for card_option in payload.get("cardOptions") or []:
-                    payloads += [option["payload"] for option in card_option["actions"]]
-        return payloads
+        return [
+            option["payload"]
+            for card in self._offer_cards()
+            for option in card["actions"]
+        ]
 
     # TODO: Validate
     def _offer_actions(self) -> list[dict[str, Any]]:
@@ -514,14 +554,17 @@ class Detail(JSONFile[dict[str, Any]]):
         """
         channels: list[AmazonChannel] = []
         seen: set[str] = set()
-        for subscription in self._subscriptions():
-            benefit_id = subscription["benefitId"]
-            if benefit_id == _PRIME_BENEFIT_ID or benefit_id in seen:
-                continue
-            seen.add(benefit_id)
-            channels.append(
-                AmazonChannel(benefit_id, _channel_name(subscription["label"])),
-            )
+        for card in self._offer_cards():
+            for option in card["actions"]:
+                subscription = option["payload"].get("subscription")
+                if not subscription:
+                    continue
+                benefit_id = subscription["benefitId"]
+                if benefit_id == _PRIME_BENEFIT_ID or benefit_id in seen:
+                    continue
+                seen.add(benefit_id)
+                name = _card_channel_name(card) or _channel_name(subscription["label"])
+                channels.append(AmazonChannel(benefit_id, name))
         return channels
 
     # TODO: Validate

@@ -27,8 +27,7 @@ from pykakasi.kanji import Kanwa
 _MAX_READING_COMBINATIONS = 32
 
 _JAPANESE = re.compile(
-    "[×々-〆぀-ヿㇰ-ㇿ㐀-䶿"
-    "一-鿿豈-﫿！-ﾟ𠀀-𮯯]",
+    "[×々-〆぀-ヿㇰ-ㇿ㐀-䶿一-鿿豈-﫿！-ﾟ𠀀-𮯯]",
 )
 
 
@@ -49,7 +48,8 @@ def plaintext(name: str | None) -> str:
     """Return `name` with its case, punctuation and spacing taken out."""
     if not name:
         return ""
-    return "".join(character for character in name.casefold() if character.isalnum())
+    spelled_out = name.casefold().replace("&", " and ")
+    return "".join(character for character in spelled_out if character.isalnum())
 
 
 # TODO: Validate

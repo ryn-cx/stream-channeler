@@ -1,15 +1,17 @@
 # TODO: Validate
 """Which canonical show a show is linked to, and the settling of it."""
 
+import re
 import uuid
 from typing import Any
 
 from fastapi import HTTPException
 from sqlmodel import Session, col, select
 
+from app.canonical_media.filters import is_canonical
 from app.canonical_media.service import add_canonical_show
 from app.channels.models import ChannelShow
-from app.episodes.linker import EpisodeLinker
+from app.episodes.linking import EpisodeLinker
 from app.media.identifiers import TMDB_PLUGIN_KEY
 from app.media.media_type import MediaType
 from app.shows.models import Show
@@ -28,6 +30,8 @@ searched for at all.
 
 _LOOKUPS_IN_FLIGHT = "canonical_show_lookups"
 """Where a session keeps the shows it is in the middle of searching for."""
+
+_TMDB_TITLE_URL = re.compile(r"themoviedb\.org/(?:movie|tv)/(?P<tmdb_id>\d+)")
 
 
 # TODO: Validate
@@ -89,6 +93,28 @@ def set_canonical_show(
     session.commit()
     session.refresh(show)
     return show
+
+
+# TODO: Validate
+def set_canonical_show_using_tmdb_url(
+    session: Session,
+    show: Show,
+    url: str,
+) -> Show:
+    from plugins.TMDB import TMDB  # noqa: PLC0415
+
+    address = url.strip()
+    if not _TMDB_TITLE_URL.search(address):
+        raise HTTPException(
+            status_code=400,
+            detail=f"{url} is not the address of a TMDB film or series",
+        )
+
+    imported = TMDB(session).import_url(address)
+    canonical_show = session.exec(
+        select(Show).where(is_canonical(Show), Show.key == imported[0].show_key),
+    ).one()
+    return set_canonical_show(session, show, canonical_show)
 
 
 # TODO: Validate
@@ -286,6 +312,23 @@ def update_show_episode_group(
     from plugins.TMDB.episode_groups import dump_extra  # noqa: PLC0415
 
     update_show_extra(session, show, dump_extra(group_id))
+
+
+# TODO: Validate
+def force_update_show(session: Session, show: Show) -> Show:
+    from plugins.utils.manage_plugins import import_plugins, plugins  # noqa: PLC0415
+
+    import_plugins()
+    plugin_classes = {plugin.plugin_key(): plugin for plugin in plugins}
+    plugin_class = plugin_classes.get(show.source.plugin.key)
+    if plugin_class is None:
+        message = f"No plugin named {show.source.plugin.key!r} to read the show again."
+        raise HTTPException(status_code=422, detail=message)
+
+    plugin_class(session).update_show(show, force=True)
+    session.commit()
+    session.refresh(show)
+    return show
 
 
 # TODO: Validate

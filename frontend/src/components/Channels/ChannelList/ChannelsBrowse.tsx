@@ -19,6 +19,7 @@ import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
+import { useInViewport } from "@/hooks/useInViewport"
 import { ManageShowsButton } from "../ChannelDetail/AddUrlsToQueueButton"
 import { ChannelDetailsButton } from "./ChannelDetailsButton"
 import { ChannelShowsButton } from "./ChannelShowsButton"
@@ -89,6 +90,8 @@ function ChannelRow({
   showChannelNumber = true,
   personalizable = false,
 }: ChannelRowProps) {
+  const rowRef = useRef<HTMLDivElement>(null)
+  const inViewport = useInViewport(rowRef)
   const scrollRef = useRef<HTMLDivElement>(null)
   const [showLeftArrow, setShowLeftArrow] = useState(false)
   const [showRightArrow, setShowRightArrow] = useState(true)
@@ -126,6 +129,7 @@ function ChannelRow({
         limit: 20,
         ...defaultOrder,
       }),
+    enabled: inViewport,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     retry: false,
@@ -137,7 +141,7 @@ function ChannelRow({
   const fallbackQuery = useQuery({
     queryKey: ["episodes-preview", channel.id, "no-options"],
     queryFn: () => getChannelEpisodes({ channelId: channel.id, limit: 20 }),
-    enabled: orderRejected,
+    enabled: inViewport && orderRejected,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     retry: false,
@@ -184,7 +188,7 @@ function ChannelRow({
   )
 
   return (
-    <div className="group/row relative">
+    <div ref={rowRef} className="group/row relative">
       {/* Block flow rather than a flex row, so a title that wraps starts its
           later lines at the gutter instead of indenting past the star. */}
       <div className="mb-2 px-[4%] text-2xl font-bold wrap-break-word">
