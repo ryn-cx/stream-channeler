@@ -264,7 +264,11 @@ export function TmdbLinkPicker({
             <TabsTrigger value="sequential">Sequential</TabsTrigger>
           </TabsList>
         </Tabs>
-        <Button variant="outline" onClick={() => setShowUsed(!showUsed)}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setShowUsed(!showUsed)}
+        >
           {showUsed ? <EyeOff /> : <Eye />}
           {showUsed ? "Hide already used" : "Show already used"}
         </Button>
@@ -321,6 +325,7 @@ export function TmdbLinkPicker({
                 {Math.round(choice.similarity * 100)}%
               </span>
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
                 className="shrink-0"
@@ -334,30 +339,32 @@ export function TmdbLinkPicker({
         )}
       </div>
 
-      <form
-        className="flex flex-wrap items-center gap-2"
-        onSubmit={(event) => {
-          event.preventDefault()
-          urlMutation.mutate()
-        }}
-      >
+      <div className="flex flex-wrap items-center gap-2">
         <Input
           value={urlDraft}
           onChange={(event) => setUrlDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return
+            event.preventDefault()
+            if (urlDraft.trim().length === 0 || urlMutation.isPending) return
+            urlMutation.mutate()
+          }}
           placeholder="themoviedb.org address of a film or of one episode"
           aria-label="TMDB address"
           className="min-w-48 flex-1"
         />
         <Button
-          type="submit"
+          type="button"
           variant="outline"
           disabled={urlDraft.trim().length === 0 || urlMutation.isPending}
+          onClick={() => urlMutation.mutate()}
         >
           Link by address
         </Button>
-      </form>
+      </div>
 
       <Button
+        type="button"
         variant="outline"
         className="self-start"
         disabled={unlinkMutation.isPending}

@@ -15,12 +15,18 @@ from app.auth.dependencies import (
     get_current_active_superuser,
 )
 from app.canonical_media.filters import is_canonical
+from app.canonical_media.metadata import (
+    canonical_episode_of,
+    fill_episodes,
+    tmdb_episode_url,
+)
 from app.canonical_media.read import canonical_list_response
 from app.episodes.canonical_links import (
     link_episode,
     link_episode_using_tmdb_url,
     mark_episode_absent_from_tmdb,
     unlink_episode,
+    verify_canonical_link,
 )
 from app.episodes.dependencies import (
     AdminCanonicalEpisode,
@@ -33,6 +39,7 @@ from app.episodes.schemas import (
     CanonicalEpisodeListOutput,
     CanonicalEpisodeOutput,
     CanonicalEpisodesPublic,
+    DuplicatedCanonicalEpisodeOutput,
     EpisodeCreate,
     EpisodeInformationOutput,
     EpisodeInformationSide,
@@ -46,20 +53,16 @@ from app.episodes.schemas import (
     UnmatchedEpisodesPublic,
 )
 from app.episodes.service import (
+    get_duplicated_canonical_episodes,
     list_tmdb_episode_choices,
     list_unlocked_episodes,
     list_unmatched_episodes,
 )
 from app.issue_reports.service import list_episode_issue_reports
-from app.media.canonical_metadata import (
-    canonical_episode_of,
-    fill_episodes,
-    tmdb_episode_url,
-)
-from app.media.identifiers import TMDB_PLUGIN_KEY
 from app.media.schemas import MediaReadOptions
 from app.media.service import delete_record, media_scoped_list_response
 from app.plugins.dependencies import ReadablePlugin
+from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
 from app.seasons.dependencies import EditableSeason, ReadableSeason
@@ -278,6 +281,19 @@ def admin_get_unlocked_episodes(
     return list_unlocked_episodes(session, limit)
 
 
+@episodes_router.get(
+    "/duplicated-canonical-episodes",
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def admin_get_duplicated_canonical_episodes(
+    session: SessionDep,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 200,
+) -> list[DuplicatedCanonicalEpisodeOutput]:
+    """Get every canonical `Episode` that has multiple non-canonical `Episode`s linked to
+    it from a single source."""
+    return get_duplicated_canonical_episodes(session, limit)
+
+
 # TODO: Validate
 @episodes_router.get(
     "/{episode_id}/tmdb-choices",  # noqa: FAST003 - Used by ExistingEpisode.
@@ -388,6 +404,19 @@ def admin_mark_episode_absent_from_tmdb(
         session,
         mark_episode_absent_from_tmdb(session, episode),
     )
+
+
+# TODO: Validate
+@episodes_router.put(
+    "/{episode_id}/verify-canonical-link",  # noqa: FAST003 - Used by ExistingEpisode.
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def admin_verify_canonical_link(
+    session: SessionDep,
+    episode: ExistingEpisode,
+) -> EpisodeOutput:
+    """Settle the canonical links an `Episode` already carries, and lock them."""
+    return _episode_output(session, verify_canonical_link(session, episode))
 
 
 # TODO: Validate

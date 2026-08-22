@@ -251,6 +251,48 @@ class UnlockedEpisodeOutput(UnmatchedEpisodeOutput):
 
 
 # TODO: Validate
+class DuplicatedLinkEpisodeOutput(EpisodeOutput):
+    """One of the episodes that collided on a canonical episode.
+
+    Served as the whole row rather than as a name and a number, since the window
+    opened to correct one of them edits the row itself.
+    """
+
+    season_number: int | None = None
+
+
+# TODO: Validate
+class DuplicatedCanonicalEpisodeOutput(BaseModel):
+    """A canonical episode more than one episode of a single source is linked to.
+
+    TMDB is what a title is usually canonical against, but a canonical row of any
+    provider can be pointed at twice, so what is served is the canonical episode
+    itself and the source that collided on it rather than anything TMDB's own.
+    """
+
+    id: str
+    """The canonical episode and the source together, since a row is the pair."""
+
+    canonical_episode_id: uuid.UUID
+    season_id: uuid.UUID
+    show_id: uuid.UUID
+    key: str
+    name: str | None
+    season_number: int | None
+    episode_number: int | None
+    show_name: str | None
+    show_year: int | None
+    url: str | None
+    show_url: str | None
+    canonical_source_name: str | None
+    canonical_plugin_name: str | None
+    source_id: uuid.UUID
+    source_name: str | None
+    plugin_name: str | None
+    linked_episodes: list[DuplicatedLinkEpisodeOutput]
+
+
+# TODO: Validate
 class EpisodeTmdbUrlInput(BaseModel):
     """The themoviedb.org address a `User` is pointing an `Episode` at."""
 

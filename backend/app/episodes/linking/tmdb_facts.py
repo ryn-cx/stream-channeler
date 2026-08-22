@@ -14,9 +14,9 @@ from app.canonical_media.keys import (
     tmdb_media_type_of,
 )
 from app.episodes.models import Episode
+from app.episodes.name_forms import plaintext_forms
+from app.episodes.name_matching import similarity
 from app.media.media_type import MediaType
-from app.media.name_forms import plaintext_forms
-from app.media.name_matching import similarity
 from app.shows.models import Show
 
 if TYPE_CHECKING:
@@ -120,6 +120,11 @@ class TmdbEpisodeFacts:
     # TODO: Validate
     def alternate_numbers_of(self, tmdb_episode: Episode) -> Collection[int]:
         return self.alternate_episode_numbers.get(tmdb_episode.id, frozenset())
+
+    # TODO: Validate
+    @staticmethod
+    def raw_name_similarity(episode: Episode, tmdb_episode: Episode) -> float:
+        return similarity(episode.name, tmdb_episode.name)
 
     # TODO: Validate
     def best_name_similarity(self, episode: Episode, tmdb_episode: Episode) -> float:

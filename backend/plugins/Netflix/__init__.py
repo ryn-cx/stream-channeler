@@ -19,7 +19,7 @@ class Netflix(
     MediaInfoMixin,
     SourceMixin,
     URLHandlerPlugin[NetflixURLHandler],
-    register=True,
+    register=False,
 ):
     """Netflix plugin."""
 

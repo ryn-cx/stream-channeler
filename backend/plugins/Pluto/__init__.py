@@ -18,7 +18,7 @@ from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
 class Pluto(
     UpsertMixin,
     MediaTypeImportMixin[PlutoURLHandler],
-    register=True,
+    register=False,
 ):
     """Pluto TV plugin."""
 

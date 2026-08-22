@@ -10,18 +10,18 @@ from app.auth.dependencies import (
     SessionDep,
     get_current_active_superuser,
 )
-from app.issue_reports.service import list_season_issue_reports
-from app.media.canonical_metadata import (
+from app.canonical_media.metadata import (
     canonical_season_of,
     tmdb_season_url,
 )
-from app.media.identifiers import TMDB_PLUGIN_KEY
+from app.issue_reports.service import list_season_issue_reports
 from app.media.schemas import MediaReadOptions
 from app.media.service import (
     delete_record,
     media_scoped_list_response,
 )
 from app.plugins.dependencies import ReadablePlugin
+from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
 from app.seasons.dependencies import EditableSeason, ReadableSeason

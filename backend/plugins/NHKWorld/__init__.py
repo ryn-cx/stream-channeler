@@ -29,7 +29,7 @@ class NHKWorld(
     SearchMixin,
     MediaInfoMixin,
     URLHandlerPlugin[NHKWorldURLHandler],
-    register=True,
+    register=False,
 ):
     _VERSION = "0.0.1"
 

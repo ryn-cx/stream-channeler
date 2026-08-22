@@ -22,7 +22,7 @@ class Roku(
     MediaInfoMixin,
     SourceMixin,
     URLHandlerPlugin[RokuURLHandler],
-    register=True,
+    register=False,
 ):
     """The Roku Channel plugin."""
 

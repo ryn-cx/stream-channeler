@@ -4,7 +4,7 @@ import re
 from difflib import SequenceMatcher
 from functools import lru_cache
 
-from app.media import name_forms
+from app.episodes import name_forms
 
 _NUMBERED_NAME = r"(?:(?:episode|ep|session|part)\s*\.?\s*#?\s*\d+|#\s*\d+)"
 _ONLY_NUMBERED_NAME = re.compile(rf"^\s*{_NUMBERED_NAME}\s*$", re.IGNORECASE)
@@ -52,7 +52,7 @@ def name_parts(name: str | None) -> tuple[str, ...]:
         return ()
     parts = [
         part
-        for part in re.split(r"/|\s+-\s+", name)
+        for part in re.split(r"[/;]|\s+-\s+", name)
         if plaintext(part) and not is_only_numbered_name(part)
     ]
     if len(parts) < 2:  # noqa: PLR2004

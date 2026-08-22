@@ -70,6 +70,8 @@ const formSchema = z.object({
   key: requiredKey,
 })
 
+const VERIFIED_NOTE = "Manual: Verified"
+
 type FormInput = z.input<typeof formSchema>
 type FormOutput = z.output<typeof formSchema>
 
@@ -134,7 +136,7 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
           onClick={() => setIsOpen(true)}
         />
       }
-      title="Edit Episode"
+      title={episode.name ? `Edit Episode — ${episode.name}` : "Edit Episode"}
       description="Update the episode details below."
       form={form}
       onSubmit={onSubmit}
@@ -158,7 +160,12 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
         name={episode.name ?? null}
         seasonNumber={null}
         episodeNumber={episode.episode_number ?? null}
+        canonicalEpisodeLocked={form.watch("canonical_episode_locked")}
         enabled={isOpen}
+        onVerified={() => {
+          form.setValue("canonical_episode_locked", true)
+          form.setValue("canonical_episode_note", VERIFIED_NOTE)
+        }}
       />
 
       {/*

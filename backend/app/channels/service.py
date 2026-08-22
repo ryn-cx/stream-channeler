@@ -45,8 +45,8 @@ from app.channels.schemas import (
     WhitelistShowInput,
 )
 from app.episodes.models import Episode
-from app.media.identifiers import TMDB_PLUGIN_KEY
 from app.models import ZERO_LAST_SUFFIX
+from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.schemas import RecordScope, ScopedReadOptions
 from app.seasons.models import Season

@@ -2,6 +2,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router"
 import {
   Clapperboard,
+  CopyX,
   Flag,
   Layers,
   Link2,
@@ -163,6 +164,21 @@ function AdminIndex() {
                 Every episode whose TMDB link nobody has settled, matched or
                 not. A name shown in red is one TMDB agrees with, which means
                 the two disagree about the number.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/duplicated-canonical-episodes" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CopyX className="size-5" />
+                Duplicated Canonical Episodes
+              </CardTitle>
+              <CardDescription>
+                Every canonical episode that more than one episode of a single
+                source is linked to, which is a link made wrongly rather than a
+                title carried twice.
               </CardDescription>
             </CardHeader>
           </Card>

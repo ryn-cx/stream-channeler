@@ -40,8 +40,6 @@ from plugins.YouTube.updater import UpdaterMixin
 from plugins.YouTube.upsert import UpsertMixin
 from plugins.YouTube.watch_history import WatchHistoryMixin
 
-_QUOTA_RETRY_DELAY = timedelta(hours=24)
-_VIDEO_SEASON_UPDATE_DELAY = timedelta(days=7)
 
 
 # TODO: Validate
@@ -134,7 +132,7 @@ class YouTube(
         if not is_quota_error(error):
             raise error
 
-        import_at = tz_datetime.now() + _QUOTA_RETRY_DELAY
+        import_at = tz_datetime.now() + timedelta(hours=24)
         logger.warning(
             "YouTube API quota is spent, delaying the import of {} until {}.",
             queue_item.url,
@@ -223,7 +221,7 @@ class YouTube(
                 update_at=season.update_at,
             )
             self._update_and_upsert_show(season.show)
-            season.update_at = tz_datetime.now() + _VIDEO_SEASON_UPDATE_DELAY
+            season.update_at = tz_datetime.now() + timedelta(days=7)
             return
 
         playlist_feed = self.playlist_feed_file(season.key)

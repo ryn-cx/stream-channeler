@@ -5,12 +5,6 @@ from app.schemas import ReadOptions
 
 
 # TODO: Validate
-class MediaOwner(StrEnum):
-    official = "official"
-    others = "others"
-
-
-# TODO: Validate
 class MediaScope(StrEnum):
     """Which media a list endpoint returns.
 
@@ -24,11 +18,6 @@ class MediaScope(StrEnum):
     all = "all"
     official = "official"
     others = "others"
-
-
-# TODO: Validate
-class AdminReadOptions(ReadOptions):
-    owner: MediaOwner
 
 
 # TODO: Validate

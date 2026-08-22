@@ -169,6 +169,30 @@ class TestAnotherPaidMovie(StandardTestsAlt[YouTube], VideoValidatorAlt):
 
 
 # TODO: Validate
+class ShowVideoValidatorAlt(YouTubeValidatorAlt):
+    urls = (
+        "youtube.com/watch?v={video_key}",
+        "youtube.com/watch?v={video_key}&list={show_playlist_key}&index=2",
+    )
+
+
+# TODO: Validate
+class TestPaidShowVideo(StandardTestsAlt[YouTube], ShowVideoValidatorAlt):
+    video_key = "8zWeHypLPRk"
+    show_playlist_key = "TVSHfA9WsdDU4jgSZuc4pG3gHBd3nWnvtjK8A"
+
+
+# TODO: Validate
+class ShowValidatorAlt(YouTubeValidatorAlt):
+    urls = ("youtube.com/show/{show_key}",)
+
+
+# TODO: Validate
+class TestSubscriptionShow(StandardTestsAlt[YouTube], ShowValidatorAlt):
+    show_key = "SC9aXZwJfzfg0g7pZ6ird15g"
+
+
+# TODO: Validate
 class TestTopicAlbumPlaylist(StandardTestsAlt[YouTube], PlaylistValidatorAlt):
     playlist_key = "OLAK5uy_kiAyq0iiYYIPvqybBkpxFvNai3lAw3fyU"
 

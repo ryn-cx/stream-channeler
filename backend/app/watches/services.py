@@ -16,9 +16,9 @@ from app.canonical_media.episodes import (
 )
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
-from app.media.identifiers import TMDB_PLUGIN_KEY
 from app.media.service import delete_record
 from app.models import Visibility
+from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.plugins.schemas import PluginOutput
 from app.schemas import Message, ReadOptions

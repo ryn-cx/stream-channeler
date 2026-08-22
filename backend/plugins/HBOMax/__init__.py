@@ -20,7 +20,7 @@ class HBOMax(
     UpsertMixin,
     SourceMixin,
     MediaTypeImportMixin[HBOMaxURLHandler],
-    register=True,
+    register=False,
 ):
     """HBO Max plugin."""
 

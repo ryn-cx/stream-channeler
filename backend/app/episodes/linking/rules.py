@@ -3,7 +3,7 @@
 from collections.abc import Callable, Collection, Hashable, Iterable
 
 from app.episodes.models import Episode
-from app.media.name_matching import loose_plaintext, plaintext
+from app.episodes.name_matching import loose_plaintext, plaintext
 
 
 # TODO: Validate

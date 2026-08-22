@@ -15,8 +15,8 @@ from pydantic import (
 )
 
 from app.canonical_media.keys import SHOW_LEVEL, tmdb_id_of
+from app.canonical_media.metadata import tmdb_show_url
 from app.issue_reports.schemas import IssueReportOutput
-from app.media.canonical_metadata import tmdb_show_url
 from app.schemas import (
     BaseCreateWithParentAndKey,
     BaseUpdateWithKey,

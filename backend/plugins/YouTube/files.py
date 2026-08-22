@@ -2,7 +2,7 @@
 import json
 import re
 import time
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from datetime import datetime, timedelta
 from functools import cache
 from typing import Any, get_args, override
@@ -423,6 +423,18 @@ class TopicReleasesFile(JSONFile[TopicReleases]):
 
 
 # TODO: Validate
+def _nodes_named(node: object, name: str) -> Iterator[dict[str, Any]]:
+    if isinstance(node, dict):
+        if isinstance(found := node.get(name), dict):
+            yield found
+        for value in node.values():
+            yield from _nodes_named(value, name)
+    elif isinstance(node, list):
+        for value in node:
+            yield from _nodes_named(value, name)
+
+
+# TODO: Validate
 class ShowListing(JSONFile[list[ShowListingResponse]]):
     """Every season of a show and every stretch of each of them.
 
@@ -461,6 +473,17 @@ class ShowListing(JSONFile[list[ShowListingResponse]]):
     def show_key(self) -> str | None:
         match = re.search(r"SC[A-Za-z0-9_-]{20,}", self.database_record.content or "")
         return match.group(0) if match else None
+
+    # TODO: Validate
+    def offer_labels(self) -> set[str]:
+        content = self.database_record.content
+        if not content:
+            return set()
+        return {
+            badge["label"]
+            for badge in _nodes_named(json.loads(content), "metadataBadgeRenderer")
+            if badge.get("style") == "BADGE_STYLE_TYPE_YPC" and "label" in badge
+        }
 
     # TODO: Validate
     def season_numbers(self) -> list[int]:

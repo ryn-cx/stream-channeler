@@ -173,6 +173,28 @@ def unlink_episode(
 
 
 # TODO: Validate
+def verify_canonical_link(session: Session, episode: Episode) -> Episode:
+    """Settle the links an `Episode` already carries as the right ones.
+
+    Nothing about what it stands for changes: the links an automatic match made
+    are taken as correct and locked so no later import moves them.
+    """
+    if not episode.canonical_episode_links:
+        raise HTTPException(
+            status_code=400,
+            detail="The episode is linked to nothing to be verified against",
+        )
+
+    episode.is_canonical = False
+    episode.canonical_episode_locked = True
+    episode.canonical_episode_note = f"{MANUAL_NOTE_PREFIX}Verified"
+    session.add(episode)
+    session.commit()
+    session.refresh(episode)
+    return episode
+
+
+# TODO: Validate
 def mark_episode_absent_from_tmdb(session: Session, episode: Episode) -> Episode:
     _drop_links(session, episode)
 

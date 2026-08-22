@@ -20,7 +20,7 @@ class ParamountPlus(
     UpsertMixin,
     SourceMixin,
     MediaTypeImportMixin[ParamountPlusURLHandler],
-    register=True,
+    register=False,
 ):
     """Paramount+ plugin."""
 

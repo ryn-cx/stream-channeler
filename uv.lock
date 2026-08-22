@@ -1285,7 +1285,7 @@ dependencies = [
 [[package]]
 name = "not-yt-dlapi"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/not-yt-dlapi#1e3c946e847a9b49165b96523086d310b8234ef2" }
+source = { git = "https://github.com/ryn-cx/not-yt-dlapi#1bf20991629f44463aa862f2dc747a62fd685f26" }
 dependencies = [
     { name = "get-around" },
     { name = "google-api-python-client" },

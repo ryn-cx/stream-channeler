@@ -28,6 +28,11 @@ from app.canonical_media.episodes import (
 )
 from app.canonical_media.filters import is_canonical, is_non_canonical
 from app.canonical_media.keys import same_issuer_clause, tmdb_key_clause
+from app.canonical_media.metadata import (
+    fill_episodes,
+    fill_tmdb_urls,
+    prefer_canonical_episodes,
+)
 from app.canonical_media.seasons import season_ids_by_episode
 from app.channels import service
 from app.channels.channel_scope import (
@@ -74,6 +79,7 @@ from app.channels.schemas import (
     CombinedChannelInput,
     CombinedChannelOutput,
     EpisodeWithDetails,
+    MediaOwner,
     SortOptionOutput,
     WhitelistEpisodeLinkOutput,
     WhitelistEpisodeOutput,
@@ -84,14 +90,8 @@ from app.channels.schemas import (
     WhitelistSourceOutput,
 )
 from app.episodes.models import Episode, EpisodeCanonicalEpisode
-from app.media.canonical_metadata import (
-    fill_episodes,
-    fill_tmdb_urls,
-    prefer_canonical_episodes,
-)
-from app.media.identifiers import TMDB_PLUGIN_KEY
-from app.media.schemas import MediaOwner
 from app.media.service import delete_record
+from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.plugins.schemas import PluginOutput
 from app.schemas import Message

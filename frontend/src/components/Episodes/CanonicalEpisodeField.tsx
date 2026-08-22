@@ -1,6 +1,6 @@
 // TODO: Validate
 import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query"
-import { X } from "lucide-react"
+import { Check, X } from "lucide-react"
 
 import {
   type CanonicalEpisodeOutput,
@@ -19,8 +19,12 @@ interface CanonicalEpisodeFieldProps {
   name: string | null
   seasonNumber: number | null
   episodeNumber: number | null
+  canonicalEpisodeLocked: boolean
   /** Only asked for while the form is open, since each is a query of its own. */
   enabled: boolean
+  /** Called once the links have been settled, so a form holding the row's own
+   * copy of the lock can be brought in line with what was just written. */
+  onVerified?: () => void
 }
 
 // TODO: Validate
@@ -65,7 +69,9 @@ export function CanonicalEpisodeField({
   name,
   seasonNumber,
   episodeNumber,
+  canonicalEpisodeLocked,
   enabled,
+  onVerified,
 }: CanonicalEpisodeFieldProps) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
@@ -94,6 +100,24 @@ export function CanonicalEpisodeField({
       showSuccessToast("Episode unlinked from TMDB episode")
       queryClient.invalidateQueries({ queryKey: ["episodes"] })
       queryClient.invalidateQueries({ queryKey: ["admin-tmdb-choices"] })
+    },
+    onError: (error: unknown) =>
+      handleError.call(
+        showErrorToast,
+        error as Parameters<typeof handleError>[0],
+      ),
+  })
+
+  const verifyMutation = useMutation({
+    mutationFn: () => EpisodesService.adminVerifyCanonicalLink({ episodeId }),
+    onSuccess: () => {
+      showSuccessToast("Canonical link verified and locked")
+      onVerified?.()
+      queryClient.invalidateQueries({ queryKey: ["episodes"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-tmdb-choices"] })
+      queryClient.invalidateQueries({
+        queryKey: ["admin-duplicated-canonical-episodes"],
+      })
     },
     onError: (error: unknown) =>
       handleError.call(
@@ -143,6 +167,20 @@ export function CanonicalEpisodeField({
           })}
         </div>
       )}
+      {canonicalEpisodeIds.length > 0 ? (
+        <Button
+          type="button"
+          variant={canonicalEpisodeLocked ? "outline" : "default"}
+          size="sm"
+          disabled={canonicalEpisodeLocked || verifyMutation.isPending}
+          onClick={() => verifyMutation.mutate()}
+        >
+          <Check className="h-4 w-4" />
+          {canonicalEpisodeLocked
+            ? "Link verified and locked"
+            : "Verify and lock link"}
+        </Button>
+      ) : null}
       {enabled ? (
         <TmdbLinkPicker
           episodeId={episodeId}

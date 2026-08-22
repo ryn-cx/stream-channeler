@@ -3,6 +3,7 @@ import json
 import random
 import uuid
 from datetime import datetime
+from enum import StrEnum
 from typing import ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
@@ -23,6 +24,7 @@ from app.plugins.schemas import PluginOutput
 from app.schemas import (
     BaseInput,
     BaseUpdateWithoutKey,
+    ReadOptions,
     RecordScope,
     ScopedReadOptions,
     make_model_with_all_fields_optional,
@@ -33,6 +35,17 @@ from app.shows.models import Show
 from app.shows.schemas import ShowPublic
 from app.sources.models import Source
 from app.sources.schemas import SourcePublic
+
+
+# TODO: Validate
+class MediaOwner(StrEnum):
+    official = "official"
+    others = "others"
+
+
+# TODO: Validate
+class AdminReadOptions(ReadOptions):
+    owner: MediaOwner
 
 
 # TODO: Validate

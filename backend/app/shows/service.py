@@ -12,8 +12,8 @@ from app.canonical_media.filters import is_canonical
 from app.canonical_media.service import add_canonical_show
 from app.channels.models import ChannelShow
 from app.episodes.linking import EpisodeLinker
-from app.media.identifiers import TMDB_PLUGIN_KEY
 from app.media.media_type import MediaType
+from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.shows.models import Show
 from app.shows.schemas import TmdbEpisodeGroupOption
 

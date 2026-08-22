@@ -565,6 +565,68 @@ export type CommentUpdate = {
 };
 
 /**
+ * A canonical episode more than one episode of a single source is linked to.
+ *
+ * TMDB is what a title is usually canonical against, but a canonical row of any
+ * provider can be pointed at twice, so what is served is the canonical episode
+ * itself and the source that collided on it rather than anything TMDB's own.
+ */
+export type DuplicatedCanonicalEpisodeOutput = {
+    id: string;
+    canonical_episode_id: string;
+    season_id: string;
+    show_id: string;
+    key: string;
+    name: (string | null);
+    season_number: (number | null);
+    episode_number: (number | null);
+    show_name: (string | null);
+    show_year: (number | null);
+    url: (string | null);
+    show_url: (string | null);
+    canonical_source_name: (string | null);
+    canonical_plugin_name: (string | null);
+    source_id: string;
+    source_name: (string | null);
+    plugin_name: (string | null);
+    linked_episodes: Array<DuplicatedLinkEpisodeOutput>;
+};
+
+/**
+ * One of the episodes that collided on a canonical episode.
+ *
+ * Served as the whole row rather than as a name and a number, since the window
+ * opened to correct one of them edits the row itself.
+ */
+export type DuplicatedLinkEpisodeOutput = {
+    key: string;
+    data_timestamp?: (string | null);
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
+    url?: (string | null);
+    name?: (string | null);
+    description?: (string | null);
+    image_url?: (string | null);
+    air_date?: (string | null);
+    episode_number?: (number | null);
+    duration?: (number | null);
+    sort_order?: (number | null);
+    canonical_episode_locked?: boolean;
+    canonical_episode_note?: (string | null);
+    id: string;
+    season_id: string;
+    canonical_episode_id?: (string | null);
+    canonical_episode_ids?: Array<(string)>;
+    linked_sort_order?: (number | null);
+    tmdb_id?: (number | null);
+    canonical_key?: (string | null);
+    season_number?: (number | null);
+};
+
+/**
  * Schema for creating an `Episode`.
  */
 export type EpisodeCreate = {
@@ -2411,6 +2473,12 @@ export type EpisodesAdminGetUnlockedEpisodesData = {
 
 export type EpisodesAdminGetUnlockedEpisodesResponse = (Array<UnlockedEpisodeOutput>);
 
+export type EpisodesAdminGetDuplicatedCanonicalEpisodesData = {
+    limit?: number;
+};
+
+export type EpisodesAdminGetDuplicatedCanonicalEpisodesResponse = (Array<DuplicatedCanonicalEpisodeOutput>);
+
 export type EpisodesAdminGetTmdbEpisodeChoicesData = {
     episodeId: string;
     tmdbShowId?: (number | null);
@@ -2450,6 +2518,12 @@ export type EpisodesAdminMarkEpisodeAbsentFromTmdbData = {
 };
 
 export type EpisodesAdminMarkEpisodeAbsentFromTmdbResponse = (EpisodeOutput);
+
+export type EpisodesAdminVerifyCanonicalLinkData = {
+    episodeId: string;
+};
+
+export type EpisodesAdminVerifyCanonicalLinkResponse = (EpisodeOutput);
 
 export type EpisodesGetEpisodeInformationData = {
     episodeId: string;

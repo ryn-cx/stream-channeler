@@ -11,7 +11,7 @@ from app.episodes.linking.rules import (
     unambiguous_lookup,
 )
 from app.episodes.models import Episode
-from app.media.name_matching import (
+from app.episodes.name_matching import (
     contains_name,
     loose_plaintext,
     name_parts,

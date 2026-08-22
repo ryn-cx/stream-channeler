@@ -25,7 +25,7 @@ class Hulu(
     MediaInfoMixin,
     SourceMixin,
     MediaTypeImportMixin[HuluURLHandler],
-    register=True,
+    register=False,
 ):
     """Hulu plugin."""
 

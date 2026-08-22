@@ -58,8 +58,8 @@ from app.channels.models import (
 )
 from app.channels.schemas import ChannelOptions
 from app.episodes.models import Episode
-from app.media.identifiers import TMDB_PLUGIN_KEY
 from app.models import Visibility
+from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show, ShowCanonicalShow

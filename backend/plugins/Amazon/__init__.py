@@ -28,7 +28,7 @@ class Amazon(
     MediaInfoMixin,
     SourceMixin,
     URLHandlerPlugin[AmazonURLHandler],
-    register=True,
+    register=False,
 ):
     """Amazon Prime Video plugin."""
 

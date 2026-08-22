@@ -13,19 +13,19 @@ from app.auth.dependencies import (
     get_current_active_superuser,
 )
 from app.canonical_media.filters import is_canonical
-from app.canonical_media.read import canonical_list_response
-from app.issue_reports.service import list_show_issue_reports
-from app.media.canonical_metadata import (
+from app.canonical_media.metadata import (
     canonical_show_of,
     tmdb_show_url,
 )
-from app.media.identifiers import TMDB_PLUGIN_KEY
+from app.canonical_media.read import canonical_list_response
+from app.issue_reports.service import list_show_issue_reports
 from app.media.schemas import MediaReadOptions
 from app.media.service import (
     delete_record,
     media_scoped_list_response,
 )
 from app.plugins.dependencies import ReadablePlugin
+from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
 from app.service import list_response

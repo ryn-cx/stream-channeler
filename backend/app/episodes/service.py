@@ -26,24 +26,27 @@ from app.canonical_media.keys import (
     tmdb_id_of,
     tmdb_key_clause,
 )
+from app.canonical_media.metadata import (
+    tmdb_episode_url,
+    tmdb_season_url,
+    tmdb_show_url,
+)
 from app.episodes.models import (
     Episode,
+    EpisodeCanonicalEpisode,
 )
+from app.episodes.name_matching import plaintext, similarity
 from app.episodes.schemas import (
+    DuplicatedCanonicalEpisodeOutput,
+    DuplicatedLinkEpisodeOutput,
     EpisodeUsingTmdb,
     TmdbEpisodeChoice,
     UnlockedEpisodeOutput,
     UnmatchedEpisodeOutput,
     UnmatchedEpisodesPublic,
 )
-from app.media.canonical_metadata import (
-    tmdb_episode_url,
-    tmdb_season_url,
-    tmdb_show_url,
-)
-from app.media.identifiers import TMDB_PLUGIN_KEY, YOUTUBE_PLUGIN_KEY
 from app.media.media_type import MediaType
-from app.media.name_matching import plaintext, similarity
+from app.plugins.identifiers import TMDB_PLUGIN_KEY, YOUTUBE_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.schemas import ReadOptions
 from app.seasons.models import Season
@@ -837,4 +840,158 @@ def list_tmdb_episode_choices(
     return sorted(
         choices,
         key=lambda choice: _order(choice.season_number, choice.episode_number),
+    )
+
+
+# TODO: Validate
+def _duplicated_link_pairs(
+    session: Session,
+    limit: int,
+) -> list[tuple[uuid.UUID, uuid.UUID]]:
+    uses = func.count(col(EpisodeCanonicalEpisode.episode_id).distinct())
+    unsettled = func.bool_or(col(Episode.canonical_episode_locked).is_(False))
+    statement = (
+        select(
+            col(EpisodeCanonicalEpisode.canonical_episode_id),
+            col(Show.source_id),
+        )
+        .join(Episode, onclause=col(EpisodeCanonicalEpisode.episode_id) == Episode.id)
+        .join(Season, onclause=col(Episode.season_id) == Season.id)
+        .join(Show, onclause=col(Season.show_id) == Show.id)
+        .where(
+            col(Episode.deleted_at).is_(None),
+            col(Season.deleted_at).is_(None),
+            col(Show.deleted_at).is_(None),
+        )
+        .group_by(
+            col(EpisodeCanonicalEpisode.canonical_episode_id),
+            col(Show.source_id),
+        )
+        .having(uses > 1, unsettled)
+        .limit(limit)
+    )
+    return [
+        (canonical_id, source_id)
+        for canonical_id, source_id in session.exec(statement).all()
+    ]
+
+
+# TODO: Validate
+def _episodes_linking_to(
+    session: Session,
+    pairs: Collection[tuple[uuid.UUID, uuid.UUID]],
+) -> dict[tuple[uuid.UUID, uuid.UUID], list[DuplicatedLinkEpisodeOutput]]:
+    canonical_episode_ids = {canonical_id for canonical_id, _source_id in pairs}
+    statement = (
+        select(
+            col(EpisodeCanonicalEpisode.canonical_episode_id),
+            col(Show.source_id),
+            Episode,
+            Season,
+        )
+        .join(Episode, onclause=col(EpisodeCanonicalEpisode.episode_id) == Episode.id)
+        .join(Season, onclause=col(Episode.season_id) == Season.id)
+        .join(Show, onclause=col(Season.show_id) == Show.id)
+        .where(
+            col(EpisodeCanonicalEpisode.canonical_episode_id).in_(
+                canonical_episode_ids,
+            ),
+            col(Episode.deleted_at).is_(None),
+            col(Season.deleted_at).is_(None),
+            col(Show.deleted_at).is_(None),
+        )
+        .order_by(col(Season.season_number), col(Episode.episode_number))
+    )
+    wanted = set(pairs)
+    linking: dict[
+        tuple[uuid.UUID, uuid.UUID],
+        list[DuplicatedLinkEpisodeOutput],
+    ] = defaultdict(list)
+    for canonical_id, source_id, episode, season in session.exec(statement).all():
+        if (canonical_id, source_id) not in wanted:
+            continue
+        output = DuplicatedLinkEpisodeOutput.model_validate(episode)
+        output.season_number = season.season_number
+        linking[canonical_id, source_id].append(output)
+    return linking
+
+
+# TODO: Validate
+def get_duplicated_canonical_episodes(
+    session: Session,
+    limit: int,
+) -> list[DuplicatedCanonicalEpisodeOutput]:
+    """Return every canonical episode a single source points more than one episode at.
+
+    Two episodes of one website standing for the same canonical episode is a
+    link made wrongly rather than a title carried twice, so they are gathered by
+    the canonical episode they collide on and served with the episodes that made
+    the claim. Any provider's canonical rows are read, not only TMDB's.
+    """
+    pairs = _duplicated_link_pairs(session, limit)
+    if not pairs:
+        return []
+
+    linking = _episodes_linking_to(session, pairs)
+    canonical_episodes = {
+        episode.id: (episode, season, show, source)
+        for episode, season, show, source in session.exec(
+            select(Episode, Season, Show, Source)
+            .join(Season, onclause=col(Episode.season_id) == Season.id)
+            .join(Show, onclause=col(Season.show_id) == Show.id)
+            .join(Source, onclause=col(Show.source_id) == Source.id)
+            .where(col(Episode.id).in_({canonical_id for canonical_id, _ in pairs})),
+        ).all()
+    }
+    sources = {
+        source.id: source
+        for source in session.exec(
+            select(Source).where(
+                col(Source.id).in_({source_id for _, source_id in pairs}),
+            ),
+        ).all()
+    }
+
+    outputs: list[DuplicatedCanonicalEpisodeOutput] = []
+    for canonical_id, source_id in pairs:
+        found = canonical_episodes.get(canonical_id)
+        source = sources.get(source_id)
+        if found is None or source is None:
+            continue
+        episode, season, show, canonical_source = found
+        outputs.append(
+            DuplicatedCanonicalEpisodeOutput(
+                id=f"{episode.id}:{source.id}",
+                canonical_episode_id=episode.id,
+                season_id=season.id,
+                show_id=show.id,
+                key=episode.key,
+                name=episode.name,
+                season_number=season.season_number,
+                episode_number=episode.episode_number,
+                show_name=show.name,
+                show_year=show.year,
+                url=tmdb_episode_url(
+                    show.key,
+                    season.season_number,
+                    episode.episode_number,
+                )
+                or episode.url,
+                show_url=tmdb_show_url(show.key) or show.url,
+                canonical_source_name=canonical_source.name,
+                canonical_plugin_name=canonical_source.plugin.name,
+                source_id=source.id,
+                source_name=source.name,
+                plugin_name=source.plugin.name,
+                linked_episodes=linking.get((canonical_id, source_id), []),
+            ),
+        )
+    return sorted(
+        outputs,
+        key=lambda output: (
+            output.source_name or "",
+            output.show_name or "",
+            output.season_number or 0,
+            output.episode_number or 0,
+        ),
     )

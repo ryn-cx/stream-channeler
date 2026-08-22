@@ -1,4 +1,5 @@
 # TODO: Validate
+from functools import partial
 from typing import Any, override
 from urllib.parse import quote
 
@@ -9,6 +10,7 @@ from plugins.YouTube.files import (
     is_channel_key,
     is_free_movies_channel,
     is_music_playlist_key,
+    is_show_key,
     is_show_season_key,
     is_video_key,
 )
@@ -60,7 +62,34 @@ class HelperMixin(FileMixin, register=False):
         return channel_key is not None and is_free_movies_channel(channel_key)
 
     # TODO: Validate
+    def show_channel_title(self, show_key: str) -> str | None:
+        episode_keys = self.show_episode_keys(show_key)
+        if not episode_keys:
+            return None
+        items = self.videos_file(episode_keys[0]).parsed().items
+        return items[0].snippet.channel_title if items else None
+
+    # TODO: Validate
+    def subscription_source(self, show_key: str) -> Source | None:
+        if not is_show_key(show_key):
+            return None
+        if "Try now" not in self.show_listing_file_for_show(show_key).offer_labels():
+            return None
+        channel_title = self.show_channel_title(show_key)
+        if not channel_title:
+            return None
+
+        source_key = f"{self.plugin_key()} {channel_title}"
+        self._initialize_source(
+            source_key,
+            partial(self._upsert_source, source_key),
+        )
+        return self._source_record(source_key)
+
+    # TODO: Validate
     def paid_or_free_source(self, show_key: str) -> Source:
+        if subscription := self.subscription_source(show_key):
+            return subscription
         if self.is_free_movie(show_key):
             return self.free_source
         return self.paid_source

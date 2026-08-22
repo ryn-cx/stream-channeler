@@ -23,7 +23,7 @@ from plugins.utils.base_plugin.files import BaseFile
 
 
 # TODO: Validate
-class StreamChanneler(WatchHistoryMixin, BasePlugin, register=True):
+class StreamChanneler(WatchHistoryMixin, BasePlugin, register=False):
     _VERSION = "0.0.1"
 
     # TODO: Validate
