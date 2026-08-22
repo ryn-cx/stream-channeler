@@ -224,7 +224,7 @@ class PluginValidatorAlt[PluginT: BasePlugin](DatabaseMixinAlt[PluginT]):
 
     # TODO: Validate
     def selected_source(self, session: Session) -> Source:
-        """The source a test that works on one takes.
+        """Return the source a test that works on one takes.
 
         The existing validator picks one at random, which a test comparing
         against a recorded dump cannot do, so the one the class names is taken
@@ -234,22 +234,22 @@ class PluginValidatorAlt[PluginT: BasePlugin](DatabaseMixinAlt[PluginT]):
 
     # TODO: Validate
     def selected_show(self, session: Session) -> Show:
-        """The show a test that works on one takes."""
+        """Return the show a test that works on one takes."""
         return self.all_shows(session)[self.show_index]
 
     # TODO: Validate
     def selected_season(self, session: Session) -> Season:
-        """The season a test that works on one takes."""
+        """Return the season a test that works on one takes."""
         return self.all_seasons(session)[self.season_index]
 
     # TODO: Validate
     def selected_episode(self, session: Session) -> Episode:
-        """The episode a test that works on one takes."""
+        """Return the episode a test that works on one takes."""
         return self.all_episodes(session)[self.episode_index]
 
     # TODO: Validate
     def fake_season(self, show: Show) -> Season:
-        """A season `show` does not have, for an update to soft delete.
+        """Build a season `show` does not have, for an update to soft delete.
 
         Written out in full rather than generated, because a randomly built
         record is a different record on every run and so a different dump.
@@ -267,7 +267,7 @@ class PluginValidatorAlt[PluginT: BasePlugin](DatabaseMixinAlt[PluginT]):
 
     # TODO: Validate
     def fake_episode(self, season: Season) -> Episode:
-        """An episode `season` does not have, for an update to soft delete.
+        """Build an episode `season` does not have, for an update to soft delete.
 
         `plugin_key` is set here because an import is what usually writes it and
         nothing imported this row.

@@ -23,7 +23,7 @@ from plugins.utils.get_around_client import get_around_client
 # TODO: Validate
 @cache
 def minbo() -> MinBO:
-    """Returns a cached MinBO client."""
+    """Return a cached MinBO client."""
     return MinBO(get_around_client=get_around_client())
 
 
@@ -55,7 +55,7 @@ class SeasonFile(PartialGAPIJSON[ShowModel]):
 
     # TODO: Validate
     @override
-    def _get(self) -> ShowModel:
+    def _fetch(self) -> ShowModel:
         return self.API_ENDPOINT.download_and_parse(
             self.show_id,
             season_number=self.season_number,
@@ -75,17 +75,17 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
 
     # TODO: Validate
     def show_file(self, show_id: str) -> ShowFile:
-        """Returns ShowFile file."""
+        """Return ShowFile file."""
         return self._file(ShowFile, show_id)
 
     # TODO: Validate
     def season_file(self, show_id: str, season_number: int) -> SeasonFile:
-        """Returns SeasonFile file."""
+        """Return SeasonFile file."""
         return self._file(SeasonFile, show_id, season_number)
 
     # TODO: Validate
     def movie_file(self, movie_id: str) -> MovieFile:
-        """Returns MovieFile file."""
+        """Return MovieFile file."""
         return self._file(MovieFile, movie_id)
 
     # TODO: Validate

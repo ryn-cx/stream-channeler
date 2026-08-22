@@ -24,7 +24,7 @@ _MOVIE_SEASON_NUMBER = 0
 # TODO: Validate
 @cache
 def notaplanet() -> NotAPlanet:
-    """Returns a cached NotAPlanet client."""
+    """Return a cached NotAPlanet client."""
     return NotAPlanet(get_around_client=get_around_client())
 
 
@@ -42,12 +42,12 @@ class ItemsFile(PartialGAPIJSON[ItemsModel]):
     # TODO: Validate
     @override
     def acceptable_error_extra_value(self) -> str:
-        """Returns what is written down in place of a title that does not exist."""
+        """Return what is written down in place of a title that does not exist."""
         return f"Invalid item_id {self.unique_identifier}"
 
     # TODO: Validate
     @override
-    def _get(self) -> ItemsModel:
+    def _fetch(self) -> ItemsModel:
         return self.API_ENDPOINT.download_and_parse([self.unique_identifier])
 
 
@@ -65,7 +65,7 @@ class SeasonsFile(GAPIJSON[SeasonsModel]):
     # TODO: Validate
     @override
     def acceptable_error_extra_value(self) -> str:
-        """Returns what is written down in place of a series that does not exist."""
+        """Return what is written down in place of a series that does not exist."""
         return f"Invalid series_id {self.unique_identifier}"
 
 

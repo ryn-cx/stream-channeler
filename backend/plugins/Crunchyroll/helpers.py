@@ -6,6 +6,8 @@ from app.media.media_type import MediaType
 from app.sources.models import Source
 from plugins.Crunchyroll.files import FileMixin
 from plugins.Crunchyroll.music_keys import (
+    MUSIC_SOURCE,
+    VIDEO_SOURCE,
     is_music_episode_key,
     is_music_show_key,
     music_episode_category,
@@ -14,8 +16,15 @@ from plugins.Crunchyroll.music_keys import (
 
 # TODO: Validate
 class HelperMixin(FileMixin, register=False):
-    video_source: Source
-    music_source: Source
+    # TODO: Validate
+    @property
+    def video_source(self) -> Source:
+        return self._source_record(VIDEO_SOURCE)
+
+    # TODO: Validate
+    @property
+    def music_source(self) -> Source:
+        return self._source_record(MUSIC_SOURCE)
 
     # TODO: Validate
     def _source_from_show_key(self, show_key: str) -> Source:

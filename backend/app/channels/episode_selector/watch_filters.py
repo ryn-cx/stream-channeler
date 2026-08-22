@@ -60,7 +60,7 @@ LAST_WATCHED_COLUMNS = {
 
 # TODO: Validate
 def watched_canonical_episodes(user: User) -> SelectOfScalar[UUID]:
-    """The canonical episodes the `User` has watched, however they were watched.
+    """Return the canonical episodes the `User` has watched, however they were watched.
 
     Every row carrying the watched identifier is matched, the canonical episode
     and its links alike, and each is read as the canonical episode it stands
@@ -83,13 +83,13 @@ def watched_canonical_episodes(user: User) -> SelectOfScalar[UUID]:
 
 # TODO: Validate
 def verified_watch_identifiers(user: User) -> SelectOfScalar[UUID]:
-    """The canonical episodes the `User` has a verified watch of."""
+    """Return the canonical episodes the `User` has a verified watch of."""
     return watched_canonical_episodes(user).where(col(Watch.verified).is_(True))
 
 
 # TODO: Validate
 def any_watch_identifiers(user: User) -> SelectOfScalar[UUID]:
-    """The canonical episodes with any watch (verified or not) for the user."""
+    """Return the canonical episodes with any watch (verified or not) for the user."""
     return watched_canonical_episodes(user)
 
 
@@ -135,7 +135,7 @@ def hide_partially_watched_condition(user: User) -> ColumnElement[bool]:
 
 # TODO: Validate
 def started_show_ids(user: User) -> SelectOfScalar[UUID]:
-    """The titles the `User` has watched anything of.
+    """Return the titles the `User` has watched anything of.
 
     The titles themselves rather than the websites' listings of them, since a watch is
     of the episode rather than of the non-canonical row that played it and a title
@@ -230,7 +230,7 @@ def latest_watch_by_identifier(
     user: User,
     episodes: Sequence[Episode],
 ) -> dict[UUID, Watch]:
-    """The `User`'s most recent `Watch` of each episode, keyed by canonical id."""
+    """Return the `User`'s most recent `Watch` of each episode, keyed by canonical id."""
     if not episodes:
         return {}
 

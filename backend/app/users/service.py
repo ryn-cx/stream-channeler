@@ -16,7 +16,7 @@ _SESSION_USERS = "users_by_email"
 
 # TODO: Validate
 def _remembered_users(session: Session) -> dict[str, User]:
-    """The users this session has answered with, by the address asked for.
+    """Return the users this session has answered with, by the address asked for.
 
     Kept on the session rather than read back out of its identity map, because
     that map holds its records weakly: a user nothing else is holding on to is

@@ -203,8 +203,8 @@ export function Dashboard() {
                   <p>
                     From the channel page, click <strong>Add Shows</strong> and
                     use the <strong>Search</strong> tab. Type a show name and
-                    results will appear from JustWatch, covering 900+ streaming
-                    services.
+                    results will appear from TMDB, covering the streaming
+                    services it lists.
                   </p>
                   <p>
                     When you expand a result, you can{" "}
@@ -226,14 +226,6 @@ export function Dashboard() {
                     directly, one per line. This supports:
                   </p>
                   <ul className="list-disc list-inside ml-2 space-y-1">
-                    <li>
-                      <strong>JustWatch URLs</strong>: prepend the source name
-                      before the URL (e.g.,{" "}
-                      <code className="bg-muted px-1 rounded text-xs">
-                        Hulu justwatch.com/us/tv-show/breaking-bad
-                      </code>
-                      )
-                    </li>
                     <li>
                       <strong>YouTube</strong>: channel or playlist URLs
                       directly

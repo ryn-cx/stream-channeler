@@ -11,7 +11,13 @@ from plugins.JustWatch.url_handlers import TitleURLHandler
 
 
 # TODO: Validate
-class JustWatch(SourceMixin, ImportURLMixin, UpsertMixin, HelperMixin, register=True):
+class JustWatch(
+    SourceMixin,
+    ImportURLMixin,
+    UpsertMixin,
+    HelperMixin,
+    register=False,
+):
     """JustWatch plugin."""
 
     _VERSION = "0.0.1"

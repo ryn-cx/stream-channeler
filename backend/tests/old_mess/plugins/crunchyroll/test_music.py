@@ -6,7 +6,7 @@ from chirashi.browse_music.models import BrowseMusicModel
 
 from app.sources.models import Source
 from plugins.Crunchyroll import Crunchyroll
-from plugins.Crunchyroll.files import chirashi
+from plugins.Crunchyroll.files import _chirashi
 from tests.old_mess.plugins.crunchyroll.validators import (
     CrunchyrollStandardTests,
     CrunchyrollUpdateSourceTests,
@@ -33,7 +33,7 @@ class CrunchyrollMusicUpdateSourceTest(
         timestamp: datetime,
     ) -> None:
         new_browse = plugin_instance.browse_music_file(timestamp)
-        dumped = chirashi().browse_music.model_dump(parsed)
+        dumped = _chirashi().browse_music.model_dump(parsed)
         new_browse.write(dumped)
         new_browse.database_record.data_timestamp = timestamp
 

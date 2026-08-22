@@ -40,26 +40,20 @@ _PHYSICAL_PRESENTATION_TYPES = frozenset({"DVD", "BLURAY"})
 
 # TODO: Validate
 @cache
-def _just_watch_client() -> GetAround:
+def _just_scrape() -> JustScrape:
+    # Get Around sometimes gets blocked without a 5 second delay.
     if settings.PROXY:
-        return GetAround(proxy=settings.PROXY)
-    return get_around_client()
-
-
-# TODO: Validate
-@cache
-def just_scrape() -> JustScrape:
-    # Nothing but this shares the proxy, so there is nothing to pace it against.
-    sleep_time = 0 if settings.PROXY else 5
-    return JustScrape(
-        get_around_client=_just_watch_client(),
-        sleep_time=sleep_time,
-    )
+        client = GetAround(proxy=settings.PROXY)
+        sleep_time = 0
+    else:
+        client = get_around_client()
+        sleep_time = 5
+    return JustScrape(get_around_client=client, sleep_time=sleep_time)
 
 
 # TODO: Validate
 class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
-    API_ENDPOINT = just_scrape().new_titles
+    API_ENDPOINT = _just_scrape().new_titles
 
     # TODO: Validate
     def __init__(
@@ -75,8 +69,8 @@ class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
 
     # TODO: Validate
     @override
-    def _get(self) -> list[new_titles_models.NewTitlesResponse]:
-        return just_scrape().new_titles.download_and_parse_for_date(
+    def _fetch(self) -> list[new_titles_models.NewTitlesResponse]:
+        return _just_scrape().new_titles.download_and_parse_for_date(
             available_to_packages=[self.source_key],
             filter_packages=[self.source_key],
             date=self.date,
@@ -84,24 +78,24 @@ class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
 
     # TODO: Validate
     def parsed_edges(self) -> list[new_titles_models.Edge]:
-        return just_scrape().new_titles.extract_edges(self.parsed())
+        return _just_scrape().new_titles.extract_edges(self.parsed())
 
 
 # TODO: Validate
 class NewTitleBucket(GAPIListJSON[new_title_buckets_models.NewTitleBucketsResponse]):
-    API_ENDPOINT = just_scrape().new_title_buckets
+    API_ENDPOINT = _just_scrape().new_title_buckets
     # NewTitleBucket is named after a specific datetime so there is no reasonable situation where it would
     IMMUTABLE = True
 
     # TODO: Validate
     @override
-    def _get(self) -> list[new_title_buckets_models.NewTitleBucketsResponse]:
+    def _fetch(self) -> list[new_title_buckets_models.NewTitleBucketsResponse]:
         end_date = self.identifier_datetime().date()
-        return just_scrape().new_title_buckets.download_and_parse_since_date(end_date)
+        return _just_scrape().new_title_buckets.download_and_parse_since_date(end_date)
 
     # TODO: Validate
     def parsed_edges(self) -> list[new_title_buckets_models.Edge]:
-        return just_scrape().new_title_buckets.extract_edges(self.parsed())
+        return _just_scrape().new_title_buckets.extract_edges(self.parsed())
 
 
 # TODO: Validate
@@ -129,7 +123,7 @@ class ProvidersLocale(JSONFile[list[dict[str, Any]]]):
 
 # TODO: Validate
 class UrlTitleDetails(GAPIJSON[url_title_details_models.UrlTitleDetailsResponse]):
-    API_ENDPOINT = just_scrape().url_title_details
+    API_ENDPOINT = _just_scrape().url_title_details
 
     # Occurs when a user puts in an invalid URL.
     # TODO: Validate
@@ -147,12 +141,12 @@ class UrlTitleDetails(GAPIJSON[url_title_details_models.UrlTitleDetailsResponse]
 class SeasonEpisodes(
     GAPIListJSON[season_episodes_models.SeasonEpisodesResponse],
 ):
-    API_ENDPOINT = just_scrape().season_episodes
+    API_ENDPOINT = _just_scrape().season_episodes
 
     # TODO: Validate
     @override
-    def _get(self) -> list[season_episodes_models.SeasonEpisodesResponse]:
-        return just_scrape().season_episodes.download_and_parse_all(
+    def _fetch(self) -> list[season_episodes_models.SeasonEpisodesResponse]:
+        return _just_scrape().season_episodes.download_and_parse_all(
             self.unique_identifier,
         )
 
@@ -173,7 +167,7 @@ class SeasonEpisodes(
 
 # TODO: Validate
 class BuyBoxOffers(GAPIJSON[buy_box_offers_models.BuyBoxOffersResponse]):
-    API_ENDPOINT = just_scrape().buy_box_offers
+    API_ENDPOINT = _just_scrape().buy_box_offers
 
 
 # TODO: Validate

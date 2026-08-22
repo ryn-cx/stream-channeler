@@ -65,7 +65,7 @@ class BasePlugin(
         {
             "session",
             "plugin",
-            "_source",
+            "_sources",
             "_canonical_source_record",
             "_current_show",
             "_reusable_file_cache",
@@ -139,7 +139,7 @@ class BasePlugin(
     @override
     def __init__(self, session: Session) -> None:
         self.session = session
-        self._source: Source | None = None
+        self._sources: dict[str, Source] = {}
         self._canonical_source_record = None
         self._reusable_file_cache = {}
         # Creates the show file cache, which `initialize_database` needs below.
@@ -151,21 +151,29 @@ class BasePlugin(
     @property
     def source(self) -> Source:
         """Return the plugin's `Source` record or raise if not initialized."""
-        if self._source is None:
-            msg = "Source has not been initialized."
-            raise AttributeError(msg)
-        return self._source
-
-    # TODO: Validate
-    @source.setter
-    def source(self, value: Source) -> None:
-        self._source = value
+        return self._source_record(self.plugin_key())
 
     # TODO: Validate
     @property
     def has_source(self) -> bool:
         """Return True if the plugin has a `Source` record."""
-        return self._source is not None
+        return self.plugin_key() in self._sources
+
+    # TODO: Validate
+    def _source_record(self, source_key: str) -> Source:
+        if source_key not in self._sources:
+            msg = f"Source {source_key} has not been initialized."
+            raise AttributeError(msg)
+        return self._sources[source_key]
+
+    # TODO: Validate
+    def _initialize_source(
+        self,
+        source_key: str,
+        build_source: Callable[[], Source],
+    ) -> None:
+        if source_key not in self._sources:
+            self._sources[source_key] = build_source()
 
     # TODO: Validate
     def initialize_database(self) -> None:
@@ -199,10 +207,11 @@ class BasePlugin(
     # TODO: Validate
     def initialize_sources(self) -> None:
         """Create the `Source` record(s) and set `self.source`."""
-        if hasattr(self, "source") and self.source:
-            return
+        self._initialize_source(self.plugin_key(), self._default_source)
 
-        self.source = (
+    # TODO: Validate
+    def _default_source(self) -> Source:
+        return (
             Source.get(self.session, self.plugin, self.plugin_key())
             or self._upsert_source()
         )
@@ -509,7 +518,7 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
     def get_url_handler(self, url: str) -> HandlerT:
         domain_regex = self._domain_regex()
         for handler_class in self._URL_HANDLERS:
-            if match := re.match(handler_class._url_regex(domain_regex), url):
+            if match := re.match(handler_class.url_regex(domain_regex), url):
                 return cast("HandlerT", handler_class(self, url, match.group(1)))  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
 
         msg = f"Invalid {self.plugin_key()} URL: {url}"
@@ -521,7 +530,7 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
     def url_regex(cls) -> str:
         domain_regex = cls._domain_regex()
         alternatives = "|".join(
-            handler_class._url_regex(domain_regex)  # noqa: SLF001 - Same package.
+            handler_class.url_regex(domain_regex)
             for handler_class in cls._URL_HANDLERS
         )
         return f"(?:{alternatives})"
@@ -534,7 +543,7 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
         *,
         force: bool = False,
     ) -> list[URLImportResult]:
-        """Setup then call upsert_show to import a new show.
+        """Set up, then call upsert_show to import a new show.
 
         What a channel takes on from the import is returned rather than the show
         itself, since that is what a caller asking for a URL to be imported is

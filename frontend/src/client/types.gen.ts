@@ -1620,6 +1620,20 @@ export type UnmatchedEpisodesPublic = {
     is_server_side: boolean;
 };
 
+export type UnmatchedSourceImport = {
+    url: string;
+};
+
+export type UnmatchedSourceOutput = {
+    id: string;
+    provider_name: string;
+    plugin_key: (string | null);
+    created_at: string;
+    modified_at: string;
+    show_id: string;
+    show_name: (string | null);
+};
+
 export type UpdatePassword = {
     current_password: string;
     new_password: string;
@@ -1773,6 +1787,18 @@ export type WatchOutput = {
     episode_id: (string | null);
     watch_identifier: string;
     user_id: string;
+};
+
+/**
+ * What a relink run found and what it was able to attach.
+ *
+ * `detached` is every watch that had no episode when the run started, and
+ * `relinked` is how many of them a link to point at was found for. The rest
+ * name an episode this database does not currently carry a live link to.
+ */
+export type WatchRelinkResults = {
+    detached: number;
+    relinked: number;
 };
 
 /**
@@ -2930,6 +2956,15 @@ export type SourcesGetPluginSourcesData = {
 
 export type SourcesGetPluginSourcesResponse = (SourcesPublic);
 
+export type UnmatchedSourcesAdminGetUnmatchedSourcesResponse = (Array<UnmatchedSourceOutput>);
+
+export type UnmatchedSourcesAdminImportUnmatchedSourceData = {
+    requestBody: UnmatchedSourceImport;
+    unmatchedSourceId: string;
+};
+
+export type UnmatchedSourcesAdminImportUnmatchedSourceResponse = (Message);
+
 export type UsersReadUserMeResponse = (UserPublic);
 
 export type UsersDeleteUserMeResponse = (Message);
@@ -3044,6 +3079,8 @@ export type WatchesImportWatchHistoryData = {
 export type WatchesImportWatchHistoryResponse = (WatchImportResults);
 
 export type WatchesExportWatchHistoryResponse = (Array<WatchExportEntry>);
+
+export type WatchesAdminRelinkWatchesResponse = (WatchRelinkResults);
 
 export type WatchesCreateWatchData = {
     episodeId: string;

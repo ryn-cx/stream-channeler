@@ -31,7 +31,7 @@ from plugins.utils.get_around_client import get_around_client
 # TODO: Validate
 @cache
 def diving_board() -> DivingBoard:
-    """Returns a cached Diving Board client."""
+    """Return a cached Diving Board client."""
     return DivingBoard(get_around_client=get_around_client())
 
 
@@ -40,13 +40,16 @@ class Season(PartialGAPIJSON[season_models.SeasonModel]):
     """Season file."""
 
     # Occurs when the user imports an invalid TV show url.
-    ACCEPTABLE_ERROR = "Unexpected response status code: 404"
+    # TODO: Validate
+    @override
+    def _get_ACCEPTABLE_ERROR(self) -> str | None:
+        return "Unexpected response status code: 404"
     API_ENDPOINT = diving_board().season
 
     # TODO: Validate
     @override
     # TODO: Make Diving Board support a str as an input so _get is not needed.
-    def _get(self) -> season_models.SeasonModel:
+    def _fetch(self) -> season_models.SeasonModel:
         return diving_board().season.download_and_parse(int(self.unique_identifier))
 
 
@@ -55,13 +58,16 @@ class Vod(PartialGAPIJSON[vod_models.VodModel]):
     """Vod file."""
 
     # Occurs when the user imports an invalid movie url.
-    ACCEPTABLE_ERROR = "Unexpected response status code: 404"
+    # TODO: Validate
+    @override
+    def _get_ACCEPTABLE_ERROR(self) -> str | None:
+        return "Unexpected response status code: 404"
     API_ENDPOINT = diving_board().vod
 
     # TODO: Validate
     @override
     # TODO: Make Diving Board support a str as an input so _get is not needed.
-    def _get(self) -> vod_models.VodModel:
+    def _fetch(self) -> vod_models.VodModel:
         return diving_board().vod.download_and_parse(int(self.unique_identifier))
 
 
@@ -70,13 +76,16 @@ class Series(PartialGAPIJSON[series_models.SeriesModel]):
     """Series file."""
 
     # Occurs when the user imports an invalid series url.
-    ACCEPTABLE_ERROR = "Unexpected response status code: 404"
+    # TODO: Validate
+    @override
+    def _get_ACCEPTABLE_ERROR(self) -> str | None:
+        return "Unexpected response status code: 404"
     API_ENDPOINT = diving_board().series
 
     # TODO: Validate
     @override
     # TODO: Make Diving Board support a str as an input so _get is not needed.
-    def _get(self) -> series_models.SeriesModel:
+    def _fetch(self) -> series_models.SeriesModel:
         return diving_board().series.download_and_parse(int(self.unique_identifier))
 
 
@@ -88,7 +97,7 @@ class Schedule(GAPIListJSON[schedule_models.ScheduleModel]):
 
     # TODO: Validate
     @override
-    def _get(self) -> list[schedule_models.ScheduleModel]:
+    def _fetch(self) -> list[schedule_models.ScheduleModel]:
         # Start at the first of the month because it matches the normal API calls.
         from_ = self.identifier_datetime().replace(
             day=1,

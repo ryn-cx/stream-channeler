@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import ClassVar, override
 
-from tminidb.search_multi.models import Result
+from tminidb.search.models.multi import MultiResult
 
 from app.media.media_type import MediaType
 from app.utils import tz_datetime
@@ -56,7 +56,7 @@ class SearchMixin(LookupMixin, register=False):
         )
 
     # TODO: Validate
-    def _search_result(self, result: Result) -> PluginSearchResult:
+    def _search_result(self, result: MultiResult) -> PluginSearchResult:
         # A movie carries its title and release date, a show its name and first
         # air date, and a multi search returns the two mixed together.
         title: str | None

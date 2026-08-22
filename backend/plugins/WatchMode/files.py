@@ -7,12 +7,12 @@ from functools import cache
 from typing import override
 
 from wampi import Wampi
-from wampi.exceptions import TitleNotFoundError
-from wampi.title_sources.models import TitleSourcesModel
+from wampi.exceptions import ResourceNotFoundError
+from wampi.models.title_sources import TitleSources as TitleSourcesModel
 
 from app.config import settings
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import GAPIJSON
+from plugins.utils.base_plugin.files import ResponseJSON
 from plugins.utils.get_around_client import get_around_client
 
 # The region a title's listing is asked for. Watchmode answers with every region
@@ -24,7 +24,7 @@ REGION = "US"
 # TODO: Validate
 @cache
 def wampi() -> Wampi:
-    """Returns a cached Wampi client."""
+    """Return a cached Wampi client."""
     return Wampi(
         api_key=settings.WATCHMODE_API_KEY,
         get_around_client=get_around_client(),
@@ -32,7 +32,7 @@ def wampi() -> Wampi:
 
 
 # TODO: Validate
-class TitleSources(GAPIJSON[TitleSourcesModel]):
+class TitleSources(ResponseJSON[TitleSourcesModel]):
     """Every source Watchmode says a title can be watched through.
 
     The title is named by the id Watchmode takes, which is TMDB's own id behind
@@ -40,13 +40,11 @@ class TitleSources(GAPIJSON[TitleSourcesModel]):
     has just read in is looked up without anything being searched for.
     """
 
-    API_ENDPOINT = wampi().title_sources
-
     # Occurs when Watchmode does not carry the title TMDB named.
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, TitleNotFoundError)
+        return isinstance(error, ResourceNotFoundError)
 
     # TODO: Validate
     @override
@@ -55,8 +53,8 @@ class TitleSources(GAPIJSON[TitleSourcesModel]):
 
     # TODO: Validate
     @override
-    def _get(self) -> TitleSourcesModel:
-        return wampi().title_sources.download_and_parse(
+    def _fetch(self) -> TitleSourcesModel:
+        return wampi().title_sources(
             self.unique_identifier,
             regions=REGION,
         )

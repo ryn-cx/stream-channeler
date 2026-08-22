@@ -44,6 +44,7 @@ from app.watches.schemas import (
     WatchesListOutput,
     WatchItem,
     WatchOutput,
+    WatchRelinkResults,
     WatchUpdate,
 )
 from plugins.utils.manage_plugins import import_plugins, plugins
@@ -72,7 +73,7 @@ def _visible_plugin_condition(user_id: uuid.UUID) -> ColumnElement[bool]:
 
 # TODO: Validate
 def _watched_canonical_subquery(user_id: uuid.UUID) -> SelectOfScalar[uuid.UUID]:
-    """The canonical episodes the `User` has watched anything of."""
+    """Return the canonical episodes the `User` has watched anything of."""
     return watched_canonical_ids(user_id)
 
 
@@ -116,7 +117,7 @@ def _representative_episode_subquery(
 
 # TODO: Validate
 def _own_visible_episode_subquery(user_id: uuid.UUID) -> ScalarSelect[uuid.UUID]:
-    """The episode a watch was recorded against, when it is one the `User` can see.
+    """Return the episode a watch was recorded against, when the `User` can see it.
 
     A watch is made against one website's non-canonical row of an episode, which is the
     non-canonical row it should be shown as. It is only stood in for by another source's
@@ -386,6 +387,25 @@ def delete_watches(session: Session, input_watch: Watch) -> Message:
     """Delete a `Watch`."""
     delete_record(session, input_watch)
     return Message(message="Watch deleted successfully")
+
+
+# TODO: Validate
+def relink_detached_watches(session: Session) -> WatchRelinkResults:
+    """Point every watch left without an episode back at one.
+
+    A watch names what it played rather than the row it was recorded against,
+    so one whose episode has since been deleted is attached again as soon as
+    another link to that episode exists. Where several do, the `User`'s own
+    source order picks between them, exactly as playback would.
+    """
+    # `relink_watches` loads the models as it is imported, so it is imported
+    # where it is used rather than alongside the models it maps.
+    from app.tools.relink_watches import relink_watches  # noqa: PLC0415
+
+    detached = session.exec(
+        select(func.count()).select_from(Watch).where(col(Watch.episode_id).is_(None)),
+    ).one()
+    return WatchRelinkResults(detached=detached, relinked=relink_watches(session))
 
 
 # TODO: Validate

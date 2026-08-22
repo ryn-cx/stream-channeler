@@ -52,7 +52,7 @@ class Crunchyroll(
     MediaInfoMixin,
     HelperMixin,
     URLHandlerPlugin[CrunchyrollURLHandler],
-    register=True,
+    register=False,
 ):
     """Crunchyroll plugin."""
 
@@ -70,11 +70,6 @@ class Crunchyroll(
         CrunchyrollEpisodeURLHandler,
     )
 
-    SHOW_INDEPENDENT_ATTRIBUTES = URLHandlerPlugin.SHOW_INDEPENDENT_ATTRIBUTES | {
-        "video_source",
-        "music_source",
-    }
-
     # TODO: Validate
     @classmethod
     @override
@@ -84,17 +79,22 @@ class Crunchyroll(
     # TODO: Validate
     @override  # Initializes 2 sources instead of 1.
     def initialize_sources(self) -> None:
-        if not hasattr(self, "video_source") or not self.video_source:
-            self.video_source = (
-                Source.get(self.session, self.plugin, VIDEO_SOURCE)
-                or self._upsert_anime_source()
-            )
+        self._initialize_source(VIDEO_SOURCE, self._anime_source)
+        self._initialize_source(MUSIC_SOURCE, self._music_source)
 
-        if not hasattr(self, "music_source") or not self.music_source:
-            self.music_source = (
-                Source.get(self.session, self.plugin, MUSIC_SOURCE)
-                or self._upsert_music_source()
-            )
+    # TODO: Validate
+    def _anime_source(self) -> Source:
+        return (
+            Source.get(self.session, self.plugin, VIDEO_SOURCE)
+            or self._upsert_anime_source()
+        )
+
+    # TODO: Validate
+    def _music_source(self) -> Source:
+        return (
+            Source.get(self.session, self.plugin, MUSIC_SOURCE)
+            or self._upsert_music_source()
+        )
 
     # TODO: Validate
     @override  # Determines which source to use based on the show key.
@@ -106,7 +106,7 @@ class Crunchyroll(
         force: bool = False,
     ) -> list[URLImportResult]:
         show_key = handler.show_key
-        self.source = self._source_from_show_key(show_key)
+        source = self._source_from_show_key(show_key)
         if not force and (show := self._preload_show(show_key).one_or_none()):
             if canonical_show:
                 add_canonical_show(self.session, show, canonical_show)
@@ -118,7 +118,7 @@ class Crunchyroll(
         _cache = self._download_show_files_and_children(show_key)
         if canonical_show is None:
             canonical_show = self._tmdb_show(show_key, force=force)
-        show = self.upsert_show(self.source, show_key, canonical_show, force=force)
+        show = self.upsert_show(source, show_key, canonical_show, force=force)
         return handler.import_results(show)
 
     # TODO: Validate

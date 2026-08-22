@@ -14,7 +14,7 @@ from app.shows.models import Show
 from app.sources.models import Source
 from app.users.service import get_or_create_plugin_user
 from app.utils import tz_datetime
-from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries, chirashi
+from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries, _chirashi
 from plugins.Crunchyroll.music_keys import MUSIC_SOURCE, VIDEO_SOURCE
 from plugins.Crunchyroll.upsert import UpsertMixin
 from plugins.utils.base_plugin.files import (
@@ -63,7 +63,7 @@ class UpdateMixin(UpsertMixin, register=False):
             self.browse_series_file,
         ):
             logger.info("Processing browse file: {}", browse_json.database_record.key)
-            releases = chirashi().browse_series.extract_data(browse_json.parsed())
+            releases = _chirashi().browse_series.extract_data(browse_json.parsed())
             for release in releases:
                 if show := Show.get_from_memory(self.session, source, release.id):
                     logger.info("Matched show: {}", show.name or release.id)
@@ -93,7 +93,7 @@ class UpdateMixin(UpsertMixin, register=False):
                 "Processing music browse file: {}",
                 browse_json.database_record.key,
             )
-            artists = chirashi().browse_music.extract_data(browse_json.parsed())
+            artists = _chirashi().browse_music.extract_data(browse_json.parsed())
             new_artist_urls: list[str] = []
             for artist in artists:
                 show_key = artist.id
@@ -121,7 +121,7 @@ class UpdateMixin(UpsertMixin, register=False):
 
     # TODO: Validate
     def _music_channel(self) -> Channel:
-        """Returns the plugin owned channel every Crunchyroll artist is queued into.
+        """Return the plugin owned channel every Crunchyroll artist is queued into.
 
         Crunchyroll offers no way to browse their music catalogue, so the channel
         collects the whole of it and is created the first time an artist is found

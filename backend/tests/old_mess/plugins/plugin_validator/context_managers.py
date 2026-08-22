@@ -207,6 +207,27 @@ def _exists(path: Path) -> bool:
 
 
 # TODO: Validate
+def _store_file(file: BaseFile[Any], unstorable: list[str]) -> None:
+    owner_key = _owner_key(file)
+    path = stored_file_path(file)
+    if _exists(path):
+        return
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(file.database_record.content or "", encoding="utf-8")
+        write_stored_metadata(owner_key, file.file_key(), file.database_record)
+    except OSError as error:
+        # Held until the run is over so the rest of the files are still
+        # stored, and the report names every key at fault rather than only
+        # the first one reached.
+        unstorable.append(f"{file.file_key()} ({error})")
+        return
+    # Logged as it is stored rather than counted up once the test is over,
+    # so a run that fails part way through still says what it downloaded.
+    logger.info(f"Stored {file.file_key()}")
+
+
+# TODO: Validate
 @contextmanager
 def serve_downloads_from_disk() -> Generator[list[str]]:
     """Serve every download from the stored test files, downloading what is missing.
@@ -228,6 +249,7 @@ def serve_downloads_from_disk() -> Generator[list[str]]:
     downloaded: list[str] = []
     unstorable: list[str] = []
     original_download_if_outdated = BaseFile[Any].download_if_outdated
+    original_write = BaseFile[Any].write
 
     # Patched on `download_if_outdated` rather than on `_download`, because a
     # file class is free to download however it likes and most of them override
@@ -258,21 +280,21 @@ def serve_downloads_from_disk() -> Generator[list[str]]:
 
         original_download_if_outdated(self, update_at)
         downloaded.append(self.file_key())
-        try:
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(self.database_record.content or "", encoding="utf-8")
-            write_stored_metadata(owner_key, self.file_key(), self.database_record)
-        except OSError as error:
-            # Held until the run is over so the rest of the files are still
-            # stored, and the report names every key at fault rather than only
-            # the first one reached.
-            unstorable.append(f"{self.file_key()} ({error})")
-            return
-        # Logged as it is stored rather than counted up once the test is over,
-        # so a run that fails part way through still says what it downloaded.
-        logger.info(f"Stored {self.file_key()}")
+        _store_file(self, unstorable)
 
-    with patch.object(BaseFile, "download_if_outdated", _download_if_outdated):
+    # TODO: Validate
+    def _write(
+        self: BaseFile[Any],
+        content: Any,  # noqa: ANN401 - Whatever the file's own write takes.
+        extra: str | None = None,
+    ) -> None:
+        original_write(self, content, extra)
+        _store_file(self, unstorable)
+
+    with (
+        patch.object(BaseFile, "download_if_outdated", _download_if_outdated),
+        patch.object(BaseFile, "write", _write),
+    ):
         yield downloaded
 
     if unstorable:
@@ -281,11 +303,20 @@ def serve_downloads_from_disk() -> Generator[list[str]]:
         raise OSError(msg)
 
 
+# TODO: Validate
+def _serve_stored_files(files: Sequence[BaseFile[Any]]) -> None:
+    for file in files:
+        if _exists(stored_file_path(file)):
+            file.download_if_outdated()
+
+
 _GROUPED_DOWNLOAD = "_download_all_episode_files"
+
+_GROUPED_SEASON_DOWNLOAD = "_download_all_season_files"
 
 
 # TODO: Validate
-def _grouped_download_overrides() -> list[type[BasePlugin]]:
+def _grouped_download_overrides(name: str) -> list[type[BasePlugin]]:
     """Return every plugin that downloads a season's episodes as a group.
 
     A plugin that keeps the one-file-at-a-time download it inherits is left out,
@@ -297,7 +328,7 @@ def _grouped_download_overrides() -> list[type[BasePlugin]]:
     while remaining:
         plugin_class = remaining.pop()
         remaining.extend(plugin_class.__subclasses__())
-        if _GROUPED_DOWNLOAD in plugin_class.__dict__:
+        if name in plugin_class.__dict__:
             overrides.append(plugin_class)
     return overrides
 
@@ -327,12 +358,51 @@ def _serve_before_grouping(
             preloaded_files,
         )
         for episode_key in episode_keys:
-            self._download_outdated_files(
+            _serve_stored_files(
                 self._episode_files(episode_key, season_key, show_key),
             )
         return grouped_download(self, season, show, preloaded_files)
 
     return _download_all_episode_files
+
+
+# TODO: Validate
+def _serve_before_season_grouping(
+    grouped_download: Callable[..., list[File]],
+) -> Callable[..., list[File]]:
+    """Wrap a show's grouped download so each episode is served on its own first.
+
+    A plugin that fetches the episodes of every season of a show in one request
+    makes that request before it reaches for any season, so serving the seasons
+    one at a time is too late to keep it from downloading them.
+    """
+
+    # TODO: Validate
+    def _download_all_season_files(
+        self: BasePlugin,
+        show: str | Show,
+    ) -> list[File]:
+        show_key = self._get_key(show)
+        season_keys = self._season_keys_from_file(show_key)
+        # What lists a season's episodes is a file of the season's, so it is
+        # reached for before the episodes it names are, exactly as the download
+        # being wrapped reaches for it.
+        _season_cache = self._preload_season_files(season_keys, show_key)
+        for season_key in season_keys:
+            self._download_outdated_files(self._season_files(season_key, show_key))
+        for season_key in season_keys:
+            episode_keys = self._episode_keys_from_file(season_key, show_key)
+            # Held for as long as the files are being reached for, because a
+            # preload only warms the session and what it warmed is dropped once
+            # it is let go.
+            _cache = self._preload_episode_files(episode_keys, season_key, show_key)
+            for episode_key in episode_keys:
+                _serve_stored_files(
+                    self._episode_files(episode_key, season_key, show_key),
+                )
+        return grouped_download(self, show)
+
+    return _download_all_season_files
 
 
 # TODO: Validate
@@ -348,14 +418,18 @@ def check_episodes_before_grouped_download() -> Generator[None]:
     the one new video rather than the season it belongs to.
     """
     with ExitStack() as stack:
-        for plugin_class in _grouped_download_overrides():
-            stack.enter_context(
-                patch.object(
-                    plugin_class,
-                    _GROUPED_DOWNLOAD,
-                    _serve_before_grouping(plugin_class.__dict__[_GROUPED_DOWNLOAD]),
-                ),
-            )
+        for name, wrap in (
+            (_GROUPED_DOWNLOAD, _serve_before_grouping),
+            (_GROUPED_SEASON_DOWNLOAD, _serve_before_season_grouping),
+        ):
+            for plugin_class in _grouped_download_overrides(name):
+                stack.enter_context(
+                    patch.object(
+                        plugin_class,
+                        name,
+                        wrap(plugin_class.__dict__[name]),
+                    ),
+                )
         yield
 
 

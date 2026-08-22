@@ -71,7 +71,7 @@ export function RemotePage() {
             Stream Channeler.
           </p>
           <p className="text-sm text-muted-foreground">
-            Queuing works on YouTube, NHK World, Crunchyroll, and JustWatch.
+            Queuing works on YouTube, NHK World, and Crunchyroll.
           </p>
         </Card>
       </div>

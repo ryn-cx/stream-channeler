@@ -5,7 +5,11 @@ from sqlmodel import Session
 
 from app.utils import tz_datetime
 from plugins.YouTube import YouTube
-from plugins.YouTube.files import is_show_season_key, is_video_key
+from plugins.YouTube.files import (
+    is_music_playlist_key,
+    is_show_season_key,
+    is_video_key,
+)
 from tests.plugins.plugin_validator_alt import PluginValidatorAlt, StandardTestsAlt
 
 
@@ -16,7 +20,11 @@ def _reads_a_feed(season_key: str) -> bool:
     A season that is a single video, and a season of a show, are re-read from
     the page describing them instead, which is a file the season already has.
     """
-    return not (is_video_key(season_key) or is_show_season_key(season_key))
+    return not (
+        is_video_key(season_key)
+        or is_show_season_key(season_key)
+        or is_music_playlist_key(season_key)
+    )
 
 
 # TODO: Validate
@@ -70,3 +78,86 @@ class TestChannelWithVideoInMultiplePlaylists(
 ):
     channel_key = "UC4QobU6STFB0P71PMvOGN5A"
     channel_name = "jawed"
+
+
+# TODO: Validate
+class SystemHubChannelValidatorAlt(YouTubeValidatorAlt):
+    urls = (
+        "youtube.com/channel/{channel_key}",
+        "youtube.com/channel/{channel_key}/videos",
+    )
+
+
+# TODO: Validate
+class TestSystemHubChannel(StandardTestsAlt[YouTube], SystemHubChannelValidatorAlt):
+    channel_key = "UClgRkhTL3_hImCAmdLfDE4g"
+
+
+# TODO: Validate
+class TestMusicSystemHubChannel(
+    StandardTestsAlt[YouTube],
+    SystemHubChannelValidatorAlt,
+):
+    channel_key = "UC-9-kyTW8ZkZNDHQJ6FgpwQ"
+
+
+# TODO: Validate
+class PlaylistValidatorAlt(YouTubeValidatorAlt):
+    urls = ("youtube.com/playlist?list={playlist_key}",)
+
+
+# A playlist a channel made, which is a season of that channel rather than a
+# listing of its own. This is the same playlist the channel test reaches through
+# the channel, asked for the other way around.
+# TODO: Validate
+class TestChannelPlaylist(StandardTestsAlt[YouTube], PlaylistValidatorAlt):
+    playlist_key = "PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh"
+
+
+# An album YouTube generated a playlist of, whose tracks went up on the
+# musician's own channel rather than on a Topic channel generated for them. A
+# channel that is not a Topic lists far more than music, so the release is a
+# show of its own instead of a season of the channel that published it.
+# TODO: Validate
+class TestMusicAlbumPlaylist(StandardTestsAlt[YouTube], PlaylistValidatorAlt):
+    playlist_key = "OLAK5uy_mKcftf5tOvVhq-CsutohYLKrB1l8PqCG8"
+
+
+# The playlist a show is published as, which is what browse lists a show under
+# and is not the key the show's page is served at, so the URL names the show only
+# by way of the listing it asks for.
+# TODO: Validate
+class TestShowPlaylistURL(StandardTestsAlt[YouTube], PlaylistValidatorAlt):
+    playlist_key = "TVSHX2-tv9KBHSAWLsDbH3h9vNzwxEAyyqXMw"
+
+
+# A channel's uploads playlist, which is a season of that channel rather than a
+# listing of its own, so the URL is the channel's asked for the long way around.
+# TODO: Validate
+class TestChannelUploadsPlaylistURL(
+    StandardTestsAlt[YouTube],
+    PlaylistValidatorAlt,
+):
+    playlist_key = "UU4QobU6STFB0P71PMvOGN5A"
+
+
+# TODO: Validate
+class VideoValidatorAlt(YouTubeValidatorAlt):
+    urls = ("youtube.com/watch?v={video_key}",)
+
+
+# A title of YouTube's catalogue that has to be bought or rented. Every one of
+# them is published on a channel generated for that title alone and named after
+# the catalogue rather than after the title, holding the title once per language
+# it was published in and nothing else.
+# TODO: Validate
+class TestPaidMovie(StandardTestsAlt[YouTube], VideoValidatorAlt):
+    video_key = "koInAsdH8WA"
+
+
+# A title of YouTube's catalogue that is served free with ads. Every one of them
+# is owned by the one channel the whole free catalogue is published on, which
+# lists almost none of what it owns, so the title is a show of its own.
+# TODO: Validate
+class TestFreeMovie(StandardTestsAlt[YouTube], VideoValidatorAlt):
+    video_key = "zKQGAv8gtBA"

@@ -141,7 +141,7 @@ class UpdateMixin(ImportURLMixin, register=False):
 
     # TODO: Validate
     def _import_show_changes(self, show_key: str, changes_file: ShowChanges) -> None:
-        """Imports show changes by updating files that are no longer up to date."""
+        """Import show changes by updating files that are no longer up to date."""
         _, tmdb_id = parse_show_key(show_key)
         translations_files = self.stored_episode_translations_files(tmdb_id)
 
@@ -170,10 +170,14 @@ class UpdateMixin(ImportURLMixin, register=False):
         changed_at: datetime,
     ) -> None:
         stored_keys = self._season_keys_from_file(show_key)
+        # What a change carries is whatever JSON TMDB wrote for that key, which
+        # for a season is an object naming the season and for everything else is
+        # a string or a number that names no season at all.
+        value = item.value if isinstance(item.value, dict) else {}
         named = (
             None
             if self._chosen_group_id(show_key) is not None
-            else getattr(item.value, "season_id", None)
+            else value.get("season_id")
         )
         key = None if named is None else season_key(MediaType.tv, named)
         changed_keys: list[str]

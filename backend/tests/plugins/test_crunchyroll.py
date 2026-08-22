@@ -83,7 +83,7 @@ class TestSwappingEpisodeGroup(StandardTestsAlt[Crunchyroll], CrunchyrollValidat
 
     # TODO: Validate
     def tmdb_show(self, session: Session) -> Show:
-        """The TMDB title the imported listing was matched to."""
+        """Return the TMDB title the imported listing was matched to."""
         for show in self.all_shows(session):
             if is_tmdb_key(show.key):
                 return show
@@ -143,7 +143,7 @@ class TestEpisodeGroupNameMatching(
 
     # TODO: Validate
     def crunchyroll_show(self, session: Session) -> Show:
-        """The listing Crunchyroll itself carries."""
+        """Return the listing Crunchyroll itself carries."""
         for show in self.all_shows(session):
             if show.source.plugin.key == Crunchyroll.plugin_key():
                 return show

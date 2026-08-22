@@ -22,7 +22,7 @@ from plugins.utils.get_around_client import get_around_client
 # TODO: Validate
 @cache
 def naphki() -> Naphki:
-    """Returns a cached Naphki client."""
+    """Return a cached Naphki client."""
     return Naphki(get_around_client=get_around_client())
 
 
@@ -31,7 +31,10 @@ class VideoProgram(GAPIJSON[VideoProgramsModel]):
     """Video program file."""
 
     # Occurs when a user puts in an invalid URL.
-    ACCEPTABLE_ERROR = "Unexpected response status code: 404"
+    # TODO: Validate
+    @override
+    def _get_ACCEPTABLE_ERROR(self) -> str | None:
+        return "Unexpected response status code: 404"
     API_ENDPOINT = naphki().video_programs
 
 
@@ -43,7 +46,7 @@ class VideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
 
     # TODO: Validate
     @override
-    def _get(self) -> list[VideoEpisodesModel]:
+    def _fetch(self) -> list[VideoEpisodesModel]:
         return naphki().video_episodes.download_and_parse_all(self.unique_identifier)
 
     # TODO: Validate
@@ -73,7 +76,7 @@ class ShowsSearch(GAPIJSON[ShowsSearchModel]):
     # website makes.
     # TODO: Validate
     @override
-    def _get(self) -> ShowsSearchModel:
+    def _fetch(self) -> ShowsSearchModel:
         endpoint = naphki().shows_search
         return endpoint.parse(endpoint.download(self.query, from_=self.offset))
 
@@ -88,7 +91,7 @@ class NewVideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
     # TODO: Consider moving this login into naphki
     # TODO: Validate
     @override
-    def _get(self) -> list[VideoEpisodesModel]:
+    def _fetch(self) -> list[VideoEpisodesModel]:
         # Page 20 at a time (the API default) rather than the 100-entry pages
         # get_all() uses. The initial baseline (to_datetime == now) stops after
         # the first page, and day-to-day there are rarely more than a handful of

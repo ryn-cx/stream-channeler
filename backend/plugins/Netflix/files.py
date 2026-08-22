@@ -23,7 +23,7 @@ from plugins.utils.get_around_client import get_around_client
 # TODO: Validate
 @cache
 def meshfilm() -> Meshfilm:
-    """Returns a cached Meshfilm client."""
+    """Return a cached Meshfilm client."""
     return Meshfilm(get_around_client=get_around_client())
 
 
@@ -55,7 +55,7 @@ class Search(GAPIJSON[search_models.SearchPageResultsModel]):
 
     # TODO: Validate
     @override
-    def _get(self) -> search_models.SearchPageResultsModel:
+    def _fetch(self) -> search_models.SearchPageResultsModel:
         return meshfilm().search_page_results.download_and_parse(
             self.query,
             self.cursor or None,

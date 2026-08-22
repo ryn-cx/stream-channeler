@@ -15,23 +15,28 @@ from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from plugins.YouTube.files import (
     get_first_item,
+    is_music_playlist_key,
     is_quota_error,
     is_show_key,
     is_show_season_key,
     is_video_key,
 )
 from plugins.YouTube.handlers import (
+    LONG_DOMAIN,
+    SHORT_DOMAIN,
     ChannelHandleURLHandler,
     ChannelKeyURLHandler,
     ChannelUsernameURLHandler,
     PlaylistURLHandler,
     PlaylistVideoURLHandler,
+    ShowPlaylistURLHandler,
     ShowURLHandler,
     VideoURLHandler,
     YouTubeURLHandler,
 )
 from plugins.YouTube.helpers import HelperMixin
 from plugins.YouTube.source import SourceMixin
+from plugins.YouTube.updater import UpdaterMixin
 from plugins.YouTube.upsert import UpsertMixin
 from plugins.YouTube.watch_history import WatchHistoryMixin
 
@@ -44,6 +49,7 @@ class YouTube(
     SourceMixin,
     UpsertMixin,
     WatchHistoryMixin,
+    UpdaterMixin,
     HelperMixin,
     register=True,
 ):
@@ -51,6 +57,7 @@ class YouTube(
 
     _VERSION = "0.0.1"
     USER_SEARCHABLE = True
+    SPECIALIZED_UPDATER = True
 
     # TODO: Don't hardcode the favicon URL
     FAVICON_URL = (
@@ -61,6 +68,7 @@ class YouTube(
     # regex overlap.
     _URL_HANDLERS = (
         PlaylistVideoURLHandler,
+        ShowPlaylistURLHandler,
         PlaylistURLHandler,
         VideoURLHandler,
         ChannelKeyURLHandler,
@@ -71,33 +79,22 @@ class YouTube(
 
     # TODO: Validate
     @classmethod
-    def __long_domain(cls) -> str:
-        return "youtube.com"
-
-    # TODO: Validate
-    @classmethod
-    def __short_domain(cls) -> str:
-        return "youtu.be"
-
-    # TODO: Validate
-    @classmethod
     @override
     def domains(cls) -> list[str]:
-        return [cls.__long_domain(), cls.__short_domain()]
+        return [LONG_DOMAIN, SHORT_DOMAIN]
 
     # TODO: Validate
     @classmethod
     @override
     def url_regex(cls) -> str:
-        long_domain_regex = cls._regex_escape_domain(cls.__long_domain())
-        short_domain_regex = cls._regex_escape_domain(cls.__short_domain())
+        domain_regex = cls._domain_regex()
         alternatives = "|".join(
             # Strip named groups to non-capturing so handlers that share a group name
             # (e.g. playlist_key) do not collide when the alternatives are combined.
             re.sub(
                 r"\(\?P<[^>]+>",
                 "(?:",
-                handler_class.full_regex(long_domain_regex, short_domain_regex),
+                handler_class.url_regex(domain_regex),
             )
             for handler_class in cls._URL_HANDLERS
         )
@@ -105,11 +102,9 @@ class YouTube(
 
     # TODO: Validate
     def get_url_handler(self, url: str) -> YouTubeURLHandler:
-        long_domain_regex = self._regex_escape_domain(self.__long_domain())
-        short_domain_regex = self._regex_escape_domain(self.__short_domain())
+        domain_regex = self._domain_regex()
         for handler_class in self._URL_HANDLERS:
-            regex = handler_class.full_regex(long_domain_regex, short_domain_regex)
-            if match := re.match(regex, url):
+            if match := re.match(handler_class.url_regex(domain_regex), url):
                 return handler_class(self, url, match)
 
         msg = f"Invalid {self.plugin_key()} URL: {url}"
@@ -194,6 +189,12 @@ class YouTube(
         if is_show_key(playlist_key) and not is_show_season_key(playlist_key):
             return not show.active_children
 
+        # A URL for a Topic channel asks for every release the musician has, which
+        # is the whole show, so nothing is missing once it has been imported with
+        # seasons.
+        if playlist_key == show.key and self.is_topic_channel(show.key):
+            return not show.active_children
+
         # If the playlist being checked is the channel uploads playlist it should only
         # be considered missing if the channel has at least one upload.
         if playlist_key == self.channel_uploads_playlist_key(show.key):
@@ -212,7 +213,11 @@ class YouTube(
         # A season that is a single video has no feed to check for new videos.
         # A season that is a single video, or a season of a show, has no feed to
         # check for new videos, so its page is re-read instead.
-        if is_video_key(season.key) or is_show_season_key(season.key):
+        if (
+            is_video_key(season.key)
+            or is_show_season_key(season.key)
+            or is_music_playlist_key(season.key)
+        ):
             self._download_season_files_and_children(
                 season,
                 update_at=season.update_at,

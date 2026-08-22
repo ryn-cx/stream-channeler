@@ -28,7 +28,7 @@ SERIES_TYPE = "series"
 # TODO: Validate
 @cache
 def nana() -> Nana:
-    """Returns a cached Nana client."""
+    """Return a cached Nana client."""
     return Nana(get_around_client=get_around_client())
 
 
@@ -66,12 +66,12 @@ class FileMixin(BasePlugin, register=False):
 
     # TODO: Validate
     def content_file(self, content_key: str) -> ContentFile:
-        """Returns ContentFile file."""
+        """Return ContentFile file."""
         return self._file(ContentFile, content_key)
 
     # TODO: Validate
     def season_episodes_file(self, episode_key: str) -> SeasonEpisodesFile:
-        """Returns SeasonEpisodesFile file."""
+        """Return SeasonEpisodesFile file."""
         return self._file(SeasonEpisodesFile, episode_key)
 
     # TODO: Validate

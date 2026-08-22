@@ -339,6 +339,16 @@ def _plugin_user_plugin_keys() -> list[str]:
 
 
 # TODO: Validate
+def _specialized_plugin_keys() -> set[str]:
+    """Return the keys of the plugins that have an update run of their own."""
+    return {
+        plugin.plugin_key()
+        for plugin in plugins
+        if getattr(plugin, "SPECIALIZED_UPDATER", False)
+    }
+
+
+# TODO: Validate
 def _next_update_at(session: Session) -> datetime | None:
     """Return the soonest future `update_at` across the plugin user's media, if any.
 
@@ -348,6 +358,7 @@ def _next_update_at(session: Session) -> datetime | None:
     by an item that the update run would skip.
     """
     soonest: datetime | None = None
+    specialized_keys = _specialized_plugin_keys()
     for media_class in MEDIA_CLASSES_IN_ORDER:
         statement = (
             _restrict_to_media_in_channel(
@@ -355,6 +366,7 @@ def _next_update_at(session: Session) -> datetime | None:
                     media_class.select_with_plugin().where(
                         col(media_class.update_at) > tz_datetime.now(),
                         col(media_class.deleted_at).is_(None),
+                        col(Plugin.key).not_in(specialized_keys),
                     ),
                 ),
                 media_class,
@@ -391,12 +403,16 @@ def _seconds_until_next_update() -> float:
 def update_outdated() -> None:
     """Update all outdated entries."""
     plugin_classes_by_key = {plugin.plugin_key(): plugin for plugin in plugins}
+    specialized_keys = _specialized_plugin_keys()
 
     for plugin_key in _plugin_user_plugin_keys():
         plugin_class = plugin_classes_by_key.get(plugin_key)
         if plugin_class is None:
             log_msg = f"[{plugin_key}] No installed plugin matches this database entry"
             logger.error(log_msg)
+            continue
+        # A plugin whose media is updated better by a run of its own is left to it.
+        if plugin_key in specialized_keys:
             continue
         try:
             _update_plugin(plugin_key, plugin_class)

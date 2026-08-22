@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from wampi.title_id import tmdb_movie_title_id, tmdb_tv_title_id
+from wampi.extract_title_id import extract_title_id
 
 from app.media.media_type import MediaType
 from plugins.WatchMode.files import FileMixin
@@ -13,8 +13,8 @@ from plugins.WatchMode.files import FileMixin
 def title_key(media_type: MediaType, tmdb_id: int) -> str:
     """Return the Watchmode title id for a TMDB id."""
     if media_type == MediaType.movie:
-        return tmdb_movie_title_id(tmdb_id)
-    return tmdb_tv_title_id(tmdb_id)
+        return extract_title_id(tmdb_movie_id=tmdb_id)
+    return extract_title_id(tmdb_tv_id=tmdb_id)
 
 
 # TODO: Validate
@@ -37,7 +37,7 @@ class SourcesMixin(FileMixin, register=False):
             return []
 
         urls: list[str] = []
-        for item in listing_file.parsed().root:
-            if item.web_url and item.web_url not in urls:
+        for item in listing_file.parsed().sources:
+            if item.web_url not in urls:
                 urls.append(item.web_url)
         return urls

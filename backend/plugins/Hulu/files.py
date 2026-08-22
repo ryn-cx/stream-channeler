@@ -34,7 +34,7 @@ SERIES_MEDIA_TYPE = "series"
 # TODO: Validate
 @cache
 def wholoo() -> Wholoo:
-    """Returns a cached Wholoo client."""
+    """Return a cached Wholoo client."""
     return Wholoo(get_around_client=get_around_client())
 
 
@@ -92,7 +92,7 @@ class SeasonFile(PartialGAPIJSON[SeasonModel]):
 
     # TODO: Validate
     @override
-    def _get(self) -> SeasonModel:
+    def _fetch(self) -> SeasonModel:
         return self.API_ENDPOINT.download_and_parse(self.series_id, self.season_number)
 
 
@@ -138,27 +138,27 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
 
     # TODO: Validate
     def series_file(self, series_id: str) -> Series:
-        """Returns Series file."""
+        """Return Series file."""
         return self._file(Series, series_id)
 
     # TODO: Validate
     def episode_hub_file(self, episode_id: str) -> EpisodeHub:
-        """Returns EpisodeHub file."""
+        """Return EpisodeHub file."""
         return self._file(EpisodeHub, episode_id)
 
     # TODO: Validate
     def search_file(self, query: str) -> SearchFile:
-        """Returns SearchFile file."""
+        """Return SearchFile file."""
         return self._file(SearchFile, query)
 
     # TODO: Validate
     def movie_file(self, movie_id: str) -> Movie:
-        """Returns Movie file."""
+        """Return Movie file."""
         return self._file(Movie, movie_id)
 
     # TODO: Validate
     def season_file(self, series_id: str, season_number: int) -> SeasonFile:
-        """Returns SeasonFile file."""
+        """Return SeasonFile file."""
         return self._file(SeasonFile, series_id, season_number)
 
     # TODO: Validate

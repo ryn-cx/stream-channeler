@@ -38,10 +38,8 @@ from plugins.utils.base_plugin.files import GAPIJSON, BaseFile, GAPIListJSON
 from plugins.utils.get_around_client import get_around_client
 
 
-# TODO: Validate
 @cache
-def chirashi() -> Chirashi:
-    """Returns a cached Chirashi client."""
+def _chirashi() -> Chirashi:
     return Chirashi(get_around_client=get_around_client())
 
 
@@ -49,7 +47,7 @@ def chirashi() -> Chirashi:
 class Series(GAPIJSON[series_models.SeriesModel]):
     """Data for a show."""
 
-    API_ENDPOINT = chirashi().series
+    API_ENDPOINT = _chirashi().series
 
     # Occurs when a user puts in an invalid series URL.
     # TODO: Validate
@@ -67,7 +65,7 @@ class Series(GAPIJSON[series_models.SeriesModel]):
 class Objects(GAPIJSON[objects_models.ObjectsModel]):
     """Data for an episode."""
 
-    API_ENDPOINT = chirashi().objects
+    API_ENDPOINT = _chirashi().objects
 
     # Occurs when a user puts in an invalid episode URL.
     # TODO: Validate
@@ -85,14 +83,14 @@ class Objects(GAPIJSON[objects_models.ObjectsModel]):
 class Seasons(GAPIJSON[seasons_models.SeasonsModel]):
     """Data for the seasons."""
 
-    API_ENDPOINT = chirashi().seasons
+    API_ENDPOINT = _chirashi().seasons
 
 
 # TODO: Validate
 class SeasonEpisodes(GAPIJSON[episodes_models.SeasonEpisodesModel]):
     """Data for the episodes in a season."""
 
-    API_ENDPOINT = chirashi().season_episodes
+    API_ENDPOINT = _chirashi().season_episodes
 
 
 # TODO: Validate
@@ -100,14 +98,14 @@ class BrowseSeries(GAPIListJSON[browse_series_models.BrowseSeriesModel]):
     """Data for recently aired shows."""
 
     IMMUTABLE = True  # Files are stamped with a datetime
-    API_ENDPOINT = chirashi().browse_series
+    API_ENDPOINT = _chirashi().browse_series
 
     # Use download_and_parse_until_datetime instead of download_and_parse so the new
     # BrowseSeriesModel includes entries up to the previous BrowseSeriesModel.
     # TODO: Validate
     @override
-    def _get(self) -> list[browse_series_models.BrowseSeriesModel]:
-        return chirashi().browse_series.download_and_parse_until_datetime(
+    def _fetch(self) -> list[browse_series_models.BrowseSeriesModel]:
+        return _chirashi().browse_series.download_and_parse_until_datetime(
             end_datetime=self.identifier_datetime(),
         )
 
@@ -116,14 +114,14 @@ class BrowseSeries(GAPIListJSON[browse_series_models.BrowseSeriesModel]):
 class Search(GAPIJSON[search_models.SearchModel]):
     """Data for search results."""
 
-    API_ENDPOINT = chirashi().search
+    API_ENDPOINT = _chirashi().search
 
 
 # TODO: Validate
 class Artist(GAPIJSON[artist_models.ArtistModel]):
     """Data for an artist."""
 
-    API_ENDPOINT = chirashi().artist
+    API_ENDPOINT = _chirashi().artist
 
     # Occurs when a user puts in an invalid artist URL.
     # TODO: Validate
@@ -141,21 +139,21 @@ class Artist(GAPIJSON[artist_models.ArtistModel]):
 class ArtistMusicVideos(GAPIJSON[artist_music_videos_models.ArtistMusicVideosModel]):
     """Data for an artist's music videos."""
 
-    API_ENDPOINT = chirashi().artist_music_videos
+    API_ENDPOINT = _chirashi().artist_music_videos
 
 
 # TODO: Validate
 class ArtistConcerts(GAPIJSON[artist_concerts_models.ArtistConcertsModel]):
     """Data for an artist's concerts."""
 
-    API_ENDPOINT = chirashi().artist_concerts
+    API_ENDPOINT = _chirashi().artist_concerts
 
 
 # TODO: Validate
 class MusicVideo(GAPIJSON[music_video_models.MusicVideoModel]):
     """Data for a music video."""
 
-    API_ENDPOINT = chirashi().music_video
+    API_ENDPOINT = _chirashi().music_video
 
     # Occurs when a user puts in an invalid music video URL.
     # TODO: Validate
@@ -173,7 +171,7 @@ class MusicVideo(GAPIJSON[music_video_models.MusicVideoModel]):
 class Concert(GAPIJSON[concert_models.ConcertModel]):
     """Data for a concert."""
 
-    API_ENDPOINT = chirashi().concert
+    API_ENDPOINT = _chirashi().concert
 
     # Occurs when a user puts in an invalid concert URL.
     # TODO: Validate
@@ -192,13 +190,13 @@ class BrowseMusic(GAPIListJSON[browse_music_models.BrowseMusicModel]):
     """Data for all of the music."""
 
     IMMUTABLE = True
-    API_ENDPOINT = chirashi().browse_music
+    API_ENDPOINT = _chirashi().browse_music
 
     # Music seems to be ordered randomly so downloading all of it is required.
     # TODO: Validate
     @override
-    def _get(self) -> list[browse_music_models.BrowseMusicModel]:
-        return chirashi().browse_music.download_and_parse_all()
+    def _fetch(self) -> list[browse_music_models.BrowseMusicModel]:
+        return _chirashi().browse_music.download_and_parse_all()
 
 
 # TODO: Validate
@@ -209,22 +207,22 @@ class FileMixin(BasePlugin, register=False):
 
     # TODO: Validate
     def series_file(self, show_key: str) -> Series:
-        """Returns data for a show."""
+        """Return data for a show."""
         return self._file(Series, show_key)
 
     # TODO: Validate
     def objects_file(self, episode_key: str) -> Objects:
-        """Returns data for an episode."""
+        """Return data for an episode."""
         return self._file(Objects, episode_key)
 
     # TODO: Validate
     def seasons_file(self, show_key: str) -> Seasons:
-        """Returns data for the seasons."""
+        """Return data for the seasons."""
         return self._file(Seasons, show_key)
 
     # TODO: Validate
     def season_episodes_file(self, season_key: str) -> SeasonEpisodes:
-        """Returns data for the episodes in a season."""
+        """Return data for the episodes in a season."""
         return self._file(SeasonEpisodes, season_key)
 
     # TODO: Validate
@@ -232,29 +230,29 @@ class FileMixin(BasePlugin, register=False):
         self,
         browse: datetime | File | Literal["Initial"],
     ) -> BrowseSeries:
-        """Returns data for recently aired shows."""
+        """Return data for recently aired shows."""
         if isinstance(browse, File):
             browse = BrowseSeries.file_key_to_unique_identifier(browse.key)
         return self._file(BrowseSeries, str(browse))
 
     # TODO: Validate
     def search_file(self, query: str) -> Search:
-        """Returns data for search results."""
+        """Return data for search results."""
         return self._file(Search, query)
 
     # TODO: Validate
     def artist_file(self, artist_id: str) -> Artist:
-        """Returns data for an artist."""
+        """Return data for an artist."""
         return self._file(Artist, artist_id)
 
     # TODO: Validate
     def artist_music_videos_file(self, artist_id: str) -> ArtistMusicVideos:
-        """Returns data for an artist's music videos."""
+        """Return data for an artist's music videos."""
         return self._file(ArtistMusicVideos, artist_id)
 
     # TODO: Validate
     def artist_concerts_file(self, artist_id: str) -> ArtistConcerts:
-        """Returns data for an artist's concerts."""
+        """Return data for an artist's concerts."""
         return self._file(ArtistConcerts, artist_id)
 
     # TODO: Validate
@@ -263,7 +261,7 @@ class FileMixin(BasePlugin, register=False):
         artist_id: str,
         category: MusicCategory,
     ) -> ArtistMusicVideos | ArtistConcerts:
-        """Returns either data for an artist's concerts or music videos.
+        """Return either data for an artist's concerts or music videos.
 
         Concerts and Music Videos are saved in the database as separate seasons. This
         function makes it easier to share code between importing them by dynamically
@@ -275,17 +273,17 @@ class FileMixin(BasePlugin, register=False):
 
     # TODO: Validate
     def music_video_file(self, music_video_id: str) -> MusicVideo:
-        """Returns data for a music video."""
+        """Return data for a music video."""
         return self._file(MusicVideo, music_video_id)
 
     # TODO: Validate
     def concert_file(self, concert_id: str) -> Concert:
-        """Returns data for a concert."""
+        """Return data for a concert."""
         return self._file(Concert, concert_id)
 
     # TODO: Validate
     def concert_or_music_video_file(self, episode_key: str) -> MusicVideo | Concert:
-        """Returns either data for a concert or a music video.
+        """Return either data for a concert or a music video.
 
         Concerts and Music Videos are saved in the database as separate seasons. This
         function makes it easier to share code between importing them by dynamically
@@ -300,21 +298,21 @@ class FileMixin(BasePlugin, register=False):
         self,
         browse: datetime | File | Literal["Initial"],
     ) -> BrowseMusic:
-        """Returns data for all of the music."""
+        """Return data for all of the music."""
         if isinstance(browse, File):
             browse = BrowseMusic.file_key_to_unique_identifier(browse.key)
         return self._file(BrowseMusic, str(browse))
 
     # TODO: Validate
     def find_newest_browse_music_file(self) -> BrowseMusic | None:
-        """Returns newest data for all of the music, or None when there is none."""
+        """Return newest data for all of the music, or None when there is none."""
         if file := self.preload_latest_file(BrowseMusic):
             return self.browse_music_file(file)
         return None
 
     # TODO: Validate
     def get_newest_music_browse_file(self) -> BrowseMusic:
-        """Returns the newest music browse file. Raises if one does not exist."""
+        """Return the newest music browse file. Raises if one does not exist."""
         if file := self.find_newest_browse_music_file():
             return file
 
@@ -323,13 +321,13 @@ class FileMixin(BasePlugin, register=False):
 
     # TODO: Validate
     def _music_source_files(self) -> Sequence[BrowseMusic]:
-        """Returns the `Source` files for Crunchyroll music."""
+        """Return the `Source` files for Crunchyroll music."""
         return [self.get_newest_music_browse_file()]
 
     # TODO: Validate
     @override
     def _source_files(self) -> Sequence[BrowseSeries]:
-        """Returns the `Source` files for Crunchyroll video."""
+        """Return the `Source` files for Crunchyroll video."""
         return [self.get_newest_browse_series_file()]
 
     # TODO: Validate
@@ -428,14 +426,14 @@ class FileMixin(BasePlugin, register=False):
 
     # TODO: Validate
     def find_newest_browse_series_file(self) -> BrowseSeries | None:
-        """Returns newest browse series file or None if one does not exist."""
+        """Return newest browse series file or None if one does not exist."""
         if file := self.preload_latest_file(BrowseSeries):
             return self.browse_series_file(file)
         return None
 
     # TODO: Validate
     def get_newest_browse_series_file(self) -> BrowseSeries:
-        """Returns newest browse series file or raises if one does not exist.
+        """Return newest browse series file or raises if one does not exist.
 
         Raise:
             FileNotFoundError: If no browse series file exists.

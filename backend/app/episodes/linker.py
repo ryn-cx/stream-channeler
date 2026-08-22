@@ -621,13 +621,13 @@ class EpisodeLinker:
 
     # TODO: Validate
     def _alternate_numbers_of(self, tmdb_episode: Episode) -> Collection[int]:
-        """The numbers a TMDB episode carries in TMDB's other orders of its title."""
+        """Return the numbers a TMDB episode carries in TMDB's other orders of its title."""
         return self._alternate_episode_numbers().get(tmdb_episode.id, frozenset())
 
     # TODO: Validate
     @staticmethod
     def _episode_numbering(tmdb_episode: Episode) -> tuple[int, int, int] | None:
-        """What TMDB is asked about one episode by, where it can be asked at all.
+        """Return what TMDB is asked about one episode by, where it can be asked at all.
 
         An episode whose title, season or number is not known is one TMDB has no
         answer for, and says so by having no numbering rather than a partial one.
@@ -726,7 +726,7 @@ class EpisodeLinker:
 
     # TODO: Validate
     def _season_number_of(self, episode: Episode) -> int | None:
-        """The season an episode of either side is filed under."""
+        """Return the season an episode of either side is filed under."""
         return self.season_numbers.get(episode.id)
 
     # TODO: Validate

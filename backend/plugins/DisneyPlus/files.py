@@ -25,7 +25,7 @@ from plugins.utils.get_around_client import get_around_client
 # TODO: Validate
 @cache
 def kneeminus() -> KneeMinus:
-    """Returns a cached KneeMinus client."""
+    """Return a cached KneeMinus client."""
     return KneeMinus(get_around_client=get_around_client())
 
 
@@ -34,7 +34,11 @@ class EntityFile(PartialGAPIJSON[EntityModel]):
     """Entity file."""
 
     API_ENDPOINT = kneeminus().entity
-    ACCEPTABLE_ERROR = "Unexpected response status code: 404"
+
+    # TODO: Validate
+    @override
+    def _get_ACCEPTABLE_ERROR(self) -> str | None:
+        return "Unexpected response status code: 404"
 
     # TODO: Validate
     def __init__(self, session: Session, plugin: Plugin, entity_id: str) -> None:
@@ -44,7 +48,7 @@ class EntityFile(PartialGAPIJSON[EntityModel]):
 
     # TODO: Validate
     @override
-    def _get(self) -> EntityModel:
+    def _fetch(self) -> EntityModel:
         return self.API_ENDPOINT.download_and_parse(UUID(self.entity_id))
 
 
@@ -53,7 +57,11 @@ class SeasonEntityFile(PartialGAPIJSON[EntityModel]):
     """Season entity file."""
 
     API_ENDPOINT = kneeminus().entity
-    ACCEPTABLE_ERROR = "Unexpected response status code: 404"
+
+    # TODO: Validate
+    @override
+    def _get_ACCEPTABLE_ERROR(self) -> str | None:
+        return "Unexpected response status code: 404"
 
     # TODO: Validate
     def __init__(
@@ -70,7 +78,7 @@ class SeasonEntityFile(PartialGAPIJSON[EntityModel]):
 
     # TODO: Validate
     @override
-    def _get(self) -> EntityModel:
+    def _fetch(self) -> EntityModel:
         return self.API_ENDPOINT.download_and_parse(
             UUID(self.entity_id),
             season_id=UUID(self.season_id),
@@ -83,12 +91,12 @@ class FileMixin(BasePlugin, register=False):
 
     # TODO: Validate
     def entity_file(self, entity_id: str) -> EntityFile:
-        """Returns EntityFile file."""
+        """Return EntityFile file."""
         return self._file(EntityFile, entity_id)
 
     # TODO: Validate
     def season_file(self, entity_id: str, season_id: str) -> SeasonEntityFile:
-        """Returns SeasonEntityFile file."""
+        """Return SeasonEntityFile file."""
         return self._file(SeasonEntityFile, entity_id, season_id)
 
     # TODO: Validate

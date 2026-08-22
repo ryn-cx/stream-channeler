@@ -1,3 +1,4 @@
+# TODO: Validate
 [project]
 name = "app"
 version = "0.1.0"
@@ -84,7 +85,7 @@ target-version = "py314"
 exclude = ["alembic"]
 
 [tool.ruff.lint]
-select = ["ALL"]
+select = ["ALL", "D400", "D401", "D404"]
 ignore = [
   # Ignores from the original template
   "E501",  # line too long, handled by black

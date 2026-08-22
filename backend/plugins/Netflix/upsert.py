@@ -216,7 +216,7 @@ class UpsertMixin(HelperMixin, register=False):
 
     # TODO: Validate
     def _upcoming_weekday(self, show_key: str) -> int | None:
-        """The weekday an upcoming episode is scheduled for, or None if none.
+        """Return the weekday an upcoming episode is scheduled for, or None if none.
 
         Netflix surfaces this as a tagline message (e.g. "New Episode Coming
         Thursday"); a title with nothing upcoming has an empty tagline.

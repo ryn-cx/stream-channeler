@@ -6,7 +6,7 @@ from chirashi.browse_series.models import BrowseSeriesModel
 
 from app.sources.models import Source
 from plugins.Crunchyroll import Crunchyroll
-from plugins.Crunchyroll.files import chirashi
+from plugins.Crunchyroll.files import _chirashi
 from tests.old_mess.plugins.crunchyroll.validators import (
     CrunchyrollStandardTests,
     CrunchyrollUpdateSourceTests,
@@ -41,7 +41,7 @@ class CrunchyrollVideoUpdateSourceTest(
         timestamp: datetime,
     ) -> None:
         new_browse = plugin_instance.browse_series_file(timestamp)
-        dumped = chirashi().browse_series.model_dump(parsed)
+        dumped = _chirashi().browse_series.model_dump(parsed)
         new_browse.write(dumped)
         new_browse.database_record.data_timestamp = timestamp
 

@@ -26,7 +26,7 @@ _MOVIE_SEASON_ID = "0"
 # TODO: Validate
 @cache
 def plugi() -> Plugi:
-    """Returns a cached Plugi client."""
+    """Return a cached Plugi client."""
     return Plugi(get_around_client=get_around_client())
 
 

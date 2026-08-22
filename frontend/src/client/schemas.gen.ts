@@ -8373,6 +8373,73 @@ export const UnmatchedEpisodesPublicSchema = {
     description: 'Schema for returning a page of episodes waiting on a TMDB match.'
 } as const;
 
+export const UnmatchedSourceImportSchema = {
+    properties: {
+        url: {
+            type: 'string',
+            minLength: 1,
+            title: 'Url'
+        }
+    },
+    type: 'object',
+    required: ['url'],
+    title: 'UnmatchedSourceImport'
+} as const;
+
+export const UnmatchedSourceOutputSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        provider_name: {
+            type: 'string',
+            title: 'Provider Name'
+        },
+        plugin_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Plugin Key'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        },
+        modified_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Modified At'
+        },
+        show_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Show Id'
+        },
+        show_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Show Name'
+        }
+    },
+    type: 'object',
+    required: ['id', 'provider_name', 'plugin_key', 'created_at', 'modified_at', 'show_id', 'show_name'],
+    title: 'UnmatchedSourceOutput'
+} as const;
+
 export const UpdatePasswordSchema = {
     properties: {
         current_password: {
@@ -8886,6 +8953,27 @@ export const WatchOutputSchema = {
     required: ['watch_date', 'verified', 'id', 'episode_id', 'watch_identifier', 'user_id'],
     title: 'WatchOutput',
     description: 'Schema for returning a `Watch`.'
+} as const;
+
+export const WatchRelinkResultsSchema = {
+    properties: {
+        detached: {
+            type: 'integer',
+            title: 'Detached'
+        },
+        relinked: {
+            type: 'integer',
+            title: 'Relinked'
+        }
+    },
+    type: 'object',
+    required: ['detached', 'relinked'],
+    title: 'WatchRelinkResults',
+    description: `What a relink run found and what it was able to attach.
+
+\`detached\` is every watch that had no episode when the run started, and
+\`relinked\` is how many of them a link to point at was found for. The rest
+name an episode this database does not currently carry a live link to.`
 } as const;
 
 export const WatchUpdateSchema = {

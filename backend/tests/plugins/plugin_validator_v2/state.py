@@ -33,7 +33,7 @@ _ID_SUFFIX = "_id"
 
 # TODO: Validate
 def _children(record: Record) -> list[Any]:
-    """The children of `record` that are worth writing down.
+    """Return the children of `record` that are worth writing down.
 
     A plugin gives every provider it tracks a source whether or not anything was
     imported from it, and an empty one says nothing two runs can compare.
@@ -138,7 +138,7 @@ def _by_key(records: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
 
 # TODO: Validate
 def _canonical_show_keys(show: Show) -> list[str]:
-    """The key of every title `show` is a copy of.
+    """Return the key of every title `show` is a copy of.
 
     A website that files two titles under one listing - a channel whose uploads
     are two series, a service that sells a sequel as another season - is a copy

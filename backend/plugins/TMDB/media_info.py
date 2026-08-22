@@ -1,12 +1,13 @@
 # TODO: Validate
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Protocol, override
 
-from tminidb.movie_details.models import MovieDetailsModel
-from tminidb.movie_watch_providers.models import MovieWatchProvidersModel
-from tminidb.tv_series_details.models import TvSeriesDetailsModel
-from tminidb.tv_watch_providers.models import TvWatchProvidersModel
+from tminidb.movies.models.details import Movie
+from tminidb.movies.models.watch_providers import MovieProviders
+from tminidb.tv_series.models.details import TvSeries
+from tminidb.tv_series.models.watch_providers import TvProviders
 
 from app.media.media_type import MediaType
 from plugins.TMDB.files import (
@@ -17,7 +18,11 @@ from plugins.TMDB.files import (
     release_year,
 )
 from plugins.TMDB.lookup import LookupMixin
-from plugins.utils.abstract_plugin import PluginMediaInfo, PluginWatchProviderItem
+from plugins.utils.abstract_plugin import (
+    AbstractPlugin,
+    PluginMediaInfo,
+    PluginWatchProviderItem,
+)
 from plugins.utils.manage_plugins import sorted_plugins
 
 STREAMING_CATEGORIES = ("flatrate", "free", "ads")
@@ -56,7 +61,7 @@ class MediaInfoMixin(LookupMixin, register=False):
         # Which of the two shapes the detail is has to be read off the file rather
         # than the parsed model, because a model whose module was reloaded after a
         # schema change is no longer an instance of the class imported here.
-        detail: MovieDetailsModel | TvSeriesDetailsModel
+        detail: Movie | TvSeries
         # A title with no poster of its own can still be shown by a poster one of
         # its seasons carries.
         season_poster_path: str | None
@@ -107,28 +112,38 @@ class MediaInfoMixin(LookupMixin, register=False):
 
 
 # TODO: Validate
-def _watch_provider_items(
-    watch_providers: TvWatchProvidersModel | MovieWatchProvidersModel | None,
-    title: str | None,
-) -> list[PluginWatchProviderItem]:
-    if watch_providers is None or not (
-        us := getattr(watch_providers.results, "us", None)
-    ):
+def streaming_providers(
+    watch_providers: TvProviders | MovieProviders | None,
+) -> list[WatchProvider]:
+    if watch_providers is None or not (united_states := watch_providers.results.US):
         return []
 
-    provider_plugins = {
+    providers_by_id: dict[int, WatchProvider] = {}
+    for category in STREAMING_CATEGORIES:
+        providers: Sequence[WatchProvider] = getattr(united_states, category)
+        for provider in providers:
+            providers_by_id.setdefault(provider.provider_id, provider)
+    return list(providers_by_id.values())
+
+
+# TODO: Validate
+def provider_name_plugins() -> dict[str, type[AbstractPlugin]]:
+    return {
         provider_name: plugin_class
         for plugin_class in sorted_plugins()
         for provider_name in plugin_class.TMDB_PROVIDER_NAMES
     }
-    providers_by_id: dict[int, WatchProvider] = {}
-    for category in STREAMING_CATEGORIES:
-        providers: list[WatchProvider] = getattr(us, category, None) or []
-        for provider in providers:
-            providers_by_id.setdefault(provider.provider_id, provider)
+
+
+# TODO: Validate
+def _watch_provider_items(
+    watch_providers: TvProviders | MovieProviders | None,
+    title: str | None,
+) -> list[PluginWatchProviderItem]:
+    provider_plugins = provider_name_plugins()
 
     items: list[PluginWatchProviderItem] = []
-    for provider in providers_by_id.values():
+    for provider in streaming_providers(watch_providers):
         plugin_class = provider_plugins.get(provider.provider_name)
         search_url = (
             plugin_class.search_url(title)

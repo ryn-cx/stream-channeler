@@ -45,7 +45,7 @@ def watch_names(
 
 # TODO: Validate
 def watched_canonical_ids(user_id: uuid.UUID) -> SelectOfScalar[uuid.UUID]:
-    """The canonical episodes the `User` has any watch of."""
+    """Return the canonical episodes the `User` has any watch of."""
     watched_episode = aliased(Episode)
     watched_link = canonical_episode_link()
     return (
@@ -111,7 +111,7 @@ def watched_dates_by_canonical_id(
     user_id: uuid.UUID,
     canonical_ids: Collection[uuid.UUID],
 ) -> dict[uuid.UUID, list[datetime]]:
-    """The `User`'s watch dates for each of `canonical_ids`.
+    """Return the `User`'s watch dates for each of `canonical_ids`.
 
     Every link to the episode answers for it, so a date recorded against one
     website's link is a date the episode was watched on wherever it is asked

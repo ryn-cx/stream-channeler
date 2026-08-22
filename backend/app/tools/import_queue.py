@@ -29,6 +29,7 @@ from app.episodes.models import Episode
 from app.log import configure_logging
 from app.seasons.models import Season
 from app.shows.models import Show, ShowCanonicalShow
+from app.tools.local_test_files import serve_downloads_from_test_files
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
@@ -56,10 +57,11 @@ def run_forever(stop_event: threading.Event | None = None) -> None:  # noqa: D10
 # TODO: Validate
 def import_queue(session: Session) -> None:
     """Actually import the queue in separate threads for each plugin."""
-    for plugin_class, items in _group_pending_urls_by_plugin(session).items():
-        with PLUGIN_LOCKS[plugin_class.plugin_key()]:
-            for item in items:
-                _import_one(session, item, plugin_class)
+    with serve_downloads_from_test_files():
+        for plugin_class, items in _group_pending_urls_by_plugin(session).items():
+            with PLUGIN_LOCKS[plugin_class.plugin_key()]:
+                for item in items:
+                    _import_one(session, item, plugin_class)
 
 
 # TODO: Validate
@@ -217,7 +219,7 @@ class _CanonicalIds:
         season_keys: Collection[str],
         canonical_show_id: UUID,
     ) -> set[UUID]:
-        """The seasons `season_keys` name that belong to `canonical_show_id`."""
+        """Return the seasons `season_keys` name that belong to `canonical_show_id`."""
         return {
             canonical_id
             for key in season_keys
@@ -231,7 +233,7 @@ class _CanonicalIds:
         episode_keys: Collection[str],
         canonical_show_id: UUID,
     ) -> set[UUID]:
-        """The episodes `episode_keys` name that belong to `canonical_show_id`."""
+        """Return the episodes `episode_keys` name that belong to `canonical_show_id`."""
         return {
             canonical_id
             for key in episode_keys
@@ -408,6 +410,8 @@ def _update_channel_show(
         episodes = blacklisted_episodes | result_episodes
 
     existing_channel_show.is_whitelist = result.is_whitelist
+    if was_whitelist != result.is_whitelist:
+        _drop_filters(session, existing_channel_show, seasons, episodes)
     _merge_filters(existing_channel_show, seasons, episodes)
 
 
@@ -426,6 +430,21 @@ def _seasons_for_episodes(
         ).where(col(Episode.id).in_(canonical_episode_ids)),
     ).all()
     return dict(rows)
+
+
+# TODO: Validate
+def _drop_filters(
+    session: Session,
+    channel_show: ChannelShow,
+    season_ids: set[UUID],
+    canonical_episode_ids: set[UUID],
+) -> None:
+    for season_filter in channel_show.season_filters:
+        if season_filter.season_id not in season_ids:
+            session.delete(season_filter)
+    for episode_filter in channel_show.episode_filters:
+        if episode_filter.canonical_episode_id not in canonical_episode_ids:
+            session.delete(episode_filter)
 
 
 # TODO: Validate

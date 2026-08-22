@@ -5,7 +5,16 @@ from abc import ABC, abstractmethod
 from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Any, ClassVar, Final, Protocol, final, overload, override
+from typing import (
+    Any,
+    ClassVar,
+    Final,
+    Protocol,
+    final,
+    get_args,
+    overload,
+    override,
+)
 from xml.etree.ElementTree import Element, fromstring
 
 from bs4 import BeautifulSoup
@@ -80,7 +89,9 @@ class BaseFile[T](ABC):
         """
         record = self._existing_database_record
         if record is None:
-            msg = f"{self.__class__.__name__}/{self.file_key()} has not been downloaded."
+            msg = (
+                f"{self.__class__.__name__}/{self.file_key()} has not been downloaded."
+            )
             raise ValueError(msg)
         return record
 
@@ -347,12 +358,16 @@ class HTMLFile(BaseFile[BeautifulSoup], ABC):
 
 
 # TODO: Validate
-class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
+class ResponseModel(Protocol):
+    # TODO: Validate
+    @property
+    # ANN401 - What a response was read out of is whatever the endpoint served.
+    def raw(self) -> Any: ...  # noqa: ANN401
+
+
+# TODO: Validate
+class EndpointJSON[T](JSONFile[T], ABC):
     API_ENDPOINT: ClassVar[Any]
-
-    ACCEPTABLE_ERROR: str | None = None
-
-    PARSE_LEVEL: ClassVar[ParseLevel] = ParseLevel.UPDATE
 
     # TODO: Validate
     def __init__(
@@ -365,14 +380,9 @@ class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
         super().__init__(session, plugin)
 
     # TODO: Validate
-    @override
-    def _parse(self, raw: Any) -> T:
-        return self.API_ENDPOINT.parse(raw, level=self.PARSE_LEVEL)  # type: ignore[no-any-return]
-
-    # TODO: Validate
     @abstractmethod
-    def _get(self) -> T:
-        """Call the appropriate get method on the API endpoint."""
+    def _fetch(self) -> T:
+        """Fetch the data from the API."""
 
     # TODO: Validate
     def _get_ACCEPTABLE_ERROR(self) -> str | None:
@@ -380,7 +390,7 @@ class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
 
         Override this for dynamic error messages that depend on instance state.
         """
-        return self.ACCEPTABLE_ERROR
+        return None
 
     # TODO: Validate
     def _is_acceptable_error(self, error: Exception) -> bool:
@@ -394,11 +404,44 @@ class PartialGAPIJSON[T = BaseModel](JSONFile[T], ABC):
     def acceptable_error_extra_value(self) -> str:
         return f"Invalid unique_identifier {self.unique_identifier}"
 
+
+# TODO: Validate
+class ResponseJSON[T: ResponseModel](EndpointJSON[T], ABC):
     # TODO: Validate
+    @override
+    def _parse(self, raw: Any) -> T:
+        model: Any = get_args(type(self).__orig_bases__[0])[0]  # type: ignore[attr-defined]
+        return model.from_response(raw)  # type: ignore[no-any-return]
+
+    # TODO: Validate
+    @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
             try:
-                response = self._get()
+                response = self._fetch()
+            except Exception as error:
+                if not self._is_acceptable_error(error):
+                    raise
+                self.write(None, self.acceptable_error_extra_value())
+            else:
+                self.write(response.raw)
+
+
+# TODO: Deprecate and remove
+class PartialGAPIJSON[T = BaseModel](EndpointJSON[T], ABC):
+    PARSE_LEVEL: ClassVar[ParseLevel] = ParseLevel.UPDATE
+
+    # TODO: Validate
+    @override
+    def _parse(self, raw: Any) -> T:
+        return self.API_ENDPOINT.parse(raw, level=self.PARSE_LEVEL)  # type: ignore[no-any-return]
+
+    # TODO: Validate
+    @override
+    def _download(self) -> None:
+        with self._log_download(self.unique_identifier):
+            try:
+                response = self._fetch()
                 content = self.API_ENDPOINT.original_input(response)
                 self.write(content)
             except Exception as e:
@@ -455,7 +498,7 @@ class GAPIJSON[T: BaseModel](PartialGAPIJSON[T], ABC):
 
     # TODO: Validate
     @override
-    def _get(self) -> T:
+    def _fetch(self) -> T:
         """Call the appropriate get method on the API endpoint."""
         return self.API_ENDPOINT.download_and_parse(self.unique_identifier)
 

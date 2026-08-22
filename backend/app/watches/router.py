@@ -1,9 +1,13 @@
 # TODO: Validate
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
 
-from app.auth.dependencies import CurrentUser, SessionDep
+from app.auth.dependencies import (
+    CurrentUser,
+    SessionDep,
+    get_current_active_superuser,
+)
 from app.episodes.dependencies import ReadableEpisode
 from app.schemas import Message, ReadOptions
 from app.watches import services
@@ -16,12 +20,14 @@ from app.watches.schemas import (
     WatchImportInput,
     WatchImportResults,
     WatchOutput,
+    WatchRelinkResults,
     WatchUpdate,
 )
 from app.watches.services import (
     delete_watches,
     get_installed_plugin,
     get_watched_episodes,
+    relink_detached_watches,
 )
 from plugins.StreamChanneler import StreamChanneler
 
@@ -119,6 +125,16 @@ def export_watch_history(
 ) -> list[WatchExportEntry]:
     """Export the `User`'s watches as a Stream Channeler watch history."""
     return StreamChanneler(session=session).export_watch_history(current_user)
+
+
+# TODO: Validate
+@watches_router.post(
+    "/relink",
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def admin_relink_watches(session: SessionDep) -> WatchRelinkResults:
+    """Point every watch left without an episode back at one."""
+    return relink_detached_watches(session)
 
 
 router = APIRouter()

@@ -41,7 +41,7 @@ def _build_duplicated_channel(
     session: Session,
     user: User,
 ) -> tuple[Channel, dict[str, Show]]:
-    """A channel with the same episode imported from two installed sources."""
+    """Build a channel with the same episode imported from two installed sources."""
     channel = create_random_channel(session, user, is_public=False)
     plugin_user = user_service.get_or_create_plugin_user(session=session)
     # The one episode both sources carry a copy of. Made up front so the two

@@ -201,7 +201,7 @@ def _log_flamegraph(stats_directory: Path) -> Generator[None]:
 # TODO: Validate
 @contextmanager
 def log_stats(plugin_validator: PluginValidatorV2[Any]) -> Generator[None]:
-    """Combined context manager for all stats logging.
+    """Combine all of the stats logging into one context manager.
 
     Held outside whatever the test freezes the clock for, because a frozen clock
     is what the timer reads too and a run measured against one takes no time at

@@ -207,7 +207,7 @@ def _log_flamegraph(stats_directory: Path) -> Generator[None]:
 # TODO: Validate
 @contextmanager
 def log_stats(plugin_validator: PluginValidator[Any]) -> Generator[None]:
-    """Combined context manager for all stats logging."""
+    """Combine all of the stats logging into one context manager."""
     label = next(
         fi.function.removeprefix("test_")
         for fi in inspect.stack()

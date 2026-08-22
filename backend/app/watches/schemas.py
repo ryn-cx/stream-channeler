@@ -98,6 +98,19 @@ class WatchImportResults(BaseModel):
 
 
 # TODO: Validate
+class WatchRelinkResults(BaseModel):
+    """What a relink run found and what it was able to attach.
+
+    `detached` is every watch that had no episode when the run started, and
+    `relinked` is how many of them a link to point at was found for. The rest
+    name an episode this database does not currently carry a live link to.
+    """
+
+    detached: int
+    relinked: int
+
+
+# TODO: Validate
 class WatchExportEntry(BaseModel):
     """Schema for a single exported `Watch`.
 

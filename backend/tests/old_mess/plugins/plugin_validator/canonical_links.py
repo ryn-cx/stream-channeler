@@ -11,7 +11,7 @@ SEPARATOR = " > "
 
 # TODO: Validate
 def _show_canonical_keys(show: Show) -> list[str]:
-    """The key of every title `show` is a copy of."""
+    """Return the key of every title `show` is a copy of."""
     return sorted({link.canonical_show.key for link in show.canonical_show_links})
 
 

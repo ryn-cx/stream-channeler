@@ -1382,7 +1382,8 @@ class TestRecentlyAiredGroupByShow:
         self,
         session_scoped_session: Session,
     ) -> None:
-        """Interleaving by show with group_by_show recently_aired sort should:
+        """Interleave by show with group_by_show recently_aired sort.
+
         1. Group shows by recently aired status (not-recent first when ascending)
         2. Interleave episodes across shows within each group
         3. Sort by duration descending within each show's episodes

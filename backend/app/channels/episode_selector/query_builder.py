@@ -152,7 +152,7 @@ class EpisodeQueryBuilder:
     def _filter_channel_options(
         self,
     ) -> None:
-        """Removes channel options that require the user to be logged in if they are not logged in."""
+        """Remove channel options that require the user to be logged in if they are not logged in."""
         if not self._user:
             self._channel_options.sort_by = [
                 sort_key
@@ -605,7 +605,7 @@ class EpisodeQueryBuilder:
 
     # TODO: Validate
     def _result_limit(self) -> int:
-        """The number of episodes to return after deduplication."""
+        """Return the number of episodes to keep after deduplication."""
         user_limit = self._channel_options.limit
         return min(user_limit or MAX_EPISODES_RETURNED, MAX_EPISODES_RETURNED)
 
@@ -639,7 +639,7 @@ class EpisodeQueryBuilder:
 
     # TODO: Validate
     def _source_rank_columns(self) -> list[ColumnElement[Any]]:
-        """The source ranking, left out when the channel has nothing to collapse."""
+        """Return the source ranking, left out when the channel has nothing to collapse."""
         if not self._holds_copied_titles:
             return []
         return [self._source_rank_column()]
@@ -687,7 +687,7 @@ class EpisodeQueryBuilder:
         fuzzy_labels: dict[int, str],
         directeds: list[UnaryExpression[Any] | ColumnElement[Any]],
     ) -> Subquery:
-        """Number the sort values a fuzzy key holds so its jitter has ranks to move."""
+        """Order the sort values a fuzzy key holds so its jitter has ranks to move."""
         extra_columns: list[ColumnElement[Any]] = [
             func.dense_rank().over(order_by=directeds[index]).label(label)
             for index, label in fuzzy_labels.items()

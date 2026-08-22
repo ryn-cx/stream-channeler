@@ -22,8 +22,8 @@ class URLHandler[PluginT](ABC):
 
     # TODO: Validate
     @classmethod
-    def _url_regex(cls, domain_regex: str) -> str:
-        """Returns the full URL regex for the handler."""
+    def url_regex(cls, domain_regex: str) -> str:
+        """Return the full URL regex for the handler."""
         return domain_regex + cls._URL_REGEX
 
     # TODO: Validate
@@ -35,7 +35,7 @@ class URLHandler[PluginT](ABC):
     # TODO: Validate
     @abstractmethod
     def raise_if_invalid(self) -> None:
-        """Raises an exception if the URL is invalid."""
+        """Raise an exception if the URL is invalid."""
 
     # TODO: Validate
     def import_results(self, show: Show) -> list[URLImportResult]:

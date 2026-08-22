@@ -6,9 +6,15 @@ from app.media.media_type import MediaType
 from app.sources.models import Source
 from plugins.YouTube.files import (
     FileMixin,
+    is_channel_key,
+    is_free_movies_channel,
+    is_music_playlist_key,
     is_show_season_key,
     is_video_key,
 )
+
+FREE_SOURCE_KEY = "YouTube Free Movies & Shows"
+PAID_SOURCE_KEY = "YouTube Paid Movies & Shows"
 
 
 # TODO: Validate
@@ -16,6 +22,44 @@ class HelperMixin(FileMixin, register=False):
     # TODO: Validate
     def record_album_playlist_key(self, playlist_key: str) -> None:
         self._importing_album_playlist_key = playlist_key
+
+    # TODO: Validate
+    @override
+    def soft_delete_missing_seasons(self, show_key: str) -> None:
+        return
+
+    # TODO: Validate
+    @property
+    def free_source(self) -> Source:
+        return self._source_record(FREE_SOURCE_KEY)
+
+    # TODO: Validate
+    @property
+    def paid_source(self) -> Source:
+        return self._source_record(PAID_SOURCE_KEY)
+
+    # TODO: Validate
+    def show_channel_key(self, show_key: str) -> str | None:
+        # A show says nothing about who owns it, so what owns it is read off one of
+        # its videos, every one of which is owned by whoever the show is.
+        if is_channel_key(show_key):
+            return show_key
+        if is_video_key(show_key):
+            episode_key = show_key
+        else:
+            episode_keys = self.show_episode_keys(show_key)
+            if not episode_keys:
+                return None
+            episode_key = episode_keys[0]
+        items = self.videos_file(episode_key).parsed().items
+        return items[0].snippet.channel_id if items else None
+
+    # TODO: Validate
+    def paid_or_free_source(self, show_key: str) -> Source:
+        channel_key = self.show_channel_key(show_key)
+        if channel_key is not None and is_free_movies_channel(channel_key):
+            return self.free_source
+        return self.paid_source
 
     # TODO: Validate
     def tmdb_media_type(self, show_key: str) -> MediaType:
@@ -28,33 +72,12 @@ class HelperMixin(FileMixin, register=False):
         season_key: str,
         show_key: str,
     ) -> int | None:
-        if not is_show_season_key(season_key):
+        if not (is_show_season_key(season_key) or is_music_playlist_key(season_key)):
             return None
         episode_keys = self._season_episode_keys(season_key)
         if episode_key not in episode_keys:
             return None
         return episode_keys.index(episode_key) + 1
-
-    # TODO: Validate
-    def _standalone_video_source(self, channel_key: str, channel_name: str) -> Source:
-        """Return the `Source` for videos that are imported one video at a time.
-
-        A channel whose videos are imported individually holds licensed titles rather
-        than the uploads of a creator, so it gets a `Source` of its own.
-        """
-        source_key = f"{self.plugin_key()}:{channel_key}"
-        # TODO: THIS IS AI BULLSHIT
-        # Looked up against the database rather than only the session, because a
-        # channel gets a source the first time one of its videos is imported and
-        # nothing loads that source into a later session before this reads it.
-        source = Source.get(self.session, self.plugin, source_key)
-        return Source(
-            key=source_key,
-            name=channel_name,
-            favicon_url=self.FAVICON_URL,
-            data_timestamp=self._existing_data_timestamp_or_now(source),
-            plugin_id=self.plugin.id,
-        ).upsert_and_set_update_at(self.plugin, source)
 
     # TODO: Validate
     def _channel_has_only_uploads(self, show_key: str) -> bool:

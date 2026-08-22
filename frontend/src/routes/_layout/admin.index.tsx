@@ -7,10 +7,12 @@ import {
   Link2,
   ListOrdered,
   Radio,
+  SearchX,
   Tv,
   Unlock,
   Users,
 } from "lucide-react"
+import { RelinkWatchesButton } from "@/components/Admin/RelinkWatchesButton"
 import { PageHeader } from "@/components/Common/PageHeader"
 import {
   Card,
@@ -34,7 +36,9 @@ export const Route = createFileRoute("/_layout/admin/")({
 function AdminIndex() {
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Admin" />
+      <PageHeader title="Admin">
+        <RelinkWatchesButton />
+      </PageHeader>
       <div className="grid grid-cols-1 gap-4 px-[4%] sm:grid-cols-2">
         <Link to="/admin/channels" className="block">
           <Card className="h-full transition-colors hover:border-primary">
@@ -130,6 +134,20 @@ function AdminIndex() {
               <CardDescription>
                 Every episode no TMDB record was found for, beside the closest
                 TMDB episode, to be approved or replaced by hand.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/unmatched-sources" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <SearchX className="size-5" />
+                Unmatched Sources
+              </CardTitle>
+              <CardDescription>
+                Every service TMDB lists a title on that neither Watchmode nor a
+                plugin search reached, to be given a URL by hand.
               </CardDescription>
             </CardHeader>
           </Card>

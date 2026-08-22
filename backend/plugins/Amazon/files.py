@@ -69,18 +69,6 @@ _GRID_CONTAINER_TYPE = "Grid"
 # TODO: Validate
 @cache
 def deforestation() -> Deforestation:
-    """Returns a cached Deforestation client.
-
-    Read out of Prime Video's own marketplace rather than out of Amazon's,
-    because a title is named by an id of one of two kinds and only this one
-    answers for both: Amazon's own marketplace answers a link written with the
-    id Prime Video writes by pointing at the id it uses itself instead.
-
-    North America is named rather than left to be worked out, because a page
-    asked for without a region is answered by pointing at the same page under
-    whichever region the request came from, and which region that is depends on
-    where this is running.
-    """
     return Deforestation(
         get_around_client=get_around_client(),
         host=MARKETPLACES["ROW"],
@@ -632,17 +620,17 @@ class FileMixin(BasePlugin, register=False):
 
     # TODO: Validate
     def detail_file(self, title_key: str) -> Detail:
-        """Returns data for a title."""
+        """Return data for a title."""
         return self._file(Detail, title_key)
 
     # TODO: Validate
     def share_link_file(self, share_key: str) -> ShareLinkRedirect:
-        """Returns where the share link written with `share_key` points."""
+        """Return where the share link written with `share_key` points."""
         return self._file(ShareLinkRedirect, share_key)
 
     # TODO: Validate
     def search_file(self, query: str) -> Search:
-        """Returns data for search results."""
+        """Return data for search results."""
         return self._file(Search, query)
 
     # TODO: Validate

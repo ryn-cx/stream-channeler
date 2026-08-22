@@ -48,7 +48,7 @@ _PAGE_HEADERS = {
 # TODO: Validate
 @cache
 def trivial_minus() -> TrivialMinus:
-    """Returns a cached TrivialMinus client."""
+    """Return a cached TrivialMinus client."""
     return TrivialMinus(get_around_client=get_around_client())
 
 
@@ -138,7 +138,7 @@ class EpisodesFile(PartialGAPIJSON[EpisodesModel]):
 
     # TODO: Validate
     @override
-    def _get(self) -> EpisodesModel:
+    def _fetch(self) -> EpisodesModel:
         return self.API_ENDPOINT.download_and_parse(
             self.show_id,
             season=self.season_number,
@@ -168,17 +168,17 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
 
     # TODO: Validate
     def show_page_file(self, show_id: str) -> ShowPage:
-        """Returns ShowPage file."""
+        """Return ShowPage file."""
         return self._file(ShowPage, show_id)
 
     # TODO: Validate
     def episodes_file(self, show_id: str, season_number: int) -> EpisodesFile:
-        """Returns EpisodesFile file."""
+        """Return EpisodesFile file."""
         return self._file(EpisodesFile, show_id, season_number)
 
     # TODO: Validate
     def movie_file(self, movie_id: str) -> MovieFile:
-        """Returns MovieFile file."""
+        """Return MovieFile file."""
         return self._file(MovieFile, movie_id)
 
     # TODO: Validate
