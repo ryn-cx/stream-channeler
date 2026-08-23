@@ -29,51 +29,85 @@ class TMDBValidatorAlt(PluginValidatorAlt[TMDB]):
     )
 
 
+
 # TODO: Validate
-class TestTV1(
+class TestTVShow(
     URLTestsAlt[TMDB],
     UpdatePluginTestsAlt[TMDB],
     UpdateTestsAlt[TMDB],
     TMDBValidatorAlt,
 ):
-    """Tests a TV series.
-
-    The series is available on Crunchyroll, Amazon Prime Video Purchase, and Crunchyroll
-    on Amazon Prime Video.
-
-    Episodes also need to be matched across multiple episode groups."""
-
     media_type = "tv"
-    parse_url_response = "30991"
-    show_slug = "cowboy-bebop"
-    urls = (
-        *TMDBValidatorAlt.urls,
-        # Only a show has seasons, so the page listing them is a sub-page a
-        # movie's URLs cannot carry.
-        "/{media_type}/{parse_url_response}/seasons?language=en-US",
-    )
-
-
-# TODO: Validate
-class TestTV2(
-    URLTestsAlt[TMDB],
-    UpdatePluginTestsAlt[TMDB],
-    UpdateTestsAlt[TMDB],
-    TMDBValidatorAlt,
-):
-    """Tests a TV series.
-
-    The series is available on Crunchyroll, Hulu, Netflix, and Crunchyroll on Amazon
-    Prime Video.
-    """
-
-    media_type = "tv"
-    parse_url_response = "57041"
-    show_slug = "gintama"
+    parse_url_response = "107113"
+    show_slug = "only-murders-in-the-building"
     urls = (
         *TMDBValidatorAlt.urls,
         "/{media_type}/{parse_url_response}/seasons?language=en-US",
     )
+
+
+
+# # TODO: Validate
+# class TestTV1(
+#     URLTestsAlt[TMDB],
+#     UpdatePluginTestsAlt[TMDB],
+#     UpdateTestsAlt[TMDB],
+#     TMDBValidatorAlt,
+# ):
+#     """Tests a TV series.
+
+#     The series is available on Crunchyroll, Amazon Prime Video Purchase, and Crunchyroll
+#     on Amazon Prime Video.
+
+#     Episodes also need to be matched across multiple episode groups."""
+
+#     media_type = "tv"
+#     parse_url_response = "30991"
+#     show_slug = "cowboy-bebop"
+#     urls = (
+#         *TMDBValidatorAlt.urls,
+#         # Only a show has seasons, so the page listing them is a sub-page a
+#         # movie's URLs cannot carry.
+#         "/{media_type}/{parse_url_response}/seasons?language=en-US",
+#     )
+
+
+# # TODO: Validate
+# class TestTV2(
+#     URLTestsAlt[TMDB],
+#     UpdatePluginTestsAlt[TMDB],
+#     UpdateTestsAlt[TMDB],
+#     TMDBValidatorAlt,
+# ):
+#     """Tests a TV series.
+
+#     The series is available on Crunchyroll, Hulu, Netflix, and Crunchyroll on Amazon
+#     Prime Video.
+#     """
+
+#     media_type = "tv"
+#     parse_url_response = "57041"
+#     show_slug = "gintama"
+#     urls = (
+#         *TMDBValidatorAlt.urls,
+#         "/{media_type}/{parse_url_response}/seasons?language=en-US",
+#     )
+
+
+# # TODO: Validate
+# class TestTV3(
+#     URLTestsAlt[TMDB],
+#     UpdatePluginTestsAlt[TMDB],
+#     UpdateTestsAlt[TMDB],
+#     TMDBValidatorAlt,
+# ):
+#     media_type = "tv"
+#     parse_url_response = "107113"
+#     show_slug = "only-murders-in-the-building"
+#     urls = (
+#         *TMDBValidatorAlt.urls,
+#         "/{media_type}/{parse_url_response}/seasons?language=en-US",
+#     )
 
 
 # # TODO: Validate

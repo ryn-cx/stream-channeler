@@ -1,8 +1,9 @@
 # TODO: Validate
 
 import re
-from difflib import SequenceMatcher
 from functools import lru_cache
+
+from rapidfuzz import fuzz
 
 from app.episodes import name_forms
 
@@ -77,7 +78,7 @@ def similarity(name: str | None, other_name: str | None) -> float:
     if stripped == other_stripped:
         return 1.0
 
-    ratio = SequenceMatcher(None, stripped, other_stripped).ratio()
+    ratio = fuzz.ratio(stripped, other_stripped) / 100
     if stripped not in other_stripped and other_stripped not in stripped:
         return ratio
 
