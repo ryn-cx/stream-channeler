@@ -91,33 +91,35 @@ class ImportURLMixin(
         the title the same way they list one that streams it, and an address
         like that is a shop page rather than a listing anything watches.
         """
-        imported: set[type[AbstractPlugin]] = set()
-        for url in self._listed_source_urls(show_key):
-            plugin_class = plugin_for_url(url)
-            if plugin_class is None:
-                continue
-            try:
-                plugin_class(self.session).import_url(url, show, force=force)
-            except InvalidURLError:
-                logger.info("Nothing to import at {}", url)
-                continue
-            imported.add(plugin_class)
+        media_type, tmdb_id = parse_show_key(show_key)
+        providers = streaming_providers(
+            self.auto_updating_watch_providers(media_type, tmdb_id).parsed(),
+        )
 
-        self._import_searched_sources(show_key, show, imported, force=force)
+        imported: set[type[AbstractPlugin]] = set()
+        if providers:
+            for url in self._listed_source_urls(show_key):
+                plugin_class = plugin_for_url(url)
+                if plugin_class is None:
+                    continue
+                try:
+                    plugin_class(self.session).import_url(url, show, force=force)
+                except InvalidURLError:
+                    logger.info("Nothing to import at {}", url)
+                    continue
+                imported.add(plugin_class)
+
+        self._import_searched_sources(providers, show, imported, force=force)
 
     # TODO: Validate
     def _import_searched_sources(
         self,
-        show_key: str,
+        providers: list[dict[str, Any]],
         show: Show,
         imported: set[type[AbstractPlugin]],
         *,
         force: bool = False,
     ) -> None:
-        media_type, tmdb_id = parse_show_key(show_key)
-        providers = streaming_providers(
-            self.auto_updating_watch_providers(media_type, tmdb_id).parsed(),
-        )
         for provider in providers:
             plugin_class = plugin_for_tmdb_name(provider["provider_name"])
             if plugin_class in imported or self._import_searched_source(
