@@ -323,6 +323,7 @@ def _unmatched_base() -> SelectOfScalar[Episode]:
             # and YouTube's are nothing TMDB carries, so neither is waiting on a
             # match the way the rest are.
             col(Plugin.key).not_in((TMDB_PLUGIN_KEY, YOUTUBE_PLUGIN_KEY)),
+            col(Source.key) != "Crunchyroll Music",
             is_canonical(Episode),
             # An episode settled as one TMDB has no record of points at nothing
             # and is locked there, which reads as canonical the same way one
