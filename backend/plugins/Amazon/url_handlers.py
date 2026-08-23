@@ -26,19 +26,27 @@ class AmazonURLHandler(URLHandler["Amazon"]):
     def __init__(self, plugin: Amazon, url: str, key: str) -> None:
         """Initialize the URL handler."""
         self._key = key
+        self._redirected_key: str | None = None
         super().__init__(plugin, url)
+
+    # TODO: Validate
+    @property
+    def title_key(self) -> str:
+        if self._redirected_key is None:
+            self._redirected_key = self.plugin.title_key_from_redirect(self._key)
+        return self._redirected_key
 
     # TODO: Validate
     @property
     @override
     def show_key(self) -> str:
-        return self.plugin.show_key_from_title_key(self._key)
+        return self.plugin.show_key_from_title_key(self.title_key)
 
     # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
-            self.plugin.detail_file(self._key),
+            self.plugin.detail_file(self.title_key),
             self.url,
         )
 

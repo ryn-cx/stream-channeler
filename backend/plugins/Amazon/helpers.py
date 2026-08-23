@@ -7,6 +7,8 @@ import re
 from typing import override
 from urllib.parse import quote_plus
 
+from deforestation.exceptions import RedirectedError
+
 from plugins.Amazon.files import FileMixin
 from plugins.utils.abstract_plugin import InvalidURLError
 
@@ -47,6 +49,21 @@ class HelperMixin(FileMixin, register=False):
             msg = f"Amazon share link {share_key} points at no title: {location!r}"
             raise InvalidURLError(msg)
         return found[1]
+
+    # TODO: Validate
+    def title_key_from_redirect(self, title_key: str) -> str:
+        try:
+            self.detail_file(title_key).download_if_outdated()
+        except RedirectedError as error:
+            found = _REDIRECT_TITLE_KEY.search(error.location)
+            if found is None:
+                msg = (
+                    f"Amazon title {title_key} points at no title: "
+                    f"{error.location!r}"
+                )
+                raise InvalidURLError(msg) from error
+            return found[1]
+        return title_key
 
     # TODO: Validate
     def show_key_from_title_key(self, title_key: str) -> str:
