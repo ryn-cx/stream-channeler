@@ -166,6 +166,10 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
           form.setValue("canonical_episode_locked", true)
           form.setValue("canonical_episode_note", VERIFIED_NOTE)
         }}
+        onLinked={() => {
+          form.setValue("canonical_episode_locked", true)
+          form.setValue("canonical_episode_note", "Manual: Selection")
+        }}
       />
 
       {/*

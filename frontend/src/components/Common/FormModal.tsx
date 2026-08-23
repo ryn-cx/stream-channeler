@@ -67,7 +67,10 @@ export function FormModal<
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {trigger}
-      <ModalContent size={size} className="overflow-y-hidden">
+      <ModalContent
+        size={size}
+        className="max-h-[calc(100dvh-2rem)] overflow-y-hidden"
+      >
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
@@ -79,7 +82,9 @@ export function FormModal<
                 <DialogDescription>{description}</DialogDescription>
               ) : null}
             </DialogHeader>
-            <DialogBody className="grid gap-4 py-4">{children}</DialogBody>
+            <DialogBody className="max-h-none min-h-0 flex-1">
+              <div className="grid gap-4 py-4">{children}</div>
+            </DialogBody>
             <ModalFooter
               isPending={isPending}
               submitLabel={submitLabel}

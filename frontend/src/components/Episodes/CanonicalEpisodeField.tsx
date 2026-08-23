@@ -25,6 +25,7 @@ interface CanonicalEpisodeFieldProps {
   /** Called once the links have been settled, so a form holding the row's own
    * copy of the lock can be brought in line with what was just written. */
   onVerified?: () => void
+  onLinked?: () => void
 }
 
 // TODO: Validate
@@ -72,6 +73,7 @@ export function CanonicalEpisodeField({
   canonicalEpisodeLocked,
   enabled,
   onVerified,
+  onLinked,
 }: CanonicalEpisodeFieldProps) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
@@ -188,6 +190,7 @@ export function CanonicalEpisodeField({
           seasonNumber={seasonNumber}
           episodeNumber={episodeNumber}
           informationQueryKey={["episodes"]}
+          onLinked={onLinked}
         />
       ) : null}
     </div>
