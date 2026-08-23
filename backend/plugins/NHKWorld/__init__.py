@@ -29,7 +29,7 @@ class NHKWorld(
     SearchMixin,
     MediaInfoMixin,
     URLHandlerPlugin[NHKWorldURLHandler],
-    register=False,
+    register=True,
 ):
     _VERSION = "0.0.1"
 
@@ -86,7 +86,7 @@ class NHKWorld(
         in_flight.add(show_key)
         try:
             return TMDB(self.session).import_search(
-                self.video_program_file(show_key).parsed().title,
+                self.video_program_file(show_key).parsed()["title"],
                 # NHK World carries programmes and nothing else, so every listing
                 # is a series as far as TMDB is concerned. It says nothing about
                 # when a programme came out, so the name is all TMDB is searched

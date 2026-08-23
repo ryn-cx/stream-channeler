@@ -3,17 +3,11 @@
 
 from __future__ import annotations
 
-from functools import cache
-from typing import override
+from typing import Any, override
 
-from wampi import Wampi
-from wampi.exceptions import ResourceNotFoundError
-from wampi.models.title_sources import TitleSources as TitleSourcesModel
-
-from app.config import settings
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import ResponseJSON
-from plugins.utils.get_around_client import get_around_client
+from plugins.utils.base_plugin.files import EndpointJSON
+from plugins.WatchMode import api
 
 # The region a title's listing is asked for. Watchmode answers with every region
 # the key is enabled for when it is not told one, and a listing of the rest is
@@ -22,17 +16,28 @@ REGION = "US"
 
 
 # TODO: Validate
-@cache
-def wampi() -> Wampi:
-    """Return a cached Wampi client."""
-    return Wampi(
-        api_key=settings.WATCHMODE_API_KEY,
-        get_around_client=get_around_client(),
-    )
+class WatchModeJSON(EndpointJSON[list[dict[str, Any]]]):
+    # TODO: Validate
+    @override
+    def _parse(self, raw: Any) -> list[dict[str, Any]]:
+        return self.raise_if_not_is_instance(raw, list)
+
+    # TODO: Validate
+    @override
+    def _download(self) -> None:
+        with self._log_download(self.unique_identifier):
+            try:
+                response = self._fetch()
+            except Exception as error:
+                if not self._is_acceptable_error(error):
+                    raise
+                self.write(None, self.acceptable_error_extra_value())
+            else:
+                self.write(response)
 
 
 # TODO: Validate
-class TitleSources(ResponseJSON[TitleSourcesModel]):
+class TitleSources(WatchModeJSON):
     """Every source Watchmode says a title can be watched through.
 
     The title is named by the id Watchmode takes, which is TMDB's own id behind
@@ -44,7 +49,7 @@ class TitleSources(ResponseJSON[TitleSourcesModel]):
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ResourceNotFoundError)
+        return isinstance(error, api.WatchModeResourceNotFoundError)
 
     # TODO: Validate
     @override
@@ -53,8 +58,8 @@ class TitleSources(ResponseJSON[TitleSourcesModel]):
 
     # TODO: Validate
     @override
-    def _fetch(self) -> TitleSourcesModel:
-        return wampi().title_sources(
+    def _fetch(self) -> list[dict[str, Any]]:
+        return api.title_sources(
             self.unique_identifier,
             regions=REGION,
         )

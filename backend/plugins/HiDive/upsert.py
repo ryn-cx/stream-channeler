@@ -11,7 +11,7 @@ from app.seasons.models import Season as SeasonModel
 from app.shows.models import Show
 from app.shows.service import find_and_add_canonical_show
 from app.sources.models import Source
-from plugins.HiDive.files import diving_board
+from plugins.HiDive import api
 from plugins.HiDive.helpers import (
     MOVIE_MEDIA_TYPE,
     SERIES_MEDIA_TYPE,
@@ -66,7 +66,7 @@ class UpsertMixin(HelperMixin, register=False):
             series_data = self.series_file(show_key).parsed()
             new_show = Show(
                 key=show_key,
-                name=series_data.metadata.series.title,
+                name=series_data["metadata"]["series"]["title"],
                 media_type=SERIES_MEDIA_TYPE,
                 url=self._show_url(show_key),
                 image_url=self._series_image_url(series_data),
@@ -90,13 +90,13 @@ class UpsertMixin(HelperMixin, register=False):
     ) -> Show:
         show = Show.get_from_memory(self.session, source, show_key)
         if self._show_is_outdated(show, force=force):
-            hero = diving_board().vod.extract_hero(self.vod_file(show_key).parsed())
+            hero = api.extract_hero(self.vod_file(show_key).parsed())
             new_show = Show(
                 key=show_key,
                 name=self._movie_title(hero),
                 description=self._movie_description(hero),
                 url=self._show_url(show_key, MOVIE_MEDIA_TYPE),
-                image_url=hero.attributes.image.attributes.source,
+                image_url=hero["attributes"]["image"]["attributes"]["source"],
                 media_type=MOVIE_MEDIA_TYPE,
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
@@ -117,19 +117,19 @@ class UpsertMixin(HelperMixin, register=False):
         series_data = self.series_file(show.key).parsed()
         season_items = self._series_season_items(series_data)
         for sort_order, season_info in enumerate(season_items):
-            season_key = str(season_info.id)
+            season_key = str(season_info["id"])
             season_data = self.season_file(season_key).parsed()
-            hero = diving_board().season.extract_hero(season_data)
+            hero = api.extract_hero(season_data)
 
             season = SeasonModel.get_from_memory(self.session, show, season_key)
             if self._season_is_outdated(season, show.key, force=force):
                 new_season = SeasonModel(
                     key=season_key,
-                    name=season_info.title,
-                    season_number=season_info.season_number,
+                    name=season_info["title"],
+                    season_number=season_info["seasonNumber"],
                     sort_order=sort_order,
                     url=self._season_url(season_key),
-                    image_url=hero.attributes.image.attributes.source,
+                    image_url=hero["attributes"]["image"]["attributes"]["source"],
                     data_timestamp=self.season_data_timestamp(season_key, show.key),
                     show_id=show.id,
                 )
@@ -152,7 +152,7 @@ class UpsertMixin(HelperMixin, register=False):
         for sort_order, season_key in enumerate(
             self._season_keys_from_file(show.key),
         ):
-            hero = diving_board().vod.extract_hero(self.vod_file(show.key).parsed())
+            hero = api.extract_hero(self.vod_file(show.key).parsed())
 
             season = SeasonModel.get_from_memory(self.session, show, season_key)
             if self._season_is_outdated(season, show.key, force=force):
@@ -162,7 +162,7 @@ class UpsertMixin(HelperMixin, register=False):
                     season_number=0,
                     sort_order=sort_order,
                     url=self._show_url(show.key, MOVIE_MEDIA_TYPE),
-                    image_url=hero.attributes.image.attributes.source,
+                    image_url=hero["attributes"]["image"]["attributes"]["source"],
                     data_timestamp=self.season_data_timestamp(season_key, show.key),
                     show_id=show.id,
                 )
@@ -184,9 +184,9 @@ class UpsertMixin(HelperMixin, register=False):
         force: bool = False,
     ) -> None:
         season_data = self.season_file(season.key).parsed()
-        bucket = diving_board().season.extract_bucket_season(season_data)
-        for sort_order, item in enumerate(bucket.attributes.items):
-            episode_key = str(item.id)
+        bucket = api.extract_bucket_season(season_data)
+        for sort_order, item in enumerate(bucket["attributes"]["items"]):
+            episode_key = str(item["id"])
             episode = Episode.get_from_memory(self.session, season, episode_key)
             if not self._episode_is_outdated(
                 episode,
@@ -196,15 +196,15 @@ class UpsertMixin(HelperMixin, register=False):
             ):
                 continue
 
-            hero = diving_board().vod.extract_hero(self.vod_file(episode_key).parsed())
+            hero = api.extract_hero(self.vod_file(episode_key).parsed())
             new_episode = Episode(
                 key=episode_key,
-                name=item.title,
-                episode_number=_episode_number(item.title),
+                name=item["title"],
+                episode_number=_episode_number(item["title"]),
                 url=self._episode_url(episode_key),
-                description=item.description,
-                image_url=item.thumbnail_url,
-                duration=item.duration,
+                description=item["description"],
+                image_url=item["thumbnailUrl"],
+                duration=item["duration"],
                 sort_order=sort_order,
                 air_date=self._release_date(hero),
                 data_timestamp=self.episode_data_timestamp(
@@ -234,13 +234,13 @@ class UpsertMixin(HelperMixin, register=False):
         ):
             return
 
-        hero = diving_board().vod.extract_hero(self.vod_file(episode_key).parsed())
+        hero = api.extract_hero(self.vod_file(episode_key).parsed())
         new_episode = Episode(
             key=episode_key,
             name=self._movie_title(hero),
             description=self._movie_description(hero),
             url=self._episode_url(episode_key),
-            image_url=hero.attributes.image.attributes.source,
+            image_url=hero["attributes"]["image"]["attributes"]["source"],
             episode_number=0,
             sort_order=0,
             duration=self._movie_duration(hero),

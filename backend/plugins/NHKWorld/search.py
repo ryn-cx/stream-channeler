@@ -24,20 +24,20 @@ class SearchMixin(FileMixin, register=False):
         parsed = search_file.parsed()
         results = [
             PluginSearchResult(
-                title=hit.field_source.title,
-                url=self.build_url(hit.field_source.url),
-                image_url=self.build_url(hit.field_source.thumbnail),
+                title=hit["_source"]["title"],
+                url=self.build_url(hit["_source"]["url"]),
+                image_url=self.build_url(hit["_source"]["thumbnail"]),
                 media_type="TV Show",
-                media_identifier=hit.field_source.slug,
+                media_identifier=hit["_source"]["slug"],
             )
-            for hit in parsed.hits.hits
+            for hit in parsed["hits"]["hits"]
         ]
         next_offset = offset + len(results)
         return PluginSearchResults(
             results=results,
             next_cursor=(
                 str(next_offset)
-                if results and next_offset < parsed.hits.total.value
+                if results and next_offset < parsed["hits"]["total"]["value"]
                 else None
             ),
         )

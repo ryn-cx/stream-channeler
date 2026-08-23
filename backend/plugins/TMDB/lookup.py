@@ -1,11 +1,7 @@
 # TODO: Validate
 from collections.abc import Sequence
 from datetime import timedelta
-from typing import overload
-
-from tminidb.movies.models.details import Movie
-from tminidb.tv_seasons.models.details import Episode as TvSeasonEpisode
-from tminidb.tv_series.models.details import Season as TvSeriesSeason
+from typing import Any, overload
 
 from app.files.models import File
 from app.media.media_type import MediaType
@@ -36,7 +32,7 @@ def _found_something(search_file: MovieSearch | TvSearch | MultiSearch) -> bool:
     """
     if not search_file.database_record.content:
         return False
-    return bool(search_file.parsed().results)
+    return bool(search_file.parsed()["results"])
 
 
 # TODO: Validate
@@ -123,7 +119,7 @@ class LookupMixin(FileMixin, register=False):
         return detail_file
 
     # TODO: Validate
-    def movie_detail(self, tmdb_id: int) -> Movie | None:
+    def movie_detail(self, tmdb_id: int) -> dict[str, Any] | None:
         """Return a film's details, downloading them if needed.
 
         A film is reached by whatever is linked to it as much as by this
@@ -186,9 +182,9 @@ class LookupMixin(FileMixin, register=False):
         if not translations_file.database_record.content:
             return []
         return [
-            translation.data.name
-            for translation in translations_file.parsed().translations
-            if translation.data.name
+            translation["data"]["name"]
+            for translation in translations_file.parsed()["translations"]
+            if translation["data"]["name"]
         ]
 
     # TODO: Validate
@@ -218,21 +214,21 @@ class LookupMixin(FileMixin, register=False):
             return {}
 
         numbers: dict[int, set[int]] = {}
-        for option in groups_file.parsed().results:
-            detail_file = self.episode_group_detail_file(option.id)
+        for option in groups_file.parsed()["results"]:
+            detail_file = self.episode_group_detail_file(option["id"])
             detail_file.download_if_outdated()
             if not detail_file.database_record.content:
                 continue
-            for group in detail_file.parsed().groups:
-                for number, episode in enumerate(group.episodes, start=1):
-                    numbers.setdefault(episode.id, set()).add(number)
+            for group in detail_file.parsed()["groups"]:
+                for number, episode in enumerate(group["episodes"], start=1):
+                    numbers.setdefault(episode["id"], set()).add(number)
         return {
             episode_id: frozenset(episode_numbers)
             for episode_id, episode_numbers in numbers.items()
         }
 
     # TODO: Validate
-    def show_seasons(self, tmdb_id: int) -> Sequence[TvSeriesSeason]:
+    def show_seasons(self, tmdb_id: int) -> Sequence[dict[str, Any]]:
         """Return the seasons of a title, downloading the title if needed.
 
         A title is read by whatever is linked to it as well as by this plugin's
@@ -243,14 +239,15 @@ class LookupMixin(FileMixin, register=False):
         show_file.download_if_outdated()
         if not show_file.database_record.content:
             return []
-        return show_file.parsed().seasons
+        seasons: Sequence[dict[str, Any]] = show_file.parsed()["seasons"]
+        return seasons
 
     # TODO: Validate
     def season_episodes(
         self,
         tmdb_id: int,
         season_number: int,
-    ) -> Sequence[TvSeasonEpisode]:
+    ) -> Sequence[dict[str, Any]]:
         """Return the episodes of one season of a title, downloading it if needed.
 
         A title's seasons are downloaded along with it when this plugin imports
@@ -263,12 +260,13 @@ class LookupMixin(FileMixin, register=False):
         season_file.download_if_outdated()
         if not season_file.database_record.content:
             return []
-        return season_file.parsed().episodes
+        episodes: Sequence[dict[str, Any]] = season_file.parsed()["episodes"]
+        return episodes
 
     # TODO: Validate
     def has_season(self, tmdb_id: int, season_number: int) -> bool:
         return any(
-            season.season_number == season_number
+            season["season_number"] == season_number
             for season in self.show_seasons(tmdb_id)
         )
 
@@ -287,7 +285,9 @@ class LookupMixin(FileMixin, register=False):
         """
         if media_type == MediaType.movie:
             return season_tmdb_id == tmdb_id
-        return any(season.id == season_tmdb_id for season in self.show_seasons(tmdb_id))
+        return any(
+            season["id"] == season_tmdb_id for season in self.show_seasons(tmdb_id)
+        )
 
     # TODO: Validate
     def has_episode_id(
@@ -305,9 +305,9 @@ class LookupMixin(FileMixin, register=False):
         if media_type == MediaType.movie:
             return episode_tmdb_id == tmdb_id
         return any(
-            episode.id == episode_tmdb_id
+            episode["id"] == episode_tmdb_id
             for season in self.show_seasons(tmdb_id)
-            for episode in self.season_episodes(tmdb_id, season.season_number)
+            for episode in self.season_episodes(tmdb_id, season["season_number"])
         )
 
     # TODO: Validate
@@ -320,6 +320,6 @@ class LookupMixin(FileMixin, register=False):
         if not self.has_season(tmdb_id, season_number):
             return False
         return any(
-            episode.episode_number == episode_number
+            episode["episode_number"] == episode_number
             for episode in self.season_episodes(tmdb_id, season_number)
         )

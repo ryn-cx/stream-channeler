@@ -14,7 +14,8 @@ from app.shows.models import Show
 from app.sources.models import Source
 from app.users.service import get_or_create_plugin_user
 from app.utils import tz_datetime
-from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries, _chirashi
+from plugins.Crunchyroll import api
+from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries
 from plugins.Crunchyroll.music_keys import MUSIC_SOURCE, VIDEO_SOURCE
 from plugins.Crunchyroll.upsert import UpsertMixin
 from plugins.utils.base_plugin.files import (
@@ -63,18 +64,19 @@ class UpdateMixin(UpsertMixin, register=False):
             self.browse_series_file,
         ):
             logger.info("Processing browse file: {}", browse_json.database_record.key)
-            releases = _chirashi().browse_series.extract_data(browse_json.parsed())
+            releases = api.extract_data(browse_json.parsed())
             for release in releases:
-                if show := Show.get_from_memory(self.session, source, release.id):
-                    logger.info("Matched show: {}", show.name or release.id)
+                if show := Show.get_from_memory(self.session, source, release["id"]):
+                    logger.info("Matched show: {}", show.name or release["id"])
                     # last_public appears to represent the last time a public change
                     # was made to the show's data. There is no way to detect what
                     # season the update is for so both show and season need to be set
                     # to be updated because the season will detect new episodes for
                     # existing seasons and the shows will detect new seasons.
-                    show.set_update_at(release.last_public)
+                    last_public = tz_datetime.fromisoformat(release["last_public"])
+                    show.set_update_at(last_public)
                     for season in show.seasons:
-                        season.set_update_at(release.last_public)
+                        season.set_update_at(last_public)
 
             browse_json.database_record.extra = {EXTRA_STATUS_FIELD: COMPLETED_STATUS}
 
@@ -93,20 +95,21 @@ class UpdateMixin(UpsertMixin, register=False):
                 "Processing music browse file: {}",
                 browse_json.database_record.key,
             )
-            artists = _chirashi().browse_music.extract_data(browse_json.parsed())
+            artists = api.extract_data(browse_json.parsed())
             new_artist_urls: list[str] = []
             for artist in artists:
-                show_key = artist.id
+                show_key = artist["id"]
                 if show := Show.get_from_memory(self.session, source, show_key):
-                    logger.info("Matched artist: {}", show.name or artist.id)
+                    logger.info("Matched artist: {}", show.name or artist["id"])
                     # An artist carries no per-category timestamp, so both of
                     # their seasons are marked alongside the show and whichever
                     # one gained a release picks it up.
-                    show.set_update_at(artist.updated_at)
+                    updated_at = tz_datetime.fromisoformat(artist["updatedAt"])
+                    show.set_update_at(updated_at)
                     for season in show.seasons:
-                        season.set_update_at(artist.updated_at)
+                        season.set_update_at(updated_at)
                 else:
-                    logger.info("Queueing new artist: {}", artist.id)
+                    logger.info("Queueing new artist: {}", artist["id"])
                     new_artist_urls.append(self._artist_url(show_key))
 
             # Queued in one call so the whole browse file costs a single commit.

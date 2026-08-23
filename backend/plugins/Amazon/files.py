@@ -11,28 +11,19 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from functools import cache
 from typing import Any, cast, override
 
 import httpx
-from deforestation import USER_AGENT, Deforestation
-from deforestation.constants import MARKETPLACES, REGION_WEB_PATHS
-from deforestation.detail_widgets.models import DetailWidgetsModel
-from deforestation.detail_widgets.models import Episode as WidgetEpisode
-from deforestation.exceptions import TitleNotFoundError
-from deforestation.search.models import Entity, SearchModel
-from pydantic import BaseModel
 from sqlmodel import Session
 
 from app.plugins.models import Plugin
+from plugins.Amazon import api
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import (
-    GAPIJSON,
     BaseFile,
+    EndpointJSON,
     JSONFile,
-    PartialGAPIJSON,
 )
-from plugins.utils.get_around_client import get_around_client
 
 # Where a share link is written, which is its own domain rather than a path on
 # Prime Video's.
@@ -70,13 +61,24 @@ _GRID_CONTAINER_TYPE = "Grid"
 
 
 # TODO: Validate
-@cache
-def deforestation() -> Deforestation:
-    return Deforestation(
-        get_around_client=get_around_client(),
-        host=MARKETPLACES["ROW"],
-        web_path=REGION_WEB_PATHS["NA"],
-    )
+class AmazonJSON(EndpointJSON[dict[str, Any]]):
+    # TODO: Validate
+    @override
+    def _parse(self, raw: Any) -> dict[str, Any]:
+        return self.raise_if_not_is_instance(raw, dict)
+
+    # TODO: Validate
+    @override
+    def _download(self) -> None:
+        with self._log_download(self.unique_identifier):
+            try:
+                response = self._fetch()
+            except Exception as error:
+                if not self._is_acceptable_error(error):
+                    raise
+                self.write(None, self.acceptable_error_extra_value())
+            else:
+                self.write(response)
 
 
 # TODO: Validate
@@ -123,14 +125,6 @@ class AmazonSearchResult:
     entity_type: str
     year: int | None
     image_url: str | None
-
-
-# TODO: Validate
-def _pick_image(images: BaseModel) -> str | None:
-    for name in _IMAGE_PREFERENCE:
-        if url := getattr(images, name, None):
-            return str(url)
-    return None
 
 
 # TODO: Validate
@@ -203,29 +197,30 @@ def _episode_from_detail(
 
 
 # TODO: Validate
-def _episode_from_widget(episode: WidgetEpisode) -> AmazonEpisode:
+def _episode_from_widget(episode: dict[str, Any]) -> AmazonEpisode:
     """Return an episode read off a page of the season's episode list."""
-    detail = episode.detail
+    detail = episode["detail"]
     return AmazonEpisode(
-        key=episode.title_id,
-        compact_key=episode.self.compact_gti,
-        title=detail.title,
-        episode_number=detail.episode_number,
-        synopsis=detail.synopsis,
-        duration=detail.duration,
-        release_date=detail.release_date,
-        image_url=_pick_image(detail.images),
+        key=episode["titleID"],
+        compact_key=episode["self"]["compactGTI"],
+        title=detail["title"],
+        episode_number=detail["episodeNumber"],
+        synopsis=detail["synopsis"],
+        duration=detail["duration"],
+        release_date=detail["releaseDate"],
+        image_url=_pick_raw_image(detail["images"]),
     )
 
 
 # TODO: Validate
-def _search_result(entity: Entity) -> AmazonSearchResult:
+def _search_result(entity: dict[str, Any]) -> AmazonSearchResult:
+    release_year = entity.get("releaseYear")
     return AmazonSearchResult(
-        key=_compact_key_from_link(entity.link.url),
-        title=entity.title,
-        entity_type=entity.entity_type,
-        year=int(entity.release_year) if entity.release_year else None,
-        image_url=entity.images.cover.url,
+        key=_compact_key_from_link(entity["link"]["url"]),
+        title=entity["title"],
+        entity_type=entity["entityType"],
+        year=int(release_year) if release_year else None,
+        image_url=entity["images"]["cover"]["url"],
     )
 
 
@@ -266,7 +261,7 @@ class ShareLinkRedirect(BaseFile[str]):
             response = httpx.get(
                 _SHARE_LINK_URL,
                 params={"gti": self.share_key},
-                headers={"User-Agent": USER_AGENT},
+                headers={"User-Agent": api.USER_AGENT},
                 follow_redirects=False,
                 timeout=_REDIRECT_TIMEOUT_SECONDS,
             )
@@ -316,8 +311,8 @@ class Detail(JSONFile[dict[str, Any]]):
     def _download(self) -> None:
         with self._log_download(self.title_key):
             try:
-                self.write(deforestation().detail.download(self.title_key))
-            except TitleNotFoundError:
+                self.write(api.detail(self.title_key))
+            except api.TitleNotFoundError:
                 # Occurs when a user puts in an invalid URL.
                 self.write(None, f"Invalid title {self.title_key}")
 
@@ -586,14 +581,12 @@ class Detail(JSONFile[dict[str, Any]]):
 
 
 # TODO: Validate
-class EpisodeList(PartialGAPIJSON[DetailWidgetsModel]):
+class EpisodeList(AmazonJSON):
     """One page of a season's episode list.
 
     The page a season opens on only carries the episodes it shows, so every page
     of them is asked for by the token the season's page carries for it.
     """
-
-    API_ENDPOINT = deforestation().detail_widgets
 
     # TODO: Validate
     def __init__(
@@ -612,27 +605,30 @@ class EpisodeList(PartialGAPIJSON[DetailWidgetsModel]):
 
     # TODO: Validate
     @override
-    def _get(self) -> DetailWidgetsModel:
+    def _fetch(self) -> dict[str, Any]:
         detail = Detail(self.session, self.plugin, self.season_key)
         token = detail.episode_page_token(self.page_index)
-        return self.API_ENDPOINT.download_and_parse(self.season_key, token)
+        return api.detail_widgets(self.season_key, token)
 
     # TODO: Validate
     def episodes(self) -> list[AmazonEpisode]:
         """Return the episodes this page holds."""
-        episode_list = self.parsed().widgets.episode_list
-        return [_episode_from_widget(episode) for episode in episode_list.episodes]
+        episode_list = self.parsed()["widgets"]["episodeList"]
+        return [_episode_from_widget(episode) for episode in episode_list["episodes"]]
 
 
 # TODO: Validate
-class Search(GAPIJSON[SearchModel]):
+class Search(AmazonJSON):
     """Everything one search query matched.
 
     Prime Video answers a search with every match at once, so there is a single
     file for a query rather than one for each page of it.
     """
 
-    API_ENDPOINT = deforestation().search
+    # TODO: Validate
+    @override
+    def _fetch(self) -> dict[str, Any]:
+        return api.search(self.unique_identifier)
 
     # TODO: Validate
     def results(self) -> list[AmazonSearchResult]:
@@ -645,10 +641,10 @@ class Search(GAPIJSON[SearchModel]):
         """
         results: list[AmazonSearchResult] = []
         seen: set[str] = set()
-        for container in self.parsed().body.containers:
-            if container.container_type != _GRID_CONTAINER_TYPE:
+        for container in self.parsed()["body"]["containers"]:
+            if container["containerType"] != _GRID_CONTAINER_TYPE:
                 continue
-            for entity in container.entities:
+            for entity in container["entities"]:
                 result = _search_result(entity)
                 if result.key in seen:
                     continue

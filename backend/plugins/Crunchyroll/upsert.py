@@ -3,15 +3,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from datetime import datetime, timedelta
-from typing import Literal, override
-
-from chirashi.artist import models as artist_models
-from chirashi.artist_concerts import models as artist_concerts_models
-from chirashi.artist_music_videos import models as artist_music_videos_models
-from chirashi.concert import models as concert_models
-from chirashi.music_video import models as music_video_models
-from chirashi.season_episodes import models as season_episodes_models
-from chirashi.series import models as series_models
+from typing import Any, Literal, override
 
 from app.episodes.models import Episode
 from app.files.models import File
@@ -19,6 +11,7 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.shows.service import find_and_add_canonical_show
 from app.sources.models import Source
+from app.utils import tz_datetime
 from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries
 from plugins.Crunchyroll.helpers import HelperMixin
 from plugins.Crunchyroll.music_keys import (
@@ -119,13 +112,13 @@ class UpsertMixin(HelperMixin, register=False):
         if self._show_is_outdated(show, force=force):
             series_data = self._series_datum(show_key)
             new_show = Show(
-                key=series_data.id,
-                name=series_data.title,
-                description=series_data.description,
+                key=series_data["id"],
+                name=series_data["title"],
+                description=series_data["description"],
                 media_type="Movie" if self._is_movie(show_key) else "Series",
-                url=self._series_url(series_data.id),
-                image_url=self._show_image(series_data.images),
-                year=series_data.series_launch_year,
+                url=self._series_url(series_data["id"]),
+                image_url=self._show_image(series_data["images"]),
+                year=series_data["series_launch_year"],
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
             )
@@ -147,14 +140,14 @@ class UpsertMixin(HelperMixin, register=False):
     ) -> Show:
         show = Show.get_from_memory(self.session, source, show_key)
         if self._show_is_outdated(show, force=force):
-            artist_data = self.artist_file(show_key).parsed().data[0]
+            artist_data = self.artist_file(show_key).parsed()["data"][0]
             new_show = Show(
                 key=show_key,
-                name=artist_data.name,
-                description=artist_data.description,
+                name=artist_data["name"],
+                description=artist_data["description"],
                 media_type="Music",
                 url=self._artist_url(show_key),
-                image_url=self._largest_image(artist_data.images.poster_wide),
+                image_url=self._largest_image(artist_data["images"]["poster_wide"]),
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
             )
@@ -173,16 +166,16 @@ class UpsertMixin(HelperMixin, register=False):
         force: bool = False,
     ) -> None:
         seasons_file = self.seasons_file(show.key)
-        for index, season_data in enumerate(seasons_file.parsed().data):
-            season = Season.get_from_memory(self.session, show, season_data.id)
+        for index, season_data in enumerate(seasons_file.parsed()["data"]):
+            season = Season.get_from_memory(self.session, show, season_data["id"])
             if self._season_is_outdated(season, show.key, force=force):
                 new_season = Season(
-                    key=season_data.id,
-                    name=season_data.title,
-                    season_number=season_data.season_number,
+                    key=season_data["id"],
+                    name=season_data["title"],
+                    season_number=season_data["season_number"],
                     sort_order=index,
                     data_timestamp=self.season_data_timestamp(
-                        season_data.id,
+                        season_data["id"],
                         show.key,
                     ),
                     show_id=show.id,
@@ -241,8 +234,12 @@ class UpsertMixin(HelperMixin, register=False):
         force: bool = False,
     ) -> None:
         episodes_data = self.season_episodes_file(season.key).parsed()
-        for index, episode_data in enumerate(episodes_data.data):
-            episode = Episode.get_from_memory(self.session, season, episode_data.id)
+        for index, episode_data in enumerate(episodes_data["data"]):
+            episode = Episode.get_from_memory(
+                self.session,
+                season,
+                episode_data["id"],
+            )
             if not self._episode_is_outdated(
                 episode,
                 season.key,
@@ -251,17 +248,17 @@ class UpsertMixin(HelperMixin, register=False):
             ):
                 continue
             new_episode = Episode(
-                key=episode_data.id,
-                name=episode_data.title,
-                episode_number=episode_data.episode_number,
-                url=self._episode_url(episode_data.id),
-                description=episode_data.description,
-                image_url=self._episode_thumbnail(episode_data.images),
-                duration=episode_data.duration_ms // 1000,
+                key=episode_data["id"],
+                name=episode_data["title"],
+                episode_number=episode_data["episode_number"],
+                url=self._episode_url(episode_data["id"]),
+                description=episode_data["description"],
+                image_url=self._episode_thumbnail(episode_data["images"]),
+                duration=episode_data["duration_ms"] // 1000,
                 sort_order=index,
-                air_date=episode_data.episode_air_date,
+                air_date=tz_datetime.fromisoformat(episode_data["episode_air_date"]),
                 data_timestamp=self.episode_data_timestamp(
-                    episode_data.id,
+                    episode_data["id"],
                     season.key,
                     show_key,
                 ),
@@ -284,17 +281,15 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> None:
-        listing: Sequence[
-            artist_concerts_models.Datum | artist_music_videos_models.Datum
-        ] = (
-            self.artist_concerts_or_artist_music_videos_file(artist_id, category)
-            .parsed()
-            .data
+        listing: Sequence[dict[str, Any]] = (
+            self.artist_concerts_or_artist_music_videos_file(
+                artist_id, category
+            ).parsed()["data"]
         )
         # Crunchyroll lists an artist's releases newest first, so the order is
         # reversed to number them the way they were released.
         for sort_order, datum in enumerate(reversed(listing)):
-            episode_key = datum.id
+            episode_key = datum["id"]
             episode = Episode.get_from_memory(self.session, season, episode_key)
             if not self._episode_is_outdated(
                 episode,
@@ -304,16 +299,18 @@ class UpsertMixin(HelperMixin, register=False):
             ):
                 continue
 
-            details = self.concert_or_music_video_file(episode_key).parsed().data[0]
+            details = self.concert_or_music_video_file(
+                episode_key,
+            ).parsed()["data"][0]
             Episode(
                 key=episode_key,
-                name=details.title,
-                description=details.description,
+                name=details["title"],
+                description=details["description"],
                 url=self._episode_url(episode_key),
-                image_url=self._largest_image(details.images.thumbnail),
-                duration=details.duration_ms // 1000,
+                image_url=self._largest_image(details["images"]["thumbnail"]),
+                duration=details["durationMs"] // 1000,
                 sort_order=sort_order,
-                air_date=details.original_release,
+                air_date=tz_datetime.fromisoformat(details["originalRelease"]),
                 data_timestamp=self.episode_data_timestamp(
                     episode_key,
                     season.key,
@@ -328,41 +325,38 @@ class UpsertMixin(HelperMixin, register=False):
 
     # TODO: Validate
     @staticmethod
-    def _show_image(images: series_models.Images) -> str | None:
+    def _show_image(images: dict[str, Any]) -> str | None:
         """Return the widest poster a listing carries, where it carries one.
 
         The wide one first because that is the shape the artwork is shown in,
         the tall one being what is left for a listing Crunchyroll has only a
         portrait poster of.
         """
-        for sizes in (images.poster_wide, images.poster_tall):
+        for sizes in (images["poster_wide"], images["poster_tall"]):
             if sizes and sizes[0]:
-                return max(sizes[0], key=lambda image: image.width).source
+                widest: str = max(sizes[0], key=lambda image: image["width"])["source"]
+                return widest
         return None
 
     # TODO: Validate
     @staticmethod
-    def _episode_thumbnail(images: season_episodes_models.Images) -> str | None:
+    def _episode_thumbnail(images: dict[str, Any]) -> str | None:
         """Return the largest thumbnail an episode has, where it has one at all.
 
         An episode Crunchyroll has no thumbnail for carries no sizes to pick
         from, and older ones carry none of the field at all.
         """
-        thumbnails = images.thumbnail
+        thumbnails = images.get("thumbnail")
         if not thumbnails or not thumbnails[0]:
             return None
-        return thumbnails[0][-1].source
+        thumbnail: str = thumbnails[0][-1]["source"]
+        return thumbnail
 
     # TODO: Validate
     @staticmethod
-    def _largest_image(
-        images: Sequence[
-            artist_models.PosterWideItem
-            | concert_models.ThumbnailItem
-            | music_video_models.ThumbnailItem
-        ],
-    ) -> str | None:
+    def _largest_image(images: Sequence[dict[str, Any]]) -> str | None:
         """Return the source of the widest size Crunchyroll offers an image in."""
         if not images:
             return None
-        return max(images, key=lambda image: image.width).source
+        largest: str = max(images, key=lambda image: image["width"])["source"]
+        return largest

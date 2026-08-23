@@ -5,38 +5,63 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from datetime import datetime
-from functools import cache
 from typing import Any, override
-
-from diving_board import DivingBoard
-from diving_board.schedule import models as schedule_models
-from diving_board.search import models as search_models
-from diving_board.season import models as season_models
-from diving_board.series import models as series_models
-from diving_board.vod import models as vod_models
 
 from app.files.models import File
 from app.utils import tz_datetime
+from plugins.HiDive import api
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import (
-    GAPIJSON,
     BaseFile,
-    GAPIListJSON,
-    PartialGAPIJSON,
+    EndpointJSON,
 )
 from plugins.utils.base_plugin.media_type import MediaTypeMixin
-from plugins.utils.get_around_client import get_around_client
 
 
 # TODO: Validate
-@cache
-def diving_board() -> DivingBoard:
-    """Return a cached Diving Board client."""
-    return DivingBoard(get_around_client=get_around_client())
+class HiDiveJSON(EndpointJSON[dict[str, Any]]):
+    # TODO: Validate
+    @override
+    def _parse(self, raw: Any) -> dict[str, Any]:
+        return self.raise_if_not_is_instance(raw, dict)
+
+    # TODO: Validate
+    @override
+    def _download(self) -> None:
+        with self._log_download(self.unique_identifier):
+            try:
+                response = self._fetch()
+            except Exception as error:
+                if not self._is_acceptable_error(error):
+                    raise
+                self.write(None, self.acceptable_error_extra_value())
+            else:
+                self.write(response)
 
 
 # TODO: Validate
-class Season(PartialGAPIJSON[season_models.SeasonModel]):
+class HiDiveListJSON(EndpointJSON[list[dict[str, Any]]]):
+    # TODO: Validate
+    @override
+    def _parse(self, raw: Any) -> list[dict[str, Any]]:
+        return self.raise_if_not_is_instance(raw, list)
+
+    # TODO: Validate
+    @override
+    def _download(self) -> None:
+        with self._log_download(self.unique_identifier):
+            try:
+                response = self._fetch()
+            except Exception as error:
+                if not self._is_acceptable_error(error):
+                    raise
+                self.write(None, self.acceptable_error_extra_value())
+            else:
+                self.write(response)
+
+
+# TODO: Validate
+class Season(HiDiveJSON):
     """Season file."""
 
     # Occurs when the user imports an invalid TV show url.
@@ -44,17 +69,15 @@ class Season(PartialGAPIJSON[season_models.SeasonModel]):
     @override
     def _get_ACCEPTABLE_ERROR(self) -> str | None:
         return "Unexpected response status code: 404"
-    API_ENDPOINT = diving_board().season
 
     # TODO: Validate
     @override
-    # TODO: Make Diving Board support a str as an input so _get is not needed.
-    def _fetch(self) -> season_models.SeasonModel:
-        return diving_board().season.download_and_parse(int(self.unique_identifier))
+    def _fetch(self) -> dict[str, Any]:
+        return api.season(self.unique_identifier)
 
 
 # TODO: Validate
-class Vod(PartialGAPIJSON[vod_models.VodModel]):
+class Vod(HiDiveJSON):
     """Vod file."""
 
     # Occurs when the user imports an invalid movie url.
@@ -62,17 +85,15 @@ class Vod(PartialGAPIJSON[vod_models.VodModel]):
     @override
     def _get_ACCEPTABLE_ERROR(self) -> str | None:
         return "Unexpected response status code: 404"
-    API_ENDPOINT = diving_board().vod
 
     # TODO: Validate
     @override
-    # TODO: Make Diving Board support a str as an input so _get is not needed.
-    def _fetch(self) -> vod_models.VodModel:
-        return diving_board().vod.download_and_parse(int(self.unique_identifier))
+    def _fetch(self) -> dict[str, Any]:
+        return api.vod(self.unique_identifier)
 
 
 # TODO: Validate
-class Series(PartialGAPIJSON[series_models.SeriesModel]):
+class Series(HiDiveJSON):
     """Series file."""
 
     # Occurs when the user imports an invalid series url.
@@ -80,24 +101,20 @@ class Series(PartialGAPIJSON[series_models.SeriesModel]):
     @override
     def _get_ACCEPTABLE_ERROR(self) -> str | None:
         return "Unexpected response status code: 404"
-    API_ENDPOINT = diving_board().series
 
     # TODO: Validate
     @override
-    # TODO: Make Diving Board support a str as an input so _get is not needed.
-    def _fetch(self) -> series_models.SeriesModel:
-        return diving_board().series.download_and_parse(int(self.unique_identifier))
+    def _fetch(self) -> dict[str, Any]:
+        return api.series(self.unique_identifier)
 
 
 # TODO: Validate
-class Schedule(GAPIListJSON[schedule_models.ScheduleModel]):
+class Schedule(HiDiveListJSON):
     """Schedule file."""
-
-    API_ENDPOINT = diving_board().schedule
 
     # TODO: Validate
     @override
-    def _fetch(self) -> list[schedule_models.ScheduleModel]:
+    def _fetch(self) -> list[dict[str, Any]]:
         # Start at the first of the month because it matches the normal API calls.
         from_ = self.identifier_datetime().replace(
             day=1,
@@ -106,17 +123,20 @@ class Schedule(GAPIListJSON[schedule_models.ScheduleModel]):
             second=0,
             microsecond=0,
         )
-        return diving_board().schedule.download_and_parse_until_datetime(
+        return api.schedule_until_datetime(
             from_=from_,
             end_datetime=tz_datetime.now(),
         )
 
 
 # TODO: Validate
-class Search(GAPIJSON[search_models.SearchModel]):
+class Search(HiDiveJSON):
     """Search file."""
 
-    API_ENDPOINT = diving_board().search
+    # TODO: Validate
+    @override
+    def _fetch(self) -> dict[str, Any]:
+        return api.search(self.unique_identifier)
 
 
 # TODO: Validate
@@ -180,12 +200,13 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
     # TODO: Validate
     @staticmethod
     def _series_season_items(
-        series_data: series_models.SeriesModel,
-    ) -> list[series_models.Item1]:
+        series_data: dict[str, Any],
+    ) -> list[dict[str, Any]]:
         """Return the list of seasons from a parsed series file."""
-        for element in series_data.elements:
-            if element.attributes.seasons:
-                return element.attributes.seasons.items
+        for element in series_data["elements"]:
+            if element["attributes"].get("seasons"):
+                items: list[dict[str, Any]] = element["attributes"]["seasons"]["items"]
+                return items
         msg = "No seasons element found in series file."
         raise ValueError(msg)
 
@@ -227,7 +248,7 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
         if self._is_movie():
             return [show_key]
         series_data = self.series_file(show_key).parsed()
-        return [str(item.id) for item in self._series_season_items(series_data)]
+        return [str(item["id"]) for item in self._series_season_items(series_data)]
 
     # TODO: Validate
     @override
@@ -243,6 +264,8 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
         episode_keys: list[str] = []
         for season_key in season_keys:
             season_data = self.season_file(season_key).parsed()
-            bucket = diving_board().season.extract_bucket_season(season_data)
-            episode_keys.extend(str(item.id) for item in bucket.attributes.items)
+            bucket = api.extract_bucket_season(season_data)
+            episode_keys.extend(
+                str(item["id"]) for item in bucket["attributes"]["items"]
+            )
         return episode_keys

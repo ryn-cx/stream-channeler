@@ -1,7 +1,7 @@
 # TODO: Validate
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import override
 
 from loguru import logger
@@ -86,7 +86,7 @@ class SourceMixin(UpsertMixin, register=False):
                 len(edges),
             )
             for edge_number, edge in enumerate(edges, start=1):
-                short_name = edge.key.package.short_name
+                short_name = edge["key"]["package"]["shortName"]
                 source = Source.get_from_memory(self.session, self.plugin, short_name)
 
                 # A provider without a source has no media JustWatch owns, so there
@@ -94,14 +94,15 @@ class SourceMixin(UpsertMixin, register=False):
                 if not source:
                     continue
 
+                edge_date = date.fromisoformat(edge["key"]["date"])
                 logger.info(
                     "Bucket entry {}/{}: {} new titles for {}",
                     edge_number,
                     len(edges),
-                    edge.key.date,
+                    edge_date,
                     source.key,
                 )
-                new_titles_file = self.new_titles_file(source.key, edge.key.date)
+                new_titles_file = self.new_titles_file(source.key, edge_date)
                 new_titles_file.download_if_outdated()
                 if (
                     new_titles_file.database_record.extra.get(EXTRA_STATUS_FIELD)
@@ -238,15 +239,15 @@ class SourceMixin(UpsertMixin, register=False):
 
             logger.info("Processing new titles file: {}", file.database_record.key)
             for edge in file.parsed_edges():
-                node = edge.node
-                full_path = node.content.full_path
-                match node.field__typename:
+                node = edge["node"]
+                full_path = node["content"]["fullPath"]
+                match node["__typename"]:
                     case "Season":
                         show_key = full_path.rsplit("/", 1)[0]
                     case "Movie":
                         show_key = full_path
                     case _:
-                        msg = f"Unknown field__typename: {node.field__typename}"
+                        msg = f"Unknown field__typename: {node['__typename']}"
                         raise ValueError(msg)
 
                 # Need to match on show because if this is a new season looking up an
@@ -256,7 +257,11 @@ class SourceMixin(UpsertMixin, register=False):
                     _cache_seasons = show.seasons
                     # `node.id` is JustWatch's global id for the season (or movie),
                     # which is exactly the key the season is stored under.
-                    if season := Season.get_from_memory(self.session, show, node.id):
+                    if season := Season.get_from_memory(
+                        self.session,
+                        show,
+                        node["id"],
+                    ):
                         season.set_update_at(file.data_timestamp)
                     # If no season was found this is a new season so the show needs
                     # to be updated.

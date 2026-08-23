@@ -1,11 +1,8 @@
 # TODO: Validate
 from datetime import date, datetime
 from itertools import chain
-from typing import cast, override
+from typing import Any, override
 from urllib.parse import parse_qs, urlsplit
-
-from just_scrape.buy_box_offers import models as buy_box_offers_models
-from just_scrape.url_title_details import models as url_title_details_models
 
 from app.utils import tz_datetime
 from plugins.JustWatch.files import FileMixin
@@ -34,7 +31,7 @@ class HelperMixin(FileMixin, register=False):
         """Return the plugin that owns the title's media on `source_key`."""
         for offer_source_key, offer in self._sources_with_videos(show_key):
             if offer_source_key == source_key:
-                offer_url = self._clean_external_url(offer.standard_web_url)
+                offer_url = self._clean_external_url(offer["standardWebURL"])
                 return plugin_for_url(offer_url, type(self))
         return None
 
@@ -95,8 +92,8 @@ class HelperMixin(FileMixin, register=False):
     @staticmethod
     def _find_matching_episode(
         source_key: str,
-        node: buy_box_offers_models.Node | url_title_details_models.Node,
-    ) -> buy_box_offers_models.Offer | None:
+        node: dict[str, Any],
+    ) -> dict[str, Any] | None:
         """Find the offer that matches the source key.
 
         The just_scrape models split offers into separate categorized lists
@@ -104,14 +101,14 @@ class HelperMixin(FileMixin, register=False):
         item whose package short_name matches.
         """
         for item in chain(
-            node.flatrate,
-            node.buy,
-            node.rent,
-            node.free,
-            node.fast,
+            node["flatrate"],
+            node["buy"],
+            node["rent"],
+            node["free"],
+            node["fast"],
         ):
             if item is None:
                 continue
-            if item.package.short_name == source_key:
-                return cast("buy_box_offers_models.Offer", item)
+            if item["package"]["shortName"] == source_key:
+                return item
         return None

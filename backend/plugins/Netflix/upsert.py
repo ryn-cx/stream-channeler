@@ -4,9 +4,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import ClassVar, override
-
-from meshfilm.lodp_title_and_plans_page import models as netflix_models
+from typing import Any, ClassVar, override
 
 from app.episodes.models import Episode
 from app.seasons.models import Season
@@ -53,11 +51,11 @@ class UpsertMixin(HelperMixin, register=False):
             data_timestamp = self.show_data_timestamp(show_key)
             new_show = Show(
                 key=show_key,
-                name=show_data.title,
-                description=show_data.short_synopsis,
+                name=show_data["title"],
+                description=show_data["shortSynopsis"],
                 media_type="TV Show",
                 url=self._show_url(show_key),
-                image_url=show_data.billboard_or_story_art960.url,
+                image_url=show_data["billboardOrStoryArt960"]["url"],
                 data_timestamp=data_timestamp,
                 update_at=self._next_update_at(show_key, data_timestamp),
                 source_id=source.id,
@@ -76,12 +74,12 @@ class UpsertMixin(HelperMixin, register=False):
         force: bool = False,
     ) -> None:
         for sort_order, season_data in enumerate(self._ordered_seasons(show.key)):
-            season_key = self._season_key(show.key, season_data.video_id)
+            season_key = self._season_key(show.key, season_data["videoId"])
             season = Season.get_from_memory(self.session, show, season_key)
             if self._season_is_outdated(season, show.key, force=force):
                 new_season = Season(
                     key=season_key,
-                    name=season_data.title,
+                    name=season_data["title"],
                     season_number=sort_order + 1,
                     sort_order=sort_order,
                     url=self._show_url(show.key),
@@ -93,7 +91,7 @@ class UpsertMixin(HelperMixin, register=False):
             self._upsert_tv_episodes(
                 season,
                 show.key,
-                season_data.video_id,
+                season_data["videoId"],
                 force=force,
             )
 
@@ -108,7 +106,7 @@ class UpsertMixin(HelperMixin, register=False):
     ) -> None:
         episodes = self._season_episodes(show_key, season_id)
         for sort_order, episode_data in enumerate(episodes):
-            episode_key = str(episode_data.video_id)
+            episode_key = str(episode_data["videoId"])
             episode = Episode.get_from_memory(self.session, season, episode_key)
             if not self._episode_is_outdated(
                 episode,
@@ -120,12 +118,12 @@ class UpsertMixin(HelperMixin, register=False):
 
             new_episode = Episode(
                 key=episode_key,
-                name=episode_data.title,
-                episode_number=episode_data.number,
+                name=episode_data["title"],
+                episode_number=episode_data["number"],
                 url=self._episode_url(episode_key),
-                description=episode_data.short_synopsis,
-                image_url=episode_data.merch_still300.url,
-                duration=episode_data.runtime_sec,
+                description=episode_data["shortSynopsis"],
+                image_url=episode_data["merchStill300"]["url"],
+                duration=episode_data["runtimeSec"],
                 sort_order=sort_order,
                 data_timestamp=self.episode_data_timestamp(
                     episode_key,
@@ -150,9 +148,9 @@ class UpsertMixin(HelperMixin, register=False):
             data_timestamp = self.show_data_timestamp(show_key)
             new_show = Show(
                 key=show_key,
-                name=movie_data.title,
+                name=movie_data["title"],
                 url=self._show_url(show_key),
-                image_url=movie_data.billboard_or_story_art960.url,
+                image_url=movie_data["billboardOrStoryArt960"]["url"],
                 media_type="Movie",
                 data_timestamp=data_timestamp,
                 update_at=self._next_update_at(show_key, data_timestamp),
@@ -168,7 +166,7 @@ class UpsertMixin(HelperMixin, register=False):
     def _upsert_movie_season(
         self,
         show: Show,
-        movie_data: netflix_models.Video1,
+        movie_data: dict[str, Any],
         *,
         force: bool = False,
     ) -> None:
@@ -190,9 +188,9 @@ class UpsertMixin(HelperMixin, register=False):
         if self._episode_is_outdated(episode, season.key, show.key, force=force):
             new_episode = Episode(
                 key=episode_key,
-                name=movie_data.title,
+                name=movie_data["title"],
                 url=self._episode_url(episode_key),
-                image_url=movie_data.billboard_or_story_art960.url,
+                image_url=movie_data["billboardOrStoryArt960"]["url"],
                 episode_number=0,
                 sort_order=0,
                 data_timestamp=self.episode_data_timestamp(
@@ -221,9 +219,9 @@ class UpsertMixin(HelperMixin, register=False):
         Netflix surfaces this as a tagline message (e.g. "New Episode Coming
         Thursday"); a title with nothing upcoming has an empty tagline.
         """
-        for tagline in self._title_video(show_key).tagline_messages:
+        for tagline in self._title_video(show_key)["taglineMessages"]:
             for name, weekday in self._WEEKDAYS.items():
-                if name in tagline.tagline:
+                if name in tagline["tagline"]:
                     return weekday
         return None
 

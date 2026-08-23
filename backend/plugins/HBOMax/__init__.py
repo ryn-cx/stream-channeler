@@ -20,7 +20,7 @@ class HBOMax(
     UpsertMixin,
     SourceMixin,
     MediaTypeImportMixin[HBOMaxURLHandler],
-    register=False,
+    register=True,
 ):
     """HBO Max plugin."""
 
@@ -40,4 +40,3 @@ class HBOMax(
     @override
     def plugin_name(cls) -> str:
         return "HBO Max"
-

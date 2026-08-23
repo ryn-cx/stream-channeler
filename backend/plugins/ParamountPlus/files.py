@@ -3,26 +3,20 @@
 
 import re
 from collections.abc import Sequence
-from functools import cache
 from http import HTTPStatus
 from typing import Any, override
 
 from bs4 import BeautifulSoup, Tag
 from bs4.filter import SoupStrainer
 from sqlmodel import Session
-from trivial_minus import TrivialMinus
-from trivial_minus.episodes.models import Datum as EpisodeDatum
-from trivial_minus.episodes.models import EpisodesModel
-from trivial_minus.exceptions import MovieNotFoundError
-from trivial_minus.movie.models import MovieModel
 
 from app.plugins.models import Plugin
+from plugins.ParamountPlus import api
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import (
-    GAPIJSON,
     BaseFile,
+    EndpointJSON,
     HTMLFile,
-    PartialGAPIJSON,
 )
 from plugins.utils.base_plugin.media_type import MediaTypeMixin
 from plugins.utils.get_around_client import get_around_client
@@ -46,10 +40,24 @@ _PAGE_HEADERS = {
 
 
 # TODO: Validate
-@cache
-def trivial_minus() -> TrivialMinus:
-    """Return a cached TrivialMinus client."""
-    return TrivialMinus(get_around_client=get_around_client())
+class ParamountPlusJSON(EndpointJSON[dict[str, Any]]):
+    # TODO: Validate
+    @override
+    def _parse(self, raw: Any) -> dict[str, Any]:
+        return self.raise_if_not_is_instance(raw, dict)
+
+    # TODO: Validate
+    @override
+    def _download(self) -> None:
+        with self._log_download(self.unique_identifier):
+            try:
+                response = self._fetch()
+            except Exception as error:
+                if not self._is_acceptable_error(error):
+                    raise
+                self.write(None, self.acceptable_error_extra_value())
+            else:
+                self.write(response)
 
 
 # TODO: Validate
@@ -118,10 +126,8 @@ class ShowPage(HTMLFile):
 
 
 # TODO: Validate
-class EpisodesFile(PartialGAPIJSON[EpisodesModel]):
+class EpisodesFile(ParamountPlusJSON):
     """Episodes file."""
-
-    API_ENDPOINT = trivial_minus().episodes
 
     # TODO: Validate
     def __init__(
@@ -138,23 +144,23 @@ class EpisodesFile(PartialGAPIJSON[EpisodesModel]):
 
     # TODO: Validate
     @override
-    def _fetch(self) -> EpisodesModel:
-        return self.API_ENDPOINT.download_and_parse(
-            self.show_id,
-            season=self.season_number,
-        )
+    def _fetch(self) -> dict[str, Any]:
+        return api.episodes(self.show_id, season_number=self.season_number)
 
 
 # TODO: Validate
-class MovieFile(GAPIJSON[MovieModel]):
+class MovieFile(ParamountPlusJSON):
     """Movie file."""
 
-    API_ENDPOINT = trivial_minus().movie
+    # TODO: Validate
+    @override
+    def _fetch(self) -> dict[str, Any]:
+        return api.movie(self.unique_identifier)
 
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, MovieNotFoundError)
+        return isinstance(error, api.MovieNotFoundError)
 
     # TODO: Validate
     @override
@@ -204,18 +210,25 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
         return self.show_page_file(show_id).season_numbers()
 
     # TODO: Validate
-    def _season_episodes(self, show_id: str, season_number: int) -> list[EpisodeDatum]:
-        return self.episodes_file(show_id, season_number).parsed().result.data
+    def _season_episodes(
+        self,
+        show_id: str,
+        season_number: int,
+    ) -> list[dict[str, Any]]:
+        parsed = self.episodes_file(show_id, season_number).parsed()
+        episodes: list[dict[str, Any]] = parsed["result"]["data"]
+        return episodes
 
     # TODO: Validate
-    def _movie_model(self, movie_id: str) -> MovieModel:
+    def _movie_data(self, movie_id: str) -> dict[str, Any]:
         return self.movie_file(movie_id).parsed()
 
     # TODO: Validate
     def _series_title(self, show_id: str) -> str:
         first_season = self._season_numbers(show_id)[0]
         self.episodes_file(show_id, first_season).download_if_outdated()
-        return self._season_episodes(show_id, first_season)[0].series_title
+        title: str = self._season_episodes(show_id, first_season)[0]["series_title"]
+        return title
 
     # TODO: Validate
     @override
@@ -273,7 +286,7 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
                 episode_keys.append(show_key)
             else:
                 episode_keys += [
-                    episode.content_id
+                    episode["content_id"]
                     for episode in self._season_episodes(show_key, season_number)
                 ]
         return episode_keys

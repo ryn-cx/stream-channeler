@@ -20,7 +20,7 @@ class ParamountPlus(
     UpsertMixin,
     SourceMixin,
     MediaTypeImportMixin[ParamountPlusURLHandler],
-    register=False,
+    register=True,
 ):
     """Paramount+ plugin."""
 
@@ -43,4 +43,3 @@ class ParamountPlus(
     @override
     def plugin_name(cls) -> str:
         return "Paramount+"
-

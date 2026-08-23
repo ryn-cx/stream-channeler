@@ -4,16 +4,13 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import override
+from typing import Any, override
 
-from diving_board.schedule.group_list import models as group_list_models
 from loguru import logger
 
 from app.sources.models import Source
-from plugins.HiDive.files import (
-    Schedule,
-    diving_board,
-)
+from plugins.HiDive import api
+from plugins.HiDive.files import Schedule
 from plugins.HiDive.helpers import HelperMixin
 from plugins.utils.base_plugin.files import COMPLETED_STATUS, EXTRA_STATUS_FIELD
 
@@ -24,12 +21,13 @@ _SHOW_NAME_SEPARATOR = " - "
 
 
 # TODO: Validate
-def _element_text(element: group_list_models.Element) -> str:
+def _element_text(element: dict[str, Any]) -> str:
     """Return the text a card's element is written with."""
-    if not element.attributes.text:
+    if not element["attributes"].get("text"):
         msg = "Schedule card element has no text."
         raise ValueError(msg)
-    return element.attributes.text
+    text: str = element["attributes"]["text"]
+    return text
 
 
 # TODO: Validate
@@ -59,12 +57,14 @@ class SourceMixin(HelperMixin, register=False):
                 schedule_file.database_record.key,
             )
             for page in schedule_file.parsed():
-                group_list = diving_board().schedule.extract_group_list(page)
-                for group in group_list.attributes.groups:
-                    for card in group.attributes.cards:
+                group_list = api.extract_group_list(page)
+                for group in group_list["attributes"]["groups"]:
+                    for card in group["attributes"]["cards"]:
                         # Layout: content[0].elements[0] is the ISO release date,
                         # elements[1] is "Show Name - Episode Title".
-                        elements = card.attributes.content[0].attributes.elements
+                        elements = card["attributes"]["content"][0]["attributes"][
+                            "elements"
+                        ]
                         release_date = datetime.fromisoformat(
                             _element_text(elements[0]),
                         ).astimezone()

@@ -27,7 +27,7 @@ class HiDive(
     SearchMixin,
     MediaInfoMixin,
     MediaTypeImportMixin[HiDiveURLHandler],
-    register=False,
+    register=True,
 ):
     """HiDive plugin."""
 
@@ -51,4 +51,3 @@ class HiDive(
     @override
     def plugin_name(cls) -> str:
         return "HIDIVE"
-

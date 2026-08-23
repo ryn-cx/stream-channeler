@@ -2,43 +2,53 @@
 """The files HBO Max is read out of."""
 
 from collections.abc import Sequence
-from functools import cache
 from typing import Any, override
 
-from minbo import MinBO
-from minbo.movies.models import MoviesModel
-from minbo.show.models import Episode1 as ShowEpisode
-from minbo.show.models import Idref14 as ShowContent
-from minbo.show.models import Season1 as ShowSeason
-from minbo.show.models import ShowModel
 from sqlmodel import Session
 
 from app.plugins.models import Plugin
+from plugins.HBOMax import api
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import GAPIJSON, BaseFile, PartialGAPIJSON
+from plugins.utils.base_plugin.files import BaseFile, EndpointJSON
 from plugins.utils.base_plugin.media_type import MediaTypeMixin
-from plugins.utils.get_around_client import get_around_client
 
 
 # TODO: Validate
-@cache
-def minbo() -> MinBO:
-    """Return a cached MinBO client."""
-    return MinBO(get_around_client=get_around_client())
+class HBOMaxJSON(EndpointJSON[dict[str, Any]]):
+    """A page's __NEXT_DATA__ JSON."""
+
+    # TODO: Validate
+    @override
+    def _parse(self, raw: Any) -> dict[str, Any]:
+        return self.raise_if_not_is_instance(raw, dict)
+
+    # TODO: Validate
+    @override
+    def _download(self) -> None:
+        with self._log_download(self.unique_identifier):
+            try:
+                response = self._fetch()
+            except Exception as error:
+                if not self._is_acceptable_error(error):
+                    raise
+                self.write(None, self.acceptable_error_extra_value())
+            else:
+                self.write(response)
 
 
 # TODO: Validate
-class ShowFile(GAPIJSON[ShowModel]):
+class ShowFile(HBOMaxJSON):
     """Show file."""
 
-    API_ENDPOINT = minbo().show
+    # TODO: Validate
+    @override
+    def _fetch(self) -> dict[str, Any]:
+        return api.show(self.unique_identifier)
 
 
 # TODO: Validate
-class SeasonFile(PartialGAPIJSON[ShowModel]):
+class SeasonFile(HBOMaxJSON):
     """Season file."""
-
-    API_ENDPOINT = minbo().show
 
     # TODO: Validate
     def __init__(
@@ -55,18 +65,18 @@ class SeasonFile(PartialGAPIJSON[ShowModel]):
 
     # TODO: Validate
     @override
-    def _fetch(self) -> ShowModel:
-        return self.API_ENDPOINT.download_and_parse(
-            self.show_id,
-            season_number=self.season_number,
-        )
+    def _fetch(self) -> dict[str, Any]:
+        return api.show(self.show_id, season_number=self.season_number)
 
 
 # TODO: Validate
-class MovieFile(GAPIJSON[MoviesModel]):
+class MovieFile(HBOMaxJSON):
     """Movie file."""
 
-    API_ENDPOINT = minbo().movie
+    # TODO: Validate
+    @override
+    def _fetch(self) -> dict[str, Any]:
+        return api.movie(self.unique_identifier)
 
 
 # TODO: Validate
@@ -114,31 +124,38 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
 
     # TODO: Validate
     @staticmethod
-    def _content(model: ShowModel) -> ShowContent:
-        return model.props.page_props.mapped_data.idref14
+    def _content(page: dict[str, Any]) -> dict[str, Any]:
+        return api.content(page)
 
     # TODO: Validate
-    def _show_content(self, show_id: str) -> ShowContent:
+    def _show_content(self, show_id: str) -> dict[str, Any]:
         return self._content(self.show_file(show_id).parsed())
 
     # TODO: Validate
     def _season_numbers(self, show_id: str) -> list[int]:
-        return [season.season_number for season in self._show_content(show_id).seasons]
+        return [
+            season["seasonNumber"] for season in self._show_content(show_id)["seasons"]
+        ]
 
     # TODO: Validate
-    def _season_entry(self, show_id: str, season_number: int) -> ShowSeason:
-        for season in self._show_content(show_id).seasons:
-            if season.season_number == season_number:
+    def _season_entry(self, show_id: str, season_number: int) -> dict[str, Any]:
+        for season in self._show_content(show_id)["seasons"]:
+            if season["seasonNumber"] == season_number:
                 return season
         msg = f"Season {season_number} not found for {show_id}"
         raise ValueError(msg)
 
     # TODO: Validate
-    def _season_episodes(self, show_id: str, season_number: int) -> list[ShowEpisode]:
+    def _season_episodes(
+        self,
+        show_id: str,
+        season_number: int,
+    ) -> list[dict[str, Any]]:
         content = self._content(self.season_file(show_id, season_number).parsed())
-        for season in content.seasons:
-            if season.season_number == season_number:
-                return season.episodes
+        for season in content["seasons"]:
+            if season["seasonNumber"] == season_number:
+                episodes: list[dict[str, Any]] = season["episodes"]
+                return episodes
         msg = f"Season {season_number} not found for {show_id}"
         raise ValueError(msg)
 
@@ -200,7 +217,7 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
                 episode_keys.append(show_key)
             else:
                 episode_keys += [
-                    self._episode_key(season_key, episode.episode_number)
+                    self._episode_key(season_key, episode["episodeNumber"])
                     for episode in self._season_episodes(show_key, season_number)
                 ]
         return episode_keys

@@ -1,64 +1,98 @@
 # TODO: Validate
 from collections.abc import Sequence
 from datetime import datetime
-from functools import cache
 from typing import Any, override
 
-from naphki import Naphki
-from naphki.shows_search.models import ShowsSearchModel
-from naphki.video_episodes import models as video_episodes_models
-from naphki.video_episodes.models import Item, VideoEpisodesModel
-from naphki.video_programs import models as video_programs_models
-from naphki.video_programs.models import VideoProgramsModel
 from sqlmodel import Session
 
 from app.files.models import File
 from app.plugins.models import Plugin
+from app.utils import tz_datetime
+from plugins.NHKWorld import api
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import GAPIJSON, BaseFile, GAPIListJSON
-from plugins.utils.get_around_client import get_around_client
+from plugins.utils.base_plugin.files import BaseFile, EndpointJSON
 
 
 # TODO: Validate
-@cache
-def naphki() -> Naphki:
-    """Return a cached Naphki client."""
-    return Naphki(get_around_client=get_around_client())
+class NHKWorldEndpointJSON[T](EndpointJSON[T]):
+    # TODO: Validate
+    @override
+    def _download(self) -> None:
+        with self._log_download(self.unique_identifier):
+            try:
+                response = self._fetch()
+            except Exception as error:
+                if not self._is_acceptable_error(error):
+                    raise
+                self.write(None, self.acceptable_error_extra_value())
+            else:
+                self.write(response)
 
 
 # TODO: Validate
-class VideoProgram(GAPIJSON[VideoProgramsModel]):
+class NHKWorldJSON(NHKWorldEndpointJSON[dict[str, Any]]):
+    # TODO: Validate
+    @override
+    def _parse(self, raw: Any) -> dict[str, Any]:
+        return self.raise_if_not_is_instance(raw, dict)
+
+
+# TODO: Validate
+class NHKWorldListJSON(NHKWorldEndpointJSON[list[dict[str, Any]]]):
+    # TODO: Validate
+    @override
+    def _parse(self, raw: Any) -> list[dict[str, Any]]:
+        return self.raise_if_not_is_instance(raw, list)
+
+
+# TODO: Validate
+def published_at(item: dict[str, Any]) -> datetime:
+    return tz_datetime.fromisoformat(item["video"]["published_at"])
+
+
+# TODO: Validate
+def expired_at(item: dict[str, Any]) -> datetime:
+    return tz_datetime.fromisoformat(item["video"]["expired_at"])
+
+
+# TODO: Validate
+def first_broadcasted_at(item: dict[str, Any]) -> datetime:
+    return tz_datetime.fromisoformat(item["first_broadcasted_at"])
+
+
+# TODO: Validate
+class VideoProgram(NHKWorldJSON):
     """Video program file."""
 
     # Occurs when a user puts in an invalid URL.
     # TODO: Validate
     @override
-    def _get_ACCEPTABLE_ERROR(self) -> str | None:
-        return "Unexpected response status code: 404"
-    API_ENDPOINT = naphki().video_programs
-
-
-# TODO: Validate
-class VideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
-    """Video episodes file."""
-
-    API_ENDPOINT = naphki().video_episodes
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, api.NHKWorldNotFoundError)
 
     # TODO: Validate
     @override
-    def _fetch(self) -> list[VideoEpisodesModel]:
-        return naphki().video_episodes.download_and_parse_all(self.unique_identifier)
-
-    # TODO: Validate
-    def items(self) -> list[Item]:
-        return [item for page in self.parsed() for item in page.items]
+    def _fetch(self) -> dict[str, Any]:
+        return api.video_programs(self.unique_identifier)
 
 
 # TODO: Validate
-class ShowsSearch(GAPIJSON[ShowsSearchModel]):
-    """Shows search file."""
+class VideoEpisodes(NHKWorldListJSON):
+    """Video episodes file."""
 
-    API_ENDPOINT = naphki().shows_search
+    # TODO: Validate
+    @override
+    def _fetch(self) -> list[dict[str, Any]]:
+        return api.video_episodes_all(self.unique_identifier)
+
+    # TODO: Validate
+    def items(self) -> list[dict[str, Any]]:
+        return [item for page in self.parsed() for item in page["items"]]
+
+
+# TODO: Validate
+class ShowsSearch(NHKWorldJSON):
+    """Shows search file."""
 
     # TODO: Validate
     def __init__(
@@ -76,47 +110,46 @@ class ShowsSearch(GAPIJSON[ShowsSearchModel]):
     # website makes.
     # TODO: Validate
     @override
-    def _fetch(self) -> ShowsSearchModel:
-        endpoint = naphki().shows_search
-        return endpoint.parse(endpoint.download(self.query, from_=self.offset))
+    def _fetch(self) -> dict[str, Any]:
+        return api.shows_search(self.query, from_=self.offset)
 
 
 # TODO: Validate
-class NewVideoEpisodes(GAPIListJSON[VideoEpisodesModel]):
+class NewVideoEpisodes(NHKWorldListJSON):
     """New video episodes file."""
 
     IMMUTABLE = True
-    API_ENDPOINT = naphki().video_episodes
 
     # TODO: Consider moving this login into naphki
     # TODO: Validate
     @override
-    def _fetch(self) -> list[VideoEpisodesModel]:
+    def _fetch(self) -> list[dict[str, Any]]:
         # Page 20 at a time (the API default) rather than the 100-entry pages
         # get_all() uses. The initial baseline (to_datetime == now) stops after
         # the first page, and day-to-day there are rarely more than a handful of
         # new episodes, so a single page almost always covers the gap.
         to_datetime = self.identifier_datetime()
-        pages: list[VideoEpisodesModel] = []
+        pages: list[dict[str, Any]] = []
         offset = 0
         while True:
-            page = naphki().video_episodes.download_and_parse(offset=offset)
+            page = api.video_episodes(offset=offset)
             pages.append(page)
-            offset += page.pagination.count
+            pagination = page["pagination"]
+            offset += pagination["count"]
             reached_datetime = any(
-                item.video.published_at <= to_datetime for item in page.items
+                published_at(item) <= to_datetime for item in page["items"]
             )
             if (
-                page.pagination.next is None
-                or page.pagination.count == 0
+                pagination["next"] is None
+                or pagination["count"] == 0
                 or reached_datetime
             ):
                 break
         return pages
 
     # TODO: Validate
-    def items(self) -> list[Item]:
-        return [item for page in self.parsed() for item in page.items]
+    def items(self) -> list[dict[str, Any]]:
+        return [item for page in self.parsed() for item in page["items"]]
 
 
 # TODO: Validate
@@ -216,19 +249,12 @@ class FileMixin(BasePlugin, register=False):
         if isinstance(season_keys, str):
             season_keys = [season_keys]
         return [
-            item.id
+            item["id"]
             for season_key in season_keys
             for item in self.video_episodes_file(season_key).items()
         ]
 
     # TODO: Validate
-    def _get_image_url(
-        self,
-        images: Sequence[
-            video_programs_models.PortraitItem
-            | video_programs_models.LandscapeItem
-            | video_episodes_models.Image
-        ],
-    ) -> str:
-        largest = max(images, key=lambda image: image.width)
-        return self.build_url(largest.url)
+    def _get_image_url(self, images: Sequence[dict[str, Any]]) -> str:
+        largest = max(images, key=lambda image: image["width"])
+        return self.build_url(largest["url"])

@@ -46,25 +46,25 @@ class SearchMixin(HelperMixin, register=False):
 
         next_cursor: str | None = None
         results: list[PluginSearchResult] = []
-        for section in search_file.parsed().data.page.sections.edges:
+        for section in search_file.parsed()["data"]["page"]["sections"]["edges"]:
             section_results = 0
-            for entity in section.node.entities.edges:
-                unified_entity = entity.node.unified_entity
+            for entity in section["node"]["entities"]["edges"]:
+                unified_entity = entity["node"].get("unifiedEntity")
                 if unified_entity is None:
                     continue
                 media_type = self._SEARCH_MEDIA_TYPES.get(
-                    unified_entity.field__typename,
+                    unified_entity["__typename"],
                 )
                 if media_type is None:
                     continue
-                title = entity.node.display_string
-                artwork = entity.node.contextual_artwork
-                media_identifier = str(unified_entity.video_id)
+                title = entity["node"]["displayString"]
+                artwork = entity["node"].get("contextualArtwork")
+                media_identifier = str(unified_entity["videoId"])
                 results.append(
                     PluginSearchResult(
                         title=title,
                         url=self._show_url(media_identifier),
-                        image_url=artwork.artwork.url if artwork else None,
+                        image_url=artwork["artwork"]["url"] if artwork else None,
                         media_type=media_type,
                         media_identifier=media_identifier,
                     ),
@@ -72,7 +72,7 @@ class SearchMixin(HelperMixin, register=False):
                 section_results += 1
             # Only the section holding the titles is worth paging through; the
             # suggestion section alongside it never produces a result.
-            page_info = section.node.entities.page_info
-            if section_results and page_info.has_next_page:
-                next_cursor = page_info.end_cursor
+            page_info = section["node"]["entities"].get("pageInfo")
+            if section_results and page_info and page_info["hasNextPage"]:
+                next_cursor = page_info["endCursor"]
         return PluginSearchResults(results=results, next_cursor=next_cursor)

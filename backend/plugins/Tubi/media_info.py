@@ -25,17 +25,17 @@ class MediaInfoMixin(HelperMixin, register=False):
         content = content_file.parsed()
         is_movie = self._is_movie(media_identifier)
         return PluginMediaInfo(
-            title=content.title,
+            title=content["title"],
             media_type="Movie" if is_movie else "Series",
-            overview=content.description,
-            poster_url=self._first_image(content.posterarts),
-            backdrop_url=self._first_image(content.backgrounds),
-            year=content.year,
+            overview=content["description"],
+            poster_url=self._first_image(content["posterarts"]),
+            backdrop_url=self._first_image(content["backgrounds"]),
+            year=content["year"],
             number_of_seasons=None
             if is_movie
             else len(self._seasons(media_identifier)),
-            runtime=content.duration,
-            genres=content.tags,
+            runtime=content.get("duration"),
+            genres=content["tags"],
             providers=[
                 PluginWatchProviderItem(
                     name=self.plugin_name(),

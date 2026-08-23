@@ -51,11 +51,13 @@ class UpsertMixin(SourceMixin, register=False):
             data_timestamp = self.show_data_timestamp(show_key)
             new_show = Show(
                 key=show_key,
-                name=details.title,
-                description=details.summary,
+                name=details["title"],
+                description=details["summary"],
                 media_type="TV Show",
                 url=self._show_url(show_key),
-                image_url=self._hero(show_key).background_image.default_image.source,
+                image_url=self._hero(show_key)["backgroundImage"]["defaultImage"][
+                    "source"
+                ],
                 year=self._release_year(show_key),
                 data_timestamp=data_timestamp,
                 source_id=source.id,
@@ -75,15 +77,15 @@ class UpsertMixin(SourceMixin, register=False):
         force: bool = False,
     ) -> None:
         for sort_order, season_entry in enumerate(self._seasons(show.key)):
-            season_id = str(season_entry.id)
+            season_id = str(season_entry["id"])
             season_key = self._season_key(show.key, season_id)
             season = Season.get_from_memory(self.session, show, season_key)
             if self._season_is_outdated(season, show.key, force=force):
                 new_season = Season(
                     key=season_key,
-                    name=season_entry.name,
+                    name=season_entry["name"],
                     season_number=self._season_number_from_name(
-                        season_entry.name,
+                        season_entry["name"],
                         sort_order + 1,
                     ),
                     sort_order=sort_order,
@@ -105,7 +107,7 @@ class UpsertMixin(SourceMixin, register=False):
         force: bool = False,
     ) -> None:
         for sort_order, item in enumerate(self._season_episodes(show_key, season_id)):
-            episode_key = str(item.field_id)
+            episode_key = str(item["_id"])
             episode = Episode.get_from_memory(self.session, season, episode_key)
             if not self._episode_is_outdated(
                 episode,
@@ -117,11 +119,11 @@ class UpsertMixin(SourceMixin, register=False):
 
             new_episode = Episode(
                 key=episode_key,
-                name=item.title,
+                name=item["title"],
                 episode_number=sort_order + 1,
                 url=self._video_url(episode_key),
-                description=item.metadata.summary,
-                image_url=item.image_variants.default_image.source,
+                description=item["metadata"]["summary"],
+                image_url=item["imageVariants"]["defaultImage"]["source"],
                 sort_order=sort_order,
                 data_timestamp=self.episode_data_timestamp(
                     episode_key,
@@ -146,11 +148,13 @@ class UpsertMixin(SourceMixin, register=False):
             data_timestamp = self.show_data_timestamp(show_key)
             new_show = Show(
                 key=show_key,
-                name=details.title,
-                description=details.summary,
+                name=details["title"],
+                description=details["summary"],
                 media_type="Movie",
                 url=self._show_url(show_key),
-                image_url=self._hero(show_key).background_image.default_image.source,
+                image_url=self._hero(show_key)["backgroundImage"]["defaultImage"][
+                    "source"
+                ],
                 year=self._release_year(show_key),
                 data_timestamp=data_timestamp,
                 source_id=source.id,
@@ -197,10 +201,12 @@ class UpsertMixin(SourceMixin, register=False):
             details = self._media_details(show_key)
             new_episode = Episode(
                 key=show_key,
-                name=details.title,
-                description=details.summary,
+                name=details["title"],
+                description=details["summary"],
                 url=self._video_url(show_key),
-                image_url=self._hero(show_key).background_image.default_image.source,
+                image_url=self._hero(show_key)["backgroundImage"]["defaultImage"][
+                    "source"
+                ],
                 episode_number=0,
                 sort_order=0,
                 data_timestamp=self.episode_data_timestamp(

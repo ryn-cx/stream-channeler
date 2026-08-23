@@ -8,7 +8,7 @@ from loguru import logger
 
 from app.shows.models import Show
 from app.sources.models import Source
-from plugins.NHKWorld.files import FileMixin, NewVideoEpisodes
+from plugins.NHKWorld.files import FileMixin, NewVideoEpisodes, published_at
 from plugins.utils.base_plugin.files import (
     COMPLETED_STATUS,
     EXTRA_STATUS_FIELD,
@@ -42,10 +42,10 @@ class SourceMixin(FileMixin, register=False):
                 feed_file.database_record.key,
             )
             for item in feed_file.items():
-                show_id = item.video_program.id
+                show_id = item["video_program"]["id"]
                 if show := Show.get_from_memory(self.session, source, show_id):
                     logger.info("Matched show: {}", show.name or show_id)
-                    show.set_update_at(item.video.published_at)
+                    show.set_update_at(published_at(item))
                 else:
                     # NHK World has a small library so new shows can be imported
                     # immediately.

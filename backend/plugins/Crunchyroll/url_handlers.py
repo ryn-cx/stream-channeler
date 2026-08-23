@@ -76,7 +76,10 @@ class CrunchyrollEpisodeURLHandler(CrunchyrollURLHandler):
     @override
     def show_key(self) -> str:
         objects_file = self.plugin.objects_file(self._key)
-        return objects_file.parsed().data[0].episode_metadata.series_id
+        series_id: str = objects_file.parsed()["data"][0]["episode_metadata"][
+            "series_id"
+        ]
+        return series_id
 
     # TODO: Validate
     @override
@@ -88,9 +91,10 @@ class CrunchyrollEpisodeURLHandler(CrunchyrollURLHandler):
         # setup?
         # Episodes for different regions have different keys. The show is always
         # imported for the original region so the episode key also needs to match.
-        for version in objects_file.parsed().data[0].episode_metadata.versions:
-            if version.original:
-                self._key = version.guid
+        versions = objects_file.parsed()["data"][0]["episode_metadata"]["versions"]
+        for version in versions:
+            if version["original"]:
+                self._key = version["guid"]
                 break
 
         original_file = self.plugin.objects_file(self._key)
@@ -143,8 +147,9 @@ class _CrunchyrollMusicURLHandler(CrunchyrollURLHandler):
     @override
     def show_key(self) -> str:
         file = self.plugin.concert_or_music_video_file(self._episode_key)
-        details = file.parsed().data[0]
-        return details.artist.id
+        details = file.parsed()["data"][0]
+        artist_id: str = details["artist"]["id"]
+        return artist_id
 
     # TODO: Validate
     @property

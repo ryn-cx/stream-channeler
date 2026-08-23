@@ -31,8 +31,8 @@ class RokuURLHandler(URLHandler["Roku"]):
     @override
     def show_key(self) -> str:
         # A season or an episode URL is imported as the series it belongs to.
-        if series := self.plugin.content_file(self._key).parsed().series:
-            return content_id(series.meta.id)
+        if series := self.plugin.content_file(self._key).parsed().get("series"):
+            return content_id(series["meta"]["id"])
         return self._key
 
     # TODO: Validate

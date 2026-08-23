@@ -4,9 +4,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import ClassVar, override
-
-from diving_board.search import models as search_models
+from typing import Any, ClassVar, override
 
 from app.utils import tz_datetime
 from plugins.HiDive.helpers import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE, HelperMixin
@@ -38,27 +36,28 @@ class SearchMixin(HelperMixin, register=False):
         search_file.download_if_outdated(minimum_timestamp)
 
         results: list[PluginSearchResult] = []
-        for element in search_file.parsed().elements:
-            for card in element.attributes.cards or []:
-                data = card.attributes.action.data
-                type_prefix, _, key = data.id.partition("#")
+        for element in search_file.parsed()["elements"]:
+            for card in element["attributes"].get("cards") or []:
+                data = card["attributes"]["action"]["data"]
+                type_prefix, _, key = data["id"].partition("#")
                 media_type = self.MEDIA_TYPE_BY_SEARCH_TYPE[type_prefix]
                 results.append(
                     PluginSearchResult(
-                        title=data.title,
+                        title=data["title"],
                         url=self._show_url(key, media_type),
                         image_url=self._search_card_image(card),
                         media_type=media_type,
-                        media_identifier=data.id,
+                        media_identifier=data["id"],
                     ),
                 )
         return paginate_search_results(results, cursor, self.SEARCH_PAGE_SIZE)
 
     # TODO: Validate
     @staticmethod
-    def _search_card_image(card: search_models.Card) -> str:
-        for header in card.attributes.header:
-            if header.attributes.source:
-                return header.attributes.source
+    def _search_card_image(card: dict[str, Any]) -> str:
+        for header in card["attributes"]["header"]:
+            if header["attributes"].get("source"):
+                source: str = header["attributes"]["source"]
+                return source
         msg = "Search card has no image"
         raise ValueError(msg)

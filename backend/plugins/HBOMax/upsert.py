@@ -4,15 +4,14 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import override
-
-from minbo.movies.models import Idref14 as MovieContent
+from typing import Any, override
 
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.shows.service import find_and_add_canonical_show
 from app.sources.models import Source
+from app.utils import tz_datetime
 from plugins.HBOMax.helpers import HelperMixin
 
 
@@ -53,11 +52,11 @@ class UpsertMixin(HelperMixin, register=False):
             data_timestamp = self.show_data_timestamp(show_key)
             new_show = Show(
                 key=show_key,
-                name=content.title.full,
-                description=content.summary.full,
+                name=content["title"]["full"],
+                description=content["summary"]["full"],
                 media_type="TV Show",
                 url=self._show_url(show_key),
-                image_url=content.image_url_link,
+                image_url=content["imageUrlLink"],
                 data_timestamp=data_timestamp,
                 source_id=source.id,
                 update_at=data_timestamp + timedelta(days=30),
@@ -82,11 +81,11 @@ class UpsertMixin(HelperMixin, register=False):
             data_timestamp = self.show_data_timestamp(show_key)
             new_show = Show(
                 key=show_key,
-                name=content.title.full,
-                description=content.summary.full,
+                name=content["title"]["full"],
+                description=content["summary"]["full"],
                 media_type="Movie",
                 url=self._movie_url(show_key),
-                image_url=content.image_url_link,
+                image_url=content["imageUrlLink"],
                 data_timestamp=data_timestamp,
                 source_id=source.id,
                 update_at=data_timestamp + timedelta(days=30),
@@ -111,7 +110,7 @@ class UpsertMixin(HelperMixin, register=False):
                 entry = self._season_entry(show.key, season_number)
                 new_season = Season(
                     key=season_key,
-                    name=entry.title.full,
+                    name=entry["title"]["full"],
                     season_number=season_number,
                     sort_order=sort_order,
                     url=self._show_url(show.key),
@@ -161,7 +160,7 @@ class UpsertMixin(HelperMixin, register=False):
     ) -> None:
         episodes = self._season_episodes(show_key, season_number)
         for sort_order, item in enumerate(episodes):
-            episode_key = self._episode_key(season.key, item.episode_number)
+            episode_key = self._episode_key(season.key, item["episodeNumber"])
             episode = Episode.get_from_memory(self.session, season, episode_key)
             if not self._episode_is_outdated(
                 episode,
@@ -173,12 +172,14 @@ class UpsertMixin(HelperMixin, register=False):
 
             new_episode = Episode(
                 key=episode_key,
-                name=str(item.title.full),
-                episode_number=item.episode_number,
-                url=item.episode_url,
-                description=item.summary.full,
-                image_url=item.images.default,
-                air_date=item.offering_dates.start_date,
+                name=str(item["title"]["full"]),
+                episode_number=item["episodeNumber"],
+                url=item["episodeUrl"],
+                description=item["summary"]["full"],
+                image_url=item["images"]["default"],
+                air_date=tz_datetime.fromisoformat(
+                    item["offeringDates"]["startDate"],
+                ),
                 sort_order=sort_order,
                 data_timestamp=self.episode_data_timestamp(
                     episode_key,
@@ -194,7 +195,7 @@ class UpsertMixin(HelperMixin, register=False):
         self,
         season: Season,
         show_key: str,
-        content: MovieContent,
+        content: dict[str, Any],
         *,
         force: bool = False,
     ) -> None:
@@ -202,10 +203,10 @@ class UpsertMixin(HelperMixin, register=False):
         if self._episode_is_outdated(episode, season.key, show_key, force=force):
             new_episode = Episode(
                 key=show_key,
-                name=content.title.full,
-                description=content.summary.full,
+                name=content["title"]["full"],
+                description=content["summary"]["full"],
                 url=self._movie_url(show_key),
-                image_url=content.image_url_link,
+                image_url=content["imageUrlLink"],
                 episode_number=0,
                 sort_order=0,
                 data_timestamp=self.episode_data_timestamp(

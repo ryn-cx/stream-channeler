@@ -45,7 +45,7 @@ class ImportURLMixin(
         unhandled_source_keys: list[str] = []
         imported_offer_urls: set[str] = set()
         for source_key, offer in self._sources_with_videos(handler.show_key):
-            offer_url = self._clean_external_url(offer.standard_web_url)
+            offer_url = self._clean_external_url(offer["standardWebURL"])
             matching_plugin = plugin_for_url(offer_url, type(self))
             if matching_plugin is None:
                 unhandled_source_keys.append(source_key)
@@ -101,16 +101,16 @@ class ImportURLMixin(
             from plugins.TMDB import TMDB  # noqa: PLC0415
 
             parsed = self.url_title_details_file(show_key).parsed()
-            content = parsed.data.url_v2.node.content
+            content = parsed["data"]["urlV2"]["node"]["content"]
             media_type = (
                 MediaType.movie
                 if self._media_type(show_key) == "Movie"
                 else MediaType.tv
             )
             return TMDB(self.session).import_search(
-                content.title,
+                content["title"],
                 media_type,
-                content.original_release_year,
+                content["originalReleaseYear"],
                 force=force,
             )
         finally:

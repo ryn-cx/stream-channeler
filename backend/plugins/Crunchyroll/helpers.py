@@ -1,6 +1,6 @@
 # TODO: Validate
 
-from chirashi.series import models as series_models
+from typing import Any
 
 from app.media.media_type import MediaType
 from app.sources.models import Source
@@ -33,13 +33,14 @@ class HelperMixin(FileMixin, register=False):
         return self.video_source
 
     # TODO: Validate
-    def _series_datum(self, show_key: str) -> series_models.Datum:
+    def _series_datum(self, show_key: str) -> dict[str, Any]:
         series_file = self.series_file(show_key)
-        return series_file.parsed().data[0]
+        datum: dict[str, Any] = series_file.parsed()["data"][0]
+        return datum
 
     # TODO: Validate
     def _is_movie(self, show_key: str) -> bool:
-        return "type:movie" in self._series_datum(show_key).keywords
+        return "type:movie" in self._series_datum(show_key)["keywords"]
 
     # TODO: Validate
     def tmdb_media_type(self, show_key: str) -> MediaType:

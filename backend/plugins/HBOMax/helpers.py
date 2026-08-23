@@ -1,10 +1,8 @@
 # TODO: Validate
 """What every other part of the plugin reads a title by."""
 
-from typing import override
+from typing import Any, override
 from urllib.parse import quote
-
-from minbo.movies.models import Idref14 as MovieContent
 
 from app.shows.models import Show
 from plugins.HBOMax.files import FileMixin
@@ -23,8 +21,8 @@ class HelperMixin(FileMixin, register=False):
         self._media_type_value = "movie" if show.media_type == "Movie" else "series"
 
     # TODO: Validate
-    def _movie_content(self, movie_id: str) -> MovieContent:
-        return self.movie_file(movie_id).parsed().props.page_props.mapped_data.idref14
+    def _movie_content(self, movie_id: str) -> dict[str, Any]:
+        return self._content(self.movie_file(movie_id).parsed())
 
     # TODO: Validate
     @classmethod

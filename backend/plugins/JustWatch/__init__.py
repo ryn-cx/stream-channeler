@@ -16,7 +16,7 @@ class JustWatch(
     ImportURLMixin,
     UpsertMixin,
     HelperMixin,
-    register=False,
+    register=True,
 ):
     """JustWatch plugin."""
 

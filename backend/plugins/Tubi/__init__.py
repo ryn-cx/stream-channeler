@@ -23,7 +23,7 @@ class Tubi(
     MediaInfoMixin,
     SourceMixin,
     URLHandlerPlugin[TubiURLHandler],
-    register=False,
+    register=True,
 ):
     """Tubi plugin."""
 

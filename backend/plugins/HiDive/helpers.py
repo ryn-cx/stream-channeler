@@ -4,11 +4,8 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import override
+from typing import Any, override
 from urllib.parse import quote_plus
-
-from diving_board.series import models as series_models
-from diving_board.vod.hero.models import VodHeroModel
 
 from app.shows.models import Show
 from plugins.HiDive.files import FileMixin
@@ -37,41 +34,44 @@ class HelperMixin(FileMixin, register=False):
 
     # TODO: Validate
     @staticmethod
-    def _series_image_url(series_data: series_models.SeriesModel) -> str:
+    def _series_image_url(series_data: dict[str, Any]) -> str:
         """Return the hero image URL from a parsed series file."""
-        for element in series_data.elements:
-            if element.attributes.image:
-                return element.attributes.image.attributes.source
+        for element in series_data["elements"]:
+            if element["attributes"].get("image"):
+                source: str = element["attributes"]["image"]["attributes"]["source"]
+                return source
         msg = "No image element found in series file."
         raise ValueError(msg)
 
     # TODO: Validate
     @staticmethod
-    def _movie_title(hero: VodHeroModel) -> str:
+    def _movie_title(hero: dict[str, Any]) -> str:
         """Return the movie's title from the VOD's own hero action."""
-        for action in hero.attributes.actions:
-            data = action.attributes.action.data
-            if data.type == "VOD":
-                return data.title
+        for action in hero["attributes"]["actions"]:
+            data = action["attributes"]["action"]["data"]
+            if data["type"] == "VOD":
+                title: str = data["title"]
+                return title
         msg = "No VOD action found in movie hero."
         raise ValueError(msg)
 
     # TODO: Validate
     @staticmethod
-    def _movie_description(hero: VodHeroModel) -> str | None:
+    def _movie_description(hero: dict[str, Any]) -> str | None:
         """Return the movie's synopsis from the first hero content block with text."""
-        for content in hero.attributes.content:
-            if content.attributes.text:
-                return content.attributes.text
+        for content in hero["attributes"]["content"]:
+            if content["attributes"].get("text"):
+                text: str = content["attributes"]["text"]
+                return text
         return None
 
     # TODO: Validate
     @staticmethod
-    def _release_date(hero: VodHeroModel) -> datetime | None:
+    def _release_date(hero: dict[str, Any]) -> datetime | None:
         """Return the day the title came out, as its hero's tags give it."""
-        for content in hero.attributes.content:
-            for tag in content.attributes.tags or []:
-                text = tag.attributes.text
+        for content in hero["attributes"]["content"]:
+            for tag in content["attributes"].get("tags") or []:
+                text = tag["attributes"].get("text")
                 if text and text.startswith(_RELEASE_DATE_PREFIX):
                     date_string = text.removeprefix(_RELEASE_DATE_PREFIX)
                     return datetime.strptime(date_string, "%B %d, %Y").astimezone()
@@ -79,11 +79,12 @@ class HelperMixin(FileMixin, register=False):
 
     # TODO: Validate
     @staticmethod
-    def _movie_duration(hero: VodHeroModel) -> int | None:
+    def _movie_duration(hero: dict[str, Any]) -> int | None:
         """Return how long the movie runs for, in seconds."""
-        for content in hero.attributes.content:
-            if content.attributes.duration is not None:
-                return content.attributes.duration
+        for content in hero["attributes"]["content"]:
+            if content["attributes"].get("duration") is not None:
+                duration: int = content["attributes"]["duration"]
+                return duration
         return None
 
     # TODO: Validate

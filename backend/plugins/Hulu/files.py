@@ -2,27 +2,15 @@
 """The files Hulu is read out of."""
 
 from collections.abc import Sequence
-from functools import cache
-from typing import Any, cast, override
+from typing import Any, override
 
 from sqlmodel import Session
-from wholoo import Wholoo
-from wholoo.movies.models import MoviesModel
-from wholoo.search.models import SearchModel
-from wholoo.season.models import Item as SeasonItem
-from wholoo.season.models import SeasonModel
-from wholoo.tv.models import TVModel
 
 from app.plugins.models import Plugin
+from plugins.Hulu import api
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import (
-    GAPIJSON,
-    BaseFile,
-    JSONFile,
-    PartialGAPIJSON,
-)
+from plugins.utils.base_plugin.files import BaseFile, EndpointJSON
 from plugins.utils.base_plugin.media_type import MediaTypeMixin
-from plugins.utils.get_around_client import get_around_client
 
 MOVIE_MEDIA_TYPE = "movie"
 """What Hulu calls a title that is a film rather than a series."""
@@ -32,50 +20,61 @@ SERIES_MEDIA_TYPE = "series"
 
 
 # TODO: Validate
-@cache
-def wholoo() -> Wholoo:
-    """Return a cached Wholoo client."""
-    return Wholoo(get_around_client=get_around_client())
+class HuluJSON(EndpointJSON[dict[str, Any]]):
+    """A file holding one Hulu endpoint's parsed JSON."""
 
+    # TODO: Validate
+    @override
+    def _parse(self, raw: Any) -> dict[str, Any]:
+        return self.raise_if_not_is_instance(raw, dict)
 
-# The details hub for a single episode, which is the only place the id of the series
-# an episode belongs to can be looked up.
-_EPISODE_HUB_URL = "https://discover.hulu.com/content/v5/hubs/episode"
-_EPISODE_HUB_PARAMS = {
-    "schema": "3",
-    "limit": "1999",
-    "device_info": "web:4.44.1",
-    "referralHost": "production",
-    "pageType": "DETAILS",
-}
+    # TODO: Validate
+    @override
+    def _download(self) -> None:
+        with self._log_download(self.unique_identifier):
+            try:
+                response = self._fetch()
+            except Exception as error:
+                if not self._is_acceptable_error(error):
+                    raise
+                self.write(None, self.acceptable_error_extra_value())
+            else:
+                self.write(response)
 
 
 # TODO: Validate
-class Series(GAPIJSON[TVModel]):
+class Series(HuluJSON):
     """Series file."""
 
-    API_ENDPOINT = wholoo().tv
+    # TODO: Validate
+    @override
+    def _fetch(self) -> dict[str, Any]:
+        return api.series_hub(self.unique_identifier)
 
 
 # TODO: Validate
-class Movie(GAPIJSON[MoviesModel]):
+class Movie(HuluJSON):
     """Movie file."""
 
-    API_ENDPOINT = wholoo().movies
+    # TODO: Validate
+    @override
+    def _fetch(self) -> dict[str, Any]:
+        return api.movie_hub(self.unique_identifier)
 
 
 # TODO: Validate
-class SearchFile(GAPIJSON[SearchModel]):
+class SearchFile(HuluJSON):
     """Search file."""
 
-    API_ENDPOINT = wholoo().search
+    # TODO: Validate
+    @override
+    def _fetch(self) -> dict[str, Any]:
+        return api.search_entity(self.unique_identifier)
 
 
 # TODO: Validate
-class SeasonFile(PartialGAPIJSON[SeasonModel]):
+class SeasonFile(HuluJSON):
     """Season file."""
-
-    API_ENDPOINT = wholoo().tv.season
 
     # TODO: Validate
     def __init__(
@@ -92,38 +91,20 @@ class SeasonFile(PartialGAPIJSON[SeasonModel]):
 
     # TODO: Validate
     @override
-    def _fetch(self) -> SeasonModel:
-        return self.API_ENDPOINT.download_and_parse(self.series_id, self.season_number)
+    def _fetch(self) -> dict[str, Any]:
+        return api.season(self.series_id, self.season_number)
 
 
+# The details hub for a single episode, which is the only place the id of the series
+# an episode belongs to can be looked up.
 # TODO: Validate
-class EpisodeHub(JSONFile[dict[str, Any]]):
+class EpisodeHub(HuluJSON):
     """Episode file."""
 
-    # TODO: Add this to Wholoo so it has full type support.
-    # TODO: Validate
-    def __init__(self, session: Session, plugin: Plugin, episode_id: str) -> None:
-        """Initialize the file."""
-        self.unique_identifier = episode_id
-        super().__init__(session, plugin)
-
     # TODO: Validate
     @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            self.write(
-                wholoo().download(
-                    f"{_EPISODE_HUB_URL}/{self.unique_identifier}",
-                    f"https://www.hulu.com/watch/{self.unique_identifier}",
-                    params=_EPISODE_HUB_PARAMS,
-                    log_id=f"EpisodeHub/{self.unique_identifier}",
-                ),
-            )
-
-    # TODO: Validate
-    @override
-    def _parse(self, raw: Any) -> dict[str, Any]:
-        return cast("dict[str, Any]", raw)
+    def _fetch(self) -> dict[str, Any]:
+        return api.episode_hub(self.unique_identifier)
 
     # TODO: Validate
     def series_id(self) -> str:
@@ -181,22 +162,30 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
         return show_key, int(season_number)
 
     # TODO: Validate
-    def _series_model(self, series_id: str) -> TVModel:
+    def _series_data(self, series_id: str) -> dict[str, Any]:
         return self.series_file(series_id).parsed()
 
     # TODO: Validate
     def _season_numbers(self, series_id: str) -> list[int]:
         numbers: dict[int, None] = {}
-        for component in self._series_model(series_id).components:
-            for item in component.items:
-                grouping = item.series_grouping_metadata
+        for component in self._series_data(series_id)["components"]:
+            for item in component["items"]:
+                grouping = item.get("series_grouping_metadata")
                 if grouping is not None:
-                    numbers[grouping.season_number] = None
+                    numbers[grouping["season_number"]] = None
         return sorted(numbers)
 
     # TODO: Validate
-    def _season_items(self, series_id: str, season_number: int) -> list[SeasonItem]:
-        return self.season_file(series_id, season_number).parsed().items
+    def _season_items(
+        self,
+        series_id: str,
+        season_number: int,
+    ) -> list[dict[str, Any]]:
+        items: list[dict[str, Any]] = self.season_file(
+            series_id,
+            season_number,
+        ).parsed()["items"]
+        return items
 
     # TODO: Validate
     @override
@@ -256,6 +245,7 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
                 episode_keys.append(show_key)
             else:
                 episode_keys += [
-                    str(item.id) for item in self._season_items(show_key, season_number)
+                    str(item["id"])
+                    for item in self._season_items(show_key, season_number)
                 ]
         return episode_keys

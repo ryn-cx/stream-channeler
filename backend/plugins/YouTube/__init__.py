@@ -41,7 +41,6 @@ from plugins.YouTube.upsert import UpsertMixin
 from plugins.YouTube.watch_history import WatchHistoryMixin
 
 
-
 # TODO: Validate
 class YouTube(
     SourceMixin,
@@ -197,8 +196,8 @@ class YouTube(
         # be considered missing if the channel has at least one upload.
         if playlist_key == self.channel_uploads_playlist_key(show.key):
             channel_by_channel_id = self.channel_by_channel_id_file(show.key)
-            channel_item = get_first_item(channel_by_channel_id.parsed().items)
-            if int(channel_item.statistics.video_count) == 0:
+            channel_item = get_first_item(channel_by_channel_id.parsed()["items"])
+            if int(channel_item["statistics"]["videoCount"]) == 0:
                 return False
         return not Season.get_from_memory(self.session, show, playlist_key)
 

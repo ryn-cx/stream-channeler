@@ -2,38 +2,40 @@
 """The files a Disney+ title is read out of."""
 
 from collections.abc import Sequence
-from functools import cache
 from typing import Any, override
-from uuid import UUID
 
-from kneeminus import KneeMinus
-from kneeminus.entity.models import (
-    DetailEntityHero,
-    EntityModel,
-    MediaDetails,
-)
-from kneeminus.entity.models import Episode as EntityEpisode
-from kneeminus.entity.models import Season as EntitySeason
 from sqlmodel import Session
 
 from app.plugins.models import Plugin
+from plugins.DisneyPlus import api
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import BaseFile, PartialGAPIJSON
-from plugins.utils.get_around_client import get_around_client
+from plugins.utils.base_plugin.files import BaseFile, EndpointJSON
 
 
 # TODO: Validate
-@cache
-def kneeminus() -> KneeMinus:
-    """Return a cached KneeMinus client."""
-    return KneeMinus(get_around_client=get_around_client())
+class DisneyPlusJSON(EndpointJSON[dict[str, Any]]):
+    # TODO: Validate
+    @override
+    def _parse(self, raw: Any) -> dict[str, Any]:
+        return api.group_main_content(self.raise_if_not_is_instance(raw, dict))
+
+    # TODO: Validate
+    @override
+    def _download(self) -> None:
+        with self._log_download(self.unique_identifier):
+            try:
+                response = self._fetch()
+            except Exception as error:
+                if not self._is_acceptable_error(error):
+                    raise
+                self.write(None, self.acceptable_error_extra_value())
+            else:
+                self.write(response)
 
 
 # TODO: Validate
-class EntityFile(PartialGAPIJSON[EntityModel]):
+class EntityFile(DisneyPlusJSON):
     """Entity file."""
-
-    API_ENDPOINT = kneeminus().entity
 
     # TODO: Validate
     @override
@@ -48,15 +50,13 @@ class EntityFile(PartialGAPIJSON[EntityModel]):
 
     # TODO: Validate
     @override
-    def _fetch(self) -> EntityModel:
-        return self.API_ENDPOINT.download_and_parse(UUID(self.entity_id))
+    def _fetch(self) -> dict[str, Any]:
+        return api.entity(self.entity_id)
 
 
 # TODO: Validate
-class SeasonEntityFile(PartialGAPIJSON[EntityModel]):
+class SeasonEntityFile(DisneyPlusJSON):
     """Season entity file."""
-
-    API_ENDPOINT = kneeminus().entity
 
     # TODO: Validate
     @override
@@ -78,11 +78,8 @@ class SeasonEntityFile(PartialGAPIJSON[EntityModel]):
 
     # TODO: Validate
     @override
-    def _fetch(self) -> EntityModel:
-        return self.API_ENDPOINT.download_and_parse(
-            UUID(self.entity_id),
-            season_id=UUID(self.season_id),
-        )
+    def _fetch(self) -> dict[str, Any]:
+        return api.entity(self.entity_id, season_id=self.season_id)
 
 
 # TODO: Validate
@@ -100,38 +97,46 @@ class FileMixin(BasePlugin, register=False):
         return self._file(SeasonEntityFile, entity_id, season_id)
 
     # TODO: Validate
-    def _grouped(self, entity_id: str) -> EntityModel:
+    def _grouped(self, entity_id: str) -> dict[str, Any]:
         return self.entity_file(entity_id).parsed()
 
     # TODO: Validate
-    def _season_grouped(self, entity_id: str, season_id: str) -> EntityModel:
+    def _season_grouped(self, entity_id: str, season_id: str) -> dict[str, Any]:
         return self.season_file(entity_id, season_id).parsed()
 
     # TODO: Validate
-    def _media_details(self, show_key: str) -> MediaDetails:
-        return self._grouped(show_key).media_details
+    def _media_details(self, show_key: str) -> dict[str, Any]:
+        details: dict[str, Any] = self._grouped(show_key)["MediaDetails"]
+        return details
 
     # TODO: Validate
-    def _hero(self, show_key: str) -> DetailEntityHero:
-        return self._grouped(show_key).detail_entity_hero
+    def _hero(self, show_key: str) -> dict[str, Any]:
+        hero: dict[str, Any] = self._grouped(show_key)["DetailEntityHero"]
+        return hero
 
     # TODO: Validate
     def _is_movie(self, show_key: str) -> bool:
-        return self._grouped(show_key).episodes is None
+        return self._grouped(show_key).get("Episodes") is None
 
     # TODO: Validate
-    def _seasons(self, show_key: str) -> list[EntitySeason]:
-        episodes = self._grouped(show_key).episodes
+    def _seasons(self, show_key: str) -> list[dict[str, Any]]:
+        episodes = self._grouped(show_key).get("Episodes")
         if episodes is None:
             return []
-        return episodes.seasons
+        seasons: list[dict[str, Any]] = episodes["seasons"]
+        return seasons
 
     # TODO: Validate
-    def _season_episodes(self, show_key: str, season_id: str) -> list[EntityEpisode]:
-        episodes = self._season_grouped(show_key, season_id).episodes
+    def _season_episodes(
+        self,
+        show_key: str,
+        season_id: str,
+    ) -> list[dict[str, Any]]:
+        episodes = self._season_grouped(show_key, season_id).get("Episodes")
         if episodes is None:
             return []
-        return episodes.episodes
+        season_episodes: list[dict[str, Any]] = episodes["episodes"]
+        return season_episodes
 
     # TODO: Validate
     @staticmethod
@@ -180,7 +185,7 @@ class FileMixin(BasePlugin, register=False):
         if self._is_movie(show_key):
             return [self._season_key(show_key, show_key)]
         return [
-            self._season_key(show_key, str(season.id))
+            self._season_key(show_key, str(season["id"]))
             for season in self._seasons(show_key)
         ]
 
@@ -200,7 +205,7 @@ class FileMixin(BasePlugin, register=False):
                 episode_keys.append(show_key)
             else:
                 episode_keys += [
-                    str(episode.field_id)
+                    str(episode["_id"])
                     for episode in self._season_episodes(show_key, season_id)
                 ]
         return episode_keys

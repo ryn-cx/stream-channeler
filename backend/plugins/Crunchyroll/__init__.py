@@ -52,7 +52,7 @@ class Crunchyroll(
     MediaInfoMixin,
     HelperMixin,
     URLHandlerPlugin[CrunchyrollURLHandler],
-    register=False,
+    register=True,
 ):
     """Crunchyroll plugin."""
 
@@ -138,9 +138,9 @@ class Crunchyroll(
         try:
             series_data = self._series_datum(show_key)
             return TMDB(self.session).import_search(
-                series_data.title,
+                series_data["title"],
                 self.tmdb_media_type(show_key),
-                series_data.series_launch_year,
+                series_data["series_launch_year"],
                 force=force,
             )
         finally:

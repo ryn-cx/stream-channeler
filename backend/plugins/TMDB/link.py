@@ -53,19 +53,21 @@ class TMDBLinker:
         media, and a person is not something to be linked to.
         """
         if media_type is not None:
-            results = (
-                self.tmdb.auto_updating_search_media(media_type, name, year)
-                .parsed()
-                .results
-            )
-            return Media(media_type, results[0].id) if results else None
+            results = self.tmdb.auto_updating_search_media(
+                media_type,
+                name,
+                year,
+            ).parsed()["results"]
+            return Media(media_type, results[0]["id"]) if results else None
 
-        found = self.tmdb.auto_updating_search_media(None, name, year).parsed().results
+        found = self.tmdb.auto_updating_search_media(None, name, year).parsed()[
+            "results"
+        ]
         return next(
             (
-                Media(half, result.id)
+                Media(half, result["id"])
                 for result in found
-                if (half := _SEARCHED_MEDIA_TYPES.get(result.media_type)) is not None
+                if (half := _SEARCHED_MEDIA_TYPES.get(result["media_type"])) is not None
             ),
             None,
         )

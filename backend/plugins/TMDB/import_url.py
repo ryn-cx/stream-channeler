@@ -120,19 +120,23 @@ class ImportURLMixin(
         )
         provider_plugins = provider_name_plugins()
         for provider in providers:
-            plugin_class = provider_plugins.get(provider.provider_name)
+            plugin_class = provider_plugins.get(provider["provider_name"])
             if plugin_class in imported or self._import_searched_source(
                 plugin_class,
                 show,
                 force=force,
             ):
-                clear_unmatched_source(self.session, show.id, provider.provider_name)
+                clear_unmatched_source(
+                    self.session,
+                    show.id,
+                    provider["provider_name"],
+                )
                 continue
 
             record_unmatched_source(
                 self.session,
                 show.id,
-                provider.provider_name,
+                provider["provider_name"],
                 plugin_class.plugin_key() if plugin_class else None,
             )
 
@@ -219,19 +223,19 @@ class ImportURLMixin(
     ) -> tuple[MediaType, int] | None:
         """Return which half the first title TMDB returns is from, and its id."""
         if media_type is not None:
-            results = (
-                self.auto_updating_search_media(media_type, name, year).parsed().results
-            )
-            return (media_type, results[0].id) if results else None
+            results = self.auto_updating_search_media(media_type, name, year).parsed()[
+                "results"
+            ]
+            return (media_type, results[0]["id"]) if results else None
 
         # A search of both halves also returns people, who are no title and are
         # passed over rather than taken as the first result.
-        for result in (
-            self.auto_updating_search_media(None, name, year).parsed().results
-        ):
-            half = _SEARCHED_MEDIA_TYPES.get(result.media_type or "")
+        for result in self.auto_updating_search_media(None, name, year).parsed()[
+            "results"
+        ]:
+            half = _SEARCHED_MEDIA_TYPES.get(result.get("media_type") or "")
             if half is not None:
-                return half, result.id
+                return half, result["id"]
         return None
 
     # TODO: Validate

@@ -27,12 +27,12 @@ class MediaInfoMixin(HelperMixin, register=False):
         is_movie = self._is_movie(media_identifier)
         details = self._media_details(media_identifier)
         hero = self._hero(media_identifier)
-        runtime_ms = hero.runtime_ms
+        runtime_ms = hero.get("runtimeMs")
         return PluginMediaInfo(
-            title=details.title,
+            title=details["title"],
             media_type="Movie" if is_movie else "Series",
-            overview=details.summary,
-            backdrop_url=hero.background_image.default_image.source,
+            overview=details["summary"],
+            backdrop_url=hero["backgroundImage"]["defaultImage"]["source"],
             year=self._release_year(media_identifier),
             number_of_seasons=None
             if is_movie
@@ -40,7 +40,7 @@ class MediaInfoMixin(HelperMixin, register=False):
             runtime=None
             if runtime_ms is None
             else runtime_ms // _MILLISECONDS_PER_SECOND,
-            genres=details.genres or hero.genres,
+            genres=details.get("genres") or hero["genres"],
             providers=[
                 PluginWatchProviderItem(
                     name=self.plugin_name(),

@@ -28,7 +28,7 @@ class HelperMixin(FileMixin, register=False):
 
     # TODO: Validate
     def _release_year(self, show_key: str) -> int | None:
-        if year := _RELEASE_YEAR_REGEX.search(self._hero(show_key).release_year):
+        if year := _RELEASE_YEAR_REGEX.search(self._hero(show_key)["releaseYear"]):
             return int(year.group())
         return None
 

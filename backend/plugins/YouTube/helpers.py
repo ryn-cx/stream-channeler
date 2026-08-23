@@ -53,8 +53,8 @@ class HelperMixin(FileMixin, register=False):
             if not episode_keys:
                 return None
             episode_key = episode_keys[0]
-        items = self.videos_file(episode_key).parsed().items
-        return items[0].snippet.channel_id if items else None
+        items = self.videos_file(episode_key).parsed()["items"]
+        return items[0]["snippet"]["channelId"] if items else None
 
     # TODO: Validate
     def is_free_movie(self, show_key: str) -> bool:
@@ -66,8 +66,8 @@ class HelperMixin(FileMixin, register=False):
         episode_keys = self.show_episode_keys(show_key)
         if not episode_keys:
             return None
-        items = self.videos_file(episode_keys[0]).parsed().items
-        return items[0].snippet.channel_title if items else None
+        items = self.videos_file(episode_keys[0]).parsed()["items"]
+        return items[0]["snippet"]["channelTitle"] if items else None
 
     # TODO: Validate
     def subscription_source(self, show_key: str) -> Source | None:
@@ -118,8 +118,8 @@ class HelperMixin(FileMixin, register=False):
         if not channel_playlists_file.database_record.content:
             return True
         return not any(
-            item.content_details.item_count > 0
-            for item in channel_playlists_file.parsed().items
+            item["contentDetails"]["itemCount"] > 0
+            for item in channel_playlists_file.parsed()["items"]
         )
 
     # TODO: Validate
@@ -130,9 +130,9 @@ class HelperMixin(FileMixin, register=False):
 
     # TODO: Validate
     @staticmethod
-    def _best_thumbnail_url(thumbnails: Any) -> str | None:  # noqa: ANN401 - TODO: Add a specific type for thumbnails
+    def _best_thumbnail_url(thumbnails: dict[str, Any]) -> str | None:
         # It sounds wrong but standard is a higher resolution than high.
         for quality in ("maxres", "standard", "high", "medium", "default"):
-            if thumb := getattr(thumbnails, quality, None):
-                return thumb.url
+            if thumbnail := thumbnails.get(quality):
+                return thumbnail["url"]
         return None

@@ -25,7 +25,7 @@ class Hulu(
     MediaInfoMixin,
     SourceMixin,
     MediaTypeImportMixin[HuluURLHandler],
-    register=False,
+    register=True,
 ):
     """Hulu plugin."""
 
@@ -39,4 +39,3 @@ class Hulu(
     @override
     def _domain(cls) -> str:
         return "hulu.com"
-

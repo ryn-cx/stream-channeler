@@ -4,9 +4,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import override
-
-from wholoo.movies.models import MoviesModel
+from typing import Any, override
 
 from app.episodes.models import Episode
 from app.seasons.models import Season
@@ -51,15 +49,15 @@ class UpsertMixin(HelperMixin, register=False):
         data_timestamp = self.show_data_timestamp(show_key)
         show = Show.get_from_memory(self.session, source, show_key)
         if self._show_is_outdated(show, force=force):
-            model = self._series_model(show_key)
-            entity = model.details.entity
+            data = self._series_data(show_key)
+            entity = data["details"]["entity"]
             new_show = Show(
                 key=show_key,
-                name=model.name,
-                description=entity.description,
+                name=data["name"],
+                description=entity["description"],
                 media_type="TV Show",
                 url=self._show_url(show_key, SERIES_MEDIA_TYPE),
-                image_url=self._image_url(model.artwork.program_tile.path),
+                image_url=self._image_url(data["artwork"]["program.tile"]["path"]),
                 data_timestamp=data_timestamp,
                 source_id=source.id,
             )
@@ -78,15 +76,15 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> Show:
-        model = self._movie_model(show_key)
+        data = self._movie_data(show_key)
         show = Show.get_from_memory(self.session, source, show_key)
         if self._show_is_outdated(show, force=force):
             new_show = Show(
                 key=show_key,
-                name=model.name,
-                description=model.details.entity.description,
+                name=data["name"],
+                description=data["details"]["entity"]["description"],
                 url=self._show_url(show_key, MOVIE_MEDIA_TYPE),
-                image_url=self._image_url(model.artwork.program_tile.path),
+                image_url=self._image_url(data["artwork"]["program.tile"]["path"]),
                 media_type="Movie",
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
@@ -128,7 +126,7 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> None:
-        model = self._movie_model(show.key)
+        movie_data = self._movie_data(show.key)
         season_key = self._season_key(show.key, 0)
         season = Season.get_from_memory(self.session, show, season_key)
         if self._season_is_outdated(season, show.key, force=force):
@@ -142,7 +140,7 @@ class UpsertMixin(HelperMixin, register=False):
             )
             season = self._upsert_season_object(new_season, show, season, show.key)
 
-        self._upsert_movie_episode(season, show.key, model, force=force)
+        self._upsert_movie_episode(season, show.key, movie_data, force=force)
 
     # TODO: Validate
     def _upsert_tv_episodes(
@@ -154,12 +152,14 @@ class UpsertMixin(HelperMixin, register=False):
         force: bool = False,
     ) -> None:
         for sort_order, item in enumerate(self._season_items(show_key, season_number)):
-            start_date = item.bundle.availability.start_date
+            start_date = tz_datetime.fromisoformat(
+                item["bundle"]["availability"]["start_date"],
+            )
             if start_date > tz_datetime.now():
                 season.set_update_at(start_date)
                 continue
 
-            episode_key = str(item.id)
+            episode_key = str(item["id"])
             episode = Episode.get_from_memory(self.session, season, episode_key)
             if not self._episode_is_outdated(
                 episode,
@@ -169,16 +169,18 @@ class UpsertMixin(HelperMixin, register=False):
             ):
                 continue
 
-            hero_artwork = item.artwork.video_horizontal_hero
+            hero_artwork = item["artwork"].get("video.horizontal.hero")
             new_episode = Episode(
                 key=episode_key,
-                name=item.name,
-                episode_number=int(item.number),
+                name=item["name"],
+                episode_number=int(item["number"]),
                 url=self._episode_url(episode_key),
-                description=item.description,
-                image_url=self._image_url(hero_artwork.path) if hero_artwork else None,
-                duration=item.duration,
-                air_date=item.premiere_date,
+                description=item["description"],
+                image_url=self._image_url(hero_artwork["path"])
+                if hero_artwork
+                else None,
+                duration=item.get("duration"),
+                air_date=tz_datetime.fromisoformat(item["premiere_date"]),
                 sort_order=sort_order,
                 data_timestamp=self.episode_data_timestamp(
                     episode_key,
@@ -194,19 +196,22 @@ class UpsertMixin(HelperMixin, register=False):
         self,
         season: Season,
         show_key: str,
-        model: MoviesModel,
+        movie_data: dict[str, Any],
         *,
         force: bool = False,
     ) -> None:
         episode = Episode.get_from_memory(self.session, season, show_key)
         if self._episode_is_outdated(episode, season.key, show_key, force=force):
+            entity = movie_data["details"]["entity"]
             new_episode = Episode(
                 key=show_key,
-                name=model.name,
-                description=model.details.entity.description,
+                name=movie_data["name"],
+                description=entity["description"],
                 url=self._episode_url(show_key),
-                image_url=self._image_url(model.artwork.program_tile.path),
-                duration=model.details.entity.duration,
+                image_url=self._image_url(
+                    movie_data["artwork"]["program.tile"]["path"],
+                ),
+                duration=entity["duration"],
                 episode_number=0,
                 sort_order=0,
                 data_timestamp=self.episode_data_timestamp(

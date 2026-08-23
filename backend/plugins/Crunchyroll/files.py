@@ -1,31 +1,11 @@
 # TODO: Validate
+from abc import ABC
 from collections.abc import Sequence
 from datetime import datetime
-from functools import cache
 from typing import Any, Literal, override
 
-from chirashi import Chirashi
-from chirashi.artist import models as artist_models
-from chirashi.artist_concerts import models as artist_concerts_models
-from chirashi.artist_music_videos import models as artist_music_videos_models
-from chirashi.browse_music import models as browse_music_models
-from chirashi.browse_series import models as browse_series_models
-from chirashi.concert import models as concert_models
-from chirashi.exceptions import (
-    ArtistNotFoundError,
-    ConcertNotFoundError,
-    EpisodeNotFoundError,
-    MusicVideoNotFoundError,
-    SeriesNotFoundError,
-)
-from chirashi.music_video import models as music_video_models
-from chirashi.objects import models as objects_models
-from chirashi.search import models as search_models
-from chirashi.season_episodes import models as episodes_models
-from chirashi.seasons import models as seasons_models
-from chirashi.series import models as series_models
-
 from app.files.models import File
+from plugins.Crunchyroll import api
 from plugins.Crunchyroll.music_keys import (
     MusicCategory,
     is_music_episode_key,
@@ -34,26 +14,65 @@ from plugins.Crunchyroll.music_keys import (
     music_episode_category,
 )
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import GAPIJSON, BaseFile, GAPIListJSON
-from plugins.utils.get_around_client import get_around_client
-
-
-@cache
-def _chirashi() -> Chirashi:
-    return Chirashi(get_around_client=get_around_client())
+from plugins.utils.base_plugin.files import BaseFile, EndpointJSON
 
 
 # TODO: Validate
-class Series(GAPIJSON[series_models.SeriesModel]):
+class CrunchyrollJSON(EndpointJSON[dict[str, Any]], ABC):
+    # TODO: Validate
+    @override
+    def _parse(self, raw: Any) -> dict[str, Any]:
+        return self.raise_if_not_is_instance(raw, dict)
+
+    # TODO: Validate
+    @override
+    def _download(self) -> None:
+        with self._log_download(self.unique_identifier):
+            try:
+                response = self._fetch()
+            except Exception as error:
+                if not self._is_acceptable_error(error):
+                    raise
+                self.write(None, self.acceptable_error_extra_value())
+            else:
+                self.write(response)
+
+
+# TODO: Validate
+class CrunchyrollListJSON(EndpointJSON[list[dict[str, Any]]], ABC):
+    # TODO: Validate
+    @override
+    def _parse(self, raw: Any) -> list[dict[str, Any]]:
+        return self.raise_if_not_is_instance(raw, list)
+
+    # TODO: Validate
+    @override
+    def _download(self) -> None:
+        with self._log_download(self.unique_identifier):
+            try:
+                response = self._fetch()
+            except Exception as error:
+                if not self._is_acceptable_error(error):
+                    raise
+                self.write(None, self.acceptable_error_extra_value())
+            else:
+                self.write(response)
+
+
+# TODO: Validate
+class Series(CrunchyrollJSON):
     """Data for a show."""
 
-    API_ENDPOINT = _chirashi().series
+    # TODO: Validate
+    @override
+    def _fetch(self) -> dict[str, Any]:
+        return api.series(self.unique_identifier)
 
     # Occurs when a user puts in an invalid series URL.
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, SeriesNotFoundError)
+        return isinstance(error, api.SeriesNotFoundError)
 
     # TODO: Validate
     @override
@@ -62,16 +81,19 @@ class Series(GAPIJSON[series_models.SeriesModel]):
 
 
 # TODO: Validate
-class Objects(GAPIJSON[objects_models.ObjectsModel]):
+class Objects(CrunchyrollJSON):
     """Data for an episode."""
 
-    API_ENDPOINT = _chirashi().objects
+    # TODO: Validate
+    @override
+    def _fetch(self) -> dict[str, Any]:
+        return api.objects(self.unique_identifier)
 
     # Occurs when a user puts in an invalid episode URL.
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, EpisodeNotFoundError)
+        return isinstance(error, api.EpisodeNotFoundError)
 
     # TODO: Validate
     @override
@@ -80,54 +102,65 @@ class Objects(GAPIJSON[objects_models.ObjectsModel]):
 
 
 # TODO: Validate
-class Seasons(GAPIJSON[seasons_models.SeasonsModel]):
+class Seasons(CrunchyrollJSON):
     """Data for the seasons."""
 
-    API_ENDPOINT = _chirashi().seasons
+    # TODO: Validate
+    @override
+    def _fetch(self) -> dict[str, Any]:
+        return api.seasons(self.unique_identifier)
 
 
 # TODO: Validate
-class SeasonEpisodes(GAPIJSON[episodes_models.SeasonEpisodesModel]):
+class SeasonEpisodes(CrunchyrollJSON):
     """Data for the episodes in a season."""
 
-    API_ENDPOINT = _chirashi().season_episodes
+    # TODO: Validate
+    @override
+    def _fetch(self) -> dict[str, Any]:
+        return api.season_episodes(self.unique_identifier)
 
 
 # TODO: Validate
-class BrowseSeries(GAPIListJSON[browse_series_models.BrowseSeriesModel]):
+class BrowseSeries(CrunchyrollListJSON):
     """Data for recently aired shows."""
 
     IMMUTABLE = True  # Files are stamped with a datetime
-    API_ENDPOINT = _chirashi().browse_series
 
-    # Use download_and_parse_until_datetime instead of download_and_parse so the new
-    # BrowseSeriesModel includes entries up to the previous BrowseSeriesModel.
+    # Use browse_series_until_datetime instead of browse_series so the new file
+    # includes entries up to the previous file.
     # TODO: Validate
     @override
-    def _fetch(self) -> list[browse_series_models.BrowseSeriesModel]:
-        return _chirashi().browse_series.download_and_parse_until_datetime(
+    def _fetch(self) -> list[dict[str, Any]]:
+        return api.browse_series_until_datetime(
             end_datetime=self.identifier_datetime(),
         )
 
 
 # TODO: Validate
-class Search(GAPIJSON[search_models.SearchModel]):
+class Search(CrunchyrollJSON):
     """Data for search results."""
 
-    API_ENDPOINT = _chirashi().search
+    # TODO: Validate
+    @override
+    def _fetch(self) -> dict[str, Any]:
+        return api.search(self.unique_identifier)
 
 
 # TODO: Validate
-class Artist(GAPIJSON[artist_models.ArtistModel]):
+class Artist(CrunchyrollJSON):
     """Data for an artist."""
 
-    API_ENDPOINT = _chirashi().artist
+    # TODO: Validate
+    @override
+    def _fetch(self) -> dict[str, Any]:
+        return api.artist(self.unique_identifier)
 
     # Occurs when a user puts in an invalid artist URL.
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ArtistNotFoundError)
+        return isinstance(error, api.ArtistNotFoundError)
 
     # TODO: Validate
     @override
@@ -136,30 +169,39 @@ class Artist(GAPIJSON[artist_models.ArtistModel]):
 
 
 # TODO: Validate
-class ArtistMusicVideos(GAPIJSON[artist_music_videos_models.ArtistMusicVideosModel]):
+class ArtistMusicVideos(CrunchyrollJSON):
     """Data for an artist's music videos."""
 
-    API_ENDPOINT = _chirashi().artist_music_videos
+    # TODO: Validate
+    @override
+    def _fetch(self) -> dict[str, Any]:
+        return api.artist_music_videos(self.unique_identifier)
 
 
 # TODO: Validate
-class ArtistConcerts(GAPIJSON[artist_concerts_models.ArtistConcertsModel]):
+class ArtistConcerts(CrunchyrollJSON):
     """Data for an artist's concerts."""
 
-    API_ENDPOINT = _chirashi().artist_concerts
+    # TODO: Validate
+    @override
+    def _fetch(self) -> dict[str, Any]:
+        return api.artist_concerts(self.unique_identifier)
 
 
 # TODO: Validate
-class MusicVideo(GAPIJSON[music_video_models.MusicVideoModel]):
+class MusicVideo(CrunchyrollJSON):
     """Data for a music video."""
 
-    API_ENDPOINT = _chirashi().music_video
+    # TODO: Validate
+    @override
+    def _fetch(self) -> dict[str, Any]:
+        return api.music_video(self.unique_identifier)
 
     # Occurs when a user puts in an invalid music video URL.
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, MusicVideoNotFoundError)
+        return isinstance(error, api.MusicVideoNotFoundError)
 
     # TODO: Validate
     @override
@@ -168,16 +210,19 @@ class MusicVideo(GAPIJSON[music_video_models.MusicVideoModel]):
 
 
 # TODO: Validate
-class Concert(GAPIJSON[concert_models.ConcertModel]):
+class Concert(CrunchyrollJSON):
     """Data for a concert."""
 
-    API_ENDPOINT = _chirashi().concert
+    # TODO: Validate
+    @override
+    def _fetch(self) -> dict[str, Any]:
+        return api.concert(self.unique_identifier)
 
     # Occurs when a user puts in an invalid concert URL.
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ConcertNotFoundError)
+        return isinstance(error, api.ConcertNotFoundError)
 
     # TODO: Validate
     @override
@@ -186,17 +231,16 @@ class Concert(GAPIJSON[concert_models.ConcertModel]):
 
 
 # TODO: Validate
-class BrowseMusic(GAPIListJSON[browse_music_models.BrowseMusicModel]):
+class BrowseMusic(CrunchyrollListJSON):
     """Data for all of the music."""
 
     IMMUTABLE = True
-    API_ENDPOINT = _chirashi().browse_music
 
     # Music seems to be ordered randomly so downloading all of it is required.
     # TODO: Validate
     @override
-    def _fetch(self) -> list[browse_music_models.BrowseMusicModel]:
-        return _chirashi().browse_music.download_and_parse_all()
+    def _fetch(self) -> list[dict[str, Any]]:
+        return api.browse_music_all()
 
 
 # TODO: Validate
@@ -393,7 +437,8 @@ class FileMixin(BasePlugin, register=False):
             # new season the show has to notice.
             return [category.value for category in MusicCategory]
         return [
-            season_data.id for season_data in self.seasons_file(show_key).parsed().data
+            season_data["id"]
+            for season_data in self.seasons_file(show_key).parsed()["data"]
         ]
 
     # TODO: Validate
@@ -411,8 +456,8 @@ class FileMixin(BasePlugin, register=False):
                 episode_keys += self._music_episode_keys(season_key, show_key)
                 continue
             episode_keys += [
-                episode.id
-                for episode in self.season_episodes_file(season_key).parsed().data
+                episode["id"]
+                for episode in self.season_episodes_file(season_key).parsed()["data"]
             ]
         return episode_keys
 
@@ -422,7 +467,7 @@ class FileMixin(BasePlugin, register=False):
             show_key,
             MusicCategory(season_key),
         ).parsed()
-        return [datum.id for datum in listing.data]
+        return [datum["id"] for datum in listing["data"]]
 
     # TODO: Validate
     def find_newest_browse_series_file(self) -> BrowseSeries | None:
@@ -436,7 +481,7 @@ class FileMixin(BasePlugin, register=False):
         """Return newest browse series file or raises if one does not exist.
 
         Raise:
-            FileNotFoundError: If no browse series file exists.
+            FileNotFoundError: If no browse file exists.
         """
         if file := self.find_newest_browse_series_file():
             return file

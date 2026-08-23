@@ -1,37 +1,25 @@
 # TODO: Validate
 from collections.abc import Sequence
 from datetime import date, datetime, timedelta
-from functools import cache
 from typing import Any, Literal, cast, override
 
-import httpx
-from get_around import GetAround
-from just_scrape import JustScrape
-from just_scrape.buy_box_offers import models as buy_box_offers_models
-from just_scrape.exceptions import GraphQLError
-from just_scrape.new_title_buckets import models as new_title_buckets_models
-from just_scrape.new_titles import models as new_titles_models
-from just_scrape.season_episodes import models as season_episodes_models
-from just_scrape.url_title_details import models as url_title_details_models
 from sqlalchemy import ScalarResult
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.config import settings
 from app.files.models import File
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
+from plugins.JustWatch import api
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import (
-    GAPIJSON,
     BaseFile,
-    GAPIListJSON,
+    EndpointJSON,
     JSONFile,
 )
-from plugins.utils.get_around_client import get_around_client
 
 _MEDIA_TYPE_MAP = {"SHOW": "TV Show", "MOVIE": "Movie"}
 
@@ -39,22 +27,49 @@ _PHYSICAL_PRESENTATION_TYPES = frozenset({"DVD", "BLURAY"})
 
 
 # TODO: Validate
-@cache
-def _just_scrape() -> JustScrape:
-    # Get Around sometimes gets blocked without a 5 second delay.
-    if settings.PROXY:
-        client = GetAround(proxy=settings.PROXY)
-        sleep_time = 0
-    else:
-        client = get_around_client()
-        sleep_time = 5
-    return JustScrape(get_around_client=client, sleep_time=sleep_time)
+class JustWatchJSON(EndpointJSON[dict[str, Any]]):
+    # TODO: Validate
+    @override
+    def _parse(self, raw: Any) -> dict[str, Any]:
+        return self.raise_if_not_is_instance(raw, dict)
+
+    # TODO: Validate
+    @override
+    def _download(self) -> None:
+        with self._log_download(self.unique_identifier):
+            try:
+                response = self._fetch()
+            except Exception as error:
+                if not self._is_acceptable_error(error):
+                    raise
+                self.write(None, self.acceptable_error_extra_value())
+            else:
+                self.write(response)
 
 
 # TODO: Validate
-class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
-    API_ENDPOINT = _just_scrape().new_titles
+class JustWatchListJSON(EndpointJSON[list[dict[str, Any]]]):
+    # TODO: Validate
+    @override
+    def _parse(self, raw: Any) -> list[dict[str, Any]]:
+        return self.raise_if_not_is_instance(raw, list)
 
+    # TODO: Validate
+    @override
+    def _download(self) -> None:
+        with self._log_download(self.unique_identifier):
+            try:
+                response = self._fetch()
+            except Exception as error:
+                if not self._is_acceptable_error(error):
+                    raise
+                self.write(None, self.acceptable_error_extra_value())
+            else:
+                self.write(response)
+
+
+# TODO: Validate
+class NewTitles(JustWatchListJSON):
     # TODO: Validate
     def __init__(
         self,
@@ -69,33 +84,36 @@ class NewTitles(GAPIListJSON[new_titles_models.NewTitlesResponse]):
 
     # TODO: Validate
     @override
-    def _fetch(self) -> list[new_titles_models.NewTitlesResponse]:
-        return _just_scrape().new_titles.download_and_parse_for_date(
-            available_to_packages=[self.source_key],
-            filter_packages=[self.source_key],
-            date=self.date,
-        )
+    def _fetch(self) -> list[dict[str, Any]]:
+        return api.new_titles(self.source_key, self.date)
 
     # TODO: Validate
-    def parsed_edges(self) -> list[new_titles_models.Edge]:
-        return _just_scrape().new_titles.extract_edges(self.parsed())
+    def parsed_edges(self) -> list[dict[str, Any]]:
+        return [
+            edge
+            for page in self.parsed()
+            for edge in page["data"]["newTitles"]["edges"]
+        ]
 
 
 # TODO: Validate
-class NewTitleBucket(GAPIListJSON[new_title_buckets_models.NewTitleBucketsResponse]):
-    API_ENDPOINT = _just_scrape().new_title_buckets
+class NewTitleBucket(JustWatchListJSON):
     # NewTitleBucket is named after a specific datetime so there is no reasonable situation where it would
     IMMUTABLE = True
 
     # TODO: Validate
     @override
-    def _fetch(self) -> list[new_title_buckets_models.NewTitleBucketsResponse]:
+    def _fetch(self) -> list[dict[str, Any]]:
         end_date = self.identifier_datetime().date()
-        return _just_scrape().new_title_buckets.download_and_parse_since_date(end_date)
+        return api.new_title_buckets(end_date)
 
     # TODO: Validate
-    def parsed_edges(self) -> list[new_title_buckets_models.Edge]:
-        return _just_scrape().new_title_buckets.extract_edges(self.parsed())
+    def parsed_edges(self) -> list[dict[str, Any]]:
+        return [
+            edge
+            for page in self.parsed()
+            for edge in page["data"]["newTitleBuckets"]["edges"]
+        ]
 
 
 # TODO: Validate
@@ -109,10 +127,7 @@ class ProvidersLocale(JSONFile[list[dict[str, Any]]]):
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
-            url = f"https://apis.justwatch.com/content/providers/locale/{self.unique_identifier}"
-            response = httpx.get(url)
-            response.raise_for_status()
-            self.write(response.json())
+            self.write(api.providers_locale(self.unique_identifier))
 
     # TODO: Add this to Just Scrape so it has full type support.
     # TODO: Validate
@@ -122,14 +137,17 @@ class ProvidersLocale(JSONFile[list[dict[str, Any]]]):
 
 
 # TODO: Validate
-class UrlTitleDetails(GAPIJSON[url_title_details_models.UrlTitleDetailsResponse]):
-    API_ENDPOINT = _just_scrape().url_title_details
+class UrlTitleDetails(JustWatchJSON):
+    # TODO: Validate
+    @override
+    def _fetch(self) -> dict[str, Any]:
+        return api.url_title_details(self.unique_identifier)
 
     # Occurs when a user puts in an invalid URL.
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, GraphQLError)
+        return isinstance(error, api.JustWatchGraphQLError)
 
     # TODO: Validate
     @override
@@ -138,20 +156,14 @@ class UrlTitleDetails(GAPIJSON[url_title_details_models.UrlTitleDetailsResponse]
 
 
 # TODO: Validate
-class SeasonEpisodes(
-    GAPIListJSON[season_episodes_models.SeasonEpisodesResponse],
-):
-    API_ENDPOINT = _just_scrape().season_episodes
-
+class SeasonEpisodes(JustWatchListJSON):
     # TODO: Validate
     @override
-    def _fetch(self) -> list[season_episodes_models.SeasonEpisodesResponse]:
-        return _just_scrape().season_episodes.download_and_parse_all(
-            self.unique_identifier,
-        )
+    def _fetch(self) -> list[dict[str, Any]]:
+        return api.season_episodes(self.unique_identifier)
 
     # TODO: Validate
-    def parsed_episodes(self) -> list[season_episodes_models.Episode]:
+    def parsed_episodes(self) -> list[dict[str, Any]]:
         """Return every episode across the file's pages.
 
         Flattened here rather than through `extract_episodes`, which decides what
@@ -161,13 +173,18 @@ class SeasonEpisodes(
         silently fails and it recurses into the value until the stack runs out.
         """
         return [
-            episode for page in self.parsed() for episode in page.data.node.episodes
+            episode
+            for page in self.parsed()
+            for episode in page["data"]["node"]["episodes"]
         ]
 
 
 # TODO: Validate
-class BuyBoxOffers(GAPIJSON[buy_box_offers_models.BuyBoxOffersResponse]):
-    API_ENDPOINT = _just_scrape().buy_box_offers
+class BuyBoxOffers(JustWatchJSON):
+    # TODO: Validate
+    @override
+    def _fetch(self) -> dict[str, Any]:
+        return api.buy_box_offers(self.unique_identifier)
 
 
 # TODO: Validate
@@ -211,9 +228,9 @@ class FileMixin(BasePlugin, register=False):
         it.
         """
         return any(
-            episode.unique_offer_count
+            episode["uniqueOfferCount"]
             for episode in self.season_episodes_file(season_key).parsed_episodes()
-            if episode.id == episode_key
+            if episode["id"] == episode_key
         )
 
     # TODO: Validate
@@ -315,9 +332,9 @@ class FileMixin(BasePlugin, register=False):
         # are refreshed here to pick up offer changes for existing episodes.
         if self._media_type(show_key) != "Movie":
             for episode in self.season_episodes_file(season_key).parsed_episodes():
-                if not episode.unique_offer_count:
+                if not episode["uniqueOfferCount"]:
                     continue
-                self.buy_box_offers_file(episode.id).download_if_outdated(update_at)
+                self.buy_box_offers_file(episode["id"]).download_if_outdated(update_at)
         return files
 
     # TODO: Validate
@@ -358,7 +375,10 @@ class FileMixin(BasePlugin, register=False):
         for `_pending_new_titles_files` to find, leaving it invisible for good.
         """
         new_titles_files = [
-            self.new_titles_file(edge.key.package.short_name, edge.key.date)
+            self.new_titles_file(
+                edge["key"]["package"]["shortName"],
+                date.fromisoformat(edge["key"]["date"]),
+            )
             for bucket_record in self._get_new_titles_buckets()
             for edge in self.new_titles_bucket_file(bucket_record).parsed_edges()
         ]
@@ -404,12 +424,12 @@ class FileMixin(BasePlugin, register=False):
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
         url_title_details = self.url_title_details_file(show_key).parsed()
-        node = url_title_details.data.url_v2.node
-        if seasons := node.seasons:
-            return [season.id for season in seasons]
+        node = url_title_details["data"]["urlV2"]["node"]
+        if seasons := node.get("seasons"):
+            return [season["id"] for season in seasons]
         # Movies have no real seasons, but `_upsert_movie_season` creates a
         # virtual season whose key is the movie's node id.
-        return [node.id]
+        return [node["id"]]
 
     # TODO: Validate
     @override
@@ -423,7 +443,7 @@ class FileMixin(BasePlugin, register=False):
         if isinstance(season_keys, str):
             season_keys = [season_keys]
         return [
-            episode.id
+            episode["id"]
             for season_key in season_keys
             for episode in self.season_episodes_file(season_key).parsed_episodes()
         ]
@@ -432,7 +452,7 @@ class FileMixin(BasePlugin, register=False):
     def _media_type(self, show_key: str) -> str:
         if not self._cached_media_type:
             url_title_details = self.url_title_details_file(show_key).parsed()
-            raw_media_type = url_title_details.data.url_v2.node.object_type
+            raw_media_type = url_title_details["data"]["urlV2"]["node"]["objectType"]
             self._cached_media_type = _MEDIA_TYPE_MAP[raw_media_type]
         return self._cached_media_type
 
@@ -440,16 +460,16 @@ class FileMixin(BasePlugin, register=False):
     def _sources_with_videos(
         self,
         show_key: str,
-    ) -> list[tuple[str, url_title_details_models.Offer]]:
+    ) -> list[tuple[str, dict[str, Any]]]:
         """Get all unique sources with their first corresponding offer."""
-        seen: dict[str, url_title_details_models.Offer] = {}
+        seen: dict[str, dict[str, Any]] = {}
         url_title_details = self.url_title_details_file(show_key).parsed()
-        for offer in url_title_details.data.url_v2.node.offers:
-            if offer.presentation_type in _PHYSICAL_PRESENTATION_TYPES:
+        for offer in url_title_details["data"]["urlV2"]["node"]["offers"]:
+            if offer["presentationType"] in _PHYSICAL_PRESENTATION_TYPES:
                 continue
             # If a website offers multiple different plans the data will be duplicated
             # for each plan so only use the first offer for each source.
-            seen.setdefault(offer.package.short_name, offer)
+            seen.setdefault(offer["package"]["shortName"], offer)
         return list(seen.items())
 
     # TODO: Validate

@@ -30,16 +30,16 @@ class MediaInfoMixin(HelperMixin, register=False):
     def _movie_media_info(self, movie_id: str) -> PluginMediaInfo:
         movie_file = self.movie_file(movie_id)
         movie_file.download_if_outdated(tz_datetime.now() - _DETAIL_MAX_AGE)
-        model = movie_file.parsed()
-        entity = model.details.entity
+        data = movie_file.parsed()
+        entity = data["details"]["entity"]
         return PluginMediaInfo(
-            title=model.name,
+            title=data["name"],
             media_type="Movie",
-            overview=entity.description,
-            poster_url=self._image_url(model.artwork.program_tile.path),
-            year=entity.premiere_date.year,
-            runtime=entity.duration,
-            genres=entity.genre_names,
+            overview=entity["description"],
+            poster_url=self._image_url(data["artwork"]["program.tile"]["path"]),
+            year=tz_datetime.fromisoformat(entity["premiere_date"]).year,
+            runtime=entity["duration"],
+            genres=entity["genre_names"],
             providers=[self._own_provider(movie_id, MOVIE_MEDIA_TYPE)],
         )
 
@@ -47,16 +47,16 @@ class MediaInfoMixin(HelperMixin, register=False):
     def _series_media_info(self, series_id: str) -> PluginMediaInfo:
         series_file = self.series_file(series_id)
         series_file.download_if_outdated(tz_datetime.now() - _DETAIL_MAX_AGE)
-        model = series_file.parsed()
-        entity = model.details.entity
+        data = series_file.parsed()
+        entity = data["details"]["entity"]
         return PluginMediaInfo(
-            title=model.name,
+            title=data["name"],
             media_type="Series",
-            overview=entity.description,
-            poster_url=self._image_url(model.artwork.program_tile.path),
-            year=entity.premiere_date.year,
+            overview=entity["description"],
+            poster_url=self._image_url(data["artwork"]["program.tile"]["path"]),
+            year=tz_datetime.fromisoformat(entity["premiere_date"]).year,
             number_of_seasons=len(self._season_numbers(series_id)),
-            genres=entity.genre_names,
+            genres=entity["genre_names"],
             providers=[self._own_provider(series_id, SERIES_MEDIA_TYPE)],
         )
 
