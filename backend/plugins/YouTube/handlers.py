@@ -16,17 +16,18 @@ from plugins.YouTube.files import (
     is_music_playlist_key,
     is_video_key,
     show_season_key,
-    system_hub_channel_name,
 )
 
 if TYPE_CHECKING:
+    from not_yt_dlapi.channels.models import ChannelsModel
+
     from app.shows.models import Show
+    from plugins.utils.base_plugin.files import EndpointFile
     from plugins.YouTube import YouTube
     from plugins.YouTube.files import (
         ChannelByChannelId,
         ChannelByHandle,
         ChannelByUsername,
-        YouTubeJSON,
     )
 
 
@@ -86,18 +87,8 @@ class YouTubeURLHandler(URLHandler["YouTube"]):
         # The API answers a channel it has nothing under with an empty listing
         # rather than by refusing, so a URL naming no channel is only known from
         # what came back holding none.
-        if not channel_file.parsed()["items"]:
+        if not channel_file.parsed().items:
             msg = f"Invalid {self.plugin.plugin_key()} URL: {self.url}"
-            raise InvalidURLError(msg)
-
-    # TODO: Validate
-    def _raise_if_system_hub_channel(self, channel_key: str) -> None:
-        hub_name = system_hub_channel_name(channel_key)
-        if hub_name is not None:
-            msg = (
-                f"{channel_key} is YouTube's system generated {hub_name} hub, which "
-                f"owns no videos of its own and cannot be imported: {self.url}"
-            )
             raise InvalidURLError(msg)
 
 
@@ -127,7 +118,7 @@ class VideoURLHandler(YouTubeURLHandler):
     @override
     def show_key(self) -> str:
         videos_file = self.plugin.videos_file(self.video_key)
-        channel_key = videos_file.parsed()["items"][0]["snippet"]["channelId"]
+        channel_key = videos_file.parsed().items[0].snippet.channel_id
         # A channel that never lists this video cannot be imported to reach it, so the
         # video is imported as a show of its own instead.
         if is_free_movies_channel(channel_key):
@@ -213,15 +204,14 @@ class PlaylistBasedURLHandler(YouTubeURLHandler):
             self.plugin.record_album_playlist_key(self.playlist_key)
             return channel_key
         playlist_items_file = self.plugin.playlist_items_file(self.playlist_key)
-        first_item = get_first_item(playlist_items_file.parsed()["items"])
-        return first_item["snippet"]["channelId"]
+        first_item = get_first_item(playlist_items_file.parsed().items)
+        return first_item.snippet.channel_id
 
     # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
         if is_channel_uploads_playlist_key(self.playlist_key):
             self._raise_if_invalid_channel(self.show_key)
-            self._raise_if_system_hub_channel(self.show_key)
             return
 
         if is_music_playlist_key(self.playlist_key):
@@ -237,8 +227,6 @@ class PlaylistBasedURLHandler(YouTubeURLHandler):
 
         playlist_items_file = self.plugin.playlist_items_file(self.playlist_key)
         self.plugin.raise_if_invalid_file(playlist_items_file, self.url)
-        first_item = get_first_item(playlist_items_file.parsed()["items"])
-        self._raise_if_system_hub_channel(first_item["snippet"]["channelId"])
 
 
 # TODO: Validate
@@ -385,7 +373,7 @@ class ChannelURLHandler(YouTubeURLHandler):
     # TODO: Validate
     @property
     @abstractmethod
-    def _channel_file(self) -> YouTubeJSON:
+    def _channel_file(self) -> EndpointFile[ChannelsModel]:
         """Return the file that resolves the URL to a channel."""
 
     # TODO: Validate
@@ -402,14 +390,13 @@ class ChannelURLHandler(YouTubeURLHandler):
     @override
     def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(self._channel_file, self.url)
-        if not self._channel_file.parsed()["items"]:
+        if not self._channel_file.parsed().items:
             msg = f"Invalid {self.plugin.plugin_key()} URL: {self.url}"
             raise InvalidURLError(msg)
         # A handle and a username are looked up in files of their own, and the
         # channel the key names is what says whether it is a Topic channel, so it is
         # read here rather than left to whatever asks first.
         self._raise_if_invalid_channel(self.show_key)
-        self._raise_if_system_hub_channel(self.show_key)
 
         # The channel only lists a fraction of the videos it owns, so importing it
         # would import almost none of them. Its videos are imported one at a time.
@@ -438,12 +425,6 @@ class ChannelKeyURLHandler(ChannelURLHandler):
         return self._match.group("channel_key")
 
     # TODO: Validate
-    @override
-    def raise_if_invalid(self) -> None:
-        self._raise_if_system_hub_channel(self.show_key)
-        super().raise_if_invalid()
-
-    # TODO: Validate
     @property
     @override
     def _channel_file(self) -> ChannelByChannelId:
@@ -459,7 +440,7 @@ class ChannelUsernameURLHandler(ChannelURLHandler):
     @property
     @override
     def show_key(self) -> str:
-        return get_first_item(self._channel_file.parsed()["items"])["id"]
+        return get_first_item(self._channel_file.parsed().items).id
 
     # TODO: Validate
     @property
@@ -481,7 +462,7 @@ class ChannelHandleURLHandler(ChannelURLHandler):
     @property
     @override
     def show_key(self) -> str:
-        return get_first_item(self._channel_file.parsed()["items"])["id"]
+        return get_first_item(self._channel_file.parsed().items).id
 
     # TODO: Validate
     @property

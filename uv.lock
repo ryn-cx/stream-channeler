@@ -754,7 +754,7 @@ dependencies = [
 [[package]]
 name = "good-ass-pydantic-integrator"
 version = "0.0.1"
-source = { git = "https://github.com/ryn-cx/good-ass-pydantic-integrator#a02c97989ad3ec0f1d10ef674d76051e3c5f47d7" }
+source = { git = "https://github.com/ryn-cx/good-ass-pydantic-integrator#87c0aae5952623872d1a000b0a87df621e210b96" }
 dependencies = [
     { name = "datamodel-code-generator" },
     { name = "degenson" },
@@ -1285,9 +1285,10 @@ dependencies = [
 [[package]]
 name = "not-yt-dlapi"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/not-yt-dlapi#1bf20991629f44463aa862f2dc747a62fd685f26" }
+source = { git = "https://github.com/ryn-cx/not-yt-dlapi#20c1aeaec5432ecd6d61a49d3959b987be64f9b6" }
 dependencies = [
     { name = "get-around" },
+    { name = "good-ass-pydantic-integrator" },
     { name = "google-api-python-client" },
     { name = "pydantic" },
 ]
@@ -2164,9 +2165,10 @@ wheels = [
 [[package]]
 name = "wampi"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/wampi#ea161316fbf8f180ed49990915a3a061c1caff1b" }
+source = { git = "https://github.com/ryn-cx/wampi#7312211a1316a7b9ac127689e82347049c2fc102" }
 dependencies = [
     { name = "get-around" },
+    { name = "good-ass-pydantic-integrator" },
     { name = "pydantic" },
 ]
 

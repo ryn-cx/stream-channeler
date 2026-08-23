@@ -3,8 +3,9 @@
 
 from __future__ import annotations
 
+from wampi.extract_title_id import extract_title_id
+
 from app.media.media_type import MediaType
-from plugins.WatchMode.api import extract_title_id
 from plugins.WatchMode.files import FileMixin
 
 
@@ -36,7 +37,7 @@ class SourcesMixin(FileMixin, register=False):
             return []
 
         urls: list[str] = []
-        for item in listing_file.parsed():
-            if item["web_url"] not in urls:
-                urls.append(item["web_url"])
+        for item in listing_file.parsed().root:
+            if item.web_url not in urls:
+                urls.append(item.web_url)
         return urls

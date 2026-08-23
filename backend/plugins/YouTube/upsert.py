@@ -1,8 +1,9 @@
 # TODO: Validate
 from datetime import timedelta
-from typing import Any, override
+from typing import override
 
-from pydantic import TypeAdapter
+from not_yt_dlapi.channels.models import Item as ChannelItem
+from not_yt_dlapi.playlists.models import Item as PlaylistsItem
 
 from app.episodes.models import Episode
 from app.seasons.models import Season
@@ -137,11 +138,11 @@ class UpsertMixin(HelperMixin, register=False):
         show = Show.get_from_memory(self.session, source, show_key)
         if self._show_is_outdated(show, force=force):
             channel_file = self.channel_by_channel_id_file(show_key)
-            channel_item = get_first_item(channel_file.parsed()["items"])
+            channel_item = get_first_item(channel_file.parsed().items)
             new_show = Show(
-                key=channel_item["id"],
+                key=channel_item.id,
                 name=self._channel_show_name(show_key, channel_item),
-                url=self.build_url(f"channel/{channel_item['id']}"),
+                url=self.build_url(f"channel/{channel_item.id}"),
                 media_type="Movie"
                 if self.is_movies_channel(show_key)
                 else "YouTube Channel",
@@ -150,9 +151,7 @@ class UpsertMixin(HelperMixin, register=False):
                 update_at=channel_file.data_timestamp + timedelta(days=365),
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
-                image_url=self._best_thumbnail_url(
-                    channel_item["snippet"]["thumbnails"],
-                ),
+                image_url=self._best_thumbnail_url(channel_item.snippet.thumbnails),
             )
             show = self._upsert_show_object(new_show, source, show, show_key)
 
@@ -165,20 +164,18 @@ class UpsertMixin(HelperMixin, register=False):
     def _channel_show_name(
         self,
         show_key: str,
-        channel_item: dict[str, Any],
+        channel_item: ChannelItem,
     ) -> str | None:
         # Every channel generated for a title of YouTube's catalogue is named after
         # the catalogue rather than after the title, so the title is read off what
         # the channel uploaded, which is that one title however many times over.
         if not self.is_movies_channel(show_key):
-            return channel_item["snippet"]["title"]
+            return channel_item.snippet.title
         episode_keys = self.show_episode_keys(show_key)
         if not episode_keys:
-            return channel_item["snippet"]["title"]
-        items = self.videos_file(episode_keys[0]).parsed()["items"]
-        if not items:
-            return channel_item["snippet"]["title"]
-        return items[0]["snippet"]["title"]
+            return channel_item.snippet.title
+        items = self.videos_file(episode_keys[0]).parsed().items
+        return items[0].snippet.title if items else channel_item.snippet.title
 
     # TODO: Validate
     def _upsert_movie_show(
@@ -187,7 +184,7 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> Show:
-        video_item = get_first_item(self.videos_file(show_key).parsed()["items"])
+        video_item = get_first_item(self.videos_file(show_key).parsed().items)
         source = self.paid_or_free_source(show_key)
 
         show = Show.get_from_memory(self.session, source, show_key)
@@ -195,15 +192,13 @@ class UpsertMixin(HelperMixin, register=False):
             data_timestamp = self.show_data_timestamp(show_key)
             new_show = Show(
                 key=show_key,
-                name=video_item["snippet"]["title"],
+                name=video_item.snippet.title,
                 # A YouTube video with a null character in the description caused
                 # importing to hang so it needs to be stripped out.
-                description=video_item["snippet"]["description"].replace("\x00", ""),
+                description=video_item.snippet.description.replace("\x00", ""),
                 url=self.build_url(f"watch?v={show_key}"),
                 media_type="Movie",
-                image_url=self._best_thumbnail_url(
-                    video_item["snippet"]["thumbnails"],
-                ),
+                image_url=self._best_thumbnail_url(video_item.snippet.thumbnails),
                 data_timestamp=data_timestamp,
                 # Movies are only updated once a year to make sure they are still
                 # available.
@@ -232,15 +227,13 @@ class UpsertMixin(HelperMixin, register=False):
     ) -> None:
         season = Season.get_from_memory(self.session, show, show_key)
         if self._season_is_outdated(season, show_key, force=force):
-            video_item = get_first_item(self.videos_file(show_key).parsed()["items"])
+            video_item = get_first_item(self.videos_file(show_key).parsed().items)
             data_timestamp = self.season_data_timestamp(show_key, show_key)
             new_season = Season(
                 key=show_key,
-                name=video_item["snippet"]["title"],
+                name=video_item.snippet.title,
                 url=self.build_url(f"watch?v={show_key}"),
-                image_url=self._best_thumbnail_url(
-                    video_item["snippet"]["thumbnails"],
-                ),
+                image_url=self._best_thumbnail_url(video_item.snippet.thumbnails),
                 data_timestamp=data_timestamp,
                 update_at=data_timestamp,
                 show_id=show.id,
@@ -307,17 +300,15 @@ class UpsertMixin(HelperMixin, register=False):
         show = Show.get_from_memory(self.session, source, show_key)
         if self._show_is_outdated(show, force=force):
             channel_item = get_first_item(
-                self.channel_by_channel_id_file(show_key).parsed()["items"],
+                self.channel_by_channel_id_file(show_key).parsed().items,
             )
             data_timestamp = self.show_data_timestamp(show_key)
             new_show = Show(
                 key=show_key,
-                name=channel_item["snippet"]["title"],
+                name=channel_item.snippet.title,
                 url=self.build_url(f"channel/{show_key}"),
                 media_type="YouTube Artist",
-                image_url=self._best_thumbnail_url(
-                    channel_item["snippet"]["thumbnails"],
-                ),
+                image_url=self._best_thumbnail_url(channel_item.snippet.thumbnails),
                 data_timestamp=data_timestamp,
                 update_at=data_timestamp + _TOPIC_UPDATE_INTERVAL,
                 source_id=source.id,
@@ -411,7 +402,7 @@ class UpsertMixin(HelperMixin, register=False):
         show_key: str,
         season_key: str,
         name: str,
-        playlist: dict[str, Any],
+        playlist: ChannelItem | PlaylistsItem,
         *,
         force: bool = False,
     ) -> None:
@@ -423,7 +414,7 @@ class UpsertMixin(HelperMixin, register=False):
                 key=season_key,
                 name=name,
                 url=self.build_url(f"playlist?list={season_key}"),
-                image_url=self._best_thumbnail_url(playlist["snippet"]["thumbnails"]),
+                image_url=self._best_thumbnail_url(playlist.snippet.thumbnails),
                 data_timestamp=data_timestamp,
                 update_at=data_timestamp + timedelta(hours=6),
                 show_id=show.id,
@@ -439,9 +430,9 @@ class UpsertMixin(HelperMixin, register=False):
         force: bool = False,
     ) -> None:
         channel_item = get_first_item(
-            self.channel_by_channel_id_file(show_key).parsed()["items"],
+            self.channel_by_channel_id_file(show_key).parsed().items,
         )
-        if int(channel_item["statistics"]["videoCount"]) == 0:
+        if int(channel_item.statistics.video_count) == 0:
             return
         uploads_key = self.channel_uploads_playlist_key(show.key)
         self._upsert_season(
@@ -465,8 +456,8 @@ class UpsertMixin(HelperMixin, register=False):
         if not channel_playlists_file.database_record.content:
             return
         playlists_by_key = {
-            parsed_playlist["id"]: parsed_playlist
-            for parsed_playlist in channel_playlists_file.parsed()["items"]
+            parsed_playlist.id: parsed_playlist
+            for parsed_playlist in channel_playlists_file.parsed().items
         }
         uploads_key = self.channel_uploads_playlist_key(show.key)
         for season_key in self._season_keys_from_file(show_key):
@@ -476,7 +467,7 @@ class UpsertMixin(HelperMixin, register=False):
                     show=show,
                     show_key=show_key,
                     season_key=season_key,
-                    name=playlist["snippet"]["title"],
+                    name=playlist.snippet.title,
                     playlist=playlist,
                     force=force,
                 )
@@ -509,12 +500,9 @@ class UpsertMixin(HelperMixin, register=False):
 
         usa_only = self.is_movies_channel(show_key)
         seen: set[str] = set()
-        for item in self.playlist_items_file(season.key).parsed()["items"]:
-            episode_key = item["contentDetails"]["videoId"]
-            if (
-                not self._video_is_valid(item["snippet"]["title"])
-                or episode_key in seen
-            ):
+        for item in self.playlist_items_file(season.key).parsed().items:
+            episode_key = item.content_details.video_id
+            if not self._video_is_valid(item.snippet.title) or episode_key in seen:
                 continue
             if usa_only and not self.is_usa_video(episode_key):
                 continue
@@ -523,7 +511,7 @@ class UpsertMixin(HelperMixin, register=False):
                 season,
                 show_key,
                 episode_key,
-                item["snippet"]["position"],
+                item.snippet.position,
                 force=force,
             )
 
@@ -541,25 +529,24 @@ class UpsertMixin(HelperMixin, register=False):
         if not self._episode_is_outdated(episode, season.key, show_key, force=force):
             return
 
-        video_item = get_first_item(self.videos_file(episode_key).parsed()["items"])
-        video_snippet = video_item["snippet"]
+        video_item = get_first_item(self.videos_file(episode_key).parsed().items)
+        video_snippet = video_item.snippet
 
-        duration_text = video_item["contentDetails"]["duration"]
+        video_duration = video_item.content_details.duration
         duration = None
-        if duration_text:
-            duration_timedelta = TypeAdapter(timedelta).validate_python(duration_text)
-            duration = int(duration_timedelta.total_seconds())
+        if video_duration:
+            duration = int(video_duration.total_seconds())
 
         new_episode = Episode(
-            key=video_item["id"],
-            name=video_snippet["title"],
-            url=self.build_url(f"watch?v={video_item['id']}"),
+            key=video_item.id,
+            name=video_snippet.title,
+            url=self.build_url(f"watch?v={video_item.id}"),
             # A YouTube video with a null character in the description caused
             # importing to hang so it needs to be stripped out.
-            description=video_snippet["description"].replace("\x00", ""),
-            air_date=video_snippet["publishedAt"],
+            description=video_snippet.description.replace("\x00", ""),
+            air_date=video_snippet.published_at,
             duration=duration,
-            image_url=self._best_thumbnail_url(video_snippet["thumbnails"]),
+            image_url=self._best_thumbnail_url(video_snippet.thumbnails),
             sort_order=sort_order,
             episode_number=self._get_episode_number(episode_key, season.key, show_key),
             data_timestamp=self.episode_data_timestamp(

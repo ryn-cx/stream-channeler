@@ -3,11 +3,17 @@
 
 from __future__ import annotations
 
-from typing import Any, override
+from functools import cache
+from typing import override
 
+from wampi import Wampi
+from wampi.exceptions import TitleNotFoundError
+from wampi.title_sources.models import TitleSourcesModel
+
+from app.config import settings
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import EndpointJSON
-from plugins.WatchMode import api
+from plugins.utils.base_plugin.files import EndpointFile
+from plugins.utils.get_around_client import get_around_client
 
 # The region a title's listing is asked for. Watchmode answers with every region
 # the key is enabled for when it is not told one, and a listing of the rest is
@@ -16,28 +22,17 @@ REGION = "US"
 
 
 # TODO: Validate
-class WatchModeJSON(EndpointJSON[list[dict[str, Any]]]):
-    # TODO: Validate
-    @override
-    def _parse(self, raw: Any) -> list[dict[str, Any]]:
-        return self.raise_if_not_is_instance(raw, list)
-
-    # TODO: Validate
-    @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            try:
-                response = self._fetch()
-            except Exception as error:
-                if not self._is_acceptable_error(error):
-                    raise
-                self.write(None, self.acceptable_error_extra_value())
-            else:
-                self.write(response)
+@cache
+def wampi() -> Wampi:
+    """Return a cached Wampi client."""
+    return Wampi(
+        api_key=settings.WATCHMODE_API_KEY,
+        get_around_client=get_around_client(),
+    )
 
 
 # TODO: Validate
-class TitleSources(WatchModeJSON):
+class TitleSources(EndpointFile[TitleSourcesModel]):
     """Every source Watchmode says a title can be watched through.
 
     The title is named by the id Watchmode takes, which is TMDB's own id behind
@@ -45,24 +40,23 @@ class TitleSources(WatchModeJSON):
     has just read in is looked up without anything being searched for.
     """
 
+    API_ENDPOINT = wampi().title_sources
+
+    # TODO: Validate
+    @override
+    def _download_file(self) -> str:
+        return self.API_ENDPOINT.download(self.unique_identifier, regions=REGION)
+
     # Occurs when Watchmode does not carry the title TMDB named.
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, api.WatchModeResourceNotFoundError)
+        return isinstance(error, TitleNotFoundError)
 
     # TODO: Validate
     @override
     def acceptable_error_extra_value(self) -> str:
         return f"Invalid title {self.unique_identifier}"
-
-    # TODO: Validate
-    @override
-    def _fetch(self) -> list[dict[str, Any]]:
-        return api.title_sources(
-            self.unique_identifier,
-            regions=REGION,
-        )
 
 
 # TODO: Validate

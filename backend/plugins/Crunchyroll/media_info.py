@@ -38,7 +38,7 @@ class MediaInfoMixin(HelperMixin, register=False):
             overview=series["extended_description"] or series["description"] or None,
             poster_url=self._largest_source(_flatten(series["images"]["poster_tall"])),
             backdrop_url=self._largest_source(
-                _flatten(series["images"]["poster_wide"])
+                _flatten(series["images"]["poster_wide"]),
             ),
             year=series["series_launch_year"],
             number_of_seasons=None if is_movie else series["season_count"],

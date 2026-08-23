@@ -5,11 +5,32 @@ import time
 from collections import Counter
 from collections.abc import Sequence
 from datetime import datetime, timedelta
+from functools import cache
 from typing import Any, override
+from urllib.parse import parse_qs, urlsplit
 
 from loguru import logger
+from not_yt_dlapi import NotYTDLAPI
+from not_yt_dlapi.channel_feed.models import ChannelFeedModel
+from not_yt_dlapi.channels.models import ChannelsModel
+from not_yt_dlapi.exceptions import (
+    APIError,
+    ChannelFeedNotFoundError,
+    PlaylistFeedNotFoundError,
+    ResourceNotFoundError,
+)
+from not_yt_dlapi.music.models import LockupViewModel as MusicLockupViewModel
+from not_yt_dlapi.music.models import MusicModel
+from not_yt_dlapi.music.models import PlaylistHeaderRenderer as MusicHeaderRenderer
+from not_yt_dlapi.playlist_feed.models import PlaylistFeedModel
+from not_yt_dlapi.playlist_items.models import PlaylistItemsModel
+from not_yt_dlapi.playlists.models import PlaylistsModel
+from not_yt_dlapi.shows.models import ShowsModel
+from not_yt_dlapi.topic.models import TopicModel
+from not_yt_dlapi.videos.models import VideosModel
 from sqlmodel import Session
 
+from app.config import settings
 from app.files.models import File
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -18,44 +39,21 @@ from app.utils import tz_datetime
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import (
     BaseFile,
-    EndpointJSON,
+    EndpointFile,
     HTMLFile,
-    JSONFile,
-    XMLFile,
+    LoadEndpoint,
+    PagedEndpointFile,
 )
 from plugins.utils.get_around_client import get_around_client
-from plugins.YouTube import api
 
 
 # TODO: Validate
-class YouTubeJSON(EndpointJSON[dict[str, Any]]):
-    # TODO: Validate
-    @override
-    def _parse(self, raw: Any) -> dict[str, Any]:
-        return self.raise_if_not_is_instance(raw, dict)
-
-    # TODO: Validate
-    @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            try:
-                response = self._fetch()
-            except Exception as error:
-                if not self._is_acceptable_error(error):
-                    raise
-                self.write(None, self.acceptable_error_extra_value())
-            else:
-                self.write(response)
-
-
-# TODO: Validate
-def _lockup_channel_key(lockup: dict[str, Any]) -> str | None:
-    metadata = lockup["metadata"]["lockupMetadataViewModel"]
-    channel_key: str | None = next(
-        api.find(metadata.get("image", {}), "browseId"),
-        None,
+@cache
+def not_yt_dlapi() -> NotYTDLAPI:
+    return NotYTDLAPI(
+        api_key=settings.YOUTUBE_API_KEY,
+        get_around_client=get_around_client(),
     )
-    return channel_key
 
 
 # TODO: Validate
@@ -87,24 +85,6 @@ def is_free_movies_channel(channel_key: str) -> bool:
     return channel_key == _FREE_MOVIES_CHANNEL_KEY
 
 
-_SYSTEM_HUB_CHANNELS = {
-    "XXX___UC-9-kyTW8ZkZNDHQJ6FgpwQ": "Music",
-    "XXX___UClgRkhTL3_hImCAmdLfDE4g": "Movies & Shows",
-    "XXX___UCOpNcN46UbXVtpKMrmU4Abg": "Gaming",
-    "XXX___UCEgdi0XIXXZ-qJOFPf4JSKw": "Sports",
-    "XXX___UCYfdidRxbB8Qhf0Nx7ioOYw": "News",
-    "XXX___UC4R8DWoMoI7CAwX8_LjQHig": "Live",
-    "XXX___UCrpQ4p1Ql_hG8rKXIKM1MOQ": "Fashion & Beauty",
-    "XXX___UCtFRv9O2AHqOZjjynzrv-xg": "Learning",
-    "XXX___UCzuqhhs6NWbgTzMuM09WKDQ": "360 / Virtual Reality",
-}
-
-
-# TODO: Validate
-def system_hub_channel_name(channel_key: str) -> str | None:
-    return _SYSTEM_HUB_CHANNELS.get(channel_key)
-
-
 # TODO: Validate
 def is_video_key(key: str) -> bool:
     """Report whether a key belongs to a video rather than a channel or playlist.
@@ -126,6 +106,11 @@ def is_show_key(key: str) -> bool:
 # TODO: Validate
 def is_channel_uploads_playlist_key(key: str) -> bool:
     return key.startswith("UU")
+
+
+# TODO: Validate
+def is_regular_playlist(key: str) -> bool:
+    return key.startswith("PL") or is_channel_uploads_playlist_key(key)
 
 
 # TODO: Validate
@@ -155,9 +140,9 @@ def split_show_season_key(season_key: str) -> tuple[str, str]:
 # TODO: Validate
 def is_quota_error(error: BaseException) -> bool:
     """Report whether `error` is the YouTube API refusing calls until quota resets."""
-    if not isinstance(error, api.YouTubeAPIError):
+    if not isinstance(error, APIError):
         return False
-    errors = error.response.get("error", {}).get("errors", [])
+    errors = error.error.get("errors", [])
     return any(
         item.get("reason") in frozenset({"dailyLimitExceeded", "quotaExceeded"})
         for item in errors
@@ -172,255 +157,221 @@ def get_first_item[T](items: Sequence[T] | None) -> T:
     return items[0]
 
 
-# TODO: Validate
-def _merge_pages(pages: list[dict[str, Any]]) -> dict[str, Any]:
-    """Merge paginated API responses into a single response with all items."""
-    merged = dict(pages[0])
-    merged["items"] = [item for page in pages for item in page.get("items", [])]
-    return merged
+class ChannelByChannelId(EndpointFile[ChannelsModel]):
+    API_ENDPOINT = not_yt_dlapi().channels
 
-
-# TODO: Validate
-class ChannelByChannelId(YouTubeJSON):
-    # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.channels_list(channel_id=self.unique_identifier)
+    def _download_file(self) -> str:
+        return self.API_ENDPOINT.download(channel_id=self.unique_identifier)
 
     # Occurs when importing an invalid channel URL.
-    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, api.YouTubeNotFoundError)
+        return isinstance(error, ResourceNotFoundError)
 
 
-# TODO: Validate
-class ChannelByHandle(YouTubeJSON):
-    # TODO: Validate
+class ChannelByHandle(EndpointFile[ChannelsModel]):
+    API_ENDPOINT = not_yt_dlapi().channels
+
     @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.channels_list(channel_handle=self.unique_identifier)
+    def _download_file(self) -> str:
+        return self.API_ENDPOINT.download(channel_handle=self.unique_identifier)
 
     # Occurs when importing an invalid channel URL.
-    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, api.YouTubeNotFoundError)
+        return isinstance(error, ResourceNotFoundError)
 
 
-# TODO: Validate
-class ChannelByUsername(YouTubeJSON):
-    # TODO: Validate
+class ChannelByUsername(EndpointFile[ChannelsModel]):
+    API_ENDPOINT = not_yt_dlapi().channels
+
     @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.channels_list(channel_username=self.unique_identifier)
+    def _download_file(self) -> str:
+        return self.API_ENDPOINT.download(channel_username=self.unique_identifier)
 
     # Occurs when importing an invalid channel URL.
-    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, api.YouTubeNotFoundError)
+        return isinstance(error, ResourceNotFoundError)
 
 
-# TODO: Validate
-class ChannelPlaylists(YouTubeJSON):
-    # TODO: Validate
+class ChannelPlaylists(EndpointFile[PlaylistsModel]):
+    API_ENDPOINT = not_yt_dlapi().playlists
+
     @override
-    def _fetch(self) -> dict[str, Any]:
-        pages: list[dict[str, Any]] = []
-        page_token: str | None = None
-        while True:
-            page = api.playlists_list(
-                channel_id=self.unique_identifier,
-                page_token=page_token,
-            )
-            pages.append(page)
-            page_token = page.get("nextPageToken")
-            if page_token is None:
-                break
-        return _merge_pages(pages)
+    def _download_file(self) -> str:
+        return self.API_ENDPOINT.download_merged(channel_id=self.unique_identifier)
 
-    # TODO: Validate
+    # TODO: When does this error occur?
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, api.YouTubeNotFoundError)
+        return isinstance(error, ResourceNotFoundError)
 
 
-# TODO: Validate
-class PlaylistInfo(YouTubeJSON):
-    # TODO: Validate
+class PlaylistInfo(EndpointFile[PlaylistsModel]):
+    API_ENDPOINT = not_yt_dlapi().playlists
+
     @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.playlists_list(playlist_ids=self.unique_identifier)
+    def _download_file(self) -> str:
+        return self.API_ENDPOINT.download(playlist_ids=self.unique_identifier)
 
 
 # TODO: Validate
-class PlaylistItems(YouTubeJSON):
+class PlaylistItems(EndpointFile[PlaylistItemsModel]):
     """Playlist items file."""
 
-    # TODO: Validate
-    def _all_pages(self) -> list[dict[str, Any]]:
-        pages: list[dict[str, Any]] = []
-        page_token: str | None = None
-        while True:
-            page = api.playlist_items_list(self.unique_identifier, page_token)
-            pages.append(page)
-            page_token = page.get("nextPageToken")
-            if page_token is None:
-                return pages
+    API_ENDPOINT = not_yt_dlapi().playlist_items
 
     # Due to API limits this function merges new videos with existing videos instead of
     # downloading all videos every time which over time will lead to a messy file with
     # dead videos.
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
-        # If this is the first time downloading the file download everything.
+    def _download_file(self) -> str:
+        # If this is the first time downloading the file download all of the pages.
         if not self._existing_database_record:
-            return _merge_pages(self._all_pages())
+            return self.API_ENDPOINT.download_merged(self.unique_identifier)
 
-        # If the entry is over a year old download a fresh non-canonical row to clean
-        # out deleted videos. Album playlists are auto-generated and never change, so
-        # re-paging them would spend quota to rediscover the same tracks.
-        year_ago_datetime = tz_datetime.now() - timedelta(days=365)
-        if (
-            not is_music_playlist_key(self.unique_identifier)
-            and self._existing_database_record.data_timestamp < year_ago_datetime
-        ):
-            return _merge_pages(self._all_pages())
-
-        existing_items: list[dict[str, Any]] = json.loads(
-            self.database_record.content or "{}",
-        )["items"]
         existing_video_ids = {
-            item["contentDetails"]["videoId"] for item in existing_items
+            item.content_details.video_id for item in self.parsed().items
         }
 
-        pages: list[dict[str, Any]] = []
+        pages: list[str] = []
         page_token: str | None = None
         reached_existing_video = False
+        downloaded_all_pages = False
         while not reached_existing_video:
-            page = api.playlist_items_list(self.unique_identifier, page_token)
+            page = self.API_ENDPOINT.download(
+                self.unique_identifier,
+                page_token=page_token,
+            )
             pages.append(page)
+            loaded = self.API_ENDPOINT.load(page)
+
+            if not (page_token := loaded.next_page_token):
+                downloaded_all_pages = True
+                break
+
             # Everything from the first already stored video onwards is already stored,
             # so the remaining pages do not need to be spent on.
             reached_existing_video = any(
-                item["contentDetails"]["videoId"] in existing_video_ids
-                for item in page["items"]
+                item.content_details.video_id in existing_video_ids
+                for item in loaded.items
             )
-            page_token = page.get("nextPageToken")
+            page_token = loaded.next_page_token
             if not page_token:
                 break
 
-        merged = _merge_pages(pages)
         # Paging to the end of the playlist without reaching a stored video means the
-        # download covers the whole playlist, so keeping the stored items would keep
+        # download covers the whole playlist, so what came back replaces what is
+        # stored rather than being put in front of it, which is what would keep
         # videos that have since been removed.
-        if not reached_existing_video:
-            return merged
+        if downloaded_all_pages:
+            return self.API_ENDPOINT.merge_pages(pages)
+        return self._document_with(pages)
 
-        new_ids = {item["contentDetails"]["videoId"] for item in merged["items"]}
-        merged["items"] = merged["items"] + [
-            item
-            for item in existing_items
-            if item["contentDetails"]["videoId"] not in new_ids
-        ]
-        return merged
+    # A video already held keeps the place it is held in, so what a download adds is
+    # every video it named that is not held yet, in the order it named them.
+    # TODO: Validate
+    def _document_with(self, pages: list[str]) -> str:
+        items: list[dict[str, Any]] = json.loads(self._stored_content())["items"]
+        held_video_ids = {item["contentDetails"]["videoId"] for item in items}
+        for page in reversed(pages):
+            for item in reversed(json.loads(page)["items"]):
+                video_id = item["contentDetails"]["videoId"]
+                if video_id in held_video_ids:
+                    continue
+                held_video_ids.add(video_id)
+                items.insert(0, item)
+
+        document = json.loads(pages[0])
+        document["items"] = items
+        document.pop("nextPageToken", None)
+        document.pop("prevPageToken", None)
+        return json.dumps(document)
 
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, api.YouTubeNotFoundError)
+        return isinstance(error, ResourceNotFoundError)
 
 
 # TODO: Validate
-class Videos(YouTubeJSON):
+class Videos(EndpointFile[VideosModel]):
     """Videos file."""
 
-    # TODO: Validate
-    @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.videos_list(self.unique_identifier)
+    API_ENDPOINT = not_yt_dlapi().videos
 
 
 # TODO: Validate
-class MusicPlaylistFile(YouTubeJSON):
-    # TODO: Validate
-    @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.music_playlist(self.unique_identifier)
+class MusicPlaylistFile(EndpointFile[MusicModel]):
+    API_ENDPOINT = not_yt_dlapi().music
 
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, api.YouTubeNotFoundError)
+        return isinstance(error, ResourceNotFoundError)
 
-    # TODO: Validate
-    def _header(self) -> dict[str, Any]:
-        return next(api.find(self.parsed(), "playlistHeaderRenderer"), {})
+    # TODO: Validatez
+    def _header(self) -> MusicHeaderRenderer:
+        return self.parsed().header.playlist_header_renderer
 
+    # The subtitle reads "Future, Metro Boomin • Album", so the names are what comes
+    # before the bullet the release type is written after.
     # TODO: Validate
-    def _credit(self) -> tuple[list[str], str | None]:
-        subtitle = self._header().get("subtitle")
-        if subtitle is None:
-            return [], None
-        credit, _, release_type = api.read_text(subtitle).rpartition(" \u2022 ")
-        if not credit:
-            return [], release_type or None
-        return [name.strip() for name in credit.split(",")], release_type
+    def _credit(self) -> tuple[str, str]:
+        credit, _, release_type = self._header().subtitle.simple_text.rpartition(
+            " \u2022 ",
+        )
+        return credit, release_type
 
     # TODO: Validate
     def title(self) -> str | None:
-        title = self._header().get("title")
-        return None if title is None else api.read_text(title)
+        return self._header().title.simple_text
 
     # TODO: Validate
     def artists(self) -> list[str]:
-        artists, _ = self._credit()
-        return artists
+        credit, _ = self._credit()
+        return [name.strip() for name in credit.split(",")] if credit else []
 
     # TODO: Validate
     def release_type(self) -> str | None:
-        _, release_type = self._credit()
+        credit, release_type = self._credit()
+        if not credit:
+            return release_type or None
         return release_type
 
     # TODO: Validate
-    def image_url(self) -> str | None:
-        images = [
-            image
-            for images in api.find(
-                self._header().get("playlistHeaderBanner", {}),
-                "thumbnails",
-            )
-            for image in images
-            if "url" in image
-        ]
-        return images[-1]["url"] if images else None
-
-    # TODO: Validate
-    def _lockups(self) -> list[dict[str, Any]]:
+    def _track_lockups(self) -> list[MusicLockupViewModel]:
         return [
-            lockup
-            for lockup in api.find(self.parsed(), "lockupViewModel")
-            if lockup.get("contentType") == "LOCKUP_CONTENT_TYPE_VIDEO"
+            item.lockup_view_model
+            for tab in self.parsed().contents.two_column_browse_results_renderer.tabs
+            for section in tab.tab_renderer.content.section_list_renderer.contents
+            for item in section.item_section_renderer.contents
+            if item.lockup_view_model.content_type == "LOCKUP_CONTENT_TYPE_VIDEO"
         ]
 
     # TODO: Validate
     def track_keys(self) -> list[str]:
-        return [lockup["contentId"] for lockup in self._lockups()]
+        return [lockup.content_id for lockup in self._track_lockups()]
+
+    # TODO: Validate
+    def image_url(self) -> str | None:
+        images = self._header().playlist_header_banner.hero_playlist_thumbnail_renderer.thumbnail.thumbnails
+        return images[-1].url if images else None
 
     # TODO: Validate
     def artist_channel_id(self) -> str | None:
         channel_keys = Counter(
-            channel_key
-            for lockup in self._lockups()
-            if (channel_key := _lockup_channel_key(lockup)) is not None
+            lockup.metadata.lockup_metadata_view_model.image.decorated_avatar_view_model.renderer_context.command_context.on_tap.innertube_command.browse_endpoint.browse_id
+            for lockup in self._track_lockups()
         )
         return next((channel for channel, _ in channel_keys.most_common(1)), None)
 
 
 # TODO: Validate
-class TopicReleasesFile(JSONFile[list[dict[str, Any]]]):
+class TopicReleasesFile(PagedEndpointFile[TopicModel]):
     """The albums and singles a musician's Topic channel lists.
 
     The channel lists a dozen releases on a shelf and the rest behind it, and a
@@ -429,60 +380,55 @@ class TopicReleasesFile(JSONFile[list[dict[str, Any]]]):
     named once.
     """
 
-    # TODO: Validate
-    def __init__(
-        self,
-        session: Session,
-        plugin: Plugin,
-        unique_identifier: str,
-    ) -> None:
-        self.unique_identifier = unique_identifier
-        super().__init__(session, plugin)
+    API_ENDPOINT = not_yt_dlapi().topic
 
     # TODO: Validate
     @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            try:
-                pages = api.topic_pages(self.unique_identifier)
-            except api.YouTubeNotFoundError:
-                self.write(None, f"Invalid unique_identifier {self.unique_identifier}")
-            else:
-                self.write(pages)
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ResourceNotFoundError)
 
+    # The shelf a channel opens with writes its releases in a list of its own and
+    # the panel behind it writes them into a grid, so both are read.
     # TODO: Validate
-    @override
-    def _parse(self, raw: Any) -> list[dict[str, Any]]:
-        return self.raise_if_not_is_instance(raw, list)
+    def _page_release_keys(self, page: TopicModel) -> list[str]:
+        endpoints = page.on_response_received_endpoints
+        if endpoints is not None:
+            return [
+                grid_item.grid_playlist_renderer.playlist_id
+                for endpoint in endpoints
+                for continuation_item in (
+                    endpoint.append_continuation_items_action.continuation_items
+                )
+                if continuation_item.grid_renderer is not None
+                for grid_item in continuation_item.grid_renderer.items
+                if grid_item.grid_playlist_renderer is not None
+            ]
+
+        contents = page.contents
+        if contents is None:
+            return []
+        return [
+            shelf_item.lockup_view_model.content_id
+            for tab in contents.two_column_browse_results_renderer.tabs
+            for section in tab.tab_renderer.content.section_list_renderer.contents
+            for item in section.item_section_renderer.contents
+            for shelf_item in (
+                item.shelf_renderer.content.horizontal_list_renderer.items
+            )
+        ]
 
     # TODO: Validate
     def release_keys(self) -> list[str]:
         keys: list[str] = []
         for page in self.parsed():
-            for key in _page_release_keys(page):
+            for key in self._page_release_keys(page):
                 if key not in keys:
                     keys.append(key)
         return keys
 
 
 # TODO: Validate
-def _page_release_keys(page: dict[str, Any]) -> list[str]:
-    grid = [
-        entry["gridPlaylistRenderer"]["playlistId"]
-        for entries in api.find(page, "items")
-        for entry in entries
-        if "gridPlaylistRenderer" in entry
-    ]
-    if grid:
-        return grid
-    shelf = next(api.find(page, "shelfRenderer"), None)
-    if shelf is None:
-        return []
-    return [lockup["contentId"] for lockup in api.find(shelf, "lockupViewModel")]
-
-
-# TODO: Validate
-class ShowListing(JSONFile[list[dict[str, Any]]]):
+class ShowListing(PagedEndpointFile[ShowsModel]):
     """Every season of a show and every stretch of each of them.
 
     A season is its own thing to ask browse for and a long one is answered a
@@ -490,31 +436,12 @@ class ShowListing(JSONFile[list[dict[str, Any]]]):
     the stretch that begins a season says which season the ones after it are of.
     """
 
-    # TODO: Validate
-    def __init__(
-        self,
-        session: Session,
-        plugin: Plugin,
-        unique_identifier: str,
-    ) -> None:
-        self.unique_identifier = unique_identifier
-        super().__init__(session, plugin)
+    API_ENDPOINT = not_yt_dlapi().shows
 
     # TODO: Validate
     @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            try:
-                pages = api.show_pages(self.unique_identifier)
-            except api.YouTubeNotFoundError:
-                self.write(None, f"Invalid unique_identifier {self.unique_identifier}")
-            else:
-                self.write(pages)
-
-    # TODO: Validate
-    @override
-    def _parse(self, raw: Any) -> list[dict[str, Any]]:
-        return self.raise_if_not_is_instance(raw, list)
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ResourceNotFoundError)
 
     # TODO: Validate
     def show_key(self) -> str | None:
@@ -523,55 +450,113 @@ class ShowListing(JSONFile[list[dict[str, Any]]]):
 
     # TODO: Validate
     def offer_labels(self) -> set[str]:
-        content = self.database_record.content
-        if not content:
-            return set()
         return {
-            badge["label"]
-            for badge in api.find(json.loads(content), "metadataBadgeRenderer")
-            if badge.get("style") == "BADGE_STYLE_TYPE_YPC" and "label" in badge
+            badge.metadata_badge_renderer.label
+            for page in self.parsed()
+            if page.sidebar is not None
+            for item in page.sidebar.playlist_sidebar_renderer.items
+            if item.playlist_sidebar_primary_info_renderer.badges is not None
+            for badge in item.playlist_sidebar_primary_info_renderer.badges
+            if badge.metadata_badge_renderer.style == "BADGE_STYLE_TYPE_YPC"
         }
 
     # TODO: Validate
     def season_numbers(self) -> list[int]:
-        seasons, _ = api.read_seasons(get_first_item(self.parsed()))
-        return sorted(seasons)
+        return sorted(self.episode_keys_by_season())
+
+    # A season is chosen from the same menu a playlist is sorted from, so what tells
+    # the two apart is that a season says which season it is, and it says so in the
+    # address a person would read it at rather than in the endpoint browse is asked
+    # by.
+    # TODO: Validate
+    def _open_season(self, page: ShowsModel) -> int | None:
+        if page.contents is None:
+            return None
+        for tab in page.contents.two_column_browse_results_renderer.tabs:
+            for section in tab.tab_renderer.content.section_list_renderer.contents:
+                for item in section.item_section_renderer.contents:
+                    metadata = item.playlist_show_metadata_renderer
+                    if metadata is None:
+                        continue
+                    for menu_item in (
+                        metadata.collection.sort_filter_sub_menu_renderer.sub_menu_items
+                    ):
+                        if not menu_item.selected:
+                            continue
+                        query = urlsplit(
+                            menu_item.navigation_endpoint.command_metadata.web_command_metadata.url,
+                        ).query
+                        numbers = parse_qs(query).get("season", ())
+                        if numbers and numbers[0].isdigit():
+                            return int(numbers[0])
+        return None
+
+    # TODO: Validate
+    def _page_episode_keys(self, page: ShowsModel) -> list[str]:
+        if page.contents is None:
+            return []
+        return [
+            content.playlist_video_renderer.video_id
+            for tab in page.contents.two_column_browse_results_renderer.tabs
+            for section in tab.tab_renderer.content.section_list_renderer.contents
+            for item in section.item_section_renderer.contents
+            if item.playlist_video_list_renderer is not None
+            for content in item.playlist_video_list_renderer.contents
+        ]
 
     # TODO: Validate
     def episode_keys_by_season(self) -> dict[int, list[str]]:
         episode_keys: dict[int, list[str]] = {}
         season_number: int | None = None
         for page in self.parsed():
-            _, open_season = api.read_seasons(page)
+            open_season = self._open_season(page)
             if open_season is not None:
                 season_number = open_season
             if season_number is None:
                 continue
             episode_keys.setdefault(season_number, []).extend(
-                entry["videoId"] for entry in api.find(page, "playlistVideoRenderer")
+                self._page_episode_keys(page),
             )
         return episode_keys
 
 
 # TODO: Validate
-class PlaylistFeed(XMLFile):
+class PlaylistFeed(EndpointFile[ChannelFeedModel | PlaylistFeedModel]):
     """Playlist feed file."""
+
+    # TODO: Validate
+    def _is_channel_feed(self) -> bool:
+        return self.unique_identifier.startswith("UU")
+
+    # TODO: Validate
+    @override
+    def _load_endpoint(self) -> LoadEndpoint[ChannelFeedModel | PlaylistFeedModel]:
+        if self._is_channel_feed():
+            return not_yt_dlapi().channel_feed
+        return not_yt_dlapi().playlist_feed
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def _identifier_suffix(cls) -> str:
+        return ".xml"
+
+    # TODO: Validate
+    @override
+    def _download_file(self) -> str:
+        if self._is_channel_feed():
+            return not_yt_dlapi().channel_feed.download(
+                "UC" + self.unique_identifier[2:],
+            )
+        return not_yt_dlapi().playlist_feed.download(self.unique_identifier)
 
     # TODO: Validate
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
-            feed: str
             try:
-                if self.unique_identifier.startswith("UU"):
-                    feed = api.feed(
-                        channel_id="UC" + self.unique_identifier[2:],
-                    )
-                else:
-                    feed = api.feed(
-                        playlist_id=self.unique_identifier,
-                    )
-            except api.YouTubeHTTPError as error:
+                feed = self._download_file()
+            except (ChannelFeedNotFoundError, PlaylistFeedNotFoundError) as error:
                 logger.warning(
                     "PlaylistFeed fetch for {} returned HTTP {}; keeping the existing feed.",
                     self.unique_identifier,
@@ -582,16 +567,7 @@ class PlaylistFeed(XMLFile):
 
     # TODO: Validate
     def video_ids(self) -> list[str]:
-        namespaces = {
-            "atom": "http://www.w3.org/2005/Atom",
-            "yt": "http://www.youtube.com/xml/schemas/2015",
-        }
-        result: list[str] = []
-        for entry in self.parsed().findall("atom:entry", namespaces):
-            video_id = entry.find("yt:videoId", namespaces)
-            if video_id is not None and video_id.text:
-                result.append(video_id.text)
-        return result
+        return [entry.video_id for entry in self.parsed().entry]
 
 
 # TODO: Validate
@@ -729,8 +705,8 @@ class FileMixin(BasePlugin, register=False):
         channel_file = self.channel_by_channel_id_file(show_key)
         if channel_file.is_outdated() or not channel_file.database_record.content:
             return False
-        items = channel_file.parsed()["items"]
-        return bool(items) and items[0]["snippet"]["title"].endswith(" - Topic")
+        items = channel_file.parsed().items
+        return bool(items) and items[0].snippet.title.endswith(" - Topic")
 
     # TODO: Validate
     def is_movies_channel(self, show_key: str) -> bool:
@@ -740,8 +716,8 @@ class FileMixin(BasePlugin, register=False):
         channel_file = self.channel_by_channel_id_file(show_key)
         if channel_file.is_outdated() or not channel_file.database_record.content:
             return False
-        items = channel_file.parsed()["items"]
-        return bool(items) and items[0]["snippet"]["title"] == "YouTube Movies"
+        items = channel_file.parsed().items
+        return bool(items) and items[0].snippet.title == "YouTube Movies"
 
     # TODO: Validate
     def is_usa_video(self, video_key: str) -> bool:
@@ -751,13 +727,13 @@ class FileMixin(BasePlugin, register=False):
         if videos_file.is_outdated() or not videos_file.database_record.content:
             return True
 
-        items = videos_file.parsed()["items"]
+        items = videos_file.parsed().items
         if not items:
             return False
-        allowed = items[0]["contentDetails"].get("regionRestriction", {}).get("allowed")
-        if allowed is None:
+        restriction = items[0].content_details.region_restriction
+        if restriction is None or restriction.allowed is None:
             return False
-        return "US" in allowed
+        return "US" in restriction.allowed
 
     # TODO: Validate
     def topic_release_keys(self, channel_key: str) -> list[str]:
@@ -889,7 +865,7 @@ class FileMixin(BasePlugin, register=False):
             )
 
         channel_item = get_first_item(
-            self.channel_by_channel_id_file(show_key).parsed()["items"],
+            self.channel_by_channel_id_file(show_key).parsed().items,
         )
         season_keys: list[str] = []
 
@@ -898,7 +874,7 @@ class FileMixin(BasePlugin, register=False):
         # first season_key listed so when the episodes are downloaded the channel
         # uploads are downloaded first because that will maximize the batch sizes and
         # minimize the number of API calls.
-        if int(channel_item["statistics"]["videoCount"]) > 0:
+        if int(channel_item.statistics.video_count) > 0:
             season_keys.append(self.channel_uploads_playlist_key(show_key))
 
         # A channel generated for one title of YouTube's catalogue is that title and
@@ -910,9 +886,9 @@ class FileMixin(BasePlugin, register=False):
         channel_playlists_file = self.channel_playlists_file(show_key)
         if channel_playlists_file.database_record.content:
             season_keys.extend(
-                item["id"]
-                for item in channel_playlists_file.parsed()["items"]
-                if item["contentDetails"]["itemCount"] > 0
+                item.id
+                for item in channel_playlists_file.parsed().items
+                if item.content_details.item_count > 0
             )
 
         return self._with_album_seasons(season_keys, show_key)
@@ -993,9 +969,9 @@ class FileMixin(BasePlugin, register=False):
             )
             raise ValueError(msg)
         return [
-            item["contentDetails"]["videoId"]
-            for item in playlist_items_file.parsed()["items"]
-            if self._video_is_valid(item["snippet"]["title"])
+            item.content_details.video_id
+            for item in playlist_items_file.parsed().items
+            if self._video_is_valid(item.snippet.title)
         ]
 
     # TODO: Validate
@@ -1010,18 +986,21 @@ class FileMixin(BasePlugin, register=False):
 
         logger.info(f"Batch downloading {len(outdated_ids)} YouTube videos")
         start = time.monotonic()
-        responses = list(api.videos_list_batched(outdated_ids))
+        responses = not_yt_dlapi().videos.download_all(outdated_ids)
         elapsed_time = time.monotonic() - start
         logger.info(
             f"Batch downloaded {len(outdated_ids)} YouTube videos "
             f"in {elapsed_time:.2f}s",
         )
 
-        responses_by_id: dict[str, dict[str, Any]] = {
-            item["id"]: {**response, "items": [item]}
-            for response in responses
-            for item in response["items"]
-        }
+        # A batch answers for fifty videos at once and every video is stored in a
+        # file of its own, so each item is written out as the response it would
+        # have arrived in had it been asked for on its own.
+        responses_by_id: dict[str, str] = {}
+        for response in responses:
+            page: dict[str, Any] = json.loads(response)
+            for item in page["items"]:
+                responses_by_id[item["id"]] = json.dumps({**page, "items": [item]})
         for video_id in outdated_ids:
             video_file = self.videos_file(video_id)
             # write is called directly because of the way the files are batch downloaded.

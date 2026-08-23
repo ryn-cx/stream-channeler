@@ -283,7 +283,7 @@ class UpsertMixin(HelperMixin, register=False):
     ) -> None:
         listing: Sequence[dict[str, Any]] = (
             self.artist_concerts_or_artist_music_videos_file(
-                artist_id, category
+                artist_id, category,
             ).parsed()["data"]
         )
         # Crunchyroll lists an artist's releases newest first, so the order is

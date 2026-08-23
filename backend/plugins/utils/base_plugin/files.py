@@ -2,7 +2,7 @@
 import json
 import time
 from abc import ABC, abstractmethod
-from collections.abc import Generator, Sequence
+from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import datetime
 from typing import (
@@ -11,17 +11,12 @@ from typing import (
     Final,
     Protocol,
     final,
-    get_args,
-    overload,
     override,
 )
 from xml.etree.ElementTree import Element, fromstring
 
 from bs4 import BeautifulSoup
-from good_ass_pydantic_integrator import ParseLevel
-from good_ass_pydantic_integrator.constants import INPUT_TYPE
 from loguru import logger
-from pydantic import BaseModel
 from sqlmodel import Session, select
 
 from app.files.models import File
@@ -287,7 +282,7 @@ class JSONFile[T](BaseFile[T], ABC):
 
     # TODO: Validate
     @override
-    def write(self, content: str | INPUT_TYPE | None, extra: str | None = None) -> None:
+    def write(self, content: Any, extra: str | None = None) -> None:
         if content is not None and not isinstance(content, str):
             content = json.dumps(content, default=str)
         super().write(content, extra)
@@ -358,11 +353,128 @@ class HTMLFile(BaseFile[BeautifulSoup], ABC):
 
 
 # TODO: Validate
-class ResponseModel(Protocol):
+class LoadEndpoint[T](Protocol):
     # TODO: Validate
-    @property
-    # ANN401 - What a response was read out of is whatever the endpoint served.
-    def raw(self) -> Any: ...  # noqa: ANN401
+    def download(self, unique_identifier: str, /) -> str: ...
+
+    # TODO: Validate
+    def load(self, data: str, log_id: str = "") -> T: ...
+
+
+# TODO: Validate
+class PagedLoadEndpoint[T](Protocol):
+    # TODO: Validate
+    def download_all(self, unique_identifier: str, /) -> list[str]: ...
+
+    # TODO: Validate
+    def load_pages(self, datas: list[str]) -> list[T]: ...
+
+
+# TODO: Validate
+class DownloadedFile[T](BaseFile[T], ABC):
+    API_ENDPOINT: ClassVar[Any]
+
+    # TODO: Validate
+    def __init__(
+        self,
+        session: Session,
+        plugin: Plugin,
+        unique_identifier: str,
+    ) -> None:
+        self.unique_identifier = unique_identifier
+        super().__init__(session, plugin)
+
+    # TODO: Validate
+    def _download_endpoint(self) -> LoadEndpoint[T]:
+        """Return the endpoint the file is downloaded from."""
+        endpoint: LoadEndpoint[T] = self.API_ENDPOINT
+        return endpoint
+
+    # TODO: Validate
+    def _download_file(self) -> str:
+        """Download the file and return the body as it was served."""
+        return self._download_endpoint().download(self.unique_identifier)
+
+    # TODO: Validate
+    def _is_acceptable_error(self, error: Exception) -> bool:  # noqa: ARG002
+        """Return whether `error` should be caught during download."""
+        return False
+
+    # TODO: Validate
+    def acceptable_error_extra_value(self) -> str:
+        return f"Invalid unique_identifier {self.unique_identifier}"
+
+    # TODO: Validate
+    @override
+    def _download(self) -> None:
+        with self._log_download(self.unique_identifier):
+            try:
+                data = self._download_file()
+            except Exception as error:
+                if not self._is_acceptable_error(error):
+                    raise
+                self.write(None, self.acceptable_error_extra_value())
+            else:
+                self.write(data)
+
+    # TODO: Validate
+    def _stored_content(self) -> str:
+        if not (content := self.database_record.content):
+            msg = "File content is empty, cannot parse."
+            raise ValueError(msg)
+        return content
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def _identifier_suffix(cls) -> str:
+        return ".json"
+
+
+# TODO: Validate
+class EndpointFile[T](DownloadedFile[T], ABC):
+    # TODO: Validate
+    def _load_endpoint(self) -> LoadEndpoint[T]:
+        """Return the endpoint the stored file is read back through."""
+        endpoint: LoadEndpoint[T] = self.API_ENDPOINT
+        return endpoint
+
+    # TODO: Validate
+    def parsed(self) -> T:
+        """Return the parsed content of the file."""
+        if self._cached_parsed is None:
+            self._cached_parsed = self._load_endpoint().load(self._stored_content())
+        return self._cached_parsed
+
+
+# TODO: Validate
+class PagedEndpointFile[T](DownloadedFile[list[T]], ABC):
+    # TODO: Validate
+    def _load_endpoint(self) -> PagedLoadEndpoint[T]:
+        endpoint: PagedLoadEndpoint[T] = self.API_ENDPOINT
+        return endpoint
+
+    # TODO: Validate
+    def _download_pages(self) -> list[str]:
+        """Download every page of the file, first to last."""
+        return self._load_endpoint().download_all(self.unique_identifier)
+
+    # TODO: Validate
+    @override
+    def _download_file(self) -> str:
+        return json.dumps(self._download_pages())
+
+    # TODO: Validate
+    def stored_pages(self) -> list[str]:
+        pages: list[str] = json.loads(self._stored_content())
+        return pages
+
+    # TODO: Validate
+    def parsed(self) -> list[T]:
+        """Return the parsed pages of the file."""
+        if self._cached_parsed is None:
+            self._cached_parsed = self._load_endpoint().load_pages(self.stored_pages())
+        return self._cached_parsed
 
 
 # TODO: Validate
@@ -403,117 +515,3 @@ class EndpointJSON[T](JSONFile[T], ABC):
     # TODO: Validate
     def acceptable_error_extra_value(self) -> str:
         return f"Invalid unique_identifier {self.unique_identifier}"
-
-
-# TODO: Validate
-class ResponseJSON[T: ResponseModel](EndpointJSON[T], ABC):
-    # TODO: Validate
-    @override
-    def _parse(self, raw: Any) -> T:
-        model: Any = get_args(type(self).__orig_bases__[0])[0]  # type: ignore[attr-defined]
-        return model.from_response(raw)  # type: ignore[no-any-return]
-
-    # TODO: Validate
-    @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            try:
-                response = self._fetch()
-            except Exception as error:
-                if not self._is_acceptable_error(error):
-                    raise
-                self.write(None, self.acceptable_error_extra_value())
-            else:
-                self.write(response.raw)
-
-
-# TODO: Deprecate and remove
-class PartialGAPIJSON[T = BaseModel](EndpointJSON[T], ABC):
-    PARSE_LEVEL: ClassVar[ParseLevel] = ParseLevel.UPDATE
-
-    # TODO: Validate
-    @override
-    def _parse(self, raw: Any) -> T:
-        return self.API_ENDPOINT.parse(raw, level=self.PARSE_LEVEL)  # type: ignore[no-any-return]
-
-    # TODO: Validate
-    @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            try:
-                response = self._fetch()
-                content = self.API_ENDPOINT.original_input(response)
-                self.write(content)
-            except Exception as e:
-                if not self._is_acceptable_error(e):
-                    raise
-
-                self.write(None, self.acceptable_error_extra_value())
-
-
-# TODO: Validate
-class APISerializerEndpoint[T](Protocol):
-    # TODO: Validate
-    @classmethod
-    def parse(cls, data: INPUT_TYPE, *, level: ParseLevel = ParseLevel.UPDATE) -> T: ...
-
-    # TODO: Validate
-    @overload
-    @staticmethod
-    def original_input(data: Sequence[BaseModel]) -> list[INPUT_TYPE]: ...
-    # TODO: Validate
-    @overload
-    @staticmethod
-    def original_input(data: BaseModel) -> INPUT_TYPE: ...
-    # TODO: Validate
-    @staticmethod
-    def original_input(
-        data: BaseModel | Sequence[BaseModel],
-    ) -> INPUT_TYPE | list[INPUT_TYPE]: ...
-
-    # TODO: Validate
-    @overload
-    @staticmethod
-    def model_dump(data: Sequence[BaseModel]) -> list[INPUT_TYPE]: ...
-    # TODO: Validate
-    @overload
-    @staticmethod
-    def model_dump(data: BaseModel) -> INPUT_TYPE: ...
-    # TODO: Validate
-    @staticmethod
-    def model_dump(
-        data: BaseModel | Sequence[BaseModel],
-    ) -> INPUT_TYPE | list[INPUT_TYPE]: ...
-
-
-# TODO: Validate
-class APIEndpoint[T](APISerializerEndpoint[T], Protocol):
-    # TODO: Validate
-    def download_and_parse(self, unique_identifier: str, /) -> T: ...
-
-
-# TODO: Validate
-class GAPIJSON[T: BaseModel](PartialGAPIJSON[T], ABC):
-    API_ENDPOINT: ClassVar[APIEndpoint[Any]]
-
-    # TODO: Validate
-    @override
-    def _fetch(self) -> T:
-        """Call the appropriate get method on the API endpoint."""
-        return self.API_ENDPOINT.download_and_parse(self.unique_identifier)
-
-
-# TODO: This may no longe be needed
-# TODO: Validate
-class GAPIJSONNoGet[T: BaseModel](PartialGAPIJSON[T], ABC):
-    API_ENDPOINT: ClassVar[APISerializerEndpoint[Any]]
-
-
-# TODO: Validate
-class GAPIListJSON[T: BaseModel](PartialGAPIJSON[list[T]], ABC):
-    API_ENDPOINT: ClassVar[APISerializerEndpoint[Any]]
-
-    # TODO: Validate
-    @override
-    def _parse(self, raw: Any) -> list[T]:
-        return [self.API_ENDPOINT.parse(page, level=self.PARSE_LEVEL) for page in raw]
