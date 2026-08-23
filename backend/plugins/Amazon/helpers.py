@@ -3,21 +3,12 @@
 
 from __future__ import annotations
 
-import re
 from typing import override
 from urllib.parse import quote_plus
 
-from deforestation.exceptions import RedirectedError
-
 from plugins.Amazon.files import FileMixin
+from plugins.Amazon.keys import title_key_from_location
 from plugins.utils.abstract_plugin import InvalidURLError
-
-# A plain ASIN is 10 characters, but a link written by Prime Video itself uses a
-# longer id of its own.
-TITLE_KEY_REGEX = r"[A-Z0-9]{10,}"
-
-# Where the id sits in the address a share link points at.
-_REDIRECT_TITLE_KEY = re.compile(rf"/(?:dp|gp/video/detail)/({TITLE_KEY_REGEX})")
 
 
 # TODO: Validate
@@ -44,26 +35,11 @@ class HelperMixin(FileMixin, register=False):
         redirect_file = self.share_link_file(share_key)
         redirect_file.download_if_outdated()
         location = redirect_file.location() or ""
-        found = _REDIRECT_TITLE_KEY.search(location)
-        if found is None:
+        landing_key = title_key_from_location(location)
+        if landing_key is None:
             msg = f"Amazon share link {share_key} points at no title: {location!r}"
             raise InvalidURLError(msg)
-        return found[1]
-
-    # TODO: Validate
-    def title_key_from_redirect(self, title_key: str) -> str:
-        try:
-            self.detail_file(title_key).download_if_outdated()
-        except RedirectedError as error:
-            found = _REDIRECT_TITLE_KEY.search(error.location)
-            if found is None:
-                msg = (
-                    f"Amazon title {title_key} points at no title: "
-                    f"{error.location!r}"
-                )
-                raise InvalidURLError(msg) from error
-            return found[1]
-        return title_key
+        return landing_key
 
     # TODO: Validate
     def show_key_from_title_key(self, title_key: str) -> str:

@@ -21,13 +21,14 @@ from deforestation.detail import Detail as DetailEndpoint
 from deforestation.detail_widgets import DetailWidgets as DetailWidgetsEndpoint
 from deforestation.detail_widgets.models import DetailWidgetsModel
 from deforestation.detail_widgets.models import Episode as WidgetEpisode
-from deforestation.exceptions import TitleNotFoundError
+from deforestation.exceptions import RedirectedError, TitleNotFoundError
 from deforestation.search import Search as SearchEndpoint
 from deforestation.search.models import Entity, SearchModel
 from pydantic import BaseModel
 from sqlmodel import Session
 
 from app.plugins.models import Plugin
+from plugins.Amazon.keys import title_key_from_location
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import (
     BaseFile,
@@ -328,6 +329,17 @@ class Detail(DownloadedFile[dict[str, Any]]):
     @override
     def acceptable_error_extra_value(self) -> str:
         return f"Invalid title {self.title_key}"
+
+    # TODO: Validate
+    @override
+    def _download_file(self) -> str:
+        try:
+            return super()._download_file()
+        except RedirectedError as error:
+            landing_key = title_key_from_location(error.location)
+            if landing_key is None:
+                raise
+            return self._download_endpoint().download(landing_key)
 
     # TODO: Validate
     @override

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
-from plugins.Amazon.helpers import TITLE_KEY_REGEX
+from plugins.Amazon.keys import TITLE_KEY_REGEX
 from plugins.utils.base_plugin.url import URLHandler
 
 if TYPE_CHECKING:
@@ -26,27 +26,19 @@ class AmazonURLHandler(URLHandler["Amazon"]):
     def __init__(self, plugin: Amazon, url: str, key: str) -> None:
         """Initialize the URL handler."""
         self._key = key
-        self._redirected_key: str | None = None
         super().__init__(plugin, url)
-
-    # TODO: Validate
-    @property
-    def title_key(self) -> str:
-        if self._redirected_key is None:
-            self._redirected_key = self.plugin.title_key_from_redirect(self._key)
-        return self._redirected_key
 
     # TODO: Validate
     @property
     @override
     def show_key(self) -> str:
-        return self.plugin.show_key_from_title_key(self.title_key)
+        return self.plugin.show_key_from_title_key(self._key)
 
     # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
         self.plugin.raise_if_invalid_file(
-            self.plugin.detail_file(self.title_key),
+            self.plugin.detail_file(self._key),
             self.url,
         )
 

@@ -14,10 +14,10 @@ from plugins.TMDB.files import (
 )
 from plugins.TMDB.lookup import LookupMixin
 from plugins.utils.abstract_plugin import (
-    AbstractPlugin,
     PluginMediaInfo,
     PluginWatchProviderItem,
 )
+from plugins.utils.base_plugin.plugin import BasePlugin
 from plugins.utils.manage_plugins import sorted_plugins
 
 STREAMING_CATEGORIES = ("flatrate", "free", "ads")
@@ -121,13 +121,11 @@ def streaming_providers(
 
 
 # TODO: Validate
-def plugin_for_tmdb_name(provider_name: str) -> type[AbstractPlugin] | None:
-    plugin_classes = sorted_plugins()
-    for plugin_class in plugin_classes:
-        if provider_name in plugin_class.TMDB_PROVIDER_NAMES:
-            return plugin_class
-    for plugin_class in plugin_classes:
-        if plugin_class.matches_tmdb_provider(provider_name):
+def plugin_for_tmdb_name(provider_name: str) -> type[BasePlugin] | None:
+    for plugin_class in sorted_plugins():
+        if issubclass(plugin_class, BasePlugin) and plugin_class.matches_tmdb_provider(
+            provider_name,
+        ):
             return plugin_class
     return None
 

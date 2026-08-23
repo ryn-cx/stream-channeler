@@ -55,6 +55,14 @@ class BasePlugin(
     ABC,
     register=False,
 ):
+    # The names TMDB uses for this plugin's website in its watch-provider data.
+    # A plugin may map to several (e.g. Netflix's base and ad-supported tiers);
+    # empty when the plugin has no matching TMDB provider.
+    TMDB_PROVIDER_NAMES: ClassVar[tuple[str, ...]] = ()
+
+    # How many search results make up a single page of `search` output.
+    SEARCH_PAGE_SIZE: ClassVar[int] = 20
+
     _VERSION: str
 
     _current_show: str | None = None
@@ -88,6 +96,12 @@ class BasePlugin(
     Everything else is dropped by `_reset_show_state`, so an attribute only
     survives a change of show by being named here.
     """
+
+    # TODO: Validate
+    @classmethod
+    def matches_tmdb_provider(cls, provider_name: str) -> bool:
+        folded_name = provider_name.casefold()
+        return any(folded_name == name.casefold() for name in cls.TMDB_PROVIDER_NAMES)
 
     # TODO: Validate
     def _set_current_show(self, show: str) -> None:

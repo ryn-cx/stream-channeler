@@ -33,14 +33,6 @@ if TYPE_CHECKING:
 class AbstractPlugin(ABC):
     """Base class every plugin must implement."""
 
-    # The names TMDB uses for this plugin's website in its watch-provider data.
-    # A plugin may map to several (e.g. Netflix's base and ad-supported tiers);
-    # empty when the plugin has no matching TMDB provider.
-    TMDB_PROVIDER_NAMES: ClassVar[tuple[str, ...]] = ()
-
-    # How many search results make up a single page of `search` output.
-    SEARCH_PAGE_SIZE: ClassVar[int] = 20
-
     # The favicon shown next to this plugin's name in the UI; None when the plugin
     # has no icon of its own.
     FAVICON_URL: ClassVar[str | None] = None
@@ -52,11 +44,6 @@ class AbstractPlugin(ABC):
     # as well as hiding it, so `search` and `search_url` stay available to the
     # cross referencing that calls them in process.
     USER_SEARCHABLE: ClassVar[bool] = False
-
-    # TODO: Validate
-    @classmethod
-    def matches_tmdb_provider(cls, provider_name: str) -> bool:  # noqa: ARG003 - `provider_name` is used by overrides.
-        return False
 
     # TODO: Validate
     @classmethod

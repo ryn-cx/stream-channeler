@@ -57,7 +57,9 @@ class Amazon(
     @classmethod
     @override
     def matches_tmdb_provider(cls, provider_name: str) -> bool:
-        return provider_name.endswith(" Amazon Channel")
+        if super().matches_tmdb_provider(provider_name):
+            return True
+        return provider_name.casefold().endswith(" amazon channel")
 
     # TODO: Validate
     @classmethod
