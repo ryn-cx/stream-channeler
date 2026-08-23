@@ -27,9 +27,12 @@ from app.canonical_media.episodes import (
     canonical_episode_link,
 )
 from app.canonical_media.seasons import season_id_column
+from app.database import load_models
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
+
+load_models()
 
 CANONICAL_EPISODE = aliased(Episode)
 CANONICAL_SEASON = aliased(Season)
