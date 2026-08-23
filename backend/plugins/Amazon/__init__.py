@@ -56,6 +56,12 @@ class Amazon(
     # TODO: Validate
     @classmethod
     @override
+    def matches_tmdb_provider(cls, provider_name: str) -> bool:
+        return provider_name.endswith(" Amazon Channel")
+
+    # TODO: Validate
+    @classmethod
+    @override
     def plugin_name(cls) -> str:
         return "Amazon Prime Video"
 

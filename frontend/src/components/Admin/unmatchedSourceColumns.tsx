@@ -5,6 +5,7 @@ import type { UnmatchedSourceOutput } from "@/client"
 import { DateCell } from "@/components/Common/TableCells"
 import { UnmatchedSourceImportForm } from "./UnmatchedSourceImportForm"
 
+// TODO: Validate
 export const unmatchedSourceColumns: ColumnDef<UnmatchedSourceOutput>[] = [
   {
     id: "show_name",
@@ -20,7 +21,7 @@ export const unmatchedSourceColumns: ColumnDef<UnmatchedSourceOutput>[] = [
   },
   {
     id: "plugin_key",
-    accessorFn: (row) => row.plugin_key ?? "",
+    accessorFn: (row) => row.plugin_key ?? "No plugin",
     header: "Plugin",
     meta: { filterVariant: "select" },
     filterFn: "equalsString",

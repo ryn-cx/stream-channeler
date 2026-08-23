@@ -55,6 +55,11 @@ class AbstractPlugin(ABC):
 
     # TODO: Validate
     @classmethod
+    def matches_tmdb_provider(cls, provider_name: str) -> bool:  # noqa: ARG003 - `provider_name` is used by overrides.
+        return False
+
+    # TODO: Validate
+    @classmethod
     @abstractmethod
     def plugin_key(cls) -> str:
         """Return the unique identifier for the plugin.

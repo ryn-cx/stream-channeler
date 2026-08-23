@@ -6,7 +6,7 @@ from typing import Any, override
 
 from app.utils import tz_datetime
 from plugins.Crunchyroll.helpers import HelperMixin
-from plugins.Crunchyroll.music_keys import is_music_show_key
+from plugins.Crunchyroll.music_keys import is_music_episode_key, is_music_show_key
 from plugins.utils.abstract_plugin import (
     PluginSearchResult,
     PluginSearchResults,
@@ -25,19 +25,10 @@ class SearchMixin(HelperMixin, register=False):
         minimum_timestamp = tz_datetime.now() - timedelta(days=7)
         search_file.download_if_outdated(minimum_timestamp)
         parsed = search_file.parsed()
-        items: list[dict[str, Any]] = [
-            item
-            for datum in parsed["data"]
-            if datum["type"] != "top_results"
-            for item in datum["items"]
-        ]
-        items.sort(key=lambda item: item["search_metadata"]["score"], reverse=True)
         results = [
             PluginSearchResult(
                 title=item["title"],
-                url=self._artist_url(item["id"])
-                if is_music_show_key(item["id"])
-                else self._series_url(item["id"]),
+                url=self._search_result_url(item),
                 year=item["series_metadata"]["series_launch_year"]
                 if item.get("series_metadata")
                 else None,
@@ -45,9 +36,37 @@ class SearchMixin(HelperMixin, register=False):
                 media_type=item["type"].replace("_", " ").title(),
                 media_identifier=item["id"],
             )
-            for item in items
+            for item in self._search_items(parsed)
         ]
         return paginate_search_results(results, cursor, self.SEARCH_PAGE_SIZE)
+
+    # TODO: Validate
+    @staticmethod
+    def _search_items(parsed: dict[str, Any]) -> list[dict[str, Any]]:
+        top_results = [
+            item
+            for datum in parsed["data"]
+            if datum["type"] == "top_results"
+            for item in datum["items"]
+        ]
+        remaining = [
+            item
+            for datum in parsed["data"]
+            if datum["type"] != "top_results"
+            for item in datum["items"]
+        ]
+        remaining.sort(key=lambda item: item["search_metadata"]["score"], reverse=True)
+        ranked = {item["id"] for item in top_results}
+        return top_results + [item for item in remaining if item["id"] not in ranked]
+
+    # TODO: Validate
+    def _search_result_url(self, item: dict[str, Any]) -> str:
+        item_key: str = item["id"]
+        if is_music_show_key(item_key):
+            return self._artist_url(item_key)
+        if is_music_episode_key(item_key) or item["type"] == "episode":
+            return self._episode_url(item_key)
+        return self._series_url(item_key)
 
     # TODO: Validate
     @staticmethod

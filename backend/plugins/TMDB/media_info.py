@@ -121,12 +121,15 @@ def streaming_providers(
 
 
 # TODO: Validate
-def provider_name_plugins() -> dict[str, type[AbstractPlugin]]:
-    return {
-        provider_name: plugin_class
-        for plugin_class in sorted_plugins()
-        for provider_name in plugin_class.TMDB_PROVIDER_NAMES
-    }
+def plugin_for_tmdb_name(provider_name: str) -> type[AbstractPlugin] | None:
+    plugin_classes = sorted_plugins()
+    for plugin_class in plugin_classes:
+        if provider_name in plugin_class.TMDB_PROVIDER_NAMES:
+            return plugin_class
+    for plugin_class in plugin_classes:
+        if plugin_class.matches_tmdb_provider(provider_name):
+            return plugin_class
+    return None
 
 
 # TODO: Validate
@@ -134,11 +137,9 @@ def _watch_provider_items(
     watch_providers: dict[str, Any] | None,
     title: str | None,
 ) -> list[PluginWatchProviderItem]:
-    provider_plugins = provider_name_plugins()
-
     items: list[PluginWatchProviderItem] = []
     for provider in streaming_providers(watch_providers):
-        plugin_class = provider_plugins.get(provider["provider_name"])
+        plugin_class = plugin_for_tmdb_name(provider["provider_name"])
         search_url = (
             plugin_class.search_url(title)
             if plugin_class is not None and title

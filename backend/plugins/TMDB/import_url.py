@@ -16,7 +16,7 @@ from app.unmatched_sources.service import (
 from plugins.TMDB.files import title_page_url
 from plugins.TMDB.keys import parse_show_key, show_key
 from plugins.TMDB.lookup import LookupMixin
-from plugins.TMDB.media_info import provider_name_plugins, streaming_providers
+from plugins.TMDB.media_info import plugin_for_tmdb_name, streaming_providers
 from plugins.TMDB.upsert import UpsertMixin
 from plugins.TMDB.url_handlers import TMDBURLHandler
 from plugins.utils.abstract_plugin import (
@@ -118,9 +118,8 @@ class ImportURLMixin(
         providers = streaming_providers(
             self.auto_updating_watch_providers(media_type, tmdb_id).parsed(),
         )
-        provider_plugins = provider_name_plugins()
         for provider in providers:
-            plugin_class = provider_plugins.get(provider["provider_name"])
+            plugin_class = plugin_for_tmdb_name(provider["provider_name"])
             if plugin_class in imported or self._import_searched_source(
                 plugin_class,
                 show,

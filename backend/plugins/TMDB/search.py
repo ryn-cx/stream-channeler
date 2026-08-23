@@ -23,6 +23,19 @@ _SEARCH_MAX_AGE = timedelta(days=7)
 
 
 # TODO: Validate
+def _decode_cursor(cursor: str | None) -> tuple[int, int]:
+    if not cursor:
+        return 1, 0
+    page, _, offset = cursor.partition(":")
+    return int(page), int(offset or 0)
+
+
+# TODO: Validate
+def _encode_cursor(page: int, offset: int) -> str:
+    return f"{page}:{offset}"
+
+
+# TODO: Validate
 class SearchMixin(LookupMixin, register=False):
     # A multi search also returns people, who cannot be added to a channel.
     _SEARCH_MEDIA_TYPES: ClassVar = {
@@ -38,20 +51,38 @@ class SearchMixin(LookupMixin, register=False):
         A result's URL is the title's own TMDB page rather than a stream, since
         `import_url` reads that page to find where the title can be watched.
         """
-        page = int(cursor) if cursor else 1
+        page, offset = _decode_cursor(cursor)
+        results: list[PluginSearchResult] = []
+        next_cursor: str | None = None
+
+        while len(results) < self.SEARCH_PAGE_SIZE:
+            parsed = self._multi_search_page(query, page)
+            matches = [
+                self._search_result(result)
+                for result in parsed["results"]
+                if result["media_type"] in self._SEARCH_MEDIA_TYPES
+            ][offset:]
+
+            wanted = self.SEARCH_PAGE_SIZE - len(results)
+            results.extend(matches[:wanted])
+            if len(matches) > wanted:
+                next_cursor = _encode_cursor(page, offset + wanted)
+                break
+
+            page += 1
+            offset = 0
+            if page > parsed["total_pages"]:
+                next_cursor = None
+                break
+            next_cursor = _encode_cursor(page, 0)
+
+        return PluginSearchResults(results=results, next_cursor=next_cursor)
+
+    # TODO: Validate
+    def _multi_search_page(self, query: str, page: int) -> dict[str, Any]:
         search_file = self.multi_search_file(query, page)
         search_file.download_if_outdated(tz_datetime.now() - _SEARCH_MAX_AGE)
-        parsed = search_file.parsed()
-
-        results = [
-            self._search_result(result)
-            for result in parsed["results"]
-            if result["media_type"] in self._SEARCH_MEDIA_TYPES
-        ]
-        return PluginSearchResults(
-            results=results,
-            next_cursor=str(page + 1) if page < parsed["total_pages"] else None,
-        )
+        return search_file.parsed()
 
     # TODO: Validate
     def _search_result(self, result: dict[str, Any]) -> PluginSearchResult:
