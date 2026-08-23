@@ -9,11 +9,10 @@ would.
 """
 
 from collections import defaultdict
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, select
 
 from app.canonical_media.episodes import (
@@ -48,6 +47,24 @@ def _detached_watches(session: Session) -> list[Watch]:
 
 
 # TODO: Validate
+def _named_episodes(watch_identifiers: set[str]) -> Any:  # noqa: ANN401 - A subquery of the episodes the watches name.
+    """Return each named episode paired with the episode it answers to."""
+    named_link = canonical_episode_link()
+    return (
+        select(
+            col(Episode.watch_identifier).label("watch_identifier"),
+            canonical_episode_id_column(Episode, named_link).label(
+                "canonical_episode_id",
+            ),
+        )
+        .select_from(Episode)
+        .outerjoin(named_link, links_of(Episode, named_link))
+        .where(col(Episode.watch_identifier).in_(watch_identifiers))
+        .subquery()
+    )
+
+
+# TODO: Validate
 def _candidates_by_watch_identifier(
     session: Session,
     watch_identifiers: set[str],
@@ -61,25 +78,21 @@ def _candidates_by_watch_identifier(
     if not watch_identifiers:
         return {}
 
-    named_episode = aliased(Episode)
-    named_link = canonical_episode_link()
     canonical_link = canonical_episode_link()
+    named = _named_episodes(watch_identifiers)
     rows = session.exec(
-        select(named_episode.watch_identifier, Episode, Source.key)  # type: ignore[call-overload]
+        select(named.c.watch_identifier, Episode, Source.key)  # type: ignore[call-overload]
         .select_from(Episode)
         .join(Season, col(Season.id) == col(Episode.season_id))
         .join(Show, col(Show.id) == col(Season.show_id))
         .join(Source, col(Source.id) == col(Show.source_id))
         .join(canonical_link, links_of(Episode, canonical_link))
-        .outerjoin(named_link, links_of(named_episode, named_link))
         .join(
-            named_episode,
-            canonical_episode_id_column(named_episode, named_link)
-            == col(canonical_link.canonical_episode_id),
+            named,
+            named.c.canonical_episode_id == col(canonical_link.canonical_episode_id),
         )
         .where(
             is_non_canonical(Episode),
-            col(named_episode.watch_identifier).in_(watch_identifiers),
             col(Episode.deleted_at).is_(None),
         ),
     ).all()
@@ -133,24 +146,19 @@ def _report_unresolvable(session: Session, watch_identifiers: set[str]) -> None:
     if not watch_identifiers:
         return
 
-    named_episode = aliased(Episode)
-    named_link = canonical_episode_link()
     canonical_link = canonical_episode_link()
+    named = _named_episodes(watch_identifiers)
     soft_deleted = set(
         session.exec(
-            select(named_episode.watch_identifier)
+            select(named.c.watch_identifier)
             .select_from(Episode)
             .join(canonical_link, links_of(Episode, canonical_link))
-            .outerjoin(named_link, links_of(named_episode, named_link))
             .join(
-                named_episode,
+                named,
                 col(canonical_link.canonical_episode_id)
-                == canonical_episode_id_column(named_episode, named_link),
+                == named.c.canonical_episode_id,
             )
-            .where(
-                is_non_canonical(Episode),
-                col(named_episode.watch_identifier).in_(watch_identifiers),
-            ),
+            .where(is_non_canonical(Episode)),
         ).all(),
     )
     unknown = watch_identifiers - soft_deleted
