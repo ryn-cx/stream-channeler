@@ -136,7 +136,7 @@ def _apply_sort_options[T](  # noqa: PLR0913
     statement: SelectOfScalar[T],
     sort_options: list[SortOption],
     columns: dict[str, InstrumentedAttribute[Any]],
-    default_sort: datetime | None,
+    default_sort: Any,  # noqa: ANN401 - Any column or expression the list falls back to.
     tiebreaker: uuid.UUID | None,
     *,
     random_tiebreaker: bool = False,
@@ -147,7 +147,7 @@ def _apply_sort_options[T](  # noqa: PLR0913
         if (column := _get_column(columns, option.column))
     ]
     if not order_by:
-        order_by.append(desc(col(default_sort)))
+        order_by.append(desc(default_sort))
 
     # Break ties randomly (e.g. to shuffle equally scored rows) rather than by the
     # stable `id`. Only sound when the whole list is read in one query, since a fresh
@@ -166,7 +166,7 @@ def get_read_results[T](  # noqa: PLR0913
     base: SelectOfScalar[T],
     *,
     schema: type[SQLModel],
-    default_sort: datetime | None,
+    default_sort: Any,  # noqa: ANN401 - Any column or expression the list falls back to.
     tiebreaker: uuid.UUID | None,
     params: ReadOptions,
     current_user: User | None,
@@ -320,13 +320,28 @@ def scoped_list_response[ResponseT: BaseModel](  # noqa: PLR0913
     favorite_model: Any = None,  # noqa: ANN401 - The model's user/record favorite link.
     favorite_record_id: Any = None,  # noqa: ANN401 - The link column referencing model.id.
     random_tiebreaker: bool = False,
+    rank_by_favorites: bool = False,
 ) -> ResponseT:
     base = select(model).join(User)
+    extra_columns: dict[str, Any] = {"username": User.username}
+    favorite_count: Any = None
+    if rank_by_favorites:
+        counts = (
+            select(
+                favorite_record_id.label("record_id"),
+                func.count().label("favorite_count"),
+            )
+            .group_by(favorite_record_id)
+            .subquery()
+        )
+        base = base.outerjoin(counts, counts.c.record_id == model.id)
+        favorite_count = func.coalesce(counts.c.favorite_count, 0)
+        extra_columns["favorite_count"] = favorite_count
     # `public` is ranked by `score`; the other scopes are newest first.
     default_sort: Any = model.created_at
     if read_options.scope == RecordScope.public:
         base = base.where(model.visibility == Visibility.public)
-        default_sort = model.score
+        default_sort = model.score if favorite_count is None else favorite_count
     elif read_options.scope == RecordScope.owned:
         if viewer is None:
             raise HTTPException(
@@ -367,7 +382,7 @@ def scoped_list_response[ResponseT: BaseModel](  # noqa: PLR0913
         tiebreaker=model.id,
         params=read_options,
         current_user=viewer,
-        extra_columns={"username": User.username},
+        extra_columns=extra_columns,
         random_tiebreaker=random_tiebreaker,
     )
     return response_model(

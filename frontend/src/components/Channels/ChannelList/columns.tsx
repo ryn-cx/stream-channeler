@@ -14,18 +14,18 @@ import { FavoriteChannel } from "./FavoriteChannel"
 
 export type ChannelTableData = ChannelOutput & { pending?: boolean }
 
-// Score is admin-only and only present on rows fetched from the admin endpoint.
 // TODO: Validate
-export function channelScoreColumn<T extends object>(): ColumnDef<T> {
+export function channelFavoriteCountColumn<T extends object>(): ColumnDef<T> {
   // TODO: Validate
-  const score = (row: T) => ("score" in row ? (row.score as number) : null)
+  const favoriteCount = (row: T) =>
+    "favorite_count" in row ? (row.favorite_count as number) : null
   return {
-    id: "score",
-    accessorFn: score,
-    header: "Score",
+    id: "favorite_count",
+    accessorFn: favoriteCount,
+    header: "Favorites",
     meta: { filterVariant: "range" },
     cell: ({ row }) => (
-      <span className="tabular-nums">{score(row.original) ?? "—"}</span>
+      <span className="tabular-nums">{favoriteCount(row.original) ?? "—"}</span>
     ),
   }
 }
@@ -50,12 +50,10 @@ export function ChannelDescriptionCell({
 }
 
 // TODO: Validate
-export function ownedChannelColumns(isAdmin: boolean): ColumnDef<ChannelRow>[] {
+export function ownedChannelColumns(): ColumnDef<ChannelRow>[] {
   const cols = [...columns] as ColumnDef<ChannelRow>[]
-  if (isAdmin) {
-    // Keep the actions column last.
-    cols.splice(cols.length - 1, 0, channelScoreColumn<ChannelRow>())
-  }
+  // Keep the actions column last.
+  cols.splice(cols.length - 1, 0, channelFavoriteCountColumn<ChannelRow>())
   return cols
 }
 

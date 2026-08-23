@@ -57,11 +57,11 @@ export const channelColumns: ColumnDef<ChannelListOutput>[] = [
     ),
   },
   {
-    accessorKey: "score",
-    header: "Score",
+    accessorKey: "favorite_count",
+    header: "Favorites",
     meta: { filterVariant: "range" },
     cell: ({ row }) => (
-      <span className="tabular-nums">{row.original.score}</span>
+      <span className="tabular-nums">{row.original.favorite_count}</span>
     ),
   },
   {

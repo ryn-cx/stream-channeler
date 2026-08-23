@@ -53,7 +53,6 @@ class BaseChannel(SQLModel):
 class BaseAdminChannel(BaseChannel):
     """Base model representing a `Channel` as an admin sees it."""
 
-    score: int = Field(default=0)
     user_id: uuid.UUID
 
 

@@ -85,7 +85,7 @@ interface ScopeView {
 
 const SCOPE_VIEWS: Record<Scope, ScopeView> = {
   owned: {
-    columns: (isAdmin) => ownedChannelColumns(isAdmin),
+    columns: () => ownedChannelColumns(),
     queryAsAdmin: (isAdmin) => isAdmin,
     tableStorageKey: "channels-own",
     pageSizeStorageKey: "channels-own-browse-page-size",

@@ -1,5 +1,6 @@
 # TODO: Validate
 import uuid
+from random import shuffle
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -344,10 +345,20 @@ def get_user_public_channels(
             col(Channel.anonymous).is_(False),
         ),
     ).all()
+    favorite_counts = channel_service.channel_favorite_counts(
+        session,
+        [channel.id for channel, _username in rows],
+    )
     data = [
-        channel_service.public_channel_output(channel, username)
+        channel_service.public_channel_output(
+            channel,
+            username,
+            favorite_counts.get(channel.id, 0),
+        )
         for channel, username in rows
     ]
+    shuffle(data)
+    data.sort(key=lambda channel: channel.favorite_count, reverse=True)
     return ChannelPublicListOutput(data=data, count=len(data))
 
 
@@ -363,8 +374,18 @@ def admin_list_user_channels(
         .join(User, col(User.id) == Channel.user_id)
         .where(Channel.user_id == user_id),
     ).all()
+    favorite_counts = channel_service.channel_favorite_counts(
+        session,
+        [channel.id for channel, _username in rows],
+    )
     return [
-        ChannelListOutput.model_validate(channel, update={"username": username})
+        ChannelListOutput.model_validate(
+            channel,
+            update={
+                "username": username,
+                "favorite_count": favorite_counts.get(channel.id, 0),
+            },
+        )
         for channel, username in rows
     ]
 

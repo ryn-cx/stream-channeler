@@ -8,7 +8,6 @@ import {
   ChannelsService,
   type Visibility,
 } from "@/client"
-import { AdminZone } from "@/components/Common/AdminZone"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -65,9 +64,6 @@ export function EditChannelDialog({
   const [visibility, setVisibility] = useState<Visibility>(channel.visibility)
   const [description, setDescription] = useState(channel.description ?? "")
   const [anonymous, setAnonymous] = useState(channel.anonymous ?? false)
-  // Score is admin-only. It ranks a public channel rather than gating it, with
-  // higher scores shown first.
-  const [score, setScore] = useState(String(channel.score ?? 0))
   // The admin endpoint returns the owner's username on the channel; for an owner
   // editing their own channel it falls back to the logged-in user.
   const creatorName = "username" in channel ? channel.username : user?.username
@@ -87,10 +83,7 @@ export function EditChannelDialog({
       return isAdmin
         ? ChannelsService.adminUpdateChannel({
             channelId: channel.id,
-            requestBody: {
-              ...base,
-              score: Math.max(0, Number.parseInt(score, 10) || 0),
-            },
+            requestBody: base,
           })
         : ChannelsService.updateChannel({
             channelId: channel.id,
@@ -183,23 +176,6 @@ export function EditChannelDialog({
               </p>
             </div>
           </div>
-          {isAdmin && (
-            <AdminZone>
-              <Label htmlFor="edit-channel-score">Score</Label>
-              <Input
-                id="edit-channel-score"
-                type="number"
-                min={0}
-                step={1}
-                value={score}
-                onChange={(event) => setScore(event.target.value)}
-              />
-              <p className="text-sm text-muted-foreground">
-                Ranks the channel in the public list, with higher scores shown
-                first.
-              </p>
-            </AdminZone>
-          )}
         </DialogBody>
 
         <DialogFooter>

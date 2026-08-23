@@ -77,7 +77,6 @@ class ChannelOutput(BaseChannel):
     id: uuid.UUID
     user_id: uuid.UUID | None
     username: str | None = None
-    score: int
 
 
 # TODO: Validate
@@ -92,7 +91,7 @@ class ChannelListOutput(BaseChannel):
     id: uuid.UUID
     user_id: uuid.UUID | None
     username: str | None
-    score: int
+    favorite_count: int = 0
     # The viewer's private overrides, only populated in the `favorites` scope. Each
     # is `None` when unset; the frontend falls back to the shared field above.
     custom_name: str | None = None

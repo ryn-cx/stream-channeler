@@ -83,7 +83,6 @@ function useChannelForm() {
   const [visibility, setVisibility] = useState<Visibility>("private")
   const [description, setDescription] = useState("")
   const [anonymous, setAnonymous] = useState(false)
-  const [score, setScore] = useState("0")
   const [ownerId, setOwnerId] = useState<string | null>(null)
   const { user } = useAuth()
   const isAdmin = user?.is_superuser === true
@@ -115,8 +114,6 @@ function useChannelForm() {
     setDescription,
     anonymous,
     setAnonymous,
-    score,
-    setScore,
     ownerId,
     setOwnerId,
     isAdmin,
@@ -132,7 +129,6 @@ function useChannelForm() {
       anonymous,
     },
     adminInput: {
-      score: score === "" ? 0 : Number.parseInt(score, 10),
       user_id: ownerId,
     },
   }
@@ -151,14 +147,6 @@ function isChannelFormValid(
   }
   if (form.isAdmin && !form.ownerId) {
     showErrorToast("Please pick the user the channel is for")
-    return false
-  }
-  if (
-    form.isAdmin &&
-    form.score !== "" &&
-    !Number.isInteger(Number(form.score))
-  ) {
-    showErrorToast("Score must be a whole number")
     return false
   }
   return true
@@ -322,19 +310,6 @@ function ChannelFormFields({
                   The user the channel belongs to.
                 </p>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="channel-score">Score</Label>
-                <Input
-                  id="channel-score"
-                  type="number"
-                  value={form.score}
-                  onChange={(event) => form.setScore(event.target.value)}
-                  placeholder="0"
-                />
-                <p className="text-sm text-muted-foreground">
-                  Higher scored channels are shown first on the public list.
-                </p>
-              </div>
             </AccordionContent>
           </AccordionItem>
         </Accordion>
@@ -423,7 +398,6 @@ export function OnboardingEditName({ channelId }: { channelId: string }) {
     setVisibility,
     setDescription,
     setAnonymous,
-    setScore,
     setOwnerId,
   } = form
 
@@ -436,7 +410,6 @@ export function OnboardingEditName({ channelId }: { channelId: string }) {
       setVisibility(channel.visibility ?? "private")
       setDescription(channel.description ?? "")
       setAnonymous(channel.anonymous ?? false)
-      setScore(String(channel.score ?? 0))
       // An anonymous channel redacts its owner from everyone but an admin, and
       // an admin is the only viewer the owner field is shown to anyway.
       if (channel.user_id) {
@@ -452,7 +425,6 @@ export function OnboardingEditName({ channelId }: { channelId: string }) {
     setVisibility,
     setDescription,
     setAnonymous,
-    setScore,
     setOwnerId,
   ])
 

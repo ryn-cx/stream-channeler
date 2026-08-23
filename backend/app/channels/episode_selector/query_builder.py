@@ -31,6 +31,7 @@ from app.channels.episode_selector.canonical_entities import (
     episode_id,
     season_id,
 )
+from app.channels.episode_selector.order_composition import OrderByComposer
 from app.channels.episode_selector.show_counts import limit_shows
 from app.channels.episode_selector.sorting import SortExpressionBuilder
 from app.channels.episode_selector.source_dedup import source_dedup_config
@@ -754,49 +755,15 @@ class EpisodeQueryBuilder:
 
         if fuzzy_indexes:
             subquery = self._rank_fuzzy_values(subquery, fuzzy_labels, directeds)
-            raws = [
-                getattr(subquery.c, f"sort_value_{i}")
-                for i in range(len(self._channel_options.sort_by))
-            ]
-            directeds = [
-                expressions.apply_direction(raws[i], key)
-                for i, key in enumerate(self._channel_options.sort_by)
-            ]
 
-        # TODO: Validate
-        def fuzzy_expression(index: int) -> ColumnElement[Any]:
-            sort_key = self._channel_options.sort_by[index]
-            rank_column = getattr(subquery.c, fuzzy_labels[index])
-            fuzziness = sort_key.fuzziness or 0
-            jitter: ColumnElement[Any] = expressions.random_hash(subquery.c.id) * (
-                fuzziness / float(2**31)
-            )
-            return rank_column + jitter
+        if self._holds_copied_titles:
+            subquery = select(subquery).where(subquery.c.source_rank == 1).subquery()
 
-        order_by: list[UnaryExpression[Any] | ColumnElement[Any]] = []
-        for index in reversed(range(len(self._channel_options.sort_by))):
-            sort_key = self._channel_options.sort_by[index]
-            if sort_key.order == "sequential":
-                if sort_key.fuzziness:
-                    order_by.insert(0, fuzzy_expression(index))
-                else:
-                    order_by.insert(0, directeds[index])
-                continue
-
-            row_num = func.row_number().over(
-                partition_by=raws[: index + 1],
-                order_by=list(order_by) or [directeds[index]],
-            )
-            if sort_key.order == "randomize":
-                partition_order: ColumnElement[Any] = expressions.random_hash(
-                    raws[index],
-                )
-            elif sort_key.fuzziness:
-                partition_order = fuzzy_expression(index)
-            else:
-                partition_order = directeds[index]
-            order_by[:0] = [row_num, partition_order]
-
+        subquery, order_by = OrderByComposer(
+            expressions,
+            self._channel_options.sort_by,
+            fuzzy_labels,
+        ).compose(subquery)
         order_by.extend([subquery.c.show_id, subquery.c.id])
 
         self._episode_entity = aliased(Episode, subquery)
@@ -804,6 +771,4 @@ class EpisodeQueryBuilder:
             self._episode_entity,
             subquery.c.channel_id,
         )
-        if self._holds_copied_titles:
-            outer = outer.where(subquery.c.source_rank == 1)
         return outer.order_by(*order_by)

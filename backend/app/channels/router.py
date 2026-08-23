@@ -295,7 +295,14 @@ def admin_update_channel(
     """Update any field on any `Channel` as an admin, including `score`."""
     channel = service.admin_update_channel(session, channel, channel_in)
     username = session.get_one(User, channel.user_id).username
-    return ChannelListOutput.model_validate(channel, update={"username": username})
+    favorite_counts = service.channel_favorite_counts(session, [channel.id])
+    return ChannelListOutput.model_validate(
+        channel,
+        update={
+            "username": username,
+            "favorite_count": favorite_counts.get(channel.id, 0),
+        },
+    )
 
 
 # TODO: Validate

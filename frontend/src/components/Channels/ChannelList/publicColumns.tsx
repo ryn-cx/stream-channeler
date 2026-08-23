@@ -5,7 +5,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 import type { ChannelListOutput } from "@/client"
 import type { ChannelRow } from "@/components/Channels/ChannelList/useScopedChannels"
 import { ChannelNumber } from "@/components/Channels/ChannelNumber"
-import { ChannelDescriptionCell, channelScoreColumn } from "./columns"
+import { ChannelDescriptionCell, channelFavoriteCountColumn } from "./columns"
 
 // `score` is only populated for a `Channel`'s owner or an admin, so the column is
 // pushed for admins alone. Sorting and filtering stay off for everyone else purely
@@ -20,9 +20,7 @@ export function publicChannelColumns(
     enableSorting: isAdmin,
     enableColumnFilter: isAdmin,
   })) as ColumnDef<ChannelRow>[]
-  if (isAdmin) {
-    cols.push(channelScoreColumn<ChannelRow>())
-  }
+  cols.push(channelFavoriteCountColumn<ChannelRow>())
   return cols
 }
 

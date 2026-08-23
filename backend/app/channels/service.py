@@ -7,7 +7,7 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from sqlalchemy.orm import aliased
-from sqlmodel import Session, col, delete, select
+from sqlmodel import Session, col, delete, func, select
 
 from app.canonical_media.episodes import (
     canonical_episode_id_column,
@@ -306,6 +306,21 @@ def channel_output(channel: Channel, viewer: User | None) -> ChannelOutput:
 
 
 # TODO: Validate
+def channel_favorite_counts(
+    session: Session,
+    channel_ids: Collection[UUID],
+) -> dict[UUID, int]:
+    if not channel_ids:
+        return {}
+    rows = session.exec(
+        select(ChannelFavorite.channel_id, func.count())
+        .where(col(ChannelFavorite.channel_id).in_(channel_ids))
+        .group_by(col(ChannelFavorite.channel_id)),
+    ).all()
+    return dict(rows)
+
+
+# TODO: Validate
 def scoped_channel_list_output(
     session: Session,
     viewer: User | None,
@@ -324,7 +339,14 @@ def scoped_channel_list_output(
         # On the public list, equally scored channels are shuffled rather than shown
         # in a fixed order so no channel is permanently ranked above its peers.
         random_tiebreaker=read_options.scope == RecordScope.public,
+        rank_by_favorites=True,
     )
+    favorite_counts = channel_favorite_counts(
+        session,
+        [row.id for row in response.data],
+    )
+    for row in response.data:
+        row.favorite_count = favorite_counts.get(row.id, 0)
     # In the `favorites` scope, overlay each row with the viewer's private
     # customization so their own name/number are what get displayed.
     if read_options.scope == RecordScope.favorites and viewer is not None:
@@ -351,6 +373,7 @@ def scoped_channel_list_output(
 def public_channel_output(
     channel: Channel,
     username: str | None,
+    favorite_count: int,
 ) -> ChannelListOutput:
     anonymous = channel.anonymous
     return ChannelListOutput(
@@ -363,7 +386,7 @@ def public_channel_output(
         description=channel.description,
         anonymous=anonymous,
         username=None if anonymous else username,
-        score=channel.score,
+        favorite_count=favorite_count,
     )
 
 
