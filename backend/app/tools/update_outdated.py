@@ -7,14 +7,21 @@ from datetime import datetime
 from typing import Any
 
 from loguru import logger
-from sqlalchemy import or_
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.canonical_media.episodes import canonical_episode_link, links_of
-from app.channels.models import ChannelSeasonFilter, ChannelShow
+from app.channels.episode_selector.visibility import channel_access_condition
+from app.channels.models import (
+    ChannelEpisodeFilter,
+    ChannelEpisodeSourceFilter,
+    ChannelSeasonFilter,
+    ChannelShow,
+    ChannelSourceFilter,
+)
 from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.log import configure_logging
@@ -41,12 +48,7 @@ MediaClass = type[MediaMixin[Any, Any]]
 
 # TODO: Validate
 def _channel_inclusion_clause() -> ColumnElement[bool]:
-    return col(ChannelShow.is_blacklist_only).is_(False) & or_(
-        col(ChannelShow.is_whitelist).is_(True)
-        & col(ChannelSeasonFilter.season_id).is_not(None),
-        col(ChannelShow.is_whitelist).is_(False)
-        & col(ChannelSeasonFilter.season_id).is_(None),
-    )
+    return col(ChannelShow.is_blacklist_only).is_(False) & channel_access_condition()
 
 
 # TODO: Validate
@@ -74,6 +76,10 @@ def _channel_season_exists(
     season_id = func.coalesce(
         col(canonical_episode.season_id),
         col(copy_episode.season_id),
+    )
+    episode_id = func.coalesce(
+        col(copy_link.canonical_episode_id),
+        col(copy_episode.id),
     )
     conditions = [condition(copy_show)] if condition else []
     statement = select(ChannelShow.id).select_from(copy_episode)
@@ -117,6 +123,36 @@ def _channel_season_exists(
             ChannelSeasonFilter,
             (col(ChannelSeasonFilter.channel_show_id) == col(ChannelShow.id))
             & (col(ChannelSeasonFilter.season_id) == season_id),
+        )
+        .outerjoin(
+            ChannelSourceFilter,
+            and_(
+                col(ChannelSourceFilter.channel_show_id) == col(ChannelShow.id),
+                col(ChannelSourceFilter.show_id) == col(copy_show.id),
+            ),
+        )
+        .outerjoin(
+            ChannelEpisodeFilter,
+            and_(
+                col(ChannelEpisodeFilter.channel_show_id) == col(ChannelShow.id),
+                col(ChannelEpisodeFilter.canonical_episode_id) == episode_id,
+                or_(
+                    col(ChannelEpisodeFilter.expires_at).is_(None),
+                    col(ChannelEpisodeFilter.expires_at) > tz_datetime.now(),
+                ),
+            ),
+        )
+        .outerjoin(
+            ChannelEpisodeSourceFilter,
+            and_(
+                col(ChannelEpisodeSourceFilter.channel_show_id) == col(ChannelShow.id),
+                col(ChannelEpisodeSourceFilter.canonical_episode_id) == episode_id,
+                col(ChannelEpisodeSourceFilter.show_id) == col(copy_show.id),
+                or_(
+                    col(ChannelEpisodeSourceFilter.expires_at).is_(None),
+                    col(ChannelEpisodeSourceFilter.expires_at) > tz_datetime.now(),
+                ),
+            ),
         )
         .where(
             col(copy_episode.season_id) == col(season.id),

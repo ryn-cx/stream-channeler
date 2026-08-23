@@ -53,6 +53,8 @@ function SourceFavicon({
 
   const favicon = (
     <img
+      loading="lazy"
+      decoding="async"
       src={source.favicon_url}
       alt={`${source.name} favicon`}
       className={`size-8 shrink-0${disabled ? " opacity-40 grayscale" : ""}`}
@@ -267,6 +269,8 @@ export function ShowCards({
                 <div className="relative aspect-video w-full bg-muted">
                   {artwork && (
                     <img
+                      loading="lazy"
+                      decoding="async"
                       src={artwork}
                       alt={name}
                       className="size-full object-cover"

@@ -189,6 +189,8 @@ function ResultCard({
       >
         {imageUrl && (
           <img
+            loading="lazy"
+            decoding="async"
             src={imageUrl}
             alt={title}
             onLoad={(event) => {

@@ -47,6 +47,23 @@ class TestTVShow(
 
 
 
+# TODO: Validate
+class TestArcher(
+    URLTestsAlt[TMDB],
+    UpdatePluginTestsAlt[TMDB],
+    UpdateTestsAlt[TMDB],
+    TMDBValidatorAlt,
+):
+    media_type = "tv"
+    parse_url_response = "10283"
+    show_slug = "archer"
+    urls = (
+        *TMDBValidatorAlt.urls,
+        "/{media_type}/{parse_url_response}/seasons?language=en-US",
+    )
+
+
+
 # # TODO: Validate
 # class TestTV1(
 #     URLTestsAlt[TMDB],

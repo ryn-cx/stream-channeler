@@ -774,17 +774,18 @@ class EpisodeQueryBuilder:
             return rank_column + jitter
 
         order_by: list[UnaryExpression[Any] | ColumnElement[Any]] = []
-        for index, sort_key in enumerate(self._channel_options.sort_by):
+        for index in reversed(range(len(self._channel_options.sort_by))):
+            sort_key = self._channel_options.sort_by[index]
             if sort_key.order == "sequential":
                 if sort_key.fuzziness:
-                    order_by.append(fuzzy_expression(index))
+                    order_by.insert(0, fuzzy_expression(index))
                 else:
-                    order_by.append(directeds[index])
+                    order_by.insert(0, directeds[index])
                 continue
 
             row_num = func.row_number().over(
                 partition_by=raws[: index + 1],
-                order_by=directeds[index + 1 :] or [directeds[index]],
+                order_by=list(order_by) or [directeds[index]],
             )
             if sort_key.order == "randomize":
                 partition_order: ColumnElement[Any] = expressions.random_hash(
@@ -794,7 +795,7 @@ class EpisodeQueryBuilder:
                 partition_order = fuzzy_expression(index)
             else:
                 partition_order = directeds[index]
-            order_by.extend([row_num, partition_order])
+            order_by[:0] = [row_num, partition_order]
 
         order_by.extend([subquery.c.show_id, subquery.c.id])
 
