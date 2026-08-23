@@ -4,10 +4,11 @@
 from __future__ import annotations
 
 from functools import cache
-from typing import override
+from typing import ClassVar, override
 
 from wampi import Wampi
 from wampi.exceptions import TitleNotFoundError
+from wampi.title_sources import TitleSources as TitleSourcesEndpoint
 from wampi.title_sources.models import TitleSourcesModel
 
 from app.config import settings
@@ -40,7 +41,7 @@ class TitleSources(EndpointFile[TitleSourcesModel]):
     has just read in is looked up without anything being searched for.
     """
 
-    API_ENDPOINT = wampi().title_sources
+    API_ENDPOINT: ClassVar[TitleSourcesEndpoint] = wampi().title_sources
 
     # TODO: Validate
     @override

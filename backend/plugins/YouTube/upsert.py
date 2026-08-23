@@ -13,21 +13,13 @@ from app.sources.models import Source
 from plugins.YouTube.files import (
     MusicPlaylistFile,
     get_first_item,
-    is_music_playlist_key,
+    is_an_album,
     is_show_key,
     is_show_season_key,
     is_video_key,
     split_show_season_key,
 )
 from plugins.YouTube.helpers import HelperMixin
-
-# A single video changes far less often than a channel or playlist does.
-_VIDEO_UPDATE_INTERVAL = timedelta(days=7)
-# A show only changes when a season or an episode is added to it.
-_SERIES_UPDATE_INTERVAL = timedelta(days=7)
-_MUSIC_UPDATE_INTERVAL = timedelta(days=365)
-# A musician only changes when they put something out.
-_TOPIC_UPDATE_INTERVAL = timedelta(days=365)
 
 
 # TODO: Validate
@@ -45,30 +37,30 @@ class UpsertMixin(HelperMixin, register=False):
         # YouTube says nothing about when a title came out, so the name is all
         # TMDB is searched on.
         if is_video_key(show_key):
-            show = self._upsert_movie_show(show_key, force=force)
+            show = self._upsert_show_movie(show_key, force=force)
             if self.is_free_movie(show_key):
                 find_and_add_canonical_show(self.session, show, canonical_show)
         elif is_show_key(show_key):
-            show = self._upsert_series_show(show_key, force=force)
+            show = self._upsert_show_series(show_key, force=force)
             find_and_add_canonical_show(self.session, show, canonical_show)
-        elif is_music_playlist_key(show_key):
-            show = self._upsert_music_show(show_key, force=force)
+        elif is_an_album(show_key):
+            show = self._upsert_show_music(show_key, force=force)
         elif self.is_topic_channel(show_key):
-            show = self._upsert_topic_show(show_key, force=force)
+            show = self._upsert_show_topic(show_key, force=force)
         elif self.is_movies_channel(show_key):
-            show = self._upsert_channel_show(
+            show = self._upsert_show_channel(
                 self.paid_or_free_source(show_key),
                 show_key,
                 force=force,
             )
             find_and_add_canonical_show(self.session, show, canonical_show)
         else:
-            show = self._upsert_channel_show(source, show_key, force=force)
+            show = self._upsert_show_channel(source, show_key, force=force)
 
         return show
 
     # TODO: Validate
-    def _upsert_series_show(
+    def _upsert_show_series(
         self,
         show_key: str,
         *,
@@ -87,18 +79,18 @@ class UpsertMixin(HelperMixin, register=False):
                 media_type="TV Show",
                 data_timestamp=data_timestamp,
                 # A show only changes when a season is added to it.
-                update_at=data_timestamp + _SERIES_UPDATE_INTERVAL,
+                update_at=data_timestamp + timedelta(days=7),
                 source_id=source.id,
             )
             show = self._upsert_show_object(new_show, source, show, show_key)
 
-        self._upsert_series_seasons(show, show_key, force=force)
+        self._upsert_seasons_series(show, show_key, force=force)
         self._soft_delete_missing(show_key)
 
         return show
 
     # TODO: Validate
-    def _upsert_series_seasons(
+    def _upsert_seasons_series(
         self,
         show: Show,
         show_key: str,
@@ -116,7 +108,9 @@ class UpsertMixin(HelperMixin, register=False):
                     season_number=int(season_number),
                     url=self.build_url(f"show/{show_key}?season={season_number}"),
                     data_timestamp=data_timestamp,
-                    update_at=data_timestamp + _SERIES_UPDATE_INTERVAL,
+                    # A show only changes when a season or an episode is added
+                    # to it.
+                    update_at=data_timestamp + timedelta(days=7),
                     show_id=show.id,
                 )
                 season = self._upsert_season_object(
@@ -128,7 +122,7 @@ class UpsertMixin(HelperMixin, register=False):
             self._upsert_episodes(season, show_key, force=force)
 
     # TODO: Validate
-    def _upsert_channel_show(
+    def _upsert_show_channel(
         self,
         source: Source,
         show_key: str,
@@ -155,7 +149,7 @@ class UpsertMixin(HelperMixin, register=False):
             )
             show = self._upsert_show_object(new_show, source, show, show_key)
 
-        self._upsert_seasons(show, show_key, force=force)
+        self._upsert_seasons_channel(show, show_key, force=force)
         self._soft_delete_missing(show_key)
 
         return show
@@ -178,7 +172,7 @@ class UpsertMixin(HelperMixin, register=False):
         return items[0].snippet.title if items else channel_item.snippet.title
 
     # TODO: Validate
-    def _upsert_movie_show(
+    def _upsert_show_movie(
         self,
         show_key: str,
         *,
@@ -212,13 +206,13 @@ class UpsertMixin(HelperMixin, register=False):
                 show_key,
             )
 
-        self._upsert_movie_season(show, show_key, force=force)
+        self._upsert_season_movie(show, show_key, force=force)
         self._soft_delete_missing(show_key)
 
         return show
 
     # TODO: Validate
-    def _upsert_movie_season(
+    def _upsert_season_movie(
         self,
         show: Show,
         show_key: str,
@@ -247,7 +241,7 @@ class UpsertMixin(HelperMixin, register=False):
         self._upsert_episodes(season, show_key, force=force)
 
     # TODO: Validate
-    def _upsert_music_show(
+    def _upsert_show_music(
         self,
         show_key: str,
         *,
@@ -266,12 +260,12 @@ class UpsertMixin(HelperMixin, register=False):
                 media_type=f"YouTube {music_playlist.release_type() or 'Album'}",
                 image_url=music_playlist.image_url(),
                 data_timestamp=data_timestamp,
-                update_at=data_timestamp + _MUSIC_UPDATE_INTERVAL,
+                update_at=data_timestamp + timedelta(days=365),
                 source_id=source.id,
             )
             show = self._upsert_show_object(new_show, source, show, show_key)
 
-        self._upsert_music_season(
+        self._upsert_season_music(
             show,
             show_key,
             show_key,
@@ -283,7 +277,7 @@ class UpsertMixin(HelperMixin, register=False):
         return show
 
     # TODO: Validate
-    def _upsert_topic_show(
+    def _upsert_show_topic(
         self,
         show_key: str,
         *,
@@ -310,14 +304,15 @@ class UpsertMixin(HelperMixin, register=False):
                 media_type="YouTube Artist",
                 image_url=self._best_thumbnail_url(channel_item.snippet.thumbnails),
                 data_timestamp=data_timestamp,
-                update_at=data_timestamp + _TOPIC_UPDATE_INTERVAL,
+                # A musician only changes when they put something out.
+                update_at=data_timestamp + timedelta(days=365),
                 source_id=source.id,
             )
             show = self._upsert_show_object(new_show, source, show, show_key)
 
         for season_key in self._season_keys_from_file(show_key):
             music_playlist = self.music_playlist_file(season_key)
-            self._upsert_music_season(
+            self._upsert_season_music(
                 show,
                 season_key,
                 show_key,
@@ -329,7 +324,7 @@ class UpsertMixin(HelperMixin, register=False):
         return show
 
     # TODO: Validate
-    def _upsert_music_season(
+    def _upsert_season_music(
         self,
         show: Show,
         season_key: str,
@@ -348,7 +343,7 @@ class UpsertMixin(HelperMixin, register=False):
                 url=self.build_url(f"playlist?list={season_key}"),
                 image_url=music_playlist.image_url(),
                 data_timestamp=data_timestamp,
-                update_at=data_timestamp + _MUSIC_UPDATE_INTERVAL,
+                update_at=data_timestamp + timedelta(days=365),
                 show_id=show.id,
             )
             season = self._upsert_season_object(new_season, show, season, show_key)
@@ -364,21 +359,21 @@ class UpsertMixin(HelperMixin, register=False):
         return f"{title} - {', '.join(artists)}"
 
     # TODO: Validate
-    def _upsert_seasons(
+    def _upsert_seasons_channel(
         self,
         show: Show,
         show_key: str,
         *,
         force: bool = False,
     ) -> None:
-        self._upsert_channel_uploads_season(show, show_key, force=force)
+        self._upsert_season_channel_uploads(show, show_key, force=force)
         if self.is_movies_channel(show_key):
             return
-        self._upsert_playlist_seasons(show, show_key, force=force)
-        self._upsert_album_seasons(show, show_key, force=force)
+        self._upsert_seasons_playlist(show, show_key, force=force)
+        self._upsert_seasons_album(show, show_key, force=force)
 
     # TODO: Validate
-    def _upsert_album_seasons(
+    def _upsert_seasons_album(
         self,
         show: Show,
         show_key: str,
@@ -387,7 +382,7 @@ class UpsertMixin(HelperMixin, register=False):
     ) -> None:
         for season_key in self._album_season_keys(show_key):
             music_playlist = self.music_playlist_file(season_key)
-            self._upsert_music_season(
+            self._upsert_season_music(
                 show,
                 season_key,
                 show_key,
@@ -422,7 +417,7 @@ class UpsertMixin(HelperMixin, register=False):
         self._upsert_episodes(season, show_key, force=force)
 
     # TODO: Validate
-    def _upsert_channel_uploads_season(
+    def _upsert_season_channel_uploads(
         self,
         show: Show,
         show_key: str,
@@ -445,7 +440,7 @@ class UpsertMixin(HelperMixin, register=False):
         )
 
     # TODO: Validate
-    def _upsert_playlist_seasons(
+    def _upsert_seasons_playlist(
         self,
         show: Show,
         show_key: str,
@@ -486,7 +481,7 @@ class UpsertMixin(HelperMixin, register=False):
             return
 
         # A season of a show holds the episodes its page lists, in page order.
-        if is_show_season_key(season.key) or is_music_playlist_key(season.key):
+        if is_show_season_key(season.key) or is_an_album(season.key):
             episode_keys = self._season_episode_keys(season.key)
             for position, episode_key in enumerate(episode_keys):
                 self._upsert_episode(

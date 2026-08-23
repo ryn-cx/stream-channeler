@@ -22,7 +22,7 @@ from app.users.models import User
 from app.utils import tz_datetime
 from plugins.utils.manage_plugins import import_plugins
 from plugins.YouTube import YouTube
-from plugins.YouTube.files import is_music_playlist_key, is_show_key, is_video_key
+from plugins.YouTube.files import is_an_album, is_show_key, is_video_key
 
 logger = logger.bind(source="updater")
 
@@ -44,11 +44,11 @@ def _belongs_to_a_channel(season: Season) -> bool:
     return (
         not is_video_key(show_key)
         and not is_show_key(show_key)
-        and not is_music_playlist_key(show_key)
+        and not is_an_album(show_key)
         # A release is a season of the musician's Topic channel, and YouTube
         # serves no feed for one, so it is no more this run's than an album
         # imported on its own is.
-        and not is_music_playlist_key(season.key)
+        and not is_an_album(season.key)
     )
 
 

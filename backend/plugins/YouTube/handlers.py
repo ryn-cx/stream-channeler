@@ -13,7 +13,7 @@ from plugins.YouTube.files import (
     get_first_item,
     is_channel_uploads_playlist_key,
     is_free_movies_channel,
-    is_music_playlist_key,
+    is_an_album,
     is_video_key,
     show_season_key,
 )
@@ -193,7 +193,7 @@ class PlaylistBasedURLHandler(YouTubeURLHandler):
         # tracks went up on, so importing it brings in the musician rather than the
         # release on its own. A release whose tracks went up somewhere else is its
         # own show, since a channel that is not a Topic lists far more than music.
-        if is_music_playlist_key(self.playlist_key):
+        if is_an_album(self.playlist_key):
             channel_key = self.plugin.music_playlist_file(
                 self.playlist_key,
             ).artist_channel_id()
@@ -214,7 +214,7 @@ class PlaylistBasedURLHandler(YouTubeURLHandler):
             self._raise_if_invalid_channel(self.show_key)
             return
 
-        if is_music_playlist_key(self.playlist_key):
+        if is_an_album(self.playlist_key):
             music_playlist_file = self.plugin.music_playlist_file(self.playlist_key)
             self.plugin.raise_if_invalid_file(music_playlist_file, self.url)
             # The release is imported as one of the musician's when the channel its

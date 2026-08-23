@@ -4,14 +4,15 @@ import re
 import time
 from collections import Counter
 from collections.abc import Sequence
-from datetime import datetime, timedelta
+from datetime import datetime
 from functools import cache
-from typing import Any, override
+from typing import Any, ClassVar, override
 from urllib.parse import parse_qs, urlsplit
 
 from loguru import logger
 from not_yt_dlapi import NotYTDLAPI
 from not_yt_dlapi.channel_feed.models import ChannelFeedModel
+from not_yt_dlapi.channels import Channels as ChannelsEndpoint
 from not_yt_dlapi.channels.models import ChannelsModel
 from not_yt_dlapi.exceptions import (
     APIError,
@@ -19,14 +20,20 @@ from not_yt_dlapi.exceptions import (
     PlaylistFeedNotFoundError,
     ResourceNotFoundError,
 )
+from not_yt_dlapi.music import Music as MusicEndpoint
 from not_yt_dlapi.music.models import LockupViewModel as MusicLockupViewModel
 from not_yt_dlapi.music.models import MusicModel
 from not_yt_dlapi.music.models import PlaylistHeaderRenderer as MusicHeaderRenderer
 from not_yt_dlapi.playlist_feed.models import PlaylistFeedModel
-from not_yt_dlapi.playlist_items.models import PlaylistItemsModel
+from not_yt_dlapi.playlist_items import PlaylistItems as PlaylistItemsEndpoint
+from not_yt_dlapi.playlist_items.models import Item, PlaylistItemsModel
+from not_yt_dlapi.playlists import Playlists as PlaylistsEndpoint
 from not_yt_dlapi.playlists.models import PlaylistsModel
+from not_yt_dlapi.shows import Shows as ShowsEndpoint
 from not_yt_dlapi.shows.models import ShowsModel
+from not_yt_dlapi.topic import Topic as TopicEndpoint
 from not_yt_dlapi.topic.models import TopicModel
+from not_yt_dlapi.videos import Videos as VideosEndpoint
 from not_yt_dlapi.videos.models import VideosModel
 from sqlmodel import Session
 
@@ -35,7 +42,6 @@ from app.files.models import File
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
-from app.utils import tz_datetime
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import (
     BaseFile,
@@ -47,7 +53,6 @@ from plugins.utils.base_plugin.files import (
 from plugins.utils.get_around_client import get_around_client
 
 
-# TODO: Validate
 @cache
 def not_yt_dlapi() -> NotYTDLAPI:
     return NotYTDLAPI(
@@ -57,21 +62,14 @@ def not_yt_dlapi() -> NotYTDLAPI:
 
 
 # TODO: Validate
-def is_music_playlist_key(key: str) -> bool:
-    """Report whether a playlist key belongs to an auto-generated album."""
+def is_an_album(key: str) -> bool:
     return key.startswith("OLAK5uy_")
 
 
 # TODO: Validate
 def is_channel_key(key: str) -> bool:
     """Report whether a key belongs to a channel rather than to what one holds."""
-    return not (is_video_key(key) or is_show_key(key) or is_music_playlist_key(key))
-
-
-# The official YouTube Movies & TV channel. Its uploads playlist and playlist listing
-# are truncated, so most of the videos it owns are missing from every listing the
-# channel exposes and can only be reached by importing them one at a time.
-_FREE_MOVIES_CHANNEL_KEY = "UCuVPpxrm2VAgpH3Ktln4HXg"
+    return not (is_video_key(key) or is_show_key(key) or is_an_album(key))
 
 
 # TODO: Validate
@@ -82,16 +80,14 @@ def is_free_movies_channel(channel_key: str) -> bool:
     title that has to be bought or rented is owned by a channel generated for
     that title alone, so who owns a video is what says which of the two it is.
     """
-    return channel_key == _FREE_MOVIES_CHANNEL_KEY
+    return channel_key == "UCuVPpxrm2VAgpH3Ktln4HXg"
 
 
 # TODO: Validate
 def is_video_key(key: str) -> bool:
-    """Report whether a key belongs to a video rather than a channel or playlist.
+    """Return whether a  is for a video.
 
-    A standalone video is its own show, season and episode, all keyed by the video,
-    and every channel and playlist key is longer than a video key.
-    """
+    Show.key and Season.key is a video key if it is a free movie."""
     # Videos are always 11 characters long and channels/playlists are never 11
     # characters long.
     return len(key) == 11  # noqa: PLR2004
@@ -158,7 +154,7 @@ def get_first_item[T](items: Sequence[T] | None) -> T:
 
 
 class ChannelByChannelId(EndpointFile[ChannelsModel]):
-    API_ENDPOINT = not_yt_dlapi().channels
+    API_ENDPOINT: ClassVar[ChannelsEndpoint] = not_yt_dlapi().channels
 
     @override
     def _download_file(self) -> str:
@@ -171,7 +167,7 @@ class ChannelByChannelId(EndpointFile[ChannelsModel]):
 
 
 class ChannelByHandle(EndpointFile[ChannelsModel]):
-    API_ENDPOINT = not_yt_dlapi().channels
+    API_ENDPOINT: ClassVar[ChannelsEndpoint] = not_yt_dlapi().channels
 
     @override
     def _download_file(self) -> str:
@@ -184,7 +180,7 @@ class ChannelByHandle(EndpointFile[ChannelsModel]):
 
 
 class ChannelByUsername(EndpointFile[ChannelsModel]):
-    API_ENDPOINT = not_yt_dlapi().channels
+    API_ENDPOINT: ClassVar[ChannelsEndpoint] = not_yt_dlapi().channels
 
     @override
     def _download_file(self) -> str:
@@ -197,20 +193,15 @@ class ChannelByUsername(EndpointFile[ChannelsModel]):
 
 
 class ChannelPlaylists(EndpointFile[PlaylistsModel]):
-    API_ENDPOINT = not_yt_dlapi().playlists
+    API_ENDPOINT: ClassVar[PlaylistsEndpoint] = not_yt_dlapi().playlists
 
     @override
     def _download_file(self) -> str:
         return self.API_ENDPOINT.download_merged(channel_id=self.unique_identifier)
 
-    # TODO: When does this error occur?
-    @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ResourceNotFoundError)
-
 
 class PlaylistInfo(EndpointFile[PlaylistsModel]):
-    API_ENDPOINT = not_yt_dlapi().playlists
+    API_ENDPOINT: ClassVar[PlaylistsEndpoint] = not_yt_dlapi().playlists
 
     @override
     def _download_file(self) -> str:
@@ -221,7 +212,11 @@ class PlaylistInfo(EndpointFile[PlaylistsModel]):
 class PlaylistItems(EndpointFile[PlaylistItemsModel]):
     """Playlist items file."""
 
-    API_ENDPOINT = not_yt_dlapi().playlist_items
+    API_ENDPOINT: ClassVar[PlaylistItemsEndpoint] = not_yt_dlapi().playlist_items
+
+    def items(self) -> list[Item]:
+        """Return the items the file holds."""
+        return self.parsed().items
 
     # Due to API limits this function merges new videos with existing videos instead of
     # downloading all videos every time which over time will lead to a messy file with
@@ -233,87 +228,88 @@ class PlaylistItems(EndpointFile[PlaylistItemsModel]):
         if not self._existing_database_record:
             return self.API_ENDPOINT.download_merged(self.unique_identifier)
 
-        existing_video_ids = {
-            item.content_details.video_id for item in self.parsed().items
-        }
-
         pages: list[str] = []
         page_token: str | None = None
         reached_existing_video = False
         downloaded_all_pages = False
-        while not reached_existing_video:
-            page = self.API_ENDPOINT.download(
+        while not (reached_existing_video or downloaded_all_pages):
+            downloaded_page = self.API_ENDPOINT.download(
                 self.unique_identifier,
                 page_token=page_token,
             )
-            pages.append(page)
-            loaded = self.API_ENDPOINT.load(page)
+            pages.append(downloaded_page)
+            loaded_page = self.API_ENDPOINT.load(downloaded_page)
+            page_token = loaded_page.next_page_token
+            downloaded_all_pages = page_token is None
 
-            if not (page_token := loaded.next_page_token):
-                downloaded_all_pages = True
-                break
-
-            # Everything from the first already stored video onwards is already stored,
-            # so the remaining pages do not need to be spent on.
             reached_existing_video = any(
-                item.content_details.video_id in existing_video_ids
-                for item in loaded.items
+                item.snippet.published_at < self.data_timestamp
+                for item in loaded_page.items
             )
-            page_token = loaded.next_page_token
-            if not page_token:
-                break
 
-        # Paging to the end of the playlist without reaching a stored video means the
-        # download covers the whole playlist, so what came back replaces what is
-        # stored rather than being put in front of it, which is what would keep
-        # videos that have since been removed.
         if downloaded_all_pages:
             return self.API_ENDPOINT.merge_pages(pages)
-        return self._document_with(pages)
+        return self._merged_items(pages, self._remove_deleted_items(pages))
 
-    # A video already held keeps the place it is held in, so what a download adds is
-    # every video it named that is not held yet, in the order it named them.
     # TODO: Validate
-    def _document_with(self, pages: list[str]) -> str:
-        items: list[dict[str, Any]] = json.loads(self._stored_content())["items"]
-        held_video_ids = {item["contentDetails"]["videoId"] for item in items}
-        for page in reversed(pages):
-            for item in reversed(json.loads(page)["items"]):
-                video_id = item["contentDetails"]["videoId"]
-                if video_id in held_video_ids:
-                    continue
-                held_video_ids.add(video_id)
-                items.insert(0, item)
+    def _remove_deleted_items(self, pages: list[str]) -> list[dict[str, Any]]:
+        downloaded_video_ids = self._downloaded_video_ids(pages)
+        stored_items: list[dict[str, Any]] = json.loads(self._stored_content())["items"]
+        kept_from = max(
+            (
+                index + 1
+                for index, item in enumerate(stored_items)
+                if item["contentDetails"]["videoId"] in downloaded_video_ids
+            ),
+            default=0,
+        )
+        return stored_items[kept_from:]
 
+    # TODO: Validate
+    def _downloaded_video_ids(self, pages: list[str]) -> set[str]:
+        return {
+            item["contentDetails"]["videoId"]
+            for page in pages
+            for item in json.loads(page)["items"]
+        }
+
+    # TODO: Validate
+    def _merged_items(
+        self,
+        pages: list[str],
+        kept_items: list[dict[str, Any]],
+    ) -> str:
+        downloaded_video_ids = self._downloaded_video_ids(pages)
+        items = [item for page in pages for item in json.loads(page)["items"]] + [
+            item
+            for item in kept_items
+            if item["contentDetails"]["videoId"] not in downloaded_video_ids
+        ]
+
+        for position, item in enumerate(items):
+            item["snippet"]["position"] = position
+
+        # Use pages[0] as the base because it has the correct value for
+        # .page_info.total_results.
         document = json.loads(pages[0])
         document["items"] = items
         document.pop("nextPageToken", None)
         document.pop("prevPageToken", None)
         return json.dumps(document)
 
-    # TODO: Validate
-    @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ResourceNotFoundError)
 
-
-# TODO: Validate
 class Videos(EndpointFile[VideosModel]):
-    """Videos file."""
-
-    API_ENDPOINT = not_yt_dlapi().videos
+    API_ENDPOINT: ClassVar[VideosEndpoint] = not_yt_dlapi().videos
 
 
 # TODO: Validate
 class MusicPlaylistFile(EndpointFile[MusicModel]):
-    API_ENDPOINT = not_yt_dlapi().music
+    API_ENDPOINT: ClassVar[MusicEndpoint] = not_yt_dlapi().music
 
-    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ResourceNotFoundError)
 
-    # TODO: Validatez
     def _header(self) -> MusicHeaderRenderer:
         return self.parsed().header.playlist_header_renderer
 
@@ -380,7 +376,7 @@ class TopicReleasesFile(PagedEndpointFile[TopicModel]):
     named once.
     """
 
-    API_ENDPOINT = not_yt_dlapi().topic
+    API_ENDPOINT: ClassVar[TopicEndpoint] = not_yt_dlapi().topic
 
     # TODO: Validate
     @override
@@ -436,7 +432,7 @@ class ShowListing(PagedEndpointFile[ShowsModel]):
     the stretch that begins a season says which season the ones after it are of.
     """
 
-    API_ENDPOINT = not_yt_dlapi().shows
+    API_ENDPOINT: ClassVar[ShowsEndpoint] = not_yt_dlapi().shows
 
     # TODO: Validate
     @override
@@ -741,7 +737,7 @@ class FileMixin(BasePlugin, register=False):
         return [
             release_key
             for release_key in self.topic_releases_file(channel_key).release_keys()
-            if is_music_playlist_key(release_key)
+            if is_an_album(release_key)
         ]
 
     # TODO: Validate
@@ -762,10 +758,9 @@ class FileMixin(BasePlugin, register=False):
     # TODO: Validate
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
-        # A show that is a single video is described by the video itself.
         if is_video_key(show_key):
             return [self.videos_file(show_key)]
-        if is_music_playlist_key(show_key):
+        if is_an_album(show_key):
             return [self.music_playlist_file(show_key)]
         # A show has no API of its own, so its page lists its seasons.
         if is_show_key(show_key):
@@ -809,7 +804,7 @@ class FileMixin(BasePlugin, register=False):
         if is_show_season_key(season_key):
             show_key, _ = split_show_season_key(season_key)
             return [self.show_listing_file_for_show(show_key)]
-        if is_music_playlist_key(season_key):
+        if is_an_album(season_key):
             return [self.music_playlist_file(season_key)]
         return [
             # Required to detect new episodes (videos). Must stay first because
@@ -847,7 +842,7 @@ class FileMixin(BasePlugin, register=False):
         if is_video_key(show_key):
             return [show_key]
 
-        if is_music_playlist_key(show_key):
+        if is_an_album(show_key):
             return [show_key]
 
         # A show has one season for every season its page lists.
@@ -912,7 +907,7 @@ class FileMixin(BasePlugin, register=False):
             season_keys.extend(
                 season.key
                 for season in existing_show.seasons
-                if is_music_playlist_key(season.key) and season.key not in season_keys
+                if is_an_album(season.key) and season.key not in season_keys
             )
         return season_keys
 
@@ -956,7 +951,7 @@ class FileMixin(BasePlugin, register=False):
             ).episode_keys_by_season()
             return episode_keys.get(int(season_number), [])
 
-        if is_music_playlist_key(season_key):
+        if is_an_album(season_key):
             return self.music_playlist_file(season_key).track_keys()
 
         playlist_items_file = self.playlist_items_file(season_key)

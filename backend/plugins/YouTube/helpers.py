@@ -9,7 +9,7 @@ from plugins.YouTube.files import (
     FileMixin,
     is_channel_key,
     is_free_movies_channel,
-    is_music_playlist_key,
+    is_an_album,
     is_show_key,
     is_show_season_key,
     is_video_key,
@@ -105,7 +105,7 @@ class HelperMixin(FileMixin, register=False):
         season_key: str,
         show_key: str,
     ) -> int | None:
-        if not (is_show_season_key(season_key) or is_music_playlist_key(season_key)):
+        if not (is_show_season_key(season_key) or is_an_album(season_key)):
             return None
         episode_keys = self._season_episode_keys(season_key)
         if episode_key not in episode_keys:

@@ -479,8 +479,6 @@ class PagedEndpointFile[T](DownloadedFile[list[T]], ABC):
 
 # TODO: Validate
 class EndpointJSON[T](JSONFile[T], ABC):
-    API_ENDPOINT: ClassVar[Any]
-
     # TODO: Validate
     def __init__(
         self,

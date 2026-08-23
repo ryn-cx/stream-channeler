@@ -6,7 +6,7 @@ from sqlmodel import Session
 from app.utils import tz_datetime
 from plugins.YouTube import YouTube
 from plugins.YouTube.files import (
-    is_music_playlist_key,
+    is_an_album,
     is_show_season_key,
     is_video_key,
 )
@@ -23,7 +23,7 @@ def _reads_a_feed(season_key: str) -> bool:
     return not (
         is_video_key(season_key)
         or is_show_season_key(season_key)
-        or is_music_playlist_key(season_key)
+        or is_an_album(season_key)
     )
 
 
@@ -195,6 +195,11 @@ class TestSubscriptionShow(StandardTestsAlt[YouTube], ShowValidatorAlt):
 # TODO: Validate
 class TestTopicAlbumPlaylist(StandardTestsAlt[YouTube], PlaylistValidatorAlt):
     playlist_key = "OLAK5uy_kiAyq0iiYYIPvqybBkpxFvNai3lAw3fyU"
+
+
+# TODO: Validate
+class TestVariousArtistsAlbum(StandardTestsAlt[YouTube], PlaylistValidatorAlt):
+    playlist_key = "OLAK5uy_keBDQuR704nX77z1CcmcLhIhYlDJkt35s"
 
 
 # TODO: Validate

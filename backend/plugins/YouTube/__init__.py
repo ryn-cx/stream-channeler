@@ -15,7 +15,7 @@ from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from plugins.YouTube.files import (
     get_first_item,
-    is_music_playlist_key,
+    is_an_album,
     is_quota_error,
     is_show_key,
     is_show_season_key,
@@ -162,6 +162,8 @@ class YouTube(
                 canonical_show=canonical_show,
                 force=force,
             )
+        # Checking for playlists here allows support for adding multiple albums from a
+        # single artist's channel.
         elif force or self._playlist_is_missing(show, playlist_key):
             _cache = self._download_show_files_and_children(show, tz_datetime.now())
             show = self.upsert_show(
@@ -214,7 +216,7 @@ class YouTube(
         if (
             is_video_key(season.key)
             or is_show_season_key(season.key)
-            or is_music_playlist_key(season.key)
+            or is_an_album(season.key)
         ):
             self._download_season_files_and_children(
                 season,
