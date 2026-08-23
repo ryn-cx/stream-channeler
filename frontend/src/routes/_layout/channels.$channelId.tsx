@@ -260,6 +260,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
   })
 
   const isOwner = user?.id === channel.user_id
+  const canManageShows = isOwner || Boolean(user?.is_superuser)
   const showHero = viewMode === "cards" && episodesWithDetails.length > 0
   const [heroIndex, setHeroIndex] = useState(0)
 
@@ -318,7 +319,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
               )}
 
               <DropdownMenuSeparator />
-              {isOwner ? (
+              {canManageShows ? (
                 <ManageShowsButton
                   channelId={channelId}
                   channelName={channel?.name}
@@ -387,7 +388,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
               Cards
             </Button>
           )}
-          {isOwner ? (
+          {canManageShows ? (
             <ManageShowsButton
               channelId={channelId}
               channelName={channel?.name}

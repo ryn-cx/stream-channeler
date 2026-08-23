@@ -224,10 +224,19 @@ function ChannelRow({
         )}
         {readOnly ? (
           <>
-            <ChannelShowsButton
-              channelId={channel.id}
-              showLabel={SHOW_BUTTON_LABELS}
-            />
+            {isAdmin ? (
+              <ManageShowsButton
+                channelId={channel.id}
+                channelName={channel.name}
+                variant="icon"
+                showLabel={SHOW_BUTTON_LABELS}
+              />
+            ) : (
+              <ChannelShowsButton
+                channelId={channel.id}
+                showLabel={SHOW_BUTTON_LABELS}
+              />
+            )}
             <ChannelDetailsButton
               channel={channel}
               showLabel={SHOW_BUTTON_LABELS}
