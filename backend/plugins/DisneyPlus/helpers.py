@@ -4,7 +4,7 @@
 import re
 from typing import override
 
-from plugins.DisneyPlus.files import FileMixin
+from plugins.DisneyPlus.files import FileMixin, required_value
 
 # Season names are the only place the real season number appears, the position of a
 # season in the list is not reliable because shows can start at a season other than 1.
@@ -28,9 +28,20 @@ class HelperMixin(FileMixin, register=False):
 
     # TODO: Validate
     def _release_year(self, show_key: str) -> int | None:
-        if year := _RELEASE_YEAR_REGEX.search(self._hero(show_key)["releaseYear"]):
+        release_year = self._hero(show_key).release_year
+        if release_year is None:
+            return None
+        if year := _RELEASE_YEAR_REGEX.search(release_year):
             return int(year.group())
         return None
+
+    # TODO: Validate
+    def _background_image_url(self, show_key: str) -> str:
+        background_image = required_value(
+            self._hero(show_key).background_image,
+            "background image",
+        )
+        return background_image.default_image.source
 
     # TODO: Validate
     @classmethod

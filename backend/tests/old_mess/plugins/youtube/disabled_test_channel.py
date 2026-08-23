@@ -4,8 +4,6 @@ from sqlmodel import Session
 from plugins.YouTube import YouTube
 from tests.old_mess.plugins.plugin_validator import StandardTests
 from tests.old_mess.plugins.youtube.validators import (
-    ChannelWithNoUploadsMixin,
-    InvalidYouTubeURLValidator,
     YouTubeValidator,
 )
 

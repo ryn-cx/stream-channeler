@@ -34,14 +34,6 @@ from plugins.TMDB import TMDB
 from plugins.utils.abstract_plugin import URLImportResult
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
-# The keys whose TMDB title is being looked up further up the stack. TMDB hands
-# a title it has just imported to whichever plugin carries it, taking the
-# addresses from Watchmode, so an import of a Crunchyroll listing can arrive here again
-# partway through its own TMDB lookup. Looking the title up a second time would
-# be the same round trip a second time, so a key already in flight is left to
-# the caller that is already resolving it.
-_TMDB_LOOKUPS_IN_FLIGHT = "crunchyroll_tmdb_lookups_in_flight"
-
 
 # TODO: Validate
 class Crunchyroll(
@@ -118,30 +110,25 @@ class Crunchyroll(
         _cache = self._download_show_files_and_children(show_key)
         if canonical_show is None:
             canonical_show = self._tmdb_show(show_key, force=force)
+            if not force and (show := self._preload_show(show_key).one_or_none()):
+                if canonical_show:
+                    add_canonical_show(self.session, show, canonical_show)
+                return handler.import_results(show)
+
         show = self.upsert_show(source, show_key, canonical_show, force=force)
         return handler.import_results(show)
 
     # TODO: Validate
+    @override  # Crunchyroll's own music has no TMDB title to be searched for.
     def _tmdb_show(self, show_key: str, *, force: bool = False) -> Show | None:
         # Music is Crunchyroll's own, so there is no TMDB title to be of.
         if is_music_show_key(show_key):
             return None
 
-        in_flight: set[str] = self.session.info.setdefault(
-            _TMDB_LOOKUPS_IN_FLIGHT,
-            set(),
+        series_data = self._series_datum(show_key)
+        return TMDB(self.session).import_search(
+            series_data["title"],
+            self.tmdb_media_type(show_key),
+            series_data["series_launch_year"],
+            force=force,
         )
-        if show_key in in_flight:
-            return None
-
-        in_flight.add(show_key)
-        try:
-            series_data = self._series_datum(show_key)
-            return TMDB(self.session).import_search(
-                series_data["title"],
-                self.tmdb_media_type(show_key),
-                series_data["series_launch_year"],
-                force=force,
-            )
-        finally:
-            in_flight.discard(show_key)

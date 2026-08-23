@@ -13,6 +13,7 @@ from sqlmodel import Session
 from app.canonical_media.service import add_canonical_show
 from app.episodes.models import Episode
 from app.episodes.preload import preload_episodes
+from app.media.media_type import MediaType
 from app.models import BaseMediaMixin, Visibility
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -31,6 +32,17 @@ from plugins.utils.base_plugin.files import INITIAL_FILE_IDENTIFIER, BaseFile
 from plugins.utils.base_plugin.preload import PreloadMixin
 from plugins.utils.base_plugin.url import URLHandler, URLMixin
 from plugins.utils.base_plugin.watch import WatchMixin
+
+_TMDB_MEDIA_TYPES = {
+    "Movie": MediaType.movie,
+    "Series": MediaType.tv,
+    "TV Show": MediaType.tv,
+}
+"""Which TMDB media type each of a show's own media types is searched under.
+
+A media type TMDB has no half of - a channel, a video, a concert - is not
+searched for at all.
+"""
 
 
 # TODO: Validate
@@ -503,6 +515,32 @@ class BasePlugin(
         return self._file(file_type, INITIAL_FILE_IDENTIFIER)
 
     # TODO: Validate
+    def _media_identifier(self, show_key: str) -> str:
+        return show_key
+
+    # TODO: Validate
+    def _tmdb_show(self, show_key: str, *, force: bool = False) -> Show | None:
+        if not self.implements("media_info"):
+            return None
+
+        media_info = self.media_info(self._media_identifier(show_key))
+        if media_info is None or not media_info.title:
+            return None
+
+        media_type = _TMDB_MEDIA_TYPES.get(media_info.media_type or "")
+        if media_type is None:
+            return None
+
+        from plugins.TMDB import TMDB  # noqa: PLC0415
+
+        return TMDB(self.session).import_search(
+            media_info.title,
+            media_type,
+            media_info.year,
+            force=force,
+        )
+
+    # TODO: Validate
     def raise_if_invalid_file(self, file: BaseFile[Any], url: str) -> None:
         file.download_if_outdated()
         if not file.database_record.content:
@@ -559,6 +597,13 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
             return handler.import_results(show)
 
         _cache = self._download_show_files_and_children(show_key)
+        if canonical_show is None:
+            canonical_show = self._tmdb_show(show_key, force=force)
+            if not force and (show := self._preload_show(show_key).one_or_none()):
+                if canonical_show:
+                    add_canonical_show(self.session, show, canonical_show)
+                return handler.import_results(show)
+
         show = self.upsert_show(
             self.source,
             show_key,

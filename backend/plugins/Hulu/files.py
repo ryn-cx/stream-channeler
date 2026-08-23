@@ -1,16 +1,33 @@
 # TODO: Validate
 """The files Hulu is read out of."""
 
+import json
 from collections.abc import Sequence
-from typing import Any, override
+from functools import cache
+from typing import Any, ClassVar, override
 
 from sqlmodel import Session
+from wholoo import Wholoo
+from wholoo.exceptions import (
+    MovieNotFoundError,
+    ResourceNotFoundError,
+    SeriesNotFoundError,
+)
+from wholoo.movies import Movies as MoviesEndpoint
+from wholoo.movies.models import MoviesModel
+from wholoo.search import Search as SearchEndpoint
+from wholoo.search.models import SearchModel
+from wholoo.season import Season as SeasonEndpoint
+from wholoo.season.models import Item as SeasonItem
+from wholoo.season.models import SeasonModel
+from wholoo.tv import TV
+from wholoo.tv.models import TVModel
 
 from app.plugins.models import Plugin
-from plugins.Hulu import api
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import BaseFile, EndpointJSON
+from plugins.utils.base_plugin.files import BaseFile, EndpointFile
 from plugins.utils.base_plugin.media_type import MediaTypeMixin
+from plugins.utils.get_around_client import get_around_client
 
 MOVIE_MEDIA_TYPE = "movie"
 """What Hulu calls a title that is a film rather than a series."""
@@ -20,61 +37,78 @@ SERIES_MEDIA_TYPE = "series"
 
 
 # TODO: Validate
-class HuluJSON(EndpointJSON[dict[str, Any]]):
-    """A file holding one Hulu endpoint's parsed JSON."""
+@cache
+def wholoo() -> Wholoo:
+    """Return a cached Wholoo client."""
+    return Wholoo(get_around_client=get_around_client())
+
+
+# The details hub for a single episode, which is the only place the id of the series
+# an episode belongs to can be looked up.
+# TODO: Add this to Wholoo so it has full type support.
+# TODO: Validate
+class EpisodeHubEndpoint:
+    # TODO: Validate
+    def __init__(self, client: Wholoo) -> None:
+        self._client = client
 
     # TODO: Validate
-    @override
-    def _parse(self, raw: Any) -> dict[str, Any]:
-        return self.raise_if_not_is_instance(raw, dict)
+    def download(self, episode_id: str, /) -> str:
+        return self._client.download(
+            endpoint=f"content/v5/hubs/episode/{episode_id}",
+            params={
+                "schema": "3",
+                "limit": "1999",
+                "device_info": "web:4.44.1",
+                "referralHost": "production",
+                "pageType": "DETAILS",
+            },
+            headers={"Referer": f"https://www.hulu.com/watch/{episode_id}"},
+            log_id=f"EpisodeHub ({episode_id!r})",
+        )
 
     # TODO: Validate
-    @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            try:
-                response = self._fetch()
-            except Exception as error:
-                if not self._is_acceptable_error(error):
-                    raise
-                self.write(None, self.acceptable_error_extra_value())
-            else:
-                self.write(response)
+    def load(self, data: str, log_id: str = "") -> dict[str, Any]:  # noqa: ARG002
+        parsed: dict[str, Any] = json.loads(data)
+        return parsed
 
 
 # TODO: Validate
-class Series(HuluJSON):
+class Series(EndpointFile[TVModel]):
     """Series file."""
 
+    API_ENDPOINT: ClassVar[TV] = wholoo().tv
+
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.series_hub(self.unique_identifier)
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, SeriesNotFoundError)
 
 
 # TODO: Validate
-class Movie(HuluJSON):
+class Movie(EndpointFile[MoviesModel]):
     """Movie file."""
 
+    API_ENDPOINT: ClassVar[MoviesEndpoint] = wholoo().movies
+
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.movie_hub(self.unique_identifier)
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, MovieNotFoundError)
 
 
 # TODO: Validate
-class SearchFile(HuluJSON):
+class SearchFile(EndpointFile[SearchModel]):
     """Search file."""
 
-    # TODO: Validate
-    @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.search_entity(self.unique_identifier)
+    API_ENDPOINT: ClassVar[SearchEndpoint] = wholoo().search
 
 
 # TODO: Validate
-class SeasonFile(HuluJSON):
+class SeasonFile(EndpointFile[SeasonModel]):
     """Season file."""
+
+    API_ENDPOINT: ClassVar[SeasonEndpoint] = wholoo().season
 
     # TODO: Validate
     def __init__(
@@ -91,20 +125,20 @@ class SeasonFile(HuluJSON):
 
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.season(self.series_id, self.season_number)
+    def _download_file(self) -> str:
+        return self.API_ENDPOINT.download(self.series_id, self.season_number)
 
 
-# The details hub for a single episode, which is the only place the id of the series
-# an episode belongs to can be looked up.
 # TODO: Validate
-class EpisodeHub(HuluJSON):
+class EpisodeHub(EndpointFile[dict[str, Any]]):
     """Episode file."""
+
+    API_ENDPOINT: ClassVar[EpisodeHubEndpoint] = EpisodeHubEndpoint(wholoo())
 
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.episode_hub(self.unique_identifier)
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ResourceNotFoundError)
 
     # TODO: Validate
     def series_id(self) -> str:
@@ -162,30 +196,22 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
         return show_key, int(season_number)
 
     # TODO: Validate
-    def _series_data(self, series_id: str) -> dict[str, Any]:
+    def _series_model(self, series_id: str) -> TVModel:
         return self.series_file(series_id).parsed()
 
     # TODO: Validate
     def _season_numbers(self, series_id: str) -> list[int]:
         numbers: dict[int, None] = {}
-        for component in self._series_data(series_id)["components"]:
-            for item in component["items"]:
-                grouping = item.get("series_grouping_metadata")
+        for component in self._series_model(series_id).components:
+            for item in component.items:
+                grouping = item.series_grouping_metadata
                 if grouping is not None:
-                    numbers[grouping["season_number"]] = None
+                    numbers[grouping.season_number] = None
         return sorted(numbers)
 
     # TODO: Validate
-    def _season_items(
-        self,
-        series_id: str,
-        season_number: int,
-    ) -> list[dict[str, Any]]:
-        items: list[dict[str, Any]] = self.season_file(
-            series_id,
-            season_number,
-        ).parsed()["items"]
-        return items
+    def _season_items(self, series_id: str, season_number: int) -> list[SeasonItem]:
+        return self.season_file(series_id, season_number).parsed().items
 
     # TODO: Validate
     @override
@@ -245,7 +271,6 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
                 episode_keys.append(show_key)
             else:
                 episode_keys += [
-                    str(item["id"])
-                    for item in self._season_items(show_key, season_number)
+                    str(item.id) for item in self._season_items(show_key, season_number)
                 ]
         return episode_keys

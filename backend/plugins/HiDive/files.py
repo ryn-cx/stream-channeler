@@ -5,116 +5,149 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from datetime import datetime
-from typing import Any, override
+from functools import cache
+from typing import Any, ClassVar, override
+
+from diving_board import DivingBoard
+from diving_board.exceptions import (
+    SeasonNotFoundError,
+    SeriesNotFoundError,
+    VodNotFoundError,
+)
+from diving_board.schedule import Schedule as ScheduleEndpoint
+from diving_board.schedule import models as schedule_models
+from diving_board.search import Search as SearchEndpoint
+from diving_board.search import models as search_models
+from diving_board.season import Season as SeasonEndpoint
+from diving_board.season import models as season_models
+from diving_board.series import Series as SeriesEndpoint
+from diving_board.series import models as series_models
+from diving_board.vod import Vod as VodEndpoint
+from diving_board.vod import models as vod_models
 
 from app.files.models import File
-from app.utils import tz_datetime
-from plugins.HiDive import api
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import (
     BaseFile,
-    EndpointJSON,
+    EndpointFile,
+    PagedEndpointFile,
 )
 from plugins.utils.base_plugin.media_type import MediaTypeMixin
+from plugins.utils.get_around_client import get_around_client
 
 
 # TODO: Validate
-class HiDiveJSON(EndpointJSON[dict[str, Any]]):
-    # TODO: Validate
-    @override
-    def _parse(self, raw: Any) -> dict[str, Any]:
-        return self.raise_if_not_is_instance(raw, dict)
-
-    # TODO: Validate
-    @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            try:
-                response = self._fetch()
-            except Exception as error:
-                if not self._is_acceptable_error(error):
-                    raise
-                self.write(None, self.acceptable_error_extra_value())
-            else:
-                self.write(response)
+@cache
+def diving_board() -> DivingBoard:
+    """Return a cached Diving Board client."""
+    return DivingBoard(get_around_client=get_around_client())
 
 
 # TODO: Validate
-class HiDiveListJSON(EndpointJSON[list[dict[str, Any]]]):
-    # TODO: Validate
-    @override
-    def _parse(self, raw: Any) -> list[dict[str, Any]]:
-        return self.raise_if_not_is_instance(raw, list)
-
-    # TODO: Validate
-    @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            try:
-                response = self._fetch()
-            except Exception as error:
-                if not self._is_acceptable_error(error):
-                    raise
-                self.write(None, self.acceptable_error_extra_value())
-            else:
-                self.write(response)
+def _single_element[ElementT](elements: list[ElementT], description: str) -> ElementT:
+    if not elements:
+        msg = f"No {description} element found"
+        raise ValueError(msg)
+    if len(elements) > 1:
+        msg = f"Too many {description} elements found"
+        raise ValueError(msg)
+    return elements[0]
 
 
 # TODO: Validate
-class Season(HiDiveJSON):
+def vod_hero(vod_data: vod_models.VodModel) -> vod_models.Element:
+    """Return the hero element of a parsed vod file."""
+    return _single_element(
+        [element for element in vod_data.elements if element.field_type == "hero"],
+        "hero",
+    )
+
+
+# TODO: Validate
+def season_hero(season_data: season_models.SeasonModel) -> season_models.Element:
+    """Return the hero element of a parsed season file."""
+    return _single_element(
+        [element for element in season_data.elements if element.field_type == "hero"],
+        "hero",
+    )
+
+
+# TODO: Validate
+def season_bucket(season_data: season_models.SeasonModel) -> season_models.Element:
+    """Return the element a season's own episodes are listed in."""
+    return _single_element(
+        [
+            element
+            for element in season_data.elements
+            if element.field_type == "bucket" and element.attributes.type == "season"
+        ],
+        "'season' bucket",
+    )
+
+
+# TODO: Validate
+def schedule_group_list(
+    schedule_data: schedule_models.ScheduleModel,
+) -> schedule_models.Element:
+    """Return the element a page of the schedule lists its days in."""
+    return _single_element(
+        [
+            element
+            for element in schedule_data.elements
+            if element.field_type == "groupList"
+        ],
+        "groupList",
+    )
+
+
+# TODO: Validate
+class Season(EndpointFile[season_models.SeasonModel]):
     """Season file."""
+
+    API_ENDPOINT: ClassVar[SeasonEndpoint] = diving_board().season
 
     # Occurs when the user imports an invalid TV show url.
     # TODO: Validate
     @override
-    def _get_ACCEPTABLE_ERROR(self) -> str | None:
-        return "Unexpected response status code: 404"
-
-    # TODO: Validate
-    @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.season(self.unique_identifier)
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, SeasonNotFoundError)
 
 
 # TODO: Validate
-class Vod(HiDiveJSON):
+class Vod(EndpointFile[vod_models.VodModel]):
     """Vod file."""
+
+    API_ENDPOINT: ClassVar[VodEndpoint] = diving_board().vod
 
     # Occurs when the user imports an invalid movie url.
     # TODO: Validate
     @override
-    def _get_ACCEPTABLE_ERROR(self) -> str | None:
-        return "Unexpected response status code: 404"
-
-    # TODO: Validate
-    @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.vod(self.unique_identifier)
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, VodNotFoundError)
 
 
 # TODO: Validate
-class Series(HiDiveJSON):
+class Series(EndpointFile[series_models.SeriesModel]):
     """Series file."""
+
+    API_ENDPOINT: ClassVar[SeriesEndpoint] = diving_board().series
 
     # Occurs when the user imports an invalid series url.
     # TODO: Validate
     @override
-    def _get_ACCEPTABLE_ERROR(self) -> str | None:
-        return "Unexpected response status code: 404"
-
-    # TODO: Validate
-    @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.series(self.unique_identifier)
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, SeriesNotFoundError)
 
 
 # TODO: Validate
-class Schedule(HiDiveListJSON):
+class Schedule(PagedEndpointFile[schedule_models.ScheduleModel]):
     """Schedule file."""
+
+    API_ENDPOINT: ClassVar[ScheduleEndpoint] = diving_board().schedule
 
     # TODO: Validate
     @override
-    def _fetch(self) -> list[dict[str, Any]]:
+    def _download_pages(self) -> list[str]:
         # Start at the first of the month because it matches the normal API calls.
         from_ = self.identifier_datetime().replace(
             day=1,
@@ -123,20 +156,14 @@ class Schedule(HiDiveListJSON):
             second=0,
             microsecond=0,
         )
-        return api.schedule_until_datetime(
-            from_=from_,
-            end_datetime=tz_datetime.now(),
-        )
+        return self.API_ENDPOINT.download_all(from_)
 
 
 # TODO: Validate
-class Search(HiDiveJSON):
+class Search(EndpointFile[search_models.SearchModel]):
     """Search file."""
 
-    # TODO: Validate
-    @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.search(self.unique_identifier)
+    API_ENDPOINT: ClassVar[SearchEndpoint] = diving_board().search
 
 
 # TODO: Validate
@@ -200,13 +227,12 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
     # TODO: Validate
     @staticmethod
     def _series_season_items(
-        series_data: dict[str, Any],
-    ) -> list[dict[str, Any]]:
+        series_data: series_models.SeriesModel,
+    ) -> list[series_models.Item1]:
         """Return the list of seasons from a parsed series file."""
-        for element in series_data["elements"]:
-            if element["attributes"].get("seasons"):
-                items: list[dict[str, Any]] = element["attributes"]["seasons"]["items"]
-                return items
+        for element in series_data.elements:
+            if element.attributes.seasons:
+                return element.attributes.seasons.items
         msg = "No seasons element found in series file."
         raise ValueError(msg)
 
@@ -248,7 +274,7 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
         if self._is_movie():
             return [show_key]
         series_data = self.series_file(show_key).parsed()
-        return [str(item["id"]) for item in self._series_season_items(series_data)]
+        return [str(item.id) for item in self._series_season_items(series_data)]
 
     # TODO: Validate
     @override
@@ -264,8 +290,6 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
         episode_keys: list[str] = []
         for season_key in season_keys:
             season_data = self.season_file(season_key).parsed()
-            bucket = api.extract_bucket_season(season_data)
-            episode_keys.extend(
-                str(item["id"]) for item in bucket["attributes"]["items"]
-            )
+            bucket = season_bucket(season_data)
+            episode_keys.extend(str(item.id) for item in bucket.attributes.items or [])
         return episode_keys

@@ -11,7 +11,6 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.shows.service import find_and_add_canonical_show
 from app.sources.models import Source
-from app.utils import tz_datetime
 from plugins.ParamountPlus.source import SourceMixin
 
 
@@ -53,10 +52,10 @@ class UpsertMixin(SourceMixin, register=False):
             data_timestamp = self.show_data_timestamp(show_key)
             new_show = Show(
                 key=show_key,
-                name=first_episode["series_title"],
+                name=first_episode.series_title,
                 media_type="TV Show",
                 url=self._show_url(show_key),
-                image_url=first_episode["thumb"]["large"],
+                image_url=first_episode.thumb.large,
                 data_timestamp=data_timestamp,
                 source_id=source.id,
                 update_at=data_timestamp + timedelta(days=7),
@@ -81,7 +80,7 @@ class UpsertMixin(SourceMixin, register=False):
                 episodes = self._season_episodes(show.key, season_number)
                 new_season = Season(
                     key=season_key,
-                    name=episodes[0]["seasonTitle"] if episodes else None,
+                    name=episodes[0].season_title if episodes else None,
                     season_number=season_number,
                     sort_order=sort_order,
                     url=self._show_url(show.key),
@@ -103,7 +102,7 @@ class UpsertMixin(SourceMixin, register=False):
     ) -> None:
         episodes = self._season_episodes(show_key, season_number)
         for sort_order, item in enumerate(episodes):
-            episode_key = item["content_id"]
+            episode_key = item.content_id
             episode = Episode.get_from_memory(self.session, season, episode_key)
             if not self._episode_is_outdated(
                 episode,
@@ -115,13 +114,13 @@ class UpsertMixin(SourceMixin, register=False):
 
             new_episode = Episode(
                 key=episode_key,
-                name=item["title"],
-                episode_number=int(item["episode_number"]),
-                url=item["url"],
-                description=item["description"],
-                image_url=item["thumb"]["large"],
-                duration=item["duration_raw"],
-                air_date=tz_datetime.fromisoformat(item["airdate_iso"]),
+                name=item.title,
+                episode_number=int(item.episode_number),
+                url=item.url,
+                description=item.description,
+                image_url=item.thumb.large,
+                duration=item.duration_raw,
+                air_date=item.airdate_iso,
                 sort_order=sort_order,
                 data_timestamp=self.episode_data_timestamp(
                     episode_key,
@@ -146,11 +145,11 @@ class UpsertMixin(SourceMixin, register=False):
             data_timestamp = self.show_data_timestamp(show_key)
             new_show = Show(
                 key=show_key,
-                name=movie["name"],
-                description=movie["description"],
+                name=movie.name,
+                description=movie.description,
                 media_type="Movie",
                 url=self._movie_url(show_key),
-                image_url=movie["image"],
+                image_url=movie.image,
                 data_timestamp=data_timestamp,
                 source_id=source.id,
                 update_at=data_timestamp + timedelta(days=30),
@@ -203,13 +202,13 @@ class UpsertMixin(SourceMixin, register=False):
         movie = self._movie_data(show_key)
         new_episode = Episode(
             key=show_key,
-            name=movie["name"],
-            description=movie["description"],
+            name=movie.name,
+            description=movie.description,
             url=self._movie_url(show_key),
-            image_url=movie["image"],
+            image_url=movie.image,
             episode_number=0,
             sort_order=0,
-            air_date=tz_datetime.fromisoformat(movie["datePublished"]),
+            air_date=movie.date_published,
             data_timestamp=self.episode_data_timestamp(
                 show_key,
                 season.key,

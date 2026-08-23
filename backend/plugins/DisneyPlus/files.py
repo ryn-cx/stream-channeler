@@ -1,67 +1,88 @@
 # TODO: Validate
 """The files a Disney+ title is read out of."""
 
-from collections.abc import Sequence
-from typing import Any, override
+from __future__ import annotations
 
+from collections.abc import Sequence
+from functools import cache
+from typing import Any, ClassVar, override
+from uuid import UUID
+
+from kneeminus import KneeMinus
+from kneeminus.entity import Entity
+from kneeminus.entity.models import EntityModel, MainContentItem
+from kneeminus.entity.models import Episode as EntityEpisode
+from kneeminus.entity.models import Season as EntitySeason
+from kneeminus.exceptions import EntityNotFoundError
 from sqlmodel import Session
 
 from app.plugins.models import Plugin
-from plugins.DisneyPlus import api
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import BaseFile, EndpointJSON
+from plugins.utils.base_plugin.files import BaseFile, EndpointFile
+from plugins.utils.get_around_client import get_around_client
 
 
 # TODO: Validate
-class DisneyPlusJSON(EndpointJSON[dict[str, Any]]):
-    # TODO: Validate
-    @override
-    def _parse(self, raw: Any) -> dict[str, Any]:
-        return api.group_main_content(self.raise_if_not_is_instance(raw, dict))
-
-    # TODO: Validate
-    @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            try:
-                response = self._fetch()
-            except Exception as error:
-                if not self._is_acceptable_error(error):
-                    raise
-                self.write(None, self.acceptable_error_extra_value())
-            else:
-                self.write(response)
+@cache
+def kneeminus() -> KneeMinus:
+    """Return a cached KneeMinus client."""
+    return KneeMinus(get_around_client=get_around_client())
 
 
 # TODO: Validate
-class EntityFile(DisneyPlusJSON):
+def main_content_item(entity: EntityModel, content_type: str) -> MainContentItem | None:
+    """Return the block of the page named by `content_type`, if the page has one."""
+    for item in entity.props.page_props.stitch_document.main_content:
+        if item.field_type == content_type:
+            return item
+    return None
+
+
+# TODO: Validate
+def required_main_content_item(
+    entity: EntityModel,
+    content_type: str,
+) -> MainContentItem:
+    """Return the block of the page named by `content_type`."""
+    item = main_content_item(entity, content_type)
+    if item is None:
+        msg = f"The page carries no {content_type} block."
+        raise ValueError(msg)
+    return item
+
+
+# TODO: Validate
+def required_value[ValueT](value: ValueT | None, description: str) -> ValueT:
+    """Return `value`, raising when the page left it out."""
+    if value is None:
+        msg = f"The page carries no {description}."
+        raise ValueError(msg)
+    return value
+
+
+# TODO: Validate
+class EntityFile(EndpointFile[EntityModel]):
     """Entity file."""
 
-    # TODO: Validate
-    @override
-    def _get_ACCEPTABLE_ERROR(self) -> str | None:
-        return "Unexpected response status code: 404"
-
-    # TODO: Validate
-    def __init__(self, session: Session, plugin: Plugin, entity_id: str) -> None:
-        """Initialize the file."""
-        self.entity_id = entity_id
-        super().__init__(session, plugin, entity_id)
+    API_ENDPOINT: ClassVar[Entity] = kneeminus().entity
 
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.entity(self.entity_id)
+    def _download_file(self) -> str:
+        return self.API_ENDPOINT.download(UUID(self.unique_identifier))
+
+    # Occurs when importing an invalid entity URL.
+    # TODO: Validate
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, EntityNotFoundError)
 
 
 # TODO: Validate
-class SeasonEntityFile(DisneyPlusJSON):
+class SeasonEntityFile(EndpointFile[EntityModel]):
     """Season entity file."""
 
-    # TODO: Validate
-    @override
-    def _get_ACCEPTABLE_ERROR(self) -> str | None:
-        return "Unexpected response status code: 404"
+    API_ENDPOINT: ClassVar[Entity] = kneeminus().entity
 
     # TODO: Validate
     def __init__(
@@ -78,8 +99,17 @@ class SeasonEntityFile(DisneyPlusJSON):
 
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.entity(self.entity_id, season_id=self.season_id)
+    def _download_file(self) -> str:
+        return self.API_ENDPOINT.download(
+            UUID(self.entity_id),
+            season_id=UUID(self.season_id),
+        )
+
+    # Occurs when importing an invalid entity URL.
+    # TODO: Validate
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, EntityNotFoundError)
 
 
 # TODO: Validate
@@ -97,46 +127,45 @@ class FileMixin(BasePlugin, register=False):
         return self._file(SeasonEntityFile, entity_id, season_id)
 
     # TODO: Validate
-    def _grouped(self, entity_id: str) -> dict[str, Any]:
+    def _entity(self, entity_id: str) -> EntityModel:
         return self.entity_file(entity_id).parsed()
 
     # TODO: Validate
-    def _season_grouped(self, entity_id: str, season_id: str) -> dict[str, Any]:
+    def _season_entity(self, entity_id: str, season_id: str) -> EntityModel:
         return self.season_file(entity_id, season_id).parsed()
 
     # TODO: Validate
-    def _media_details(self, show_key: str) -> dict[str, Any]:
-        details: dict[str, Any] = self._grouped(show_key)["MediaDetails"]
-        return details
+    def _media_details(self, show_key: str) -> MainContentItem:
+        return required_main_content_item(self._entity(show_key), "MediaDetails")
 
     # TODO: Validate
-    def _hero(self, show_key: str) -> dict[str, Any]:
-        hero: dict[str, Any] = self._grouped(show_key)["DetailEntityHero"]
-        return hero
+    def _hero(self, show_key: str) -> MainContentItem:
+        return required_main_content_item(self._entity(show_key), "DetailEntityHero")
 
     # TODO: Validate
     def _is_movie(self, show_key: str) -> bool:
-        return self._grouped(show_key).get("Episodes") is None
+        return main_content_item(self._entity(show_key), "Episodes") is None
 
     # TODO: Validate
-    def _seasons(self, show_key: str) -> list[dict[str, Any]]:
-        episodes = self._grouped(show_key).get("Episodes")
+    def _seasons(self, show_key: str) -> list[EntitySeason]:
+        episodes = main_content_item(self._entity(show_key), "Episodes")
         if episodes is None:
             return []
-        seasons: list[dict[str, Any]] = episodes["seasons"]
-        return seasons
+        return episodes.seasons or []
 
     # TODO: Validate
     def _season_episodes(
         self,
         show_key: str,
         season_id: str,
-    ) -> list[dict[str, Any]]:
-        episodes = self._season_grouped(show_key, season_id).get("Episodes")
+    ) -> list[EntityEpisode]:
+        episodes = main_content_item(
+            self._season_entity(show_key, season_id),
+            "Episodes",
+        )
         if episodes is None:
             return []
-        season_episodes: list[dict[str, Any]] = episodes["episodes"]
-        return season_episodes
+        return episodes.episodes or []
 
     # TODO: Validate
     @staticmethod
@@ -185,7 +214,7 @@ class FileMixin(BasePlugin, register=False):
         if self._is_movie(show_key):
             return [self._season_key(show_key, show_key)]
         return [
-            self._season_key(show_key, str(season["id"]))
+            self._season_key(show_key, str(season.id))
             for season in self._seasons(show_key)
         ]
 
@@ -205,7 +234,7 @@ class FileMixin(BasePlugin, register=False):
                 episode_keys.append(show_key)
             else:
                 episode_keys += [
-                    str(episode["_id"])
+                    str(episode.field_id)
                     for episode in self._season_episodes(show_key, season_id)
                 ]
         return episode_keys

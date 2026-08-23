@@ -377,7 +377,7 @@ wheels = [
 [[package]]
 name = "chirashi"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/chirashi#f786e5bfa5cd0956c2191264ede0fe92cb197300" }
+source = { git = "https://github.com/ryn-cx/chirashi#330f7d8be2ce9ee07f5b1f432d7246b5c4caf6d0" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -533,7 +533,7 @@ wheels = [
 [[package]]
 name = "deforestation"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/deforestation#a274ae4814c427e24bb3ed2ab8f46a7c0def0a8e" }
+source = { git = "https://github.com/ryn-cx/deforestation#ddf187df43ec862a6ddc6e347e48323f1d4f8385" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -568,7 +568,7 @@ wheels = [
 [[package]]
 name = "diving-board"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/diving-board#b35a9f37b7f9e6d68822f0ba6f339f1da829748f" }
+source = { git = "https://github.com/ryn-cx/diving-board#924521122df981637e1812d00d615bfc636842a6" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -1051,7 +1051,7 @@ wheels = [
 [[package]]
 name = "kneeminus"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/knee-minus#0233e8c2dc897b101d65ec6f0ee03f0bcaae4824" }
+source = { git = "https://github.com/ryn-cx/knee-minus#5701e78827dc900dc190a974a3d8158e2122aa93" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -1210,7 +1210,7 @@ wheels = [
 [[package]]
 name = "meshfilm"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/meshfilm#97bfa5a8ffe3fa61571d850c613bf01a285e67dc" }
+source = { git = "https://github.com/ryn-cx/meshfilm#ff2d327e80a4f2029da30bc2adb6c4a9a1ec9267" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -1219,7 +1219,7 @@ dependencies = [
 [[package]]
 name = "minbo"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/minbo#881c880913ea3420d25185253e60d7796180524b" }
+source = { git = "https://github.com/ryn-cx/minbo#257983e1b7420bbbfcec621112893222e0727cd0" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -1267,7 +1267,7 @@ wheels = [
 [[package]]
 name = "nana"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/nana#e95b91a40be336a3092f34bd76c342b554314a5b" }
+source = { git = "https://github.com/ryn-cx/nana#afcb81177150e7674fbf0b1d91d32ae7741dc4e5" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -1276,7 +1276,7 @@ dependencies = [
 [[package]]
 name = "naphki"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/naphki#8ab5126b629cd86bf29612e8f51d9fe22732a138" }
+source = { git = "https://github.com/ryn-cx/naphki#dbdc8a9df251fd7215bc339e0cc3ed9f9e0b8dd5" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -1296,7 +1296,7 @@ dependencies = [
 [[package]]
 name = "notaplanet"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/notaplanet#b2ca67f96c8f7dc1695ea2a47e4b4ba20f59c1da" }
+source = { git = "https://github.com/ryn-cx/notaplanet#a2e9c628b08dcd4f6f5d0721cf32f9e24be19f8b" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -1341,7 +1341,7 @@ wheels = [
 [[package]]
 name = "plugi"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/plugi#a5ceaf0c5bdb754cf28731801dd5e7cc7f138072" }
+source = { git = "https://github.com/ryn-cx/plugi#fe87b14001ce6a7c837a7572d44900c17d876e78" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -2012,7 +2012,7 @@ dependencies = [
 [[package]]
 name = "trivial-minus"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/trivial-minus#a86c9d70a9839e57ad1d377efaad945c80b7c6e6" }
+source = { git = "https://github.com/ryn-cx/trivial-minus#be4cb40f5f704859980dd66e6721795e0059dd04" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -2236,7 +2236,7 @@ wheels = [
 [[package]]
 name = "wholoo"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/wholoo#ca8658d5c56ceb826e2a2616811793dbfea95dc1" }
+source = { git = "https://github.com/ryn-cx/wholoo#6f4858f159646a1e7d8c9638488fea695949e836" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -2285,7 +2285,7 @@ wheels = [
 [[package]]
 name = "yt-dlapi"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/yt-dlapi#d0a66fe388c39e5e6f702c15bd246e8653022193" }
+source = { git = "https://github.com/ryn-cx/yt-dlapi#00a3c8e54b413822c75a3bdc514b27a8803e1ce1" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },

@@ -8,7 +8,7 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.shows.service import find_and_add_canonical_show
 from app.sources.models import Source
-from plugins.NHKWorld.files import FileMixin, expired_at, first_broadcasted_at
+from plugins.NHKWorld.files import FileMixin
 
 
 # TODO: Validate
@@ -27,11 +27,11 @@ class UpsertMixin(FileMixin, register=False):
         if self._show_is_outdated(show, force=force):
             program = self.video_program_file(show_key).parsed()
             new_show = Show(
-                key=program["id"],
-                name=program["title"],
-                description=program["description"],
-                url=self.build_url(program["url"]),
-                image_url=self._get_image_url(program["images"]["portrait"]),
+                key=program.id,
+                name=program.title,
+                description=program.description,
+                url=self.build_url(program.url),
+                image_url=self._get_image_url(program.images.portrait),
                 media_type="TV Show",
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
@@ -81,9 +81,9 @@ class UpsertMixin(FileMixin, register=False):
         # Episodes are listed newest to oldest.
         items = list(reversed(self.video_episodes_file(show_key).items()))
         for sort_order, item in enumerate(items):
-            season.set_update_at(expired_at(item))
+            season.set_update_at(item.video.expired_at)
 
-            episode = Episode.get_from_memory(self.session, season, item["id"])
+            episode = Episode.get_from_memory(self.session, season, item.id)
             if not self._episode_is_outdated(
                 episode,
                 season.key,
@@ -92,19 +92,18 @@ class UpsertMixin(FileMixin, register=False):
             ):
                 continue
 
-            video = item["video"]
             new_episode = Episode(
-                key=item["id"],
-                name=item["title"],
-                url=self.build_url(item["url"]),
-                description=item["description"],
-                image_url=self._get_image_url(item["images"]),
-                air_date=first_broadcasted_at(item),
-                duration=video["duration"],
+                key=item.id,
+                name=item.title,
+                url=self.build_url(item.url),
+                description=item.description,
+                image_url=self._get_image_url(item.images),
+                air_date=item.first_broadcasted_at,
+                duration=item.video.duration,
                 sort_order=sort_order,
                 episode_number=sort_order + 1,
                 data_timestamp=self.episode_data_timestamp(
-                    item["id"],
+                    item.id,
                     season.key,
                     show_key,
                 ),

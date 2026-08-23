@@ -17,20 +17,6 @@ from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.shows.models import Show
 from app.shows.schemas import TmdbEpisodeGroupOption
 
-_TMDB_MEDIA_TYPES = {
-    "Movie": MediaType.movie,
-    "Series": MediaType.tv,
-    "TV Show": MediaType.tv,
-}
-"""Which TMDB media type each of a show's own media types is searched under.
-
-A media type TMDB has no half of - a channel, a video, a concert - is not
-searched for at all.
-"""
-
-_LOOKUPS_IN_FLIGHT = "canonical_show_lookups"
-"""Where a session keeps the shows it is in the middle of searching for."""
-
 _TMDB_TITLE_URL = re.compile(r"themoviedb\.org/(?:movie|tv)/(?P<tmdb_id>\d+)")
 
 
@@ -56,8 +42,6 @@ def find_and_add_canonical_show(
     here, because the episodes just written include ones the canonical show it is
     already linked to has never been read against.
     """
-    if not (canonical_show or show.canonical_shows):
-        canonical_show = _searched_show(session, show)
     if canonical_show:
         add_canonical_show(session, show, canonical_show)
     EpisodeLinker(session, show).link_show()
@@ -418,31 +402,3 @@ def validate_extra(
     if group_id not in known:
         message = f"TMDB holds no episode order {group_id!r} for this show."
         raise HTTPException(status_code=422, detail=message)
-
-
-# TODO: Validate
-def _searched_show(session: Session, show: Show) -> Show | None:
-    """Return the TMDB show matching this show's own name, where there is one.
-
-    Searched on the show's own name, year and media type rather than on anything
-    only its source could answer, so every show is searched the same way and one
-    with no name is not searched at all.
-    """
-    media_type = _TMDB_MEDIA_TYPES.get(show.media_type or "")
-    if media_type is None or not show.name:
-        return None
-
-    # Held for as long as the search runs, because finding a match imports it and
-    # importing it writes shows, which is what asks for a match again.
-    in_flight: set[uuid.UUID] = session.info.setdefault(_LOOKUPS_IN_FLIGHT, set())
-    if show.id in in_flight:
-        return None
-    in_flight.add(show.id)
-    try:
-        # Imported here rather than at the top of the module because the plugin
-        # is built on the base every plugin is, which reads this module in turn.
-        from plugins.TMDB import TMDB  # noqa: PLC0415
-
-        return TMDB(session).import_search(show.name, media_type, show.year)
-    finally:
-        in_flight.discard(show.id)

@@ -24,21 +24,21 @@ class MediaInfoMixin(HelperMixin, register=False):
         content_file = self.content_file(media_identifier)
         content_file.download_if_outdated(tz_datetime.now() - _CONTENT_MAX_AGE)
         content = content_file.parsed()
-        is_movie = content["type"] == MOVIE_TYPE
+        is_movie = content.type == MOVIE_TYPE
         episodes = self._show_episodes(media_identifier)
         return PluginMediaInfo(
-            title=content["title"],
-            media_type=content["type"],
-            overview=content.get("description"),
-            poster_url=content["imageMap"]["detailPoster"]["path"],
-            backdrop_url=content["imageMap"]["detailBackground"]["path"],
-            year=content["releaseYear"],
+            title=content.title,
+            media_type="Movie" if is_movie else "TV Show",
+            overview=content.description,
+            poster_url=content.image_map.detail_poster.path,
+            backdrop_url=content.image_map.detail_background.path,
+            year=content.release_year,
             number_of_seasons=(
                 None if is_movie else len(self._season_numbers(media_identifier))
             ),
             number_of_episodes=None if is_movie else len(episodes),
-            runtime=content.get("runTimeSeconds"),
-            genres=content["genres"],
+            runtime=content.run_time_seconds,
+            genres=content.genres,
             providers=[
                 PluginWatchProviderItem(
                     name=self.plugin_name(),

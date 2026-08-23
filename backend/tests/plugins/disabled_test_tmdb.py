@@ -1,19 +1,13 @@
 # TODO: Validate
-from typing import override
 
-from sqlmodel import Session, col, select
 
-from app.episodes.models import Episode
 from plugins.TMDB import TMDB
-from plugins.utils.abstract_plugin import URLImportResult
-from plugins.utils.base_plugin import BasePlugin
 from tests.plugins.plugin_validator_alt import (
     PluginValidatorAlt,
     UpdatePluginTestsAlt,
     UpdateTestsAlt,
     URLTestsAlt,
 )
-from tests.plugins.plugin_validator_alt.log_stats import log_stats
 
 SEPARATOR = "/"
 """What separates the keys naming where an episode sits."""

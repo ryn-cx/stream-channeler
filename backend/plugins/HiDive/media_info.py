@@ -4,10 +4,12 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Any, override
+from typing import override
+
+from diving_board.series import models as series_models
 
 from app.utils import tz_datetime
-from plugins.HiDive import api
+from plugins.HiDive.files import vod_hero
 from plugins.HiDive.helpers import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE, HelperMixin
 from plugins.utils.abstract_plugin import PluginMediaInfo, PluginWatchProviderItem
 
@@ -20,6 +22,12 @@ _MOVIE_IDENTIFIER_PREFIX = "VOD"
 # TODO: Validate
 class MediaInfoMixin(HelperMixin, register=False):
     """Reading a title back for the result it was found as."""
+
+    # TODO: Validate
+    @override
+    def _media_identifier(self, show_key: str) -> str:
+        prefix = _MOVIE_IDENTIFIER_PREFIX if self._is_movie() else "SERIES"
+        return f"{prefix}#{show_key}"
 
     # TODO: Validate
     @override
@@ -36,12 +44,12 @@ class MediaInfoMixin(HelperMixin, register=False):
         series_data = series_file.parsed()
         seasons = self._series_season_items(series_data)
         return PluginMediaInfo(
-            title=series_data["metadata"]["series"]["title"],
+            title=series_data.metadata.series.title,
             media_type=SERIES_MEDIA_TYPE,
             overview=_series_description(series_data),
             poster_url=self._series_image_url(series_data),
             number_of_seasons=len(seasons),
-            number_of_episodes=sum(season["episodeCount"] for season in seasons),
+            number_of_episodes=sum(season.episode_count for season in seasons),
             providers=[self._own_provider(self._show_url(show_key))],
         )
 
@@ -49,13 +57,13 @@ class MediaInfoMixin(HelperMixin, register=False):
     def _movie_media_info(self, show_key: str) -> PluginMediaInfo:
         vod_file = self.vod_file(show_key)
         vod_file.download_if_outdated(tz_datetime.now() - _DETAIL_MAX_AGE)
-        hero = api.extract_hero(vod_file.parsed())
+        hero = vod_hero(vod_file.parsed())
         release_date = self._release_date(hero)
         return PluginMediaInfo(
             title=self._movie_title(hero),
             media_type=MOVIE_MEDIA_TYPE,
             overview=self._movie_description(hero),
-            poster_url=hero["attributes"]["image"]["attributes"]["source"],
+            poster_url=self._hero_image_url(hero),
             year=release_date.year if release_date else None,
             runtime=self._movie_duration(hero),
             providers=[
@@ -77,11 +85,10 @@ class MediaInfoMixin(HelperMixin, register=False):
 
 
 # TODO: Validate
-def _series_description(series_data: dict[str, Any]) -> str | None:
+def _series_description(series_data: series_models.SeriesModel) -> str | None:
     """Return what the series is about, from the first block of text about it."""
-    for element in series_data["elements"]:
-        for content in element["attributes"].get("content") or []:
-            if content["attributes"].get("text"):
-                text: str = content["attributes"]["text"]
-                return text
+    for element in series_data.elements:
+        for content in element.attributes.content or []:
+            if content.attributes.text:
+                return content.attributes.text
     return None

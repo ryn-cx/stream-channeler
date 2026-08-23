@@ -6,52 +6,51 @@ their episodes all come out of the one file the title is downloaded as.
 """
 
 from collections.abc import Sequence
-from typing import Any, override
+from functools import cache
+from typing import Any, ClassVar, override
 
+from meshfilm import Meshfilm
+from meshfilm.lodp_title_and_plans_page import LodpTitleAndPlansPage
+from meshfilm.lodp_title_and_plans_page.models import (
+    LodpTitleAndPlansPageModel,
+)
+from meshfilm.lodp_title_and_plans_page.models import Node as SeasonNode
+from meshfilm.lodp_title_and_plans_page.models import Node1 as EpisodeNode
+from meshfilm.lodp_title_and_plans_page.models import Video1 as TitleVideo
+from meshfilm.search_page_results import SearchPageResults
+from meshfilm.search_page_results.models import SearchPageResultsModel
 from sqlmodel import Session
 
 from app.plugins.models import Plugin
-from plugins.Netflix import api
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import BaseFile, EndpointJSON
+from plugins.utils.base_plugin.files import BaseFile, EndpointFile
+from plugins.utils.get_around_client import get_around_client
 
 
 # TODO: Validate
-class NetflixJSON(EndpointJSON[dict[str, Any]]):
-    """A file holding one Netflix GraphQL response."""
-
-    # TODO: Validate
-    @override
-    def _parse(self, raw: Any) -> dict[str, Any]:
-        return self.raise_if_not_is_instance(raw, dict)
-
-    # TODO: Validate
-    @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            try:
-                response = self._fetch()
-            except Exception as error:
-                if not self._is_acceptable_error(error):
-                    raise
-                self.write(None, self.acceptable_error_extra_value())
-            else:
-                self.write(response)
+@cache
+def meshfilm() -> Meshfilm:
+    """Return a cached Meshfilm client."""
+    return Meshfilm(get_around_client=get_around_client())
 
 
 # TODO: Validate
-class Title(NetflixJSON):
+class Title(EndpointFile[LodpTitleAndPlansPageModel]):
     """Title file."""
 
+    API_ENDPOINT: ClassVar[LodpTitleAndPlansPage] = meshfilm().lodp_title_and_plans_page
+
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.lodp_title_and_plans_page(self.unique_identifier)
+    def _download_file(self) -> str:
+        return self.API_ENDPOINT.download(int(self.unique_identifier))
 
 
 # TODO: Validate
-class Search(NetflixJSON):
+class Search(EndpointFile[SearchPageResultsModel]):
     """Search file."""
+
+    API_ENDPOINT: ClassVar[SearchPageResults] = meshfilm().search_page_results
 
     # TODO: Validate
     def __init__(
@@ -68,8 +67,8 @@ class Search(NetflixJSON):
 
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.search_page_results(self.query, self.cursor or None)
+    def _download_file(self) -> str:
+        return self.API_ENDPOINT.download(self.query, self.cursor or None)
 
 
 # TODO: Validate
@@ -87,14 +86,10 @@ class FileMixin(BasePlugin, register=False):
         return self._file(Search, query, cursor or "")
 
     # TODO: Validate
-    def _title_video(self, show_key: str) -> dict[str, Any]:
+    def _title_video(self, show_key: str) -> TitleVideo:
         parsed = self.title_file(show_key).parsed()
         video = next(
-            (
-                video
-                for video in parsed["data"]["videos"]
-                if video["videoId"] == int(show_key)
-            ),
+            (video for video in parsed.data.videos if video.video_id == int(show_key)),
             None,
         )
         if video is None:
@@ -104,24 +99,24 @@ class FileMixin(BasePlugin, register=False):
 
     # TODO: Validate
     def _is_movie(self, show_key: str) -> bool:
-        return self._title_video(show_key)["__typename"] == "Movie"
+        return self._title_video(show_key).field__typename == "Movie"
 
     # TODO: Validate
-    def _ordered_seasons(self, show_key: str) -> list[dict[str, Any]]:
-        seasons = self._title_video(show_key).get("seasons")
+    def _ordered_seasons(self, show_key: str) -> list[SeasonNode]:
+        seasons = self._title_video(show_key).seasons
         if seasons is None:
             return []
-        return [edge["node"] for edge in seasons["edges"]]
+        return [edge.node for edge in seasons.edges]
 
     # TODO: Validate
     def _season_episodes(
         self,
         show_key: str,
         season_id: int,
-    ) -> list[dict[str, Any]]:
+    ) -> list[EpisodeNode]:
         for season in self._ordered_seasons(show_key):
-            if season["videoId"] == season_id:
-                return [edge["node"] for edge in season["episodes"]["edges"]]
+            if season.video_id == season_id:
+                return [edge.node for edge in season.episodes.edges]
         return []
 
     # TODO: Validate
@@ -170,7 +165,7 @@ class FileMixin(BasePlugin, register=False):
         if self._is_movie(show_key):
             return [self._season_key(show_key, show_key)]
         return [
-            self._season_key(show_key, season["videoId"])
+            self._season_key(show_key, season.video_id)
             for season in self._ordered_seasons(show_key)
         ]
 
@@ -190,7 +185,7 @@ class FileMixin(BasePlugin, register=False):
                 episode_keys.append(show_key)
             else:
                 episode_keys += [
-                    str(episode["videoId"])
+                    str(episode.video_id)
                     for episode in self._season_episodes(show_key, int(season_id))
                 ]
         return episode_keys

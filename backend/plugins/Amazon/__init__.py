@@ -76,6 +76,16 @@ class Amazon(
             return [result for show in shows for result in handler.import_results(show)]
 
         _cache = self._download_show_files_and_children(show_key)
+        if canonical_show is None:
+            canonical_show = self._tmdb_show(show_key, force=force)
+            if not force and (shows := self._preload_show(show_key).all()):
+                if canonical_show:
+                    for show in shows:
+                        add_canonical_show(self.session, show, canonical_show)
+                return [
+                    result for show in shows for result in handler.import_results(show)
+                ]
+
         results: list[URLImportResult] = []
         for source in self.title_sources(show_key):
             show = self.upsert_show(source, show_key, canonical_show, force=force)

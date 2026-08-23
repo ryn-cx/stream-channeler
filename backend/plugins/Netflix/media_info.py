@@ -27,18 +27,18 @@ class MediaInfoMixin(HelperMixin, register=False):
         is_movie = self._is_movie(media_identifier)
         seasons = self._ordered_seasons(media_identifier)
         return PluginMediaInfo(
-            title=video["title"],
+            title=video.title,
             media_type="Movie" if is_movie else "TV Show",
-            overview=video["shortSynopsis"],
+            overview=video.short_synopsis,
             # Netflix pictures a title by the wide art its own page opens with,
             # and offers nothing shaped like a poster alongside it.
-            backdrop_url=video["billboardOrStoryArt960"]["url"],
-            year=video["latestYear"],
+            backdrop_url=video.billboard_or_story_art960.url,
+            year=video.latest_year,
             number_of_seasons=None if is_movie else len(seasons),
             number_of_episodes=None
             if is_movie
-            else sum(len(season["episodes"]["edges"]) for season in seasons),
-            genres=[edge["node"]["title"] for edge in video["genres"]["edges"]],
+            else sum(len(season.episodes.edges) for season in seasons),
+            genres=[edge.node.title for edge in video.genres.edges],
             providers=[
                 PluginWatchProviderItem(
                     name=self.plugin_name(),

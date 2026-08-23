@@ -1,8 +1,10 @@
 # TODO: Validate
 """What every other part of the plugin reads a title by."""
 
-from typing import Any, override
+from typing import override
 from urllib.parse import quote, quote_plus
+
+from wholoo.movies.models import MoviesModel
 
 from app.shows.models import Show
 from plugins.Hulu.files import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE, FileMixin
@@ -26,13 +28,13 @@ class HelperMixin(FileMixin, register=False):
         )
 
     # TODO: Validate
-    def _movie_data(self, movie_id: str) -> dict[str, Any]:
+    def _movie_model(self, movie_id: str) -> MoviesModel:
         return self.movie_file(movie_id).parsed()
 
     # TODO: Validate
     def _season_name(self, series_id: str, season_number: int) -> str:
         parsed = self.season_file(series_id, season_number).parsed()
-        return str(parsed["series_grouping_metadata"]["groupingName"])
+        return parsed.series_grouping_metadata.grouping_name
 
     # TODO: Validate
     @staticmethod

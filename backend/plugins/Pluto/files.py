@@ -2,46 +2,61 @@
 """The files Pluto TV is read out of."""
 
 from collections.abc import Sequence
-from typing import Any, override
+from functools import cache
+from typing import Any, ClassVar, override
 
-from plugins.Pluto import api
+from notaplanet import NotAPlanet
+from notaplanet.exceptions import NotAPlanetError, SeriesNotFoundError
+from notaplanet.items import Items as ItemsEndpoint
+from notaplanet.items.models import ItemsModel, ItemsModelItem
+from notaplanet.seasons import Seasons as SeasonsEndpoint
+from notaplanet.seasons.models import Episode, Season, SeasonsModel
+
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import BaseFile, EndpointJSON
+from plugins.utils.base_plugin.files import BaseFile, EndpointFile
 from plugins.utils.base_plugin.media_type import MediaTypeMixin
+from plugins.utils.get_around_client import get_around_client
 
 # A movie has no seasons of its own so its single season is given a fixed number.
 _MOVIE_SEASON_NUMBER = 0
 
 
 # TODO: Validate
-class PlutoJSON[T: dict[str, Any] | list[dict[str, Any]]](EndpointJSON[T]):
-    # TODO: Validate
-    @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            try:
-                response = self._fetch()
-            except Exception as error:
-                if not self._is_acceptable_error(error):
-                    raise
-                self.write(None, self.acceptable_error_extra_value())
-            else:
-                self.write(response)
+@cache
+def notaplanet() -> NotAPlanet:
+    """Return a cached NotAPlanet client."""
+    return NotAPlanet(get_around_client=get_around_client())
 
 
 # TODO: Validate
-class ItemsFile(PlutoJSON[list[dict[str, Any]]]):
+class ItemNotFoundError(NotAPlanetError):
+    """Raised when nothing is filed under the requested item id."""
+
+    # TODO: Validate
+    def __init__(self, item_id: str) -> None:
+        """Initialize with the item id that nothing is filed under."""
+        self.item_id = item_id
+        super().__init__(f"No item is filed under {item_id!r}")
+
+
+# TODO: Validate
+class ItemsFile(EndpointFile[ItemsModel]):
     """Items file."""
+
+    API_ENDPOINT: ClassVar[ItemsEndpoint] = notaplanet().items
 
     # TODO: Validate
     @override
-    def _parse(self, raw: Any) -> list[dict[str, Any]]:
-        return self.raise_if_not_is_instance(raw, list)
+    def _download_file(self) -> str:
+        data = self.API_ENDPOINT.download([self.unique_identifier])
+        if not self.API_ENDPOINT.load(data).root:
+            raise ItemNotFoundError(self.unique_identifier)
+        return data
 
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, api.PlutoItemNotFoundError)
+        return isinstance(error, ItemNotFoundError)
 
     # TODO: Validate
     @override
@@ -49,36 +64,23 @@ class ItemsFile(PlutoJSON[list[dict[str, Any]]]):
         """Return what is written down in place of a title that does not exist."""
         return f"Invalid item_id {self.unique_identifier}"
 
-    # TODO: Validate
-    @override
-    def _fetch(self) -> list[dict[str, Any]]:
-        return api.items([self.unique_identifier])
-
 
 # TODO: Validate
-class SeasonsFile(PlutoJSON[dict[str, Any]]):
+class SeasonsFile(EndpointFile[SeasonsModel]):
     """Seasons file."""
 
-    # TODO: Validate
-    @override
-    def _parse(self, raw: Any) -> dict[str, Any]:
-        return self.raise_if_not_is_instance(raw, dict)
+    API_ENDPOINT: ClassVar[SeasonsEndpoint] = notaplanet().seasons
 
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, api.PlutoSeriesNotFoundError)
+        return isinstance(error, SeriesNotFoundError)
 
     # TODO: Validate
     @override
     def acceptable_error_extra_value(self) -> str:
         """Return what is written down in place of a series that does not exist."""
         return f"Invalid series_id {self.unique_identifier}"
-
-    # TODO: Validate
-    @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.seasons(self.unique_identifier)
 
 
 # TODO: Validate
@@ -96,11 +98,11 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
         return self._file(SeasonsFile, series_id)
 
     # TODO: Validate
-    def _item(self, show_key: str) -> dict[str, Any]:
-        return self.items_file(show_key).parsed()[0]
+    def _item(self, show_key: str) -> ItemsModelItem:
+        return self.items_file(show_key).parsed().root[0]
 
     # TODO: Validate
-    def _series(self, show_key: str) -> dict[str, Any]:
+    def _series(self, show_key: str) -> SeasonsModel:
         return self.seasons_file(show_key).parsed()
 
     # TODO: Validate
@@ -111,20 +113,18 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
         return self._media_type_value == "movie"
 
     # TODO: Validate
-    def _seasons(self, show_key: str) -> list[dict[str, Any]]:
-        seasons: list[dict[str, Any]] = self._series(show_key)["seasons"]
-        return seasons
+    def _seasons(self, show_key: str) -> list[Season]:
+        return self._series(show_key).seasons
 
     # TODO: Validate
     def _season_episodes(
         self,
         show_key: str,
         season_number: int,
-    ) -> list[dict[str, Any]]:
+    ) -> list[Episode]:
         for season in self._seasons(show_key):
-            if season["number"] == season_number:
-                episodes: list[dict[str, Any]] = season["episodes"]
-                return episodes
+            if season.number == season_number:
+                return season.episodes
         return []
 
     # TODO: Validate
@@ -183,7 +183,7 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
         if self._is_movie():
             return [self._movie_season_key(show_key)]
         return [
-            self._season_key(show_key, season["number"])
+            self._season_key(show_key, season.number)
             for season in self._seasons(show_key)
         ]
 
@@ -203,7 +203,7 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
                 episode_keys.append(show_key)
             else:
                 episode_keys += [
-                    episode["_id"]
+                    episode.field_id
                     for episode in self._season_episodes(show_key, season_number)
                 ]
         return episode_keys

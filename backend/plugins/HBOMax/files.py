@@ -1,54 +1,57 @@
 # TODO: Validate
 """The files HBO Max is read out of."""
 
-from collections.abc import Sequence
-from typing import Any, override
+from __future__ import annotations
 
-from sqlmodel import Session
+from functools import cache
+from typing import TYPE_CHECKING, Any, ClassVar, override
 
-from app.plugins.models import Plugin
-from plugins.HBOMax import api
+from minbo import MinBO
+from minbo.exceptions import MovieNotFoundError, ShowNotFoundError
+from minbo.movie import Movie as MovieEndpoint
+from minbo.movie.models import Idref14 as MovieContent
+from minbo.movie.models import MovieModel
+from minbo.show import Show as ShowEndpoint
+from minbo.show.models import Episode, Season, ShowModel
+from minbo.show.models import Idref14 as ShowContent
+
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import BaseFile, EndpointJSON
+from plugins.utils.base_plugin.files import BaseFile, EndpointFile
 from plugins.utils.base_plugin.media_type import MediaTypeMixin
+from plugins.utils.get_around_client import get_around_client
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from sqlmodel import Session
+
+    from app.plugins.models import Plugin
 
 
 # TODO: Validate
-class HBOMaxJSON(EndpointJSON[dict[str, Any]]):
-    """A page's __NEXT_DATA__ JSON."""
-
-    # TODO: Validate
-    @override
-    def _parse(self, raw: Any) -> dict[str, Any]:
-        return self.raise_if_not_is_instance(raw, dict)
-
-    # TODO: Validate
-    @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            try:
-                response = self._fetch()
-            except Exception as error:
-                if not self._is_acceptable_error(error):
-                    raise
-                self.write(None, self.acceptable_error_extra_value())
-            else:
-                self.write(response)
+@cache
+def minbo() -> MinBO:
+    """Return a cached MinBO client."""
+    return MinBO(get_around_client=get_around_client())
 
 
 # TODO: Validate
-class ShowFile(HBOMaxJSON):
+class ShowFile(EndpointFile[ShowModel]):
     """Show file."""
 
+    API_ENDPOINT: ClassVar[ShowEndpoint] = minbo().show
+
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.show(self.unique_identifier)
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ShowNotFoundError)
 
 
 # TODO: Validate
-class SeasonFile(HBOMaxJSON):
+class SeasonFile(EndpointFile[ShowModel]):
     """Season file."""
+
+    API_ENDPOINT: ClassVar[ShowEndpoint] = minbo().show
 
     # TODO: Validate
     def __init__(
@@ -65,18 +68,25 @@ class SeasonFile(HBOMaxJSON):
 
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.show(self.show_id, season_number=self.season_number)
-
-
-# TODO: Validate
-class MovieFile(HBOMaxJSON):
-    """Movie file."""
+    def _download_file(self) -> str:
+        return self.API_ENDPOINT.download(self.show_id, self.season_number)
 
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.movie(self.unique_identifier)
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ShowNotFoundError)
+
+
+# TODO: Validate
+class MovieFile(EndpointFile[MovieModel]):
+    """Movie file."""
+
+    API_ENDPOINT: ClassVar[MovieEndpoint] = minbo().movie
+
+    # TODO: Validate
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, MovieNotFoundError)
 
 
 # TODO: Validate
@@ -123,24 +133,17 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
         return f"{season_key}:{episode_number}"
 
     # TODO: Validate
-    @staticmethod
-    def _content(page: dict[str, Any]) -> dict[str, Any]:
-        return api.content(page)
-
-    # TODO: Validate
-    def _show_content(self, show_id: str) -> dict[str, Any]:
-        return self._content(self.show_file(show_id).parsed())
+    def _show_content(self, show_id: str) -> ShowContent:
+        return self.show_file(show_id).parsed().props.page_props.mapped_data.idref14
 
     # TODO: Validate
     def _season_numbers(self, show_id: str) -> list[int]:
-        return [
-            season["seasonNumber"] for season in self._show_content(show_id)["seasons"]
-        ]
+        return [season.season_number for season in self._show_content(show_id).seasons]
 
     # TODO: Validate
-    def _season_entry(self, show_id: str, season_number: int) -> dict[str, Any]:
-        for season in self._show_content(show_id)["seasons"]:
-            if season["seasonNumber"] == season_number:
+    def _season_entry(self, show_id: str, season_number: int) -> Season:
+        for season in self._show_content(show_id).seasons:
+            if season.season_number == season_number:
                 return season
         msg = f"Season {season_number} not found for {show_id}"
         raise ValueError(msg)
@@ -150,14 +153,21 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
         self,
         show_id: str,
         season_number: int,
-    ) -> list[dict[str, Any]]:
-        content = self._content(self.season_file(show_id, season_number).parsed())
-        for season in content["seasons"]:
-            if season["seasonNumber"] == season_number:
-                episodes: list[dict[str, Any]] = season["episodes"]
-                return episodes
+    ) -> list[Episode]:
+        content = (
+            self.season_file(show_id, season_number)
+            .parsed()
+            .props.page_props.mapped_data.idref14
+        )
+        for season in content.seasons:
+            if season.season_number == season_number:
+                return season.episodes
         msg = f"Season {season_number} not found for {show_id}"
         raise ValueError(msg)
+
+    # TODO: Validate
+    def _movie_content(self, movie_id: str) -> MovieContent:
+        return self.movie_file(movie_id).parsed().props.page_props.mapped_data.idref14
 
     # TODO: Validate
     @override
@@ -217,7 +227,7 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
                 episode_keys.append(show_key)
             else:
                 episode_keys += [
-                    self._episode_key(season_key, episode["episodeNumber"])
+                    self._episode_key(season_key, episode.episode_number)
                     for episode in self._season_episodes(show_key, season_number)
                 ]
         return episode_keys

@@ -1,7 +1,7 @@
 # TODO: Validate
 """What every other part of the plugin reads a title by."""
 
-from typing import Any, override
+from typing import override
 from urllib.parse import quote
 
 from app.shows.models import Show
@@ -19,10 +19,6 @@ class HelperMixin(FileMixin, register=False):
             msg = "Show.media_type is not set."
             raise AttributeError(msg)
         self._media_type_value = "movie" if show.media_type == "Movie" else "series"
-
-    # TODO: Validate
-    def _movie_content(self, movie_id: str) -> dict[str, Any]:
-        return self._content(self.movie_file(movie_id).parsed())
 
     # TODO: Validate
     @classmethod
