@@ -22,7 +22,6 @@ import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 import { useInViewport } from "@/hooks/useInViewport"
 import { ManageShowsButton } from "../ChannelDetail/AddUrlsToQueueButton"
 import { ChannelDetailsButton } from "./ChannelDetailsButton"
-import { ChannelShowsButton } from "./ChannelShowsButton"
 import DeleteChannel from "./DeleteChannel"
 import EditChannel from "./EditChannel"
 import EditFavoriteChannel from "./EditFavoriteChannel"
@@ -224,16 +223,11 @@ function ChannelRow({
         )}
         {readOnly ? (
           <>
-            {isAdmin ? (
+            {isAdmin && (
               <ManageShowsButton
                 channelId={channel.id}
                 channelName={channel.name}
                 variant="icon"
-                showLabel={SHOW_BUTTON_LABELS}
-              />
-            ) : (
-              <ChannelShowsButton
-                channelId={channel.id}
                 showLabel={SHOW_BUTTON_LABELS}
               />
             )}

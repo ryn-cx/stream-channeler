@@ -8,6 +8,10 @@ import { ChannelDescriptionMarkdown } from "@/components/Channels/ChannelDetail/
 import { ShowCardsWithInformation } from "@/components/Channels/ShowCardsWithInformation"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import {
+  type TriggerVariant,
+  VariantTrigger,
+} from "@/components/Common/VariantTrigger"
+import {
   Dialog,
   DialogBody,
   DialogContent,
@@ -19,12 +23,14 @@ import {
 
 interface ChannelDetailsButtonProps {
   channel: { id: string; name?: string | null; description?: string | null }
+  variant?: TriggerVariant
   showLabel?: boolean
 }
 
 // TODO: Validate
 export function ChannelDetailsButton({
   channel,
+  variant = "icon",
   showLabel,
 }: ChannelDetailsButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
@@ -50,11 +56,20 @@ export function ChannelDetailsButton({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <TooltipIconButton
-          label="Details"
-          icon={<Info className="size-4" />}
-          showLabel={showLabel}
-        />
+        {variant === "icon" ? (
+          <TooltipIconButton
+            label="Details"
+            icon={<Info className="size-4" />}
+            showLabel={showLabel}
+          />
+        ) : (
+          <VariantTrigger
+            variant={variant}
+            icon={Info}
+            label="Details"
+            iconTitle="Details"
+          />
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[calc(100%-2rem)] max-h-[80vh] flex flex-col">
         <DialogHeader>

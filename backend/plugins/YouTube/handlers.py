@@ -410,7 +410,10 @@ class ChannelURLHandler(YouTubeURLHandler):
     # TODO: Validate
     @override
     def import_results(self, show: Show) -> list[URLImportResult]:
-        return [URLImportResult.for_show(show)]
+        if self.plugin.is_topic_channel(self.show_key):
+            return [URLImportResult.for_show(show)]
+        seasons = [season for season in show.seasons if season.key == self.playlist_key]
+        return [URLImportResult.for_seasons(show, seasons)]
 
 
 # TODO: Validate

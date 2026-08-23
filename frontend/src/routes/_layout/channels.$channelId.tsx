@@ -26,7 +26,7 @@ import {
 import { EpisodeCards } from "@/components/Channels/ChannelDetail/EpisodeCards"
 import { EpisodeFilters } from "@/components/Channels/ChannelDetail/EpisodeFilters"
 import { SaveOrderButton } from "@/components/Channels/ChannelDetail/SaveOrderButton"
-import { ChannelShowsButton } from "@/components/Channels/ChannelList/ChannelShowsButton"
+import { ChannelDetailsButton } from "@/components/Channels/ChannelList/ChannelDetailsButton"
 import EditChannel from "@/components/Channels/ChannelList/EditChannel"
 import { FavoriteChannel } from "@/components/Channels/ChannelList/FavoriteChannel"
 import { ChannelNumber } from "@/components/Channels/ChannelNumber"
@@ -327,7 +327,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
                   combinedChannels={{ isLoggedIn: !!user }}
                 />
               ) : (
-                <ChannelShowsButton channelId={channelId} variant="menu" />
+                <ChannelDetailsButton channel={channel} variant="menu" />
               )}
               <DropdownMenuSeparator />
 
@@ -395,7 +395,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
               combinedChannels={{ isLoggedIn: !!user }}
             />
           ) : (
-            <ChannelShowsButton channelId={channelId} variant="button" />
+            <ChannelDetailsButton channel={channel} variant="button" />
           )}
           <EpisodeFilters
             key={orderPreset?.id ?? "channel"}
