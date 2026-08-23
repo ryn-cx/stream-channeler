@@ -148,7 +148,9 @@ class EpisodeQueryBuilder:
                 ChannelOrder.id == self._channel_options.order_preset_id,
             )
             if order := self._session.exec(query).first():
+                requested_limit = self._channel_options.limit
                 self._channel_options = ChannelOptions.model_validate_json(order.config)
+                self._channel_options.limit = requested_limit
 
     # TODO: Validate
     def _filter_channel_options(
@@ -625,7 +627,19 @@ class EpisodeQueryBuilder:
     ) -> Select[tuple[Episode, UUID]]:
         # Fetch up to the hard cap regardless of the requested limit so that the
         # show counts, which drop episodes after the read, can still fill it.
-        return query.limit(MAX_EPISODES_RETURNED)
+        return query.limit(self._sql_limit())
+
+    # TODO: Validate
+    def _sql_limit(self) -> int:
+        options = self._channel_options
+        if (
+            options.total_shows_count is not None
+            or options.started_shows_count is not None
+            or options.new_shows_count is not None
+        ):
+            return MAX_EPISODES_RETURNED
+        rows_per_episode = max(len(self._channel_ids), 1)
+        return min(self._result_limit() * rows_per_episode, MAX_EPISODES_RETURNED)
 
     # TODO: Validate
     def _filter_disabled_sources(
