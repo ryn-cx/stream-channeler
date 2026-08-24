@@ -56,6 +56,7 @@ class UpsertMixin(FileMixin, register=False):
         if self._season_is_outdated(season, show_key, force=force):
             new_season = Season(
                 key=show_key,
+                season_number=1,
                 sort_order=0,
                 url=show.url,
                 data_timestamp=self.season_data_timestamp(show_key, show_key),
