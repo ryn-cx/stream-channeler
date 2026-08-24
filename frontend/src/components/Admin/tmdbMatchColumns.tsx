@@ -281,6 +281,26 @@ function choiceSummarised(
   }
 }
 
+// TODO: Validate
+function episodeSummarised(row: UnmatchedEpisodeOutput): Summarised {
+  return {
+    source_name: row.source_name,
+    plugin_name: row.plugin_name,
+    source_id: row.source_id,
+    show_id: row.show_id,
+    season_id: row.season_id,
+    show_name: row.show_name,
+    show_year: row.show_year,
+    show_url: row.show_url,
+    season_url: row.season_url,
+    season_number: row.season_number,
+    episode_number: row.episode_number ?? null,
+    absolute_number: row.absolute_number ?? null,
+    name: row.name ?? null,
+    url: row.url ?? null,
+  }
+}
+
 export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
   {
     id: "summary",
@@ -288,7 +308,7 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
     header: "Combined Episode",
     cell: ({ row }) => (
       <MatchSummary
-        record={{ ...row.original, source_id: row.original.source_id }}
+        record={episodeSummarised(row.original)}
         counterpart={row.original.best_match}
       />
     ),
@@ -311,7 +331,7 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
       return (
         <MatchSummary
           record={match}
-          counterpart={row.original}
+          counterpart={episodeSummarised(row.original)}
           note={<AlreadyUsedNote match={nameMatch} />}
           action={
             <TmdbMatchConfirmButton
@@ -342,7 +362,7 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
       return (
         <MatchSummary
           record={match}
-          counterpart={row.original}
+          counterpart={episodeSummarised(row.original)}
           note={<AlreadyUsedNote match={numberMatch} />}
           action={
             <TmdbMatchConfirmButton

@@ -1624,13 +1624,31 @@ export type Token = {
  * a wrong link is only visible next to the TMDB episode it was made against.
  */
 export type UnlockedEpisodeOutput = {
+    key: string;
+    data_timestamp?: (string | null);
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
+    url?: (string | null);
+    name?: (string | null);
+    description?: (string | null);
+    image_url?: (string | null);
+    air_date?: (string | null);
+    episode_number?: (number | null);
+    duration?: (number | null);
+    sort_order?: (number | null);
+    canonical_episode_locked?: boolean;
+    canonical_episode_note?: (string | null);
     id: string;
-    canonical_episode_id: (string | null);
-    canonical_episode_note: (string | null);
-    name: (string | null);
-    episode_number: (number | null);
-    absolute_number: (number | null);
     season_id: string;
+    canonical_episode_id?: (string | null);
+    canonical_episode_ids?: Array<(string)>;
+    linked_sort_order?: (number | null);
+    tmdb_id?: (number | null);
+    canonical_key?: (string | null);
+    absolute_number?: (number | null);
     season_name: (string | null);
     season_number: (number | null);
     show_id: string;
@@ -1641,7 +1659,6 @@ export type UnlockedEpisodeOutput = {
     source_id: string;
     source_name: (string | null);
     plugin_name: (string | null);
-    url: (string | null);
     best_match: (TmdbEpisodeChoice | null);
     number_match: (TmdbEpisodeChoice | null);
     name_matches: boolean;
@@ -1651,13 +1668,31 @@ export type UnlockedEpisodeOutput = {
  * An episode no TMDB record was found for, beside the closest TMDB episode.
  */
 export type UnmatchedEpisodeOutput = {
+    key: string;
+    data_timestamp?: (string | null);
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
+    url?: (string | null);
+    name?: (string | null);
+    description?: (string | null);
+    image_url?: (string | null);
+    air_date?: (string | null);
+    episode_number?: (number | null);
+    duration?: (number | null);
+    sort_order?: (number | null);
+    canonical_episode_locked?: boolean;
+    canonical_episode_note?: (string | null);
     id: string;
-    canonical_episode_id: (string | null);
-    canonical_episode_note: (string | null);
-    name: (string | null);
-    episode_number: (number | null);
-    absolute_number: (number | null);
     season_id: string;
+    canonical_episode_id?: (string | null);
+    canonical_episode_ids?: Array<(string)>;
+    linked_sort_order?: (number | null);
+    tmdb_id?: (number | null);
+    canonical_key?: (string | null);
+    absolute_number?: (number | null);
     season_name: (string | null);
     season_number: (number | null);
     show_id: string;
@@ -1668,7 +1703,6 @@ export type UnmatchedEpisodeOutput = {
     source_id: string;
     source_name: (string | null);
     plugin_name: (string | null);
-    url: (string | null);
     best_match: (TmdbEpisodeChoice | null);
     number_match: (TmdbEpisodeChoice | null);
 };
@@ -2458,6 +2492,7 @@ export type EpisodesGetEpisodesResponse = (EpisodesPublic);
 export type EpisodesAdminGetUnmatchedEpisodesData = {
     filterOptions?: string;
     limit?: number;
+    nonCanonicalShowsOnly?: boolean;
     offset?: number;
     sortOptions?: string;
 };

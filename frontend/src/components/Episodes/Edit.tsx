@@ -77,11 +77,15 @@ type FormOutput = z.output<typeof formSchema>
 
 interface EditEpisodeProps {
   episode: EditableEpisodeFields
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 // TODO: Validate
-const EditEpisode = ({ episode }: EditEpisodeProps) => {
-  const [isOpen, setIsOpen] = useState(false)
+const EditEpisode = ({ episode, open, onOpenChange }: EditEpisodeProps) => {
+  const [isOpenHere, setIsOpenHere] = useState(false)
+  const isOpen = open ?? isOpenHere
+  const setIsOpen = onOpenChange ?? setIsOpenHere
 
   const form = useForm<FormInput, unknown, FormOutput>({
     resolver: zodResolver(formSchema),
@@ -130,11 +134,13 @@ const EditEpisode = ({ episode }: EditEpisodeProps) => {
       open={isOpen}
       onOpenChange={setIsOpen}
       trigger={
-        <TooltipIconButton
-          label="Edit Episode"
-          icon={<Pencil />}
-          onClick={() => setIsOpen(true)}
-        />
+        open === undefined ? (
+          <TooltipIconButton
+            label="Edit Episode"
+            icon={<Pencil />}
+            onClick={() => setIsOpen(true)}
+          />
+        ) : null
       }
       title={episode.name ? `Edit Episode — ${episode.name}` : "Edit Episode"}
       description="Update the episode details below."

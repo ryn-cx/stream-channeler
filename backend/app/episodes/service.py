@@ -20,7 +20,7 @@ from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.canonical_media.episodes import canonical_episode_link, links_of
-from app.canonical_media.filters import is_canonical
+from app.canonical_media.filters import is_canonical, is_non_canonical
 from app.canonical_media.keys import (
     EPISODE_LEVEL,
     tmdb_id_of,
@@ -39,16 +39,17 @@ from app.episodes.name_matching import plaintext, similarity
 from app.episodes.schemas import (
     DuplicatedCanonicalEpisodeOutput,
     DuplicatedLinkEpisodeOutput,
+    EpisodeOutput,
     EpisodeUsingTmdb,
     TmdbEpisodeChoice,
     UnlockedEpisodeOutput,
     UnmatchedEpisodeOutput,
     UnmatchedEpisodesPublic,
+    UnmatchedReadOptions,
 )
 from app.media.media_type import MediaType
 from app.plugins.identifiers import TMDB_PLUGIN_KEY, YOUTUBE_PLUGIN_KEY
 from app.plugins.models import Plugin
-from app.schemas import ReadOptions
 from app.seasons.models import Season
 from app.service import _apply_filter_options, _apply_sort_options
 from app.shows.models import Show, ShowCanonicalShow
@@ -297,7 +298,10 @@ _UNMATCHED_COLUMNS: dict[str, Any] = {
 
 
 # TODO: Validate
-def _unmatched_base() -> SelectOfScalar[Episode]:
+def _unmatched_base(
+    *,
+    non_canonical_shows_only: bool = False,
+) -> SelectOfScalar[Episode]:
     """Every canonical episode of a plugin other than TMDB and YouTube.
 
     The rows the page is drawn from, before anything is sorted, filtered or
@@ -333,6 +337,7 @@ def _unmatched_base() -> SelectOfScalar[Episode]:
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
             col(Show.deleted_at).is_(None),
+            *([is_non_canonical(Show)] if non_canonical_shows_only else []),
         )
     )
 
@@ -446,7 +451,7 @@ def _source_absolute_numbers(
 # TODO: Validate
 def list_unmatched_episodes(
     session: Session,
-    params: ReadOptions,
+    params: UnmatchedReadOptions,
 ) -> UnmatchedEpisodesPublic:
     """Return a page of the canonical episodes outside TMDB and YouTube.
 
@@ -459,13 +464,16 @@ def list_unmatched_episodes(
     worked out by comparing names in Python, which is worth doing for the twenty
     rows being shown and not for every row there is.
     """
+    base = _unmatched_base(
+        non_canonical_shows_only=params.non_canonical_shows_only,
+    )
     filtered = _apply_filter_options(
-        _unmatched_base(),
+        base,
         params.filter_options,
         _UNMATCHED_COLUMNS,
     )
     total_count = session.exec(
-        select(func.count()).select_from(_unmatched_base().subquery()),
+        select(func.count()).select_from(base.subquery()),
     ).one()
     filtered_count = session.exec(
         select(func.count()).select_from(filtered.subquery()),
@@ -515,13 +523,8 @@ def _unmatched_outputs(
 
     return [
         UnmatchedEpisodeOutput(
-            id=episode.id,
-            canonical_episode_id=episode.sole_canonical_episode_id,
-            canonical_episode_note=episode.canonical_episode_note,
-            name=episode.name,
-            episode_number=episode.episode_number,
+            **EpisodeOutput.model_validate(episode).model_dump(),
             absolute_number=source_numbers.get(episode.id),
-            season_id=season.id,
             season_name=season.name,
             season_number=season.season_number,
             show_id=show.id,
@@ -532,7 +535,6 @@ def _unmatched_outputs(
             source_id=source.id,
             source_name=source.name,
             plugin_name=source.plugin.name,
-            url=episode.url,
             best_match=_marked_used(
                 _best_match(
                     episode,
@@ -649,13 +651,8 @@ def list_unlocked_episodes(
         )
         outputs.append(
             UnlockedEpisodeOutput(
-                id=episode.id,
-                canonical_episode_id=episode.sole_canonical_episode_id,
-                canonical_episode_note=episode.canonical_episode_note,
-                name=episode.name,
-                episode_number=episode.episode_number,
+                **EpisodeOutput.model_validate(episode).model_dump(),
                 absolute_number=source_numbers.get(episode.id),
-                season_id=season.id,
                 season_name=season.name,
                 season_number=season.season_number,
                 show_id=show.id,
@@ -666,7 +663,6 @@ def list_unlocked_episodes(
                 source_id=source.id,
                 source_name=source.name,
                 plugin_name=source.plugin.name,
-                url=episode.url,
                 best_match=best_match,
                 number_match=_number_match(
                     episode,

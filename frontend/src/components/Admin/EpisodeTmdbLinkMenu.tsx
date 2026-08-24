@@ -172,6 +172,7 @@ export function TmdbLinkPicker({
   // The episodes still going spare are what a title is usually missing, so they
   // are what is offered until the whole title is asked for.
   const [showUsed, setShowUsed] = useState(false)
+  const [nameDraft, setNameDraft] = useState("")
   const [urlDraft, setUrlDraft] = useState("")
   const { data: choices, isLoading } = useQuery({
     queryKey: ["admin-tmdb-choices", episodeId],
@@ -234,8 +235,14 @@ export function TmdbLinkPicker({
   const agreementWith = (choice: TmdbEpisodeChoice) =>
     numberingAgreement(choice, episodeNumbering)
 
+  const wanted = nameDraft.trim().toLowerCase()
+
   const inScope = (choices ?? []).filter(
-    (choice) => showUsed || !choice.already_used,
+    (choice) =>
+      (showUsed || !choice.already_used) &&
+      (wanted.length === 0 ||
+        choice.name.toLowerCase().includes(wanted) ||
+        choice.show_name.toLowerCase().includes(wanted)),
   )
 
   const ordered = [...inScope].sort(
@@ -255,6 +262,13 @@ export function TmdbLinkPicker({
       </p>
 
       <div className="flex flex-wrap items-center gap-2">
+        <Input
+          value={nameDraft}
+          onChange={(event) => setNameDraft(event.target.value)}
+          placeholder="Filter by name"
+          aria-label="Filter the episodes below by name"
+          className="min-w-48 flex-1"
+        />
         <Tabs
           value={order}
           onValueChange={(value) => setOrder(value as ChoiceOrder)}
@@ -281,7 +295,9 @@ export function TmdbLinkPicker({
           <p className="p-4 text-sm text-muted-foreground">
             {(choices ?? []).length === 0
               ? "No TMDB episodes to choose from. Paste the address of the episode on TMDB to link it and read its title in."
-              : "Every TMDB episode of this title is already used by another episode of this show."}
+              : wanted.length > 0
+                ? "No TMDB episode of this title is named that."
+                : "Every TMDB episode of this title is already used by another episode of this show."}
           </p>
         ) : (
           ordered.map((choice) => (

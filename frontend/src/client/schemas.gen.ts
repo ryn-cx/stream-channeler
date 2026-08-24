@@ -8337,10 +8337,167 @@ export const URLStatusSchema = {
 
 export const UnlockedEpisodeOutputSchema = {
     properties: {
+        key: {
+            type: 'string',
+            minLength: 1,
+            title: 'Key'
+        },
+        data_timestamp: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Extra'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        image_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Image Url'
+        },
+        air_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Air Date'
+        },
+        episode_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Episode Number'
+        },
+        duration: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Duration'
+        },
+        sort_order: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Sort Order'
+        },
+        canonical_episode_locked: {
+            type: 'boolean',
+            title: 'Canonical Episode Locked',
+            default: false
+        },
+        canonical_episode_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Episode Note'
+        },
         id: {
             type: 'string',
             format: 'uuid',
             title: 'Id'
+        },
+        season_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Season Id'
         },
         canonical_episode_id: {
             anyOf: [
@@ -8354,29 +8511,15 @@ export const UnlockedEpisodeOutputSchema = {
             ],
             title: 'Canonical Episode Id'
         },
-        canonical_episode_note: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Episode Note'
+        canonical_episode_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Canonical Episode Ids'
         },
-        name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
-        },
-        episode_number: {
+        linked_sort_order: {
             anyOf: [
                 {
                     type: 'integer'
@@ -8385,7 +8528,29 @@ export const UnlockedEpisodeOutputSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Episode Number'
+            title: 'Linked Sort Order'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
+        },
+        canonical_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Key'
         },
         absolute_number: {
             anyOf: [
@@ -8397,11 +8562,6 @@ export const UnlockedEpisodeOutputSchema = {
                 }
             ],
             title: 'Absolute Number'
-        },
-        season_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Season Id'
         },
         season_name: {
             anyOf: [
@@ -8500,17 +8660,6 @@ export const UnlockedEpisodeOutputSchema = {
                 }
             ],
             title: 'Plugin Name'
-        },
-        url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Url'
         },
         best_match: {
             anyOf: [
@@ -8538,7 +8687,7 @@ export const UnlockedEpisodeOutputSchema = {
         }
     },
     type: 'object',
-    required: ['id', 'canonical_episode_id', 'canonical_episode_note', 'name', 'episode_number', 'absolute_number', 'season_id', 'season_name', 'season_number', 'show_id', 'show_name', 'show_year', 'show_url', 'season_url', 'source_id', 'source_name', 'plugin_name', 'url', 'best_match', 'number_match', 'name_matches'],
+    required: ['key', 'id', 'season_id', 'season_name', 'season_number', 'show_id', 'show_name', 'show_year', 'show_url', 'season_url', 'source_id', 'source_name', 'plugin_name', 'best_match', 'number_match', 'name_matches'],
     title: 'UnlockedEpisodeOutput',
     description: `An episode whose TMDB link no \`User\` has settled, matched or not.
 
@@ -8549,10 +8698,167 @@ a wrong link is only visible next to the TMDB episode it was made against.`
 
 export const UnmatchedEpisodeOutputSchema = {
     properties: {
+        key: {
+            type: 'string',
+            minLength: 1,
+            title: 'Key'
+        },
+        data_timestamp: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Extra'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        image_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Image Url'
+        },
+        air_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Air Date'
+        },
+        episode_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Episode Number'
+        },
+        duration: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Duration'
+        },
+        sort_order: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Sort Order'
+        },
+        canonical_episode_locked: {
+            type: 'boolean',
+            title: 'Canonical Episode Locked',
+            default: false
+        },
+        canonical_episode_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Episode Note'
+        },
         id: {
             type: 'string',
             format: 'uuid',
             title: 'Id'
+        },
+        season_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Season Id'
         },
         canonical_episode_id: {
             anyOf: [
@@ -8566,29 +8872,15 @@ export const UnmatchedEpisodeOutputSchema = {
             ],
             title: 'Canonical Episode Id'
         },
-        canonical_episode_note: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Episode Note'
+        canonical_episode_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Canonical Episode Ids'
         },
-        name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
-        },
-        episode_number: {
+        linked_sort_order: {
             anyOf: [
                 {
                     type: 'integer'
@@ -8597,7 +8889,29 @@ export const UnmatchedEpisodeOutputSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Episode Number'
+            title: 'Linked Sort Order'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
+        },
+        canonical_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Key'
         },
         absolute_number: {
             anyOf: [
@@ -8609,11 +8923,6 @@ export const UnmatchedEpisodeOutputSchema = {
                 }
             ],
             title: 'Absolute Number'
-        },
-        season_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Season Id'
         },
         season_name: {
             anyOf: [
@@ -8713,17 +9022,6 @@ export const UnmatchedEpisodeOutputSchema = {
             ],
             title: 'Plugin Name'
         },
-        url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Url'
-        },
         best_match: {
             anyOf: [
                 {
@@ -8746,7 +9044,7 @@ export const UnmatchedEpisodeOutputSchema = {
         }
     },
     type: 'object',
-    required: ['id', 'canonical_episode_id', 'canonical_episode_note', 'name', 'episode_number', 'absolute_number', 'season_id', 'season_name', 'season_number', 'show_id', 'show_name', 'show_year', 'show_url', 'season_url', 'source_id', 'source_name', 'plugin_name', 'url', 'best_match', 'number_match'],
+    required: ['key', 'id', 'season_id', 'season_name', 'season_number', 'show_id', 'show_name', 'show_year', 'show_url', 'season_url', 'source_id', 'source_name', 'plugin_name', 'best_match', 'number_match'],
     title: 'UnmatchedEpisodeOutput',
     description: 'An episode no TMDB record was found for, beside the closest TMDB episode.'
 } as const;

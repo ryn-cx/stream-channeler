@@ -1434,6 +1434,7 @@ export class EpisodesService {
      * @param data.filterOptions
      * @param data.offset
      * @param data.limit
+     * @param data.nonCanonicalShowsOnly
      * @returns UnmatchedEpisodesPublic Successful Response
      * @throws ApiError
      */
@@ -1445,7 +1446,8 @@ export class EpisodesService {
                 sort_options: data.sortOptions,
                 filter_options: data.filterOptions,
                 offset: data.offset,
-                limit: data.limit
+                limit: data.limit,
+                non_canonical_shows_only: data.nonCanonicalShowsOnly
             },
             errors: {
                 422: 'Validation Error'

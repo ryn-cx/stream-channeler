@@ -5,18 +5,11 @@ import { useState } from "react"
 
 import type { UnmatchedEpisodeOutput } from "@/client"
 import { EpisodesService } from "@/client"
+import EditEpisode from "@/components/Episodes/Edit"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
-import { TmdbLinkPicker } from "./EpisodeTmdbLinkMenu"
-import { TMDB_MATCHES_QUERY_KEY, useSettleTmdbMatch } from "./tmdbMatchesQuery"
+import { useSettleTmdbMatch } from "./tmdbMatchesQuery"
 
 // TODO: Validate
 /**
@@ -140,25 +133,11 @@ export function TmdbMatchActions({
         it is left to the dialog to mount it: rendering one per row would ask
         for the whole catalogue just to draw the table.
       */}
-      <Dialog open={isPicking} onOpenChange={setIsPicking}>
-        <DialogContent className="sm:max-w-3xl max-h-[85vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>
-              {episode.show_name ?? "Unnamed show"} — TMDB episode link
-            </DialogTitle>
-          </DialogHeader>
-          <DialogBody>
-            <TmdbLinkPicker
-              episodeId={episode.id}
-              name={episode.name}
-              seasonNumber={episode.season_number}
-              episodeNumber={episode.episode_number}
-              informationQueryKey={TMDB_MATCHES_QUERY_KEY}
-              onLinked={() => setIsPicking(false)}
-            />
-          </DialogBody>
-        </DialogContent>
-      </Dialog>
+      <EditEpisode
+        episode={episode}
+        open={isPicking}
+        onOpenChange={setIsPicking}
+      />
     </div>
   )
 }

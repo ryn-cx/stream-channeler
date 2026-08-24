@@ -20,6 +20,7 @@ from app.issue_reports.schemas import IssueReportOutput
 from app.schemas import (
     BaseCreateWithParentAndKey,
     BaseUpdateWithKey,
+    ReadOptions,
     make_model_with_all_fields_optional,
 )
 from app.seasons.models import Season
@@ -194,16 +195,10 @@ class TmdbEpisodeChoice(BaseModel):
 
 
 # TODO: Validate
-class UnmatchedEpisodeOutput(BaseModel):
+class UnmatchedEpisodeOutput(EpisodeOutput):
     """An episode no TMDB record was found for, beside the closest TMDB episode."""
 
-    id: uuid.UUID
-    canonical_episode_id: uuid.UUID | None
-    canonical_episode_note: str | None
-    name: str | None
-    episode_number: int | None
-    absolute_number: int | None
-    season_id: uuid.UUID
+    absolute_number: int | None = None
     season_name: str | None
     season_number: int | None
     show_id: uuid.UUID
@@ -214,12 +209,16 @@ class UnmatchedEpisodeOutput(BaseModel):
     source_id: uuid.UUID
     source_name: str | None
     plugin_name: str | None
-    url: str | None
     best_match: TmdbEpisodeChoice | None
     # The episode TMDB numbers the same way, which is a different question to
     # the one the name asks and often a different episode. Both are offered so
     # a row can be settled on whichever of the two is the one to trust.
     number_match: TmdbEpisodeChoice | None
+
+
+# TODO: Validate
+class UnmatchedReadOptions(ReadOptions):
+    non_canonical_shows_only: bool = False
 
 
 # TODO: Validate

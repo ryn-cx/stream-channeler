@@ -7,6 +7,7 @@ import type {
   VisibilityState,
 } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
+import { Link2, Link2Off } from "lucide-react"
 import { useState } from "react"
 
 import { EpisodesService } from "@/client"
@@ -14,6 +15,7 @@ import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButt
 import { DataTable, serializeTableQuery } from "@/components/Common/DataTable"
 import { DataTableSkeleton } from "@/components/Common/DataTableSkeleton"
 import { PageHeader } from "@/components/Common/PageHeader"
+import { Button } from "@/components/ui/button"
 import { usePersistedJsonState } from "@/hooks/usePersistedState"
 import {
   TMDB_MATCH_DEFAULT_VISIBILITY,
@@ -40,12 +42,14 @@ export function TmdbMatchesAdminTable() {
   })
   const [sortOptions, setSortOptions] = useState<SortingState>([])
   const [filterOptions, setFilterOptions] = useState<ColumnFiltersState>([])
+  const [nonCanonicalShowsOnly, setNonCanonicalShowsOnly] = useState(false)
 
   const params = {
     offset: pagination.pageIndex * pagination.pageSize,
     limit: pagination.pageSize,
     sortOptions,
     filterOptions,
+    nonCanonicalShowsOnly,
   }
 
   const query = useQuery({
@@ -54,6 +58,7 @@ export function TmdbMatchesAdminTable() {
       EpisodesService.adminGetUnmatchedEpisodes({
         offset: params.offset,
         limit: params.limit,
+        nonCanonicalShowsOnly: params.nonCanonicalShowsOnly,
         ...serializeTableQuery(params, tmdbMatchColumns),
       }),
     // The page already on screen is kept while the next one is read, so paging
@@ -81,6 +86,17 @@ export function TmdbMatchesAdminTable() {
       }
     >
       <PageHeader title="TMDB Matches">
+        <Button
+          variant={nonCanonicalShowsOnly ? "default" : "outline"}
+          onClick={() => {
+            setNonCanonicalShowsOnly(!nonCanonicalShowsOnly)
+            setPagination({ ...pagination, pageIndex: 0 })
+          }}
+          title="Show only the episodes of shows linked to a title"
+        >
+          {nonCanonicalShowsOnly ? <Link2 /> : <Link2Off />}
+          {nonCanonicalShowsOnly ? "Linked shows only" : "Every show"}
+        </Button>
         <ColumnVisibilityButton table={table} />
       </PageHeader>
       <div className="px-[4%]">

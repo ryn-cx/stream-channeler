@@ -51,6 +51,7 @@ from app.episodes.schemas import (
     TmdbEpisodeChoice,
     UnlockedEpisodeOutput,
     UnmatchedEpisodesPublic,
+    UnmatchedReadOptions,
 )
 from app.episodes.service import (
     get_duplicated_canonical_episodes,
@@ -262,7 +263,7 @@ def get_show_episodes(
 )
 def admin_get_unmatched_episodes(
     session: SessionDep,
-    read_options: Annotated[ReadOptions, Query()],
+    read_options: Annotated[UnmatchedReadOptions, Query()],
 ) -> UnmatchedEpisodesPublic:
     """Get a page of the canonical `Episode`s outside TMDB and YouTube."""
     return list_unmatched_episodes(session, read_options)
