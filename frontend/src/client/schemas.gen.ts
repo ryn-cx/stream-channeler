@@ -2952,10 +2952,17 @@ export const DuplicatedLinkEpisodeOutputSchema = {
             ],
             title: 'Sort Order'
         },
-        canonical_episode_locked: {
-            type: 'boolean',
-            title: 'Canonical Episode Locked',
-            default: false
+        canonical_episode_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Episode Validated At'
         },
         canonical_episode_note: {
             anyOf: [
@@ -3189,10 +3196,17 @@ export const EpisodeCreateSchema = {
             ],
             title: 'Sort Order'
         },
-        canonical_episode_locked: {
-            type: 'boolean',
-            title: 'Canonical Episode Locked',
-            default: false
+        canonical_episode_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Episode Validated At'
         },
         canonical_episode_note: {
             anyOf: [
@@ -3220,9 +3234,17 @@ export const EpisodeInformationOutputSchema = {
             format: 'uuid',
             title: 'Episode Id'
         },
-        canonical_episode_locked: {
-            type: 'boolean',
-            title: 'Canonical Episode Locked'
+        canonical_episode_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Episode Validated At'
         },
         canonical_episode_note: {
             anyOf: [
@@ -3257,7 +3279,7 @@ export const EpisodeInformationOutputSchema = {
         }
     },
     type: 'object',
-    required: ['episode_id', 'canonical_episode_locked', 'canonical_episode_note', 'issue_reports', 'source', 'tmdb'],
+    required: ['episode_id', 'canonical_episode_validated_at', 'canonical_episode_note', 'issue_reports', 'source', 'tmdb'],
     title: 'EpisodeInformationOutput',
     description: `What the website and TMDB each say about an episode, side by side.
 
@@ -3403,9 +3425,17 @@ export const EpisodeInformationSideSchema = {
             type: 'string',
             title: 'Key'
         },
-        canonical_episode_locked: {
-            type: 'boolean',
-            title: 'Canonical Episode Locked'
+        canonical_episode_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Episode Validated At'
         },
         canonical_episode_note: {
             anyOf: [
@@ -3456,7 +3486,7 @@ export const EpisodeInformationSideSchema = {
         }
     },
     type: 'object',
-    required: ['label', 'name', 'description', 'image_url', 'duration', 'air_date', 'episode_number', 'sort_order', 'season_number', 'season_name', 'show_id', 'show_name', 'url', 'key', 'canonical_episode_locked', 'canonical_episode_note', 'data_timestamp', 'update_at', 'modified_at'],
+    required: ['label', 'name', 'description', 'image_url', 'duration', 'air_date', 'episode_number', 'sort_order', 'season_number', 'season_name', 'show_id', 'show_name', 'url', 'key', 'canonical_episode_validated_at', 'canonical_episode_note', 'data_timestamp', 'update_at', 'modified_at'],
     title: 'EpisodeInformationSide',
     description: "One record's own account of an episode, as the website that holds it has it."
 } as const;
@@ -3599,10 +3629,17 @@ export const EpisodeListOutputSchema = {
             ],
             title: 'Sort Order'
         },
-        canonical_episode_locked: {
-            type: 'boolean',
-            title: 'Canonical Episode Locked',
-            default: false
+        canonical_episode_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Episode Validated At'
         },
         canonical_episode_note: {
             anyOf: [
@@ -3893,10 +3930,17 @@ export const EpisodeOutputSchema = {
             ],
             title: 'Sort Order'
         },
-        canonical_episode_locked: {
-            type: 'boolean',
-            title: 'Canonical Episode Locked',
-            default: false
+        canonical_episode_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Episode Validated At'
         },
         canonical_episode_note: {
             anyOf: [
@@ -4137,10 +4181,17 @@ export const EpisodeUpdateSchema = {
             ],
             title: 'Sort Order'
         },
-        canonical_episode_locked: {
-            type: 'boolean',
-            title: 'Canonical Episode Locked',
-            default: false
+        canonical_episode_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Episode Validated At'
         },
         canonical_episode_note: {
             anyOf: [
@@ -4356,10 +4407,17 @@ export const EpisodeWithDetailsSchema = {
             ],
             title: 'Sort Order'
         },
-        canonical_episode_locked: {
-            type: 'boolean',
-            title: 'Canonical Episode Locked',
-            default: false
+        canonical_episode_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Episode Validated At'
         },
         canonical_episode_note: {
             anyOf: [
@@ -6818,10 +6876,17 @@ export const ShowCreateSchema = {
             ],
             title: 'Year'
         },
-        canonical_show_locked: {
-            type: 'boolean',
-            title: 'Canonical Show Locked',
-            default: false
+        canonical_show_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Show Validated At'
         },
         canonical_show_note: {
             anyOf: [
@@ -6849,9 +6914,17 @@ export const ShowInformationOutputSchema = {
             format: 'uuid',
             title: 'Show Id'
         },
-        canonical_show_locked: {
-            type: 'boolean',
-            title: 'Canonical Show Locked'
+        canonical_show_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Show Validated At'
         },
         editable: {
             type: 'boolean',
@@ -6879,7 +6952,7 @@ export const ShowInformationOutputSchema = {
         }
     },
     type: 'object',
-    required: ['show_id', 'canonical_show_locked', 'editable', 'issue_reports', 'source', 'tmdb'],
+    required: ['show_id', 'canonical_show_validated_at', 'editable', 'issue_reports', 'source', 'tmdb'],
     title: 'ShowInformationOutput',
     description: `What the website and TMDB each say about a show, side by side.
 
@@ -7074,10 +7147,17 @@ export const ShowListPublicSchema = {
             ],
             title: 'Year'
         },
-        canonical_show_locked: {
-            type: 'boolean',
-            title: 'Canonical Show Locked',
-            default: false
+        canonical_show_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Show Validated At'
         },
         canonical_show_note: {
             anyOf: [
@@ -7290,10 +7370,17 @@ export const ShowPublicSchema = {
             ],
             title: 'Year'
         },
-        canonical_show_locked: {
-            type: 'boolean',
-            title: 'Canonical Show Locked',
-            default: false
+        canonical_show_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Show Validated At'
         },
         canonical_show_note: {
             anyOf: [
@@ -7487,10 +7574,17 @@ export const ShowUpdateSchema = {
             ],
             title: 'Year'
         },
-        canonical_show_locked: {
-            type: 'boolean',
-            title: 'Canonical Show Locked',
-            default: false
+        canonical_show_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Show Validated At'
         },
         canonical_show_note: {
             anyOf: [
@@ -8478,10 +8572,17 @@ export const UnlockedEpisodeOutputSchema = {
             ],
             title: 'Sort Order'
         },
-        canonical_episode_locked: {
-            type: 'boolean',
-            title: 'Canonical Episode Locked',
-            default: false
+        canonical_episode_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Episode Validated At'
         },
         canonical_episode_note: {
             anyOf: [
@@ -8839,10 +8940,17 @@ export const UnmatchedEpisodeOutputSchema = {
             ],
             title: 'Sort Order'
         },
-        canonical_episode_locked: {
-            type: 'boolean',
-            title: 'Canonical Episode Locked',
-            default: false
+        canonical_episode_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Episode Validated At'
         },
         canonical_episode_note: {
             anyOf: [
@@ -9147,6 +9255,322 @@ export const UnmatchedSourceOutputSchema = {
     type: 'object',
     required: ['id', 'provider_name', 'plugin_key', 'created_at', 'modified_at', 'show_id', 'show_name'],
     title: 'UnmatchedSourceOutput'
+} as const;
+
+export const UnvalidatedLinkedShowOutputSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Year'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        },
+        image_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Image Url'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
+        }
+    },
+    type: 'object',
+    required: ['id', 'name', 'year', 'url', 'image_url', 'tmdb_id'],
+    title: 'UnvalidatedLinkedShowOutput',
+    description: `One of the canonical shows an unvalidated row stands for.
+
+Enough of the canonical show to judge the link by, since what is being
+settled is whether this row really is that title.`
+} as const;
+
+export const UnvalidatedShowOutputSchema = {
+    properties: {
+        key: {
+            type: 'string',
+            minLength: 1,
+            title: 'Key'
+        },
+        data_timestamp: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Data Timestamp'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
+            additionalProperties: true,
+            type: 'object',
+            title: 'Extra'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        media_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Media Type'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        },
+        image_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Image Url'
+        },
+        year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Year'
+        },
+        canonical_show_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Show Validated At'
+        },
+        canonical_show_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Show Note'
+        },
+        source_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Source Id'
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        canonical_show_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Show Id'
+        },
+        canonical_show_ids: {
+            items: {
+                type: 'string',
+                format: 'uuid'
+            },
+            type: 'array',
+            title: 'Canonical Show Ids'
+        },
+        tmdb_id: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Id'
+        },
+        username: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Username'
+        },
+        source_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Name'
+        },
+        plugin_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Plugin Id'
+        },
+        plugin_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Plugin Name'
+        },
+        linked_shows: {
+            items: {
+                '$ref': '#/components/schemas/UnvalidatedLinkedShowOutput'
+            },
+            type: 'array',
+            title: 'Linked Shows'
+        },
+        episode_count: {
+            type: 'integer',
+            title: 'Episode Count'
+        },
+        created_at: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Created At'
+        }
+    },
+    type: 'object',
+    required: ['key', 'source_id', 'id', 'username', 'source_name', 'plugin_id', 'plugin_name', 'linked_shows', 'episode_count', 'created_at'],
+    title: 'UnvalidatedShowOutput',
+    description: `A \`Show\` whose canonical shows no \`User\` has validated.
+
+Both kinds of row are listed. A row linked to a title is here so the link can
+be confirmed or taken off, and a row that is its own record is here so that
+TMDB having no counterpart for it can be confirmed as well, which is the same
+decision made about a different answer.`
 } as const;
 
 export const UpdatePasswordSchema = {
@@ -9952,10 +10376,17 @@ export const WhitelistEpisodeLinkOutputSchema = {
             ],
             title: 'Sort Order'
         },
-        canonical_episode_locked: {
-            type: 'boolean',
-            title: 'Canonical Episode Locked',
-            default: false
+        canonical_episode_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Episode Validated At'
         },
         canonical_episode_note: {
             anyOf: [
@@ -10206,10 +10637,17 @@ export const WhitelistEpisodeOutputSchema = {
             ],
             title: 'Sort Order'
         },
-        canonical_episode_locked: {
-            type: 'boolean',
-            title: 'Canonical Episode Locked',
-            default: false
+        canonical_episode_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Episode Validated At'
         },
         canonical_episode_note: {
             anyOf: [
@@ -10696,10 +11134,17 @@ export const WhitelistShowOutputSchema = {
             ],
             title: 'Year'
         },
-        canonical_show_locked: {
-            type: 'boolean',
-            title: 'Canonical Show Locked',
-            default: false
+        canonical_show_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Show Validated At'
         },
         canonical_show_note: {
             anyOf: [

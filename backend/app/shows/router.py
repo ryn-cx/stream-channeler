@@ -43,16 +43,19 @@ from app.shows.schemas import (
     ShowTmdbUrlInput,
     ShowUpdate,
     TmdbEpisodeGroupOption,
+    UnvalidatedShowOutput,
 )
 from app.shows.service import (
     canonicalize_show,
     force_update_show,
     list_tmdb_episode_groups,
+    list_unvalidated_shows,
     relink_show,
     set_canonical_show,
     set_canonical_show_using_tmdb_url,
     unset_canonical_show,
     update_show_extra,
+    validate_show,
 )
 from app.sources.dependencies import EditableSource, ReadableSource
 from app.sources.models import Source
@@ -160,6 +163,19 @@ def get_plugin_shows(
 
 
 # TODO: Validate
+@shows_router.get(
+    "/unvalidated",
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def admin_get_unvalidated_shows(
+    session: SessionDep,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 200,
+) -> list[UnvalidatedShowOutput]:
+    """Get every `Show` whose canonical shows no `User` has validated."""
+    return list_unvalidated_shows(session, limit)
+
+
+# TODO: Validate
 def _information_side(label: str, show: Show, url: str | None) -> ShowInformationSide:
     return ShowInformationSide(
         label=label,
@@ -202,7 +218,7 @@ def get_show_information(
 
     return ShowInformationOutput(
         show_id=show.id,
-        canonical_show_locked=show.canonical_show_locked,
+        canonical_show_validated_at=show.canonical_show_validated_at,
         editable=editable,
         issue_reports=list_show_issue_reports(session, show.id),
         source=_information_side(
@@ -310,6 +326,16 @@ def admin_unlink_show_from_canonical(
 )
 def admin_canonicalize_show(session: SessionDep, show: EditableShow) -> ShowPublic:
     return _show_output(canonicalize_show(session, show))
+
+
+# TODO: Validate
+@shows_router.post(
+    "/{show_id}/validate",  # noqa: FAST003 - Used by EditableShow.
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def admin_validate_show(session: SessionDep, show: EditableShow) -> ShowPublic:
+    """Settle the canonical shows a `Show` stands for as the right ones."""
+    return _show_output(validate_show(session, show))
 
 
 # TODO: Validate

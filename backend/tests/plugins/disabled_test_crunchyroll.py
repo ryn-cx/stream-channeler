@@ -209,7 +209,7 @@ class TestEpisodeGroupNameMatching(
         show = self.crunchyroll_show(session_with_files)
         for episode in self.crunchyroll_episodes(session_with_files):
             episode.canonical_episode = None
-            episode.canonical_episode_locked = False
+            episode.canonical_episode_validated_at = None
             episode.canonical_episode_note = None
         session_with_files.flush()
 

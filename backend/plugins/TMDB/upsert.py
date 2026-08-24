@@ -27,6 +27,7 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.users.models import User
+from app.utils import tz_datetime
 from plugins.TMDB.files import (
     SeasonSource,
     air_datetime,
@@ -154,6 +155,7 @@ class UpsertMixin(HelperMixin, register=False):
                 media_type="TV Show",
                 data_timestamp=data_timestamp,
                 update_at=data_timestamp + CHANGES_INTERVAL,
+                canonical_show_validated_at=tz_datetime.now(),
                 source_id=source.id,
             )
             show = self._upsert_show_object(new_show, source, show, show_key)
@@ -264,6 +266,7 @@ class UpsertMixin(HelperMixin, register=False):
                 media_type="Movie",
                 data_timestamp=data_timestamp,
                 update_at=data_timestamp + CHANGES_INTERVAL,
+                canonical_show_validated_at=tz_datetime.now(),
                 source_id=source.id,
             )
             show = self._upsert_show_object(new_show, source, show, show_key)

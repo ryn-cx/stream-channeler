@@ -2,6 +2,7 @@
 """Show models."""
 
 import uuid
+from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar, Self, override
 
 from sqlalchemy import text
@@ -21,6 +22,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 from app.canonical_media.keys import SHOW_LEVEL, tmdb_id_of
 from app.models import (
     BaseMediaMixin,
+    DateTimeField,
     MediaMixin,
     TimestampIdAndHashMixin,
     sortable_field_indexes,
@@ -59,7 +61,7 @@ class BaseCanonicalShow(BaseMediaMixin):
 class BaseShow(BaseCanonicalShow):
     """Base model for a `Show`."""
 
-    canonical_show_locked: bool = Field(default=False)
+    canonical_show_validated_at: datetime | None = DateTimeField(default=None)
     canonical_show_note: str | None = Field(default=None)
 
 
@@ -293,7 +295,7 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
         rows and standing for some itself.
         """
         protected_keys = set(protected_keys or ()) | {
-            "canonical_show_locked",
+            "canonical_show_validated_at",
             "is_canonical",
         }
         return super().upsert(parent, existing_record, protected_keys)

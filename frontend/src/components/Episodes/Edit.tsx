@@ -10,7 +10,6 @@ import {
   EpisodeInformationHero,
   useEpisodeInformation,
 } from "@/components/ChannelCommon/EpisodeInformationHero"
-import { FormCheckboxField } from "@/components/Common/FormCheckboxField"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
@@ -49,7 +48,7 @@ export type EditableEpisodeFields = Pick<
   | "episode_number"
   | "duration"
   | "sort_order"
-  | "canonical_episode_locked"
+  | "canonical_episode_validated_at"
   | "canonical_episode_note"
   | "data_timestamp"
   | "update_at"
@@ -58,7 +57,7 @@ export type EditableEpisodeFields = Pick<
 >
 
 const formSchema = z.object({
-  canonical_episode_locked: z.boolean(),
+  canonical_episode_validated_at: optionalString,
   canonical_episode_note: optionalString,
   deleted_at: optionalString,
   extra: optionalString,
@@ -109,7 +108,8 @@ const EditEpisode = ({ episode, open, onOpenChange }: EditEpisodeProps) => {
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
-      canonical_episode_locked: episode.canonical_episode_locked ?? false,
+      canonical_episode_validated_at:
+        episode.canonical_episode_validated_at?.slice(0, 16) ?? "",
       canonical_episode_note: episode.canonical_episode_note ?? "",
       deleted_at: episode.deleted_at?.slice(0, 16) ?? "",
       extra: extraText(episode.extra),
@@ -183,17 +183,22 @@ const EditEpisode = ({ episode, open, onOpenChange }: EditEpisodeProps) => {
         canonicalEpisodeIds={canonicalEpisodeIds}
         seasonNumber={null}
         episodeNumber={episode.episode_number ?? null}
-        canonicalEpisodeLocked={form.watch("canonical_episode_locked")}
+        canonicalEpisodeValidatedAt={form.watch(
+          "canonical_episode_validated_at",
+        )}
         enabled={isOpen}
         onVerified={() => {
-          form.setValue("canonical_episode_locked", true)
+          form.setValue(
+            "canonical_episode_validated_at",
+            new Date().toISOString().slice(0, 16),
+          )
           form.setValue("canonical_episode_note", VERIFIED_NOTE)
         }}
         onLinksChanged={(linked) => {
           setCanonicalEpisodeIds(linked.canonical_episode_ids ?? [])
           form.setValue(
-            "canonical_episode_locked",
-            linked.canonical_episode_locked ?? false,
+            "canonical_episode_validated_at",
+            linked.canonical_episode_validated_at?.slice(0, 16) ?? "",
           )
           form.setValue(
             "canonical_episode_note",
@@ -293,9 +298,11 @@ const EditEpisode = ({ episode, open, onOpenChange }: EditEpisodeProps) => {
                 />
               </div>
               <div className="sm:col-span-2">
-                <FormCheckboxField
+                <FormTextField
                   control={form.control}
-                  label="Canonical Episode Locked"
+                  label="Canonical Episode Validated At"
+                  type="datetime-local"
+                  showNowButton
                 />
               </div>
               <div className="sm:col-span-2">

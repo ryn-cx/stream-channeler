@@ -80,7 +80,7 @@ class BaseCanonicalEpisode(BaseMediaMixin):
 class BaseEpisode(BaseCanonicalEpisode):
     """Base model for an `Episode`."""
 
-    canonical_episode_locked: bool = Field(default=False)
+    canonical_episode_validated_at: datetime | None = DateTimeField(default=None)
     canonical_episode_note: str | None = Field(default=None)
 
 
@@ -345,7 +345,7 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
             self.key,
         )
         protected_keys = set(protected_keys or ()) | {
-            "canonical_episode_locked",
+            "canonical_episode_validated_at",
             "is_canonical",
         }
         return super().upsert(parent, existing_record, protected_keys)

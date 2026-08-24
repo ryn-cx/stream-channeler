@@ -132,18 +132,11 @@ export const showColumns: ColumnDef<ShowTableData>[] = [
     ),
   },
   {
-    accessorFn: (row) => (row.canonical_show_locked ? "true" : "false"),
-    id: "canonical_show_locked",
-    header: "Link Locked",
-    meta: {
-      filterVariant: "select",
-      filterOptions: [
-        { label: "Yes", value: "true" },
-        { label: "No", value: "false" },
-      ],
-    },
+    accessorKey: "canonical_show_validated_at",
+    header: "Link Validated At",
+    meta: { filterVariant: "dateRange" },
     cell: ({ row }) => (
-      <span>{row.original.canonical_show_locked ? "Yes" : "No"}</span>
+      <DateCell value={row.original.canonical_show_validated_at} />
     ),
   },
   {

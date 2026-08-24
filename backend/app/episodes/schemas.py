@@ -129,7 +129,7 @@ class EpisodeInformationSide(BaseModel):
     show_name: str | None
     url: str | None
     key: str
-    canonical_episode_locked: bool
+    canonical_episode_validated_at: datetime | None
     canonical_episode_note: str | None
     data_timestamp: datetime | None
     update_at: datetime | None
@@ -146,7 +146,7 @@ class EpisodeInformationOutput(BaseModel):
     """
 
     episode_id: uuid.UUID
-    canonical_episode_locked: bool
+    canonical_episode_validated_at: datetime | None
     canonical_episode_note: str | None
     issue_reports: list[IssueReportOutput]
     source: EpisodeInformationSide

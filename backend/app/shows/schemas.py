@@ -124,7 +124,7 @@ class ShowInformationOutput(BaseModel):
     """
 
     show_id: uuid.UUID
-    canonical_show_locked: bool
+    canonical_show_validated_at: datetime | None
     editable: bool
     issue_reports: list[IssueReportOutput]
     source: ShowInformationSide
@@ -179,3 +179,34 @@ class CanonicalShowsPublic(BaseModel):
     total_count: int
     filtered_count: int
     is_server_side: bool
+
+
+# TODO: Validate
+class UnvalidatedLinkedShowOutput(BaseModel):
+    """One of the canonical shows an unvalidated row stands for.
+
+    Enough of the canonical show to judge the link by, since what is being
+    settled is whether this row really is that title.
+    """
+
+    id: uuid.UUID
+    name: str | None
+    year: int | None
+    url: str | None
+    image_url: str | None
+    tmdb_id: int | None
+
+
+# TODO: Validate
+class UnvalidatedShowOutput(ShowListPublic):
+    """A `Show` whose canonical shows no `User` has validated.
+
+    Both kinds of row are listed. A row linked to a title is here so the link can
+    be confirmed or taken off, and a row that is its own record is here so that
+    TMDB having no counterpart for it can be confirmed as well, which is the same
+    decision made about a different answer.
+    """
+
+    linked_shows: list[UnvalidatedLinkedShowOutput]
+    episode_count: int
+    created_at: datetime

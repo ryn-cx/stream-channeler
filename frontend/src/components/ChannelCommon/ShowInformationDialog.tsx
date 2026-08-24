@@ -7,6 +7,7 @@ import { CollapsibleSection } from "@/components/ChannelCommon/CollapsibleSectio
 import { InformationHero } from "@/components/ChannelCommon/InformationHero"
 import {
   ExternalAnchor,
+  formatInformationDate,
   type InformationRows,
   InformationTable,
 } from "@/components/ChannelCommon/InformationTable"
@@ -222,8 +223,8 @@ export function ShowInformationPanel({
 
       <div className="grid items-start gap-4 sm:grid-cols-2">
         <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-          <dt className="text-muted-foreground">Link locked</dt>
-          <dd>{data.canonical_show_locked ? "Yes" : "No"}</dd>
+          <dt className="text-muted-foreground">Link validated at</dt>
+          <dd>{formatInformationDate(data.canonical_show_validated_at)}</dd>
         </dl>
 
         <IssueReportsSection

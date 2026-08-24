@@ -7,7 +7,6 @@ import { z } from "zod"
 
 import { type ShowPublic, ShowsService, type ShowUpdate } from "@/client"
 import { ShowInformationSummary } from "@/components/ChannelCommon/ShowInformationDialog"
-import { FormCheckboxField } from "@/components/Common/FormCheckboxField"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
@@ -38,7 +37,7 @@ import {
 
 const formSchema = z.object({
   year: optionalInt,
-  canonical_show_locked: z.boolean(),
+  canonical_show_validated_at: optionalString,
   canonical_show_note: optionalString,
   deleted_at: optionalString,
   extra: optionalString,
@@ -78,7 +77,8 @@ const EditShow = ({ show, size }: EditShowProps) => {
     criteriaMode: "all",
     defaultValues: {
       year: show.year == null ? "" : String(show.year),
-      canonical_show_locked: show.canonical_show_locked ?? false,
+      canonical_show_validated_at:
+        show.canonical_show_validated_at?.slice(0, 16) ?? "",
       canonical_show_note: show.canonical_show_note ?? "",
       deleted_at: show.deleted_at?.slice(0, 16) ?? "",
       extra: extraText(show.extra),
@@ -212,9 +212,11 @@ const EditShow = ({ show, size }: EditShowProps) => {
               label="Canonical Show Note"
               type="text"
             />
-            <FormCheckboxField
+            <FormTextField
               control={form.control}
-              label="Canonical Show Locked"
+              label="Canonical Show Validated At"
+              type="datetime-local"
+              showNowButton
             />
             <FormTextField
               control={form.control}

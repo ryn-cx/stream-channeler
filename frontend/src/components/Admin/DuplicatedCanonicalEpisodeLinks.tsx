@@ -39,9 +39,9 @@ export function DuplicatedCanonicalEpisodeLinks({
               {episode.name ?? "Unnamed"}
             </span>
           )}
-          {episode.canonical_episode_locked ? (
+          {episode.canonical_episode_validated_at ? (
             <span className="shrink-0 text-muted-foreground text-xs">
-              Locked
+              Validated
             </span>
           ) : null}
           <div className="ml-auto shrink-0">

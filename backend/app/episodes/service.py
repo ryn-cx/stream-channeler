@@ -333,7 +333,7 @@ def _unmatched_base(
             # and is locked there, which reads as canonical the same way one
             # nothing has worked out yet does. The lock is what tells them
             # apart, and a settled episode is waiting on nobody.
-            col(Episode.canonical_episode_locked).is_(False),
+            col(Episode.canonical_episode_validated_at).is_(None),
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
             col(Show.deleted_at).is_(None),
@@ -605,7 +605,7 @@ def _unlocked_rows(
         .join(Plugin, onclause=col(Source.plugin_id) == Plugin.id)
         .where(
             Plugin.key != TMDB_PLUGIN_KEY,
-            col(Episode.canonical_episode_locked).is_(False),
+            col(Episode.canonical_episode_validated_at).is_(None),
             _has_tmdb_title(),
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
@@ -846,7 +846,7 @@ def _duplicated_link_pairs(
     limit: int,
 ) -> list[tuple[uuid.UUID, uuid.UUID]]:
     uses = func.count(col(EpisodeCanonicalEpisode.episode_id).distinct())
-    unsettled = func.bool_or(col(Episode.canonical_episode_locked).is_(False))
+    unsettled = func.bool_or(col(Episode.canonical_episode_validated_at).is_(None))
     statement = (
         select(
             col(EpisodeCanonicalEpisode.canonical_episode_id),

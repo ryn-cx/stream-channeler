@@ -443,7 +443,7 @@ def _information_side(
         show_name=show.name,
         url=url,
         key=episode.key,
-        canonical_episode_locked=episode.canonical_episode_locked,
+        canonical_episode_validated_at=episode.canonical_episode_validated_at,
         canonical_episode_note=episode.canonical_episode_note,
         data_timestamp=episode.data_timestamp,
         update_at=episode.update_at,
@@ -489,7 +489,7 @@ def get_episode_information(
 
     return EpisodeInformationOutput(
         episode_id=episode.id,
-        canonical_episode_locked=episode.canonical_episode_locked,
+        canonical_episode_validated_at=episode.canonical_episode_validated_at,
         canonical_episode_note=episode.canonical_episode_note,
         issue_reports=list_episode_issue_reports(session, episode.id),
         source=_information_side(

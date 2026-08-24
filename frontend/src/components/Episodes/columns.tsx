@@ -170,21 +170,11 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
     ),
   },
   {
-    accessorFn: (row) => (row.canonical_episode_locked ? "true" : "false"),
-    id: "canonical_episode_locked",
-    header: "Link Locked",
-    meta: {
-      filterVariant: "select",
-      filterOptions: [
-        { label: "Yes", value: "true" },
-        { label: "No", value: "false" },
-      ],
-    },
-    filterFn: "equalsString",
+    accessorKey: "canonical_episode_validated_at",
+    header: "Link Validated At",
+    meta: { filterVariant: "dateRange" },
     cell: ({ row }) => (
-      <span className="text-muted-foreground">
-        {row.original.canonical_episode_locked ? "Yes" : "No"}
-      </span>
+      <DateCell value={row.original.canonical_episode_validated_at} />
     ),
   },
   {

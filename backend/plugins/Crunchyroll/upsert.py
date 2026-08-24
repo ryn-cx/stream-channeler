@@ -149,6 +149,7 @@ class UpsertMixin(HelperMixin, register=False):
                 url=self._artist_url(show_key),
                 image_url=self._largest_image(artist_data["images"]["poster_wide"]),
                 data_timestamp=self.show_data_timestamp(show_key),
+                canonical_show_validated_at=tz_datetime.now(),
                 source_id=source.id,
             )
             show = self._upsert_show_object(new_show, source, show, show_key)

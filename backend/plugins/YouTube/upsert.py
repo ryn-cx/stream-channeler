@@ -10,6 +10,7 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.shows.service import find_and_add_canonical_show
 from app.sources.models import Source
+from app.utils import tz_datetime
 from plugins.YouTube.files import (
     MusicPlaylistFile,
     get_first_item,
@@ -144,6 +145,9 @@ class UpsertMixin(HelperMixin, register=False):
                 # checking for new playlists and changes to the channel information.
                 update_at=channel_file.data_timestamp + timedelta(days=365),
                 data_timestamp=self.show_data_timestamp(show_key),
+                canonical_show_validated_at=None
+                if self.is_movies_channel(show_key)
+                else tz_datetime.now(),
                 source_id=source.id,
                 image_url=self._best_thumbnail_url(channel_item.snippet.thumbnails),
             )

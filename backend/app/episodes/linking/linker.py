@@ -299,7 +299,7 @@ class EpisodeLinker:
 
         episode = episodes[0]
         canonical_episode = self.canonical_episodes[0]
-        if not episode.canonical_episode_locked:
+        if episode.canonical_episode_validated_at is None:
             self._claim(episode, canonical_episode, "Automatic: Movie match")
         return []
 

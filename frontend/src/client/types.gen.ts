@@ -611,7 +611,7 @@ export type DuplicatedLinkEpisodeOutput = {
     episode_number?: (number | null);
     duration?: (number | null);
     sort_order?: (number | null);
-    canonical_episode_locked?: boolean;
+    canonical_episode_validated_at?: (string | null);
     canonical_episode_note?: (string | null);
     id: string;
     season_id: string;
@@ -642,7 +642,7 @@ export type EpisodeCreate = {
     episode_number?: (number | null);
     duration?: (number | null);
     sort_order?: (number | null);
-    canonical_episode_locked?: boolean;
+    canonical_episode_validated_at?: (string | null);
     canonical_episode_note?: (string | null);
 };
 
@@ -655,7 +655,7 @@ export type EpisodeCreate = {
  */
 export type EpisodeInformationOutput = {
     episode_id: string;
-    canonical_episode_locked: boolean;
+    canonical_episode_validated_at: (string | null);
     canonical_episode_note: (string | null);
     issue_reports: Array<IssueReportOutput>;
     source: EpisodeInformationSide;
@@ -680,7 +680,7 @@ export type EpisodeInformationSide = {
     show_name: (string | null);
     url: (string | null);
     key: string;
-    canonical_episode_locked: boolean;
+    canonical_episode_validated_at: (string | null);
     canonical_episode_note: (string | null);
     data_timestamp: (string | null);
     update_at: (string | null);
@@ -706,7 +706,7 @@ export type EpisodeListOutput = {
     episode_number?: (number | null);
     duration?: (number | null);
     sort_order?: (number | null);
-    canonical_episode_locked?: boolean;
+    canonical_episode_validated_at?: (string | null);
     canonical_episode_note?: (string | null);
     id: string;
     season_id: string;
@@ -744,7 +744,7 @@ export type EpisodeOutput = {
     episode_number?: (number | null);
     duration?: (number | null);
     sort_order?: (number | null);
-    canonical_episode_locked?: boolean;
+    canonical_episode_validated_at?: (string | null);
     canonical_episode_note?: (string | null);
     id: string;
     season_id: string;
@@ -791,7 +791,7 @@ export type EpisodeUpdate = {
     episode_number?: (number | null);
     duration?: (number | null);
     sort_order?: (number | null);
-    canonical_episode_locked?: boolean;
+    canonical_episode_validated_at?: (string | null);
     canonical_episode_note?: (string | null);
 };
 
@@ -822,7 +822,7 @@ export type EpisodeWithDetails = {
     episode_number?: (number | null);
     duration?: (number | null);
     sort_order?: (number | null);
-    canonical_episode_locked?: boolean;
+    canonical_episode_validated_at?: (string | null);
     canonical_episode_note?: (string | null);
     id: string;
     season_id: string;
@@ -1324,7 +1324,7 @@ export type ShowCreate = {
     url?: (string | null);
     image_url?: (string | null);
     year?: (number | null);
-    canonical_show_locked?: boolean;
+    canonical_show_validated_at?: (string | null);
     canonical_show_note?: (string | null);
 };
 
@@ -1337,7 +1337,7 @@ export type ShowCreate = {
  */
 export type ShowInformationOutput = {
     show_id: string;
-    canonical_show_locked: boolean;
+    canonical_show_validated_at: (string | null);
     editable: boolean;
     issue_reports: Array<IssueReportOutput>;
     source: ShowInformationSide;
@@ -1374,7 +1374,7 @@ export type ShowListPublic = {
     url?: (string | null);
     image_url?: (string | null);
     year?: (number | null);
-    canonical_show_locked?: boolean;
+    canonical_show_validated_at?: (string | null);
     canonical_show_note?: (string | null);
     source_id: string;
     id: string;
@@ -1404,7 +1404,7 @@ export type ShowPublic = {
     url?: (string | null);
     image_url?: (string | null);
     year?: (number | null);
-    canonical_show_locked?: boolean;
+    canonical_show_validated_at?: (string | null);
     canonical_show_note?: (string | null);
     source_id: string;
     id: string;
@@ -1444,7 +1444,7 @@ export type ShowUpdate = {
     url?: (string | null);
     image_url?: (string | null);
     year?: (number | null);
-    canonical_show_locked?: boolean;
+    canonical_show_validated_at?: (string | null);
     canonical_show_note?: (string | null);
 };
 
@@ -1640,7 +1640,7 @@ export type UnlockedEpisodeOutput = {
     episode_number?: (number | null);
     duration?: (number | null);
     sort_order?: (number | null);
-    canonical_episode_locked?: boolean;
+    canonical_episode_validated_at?: (string | null);
     canonical_episode_note?: (string | null);
     id: string;
     season_id: string;
@@ -1684,7 +1684,7 @@ export type UnmatchedEpisodeOutput = {
     episode_number?: (number | null);
     duration?: (number | null);
     sort_order?: (number | null);
-    canonical_episode_locked?: boolean;
+    canonical_episode_validated_at?: (string | null);
     canonical_episode_note?: (string | null);
     id: string;
     season_id: string;
@@ -1730,6 +1730,59 @@ export type UnmatchedSourceOutput = {
     modified_at: string;
     show_id: string;
     show_name: (string | null);
+};
+
+/**
+ * One of the canonical shows an unvalidated row stands for.
+ *
+ * Enough of the canonical show to judge the link by, since what is being
+ * settled is whether this row really is that title.
+ */
+export type UnvalidatedLinkedShowOutput = {
+    id: string;
+    name: (string | null);
+    year: (number | null);
+    url: (string | null);
+    image_url: (string | null);
+    tmdb_id: (number | null);
+};
+
+/**
+ * A `Show` whose canonical shows no `User` has validated.
+ *
+ * Both kinds of row are listed. A row linked to a title is here so the link can
+ * be confirmed or taken off, and a row that is its own record is here so that
+ * TMDB having no counterpart for it can be confirmed as well, which is the same
+ * decision made about a different answer.
+ */
+export type UnvalidatedShowOutput = {
+    key: string;
+    data_timestamp?: (string | null);
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
+    name?: (string | null);
+    media_type?: (string | null);
+    description?: (string | null);
+    url?: (string | null);
+    image_url?: (string | null);
+    year?: (number | null);
+    canonical_show_validated_at?: (string | null);
+    canonical_show_note?: (string | null);
+    source_id: string;
+    id: string;
+    canonical_show_id?: (string | null);
+    canonical_show_ids?: Array<(string)>;
+    tmdb_id?: (number | null);
+    username: (string | null);
+    source_name: (string | null);
+    plugin_id: string;
+    plugin_name: (string | null);
+    linked_shows: Array<UnvalidatedLinkedShowOutput>;
+    episode_count: number;
+    created_at: string;
 };
 
 export type UpdatePassword = {
@@ -1936,7 +1989,7 @@ export type WhitelistEpisodeLinkOutput = {
     episode_number?: (number | null);
     duration?: (number | null);
     sort_order?: (number | null);
-    canonical_episode_locked?: boolean;
+    canonical_episode_validated_at?: (string | null);
     canonical_episode_note?: (string | null);
     id: string;
     season_id: string;
@@ -1967,7 +2020,7 @@ export type WhitelistEpisodeOutput = {
     episode_number?: (number | null);
     duration?: (number | null);
     sort_order?: (number | null);
-    canonical_episode_locked?: boolean;
+    canonical_episode_validated_at?: (string | null);
     canonical_episode_note?: (string | null);
     id: string;
     season_id: string;
@@ -2051,7 +2104,7 @@ export type WhitelistShowOutput = {
     url?: (string | null);
     image_url?: (string | null);
     year?: (number | null);
-    canonical_show_locked?: boolean;
+    canonical_show_validated_at?: (string | null);
     canonical_show_note?: (string | null);
     source_id: string;
     id: string;
@@ -2937,6 +2990,12 @@ export type ShowsGetShowsData = {
 
 export type ShowsGetShowsResponse = (ShowsPublic);
 
+export type ShowsAdminGetUnvalidatedShowsData = {
+    limit?: number;
+};
+
+export type ShowsAdminGetUnvalidatedShowsResponse = (Array<UnvalidatedShowOutput>);
+
 export type ShowsGetShowInformationData = {
     showId: string;
 };
@@ -2988,6 +3047,12 @@ export type ShowsAdminCanonicalizeShowData = {
 };
 
 export type ShowsAdminCanonicalizeShowResponse = (ShowPublic);
+
+export type ShowsAdminValidateShowData = {
+    showId: string;
+};
+
+export type ShowsAdminValidateShowResponse = (ShowPublic);
 
 export type ShowsAdminRelinkShowEpisodesData = {
     showId: string;

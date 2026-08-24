@@ -6,17 +6,26 @@ import uuid
 from typing import Any
 
 from fastapi import HTTPException
+from sqlalchemy import func
 from sqlmodel import Session, col, select
 
 from app.canonical_media.filters import is_canonical
+from app.canonical_media.keys import SHOW_LEVEL, tmdb_id_of
 from app.canonical_media.service import add_canonical_show
 from app.channels.models import ChannelShow
 from app.episodes.linking import EpisodeLinker
-from app.episodes.models import MANUAL_NOTE_PREFIX
+from app.episodes.models import MANUAL_NOTE_PREFIX, Episode
 from app.media.media_type import MediaType
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
+from app.seasons.models import Season
 from app.shows.models import Show
-from app.shows.schemas import TmdbEpisodeGroupOption
+from app.shows.schemas import (
+    ShowListPublic,
+    TmdbEpisodeGroupOption,
+    UnvalidatedLinkedShowOutput,
+    UnvalidatedShowOutput,
+)
+from app.utils import tz_datetime
 
 _TMDB_TITLE_URL = re.compile(r"themoviedb\.org/(?:movie|tv)/(?P<tmdb_id>\d+)")
 
@@ -76,7 +85,7 @@ def set_canonical_show(
         canonical_show,
         note=f"{MANUAL_NOTE_PREFIX}Selection",
     )
-    show.canonical_show_locked = True
+    show.canonical_show_validated_at = tz_datetime.now()
     session.add(show)
 
     EpisodeLinker(session, show).link_show()
@@ -158,7 +167,7 @@ def canonicalize_show(session: Session, show: Show) -> Show:
     session.expire(show, ["canonical_show_links", "is_canonical"])
 
     _unlink_unlisted_episodes(session, show)
-    show.canonical_show_locked = True
+    show.canonical_show_validated_at = tz_datetime.now()
     show.canonical_show_note = f"{MANUAL_NOTE_PREFIX}Canonicalized"
     session.add(show)
     session.commit()
@@ -213,7 +222,7 @@ def _unlink_unlisted_episodes(session: Session, show: Show) -> None:
             session.expire(episode, ["canonical_episode_links", "is_canonical"])
 
             if not episode.canonical_episode_links:
-                episode.canonical_episode_locked = False
+                episode.canonical_episode_validated_at = None
                 episode.canonical_episode_note = None
                 session.add(episode)
     session.flush()
@@ -347,7 +356,7 @@ def _relink_non_canonical_show(
 ) -> None:
     for season in non_canonical_show.active_children:
         for episode in season.active_children:
-            if episode.canonical_episode_locked:
+            if episode.canonical_episode_validated_at is not None:
                 continue
             for episode_link in list(episode.canonical_episode_links):
                 session.delete(episode_link)
@@ -410,3 +419,67 @@ def validate_extra(
     if group_id not in known:
         message = f"TMDB holds no episode order {group_id!r} for this show."
         raise HTTPException(status_code=422, detail=message)
+
+
+# TODO: Validate
+def validate_show(session: Session, show: Show) -> Show:
+    """Settle the canonical shows a `Show` already stands for as the right ones.
+
+    Nothing about what it stands for changes. A row linked to a title is being
+    said to really be that title, and a row that is its own record is being said
+    to be one TMDB holds no counterpart for, which is one decision about two
+    answers and so one column either way.
+    """
+    show.canonical_show_validated_at = tz_datetime.now()
+    session.add(show)
+    session.commit()
+    session.refresh(show)
+    return show
+
+
+# TODO: Validate
+def list_unvalidated_shows(session: Session, limit: int) -> list[UnvalidatedShowOutput]:
+    """Return every `Show` whose canonical shows no `User` has validated."""
+    shows = session.exec(
+        Show.select_with_user_eager()
+        .where(
+            col(Show.canonical_show_validated_at).is_(None),
+            col(Show.deleted_at).is_(None),
+        )
+        .order_by(col(Show.name))
+        .limit(limit),
+    ).all()
+
+    show_ids = [show.id for show in shows]
+    episode_counts = dict(
+        session.exec(
+            select(Season.show_id, func.count(col(Episode.id)))
+            .join(Episode, onclause=col(Episode.season_id) == Season.id)
+            .where(
+                col(Season.show_id).in_(show_ids),
+                col(Season.deleted_at).is_(None),
+                col(Episode.deleted_at).is_(None),
+            )
+            .group_by(col(Season.show_id)),
+        ).all(),
+    )
+
+    return [
+        UnvalidatedShowOutput(
+            **ShowListPublic.model_validate(show).model_dump(),
+            episode_count=episode_counts.get(show.id, 0),
+            created_at=show.created_at,
+            linked_shows=[
+                UnvalidatedLinkedShowOutput(
+                    id=linked.id,
+                    name=linked.name,
+                    year=linked.year,
+                    url=linked.url,
+                    image_url=linked.image_url,
+                    tmdb_id=tmdb_id_of(linked.key, SHOW_LEVEL),
+                )
+                for linked in show.canonical_shows
+            ],
+        )
+        for show in shows
+    ]

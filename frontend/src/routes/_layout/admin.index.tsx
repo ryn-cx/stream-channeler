@@ -9,6 +9,7 @@ import {
   ListOrdered,
   Radio,
   SearchX,
+  ShieldCheck,
   Tv,
   Unlock,
   Users,
@@ -149,6 +150,22 @@ function AdminIndex() {
               <CardDescription>
                 Every service TMDB lists a title on that neither Watchmode nor a
                 plugin search reached, to be given a URL by hand.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/unvalidated-shows" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShieldCheck className="size-5" />
+                Unvalidated Shows
+              </CardTitle>
+              <CardDescription>
+                Every show whose canonical shows nobody has validated. A row
+                linked to a title is here so the link can be confirmed, and one
+                that is its own record is here so that TMDB having no
+                counterpart for it can be confirmed too.
               </CardDescription>
             </CardHeader>
           </Card>

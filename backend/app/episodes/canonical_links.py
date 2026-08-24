@@ -14,6 +14,7 @@ from app.episodes.models import (
 )
 from app.seasons.models import Season
 from app.shows.models import Show
+from app.utils import tz_datetime
 
 _TMDB_EPISODE_URL = re.compile(
     r"themoviedb\.org/tv/(?P<tmdb_id>\d+)[^/]*"
@@ -137,7 +138,7 @@ def _link_one_episode(
             ),
         )
 
-    episode.canonical_episode_locked = True
+    episode.canonical_episode_validated_at = tz_datetime.now()
     episode.canonical_episode_note = f"{MANUAL_NOTE_PREFIX}Selection"
     session.add(episode)
 
@@ -167,7 +168,7 @@ def unlink_episode(
     _drop_links(session, episode, canonical_episode)
 
     if not episode.canonical_episode_links:
-        episode.canonical_episode_locked = False
+        episode.canonical_episode_validated_at = None
         episode.canonical_episode_note = None
         session.add(episode)
     session.commit()
@@ -188,7 +189,7 @@ def verify_canonical_link(session: Session, episode: Episode) -> Episode:
             detail="The episode is linked to nothing to be verified against",
         )
 
-    episode.canonical_episode_locked = True
+    episode.canonical_episode_validated_at = tz_datetime.now()
     episode.canonical_episode_note = f"{MANUAL_NOTE_PREFIX}Verified"
     session.add(episode)
     session.commit()
@@ -200,7 +201,7 @@ def verify_canonical_link(session: Session, episode: Episode) -> Episode:
 def mark_episode_absent_from_tmdb(session: Session, episode: Episode) -> Episode:
     _drop_links(session, episode)
 
-    episode.canonical_episode_locked = True
+    episode.canonical_episode_validated_at = tz_datetime.now()
     episode.canonical_episode_note = f"{MANUAL_NOTE_PREFIX}Not on TMDB"
     session.add(episode)
     session.commit()

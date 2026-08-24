@@ -19,7 +19,7 @@ interface CanonicalEpisodeFieldProps {
   canonicalEpisodeIds: string[]
   seasonNumber: number | null
   episodeNumber: number | null
-  canonicalEpisodeLocked: boolean
+  canonicalEpisodeValidatedAt: string | null | undefined
   /** Only asked for while the form is open, since each is a query of its own. */
   enabled: boolean
   /** Called once the links have been settled, so a form holding the row's own
@@ -69,7 +69,7 @@ export function CanonicalEpisodeField({
   canonicalEpisodeIds,
   seasonNumber,
   episodeNumber,
-  canonicalEpisodeLocked,
+  canonicalEpisodeValidatedAt,
   enabled,
   onVerified,
   onLinksChanged,
@@ -172,15 +172,15 @@ export function CanonicalEpisodeField({
       {canonicalEpisodeIds.length > 0 ? (
         <Button
           type="button"
-          variant={canonicalEpisodeLocked ? "outline" : "default"}
+          variant={canonicalEpisodeValidatedAt ? "outline" : "default"}
           size="sm"
-          disabled={canonicalEpisodeLocked || verifyMutation.isPending}
+          disabled={
+            Boolean(canonicalEpisodeValidatedAt) || verifyMutation.isPending
+          }
           onClick={() => verifyMutation.mutate()}
         >
           <Check className="h-4 w-4" />
-          {canonicalEpisodeLocked
-            ? "Link verified and locked"
-            : "Verify and lock link"}
+          {canonicalEpisodeValidatedAt ? "Link validated" : "Validate link"}
         </Button>
       ) : null}
       {enabled ? (

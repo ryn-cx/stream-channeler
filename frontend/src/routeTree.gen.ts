@@ -41,6 +41,7 @@ import { Route as LayoutPluginPluginIdRouteImport } from './routes/_layout/plugi
 import { Route as LayoutChannelsBrowseRouteImport } from './routes/_layout/channels.browse'
 import { Route as LayoutChannelsChannelIdRouteImport } from './routes/_layout/channels.$channelId'
 import { Route as LayoutAdminUsersRouteImport } from './routes/_layout/admin.users'
+import { Route as LayoutAdminUnvalidatedShowsRouteImport } from './routes/_layout/admin.unvalidated-shows'
 import { Route as LayoutAdminUnmatchedSourcesRouteImport } from './routes/_layout/admin.unmatched-sources'
 import { Route as LayoutAdminUnlockedEpisodesRouteImport } from './routes/_layout/admin.unlocked-episodes'
 import { Route as LayoutAdminTmdbMatchesRouteImport } from './routes/_layout/admin.tmdb-matches'
@@ -223,6 +224,12 @@ const LayoutAdminUsersRoute = LayoutAdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => LayoutAdminRoute,
 } as any)
+const LayoutAdminUnvalidatedShowsRoute =
+  LayoutAdminUnvalidatedShowsRouteImport.update({
+    id: '/unvalidated-shows',
+    path: '/unvalidated-shows',
+    getParentRoute: () => LayoutAdminRoute,
+  } as any)
 const LayoutAdminUnmatchedSourcesRoute =
   LayoutAdminUnmatchedSourcesRouteImport.update({
     id: '/unmatched-sources',
@@ -383,6 +390,7 @@ export interface FileRoutesByFullPath {
   '/admin/tmdb-matches': typeof LayoutAdminTmdbMatchesRoute
   '/admin/unlocked-episodes': typeof LayoutAdminUnlockedEpisodesRoute
   '/admin/unmatched-sources': typeof LayoutAdminUnmatchedSourcesRoute
+  '/admin/unvalidated-shows': typeof LayoutAdminUnvalidatedShowsRoute
   '/admin/users': typeof LayoutAdminUsersRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/channels/browse': typeof LayoutChannelsBrowseRoute
@@ -436,6 +444,7 @@ export interface FileRoutesByTo {
   '/admin/tmdb-matches': typeof LayoutAdminTmdbMatchesRoute
   '/admin/unlocked-episodes': typeof LayoutAdminUnlockedEpisodesRoute
   '/admin/unmatched-sources': typeof LayoutAdminUnmatchedSourcesRoute
+  '/admin/unvalidated-shows': typeof LayoutAdminUnvalidatedShowsRoute
   '/admin/users': typeof LayoutAdminUsersRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/channels/browse': typeof LayoutChannelsBrowseRoute
@@ -493,6 +502,7 @@ export interface FileRoutesById {
   '/_layout/admin/tmdb-matches': typeof LayoutAdminTmdbMatchesRoute
   '/_layout/admin/unlocked-episodes': typeof LayoutAdminUnlockedEpisodesRoute
   '/_layout/admin/unmatched-sources': typeof LayoutAdminUnmatchedSourcesRoute
+  '/_layout/admin/unvalidated-shows': typeof LayoutAdminUnvalidatedShowsRoute
   '/_layout/admin/users': typeof LayoutAdminUsersRoute
   '/_layout/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/_layout/channels/browse': typeof LayoutChannelsBrowseRoute
@@ -550,6 +560,7 @@ export interface FileRouteTypes {
     | '/admin/tmdb-matches'
     | '/admin/unlocked-episodes'
     | '/admin/unmatched-sources'
+    | '/admin/unvalidated-shows'
     | '/admin/users'
     | '/channels/$channelId'
     | '/channels/browse'
@@ -603,6 +614,7 @@ export interface FileRouteTypes {
     | '/admin/tmdb-matches'
     | '/admin/unlocked-episodes'
     | '/admin/unmatched-sources'
+    | '/admin/unvalidated-shows'
     | '/admin/users'
     | '/channels/$channelId'
     | '/channels/browse'
@@ -659,6 +671,7 @@ export interface FileRouteTypes {
     | '/_layout/admin/tmdb-matches'
     | '/_layout/admin/unlocked-episodes'
     | '/_layout/admin/unmatched-sources'
+    | '/_layout/admin/unvalidated-shows'
     | '/_layout/admin/users'
     | '/_layout/channels/$channelId'
     | '/_layout/channels/browse'
@@ -918,6 +931,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminUsersRouteImport
       parentRoute: typeof LayoutAdminRoute
     }
+    '/_layout/admin/unvalidated-shows': {
+      id: '/_layout/admin/unvalidated-shows'
+      path: '/unvalidated-shows'
+      fullPath: '/admin/unvalidated-shows'
+      preLoaderRoute: typeof LayoutAdminUnvalidatedShowsRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
     '/_layout/admin/unmatched-sources': {
       id: '/_layout/admin/unmatched-sources'
       path: '/unmatched-sources'
@@ -1086,6 +1106,7 @@ interface LayoutAdminRouteChildren {
   LayoutAdminTmdbMatchesRoute: typeof LayoutAdminTmdbMatchesRoute
   LayoutAdminUnlockedEpisodesRoute: typeof LayoutAdminUnlockedEpisodesRoute
   LayoutAdminUnmatchedSourcesRoute: typeof LayoutAdminUnmatchedSourcesRoute
+  LayoutAdminUnvalidatedShowsRoute: typeof LayoutAdminUnvalidatedShowsRoute
   LayoutAdminUsersRoute: typeof LayoutAdminUsersRoute
   LayoutAdminIndexRoute: typeof LayoutAdminIndexRoute
 }
@@ -1102,6 +1123,7 @@ const LayoutAdminRouteChildren: LayoutAdminRouteChildren = {
   LayoutAdminTmdbMatchesRoute: LayoutAdminTmdbMatchesRoute,
   LayoutAdminUnlockedEpisodesRoute: LayoutAdminUnlockedEpisodesRoute,
   LayoutAdminUnmatchedSourcesRoute: LayoutAdminUnmatchedSourcesRoute,
+  LayoutAdminUnvalidatedShowsRoute: LayoutAdminUnvalidatedShowsRoute,
   LayoutAdminUsersRoute: LayoutAdminUsersRoute,
   LayoutAdminIndexRoute: LayoutAdminIndexRoute,
 }
