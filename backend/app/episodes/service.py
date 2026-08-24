@@ -50,6 +50,7 @@ from app.episodes.schemas import (
 from app.media.media_type import MediaType
 from app.plugins.identifiers import TMDB_PLUGIN_KEY, YOUTUBE_PLUGIN_KEY
 from app.plugins.models import Plugin
+from app.schemas import SortOption
 from app.seasons.models import Season
 from app.service import _apply_filter_options, _apply_sort_options
 from app.shows.models import Show, ShowCanonicalShow
@@ -431,6 +432,19 @@ def _source_absolute_numbers(
 
 
 # TODO: Validate
+def _expanded_sort_options(sort_options: list[SortOption]) -> list[SortOption]:
+    expanded: list[SortOption] = []
+    for option in sort_options:
+        expanded.append(option)
+        if option.column == "summary":
+            expanded += [
+                SortOption(id="season_number", desc=option.desc),
+                SortOption(id="episode_number", desc=option.desc),
+            ]
+    return expanded
+
+
+# TODO: Validate
 def list_unmatched_episodes(
     session: Session,
     params: UnmatchedReadOptions,
@@ -463,7 +477,7 @@ def list_unmatched_episodes(
     page = (
         _apply_sort_options(
             filtered,
-            params.sort_options,
+            _expanded_sort_options(params.sort_options),
             _UNMATCHED_COLUMNS,
             Episode.created_at,
             Episode.id,
