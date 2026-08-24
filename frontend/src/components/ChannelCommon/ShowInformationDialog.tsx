@@ -1,5 +1,6 @@
 // TODO: Validate
 import { useQuery } from "@tanstack/react-query"
+import type { ReactNode } from "react"
 import type { ShowInformationOutput, ShowInformationSide } from "@/client"
 import { ShowsService } from "@/client"
 import { AddToChannelButton } from "@/components/ChannelCommon/AddToChannelButton"
@@ -69,6 +70,7 @@ interface ShowInformationPanelProps {
   showId: string
   /** Whether the information is wanted yet, so a collapsed panel fetches nothing. */
   enabled?: boolean
+  children?: ReactNode
 }
 
 // TODO: Validate
@@ -130,6 +132,7 @@ function summaryHero(data: ShowInformationOutput) {
 export function ShowInformationSummary({
   showId,
   enabled = true,
+  children,
 }: ShowInformationPanelProps) {
   const { data, isLoading, error } = useShowInformation(showId, enabled)
 
@@ -149,6 +152,7 @@ export function ShowInformationSummary({
   return (
     <div className="flex flex-col gap-2">
       {summaryHero(data)}
+      {children}
       <AddToChannelButton showId={data.show_id} />
     </div>
   )

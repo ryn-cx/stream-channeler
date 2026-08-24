@@ -1,6 +1,6 @@
 // TODO: Validate
 import { useMutation } from "@tanstack/react-query"
-import { Check, CircleSlash, Hash, ListTree } from "lucide-react"
+import { Check, CircleSlash, Hash, ListOrdered, ListTree } from "lucide-react"
 
 import type { UnmatchedEpisodeOutput } from "@/client"
 import { EpisodesService } from "@/client"
@@ -27,7 +27,7 @@ export function TmdbMatchConfirmButton({
 }: {
   episodeId: string
   match: NonNullable<UnmatchedEpisodeOutput["best_match"]>
-  kind: "name" | "number"
+  kind: "name" | "season_episode" | "absolute"
 }) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const { settle, restore, reread } = useSettleTmdbMatch()
@@ -51,21 +51,34 @@ export function TmdbMatchConfirmButton({
     onSettled: reread,
   })
 
-  const Icon = kind === "name" ? Check : Hash
-  const label = kind === "name" ? "Name Match" : "Number Match"
+  const icons = { name: Check, season_episode: Hash, absolute: ListOrdered }
+  const labels = {
+    name: "Name Match",
+    season_episode: "Number Match",
+    absolute: "Sequential Match",
+  }
+  const Icon = icons[kind]
+  const label = labels[kind]
 
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      className="mt-1"
-      disabled={confirmMutation.isPending}
-      title={`Link to ${match.name ?? `the episode matched by ${kind}`}`}
-      onClick={() => confirmMutation.mutate()}
-    >
-      <Icon className="h-4 w-4" />
-      {label}
-    </Button>
+    <span className="mt-1 flex items-center gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={confirmMutation.isPending}
+        title={`Link to ${match.name ?? `the episode this ${label} offers`}`}
+        onClick={() => confirmMutation.mutate()}
+      >
+        <Icon className="h-4 w-4" />
+        {label}
+      </Button>
+      <span
+        className="text-xs font-medium tabular-nums"
+        style={{ color: `oklch(0.6 0.15 ${25 + match.similarity * 120})` }}
+      >
+        {Math.round(match.similarity * 100)}%
+      </span>
+    </span>
   )
 }
 

@@ -27,6 +27,8 @@ import {
 } from "@/lib/formSchemas"
 import { CanonicalizeShowButton } from "./CanonicalizeShowButton"
 import { CanonicalShowField } from "./CanonicalShowField"
+import { NonCanonicalShowField } from "./NonCanonicalShowField"
+import { NonCanonicalShowLinks } from "./NonCanonicalShowLinks"
 import { RelinkShowButton } from "./RelinkShowButton"
 import {
   episodeGroupIdOf,
@@ -57,16 +59,19 @@ type FormOutput = z.output<typeof formSchema>
 interface EditShowProps {
   show: ShowPublic & { plugin_name?: string | null }
   size?: React.ComponentProps<typeof TooltipIconButton>["size"]
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 // TODO: Validate
-const EditShow = ({ show, size }: EditShowProps) => {
-  const [isOpen, setIsOpen] = useState(false)
+const EditShow = ({ show, size, open, onOpenChange }: EditShowProps) => {
+  const [isOpenHere, setIsOpenHere] = useState(false)
+  const isOpen = open ?? isOpenHere
+  const setIsOpen = onOpenChange ?? setIsOpenHere
   const { user } = useAuth()
   // Only TMDB's own rows carry an episode order, and only an admin sets one.
-  const showsEpisodeOrder =
-    Boolean(user?.is_superuser) &&
-    show.plugin_name === TMDB_EPISODE_ORDER_PLUGIN
+  const isTmdbShow = show.plugin_name === TMDB_EPISODE_ORDER_PLUGIN
+  const showsEpisodeOrder = Boolean(user?.is_superuser) && isTmdbShow
   const [episodeGroupId, setEpisodeGroupId] = useState(() =>
     episodeGroupIdOf(show.extra),
   )
@@ -121,12 +126,14 @@ const EditShow = ({ show, size }: EditShowProps) => {
       open={isOpen}
       onOpenChange={setIsOpen}
       trigger={
-        <TooltipIconButton
-          label="Edit Show"
-          icon={<Pencil />}
-          size={size}
-          onClick={() => setIsOpen(true)}
-        />
+        open === undefined ? (
+          <TooltipIconButton
+            label="Edit Show"
+            icon={<Pencil />}
+            size={size}
+            onClick={() => setIsOpen(true)}
+          />
+        ) : null
       }
       title="Edit Show"
       description="Update the show details below."
@@ -138,20 +145,27 @@ const EditShow = ({ show, size }: EditShowProps) => {
         user?.is_superuser ? <RelinkShowButton showId={show.id} /> : null
       }
     >
-      <ShowInformationSummary showId={show.id} enabled={isOpen} />
-      {user?.is_superuser && (
-        <div className="space-y-3">
-          <CanonicalShowField
-            showId={show.id}
-            canonicalShowIds={show.canonical_show_ids ?? []}
-            enabled={isOpen}
-          />
-          <CanonicalizeShowButton
-            showId={show.id}
-            canonicalShowIds={show.canonical_show_ids ?? []}
-          />
-        </div>
-      )}
+      <ShowInformationSummary showId={show.id} enabled={isOpen}>
+        {isTmdbShow && user?.is_superuser ? (
+          <NonCanonicalShowLinks showId={show.id} enabled={isOpen} />
+        ) : null}
+      </ShowInformationSummary>
+      {user?.is_superuser &&
+        (isTmdbShow ? (
+          <NonCanonicalShowField showId={show.id} />
+        ) : (
+          <div className="space-y-3">
+            <CanonicalShowField
+              showId={show.id}
+              canonicalShowIds={show.canonical_show_ids ?? []}
+              enabled={isOpen}
+            />
+            <CanonicalizeShowButton
+              showId={show.id}
+              canonicalShowIds={show.canonical_show_ids ?? []}
+            />
+          </div>
+        ))}
       {showsEpisodeOrder && (
         <TmdbEpisodeOrderField
           showId={show.id}

@@ -186,67 +186,49 @@ def _best_match(
 
 
 # TODO: Validate
-def _numbers_agree(
-    episode: Episode,
-    season: Season,
-    own_absolute: int | None,
-    candidate: _Candidate,
-    candidate_absolute: int | None,
-) -> bool:
-    """Whether TMDB puts the episode where the website does, by any of its numbers.
-
-    Compared across as well as like for like, since a website that numbers a
-    title straight through calls TMDB's `S2E8` its own episode 57, so its
-    episode number is answered by TMDB's count through the whole title rather
-    than by TMDB's episode number.
-    """
-    candidate_episode, candidate_season, _show = candidate
-    if (
-        season.season_number is not None
-        and episode.episode_number is not None
-        and candidate_season.season_number == season.season_number
-        and candidate_episode.episode_number == episode.episode_number
-    ):
-        return True
-    if (
-        episode.episode_number is not None
-        and episode.episode_number == candidate_absolute
-    ):
-        return True
-    return own_absolute is not None and own_absolute in (
-        candidate_absolute,
-        candidate_episode.episode_number,
-    )
-
-
-# TODO: Validate
-def _number_match(
+def _season_and_episode_match(
     episode: Episode,
     season: Season,
     candidates: list[_Candidate],
     absolute_numbers: dict[uuid.UUID, int],
-    own_absolute: int | None,
 ) -> TmdbEpisodeChoice | None:
-    """Return the TMDB episode numbered where `episode` is, or `None`.
-
-    Read alongside the match made on the name rather than instead of it, since
-    the two disagreeing is the whole of what somebody settling a row is being
-    asked about: a name that matches and a number that does not is a title that
-    reuses its episode names, and the other way round is a website numbering the
-    title its own way.
-    """
     for candidate in candidates:
-        if _numbers_agree(
-            episode,
-            season,
-            own_absolute,
-            candidate,
-            absolute_numbers.get(candidate[0].id),
+        candidate_episode, candidate_season, _show = candidate
+        if (
+            season.season_number is not None
+            and episode.episode_number is not None
+            and candidate_season.season_number == season.season_number
+            and candidate_episode.episode_number == episode.episode_number
         ):
             return _choice(
                 candidate,
                 absolute_numbers,
-                similarity(episode.name, candidate[0].name),
+                similarity(episode.name, candidate_episode.name),
+            )
+    return None
+
+
+# TODO: Validate
+def _absolute_number_match(
+    episode: Episode,
+    candidates: list[_Candidate],
+    absolute_numbers: dict[uuid.UUID, int],
+    own_absolute: int | None,
+) -> TmdbEpisodeChoice | None:
+    for candidate in candidates:
+        candidate_episode = candidate[0]
+        candidate_absolute = absolute_numbers.get(candidate_episode.id)
+        if (
+            episode.episode_number is not None
+            and episode.episode_number == candidate_absolute
+        ) or (
+            own_absolute is not None
+            and own_absolute in (candidate_absolute, candidate_episode.episode_number)
+        ):
+            return _choice(
+                candidate,
+                absolute_numbers,
+                similarity(episode.name, candidate_episode.name),
             )
     return None
 
@@ -545,10 +527,19 @@ def _unmatched_outputs(
                 episode.id,
                 used.get(show.id, {}),
             ),
-            number_match=_marked_used(
-                _number_match(
+            season_episode_match=_marked_used(
+                _season_and_episode_match(
                     episode,
                     season,
+                    candidates.get(show.id, []),
+                    candidate_numbers.get(show.id, {}),
+                ),
+                episode.id,
+                used.get(show.id, {}),
+            ),
+            absolute_number_match=_marked_used(
+                _absolute_number_match(
+                    episode,
                     candidates.get(show.id, []),
                     candidate_numbers.get(show.id, {}),
                     source_numbers.get(episode.id),
@@ -664,9 +655,14 @@ def list_unlocked_episodes(
                 source_name=source.name,
                 plugin_name=source.plugin.name,
                 best_match=best_match,
-                number_match=_number_match(
+                season_episode_match=_season_and_episode_match(
                     episode,
                     season,
+                    candidates.get(show.id, []),
+                    candidate_numbers.get(show.id, {}),
+                ),
+                absolute_number_match=_absolute_number_match(
+                    episode,
                     candidates.get(show.id, []),
                     candidate_numbers.get(show.id, {}),
                     source_numbers.get(episode.id),

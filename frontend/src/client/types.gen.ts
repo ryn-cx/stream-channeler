@@ -1328,6 +1328,10 @@ export type ShowCreate = {
     canonical_show_note?: (string | null);
 };
 
+export type ShowImportUrlInput = {
+    url: string;
+};
+
 /**
  * What the website and TMDB each say about a show, side by side.
  *
@@ -1661,7 +1665,8 @@ export type UnlockedEpisodeOutput = {
     source_name: (string | null);
     plugin_name: (string | null);
     best_match: (TmdbEpisodeChoice | null);
-    number_match: (TmdbEpisodeChoice | null);
+    season_episode_match: (TmdbEpisodeChoice | null);
+    absolute_number_match: (TmdbEpisodeChoice | null);
     name_matches: boolean;
 };
 
@@ -1705,7 +1710,8 @@ export type UnmatchedEpisodeOutput = {
     source_name: (string | null);
     plugin_name: (string | null);
     best_match: (TmdbEpisodeChoice | null);
-    number_match: (TmdbEpisodeChoice | null);
+    season_episode_match: (TmdbEpisodeChoice | null);
+    absolute_number_match: (TmdbEpisodeChoice | null);
 };
 
 /**
@@ -3021,6 +3027,12 @@ export type ShowsDeleteShowData = {
 
 export type ShowsDeleteShowResponse = (Message);
 
+export type ShowsGetNonCanonicalShowsData = {
+    showId: string;
+};
+
+export type ShowsGetNonCanonicalShowsResponse = (Array<ShowListPublic>);
+
 export type ShowsAdminLinkShowToCanonicalData = {
     canonicalShowId: string;
     showId: string;
@@ -3041,6 +3053,13 @@ export type ShowsAdminLinkShowByTmdbUrlData = {
 };
 
 export type ShowsAdminLinkShowByTmdbUrlResponse = (ShowPublic);
+
+export type ShowsAdminImportNonCanonicalShowData = {
+    requestBody: ShowImportUrlInput;
+    showId: string;
+};
+
+export type ShowsAdminImportNonCanonicalShowResponse = (ShowPublic);
 
 export type ShowsAdminCanonicalizeShowData = {
     showId: string;

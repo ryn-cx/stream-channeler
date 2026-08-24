@@ -6907,6 +6907,18 @@ export const ShowCreateSchema = {
     description: 'Schema for creating a `Show`.'
 } as const;
 
+export const ShowImportUrlInputSchema = {
+    properties: {
+        url: {
+            type: 'string',
+            title: 'Url'
+        }
+    },
+    type: 'object',
+    required: ['url'],
+    title: 'ShowImportUrlInput'
+} as const;
+
 export const ShowInformationOutputSchema = {
     properties: {
         show_id: {
@@ -8777,7 +8789,17 @@ export const UnlockedEpisodeOutputSchema = {
                 }
             ]
         },
-        number_match: {
+        season_episode_match: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/TmdbEpisodeChoice'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        absolute_number_match: {
             anyOf: [
                 {
                     '$ref': '#/components/schemas/TmdbEpisodeChoice'
@@ -8793,7 +8815,7 @@ export const UnlockedEpisodeOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'id', 'season_id', 'season_name', 'season_number', 'show_id', 'show_name', 'show_year', 'show_url', 'season_url', 'source_id', 'source_name', 'plugin_name', 'best_match', 'number_match', 'name_matches'],
+    required: ['key', 'id', 'season_id', 'season_name', 'season_number', 'show_id', 'show_name', 'show_year', 'show_url', 'season_url', 'source_id', 'source_name', 'plugin_name', 'best_match', 'season_episode_match', 'absolute_number_match', 'name_matches'],
     title: 'UnlockedEpisodeOutput',
     description: `An episode whose TMDB link no \`User\` has settled, matched or not.
 
@@ -9145,7 +9167,17 @@ export const UnmatchedEpisodeOutputSchema = {
                 }
             ]
         },
-        number_match: {
+        season_episode_match: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/TmdbEpisodeChoice'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        absolute_number_match: {
             anyOf: [
                 {
                     '$ref': '#/components/schemas/TmdbEpisodeChoice'
@@ -9157,7 +9189,7 @@ export const UnmatchedEpisodeOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'id', 'season_id', 'season_name', 'season_number', 'show_id', 'show_name', 'show_year', 'show_url', 'season_url', 'source_id', 'source_name', 'plugin_name', 'best_match', 'number_match'],
+    required: ['key', 'id', 'season_id', 'season_name', 'season_number', 'show_id', 'show_name', 'show_year', 'show_url', 'season_url', 'source_id', 'source_name', 'plugin_name', 'best_match', 'season_episode_match', 'absolute_number_match'],
     title: 'UnmatchedEpisodeOutput',
     description: 'An episode no TMDB record was found for, beside the closest TMDB episode.'
 } as const;

@@ -214,7 +214,8 @@ class UnmatchedEpisodeOutput(EpisodeOutput):
     # The episode TMDB numbers the same way, which is a different question to
     # the one the name asks and often a different episode. Both are offered so
     # a row can be settled on whichever of the two is the one to trust.
-    number_match: TmdbEpisodeChoice | None
+    season_episode_match: TmdbEpisodeChoice | None
+    absolute_number_match: TmdbEpisodeChoice | None
 
 
 # TODO: Validate

@@ -117,6 +117,44 @@ def set_canonical_show_using_tmdb_url(
 
 
 # TODO: Validate
+def import_non_canonical_show_from_url(
+    session: Session,
+    canonical_show: Show,
+    url: str,
+) -> Show:
+    from plugins.utils.abstract_plugin import InvalidURLError  # noqa: PLC0415
+    from plugins.utils.manage_plugins import plugin_for_url  # noqa: PLC0415
+
+    address = url.strip()
+    if not canonical_show.is_canonical:
+        message = "A show linked to a canonical show cannot hold rows of its own."
+        raise HTTPException(status_code=409, detail=message)
+
+    plugin_class = plugin_for_url(address)
+    if plugin_class is None:
+        raise HTTPException(status_code=400, detail=f"No plugin imports {address}")
+
+    try:
+        results = plugin_class(session).import_url(address, canonical_show)
+    except InvalidURLError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    session.flush()
+    session.expire(canonical_show, ["non_canonical_shows"])
+    imported_keys = {result.show_key for result in results}
+    for link in canonical_show.non_canonical_shows:
+        if link.show.key not in imported_keys:
+            continue
+        link.show.canonical_show_validated_at = tz_datetime.now()
+        link.show.canonical_show_note = f"{MANUAL_NOTE_PREFIX}Selection"
+        session.add(link.show)
+
+    session.commit()
+    session.refresh(canonical_show)
+    return canonical_show
+
+
+# TODO: Validate
 def unset_canonical_show(
     session: Session,
     show: Show,

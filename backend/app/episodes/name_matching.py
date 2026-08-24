@@ -9,6 +9,14 @@ from app.episodes import name_forms
 
 _NUMBERED_NAME = r"(?:(?:episode|ep|session|part)\s*\.?\s*#?\s*\d+|#\s*\d+)"
 _ONLY_NUMBERED_NAME = re.compile(rf"^\s*{_NUMBERED_NAME}\s*$", re.IGNORECASE)
+_UNTITLED_NAME = re.compile(r"^\s*untitled\s*$", re.IGNORECASE)
+
+
+# TODO: Validate
+def is_untitled_name(name: str | None) -> bool:
+    if not name:
+        return False
+    return _UNTITLED_NAME.match(name) is not None
 
 
 # TODO: Validate
@@ -30,7 +38,7 @@ def is_only_numbered_name(name: str) -> bool:
 # TODO: Validate
 @lru_cache(maxsize=16384)
 def plaintext(name: str | None) -> str:
-    if not name:
+    if not name or is_untitled_name(name):
         return ""
     return name_forms.plaintext(_untitled_number(name))
 

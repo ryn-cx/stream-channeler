@@ -35,6 +35,7 @@ from app.shows.schemas import (
     CanonicalShowOutput,
     CanonicalShowsPublic,
     ShowCreate,
+    ShowImportUrlInput,
     ShowInformationOutput,
     ShowInformationSide,
     ShowListPublic,
@@ -48,6 +49,7 @@ from app.shows.schemas import (
 from app.shows.service import (
     canonicalize_show,
     force_update_show,
+    import_non_canonical_show_from_url,
     list_tmdb_episode_groups,
     list_unvalidated_shows,
     relink_show,
@@ -241,6 +243,17 @@ def get_show(show: ReadableShow) -> ShowPublic:
 
 
 # TODO: Validate
+@shows_router.get(
+    "/{show_id}/non-canonical",  # noqa: FAST003 - Used by ReadableShow.
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def get_non_canonical_shows(show: ReadableShow) -> list[ShowListPublic]:
+    return [
+        ShowListPublic.model_validate(link.show) for link in show.non_canonical_shows
+    ]
+
+
+# TODO: Validate
 @shows_router.patch(
     "/{show_id}",
     dependencies=[Depends(get_current_active_superuser)],
@@ -303,6 +316,21 @@ def admin_link_show_by_tmdb_url(
     url_input: ShowTmdbUrlInput,
 ) -> ShowPublic:
     return _show_output(set_canonical_show_using_tmdb_url(session, show, url_input.url))
+
+
+# TODO: Validate
+@shows_router.post(
+    "/{show_id}/non-canonical-by-url",  # noqa: FAST003 - Used by the dependencies.
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def admin_import_non_canonical_show(
+    session: SessionDep,
+    show: EditableShow,
+    url_input: ShowImportUrlInput,
+) -> ShowPublic:
+    return _show_output(
+        import_non_canonical_show_from_url(session, show, url_input.url),
+    )
 
 
 # TODO: Validate

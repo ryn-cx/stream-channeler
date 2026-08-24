@@ -1,13 +1,19 @@
 // TODO: Validate
 import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
-import { SquareArrowOutUpRight } from "lucide-react"
-import type { ReactNode } from "react"
+import { Pencil, SquareArrowOutUpRight } from "lucide-react"
+import { type ReactNode, useState } from "react"
 
 import type { UnlockedEpisodeOutput, UnmatchedEpisodeOutput } from "@/client"
 import { TmdbLink } from "@/components/ChannelCommon/TmdbLink"
+import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
+import EditSeason from "@/components/Seasons/Edit"
+import EditShow from "@/components/Shows/Edit"
+import { buttonVariants } from "@/components/ui/button"
+import { useSeason, useShow } from "@/hooks/useEntities"
 import { cn } from "@/lib/utils"
 import { TmdbMatchActions, TmdbMatchConfirmButton } from "./TmdbMatchActions"
+import { useOpenEpisodeEditor } from "./tmdbMatchEditing"
 import { type Numbered, numberingAgreement } from "./tmdbNumbering"
 
 // TODO: Validate
@@ -67,30 +73,81 @@ interface Summarised extends Numbered {
   season_id: string
 }
 
-/** A page this site holds a row on, and what names the row on it. */
-type MediaPage =
-  | { to: "/show/$showKey"; params: { showKey: string } }
-  | { to: "/season/$seasonKey"; params: { seasonKey: string } }
-  | { to: "/source/$sourceKey"; params: { sourceKey: string } }
-
 // TODO: Validate
-/**
- * The icon that opens a row's own page on this site.
- *
- * Beside the name rather than on it, because the name already opens the page the
- * media came from and the two are worth being able to reach separately: one says
- * what the site holding it says, the other says what is stored here.
- */
-function MediaPageLink({ label, ...page }: MediaPage & { label: string }) {
+function ExternalLinkButton({
+  url,
+  label,
+}: {
+  url: string | null
+  label: string
+}) {
+  if (!url) return null
   return (
-    <Link
-      {...page}
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
       title={label}
       aria-label={label}
-      className="ml-1 inline-flex align-middle text-muted-foreground hover:text-foreground"
+      className={cn(
+        buttonVariants({ variant: "outline", size: "icon-sm" }),
+        "bg-muted dark:bg-muted/50",
+      )}
     >
-      <SquareArrowOutUpRight className="size-3" />
-    </Link>
+      <SquareArrowOutUpRight />
+    </a>
+  )
+}
+
+// TODO: Validate
+function ShowEditButton({ showId }: { showId: string }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const { data: show } = useShow(isOpen ? showId : undefined)
+  return (
+    <>
+      <TooltipIconButton
+        label="Edit this show"
+        icon={<Pencil />}
+        size="icon-sm"
+        onClick={() => setIsOpen(true)}
+      />
+      {isOpen && show ? (
+        <EditShow show={show} open onOpenChange={setIsOpen} />
+      ) : null}
+    </>
+  )
+}
+
+// TODO: Validate
+function SeasonEditButton({ seasonId }: { seasonId: string }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const { data: season } = useSeason(isOpen ? seasonId : undefined)
+  return (
+    <>
+      <TooltipIconButton
+        label="Edit this season"
+        icon={<Pencil />}
+        size="icon-sm"
+        onClick={() => setIsOpen(true)}
+      />
+      {isOpen && season ? (
+        <EditSeason season={season} open onOpenChange={setIsOpen} />
+      ) : null}
+    </>
+  )
+}
+
+// TODO: Validate
+function EpisodeEditButton({ episode }: { episode: UnmatchedEpisodeOutput }) {
+  const openEditor = useOpenEpisodeEditor()
+  if (!openEditor) return null
+  return (
+    <TooltipIconButton
+      label="Edit this episode"
+      icon={<Pencil />}
+      size="icon-sm"
+      onClick={() => openEditor(episode)}
+    />
   )
 }
 
@@ -139,16 +196,27 @@ function MatchSummary({
   counterpart,
   note,
   action,
+  editEpisode,
+  isTmdbSide,
 }: {
   record: Summarised
   counterpart: Numbered | null
   note?: ReactNode
   action?: ReactNode
+  editEpisode?: ReactNode
+  isTmdbSide?: boolean
 }) {
   const agreement = numberingAgreement(
     record,
     counterpart ?? NOTHING_TO_AGREE_WITH,
   )
+  const seasonsAgree =
+    isTmdbSide === true &&
+    record.season_number !== null &&
+    record.season_number === (counterpart?.season_number ?? null)
+  const agreeingNumber = seasonsAgree
+    ? "text-emerald-600 dark:text-emerald-400"
+    : "text-destructive"
 
   return (
     <WrappingCell className="max-w-72">
@@ -158,63 +226,82 @@ function MatchSummary({
         line one of them is missing puts everything below it out of step.
       */}
       <span className="block text-xs text-muted-foreground">
-        {record.source_name ?? "Unknown source"}
-        {record.plugin_name ? ` · ${record.plugin_name}` : ""}
         {record.source_id ? (
-          <MediaPageLink
+          <Link
             to="/source/$sourceKey"
             params={{ sourceKey: record.source_id }}
-            label="Open this source here"
-          />
-        ) : null}
+            className="hover:underline"
+          >
+            {record.source_name ?? "Unknown source"}
+            {record.plugin_name ? ` · ${record.plugin_name}` : ""}
+          </Link>
+        ) : (
+          <>
+            {record.source_name ?? "Unknown source"}
+            {record.plugin_name ? ` · ${record.plugin_name}` : ""}
+          </>
+        )}
       </span>
-      <span className="block font-medium">
-        <SummaryLink href={record.show_url}>
-          {record.show_name ?? "Unnamed"}
-          {record.show_year === null ? "" : ` ${record.show_year}`}
-        </SummaryLink>
-        <MediaPageLink
+      <span className="flex flex-wrap items-center gap-1 font-medium">
+        <Link
           to="/show/$showKey"
           params={{ showKey: record.show_id }}
-          label="Open this show here"
+          className="min-w-0 hover:underline"
+        >
+          {record.show_name ?? "Unnamed"}
+          {record.show_year === null ? "" : ` ${record.show_year}`}
+        </Link>
+        <ShowEditButton showId={record.show_id} />
+        <ExternalLinkButton
+          url={record.show_url}
+          label="Open this show on the site it came from"
         />
       </span>
-      <span className="block text-xs text-muted-foreground">
-        <SummaryLink href={record.season_url}>
-          Season {record.season_number ?? "?"}
-        </SummaryLink>
-        <MediaPageLink
+      <span className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+        <Link
           to="/season/$seasonKey"
           params={{ seasonKey: record.season_id }}
-          label="Open this season here"
+          className="min-w-0 hover:underline"
+        >
+          Season {record.season_number ?? "?"}
+        </Link>
+        <SeasonEditButton seasonId={record.season_id} />
+        <ExternalLinkButton
+          url={record.season_url}
+          label="Open this season on the site it came from"
         />
       </span>
-      <SummaryLink href={record.url} className="block text-xs">
-        <span className="tabular-nums">
-          <span
-            className={
-              agreement.seasonAndEpisode
-                ? "text-destructive"
-                : "text-muted-foreground"
-            }
-          >
-            {record.episode_number ?? "?"}
-          </span>
-          {record.absolute_number === null ? null : (
+      <span className="flex flex-wrap items-center gap-1 text-xs">
+        <span className="min-w-0">
+          <span className="tabular-nums">
             <span
               className={
-                agreement.absolute
-                  ? "text-destructive"
+                agreement.seasonAndEpisode
+                  ? agreeingNumber
                   : "text-muted-foreground"
               }
             >
-              {" "}
-              ({record.absolute_number})
+              {record.episode_number ?? "?"}
             </span>
-          )}
-        </span>{" "}
-        {record.name ?? "Unnamed"}
-      </SummaryLink>
+            {record.absolute_number === null ? null : (
+              <span
+                className={
+                  agreement.absolute ? agreeingNumber : "text-muted-foreground"
+                }
+              >
+                {" "}
+                ({record.absolute_number})
+              </span>
+            )}
+          </span>{" "}
+          {record.name ?? "Unnamed"}
+        </span>
+        {editEpisode}
+        <ExternalLinkButton
+          url={record.url}
+          label="Open this episode on the site it came from"
+        />
+      </span>
       {note}
       {action}
     </WrappingCell>
@@ -310,6 +397,7 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
       <MatchSummary
         record={episodeSummarised(row.original)}
         counterpart={row.original.best_match}
+        editEpisode={<EpisodeEditButton episode={row.original} />}
       />
     ),
   },
@@ -333,6 +421,7 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
           record={match}
           counterpart={episodeSummarised(row.original)}
           note={<AlreadyUsedNote match={nameMatch} />}
+          isTmdbSide
           action={
             <TmdbMatchConfirmButton
               episodeId={row.original.id}
@@ -346,13 +435,13 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
   },
   {
     id: "number_match_summary",
-    accessorFn: (row) => row.number_match?.show_name ?? "No match",
-    header: "TMDB by number",
+    accessorFn: (row) => row.season_episode_match?.show_name ?? "No match",
+    header: "TMDB by season & episode #",
     meta: { serverBacked: false },
     cell: ({ row }) => {
-      const numberMatch = row.original.number_match
-      const match = choiceSummarised(numberMatch)
-      if (!numberMatch || !match) {
+      const seasonEpisodeMatch = row.original.season_episode_match
+      const match = choiceSummarised(seasonEpisodeMatch)
+      if (!seasonEpisodeMatch || !match) {
         return (
           <WrappingCell className="max-w-72 text-muted-foreground">
             No match
@@ -363,12 +452,45 @@ export const tmdbMatchColumns: ColumnDef<UnmatchedEpisodeOutput>[] = [
         <MatchSummary
           record={match}
           counterpart={episodeSummarised(row.original)}
-          note={<AlreadyUsedNote match={numberMatch} />}
+          note={<AlreadyUsedNote match={seasonEpisodeMatch} />}
+          isTmdbSide
           action={
             <TmdbMatchConfirmButton
               episodeId={row.original.id}
-              match={numberMatch}
-              kind="number"
+              match={seasonEpisodeMatch}
+              kind="season_episode"
+            />
+          }
+        />
+      )
+    },
+  },
+  {
+    id: "absolute_match_summary",
+    accessorFn: (row) => row.absolute_number_match?.show_name ?? "No match",
+    header: "TMDB by sequential #",
+    meta: { serverBacked: false },
+    cell: ({ row }) => {
+      const absoluteMatch = row.original.absolute_number_match
+      const match = choiceSummarised(absoluteMatch)
+      if (!absoluteMatch || !match) {
+        return (
+          <WrappingCell className="max-w-72 text-muted-foreground">
+            No match
+          </WrappingCell>
+        )
+      }
+      return (
+        <MatchSummary
+          record={match}
+          counterpart={episodeSummarised(row.original)}
+          note={<AlreadyUsedNote match={absoluteMatch} />}
+          isTmdbSide
+          action={
+            <TmdbMatchConfirmButton
+              episodeId={row.original.id}
+              match={absoluteMatch}
+              kind="absolute"
             />
           }
         />

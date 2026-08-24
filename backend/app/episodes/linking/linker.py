@@ -25,7 +25,11 @@ from app.episodes.linking.split_names import SplitNameLinker
 from app.episodes.linking.tmdb_facts import TmdbEpisodeFacts
 from app.episodes.models import Episode, EpisodeCanonicalEpisode
 from app.episodes.name_forms import plaintext_forms
-from app.episodes.name_matching import is_only_numbered_name, name_parts
+from app.episodes.name_matching import (
+    is_only_numbered_name,
+    is_untitled_name,
+    name_parts,
+)
 from app.episodes.preload import preload_episodes
 from app.media.media_type import MediaType
 from app.seasons.models import Season
@@ -159,7 +163,10 @@ class EpisodeLinker:
             self._unlinked(episodes),
         )
         episodes = self._link_name_parts(self._with_split_names(episodes, named))
-        return self._by_best_name("Automatic: Best name match")(episodes)
+        episodes = self._by_best_name("Automatic: Best name match")(episodes)
+        return self._by_untitled_season_and_episode_number(
+            "Automatic: Untitled numbering match",
+        )(episodes)
 
     # TODO: Validate
     def link_unnamed_episodes(self, episodes: list[Episode]) -> list[Episode]:
@@ -195,7 +202,7 @@ class EpisodeLinker:
         name = episode.name
         if not name:
             return True
-        return is_only_numbered_name(name)
+        return is_only_numbered_name(name) or is_untitled_name(name)
 
     # TODO: Validate
     def _season_number_of(self, episode: Episode) -> int | None:
@@ -234,9 +241,15 @@ class EpisodeLinker:
         keys_of: Callable[[Episode], Iterable[Hashable | None]],
         key_of: Callable[[Episode], Hashable | None],
         note: str,
+        canonical_episodes: Collection[Episode] | None = None,
     ) -> Callable[[list[Episode]], list[Episode]]:
         def step(episodes: list[Episode]) -> list[Episode]:
-            index = unambiguous_lookup(self.canonical_episodes, keys_of)
+            index = unambiguous_lookup(
+                self.canonical_episodes
+                if canonical_episodes is None
+                else canonical_episodes,
+                keys_of,
+            )
             for episode in episodes:
                 key = key_of(episode)
                 if key is None:
@@ -272,6 +285,23 @@ class EpisodeLinker:
     ) -> Callable[[list[Episode]], list[Episode]]:
         key_of = season_and_episode_number_key(self._season_number_of)
         return self._by_key(single(key_of), key_of, note)
+
+    # TODO: Validate
+    def _by_untitled_season_and_episode_number(
+        self,
+        note: str,
+    ) -> Callable[[list[Episode]], list[Episode]]:
+        key_of = season_and_episode_number_key(self._season_number_of)
+        return self._by_key(
+            single(key_of),
+            key_of,
+            note,
+            [
+                tmdb_episode
+                for tmdb_episode in self.canonical_episodes
+                if is_untitled_name(tmdb_episode.name)
+            ],
+        )
 
     # TODO: Validate
     def _by_name_and_episode_index(

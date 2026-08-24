@@ -37,11 +37,15 @@ type FormOutput = z.output<typeof formSchema>
 interface EditSeasonProps {
   season: SeasonOutput
   size?: React.ComponentProps<typeof TooltipIconButton>["size"]
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 // TODO: Validate
-const EditSeason = ({ season, size }: EditSeasonProps) => {
-  const [isOpen, setIsOpen] = useState(false)
+const EditSeason = ({ season, size, open, onOpenChange }: EditSeasonProps) => {
+  const [isOpenHere, setIsOpenHere] = useState(false)
+  const isOpen = open ?? isOpenHere
+  const setIsOpen = onOpenChange ?? setIsOpenHere
 
   const form = useForm<FormInput, unknown, FormOutput>({
     resolver: zodResolver(formSchema),
@@ -83,12 +87,14 @@ const EditSeason = ({ season, size }: EditSeasonProps) => {
       open={isOpen}
       onOpenChange={setIsOpen}
       trigger={
-        <TooltipIconButton
-          label="Edit Season"
-          icon={<Pencil />}
-          size={size}
-          onClick={() => setIsOpen(true)}
-        />
+        open === undefined ? (
+          <TooltipIconButton
+            label="Edit Season"
+            icon={<Pencil />}
+            size={size}
+            onClick={() => setIsOpen(true)}
+          />
+        ) : null
       }
       title="Edit Season"
       description="Update the season details below."
