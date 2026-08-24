@@ -125,6 +125,7 @@ class EpisodeInformationSide(BaseModel):
     sort_order: int | None
     season_number: int | None
     season_name: str | None
+    show_id: uuid.UUID
     show_name: str | None
     url: str | None
     key: str

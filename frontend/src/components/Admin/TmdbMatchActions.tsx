@@ -1,14 +1,13 @@
 // TODO: Validate
 import { useMutation } from "@tanstack/react-query"
 import { Check, CircleSlash, Hash, ListTree } from "lucide-react"
-import { useState } from "react"
 
 import type { UnmatchedEpisodeOutput } from "@/client"
 import { EpisodesService } from "@/client"
-import EditEpisode from "@/components/Episodes/Edit"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
+import { useOpenEpisodeEditor } from "./tmdbMatchEditing"
 import { useSettleTmdbMatch } from "./tmdbMatchesQuery"
 
 // TODO: Validate
@@ -89,7 +88,7 @@ export function TmdbMatchActions({
 }) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const { settle, restore, reread } = useSettleTmdbMatch()
-  const [isPicking, setIsPicking] = useState(false)
+  const openEditor = useOpenEpisodeEditor()
 
   const absentMutation = useMutation({
     mutationFn: () =>
@@ -111,7 +110,7 @@ export function TmdbMatchActions({
       <Button
         variant="outline"
         size="sm"
-        onClick={() => setIsPicking(true)}
+        onClick={() => openEditor?.(episode)}
         title="Choose a TMDB episode"
       >
         <ListTree className="h-4 w-4" />
@@ -127,17 +126,6 @@ export function TmdbMatchActions({
         <CircleSlash className="h-4 w-4" />
         Not on TMDB
       </Button>
-
-      {/*
-        The picker reads every episode of every title the show is linked to, so
-        it is left to the dialog to mount it: rendering one per row would ask
-        for the whole catalogue just to draw the table.
-      */}
-      <EditEpisode
-        episode={episode}
-        open={isPicking}
-        onOpenChange={setIsPicking}
-      />
     </div>
   )
 }

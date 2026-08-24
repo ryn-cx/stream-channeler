@@ -160,9 +160,9 @@ const EditShow = ({ show, size }: EditShowProps) => {
           enabled={isOpen}
         />
       )}
-      <Accordion type="single" collapsible>
+      <Accordion type="single" collapsible className="rounded-xl border px-4">
         <AccordionItem value="fields">
-          <AccordionTrigger>Show Fields</AccordionTrigger>
+          <AccordionTrigger>Manually Edit Fields</AccordionTrigger>
           <AccordionContent className="grid gap-4">
             <FormTextField
               control={form.control}

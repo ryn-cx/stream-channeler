@@ -439,6 +439,7 @@ def _information_side(
         sort_order=episode.sort_order,
         season_number=season.season_number,
         season_name=season.name,
+        show_id=show.id,
         show_name=show.name,
         url=url,
         key=episode.key,

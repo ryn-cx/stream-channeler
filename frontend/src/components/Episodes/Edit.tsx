@@ -6,18 +6,23 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 
 import { EpisodesService, type EpisodeUpdate } from "@/client"
-import { EpisodeInformationHero } from "@/components/ChannelCommon/EpisodeInformationHero"
+import {
+  EpisodeInformationHero,
+  useEpisodeInformation,
+} from "@/components/ChannelCommon/EpisodeInformationHero"
 import { FormCheckboxField } from "@/components/Common/FormCheckboxField"
 import { FormModal } from "@/components/Common/FormModal"
 import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { useEditTableRow } from "@/components/Common/useEditTableRow"
+import EditShow from "@/components/Shows/Edit"
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import { useShow } from "@/hooks/useEntities"
 import { extraText, parseExtraText } from "@/lib/extra"
 import {
   nullifyBlanks,
@@ -75,6 +80,13 @@ const VERIFIED_NOTE = "Manual: Verified"
 type FormInput = z.input<typeof formSchema>
 type FormOutput = z.output<typeof formSchema>
 
+// TODO: Validate
+const EditShowOfEpisode = ({ showId }: { showId: string }) => {
+  const { data: show } = useShow(showId)
+  if (!show) return null
+  return <EditShow show={show} size="icon-sm" />
+}
+
 interface EditEpisodeProps {
   episode: EditableEpisodeFields
   open?: boolean
@@ -86,6 +98,11 @@ const EditEpisode = ({ episode, open, onOpenChange }: EditEpisodeProps) => {
   const [isOpenHere, setIsOpenHere] = useState(false)
   const isOpen = open ?? isOpenHere
   const setIsOpen = onOpenChange ?? setIsOpenHere
+  const information = useEpisodeInformation(episode.id, isOpen)
+  const showId = information.data?.source.show_id
+  const [canonicalEpisodeIds, setCanonicalEpisodeIds] = useState(
+    episode.canonical_episode_ids ?? [],
+  )
 
   const form = useForm<FormInput, unknown, FormOutput>({
     resolver: zodResolver(formSchema),
@@ -142,8 +159,7 @@ const EditEpisode = ({ episode, open, onOpenChange }: EditEpisodeProps) => {
           />
         ) : null
       }
-      title={episode.name ? `Edit Episode — ${episode.name}` : "Edit Episode"}
-      description="Update the episode details below."
+      title="Edit Episode"
       form={form}
       onSubmit={onSubmit}
       isPending={mutation.isPending}
@@ -158,12 +174,13 @@ const EditEpisode = ({ episode, open, onOpenChange }: EditEpisodeProps) => {
         episodeId={episode.id}
         enabled={isOpen}
         preferSource
+        spelledOutDuration
+        titleAction={showId ? <EditShowOfEpisode showId={showId} /> : null}
       />
 
       <CanonicalEpisodeField
         episodeId={episode.id}
-        canonicalEpisodeIds={episode.canonical_episode_ids ?? []}
-        name={episode.name ?? null}
+        canonicalEpisodeIds={canonicalEpisodeIds}
         seasonNumber={null}
         episodeNumber={episode.episode_number ?? null}
         canonicalEpisodeLocked={form.watch("canonical_episode_locked")}
@@ -172,9 +189,16 @@ const EditEpisode = ({ episode, open, onOpenChange }: EditEpisodeProps) => {
           form.setValue("canonical_episode_locked", true)
           form.setValue("canonical_episode_note", VERIFIED_NOTE)
         }}
-        onLinked={() => {
-          form.setValue("canonical_episode_locked", true)
-          form.setValue("canonical_episode_note", "Manual: Selection")
+        onLinksChanged={(linked) => {
+          setCanonicalEpisodeIds(linked.canonical_episode_ids ?? [])
+          form.setValue(
+            "canonical_episode_locked",
+            linked.canonical_episode_locked ?? false,
+          )
+          form.setValue(
+            "canonical_episode_note",
+            linked.canonical_episode_note ?? "",
+          )
         }}
       />
 
@@ -184,7 +208,7 @@ const EditEpisode = ({ episode, open, onOpenChange }: EditEpisodeProps) => {
         website's account of the episode, which is written by the import and
         only ever corrected by hand.
       */}
-      <Accordion type="single" collapsible>
+      <Accordion type="single" collapsible className="rounded-xl border px-4">
         <AccordionItem value="fields">
           <AccordionTrigger>Manually Edit Fields</AccordionTrigger>
           <AccordionContent>

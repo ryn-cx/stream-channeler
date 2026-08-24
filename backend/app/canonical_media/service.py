@@ -178,6 +178,7 @@ def add_canonical_show(
     session: Session,
     show: Show,
     canonical_show: Show,
+    note: str = "Automatic: Import match",
 ) -> ShowCanonicalShow:
     """Record that `show` stands for the canonical show `canonical_show`.
 
@@ -197,21 +198,28 @@ def add_canonical_show(
     if show.is_canonical:
         _follow_show_to_canonical_show(session, show, canonical_show)
 
-    show.is_canonical = False
-    for existing_canonical_show in show.canonical_show_links:
+    existing_canonical_show = None
+    for candidate in show.canonical_show_links:
         # By the row where the link is already stored, and by the object itself
         # where it is not: a link made this session names the canonical show it
         # holds rather than its id, which the flush is what writes.
         if (
-            existing_canonical_show.canonical_show is canonical_show
-            or existing_canonical_show.canonical_show_id == canonical_show.id
+            candidate.canonical_show is canonical_show
+            or candidate.canonical_show_id == canonical_show.id
         ):
-            return existing_canonical_show
-    existing_canonical_show = ShowCanonicalShow(
-        show=show,
-        canonical_show=canonical_show,
-    )
-    session.add(existing_canonical_show)
+            existing_canonical_show = candidate
+            break
+
+    if existing_canonical_show is None:
+        show.canonical_show_note = note
+        existing_canonical_show = ShowCanonicalShow(
+            show=show,
+            canonical_show=canonical_show,
+        )
+        session.add(existing_canonical_show)
+
+    session.flush()
+    session.expire(show, ["is_canonical"])
     return existing_canonical_show
 
 

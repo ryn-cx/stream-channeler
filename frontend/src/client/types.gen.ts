@@ -676,6 +676,7 @@ export type EpisodeInformationSide = {
     sort_order: (number | null);
     season_number: (number | null);
     season_name: (string | null);
+    show_id: string;
     show_name: (string | null);
     url: (string | null);
     key: string;

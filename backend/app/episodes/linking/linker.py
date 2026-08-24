@@ -216,7 +216,6 @@ class EpisodeLinker:
         link.episode = episode
         link.canonical_episode = tmdb_episode
         episode.canonical_episode_links.append(link)
-        episode.is_canonical = False
         episode.canonical_episode_note = note
         self.session.add(link)
 

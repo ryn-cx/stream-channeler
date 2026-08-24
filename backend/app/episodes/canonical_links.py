@@ -121,7 +121,12 @@ def _link_one_episode(
     episode: Episode,
     canonical_episode: Episode,
 ) -> None:
-    add_canonical_show(session, episode.season.show, canonical_episode.season.show)
+    add_canonical_show(
+        session,
+        episode.season.show,
+        canonical_episode.season.show,
+        note=f"{MANUAL_NOTE_PREFIX}Episode selection",
+    )
 
     if canonical_episode.id not in episode.canonical_episode_ids:
         session.add(
@@ -132,7 +137,6 @@ def _link_one_episode(
             ),
         )
 
-    episode.is_canonical = False
     episode.canonical_episode_locked = True
     episode.canonical_episode_note = f"{MANUAL_NOTE_PREFIX}Selection"
     session.add(episode)
@@ -151,7 +155,7 @@ def _drop_links(
         ):
             session.delete(link)
     session.flush()
-    session.expire(episode, ["canonical_episode_links"])
+    session.expire(episode, ["canonical_episode_links", "is_canonical"])
 
 
 # TODO: Validate
@@ -163,7 +167,6 @@ def unlink_episode(
     _drop_links(session, episode, canonical_episode)
 
     if not episode.canonical_episode_links:
-        episode.is_canonical = True
         episode.canonical_episode_locked = False
         episode.canonical_episode_note = None
         session.add(episode)
@@ -185,7 +188,6 @@ def verify_canonical_link(session: Session, episode: Episode) -> Episode:
             detail="The episode is linked to nothing to be verified against",
         )
 
-    episode.is_canonical = False
     episode.canonical_episode_locked = True
     episode.canonical_episode_note = f"{MANUAL_NOTE_PREFIX}Verified"
     session.add(episode)
@@ -198,7 +200,6 @@ def verify_canonical_link(session: Session, episode: Episode) -> Episode:
 def mark_episode_absent_from_tmdb(session: Session, episode: Episode) -> Episode:
     _drop_links(session, episode)
 
-    episode.is_canonical = True
     episode.canonical_episode_locked = True
     episode.canonical_episode_note = f"{MANUAL_NOTE_PREFIX}Not on TMDB"
     session.add(episode)

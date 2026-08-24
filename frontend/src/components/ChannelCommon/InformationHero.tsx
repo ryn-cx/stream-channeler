@@ -1,5 +1,6 @@
 // TODO: Validate
 import { ExternalLink } from "lucide-react"
+import type { ReactNode } from "react"
 
 import { ClampedContent } from "@/components/ChannelCommon/ClampedContent"
 import { Badge } from "@/components/ui/badge"
@@ -18,6 +19,7 @@ interface InformationHeroProps {
   /** Short facts shown as chips under the title, e.g. duration or air date. */
   facts?: string[]
   links?: InformationHeroLink[]
+  titleAction?: ReactNode
 }
 
 // TODO: Validate
@@ -34,6 +36,7 @@ export function InformationHero({
   imageUrl,
   facts = [],
   links = [],
+  titleAction,
 }: InformationHeroProps) {
   return (
     <div className="overflow-hidden rounded-xl border bg-linear-to-br from-muted/60 to-background">
@@ -47,7 +50,10 @@ export function InformationHero({
         )}
         <div className="flex min-w-0 flex-col gap-2">
           <div>
-            <h2 className="text-xl font-semibold wrap-break-word">{title}</h2>
+            <div className="flex items-start gap-2">
+              <h2 className="text-xl font-semibold wrap-break-word">{title}</h2>
+              {titleAction}
+            </div>
             {subtitle && (
               <p className="text-sm text-muted-foreground wrap-break-word">
                 {subtitle}

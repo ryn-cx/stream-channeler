@@ -5,6 +5,7 @@ import { Check, X } from "lucide-react"
 import {
   type CanonicalEpisodeOutput,
   CanonicalEpisodesService,
+  type EpisodeOutput,
   EpisodesService,
 } from "@/client"
 import { TmdbLinkPicker } from "@/components/Admin/EpisodeTmdbLinkMenu"
@@ -16,7 +17,6 @@ import { handleError } from "@/utils"
 interface CanonicalEpisodeFieldProps {
   episodeId: string
   canonicalEpisodeIds: string[]
-  name: string | null
   seasonNumber: number | null
   episodeNumber: number | null
   canonicalEpisodeLocked: boolean
@@ -25,7 +25,7 @@ interface CanonicalEpisodeFieldProps {
   /** Called once the links have been settled, so a form holding the row's own
    * copy of the lock can be brought in line with what was just written. */
   onVerified?: () => void
-  onLinked?: () => void
+  onLinksChanged?: (episode: EpisodeOutput) => void
 }
 
 // TODO: Validate
@@ -67,13 +67,12 @@ function CanonicalEpisodeName({
 export function CanonicalEpisodeField({
   episodeId,
   canonicalEpisodeIds,
-  name,
   seasonNumber,
   episodeNumber,
   canonicalEpisodeLocked,
   enabled,
   onVerified,
-  onLinked,
+  onLinksChanged,
 }: CanonicalEpisodeFieldProps) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
@@ -98,10 +97,11 @@ export function CanonicalEpisodeField({
         episodeId,
         canonicalEpisodeId: droppedId,
       }),
-    onSuccess: () => {
+    onSuccess: (unlinked) => {
       showSuccessToast("Episode unlinked from TMDB episode")
       queryClient.invalidateQueries({ queryKey: ["episodes"] })
       queryClient.invalidateQueries({ queryKey: ["admin-tmdb-choices"] })
+      onLinksChanged?.(unlinked)
     },
     onError: (error: unknown) =>
       handleError.call(
@@ -186,11 +186,10 @@ export function CanonicalEpisodeField({
       {enabled ? (
         <TmdbLinkPicker
           episodeId={episodeId}
-          name={name}
           seasonNumber={seasonNumber}
           episodeNumber={episodeNumber}
           informationQueryKey={["episodes"]}
-          onLinked={onLinked}
+          onLinksChanged={onLinksChanged}
         />
       ) : null}
     </div>

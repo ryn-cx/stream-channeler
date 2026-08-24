@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import uuid
 from typing import Any, override
 
 from loguru import logger
@@ -98,6 +99,7 @@ class ImportURLMixin(
 
         imported: set[type[AbstractPlugin]] = set()
         if providers:
+            noted = self._linked_show_ids(show)
             for url in self._listed_source_urls(show_key):
                 plugin_class = plugin_for_url(url)
                 if plugin_class is None:
@@ -107,9 +109,32 @@ class ImportURLMixin(
                 except InvalidURLError:
                     logger.info("Nothing to import at {}", url)
                     continue
+                self._note_new_links(show, noted, "Automatic: Watchmode listing")
                 imported.add(plugin_class)
 
         self._import_searched_sources(providers, show, imported, force=force)
+
+    # TODO: Validate
+    def _linked_show_ids(self, show: Show) -> set[uuid.UUID]:
+        self.session.flush()
+        self.session.expire(show, ["non_canonical_shows"])
+        return {link.show_id for link in show.non_canonical_shows}
+
+    # TODO: Validate
+    def _note_new_links(
+        self,
+        show: Show,
+        noted: set[uuid.UUID],
+        note: str,
+    ) -> None:
+        self.session.flush()
+        self.session.expire(show, ["non_canonical_shows"])
+        for link in show.non_canonical_shows:
+            if link.show_id in noted:
+                continue
+            link.show.canonical_show_note = note
+            self.session.add(link.show)
+            noted.add(link.show_id)
 
     # TODO: Validate
     def _import_searched_sources(
@@ -120,6 +145,7 @@ class ImportURLMixin(
         *,
         force: bool = False,
     ) -> None:
+        noted = self._linked_show_ids(show)
         for provider in providers:
             plugin_class = plugin_for_tmdb_name(provider["provider_name"])
             if plugin_class in imported or self._import_searched_source(
@@ -127,6 +153,11 @@ class ImportURLMixin(
                 show,
                 force=force,
             ):
+                self._note_new_links(
+                    show,
+                    noted,
+                    "Automatic: Source website search",
+                )
                 clear_unmatched_source(
                     self.session,
                     show.id,

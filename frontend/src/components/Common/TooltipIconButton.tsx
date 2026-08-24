@@ -31,6 +31,7 @@ export function TooltipIconButton({
   icon,
   variant = "outline",
   size = "icon",
+  type = "button",
   className,
   showLabel,
   ...props
@@ -43,6 +44,7 @@ export function TooltipIconButton({
       <Button
         variant={variant}
         size={LABELLED_SIZES[size ?? "icon"] ?? size}
+        type={type}
         className={buttonClassName}
         {...props}
       >
@@ -58,6 +60,7 @@ export function TooltipIconButton({
         <Button
           variant={variant}
           size={size}
+          type={type}
           className={buttonClassName}
           {...props}
         >

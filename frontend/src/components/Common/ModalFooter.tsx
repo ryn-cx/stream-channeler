@@ -36,7 +36,7 @@ export function ModalFooter({
     <DialogFooter className={cn(className)}>
       {start ? <div className="sm:mr-auto">{start}</div> : null}
       <DialogClose asChild>
-        <Button variant="outline" disabled={isPending}>
+        <Button type="button" variant="outline" disabled={isPending}>
           {cancelLabel}
         </Button>
       </DialogClose>

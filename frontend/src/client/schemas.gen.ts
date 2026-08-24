@@ -3372,6 +3372,11 @@ export const EpisodeInformationSideSchema = {
             ],
             title: 'Season Name'
         },
+        show_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Show Id'
+        },
         show_name: {
             anyOf: [
                 {
@@ -3451,7 +3456,7 @@ export const EpisodeInformationSideSchema = {
         }
     },
     type: 'object',
-    required: ['label', 'name', 'description', 'image_url', 'duration', 'air_date', 'episode_number', 'sort_order', 'season_number', 'season_name', 'show_name', 'url', 'key', 'canonical_episode_locked', 'canonical_episode_note', 'data_timestamp', 'update_at', 'modified_at'],
+    required: ['label', 'name', 'description', 'image_url', 'duration', 'air_date', 'episode_number', 'sort_order', 'season_number', 'season_name', 'show_id', 'show_name', 'url', 'key', 'canonical_episode_locked', 'canonical_episode_note', 'data_timestamp', 'update_at', 'modified_at'],
     title: 'EpisodeInformationSide',
     description: "One record's own account of an episode, as the website that holds it has it."
 } as const;

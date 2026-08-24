@@ -65,14 +65,7 @@ class BaseShow(BaseCanonicalShow):
 
 # TODO: Validate
 class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
-    """Model representing a show, canonical or not.
-
-    A row is the canonical show itself, or one website's non-canonical row standing for
-    however many canonical shows that website mixed into it. The two are the same shape
-    and are read the same way, so they are one table, and `is_canonical` is the whole of
-    what tells them apart. Which canonical shows a non-canonical row stands for is
-    stored in `ShowCanonicalShow` alone, where no one of them stands above the rest.
-    """
+    """Model representing a show."""
 
     PARENT_ID_FIELD: ClassVar[str] = "source_id"
     CANONICAL_FLAG_FIELD: ClassVar[str] = "is_canonical"

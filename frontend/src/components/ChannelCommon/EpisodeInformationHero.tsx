@@ -1,5 +1,6 @@
 // TODO: Validate
 import { useQuery } from "@tanstack/react-query"
+import type { ReactNode } from "react"
 
 import type { EpisodeInformationOutput, EpisodeInformationSide } from "@/client"
 import { EpisodesService } from "@/client"
@@ -12,6 +13,12 @@ export function formatDuration(value: number | null) {
   const minutes = Math.floor(value / 60)
   const seconds = value % 60
   return `${value}s (${minutes}m ${seconds}s)`
+}
+
+// TODO: Validate
+export function durationText(value: number | null) {
+  if (value == null) return null
+  return `${Math.floor(value / 60)}m ${value % 60}s`
 }
 
 // TODO: Validate
@@ -40,10 +47,16 @@ function heroSubtitle(data: EpisodeInformationOutput, preferSource: boolean) {
 }
 
 // TODO: Validate
-function heroFacts(data: EpisodeInformationOutput, preferSource: boolean) {
+function heroFacts(
+  data: EpisodeInformationOutput,
+  preferSource: boolean,
+  spelledOutDuration: boolean,
+) {
   const side = primarySide(data, preferSource)
   const facts = [
-    formatDuration(side.duration),
+    spelledOutDuration
+      ? durationText(side.duration)
+      : formatDuration(side.duration),
     formatInformationDate(side.air_date),
     // What TMDB has to do with the episode is no part of one website's own
     // account of it, so it is left out where the website's row is what was
@@ -72,6 +85,16 @@ export const episodeInformationQueryKey = (episodeId: string) => [
   episodeId,
 ]
 
+// TODO: Validate
+export function useEpisodeInformation(episodeId: string, enabled = true) {
+  return useQuery({
+    queryKey: episodeInformationQueryKey(episodeId),
+    queryFn: () => EpisodesService.getEpisodeInformation({ episodeId }),
+    enabled,
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
 interface EpisodeInformationHeroProps {
   episodeId: string
   /** Whether the information is wanted yet, so a closed window fetches nothing. */
@@ -83,6 +106,8 @@ interface EpisodeInformationHeroProps {
    * put words in the website's mouth.
    */
   preferSource?: boolean
+  spelledOutDuration?: boolean
+  titleAction?: ReactNode
 }
 
 // TODO: Validate
@@ -99,13 +124,10 @@ export function EpisodeInformationHero({
   episodeId,
   enabled = true,
   preferSource = false,
+  spelledOutDuration = false,
+  titleAction,
 }: EpisodeInformationHeroProps) {
-  const { data, isLoading, error } = useQuery({
-    queryKey: episodeInformationQueryKey(episodeId),
-    queryFn: () => EpisodesService.getEpisodeInformation({ episodeId }),
-    enabled,
-    staleTime: 5 * 60 * 1000,
-  })
+  const { data, isLoading, error } = useEpisodeInformation(episodeId, enabled)
 
   if (isLoading) {
     return (
@@ -130,8 +152,9 @@ export function EpisodeInformationHero({
       subtitle={heroSubtitle(data, preferSource)}
       description={side.description}
       imageUrl={side.image_url}
-      facts={heroFacts(data, preferSource)}
+      facts={heroFacts(data, preferSource, spelledOutDuration)}
       links={heroLinks(data, preferSource)}
+      titleAction={titleAction}
     />
   )
 }

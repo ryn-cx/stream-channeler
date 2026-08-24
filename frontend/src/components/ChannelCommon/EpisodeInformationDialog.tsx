@@ -157,7 +157,6 @@ export function EpisodeInformationPanel({
 
       <EpisodeTmdbLinkMenu
         episodeId={episodeId}
-        name={data.source.name}
         seasonNumber={data.source.season_number}
         episodeNumber={data.source.episode_number}
         informationQueryKey={queryKey}

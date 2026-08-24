@@ -1,10 +1,10 @@
 // TODO: Validate
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Eye, EyeOff, Unlink } from "lucide-react"
+import { Eye, EyeOff } from "lucide-react"
 import type { ReactNode } from "react"
 import { useState } from "react"
 
-import type { TmdbEpisodeChoice } from "@/client"
+import type { EpisodeOutput, TmdbEpisodeChoice } from "@/client"
 import { EpisodesService } from "@/client"
 import { CollapsibleSection } from "@/components/ChannelCommon/CollapsibleSection"
 import { AdminZone } from "@/components/Common/AdminZone"
@@ -22,15 +22,11 @@ type ChoiceOrder = "sequential" | "similarity"
 
 interface EpisodeTmdbLinkMenuProps {
   episodeId: string
-  name: string | null
   seasonNumber: number | null
   episodeNumber: number | null
   /** Query key of the information the episode was read off. */
   informationQueryKey: unknown[]
-  /** Called once the episode has been pointed at a TMDB episode, by either way
-   * of doing it. A caller showing the picker in a window of its own uses this to
-   * close it, since the row it was opened from is gone by then. */
-  onLinked?: () => void
+  onLinksChanged?: (episode: EpisodeOutput) => void
 }
 
 // TODO: Validate
@@ -159,11 +155,10 @@ export function EpisodeTmdbLinkMenu(props: EpisodeTmdbLinkMenuProps) {
  */
 export function TmdbLinkPicker({
   episodeId,
-  name,
   seasonNumber,
   episodeNumber,
   informationQueryKey,
-  onLinked,
+  onLinksChanged,
 }: EpisodeTmdbLinkMenuProps) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
@@ -183,26 +178,16 @@ export function TmdbLinkPicker({
     mutationFn: (canonicalEpisodeId: string) =>
       EpisodesService.adminLinkEpisodeToTmdb({ episodeId, canonicalEpisodeId }),
     onMutate: () => settle(episodeId),
-    onSuccess: () => {
+    onSuccess: (linked) => {
       showSuccessToast("Episode linked to TMDB")
       queryClient.invalidateQueries({ queryKey: informationQueryKey })
-      onLinked?.()
+      onLinksChanged?.(linked)
     },
     onError: (error: unknown, _variables, previous) => {
       restore(previous)
       handleError.call(showErrorToast, error as any)
     },
     onSettled: reread,
-  })
-
-  const unlinkMutation = useMutation({
-    mutationFn: () => EpisodesService.adminUnlinkEpisodeFromTmdb({ episodeId }),
-    onSuccess: () => {
-      showSuccessToast("Episode unlinked from TMDB")
-      queryClient.invalidateQueries({ queryKey: informationQueryKey })
-      queryClient.invalidateQueries({ queryKey: ["admin-tmdb-choices"] })
-    },
-    onError: (error: unknown) => handleError.call(showErrorToast, error as any),
   })
 
   const urlMutation = useMutation({
@@ -212,11 +197,11 @@ export function TmdbLinkPicker({
         requestBody: { url: urlDraft },
       }),
     onMutate: () => settle(episodeId),
-    onSuccess: () => {
+    onSuccess: (linked) => {
       showSuccessToast("Episode linked to TMDB")
       setUrlDraft("")
       queryClient.invalidateQueries({ queryKey: informationQueryKey })
-      onLinked?.()
+      onLinksChanged?.(linked)
     },
     onError: (error: unknown, _variables, previous) => {
       restore(previous)
@@ -257,10 +242,6 @@ export function TmdbLinkPicker({
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm text-muted-foreground">
-        {name ?? "Unnamed"} — {numbering(seasonNumber, episodeNumber)}
-      </p>
-
       <div className="flex flex-wrap items-center gap-2">
         <Input
           value={nameDraft}
@@ -378,17 +359,6 @@ export function TmdbLinkPicker({
           Link by address
         </Button>
       </div>
-
-      <Button
-        type="button"
-        variant="outline"
-        className="self-start"
-        disabled={unlinkMutation.isPending}
-        onClick={() => unlinkMutation.mutate()}
-      >
-        <Unlink />
-        Unlink from TMDB
-      </Button>
     </div>
   )
 }

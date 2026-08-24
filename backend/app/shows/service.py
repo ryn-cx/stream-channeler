@@ -12,6 +12,7 @@ from app.canonical_media.filters import is_canonical
 from app.canonical_media.service import add_canonical_show
 from app.channels.models import ChannelShow
 from app.episodes.linking import EpisodeLinker
+from app.episodes.models import MANUAL_NOTE_PREFIX
 from app.media.media_type import MediaType
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.shows.models import Show
@@ -69,7 +70,12 @@ def set_canonical_show(
         message = "A show other shows are linked to cannot be linked to one itself."
         raise HTTPException(status_code=409, detail=message)
 
-    add_canonical_show(session, show, canonical_show)
+    add_canonical_show(
+        session,
+        show,
+        canonical_show,
+        note=f"{MANUAL_NOTE_PREFIX}Selection",
+    )
     show.canonical_show_locked = True
     session.add(show)
 
@@ -125,7 +131,11 @@ def unset_canonical_show(
     # Read again rather than left as it is, since a link deleted is still in the
     # collection it was read out of and what the row stands for now is what the
     # episodes below are settled against.
-    session.expire(show, ["canonical_show_links"])
+    session.expire(show, ["canonical_show_links", "is_canonical"])
+
+    if not show.canonical_show_links:
+        show.canonical_show_note = None
+        session.add(show)
 
     _unlink_unlisted_episodes(session, show)
     EpisodeLinker(session, show).link_show()
@@ -145,11 +155,11 @@ def canonicalize_show(session: Session, show: Show) -> Show:
     for link in list(show.canonical_show_links):
         session.delete(link)
     session.flush()
-    session.expire(show, ["canonical_show_links"])
+    session.expire(show, ["canonical_show_links", "is_canonical"])
 
     _unlink_unlisted_episodes(session, show)
-    show.is_canonical = True
     show.canonical_show_locked = True
+    show.canonical_show_note = f"{MANUAL_NOTE_PREFIX}Canonicalized"
     session.add(show)
     session.commit()
     session.refresh(show)
@@ -200,10 +210,9 @@ def _unlink_unlisted_episodes(session: Session, show: Show) -> None:
                     continue
                 session.delete(link)
             session.flush()
-            session.expire(episode, ["canonical_episode_links"])
+            session.expire(episode, ["canonical_episode_links", "is_canonical"])
 
             if not episode.canonical_episode_links:
-                episode.is_canonical = True
                 episode.canonical_episode_locked = False
                 episode.canonical_episode_note = None
                 session.add(episode)
@@ -342,11 +351,10 @@ def _relink_non_canonical_show(
                 continue
             for episode_link in list(episode.canonical_episode_links):
                 session.delete(episode_link)
-            episode.is_canonical = True
             episode.canonical_episode_note = None
         session.flush()
         for episode in season.active_children:
-            session.expire(episode, ["canonical_episode_links"])
+            session.expire(episode, ["canonical_episode_links", "is_canonical"])
     EpisodeLinker(session, non_canonical_show).link_show()
 
 
