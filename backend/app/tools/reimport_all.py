@@ -3,6 +3,7 @@
 from loguru import logger
 from sqlmodel import Session
 
+from app.canonical_media.filters import is_canonical
 from app.database import engine, load_models
 from app.plugins.models import Plugin
 from app.shows.models import Show
@@ -20,7 +21,7 @@ def reimport_all_shows(session: Session) -> None:
     shows = session.exec(
         Show.select_with_plugin()
         .join(User, Plugin.user_id == User.id)  # type: ignore[arg-type]
-        .where(User.email == PLUGIN_USER_EMAIL),
+        .where(User.email == PLUGIN_USER_EMAIL, is_canonical(Show)),
     ).all()
 
     for show in shows:
