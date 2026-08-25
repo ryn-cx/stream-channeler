@@ -100,9 +100,10 @@ class ImportURLMixin(
         imported: set[type[AbstractPlugin]] = set()
         if providers:
             noted = self._linked_show_ids(show)
+            linked = self._linked_plugin_keys(show)
             for url in self._listed_source_urls(show_key):
                 plugin_class = plugin_for_url(url)
-                if plugin_class is None:
+                if plugin_class is None or plugin_class.plugin_key() in linked:
                     continue
                 try:
                     plugin_class(self.session).import_url(url, show, force=force)
@@ -119,6 +120,12 @@ class ImportURLMixin(
         self.session.flush()
         self.session.expire(show, ["non_canonical_shows"])
         return {link.show_id for link in show.non_canonical_shows}
+
+    # TODO: Validate
+    def _linked_plugin_keys(self, show: Show) -> set[str]:
+        self.session.flush()
+        self.session.expire(show, ["non_canonical_shows"])
+        return {link.show.source.plugin.key for link in show.non_canonical_shows}
 
     # TODO: Validate
     def _note_new_links(
@@ -146,12 +153,16 @@ class ImportURLMixin(
         force: bool = False,
     ) -> None:
         noted = self._linked_show_ids(show)
+        linked = self._linked_plugin_keys(show)
         for provider in providers:
             plugin_class = plugin_for_tmdb_name(provider["provider_name"])
-            if plugin_class in imported or self._import_searched_source(
-                plugin_class,
-                show,
-                force=force,
+            already_linked = (
+                plugin_class is not None and plugin_class.plugin_key() in linked
+            )
+            if (
+                plugin_class in imported
+                or already_linked
+                or self._import_searched_source(plugin_class, show, force=force)
             ):
                 self._note_new_links(
                     show,

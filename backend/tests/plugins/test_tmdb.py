@@ -1,13 +1,24 @@
 # TODO: Validate
 
 
+from datetime import timedelta
+from typing import override
+
+from freezegun import freeze_time
+from sqlmodel import Session
+
+from app.shows.models import Show
 from plugins.TMDB import TMDB
+from plugins.Tubi import Tubi
+from tests.old_mess.plugins.plugin_validator.context_managers import mock_update
 from tests.plugins.plugin_validator_alt import (
     PluginValidatorAlt,
     UpdatePluginTestsAlt,
     UpdateTestsAlt,
     URLTestsAlt,
 )
+from tests.plugins.plugin_validator_alt.database import IMPORT_TIME, UPDATE_TIME
+from tests.plugins.plugin_validator_alt.log_stats import log_stats
 
 SEPARATOR = "/"
 """What separates the keys naming where an episode sits."""
@@ -62,6 +73,122 @@ class TestArcher(
         "/{media_type}/{parse_url_response}/seasons?language=en-US",
     )
 
+
+# TODO: Validate
+class TestWelcomeToTheJapariPark(
+    URLTestsAlt[TMDB],
+    UpdatePluginTestsAlt[TMDB],
+    UpdateTestsAlt[TMDB],
+    TMDBValidatorAlt,
+):
+    media_type = "tv"
+    parse_url_response = "88459"
+    show_slug = "welcome-to-the-japari-park"
+    urls = (
+        *TMDBValidatorAlt.urls,
+        "/{media_type}/{parse_url_response}/seasons?language=en-US",
+    )
+
+
+# TODO: Validate
+class TestLaidBackCamp(
+    URLTestsAlt[TMDB],
+    UpdateTestsAlt[TMDB],
+    TMDBValidatorAlt,
+):
+    media_type = "tv"
+    parse_url_response = "76075"
+    show_slug = "laid-back-camp"
+    urls = (
+        *TMDBValidatorAlt.urls,
+        "/{media_type}/{parse_url_response}/seasons?language=en-US",
+    )
+
+
+# TODO: Validate
+class TestSpaceGhostAndDinoBoy(
+    URLTestsAlt[TMDB],
+    UpdateTestsAlt[TMDB],
+    TMDBValidatorAlt,
+):
+    media_type = "tv"
+    parse_url_response = "3303"
+    show_slug = "space-ghost-and-dino-boy"
+    urls = (
+        *TMDBValidatorAlt.urls,
+        "/{media_type}/{parse_url_response}/seasons?language=en-US",
+    )
+
+
+# TODO: Validate
+class TestSuperman(
+    URLTestsAlt[TMDB],
+    UpdatePluginTestsAlt[TMDB],
+    UpdateTestsAlt[TMDB],
+    TMDBValidatorAlt,
+):
+    media_type = "movie"
+    parse_url_response = "95414"
+    show_slug = "superman"
+
+
+# TODO: Validate
+class TestSupermanRelinkedTubi(TMDBValidatorAlt):
+    media_type = "movie"
+    parse_url_response = "95414"
+    show_slug = "superman"
+    urls = ("https://www.themoviedb.org/movie/95414-superman?language=en-US",)
+    relinked_url = (
+        "https://tubitv.com/series/300001134/superman-original-fleischer-restoration"
+    )
+
+    # TODO: Validate
+    @override
+    def _initialize_extra_files(self, session: Session) -> None:
+        Tubi(session).import_url(self.relinked_url)
+
+    # TODO: Validate
+    def shows_of(self, session: Session, plugin_key: str) -> list[Show]:
+        return [
+            show
+            for show in self.all_shows(session)
+            if show.source.plugin.key == plugin_key
+        ]
+
+    # TODO: Validate
+    def test_forced_update_keeps_the_relinked_listing(
+        self,
+        session_with_files: Session,
+    ) -> None:
+        self.import_url(session_with_files)
+        tmdb_show = self.shows_of(session_with_files, "TMDB")[0]
+
+        listed = self.shows_of(session_with_files, "Tubi")
+        assert listed, "Watchmode listed no Tubi listing to take off."
+        for show in listed:
+            session_with_files.delete(show)
+        session_with_files.flush()
+        session_with_files.expire_all()
+
+        with freeze_time(IMPORT_TIME):
+            Tubi(session_with_files).import_url(self.relinked_url, tmdb_show)
+        session_with_files.flush()
+        session_with_files.expire_all()
+
+        relinked_keys = {show.key for show in self.shows_of(session_with_files, "Tubi")}
+        assert relinked_keys == {"300001134"}
+
+        with log_stats(self), freeze_time(UPDATE_TIME), mock_update():
+            assert tmdb_show.data_timestamp
+            tmdb_show.update_at = tmdb_show.data_timestamp + timedelta(seconds=1)
+            TMDB(session_with_files).update_show(tmdb_show, force=True)
+            session_with_files.flush()
+        session_with_files.expire_all()
+
+        assert {
+            show.key for show in self.shows_of(session_with_files, "Tubi")
+        } == relinked_keys
+        self.assert_state(session_with_files, "forced_update_keeps_relinked_listing")
 
 
 # # TODO: Validate

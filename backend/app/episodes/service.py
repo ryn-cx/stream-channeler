@@ -798,6 +798,8 @@ def list_tmdb_episode_choices(
     session: Session,
     episode: Episode,
     tmdb_show_id: int | None = None,
+    name: str | None = None,
+    limit: int = 100,
 ) -> list[TmdbEpisodeChoice]:
     """Return every TMDB episode of a title, in the order the title runs.
 
@@ -811,6 +813,9 @@ def list_tmdb_episode_choices(
     episode is not always among the episodes of the titles its show is, and naming
     the title it is under is the only way to reach it.
     """
+    if name and name.strip():
+        return _named_tmdb_episode_choices(session, episode, name.strip(), limit)
+
     canonical_show_ids = (
         episode.season.show.canonical_show_ids
         if tmdb_show_id is None
@@ -822,32 +827,85 @@ def list_tmdb_episode_choices(
     titles = [
         by_title.get(canonical_show_id, []) for canonical_show_id in canonical_show_ids
     ]
-    candidates = [candidate for title in titles for candidate in title]
-    absolute_numbers = {
-        candidate_id: number
-        for title in titles
-        for candidate_id, number in _candidate_absolute_numbers(title).items()
-    }
-    used_tmdb_ids = _tmdb_ids_used_by_show(session, episode)
-    choices = [
-        choice
-        for candidate in candidates
-        if (
-            choice := _choice(
-                candidate,
-                absolute_numbers,
-                similarity(episode.name, candidate[0].name),
-            )
-        )
-        is not None
-    ]
-    for choice in choices:
-        choice.used_by = used_tmdb_ids.get(choice.tmdb_episode_id, [])
-        choice.already_used = bool(choice.used_by)
     return sorted(
-        choices,
+        _title_choices(session, episode, titles),
         key=lambda choice: _order(choice.season_number, choice.episode_number),
     )
+
+
+# TODO: Validate
+def _named_canonical_episodes(
+    session: Session,
+    wanted: str,
+    limit: int,
+) -> list[tuple[uuid.UUID, uuid.UUID]]:
+    statement = (
+        select(Episode.id, Season.show_id)
+        .join(Season, onclause=col(Episode.season_id) == Season.id)
+        .join(Show, onclause=col(Season.show_id) == Show.id)
+        .where(
+            is_canonical(Episode),
+            is_canonical(Show),
+            col(Episode.deleted_at).is_(None),
+            col(Season.deleted_at).is_(None),
+            col(Show.deleted_at).is_(None),
+            tmdb_key_clause(col(Episode.key)),
+            col(Episode.name).icontains(wanted, autoescape=True),
+        )
+        .order_by(col(Episode.name), col(Episode.id))
+        .limit(limit)
+    )
+    return [
+        (episode_id, show_id) for episode_id, show_id in session.exec(statement).all()
+    ]
+
+
+# TODO: Validate
+def _title_choices(
+    session: Session,
+    episode: Episode,
+    titles: list[list[_Candidate]],
+    keep: set[uuid.UUID] | None = None,
+) -> list[TmdbEpisodeChoice]:
+    used_tmdb_ids = _tmdb_ids_used_by_show(session, episode)
+    choices: list[TmdbEpisodeChoice] = []
+    for title in titles:
+        numbers = _candidate_absolute_numbers(title)
+        for candidate in title:
+            if keep is not None and candidate[0].id not in keep:
+                continue
+            choice = _choice(
+                candidate,
+                numbers,
+                similarity(episode.name, candidate[0].name),
+            )
+            if choice is None:
+                continue
+            choice.used_by = used_tmdb_ids.get(choice.tmdb_episode_id, [])
+            choice.already_used = bool(choice.used_by)
+            choices.append(choice)
+    return choices
+
+
+# TODO: Validate
+def _named_tmdb_episode_choices(
+    session: Session,
+    episode: Episode,
+    wanted: str,
+    limit: int,
+) -> list[TmdbEpisodeChoice]:
+    matches = _named_canonical_episodes(session, wanted, limit)
+    if not matches:
+        return []
+
+    by_title = _candidates_by_show(session, {show_id for _id, show_id in matches})
+    choices = _title_choices(
+        session,
+        episode,
+        list(by_title.values()),
+        {episode_id for episode_id, _show_id in matches},
+    )
+    return sorted(choices, key=lambda choice: -choice.similarity)
 
 
 # TODO: Validate

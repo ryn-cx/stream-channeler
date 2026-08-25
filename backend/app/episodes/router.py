@@ -304,13 +304,15 @@ def admin_get_tmdb_episode_choices(
     session: SessionDep,
     episode: ExistingEpisode,
     tmdb_show_id: int | None = None,
+    name: str | None = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
 ) -> list[TmdbEpisodeChoice]:
     """Get every TMDB episode an `Episode` could be linked to, in the title's order.
 
     `tmdb_show_id` reads the episodes of a series other than the one the show is
     linked to, which is what reaches an episode TMDB files under its own title.
     """
-    return list_tmdb_episode_choices(session, episode, tmdb_show_id)
+    return list_tmdb_episode_choices(session, episode, tmdb_show_id, name, limit)
 
 
 # TODO: Validate

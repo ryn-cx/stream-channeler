@@ -1507,6 +1507,8 @@ export class EpisodesService {
      * @param data The data for the request.
      * @param data.episodeId
      * @param data.tmdbShowId
+     * @param data.name
+     * @param data.limit
      * @returns TmdbEpisodeChoice Successful Response
      * @throws ApiError
      */
@@ -1518,7 +1520,9 @@ export class EpisodesService {
                 episode_id: data.episodeId
             },
             query: {
-                tmdb_show_id: data.tmdbShowId
+                tmdb_show_id: data.tmdbShowId,
+                name: data.name,
+                limit: data.limit
             },
             errors: {
                 422: 'Validation Error'

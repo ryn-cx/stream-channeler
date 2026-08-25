@@ -1,6 +1,6 @@
 // TODO: Validate
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Eye, EyeOff } from "lucide-react"
+import { Eye, EyeOff, Search } from "lucide-react"
 import type { ReactNode } from "react"
 import { useState } from "react"
 
@@ -169,9 +169,14 @@ export function TmdbLinkPicker({
   const [showUsed, setShowUsed] = useState(false)
   const [nameDraft, setNameDraft] = useState("")
   const [urlDraft, setUrlDraft] = useState("")
+  const [searchedName, setSearchedName] = useState<string | null>(null)
   const { data: choices, isLoading } = useQuery({
-    queryKey: ["admin-tmdb-choices", episodeId],
-    queryFn: () => EpisodesService.adminGetTmdbEpisodeChoices({ episodeId }),
+    queryKey: ["admin-tmdb-choices", episodeId, searchedName],
+    queryFn: () =>
+      EpisodesService.adminGetTmdbEpisodeChoices({
+        episodeId,
+        name: searchedName ?? undefined,
+      }),
   })
 
   const linkMutation = useMutation({
@@ -221,14 +226,24 @@ export function TmdbLinkPicker({
     numberingAgreement(choice, episodeNumbering)
 
   const wanted = nameDraft.trim().toLowerCase()
+  const isSearch = searchedName !== null
 
-  const inScope = (choices ?? []).filter(
+  const offered = choices ?? []
+  const inScope = offered.filter(
     (choice) =>
       (showUsed || !choice.already_used) &&
-      (wanted.length === 0 ||
+      (isSearch ||
+        wanted.length === 0 ||
         choice.name.toLowerCase().includes(wanted) ||
         choice.show_name.toLowerCase().includes(wanted)),
   )
+
+  // TODO: Validate
+  const searchEverything = () => {
+    const asked = nameDraft.trim()
+    if (asked.length === 0) return
+    setSearchedName(asked)
+  }
 
   const ordered = [...inScope].sort(
     (left: TmdbEpisodeChoice, right: TmdbEpisodeChoice) => {
@@ -246,10 +261,33 @@ export function TmdbLinkPicker({
         <Input
           value={nameDraft}
           onChange={(event) => setNameDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return
+            event.preventDefault()
+            searchEverything()
+          }}
           placeholder="Filter by name"
           aria-label="Filter the episodes below by name"
           className="min-w-48 flex-1"
         />
+        <Button
+          type="button"
+          variant="outline"
+          disabled={nameDraft.trim().length === 0}
+          onClick={searchEverything}
+        >
+          <Search />
+          Search every show
+        </Button>
+        {isSearch ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setSearchedName(null)}
+          >
+            Back to this show
+          </Button>
+        ) : null}
         <Tabs
           value={order}
           onValueChange={(value) => setOrder(value as ChoiceOrder)}
@@ -270,15 +308,25 @@ export function TmdbLinkPicker({
       </div>
 
       <div className="max-h-96 overflow-y-auto rounded-lg border">
+        {isSearch ? (
+          <p className="border-b px-3 py-2 text-xs text-muted-foreground">
+            Every TMDB episode named “{searchedName}”, whichever show it belongs
+            to.
+          </p>
+        ) : null}
         {isLoading ? (
           <p className="p-4 text-sm text-muted-foreground">Loading…</p>
         ) : ordered.length === 0 ? (
           <p className="p-4 text-sm text-muted-foreground">
-            {(choices ?? []).length === 0
-              ? "No TMDB episodes to choose from. Paste the address of the episode on TMDB to link it and read its title in."
-              : wanted.length > 0
-                ? "No TMDB episode of this title is named that."
-                : "Every TMDB episode of this title is already used by another episode of this show."}
+            {isSearch
+              ? offered.length === 0
+                ? "No TMDB episode anywhere in the database is named that."
+                : "Every TMDB episode named that is already used by another episode of this show."
+              : offered.length === 0
+                ? "No TMDB episodes to choose from. Paste the address of the episode on TMDB to link it and read its title in."
+                : wanted.length > 0
+                  ? "No TMDB episode of this title is named that."
+                  : "Every TMDB episode of this title is already used by another episode of this show."}
           </p>
         ) : (
           ordered.map((choice) => (

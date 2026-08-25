@@ -117,6 +117,12 @@ def streaming_providers(
         providers: Sequence[dict[str, Any]] = united_states.get(category, ())
         for provider in providers:
             providers_by_id.setdefault(provider["provider_id"], provider)
+    for category in ("buy", "rent"):
+        sold: Sequence[dict[str, Any]] = united_states.get(category, ())
+        for provider in sold:
+            if plugin_for_tmdb_name(provider["provider_name"]) is None:
+                continue
+            providers_by_id.setdefault(provider["provider_id"], provider)
     return list(providers_by_id.values())
 
 

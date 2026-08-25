@@ -2573,6 +2573,8 @@ export type EpisodesAdminGetDuplicatedCanonicalEpisodesResponse = (Array<Duplica
 
 export type EpisodesAdminGetTmdbEpisodeChoicesData = {
     episodeId: string;
+    limit?: number;
+    name?: (string | null);
     tmdbShowId?: (number | null);
 };
 

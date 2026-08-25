@@ -4,7 +4,7 @@
 # ANN401 (Throughout the file) - Any is ok because the actual types are set by
 # copy_func_params.
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timezone
 from typing import Any
 
 from app.utils.copy_params import copy_func_params
@@ -17,7 +17,7 @@ _DATETIME_TZINFO_POSITION = 8
 # TODO: Validate
 def _local_tz() -> Any:  # noqa: ANN401
     """Return the system's local tzinfo without relying on a naive datetime.now()."""
-    return datetime.now(UTC).astimezone().tzinfo
+    return timezone(datetime.now(UTC).astimezone().utcoffset() or UTC.utcoffset(None))
 
 
 # TODO: Validate

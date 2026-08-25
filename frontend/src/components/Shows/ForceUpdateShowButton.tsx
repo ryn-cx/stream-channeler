@@ -8,20 +8,20 @@ import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
-interface RelinkShowButtonProps {
+interface ForceUpdateShowButtonProps {
   showId: string
 }
 
 // TODO: Validate
-export function RelinkShowButton({ showId }: RelinkShowButtonProps) {
+export function ForceUpdateShowButton({ showId }: ForceUpdateShowButtonProps) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
   const [isConfirming, setIsConfirming] = useState(false)
 
   const mutation = useMutation({
-    mutationFn: () => ShowsService.adminRelinkShowEpisodes({ showId }),
+    mutationFn: () => ShowsService.adminForceUpdateShow({ showId }),
     onSuccess: () => {
-      showSuccessToast("Episodes relinked")
+      showSuccessToast("Show imported again")
       queryClient.invalidateQueries({ queryKey: ["shows"] })
       queryClient.invalidateQueries({ queryKey: ["episodes"] })
       queryClient.invalidateQueries({ queryKey: ["show-information", showId] })
@@ -44,14 +44,14 @@ export function RelinkShowButton({ showId }: RelinkShowButtonProps) {
         disabled={mutation.isPending}
         onClick={() => setIsConfirming(true)}
       >
-        Relink
+        Force Update
       </Button>
       <ConfirmDialog
         open={isConfirming}
         onOpenChange={setIsConfirming}
-        title="Relink Episodes"
-        description="Every episode link that nobody confirmed by hand is deleted and worked out again from scratch. Episodes you locked, and the ones settled as not on TMDB, are left alone."
-        confirmLabel="Relink"
+        title="Force Update Show"
+        description="The show is read from its website again from scratch, whatever it was last read at, and everything it holds is written out again."
+        confirmLabel="Force Update"
         variant="destructive"
         onConfirm={() => mutation.mutate()}
       />
