@@ -21,6 +21,7 @@ export interface Show {
   tmdb_id?: number | null
   canonical_show_id?: string | null
   image_url?: string | null
+  year?: number | null
 }
 
 export interface Source {
@@ -283,13 +284,12 @@ export function ShowCards({
                       <SourceFavicon source={canonicalSource} />
                     </span>
                   )}
-                  {/* The name reads over the artwork so the card stays as short
-                      as the picture it shows. */}
-                  <span className="absolute inset-x-0 bottom-0 wrap-break-word bg-linear-to-t from-black/80 to-transparent p-2 text-sm font-medium text-white">
-                    {name}
-                  </span>
                 </div>
                 <div className="flex flex-col gap-2 p-3">
+                  <span className="wrap-break-word text-sm">
+                    <span className="font-bold">{name}</span>
+                    {canonicalShow?.year ? ` (${canonicalShow.year})` : ""}
+                  </span>
                   <div className="flex flex-wrap items-center gap-1">
                     {showFacts(canonicalShow, stats[canonicalShowId]).map(
                       (fact) => (
