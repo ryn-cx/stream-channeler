@@ -7,7 +7,7 @@ from collections.abc import Iterable, Sequence
 from datetime import datetime
 from enum import StrEnum
 from functools import partial
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, Self, TypeVar
 
 from sqlalchemy import util
 from sqlalchemy.dialects.postgresql import JSONB
@@ -79,8 +79,6 @@ def sortable_field_indexes(
 
 # TODO: Validate
 class Visibility(StrEnum):
-    """Visibility enum for `Channel`s and `Plugin`s."""
-
     public = "public"
     unlisted = "unlisted"
     private = "private"
@@ -95,7 +93,7 @@ class RootRecordMixin(ABC):
 
     # TODO: Validate
     @abstractmethod
-    def _root_record(self, session: Session) -> Channel | Plugin | ChannelOrder:
+    def _root_record(self, session: Session) -> Channel | ChannelOrder:
         """Return the root record directly owned by the `User`."""
 
     # TODO: Validate
@@ -181,38 +179,16 @@ class BaseMediaMixin(SQLModel):
     )
 
 
+ChildT = TypeVar("ChildT", bound="Plugin | Source | Show | Season | Episode | File")
+ParentT = TypeVar("ParentT", bound="Plugin | Source | Show | Season")
+
+
 # TODO: Validate
-class MediaMixin[
-    ParentT: User | Plugin | Source | Show | Season,
-    ChildT: Plugin | Source | Show | Season | Episode | File,
-](TimestampIdAndHashMixin, BaseMediaMixin, RootRecordMixin, ABC):
-    # The column holding the parent's id. Named rather than found by looking for
-    # the first foreign key, since a model can hold more than one and which of
-    # them is the parent is not something the columns say.
-    PARENT_ID_FIELD: ClassVar[str]
+class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):  # noqa: UP046
     # The column saying outright whether this row is the media itself, for the
     # models that hold both kinds of row in one table. Those models carry
     # `is_canonical` as a column of their own; the rest leave this unset.
     CANONICAL_FLAG_FIELD: ClassVar[str | None] = None
-
-    """Mixin for media models.
-
-    Subclasses must implement `parent`, `children`, `root_record`, and
-    `select_with_plugin`.
-    """
-
-    # TODO: Validate
-    @property
-    @abstractmethod
-    def parent(self) -> ParentT:
-        """Return the parent of the record.
-
-        - `Plugin` -> `User`
-        - `Source` -> `Plugin`
-        - `Show` -> `Source`
-        - `Season` -> `Show`
-        - `Episode` -> `Season`
-        """
 
     # TODO: Validate
     @property
@@ -247,10 +223,142 @@ class MediaMixin[
         """Return a select joined to `Plugin`."""
 
     # TODO: Validate
-    @classmethod
+    def set_update_at(
+        self,
+        new_update_at_value: datetime | None,
+        files: Sequence[SupportsDataTimestamp] | None = None,
+    ) -> None:
+        """Set `update_at` based its current value and `new_update_at_value`."""
+        files = files or []
+        # If the existing update_at is older than data_timestamp the update has
+        # been completed and update_at can be cleared.
+        if (
+            self.update_at
+            and self.data_timestamp
+            and self.update_at < self.data_timestamp
+        ):
+            self.update_at = None
+
+        # If every file is newer than the existing update_at the update has been
+        # completed and update_at can be cleared.
+        if (
+            self.update_at
+            and files
+            and all(file.data_timestamp > self.update_at for file in files)
+        ):
+            self.update_at = None
+
+        if not new_update_at_value:
+            return
+
+        # If the existing data_timestamp is newer than the new update_at value update_at
+        # can be ignored because the data is already up to date.
+        if self.data_timestamp and self.data_timestamp >= new_update_at_value:
+            return
+
+        # If every file is newer than the new update_at value the data is already up to
+        # date and the new value can be ignored.
+        if files and all(file.data_timestamp > new_update_at_value for file in files):
+            return
+
+        # If the new update_at is before the existing update_at the existing update_at
+        # should be replaced so the updates occur as soon as possible.
+        if self.update_at is None or new_update_at_value < self.update_at:
+            self.update_at = new_update_at_value
+
+    # TODO: Validate
+    def add_child(self, child: ChildT) -> None:
+        """Add a child to the record."""
+        self.children.append(child)
+
+    # TODO: Validate
+    def _update_existing(self, existing_record: Self, protected_keys: set[str]) -> Self:
+        # id:  automatically generated when making a model, but that value should
+        # only be used for new entries. When upserting the original id should be
+        # preserved.
+        # created_at: set by the database.
+        # modified_at: set by the database.
+        protected_keys = protected_keys | {"id", "created_at", "modified_at"}
+        dumped = self.model_dump(exclude=protected_keys)
+        existing_record.sqlmodel_update(dumped)
+        return existing_record
+
+    # TODO: Validate
+    def soft_delete(
+        self,
+        timestamp: datetime | None = None,
+        *,
+        recursive: bool = True,
+    ) -> None:
+        """Soft delete the record.
+
+        If the record is already deleted, the existing `deleted_at` value will be
+        kept.
+
+        Args:
+            timestamp: The timestamp to set for `deleted_at`. If `None`, the current
+                time will be used.
+            recursive: Whether to also soft delete all children of the record.
+
+        """
+        if self.deleted_at is None:
+            self.deleted_at = timestamp or tz_datetime.now()
+
+        if recursive:
+            for child in self.children:
+                child.soft_delete(timestamp)
+
+    # TODO: Validate
+    def soft_undelete(self, *, recursive: bool = True) -> None:
+        """Soft undelete the record.
+
+        If the record is not deleted `soft_undelete` does nothing.
+
+        Args:
+            recursive: Whether to also soft undelete all children of the record.
+
+        """
+        self.deleted_at = None
+        if recursive:
+            for child in self.children:
+                child.soft_undelete()
+
+    # TODO: Validate
+    def soft_delete_missing_children(self, found_keys: Iterable[str]) -> None:
+        """Soft delete children whose keys are not in `found_keys`."""
+        found_keys = set(found_keys)
+        for child in self.children:
+            if child.key not in found_keys:
+                child.soft_delete()
+
+
+# TODO: Validate
+class ChildMediaMixin(MediaMixin[ChildT], ABC, Generic[ParentT, ChildT]):  # noqa: UP046
+    # The column holding the parent's id. Named rather than found by looking for
+    # the first foreign key, since a model can hold more than one and which of
+    # them is the parent is not something the columns say.
+    PARENT_ID_FIELD: ClassVar[str]
+
+    # TODO: Validate
+    @property
     @abstractmethod
-    def select_with_user_eager(cls) -> SelectOfScalar[Any]:
-        """Return a select joined to `User` with contains_eager."""
+    def parent(self) -> ParentT:
+        """Return the parent of the record.
+
+        - `Source` -> `Plugin`
+        - `Show` -> `Source`
+        - `Season` -> `Show`
+        - `Episode` -> `Season`
+        """
+
+    # TODO: Validate
+    @classmethod
+    def parent_id_field(cls) -> str:
+        """Return the name of the parent id column."""
+        return cls.PARENT_ID_FIELD
+
+    # TODO: Consider implementing a recursive version of this so only one upsert needs
+    # to be called when upserting a tree of records.
 
     # TODO: Validate
     @classmethod
@@ -363,61 +471,6 @@ class MediaMixin[
         """
         return session.identity_map[(cls, (parent.id, key), None)]
 
-    # TODO: Validate
-    def set_update_at(
-        self,
-        new_update_at_value: datetime | None,
-        files: Sequence[SupportsDataTimestamp] | None = None,
-    ) -> None:
-        """Set `update_at` based its current value and `new_update_at_value`."""
-        files = files or []
-        # If the existing update_at is older than data_timestamp the update has
-        # been completed and update_at can be cleared.
-        if (
-            self.update_at
-            and self.data_timestamp
-            and self.update_at < self.data_timestamp
-        ):
-            self.update_at = None
-
-        # If every file is newer than the existing update_at the update has been
-        # completed and update_at can be cleared.
-        if (
-            self.update_at
-            and files
-            and all(file.data_timestamp > self.update_at for file in files)
-        ):
-            self.update_at = None
-
-        if not new_update_at_value:
-            return
-
-        # If the existing data_timestamp is newer than the new update_at value update_at
-        # can be ignored because the data is already up to date.
-        if self.data_timestamp and self.data_timestamp >= new_update_at_value:
-            return
-
-        # If every file is newer than the new update_at value the data is already up to
-        # date and the new value can be ignored.
-        if files and all(file.data_timestamp > new_update_at_value for file in files):
-            return
-
-        # If the new update_at is before the existing update_at the existing update_at
-        # should be replaced so the updates occur as soon as possible.
-        if self.update_at is None or new_update_at_value < self.update_at:
-            self.update_at = new_update_at_value
-
-    # TODO: Validate
-    def add_child(self, child: ChildT) -> None:
-        """Add a child to the record."""
-        self.children.append(child)
-
-    # TODO: Validate
-    @classmethod
-    def parent_id_field(cls) -> str:
-        """Return the name of the parent id column."""
-        return cls.PARENT_ID_FIELD
-
     # TODO: Consider implementing a recursive version of this so only one upsert needs
     # to be called when upserting a tree of records.
     # TODO: Validate
@@ -440,15 +493,7 @@ class MediaMixin[
         if protected_keys is None:
             protected_keys = set()
         if existing_record:
-            # id:  automatically generated when making a model, but that value should
-            # only be used for new entries. When upserting the original id should be
-            # preserved.
-            # created_at: set by the database.
-            # modified_at: set by the database.
-            protected_keys = protected_keys | {"id", "created_at", "modified_at"}
-            dumped = self.model_dump(exclude=protected_keys)
-            existing_record.sqlmodel_update(dumped)
-            return existing_record
+            return self._update_existing(existing_record, protected_keys)
         # self will always be a child of parent
         parent.add_child(self)  # type: ignore[arg-type]
         return self
@@ -471,51 +516,3 @@ class MediaMixin[
         if existing_record:
             record.set_update_at(self.update_at, files)
         return record
-
-    # TODO: Validate
-    def soft_delete(
-        self,
-        timestamp: datetime | None = None,
-        *,
-        recursive: bool = True,
-    ) -> None:
-        """Soft delete the record.
-
-        If the record is already deleted, the existing `deleted_at` value will be
-        kept.
-
-        Args:
-            timestamp: The timestamp to set for `deleted_at`. If `None`, the current
-                time will be used.
-            recursive: Whether to also soft delete all children of the record.
-
-        """
-        if self.deleted_at is None:
-            self.deleted_at = timestamp or tz_datetime.now()
-
-        if recursive:
-            for child in self.children:
-                child.soft_delete(timestamp)
-
-    # TODO: Validate
-    def soft_undelete(self, *, recursive: bool = True) -> None:
-        """Soft undelete the record.
-
-        If the record is not deleted `soft_undelete` does nothing.
-
-        Args:
-            recursive: Whether to also soft undelete all children of the record.
-
-        """
-        self.deleted_at = None
-        if recursive:
-            for child in self.children:
-                child.soft_undelete()
-
-    # TODO: Validate
-    def soft_delete_missing_children(self, found_keys: Iterable[str]) -> None:
-        """Soft delete children whose keys are not in `found_keys`."""
-        found_keys = set(found_keys)
-        for child in self.children:
-            if child.key not in found_keys:
-                child.soft_delete()

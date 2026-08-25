@@ -10,7 +10,7 @@ from app.auth.dependencies import (
     SuperUser,
     get_current_active_superuser,
 )
-from app.files.dependencies import EditableFile, ReadableFile
+from app.files.dependencies import ExistingFile
 from app.files.models import File
 from app.files.schemas import (
     FileCreate,
@@ -19,16 +19,11 @@ from app.files.schemas import (
     FilesPublic,
     FileUpdate,
 )
-from app.media.schemas import MediaReadOptions
-from app.media.service import (
-    delete_record,
-    media_scoped_list_response,
-)
-from app.plugins.dependencies import EditablePlugin, ReadablePlugin
+from app.media.service import delete_record
+from app.plugins.dependencies import ExistingPlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
 from app.service import list_response
-from app.users.models import User
 
 files_router = APIRouter(
     prefix="/admin/files",
@@ -43,7 +38,6 @@ plugin_files_router = APIRouter(
 
 FILE_PARENT_COLUMNS: dict[str, Any] = {
     "plugin_name": Plugin.name,
-    "username": User.username,
 }
 
 
@@ -51,10 +45,9 @@ FILE_PARENT_COLUMNS: dict[str, Any] = {
 @plugin_files_router.post("/files", response_model=FilePublic)
 def create_file(
     session: SessionDep,
-    plugin: EditablePlugin,
+    plugin: ExistingPlugin,
     file_input: FileCreate,
 ) -> File:
-    """Create a `File` if the `Plugin` is editable by the `User`."""
     return file_input.create(session, File, plugin)
 
 
@@ -63,15 +56,14 @@ def create_file(
 def get_files(
     session: SessionDep,
     current_user: SuperUser,
-    read_options: Annotated[MediaReadOptions, Query()],
+    read_options: Annotated[ReadOptions, Query()],
 ) -> FilesPublic:
-    """Get every `File` across all `Plugin`s readable by the `User`."""
-    return media_scoped_list_response(
+    return list_response(
         session=session,
-        base=File.select_with_user_eager(),
+        base=File.select_with_plugin_eager(),
         response_model=FilesPublic,
         schema=FileListPublic,
-        read_options=read_options,
+        params=read_options,
         current_user=current_user,
         extra_columns=FILE_PARENT_COLUMNS,
     )
@@ -80,13 +72,12 @@ def get_files(
 # TODO: Validate
 @plugin_files_router.get("/files")
 def get_plugin_files(
-    plugin: ReadablePlugin,
+    plugin: ExistingPlugin,
     session: SessionDep,
     current_user: SuperUser,
     read_options: Annotated[ReadOptions, Query()],
 ) -> FilesPublic:
-    """List all `File`s for a `Plugin` if it is public or editable by the `User`."""
-    base = File.select_with_user_eager().where(File.plugin_id == plugin.id)
+    base = File.select_with_plugin_eager().where(File.plugin_id == plugin.id)
     return list_response(
         session=session,
         base=base,
@@ -99,27 +90,24 @@ def get_plugin_files(
 
 
 # TODO: Validate
-@files_router.get("/{file_id}", response_model=FilePublic)  # noqa: FAST003 - Used by ReadableFile.
-def get_file(file: ReadableFile) -> File:
-    """Get a `File` if it's readable by the `User`."""
+@files_router.get("/{file_id}", response_model=FilePublic)  # noqa: FAST003 - Used by ExistingFile.
+def get_file(file: ExistingFile) -> File:
     return file
 
 
 # TODO: Validate
-@files_router.patch("/{file_id}", response_model=FilePublic)  # noqa: FAST003 - Used by EditableFile.
+@files_router.patch("/{file_id}", response_model=FilePublic)  # noqa: FAST003 - Used by ExistingFile.
 def update_file(
     session: SessionDep,
-    file: EditableFile,
+    file: ExistingFile,
     file_input: FileUpdate,
 ) -> File:
-    """Update and return a `File` if it's editable by the `User`."""
     return file_input.update(session, file)
 
 
 # TODO: Validate
-@files_router.delete("/{file_id}")  # noqa: FAST003 - Used by EditableFile.
-def delete_file(session: SessionDep, file: EditableFile) -> Message:
-    """Delete a `File` if it's editable by the `User`."""
+@files_router.delete("/{file_id}")  # noqa: FAST003 - Used by ExistingFile.
+def delete_file(session: SessionDep, file: ExistingFile) -> Message:
     return delete_record(session, file)
 
 

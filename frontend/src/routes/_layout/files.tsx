@@ -30,9 +30,8 @@ function AllFilesPage() {
       columnVisibilityKey="files-column-visibility"
       defaultHidden={{ id: false }}
       emptyIcon={FileText}
-      fetchTable={async (scope, params) => {
+      fetchTable={async (params) => {
         const result = await FilesService.getFiles({
-          scope,
           offset: params.offset,
           limit: params.limit,
           ...serializeTableQuery(params, fileColumns),

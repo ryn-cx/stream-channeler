@@ -8,7 +8,6 @@ from app.constants import ALL_TEST_FILES_FOLDER
 from app.database import engine, load_models
 from app.files.models import File
 from app.plugins.models import Plugin
-from app.users.service import get_or_create_plugin_user
 from plugins.utils.manage_plugins import import_plugins, plugins
 from tests.old_mess.plugins.plugin_validator.context_managers import (
     stored_file_record,
@@ -23,16 +22,11 @@ COMMIT_EVERY = 500
 
 # TODO: Validate
 def _plugin_records_by_owner_key(session: Session) -> dict[str, Plugin]:
-    plugin_user = get_or_create_plugin_user(session=session)
     records: dict[str, Plugin] = {}
     for plugin_class in plugins:
         plugin_class(session)
         owner_key = plugin_class.__module__.split(".")[1]
-        records[owner_key] = Plugin.get_one(
-            session,
-            plugin_user,
-            plugin_class.plugin_key(),
-        )
+        records[owner_key] = Plugin.get_one(session, plugin_class.plugin_key())
     return records
 
 

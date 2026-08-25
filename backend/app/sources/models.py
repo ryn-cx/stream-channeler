@@ -8,15 +8,13 @@ from sqlmodel import (
     Index,
     PrimaryKeyConstraint,
     Relationship,
-    Session,
     UniqueConstraint,
     select,
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.models import BaseMediaMixin, MediaMixin, sortable_field_indexes
+from app.models import BaseMediaMixin, ChildMediaMixin, sortable_field_indexes
 from app.plugins.models import Plugin
-from app.users.models import User
 
 if TYPE_CHECKING:
     from app.shows.models import Show
@@ -32,7 +30,7 @@ class BaseSource(BaseMediaMixin):
 
 
 # TODO: Validate
-class Source(BaseSource, MediaMixin[Plugin, "Show"], table=True):
+class Source(BaseSource, ChildMediaMixin[Plugin, "Show"], table=True):
     PARENT_ID_FIELD: ClassVar[str] = "plugin_id"
 
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = []
@@ -52,11 +50,6 @@ class Source(BaseSource, MediaMixin[Plugin, "Show"], table=True):
     shows: list[Show] = Relationship(back_populates="source", cascade_delete=True)
 
     # TODO: Validate
-    @override
-    def _root_record(self, session: Session) -> Plugin:
-        return self.plugin
-
-    # TODO: Validate
     @classmethod
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
@@ -64,14 +57,9 @@ class Source(BaseSource, MediaMixin[Plugin, "Show"], table=True):
 
     # TODO: Validate
     @classmethod
-    @override
-    def select_with_user_eager(cls) -> SelectOfScalar[Self]:
-        return (
-            cls.select_with_plugin()
-            .join(User)
-            .options(
-                contains_eager(cls.plugin).contains_eager(Plugin.user),  # type: ignore[arg-type]  # type: ignore[arg-type]
-            )
+    def select_with_plugin_eager(cls) -> SelectOfScalar[Self]:
+        return cls.select_with_plugin().options(
+            contains_eager(cls.plugin),  # type: ignore[arg-type]
         )
 
     # TODO: Validate

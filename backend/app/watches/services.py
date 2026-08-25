@@ -3,9 +3,9 @@ import uuid
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ColumnElement, ScalarSelect, Subquery
+from sqlalchemy import ScalarSelect, Subquery
 from sqlalchemy.orm import aliased
-from sqlmodel import Session, col, func, or_, select
+from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.canonical_media.episodes import (
@@ -17,7 +17,6 @@ from app.canonical_media.episodes import (
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
 from app.media.service import delete_record
-from app.models import Visibility
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.plugins.schemas import PluginOutput
@@ -30,7 +29,6 @@ from app.shows.schemas import ShowPublic
 from app.sources.models import Source
 from app.sources.schemas import SourcePublic
 from app.users.models import User
-from app.users.service import get_or_create_plugin_user
 from app.watches.exceptions import WatchAlreadyExistsError
 from app.watches.identifiers import (
     canonical_id_by_watch,
@@ -64,14 +62,6 @@ IdentifiedEpisode = aliased(Episode)
 
 
 # TODO: Validate
-def _visible_plugin_condition(user_id: uuid.UUID) -> ColumnElement[bool]:
-    return or_(
-        col(Plugin.visibility).in_((Visibility.public, Visibility.unlisted)),
-        col(Plugin.user_id) == user_id,
-    )
-
-
-# TODO: Validate
 def _watched_canonical_subquery(user_id: uuid.UUID) -> SelectOfScalar[uuid.UUID]:
     """Return the canonical episodes the `User` has watched anything of."""
     return watched_canonical_ids(user_id)
@@ -79,7 +69,6 @@ def _watched_canonical_subquery(user_id: uuid.UUID) -> SelectOfScalar[uuid.UUID]
 
 # TODO: Validate
 def _representative_episode_subquery(
-    user_id: uuid.UUID,
     canonical_ids: SelectOfScalar[uuid.UUID],
 ) -> Subquery:
     """One representative visible non-canonical row per canonical episode.
@@ -106,7 +95,6 @@ def _representative_episode_subquery(
         .join(Source, col(Source.id) == col(Show.source_id))
         .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
         .where(col(Episode.deleted_at).is_(None))
-        .where(_visible_plugin_condition(user_id))
         .where(col(Plugin.key) != TMDB_PLUGIN_KEY)
         .where(col(canonical_link.canonical_episode_id).in_(canonical_ids))
         .distinct(col(canonical_link.canonical_episode_id))
@@ -116,7 +104,7 @@ def _representative_episode_subquery(
 
 
 # TODO: Validate
-def _own_visible_episode_subquery(user_id: uuid.UUID) -> ScalarSelect[uuid.UUID]:
+def _own_visible_episode_subquery() -> ScalarSelect[uuid.UUID]:
     """Return the episode a watch was recorded against, when the `User` can see it.
 
     A watch is made against one website's non-canonical row of an episode, which is the
@@ -131,7 +119,6 @@ def _own_visible_episode_subquery(user_id: uuid.UUID) -> ScalarSelect[uuid.UUID]
         .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
         .where(col(WatchedEpisode.id) == col(Watch.episode_id))
         .where(col(WatchedEpisode.deleted_at).is_(None))
-        .where(_visible_plugin_condition(user_id))
         .where(col(Plugin.key) != TMDB_PLUGIN_KEY)
         .correlate(Watch)
         .scalar_subquery()
@@ -141,7 +128,6 @@ def _own_visible_episode_subquery(user_id: uuid.UUID) -> ScalarSelect[uuid.UUID]
 # TODO: Validate
 def _episode_watch_base_statement(user_id: uuid.UUID) -> SelectOfScalar[Watch]:
     representative = _representative_episode_subquery(
-        user_id,
         _watched_canonical_subquery(user_id),
     )
     identified_link = canonical_episode_link()
@@ -163,7 +149,7 @@ def _episode_watch_base_statement(user_id: uuid.UUID) -> SelectOfScalar[Watch]:
             Episode,
             col(Episode.id)
             == func.coalesce(
-                _own_visible_episode_subquery(user_id),
+                _own_visible_episode_subquery(),
                 representative.c.episode_id,
             ),
         )
@@ -197,7 +183,7 @@ def get_watched_episodes(
             "episode": col(Episode.name),
         },
     )
-    output = _format_watched_episodes_data(session, user.id, rows)
+    output = _format_watched_episodes_data(session, rows)
     output.total_count = total_count
     output.filtered_count = filtered_count
     output.is_server_side = is_server_side
@@ -207,7 +193,6 @@ def get_watched_episodes(
 # TODO: Validate
 def _own_visible_episodes_by_watch(
     session: Session,
-    user_id: uuid.UUID,
     watches: Sequence[Watch],
 ) -> dict[uuid.UUID, Episode]:
     watch_ids = {watch.id for watch in watches}
@@ -224,7 +209,6 @@ def _own_visible_episodes_by_watch(
         .where(
             col(Watch.id).in_(watch_ids),
             col(Episode.deleted_at).is_(None),
-            _visible_plugin_condition(user_id),
             col(Plugin.key) != TMDB_PLUGIN_KEY,
         ),
     ).all()
@@ -234,7 +218,6 @@ def _own_visible_episodes_by_watch(
 # TODO: Validate
 def _representative_episodes_by_watch(
     session: Session,
-    user_id: uuid.UUID,
     watches: Sequence[Watch],
 ) -> dict[uuid.UUID, Episode]:
     """Load the representative visible `Episode` for each watched identifier.
@@ -244,7 +227,7 @@ def _representative_episodes_by_watch(
     media is reached two ways and so has a row under each, either stands for the
     identifier; they are links to one episode either way.
     """
-    episodes = _own_visible_episodes_by_watch(session, user_id, watches)
+    episodes = _own_visible_episodes_by_watch(session, watches)
     canonical_ids_by_watch = canonical_id_by_watch(
         session,
         [watch for watch in watches if watch.id not in episodes],
@@ -252,7 +235,6 @@ def _representative_episodes_by_watch(
     if not canonical_ids_by_watch:
         return episodes
     representative = _representative_episode_subquery(
-        user_id,
         select(col(Episode.id)).where(
             col(Episode.id).in_(set(canonical_ids_by_watch.values())),
         ),
@@ -273,7 +255,6 @@ def _representative_episodes_by_watch(
 # TODO: Validate
 def _format_watched_episodes_data(
     session: Session,
-    user_id: uuid.UUID,
     episode_watches: Sequence[Watch],
 ) -> WatchesListOutput:
     episodes_dict: dict[uuid.UUID, EpisodeOutput] = {}
@@ -283,11 +264,7 @@ def _format_watched_episodes_data(
     plugins_dict: dict[uuid.UUID, PluginOutput] = {}
     watches: list[WatchItem] = []
 
-    episode_by_watch = _representative_episodes_by_watch(
-        session,
-        user_id,
-        episode_watches,
-    )
+    episode_by_watch = _representative_episodes_by_watch(session, episode_watches)
 
     for episode_watch in episode_watches:
         episode = episode_by_watch.get(episode_watch.id)
@@ -412,18 +389,13 @@ def relink_detached_watches(session: Session) -> WatchRelinkResults:
 def get_plugins_with_import_watch_history(
     session: Session,
 ) -> list[type[AbstractPlugin]]:
-    """Return all plugin classes that support watch import.
-
-    Only includes plugins that are owned by the official plugin user.
-    """
+    """Return all plugin classes that support watch import."""
     import_plugins()
-    plugin_user = get_or_create_plugin_user(session=session)
-
     return [
         plugin_cls
         for plugin_cls in plugins
         if plugin_cls.implements("import_watch_history")
-        and Plugin.get(session, plugin_user, plugin_cls.plugin_key())
+        and Plugin.get(session, plugin_cls.plugin_key())
     ]
 
 

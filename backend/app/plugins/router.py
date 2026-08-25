@@ -1,6 +1,6 @@
 # TODO: Validate
 
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
@@ -9,12 +9,8 @@ from app.auth.dependencies import (
     SessionDep,
     get_current_active_superuser,
 )
-from app.media.schemas import MediaReadOptions
-from app.media.service import (
-    delete_record,
-    media_scoped_list_response,
-)
-from app.plugins.dependencies import EditablePlugin, ReadablePlugin
+from app.media.service import delete_record
+from app.plugins.dependencies import ExistingPlugin
 from app.plugins.models import Plugin
 from app.plugins.schemas import (
     PluginCreate,
@@ -28,18 +24,13 @@ from app.plugins.schemas import (
     PluginUpdate,
     PluginURLMatch,
 )
-from app.schemas import Message
-from app.users.models import User
+from app.schemas import Message, ReadOptions
+from app.service import list_response
 from plugins.utils.abstract_plugin import PluginMediaInfo, PluginSearchResults
 from plugins.utils.manage_plugins import sorted_plugins
 
 plugins_router = APIRouter(prefix="/plugins", tags=["plugins"])
 
-PLUGIN_EXTRA_COLUMNS: dict[str, Any] = {"username": User.username}
-
-
-# A `Plugin`'s parent is the `User` that owns it rather than another media record, so
-# the create route resolves the requester instead of a record they can edit.
 # TODO: Validate
 @plugins_router.post(
     "",
@@ -48,11 +39,10 @@ PLUGIN_EXTRA_COLUMNS: dict[str, Any] = {"username": User.username}
 )
 def create_plugin(
     session: SessionDep,
-    current_user: CurrentUser,
     plugin_input: PluginCreate,
 ) -> Plugin:
-    """Create a `Plugin` owned by the `User`."""
-    return plugin_input.create(session, Plugin, current_user)
+    """Create a `Plugin`."""
+    return plugin_input.create(session)
 
 
 # TODO: Validate
@@ -60,17 +50,16 @@ def create_plugin(
 def get_plugins(
     session: SessionDep,
     current_user: CurrentUser,
-    read_options: Annotated[MediaReadOptions, Query()],
+    read_options: Annotated[ReadOptions, Query()],
 ) -> PluginsPublic:
     """Get `Plugin`s."""
-    return media_scoped_list_response(
+    return list_response(
         session=session,
-        base=Plugin.select_with_user_eager(),
+        base=Plugin.select_with_plugin(),
         response_model=PluginsPublic,
         schema=PluginListOutput,
-        read_options=read_options,
+        params=read_options,
         current_user=current_user,
-        extra_columns=PLUGIN_EXTRA_COLUMNS,
     )
 
 
@@ -82,10 +71,9 @@ def get_plugins(
 )
 def update_plugin(
     session: SessionDep,
-    plugin: EditablePlugin,
+    plugin: ExistingPlugin,
     plugin_input: PluginUpdate,
 ) -> Plugin:
-    """Update and return a `Plugin` if it's editable by the `User`."""
     return plugin_input.update(session, plugin)
 
 
@@ -94,8 +82,7 @@ def update_plugin(
     "/{plugin_id}",
     dependencies=[Depends(get_current_active_superuser)],
 )
-def delete_plugin(session: SessionDep, plugin: EditablePlugin) -> Message:
-    """Delete a `Plugin` if it's editable by the `User`."""
+def delete_plugin(session: SessionDep, plugin: ExistingPlugin) -> Message:
     return delete_record(session, plugin)
 
 
@@ -263,8 +250,7 @@ def media_info(
     response_model=PluginOutput,
     dependencies=[Depends(get_current_active_superuser)],
 )
-def get_plugin(plugin: ReadablePlugin) -> Plugin:
-    """Get a `Plugin` if it's readable by the `User`."""
+def get_plugin(plugin: ExistingPlugin) -> Plugin:
     return plugin
 
 

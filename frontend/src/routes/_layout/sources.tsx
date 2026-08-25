@@ -33,9 +33,8 @@ function SourcesPage() {
       columnVisibilityKey="sources-column-visibility"
       defaultHidden={{ key: false, id: false }}
       emptyIcon={Database}
-      fetchTable={async (scope, params) => {
+      fetchTable={async (params) => {
         const result = await SourcesService.getSources({
-          scope,
           offset: params.offset,
           limit: params.limit,
           ...serializeTableQuery(params, sourceColumns),

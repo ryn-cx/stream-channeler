@@ -33,9 +33,8 @@ function SeasonsPage() {
       columnVisibilityKey="seasons-column-visibility"
       defaultHidden={{ key: false, id: false }}
       emptyIcon={Layers}
-      fetchTable={async (scope, params) => {
+      fetchTable={async (params) => {
         const result = await SeasonsService.getSeasons({
-          scope,
           offset: params.offset,
           limit: params.limit,
           ...serializeTableQuery(params, seasonColumns),

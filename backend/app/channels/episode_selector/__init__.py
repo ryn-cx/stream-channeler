@@ -20,10 +20,12 @@ from app.channels.episode_selector.source_dedup import (
     SourceDedupConfig,
     source_dedup_config,
 )
+from app.channels.episode_selector.user_urls import apply_user_episode_urls
 
 __all__ = [
     "EpisodeQueryBuilder",
     "EpisodeResult",
     "SourceDedupConfig",
+    "apply_user_episode_urls",
     "source_dedup_config",
 ]

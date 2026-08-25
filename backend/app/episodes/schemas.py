@@ -19,6 +19,7 @@ from app.episodes.models import BaseCanonicalEpisode, BaseEpisode, Episode
 from app.issue_reports.schemas import IssueReportOutput
 from app.schemas import (
     BaseCreateWithParentAndKey,
+    BaseInput,
     BaseUpdateWithKey,
     ReadOptions,
     make_model_with_all_fields_optional,
@@ -82,16 +83,6 @@ class EpisodeListOutput(EpisodeOutput):
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)  # type: ignore[assignment]
 
-    username: str | None = Field(
-        validation_alias=AliasPath(
-            "season",
-            "show",
-            "source",
-            "plugin",
-            "user",
-            "username",
-        ),
-    )
     season_name: str | None = Field(validation_alias=AliasPath("season", "name"))
     show_id: uuid.UUID = Field(validation_alias=AliasPath("season", "show_id"))
     show_name: str | None = Field(
@@ -151,6 +142,18 @@ class EpisodeInformationOutput(BaseModel):
     issue_reports: list[IssueReportOutput]
     source: EpisodeInformationSide
     tmdb: EpisodeInformationSide | None
+    user_url: str | None
+
+
+# TODO: Validate
+class UserEpisodeUrlInput(BaseInput):
+    url: str = Field(min_length=1)
+
+
+# TODO: Validate
+class UserEpisodeUrlOutput(BaseModel):
+    canonical_episode_id: uuid.UUID
+    url: str | None
 
 
 # TODO: Validate

@@ -38,7 +38,7 @@ from app.shows.models import Show
 
 # The three merged media models, named by the base they share so a level is
 # something to pass rather than something to branch on.
-type MediaModel = type[MediaMixin[Any, Any]]
+type MediaModel = type[MediaMixin[Any]]
 
 # What each level's canonical row answers for. Anything else belongs to the
 # non-canonical row alone — `url` above all, which says where rather than what.

@@ -14,11 +14,6 @@ export type FileTableData = FileListPublic & { pending?: boolean }
 
 export const fileColumns: ColumnDef<FileTableData>[] = [
   {
-    accessorKey: "username",
-    header: "User",
-    cell: ({ row }) => <TruncatedCell value={row.original.username} />,
-  },
-  {
     accessorKey: "plugin_name",
     header: "Plugin",
     cell: ({ row }) => (

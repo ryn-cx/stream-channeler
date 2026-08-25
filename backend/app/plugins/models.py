@@ -1,10 +1,10 @@
 # TODO: Validate
 """Plugin models."""
 
-import uuid
-from typing import TYPE_CHECKING, ClassVar, Self, override
+from typing import TYPE_CHECKING, Any, ClassVar, Self, override
 
-from sqlalchemy.orm import contains_eager, object_session
+from sqlalchemy import util
+from sqlalchemy.orm import object_session
 from sqlmodel import (
     Field,
     Index,
@@ -19,33 +19,34 @@ from sqlmodel.sql.expression import SelectOfScalar
 from app.models import (
     BaseMediaMixin,
     MediaMixin,
-    Visibility,
+    SupportsDataTimestamp,
     sortable_field_indexes,
 )
-from app.users.models import User
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from sqlalchemy.orm._typing import OrmExecuteOptionsParameter
+    from sqlalchemy.orm.interfaces import ORMOption
+    from sqlalchemy.sql.selectable import ForUpdateParameter
+
     from app.files.models import File
     from app.sources.models import Source
 
-DIRECT_SORTABLE_FIELDS = ["id", "name", "visibility"]
+DIRECT_SORTABLE_FIELDS = ["id", "name"]
 
 
 # TODO: Validate
 class BasePlugin(BaseMediaMixin):
     """Base model for a `Plugin`."""
 
-    visibility: Visibility = Field()
-    anonymous: bool = Field()
     name: str | None = Field(default=None)
     version: str | None = Field(default=None)
 
 
 # TODO: Validate
-class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
+class Plugin(BasePlugin, MediaMixin["Source | File"], table=True):
     """Model representing a `Plugin`."""
-
-    PARENT_ID_FIELD: ClassVar[str] = "user_id"
 
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = []
     SORTABLE_FIELDS: ClassVar[list[str]] = (
@@ -53,26 +54,14 @@ class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
     )
 
     __table_args__ = (
-        PrimaryKeyConstraint("user_id", "key"),
+        PrimaryKeyConstraint("key"),
         UniqueConstraint("id"),
         *sortable_field_indexes("Plugin", DIRECT_SORTABLE_FIELDS),
         Index("Plugin-deleted_at-index", "deleted_at"),
     )
 
-    user_id: uuid.UUID = Field(
-        foreign_key="user.id",
-        ondelete="CASCADE",
-    )
-    user: User = Relationship(back_populates="plugins")
-
     sources: list[Source] = Relationship(back_populates="plugin", cascade_delete=True)
     files: list[File] = Relationship(back_populates="plugin", cascade_delete=True)
-
-    # TODO: Validate
-    @property
-    @override
-    def parent(self) -> User:
-        return self.user
 
     # TODO: Validate
     @override
@@ -93,11 +82,6 @@ class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
             self.sources.append(child)
 
     # TODO: Validate
-    @override
-    def _root_record(self, session: Session) -> Plugin:
-        return self
-
-    # TODO: Validate
     @classmethod
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
@@ -105,22 +89,93 @@ class Plugin(BasePlugin, MediaMixin[User, "Source | File"], table=True):
         return select(cls)
 
     # TODO: Validate
-    @classmethod
-    @override
-    def select_with_user_eager(cls) -> SelectOfScalar[Self]:
-        return (
-            cls.select_with_plugin()
-            .join(User)
-            .options(
-                contains_eager(cls.user),  # type: ignore[arg-type]
-            )
-        )
-
-    # TODO: Validate
     @property
     @override
     def children(self) -> list[Source | File]:
         return [*self.sources, *self.files]
+
+    # TODO: Validate
+    @classmethod
+    def get(  # noqa: PLR0913 - Copied from wrapped function
+        cls,
+        session: Session,
+        key: str,
+        *,
+        options: Sequence[ORMOption] | None = None,
+        populate_existing: bool = False,
+        with_for_update: ForUpdateParameter = None,
+        identity_token: Any | None = None,  # noqa: ANN401 - Copied from wrapped function
+        execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
+        bind_arguments: dict[str, Any] | None = None,
+    ) -> Self | None:
+        return session.get(
+            cls,
+            key,
+            options=options,
+            populate_existing=populate_existing,
+            with_for_update=with_for_update,
+            identity_token=identity_token,
+            execution_options=execution_options,
+            bind_arguments=bind_arguments,
+        )
+
+    # TODO: Validate
+    @classmethod
+    def get_one(  # noqa: PLR0913 - Copied from wrapped function
+        cls,
+        session: Session,
+        key: str,
+        *,
+        options: Sequence[ORMOption] | None = None,
+        populate_existing: bool = False,
+        with_for_update: ForUpdateParameter = None,
+        identity_token: Any | None = None,  # noqa: ANN401 - Copied from wrapped function
+        execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
+        bind_arguments: dict[str, Any] | None = None,
+    ) -> Self:
+        return session.get_one(
+            cls,
+            key,
+            options=options,
+            populate_existing=populate_existing,
+            with_for_update=with_for_update,
+            identity_token=identity_token,
+            execution_options=execution_options,
+            bind_arguments=bind_arguments,
+        )
+
+    # TODO: Validate
+    def upsert(
+        self,
+        session: Session,
+        existing_record: Self | None,
+        protected_keys: set[str] | None = None,
+    ) -> Self:
+        if protected_keys is None:
+            protected_keys = set()
+        if existing_record:
+            return self._update_existing(existing_record, protected_keys)
+        session.add(self)
+        return self
+
+    # TODO: Validate
+    def upsert_and_set_update_at(
+        self,
+        session: Session,
+        existing_record: Self | None,
+        files: Sequence[SupportsDataTimestamp] | None = None,
+        protected_keys: set[str] | None = None,
+    ) -> Self:
+        """Upsert and automatically set the `update_at` timestamp."""
+        if protected_keys is None:
+            protected_keys = {"update_at"}
+        else:
+            protected_keys.add("update_at")
+
+        record = self.upsert(session, existing_record, protected_keys)
+        if existing_record:
+            record.set_update_at(self.update_at, files)
+        return record
 
     # TODO: Validate
     def __str__(self) -> str:

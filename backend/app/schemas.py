@@ -15,25 +15,17 @@ from app.comments.models import Comment
 from app.constants import SERVER_SIDE_THRESHOLD_MAXIMUM
 from app.episodes.models import Episode
 from app.files.models import File
-from app.models import MediaMixin
+from app.models import ChildMediaMixin
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from app.users.models import User
 from app.watches.models import Watch
 
-USER_OWNED_MODELS = (
-    Episode
-    | Season
-    | Show
-    | Source
-    | Plugin
-    | Channel
-    | Watch
-    | File
-    | ChannelOrder
-    | Comment
+USER_OWNED_MODELS = Channel | Watch | ChannelOrder | Comment
+
+DELETABLE_MODELS = (
+    USER_OWNED_MODELS | Episode | Season | Show | Source | Plugin | File
 )
 
 
@@ -148,8 +140,8 @@ class BaseInput(SQLModel):
 
 # TODO: Validate
 class BaseCreateWithParentAndKey[
-    ModelT: MediaMixin[Any, Any],
-    ParentT: Plugin | Source | Show | Season | User,
+    ModelT: ChildMediaMixin[Any, Any],
+    ParentT: Plugin | Source | Show | Season,
 ](BaseInput):
     """Base create schemas for models with a parent and a key field."""
 
@@ -171,7 +163,7 @@ class BaseCreateWithParentAndKey[
 
 
 # TODO: Validate
-class BaseUpdateWithKey[ModelT: MediaMixin[Any, Any]](BaseInput):
+class BaseUpdateWithKey[ModelT: ChildMediaMixin[Any, Any]](BaseInput):
     """Base update schemas for models with a key field."""
 
     key: str | None

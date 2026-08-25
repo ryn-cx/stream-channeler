@@ -24,7 +24,6 @@ from sqlmodel.sql.expression import SelectOfScalar
 
 from app.constants import DEFAULT_SERVER_SIDE_THRESHOLD
 from app.models import Visibility
-from app.plugins.models import Plugin
 from app.schemas import (
     FilterOption,
     ReadOptions,
@@ -218,41 +217,6 @@ def get_read_results[T](  # noqa: PLR0913
 
 
 # TODO: Validate
-def _owning_plugin(record: Any) -> Plugin:  # noqa: ANN401 - Any media record.
-    """Return the `Plugin` that owns `record`.
-
-    Walks `parent` rather than calling `_root_record`, which issues a query per
-    record; every media list eager-loads this chain, so walking it costs nothing.
-    """
-    current = record
-    while not isinstance(current, Plugin):
-        current = current.parent
-    return current
-
-
-# TODO: Validate
-def media_row_output[SchemaT: SQLModel](
-    record: Any,  # noqa: ANN401 - Any media record.
-    viewer: User | None,
-    schema: type[SchemaT],
-) -> SchemaT:
-    """Build a media list row, hiding the owner when its `Plugin` is anonymous.
-
-    A media record's owner is its `Plugin`'s `User`, so the `Plugin`'s `anonymous`
-    flag decides this just as a `Channel`'s own flag does. The owner and admins see
-    through the anonymity.
-    """
-    row = schema.model_validate(record)
-    plugin = _owning_plugin(record)
-    privileged = bool(
-        viewer and (viewer.is_superuser or viewer.id == plugin.user_id),
-    )
-    if plugin.anonymous and not privileged and hasattr(row, "username"):
-        row.username = None
-    return row
-
-
-# TODO: Validate
 def list_response[ResponseT: BaseModel](  # noqa: PLR0913
     *,
     session: Session,
@@ -281,7 +245,7 @@ def list_response[ResponseT: BaseModel](  # noqa: PLR0913
         extra_columns=extra_columns,
     )
     return response_model(
-        data=[media_row_output(row, current_user, schema) for row in rows],
+        data=[schema.model_validate(row) for row in rows],
         total_count=total_count,
         filtered_count=filtered_count,
         is_server_side=is_server_side,

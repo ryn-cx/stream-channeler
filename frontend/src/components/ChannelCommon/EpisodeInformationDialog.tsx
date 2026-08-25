@@ -9,6 +9,7 @@ import {
   episodeInformationQueryKey,
   formatDuration,
 } from "@/components/ChannelCommon/EpisodeInformationHero"
+import { EpisodeUserUrlSection } from "@/components/ChannelCommon/EpisodeUserUrlSection"
 import {
   ExternalAnchor,
   formatInformationDate,
@@ -131,6 +132,12 @@ export function EpisodeInformationPanel({
         episodeId={episodeId}
         enabled={enabled}
         preferSource={preferSource}
+      />
+
+      <EpisodeUserUrlSection
+        episodeId={episodeId}
+        userUrl={data.user_url}
+        informationQueryKey={queryKey}
       />
 
       {/*

@@ -5,25 +5,17 @@ from sqlmodel import Session
 from app.canonical_media.service import add_canonical_show
 from app.episodes.canonical_links import link_episode
 from app.episodes.models import Episode
-from app.models import Visibility
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from app.users.service import get_or_create_plugin_user
 
 
 # TODO: Validate
 def _source(session: Session) -> Source:
-    user = get_or_create_plugin_user(session=session)
-    plugin = Plugin.get(session, user, "TestPlugin")
+    plugin = Plugin.get(session, "TestPlugin")
     if plugin is None:
-        plugin = Plugin(
-            key="TestPlugin",
-            visibility=Visibility.unlisted,
-            anonymous=False,
-            user_id=user.id,
-        )
+        plugin = Plugin(key="TestPlugin")
         session.add(plugin)
     source = Source.get(session, plugin, "TestPlugin")
     if source is None:

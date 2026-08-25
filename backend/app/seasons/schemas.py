@@ -43,9 +43,6 @@ class SeasonListOutput(SeasonOutput):
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)  # type: ignore[assignment]
 
-    username: str | None = Field(
-        validation_alias=AliasPath("show", "source", "plugin", "user", "username"),
-    )
     show_name: str | None = Field(validation_alias=AliasPath("show", "name"))
     source_id: uuid.UUID = Field(validation_alias=AliasPath("show", "source_id"))
     source_name: str | None = Field(

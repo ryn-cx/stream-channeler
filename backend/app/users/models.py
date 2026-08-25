@@ -16,7 +16,7 @@ from app.utils import tz_datetime
 if TYPE_CHECKING:
     from app.channel_orders.models import ChannelOrder, ChannelOrderFavorite
     from app.channels.models import Channel, ChannelFavorite
-    from app.plugins.models import Plugin
+    from app.episodes.models import UserEpisodeUrl
     from app.watches.models import Watch
 
 
@@ -47,7 +47,6 @@ class User(UserBase, table=True):
         default_factory=tz_datetime.now,
         sa_type=DateTime(timezone=True),  # type: ignore[call-overload]
     )
-    plugins: list[Plugin] = Relationship(back_populates="user")
     channels: list[Channel] = Relationship(back_populates="user", cascade_delete=True)
     channel_orders: list[ChannelOrder] = Relationship(
         back_populates="user",
@@ -69,18 +68,10 @@ class User(UserBase, table=True):
         back_populates="user",
         cascade_delete=True,
     )
-
-    # TODO: Validate
-    def add_child(self, child: Plugin | Channel | ChannelOrder) -> None:
-        from app.channel_orders.models import ChannelOrder  # noqa: PLC0415
-        from app.channels.models import Channel  # noqa: PLC0415
-
-        if isinstance(child, Channel):
-            self.channels.append(child)
-        elif isinstance(child, ChannelOrder):
-            self.channel_orders.append(child)
-        else:
-            self.plugins.append(child)
+    episode_urls: list[UserEpisodeUrl] = Relationship(
+        back_populates="user",
+        cascade_delete=True,
+    )
 
 
 # TODO: Validate

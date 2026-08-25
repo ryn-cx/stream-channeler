@@ -6,12 +6,11 @@ from datetime import datetime
 from typing import ClassVar, Never, Self, override
 
 from sqlalchemy.orm import contains_eager
-from sqlmodel import Field, PrimaryKeyConstraint, Relationship, Session, select
+from sqlmodel import Field, PrimaryKeyConstraint, Relationship, select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.models import BaseMediaMixin, DateTimeField, MediaMixin
+from app.models import BaseMediaMixin, ChildMediaMixin, DateTimeField
 from app.plugins.models import Plugin
-from app.users.models import User
 
 
 # TODO: Validate
@@ -24,7 +23,7 @@ class BaseFile(BaseMediaMixin):
 
 
 # TODO: Validate
-class File(BaseFile, MediaMixin[Plugin, Never], table=True):  # pyright: ignore[reportIncompatibleVariableOverride]
+class File(BaseFile, ChildMediaMixin[Plugin, Never], table=True):  # pyright: ignore[reportIncompatibleVariableOverride]
     """Model representing a `File`."""
 
     PARENT_ID_FIELD: ClassVar[str] = "plugin_id"
@@ -47,11 +46,6 @@ class File(BaseFile, MediaMixin[Plugin, Never], table=True):  # pyright: ignore[
         return []
 
     # TODO: Validate
-    @override
-    def _root_record(self, session: Session) -> Plugin:
-        return self.plugin
-
-    # TODO: Validate
     @classmethod
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
@@ -59,14 +53,9 @@ class File(BaseFile, MediaMixin[Plugin, Never], table=True):  # pyright: ignore[
 
     # TODO: Validate
     @classmethod
-    @override
-    def select_with_user_eager(cls) -> SelectOfScalar[Self]:
-        return (
-            cls.select_with_plugin()
-            .join(User)
-            .options(
-                contains_eager(cls.plugin).contains_eager(Plugin.user),  # type: ignore[arg-type]  # type: ignore[arg-type]
-            )
+    def select_with_plugin_eager(cls) -> SelectOfScalar[Self]:
+        return cls.select_with_plugin().options(
+            contains_eager(cls.plugin),  # type: ignore[arg-type]
         )
 
     # TODO: Validate

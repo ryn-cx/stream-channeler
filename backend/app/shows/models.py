@@ -12,7 +12,6 @@ from sqlmodel import (
     Index,
     PrimaryKeyConstraint,
     Relationship,
-    Session,
     SQLModel,
     UniqueConstraint,
     select,
@@ -22,14 +21,13 @@ from sqlmodel.sql.expression import SelectOfScalar
 from app.canonical_media.keys import SHOW_LEVEL, tmdb_id_of
 from app.models import (
     BaseMediaMixin,
+    ChildMediaMixin,
     DateTimeField,
-    MediaMixin,
     TimestampIdAndHashMixin,
     sortable_field_indexes,
 )
 from app.plugins.models import Plugin
 from app.sources.models import Source
-from app.users.models import User
 
 if TYPE_CHECKING:
     from app.channels.models import ChannelSourceFilter
@@ -66,7 +64,7 @@ class BaseShow(BaseCanonicalShow):
 
 
 # TODO: Validate
-class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
+class Show(BaseShow, ChildMediaMixin[Source, "Season"], table=True):
     """Model representing a show."""
 
     PARENT_ID_FIELD: ClassVar[str] = "source_id"
@@ -225,16 +223,6 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
     )
 
     # TODO: Validate
-    @override
-    def _root_record(self, session: Session) -> Plugin:
-        return session.exec(
-            select(Plugin)
-            .select_from(Source)
-            .join(Plugin)
-            .where(Source.id == self.source_id),
-        ).one()
-
-    # TODO: Validate
     @classmethod
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
@@ -246,21 +234,15 @@ class Show(BaseShow, MediaMixin[Source, "Season"], table=True):
 
     # TODO: Validate
     @classmethod
-    @override
-    def select_with_user_eager(cls) -> SelectOfScalar[Self]:
-        return (
-            cls.select_with_plugin()
-            .join(User)
-            .options(
-                contains_eager(cls.source)  # type: ignore[arg-type]
-                .contains_eager(Source.plugin)  # type: ignore[arg-type]
-                .contains_eager(Plugin.user),
-                # Which canonical shows a row stands for is read off every row
-                # that is served, and it is a table away now rather than a column
-                # of the row, so it is fetched with them rather than one at a
-                # time.
-                selectinload(cls.canonical_show_links),  # type: ignore[arg-type]
-            )
+    def select_with_plugin_eager(cls) -> SelectOfScalar[Self]:
+        return cls.select_with_plugin().options(
+            contains_eager(cls.source)  # type: ignore[arg-type]
+            .contains_eager(Source.plugin),  # type: ignore[arg-type]
+            # Which canonical shows a row stands for is read off every row
+            # that is served, and it is a table away now rather than a column
+            # of the row, so it is fetched with them rather than one at a
+            # time.
+            selectinload(cls.canonical_show_links),  # type: ignore[arg-type]
         )
 
     # TODO: Validate

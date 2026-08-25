@@ -8,7 +8,7 @@ from app.auth.dependencies import (
     SessionDep,
     get_current_active_superuser,
 )
-from app.episodes.dependencies import ReadableEpisode
+from app.episodes.dependencies import ExistingEpisode
 from app.schemas import Message, ReadOptions
 from app.watches import services
 from app.watches.dependencies import EditableWatch
@@ -40,10 +40,9 @@ watches_router = APIRouter(prefix="/watches", tags=["watches"])
 def create_watch(
     session: SessionDep,
     current_user: CurrentUser,
-    episode: ReadableEpisode,
+    episode: ExistingEpisode,
     watch_input: WatchCreate,
 ) -> Watch:
-    """Create a `Watch` if the `Episode` is readable by the `User`."""
     return services.create_watch(session, current_user.id, episode, watch_input)
 
 

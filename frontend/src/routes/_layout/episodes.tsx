@@ -37,9 +37,8 @@ function EpisodesPage() {
       columnVisibilityKey="episodes-column-visibility"
       defaultHidden={{ key: false, id: false }}
       emptyIcon={Film}
-      fetchTable={async (scope, params) => {
+      fetchTable={async (params) => {
         const result = await EpisodesService.getEpisodes({
-          scope,
           offset: params.offset,
           limit: params.limit,
           ...serializeTableQuery(params, episodeColumns),

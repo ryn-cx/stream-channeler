@@ -3276,10 +3276,21 @@ export const EpisodeInformationOutputSchema = {
                     type: 'null'
                 }
             ]
+        },
+        user_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'User Url'
         }
     },
     type: 'object',
-    required: ['episode_id', 'canonical_episode_validated_at', 'canonical_episode_note', 'issue_reports', 'source', 'tmdb'],
+    required: ['episode_id', 'canonical_episode_validated_at', 'canonical_episode_note', 'issue_reports', 'source', 'tmdb', 'user_url'],
     title: 'EpisodeInformationOutput',
     description: `What the website and TMDB each say about an episode, side by side.
 
@@ -3715,17 +3726,6 @@ export const EpisodeListOutputSchema = {
             ],
             title: 'Canonical Key'
         },
-        username: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Username'
-        },
         season_name: {
             anyOf: [
                 {
@@ -3787,7 +3787,7 @@ export const EpisodeListOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'id', 'season_id', 'username', 'season_name', 'show_id', 'show_name', 'source_id', 'source_name', 'plugin_id', 'plugin_name'],
+    required: ['key', 'id', 'season_id', 'season_name', 'show_id', 'show_name', 'source_id', 'source_name', 'plugin_id', 'plugin_name'],
     title: 'EpisodeListOutput',
     description: 'Schema for returning a list of `Episode`s, with parent information.'
 } as const;
@@ -4584,6 +4584,18 @@ export const EpisodeWithDetailsSchema = {
                 }
             ],
             title: 'Tmdb Episode Number'
+        },
+        source_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Id'
         }
     },
     type: 'object',
@@ -4739,21 +4751,10 @@ export const FileListPublicSchema = {
                 }
             ],
             title: 'Plugin Name'
-        },
-        username: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Username'
         }
     },
     type: 'object',
-    required: ['key', 'data_timestamp', 'plugin_id', 'id', 'plugin_name', 'username'],
+    required: ['key', 'data_timestamp', 'plugin_id', 'id', 'plugin_name'],
     title: 'FileListPublic',
     description: `Schema for returning a list of \`File\`s, excluding \`content\`.
 
@@ -5172,17 +5173,6 @@ export const MediaOwnerSchema = {
     title: 'MediaOwner'
 } as const;
 
-export const MediaScopeSchema = {
-    type: 'string',
-    enum: ['owned', 'public', 'all', 'official', 'others'],
-    title: 'MediaScope',
-    description: `Which media a list endpoint returns.
-
-Mirrors \`RecordScope\`'s \`owned\`, \`public\` and \`all\` so the media tabs match the
-\`Channel\` and \`ChannelOrder\` ones, and keeps the admin-only \`official\`/\`others\`
-split of everyone else's media. Media has no \`favorites\`.`
-} as const;
-
 export const MessageSchema = {
     properties: {
         message: {
@@ -5218,6 +5208,7 @@ export const PluginCreateSchema = {
     properties: {
         key: {
             type: 'string',
+            minLength: 1,
             title: 'Key'
         },
         data_timestamp: {
@@ -5261,13 +5252,6 @@ export const PluginCreateSchema = {
             type: 'object',
             title: 'Extra'
         },
-        visibility: {
-            '$ref': '#/components/schemas/Visibility'
-        },
-        anonymous: {
-            type: 'boolean',
-            title: 'Anonymous'
-        },
         name: {
             anyOf: [
                 {
@@ -5293,7 +5277,7 @@ export const PluginCreateSchema = {
     },
     additionalProperties: false,
     type: 'object',
-    required: ['key', 'visibility', 'anonymous'],
+    required: ['key'],
     title: 'PluginCreate',
     description: 'Schema for creating a `Plugin`.'
 } as const;
@@ -5393,13 +5377,6 @@ export const PluginListOutputSchema = {
             type: 'object',
             title: 'Extra'
         },
-        visibility: {
-            '$ref': '#/components/schemas/Visibility'
-        },
-        anonymous: {
-            type: 'boolean',
-            title: 'Anonymous'
-        },
         name: {
             anyOf: [
                 {
@@ -5426,23 +5403,12 @@ export const PluginListOutputSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Id'
-        },
-        username: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Username'
         }
     },
     type: 'object',
-    required: ['key', 'visibility', 'anonymous', 'id', 'username'],
+    required: ['key', 'id'],
     title: 'PluginListOutput',
-    description: 'Schema for returning a list of `Plugin`s, with owner information.'
+    description: 'Schema for returning a list of `Plugin`s.'
 } as const;
 
 export const PluginMediaInfoSchema = {
@@ -5675,13 +5641,6 @@ export const PluginOutputSchema = {
             type: 'object',
             title: 'Extra'
         },
-        visibility: {
-            '$ref': '#/components/schemas/Visibility'
-        },
-        anonymous: {
-            type: 'boolean',
-            title: 'Anonymous'
-        },
         name: {
             anyOf: [
                 {
@@ -5711,7 +5670,7 @@ export const PluginOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'visibility', 'anonymous', 'id'],
+    required: ['key', 'id'],
     title: 'PluginOutput',
     description: 'Schema for returning a `Plugin`.'
 } as const;
@@ -5936,27 +5895,6 @@ export const PluginUpdateSchema = {
             additionalProperties: true,
             type: 'object',
             title: 'Extra'
-        },
-        visibility: {
-            anyOf: [
-                {
-                    '$ref': '#/components/schemas/Visibility'
-                },
-                {
-                    type: 'null'
-                }
-            ]
-        },
-        anonymous: {
-            anyOf: [
-                {
-                    type: 'boolean'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Anonymous'
         },
         name: {
             anyOf: [
@@ -6437,17 +6375,6 @@ export const SeasonListOutputSchema = {
             format: 'uuid',
             title: 'Id'
         },
-        username: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Username'
-        },
         show_name: {
             anyOf: [
                 {
@@ -6493,7 +6420,7 @@ export const SeasonListOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'show_id', 'id', 'username', 'show_name', 'source_id', 'source_name', 'plugin_id', 'plugin_name'],
+    required: ['key', 'show_id', 'id', 'show_name', 'source_id', 'source_name', 'plugin_id', 'plugin_name'],
     title: 'SeasonListOutput',
     description: 'Schema for returning a list of `Season`s, with parent information.'
 } as const;
@@ -7234,17 +7161,6 @@ export const ShowListPublicSchema = {
             ],
             title: 'Plugin Name'
         },
-        username: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Username'
-        },
         source_name: {
             anyOf: [
                 {
@@ -7263,7 +7179,7 @@ export const ShowListPublicSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'source_id', 'id', 'plugin_name', 'username', 'source_name', 'plugin_id'],
+    required: ['key', 'source_id', 'id', 'plugin_name', 'source_name', 'plugin_id'],
     title: 'ShowListPublic',
     description: 'Schema for returning a list of `Show`s, with parent information.'
 } as const;
@@ -7948,17 +7864,6 @@ export const SourceListPublicSchema = {
             format: 'uuid',
             title: 'Id'
         },
-        username: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Username'
-        },
         plugin_name: {
             anyOf: [
                 {
@@ -7972,7 +7877,7 @@ export const SourceListPublicSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'plugin_id', 'id', 'username', 'plugin_name'],
+    required: ['key', 'plugin_id', 'id', 'plugin_name'],
     title: 'SourceListPublic',
     description: 'Schema for returning a list of `Source`s, with parent information.'
 } as const;
@@ -9584,17 +9489,6 @@ export const UnvalidatedShowOutputSchema = {
             ],
             title: 'Plugin Name'
         },
-        username: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Username'
-        },
         source_name: {
             anyOf: [
                 {
@@ -9629,7 +9523,7 @@ export const UnvalidatedShowOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'source_id', 'id', 'plugin_name', 'username', 'source_name', 'plugin_id', 'linked_shows', 'episode_count', 'created_at'],
+    required: ['key', 'source_id', 'id', 'plugin_name', 'source_name', 'plugin_id', 'linked_shows', 'episode_count', 'created_at'],
     title: 'UnvalidatedShowOutput',
     description: `A \`Show\` whose canonical shows no \`User\` has validated.
 
@@ -9700,6 +9594,44 @@ export const UserCreateSchema = {
     type: 'object',
     required: ['email', 'username', 'password'],
     title: 'UserCreate'
+} as const;
+
+export const UserEpisodeUrlInputSchema = {
+    properties: {
+        url: {
+            type: 'string',
+            minLength: 1,
+            title: 'Url'
+        }
+    },
+    additionalProperties: false,
+    type: 'object',
+    required: ['url'],
+    title: 'UserEpisodeUrlInput'
+} as const;
+
+export const UserEpisodeUrlOutputSchema = {
+    properties: {
+        canonical_episode_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Canonical Episode Id'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        }
+    },
+    type: 'object',
+    required: ['canonical_episode_id', 'url'],
+    title: 'UserEpisodeUrlOutput'
 } as const;
 
 export const UserPublicSchema = {
@@ -9950,8 +9882,7 @@ export const ValidationErrorSchema = {
 export const VisibilitySchema = {
     type: 'string',
     enum: ['public', 'unlisted', 'private'],
-    title: 'Visibility',
-    description: 'Visibility enum for `Channel`s and `Plugin`s.'
+    title: 'Visibility'
 } as const;
 
 export const WatchCreateSchema = {

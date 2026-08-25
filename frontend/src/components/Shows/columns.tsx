@@ -16,11 +16,6 @@ export type ShowTableData = ShowListPublic & { pending?: boolean }
 
 export const showColumns: ColumnDef<ShowTableData>[] = [
   {
-    accessorKey: "username",
-    header: "User",
-    cell: ({ row }) => <TruncatedCell value={row.original.username} />,
-  },
-  {
     accessorKey: "plugin_name",
     header: "Plugin",
     cell: ({ row }) => (

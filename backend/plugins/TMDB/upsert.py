@@ -21,12 +21,9 @@ from app.canonical_media.service import (
 )
 from app.episodes.models import Episode
 from app.media.media_type import MediaType
-from app.models import Visibility
-from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from app.users.models import User
 from app.utils import tz_datetime
 from plugins.TMDB.files import (
     SeasonSource,
@@ -57,22 +54,6 @@ CHANGES_INTERVAL = timedelta(days=7)
 # TODO: Validate
 class UpsertMixin(HelperMixin, register=False):
     """Reads TMDB into records of TMDB's own."""
-
-    # TODO: Validate
-    @override
-    def _upsert_plugin(
-        self,
-        plugin_user: User,
-        existing_plugin: Plugin | None,
-    ) -> Plugin:
-        return Plugin(
-            key=self.plugin_key(),
-            name=self.plugin_name(),
-            version=self._VERSION,
-            visibility=Visibility.private,
-            anonymous=False,
-            user_id=plugin_user.id,
-        ).upsert_and_set_update_at(plugin_user, existing_plugin)
 
     # TODO: Validate
     @override

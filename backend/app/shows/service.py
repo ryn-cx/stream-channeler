@@ -487,7 +487,7 @@ def validate_show(session: Session, show: Show) -> Show:
 def list_unvalidated_shows(session: Session, limit: int) -> list[UnvalidatedShowOutput]:
     """Return every `Show` whose canonical shows no `User` has validated."""
     shows = session.exec(
-        Show.select_with_user_eager()
+        Show.select_with_plugin_eager()
         .where(
             col(Show.canonical_show_validated_at).is_(None),
             col(Show.deleted_at).is_(None),

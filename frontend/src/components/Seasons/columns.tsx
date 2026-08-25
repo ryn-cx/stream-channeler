@@ -14,11 +14,6 @@ export type SeasonTableData = SeasonListOutput & { pending?: boolean }
 
 export const seasonColumns: ColumnDef<SeasonTableData>[] = [
   {
-    accessorKey: "username",
-    header: "User",
-    cell: ({ row }) => <TruncatedCell value={row.original.username} />,
-  },
-  {
     accessorKey: "plugin_name",
     header: "Plugin",
     cell: ({ row }) => (

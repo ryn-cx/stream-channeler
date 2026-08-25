@@ -660,6 +660,7 @@ export type EpisodeInformationOutput = {
     issue_reports: Array<IssueReportOutput>;
     source: EpisodeInformationSide;
     tmdb: (EpisodeInformationSide | null);
+    user_url: (string | null);
 };
 
 /**
@@ -715,7 +716,6 @@ export type EpisodeListOutput = {
     linked_sort_order?: (number | null);
     tmdb_id?: (number | null);
     canonical_key?: (string | null);
-    username: (string | null);
     season_name: (string | null);
     show_id: string;
     show_name: (string | null);
@@ -840,6 +840,7 @@ export type EpisodeWithDetails = {
     tmdb_season_number?: (number | null);
     tmdb_season_name?: (string | null);
     tmdb_episode_number?: (number | null);
+    source_id?: (string | null);
 };
 
 /**
@@ -872,7 +873,6 @@ export type FileListPublic = {
     plugin_id: string;
     id: string;
     plugin_name: (string | null);
-    username: (string | null);
 };
 
 /**
@@ -985,15 +985,6 @@ export type IssueReportUpdate = {
 export type MediaOwner = 'official' | 'others';
 
 /**
- * Which media a list endpoint returns.
- *
- * Mirrors `RecordScope`'s `owned`, `public` and `all` so the media tabs match the
- * `Channel` and `ChannelOrder` ones, and keeps the admin-only `official`/`others`
- * split of everyone else's media. Media has no `favorites`.
- */
-export type MediaScope = 'owned' | 'public' | 'all' | 'official' | 'others';
-
-/**
  * Generic message.
  */
 export type Message = {
@@ -1016,8 +1007,6 @@ export type PluginCreate = {
     extra?: {
         [key: string]: unknown;
     };
-    visibility: Visibility;
-    anonymous: boolean;
     name?: (string | null);
     version?: (string | null);
 };
@@ -1035,7 +1024,7 @@ export type PluginImportWatchHistoryInformation = {
 };
 
 /**
- * Schema for returning a list of `Plugin`s, with owner information.
+ * Schema for returning a list of `Plugin`s.
  */
 export type PluginListOutput = {
     key: string;
@@ -1045,12 +1034,9 @@ export type PluginListOutput = {
     extra?: {
         [key: string]: unknown;
     };
-    visibility: Visibility;
-    anonymous: boolean;
     name?: (string | null);
     version?: (string | null);
     id: string;
-    username: (string | null);
 };
 
 /**
@@ -1090,8 +1076,6 @@ export type PluginOutput = {
     extra?: {
         [key: string]: unknown;
     };
-    visibility: Visibility;
-    anonymous: boolean;
     name?: (string | null);
     version?: (string | null);
     id: string;
@@ -1154,8 +1138,6 @@ export type PluginUpdate = {
     extra?: {
         [key: string]: unknown;
     };
-    visibility?: (Visibility | null);
-    anonymous?: (boolean | null);
     name?: (string | null);
     version?: (string | null);
 };
@@ -1251,7 +1233,6 @@ export type SeasonListOutput = {
     sort_order?: (number | null);
     show_id: string;
     id: string;
-    username: (string | null);
     show_name: (string | null);
     source_id: string;
     source_name: (string | null);
@@ -1386,7 +1367,6 @@ export type ShowListPublic = {
     canonical_show_ids?: Array<(string)>;
     tmdb_id?: (number | null);
     plugin_name: (string | null);
-    username: (string | null);
     source_name: (string | null);
     plugin_id: string;
 };
@@ -1516,7 +1496,6 @@ export type SourceListPublic = {
     image_url?: (string | null);
     plugin_id: string;
     id: string;
-    username: (string | null);
     plugin_name: (string | null);
 };
 
@@ -1786,7 +1765,6 @@ export type UnvalidatedShowOutput = {
     canonical_show_ids?: Array<(string)>;
     tmdb_id?: (number | null);
     plugin_name: (string | null);
-    username: (string | null);
     source_name: (string | null);
     plugin_id: string;
     linked_shows: Array<UnvalidatedLinkedShowOutput>;
@@ -1811,6 +1789,15 @@ export type UserCreate = {
     username: string;
     server_side_threshold?: number;
     password: string;
+};
+
+export type UserEpisodeUrlInput = {
+    url: string;
+};
+
+export type UserEpisodeUrlOutput = {
+    canonical_episode_id: string;
+    url: (string | null);
 };
 
 export type UserPublic = {
@@ -1859,9 +1846,6 @@ export type ValidationError = {
     };
 };
 
-/**
- * Visibility enum for `Channel`s and `Plugin`s.
- */
 export type Visibility = 'public' | 'unlisted' | 'private';
 
 /**
@@ -2547,7 +2531,6 @@ export type EpisodesGetEpisodesData = {
     filterOptions?: string;
     limit?: number;
     offset?: number;
-    scope?: MediaScope;
     sortOptions?: string;
 };
 
@@ -2629,6 +2612,19 @@ export type EpisodesGetEpisodeInformationData = {
 
 export type EpisodesGetEpisodeInformationResponse = (EpisodeInformationOutput);
 
+export type EpisodesSetEpisodeUserUrlData = {
+    episodeId: string;
+    requestBody: UserEpisodeUrlInput;
+};
+
+export type EpisodesSetEpisodeUserUrlResponse = (UserEpisodeUrlOutput);
+
+export type EpisodesDeleteEpisodeUserUrlData = {
+    episodeId: string;
+};
+
+export type EpisodesDeleteEpisodeUserUrlResponse = (UserEpisodeUrlOutput);
+
 export type EpisodesGetEpisodeData = {
     episodeId: string;
 };
@@ -2699,7 +2695,6 @@ export type FilesGetFilesData = {
     filterOptions?: string;
     limit?: number;
     offset?: number;
-    scope?: MediaScope;
     sortOptions?: string;
 };
 
@@ -2861,7 +2856,6 @@ export type PluginsGetPluginsData = {
     filterOptions?: string;
     limit?: number;
     offset?: number;
-    scope?: MediaScope;
     sortOptions?: string;
 };
 
@@ -2930,7 +2924,6 @@ export type SeasonsGetSeasonsData = {
     filterOptions?: string;
     limit?: number;
     offset?: number;
-    scope?: MediaScope;
     sortOptions?: string;
 };
 
@@ -3002,7 +2995,6 @@ export type ShowsGetShowsData = {
     filterOptions?: string;
     limit?: number;
     offset?: number;
-    scope?: MediaScope;
     sortOptions?: string;
 };
 
@@ -3134,7 +3126,6 @@ export type SourcesGetSourcesData = {
     filterOptions?: string;
     limit?: number;
     offset?: number;
-    scope?: MediaScope;
     sortOptions?: string;
 };
 

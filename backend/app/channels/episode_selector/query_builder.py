@@ -59,7 +59,6 @@ from app.channels.models import (
 )
 from app.channels.schemas import ChannelOptions
 from app.episodes.models import Episode
-from app.models import Visibility
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -104,7 +103,7 @@ class EpisodeQueryBuilder:
 
         self._channel_ids = self._fetch_channel_ids()
 
-        self._source_config = source_dedup_config(session, self._user)
+        self.source_config = source_dedup_config(session, self._user)
         self._holds_copied_titles = self._fetch_holds_copied_titles()
 
         self._canonical_columns = CanonicalColumns()
@@ -280,7 +279,7 @@ class EpisodeQueryBuilder:
         query = self._filter_deleted_media(query)
         query = self._filter_episodes_by_channels(query)
         query = self._apply_channel_specific_blacklist(query)
-        query = self._filter_by_plugin_visibility(query)
+        query = self._join_plugin_and_filter_sources(query)
         query = self._filter_metadata_plugins(query)
         query = self._filter_disabled_sources(query)
         query = self._filter_by_watch_state(query)
@@ -495,20 +494,13 @@ class EpisodeQueryBuilder:
         return query.where(col(Episode.deleted_at).is_(None))
 
     # TODO: Validate
-    def _filter_by_plugin_visibility(
+    def _join_plugin_and_filter_sources(
         self,
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[Episode, UUID]]:
-        """Filter out episodes from private plugins the viewer doesn't own."""
-        conditions: list[ColumnElement[bool]] = [
-            col(Plugin.visibility).in_((Visibility.public, Visibility.unlisted)),
-        ]
-        if self._user:
-            conditions.append(col(Plugin.user_id) == self._user.id)  # type: ignore[arg-type]
-        query = (
-            query.join(Source, col(Show.source_id) == Source.id)
-            .join(Plugin, col(Source.plugin_id) == Plugin.id)
-            .where(or_(*conditions))
+        query = query.join(Source, col(Show.source_id) == Source.id).join(
+            Plugin,
+            col(Source.plugin_id) == Plugin.id,
         )
         if self._channel_options.source_ids:
             if self._channel_options.source_ids_is_blacklist:
@@ -530,7 +522,7 @@ class EpisodeQueryBuilder:
 
         TMDB is imported so other websites can borrow what they left out, never so its
         own non-canonical row of an episode is watched, so it is never one of the
-        results. `Plugin` is already joined by `_filter_by_plugin_visibility`.
+        results.
         """
         return query.where(Plugin.key != TMDB_PLUGIN_KEY)
 
@@ -662,10 +654,9 @@ class EpisodeQueryBuilder:
         """Globally hide episodes from sources the user has disabled.
 
         Stacks on top of the channel's own source filtering: an episode must pass
-        both this and the per-channel `source_ids` filter. `Source` is already
-        joined by `_filter_by_plugin_visibility`.
+        both this and the per-channel `source_ids` filter.
         """
-        config = self._source_config
+        config = self.source_config
         if config.other_enabled:
             if config.disabled_keys:
                 query = query.where(col(Source.key).not_in(config.disabled_keys))
@@ -689,9 +680,9 @@ class EpisodeQueryBuilder:
         from.
         """
         priority = case(
-            self._source_config.priority,
+            self.source_config.priority,
             value=col(Source.key),
-            else_=self._source_config.other_priority,
+            else_=self.source_config.other_priority,
         )
         return (
             func.rank()

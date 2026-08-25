@@ -242,7 +242,9 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
   ).map((episode) => {
     const season = episodesData!.seasons[episode.season_id]
     const show = episodesData!.shows[season.show_id]
-    const source = episodesData!.sources[show.source_id]
+    const source =
+      episodesData!.sources[episode.source_id ?? show.source_id] ??
+      episodesData!.sources[show.source_id]
     const plugin = episodesData!.plugins[source.plugin_id]
     const channel = episodesData!.channels[episode.channel_id]
     return { ...episode, season, show, source, plugin, channel }

@@ -10,10 +10,8 @@ from sqlmodel import col, select
 from app.auth.dependencies import SessionDep, SuperUser
 from app.canonical_media.filters import is_canonical
 from app.episodes.models import Episode
-from app.media.service import editable_record, existing_record, readable_record
+from app.media.service import existing_record
 
-ReadableEpisode = Annotated[Episode, Depends(readable_record(Episode, "episode_id"))]
-EditableEpisode = Annotated[Episode, Depends(editable_record(Episode, "episode_id"))]
 ExistingEpisode = Annotated[Episode, Depends(existing_record(Episode, "episode_id"))]
 
 

@@ -229,6 +229,7 @@ class EpisodeWithDetails(EpisodeOutput):
     tmdb_season_number: int | None = Field(default=None)
     tmdb_season_name: str | None = Field(default=None)
     tmdb_episode_number: int | None = Field(default=None)
+    source_id: uuid.UUID | None = Field(default=None)
 
 
 # TODO: Validate

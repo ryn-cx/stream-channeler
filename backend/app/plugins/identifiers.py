@@ -8,3 +8,7 @@ still worth naming in one place.
 
 TMDB_PLUGIN_KEY = "TMDB"
 YOUTUBE_PLUGIN_KEY = "YouTube"
+CUSTOM_MEDIA_PLUGIN_KEY = "CustomMedia"
+CUSTOM_MEDIA_SOURCE_KEY = "CustomMedia"
+CUSTOM_MEDIA_NAME = "Custom Media"
+CUSTOM_MEDIA_FAVICON_URL = "/assets/images/stream-channeler-icon.png"

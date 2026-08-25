@@ -9,11 +9,10 @@ from sqlmodel import col, select
 
 from app.auth.dependencies import SessionDep, SuperUser
 from app.canonical_media.filters import is_canonical
-from app.media.service import editable_record, readable_record
+from app.media.service import existing_record
 from app.shows.models import Show
 
-ReadableShow = Annotated[Show, Depends(readable_record(Show, "show_id"))]
-EditableShow = Annotated[Show, Depends(editable_record(Show, "show_id"))]
+ExistingShow = Annotated[Show, Depends(existing_record(Show, "show_id"))]
 
 
 # TODO: Validate

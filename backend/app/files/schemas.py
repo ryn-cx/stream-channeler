@@ -52,9 +52,6 @@ class FileListPublic(BaseMediaMixin):
     plugin_id: uuid.UUID
     id: uuid.UUID
     plugin_name: str | None = Field(validation_alias=AliasPath("plugin", "name"))
-    username: str | None = Field(
-        validation_alias=AliasPath("plugin", "user", "username"),
-    )
 
 
 # TODO: Validate

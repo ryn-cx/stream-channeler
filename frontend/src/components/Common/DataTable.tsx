@@ -39,7 +39,6 @@ import {
   useState,
 } from "react"
 
-import type { MediaScope } from "@/client"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTableSkeleton } from "@/components/Common/DataTableSkeleton"
 import { EmptyState } from "@/components/Common/EmptyState"
@@ -62,7 +61,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import useAuth from "@/hooks/useAuth"
 import {
   usePersistedJsonState,
   usePersistedState,
@@ -932,27 +930,16 @@ export function DetailTablePage<TData extends { id: string }>({
   )
 }
 
-// The active tab. Media has no owner or visibility of its own, so every scope is
-// resolved server-side against the owning plugin.
-export type OwnerView = MediaScope
-
-// The canonical rows share a table with the non-canonical rows of them but have
-// no owner, so
-// they are a tab of their own rather than one of the ownership scopes.
 export const CANONICAL_TAB = "canonical"
 
-export type MediaTab = MediaScope | typeof CANONICAL_TAB
+export const MEDIA_TAB = "media"
 
-// `owned` and `public` are open to any user; the rest are admin-only, matching the
-// scopes the API will serve.
-const ADMIN_TABS: MediaTab[] = ["all", "official", "others", CANONICAL_TAB]
+export type MediaTab = typeof MEDIA_TAB | typeof CANONICAL_TAB
 
-// `owned` is the default tab, so it stays out of the URL entirely.
 export type MediaSearch = {
-  view?: Exclude<MediaTab, "owned">
+  view?: typeof CANONICAL_TAB
 }
 
-// The route each media list lives at, so the scope tabs know where to navigate.
 export type MediaPath =
   | "/plugins"
   | "/sources"
@@ -965,23 +952,11 @@ export type MediaPath =
 export const validateMediaSearch = (
   search: Record<string, unknown>,
 ): MediaSearch => ({
-  view:
-    search.view === "public" ||
-    search.view === "all" ||
-    search.view === "official" ||
-    search.view === "others" ||
-    search.view === CANONICAL_TAB
-      ? search.view
-      : undefined,
+  view: search.view === CANONICAL_TAB ? search.view : undefined,
 })
 
 const SCOPE_TABS: { value: MediaTab; label: string }[] = [
-  // I think it's funny that ever option starts with O.
-  { value: "owned", label: "Owned" },
-  { value: "public", label: "Public" },
-  { value: "all", label: "All" },
-  { value: "official", label: "Official" },
-  { value: "others", label: "Other Users" },
+  { value: MEDIA_TAB, label: "Media" },
   { value: CANONICAL_TAB, label: "Canonical" },
 ]
 
@@ -1000,17 +975,12 @@ interface MediaListPageProps<
 > {
   title: string
   path: MediaPath
-  // Either a static column set, or a builder that receives the active scope tab
-  // (so columns can vary per tab, e.g. admin-only shortcuts on "Official").
-  columns: ColumnDef<TData>[] | ((scope: OwnerView) => ColumnDef<TData>[])
+  columns: ColumnDef<TData>[]
   columnVisibilityKey: string
   defaultHidden?: VisibilityState
   emptyIcon: LucideIcon
-  headerActions?: (scope: OwnerView) => ReactNode
-  fetchTable: (
-    scope: OwnerView,
-    params: MediaPageParams,
-  ) => Promise<MediaTableResult<TData>>
+  headerActions?: ReactNode
+  fetchTable: (params: MediaPageParams) => Promise<MediaTableResult<TData>>
   // Left off by the lists that have no canonical counterpart, which drops the tab.
   canonical?: CanonicalTab<TCanonical>
 }
@@ -1030,66 +1000,49 @@ export function MediaListPage<
   fetchTable,
   canonical,
 }: MediaListPageProps<TData, TCanonical>) {
-  const { user } = useAuth()
-  const isAdmin = user?.is_superuser ?? false
   const search = useSearch({ strict: false }) as MediaSearch
   const navigate = useNavigate()
-  // The tab the user last read this list at, so returning to it without a scope
-  // in the URL picks up where they left off rather than at the default.
-  const [rememberedScope, setRememberedScope] = usePersistedState<MediaTab>(
+  const [rememberedTab, setRememberedTab] = usePersistedState<MediaTab>(
     `media-scope:${path}`,
-    "owned",
+    MEDIA_TAB,
   )
-  const requestedTab: MediaTab = search.view ?? rememberedScope
-  // A linked admin-only tab would 403 for a non-admin, and a canonical one has
-  // nothing to read on a list without a canonical counterpart, so both fall back.
-  const unavailable =
-    (!isAdmin && ADMIN_TABS.includes(requestedTab)) ||
-    (requestedTab === CANONICAL_TAB && !canonical)
-  const activeTab: MediaTab = unavailable ? "owned" : requestedTab
+  const requestedTab: MediaTab = search.view ?? rememberedTab
+  const activeTab: MediaTab =
+    requestedTab === CANONICAL_TAB && !canonical ? MEDIA_TAB : requestedTab
 
   useEffect(() => {
-    if (search.view && search.view !== rememberedScope) {
-      setRememberedScope(search.view)
+    if (search.view && search.view !== rememberedTab) {
+      setRememberedTab(search.view)
     }
-  }, [search.view, rememberedScope, setRememberedScope])
+  }, [search.view, rememberedTab, setRememberedTab])
 
   // TODO: Validate
-  const setScopeTab = (next: MediaTab) => {
-    setRememberedScope(next)
+  const setTab = (next: MediaTab) => {
+    setRememberedTab(next)
     navigate({
       to: path,
-      search: next === "owned" ? {} : { view: next },
+      search: next === MEDIA_TAB ? {} : { view: next },
       replace: true,
     })
   }
-  const visibleTabs = SCOPE_TABS.filter(
-    (tab) =>
-      (isAdmin || !ADMIN_TABS.includes(tab.value)) &&
-      (tab.value !== CANONICAL_TAB || canonical),
-  )
-
-  const scopeFilter = activeTab === CANONICAL_TAB ? "owned" : activeTab
-  const resolvedColumns = useMemo(
-    () => (typeof columns === "function" ? columns(scopeFilter) : columns),
-    [columns, scopeFilter],
-  )
 
   const header = (
     <div className="flex flex-wrap items-center gap-3">
       <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-      <Tabs
-        value={activeTab}
-        onValueChange={(value) => setScopeTab(value as MediaTab)}
-      >
-        <TabsList>
-          {visibleTabs.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value}>
-              {tab.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      {canonical && (
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => setTab(value as MediaTab)}
+        >
+          <TabsList>
+            {SCOPE_TABS.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value}>
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      )}
     </div>
   )
   const emptyState = (
@@ -1117,13 +1070,13 @@ export function MediaListPage<
 
   return (
     <MediaTablePage
-      columns={resolvedColumns}
-      queryKey={["media-table", title, scopeFilter]}
-      fetchTable={(params) => fetchTable(scopeFilter, params)}
+      columns={columns}
+      queryKey={["media-table", title, MEDIA_TAB]}
+      fetchTable={fetchTable}
       columnVisibilityKey={columnVisibilityKey}
       defaultHidden={defaultHidden}
-      resetKey={scopeFilter}
-      headerActions={headerActions?.(scopeFilter)}
+      resetKey={MEDIA_TAB}
+      headerActions={headerActions}
       header={header}
       emptyState={emptyState}
     />

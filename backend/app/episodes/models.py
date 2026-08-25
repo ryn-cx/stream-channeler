@@ -13,7 +13,6 @@ from sqlmodel import (
     Index,
     PrimaryKeyConstraint,
     Relationship,
-    Session,
     SQLModel,
     UniqueConstraint,
     col,
@@ -24,8 +23,8 @@ from sqlmodel.sql.expression import SelectOfScalar
 from app.canonical_media.keys import EPISODE_LEVEL, tmdb_id_of, watch_identifier
 from app.models import (
     BaseMediaMixin,
+    ChildMediaMixin,
     DateTimeField,
-    MediaMixin,
     TimestampIdAndHashMixin,
     sortable_field_indexes,
 )
@@ -85,7 +84,7 @@ class BaseEpisode(BaseCanonicalEpisode):
 
 
 # TODO: Validate
-class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
+class Episode(BaseEpisode, ChildMediaMixin[Season, Never], table=True):
     """Model representing an episode, and a website's non-canonical row of one.
 
     A row is the episode itself, or one website's non-canonical row standing for however
@@ -264,18 +263,6 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
     )
 
     # TODO: Validate
-    @override
-    def _root_record(self, session: Session) -> Plugin:
-        return session.exec(
-            select(Plugin)
-            .select_from(Season)
-            .join(Show, col(Season.show_id) == col(Show.id))
-            .join(Source)
-            .join(Plugin)
-            .where(Season.id == self.season_id),
-        ).one()
-
-    # TODO: Validate
     @classmethod
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
@@ -291,18 +278,12 @@ class Episode(BaseEpisode, MediaMixin[Season, Never], table=True):
 
     # TODO: Validate
     @classmethod
-    @override
-    def select_with_user_eager(cls) -> SelectOfScalar[Self]:
-        return (
-            cls.select_with_plugin()
-            .join(User)
-            .options(
-                contains_eager(cls.season)  # type: ignore[arg-type]
-                .contains_eager(Season.show)  # type: ignore[arg-type]
-                .contains_eager(Show.source)  # type: ignore[arg-type]
-                .contains_eager(Source.plugin)  # type: ignore[arg-type]
-                .contains_eager(Plugin.user),  # type: ignore[arg-type]
-            )
+    def select_with_plugin_eager(cls) -> SelectOfScalar[Self]:
+        return cls.select_with_plugin().options(
+            contains_eager(cls.season)  # type: ignore[arg-type]
+            .contains_eager(Season.show)  # type: ignore[arg-type]
+            .contains_eager(Show.source)  # type: ignore[arg-type]
+            .contains_eager(Source.plugin),  # type: ignore[arg-type]
         )
 
     # TODO: Validate
@@ -432,3 +413,23 @@ def stringify_episode(
     if episode.id:
         base_episode += f" ({episode.id})"
     return f"{parent}\n{base_episode}"
+
+
+# TODO: Validate
+class BaseUserEpisodeUrl(SQLModel):
+    url: str = Field(min_length=1)
+
+
+# TODO: Validate
+class UserEpisodeUrl(BaseUserEpisodeUrl, TimestampIdAndHashMixin, table=True):
+    __table_args__ = (
+        PrimaryKeyConstraint("user_id", "canonical_episode_id"),
+        Index("UserEpisodeUrl-canonical_episode_id-index", "canonical_episode_id"),
+    )
+
+    user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
+    canonical_episode_id: uuid.UUID = Field(
+        foreign_key="episode.id",
+        ondelete="CASCADE",
+    )
+    user: User = Relationship(back_populates="episode_urls")

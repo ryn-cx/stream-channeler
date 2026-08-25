@@ -62,7 +62,8 @@ const SourcePreferences = () => {
   })
 
   const visible = preferences.filter(
-    (preference) => preference.episode_count > 0,
+    (preference) =>
+      preference.episode_count > 0 || preference.source_key === "CustomMedia",
   )
 
   // TODO: Validate

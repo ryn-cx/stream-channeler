@@ -18,8 +18,9 @@ from app.channels import service as channel_service
 from app.channels.models import Channel
 from app.channels.schemas import ChannelListOutput, ChannelPublicListOutput
 from app.config import settings
+from app.episodes.user_urls import user_episode_url_count
 from app.models import Visibility
-from app.plugins.models import Plugin
+from app.plugins.identifiers import CUSTOM_MEDIA_SOURCE_KEY
 from app.schemas import Message
 from app.sources.service import (
     OTHER_SOURCE_KEY,
@@ -170,6 +171,7 @@ def update_password_me(
 # TODO: Validate
 def _source_preference_outputs(
     session: SessionDep,
+    current_user: User,
     preferences: list[SourcePreference],
 ) -> list[SourcePreferenceOutput]:
     """Attach each source's stored display name, favicon and episode count."""
@@ -179,11 +181,14 @@ def _source_preference_outputs(
     other_count = sum(
         count for source_id, count in counts.items() if source_id not in installed_ids
     )
+    custom_media_count = user_episode_url_count(session, current_user)
     outputs: list[SourcePreferenceOutput] = []
     for preference in preferences:
         source = sources.get(preference.source_key)
         if preference.source_key == OTHER_SOURCE_KEY:
             episode_count = other_count
+        elif preference.source_key == CUSTOM_MEDIA_SOURCE_KEY:
+            episode_count = custom_media_count
         else:
             episode_count = counts.get(source.id, 0) if source else 0
         outputs.append(
@@ -210,6 +215,7 @@ def read_source_preferences(
     """
     return _source_preference_outputs(
         session,
+        current_user,
         user_service.effective_source_preferences(
             session,
             user_service.stored_preferences(current_user.source_preferences),
@@ -257,6 +263,7 @@ def update_source_preferences(
     session.refresh(current_user)
     return _source_preference_outputs(
         session,
+        current_user,
         user_service.effective_source_preferences(
             session,
             user_service.stored_preferences(current_user.source_preferences),
@@ -447,8 +454,6 @@ def delete_user(
     statement = delete(Channel).where(col(Channel.user_id) == user.id)
     session.exec(statement)
     statement = delete(Watch).where(col(Watch.user_id) == user.id)
-    session.exec(statement)
-    statement = delete(Plugin).where(col(Plugin.user_id) == user.id)
     session.exec(statement)
     session.delete(user)
     session.commit()

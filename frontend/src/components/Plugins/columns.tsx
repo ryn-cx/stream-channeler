@@ -3,27 +3,16 @@ import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Clapperboard, FileText, Film, Layers } from "lucide-react"
 import type { PluginListOutput } from "@/client"
-import type { OwnerView } from "@/components/Common/DataTable"
 import { DateCell, TruncatedCell } from "@/components/Common/TableCells"
 import { TooltipIconLink } from "@/components/Common/TooltipIconLink"
 import { extraText } from "@/lib/extra"
-import { cn } from "@/lib/utils"
-import { visibilityDotClass, visibilityLabel } from "@/lib/visibility"
 import { PluginActionsMenu } from "./ActionsMenu"
 
 export type PluginTableData = PluginListOutput & { pending?: boolean }
 
 // TODO: Validate
-export function pluginColumns(
-  _scope: OwnerView,
-  isAdmin = false,
-): ColumnDef<PluginTableData>[] {
+export function pluginColumns(isAdmin = false): ColumnDef<PluginTableData>[] {
   return [
-    {
-      accessorKey: "username",
-      header: "User",
-      cell: ({ row }) => <TruncatedCell value={row.original.username} />,
-    },
     {
       accessorKey: "name",
       header: "Name",
@@ -113,33 +102,6 @@ export function pluginColumns(
       cell: ({ row }) => (
         <TruncatedCell value={extraText(row.original.extra)} />
       ),
-    },
-    {
-      accessorFn: (row) => visibilityLabel(row.visibility),
-      id: "visibility",
-      header: "Visibility",
-      meta: { filterVariant: "select" },
-      filterFn: "equalsString",
-      cell: ({ row }) => {
-        const visibility = row.original.visibility
-        return (
-          <div className="flex items-center gap-2">
-            <span
-              className={cn(
-                "size-2 rounded-full",
-                visibilityDotClass(visibility),
-              )}
-            />
-            <span
-              className={
-                visibility === "private" ? "text-muted-foreground" : ""
-              }
-            >
-              {visibilityLabel(visibility)}
-            </span>
-          </div>
-        )
-      },
     },
     {
       accessorKey: "key",

@@ -17,8 +17,6 @@ from app.database import engine, load_models
 from app.log import configure_logging
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.users.constants import PLUGIN_USER_EMAIL
-from app.users.models import User
 from app.utils import tz_datetime
 from plugins.utils.manage_plugins import import_plugins
 from plugins.YouTube import YouTube
@@ -56,9 +54,7 @@ def _belongs_to_a_channel(season: Season) -> bool:
 def _outdated_channel_seasons(session: Session) -> list[Season]:
     statement = (
         Season.select_with_plugin()
-        .join(User, Plugin.user_id == User.id)  # type: ignore[arg-type]
         .where(
-            User.email == PLUGIN_USER_EMAIL,
             col(Plugin.key) == YouTube.plugin_key(),
             col(Season.update_at).is_not(None),
             col(Season.update_at) < tz_datetime.now(),

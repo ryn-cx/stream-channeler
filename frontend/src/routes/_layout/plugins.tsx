@@ -33,17 +33,16 @@ function PluginPage() {
     <MediaListPage<PluginTableData>
       title="Plugins"
       path="/plugins"
-      columns={(scope) => pluginColumns(scope, isAdmin)}
+      columns={pluginColumns(isAdmin)}
       columnVisibilityKey="plugins-column-visibility"
       defaultHidden={{ key: false, id: false }}
       emptyIcon={Puzzle}
-      headerActions={(scope) => (scope === "owned" ? <AddPlugin /> : null)}
-      fetchTable={async (scope, params) => {
+      headerActions={<AddPlugin />}
+      fetchTable={async (params) => {
         const result = await PluginsService.getPlugins({
-          scope,
           offset: params.offset,
           limit: params.limit,
-          ...serializeTableQuery(params, pluginColumns(scope, isAdmin)),
+          ...serializeTableQuery(params, pluginColumns(isAdmin)),
         })
         return {
           data: result.data,

@@ -19,17 +19,13 @@ from app.canonical_media.metadata import (
 )
 from app.canonical_media.read import canonical_list_response
 from app.issue_reports.service import list_show_issue_reports
-from app.media.schemas import MediaReadOptions
-from app.media.service import (
-    delete_record,
-    media_scoped_list_response,
-)
-from app.plugins.dependencies import ReadablePlugin
+from app.media.service import delete_record
+from app.plugins.dependencies import ExistingPlugin
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
 from app.service import list_response
-from app.shows.dependencies import AdminCanonicalShow, EditableShow, ReadableShow
+from app.shows.dependencies import AdminCanonicalShow, ExistingShow
 from app.shows.models import Show
 from app.shows.schemas import (
     CanonicalShowOutput,
@@ -59,10 +55,9 @@ from app.shows.service import (
     update_show_extra,
     validate_show,
 )
-from app.sources.dependencies import EditableSource, ReadableSource
+from app.sources.dependencies import ExistingSource
 from app.sources.models import Source
 from app.users.dependencies import OptionalUser
-from app.users.models import User
 
 plugin_shows_router = APIRouter(
     prefix="/plugins/{plugin_id}",
@@ -81,7 +76,6 @@ canonical_shows_router = APIRouter(
 )
 
 SHOW_EXTRA_COLUMNS: dict[str, Any] = {
-    "username": User.username,
     "source_name": Source.name,
     "plugin_id": Source.plugin_id,
     "plugin_name": Plugin.name,
@@ -98,10 +92,9 @@ def _show_output(show: Show) -> ShowPublic:
 @source_shows_router.post("/shows")
 def create_show(
     session: SessionDep,
-    source: EditableSource,
+    source: ExistingSource,
     show_input: ShowCreate,
 ) -> ShowPublic:
-    """Create a `Show` if the `Source` is editable by the `User`."""
     return _show_output(show_input.create(session, Show, source))
 
 
@@ -110,15 +103,15 @@ def create_show(
 def get_shows(
     session: SessionDep,
     current_user: CurrentUser,
-    read_options: Annotated[MediaReadOptions, Query()],
+    read_options: Annotated[ReadOptions, Query()],
 ) -> ShowsPublic:
     """Get `Show`s."""
-    return media_scoped_list_response(
+    return list_response(
         session=session,
-        base=Show.select_with_user_eager(),
+        base=Show.select_with_plugin_eager(),
         response_model=ShowsPublic,
         schema=ShowListPublic,
-        read_options=read_options,
+        params=read_options,
         current_user=current_user,
         extra_columns=SHOW_EXTRA_COLUMNS,
     )
@@ -128,14 +121,13 @@ def get_shows(
 @source_shows_router.get("/shows")
 def get_source_shows(
     session: SessionDep,
-    source: ReadableSource,
+    source: ExistingSource,
     current_user: OptionalUser,
     read_options: Annotated[ReadOptions, Query()],
 ) -> ShowsPublic:
-    """Get all of the `Show`s for a `Source` if it is readable by the `User`."""
     return list_response(
         session=session,
-        base=Show.select_with_user_eager().where(Show.source_id == source.id),
+        base=Show.select_with_plugin_eager().where(Show.source_id == source.id),
         response_model=ShowsPublic,
         schema=ShowListPublic,
         params=read_options,
@@ -148,14 +140,13 @@ def get_source_shows(
 @plugin_shows_router.get("/shows")
 def get_plugin_shows(
     session: SessionDep,
-    plugin: ReadablePlugin,
+    plugin: ExistingPlugin,
     current_user: OptionalUser,
     read_options: Annotated[ReadOptions, Query()],
 ) -> ShowsPublic:
-    """Get all of the `Show`s for a `Plugin` if it is readable by the `User`."""
     return list_response(
         session=session,
-        base=Show.select_with_user_eager().where(Source.plugin_id == plugin.id),
+        base=Show.select_with_plugin_eager().where(Source.plugin_id == plugin.id),
         response_model=ShowsPublic,
         schema=ShowListPublic,
         params=read_options,
@@ -191,10 +182,10 @@ def _information_side(label: str, show: Show, url: str | None) -> ShowInformatio
 
 
 # TODO: Validate
-@shows_router.get("/{show_id}/information")  # noqa: FAST003 - Used by ReadableShow.
+@shows_router.get("/{show_id}/information")  # noqa: FAST003 - Used by ExistingShow.
 def get_show_information(
     session: SessionDep,
-    show: ReadableShow,
+    show: ExistingShow,
     current_user: OptionalUser,
 ) -> ShowInformationOutput:
     """Return what the website and TMDB each say about a `Show`.
@@ -214,9 +205,7 @@ def get_show_information(
             tmdb_show_url(counterpart.key),
         )
 
-    editable = current_user is not None and (
-        current_user.is_superuser or current_user.id == show.owner_id(session)
-    )
+    editable = current_user is not None and current_user.is_superuser
 
     return ShowInformationOutput(
         show_id=show.id,
@@ -237,17 +226,16 @@ def get_show_information(
     "/{show_id}",
     dependencies=[Depends(get_current_active_superuser)],
 )
-def get_show(show: ReadableShow) -> ShowPublic:
-    """Get a `Show` if it's readable by the `User`."""
+def get_show(show: ExistingShow) -> ShowPublic:
     return _show_output(show)
 
 
 # TODO: Validate
 @shows_router.get(
-    "/{show_id}/non-canonical",  # noqa: FAST003 - Used by ReadableShow.
+    "/{show_id}/non-canonical",  # noqa: FAST003 - Used by ExistingShow.
     dependencies=[Depends(get_current_active_superuser)],
 )
-def get_non_canonical_shows(show: ReadableShow) -> list[ShowListPublic]:
+def get_non_canonical_shows(show: ExistingShow) -> list[ShowListPublic]:
     return [
         ShowListPublic.model_validate(link.show) for link in show.non_canonical_shows
     ]
@@ -260,12 +248,10 @@ def get_non_canonical_shows(show: ReadableShow) -> list[ShowListPublic]:
 )
 def update_show(
     session: SessionDep,
-    show: EditableShow,
+    show: ExistingShow,
     show_input: ShowUpdate,
 ) -> ShowPublic:
-    """Update and return a `Show` if it's editable by the `User`.
-
-    Which canonical show this stands for is not something an update writes: it is
+    """Which canonical show this stands for is not something an update writes: it is
     linker's to work out during an import, or a `User`'s to settle through the
     TMDB matching screens, so there is nothing to repoint here.
 
@@ -289,7 +275,7 @@ def update_show(
 )
 def admin_link_show_to_canonical(
     session: SessionDep,
-    show: EditableShow,
+    show: ExistingShow,
     canonical_show: AdminCanonicalShow,
 ) -> ShowPublic:
     """Add the canonical show an admin chose to what a `Show` stands for.
@@ -312,7 +298,7 @@ def admin_link_show_to_canonical(
 )
 def admin_link_show_by_tmdb_url(
     session: SessionDep,
-    show: EditableShow,
+    show: ExistingShow,
     url_input: ShowTmdbUrlInput,
 ) -> ShowPublic:
     return _show_output(set_canonical_show_using_tmdb_url(session, show, url_input.url))
@@ -325,7 +311,7 @@ def admin_link_show_by_tmdb_url(
 )
 def admin_import_non_canonical_show(
     session: SessionDep,
-    show: EditableShow,
+    show: ExistingShow,
     url_input: ShowImportUrlInput,
 ) -> ShowPublic:
     return _show_output(
@@ -340,7 +326,7 @@ def admin_import_non_canonical_show(
 )
 def admin_unlink_show_from_canonical(
     session: SessionDep,
-    show: EditableShow,
+    show: ExistingShow,
     canonical_show: AdminCanonicalShow,
 ) -> ShowPublic:
     """Take one canonical show off what a `Show` stands for."""
@@ -349,31 +335,31 @@ def admin_unlink_show_from_canonical(
 
 # TODO: Validate
 @shows_router.post(
-    "/{show_id}/canonicalize",  # noqa: FAST003 - Used by EditableShow.
+    "/{show_id}/canonicalize",  # noqa: FAST003 - Used by ExistingShow.
     dependencies=[Depends(get_current_active_superuser)],
 )
-def admin_canonicalize_show(session: SessionDep, show: EditableShow) -> ShowPublic:
+def admin_canonicalize_show(session: SessionDep, show: ExistingShow) -> ShowPublic:
     return _show_output(canonicalize_show(session, show))
 
 
 # TODO: Validate
 @shows_router.post(
-    "/{show_id}/validate",  # noqa: FAST003 - Used by EditableShow.
+    "/{show_id}/validate",  # noqa: FAST003 - Used by ExistingShow.
     dependencies=[Depends(get_current_active_superuser)],
 )
-def admin_validate_show(session: SessionDep, show: EditableShow) -> ShowPublic:
+def admin_validate_show(session: SessionDep, show: ExistingShow) -> ShowPublic:
     """Settle the canonical shows a `Show` stands for as the right ones."""
     return _show_output(validate_show(session, show))
 
 
 # TODO: Validate
 @shows_router.post(
-    "/{show_id}/relink",  # noqa: FAST003 - Used by EditableShow.
+    "/{show_id}/relink",  # noqa: FAST003 - Used by ExistingShow.
     dependencies=[Depends(get_current_active_superuser)],
 )
 def admin_relink_show_episodes(
     session: SessionDep,
-    show: EditableShow,
+    show: ExistingShow,
 ) -> ShowPublic:
     """Work out every unsettled episode link on a `Show` again from scratch."""
     return _show_output(relink_show(session, show))
@@ -381,21 +367,21 @@ def admin_relink_show_episodes(
 
 # TODO: Validate
 @shows_router.post(
-    "/{show_id}/force-update",  # noqa: FAST003 - Used by EditableShow.
+    "/{show_id}/force-update",  # noqa: FAST003 - Used by ExistingShow.
     dependencies=[Depends(get_current_active_superuser)],
 )
-def admin_force_update_show(session: SessionDep, show: EditableShow) -> ShowPublic:
+def admin_force_update_show(session: SessionDep, show: ExistingShow) -> ShowPublic:
     return _show_output(force_update_show(session, show))
 
 
 # TODO: Validate
 @shows_router.get(
-    "/{show_id}/tmdb-episode-groups",  # noqa: FAST003 - Used by ReadableShow.
+    "/{show_id}/tmdb-episode-groups",  # noqa: FAST003 - Used by ExistingShow.
     dependencies=[Depends(get_current_active_superuser)],
 )
 def get_show_tmdb_episode_groups(
     session: SessionDep,
-    show: ReadableShow,
+    show: ExistingShow,
 ) -> list[TmdbEpisodeGroupOption]:
     """Get the episode orders TMDB holds for a `Show`, for one to be chosen."""
     return list_tmdb_episode_groups(session, show)
@@ -406,8 +392,7 @@ def get_show_tmdb_episode_groups(
     "/{show_id}",
     dependencies=[Depends(get_current_active_superuser)],
 )
-def delete_show(session: SessionDep, show: EditableShow) -> Message:
-    """Delete a `Show` if it's editable by the `User`."""
+def delete_show(session: SessionDep, show: ExistingShow) -> Message:
     return delete_record(session, show)
 
 

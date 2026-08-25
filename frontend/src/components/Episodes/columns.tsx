@@ -13,11 +13,6 @@ export type EpisodeTableData = EpisodeListOutput & { pending?: boolean }
 
 export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
   {
-    accessorKey: "username",
-    header: "User",
-    cell: ({ row }) => <TruncatedCell value={row.original.username} />,
-  },
-  {
     accessorKey: "plugin_name",
     header: "Plugin",
     cell: ({ row }) => (

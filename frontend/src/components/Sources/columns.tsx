@@ -16,11 +16,6 @@ export type SourceTableData = SourceListPublic & { pending?: boolean }
 
 export const sourceColumns: ColumnDef<SourceTableData>[] = [
   {
-    accessorKey: "username",
-    header: "User",
-    cell: ({ row }) => <TruncatedCell value={row.original.username} />,
-  },
-  {
     accessorKey: "plugin_name",
     header: "Plugin",
     cell: ({ row }) => (

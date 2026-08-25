@@ -10,7 +10,6 @@ from sqlmodel import (
     Index,
     PrimaryKeyConstraint,
     Relationship,
-    Session,
     UniqueConstraint,
     col,
     select,
@@ -19,13 +18,12 @@ from sqlmodel.sql.expression import SelectOfScalar
 
 from app.models import (
     BaseMediaMixin,
-    MediaMixin,
+    ChildMediaMixin,
     sortable_field_indexes,
 )
 from app.plugins.models import Plugin
 from app.shows.models import Show
 from app.sources.models import Source
-from app.users.models import User
 
 if TYPE_CHECKING:
     from app.episodes.models import Episode
@@ -53,7 +51,7 @@ class BaseSeason(BaseMediaMixin):
 
 
 # TODO: Validate
-class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
+class Season(BaseSeason, ChildMediaMixin[Show, "Episode"], table=True):
     """Model representing a season, and a website's non-canonical row of one.
 
     The season itself hangs off the title the way a non-canonical row hangs off the
@@ -103,17 +101,6 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
         return self.episodes
 
     # TODO: Validate
-    @override
-    def _root_record(self, session: Session) -> Plugin:
-        return session.exec(
-            select(Plugin)
-            .select_from(Show)
-            .join(Source)
-            .join(Plugin)
-            .where(Show.id == self.show_id),
-        ).one()
-
-    # TODO: Validate
     @classmethod
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
@@ -126,17 +113,11 @@ class Season(BaseSeason, MediaMixin[Show, "Episode"], table=True):
 
     # TODO: Validate
     @classmethod
-    @override
-    def select_with_user_eager(cls) -> SelectOfScalar[Self]:
-        return (
-            cls.select_with_plugin()
-            .join(User)
-            .options(
-                contains_eager(cls.show)  # type: ignore[arg-type]
-                .contains_eager(Show.source)  # type: ignore[arg-type]
-                .contains_eager(Source.plugin)  # type: ignore[arg-type]
-                .contains_eager(Plugin.user),  # type: ignore[arg-type]
-            )
+    def select_with_plugin_eager(cls) -> SelectOfScalar[Self]:
+        return cls.select_with_plugin().options(
+            contains_eager(cls.show)  # type: ignore[arg-type]
+            .contains_eager(Show.source)  # type: ignore[arg-type]
+            .contains_eager(Source.plugin),  # type: ignore[arg-type]
         )
 
     # TODO: Validate

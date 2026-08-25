@@ -14,13 +14,11 @@ from app.canonical_media.service import add_canonical_show
 from app.episodes.models import Episode
 from app.episodes.preload import preload_episodes
 from app.media.media_type import MediaType
-from app.models import BaseMediaMixin, Visibility
+from app.models import BaseMediaMixin
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from app.users.models import User
-from app.users.service import get_or_create_plugin_user
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
@@ -223,11 +221,10 @@ class BasePlugin(
         """
         if hasattr(self, "plugin") and self.plugin:
             return
-        plugin_user = get_or_create_plugin_user(session=self.session)
-        if existing_plugin := Plugin.get(self.session, plugin_user, self.plugin_key()):
+        if existing_plugin := Plugin.get(self.session, self.plugin_key()):
             self.plugin = existing_plugin
         else:
-            self.plugin = self._upsert_plugin(plugin_user, existing_plugin)
+            self.plugin = self._upsert_plugin(existing_plugin)
             self.session.commit()
 
     # TODO: Validate
@@ -243,20 +240,13 @@ class BasePlugin(
         )
 
     # TODO: Validate
-    def _upsert_plugin(
-        self,
-        plugin_user: User,
-        existing_plugin: Plugin | None,
-    ) -> Plugin:
+    def _upsert_plugin(self, existing_plugin: Plugin | None) -> Plugin:
         """Create or update the `Plugin` record."""
         return Plugin(
             key=self.plugin_key(),
             name=self.plugin_name(),
             version=self._VERSION,
-            visibility=Visibility.unlisted,
-            anonymous=False,
-            user_id=plugin_user.id,
-        ).upsert_and_set_update_at(plugin_user, existing_plugin)
+        ).upsert_and_set_update_at(self.session, existing_plugin)
 
     # TODO: Validate
     @staticmethod

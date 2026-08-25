@@ -10,16 +10,12 @@ from app.auth.dependencies import (
     SessionDep,
     get_current_active_superuser,
 )
-from app.media.schemas import MediaReadOptions
-from app.media.service import (
-    delete_record,
-    media_scoped_list_response,
-)
-from app.plugins.dependencies import EditablePlugin, ReadablePlugin
+from app.media.service import delete_record
+from app.plugins.dependencies import ExistingPlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
 from app.service import list_response
-from app.sources.dependencies import EditableSource, ReadableSource
+from app.sources.dependencies import ExistingSource
 from app.sources.models import Source
 from app.sources.schemas import (
     SourceCreate,
@@ -29,7 +25,6 @@ from app.sources.schemas import (
     SourceUpdate,
 )
 from app.users.dependencies import OptionalUser
-from app.users.models import User
 
 plugin_sources_router = APIRouter(
     prefix="/plugins/{plugin_id}",
@@ -43,7 +38,6 @@ sources_router = APIRouter(
 )
 
 SOURCE_EXTRA_COLUMNS: dict[str, Any] = {
-    "username": User.username,
     "plugin_name": Plugin.name,
 }
 
@@ -52,10 +46,9 @@ SOURCE_EXTRA_COLUMNS: dict[str, Any] = {
 @plugin_sources_router.post("/sources", response_model=SourcePublic)
 def create_source(
     session: SessionDep,
-    plugin: EditablePlugin,
+    plugin: ExistingPlugin,
     source_input: SourceCreate,
 ) -> Source:
-    """Create a `Source` if the `Plugin` is editable by the `User`."""
     return source_input.create(session, Source, plugin)
 
 
@@ -64,32 +57,12 @@ def create_source(
 def get_sources(
     session: SessionDep,
     current_user: CurrentUser,
-    read_options: Annotated[MediaReadOptions, Query()],
-) -> SourcesPublic:
-    """Get `Source`s."""
-    return media_scoped_list_response(
-        session=session,
-        base=Source.select_with_user_eager(),
-        response_model=SourcesPublic,
-        schema=SourceListPublic,
-        read_options=read_options,
-        current_user=current_user,
-        extra_columns=SOURCE_EXTRA_COLUMNS,
-    )
-
-
-# TODO: Validate
-@plugin_sources_router.get("/sources")
-def get_plugin_sources(
-    session: SessionDep,
-    plugin: ReadablePlugin,
-    current_user: OptionalUser,
     read_options: Annotated[ReadOptions, Query()],
 ) -> SourcesPublic:
-    """Get all of the `Source`s for a `Plugin` if it is readable by the `User`."""
+    """Get `Source`s."""
     return list_response(
         session=session,
-        base=Source.select_with_user_eager().where(Source.plugin_id == plugin.id),
+        base=Source.select_with_plugin_eager(),
         response_model=SourcesPublic,
         schema=SourceListPublic,
         params=read_options,
@@ -99,27 +72,43 @@ def get_plugin_sources(
 
 
 # TODO: Validate
-@sources_router.get("/{source_id}", response_model=SourcePublic)  # noqa: FAST003 - Used by ReadableSource.
-def get_source(source: ReadableSource) -> Source:
-    """Get a `Source` if it's readable by the `User`."""
+@plugin_sources_router.get("/sources")
+def get_plugin_sources(
+    session: SessionDep,
+    plugin: ExistingPlugin,
+    current_user: OptionalUser,
+    read_options: Annotated[ReadOptions, Query()],
+) -> SourcesPublic:
+    return list_response(
+        session=session,
+        base=Source.select_with_plugin_eager().where(Source.plugin_id == plugin.id),
+        response_model=SourcesPublic,
+        schema=SourceListPublic,
+        params=read_options,
+        current_user=current_user,
+        extra_columns=SOURCE_EXTRA_COLUMNS,
+    )
+
+
+# TODO: Validate
+@sources_router.get("/{source_id}", response_model=SourcePublic)  # noqa: FAST003 - Used by ExistingSource.
+def get_source(source: ExistingSource) -> Source:
     return source
 
 
 # TODO: Validate
-@sources_router.patch("/{source_id}", response_model=SourcePublic)  # noqa: FAST003 - Used by EditableSource.
+@sources_router.patch("/{source_id}", response_model=SourcePublic)  # noqa: FAST003 - Used by ExistingSource.
 def update_source(
     session: SessionDep,
-    source: EditableSource,
+    source: ExistingSource,
     source_input: SourceUpdate,
 ) -> Source:
-    """Update and return a `Source` if it's editable by the `User`."""
     return source_input.update(session, source)
 
 
 # TODO: Validate
-@sources_router.delete("/{source_id}")  # noqa: FAST003 - Used by EditableSource.
-def delete_source(session: SessionDep, source: EditableSource) -> Message:
-    """Delete a `Source` if it's editable by the `User`."""
+@sources_router.delete("/{source_id}")  # noqa: FAST003 - Used by ExistingSource.
+def delete_source(session: SessionDep, source: ExistingSource) -> Message:
     return delete_record(session, source)
 
 

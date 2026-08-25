@@ -30,9 +30,7 @@ from app.episodes.canonical_links import (
 )
 from app.episodes.dependencies import (
     AdminCanonicalEpisode,
-    EditableEpisode,
     ExistingEpisode,
-    ReadableEpisode,
 )
 from app.episodes.models import Episode
 from app.episodes.schemas import (
@@ -52,6 +50,8 @@ from app.episodes.schemas import (
     UnlockedEpisodeOutput,
     UnmatchedEpisodesPublic,
     UnmatchedReadOptions,
+    UserEpisodeUrlInput,
+    UserEpisodeUrlOutput,
 )
 from app.episodes.service import (
     get_duplicated_canonical_episodes,
@@ -59,22 +59,27 @@ from app.episodes.service import (
     list_unlocked_episodes,
     list_unmatched_episodes,
 )
+from app.episodes.user_urls import (
+    canonical_episode_for_url,
+    clear_user_episode_url,
+    set_user_episode_url,
+    single_canonical_episode_id,
+    user_episode_url,
+)
 from app.issue_reports.service import list_episode_issue_reports
-from app.media.schemas import MediaReadOptions
-from app.media.service import delete_record, media_scoped_list_response
-from app.plugins.dependencies import ReadablePlugin
+from app.media.service import delete_record
+from app.plugins.dependencies import ExistingPlugin
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
-from app.seasons.dependencies import EditableSeason, ReadableSeason
+from app.seasons.dependencies import ExistingSeason
 from app.seasons.models import Season
 from app.service import list_response
-from app.shows.dependencies import AdminCanonicalShow, ReadableShow
+from app.shows.dependencies import AdminCanonicalShow, ExistingShow
 from app.shows.models import Show
-from app.sources.dependencies import ReadableSource
+from app.sources.dependencies import ExistingSource
 from app.sources.models import Source
 from app.users.dependencies import OptionalUser
-from app.users.models import User
 
 plugin_episodes_router = APIRouter(
     prefix="/plugins/{plugin_id}",
@@ -119,7 +124,6 @@ CANONICAL_EPISODE_EXTRA_COLUMNS: dict[str, Any] = {
 }
 
 EPISODE_EXTRA_COLUMNS: dict[str, Any] = {
-    "username": User.username,
     "season_name": Season.name,
     "show_id": Season.show_id,
     "show_name": Show.name,
@@ -140,10 +144,9 @@ def _episode_output(session: SessionDep, episode: Episode) -> EpisodeOutput:
 @season_episodes_router.post("/episodes")
 def create_episode(
     session: SessionDep,
-    season: EditableSeason,
+    season: ExistingSeason,
     episode_input: EpisodeCreate,
 ) -> EpisodeOutput:
-    """Create an `Episode` if the `Season` is editable by the `User`."""
     return _episode_output(session, episode_input.create(session, Episode, season))
 
 
@@ -152,15 +155,15 @@ def create_episode(
 def get_episodes(
     session: SessionDep,
     current_user: CurrentUser,
-    read_options: Annotated[MediaReadOptions, Query()],
+    read_options: Annotated[ReadOptions, Query()],
 ) -> EpisodesPublic:
     """Get `Episode`s."""
-    episodes = media_scoped_list_response(
+    episodes = list_response(
         session=session,
-        base=Episode.select_with_user_eager(),
+        base=Episode.select_with_plugin_eager(),
         response_model=EpisodesPublic,
         schema=EpisodeListOutput,
-        read_options=read_options,
+        params=read_options,
         current_user=current_user,
         extra_columns=EPISODE_EXTRA_COLUMNS,
     )
@@ -172,14 +175,13 @@ def get_episodes(
 @season_episodes_router.get("/episodes")
 def get_season_episodes(
     session: SessionDep,
-    season: ReadableSeason,
+    season: ExistingSeason,
     current_user: OptionalUser,
     read_options: Annotated[ReadOptions, Query()],
 ) -> EpisodesPublic:
-    """Get all of the `Episode`s for a `Season` if it is readable by the `User`."""
     episodes = list_response(
         session=session,
-        base=Episode.select_with_user_eager().where(Episode.season_id == season.id),
+        base=Episode.select_with_plugin_eager().where(Episode.season_id == season.id),
         response_model=EpisodesPublic,
         schema=EpisodeListOutput,
         params=read_options,
@@ -194,14 +196,13 @@ def get_season_episodes(
 @plugin_episodes_router.get("/episodes")
 def get_plugin_episodes(
     session: SessionDep,
-    plugin: ReadablePlugin,
+    plugin: ExistingPlugin,
     current_user: OptionalUser,
     read_options: Annotated[ReadOptions, Query()],
 ) -> EpisodesPublic:
-    """Get all of the `Episode`s for a `Plugin` if it is readable by the `User`."""
     episodes = list_response(
         session=session,
-        base=Episode.select_with_user_eager().where(Source.plugin_id == plugin.id),
+        base=Episode.select_with_plugin_eager().where(Source.plugin_id == plugin.id),
         response_model=EpisodesPublic,
         schema=EpisodeListOutput,
         params=read_options,
@@ -216,14 +217,13 @@ def get_plugin_episodes(
 @source_episodes_router.get("/episodes")
 def get_source_episodes(
     session: SessionDep,
-    source: ReadableSource,
+    source: ExistingSource,
     current_user: OptionalUser,
     read_options: Annotated[ReadOptions, Query()],
 ) -> EpisodesPublic:
-    """Get all of the `Episode`s for a `Source` if it is readable by the `User`."""
     episodes = list_response(
         session=session,
-        base=Episode.select_with_user_eager().where(Show.source_id == source.id),
+        base=Episode.select_with_plugin_eager().where(Show.source_id == source.id),
         response_model=EpisodesPublic,
         schema=EpisodeListOutput,
         params=read_options,
@@ -238,14 +238,13 @@ def get_source_episodes(
 @show_episodes_router.get("/episodes")
 def get_show_episodes(
     session: SessionDep,
-    show: ReadableShow,
+    show: ExistingShow,
     current_user: OptionalUser,
     read_options: Annotated[ReadOptions, Query()],
 ) -> EpisodesPublic:
-    """Get all of the `Episode`s for a `Show` if it is readable by the `User`."""
     episodes = list_response(
         session=session,
-        base=Episode.select_with_user_eager().where(Season.show_id == show.id),
+        base=Episode.select_with_plugin_eager().where(Season.show_id == show.id),
         response_model=EpisodesPublic,
         schema=EpisodeListOutput,
         params=read_options,
@@ -454,10 +453,11 @@ def _information_side(
 
 
 # TODO: Validate
-@episodes_router.get("/{episode_id}/information")  # noqa: FAST003 - Used by ReadableEpisode.
+@episodes_router.get("/{episode_id}/information")  # noqa: FAST003 - Used by ExistingEpisode.
 def get_episode_information(
     session: SessionDep,
-    episode: ReadableEpisode,
+    episode: ExistingEpisode,
+    user: OptionalUser,
 ) -> EpisodeInformationOutput:
     """Return what the website and TMDB each say about an `Episode`.
 
@@ -489,8 +489,16 @@ def get_episode_information(
             ),
         )
 
+    canonical_episode_id = single_canonical_episode_id(episode)
+    stored_url = (
+        user_episode_url(session, user, canonical_episode_id)
+        if canonical_episode_id
+        else None
+    )
+
     return EpisodeInformationOutput(
         episode_id=episode.id,
+        user_url=stored_url.url if stored_url else None,
         canonical_episode_validated_at=episode.canonical_episode_validated_at,
         canonical_episode_note=episode.canonical_episode_note,
         issue_reports=list_episode_issue_reports(session, episode.id),
@@ -506,11 +514,47 @@ def get_episode_information(
 
 
 # TODO: Validate
+@episodes_router.put("/{episode_id}/user-url")  # noqa: FAST003 - Used by ExistingEpisode.
+def set_episode_user_url(
+    session: SessionDep,
+    episode: ExistingEpisode,
+    current_user: CurrentUser,
+    url_input: UserEpisodeUrlInput,
+) -> UserEpisodeUrlOutput:
+    canonical_episode_id = canonical_episode_for_url(episode)
+    record = set_user_episode_url(
+        session,
+        current_user,
+        canonical_episode_id,
+        url_input.url,
+    )
+    return UserEpisodeUrlOutput(
+        canonical_episode_id=canonical_episode_id,
+        url=record.url,
+    )
+
+
+# TODO: Validate
+@episodes_router.delete("/{episode_id}/user-url")  # noqa: FAST003 - Used by ExistingEpisode.
+def delete_episode_user_url(
+    session: SessionDep,
+    episode: ExistingEpisode,
+    current_user: CurrentUser,
+) -> UserEpisodeUrlOutput:
+    canonical_episode_id = canonical_episode_for_url(episode)
+    clear_user_episode_url(session, current_user, canonical_episode_id)
+    return UserEpisodeUrlOutput(
+        canonical_episode_id=canonical_episode_id,
+        url=None,
+    )
+
+
+# TODO: Validate
 @episodes_router.get(
-    "/{episode_id}",  # noqa: FAST003 - Used by EditableEpisode.
+    "/{episode_id}",  # noqa: FAST003 - Used by ExistingEpisode.
     dependencies=[Depends(get_current_active_superuser)],
 )
-def get_episode(session: SessionDep, episode: EditableEpisode) -> EpisodeOutput:
+def get_episode(session: SessionDep, episode: ExistingEpisode) -> EpisodeOutput:
     return _episode_output(session, episode)
 
 
@@ -521,12 +565,10 @@ def get_episode(session: SessionDep, episode: EditableEpisode) -> EpisodeOutput:
 )
 def update_episode(
     session: SessionDep,
-    episode: EditableEpisode,
+    episode: ExistingEpisode,
     episode_input: EpisodeUpdate,
 ) -> EpisodeOutput:
-    """Update and return an `Episode` if it's editable by the `User`.
-
-    Which episode this is linked to is settled by the TMDB matching screens
+    """Which episode this is linked to is settled by the TMDB matching screens
     rather than written here, so there is nothing to check.
     """
     return _episode_output(session, episode_input.update(session, episode))
@@ -537,8 +579,7 @@ def update_episode(
     "/{episode_id}",
     dependencies=[Depends(get_current_active_superuser)],
 )
-def delete_episode(session: SessionDep, episode: EditableEpisode) -> Message:
-    """Delete an `Episode` if it's editable by the `User`."""
+def delete_episode(session: SessionDep, episode: ExistingEpisode) -> Message:
     return delete_record(session, episode)
 
 

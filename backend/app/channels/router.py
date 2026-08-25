@@ -47,7 +47,10 @@ from app.channels.dependencies import (
     ReadableChannel,
     ReadableChannelCanonicalShow,
 )
-from app.channels.episode_selector import EpisodeQueryBuilder
+from app.channels.episode_selector import (
+    EpisodeQueryBuilder,
+    apply_user_episode_urls,
+)
 from app.channels.models import (
     Channel,
     ChannelEpisodeSourceFilter,
@@ -97,11 +100,12 @@ from app.plugins.schemas import PluginOutput
 from app.schemas import Message
 from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
-from app.shows.dependencies import ReadableShow
+from app.shows.dependencies import ExistingShow
 from app.shows.models import Show, ShowCanonicalShow
 from app.shows.schemas import ShowPublic
 from app.sources.models import Source
 from app.sources.schemas import SourcePublic
+from app.sources.service import get_or_create_custom_media_source
 from app.users.dependencies import OptionalUser
 from app.users.models import User
 from app.users.service import get_or_create_plugin_user
@@ -471,12 +475,14 @@ def get_channel_episodes(
     for channel_obj in channels:
         output.channels[channel_obj.id] = service.channel_output(channel_obj, user)
 
+    source_keys: dict[uuid.UUID, str] = {}
     for result in results:
         episode = result.episode
         season = episode.season
         show = season.show
         source = show.source
         plugin = source.plugin
+        source_keys[episode.id] = source.key
 
         extras: dict[str, Any] = {
             "channel_id": result.channel_id,
@@ -515,6 +521,19 @@ def get_channel_episodes(
     fill_episodes(session, output.episodes)
     fill_tmdb_urls(session, output.episodes)
     prefer_canonical_episodes(session, output.episodes)
+    custom_source = apply_user_episode_urls(
+        session,
+        user,
+        output.episodes,
+        source_keys,
+        builder.source_config,
+        channel_options,
+    )
+    if custom_source:
+        output.sources[custom_source.id] = SourcePublic.model_validate(custom_source)
+        output.plugins[custom_source.plugin_id] = PluginOutput.model_validate(
+            custom_source.plugin,
+        )
 
     logger.info("get_channel_episodes completed in {:.3f} seconds", time.time() - start)
     return output
@@ -577,15 +596,6 @@ def get_channel_shows(
         for show in non_canonical_shows[canonical_show_id]:
             source = show.source
             plugin = source.plugin
-
-            # TMDB's plugin is private because its media is never browsed on its own,
-            # but a title it is the only non-canonical row of is one the viewer put on
-            # the channel themselves, so it is theirs to see here.
-            if plugin.key != TMDB_PLUGIN_KEY and not plugin.is_readable(
-                session,
-                user,
-            ):
-                continue
 
             # A non-canonical row is read as the title the channel holds rather than as
             # any other title it is of, since a listing that mixes titles is on a
@@ -851,7 +861,6 @@ def _linked_show_stats(
 @channels_router.get("/{channel_id}/sources")  # noqa: FAST003
 def get_channel_sources(
     channel: ReadableChannel,
-    user: OptionalUser,
     session: SessionDep,
 ) -> list[SourcePublic]:
     """Read all unique sources for a channel."""
@@ -863,13 +872,14 @@ def get_channel_sources(
     for channel_show in channel.shows:
         for show in non_canonical_shows[channel_show.canonical_show_id]:
             source = show.source
-            plugin = source.plugin
-
-            if not plugin.is_readable(session, user):
-                continue
-
             if source.id not in sources:
                 sources[source.id] = SourcePublic.model_validate(source)
+
+    custom_source = get_or_create_custom_media_source(session)
+    sources.setdefault(
+        custom_source.id,
+        SourcePublic.model_validate(custom_source),
+    )
 
     return list(sources.values())
 
@@ -1721,25 +1731,25 @@ def update_channel_order(
     return channel
 
 
-# FAST003 - Parameter is used by ReadableShow.
+# FAST003 - Parameter is used by ExistingShow.
 # TODO: Validate
 @channels_router.get("/for-show/{show_id}")  # noqa: FAST003
 def get_channels_for_show(
     session: SessionDep,
     current_user: CurrentUser,
-    show: ReadableShow,
+    show: ExistingShow,
 ) -> list[ChannelShowMembership]:
     """List the `User`'s `Channel`s, saying which already hold a title."""
     return service.channels_with_show_membership(session, current_user, show)
 
 
-# FAST003 - Parameters are used by EditableChannel and ReadableShow.
+# FAST003 - Parameters are used by EditableChannel and ExistingShow.
 # TODO: Validate
 @channels_router.post("/{channel_id}/add-show/{show_id}")  # noqa: FAST003
 def add_channel_show(
     session: SessionDep,
     channel: EditableChannel,
-    show: ReadableShow,
+    show: ExistingShow,
 ) -> Message:
     """Put a title, on every website it is on, onto a `Channel`."""
     service.add_show_to_channel(session, channel, show)

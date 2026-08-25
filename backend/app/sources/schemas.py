@@ -42,9 +42,6 @@ class SourceListPublic(SourcePublic):
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)  # type: ignore[assignment]
 
-    username: str | None = Field(
-        validation_alias=AliasPath("plugin", "user", "username"),
-    )
     plugin_name: str | None = Field(validation_alias=AliasPath("plugin", "name"))
 
 

@@ -30,8 +30,6 @@ from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show, ShowCanonicalShow
 from app.sources.models import Source
-from app.users.constants import PLUGIN_USER_EMAIL
-from app.users.models import User
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.manage_plugins import import_plugins, plugins
@@ -43,7 +41,7 @@ load_models()
 
 # Every media class updated by this script; typed as the shared `MediaMixin` base so
 # `select_with_plugin()` resolves to a single return type rather than a union.
-MediaClass = type[MediaMixin[Any, Any]]
+MediaClass = type[MediaMixin[Any]]
 
 
 # TODO: Validate
@@ -244,15 +242,6 @@ MEDIA_CLASSES_IN_ORDER: tuple[MediaClass, ...] = (
 
 
 # TODO: Validate
-def _restrict_to_plugin_user[ResultT](
-    statement: SelectOfScalar[ResultT],
-) -> SelectOfScalar[ResultT]:
-    return statement.join(User, Plugin.user_id == User.id).where(  # type: ignore[arg-type]
-        User.email == PLUGIN_USER_EMAIL,
-    )
-
-
-# TODO: Validate
 def _restrict_to_media_in_channel[ResultT](
     statement: SelectOfScalar[ResultT],
     media_class: MediaClass,
@@ -283,14 +272,14 @@ def _process_outdated_items(
     media_type_name = media_class.__name__.lower()
     update_method_name = f"update_{media_type_name}"
 
-    statement = _restrict_to_plugin_user(
+    statement = (
         media_class.select_with_plugin()
         .where(
             col(media_class.update_at).is_not(None),
             col(media_class.update_at) < tz_datetime.now(),
             col(media_class.deleted_at).is_(None),
         )
-        .order_by(col(media_class.update_at).asc()),
+        .order_by(col(media_class.update_at).asc())
     )
     # Only this plugin's media so each plugin's run is independent.
     statement = statement.where(col(Plugin.key) == plugin_key)
@@ -362,16 +351,10 @@ def _update_plugin(
 
 
 # TODO: Validate
-def _plugin_user_plugin_keys() -> list[str]:
-    """Return the keys of every `Plugin` owned by the plugin user, from the database."""
+def _installed_plugin_keys() -> list[str]:
+    """Return the keys of every `Plugin` in the database."""
     with Session(engine) as session:
-        return list(
-            session.exec(
-                select(Plugin.key)
-                .join(User, Plugin.user_id == User.id)  # type: ignore[arg-type]
-                .where(User.email == PLUGIN_USER_EMAIL),
-            ).all(),
-        )
+        return list(session.exec(select(Plugin.key)).all())
 
 
 # TODO: Validate
@@ -398,12 +381,10 @@ def _next_update_at(session: Session) -> datetime | None:
     for media_class in MEDIA_CLASSES_IN_ORDER:
         statement = (
             _restrict_to_media_in_channel(
-                _restrict_to_plugin_user(
-                    media_class.select_with_plugin().where(
-                        col(media_class.update_at) > tz_datetime.now(),
-                        col(media_class.deleted_at).is_(None),
-                        col(Plugin.key).not_in(specialized_keys),
-                    ),
+                media_class.select_with_plugin().where(
+                    col(media_class.update_at) > tz_datetime.now(),
+                    col(media_class.deleted_at).is_(None),
+                    col(Plugin.key).not_in(specialized_keys),
                 ),
                 media_class,
             )
@@ -441,7 +422,7 @@ def update_outdated() -> None:
     plugin_classes_by_key = {plugin.plugin_key(): plugin for plugin in plugins}
     specialized_keys = _specialized_plugin_keys()
 
-    for plugin_key in _plugin_user_plugin_keys():
+    for plugin_key in _installed_plugin_keys():
         plugin_class = plugin_classes_by_key.get(plugin_key)
         if plugin_class is None:
             log_msg = f"[{plugin_key}] No installed plugin matches this database entry"

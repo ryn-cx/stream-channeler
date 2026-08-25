@@ -6,12 +6,16 @@ import uuid
 from sqlmodel import Session, col, func, select
 
 from app.episodes.models import Episode
+from app.plugins.identifiers import (
+    CUSTOM_MEDIA_FAVICON_URL,
+    CUSTOM_MEDIA_NAME,
+    CUSTOM_MEDIA_PLUGIN_KEY,
+    CUSTOM_MEDIA_SOURCE_KEY,
+)
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from app.users.constants import PLUGIN_USER_EMAIL
-from app.users.models import User
 
 OTHER_SOURCE_KEY = "Other"
 
@@ -20,19 +24,13 @@ OTHER_SOURCE_KEY = "Other"
 def sources_by_key(session: Session) -> dict[str, Source]:
     """Return the installed plugins' stored `Source`s, keyed by source key.
 
-    Only sources owned by the plugin user count as installed sources; a source
-    imported under a user's own plugin is private to them and is left out. A
-    plugin that splits its media across several sources (e.g. Amazon Prime
+    A plugin that splits its media across several sources (e.g. Amazon Prime
     Video's channels) is represented by each of those sources.
     """
     sources = session.exec(
         select(Source)
         .join(Plugin, col(Source.plugin_id) == Plugin.id)
-        .join(User, col(Plugin.user_id) == User.id)
-        .where(
-            col(Source.deleted_at).is_(None),
-            func.lower(User.email) == PLUGIN_USER_EMAIL,
-        )
+        .where(col(Source.deleted_at).is_(None))
         .order_by(col(Source.name), col(Source.key)),
     ).all()
     return {source.key: source for source in sources}
@@ -63,3 +61,30 @@ def episode_counts_by_source_id(session: Session) -> dict[uuid.UUID, int]:
 def source_keys(session: Session) -> list[str]:
     """Return the key of every installed plugin's `Source`, ordered for display."""
     return list(sources_by_key(session))
+
+
+# TODO: Validate
+def get_or_create_custom_media_source(session: Session) -> Source:
+    plugin = Plugin.get(session, CUSTOM_MEDIA_PLUGIN_KEY)
+    if plugin is None:
+        plugin = Plugin(key=CUSTOM_MEDIA_PLUGIN_KEY, name=CUSTOM_MEDIA_NAME)
+        session.add(plugin)
+        session.commit()
+        session.refresh(plugin)
+
+    source = Source.get(session, plugin, CUSTOM_MEDIA_SOURCE_KEY)
+    if source is None:
+        source = Source(
+            key=CUSTOM_MEDIA_SOURCE_KEY,
+            name=CUSTOM_MEDIA_NAME,
+            favicon_url=CUSTOM_MEDIA_FAVICON_URL,
+            plugin_id=plugin.id,
+        )
+        session.add(source)
+        session.commit()
+        session.refresh(source)
+    elif source.favicon_url != CUSTOM_MEDIA_FAVICON_URL:
+        source.favicon_url = CUSTOM_MEDIA_FAVICON_URL
+        session.commit()
+        session.refresh(source)
+    return source

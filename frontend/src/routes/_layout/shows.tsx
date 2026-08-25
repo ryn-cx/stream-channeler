@@ -34,9 +34,8 @@ function ShowsPage() {
       columnVisibilityKey="shows-column-visibility"
       defaultHidden={{ key: false, id: false }}
       emptyIcon={Clapperboard}
-      fetchTable={async (scope, params) => {
+      fetchTable={async (params) => {
         const result = await ShowsService.getShows({
-          scope,
           offset: params.offset,
           limit: params.limit,
           ...serializeTableQuery(params, showColumns),

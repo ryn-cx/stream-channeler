@@ -3,28 +3,57 @@
 
 import uuid
 
-from pydantic import AliasPath, BaseModel, ConfigDict, Field
+from fastapi import HTTPException
+from pydantic import BaseModel
+from sqlmodel import Session
 
 from app.plugins.models import BasePlugin, Plugin
 from app.schemas import (
-    BaseCreateWithParentAndKey,
-    BaseUpdateWithKey,
+    BaseInput,
     make_model_with_all_fields_optional,
 )
-from app.users.models import User
 
 
 # TODO: Validate
-class PluginCreate(BaseCreateWithParentAndKey[Plugin, User], BasePlugin):
+class PluginCreate(BaseInput, BasePlugin):
     """Schema for creating a `Plugin`."""
+
+    # TODO: Validate
+    def create(self, session: Session) -> Plugin:
+        if Plugin.get(session, self.key):
+            raise HTTPException(
+                status_code=409,
+                detail="Plugin with this key already exists",
+            )
+        plugin = Plugin.model_validate(self)
+        session.add(plugin)
+        session.commit()
+        session.refresh(plugin)
+        return plugin
 
 
 # TODO: Validate
 class PluginUpdate(
     make_model_with_all_fields_optional(BasePlugin),
-    BaseUpdateWithKey[Plugin],
+    BaseInput,
 ):
     """Schema for updating a `Plugin`."""
+
+    # TODO: Validate
+    def update(self, session: Session, existing_record: Plugin) -> Plugin:
+        if (
+            self.key is not None
+            and self.key != existing_record.key
+            and Plugin.get(session, self.key)
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="Plugin with this key already exists",
+            )
+
+        existing_record.sqlmodel_update(self.model_dump(exclude_unset=True))
+        session.commit()
+        return existing_record
 
 
 # TODO: Validate
@@ -34,14 +63,9 @@ class PluginOutput(BasePlugin):
     id: uuid.UUID
 
 
-# TODO: Consider reworking this into seperate models for each parent.
 # TODO: Validate
 class PluginListOutput(PluginOutput):
-    """Schema for returning a list of `Plugin`s, with owner information."""
-
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)  # type: ignore[assignment]
-
-    username: str | None = Field(validation_alias=AliasPath("user", "username"))
+    """Schema for returning a list of `Plugin`s."""
 
 
 # TODO: Validate

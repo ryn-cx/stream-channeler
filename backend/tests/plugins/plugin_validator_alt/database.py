@@ -30,7 +30,6 @@ from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from app.users.service import get_or_create_plugin_user
 from plugins.utils.abstract_plugin import PluginSearchResults, URLImportResult
 from plugins.utils.base_plugin import BaseFile, BasePlugin
 from plugins.utils.manage_plugins import import_plugins, plugins
@@ -395,7 +394,6 @@ class DatabaseMixinAlt[PluginT: BasePlugin]:
         logger.info(f"Importing files for {type(self).__name__}")
 
         stored = self._files_to_import()
-        plugin_user = get_or_create_plugin_user(session=session)
 
         # Do not initialize the source until after the files are imported because
         # initializing the source often requires downloading files.
@@ -421,11 +419,7 @@ class DatabaseMixinAlt[PluginT: BasePlugin]:
                 plugin_class.initialize_sources = initialize_sources  # type: ignore[method-assign]
             if plugin_key == self.plugin_class.plugin_key():
                 plugin_under_test = plugin_instance
-            plugin_records[plugin_key] = Plugin.get_one(
-                session,
-                plugin_user,
-                plugin_key,
-            )
+            plugin_records[plugin_key] = Plugin.get_one(session, plugin_key)
 
         existing_keys = {
             plugin_key: {file.key for file in record.files}

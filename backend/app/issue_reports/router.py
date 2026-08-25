@@ -4,7 +4,7 @@
 from fastapi import APIRouter, Depends
 
 from app.auth.dependencies import SessionDep, get_current_active_superuser
-from app.episodes.dependencies import ReadableEpisode
+from app.episodes.dependencies import ExistingEpisode
 from app.issue_reports.dependencies import (
     EditableEpisodeIssueReport,
     EditableSeasonIssueReport,
@@ -30,8 +30,8 @@ from app.issue_reports.service import (
     update_issue_report_record,
 )
 from app.schemas import Message
-from app.seasons.dependencies import ReadableSeason
-from app.shows.dependencies import ReadableShow
+from app.seasons.dependencies import ExistingSeason
+from app.shows.dependencies import ExistingShow
 from app.users.dependencies import OptionalUser
 
 episode_issue_reports_router = APIRouter(
@@ -65,7 +65,7 @@ issue_reports_router = APIRouter(prefix="/issue-reports", tags=["issue reports"]
 @episode_issue_reports_router.get("")
 def get_episode_issue_reports(
     session: SessionDep,
-    episode: ReadableEpisode,
+    episode: ExistingEpisode,
 ) -> list[IssueReportOutput]:
     """Get every `EpisodeIssueReport` left on an `Episode`."""
     return list_episode_issue_reports(session, episode.id)
@@ -76,7 +76,7 @@ def get_episode_issue_reports(
 def create_episode_issue_report(
     session: SessionDep,
     optional_user: OptionalUser,
-    episode: ReadableEpisode,
+    episode: ExistingEpisode,
     report_input: IssueReportCreate,
 ) -> IssueReportOutput:
     """Leave an `EpisodeIssueReport` on an `Episode`, with or without an account."""
@@ -90,7 +90,7 @@ def create_episode_issue_report(
 @season_issue_reports_router.get("")
 def get_season_issue_reports(
     session: SessionDep,
-    season: ReadableSeason,
+    season: ExistingSeason,
 ) -> list[IssueReportOutput]:
     """Get every `SeasonIssueReport` left on a `Season`."""
     return list_season_issue_reports(session, season.id)
@@ -101,7 +101,7 @@ def get_season_issue_reports(
 def create_season_issue_report(
     session: SessionDep,
     optional_user: OptionalUser,
-    season: ReadableSeason,
+    season: ExistingSeason,
     report_input: IssueReportCreate,
 ) -> IssueReportOutput:
     """Leave a `SeasonIssueReport` on a `Season`, with or without an account."""
@@ -115,7 +115,7 @@ def create_season_issue_report(
 @show_issue_reports_router.get("")
 def get_show_issue_reports(
     session: SessionDep,
-    show: ReadableShow,
+    show: ExistingShow,
 ) -> list[IssueReportOutput]:
     """Get every `ShowIssueReport` left on a `Show`."""
     return list_show_issue_reports(session, show.id)
@@ -126,7 +126,7 @@ def get_show_issue_reports(
 def create_show_issue_report(
     session: SessionDep,
     optional_user: OptionalUser,
-    show: ReadableShow,
+    show: ExistingShow,
     report_input: IssueReportCreate,
 ) -> IssueReportOutput:
     """Leave a `ShowIssueReport` on a `Show`, with or without an account."""

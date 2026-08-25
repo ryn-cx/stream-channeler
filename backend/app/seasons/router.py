@@ -15,16 +15,12 @@ from app.canonical_media.metadata import (
     tmdb_season_url,
 )
 from app.issue_reports.service import list_season_issue_reports
-from app.media.schemas import MediaReadOptions
-from app.media.service import (
-    delete_record,
-    media_scoped_list_response,
-)
-from app.plugins.dependencies import ReadablePlugin
+from app.media.service import delete_record
+from app.plugins.dependencies import ExistingPlugin
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
-from app.seasons.dependencies import EditableSeason, ReadableSeason
+from app.seasons.dependencies import ExistingSeason
 from app.seasons.models import Season
 from app.seasons.schemas import (
     SeasonCreate,
@@ -36,12 +32,11 @@ from app.seasons.schemas import (
     SeasonUpdate,
 )
 from app.service import list_response
-from app.shows.dependencies import EditableShow, ReadableShow
+from app.shows.dependencies import ExistingShow
 from app.shows.models import Show
-from app.sources.dependencies import ReadableSource
+from app.sources.dependencies import ExistingSource
 from app.sources.models import Source
 from app.users.dependencies import OptionalUser
-from app.users.models import User
 
 plugin_seasons_router = APIRouter(
     prefix="/plugins/{plugin_id}",
@@ -61,7 +56,6 @@ show_seasons_router = APIRouter(
 seasons_router = APIRouter(prefix="/seasons", tags=["seasons"])
 
 SEASON_EXTRA_COLUMNS: dict[str, Any] = {
-    "username": User.username,
     "show_name": Show.name,
     "source_id": Show.source_id,
     "source_name": Source.name,
@@ -74,10 +68,9 @@ SEASON_EXTRA_COLUMNS: dict[str, Any] = {
 @show_seasons_router.post("/seasons")
 def create_season(
     session: SessionDep,
-    show: EditableShow,
+    show: ExistingShow,
     season_input: SeasonCreate,
 ) -> SeasonOutput:
-    """Create a `Season` if the `Show` is editable by the `User`."""
     return SeasonOutput.model_validate(season_input.create(session, Season, show))
 
 
@@ -86,15 +79,15 @@ def create_season(
 def get_seasons(
     session: SessionDep,
     current_user: CurrentUser,
-    read_options: Annotated[MediaReadOptions, Query()],
+    read_options: Annotated[ReadOptions, Query()],
 ) -> SeasonsPublic:
     """Get `Season`s."""
-    seasons = media_scoped_list_response(
+    seasons = list_response(
         session=session,
-        base=Season.select_with_user_eager(),
+        base=Season.select_with_plugin_eager(),
         response_model=SeasonsPublic,
         schema=SeasonListOutput,
-        read_options=read_options,
+        params=read_options,
         current_user=current_user,
         extra_columns=SEASON_EXTRA_COLUMNS,
     )
@@ -105,14 +98,13 @@ def get_seasons(
 @show_seasons_router.get("/seasons")
 def get_show_seasons(
     session: SessionDep,
-    show: ReadableShow,
+    show: ExistingShow,
     current_user: OptionalUser,
     read_options: Annotated[ReadOptions, Query()],
 ) -> SeasonsPublic:
-    """Get all of the `Season`s for a `Show` if it is readable by the `User`."""
     seasons = list_response(
         session=session,
-        base=Season.select_with_user_eager().where(Season.show_id == show.id),
+        base=Season.select_with_plugin_eager().where(Season.show_id == show.id),
         response_model=SeasonsPublic,
         schema=SeasonListOutput,
         params=read_options,
@@ -126,14 +118,13 @@ def get_show_seasons(
 @plugin_seasons_router.get("/seasons")
 def get_plugin_seasons(
     session: SessionDep,
-    plugin: ReadablePlugin,
+    plugin: ExistingPlugin,
     current_user: OptionalUser,
     read_options: Annotated[ReadOptions, Query()],
 ) -> SeasonsPublic:
-    """Get all of the `Season`s for a `Plugin` if it is readable by the `User`."""
     seasons = list_response(
         session=session,
-        base=Season.select_with_user_eager().where(Source.plugin_id == plugin.id),
+        base=Season.select_with_plugin_eager().where(Source.plugin_id == plugin.id),
         response_model=SeasonsPublic,
         schema=SeasonListOutput,
         params=read_options,
@@ -147,14 +138,13 @@ def get_plugin_seasons(
 @source_seasons_router.get("/seasons")
 def get_source_seasons(
     session: SessionDep,
-    source: ReadableSource,
+    source: ExistingSource,
     current_user: OptionalUser,
     read_options: Annotated[ReadOptions, Query()],
 ) -> SeasonsPublic:
-    """Get all of the `Season`s for a `Source` if it is readable by the `User`."""
     seasons = list_response(
         session=session,
-        base=Season.select_with_user_eager().where(Show.source_id == source.id),
+        base=Season.select_with_plugin_eager().where(Show.source_id == source.id),
         response_model=SeasonsPublic,
         schema=SeasonListOutput,
         params=read_options,
@@ -184,10 +174,10 @@ def _information_side(
 
 
 # TODO: Validate
-@seasons_router.get("/{season_id}/information")  # noqa: FAST003 - Used by ReadableSeason.
+@seasons_router.get("/{season_id}/information")  # noqa: FAST003 - Used by ExistingSeason.
 def get_season_information(
     session: SessionDep,
-    season: ReadableSeason,
+    season: ExistingSeason,
 ) -> SeasonInformationOutput:
     """Return what the website and TMDB each say about a `Season`.
 
@@ -227,8 +217,7 @@ def get_season_information(
     "/{season_id}",
     dependencies=[Depends(get_current_active_superuser)],
 )
-def get_season(season: ReadableSeason) -> SeasonOutput:
-    """Get a `Season` if it's readable by the `User`."""
+def get_season(season: ExistingSeason) -> SeasonOutput:
     return SeasonOutput.model_validate(season)
 
 
@@ -239,10 +228,9 @@ def get_season(season: ReadableSeason) -> SeasonOutput:
 )
 def update_season(
     session: SessionDep,
-    season: EditableSeason,
+    season: ExistingSeason,
     season_input: SeasonUpdate,
 ) -> SeasonOutput:
-    """Update and return a `Season` if it's editable by the `User`."""
     return SeasonOutput.model_validate(season_input.update(session, season))
 
 
@@ -251,8 +239,7 @@ def update_season(
     "/{season_id}",
     dependencies=[Depends(get_current_active_superuser)],
 )
-def delete_season(session: SessionDep, season: EditableSeason) -> Message:
-    """Delete a `Season` if it's editable by the `User`."""
+def delete_season(session: SessionDep, season: ExistingSeason) -> Message:
     return delete_record(session, season)
 
 
