@@ -49,7 +49,7 @@ class HelperMixin(FileMixin, register=False):
             if season.key != season_key:
                 continue
             for episode in season.episodes:
-                if episode.entry["id"] == episode_tmdb_id:
+                if episode.entry.id == episode_tmdb_id:
                     return episode.number
         message = f"{season_key} has no episode {episode_key}"
         raise ValueError(message)
@@ -78,7 +78,7 @@ class HelperMixin(FileMixin, register=False):
 
         wanted = set(season_keys)
         return [
-            episode_key(media_type, episode.entry["id"])
+            episode_key(media_type, episode.entry.id)
             for season in self.series_seasons(show_key)
             if season.key in wanted
             for episode in season.episodes

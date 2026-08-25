@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Any, ClassVar, override
+from typing import ClassVar, override
+
+from tminidb.search.models.multi import MultiResult, MultiSearchResults
 
 from app.media.media_type import MediaType
 from app.utils import tz_datetime
@@ -59,8 +61,8 @@ class SearchMixin(LookupMixin, register=False):
             parsed = self._multi_search_page(query, page)
             matches = [
                 self._search_result(result)
-                for result in parsed["results"]
-                if result["media_type"] in self._SEARCH_MEDIA_TYPES
+                for result in parsed.results
+                if result.media_type in self._SEARCH_MEDIA_TYPES
             ][offset:]
 
             wanted = self.SEARCH_PAGE_SIZE - len(results)
@@ -71,7 +73,7 @@ class SearchMixin(LookupMixin, register=False):
 
             page += 1
             offset = 0
-            if page > parsed["total_pages"]:
+            if page > parsed.total_pages:
                 next_cursor = None
                 break
             next_cursor = _encode_cursor(page, 0)
@@ -79,36 +81,36 @@ class SearchMixin(LookupMixin, register=False):
         return PluginSearchResults(results=results, next_cursor=next_cursor)
 
     # TODO: Validate
-    def _multi_search_page(self, query: str, page: int) -> dict[str, Any]:
+    def _multi_search_page(self, query: str, page: int) -> MultiSearchResults:
         search_file = self.multi_search_file(query, page)
         search_file.download_if_outdated(tz_datetime.now() - _SEARCH_MAX_AGE)
         return search_file.parsed()
 
     # TODO: Validate
-    def _search_result(self, result: dict[str, Any]) -> PluginSearchResult:
+    def _search_result(self, result: MultiResult) -> PluginSearchResult:
         # A movie carries its title and release date, a show its name and first
         # air date, and a multi search returns the two mixed together.
         title: str | None
-        if result["media_type"] == "movie":
-            title = result.get("title") or result.get("original_title")
-            year = release_year(result.get("release_date"))
+        media_type: MediaType
+        if result.media_type == "movie":
+            media_type = MediaType.movie
+            title = result.title or result.original_title
+            year = release_year(result.release_date)
         else:
-            title = result.get("name") or result.get("original_name")
-            year = release_year(result.get("first_air_date"))
+            media_type = MediaType.tv
+            title = result.name or result.original_name
+            year = release_year(result.first_air_date)
 
-        if title is None:
-            msg = f"TMDB {result['media_type']} {result['id']} has no title"
+        if not title:
+            msg = f"TMDB {result.media_type} {result.id} has no title"
             raise ValueError(msg)
 
         return PluginSearchResult(
             title=title,
-            url=title_page_url(result["media_type"], result["id"]),
+            url=title_page_url(media_type, result.id),
             year=year,
-            image_url=poster_image_url(result["poster_path"])
-            or backdrop_image_url(result["backdrop_path"]),
-            media_type=self._SEARCH_MEDIA_TYPES[result["media_type"]],
-            media_identifier=media_identifier(
-                MediaType(result["media_type"]),
-                result["id"],
-            ),
+            image_url=poster_image_url(result.poster_path)
+            or backdrop_image_url(result.backdrop_path),
+            media_type=self._SEARCH_MEDIA_TYPES[media_type],
+            media_identifier=media_identifier(media_type, result.id),
         )

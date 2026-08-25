@@ -1,4 +1,5 @@
 # TODO: Validate
+from abc import abstractmethod
 from collections.abc import Sequence
 from datetime import date, datetime, timedelta
 from http import HTTPStatus
@@ -11,6 +12,22 @@ from typing import (
 )
 
 from sqlmodel import Session, col, select
+from tminidb.base_response_model import BaseResponseModel
+from tminidb.models.changes import Change
+from tminidb.movies.models.details import Movie
+from tminidb.movies.models.watch_providers import MovieProviders
+from tminidb.search.models.movie import MovieSearchResults
+from tminidb.search.models.multi import MultiSearchResults
+from tminidb.search.models.tv import TvSearchResults
+from tminidb.tv_episode_groups.models.details import EpisodeGroup, GroupEpisode
+from tminidb.tv_episodes.models.details import Details
+from tminidb.tv_episodes.models.translations import Translations
+from tminidb.tv_seasons.models.details import Episode, TvSeason
+from tminidb.tv_series.models.changes import TvSeriesChangeLog
+from tminidb.tv_series.models.details import TvSeries
+from tminidb.tv_series.models.episode_groups import EpisodeGroups as EpisodeGroupsModel
+from tminidb.tv_series.models.episode_groups import EpisodeGroupSummary
+from tminidb.tv_series.models.watch_providers import TvProviders
 
 from app.files.models import File
 from app.media.media_type import MediaType
@@ -94,7 +111,7 @@ def air_datetime(air_date: str | date | None) -> datetime | None:
 
 
 # TODO: Validate
-class _TMDBEndpointFile(EndpointJSON[dict[str, Any]]):
+class _TMDBEndpointFile[T: BaseResponseModel](EndpointJSON[T]):
     """TMDB endpoint file.
 
     An endpoint is called rather than asked to download and parse, and what it
@@ -103,16 +120,25 @@ class _TMDBEndpointFile(EndpointJSON[dict[str, Any]]):
     """
 
     # TODO: Validate
+    @abstractmethod
+    def _fetch_json(self) -> dict[str, Any]: ...
+
+    # TODO: Validate
+    @abstractmethod
     @override
-    def _parse(self, raw: Any) -> dict[str, Any]:
-        return self.raise_if_not_is_instance(raw, dict)
+    def _parse(self, raw: Any) -> T: ...
+
+    # TODO: Validate
+    @override
+    def _fetch(self) -> T:
+        return self._parse(self._fetch_json())
 
     # TODO: Validate
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
             try:
-                response = self._fetch()
+                response = self._fetch_json()
             except Exception as error:
                 if not self._is_acceptable_error(error):
                     raise
@@ -132,47 +158,67 @@ class _TMDBEndpointFile(EndpointJSON[dict[str, Any]]):
 
 
 # TODO: Validate
-class MovieDetails(_TMDBEndpointFile):
+class MovieDetails(_TMDBEndpointFile[Movie]):
     """Movie details file."""
 
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
+    def _parse(self, raw: Any) -> Movie:
+        return Movie.from_response(raw)
+
+    # TODO: Validate
+    @override
+    def _fetch_json(self) -> dict[str, Any]:
         return api.movie_details(int(self.unique_identifier))
 
 
 # TODO: Validate
-class TvSeriesDetails(_TMDBEndpointFile):
+class TvSeriesDetails(_TMDBEndpointFile[TvSeries]):
     """TV series details file."""
 
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
+    def _parse(self, raw: Any) -> TvSeries:
+        return TvSeries.from_response(raw)
+
+    # TODO: Validate
+    @override
+    def _fetch_json(self) -> dict[str, Any]:
         return api.tv_series_details(int(self.unique_identifier))
 
 
 # TODO: Validate
-class MovieWatchProviders(_TMDBEndpointFile):
+class MovieWatchProviders(_TMDBEndpointFile[MovieProviders]):
     """Movie watch providers file."""
 
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
+    def _parse(self, raw: Any) -> MovieProviders:
+        return MovieProviders.from_response(raw)
+
+    # TODO: Validate
+    @override
+    def _fetch_json(self) -> dict[str, Any]:
         return api.movie_watch_providers(int(self.unique_identifier))
 
 
 # TODO: Validate
-class TvWatchProviders(_TMDBEndpointFile):
+class TvWatchProviders(_TMDBEndpointFile[TvProviders]):
     """TV watch providers file."""
 
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
+    def _parse(self, raw: Any) -> TvProviders:
+        return TvProviders.from_response(raw)
+
+    # TODO: Validate
+    @override
+    def _fetch_json(self) -> dict[str, Any]:
         return api.tv_series_watch_providers(int(self.unique_identifier))
 
 
 # TODO: Validate
-class ShowDetail(_TMDBEndpointFile):
+class ShowDetail(_TMDBEndpointFile[TvSeries]):
     """Show detail file.
 
     The seasons and episodes under a title are reached through
@@ -182,12 +228,17 @@ class ShowDetail(_TMDBEndpointFile):
 
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
+    def _parse(self, raw: Any) -> TvSeries:
+        return TvSeries.from_response(raw)
+
+    # TODO: Validate
+    @override
+    def _fetch_json(self) -> dict[str, Any]:
         return api.tv_series_details(int(self.unique_identifier))
 
 
 # TODO: Validate
-class EpisodeGroups(_TMDBEndpointFile):
+class EpisodeGroups(_TMDBEndpointFile[EpisodeGroupsModel]):
     """Every episode order TMDB holds for a title, beside the title's own.
 
     Only what each order is called and how big it is - the episodes an order
@@ -197,12 +248,17 @@ class EpisodeGroups(_TMDBEndpointFile):
 
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
+    def _parse(self, raw: Any) -> EpisodeGroupsModel:
+        return EpisodeGroupsModel.from_response(raw)
+
+    # TODO: Validate
+    @override
+    def _fetch_json(self) -> dict[str, Any]:
         return api.tv_series_episode_groups(int(self.unique_identifier))
 
 
 # TODO: Validate
-class EpisodeGroupDetail(_TMDBEndpointFile):
+class EpisodeGroupDetail(_TMDBEndpointFile[EpisodeGroup]):
     """One episode order, and the episodes each of its groups holds.
 
     Keyed by the order's own id rather than by the title's, because that is what
@@ -213,12 +269,17 @@ class EpisodeGroupDetail(_TMDBEndpointFile):
 
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
+    def _parse(self, raw: Any) -> EpisodeGroup:
+        return EpisodeGroup.from_response(raw)
+
+    # TODO: Validate
+    @override
+    def _fetch_json(self) -> dict[str, Any]:
         return api.tv_episode_group_details(self.unique_identifier)
 
 
 # TODO: Validate
-class SeasonDetail(_TMDBEndpointFile):
+class SeasonDetail(_TMDBEndpointFile[TvSeason]):
     """Season detail file."""
 
     # TODO: Validate
@@ -235,7 +296,12 @@ class SeasonDetail(_TMDBEndpointFile):
 
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
+    def _parse(self, raw: Any) -> TvSeason:
+        return TvSeason.from_response(raw)
+
+    # TODO: Validate
+    @override
+    def _fetch_json(self) -> dict[str, Any]:
         return api.tv_season_details(
             self.tmdb_show_id,
             self.season_number,
@@ -243,7 +309,7 @@ class SeasonDetail(_TMDBEndpointFile):
 
 
 # TODO: Validate
-class EpisodeDetail(_TMDBEndpointFile):
+class EpisodeDetail(_TMDBEndpointFile[Details]):
     """Episode detail file."""
 
     # TODO: Validate
@@ -266,7 +332,12 @@ class EpisodeDetail(_TMDBEndpointFile):
 
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
+    def _parse(self, raw: Any) -> Details:
+        return Details.from_response(raw)
+
+    # TODO: Validate
+    @override
+    def _fetch_json(self) -> dict[str, Any]:
         return api.tv_episode_details(
             self.tmdb_show_id,
             self.season_number,
@@ -275,7 +346,7 @@ class EpisodeDetail(_TMDBEndpointFile):
 
 
 # TODO: Validate
-class EpisodeTranslations(_TMDBEndpointFile):
+class EpisodeTranslations(_TMDBEndpointFile[Translations]):
     """Every language's name for a single episode."""
 
     # TODO: Validate
@@ -298,7 +369,12 @@ class EpisodeTranslations(_TMDBEndpointFile):
 
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
+    def _parse(self, raw: Any) -> Translations:
+        return Translations.from_response(raw)
+
+    # TODO: Validate
+    @override
+    def _fetch_json(self) -> dict[str, Any]:
         return api.tv_episode_translations(
             self.tmdb_show_id,
             self.season_number,
@@ -315,7 +391,7 @@ def change_datetime(changed_at: str) -> datetime:
 
 
 # TODO: Validate
-class ShowChanges(_TMDBEndpointFile):
+class ShowChanges(_TMDBEndpointFile[TvSeriesChangeLog]):
     # TODO: Validate
     def __init__(
         self,
@@ -335,7 +411,12 @@ class ShowChanges(_TMDBEndpointFile):
 
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
+    def _parse(self, raw: Any) -> TvSeriesChangeLog:
+        return TvSeriesChangeLog.from_response(raw)
+
+    # TODO: Validate
+    @override
+    def _fetch_json(self) -> dict[str, Any]:
         # An end date is asked with as well as a start, because TMDB answers a
         # start on its own with the fortnight after it rather than everything
         # since, and a title left alone for longer than that would have the
@@ -348,15 +429,14 @@ class ShowChanges(_TMDBEndpointFile):
         )
 
     # TODO: Validate
-    def changes(self) -> Sequence[Any]:
+    def changes(self) -> Sequence[Change]:
         if not self.database_record.content:
             return []
-        changed: Sequence[Any] = self.parsed()["changes"]
-        return changed
+        return self.parsed().changes
 
 
 # TODO: Validate
-class MultiSearch(_TMDBEndpointFile):
+class MultiSearch(_TMDBEndpointFile[MultiSearchResults]):
     """Multi search file."""
 
     # TODO: Validate
@@ -373,7 +453,12 @@ class MultiSearch(_TMDBEndpointFile):
 
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
+    def _parse(self, raw: Any) -> MultiSearchResults:
+        return MultiSearchResults.from_response(raw)
+
+    # TODO: Validate
+    @override
+    def _fetch_json(self) -> dict[str, Any]:
         return api.search_multi(self.query, page=self.page)
 
 
@@ -411,7 +496,7 @@ class TitlePage(HTMLFile):
 
 
 # TODO: Validate
-class MovieSearch(_TMDBEndpointFile):
+class MovieSearch(_TMDBEndpointFile[MovieSearchResults]):
     """Movie search file."""
 
     # TODO: Validate
@@ -428,13 +513,18 @@ class MovieSearch(_TMDBEndpointFile):
 
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
+    def _parse(self, raw: Any) -> MovieSearchResults:
+        return MovieSearchResults.from_response(raw)
+
+    # TODO: Validate
+    @override
+    def _fetch_json(self) -> dict[str, Any]:
         year = None if self.year is None else str(self.year)
         return api.search_movie(self.query, year=year)
 
 
 # TODO: Validate
-class TvSearch(_TMDBEndpointFile):
+class TvSearch(_TMDBEndpointFile[TvSearchResults]):
     """TV search file."""
 
     # TODO: Validate
@@ -451,7 +541,12 @@ class TvSearch(_TMDBEndpointFile):
 
     # TODO: Validate
     @override
-    def _fetch(self) -> dict[str, Any]:
+    def _parse(self, raw: Any) -> TvSearchResults:
+        return TvSearchResults.from_response(raw)
+
+    # TODO: Validate
+    @override
+    def _fetch_json(self) -> dict[str, Any]:
         return api.search_tv(self.query, year=self.year)
 
 
@@ -460,7 +555,7 @@ class EpisodeSource(NamedTuple):
     """One episode of a season, and the number the order gives it."""
 
     number: int
-    entry: Any
+    entry: Episode | GroupEpisode
 
 
 # TODO: Validate
@@ -756,13 +851,16 @@ class FileMixin(BasePlugin, register=False):
             self.show_detail_file(tmdb_id),
             groups_file,
             *(
-                self.episode_group_detail_file(option["id"])
+                self.episode_group_detail_file(option.id)
                 for option in self._episode_group_options(tmdb_id)
             ),
         ]
 
     # TODO: Validate
-    def _episode_group_options(self, tmdb_id: int) -> Sequence[Any]:
+    def _episode_group_options(
+        self,
+        tmdb_id: int,
+    ) -> Sequence[EpisodeGroupSummary]:
         """Return every episode order TMDB lists for a title.
 
         A title TMDB holds no orders for, and one the endpoint has nothing to
@@ -772,8 +870,7 @@ class FileMixin(BasePlugin, register=False):
         groups_file = self.episode_groups_file(tmdb_id)
         if not groups_file.database_record.content:
             return []
-        options: Sequence[Any] = groups_file.parsed()["results"]
-        return options
+        return groups_file.parsed().results
 
     # TODO: Validate
     def _chosen_group_id(self, show_key: str) -> str | None:
@@ -787,7 +884,7 @@ class FileMixin(BasePlugin, register=False):
         return chosen_group_id(show.extra) if show else None
 
     # TODO: Validate
-    def _chosen_group(self, show_key: str) -> dict[str, Any] | None:
+    def _chosen_group(self, show_key: str) -> EpisodeGroup | None:
         """Return the chosen episode order itself, where there is one."""
         group_id = self._chosen_group_id(show_key)
         if group_id is None:
@@ -810,20 +907,20 @@ class FileMixin(BasePlugin, register=False):
             return [
                 SeasonSource(
                     key=season_key(MediaType.tv, order),
-                    name=entry["name"],
+                    name=entry.name,
                     season_number=order + 1,
                     poster_path=None,
                     episodes=[
                         EpisodeSource(number=number, entry=episode)
-                        for number, episode in enumerate(entry["episodes"], start=1)
+                        for number, episode in enumerate(entry.episodes, start=1)
                     ],
                 )
-                for order, entry in enumerate(group["groups"])
+                for order, entry in enumerate(group.groups)
             ]
 
         seasons: list[SeasonSource] = []
-        for season in self.show_detail_file(tmdb_id).parsed()["seasons"]:
-            season_file = self.season_detail_file(tmdb_id, season["season_number"])
+        for season in self.show_detail_file(tmdb_id).parsed().seasons:
+            season_file = self.season_detail_file(tmdb_id, season.season_number)
             # Downloaded here rather than left to the caller for the same reason
             # the orders are: what says which seasons a title has is the title's
             # own file, so nothing can name a season file before that has been
@@ -837,13 +934,13 @@ class FileMixin(BasePlugin, register=False):
             detail = season_file.parsed()
             seasons.append(
                 SeasonSource(
-                    key=season_key(MediaType.tv, season["id"]),
-                    name=detail["name"],
-                    season_number=season["season_number"],
-                    poster_path=detail["poster_path"],
+                    key=season_key(MediaType.tv, season.id),
+                    name=detail.name,
+                    season_number=season.season_number,
+                    poster_path=detail.poster_path,
                     episodes=[
-                        EpisodeSource(number=episode["episode_number"], entry=episode)
-                        for episode in detail["episodes"]
+                        EpisodeSource(number=episode.episode_number, entry=episode)
+                        for episode in detail.episodes
                     ],
                 ),
             )
@@ -891,9 +988,8 @@ class FileMixin(BasePlugin, register=False):
         """Return the number TMDB's own seasons give the season `season_key` names."""
         _, season_tmdb_id = parse_season_key(season_key)
         _, tmdb_id = parse_show_key(show_key)
-        for season in self.show_detail_file(tmdb_id).parsed()["seasons"]:
-            if season["id"] == season_tmdb_id:
-                number: int = season["season_number"]
-                return number
+        for season in self.show_detail_file(tmdb_id).parsed().seasons:
+            if season.id == season_tmdb_id:
+                return season.season_number
         message = f"{show_key} has no season {season_key}"
         raise ValueError(message)

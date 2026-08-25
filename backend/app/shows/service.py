@@ -291,7 +291,10 @@ def list_tmdb_episode_groups(
     if media_type is not MediaType.tv:
         return []
 
-    groups = TMDB(session).episode_groups_file(tmdb_id).parsed()
+    groups_file = TMDB(session).episode_groups_file(tmdb_id)
+    if not groups_file.database_record.content:
+        return []
+
     return [
         TmdbEpisodeGroupOption(
             id=group.id,
@@ -301,7 +304,7 @@ def list_tmdb_episode_groups(
             episode_count=group.episode_count,
             type=group.type,
         )
-        for group in groups.results
+        for group in groups_file.parsed().results
     ]
 
 
@@ -453,8 +456,12 @@ def validate_extra(
         message = "A film has no episode orders to be read in."
         raise HTTPException(status_code=422, detail=message)
 
-    groups = TMDB(session).episode_groups_file(tmdb_id).parsed()
-    known = {group.id for group in groups.results}
+    groups_file = TMDB(session).episode_groups_file(tmdb_id)
+    known = (
+        {group.id for group in groups_file.parsed().results}
+        if groups_file.database_record.content
+        else set()
+    )
     if group_id not in known:
         message = f"TMDB holds no episode order {group_id!r} for this show."
         raise HTTPException(status_code=422, detail=message)

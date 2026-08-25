@@ -9,7 +9,9 @@ records named.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, override
+
+from tminidb.models.changes import Item
 
 from app.media.media_type import MediaType
 from app.utils import tz_datetime
@@ -149,16 +151,16 @@ class UpdateMixin(ImportURLMixin, register=False):
         translations_files = self.stored_episode_translations_files(tmdb_id)
 
         for change in changes_file.changes():
-            for item in change["items"]:
-                changed_at = change_datetime(item["time"])
-                if change["key"] in SHOW_DETAIL_CHANGE_KEYS:
+            for item in change.items:
+                changed_at = change_datetime(item.time)
+                if change.key in SHOW_DETAIL_CHANGE_KEYS:
                     self._update_changed_show_files(tmdb_id, changed_at)
-                if change["key"] in SEASON_DETAIL_CHANGE_KEYS:
+                if change.key in SEASON_DETAIL_CHANGE_KEYS:
                     self._update_changed_season_files(show_key, item, changed_at)
-                if change["key"] in EPISODE_TRANSLATIONS_CHANGE_KEYS:
+                if change.key in EPISODE_TRANSLATIONS_CHANGE_KEYS:
                     self._download_outdated_files(translations_files, changed_at)
-                if change["key"] not in SUPPORTED_CHANGE_KEYS:
-                    message = f"{show_key} has an unknown change key: {change['key']}"
+                if change.key not in SUPPORTED_CHANGE_KEYS:
+                    message = f"{show_key} has an unknown change key: {change.key}"
                     raise ValueError(message)
 
     # TODO: Validate
@@ -169,14 +171,14 @@ class UpdateMixin(ImportURLMixin, register=False):
     def _update_changed_season_files(
         self,
         show_key: str,
-        item: Any,  # noqa: ANN401 - One entry of a change group, whose type is per endpoint.
+        item: Item,
         changed_at: datetime,
     ) -> None:
         stored_keys = self._season_keys_from_file(show_key)
         # What a change carries is whatever JSON TMDB wrote for that key, which
         # for a season is an object naming the season and for everything else is
         # a string or a number that names no season at all.
-        changed = item.get("value")
+        changed = item.value
         value = changed if isinstance(changed, dict) else {}
         named = (
             None

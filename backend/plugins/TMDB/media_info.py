@@ -2,7 +2,11 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, override
+from typing import override
+
+from tminidb.models.watch_providers import Provider, WatchProviders
+from tminidb.movies.models.details import Movie
+from tminidb.tv_series.models.details import TvSeries
 
 from app.media.media_type import MediaType
 from plugins.TMDB.files import (
@@ -49,80 +53,74 @@ class MediaInfoMixin(LookupMixin, register=False):
         # Which of the two shapes the detail is has to be read off the file rather
         # than the parsed model, because a model whose module was reloaded after a
         # schema change is no longer an instance of the class imported here.
-        detail: dict[str, Any]
+        detail: Movie | TvSeries
         # A title with no poster of its own can still be shown by a poster one of
         # its seasons carries.
         season_poster_path: str | None
         if isinstance(detail_file, MovieDetails):
             detail = detail_file.parsed()
-            title = detail["title"]
-            year = release_year(detail["release_date"])
+            title = detail.title
+            year = release_year(detail.release_date)
             end_year = None
             number_of_seasons = None
             number_of_episodes = None
-            runtime = detail["runtime"]
+            runtime = detail.runtime
             season_poster_path = None
         else:
             detail = detail_file.parsed()
-            title = detail["name"]
-            year = release_year(detail["first_air_date"])
-            end_year = release_year(detail["last_air_date"])
-            number_of_seasons = detail["number_of_seasons"]
-            number_of_episodes = detail["number_of_episodes"]
+            title = detail.name
+            year = release_year(detail.first_air_date)
+            end_year = release_year(detail.last_air_date)
+            number_of_seasons = detail.number_of_seasons
+            number_of_episodes = detail.number_of_episodes
             runtime = None
             season_poster_path = next(
-                (
-                    season["poster_path"]
-                    for season in detail["seasons"]
-                    if season["poster_path"]
-                ),
+                (season.poster_path for season in detail.seasons if season.poster_path),
                 None,
             )
 
         # Either image stands in for the other when its own path is missing, sized
         # for the slot it fills rather than the slot it came from.
-        poster_path = detail["poster_path"] or season_poster_path
-        backdrop_path = detail["backdrop_path"]
+        poster_path = detail.poster_path or season_poster_path
+        backdrop_path = detail.backdrop_path
         return PluginMediaInfo(
             title=title,
             media_type=_MEDIA_TYPE_LABELS[media_type],
-            tagline=detail["tagline"] or None,
-            overview=detail["overview"] or None,
+            tagline=detail.tagline or None,
+            overview=detail.overview or None,
             poster_url=poster_image_url(poster_path or backdrop_path),
             backdrop_url=backdrop_image_url(backdrop_path or poster_path),
             year=year,
             end_year=end_year,
-            status=detail["status"],
-            rating=detail["vote_average"],
-            vote_count=detail["vote_count"],
+            status=detail.status,
+            rating=detail.vote_average,
+            vote_count=detail.vote_count,
             number_of_seasons=number_of_seasons,
             number_of_episodes=number_of_episodes,
             runtime=runtime,
-            genres=[genre["name"] for genre in detail["genres"]],
+            genres=[genre.name for genre in detail.genres],
             providers=_watch_provider_items(providers, title),
         )
 
 
 # TODO: Validate
 def streaming_providers(
-    watch_providers: dict[str, Any] | None,
-) -> list[dict[str, Any]]:
-    if watch_providers is None or not (
-        united_states := watch_providers["results"].get("US")
-    ):
+    watch_providers: WatchProviders | None,
+) -> list[Provider]:
+    if watch_providers is None or not (united_states := watch_providers.results.US):
         return []
 
-    providers_by_id: dict[int, dict[str, Any]] = {}
+    providers_by_id: dict[int, Provider] = {}
     for category in STREAMING_CATEGORIES:
-        providers: Sequence[dict[str, Any]] = united_states.get(category, ())
+        providers: Sequence[Provider] = getattr(united_states, category)
         for provider in providers:
-            providers_by_id.setdefault(provider["provider_id"], provider)
+            providers_by_id.setdefault(provider.provider_id, provider)
     for category in ("buy", "rent"):
-        sold: Sequence[dict[str, Any]] = united_states.get(category, ())
+        sold: Sequence[Provider] = getattr(united_states, category)
         for provider in sold:
-            if plugin_for_tmdb_name(provider["provider_name"]) is None:
+            if plugin_for_tmdb_name(provider.provider_name) is None:
                 continue
-            providers_by_id.setdefault(provider["provider_id"], provider)
+            providers_by_id.setdefault(provider.provider_id, provider)
     return list(providers_by_id.values())
 
 
@@ -138,12 +136,12 @@ def plugin_for_tmdb_name(provider_name: str) -> type[BasePlugin] | None:
 
 # TODO: Validate
 def _watch_provider_items(
-    watch_providers: dict[str, Any] | None,
+    watch_providers: WatchProviders | None,
     title: str | None,
 ) -> list[PluginWatchProviderItem]:
     items: list[PluginWatchProviderItem] = []
     for provider in streaming_providers(watch_providers):
-        plugin_class = plugin_for_tmdb_name(provider["provider_name"])
+        plugin_class = plugin_for_tmdb_name(provider.provider_name)
         search_url = (
             plugin_class.search_url(title)
             if plugin_class is not None and title
@@ -151,8 +149,8 @@ def _watch_provider_items(
         )
         items.append(
             PluginWatchProviderItem(
-                name=provider["provider_name"],
-                icon_url=logo_image_url(provider["logo_path"]),
+                name=provider.provider_name,
+                icon_url=logo_image_url(provider.logo_path),
                 plugin_key=plugin_class.plugin_key() if plugin_class else None,
                 search_url=search_url,
             ),

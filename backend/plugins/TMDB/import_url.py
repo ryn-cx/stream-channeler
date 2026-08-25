@@ -7,6 +7,7 @@ import uuid
 from typing import Any, override
 
 from loguru import logger
+from tminidb.models.watch_providers import Provider
 
 from app.media.media_type import MediaType
 from app.shows.models import Show
@@ -146,7 +147,7 @@ class ImportURLMixin(
     # TODO: Validate
     def _import_searched_sources(
         self,
-        providers: list[dict[str, Any]],
+        providers: list[Provider],
         show: Show,
         imported: set[type[AbstractPlugin]],
         *,
@@ -155,7 +156,7 @@ class ImportURLMixin(
         noted = self._linked_show_ids(show)
         linked = self._linked_plugin_keys(show)
         for provider in providers:
-            plugin_class = plugin_for_tmdb_name(provider["provider_name"])
+            plugin_class = plugin_for_tmdb_name(provider.provider_name)
             already_linked = (
                 plugin_class is not None and plugin_class.plugin_key() in linked
             )
@@ -174,14 +175,14 @@ class ImportURLMixin(
                 clear_unmatched_source(
                     self.session,
                     show.id,
-                    provider["provider_name"],
+                    provider.provider_name,
                 )
                 continue
 
             record_unmatched_source(
                 self.session,
                 show.id,
-                provider["provider_name"],
+                provider.provider_name,
                 plugin_class.plugin_key() if plugin_class else None,
             )
 
@@ -268,19 +269,19 @@ class ImportURLMixin(
     ) -> tuple[MediaType, int] | None:
         """Return which half the first title TMDB returns is from, and its id."""
         if media_type is not None:
-            results = self.auto_updating_search_media(media_type, name, year).parsed()[
-                "results"
-            ]
-            return (media_type, results[0]["id"]) if results else None
+            results = (
+                self.auto_updating_search_media(media_type, name, year).parsed().results
+            )
+            return (media_type, results[0].id) if results else None
 
         # A search of both halves also returns people, who are no title and are
         # passed over rather than taken as the first result.
-        for result in self.auto_updating_search_media(None, name, year).parsed()[
-            "results"
-        ]:
-            half = _SEARCHED_MEDIA_TYPES.get(result.get("media_type") or "")
+        for result in (
+            self.auto_updating_search_media(None, name, year).parsed().results
+        ):
+            half = _SEARCHED_MEDIA_TYPES.get(result.media_type)
             if half is not None:
-                return half, result["id"]
+                return half, result.id
         return None
 
     # TODO: Validate
