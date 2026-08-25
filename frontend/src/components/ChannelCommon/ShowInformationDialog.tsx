@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query"
 import type { ReactNode } from "react"
 import type { ShowInformationOutput, ShowInformationSide } from "@/client"
 import { ShowsService } from "@/client"
-import { AddToChannelButton } from "@/components/ChannelCommon/AddToChannelButton"
 import { CollapsibleSection } from "@/components/ChannelCommon/CollapsibleSection"
 import { InformationHero } from "@/components/ChannelCommon/InformationHero"
 import {
@@ -153,7 +152,6 @@ export function ShowInformationSummary({
     <div className="flex flex-col gap-2">
       {summaryHero(data)}
       {children}
-      <AddToChannelButton showId={data.show_id} />
     </div>
   )
 }

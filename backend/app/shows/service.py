@@ -148,6 +148,7 @@ def import_non_canonical_show_from_url(
         link.show.canonical_show_validated_at = tz_datetime.now()
         link.show.canonical_show_note = f"{MANUAL_NOTE_PREFIX}Selection"
         session.add(link.show)
+        EpisodeLinker(session, link.show).link_show()
 
     session.commit()
     session.refresh(canonical_show)

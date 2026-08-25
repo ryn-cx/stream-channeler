@@ -136,7 +136,6 @@ const EditShow = ({ show, size, open, onOpenChange }: EditShowProps) => {
         ) : null
       }
       title="Edit Show"
-      description="Update the show details below."
       form={form}
       onSubmit={onSubmit}
       isPending={mutation.isPending}

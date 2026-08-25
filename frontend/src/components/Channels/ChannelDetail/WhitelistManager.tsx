@@ -8,6 +8,7 @@ import type {
   WhitelistShowInput,
 } from "@/client"
 import { ChannelsService } from "@/client"
+import { AddToChannelButton } from "@/components/ChannelCommon/AddToChannelButton"
 import {
   ShowInformationSummary,
   ShowIssueReports,
@@ -354,7 +355,9 @@ export function WhitelistManager({
           </div>
         </div>
 
-        <ShowInformationSummary showId={canonicalShowId} />
+        <ShowInformationSummary showId={canonicalShowId}>
+          <AddToChannelButton showId={canonicalShowId} />
+        </ShowInformationSummary>
 
         <ShowIssueReports showId={canonicalShowId} />
 
