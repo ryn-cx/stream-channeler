@@ -7223,6 +7223,17 @@ export const ShowListPublicSchema = {
             ],
             title: 'Tmdb Id'
         },
+        plugin_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Plugin Name'
+        },
         username: {
             anyOf: [
                 {
@@ -7249,21 +7260,10 @@ export const ShowListPublicSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Plugin Id'
-        },
-        plugin_name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Plugin Name'
         }
     },
     type: 'object',
-    required: ['key', 'source_id', 'id', 'username', 'source_name', 'plugin_id', 'plugin_name'],
+    required: ['key', 'source_id', 'id', 'plugin_name', 'username', 'source_name', 'plugin_id'],
     title: 'ShowListPublic',
     description: 'Schema for returning a list of `Show`s, with parent information.'
 } as const;
@@ -7445,6 +7445,17 @@ export const ShowPublicSchema = {
                 }
             ],
             title: 'Tmdb Id'
+        },
+        plugin_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Plugin Name'
         }
     },
     type: 'object',
@@ -9562,6 +9573,17 @@ export const UnvalidatedShowOutputSchema = {
             ],
             title: 'Tmdb Id'
         },
+        plugin_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Plugin Name'
+        },
         username: {
             anyOf: [
                 {
@@ -9589,17 +9611,6 @@ export const UnvalidatedShowOutputSchema = {
             format: 'uuid',
             title: 'Plugin Id'
         },
-        plugin_name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Plugin Name'
-        },
         linked_shows: {
             items: {
                 '$ref': '#/components/schemas/UnvalidatedLinkedShowOutput'
@@ -9618,7 +9629,7 @@ export const UnvalidatedShowOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'source_id', 'id', 'username', 'source_name', 'plugin_id', 'plugin_name', 'linked_shows', 'episode_count', 'created_at'],
+    required: ['key', 'source_id', 'id', 'plugin_name', 'username', 'source_name', 'plugin_id', 'linked_shows', 'episode_count', 'created_at'],
     title: 'UnvalidatedShowOutput',
     description: `A \`Show\` whose canonical shows no \`User\` has validated.
 
@@ -11252,6 +11263,17 @@ export const WhitelistShowOutputSchema = {
                 }
             ],
             title: 'Tmdb Id'
+        },
+        plugin_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Plugin Name'
         },
         is_whitelist: {
             type: 'boolean',

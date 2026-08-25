@@ -43,7 +43,7 @@ export function NonCanonicalShowField({ showId }: NonCanonicalShowFieldProps) {
 
   return (
     <div className="space-y-2">
-      <Label htmlFor="non-canonical-show-url">Linked Shows</Label>
+      <Label htmlFor="non-canonical-show-url">Link another show</Label>
       <div className="flex flex-wrap items-center gap-2">
         <Input
           id="non-canonical-show-url"

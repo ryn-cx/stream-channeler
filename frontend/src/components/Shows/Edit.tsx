@@ -57,7 +57,7 @@ type FormInput = z.input<typeof formSchema>
 type FormOutput = z.output<typeof formSchema>
 
 interface EditShowProps {
-  show: ShowPublic & { plugin_name?: string | null }
+  show: ShowPublic
   size?: React.ComponentProps<typeof TooltipIconButton>["size"]
   open?: boolean
   onOpenChange?: (open: boolean) => void
@@ -144,14 +144,13 @@ const EditShow = ({ show, size, open, onOpenChange }: EditShowProps) => {
         user?.is_superuser ? <ForceUpdateShowButton showId={show.id} /> : null
       }
     >
-      <ShowInformationSummary showId={show.id} enabled={isOpen}>
-        {isTmdbShow && user?.is_superuser ? (
-          <NonCanonicalShowLinks showId={show.id} enabled={isOpen} />
-        ) : null}
-      </ShowInformationSummary>
+      <ShowInformationSummary showId={show.id} enabled={isOpen} />
       {user?.is_superuser &&
         (isTmdbShow ? (
-          <NonCanonicalShowField showId={show.id} />
+          <div className="space-y-3">
+            <NonCanonicalShowLinks showId={show.id} enabled={isOpen} />
+            <NonCanonicalShowField showId={show.id} />
+          </div>
         ) : (
           <div className="space-y-3">
             <CanonicalShowField

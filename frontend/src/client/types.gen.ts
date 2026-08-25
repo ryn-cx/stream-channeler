@@ -1385,10 +1385,10 @@ export type ShowListPublic = {
     canonical_show_id?: (string | null);
     canonical_show_ids?: Array<(string)>;
     tmdb_id?: (number | null);
+    plugin_name: (string | null);
     username: (string | null);
     source_name: (string | null);
     plugin_id: string;
-    plugin_name: (string | null);
 };
 
 /**
@@ -1415,6 +1415,7 @@ export type ShowPublic = {
     canonical_show_id?: (string | null);
     canonical_show_ids?: Array<(string)>;
     tmdb_id?: (number | null);
+    plugin_name?: (string | null);
 };
 
 /**
@@ -1784,10 +1785,10 @@ export type UnvalidatedShowOutput = {
     canonical_show_id?: (string | null);
     canonical_show_ids?: Array<(string)>;
     tmdb_id?: (number | null);
+    plugin_name: (string | null);
     username: (string | null);
     source_name: (string | null);
     plugin_id: string;
-    plugin_name: (string | null);
     linked_shows: Array<UnvalidatedLinkedShowOutput>;
     episode_count: number;
     created_at: string;
@@ -2119,6 +2120,7 @@ export type WhitelistShowOutput = {
     canonical_show_id?: (string | null);
     canonical_show_ids?: Array<(string)>;
     tmdb_id?: (number | null);
+    plugin_name?: (string | null);
     is_whitelist: boolean;
     sources: Array<WhitelistSourceOutput>;
     seasons: Array<WhitelistSeasonOutput>;

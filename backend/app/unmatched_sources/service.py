@@ -95,7 +95,9 @@ def import_unmatched_source(
             detail=f"No plugin imports {url}",
         )
 
-    show = session.get(Show, unmatched_source.show_id)
+    show = session.exec(
+        select(Show).where(Show.id == unmatched_source.show_id),
+    ).one_or_none()
     if show is None:
         raise HTTPException(status_code=404, detail="Show not found")
 

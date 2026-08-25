@@ -82,6 +82,10 @@ class ShowPublic(BaseShow):
     canonical_show_ids: list[uuid.UUID] = Field(default_factory=list)
     # The TMDB id behind that, when TMDB has a record of it.
     tmdb_id: int | None = None
+    plugin_name: str | None = Field(
+        default=None,
+        validation_alias=AliasPath("source", "plugin", "name"),
+    )
 
 
 # TODO: Consider reworking this into seperate models for each parent.

@@ -9,9 +9,9 @@ import { TmdbLink } from "@/components/ChannelCommon/TmdbLink"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { EditEpisodeById } from "@/components/Episodes/EditEpisodeById"
 import EditSeason from "@/components/Seasons/Edit"
-import EditShow from "@/components/Shows/Edit"
+import { EditShowById } from "@/components/Shows/EditShowById"
 import { buttonVariants } from "@/components/ui/button"
-import { useSeason, useShow } from "@/hooks/useEntities"
+import { useSeason } from "@/hooks/useEntities"
 import { cn } from "@/lib/utils"
 import { TmdbMatchActions, TmdbMatchConfirmButton } from "./TmdbMatchActions"
 import { useOpenEpisodeEditor } from "./tmdbMatchEditing"
@@ -97,25 +97,6 @@ function ExternalLinkButton({
     >
       <SquareArrowOutUpRight />
     </a>
-  )
-}
-
-// TODO: Validate
-function ShowEditButton({ showId }: { showId: string }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const { data: show } = useShow(isOpen ? showId : undefined)
-  return (
-    <>
-      <TooltipIconButton
-        label="Edit this show"
-        icon={<Pencil />}
-        size="icon-sm"
-        onClick={() => setIsOpen(true)}
-      />
-      {isOpen && show ? (
-        <EditShow show={show} open onOpenChange={setIsOpen} />
-      ) : null}
-    </>
   )
 }
 
@@ -252,7 +233,7 @@ function MatchSummary({
           {record.show_name ?? "Unnamed"}
           {record.show_year === null ? "" : ` ${record.show_year}`}
         </Link>
-        <ShowEditButton showId={record.show_id} />
+        <EditShowById showId={record.show_id} />
         <ExternalLinkButton
           url={record.show_url}
           label="Open this show on the site it came from"

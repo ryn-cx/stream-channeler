@@ -3,6 +3,7 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import type { UnmatchedSourceOutput } from "@/client"
 import { DateCell } from "@/components/Common/TableCells"
+import { EditShowById } from "@/components/Shows/EditShowById"
 import { UnmatchedSourceImportForm } from "./UnmatchedSourceImportForm"
 
 // TODO: Validate
@@ -11,6 +12,14 @@ export const unmatchedSourceColumns: ColumnDef<UnmatchedSourceOutput>[] = [
     id: "show_name",
     accessorFn: (row) => row.show_name ?? "",
     header: "Show",
+    cell: ({ row }) => (
+      <span className="flex items-center gap-2">
+        <span className="whitespace-normal wrap-break-word">
+          {row.original.show_name ?? "Unnamed"}
+        </span>
+        <EditShowById showId={row.original.show_id} />
+      </span>
+    ),
   },
   {
     id: "provider_name",
