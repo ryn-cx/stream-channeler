@@ -12,6 +12,7 @@ from app.unmatched_sources.schemas import (
     UnmatchedSourceImport,
     UnmatchedSourceOutput,
 )
+from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.manage_plugins import plugin_for_url
 
@@ -75,6 +76,7 @@ def clear_unmatched_source(
 def list_unmatched_sources(session: Session) -> list[UnmatchedSourceOutput]:
     statement = (
         select(UnmatchedSource)
+        .where(col(UnmatchedSource.ignored_at).is_(None))
         .options(selectinload(UnmatchedSource.show))  # type: ignore[arg-type]
         .order_by(col(UnmatchedSource.created_at).desc())
     )
@@ -109,3 +111,24 @@ def import_unmatched_source(
     session.delete(unmatched_source)
     session.commit()
     return Message(message="Unmatched source imported successfully")
+
+
+# TODO: Validate
+def ignore_unmatched_source(
+    session: Session,
+    unmatched_source: UnmatchedSource,
+) -> Message:
+    unmatched_source.ignored_at = tz_datetime.now()
+    session.add(unmatched_source)
+    session.commit()
+    return Message(message="Unmatched source ignored")
+
+
+# TODO: Validate
+def delete_unmatched_source(
+    session: Session,
+    unmatched_source: UnmatchedSource,
+) -> Message:
+    session.delete(unmatched_source)
+    session.commit()
+    return Message(message="Unmatched source deleted")

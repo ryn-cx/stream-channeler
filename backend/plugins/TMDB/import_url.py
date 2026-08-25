@@ -164,6 +164,8 @@ class ImportURLMixin(
                 or already_linked
                 or self._import_searched_source(plugin_class, show, force=force)
             ):
+                if plugin_class is not None:
+                    imported.add(plugin_class)
                 self._note_new_links(
                     show,
                     noted,

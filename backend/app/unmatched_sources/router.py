@@ -9,6 +9,8 @@ from app.unmatched_sources.schemas import (
     UnmatchedSourceOutput,
 )
 from app.unmatched_sources.service import (
+    delete_unmatched_source,
+    ignore_unmatched_source,
     import_unmatched_source,
     list_unmatched_sources,
 )
@@ -36,6 +38,24 @@ def admin_import_unmatched_source(
     import_input: UnmatchedSourceImport,
 ) -> Message:
     return import_unmatched_source(session, unmatched_source, import_input)
+
+
+# TODO: Validate
+@unmatched_sources_router.post("/{unmatched_source_id}/ignore")  # noqa: FAST003 - Used by ExistingUnmatchedSource.
+def admin_ignore_unmatched_source(
+    session: SessionDep,
+    unmatched_source: ExistingUnmatchedSource,
+) -> Message:
+    return ignore_unmatched_source(session, unmatched_source)
+
+
+# TODO: Validate
+@unmatched_sources_router.delete("/{unmatched_source_id}")  # noqa: FAST003 - Used by ExistingUnmatchedSource.
+def admin_delete_unmatched_source(
+    session: SessionDep,
+    unmatched_source: ExistingUnmatchedSource,
+) -> Message:
+    return delete_unmatched_source(session, unmatched_source)
 
 
 router = APIRouter()

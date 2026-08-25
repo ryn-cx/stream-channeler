@@ -29,7 +29,13 @@ class ParamountPlus(
         MovieURLHandler,
         ShowURLHandler,
     )
-    TMDB_PROVIDER_NAMES = ("Paramount Plus", "Paramount+", "Paramount+ Amazon Channel")
+    TMDB_PROVIDER_NAMES = (
+        "Paramount Plus",
+        "Paramount+",
+        "Paramount+ Amazon Channel",
+        "Paramount Plus Essential",
+        "Paramount Plus Premium",
+    )
     FAVICON_URL = "https://www.paramountplus.com/favicon.ico"
 
     # TODO: Validate

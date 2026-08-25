@@ -1,5 +1,6 @@
 # TODO: Validate
 import uuid
+from datetime import datetime
 
 from sqlmodel import (
     Field,
@@ -10,7 +11,7 @@ from sqlmodel import (
     UniqueConstraint,
 )
 
-from app.models import TimestampIdAndHashMixin
+from app.models import DateTimeField, TimestampIdAndHashMixin
 from app.shows.models import Show
 
 
@@ -18,6 +19,7 @@ from app.shows.models import Show
 class BaseUnmatchedSource(SQLModel):
     provider_name: str = Field(min_length=1)
     plugin_key: str | None = Field(default=None)
+    ignored_at: datetime | None = DateTimeField(default=None)
 
 
 # TODO: Validate

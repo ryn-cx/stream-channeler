@@ -3185,6 +3185,18 @@ export type UnmatchedSourcesAdminImportUnmatchedSourceData = {
 
 export type UnmatchedSourcesAdminImportUnmatchedSourceResponse = (Message);
 
+export type UnmatchedSourcesAdminIgnoreUnmatchedSourceData = {
+    unmatchedSourceId: string;
+};
+
+export type UnmatchedSourcesAdminIgnoreUnmatchedSourceResponse = (Message);
+
+export type UnmatchedSourcesAdminDeleteUnmatchedSourceData = {
+    unmatchedSourceId: string;
+};
+
+export type UnmatchedSourcesAdminDeleteUnmatchedSourceResponse = (Message);
+
 export type UsersReadUserMeResponse = (UserPublic);
 
 export type UsersDeleteUserMeResponse = (Message);

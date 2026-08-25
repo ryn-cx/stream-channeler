@@ -4,6 +4,8 @@ import type { ColumnDef } from "@tanstack/react-table"
 import type { UnmatchedSourceOutput } from "@/client"
 import { DateCell } from "@/components/Common/TableCells"
 import { EditShowById } from "@/components/Shows/EditShowById"
+import { UnmatchedSourceDeleteButton } from "./UnmatchedSourceDeleteButton"
+import { UnmatchedSourceIgnoreButton } from "./UnmatchedSourceIgnoreButton"
 import { UnmatchedSourceImportForm } from "./UnmatchedSourceImportForm"
 
 // TODO: Validate
@@ -51,7 +53,11 @@ export const unmatchedSourceColumns: ColumnDef<UnmatchedSourceOutput>[] = [
     header: "Import URL",
     enableSorting: false,
     cell: ({ row }) => (
-      <UnmatchedSourceImportForm unmatchedSource={row.original} />
+      <span className="flex items-center gap-2">
+        <UnmatchedSourceImportForm unmatchedSource={row.original} />
+        <UnmatchedSourceIgnoreButton unmatchedSource={row.original} />
+        <UnmatchedSourceDeleteButton unmatchedSource={row.original} />
+      </span>
     ),
   },
 ]
