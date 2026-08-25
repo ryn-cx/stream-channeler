@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
-from tminidb.models.changes import Item
+from tminidb.changes.tv_series.models import Item
 
 from app.media.media_type import MediaType
 from app.utils import tz_datetime
@@ -179,11 +179,10 @@ class UpdateMixin(ImportURLMixin, register=False):
         # for a season is an object naming the season and for everything else is
         # a string or a number that names no season at all.
         changed = item.value
-        value = changed if isinstance(changed, dict) else {}
         named = (
             None
             if self._chosen_group_id(show_key) is not None
-            else value.get("season_id")
+            else getattr(changed, "season_id", None)
         )
         key = None if named is None else season_key(MediaType.tv, named)
         changed_keys: list[str]

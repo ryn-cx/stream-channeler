@@ -7,7 +7,6 @@ import uuid
 from typing import Any, override
 
 from loguru import logger
-from tminidb.models.watch_providers import Provider
 
 from app.media.media_type import MediaType
 from app.shows.models import Show
@@ -18,7 +17,11 @@ from app.unmatched_sources.service import (
 from plugins.TMDB.files import title_page_url
 from plugins.TMDB.keys import parse_show_key, show_key
 from plugins.TMDB.lookup import LookupMixin
-from plugins.TMDB.media_info import plugin_for_tmdb_name, streaming_providers
+from plugins.TMDB.media_info import (
+    Provider,
+    plugin_for_tmdb_name,
+    streaming_providers,
+)
 from plugins.TMDB.upsert import UpsertMixin
 from plugins.TMDB.url_handlers import TMDBURLHandler
 from plugins.utils.abstract_plugin import (

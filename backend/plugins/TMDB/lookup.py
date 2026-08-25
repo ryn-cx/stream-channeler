@@ -3,9 +3,9 @@ from collections.abc import Sequence
 from datetime import timedelta
 from typing import overload
 
-from tminidb.movies.models.details import Movie
-from tminidb.tv_seasons.models.details import Episode
-from tminidb.tv_series.models.details import Season
+from tminidb.details.movie.models import MovieModel
+from tminidb.details.tv_season.models import Episode
+from tminidb.details.tv_series.models import Season
 
 from app.files.models import File
 from app.media.media_type import MediaType
@@ -123,7 +123,7 @@ class LookupMixin(FileMixin, register=False):
         return detail_file
 
     # TODO: Validate
-    def movie_detail(self, tmdb_id: int) -> Movie | None:
+    def movie_detail(self, tmdb_id: int) -> MovieModel | None:
         """Return a film's details, downloading them if needed.
 
         A film is reached by whatever is linked to it as much as by this

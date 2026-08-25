@@ -11,23 +11,36 @@ from typing import (
     override,
 )
 
+from pydantic import BaseModel
 from sqlmodel import Session, col, select
-from tminidb.base_response_model import BaseResponseModel
-from tminidb.models.changes import Change
-from tminidb.movies.models.details import Movie
-from tminidb.movies.models.watch_providers import MovieProviders
-from tminidb.search.models.movie import MovieSearchResults
-from tminidb.search.models.multi import MultiSearchResults
-from tminidb.search.models.tv import TvSearchResults
-from tminidb.tv_episode_groups.models.details import EpisodeGroup, GroupEpisode
-from tminidb.tv_episodes.models.details import Details
-from tminidb.tv_episodes.models.translations import Translations
-from tminidb.tv_seasons.models.details import Episode, TvSeason
-from tminidb.tv_series.models.changes import TvSeriesChangeLog
-from tminidb.tv_series.models.details import TvSeries
-from tminidb.tv_series.models.episode_groups import EpisodeGroups as EpisodeGroupsModel
-from tminidb.tv_series.models.episode_groups import EpisodeGroupSummary
-from tminidb.tv_series.models.watch_providers import TvProviders
+from tminidb.changes.tv_series import models as tv_series_changes
+from tminidb.changes.tv_series.models import Change, TvSeriesChangesModel
+from tminidb.details.movie import models as movie_details
+from tminidb.details.movie.models import MovieModel
+from tminidb.details.tv_episode import models as tv_episode_details
+from tminidb.details.tv_episode.models import TvEpisodeModel
+from tminidb.details.tv_season import models as tv_season_details
+from tminidb.details.tv_season.models import Episode, TvSeasonModel
+from tminidb.details.tv_series import models as tv_series_details
+from tminidb.details.tv_series.models import TvSeriesModel
+from tminidb.search.movie import models as search_movie
+from tminidb.search.movie.models import SearchMovieModel
+from tminidb.search.multi import models as search_multi
+from tminidb.search.multi.models import SearchMultiModel
+from tminidb.search.tv import models as search_tv
+from tminidb.search.tv.models import SearchTvModel
+from tminidb.tv_episode_group import models as tv_episode_group
+from tminidb.tv_episode_group.models import Episode as GroupEpisode
+from tminidb.tv_episode_group.models import TvEpisodeGroupModel
+from tminidb.tv_episode_translations import models as tv_episode_translations
+from tminidb.tv_episode_translations.models import TvEpisodeTranslationsModel
+from tminidb.tv_series_episode_groups import models as tv_series_episode_groups
+from tminidb.tv_series_episode_groups.models import Result as EpisodeGroupSummary
+from tminidb.tv_series_episode_groups.models import TvSeriesEpisodeGroupsModel
+from tminidb.watch_providers.movie import models as movie_watch_providers_models
+from tminidb.watch_providers.movie.models import MovieWatchProvidersModel
+from tminidb.watch_providers.tv_series import models as tv_series_watch_providers_models
+from tminidb.watch_providers.tv_series.models import TvSeriesWatchProvidersModel
 
 from app.files.models import File
 from app.media.media_type import MediaType
@@ -111,7 +124,7 @@ def air_datetime(air_date: str | date | None) -> datetime | None:
 
 
 # TODO: Validate
-class _TMDBEndpointFile[T: BaseResponseModel](EndpointJSON[T]):
+class _TMDBEndpointFile[T: BaseModel](EndpointJSON[T]):
     """TMDB endpoint file.
 
     An endpoint is called rather than asked to download and parse, and what it
@@ -158,13 +171,13 @@ class _TMDBEndpointFile[T: BaseResponseModel](EndpointJSON[T]):
 
 
 # TODO: Validate
-class MovieDetails(_TMDBEndpointFile[Movie]):
+class MovieDetails(_TMDBEndpointFile[MovieModel]):
     """Movie details file."""
 
     # TODO: Validate
     @override
-    def _parse(self, raw: Any) -> Movie:
-        return Movie.from_response(raw)
+    def _parse(self, raw: Any) -> MovieModel:
+        return movie_details.model_validate_json(raw, self.file_key())
 
     # TODO: Validate
     @override
@@ -173,13 +186,13 @@ class MovieDetails(_TMDBEndpointFile[Movie]):
 
 
 # TODO: Validate
-class TvSeriesDetails(_TMDBEndpointFile[TvSeries]):
+class TvSeriesDetails(_TMDBEndpointFile[TvSeriesModel]):
     """TV series details file."""
 
     # TODO: Validate
     @override
-    def _parse(self, raw: Any) -> TvSeries:
-        return TvSeries.from_response(raw)
+    def _parse(self, raw: Any) -> TvSeriesModel:
+        return tv_series_details.model_validate_json(raw, self.file_key())
 
     # TODO: Validate
     @override
@@ -188,13 +201,16 @@ class TvSeriesDetails(_TMDBEndpointFile[TvSeries]):
 
 
 # TODO: Validate
-class MovieWatchProviders(_TMDBEndpointFile[MovieProviders]):
+class MovieWatchProviders(_TMDBEndpointFile[MovieWatchProvidersModel]):
     """Movie watch providers file."""
 
     # TODO: Validate
     @override
-    def _parse(self, raw: Any) -> MovieProviders:
-        return MovieProviders.from_response(raw)
+    def _parse(self, raw: Any) -> MovieWatchProvidersModel:
+        return movie_watch_providers_models.model_validate_json(
+            raw,
+            self.file_key(),
+        )
 
     # TODO: Validate
     @override
@@ -203,13 +219,16 @@ class MovieWatchProviders(_TMDBEndpointFile[MovieProviders]):
 
 
 # TODO: Validate
-class TvWatchProviders(_TMDBEndpointFile[TvProviders]):
+class TvWatchProviders(_TMDBEndpointFile[TvSeriesWatchProvidersModel]):
     """TV watch providers file."""
 
     # TODO: Validate
     @override
-    def _parse(self, raw: Any) -> TvProviders:
-        return TvProviders.from_response(raw)
+    def _parse(self, raw: Any) -> TvSeriesWatchProvidersModel:
+        return tv_series_watch_providers_models.model_validate_json(
+            raw,
+            self.file_key(),
+        )
 
     # TODO: Validate
     @override
@@ -218,7 +237,7 @@ class TvWatchProviders(_TMDBEndpointFile[TvProviders]):
 
 
 # TODO: Validate
-class ShowDetail(_TMDBEndpointFile[TvSeries]):
+class ShowDetail(_TMDBEndpointFile[TvSeriesModel]):
     """Show detail file.
 
     The seasons and episodes under a title are reached through
@@ -228,8 +247,8 @@ class ShowDetail(_TMDBEndpointFile[TvSeries]):
 
     # TODO: Validate
     @override
-    def _parse(self, raw: Any) -> TvSeries:
-        return TvSeries.from_response(raw)
+    def _parse(self, raw: Any) -> TvSeriesModel:
+        return tv_series_details.model_validate_json(raw, self.file_key())
 
     # TODO: Validate
     @override
@@ -238,7 +257,7 @@ class ShowDetail(_TMDBEndpointFile[TvSeries]):
 
 
 # TODO: Validate
-class EpisodeGroups(_TMDBEndpointFile[EpisodeGroupsModel]):
+class EpisodeGroups(_TMDBEndpointFile[TvSeriesEpisodeGroupsModel]):
     """Every episode order TMDB holds for a title, beside the title's own.
 
     Only what each order is called and how big it is - the episodes an order
@@ -248,8 +267,8 @@ class EpisodeGroups(_TMDBEndpointFile[EpisodeGroupsModel]):
 
     # TODO: Validate
     @override
-    def _parse(self, raw: Any) -> EpisodeGroupsModel:
-        return EpisodeGroupsModel.from_response(raw)
+    def _parse(self, raw: Any) -> TvSeriesEpisodeGroupsModel:
+        return tv_series_episode_groups.model_validate_json(raw, self.file_key())
 
     # TODO: Validate
     @override
@@ -258,7 +277,7 @@ class EpisodeGroups(_TMDBEndpointFile[EpisodeGroupsModel]):
 
 
 # TODO: Validate
-class EpisodeGroupDetail(_TMDBEndpointFile[EpisodeGroup]):
+class EpisodeGroupDetail(_TMDBEndpointFile[TvEpisodeGroupModel]):
     """One episode order, and the episodes each of its groups holds.
 
     Keyed by the order's own id rather than by the title's, because that is what
@@ -269,8 +288,8 @@ class EpisodeGroupDetail(_TMDBEndpointFile[EpisodeGroup]):
 
     # TODO: Validate
     @override
-    def _parse(self, raw: Any) -> EpisodeGroup:
-        return EpisodeGroup.from_response(raw)
+    def _parse(self, raw: Any) -> TvEpisodeGroupModel:
+        return tv_episode_group.model_validate_json(raw, self.file_key())
 
     # TODO: Validate
     @override
@@ -279,7 +298,7 @@ class EpisodeGroupDetail(_TMDBEndpointFile[EpisodeGroup]):
 
 
 # TODO: Validate
-class SeasonDetail(_TMDBEndpointFile[TvSeason]):
+class SeasonDetail(_TMDBEndpointFile[TvSeasonModel]):
     """Season detail file."""
 
     # TODO: Validate
@@ -296,8 +315,8 @@ class SeasonDetail(_TMDBEndpointFile[TvSeason]):
 
     # TODO: Validate
     @override
-    def _parse(self, raw: Any) -> TvSeason:
-        return TvSeason.from_response(raw)
+    def _parse(self, raw: Any) -> TvSeasonModel:
+        return tv_season_details.model_validate_json(raw, self.file_key())
 
     # TODO: Validate
     @override
@@ -309,7 +328,7 @@ class SeasonDetail(_TMDBEndpointFile[TvSeason]):
 
 
 # TODO: Validate
-class EpisodeDetail(_TMDBEndpointFile[Details]):
+class EpisodeDetail(_TMDBEndpointFile[TvEpisodeModel]):
     """Episode detail file."""
 
     # TODO: Validate
@@ -332,8 +351,8 @@ class EpisodeDetail(_TMDBEndpointFile[Details]):
 
     # TODO: Validate
     @override
-    def _parse(self, raw: Any) -> Details:
-        return Details.from_response(raw)
+    def _parse(self, raw: Any) -> TvEpisodeModel:
+        return tv_episode_details.model_validate_json(raw, self.file_key())
 
     # TODO: Validate
     @override
@@ -346,7 +365,7 @@ class EpisodeDetail(_TMDBEndpointFile[Details]):
 
 
 # TODO: Validate
-class EpisodeTranslations(_TMDBEndpointFile[Translations]):
+class EpisodeTranslations(_TMDBEndpointFile[TvEpisodeTranslationsModel]):
     """Every language's name for a single episode."""
 
     # TODO: Validate
@@ -369,8 +388,8 @@ class EpisodeTranslations(_TMDBEndpointFile[Translations]):
 
     # TODO: Validate
     @override
-    def _parse(self, raw: Any) -> Translations:
-        return Translations.from_response(raw)
+    def _parse(self, raw: Any) -> TvEpisodeTranslationsModel:
+        return tv_episode_translations.model_validate_json(raw, self.file_key())
 
     # TODO: Validate
     @override
@@ -391,7 +410,7 @@ def change_datetime(changed_at: str) -> datetime:
 
 
 # TODO: Validate
-class ShowChanges(_TMDBEndpointFile[TvSeriesChangeLog]):
+class ShowChanges(_TMDBEndpointFile[TvSeriesChangesModel]):
     # TODO: Validate
     def __init__(
         self,
@@ -411,8 +430,8 @@ class ShowChanges(_TMDBEndpointFile[TvSeriesChangeLog]):
 
     # TODO: Validate
     @override
-    def _parse(self, raw: Any) -> TvSeriesChangeLog:
-        return TvSeriesChangeLog.from_response(raw)
+    def _parse(self, raw: Any) -> TvSeriesChangesModel:
+        return tv_series_changes.model_validate_json(raw, self.file_key())
 
     # TODO: Validate
     @override
@@ -436,7 +455,7 @@ class ShowChanges(_TMDBEndpointFile[TvSeriesChangeLog]):
 
 
 # TODO: Validate
-class MultiSearch(_TMDBEndpointFile[MultiSearchResults]):
+class MultiSearch(_TMDBEndpointFile[SearchMultiModel]):
     """Multi search file."""
 
     # TODO: Validate
@@ -453,8 +472,8 @@ class MultiSearch(_TMDBEndpointFile[MultiSearchResults]):
 
     # TODO: Validate
     @override
-    def _parse(self, raw: Any) -> MultiSearchResults:
-        return MultiSearchResults.from_response(raw)
+    def _parse(self, raw: Any) -> SearchMultiModel:
+        return search_multi.model_validate_json(raw, self.file_key())
 
     # TODO: Validate
     @override
@@ -496,7 +515,7 @@ class TitlePage(HTMLFile):
 
 
 # TODO: Validate
-class MovieSearch(_TMDBEndpointFile[MovieSearchResults]):
+class MovieSearch(_TMDBEndpointFile[SearchMovieModel]):
     """Movie search file."""
 
     # TODO: Validate
@@ -513,8 +532,8 @@ class MovieSearch(_TMDBEndpointFile[MovieSearchResults]):
 
     # TODO: Validate
     @override
-    def _parse(self, raw: Any) -> MovieSearchResults:
-        return MovieSearchResults.from_response(raw)
+    def _parse(self, raw: Any) -> SearchMovieModel:
+        return search_movie.model_validate_json(raw, self.file_key())
 
     # TODO: Validate
     @override
@@ -524,7 +543,7 @@ class MovieSearch(_TMDBEndpointFile[MovieSearchResults]):
 
 
 # TODO: Validate
-class TvSearch(_TMDBEndpointFile[TvSearchResults]):
+class TvSearch(_TMDBEndpointFile[SearchTvModel]):
     """TV search file."""
 
     # TODO: Validate
@@ -541,8 +560,8 @@ class TvSearch(_TMDBEndpointFile[TvSearchResults]):
 
     # TODO: Validate
     @override
-    def _parse(self, raw: Any) -> TvSearchResults:
-        return TvSearchResults.from_response(raw)
+    def _parse(self, raw: Any) -> SearchTvModel:
+        return search_tv.model_validate_json(raw, self.file_key())
 
     # TODO: Validate
     @override
@@ -884,7 +903,7 @@ class FileMixin(BasePlugin, register=False):
         return chosen_group_id(show.extra) if show else None
 
     # TODO: Validate
-    def _chosen_group(self, show_key: str) -> EpisodeGroup | None:
+    def _chosen_group(self, show_key: str) -> TvEpisodeGroupModel | None:
         """Return the chosen episode order itself, where there is one."""
         group_id = self._chosen_group_id(show_key)
         if group_id is None:

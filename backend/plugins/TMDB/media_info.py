@@ -4,9 +4,23 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import override
 
-from tminidb.models.watch_providers import Provider, WatchProviders
-from tminidb.movies.models.details import Movie
-from tminidb.tv_series.models.details import TvSeries
+from tminidb.details.movie.models import MovieModel
+from tminidb.details.tv_series.models import TvSeriesModel
+from tminidb.watch_providers.movie.models import BuyItem as MovieBuyItem
+from tminidb.watch_providers.movie.models import (
+    FlatrateItem as MovieFlatrateItem,
+)
+from tminidb.watch_providers.movie.models import MovieWatchProvidersModel
+from tminidb.watch_providers.movie.models import RentItem as MovieRentItem
+from tminidb.watch_providers.tv_series.models import BuyItem as TvBuyItem
+from tminidb.watch_providers.tv_series.models import (
+    FlatrateItem as TvFlatrateItem,
+)
+from tminidb.watch_providers.tv_series.models import FreeItem as TvFreeItem
+from tminidb.watch_providers.tv_series.models import RentItem as TvRentItem
+from tminidb.watch_providers.tv_series.models import (
+    TvSeriesWatchProvidersModel,
+)
 
 from app.media.media_type import MediaType
 from plugins.TMDB.files import (
@@ -25,6 +39,17 @@ from plugins.utils.base_plugin.plugin import BasePlugin
 from plugins.utils.manage_plugins import sorted_plugins
 
 STREAMING_CATEGORIES = ("flatrate", "free", "ads")
+
+type WatchProviders = MovieWatchProvidersModel | TvSeriesWatchProvidersModel
+type Provider = (
+    MovieFlatrateItem
+    | MovieRentItem
+    | MovieBuyItem
+    | TvFlatrateItem
+    | TvFreeItem
+    | TvBuyItem
+    | TvRentItem
+)
 
 _MEDIA_TYPE_LABELS = {MediaType.movie: "Movie", MediaType.tv: "TV Show"}
 
@@ -53,7 +78,7 @@ class MediaInfoMixin(LookupMixin, register=False):
         # Which of the two shapes the detail is has to be read off the file rather
         # than the parsed model, because a model whose module was reloaded after a
         # schema change is no longer an instance of the class imported here.
-        detail: Movie | TvSeries
+        detail: MovieModel | TvSeriesModel
         # A title with no poster of its own can still be shown by a poster one of
         # its seasons carries.
         season_poster_path: str | None
@@ -107,16 +132,16 @@ class MediaInfoMixin(LookupMixin, register=False):
 def streaming_providers(
     watch_providers: WatchProviders | None,
 ) -> list[Provider]:
-    if watch_providers is None or not (united_states := watch_providers.results.US):
+    if watch_providers is None or not (united_states := watch_providers.results.us):
         return []
 
     providers_by_id: dict[int, Provider] = {}
     for category in STREAMING_CATEGORIES:
-        providers: Sequence[Provider] = getattr(united_states, category)
+        providers: Sequence[Provider] = getattr(united_states, category, None) or []
         for provider in providers:
             providers_by_id.setdefault(provider.provider_id, provider)
     for category in ("buy", "rent"):
-        sold: Sequence[Provider] = getattr(united_states, category)
+        sold: Sequence[Provider] = getattr(united_states, category, None) or []
         for provider in sold:
             if plugin_for_tmdb_name(provider.provider_name) is None:
                 continue

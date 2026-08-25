@@ -4,7 +4,8 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import ClassVar, override
 
-from tminidb.search.models.multi import MultiResult, MultiSearchResults
+from tminidb.search.multi.models import Result as MultiResult
+from tminidb.search.multi.models import SearchMultiModel
 
 from app.media.media_type import MediaType
 from app.utils import tz_datetime
@@ -81,7 +82,7 @@ class SearchMixin(LookupMixin, register=False):
         return PluginSearchResults(results=results, next_cursor=next_cursor)
 
     # TODO: Validate
-    def _multi_search_page(self, query: str, page: int) -> MultiSearchResults:
+    def _multi_search_page(self, query: str, page: int) -> SearchMultiModel:
         search_file = self.multi_search_file(query, page)
         search_file.download_if_outdated(tz_datetime.now() - _SEARCH_MAX_AGE)
         return search_file.parsed()
