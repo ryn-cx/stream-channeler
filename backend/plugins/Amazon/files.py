@@ -609,6 +609,19 @@ class Detail(DownloadedFile[dict[str, Any]]):
         """
         return any(payload.get("transaction") for payload in self._offer_payloads())
 
+    # TODO: Validate
+    def unavailable_message(self) -> str | None:
+        if self._offer_payloads():
+            return None
+        for action in self._offer_actions():
+            for primary_action in action["primaryActions"]:
+                if primary_action["actionType"] == "MESSAGE":
+                    message: str = primary_action["payload"]["message"]["message"][
+                        "string"
+                    ]
+                    return message
+        return None
+
 
 # TODO: Validate
 class EpisodeList(EndpointFile[DetailWidgetsModel]):

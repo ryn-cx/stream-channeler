@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from plugins.Amazon.keys import TITLE_KEY_REGEX
+from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.url import URLHandler
 
 if TYPE_CHECKING:
@@ -37,10 +38,11 @@ class AmazonURLHandler(URLHandler["Amazon"]):
     # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
-        self.plugin.raise_if_invalid_file(
-            self.plugin.detail_file(self._key),
-            self.url,
-        )
+        detail_file = self.plugin.detail_file(self._key)
+        self.plugin.raise_if_invalid_file(detail_file, self.url)
+        if message := detail_file.unavailable_message():
+            msg = f"{message}: {self.url}"
+            raise InvalidURLError(msg)
 
 
 # TODO: Validate
