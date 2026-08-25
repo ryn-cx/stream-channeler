@@ -27,13 +27,13 @@ from app.users.models import User
 
 
 # TODO: Validate
-def limit_shows(
+def selected_show_ids(
     session: Session,
     user: User | None,
     episodes: list[Episode],
     channel_options: ChannelOptions,
-) -> list[Episode]:
-    """Keep only the episodes of the shows the counts leave room for.
+) -> set[UUID] | None:
+    """Return the shows the counts leave room for, or None where they leave every one.
 
     A show counts as started once the `User` has watched anything of it, which is
     what lets a channel ask for a few shows already under way alongside a few it
@@ -44,9 +44,9 @@ def limit_shows(
     started_count = channel_options.started_shows_count
     new_count = channel_options.new_shows_count
     if total is None and started_count is None and new_count is None:
-        return episodes
+        return None
     if not user or not episodes:
-        return episodes
+        return None
 
     episode_to_shows = _titles_by_canonical_episode(session, episodes)
     started: set[UUID] = set(session.exec(started_show_ids(user)).all())
@@ -60,19 +60,12 @@ def limit_shows(
             seen.add(show_id)
             show_order.append((show_id, show_id in started))
 
-    selected = _select_show_subset(
+    return _select_show_subset(
         show_order,
         total=total,
         started_count=started_count,
         new_count=new_count,
     )
-    # An episode of a row that mixes shows belongs to each of them alike, so room
-    # left for any one of its canonical shows is room for the episode.
-    return [
-        episode
-        for episode in episodes
-        if not selected.isdisjoint(episode_to_shows[canonical_id_of(episode)])
-    ]
 
 
 # TODO: Validate

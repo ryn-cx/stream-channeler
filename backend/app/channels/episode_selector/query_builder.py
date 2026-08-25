@@ -32,7 +32,7 @@ from app.channels.episode_selector.canonical_entities import (
     season_id,
 )
 from app.channels.episode_selector.order_composition import OrderByComposer
-from app.channels.episode_selector.show_counts import limit_shows
+from app.channels.episode_selector.show_counts import selected_show_ids
 from app.channels.episode_selector.sorting import SortExpressionBuilder
 from app.channels.episode_selector.source_dedup import source_dedup_config
 from app.channels.episode_selector.visibility import (
@@ -237,44 +237,15 @@ class EpisodeQueryBuilder:
     # TODO: Validate
     def get_episodes(self) -> list[EpisodeResult]:
         """Get filtered, sorted episodes with channel IDs and latest watch data."""
-        self._episode_entity = Episode
-        query = self._base_query()
-        query = self._join_whitelist(query)
-        query = self._join_last_watched(query)
-        query = self._join_saved_order(query)
-        query = self._filter_deleted_media(query)
-        query = self._filter_episodes_by_channels(query)
-        query = self._apply_channel_specific_blacklist(query)
-        query = self._filter_by_plugin_visibility(query)
-        query = self._filter_metadata_plugins(query)
-        query = self._filter_disabled_sources(query)
-        query = self._filter_by_watch_state(query)
-        query = self._filter_by_ranges(query)
-        query = self._sort_and_deduplicate(query)
-        query = self._apply_limit(query)
-        query = query.options(
-            selectinload(self._episode_entity.season)
-            .selectinload(Season.show)  # type: ignore[arg-type]
-            .selectinload(Show.source)  # type: ignore[arg-type]
-            .selectinload(Source.plugin),  # type: ignore[arg-type]
-        )
-
-        ordered_episodes: list[Episode] = []
-        channels_by_media: dict[UUID, list[UUID]] = {}
-        for episode, channel_id in self._session.exec(query).all():
-            media_id = _media_id(episode)
-            if media_id not in channels_by_media:
-                channels_by_media[media_id] = []
-                ordered_episodes.append(episode)
-            if channel_id not in channels_by_media[media_id]:
-                channels_by_media[media_id].append(channel_id)
-
-        ordered_episodes = limit_shows(
+        ordered_episodes, channels_by_media = self._read_ordered_episodes()
+        shows = selected_show_ids(
             self._session,
             self._user,
             ordered_episodes,
             self._channel_options,
         )
+        if shows is not None:
+            ordered_episodes, channels_by_media = self._read_ordered_episodes(shows)
         ordered_episodes = ordered_episodes[: self._result_limit()]
 
         watches = (
@@ -295,6 +266,46 @@ class EpisodeQueryBuilder:
             )
             for episode in ordered_episodes
         ]
+
+    # TODO: Validate
+    def _read_ordered_episodes(
+        self,
+        shows: set[UUID] | None = None,
+    ) -> tuple[list[Episode], dict[UUID, list[UUID]]]:
+        self._episode_entity = Episode
+        query = self._base_query()
+        query = self._join_whitelist(query)
+        query = self._join_last_watched(query)
+        query = self._join_saved_order(query)
+        query = self._filter_deleted_media(query)
+        query = self._filter_episodes_by_channels(query)
+        query = self._apply_channel_specific_blacklist(query)
+        query = self._filter_by_plugin_visibility(query)
+        query = self._filter_metadata_plugins(query)
+        query = self._filter_disabled_sources(query)
+        query = self._filter_by_watch_state(query)
+        query = self._filter_by_ranges(query)
+        if shows is not None:
+            query = query.where(self._canonical_columns.show_id().in_(shows))
+        query = self._sort_and_deduplicate(query)
+        query = self._apply_limit(query, restricted=shows is not None)
+        query = query.options(
+            selectinload(self._episode_entity.season)
+            .selectinload(Season.show)  # type: ignore[arg-type]
+            .selectinload(Show.source)  # type: ignore[arg-type]
+            .selectinload(Source.plugin),  # type: ignore[arg-type]
+        )
+
+        ordered_episodes: list[Episode] = []
+        channels_by_media: dict[UUID, list[UUID]] = {}
+        for episode, channel_id in self._session.exec(query).all():
+            media_id = _media_id(episode)
+            if media_id not in channels_by_media:
+                channels_by_media[media_id] = []
+                ordered_episodes.append(episode)
+            if channel_id not in channels_by_media[media_id]:
+                channels_by_media[media_id].append(channel_id)
+        return ordered_episodes, channels_by_media
 
     # TODO: Validate
     def _base_query(self) -> Select[tuple[Episode, UUID]]:
@@ -624,15 +635,17 @@ class EpisodeQueryBuilder:
     def _apply_limit(
         self,
         query: Select[tuple[Episode, UUID]],
+        *,
+        restricted: bool = False,
     ) -> Select[tuple[Episode, UUID]]:
         # Fetch up to the hard cap regardless of the requested limit so that the
         # show counts, which drop episodes after the read, can still fill it.
-        return query.limit(self._sql_limit())
+        return query.limit(self._sql_limit(restricted=restricted))
 
     # TODO: Validate
-    def _sql_limit(self) -> int:
+    def _sql_limit(self, *, restricted: bool = False) -> int:
         options = self._channel_options
-        if (
+        if not restricted and (
             options.total_shows_count is not None
             or options.started_shows_count is not None
             or options.new_shows_count is not None
