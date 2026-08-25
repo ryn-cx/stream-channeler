@@ -827,8 +827,19 @@ def list_tmdb_episode_choices(
     titles = [
         by_title.get(canonical_show_id, []) for canonical_show_id in canonical_show_ids
     ]
+    choices = _title_choices(session, episode, titles)
+    named = {choice.canonical_episode_id for choice in choices}
+    choices += [
+        choice
+        for choice in _matched_choices(
+            session,
+            episode,
+            _similar_canonical_episodes(session, episode.name, 10),
+        )
+        if choice.canonical_episode_id not in named
+    ]
     return sorted(
-        _title_choices(session, episode, titles),
+        choices,
         key=lambda choice: _order(choice.season_number, choice.episode_number),
     )
 
@@ -853,6 +864,37 @@ def _named_canonical_episodes(
             col(Episode.name).icontains(wanted, autoescape=True),
         )
         .order_by(col(Episode.name), col(Episode.id))
+        .limit(limit)
+    )
+    return [
+        (episode_id, show_id) for episode_id, show_id in session.exec(statement).all()
+    ]
+
+
+# TODO: Validate
+def _similar_canonical_episodes(
+    session: Session,
+    name: str | None,
+    limit: int,
+) -> list[tuple[uuid.UUID, uuid.UUID]]:
+    if not name:
+        return []
+
+    statement = (
+        select(Episode.id, Season.show_id)
+        .join(Season, onclause=col(Episode.season_id) == Season.id)
+        .join(Show, onclause=col(Season.show_id) == Show.id)
+        .where(
+            is_canonical(Episode),
+            is_canonical(Show),
+            col(Episode.deleted_at).is_(None),
+            col(Season.deleted_at).is_(None),
+            col(Show.deleted_at).is_(None),
+            tmdb_key_clause(col(Episode.key)),
+            col(Episode.name).is_not(None),
+            col(Episode.name).op("%")(name),
+        )
+        .order_by(col(Episode.name).op("<->")(name))
         .limit(limit)
     )
     return [
@@ -888,22 +930,34 @@ def _title_choices(
 
 
 # TODO: Validate
+def _matched_choices(
+    session: Session,
+    episode: Episode,
+    matches: list[tuple[uuid.UUID, uuid.UUID]],
+) -> list[TmdbEpisodeChoice]:
+    if not matches:
+        return []
+
+    by_title = _candidates_by_show(session, {show_id for _id, show_id in matches})
+    return _title_choices(
+        session,
+        episode,
+        list(by_title.values()),
+        {episode_id for episode_id, _show_id in matches},
+    )
+
+
+# TODO: Validate
 def _named_tmdb_episode_choices(
     session: Session,
     episode: Episode,
     wanted: str,
     limit: int,
 ) -> list[TmdbEpisodeChoice]:
-    matches = _named_canonical_episodes(session, wanted, limit)
-    if not matches:
-        return []
-
-    by_title = _candidates_by_show(session, {show_id for _id, show_id in matches})
-    choices = _title_choices(
+    choices = _matched_choices(
         session,
         episode,
-        list(by_title.values()),
-        {episode_id for episode_id, _show_id in matches},
+        _named_canonical_episodes(session, wanted, limit),
     )
     return sorted(choices, key=lambda choice: -choice.similarity)
 

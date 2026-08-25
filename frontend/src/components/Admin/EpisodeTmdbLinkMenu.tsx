@@ -260,7 +260,10 @@ export function TmdbLinkPicker({
       <div className="flex flex-wrap items-center gap-2">
         <Input
           value={nameDraft}
-          onChange={(event) => setNameDraft(event.target.value)}
+          onChange={(event) => {
+            setNameDraft(event.target.value)
+            if (event.target.value.trim().length === 0) setSearchedName(null)
+          }}
           onKeyDown={(event) => {
             if (event.key !== "Enter") return
             event.preventDefault()
@@ -268,7 +271,7 @@ export function TmdbLinkPicker({
           }}
           placeholder="Filter by name"
           aria-label="Filter the episodes below by name"
-          className="min-w-48 flex-1"
+          className="w-40 min-w-0"
         />
         <Button
           type="button"
@@ -279,15 +282,6 @@ export function TmdbLinkPicker({
           <Search />
           Search every show
         </Button>
-        {isSearch ? (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setSearchedName(null)}
-          >
-            Back to this show
-          </Button>
-        ) : null}
         <Tabs
           value={order}
           onValueChange={(value) => setOrder(value as ChoiceOrder)}
