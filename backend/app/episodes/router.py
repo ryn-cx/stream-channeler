@@ -506,6 +506,15 @@ def get_episode_information(
 
 
 # TODO: Validate
+@episodes_router.get(
+    "/{episode_id}",  # noqa: FAST003 - Used by EditableEpisode.
+    dependencies=[Depends(get_current_active_superuser)],
+)
+def get_episode(session: SessionDep, episode: EditableEpisode) -> EpisodeOutput:
+    return _episode_output(session, episode)
+
+
+# TODO: Validate
 @episodes_router.patch(
     "/{episode_id}",
     dependencies=[Depends(get_current_active_superuser)],

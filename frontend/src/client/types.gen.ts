@@ -1592,6 +1592,8 @@ export type TmdbEpisodeChoice = {
     season_number: number;
     episode_number: number;
     absolute_number: (number | null);
+    duration: (number | null);
+    air_date: (string | null);
     url: string;
     show_url: (string | null);
     season_url: (string | null);
@@ -2624,6 +2626,12 @@ export type EpisodesGetEpisodeInformationData = {
 };
 
 export type EpisodesGetEpisodeInformationResponse = (EpisodeInformationOutput);
+
+export type EpisodesGetEpisodeData = {
+    episodeId: string;
+};
+
+export type EpisodesGetEpisodeResponse = (EpisodeOutput);
 
 export type EpisodesUpdateEpisodeData = {
     episodeId: string;

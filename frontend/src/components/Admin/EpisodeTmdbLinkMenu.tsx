@@ -7,7 +7,9 @@ import { useState } from "react"
 import type { EpisodeOutput, TmdbEpisodeChoice } from "@/client"
 import { EpisodesService } from "@/client"
 import { CollapsibleSection } from "@/components/ChannelCommon/CollapsibleSection"
+import { formatDuration } from "@/components/ChannelCommon/formatters"
 import { AdminZone } from "@/components/Common/AdminZone"
+import { EditEpisodeById } from "@/components/Episodes/EditEpisodeById"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -93,13 +95,17 @@ function UsedByDetails({ choice }: { choice: TmdbEpisodeChoice }) {
       {isOpen ? (
         <span className="mt-1 block space-y-0.5">
           {usedBy.map((used) => (
-            <span key={used.id} className="block text-muted-foreground">
+            <span
+              key={used.id}
+              className="flex items-center gap-1 text-muted-foreground"
+            >
               <span className="tabular-nums">
                 {numbering(used.season_number, used.episode_number)}
               </span>{" "}
               <TmdbPageLink url={used.url}>
                 {used.name ?? "Unnamed"}
               </TmdbPageLink>
+              <EditEpisodeById episodeId={used.id} />
             </span>
           ))}
         </span>
@@ -360,6 +366,14 @@ export function TmdbLinkPicker({
                 </span>
               </span>
               {choice.already_used ? <UsedByDetails choice={choice} /> : null}
+              <span className="w-20 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+                {choice.air_date
+                  ? new Date(choice.air_date).toLocaleDateString()
+                  : "No air date"}
+                <span className="block">
+                  {formatDuration(choice.duration) ?? "No duration"}
+                </span>
+              </span>
               <span className="shrink-0 tabular-nums text-muted-foreground">
                 {Math.round(choice.similarity * 100)}%
               </span>

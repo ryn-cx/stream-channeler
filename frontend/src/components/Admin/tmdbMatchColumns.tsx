@@ -7,6 +7,7 @@ import { type ReactNode, useState } from "react"
 import type { UnlockedEpisodeOutput, UnmatchedEpisodeOutput } from "@/client"
 import { TmdbLink } from "@/components/ChannelCommon/TmdbLink"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
+import { EditEpisodeById } from "@/components/Episodes/EditEpisodeById"
 import EditSeason from "@/components/Seasons/Edit"
 import EditShow from "@/components/Shows/Edit"
 import { buttonVariants } from "@/components/ui/button"
@@ -326,20 +327,21 @@ function AlreadyUsedNote({
     return null
   }
   return (
-    <span className="mt-0.5 block text-xs text-destructive">
-      Already used by{" "}
-      {match.used_by
-        .map((episode) =>
-          [
+    <span className="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-destructive">
+      Already used by
+      {match.used_by.map((episode) => (
+        <span key={episode.id} className="inline-flex items-center gap-1">
+          {[
             episode.season_number === null
               ? null
               : `S${episode.season_number}E${episode.episode_number ?? "?"}`,
             episode.name,
           ]
             .filter(Boolean)
-            .join(" "),
-        )
-        .join(", ")}
+            .join(" ")}
+          <EditEpisodeById episodeId={episode.id} />
+        </span>
+      ))}
     </span>
   )
 }

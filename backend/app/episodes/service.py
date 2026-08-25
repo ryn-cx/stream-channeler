@@ -148,6 +148,8 @@ def _choice(
         season_number=season.season_number,  # type: ignore[arg-type]
         episode_number=episode.episode_number,  # type: ignore[arg-type]
         absolute_number=absolute_numbers.get(episode.id),
+        duration=episode.duration,
+        air_date=episode.air_date,
         url=tmdb_episode_url(  # type: ignore[arg-type]
             show.key,
             season.season_number,

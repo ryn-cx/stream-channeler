@@ -183,6 +183,8 @@ class TmdbEpisodeChoice(BaseModel):
     season_number: int
     episode_number: int
     absolute_number: int | None
+    duration: int | None
+    air_date: datetime | None
     url: str
     show_url: str | None
     season_url: str | None

@@ -8328,6 +8328,29 @@ export const TmdbEpisodeChoiceSchema = {
             ],
             title: 'Absolute Number'
         },
+        duration: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Duration'
+        },
+        air_date: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Air Date'
+        },
         url: {
             type: 'string',
             title: 'Url'
@@ -8373,7 +8396,7 @@ export const TmdbEpisodeChoiceSchema = {
         }
     },
     type: 'object',
-    required: ['canonical_episode_id', 'season_id', 'show_id', 'tmdb_episode_id', 'name', 'show_name', 'show_year', 'source_name', 'plugin_name', 'season_number', 'episode_number', 'absolute_number', 'url', 'show_url', 'season_url', 'similarity'],
+    required: ['canonical_episode_id', 'season_id', 'show_id', 'tmdb_episode_id', 'name', 'show_name', 'show_year', 'source_name', 'plugin_name', 'season_number', 'episode_number', 'absolute_number', 'duration', 'air_date', 'url', 'show_url', 'season_url', 'similarity'],
     title: 'TmdbEpisodeChoice',
     description: 'A TMDB episode, as one of the episodes an `Episode` can be linked to.'
 } as const;

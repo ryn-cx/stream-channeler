@@ -2,6 +2,7 @@
 import { useQuery } from "@tanstack/react-query"
 
 import {
+  EpisodesService,
   PluginsService,
   SeasonsService,
   ShowsService,
@@ -41,6 +42,15 @@ export function useSeason(seasonId: string | undefined) {
     queryKey: ["seasons", seasonId],
     queryFn: () => SeasonsService.getSeason({ seasonId: seasonId! }),
     enabled: !!seasonId,
+  })
+}
+
+// TODO: Validate
+export function useEpisode(episodeId: string | undefined) {
+  return useQuery({
+    queryKey: ["episodes", episodeId],
+    queryFn: () => EpisodesService.getEpisode({ episodeId: episodeId! }),
+    enabled: !!episodeId,
   })
 }
 
