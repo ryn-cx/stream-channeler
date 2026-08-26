@@ -1,9 +1,13 @@
 // TODO: Validate
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
+import { Unlink } from "lucide-react"
 
 import { ShowsService } from "@/client"
+import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { Label } from "@/components/ui/label"
+import useCustomToast from "@/hooks/useCustomToast"
+import { handleError } from "@/utils"
 import EditShow from "./Edit"
 
 interface NonCanonicalShowLinksProps {
@@ -16,10 +20,31 @@ export function NonCanonicalShowLinks({
   showId,
   enabled,
 }: NonCanonicalShowLinksProps) {
+  const { showSuccessToast, showErrorToast } = useCustomToast()
+  const queryClient = useQueryClient()
   const { data: shows, isLoading } = useQuery({
     queryKey: ["shows", showId, "non-canonical"],
     queryFn: () => ShowsService.getNonCanonicalShows({ showId }),
     enabled,
+  })
+
+  const unlinkMutation = useMutation({
+    mutationFn: (droppedId: string) =>
+      ShowsService.adminUnlinkShowFromCanonical({
+        showId: droppedId,
+        canonicalShowId: showId,
+      }),
+    onSuccess: () => {
+      showSuccessToast("Show unlinked from this title")
+      queryClient.invalidateQueries({ queryKey: ["shows"] })
+      queryClient.invalidateQueries({ queryKey: ["show-information", showId] })
+      queryClient.invalidateQueries({ queryKey: ["canonical-show"] })
+    },
+    onError: (error: unknown) =>
+      handleError.call(
+        showErrorToast,
+        error as Parameters<typeof handleError>[0],
+      ),
   })
 
   if (isLoading) {
@@ -57,6 +82,13 @@ export function NonCanonicalShowLinks({
               </span>
             </span>
             <EditShow show={linked} size="sm" />
+            <TooltipIconButton
+              label="Unlink Show"
+              icon={<Unlink />}
+              size="sm"
+              disabled={unlinkMutation.isPending}
+              onClick={() => unlinkMutation.mutate(linked.id)}
+            />
           </div>
         ))}
       </div>
