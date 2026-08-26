@@ -99,6 +99,7 @@ class EpisodeQueryBuilder:
         self._channel = channel
         self._user = user
         self._episode_entity: Any = Episode
+        self.has_more = False
         self._set_channel_options(channel_options)
 
         self._channel_ids = self._fetch_channel_ids()
@@ -245,7 +246,10 @@ class EpisodeQueryBuilder:
         )
         if shows is not None:
             ordered_episodes, channels_by_media = self._read_ordered_episodes(shows)
-        ordered_episodes = ordered_episodes[: self._result_limit()]
+        page_start = self._channel_options.offset
+        page_end = page_start + self._result_limit()
+        self.has_more = len(ordered_episodes) > page_end
+        ordered_episodes = ordered_episodes[page_start:page_end]
 
         watches = (
             latest_watch_by_identifier(
@@ -293,6 +297,7 @@ class EpisodeQueryBuilder:
             .selectinload(Season.show)  # type: ignore[arg-type]
             .selectinload(Show.source)  # type: ignore[arg-type]
             .selectinload(Source.plugin),  # type: ignore[arg-type]
+            selectinload(self._episode_entity.canonical_episode_links),
         )
 
         ordered_episodes: list[Episode] = []
@@ -644,7 +649,8 @@ class EpisodeQueryBuilder:
         ):
             return MAX_EPISODES_RETURNED
         rows_per_episode = max(len(self._channel_ids), 1)
-        return min(self._result_limit() * rows_per_episode, MAX_EPISODES_RETURNED)
+        wanted = options.offset + self._result_limit() + 1
+        return min(wanted * rows_per_episode, MAX_EPISODES_RETURNED)
 
     # TODO: Validate
     def _filter_disabled_sources(

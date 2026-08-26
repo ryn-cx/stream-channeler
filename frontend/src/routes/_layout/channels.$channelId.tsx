@@ -1,9 +1,19 @@
 // TODO: Validate
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import {
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query"
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import type { VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { EllipsisVertical, LayoutGrid, Table as TableIcon } from "lucide-react"
+import {
+  ChevronLeft,
+  ChevronRight,
+  EllipsisVertical,
+  LayoutGrid,
+  Table as TableIcon,
+} from "lucide-react"
 import { Suspense, useEffect, useState } from "react"
 import { getChannelEpisodes } from "@/api/channels"
 import {
@@ -73,10 +83,15 @@ type ChannelSearchParams = {
   minimumDuration?: number
   maximumDuration?: number
   limit?: number
+  offset?: number
   sourceIds?: string[]
   sourceIdsIsBlacklist?: boolean
   randomSeed?: number
 }
+
+const PAGE_SIZE = 100
+
+const PAGE_CACHE_MILLISECONDS = 5 * 60 * 1000
 
 export const Route = createFileRoute("/_layout/channels/$channelId")({
   component: ChannelDetail,
@@ -109,6 +124,7 @@ export const Route = createFileRoute("/_layout/channels/$channelId")({
       minimumDuration: search.minimumDuration as number | undefined,
       maximumDuration: search.maximumDuration as number | undefined,
       limit: search.limit as number | undefined,
+      offset: search.offset as number | undefined,
       sourceIds: search.sourceIds as string[] | undefined,
       sourceIdsIsBlacklist: search.sourceIdsIsBlacklist as boolean | undefined,
       randomSeed: search.randomSeed as number | undefined,
@@ -133,9 +149,11 @@ function getEpisodesQueryOptions(
       getChannelEpisodes({
         channelId,
         ...searchParams,
+        limit: searchParams.limit ?? PAGE_SIZE,
       }),
     queryKey: ["episodes", channelId, searchParams],
     refetchOnWindowFocus: false,
+    staleTime: PAGE_CACHE_MILLISECONDS,
     placeholderData: (previousData: any) => previousData,
   }
 }
@@ -191,10 +209,60 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
   }, [channel.name])
 
   const search = Route.useSearch()
-  const { data: episodesData, isPlaceholderData } = useQuery(
-    getEpisodesQueryOptions(channelId, search),
-  )
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const routeFullPath = Route.fullPath
+  const pageSize = search.limit ?? PAGE_SIZE
+  const pageOffset = search.offset ?? 0
+  const [fallbackRandomSeed] = useState(() =>
+    Math.floor(Math.random() * 2 ** 31),
+  )
+  const pagedSearch: ChannelSearchParams = {
+    ...search,
+    randomSeed: search.randomSeed ?? fallbackRandomSeed,
+  }
+  const { data: episodesData, isPlaceholderData } = useQuery(
+    getEpisodesQueryOptions(channelId, pagedSearch),
+  )
+
+  // TODO: Validate
+  const searchForOffset = (nextOffset: number): ChannelSearchParams => ({
+    ...pagedSearch,
+    offset: nextOffset || undefined,
+  })
+
+  // TODO: Validate
+  const goToOffset = (nextOffset: number) => {
+    navigate({
+      to: routeFullPath,
+      params: { channelId },
+      search: searchForOffset(nextOffset),
+    })
+    window.scrollTo(0, 0)
+  }
+
+  const hasNextPage = episodesData?.has_more ?? false
+  const pagedSearchKey = JSON.stringify(pagedSearch)
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the page is named by its own search
+  useEffect(() => {
+    const neighbours = hasNextPage ? [pageOffset + pageSize] : []
+    if (pageOffset > 0) {
+      neighbours.push(Math.max(0, pageOffset - pageSize))
+    }
+    for (const neighbour of neighbours) {
+      queryClient.prefetchQuery(
+        getEpisodesQueryOptions(channelId, searchForOffset(neighbour)),
+      )
+    }
+  }, [
+    channelId,
+    pageOffset,
+    pageSize,
+    hasNextPage,
+    pagedSearchKey,
+    queryClient,
+  ])
 
   // A referenced preset holds the options the backend actually applies, and the URL
   // only carries its id, so the preset has to be read back for the dialog to show it.
@@ -265,6 +333,11 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
   const canManageShows = isOwner || Boolean(user?.is_superuser)
   const showHero = viewMode === "cards" && episodesWithDetails.length > 0
   const [heroIndex, setHeroIndex] = useState(0)
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: start the page on its first episode
+  useEffect(() => {
+    setHeroIndex(0)
+  }, [pageOffset])
 
   const heroEpisode = episodesWithDetails[heroIndex] ?? episodesWithDetails[0]
   const hasNextHero = heroIndex < episodesWithDetails.length - 1
@@ -482,6 +555,30 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
           />
         )}
       </div>
+
+      {episodesData && (pageOffset > 0 || episodesData.has_more) && (
+        <div className="flex items-center justify-center gap-4 px-[4%] py-6">
+          <Button
+            variant="outline"
+            disabled={pageOffset === 0}
+            onClick={() => goToOffset(Math.max(0, pageOffset - pageSize))}
+          >
+            <ChevronLeft />
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {Math.floor(pageOffset / pageSize) + 1}
+          </span>
+          <Button
+            variant="outline"
+            disabled={!episodesData.has_more}
+            onClick={() => goToOffset(pageOffset + pageSize)}
+          >
+            Next
+            <ChevronRight />
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

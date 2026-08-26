@@ -465,6 +465,7 @@ def get_channel_episodes(
 
     builder = EpisodeQueryBuilder(session, channel, channel_options, user)
     results = builder.get_episodes()
+    output.has_more = builder.has_more
 
     unique_channel_ids = {
         channel_id for result in results for channel_id in result.channel_ids

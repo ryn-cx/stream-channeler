@@ -1095,6 +1095,11 @@ export const ChannelEpisodesOutputSchema = {
             },
             type: 'object',
             title: 'Channels'
+        },
+        has_more: {
+            type: 'boolean',
+            title: 'Has More',
+            default: false
         }
     },
     type: 'object',
@@ -1445,6 +1450,12 @@ export const ChannelOptionsSchema = {
             ],
             title: 'Limit',
             default: 1000
+        },
+        offset: {
+            type: 'integer',
+            minimum: 0,
+            title: 'Offset',
+            default: 0
         }
     },
     additionalProperties: false,
