@@ -28,7 +28,7 @@ logger = logger.bind(source="updater")
 import_plugins()
 load_models()
 
-UPDATE_INTERVAL_SECONDS = 60.0 * 60.0
+UPDATE_INTERVAL_SECONDS = 60.0 * 60.0 * 24
 
 
 # TODO: Validate
