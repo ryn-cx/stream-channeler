@@ -11,12 +11,12 @@ from app.channels.models import (
 from app.tools.import_queue import add_results_to_channel
 from plugins.StreamChanneler import StreamChanneler
 from plugins.utils.abstract_plugin import InvalidURLError
-from tests.old_mess.app.channels.utils import create_random_channel
-from tests.old_mess.app.episodes.utils import create_random_episode
-from tests.old_mess.app.plugins.utils import create_random_plugin
-from tests.old_mess.app.seasons.utils import create_random_season
-from tests.old_mess.app.shows.utils import create_random_show
-from tests.old_mess.app.sources.utils import create_random_source
+from tests.app.channels.utils import create_random_channel
+from tests.app.episodes.utils import create_random_episode
+from tests.app.plugins.utils import create_random_plugin
+from tests.app.seasons.utils import create_random_season
+from tests.app.shows.utils import create_random_show
+from tests.app.sources.utils import create_random_source
 
 
 # TODO: Validate

@@ -13,14 +13,6 @@ from tests.app.utils.utils import random_email, random_lower_string
 
 
 # TODO: Validate
-class CreatedUser(BaseModel):
-    id: uuid.UUID
-    email: str
-    password: str
-    headers: dict[str, str]
-
-
-# TODO: Validate
 def user_authentication_headers(
     *,
     client: TestClient,
@@ -28,7 +20,6 @@ def user_authentication_headers(
     password: str,
 ) -> dict[str, str]:
     data = {"username": email, "password": password}
-
     r = client.post(f"{settings.API_V1_STR}/login/access-token", data=data)
     response = r.json()
     auth_token = response["access_token"]
@@ -36,11 +27,24 @@ def user_authentication_headers(
 
 
 # TODO: Validate
-def create_random_user(db: Session) -> User:
+def create_random_user(session: Session) -> User:
     email = random_email()
     password = random_lower_string()
-    user_in = UserCreate(email=email, password=password)
-    return user_service.create_user(session=db, user_create=user_in)
+    user_in = UserCreate(email=email, username=random_lower_string(), password=password)
+    return user_service.create_user(session=session, user_create=user_in)
+
+
+# TODO: Validate
+def create_random_superuser(session: Session) -> User:
+    email = random_email()
+    password = random_lower_string()
+    user_in = UserCreate(
+        email=email,
+        username=random_lower_string(),
+        password=password,
+        is_superuser=True,
+    )
+    return user_service.create_user(session=session, user_create=user_in)
 
 
 # TODO: Validate
@@ -48,25 +52,20 @@ def authentication_token_from_email(
     *,
     client: TestClient,
     email: str,
-    db: Session,
+    session: Session,
 ) -> dict[str, str]:
-    """
-    Return a valid token for the user with given email.
-
-    If the user doesn't exist it is created first.
-    """
     password = random_lower_string()
-    user = user_service.get_user_by_email(session=db, email=email)
+    user = user_service.get_user_by_email(session=session, email=email)
     if not user:
-        user_in_create = UserCreate(email=email, password=password)
-        user = user_service.create_user(session=db, user_create=user_in_create)
+        user_in_create = UserCreate(email=email, username=random_lower_string(), password=password)
+        user = user_service.create_user(session=session, user_create=user_in_create)
     else:
         user_in_update = UserUpdate(password=password)
         if not user.id:
             msg = "User id not set"
             raise ValueError(msg)
         user = user_service.update_user(
-            session=db,
+            session=session,
             db_user=user,
             user_in=user_in_update,
         )
@@ -75,18 +74,19 @@ def authentication_token_from_email(
 
 
 # TODO: Validate
-def create_logged_in_user(client: TestClient, session: Session) -> CreatedUser:
+class CreatedUser(BaseModel):
+    id: uuid.UUID
+    email: str
+    password: str
+    headers: dict[str, str]
+
+
+# TODO: Rename this or something.
+# TODO: Validate
+def create_random_user_alt(client: TestClient, session: Session) -> CreatedUser:
     email = random_email()
     password = random_lower_string()
-    user_in = UserCreate(
-        email=email,
-        username=random_lower_string(),
-        password=password,
-    )
+    user_in = UserCreate(email=email, username=random_lower_string(), password=password)
     user = user_service.create_user(session=session, user_create=user_in)
-    headers = user_authentication_headers(
-        client=client,
-        email=email,
-        password=password,
-    )
+    headers = user_authentication_headers(client=client, email=email, password=password)
     return CreatedUser(id=user.id, email=email, password=password, headers=headers)

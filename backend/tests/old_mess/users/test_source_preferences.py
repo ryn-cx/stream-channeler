@@ -15,13 +15,13 @@ from app.users import service as user_service
 from app.users.models import User, UserSourcePreference
 from app.users.schemas import SourcePreference
 from app.users.service import effective_source_preferences
-from tests.old_mess.app.plugins.utils import create_random_plugin
-from tests.old_mess.app.sources.utils import create_random_source
-from tests.old_mess.app.users.utils import (
+from tests.app.plugins.utils import create_random_plugin
+from tests.app.sources.utils import create_random_source
+from tests.app.users.utils import (
     authentication_token_from_email,
     create_random_user,
 )
-from tests.old_mess.app.utils.utils import build_random_model
+from tests.app.utils.utils import build_random_model
 
 SOURCE_PREFERENCES_URL = f"{settings.API_V1_STR}/users/me/source-preferences"
 

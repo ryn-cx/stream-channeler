@@ -23,7 +23,7 @@ from plugins.utils.abstract_plugin import (
     URLImportResult,
 )
 from plugins.utils.base_plugin import BasePlugin
-from tests.old_mess.app.utils.utils import build_random_model
+from tests.app.utils.utils import build_random_model
 from tests.old_mess.plugins.plugin_validator.context_managers import (
     mock_update,
 )
