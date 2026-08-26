@@ -40,7 +40,7 @@ from app.users.schemas import (
     UserUpdate,
     UserUpdateMe,
 )
-from app.utils import service as email_service
+from app.utils.service import generate_new_account_email, send_email
 from app.watches.models import Watch
 
 users_router = APIRouter(prefix="/users", tags=["users"])
@@ -91,12 +91,12 @@ def create_user(*, session: SessionDep, user_in: UserCreate) -> User:
 
     user = user_service.create_user(session=session, user_create=user_in)
     if settings.emails_enabled and user_in.email:
-        email_data = email_service.generate_new_account_email(
+        email_data = generate_new_account_email(
             email_to=user_in.email,
             username=user_in.email,
             password=user_in.password,
         )
-        email_service.send_email(
+        send_email(
             email_to=user_in.email,
             subject=email_data.subject,
             html_content=email_data.html_content,

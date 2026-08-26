@@ -1,4 +1,3 @@
-# TODO: Validate
 from datetime import UTC, datetime, timedelta
 
 import jwt
@@ -12,7 +11,6 @@ from app.users import service as user_service
 from app.users.models import User
 
 
-# TODO: Validate
 def authenticate(*, session: Session, email: str, password: str) -> User | None:
     db_user = user_service.get_user_by_email(session=session, email=email)
     if not db_user:
@@ -31,7 +29,6 @@ def authenticate(*, session: Session, email: str, password: str) -> User | None:
     return db_user
 
 
-# TODO: Validate
 def generate_password_reset_token(email: str) -> str:
     delta = timedelta(hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS)
     now = datetime.now(UTC)
@@ -44,7 +41,6 @@ def generate_password_reset_token(email: str) -> str:
     )
 
 
-# TODO: Validate
 def verify_password_reset_token(token: str) -> str | None:
     try:
         decoded_token = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])

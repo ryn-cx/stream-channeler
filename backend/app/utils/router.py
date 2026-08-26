@@ -4,7 +4,7 @@ from pydantic.networks import EmailStr
 
 from app.auth.dependencies import get_current_active_superuser
 from app.schemas import Message
-from app.utils import service as email_service
+from app.utils.service import generate_test_email, send_email
 
 utils_router = APIRouter(prefix="/utils", tags=["utils"])
 admin_router = APIRouter(
@@ -18,8 +18,8 @@ admin_router = APIRouter(
 @admin_router.post("/test-email/", status_code=status.HTTP_201_CREATED)
 def test_email(email_to: EmailStr) -> Message:
     """Test emails."""
-    email_data = email_service.generate_test_email(email_to=email_to)
-    email_service.send_email(
+    email_data = generate_test_email(email_to=email_to)
+    send_email(
         email_to=email_to,
         subject=email_data.subject,
         html_content=email_data.html_content,

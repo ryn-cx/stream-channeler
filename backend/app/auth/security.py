@@ -1,4 +1,3 @@
-# TODO: Validate
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
@@ -10,22 +9,15 @@ from pwdlib.hashers.bcrypt import BcryptHasher
 from app.auth.constants import ALGORITHM
 from app.config import settings
 
-password_hash = PasswordHash(
-    (
-        Argon2Hasher(),
-        BcryptHasher(),
-    ),
-)
+password_hash = PasswordHash((Argon2Hasher(), BcryptHasher()))
 
 
-# TODO: Validate
 def create_access_token(subject: str | UUID, expires_delta: timedelta) -> str:
     expire = datetime.now(UTC) + expires_delta
-    to_encode = {"exp": expire, "sub": str(subject)}
+    to_encode: dict[str, datetime | str] = {"exp": expire, "sub": str(subject)}
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
 
 
-# TODO: Validate
 def verify_password(
     plain_password: str,
     hashed_password: str,
@@ -33,6 +25,5 @@ def verify_password(
     return password_hash.verify_and_update(plain_password, hashed_password)
 
 
-# TODO: Validate
 def get_password_hash(password: str) -> str:
     return password_hash.hash(password)

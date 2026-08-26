@@ -1,4 +1,3 @@
-# TODO: Validate
 ALGORITHM = "HS256"
 
 # Dummy hash to use for timing attack prevention when user is not found
