@@ -27,6 +27,7 @@ from plugins.TMDB.url_handlers import TMDBURLHandler
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
     InvalidURLError,
+    PluginSearchResult,
     URLImportResult,
 )
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
@@ -109,10 +110,7 @@ class ImportURLMixin(
                 plugin_class = plugin_for_url(url)
                 if plugin_class is None or plugin_class.plugin_key() in linked:
                     continue
-                try:
-                    plugin_class(self.session).import_url(url, show, force=force)
-                except InvalidURLError:
-                    logger.info("Nothing to import at {}", url)
+                if not self._import_child_url(plugin_class, url, show, force=force):
                     continue
                 self._note_new_links(show, noted, "Automatic: Watchmode listing")
                 imported.add(plugin_class)
@@ -204,16 +202,49 @@ class ImportURLMixin(
         ):
             return False
 
-        plugin = plugin_class(self.session)
-        results = plugin.search(show.name).results
+        results = self._searched_source_results(plugin_class, show.name)
         if not results:
             return False
 
+        return self._import_child_url(plugin_class, results[0].url, show, force=force)
+
+    # TODO: Validate
+    def _searched_source_results(
+        self,
+        plugin_class: type[AbstractPlugin],
+        name: str,
+    ) -> list[PluginSearchResult]:
+        savepoint = self.session.begin_nested()
         try:
-            plugin.import_url(results[0].url, show, force=force)
+            results = plugin_class(self.session).search(name).results
+        except Exception:  # noqa: BLE001
+            savepoint.rollback()
+            logger.exception("Searching {} for {}", plugin_class.plugin_key(), name)
+            return []
+        savepoint.commit()
+        return results
+
+    # TODO: Validate
+    def _import_child_url(
+        self,
+        plugin_class: type[AbstractPlugin],
+        url: str,
+        show: Show,
+        *,
+        force: bool = False,
+    ) -> bool:
+        savepoint = self.session.begin_nested()
+        try:
+            plugin_class(self.session).import_url(url, show, force=force)
         except InvalidURLError:
-            logger.info("Nothing to import at {}", results[0].url)
+            savepoint.rollback()
+            logger.info("Nothing to import at {}", url)
             return False
+        except Exception:  # noqa: BLE001
+            savepoint.rollback()
+            logger.exception("Importing {}", url)
+            return False
+        savepoint.commit()
         return True
 
     # TODO: Validate
