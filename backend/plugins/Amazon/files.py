@@ -714,18 +714,22 @@ class FileMixin(BasePlugin, register=False):
         return self.detail_file(title_key).entity_type() == MOVIE_ENTITY_TYPE
 
     # TODO: Validate
+    def _season_available(self, season_key: str) -> bool:
+        detail = self.detail_file(season_key)
+        detail.download_if_outdated()
+        return detail.unavailable_message() is None
+
+    # TODO: Validate
     def _season_entries(self, show_key: str) -> list[AmazonSeason]:
-        """Return every season of a title, which a film is one of itself."""
         page = self.detail_file(show_key)
-        if seasons := page.seasons():
-            return seasons
-        return [
+        seasons = page.seasons() or [
             AmazonSeason(
                 key=page.compact_key(),
                 name=page.title(),
                 season_number=page.season_number() or 1,
             ),
         ]
+        return [season for season in seasons if self._season_available(season.key)]
 
     # TODO: Validate
     @override

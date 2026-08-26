@@ -357,7 +357,7 @@ class PagedLoadEndpoint[T](Protocol):
     def download_all(self, unique_identifier: str, /) -> list[str]: ...
 
     # TODO: Validate
-    def load_pages(self, datas: list[str]) -> list[T]: ...
+    def load(self, data: str, log_id: str = "") -> T: ...
 
 
 # TODO: Validate
@@ -425,7 +425,7 @@ class EndpointFile[T](DownloadedFile[T], ABC):
     # TODO: Validate
     @override
     def _parse(self, content: str) -> T:
-        return self._load_endpoint().load(content)
+        return self._load_endpoint().load(content, self.file_key())
 
 
 # TODO: Validate
@@ -449,4 +449,5 @@ class PagedEndpointFile[T](DownloadedFile[list[T]], ABC):
     @override
     def _parse(self, content: str) -> list[T]:
         pages: list[str] = json.loads(content)
-        return self._load_endpoint().load_pages(pages)
+        endpoint = self._load_endpoint()
+        return [endpoint.load(page, self.file_key()) for page in pages]
