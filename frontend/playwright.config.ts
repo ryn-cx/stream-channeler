@@ -1,3 +1,4 @@
+// TODO: Validate
 import { defineConfig, devices } from '@playwright/test';
 import 'dotenv/config'
 

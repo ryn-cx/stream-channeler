@@ -17,6 +17,7 @@ from plugins.YouTube.files import (
     is_an_album,
     is_show_key,
     is_show_season_key,
+    is_user_playlist,
     is_video_key,
     split_show_season_key,
 )
@@ -46,6 +47,9 @@ class UpsertMixin(HelperMixin, register=False):
             find_and_add_canonical_show(self.session, show, canonical_show)
         elif is_an_album(show_key):
             show = self._upsert_show_music(show_key, force=force)
+        elif is_user_playlist(show_key):
+            show = self._upsert_show_playlist(show_key, force=force)
+            find_and_add_canonical_show(self.session, show, canonical_show)
         elif self.is_topic_channel(show_key):
             show = self._upsert_show_topic(show_key, force=force)
         elif self.is_movies_channel(show_key):
@@ -243,6 +247,46 @@ class UpsertMixin(HelperMixin, register=False):
                 show_key,
             )
         self._upsert_episodes(season, show_key, force=force)
+
+    # TODO: Validate
+    def _upsert_show_playlist(
+        self,
+        show_key: str,
+        *,
+        force: bool = False,
+    ) -> Show:
+        playlist_item = get_first_item(
+            self.playlist_info_file(show_key).parsed().items,
+        )
+        source = self.links_source
+
+        show = Show.get_from_memory(self.session, source, show_key)
+        if self._show_is_outdated(show, force=force):
+            data_timestamp = self.show_data_timestamp(show_key)
+            new_show = Show(
+                key=show_key,
+                name=playlist_item.snippet.title,
+                description=playlist_item.snippet.description.replace("\x00", ""),
+                url=self.build_url(f"playlist?list={show_key}"),
+                media_type="TV Show",
+                image_url=self._best_thumbnail_url(playlist_item.snippet.thumbnails),
+                data_timestamp=data_timestamp,
+                update_at=data_timestamp + timedelta(hours=6),
+                source_id=source.id,
+            )
+            show = self._upsert_show_object(new_show, source, show, show_key)
+
+        self._upsert_season(
+            show=show,
+            show_key=show_key,
+            season_key=show_key,
+            name=playlist_item.snippet.title,
+            playlist=playlist_item,
+            force=force,
+        )
+        self._soft_delete_missing(show_key)
+
+        return show
 
     # TODO: Validate
     def _upsert_show_music(

@@ -243,6 +243,7 @@ class EpisodeLinker:
         note: str,
         canonical_episodes: Collection[Episode] | None = None,
     ) -> Callable[[list[Episode]], list[Episode]]:
+        # TODO: Validate
         def step(episodes: list[Episode]) -> list[Episode]:
             index = unambiguous_lookup(
                 self.canonical_episodes
@@ -356,6 +357,7 @@ class EpisodeLinker:
         numbers_of: Callable[[Episode], Collection[int]],
         note: str,
     ) -> Callable[[list[Episode]], list[Episode]]:
+        # TODO: Validate
         def step(episodes: list[Episode]) -> list[Episode]:
             numbered_episodes = [
                 episode for episode in episodes if episode.episode_number is not None
@@ -430,6 +432,7 @@ class EpisodeLinker:
 
     # TODO: Validate
     def _by_best_name(self, note: str) -> Callable[[list[Episode]], list[Episode]]:
+        # TODO: Validate
         def step(episodes: list[Episode]) -> list[Episode]:
             if not episodes:
                 return episodes

@@ -1,3 +1,4 @@
+# TODO: Validate
 # Stage 0, "build-stage", based on Bun, to build and compile the frontend
 FROM oven/bun:1 AS build-stage
 

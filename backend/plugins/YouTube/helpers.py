@@ -17,6 +17,7 @@ from plugins.YouTube.files import (
 
 FREE_SOURCE_KEY = "YouTube Free Movies & Shows"
 PAID_SOURCE_KEY = "YouTube Paid Movies & Shows"
+LINKS_SOURCE_KEY = "YouTube Links"
 
 
 # TODO: Validate
@@ -24,6 +25,14 @@ class HelperMixin(FileMixin, register=False):
     # TODO: Validate
     def record_album_playlist_key(self, playlist_key: str) -> None:
         self._importing_album_playlist_key = playlist_key
+
+    # TODO: Validate
+    def record_linking_playlist_key(self, playlist_key: str) -> None:
+        self._linking_playlist_key = playlist_key
+
+    # TODO: Validate
+    def is_linking_playlist(self, playlist_key: str) -> bool:
+        return self._linking_playlist_key == playlist_key
 
     # TODO: Validate
     @override
@@ -39,6 +48,11 @@ class HelperMixin(FileMixin, register=False):
     @property
     def paid_source(self) -> Source:
         return self._source_record(PAID_SOURCE_KEY)
+
+    # TODO: Validate
+    @property
+    def links_source(self) -> Source:
+        return self._source_record(LINKS_SOURCE_KEY)
 
     # TODO: Validate
     def show_channel_key(self, show_key: str) -> str | None:

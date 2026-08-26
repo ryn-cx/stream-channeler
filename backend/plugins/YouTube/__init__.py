@@ -19,6 +19,7 @@ from plugins.YouTube.files import (
     is_quota_error,
     is_show_key,
     is_show_season_key,
+    is_user_playlist,
     is_video_key,
 )
 from plugins.YouTube.handlers import (
@@ -27,6 +28,7 @@ from plugins.YouTube.handlers import (
     ChannelHandleURLHandler,
     ChannelKeyURLHandler,
     ChannelUsernameURLHandler,
+    PlaylistBasedURLHandler,
     PlaylistURLHandler,
     PlaylistVideoURLHandler,
     ShowPlaylistURLHandler,
@@ -39,7 +41,6 @@ from plugins.YouTube.source import SourceMixin
 from plugins.YouTube.updater import UpdaterMixin
 from plugins.YouTube.upsert import UpsertMixin
 from plugins.YouTube.watch_history import WatchHistoryMixin
-
 
 
 # TODO: Validate
@@ -119,6 +120,12 @@ class YouTube(
     ) -> list[URLImportResult]:
         self._set_current_show(url)
         handler = self.get_url_handler(url)
+        if (
+            canonical_show is not None
+            and isinstance(handler, PlaylistBasedURLHandler)
+            and is_user_playlist(handler.playlist_key)
+        ):
+            self.record_linking_playlist_key(handler.playlist_key)
         handler.raise_if_invalid()
         return self._import_handler(handler, canonical_show, force=force)
 

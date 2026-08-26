@@ -50,6 +50,7 @@ def unambiguous_lookup(
 def single(
     key_of: Callable[[Episode], Hashable | None],
 ) -> Callable[[Episode], Iterable[Hashable | None]]:
+    # TODO: Validate
     def keys_of(episode: Episode) -> Iterable[Hashable | None]:
         return (key_of(episode),)
 
@@ -60,6 +61,7 @@ def single(
 def name_key(
     name_of: Callable[[Episode], str | None],
 ) -> Callable[[Episode], Hashable | None]:
+    # TODO: Validate
     def key_of(episode: Episode) -> Hashable | None:
         return name_of(episode) or None
 
@@ -70,6 +72,7 @@ def name_key(
 def name_and_episode_index_key(
     name_of: Callable[[Episode], str | None],
 ) -> Callable[[Episode], Hashable | None]:
+    # TODO: Validate
     def key_of(episode: Episode) -> Hashable | None:
         name = name_of(episode)
         if not name:
@@ -84,6 +87,7 @@ def name_and_episode_indexes_keys(
     name_of: Callable[[Episode], str | None],
     numbers_of: Callable[[Episode], Collection[int]],
 ) -> Callable[[Episode], Iterable[Hashable | None]]:
+    # TODO: Validate
     def keys_of(episode: Episode) -> Iterable[Hashable | None]:
         name = name_of(episode)
         if not name:
@@ -98,6 +102,7 @@ def name_season_and_episode_number_key(
     name_of: Callable[[Episode], str | None],
     season_number_of: Callable[[Episode], int | None],
 ) -> Callable[[Episode], Hashable | None]:
+    # TODO: Validate
     def key_of(episode: Episode) -> Hashable | None:
         name = name_of(episode)
         season_number = season_number_of(episode)
@@ -112,6 +117,7 @@ def name_season_and_episode_number_key(
 def season_and_episode_number_key(
     season_number_of: Callable[[Episode], int | None],
 ) -> Callable[[Episode], Hashable | None]:
+    # TODO: Validate
     def key_of(episode: Episode) -> Hashable | None:
         season_number = season_number_of(episode)
         if season_number is None or episode.episode_number is None:

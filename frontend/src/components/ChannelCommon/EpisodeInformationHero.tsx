@@ -79,6 +79,7 @@ function heroLinks(data: EpisodeInformationOutput, preferSource: boolean) {
   return links
 }
 
+// TODO: Validate
 /** Where the episode's information is held, which every reader of it shares. */
 export const episodeInformationQueryKey = (episodeId: string) => [
   "episode-information",

@@ -1,5 +1,5 @@
 // TODO: Validate
-import { readFileSync, writeFileSync } from "node:fs"
+import { readFileSync, statSync, writeFileSync } from "node:fs"
 import { relative, resolve } from "node:path"
 import { Glob } from "bun"
 import ts from "typescript"
@@ -9,6 +9,7 @@ const EXEMPT_PATTERNS = [
   /(^|[\\/])client[\\/]/,
   /routeTree\.gen\.ts$/,
   /(^|[\\/])node_modules[\\/]/,
+  /(^|[\\/])(dist|build|coverage|blob-report|playwright-report|test-results)[\\/]/,
 ]
 
 // TODO: Validate
@@ -54,6 +55,7 @@ const isMarkable = (node: ts.Node): boolean => {
 // TODO: Validate
 const collectInsertLines = (sourceFile: ts.SourceFile): Set<number> => {
   const insertLines = new Set<number>()
+  // TODO: Validate
   const visit = (node: ts.Node): void => {
     if (isMarkable(node)) {
       const start = node.getStart(sourceFile, true)
@@ -96,14 +98,24 @@ const processFile = (path: string): boolean => {
 }
 
 // TODO: Validate
+const iterFiles = function* (root: string): Generator<string> {
+  if (statSync(root).isFile()) {
+    yield resolve(root)
+    return
+  }
+  const glob = new Glob("**/*.{ts,tsx,js,jsx,mjs}")
+  for (const match of glob.scanSync({ cwd: root, absolute: true })) {
+    yield resolve(match)
+  }
+}
+
+// TODO: Validate
 const main = (): void => {
   const roots = process.argv.slice(2)
-  const glob = new Glob("**/*.{ts,tsx,js,jsx,mjs}")
   let changedCount = 0
   let totalCount = 0
   for (const root of roots.length > 0 ? roots : ["src"]) {
-    for (const match of glob.scanSync({ cwd: root, absolute: true })) {
-      const path = resolve(match)
+    for (const path of iterFiles(root)) {
       if (isExempt(relative(process.cwd(), path))) continue
       totalCount += 1
       if (processFile(path)) {

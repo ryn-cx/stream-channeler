@@ -184,6 +184,8 @@ class PlaylistBasedURLHandler(YouTubeURLHandler):
     @property
     @override
     def show_key(self) -> str:
+        if self.plugin.is_linking_playlist(self.playlist_key):
+            return self.playlist_key
         # A channel's uploads are a season of that channel rather than a listing of
         # their own, and the playlist they are listed as is named after the channel,
         # so the channel is read off the key rather than looked up.
@@ -210,6 +212,13 @@ class PlaylistBasedURLHandler(YouTubeURLHandler):
     # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
+        if self.plugin.is_linking_playlist(self.playlist_key):
+            self.plugin.raise_if_invalid_file(
+                self.plugin.playlist_items_file(self.playlist_key),
+                self.url,
+            )
+            return
+
         if is_channel_uploads_playlist_key(self.playlist_key):
             self._raise_if_invalid_channel(self.show_key)
             return
@@ -237,6 +246,8 @@ class PlaylistURLHandler(PlaylistBasedURLHandler):
     # TODO: Validate
     @override
     def import_results(self, show: Show) -> list[URLImportResult]:
+        if self.plugin.is_linking_playlist(self.playlist_key):
+            return [URLImportResult.for_show(show)]
         seasons = [season for season in show.seasons if season.key == self.playlist_key]
         return [URLImportResult.for_seasons(show, seasons)]
 
