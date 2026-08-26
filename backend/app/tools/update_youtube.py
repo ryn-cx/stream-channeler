@@ -17,6 +17,7 @@ from app.database import engine, load_models
 from app.log import configure_logging
 from app.plugins.models import Plugin
 from app.seasons.models import Season
+from app.tools.update_outdated import _season_in_channel_exists
 from app.utils import tz_datetime
 from plugins.utils.manage_plugins import import_plugins
 from plugins.YouTube import YouTube
@@ -59,6 +60,7 @@ def _outdated_channel_seasons(session: Session) -> list[Season]:
             col(Season.update_at).is_not(None),
             col(Season.update_at) < tz_datetime.now(),
             col(Season.deleted_at).is_(None),
+            _season_in_channel_exists(),
         )
         .options(contains_eager(Season.show))  # type: ignore[arg-type]
         .order_by(col(Season.update_at).asc())
@@ -72,7 +74,6 @@ def _outdated_channel_seasons(session: Session) -> list[Season]:
 
 # TODO: Validate
 def update_youtube() -> None:
-    """Update every outdated channel season in one pass."""
     with Session(engine) as session:
         seasons = _outdated_channel_seasons(session)
         if not seasons:
@@ -100,7 +101,6 @@ def update_youtube() -> None:
 
 # TODO: Validate
 def run_forever() -> None:
-    """Update every outdated channel season, once an hour, forever."""
     while True:
         try:
             update_youtube()
