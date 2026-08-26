@@ -42,9 +42,11 @@ export function TmdbMatchesAdminTable() {
     pageIndex: 0,
     pageSize: PAGE_SIZE,
   })
-  const [sortOptions, setSortOptions] = useState<SortingState>([])
+  const [sortOptions, setSortOptions] = useState<SortingState>([
+    { id: "summary", desc: false },
+  ])
   const [filterOptions, setFilterOptions] = useState<ColumnFiltersState>([])
-  const [nonCanonicalShowsOnly, setNonCanonicalShowsOnly] = useState(false)
+  const [nonCanonicalShowsOnly, setNonCanonicalShowsOnly] = useState(true)
   const [editing, setEditing] = useState<UnmatchedEpisodeOutput | null>(null)
 
   const params = {
