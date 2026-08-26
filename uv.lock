@@ -1269,7 +1269,7 @@ wheels = [
 [[package]]
 name = "nana"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/nana#afcb81177150e7674fbf0b1d91d32ae7741dc4e5" }
+source = { git = "https://github.com/ryn-cx/nana#59f41ed44d2695a3f68e0134a5b7402d836562b9" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
