@@ -1,6 +1,8 @@
 # TODO: Validate
 
-from typing import Any
+from typing import Protocol
+
+from chirashi.series.models import Datum as SeriesDatum
 
 from app.media.media_type import MediaType
 from app.sources.models import Source
@@ -12,6 +14,12 @@ from plugins.Crunchyroll.music_keys import (
     is_music_show_key,
     music_episode_category,
 )
+
+
+# TODO: Validate
+class SizedImage(Protocol):
+    width: int
+    source: str
 
 
 # TODO: Validate
@@ -33,14 +41,12 @@ class HelperMixin(FileMixin, register=False):
         return self.video_source
 
     # TODO: Validate
-    def _series_datum(self, show_key: str) -> dict[str, Any]:
-        series_file = self.series_file(show_key)
-        datum: dict[str, Any] = series_file.parsed()["data"][0]
-        return datum
+    def _series_datum(self, show_key: str) -> SeriesDatum:
+        return self.series_file(show_key).parsed().data[0]
 
     # TODO: Validate
     def _is_movie(self, show_key: str) -> bool:
-        return "type:movie" in self._series_datum(show_key)["keywords"]
+        return "type:movie" in self._series_datum(show_key).keywords
 
     # TODO: Validate
     def tmdb_media_type(self, show_key: str) -> MediaType:

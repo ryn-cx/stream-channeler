@@ -34,6 +34,7 @@ from plugins.utils.base_plugin.files import (
     BaseFile,
     DownloadedFile,
     EndpointFile,
+    TextFile,
 )
 from plugins.utils.get_around_client import get_around_client
 
@@ -229,7 +230,7 @@ def _search_result(entity: Entity) -> AmazonSearchResult:
 
 
 # TODO: Validate
-class ShareLinkRedirect(BaseFile[str]):
+class ShareLinkRedirect(TextFile):
     """Where a share link points.
 
     Amazon writes a share link with an id of its own that none of Prime Video's
@@ -244,12 +245,6 @@ class ShareLinkRedirect(BaseFile[str]):
         self.share_key = share_key
         self.unique_identifier = share_key
         super().__init__(session, plugin)
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _identifier_suffix(cls) -> str:
-        return ".txt"
 
     # TODO: Validate
     @override
@@ -313,11 +308,11 @@ class Detail(DownloadedFile[dict[str, Any]]):
         super().__init__(session, plugin, title_key)
 
     # TODO: Validate
-    def parsed(self) -> dict[str, Any]:
+    @override
+    def _parse(self, content: str) -> dict[str, Any]:
         """Return the page as Amazon wrote it."""
-        if self._cached_parsed is None:
-            self._cached_parsed = json.loads(self._stored_content())
-        return self._cached_parsed
+        page: dict[str, Any] = json.loads(content)
+        return page
 
     # Occurs when a user puts in an invalid URL.
     # TODO: Validate

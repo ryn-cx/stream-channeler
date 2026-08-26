@@ -1,11 +1,43 @@
 # TODO: Validate
-from abc import ABC
 from collections.abc import Sequence
 from datetime import datetime
-from typing import Any, Literal, override
+from functools import cache
+from typing import Any, ClassVar, Literal, override
+
+from chirashi import Chirashi
+from chirashi.artist import Artist as ArtistEndpoint
+from chirashi.artist.models import ArtistModel
+from chirashi.artist_concerts import ArtistConcerts as ArtistConcertsEndpoint
+from chirashi.artist_concerts.models import ArtistConcertsModel
+from chirashi.artist_music_videos import ArtistMusicVideos as ArtistMusicVideosEndpoint
+from chirashi.artist_music_videos.models import ArtistMusicVideosModel
+from chirashi.browse_music import BrowseMusic as BrowseMusicEndpoint
+from chirashi.browse_music.models import BrowseMusicModel
+from chirashi.browse_series import Browse as BrowseSeriesEndpoint
+from chirashi.browse_series.models import BrowseSeriesModel
+from chirashi.concert import Concert as ConcertEndpoint
+from chirashi.concert.models import ConcertModel
+from chirashi.exceptions import (
+    ArtistNotFoundError,
+    ConcertNotFoundError,
+    EpisodeNotFoundError,
+    MusicVideoNotFoundError,
+    SeriesNotFoundError,
+)
+from chirashi.music_video import MusicVideo as MusicVideoEndpoint
+from chirashi.music_video.models import MusicVideoModel
+from chirashi.objects import Objects as ObjectsEndpoint
+from chirashi.objects.models import ObjectsModel
+from chirashi.search import Search as SearchEndpoint
+from chirashi.search.models import SearchModel
+from chirashi.season_episodes import SeasonEpisodes as SeasonEpisodesEndpoint
+from chirashi.season_episodes.models import SeasonEpisodesModel
+from chirashi.seasons import Seasons as SeasonsEndpoint
+from chirashi.seasons.models import SeasonsModel
+from chirashi.series import Series as SeriesEndpoint
+from chirashi.series.models import SeriesModel
 
 from app.files.models import File
-from plugins.Crunchyroll import api
 from plugins.Crunchyroll.music_keys import (
     MusicCategory,
     is_music_episode_key,
@@ -14,65 +46,28 @@ from plugins.Crunchyroll.music_keys import (
     music_episode_category,
 )
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import BaseFile, EndpointJSON
+from plugins.utils.base_plugin.files import BaseFile, EndpointFile, PagedEndpointFile
+from plugins.utils.get_around_client import get_around_client
 
 
 # TODO: Validate
-class CrunchyrollJSON(EndpointJSON[dict[str, Any]], ABC):
-    # TODO: Validate
-    @override
-    def _parse(self, raw: Any) -> dict[str, Any]:
-        return self.raise_if_not_is_instance(raw, dict)
-
-    # TODO: Validate
-    @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            try:
-                response = self._fetch()
-            except Exception as error:
-                if not self._is_acceptable_error(error):
-                    raise
-                self.write(None, self.acceptable_error_extra_value())
-            else:
-                self.write(response)
+@cache
+def chirashi() -> Chirashi:
+    """Return a cached Chirashi client."""
+    return Chirashi(get_around_client=get_around_client())
 
 
 # TODO: Validate
-class CrunchyrollListJSON(EndpointJSON[list[dict[str, Any]]], ABC):
-    # TODO: Validate
-    @override
-    def _parse(self, raw: Any) -> list[dict[str, Any]]:
-        return self.raise_if_not_is_instance(raw, list)
-
-    # TODO: Validate
-    @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            try:
-                response = self._fetch()
-            except Exception as error:
-                if not self._is_acceptable_error(error):
-                    raise
-                self.write(None, self.acceptable_error_extra_value())
-            else:
-                self.write(response)
-
-
-# TODO: Validate
-class Series(CrunchyrollJSON):
+class Series(EndpointFile[SeriesModel]):
     """Data for a show."""
 
-    # TODO: Validate
-    @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.series(self.unique_identifier)
+    API_ENDPOINT: ClassVar[SeriesEndpoint] = chirashi().series
 
     # Occurs when a user puts in an invalid series URL.
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, api.SeriesNotFoundError)
+        return isinstance(error, SeriesNotFoundError)
 
     # TODO: Validate
     @override
@@ -81,19 +76,16 @@ class Series(CrunchyrollJSON):
 
 
 # TODO: Validate
-class Objects(CrunchyrollJSON):
+class Objects(EndpointFile[ObjectsModel]):
     """Data for an episode."""
 
-    # TODO: Validate
-    @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.objects(self.unique_identifier)
+    API_ENDPOINT: ClassVar[ObjectsEndpoint] = chirashi().objects
 
     # Occurs when a user puts in an invalid episode URL.
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, api.EpisodeNotFoundError)
+        return isinstance(error, EpisodeNotFoundError)
 
     # TODO: Validate
     @override
@@ -102,65 +94,53 @@ class Objects(CrunchyrollJSON):
 
 
 # TODO: Validate
-class Seasons(CrunchyrollJSON):
+class Seasons(EndpointFile[SeasonsModel]):
     """Data for the seasons."""
 
-    # TODO: Validate
-    @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.seasons(self.unique_identifier)
+    API_ENDPOINT: ClassVar[SeasonsEndpoint] = chirashi().seasons
 
 
 # TODO: Validate
-class SeasonEpisodes(CrunchyrollJSON):
+class SeasonEpisodes(EndpointFile[SeasonEpisodesModel]):
     """Data for the episodes in a season."""
 
-    # TODO: Validate
-    @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.season_episodes(self.unique_identifier)
+    API_ENDPOINT: ClassVar[SeasonEpisodesEndpoint] = chirashi().season_episodes
 
 
 # TODO: Validate
-class BrowseSeries(CrunchyrollListJSON):
+class BrowseSeries(PagedEndpointFile[BrowseSeriesModel]):
     """Data for recently aired shows."""
 
     IMMUTABLE = True  # Files are stamped with a datetime
 
-    # Use browse_series_until_datetime instead of browse_series so the new file
-    # includes entries up to the previous file.
+    API_ENDPOINT: ClassVar[BrowseSeriesEndpoint] = chirashi().browse_series
+
     # TODO: Validate
     @override
-    def _fetch(self) -> list[dict[str, Any]]:
-        return api.browse_series_until_datetime(
+    def _download_pages(self) -> list[str]:
+        return self.API_ENDPOINT.download_until_datetime(
             end_datetime=self.identifier_datetime(),
         )
 
 
 # TODO: Validate
-class Search(CrunchyrollJSON):
+class Search(EndpointFile[SearchModel]):
     """Data for search results."""
 
-    # TODO: Validate
-    @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.search(self.unique_identifier)
+    API_ENDPOINT: ClassVar[SearchEndpoint] = chirashi().search
 
 
 # TODO: Validate
-class Artist(CrunchyrollJSON):
+class Artist(EndpointFile[ArtistModel]):
     """Data for an artist."""
 
-    # TODO: Validate
-    @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.artist(self.unique_identifier)
+    API_ENDPOINT: ClassVar[ArtistEndpoint] = chirashi().artist
 
     # Occurs when a user puts in an invalid artist URL.
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, api.ArtistNotFoundError)
+        return isinstance(error, ArtistNotFoundError)
 
     # TODO: Validate
     @override
@@ -169,39 +149,30 @@ class Artist(CrunchyrollJSON):
 
 
 # TODO: Validate
-class ArtistMusicVideos(CrunchyrollJSON):
+class ArtistMusicVideos(EndpointFile[ArtistMusicVideosModel]):
     """Data for an artist's music videos."""
 
-    # TODO: Validate
-    @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.artist_music_videos(self.unique_identifier)
+    API_ENDPOINT: ClassVar[ArtistMusicVideosEndpoint] = chirashi().artist_music_videos
 
 
 # TODO: Validate
-class ArtistConcerts(CrunchyrollJSON):
+class ArtistConcerts(EndpointFile[ArtistConcertsModel]):
     """Data for an artist's concerts."""
 
-    # TODO: Validate
-    @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.artist_concerts(self.unique_identifier)
+    API_ENDPOINT: ClassVar[ArtistConcertsEndpoint] = chirashi().artist_concerts
 
 
 # TODO: Validate
-class MusicVideo(CrunchyrollJSON):
+class MusicVideo(EndpointFile[MusicVideoModel]):
     """Data for a music video."""
 
-    # TODO: Validate
-    @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.music_video(self.unique_identifier)
+    API_ENDPOINT: ClassVar[MusicVideoEndpoint] = chirashi().music_video
 
     # Occurs when a user puts in an invalid music video URL.
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, api.MusicVideoNotFoundError)
+        return isinstance(error, MusicVideoNotFoundError)
 
     # TODO: Validate
     @override
@@ -210,19 +181,16 @@ class MusicVideo(CrunchyrollJSON):
 
 
 # TODO: Validate
-class Concert(CrunchyrollJSON):
+class Concert(EndpointFile[ConcertModel]):
     """Data for a concert."""
 
-    # TODO: Validate
-    @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.concert(self.unique_identifier)
+    API_ENDPOINT: ClassVar[ConcertEndpoint] = chirashi().concert
 
     # Occurs when a user puts in an invalid concert URL.
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, api.ConcertNotFoundError)
+        return isinstance(error, ConcertNotFoundError)
 
     # TODO: Validate
     @override
@@ -231,16 +199,18 @@ class Concert(CrunchyrollJSON):
 
 
 # TODO: Validate
-class BrowseMusic(CrunchyrollListJSON):
+class BrowseMusic(PagedEndpointFile[BrowseMusicModel]):
     """Data for all of the music."""
 
     IMMUTABLE = True
 
+    API_ENDPOINT: ClassVar[BrowseMusicEndpoint] = chirashi().browse_music
+
     # Music seems to be ordered randomly so downloading all of it is required.
     # TODO: Validate
     @override
-    def _fetch(self) -> list[dict[str, Any]]:
-        return api.browse_music_all()
+    def _download_pages(self) -> list[str]:
+        return self.API_ENDPOINT.download_all()
 
 
 # TODO: Validate
@@ -437,8 +407,7 @@ class FileMixin(BasePlugin, register=False):
             # new season the show has to notice.
             return [category.value for category in MusicCategory]
         return [
-            season_data["id"]
-            for season_data in self.seasons_file(show_key).parsed()["data"]
+            season_data.id for season_data in self.seasons_file(show_key).parsed().data
         ]
 
     # TODO: Validate
@@ -456,8 +425,8 @@ class FileMixin(BasePlugin, register=False):
                 episode_keys += self._music_episode_keys(season_key, show_key)
                 continue
             episode_keys += [
-                episode["id"]
-                for episode in self.season_episodes_file(season_key).parsed()["data"]
+                episode.id
+                for episode in self.season_episodes_file(season_key).parsed().data
             ]
         return episode_keys
 
@@ -467,7 +436,7 @@ class FileMixin(BasePlugin, register=False):
             show_key,
             MusicCategory(season_key),
         ).parsed()
-        return [datum["id"] for datum in listing["data"]]
+        return [datum.id for datum in listing.data]
 
     # TODO: Validate
     def find_newest_browse_series_file(self) -> BrowseSeries | None:

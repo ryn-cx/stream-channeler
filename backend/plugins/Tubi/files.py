@@ -2,11 +2,19 @@
 """The files a Tubi title is read out of."""
 
 from collections.abc import Sequence
-from typing import Any, override
+from functools import cache
+from typing import Any, ClassVar, override
 
-from plugins.Tubi import api
+from plugi import Plugi
+from plugi.content import Content as ContentEndpoint
+from plugi.content.models import Child as SeasonChild
+from plugi.content.models import Child1 as EpisodeChild
+from plugi.content.models import ContentModel
+from plugi.exceptions import ContentNotFoundError
+
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import BaseFile, EndpointJSON
+from plugins.utils.base_plugin.files import BaseFile, EndpointFile
+from plugins.utils.get_around_client import get_around_client
 
 # The `type` field of a Tubi content response marks a series; a movie and a single
 # episode both use "v".
@@ -17,39 +25,22 @@ _MOVIE_SEASON_ID = "0"
 
 
 # TODO: Validate
-class TubiJSON(EndpointJSON[dict[str, Any]]):
-    # TODO: Validate
-    @override
-    def _parse(self, raw: Any) -> dict[str, Any]:
-        return self.raise_if_not_is_instance(raw, dict)
-
-    # TODO: Validate
-    @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            try:
-                response = self._fetch()
-            except Exception as error:
-                if not self._is_acceptable_error(error):
-                    raise
-                self.write(None, self.acceptable_error_extra_value())
-            else:
-                self.write(response)
+@cache
+def plugi() -> Plugi:
+    """Return a cached Plugi client."""
+    return Plugi(get_around_client=get_around_client())
 
 
 # TODO: Validate
-class ContentFile(TubiJSON):
+class ContentFile(EndpointFile[ContentModel]):
     """Content file."""
 
-    # TODO: Validate
-    @override
-    def _fetch(self) -> dict[str, Any]:
-        return api.content(self.unique_identifier)
+    API_ENDPOINT: ClassVar[ContentEndpoint] = plugi().content
 
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, api.TubiContentNotFoundError)
+        return isinstance(error, ContentNotFoundError)
 
     # TODO: Validate
     @override
@@ -67,28 +58,26 @@ class FileMixin(BasePlugin, register=False):
         return self._file(ContentFile, content_id)
 
     # TODO: Validate
-    def _content(self, content_id: str) -> dict[str, Any]:
+    def _content(self, content_id: str) -> ContentModel:
         return self.content_file(content_id).parsed()
 
     # TODO: Validate
     def _is_movie(self, show_key: str) -> bool:
-        content_type: str = self._content(show_key)["type"]
-        return content_type != _SERIES_TYPE
+        return self._content(show_key).type != _SERIES_TYPE
 
     # TODO: Validate
-    def _seasons(self, show_key: str) -> list[dict[str, Any]]:
-        children = self._content(show_key).get("children")
+    def _seasons(self, show_key: str) -> list[SeasonChild]:
+        children = self._content(show_key).children
         if children is None:
             return []
         # Tubi returns the seasons in an arbitrary order.
-        return sorted(children, key=lambda season: int(season["id"]))
+        return sorted(children, key=lambda season: int(season.id))
 
     # TODO: Validate
-    def _season_episodes(self, show_key: str, season_id: str) -> list[dict[str, Any]]:
+    def _season_episodes(self, show_key: str, season_id: str) -> list[EpisodeChild]:
         for season in self._seasons(show_key):
-            if season["id"] == season_id:
-                episodes: list[dict[str, Any]] = season["children"]
-                return episodes
+            if season.id == season_id:
+                return season.children
         return []
 
     # TODO: Validate
@@ -142,8 +131,7 @@ class FileMixin(BasePlugin, register=False):
         if self._is_movie(show_key):
             return [self._movie_season_key(show_key)]
         return [
-            self._season_key(show_key, season["id"])
-            for season in self._seasons(show_key)
+            self._season_key(show_key, season.id) for season in self._seasons(show_key)
         ]
 
     # TODO: Validate
@@ -162,7 +150,6 @@ class FileMixin(BasePlugin, register=False):
                 episode_keys.append(show_key)
             else:
                 episode_keys += [
-                    episode["id"]
-                    for episode in self._season_episodes(show_key, season_id)
+                    episode.id for episode in self._season_episodes(show_key, season_id)
                 ]
         return episode_keys

@@ -238,6 +238,26 @@ class BaseFile[T](ABC):
         self._cached_parsed = None
 
     # TODO: Validate
+    @abstractmethod
+    def _parse(self, content: str) -> T:
+        """Read the stored file into the value `parsed` answers with."""
+
+    # TODO: Validate
+    def _stored_content(self) -> str:
+        if not (content := self.database_record.content):
+            msg = "File content is empty, cannot parse."
+            raise ValueError(msg)
+        return content
+
+    # TODO: Validate
+    @final
+    def parsed(self) -> T:
+        """Return the parsed content of the file."""
+        if self._cached_parsed is None:
+            self._cached_parsed = self._parse(self._stored_content())
+        return self._cached_parsed
+
+    # TODO: Validate
     def is_outdated(self, minimum_timestamp: datetime | None = None) -> bool:
         """Check if the file is outdated."""
         if self.IMMUTABLE and self._existing_database_record:
@@ -261,37 +281,17 @@ class BaseFile[T](ABC):
 
 
 # TODO: Validate
-class JSONFile[T](BaseFile[T], ABC):
-    # TODO: Validate
-    @abstractmethod
-    # ANN401 - The input type is parsed JSON which is always Any.
-    def _parse(self, raw: Any) -> T:  # noqa: ANN401
-        """Parse raw JSON into a typed model."""
-
-    # TODO: Validate
-    def parsed(self) -> T:
-        """Return the parsed content of the file."""
-        if self._cached_parsed is None:
-            if not (content := self.database_record.content):
-                msg = "File content is empty, cannot parse."
-                raise ValueError(msg)
-
-            json_data = json.loads(content)
-            self._cached_parsed = self._parse(json_data)
-        return self._cached_parsed
-
+class TextFile(BaseFile[str], ABC):
     # TODO: Validate
     @override
-    def write(self, content: Any, extra: str | None = None) -> None:
-        if content is not None and not isinstance(content, str):
-            content = json.dumps(content, default=str)
-        super().write(content, extra)
+    def _parse(self, content: str) -> str:
+        return content
 
     # TODO: Validate
     @classmethod
     @override
     def _identifier_suffix(cls) -> str:
-        return ".json"
+        return ".txt"
 
 
 # TODO: Validate
@@ -307,14 +307,9 @@ class XMLFile(BaseFile[Element], ABC):
         super().__init__(session, plugin)
 
     # TODO: Validate
-    def parsed(self) -> Element:
-        """Return the parsed content of the file."""
-        if self._cached_parsed is None:
-            if not (content := self.database_record.content):
-                msg = "File content is empty, cannot parse."
-                raise ValueError(msg)
-            self._cached_parsed = fromstring(content)  # noqa: S314
-        return self._cached_parsed
+    @override
+    def _parse(self, content: str) -> Element:
+        return fromstring(content)  # noqa: S314
 
     # TODO: Validate
     @classmethod
@@ -336,14 +331,9 @@ class HTMLFile(BaseFile[BeautifulSoup], ABC):
         super().__init__(session, plugin)
 
     # TODO: Validate
-    def parsed(self) -> BeautifulSoup:
-        """Return the parsed content of the file."""
-        if self._cached_parsed is None:
-            if not (content := self.database_record.content):
-                msg = "File content is empty, cannot parse."
-                raise ValueError(msg)
-            self._cached_parsed = BeautifulSoup(content, "html.parser")
-        return self._cached_parsed
+    @override
+    def _parse(self, content: str) -> BeautifulSoup:
+        return BeautifulSoup(content, "html.parser")
 
     # TODO: Validate
     @classmethod
@@ -418,13 +408,6 @@ class DownloadedFile[T](BaseFile[T], ABC):
                 self.write(data)
 
     # TODO: Validate
-    def _stored_content(self) -> str:
-        if not (content := self.database_record.content):
-            msg = "File content is empty, cannot parse."
-            raise ValueError(msg)
-        return content
-
-    # TODO: Validate
     @classmethod
     @override
     def _identifier_suffix(cls) -> str:
@@ -440,11 +423,9 @@ class EndpointFile[T](DownloadedFile[T], ABC):
         return endpoint
 
     # TODO: Validate
-    def parsed(self) -> T:
-        """Return the parsed content of the file."""
-        if self._cached_parsed is None:
-            self._cached_parsed = self._load_endpoint().load(self._stored_content())
-        return self._cached_parsed
+    @override
+    def _parse(self, content: str) -> T:
+        return self._load_endpoint().load(content)
 
 
 # TODO: Validate
@@ -465,51 +446,7 @@ class PagedEndpointFile[T](DownloadedFile[list[T]], ABC):
         return json.dumps(self._download_pages())
 
     # TODO: Validate
-    def stored_pages(self) -> list[str]:
-        pages: list[str] = json.loads(self._stored_content())
-        return pages
-
-    # TODO: Validate
-    def parsed(self) -> list[T]:
-        """Return the parsed pages of the file."""
-        if self._cached_parsed is None:
-            self._cached_parsed = self._load_endpoint().load_pages(self.stored_pages())
-        return self._cached_parsed
-
-
-# TODO: Validate
-class EndpointJSON[T](JSONFile[T], ABC):
-    # TODO: Validate
-    def __init__(
-        self,
-        session: Session,
-        plugin: Plugin,
-        unique_identifier: str,
-    ) -> None:
-        self.unique_identifier = unique_identifier
-        super().__init__(session, plugin)
-
-    # TODO: Validate
-    @abstractmethod
-    def _fetch(self) -> T:
-        """Fetch the data from the API."""
-
-    # TODO: Validate
-    def _get_ACCEPTABLE_ERROR(self) -> str | None:
-        """Return the error message that should be caught during download.
-
-        Override this for dynamic error messages that depend on instance state.
-        """
-        return None
-
-    # TODO: Validate
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        """Return whether `error` should be caught during download.
-
-        Override this to match on the exception type instead of its message.
-        """
-        return str(error) == self._get_ACCEPTABLE_ERROR()
-
-    # TODO: Validate
-    def acceptable_error_extra_value(self) -> str:
-        return f"Invalid unique_identifier {self.unique_identifier}"
+    @override
+    def _parse(self, content: str) -> list[T]:
+        pages: list[str] = json.loads(content)
+        return self._load_endpoint().load_pages(pages)

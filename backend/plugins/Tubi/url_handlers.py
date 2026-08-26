@@ -77,9 +77,7 @@ class EpisodeURLHandler(TubiURLHandler):
     @property
     @override
     def show_key(self) -> str:
-        series_id: str | None = (
-            self.plugin.content_file(self._key).parsed().get("series_id")
-        )
+        series_id = self.plugin.content_file(self._key).parsed().series_id
         if series_id is None:
             msg = f"Invalid Tubi URL: {self.url}"
             raise InvalidURLError(msg)

@@ -2,7 +2,11 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Any, override
+from typing import override
+
+from chirashi.search.models import Images as SearchImages
+from chirashi.search.models import Item as SearchItem
+from chirashi.search.models import SearchModel
 
 from app.utils import tz_datetime
 from plugins.Crunchyroll.helpers import HelperMixin
@@ -27,14 +31,14 @@ class SearchMixin(HelperMixin, register=False):
         parsed = search_file.parsed()
         results = [
             PluginSearchResult(
-                title=item["title"],
+                title=item.title,
                 url=self._search_result_url(item),
-                year=item["series_metadata"]["series_launch_year"]
-                if item.get("series_metadata")
+                year=item.series_metadata.series_launch_year
+                if item.series_metadata
                 else None,
-                image_url=self._search_image_url(item["images"]),
-                media_type=item["type"].replace("_", " ").title(),
-                media_identifier=item["id"],
+                image_url=self._search_image_url(item.images),
+                media_type=item.type.replace("_", " ").title(),
+                media_identifier=item.id,
             )
             for item in self._search_items(parsed)
         ]
@@ -42,39 +46,41 @@ class SearchMixin(HelperMixin, register=False):
 
     # TODO: Validate
     @staticmethod
-    def _search_items(parsed: dict[str, Any]) -> list[dict[str, Any]]:
+    def _search_items(parsed: SearchModel) -> list[SearchItem]:
         top_results = [
             item
-            for datum in parsed["data"]
-            if datum["type"] == "top_results"
-            for item in datum["items"]
+            for datum in parsed.data
+            if datum.type == "top_results"
+            for item in datum.items
         ]
         remaining = [
             item
-            for datum in parsed["data"]
-            if datum["type"] != "top_results"
-            for item in datum["items"]
+            for datum in parsed.data
+            if datum.type != "top_results"
+            for item in datum.items
         ]
-        remaining.sort(key=lambda item: item["search_metadata"]["score"], reverse=True)
-        ranked = {item["id"] for item in top_results}
-        return top_results + [item for item in remaining if item["id"] not in ranked]
+        remaining.sort(key=lambda item: item.search_metadata.score, reverse=True)
+        ranked = {item.id for item in top_results}
+        return top_results + [item for item in remaining if item.id not in ranked]
 
     # TODO: Validate
-    def _search_result_url(self, item: dict[str, Any]) -> str:
-        item_key: str = item["id"]
+    def _search_result_url(self, item: SearchItem) -> str:
+        item_key = item.id
         if is_music_show_key(item_key):
             return self._artist_url(item_key)
-        if is_music_episode_key(item_key) or item["type"] == "episode":
+        if is_music_episode_key(item_key) or item.type == "episode":
             return self._episode_url(item_key)
         return self._series_url(item_key)
 
     # TODO: Validate
     @staticmethod
-    def _search_image_url(images: dict[str, Any]) -> str | None:
-        for key in ("poster_tall", "promo_image", "poster_wide", "thumbnail"):
-            if group := images.get(key):
-                variants = group[0]
-                image = variants[1] if isinstance(variants, list) else variants
-                source: str = image["source"]
-                return source
+    def _search_image_url(images: SearchImages) -> str | None:
+        for group in (images.poster_tall, images.promo_image, images.poster_wide):
+            if group:
+                return group[0][1].source
+        if images.thumbnail:
+            variants = images.thumbnail[0]
+            if isinstance(variants, list):
+                return variants[1].source
+            return variants.source
         return None
