@@ -24,13 +24,17 @@ from plugins.utils.base_plugin.files import BaseFile
 
 # TODO: Validate
 class StreamChanneler(WatchHistoryMixin, BasePlugin, register=False):
-    _VERSION = "0.0.1"
-
     # TODO: Validate
     @classmethod
     @override
     def plugin_name(cls) -> str:
         return "Stream Channeler"
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def favicon_url(cls) -> str | None:
+        return None
 
     # StreamChanneler does not use files, so these abstract methods are no-ops.
 

@@ -7,11 +7,9 @@ from datetime import timedelta
 from typing import override
 
 from app.utils import tz_datetime
-from plugins.Amazon.files import MOVIE_ENTITY_TYPE
+from plugins.Amazon.constants import MOVIE_ENTITY_TYPE
 from plugins.Amazon.helpers import HelperMixin
 from plugins.utils.abstract_plugin import PluginMediaInfo, PluginWatchProviderItem
-
-_DETAIL_MAX_AGE = timedelta(days=7)
 
 
 # TODO: Validate
@@ -22,7 +20,7 @@ class MediaInfoMixin(HelperMixin, register=False):
     @override
     def media_info(self, media_identifier: str) -> PluginMediaInfo | None:
         detail_file = self.detail_file(media_identifier)
-        detail_file.download_if_outdated(tz_datetime.now() - _DETAIL_MAX_AGE)
+        detail_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         is_movie = detail_file.entity_type() == MOVIE_ENTITY_TYPE
         seasons = detail_file.seasons()
         return PluginMediaInfo(
@@ -37,7 +35,7 @@ class MediaInfoMixin(HelperMixin, register=False):
             providers=[
                 PluginWatchProviderItem(
                     name=self.plugin_name(),
-                    icon_url=self.FAVICON_URL,
+                    icon_url=self.favicon_url(),
                     plugin_key=self.plugin_key(),
                     search_url=self._detail_url(detail_file.compact_key()),
                 ),

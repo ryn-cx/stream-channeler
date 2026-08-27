@@ -27,10 +27,23 @@ class DisneyPlus(
 ):
     """Disney+ plugin."""
 
-    _VERSION = "0.0.1"
-    _URL_HANDLERS = (EntityURLHandler,)
-    TMDB_PROVIDER_NAMES = ("Disney+",)
-    FAVICON_URL = "https://www.disneyplus.com/favicon.ico"
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_handlers(cls) -> tuple[type[DisneyPlusURLHandler], ...]:
+        return (EntityURLHandler,)
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def tmdb_provider_names(cls) -> tuple[str, ...]:
+        return ("Disney+",)
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def favicon_url(cls) -> str:
+        return "https://www.disneyplus.com/favicon.ico"
 
     # TODO: Validate
     @classmethod

@@ -11,7 +11,6 @@ watched on TMDB, so its records are left out wherever media is being chosen to p
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import override
 
 from app.canonical_media.service import (
@@ -25,6 +24,7 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
+from plugins.TMDB.constants import CHANGES_INTERVAL
 from plugins.TMDB.files import (
     SeasonSource,
     air_datetime,
@@ -37,18 +37,10 @@ from plugins.TMDB.files import (
 )
 from plugins.TMDB.helpers import HelperMixin
 from plugins.TMDB.keys import (
-    MOVIE_EPISODE_NUMBER,
-    MOVIE_SEASON_NUMBER,
     episode_key,
     parse_show_key,
     season_key,
 )
-
-# How long a title stands for before TMDB is asked what has changed about it.
-# Only a title is on a timer: what its seasons and episodes are is settled by
-# what that ask comes back with, so one of those is read again when TMDB says it
-# moved and is left alone when it says nothing.
-CHANGES_INTERVAL = timedelta(days=7)
 
 
 # TODO: Validate
@@ -62,7 +54,7 @@ class UpsertMixin(HelperMixin, register=False):
         return Source(
             key=self.plugin_key(),
             name=self.plugin_name(),
-            favicon_url=self.FAVICON_URL,
+            favicon_url=self.favicon_url(),
             data_timestamp=self._existing_data_timestamp_or_now(source),
             plugin_id=self.plugin.id,
         ).upsert_and_set_update_at(self.plugin, source)
@@ -272,8 +264,8 @@ class UpsertMixin(HelperMixin, register=False):
             new_season = Season(
                 key=key,
                 name=movie.title,
-                season_number=MOVIE_SEASON_NUMBER,
-                sort_order=MOVIE_SEASON_NUMBER,
+                season_number=0,
+                sort_order=0,
                 url=title_page_url(MediaType.movie, tmdb_id),
                 image_url=poster_image_url(movie.poster_path),
                 data_timestamp=data_timestamp,
@@ -308,8 +300,8 @@ class UpsertMixin(HelperMixin, register=False):
             image_url=backdrop_image_url(movie.backdrop_path),
             duration=duration_seconds(movie.runtime),
             air_date=air_datetime(movie.release_date),
-            episode_number=MOVIE_EPISODE_NUMBER,
-            sort_order=MOVIE_EPISODE_NUMBER,
+            episode_number=0,
+            sort_order=0,
             data_timestamp=data_timestamp,
             update_at=None,
             season_id=season.id,

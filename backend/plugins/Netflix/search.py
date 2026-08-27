@@ -14,8 +14,6 @@ from plugins.utils.abstract_plugin import (
     PluginSearchResults,
 )
 
-_SEARCH_MAX_AGE = timedelta(days=30)
-
 
 # TODO: Validate
 class SearchMixin(HelperMixin, register=False):
@@ -42,7 +40,7 @@ class SearchMixin(HelperMixin, register=False):
         (collections, autocomplete) carry no title and are skipped.
         """
         search_file = self.search_file(query, cursor)
-        search_file.download_if_outdated(tz_datetime.now() - _SEARCH_MAX_AGE)
+        search_file.download_if_outdated(tz_datetime.now() - timedelta(days=30))
 
         next_cursor: str | None = None
         results: list[PluginSearchResult] = []

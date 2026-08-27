@@ -10,10 +10,6 @@ from app.utils import tz_datetime
 from plugins.DisneyPlus.helpers import HelperMixin
 from plugins.utils.abstract_plugin import PluginMediaInfo, PluginWatchProviderItem
 
-_ENTITY_MAX_AGE = timedelta(days=7)
-
-_MILLISECONDS_PER_SECOND = 1000
-
 
 # TODO: Validate
 class MediaInfoMixin(HelperMixin, register=False):
@@ -23,7 +19,7 @@ class MediaInfoMixin(HelperMixin, register=False):
     @override
     def media_info(self, media_identifier: str) -> PluginMediaInfo | None:
         entity_file = self.entity_file(media_identifier)
-        entity_file.download_if_outdated(tz_datetime.now() - _ENTITY_MAX_AGE)
+        entity_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         is_movie = self._is_movie(media_identifier)
         details = self._media_details(media_identifier)
         hero = self._hero(media_identifier)
@@ -37,14 +33,12 @@ class MediaInfoMixin(HelperMixin, register=False):
             number_of_seasons=None
             if is_movie
             else len(self._seasons(media_identifier)),
-            runtime=None
-            if runtime_ms is None
-            else runtime_ms // _MILLISECONDS_PER_SECOND,
+            runtime=None if runtime_ms is None else runtime_ms // 1000,
             genres=details.genres or hero.genres or [],
             providers=[
                 PluginWatchProviderItem(
                     name=self.plugin_name(),
-                    icon_url=self.FAVICON_URL,
+                    icon_url=self.favicon_url(),
                     plugin_key=self.plugin_key(),
                     search_url=self._show_url(media_identifier),
                 ),

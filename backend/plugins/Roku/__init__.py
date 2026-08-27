@@ -26,13 +26,26 @@ class Roku(
 ):
     """The Roku Channel plugin."""
 
-    _VERSION = "0.0.1"
-    _URL_HANDLERS = (
-        DetailsURLHandler,
-        WatchURLHandler,
-    )
-    TMDB_PROVIDER_NAMES = ("The Roku Channel",)
-    FAVICON_URL = "https://therokuchannel.roku.com/favicon.ico"
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_handlers(cls) -> tuple[type[RokuURLHandler], ...]:
+        return (
+            DetailsURLHandler,
+            WatchURLHandler,
+        )
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def tmdb_provider_names(cls) -> tuple[str, ...]:
+        return ("The Roku Channel",)
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def favicon_url(cls) -> str:
+        return "https://therokuchannel.roku.com/favicon.ico"
 
     # TODO: Validate
     @classmethod

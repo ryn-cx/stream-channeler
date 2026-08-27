@@ -5,7 +5,7 @@ import re
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Any, ClassVar, cast, override
+from typing import Any, cast, override
 
 from loguru import logger
 from sqlmodel import Session
@@ -56,12 +56,16 @@ class BasePlugin(
     # The names TMDB uses for this plugin's website in its watch-provider data.
     # A plugin may map to several (e.g. Netflix's base and ad-supported tiers);
     # empty when the plugin has no matching TMDB provider.
-    TMDB_PROVIDER_NAMES: ClassVar[tuple[str, ...]] = ()
+    # TODO: Validate
+    @classmethod
+    def tmdb_provider_names(cls) -> tuple[str, ...]:
+        return ()
 
     # How many search results make up a single page of `search` output.
-    SEARCH_PAGE_SIZE: ClassVar[int] = 20
-
-    _VERSION: str
+    # TODO: Validate
+    @classmethod
+    def search_page_size(cls) -> int:
+        return 20
 
     _current_show: str | None = None
     """What the values cached on this instance belong to."""
@@ -72,34 +76,40 @@ class BasePlugin(
     _file_cache: dict[object, Any]
     _reusable_file_cache: dict[object, Any]
 
-    _PLUGIN_WIDE_FILES: ClassVar[tuple[type[BaseFile[Any]], ...]] = ()
-    """The file types that describe the plugin or a source rather than one show.
+    # TODO: Validate
+    @classmethod
+    def _plugin_wide_files(cls) -> tuple[type[BaseFile[Any]], ...]:
+        """The file types that describe the plugin or a source rather than one show.
 
-    `_file` caches these separately so they survive a change of show, since
-    re-reading a provider list or a feed for every show would be wasted work.
-    """
+        `_file` caches these separately so they survive a change of show, since
+        re-reading a provider list or a feed for every show would be wasted work.
+        """
+        return ()
 
-    SHOW_INDEPENDENT_ATTRIBUTES: ClassVar[frozenset[str]] = frozenset(
-        {
-            "session",
-            "plugin",
-            "_sources",
-            "_canonical_source_record",
-            "_current_show",
-            "_reusable_file_cache",
-        },
-    )
-    """The instance attributes that describe the plugin rather than a show.
+    # TODO: Validate
+    @classmethod
+    def show_independent_attributes(cls) -> frozenset[str]:
+        """The instance attributes that describe the plugin rather than a show.
 
-    Everything else is dropped by `_reset_show_state`, so an attribute only
-    survives a change of show by being named here.
-    """
+        Everything else is dropped by `_reset_show_state`, so an attribute only
+        survives a change of show by being named here.
+        """
+        return frozenset(
+            {
+                "session",
+                "plugin",
+                "_sources",
+                "_canonical_source_record",
+                "_current_show",
+                "_reusable_file_cache",
+            },
+        )
 
     # TODO: Validate
     @classmethod
     def matches_tmdb_provider(cls, provider_name: str) -> bool:
         folded_name = provider_name.casefold()
-        return any(folded_name == name.casefold() for name in cls.TMDB_PROVIDER_NAMES)
+        return any(folded_name == name.casefold() for name in cls.tmdb_provider_names())
 
     # TODO: Validate
     def _set_current_show(self, show: str) -> None:
@@ -127,13 +137,14 @@ class BasePlugin(
         """Drop everything cached for the show the instance has moved off.
 
         Every instance attribute goes except the ones named in
-        `SHOW_INDEPENDENT_ATTRIBUTES`, so a plugin caches whatever it likes
+        `show_independent_attributes`, so a plugin caches whatever it likes
         without having to remember to clear it. An attribute that is read after
         being dropped falls back to its class-level default, which is where a
         per-show value's "nothing cached yet" state belongs.
         """
+        show_independent_attributes = self.show_independent_attributes()
         for name in list(vars(self)):
-            if name not in self.SHOW_INDEPENDENT_ATTRIBUTES:
+            if name not in show_independent_attributes:
                 delattr(self, name)
         self._file_cache = {}
 
@@ -169,7 +180,6 @@ class BasePlugin(
         # Creates the show file cache, which `initialize_database` needs below.
         self._reset_show_state()
         self.initialize_database()
-        self._validate_plugin_version()
 
     # TODO: Validate
     @property
@@ -245,7 +255,6 @@ class BasePlugin(
         return Plugin(
             key=self.plugin_key(),
             name=self.plugin_name(),
-            version=self._VERSION,
         ).upsert_and_set_update_at(self.session, existing_plugin)
 
     # TODO: Validate
@@ -278,16 +287,6 @@ class BasePlugin(
                         season.set_update_at(update_at)
                     if update_show:
                         show.set_update_at(update_at)
-
-    # TODO: Validate
-    def _validate_plugin_version(self) -> None:
-        if self.plugin.version != self._VERSION:
-            msg = (
-                f"Plugin {self.plugin_key()!r} requires version {self._VERSION!r} "
-                f"but the database has version {self.plugin.version!r}. "
-                f"The database record needs to be migrated."
-            )
-            raise RuntimeError(msg)
 
     # TODO: Validate
     def _update_and_upsert_show(
@@ -500,7 +499,7 @@ class BasePlugin(
         """Return the cached `file_type` instance for `identifiers`."""
         cache = (
             self._reusable_file_cache
-            if file_type in self._PLUGIN_WIDE_FILES
+            if file_type in self._plugin_wide_files()
             else self._file_cache
         )
         cache_key = (file_type, identifiers)
@@ -554,12 +553,15 @@ class BasePlugin(
 
 # TODO: Validate
 class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=False):
-    _URL_HANDLERS: ClassVar[tuple[type[URLHandler[Any]], ...]]
+    # TODO: Validate
+    @classmethod
+    @abstractmethod
+    def _url_handlers(cls) -> tuple[type[URLHandler[Any]], ...]: ...
 
     # TODO: Validate
     def get_url_handler(self, url: str) -> HandlerT:
         domain_regex = self._domain_regex()
-        for handler_class in self._URL_HANDLERS:
+        for handler_class in self._url_handlers():
             if match := re.match(handler_class.url_regex(domain_regex), url):
                 return cast("HandlerT", handler_class(self, url, match.group(1)))  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
 
@@ -572,7 +574,8 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
     def url_regex(cls) -> str:
         domain_regex = cls._domain_regex()
         alternatives = "|".join(
-            handler_class.url_regex(domain_regex) for handler_class in cls._URL_HANDLERS
+            handler_class.url_regex(domain_regex)
+            for handler_class in cls._url_handlers()
         )
         return f"(?:{alternatives})"
 

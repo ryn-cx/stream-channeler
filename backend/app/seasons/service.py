@@ -4,8 +4,11 @@
 from app.seasons.models import Season
 from app.seasons.schemas import (
     SeasonInformationSide,
+    SeasonOutput,
 )
 from app.shows.models import Show
+from app.shows.schemas import ShowPublic
+from app.sources.schemas import SourceListPublic
 
 
 # TODO: Validate
@@ -13,15 +16,10 @@ def _information_side(
     label: str,
     season: Season,
     show: Show,
-    url: str | None,
 ) -> SeasonInformationSide:
     return SeasonInformationSide(
         label=label,
-        name=season.name,
-        season_number=season.season_number,
-        sort_order=season.sort_order,
-        image_url=season.image_url,
-        show_name=show.name,
-        url=url,
-        key=season.key,
+        season=SeasonOutput.model_validate(season),
+        show=ShowPublic.model_validate(show),
+        source=SourceListPublic.model_validate(show.source),
     )

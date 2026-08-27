@@ -9,10 +9,6 @@ from urllib.parse import quote
 
 from plugins.Tubi.files import FileMixin
 
-# Episode titles are prefixed with their season and episode number, e.g.
-# "S01:E01 - What a Night for a Knight".
-_EPISODE_TITLE_PREFIX_REGEX = re.compile(r"^S\d+:E\d+ - ")
-
 
 # TODO: Validate
 class HelperMixin(FileMixin, register=False):
@@ -21,7 +17,9 @@ class HelperMixin(FileMixin, register=False):
     # TODO: Validate
     @staticmethod
     def _episode_name(title: str) -> str:
-        return _EPISODE_TITLE_PREFIX_REGEX.sub("", title)
+        # Episode titles are prefixed with their season and episode number,
+        # e.g. "S01:E01 - What a Night for a Knight".
+        return re.sub(r"^S\d+:E\d+ - ", "", title)
 
     # TODO: Validate
     @staticmethod

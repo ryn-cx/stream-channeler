@@ -59,6 +59,7 @@ from app.media.media_type import MediaType
 from app.plugins.models import Plugin
 from app.shows.models import Show
 from app.utils import tz_datetime
+from plugins.TMDB.constants import TMDB_DOMAIN
 from plugins.TMDB.episode_groups import chosen_group_id
 from plugins.TMDB.keys import (
     parse_season_key,
@@ -68,8 +69,6 @@ from plugins.TMDB.keys import (
 from plugins.utils.base_plugin.files import BaseFile, EndpointFile, HTMLFile
 from plugins.utils.base_plugin.plugin import BasePlugin
 from plugins.utils.get_around_client import get_around_client
-
-TMDB_DOMAIN = "themoviedb.org"
 
 
 # TMDB is a public API, so a direct client is used rather than the get-around
@@ -87,13 +86,6 @@ def title_page_url(media_type: str, tmdb_id: int) -> str:
     return f"https://www.{TMDB_DOMAIN}/{media_type}/{tmdb_id}?language=en-US"
 
 
-_POSTER_BASE_URL = "https://image.tmdb.org/t/p/w342"
-_BACKDROP_BASE_URL = "https://image.tmdb.org/t/p/original"
-_STILL_BASE_URL = "https://image.tmdb.org/t/p/original"
-_LOGO_BASE_URL = "https://image.tmdb.org/t/p/w92"
-_LATEST_SHOW_CHANGES_DATES = "tmdb_latest_show_changes_dates"
-
-
 # TODO: Validate
 def _image_url(base_url: str, path: str | None) -> str | None:
     return f"{base_url}{path}" if path else None
@@ -108,22 +100,22 @@ def release_year(value: str | date | None) -> int | None:
 
 # TODO: Validate
 def poster_image_url(path: str | None) -> str | None:
-    return _image_url(_POSTER_BASE_URL, path)
+    return _image_url("https://image.tmdb.org/t/p/w342", path)
 
 
 # TODO: Validate
 def backdrop_image_url(path: str | None) -> str | None:
-    return _image_url(_BACKDROP_BASE_URL, path)
+    return _image_url("https://image.tmdb.org/t/p/original", path)
 
 
 # TODO: Validate
 def still_image_url(path: str | None) -> str | None:
-    return _image_url(_STILL_BASE_URL, path)
+    return _image_url("https://image.tmdb.org/t/p/original", path)
 
 
 # TODO: Validate
 def logo_image_url(path: str | None) -> str | None:
-    return _image_url(_LOGO_BASE_URL, path)
+    return _image_url("https://image.tmdb.org/t/p/w92", path)
 
 
 # TODO: Validate
@@ -348,9 +340,6 @@ class EpisodeTranslations(_TMDBEndpointFile[TvEpisodeTranslationsModel]):
         )
 
 
-CHANGES_OVERLAP = timedelta(days=2)
-
-
 # TODO: Validate
 def change_datetime(changed_at: str) -> datetime:
     return tz_datetime.fromisoformat(changed_at.replace(" UTC", "+00:00"))
@@ -565,12 +554,12 @@ class FileMixin(BasePlugin, register=False):
     def changes_since(self, show_key: str) -> date:
         show = Show.get(self.session, self.source, show_key)
         reference = show.update_at if show and show.update_at else tz_datetime.now()
-        return (reference - CHANGES_OVERLAP).date()
+        return (reference - timedelta(days=2)).date()
 
     # TODO: Validate
     def _latest_show_changes_dates(self) -> dict[int, date | None]:
         cached: dict[int, date | None] = self.session.info.setdefault(
-            _LATEST_SHOW_CHANGES_DATES,
+            "tmdb_latest_show_changes_dates",
             {},
         )
         return cached

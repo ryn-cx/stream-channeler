@@ -9,7 +9,8 @@ from typing import ClassVar, override
 from diving_board.search import models as search_models
 
 from app.utils import tz_datetime
-from plugins.HiDive.helpers import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE, HelperMixin
+from plugins.HiDive.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
+from plugins.HiDive.helpers import HelperMixin
 from plugins.utils.abstract_plugin import (
     PluginSearchResult,
     PluginSearchResults,
@@ -52,7 +53,7 @@ class SearchMixin(HelperMixin, register=False):
                         media_identifier=data.id,
                     ),
                 )
-        return paginate_search_results(results, cursor, self.SEARCH_PAGE_SIZE)
+        return paginate_search_results(results, cursor, self.search_page_size())
 
     # TODO: Validate
     @staticmethod

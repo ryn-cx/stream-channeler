@@ -9,7 +9,7 @@ from typing import override
 from wholoo.search.models import Result
 
 from app.utils import tz_datetime
-from plugins.Hulu.files import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
+from plugins.Hulu.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
 from plugins.Hulu.helpers import HelperMixin
 from plugins.utils.abstract_plugin import (
     PluginSearchResult,
@@ -35,7 +35,7 @@ class SearchMixin(HelperMixin, register=False):
             for result in group.results
             if result.metrics_info.target_type in (SERIES_MEDIA_TYPE, MOVIE_MEDIA_TYPE)
         ]
-        return paginate_search_results(results, cursor, self.SEARCH_PAGE_SIZE)
+        return paginate_search_results(results, cursor, self.search_page_size())
 
     # TODO: Validate
     def _search_result(self, result: Result) -> PluginSearchResult:

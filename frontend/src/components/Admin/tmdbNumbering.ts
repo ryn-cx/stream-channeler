@@ -1,5 +1,7 @@
 // TODO: Validate
 
+import type { EpisodeRecord } from "@/client"
+
 /** A record numbered by its season, its place in that season, and in the title. */
 export interface Numbered {
   season_number: number | null
@@ -66,4 +68,16 @@ export function numberingAgreement(
 export function isNumberedTheSame(own: Numbered, other: Numbered): boolean {
   const agreement = numberingAgreement(own, other)
   return agreement.seasonAndEpisode || agreement.absolute
+}
+
+// TODO: Validate
+/** How a served record is numbered, read off the season and episode it carries. */
+export function numberingOf(
+  record: EpisodeRecord & { absolute_number?: number | null },
+): Numbered {
+  return {
+    season_number: record.season.season_number ?? null,
+    episode_number: record.episode.episode_number ?? null,
+    absolute_number: record.absolute_number ?? null,
+  }
 }

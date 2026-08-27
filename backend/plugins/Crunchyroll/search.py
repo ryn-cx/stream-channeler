@@ -42,7 +42,7 @@ class SearchMixin(HelperMixin, register=False):
             )
             for item in self._search_items(parsed)
         ]
-        return paginate_search_results(results, cursor, self.SEARCH_PAGE_SIZE)
+        return paginate_search_results(results, cursor, self.search_page_size())
 
     # TODO: Validate
     @staticmethod

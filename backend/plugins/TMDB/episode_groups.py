@@ -22,8 +22,6 @@ from typing import Any
 
 from pydantic import BaseModel, ValidationError
 
-EPISODE_GROUP_FIELD = "tmdb_episode_group_id"
-
 
 # TODO: Validate
 class TmdbShowExtra(BaseModel):

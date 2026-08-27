@@ -2,19 +2,13 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import timedelta
 from typing import override
 
 from app.utils import tz_datetime
+from plugins.Crunchyroll.constants import DETAIL_MAX_AGE
 from plugins.Crunchyroll.helpers import HelperMixin, SizedImage
 from plugins.Crunchyroll.music_keys import is_music_show_key
 from plugins.utils.abstract_plugin import PluginMediaInfo, PluginWatchProviderItem
-
-_DETAIL_MAX_AGE = timedelta(days=7)
-
-# Crunchyroll files a series' genres alongside tags that are settings rather
-# than genres, and those are the ones written as `name:value`.
-_KEYWORD_SEPARATOR = ":"
 
 
 # TODO: Validate
@@ -29,7 +23,7 @@ class MediaInfoMixin(HelperMixin, register=False):
     # TODO: Validate
     def _series_media_info(self, show_key: str) -> PluginMediaInfo:
         series_file = self.series_file(show_key)
-        series_file.download_if_outdated(tz_datetime.now() - _DETAIL_MAX_AGE)
+        series_file.download_if_outdated(tz_datetime.now() - DETAIL_MAX_AGE)
         series = series_file.parsed().data[0]
         is_movie = "type:movie" in series.keywords
         return PluginMediaInfo(
@@ -46,7 +40,10 @@ class MediaInfoMixin(HelperMixin, register=False):
             genres=[
                 keyword
                 for keyword in series.keywords
-                if _KEYWORD_SEPARATOR not in keyword
+                # Crunchyroll files a series' genres alongside tags that
+                # are settings rather than genres, and those are the ones
+                # written as `name:value`.
+                if ":" not in keyword
             ],
             providers=[self._own_provider(self._series_url(show_key))],
         )
@@ -54,7 +51,7 @@ class MediaInfoMixin(HelperMixin, register=False):
     # TODO: Validate
     def _artist_media_info(self, artist_id: str) -> PluginMediaInfo:
         artist_file = self.artist_file(artist_id)
-        artist_file.download_if_outdated(tz_datetime.now() - _DETAIL_MAX_AGE)
+        artist_file.download_if_outdated(tz_datetime.now() - DETAIL_MAX_AGE)
         artist = artist_file.parsed().data[0]
         return PluginMediaInfo(
             title=artist.name,
@@ -74,7 +71,7 @@ class MediaInfoMixin(HelperMixin, register=False):
     def _own_provider(cls, url: str) -> PluginWatchProviderItem:
         return PluginWatchProviderItem(
             name=cls.plugin_key(),
-            icon_url=cls.FAVICON_URL,
+            icon_url=cls.favicon_url(),
             plugin_key=cls.plugin_key(),
             search_url=url,
         )

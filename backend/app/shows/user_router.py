@@ -6,10 +6,7 @@ from fastapi import APIRouter
 from app.auth.dependencies import (
     SessionDep,
 )
-from app.canonical_media.metadata import (
-    canonical_show_of,
-    tmdb_show_url,
-)
+from app.canonical_media.metadata import canonical_show_of
 from app.issue_reports.service import list_show_issue_reports
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.shows.dependencies import AdminCanonicalShow, ExistingShow
@@ -53,23 +50,16 @@ def get_show_information(
     counterpart = canonical_show_of(session, show)
     tmdb: ShowInformationSide | None = None
     if counterpart:
-        tmdb = _information_side(
-            TMDB_PLUGIN_KEY,
-            counterpart,
-            tmdb_show_url(counterpart.key),
-        )
+        tmdb = _information_side(TMDB_PLUGIN_KEY, counterpart)
 
     editable = current_user is not None and current_user.is_superuser
 
     return ShowInformationOutput(
-        show_id=show.id,
-        canonical_show_validated_at=show.canonical_show_validated_at,
         editable=editable,
         issue_reports=list_show_issue_reports(session, show.id),
         source=_information_side(
             source.name or source.plugin.name or source.plugin.key,
             show,
-            show.url,
         ),
         tmdb=tmdb,
     )

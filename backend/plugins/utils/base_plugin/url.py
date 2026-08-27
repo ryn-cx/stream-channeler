@@ -138,15 +138,15 @@ class URLMixin(ABC):
         """Return a regex string that matches all of the source's domains."""
         if len(cls.domains()) > 1:
             escaped_domains = [
-                cls._regex_escape_domain(domain) for domain in cls.domains()
+                cls.regex_escape_domain(domain) for domain in cls.domains()
             ]
             return "(?:" + "|".join(escaped_domains) + ")"
 
-        return cls._regex_escape_domain(cls._domain())
+        return cls.regex_escape_domain(cls._domain())
 
     # TODO: Validate
     @classmethod
-    def _regex_escape_domain(cls, domain: str) -> str:
+    def regex_escape_domain(cls, domain: str) -> str:
         """Escapes a plain text domain in the format of example.com.
 
         The escaping process will make a regex that matches the following:

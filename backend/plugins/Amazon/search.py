@@ -38,4 +38,4 @@ class SearchMixin(HelperMixin, register=False):
             )
             for result in search_file.results()
         ]
-        return paginate_search_results(results, cursor, self.SEARCH_PAGE_SIZE)
+        return paginate_search_results(results, cursor, self.search_page_size())

@@ -6,10 +6,7 @@ from fastapi import APIRouter
 from app.auth.dependencies import (
     SessionDep,
 )
-from app.canonical_media.metadata import (
-    canonical_season_of,
-    tmdb_season_url,
-)
+from app.canonical_media.metadata import canonical_season_of
 from app.issue_reports.service import list_season_issue_reports
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.seasons.dependencies import ExistingSeason
@@ -50,17 +47,14 @@ def get_season_information(
             TMDB_PLUGIN_KEY,
             canonical_season,
             canonical_show,
-            tmdb_season_url(canonical_show.key, canonical_season.season_number),
         )
 
     return SeasonInformationOutput(
-        season_id=season.id,
         issue_reports=list_season_issue_reports(session, season.id),
         source=_information_side(
             source.name or source.plugin.name or source.plugin.key,
             season,
             show,
-            season.url,
         ),
         tmdb=tmdb,
     )

@@ -5,19 +5,20 @@ from urllib.parse import quote
 
 from app.media.media_type import MediaType
 from app.sources.models import Source
+from plugins.YouTube.constants import (
+    FREE_SOURCE_KEY,
+    LINKS_SOURCE_KEY,
+    PAID_SOURCE_KEY,
+)
 from plugins.YouTube.files import (
     FileMixin,
+    is_an_album,
     is_channel_key,
     is_free_movies_channel,
-    is_an_album,
     is_show_key,
     is_show_season_key,
     is_video_key,
 )
-
-FREE_SOURCE_KEY = "YouTube Free Movies & Shows"
-PAID_SOURCE_KEY = "YouTube Paid Movies & Shows"
-LINKS_SOURCE_KEY = "YouTube Links"
 
 
 # TODO: Validate

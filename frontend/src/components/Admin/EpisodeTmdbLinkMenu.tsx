@@ -18,14 +18,14 @@ import useCustomToast from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
 import { useSettleTmdbMatch } from "./tmdbMatchesQuery"
-import { type Numbered, numberingAgreement } from "./tmdbNumbering"
+import { type Numbered, numberingAgreement, numberingOf } from "./tmdbNumbering"
 
 type ChoiceOrder = "sequential" | "similarity"
 
 interface EpisodeTmdbLinkMenuProps {
   episodeId: string
-  seasonNumber: number | null
-  episodeNumber: number | null
+  seasonNumber: number | null | undefined
+  episodeNumber: number | null | undefined
   /** Query key of the information the episode was read off. */
   informationQueryKey: unknown[]
   onLinksChanged?: (episode: EpisodeOutput) => void
@@ -34,8 +34,8 @@ interface EpisodeTmdbLinkMenuProps {
 // TODO: Validate
 /** "S1E1", or as much of it as the record was numbered with. */
 function numbering(
-  seasonNumber: number | null,
-  episodeNumber: number | null,
+  seasonNumber: number | null | undefined,
+  episodeNumber: number | null | undefined,
 ): string {
   return `S${seasonNumber ?? "?"}E${episodeNumber ?? "?"}`
 }
@@ -52,7 +52,7 @@ function TmdbPageLink({
   url,
   children,
 }: {
-  url: string | null
+  url: string | null | undefined
   children: ReactNode
 }) {
   if (!url) return <>{children}</>
@@ -96,16 +96,19 @@ function UsedByDetails({ choice }: { choice: TmdbEpisodeChoice }) {
         <span className="mt-1 block space-y-0.5">
           {usedBy.map((used) => (
             <span
-              key={used.id}
+              key={used.episode.id}
               className="flex items-center gap-1 text-muted-foreground"
             >
               <span className="tabular-nums">
-                {numbering(used.season_number, used.episode_number)}
+                {numbering(
+                  used.season.season_number,
+                  used.episode.episode_number,
+                )}
               </span>{" "}
-              <TmdbPageLink url={used.url}>
-                {used.name ?? "Unnamed"}
+              <TmdbPageLink url={used.episode.url}>
+                {used.episode.name ?? "Unnamed"}
               </TmdbPageLink>
-              <EditEpisodeById episodeId={used.id} />
+              <EditEpisodeById episodeId={used.episode.id} />
             </span>
           ))}
         </span>
@@ -116,10 +119,13 @@ function UsedByDetails({ choice }: { choice: TmdbEpisodeChoice }) {
 
 // TODO: Validate
 /** Order two numbers, putting the one nothing numbered last. */
-function compareNumbers(left: number | null, right: number | null): number {
+function compareNumbers(
+  left: number | null | undefined,
+  right: number | null | undefined,
+): number {
   if (left === right) return 0
-  if (left === null) return 1
-  if (right === null) return -1
+  if (left == null) return 1
+  if (right == null) return -1
   return left - right
 }
 
@@ -222,14 +228,14 @@ export function TmdbLinkPicker({
   })
 
   const episodeNumbering: Numbered = {
-    season_number: seasonNumber,
-    episode_number: episodeNumber,
+    season_number: seasonNumber ?? null,
+    episode_number: episodeNumber ?? null,
     absolute_number: null,
   }
 
   // TODO: Validate
   const agreementWith = (choice: TmdbEpisodeChoice) =>
-    numberingAgreement(choice, episodeNumbering)
+    numberingAgreement(numberingOf(choice), episodeNumbering)
 
   const wanted = nameDraft.trim().toLowerCase()
   const isSearch = searchedName !== null
@@ -240,8 +246,8 @@ export function TmdbLinkPicker({
       (showUsed || !choice.already_used) &&
       (isSearch ||
         wanted.length === 0 ||
-        choice.name.toLowerCase().includes(wanted) ||
-        choice.show_name.toLowerCase().includes(wanted)),
+        (choice.episode.name ?? "").toLowerCase().includes(wanted) ||
+        (choice.show.name ?? "").toLowerCase().includes(wanted)),
   )
 
   // TODO: Validate
@@ -255,8 +261,11 @@ export function TmdbLinkPicker({
     (left: TmdbEpisodeChoice, right: TmdbEpisodeChoice) => {
       if (order === "similarity") return right.similarity - left.similarity
       return (
-        compareNumbers(left.season_number, right.season_number) ||
-        compareNumbers(left.episode_number, right.episode_number)
+        compareNumbers(left.season.season_number, right.season.season_number) ||
+        compareNumbers(
+          left.episode.episode_number,
+          right.episode.episode_number,
+        )
       )
     },
   )
@@ -331,7 +340,7 @@ export function TmdbLinkPicker({
         ) : (
           ordered.map((choice) => (
             <div
-              key={choice.tmdb_episode_id}
+              key={choice.episode.id}
               className="flex items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0"
             >
               <span className="w-24 shrink-0 tabular-nums">
@@ -342,7 +351,10 @@ export function TmdbLinkPicker({
                       : "text-muted-foreground"
                   }
                 >
-                  {numbering(choice.season_number, choice.episode_number)}
+                  {numbering(
+                    choice.season.season_number,
+                    choice.episode.episode_number,
+                  )}
                 </span>
                 <span
                   className={cn(
@@ -352,26 +364,28 @@ export function TmdbLinkPicker({
                       : "text-muted-foreground",
                   )}
                 >
-                  {choice.absolute_number === null
+                  {choice.absolute_number == null
                     ? "N/A"
                     : `#${choice.absolute_number}`}
                 </span>
               </span>
               <span className="flex-1 whitespace-normal wrap-break-word">
-                <TmdbPageLink url={choice.url}>{choice.name}</TmdbPageLink>
+                <TmdbPageLink url={choice.episode.tmdb_url}>
+                  {choice.episode.name}
+                </TmdbPageLink>
                 <span className="block text-xs text-muted-foreground">
-                  <TmdbPageLink url={choice.show_url}>
-                    {choice.show_name}
+                  <TmdbPageLink url={choice.show.tmdb_url}>
+                    {choice.show.name}
                   </TmdbPageLink>
                 </span>
               </span>
               {choice.already_used ? <UsedByDetails choice={choice} /> : null}
               <span className="w-20 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
-                {choice.air_date
-                  ? new Date(choice.air_date).toLocaleDateString()
+                {choice.episode.air_date
+                  ? new Date(choice.episode.air_date).toLocaleDateString()
                   : "No air date"}
                 <span className="block">
-                  {formatDuration(choice.duration) ?? "No duration"}
+                  {formatDuration(choice.episode.duration) ?? "No duration"}
                 </span>
               </span>
               <span className="shrink-0 tabular-nums text-muted-foreground">
@@ -383,7 +397,7 @@ export function TmdbLinkPicker({
                 size="sm"
                 className="shrink-0"
                 disabled={linkMutation.isPending}
-                onClick={() => linkMutation.mutate(choice.canonical_episode_id)}
+                onClick={() => linkMutation.mutate(choice.episode.id)}
               >
                 Link
               </Button>

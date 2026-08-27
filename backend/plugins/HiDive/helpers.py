@@ -12,16 +12,12 @@ from diving_board.series import models as series_models
 from diving_board.vod import models as vod_models
 
 from app.shows.models import Show
+from plugins.HiDive.constants import (
+    MOVIE_MEDIA_TYPE,
+    RELEASE_DATE_PREFIX,
+    SERIES_MEDIA_TYPE,
+)
 from plugins.HiDive.files import FileMixin
-
-MOVIE_MEDIA_TYPE = "Movie"
-"""What the plugin calls a title that is a film rather than a series."""
-
-SERIES_MEDIA_TYPE = "Series"
-"""What the plugin calls a title that is a series rather than a film."""
-
-# What the day a movie came out is written after in the tags of its hero.
-_RELEASE_DATE_PREFIX = "Original Premiere: "
 
 
 # TODO: Validate
@@ -82,8 +78,8 @@ class HelperMixin(FileMixin, register=False):
         for content in hero.attributes.content or []:
             for tag in content.attributes.tags or []:
                 text = tag.attributes.text
-                if text and text.startswith(_RELEASE_DATE_PREFIX):
-                    date_string = text.removeprefix(_RELEASE_DATE_PREFIX)
+                if text and text.startswith(RELEASE_DATE_PREFIX):
+                    date_string = text.removeprefix(RELEASE_DATE_PREFIX)
                     return datetime.strptime(date_string, "%B %d, %Y").astimezone()
         return None
 

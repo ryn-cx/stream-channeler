@@ -36,28 +36,31 @@ interface EpisodeInformationDialogProps {
 
 // TODO: Validate
 function sideRows(side: EpisodeInformationSide): InformationRows {
+  const episode = side.episode
   return {
-    Name: side.name,
-    "Episode number": side.episode_number,
-    "Sort order": side.sort_order,
-    "Season number": side.season_number,
-    "Season name": side.season_name,
-    Show: side.show_name,
-    Duration: formatDuration(side.duration),
-    "Air date": formatInformationDate(side.air_date),
-    Description: side.description,
-    Link: side.url ? <ExternalAnchor href={side.url} label={side.url} /> : null,
-    Image: side.image_url ? (
-      <ExternalAnchor href={side.image_url} label={side.image_url} />
+    Name: episode.name,
+    "Episode number": episode.episode_number,
+    "Sort order": episode.sort_order,
+    "Season number": side.season.season_number,
+    "Season name": side.season.name,
+    Show: side.show.name,
+    Duration: formatDuration(episode.duration),
+    "Air date": formatInformationDate(episode.air_date),
+    Description: episode.description,
+    Link: episode.url ? (
+      <ExternalAnchor href={episode.url} label={episode.url} />
     ) : null,
-    Key: side.key,
+    Image: episode.image_url ? (
+      <ExternalAnchor href={episode.image_url} label={episode.image_url} />
+    ) : null,
+    Key: episode.key,
     "Link validated at": formatInformationDate(
-      side.canonical_episode_validated_at,
+      episode.canonical_episode_validated_at,
     ),
-    "Link note": side.canonical_episode_note,
-    "Data timestamp": formatInformationDate(side.data_timestamp),
-    "Update at": formatInformationDate(side.update_at),
-    "Modified at": formatInformationDate(side.modified_at),
+    "Link note": episode.canonical_episode_note,
+    "Data timestamp": formatInformationDate(episode.data_timestamp),
+    "Update at": formatInformationDate(episode.update_at),
+    "Modified at": formatInformationDate(episode.modified_at),
   }
 }
 
@@ -166,8 +169,8 @@ export function EpisodeInformationPanel({
 
       <EpisodeTmdbLinkMenu
         episodeId={episodeId}
-        seasonNumber={data.source.season_number}
-        episodeNumber={data.source.episode_number}
+        seasonNumber={data.source.season.season_number}
+        episodeNumber={data.source.episode.episode_number}
         informationQueryKey={queryKey}
       />
     </div>

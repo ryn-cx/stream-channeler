@@ -22,13 +22,26 @@ class Pluto(
 ):
     """Pluto TV plugin."""
 
-    _VERSION = "0.0.1"
-    _URL_HANDLERS = (
-        MovieURLHandler,
-        SeriesURLHandler,
-    )
-    TMDB_PROVIDER_NAMES = ("Pluto TV",)
-    FAVICON_URL = "https://pluto.tv/favicon.ico"
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_handlers(cls) -> tuple[type[PlutoURLHandler], ...]:
+        return (
+            MovieURLHandler,
+            SeriesURLHandler,
+        )
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def tmdb_provider_names(cls) -> tuple[str, ...]:
+        return ("Pluto TV",)
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def favicon_url(cls) -> str:
+        return "https://pluto.tv/favicon.ico"
 
     # TODO: Validate
     @classmethod

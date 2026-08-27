@@ -3,15 +3,16 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import override
 
 from app.utils import tz_datetime
-from plugins.Hulu.files import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
+from plugins.Hulu.constants import (
+    DETAIL_MAX_AGE,
+    MOVIE_MEDIA_TYPE,
+    SERIES_MEDIA_TYPE,
+)
 from plugins.Hulu.helpers import HelperMixin
 from plugins.utils.abstract_plugin import PluginMediaInfo, PluginWatchProviderItem
-
-_DETAIL_MAX_AGE = timedelta(days=7)
 
 
 # TODO: Validate
@@ -29,7 +30,7 @@ class MediaInfoMixin(HelperMixin, register=False):
     # TODO: Validate
     def _movie_media_info(self, movie_id: str) -> PluginMediaInfo:
         movie_file = self.movie_file(movie_id)
-        movie_file.download_if_outdated(tz_datetime.now() - _DETAIL_MAX_AGE)
+        movie_file.download_if_outdated(tz_datetime.now() - DETAIL_MAX_AGE)
         model = movie_file.parsed()
         entity = model.details.entity
         return PluginMediaInfo(
@@ -46,7 +47,7 @@ class MediaInfoMixin(HelperMixin, register=False):
     # TODO: Validate
     def _series_media_info(self, series_id: str) -> PluginMediaInfo:
         series_file = self.series_file(series_id)
-        series_file.download_if_outdated(tz_datetime.now() - _DETAIL_MAX_AGE)
+        series_file.download_if_outdated(tz_datetime.now() - DETAIL_MAX_AGE)
         model = series_file.parsed()
         entity = model.details.entity
         return PluginMediaInfo(
@@ -67,7 +68,7 @@ class MediaInfoMixin(HelperMixin, register=False):
     def _own_provider(cls, show_key: str, media_type: str) -> PluginWatchProviderItem:
         return PluginWatchProviderItem(
             name=cls.plugin_name(),
-            icon_url=cls.FAVICON_URL,
+            icon_url=cls.favicon_url(),
             plugin_key=cls.plugin_key(),
             search_url=cls._show_url(show_key, media_type),
         )

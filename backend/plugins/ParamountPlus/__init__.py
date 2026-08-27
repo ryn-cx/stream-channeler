@@ -24,19 +24,32 @@ class ParamountPlus(
 ):
     """Paramount+ plugin."""
 
-    _VERSION = "0.0.1"
-    _URL_HANDLERS = (
-        MovieURLHandler,
-        ShowURLHandler,
-    )
-    TMDB_PROVIDER_NAMES = (
-        "Paramount Plus",
-        "Paramount+",
-        "Paramount+ Amazon Channel",
-        "Paramount Plus Essential",
-        "Paramount Plus Premium",
-    )
-    FAVICON_URL = "https://www.paramountplus.com/favicon.ico"
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_handlers(cls) -> tuple[type[ParamountPlusURLHandler], ...]:
+        return (
+            MovieURLHandler,
+            ShowURLHandler,
+        )
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def tmdb_provider_names(cls) -> tuple[str, ...]:
+        return (
+            "Paramount Plus",
+            "Paramount+",
+            "Paramount+ Amazon Channel",
+            "Paramount Plus Essential",
+            "Paramount Plus Premium",
+        )
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def favicon_url(cls) -> str:
+        return "https://www.paramountplus.com/favicon.ico"
 
     # TODO: Validate
     @classmethod

@@ -17,7 +17,7 @@ function withoutEpisode(
   episodeId: string,
 ): UnmatchedEpisodesPublic | undefined {
   if (!page) return page
-  const data = page.data.filter((episode) => episode.id !== episodeId)
+  const data = page.data.filter((row) => row.episode.id !== episodeId)
   if (data.length === page.data.length) return page
   const settled = page.data.length - data.length
   return {

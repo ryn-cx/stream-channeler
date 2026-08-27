@@ -13,6 +13,7 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
+from plugins.YouTube.constants import LONG_DOMAIN, SHORT_DOMAIN
 from plugins.YouTube.files import (
     get_first_item,
     is_an_album,
@@ -23,8 +24,6 @@ from plugins.YouTube.files import (
     is_video_key,
 )
 from plugins.YouTube.handlers import (
-    LONG_DOMAIN,
-    SHORT_DOMAIN,
     ChannelHandleURLHandler,
     ChannelKeyURLHandler,
     ChannelUsernameURLHandler,
@@ -54,27 +53,40 @@ class YouTube(
 ):
     """YouTube plugin."""
 
-    _VERSION = "0.0.1"
-    USER_SEARCHABLE = True
-    SPECIALIZED_UPDATER = True
+    # TODO: Validate
+    @classmethod
+    @override
+    def user_searchable(cls) -> bool:
+        return True
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def specialized_updater(cls) -> bool:
+        return True
 
     # TODO: Don't hardcode the favicon URL
-    FAVICON_URL = (
-        "https://www.youtube.com/s/desktop/45ea6c88/img/logos/favicon_144x144.png"
-    )
+    # TODO: Validate
+    @classmethod
+    @override
+    def favicon_url(cls) -> str:
+        return (
+            "https://www.youtube.com/s/desktop/45ea6c88/img/logos/favicon_144x144.png"
+        )
 
-    # _playlist_video before _video, and _username and _show before _handle, due to
-    # regex overlap.
-    _URL_HANDLERS = (
-        PlaylistVideoURLHandler,
-        ShowPlaylistURLHandler,
-        PlaylistURLHandler,
-        VideoURLHandler,
-        ChannelKeyURLHandler,
-        ShowURLHandler,
-        ChannelUsernameURLHandler,
-        ChannelHandleURLHandler,
-    )
+    # TODO: Validate
+    @classmethod
+    def _url_handlers(cls) -> tuple[type[YouTubeURLHandler], ...]:
+        return (
+            PlaylistVideoURLHandler,  # Must be first due to regex overlap
+            ShowPlaylistURLHandler,
+            PlaylistURLHandler,
+            VideoURLHandler,
+            ChannelKeyURLHandler,
+            ShowURLHandler,
+            ChannelUsernameURLHandler,
+            ChannelHandleURLHandler,
+        )
 
     # TODO: Validate
     @classmethod
@@ -95,14 +107,14 @@ class YouTube(
                 "(?:",
                 handler_class.url_regex(domain_regex),
             )
-            for handler_class in cls._URL_HANDLERS
+            for handler_class in cls._url_handlers()
         )
         return f"(?:{alternatives})"
 
     # TODO: Validate
     def get_url_handler(self, url: str) -> YouTubeURLHandler:
         domain_regex = self._domain_regex()
-        for handler_class in self._URL_HANDLERS:
+        for handler_class in self._url_handlers():
             if match := re.match(handler_class.url_regex(domain_regex), url):
                 return handler_class(self, url, match)
 

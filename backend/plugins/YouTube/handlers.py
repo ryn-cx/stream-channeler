@@ -7,13 +7,14 @@ from typing import TYPE_CHECKING, override
 from urllib.parse import parse_qs, urlparse
 
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from plugins.utils.base_plugin.url import URLHandler, URLMixin
+from plugins.utils.base_plugin.url import URLHandler
+from plugins.YouTube.constants import LONG_DOMAIN_REGEX, SHORT_DOMAIN_REGEX
 from plugins.YouTube.files import (
     channel_key_from_uploads_playlist_key,
     get_first_item,
+    is_an_album,
     is_channel_uploads_playlist_key,
     is_free_movies_channel,
-    is_an_album,
     is_video_key,
     show_season_key,
 )
@@ -29,12 +30,6 @@ if TYPE_CHECKING:
         ChannelByHandle,
         ChannelByUsername,
     )
-
-
-LONG_DOMAIN = "youtube.com"
-SHORT_DOMAIN = "youtu.be"
-_LONG_DOMAIN_REGEX = URLMixin._regex_escape_domain(LONG_DOMAIN)  # noqa: SLF001 - Same package.
-_SHORT_DOMAIN_REGEX = URLMixin._regex_escape_domain(SHORT_DOMAIN)  # noqa: SLF001 - Same package.
 
 
 # TODO: Validate
@@ -68,7 +63,7 @@ class YouTubeURLHandler(URLHandler["YouTube"]):
     @classmethod
     @override
     def url_regex(cls, domain_regex: str) -> str:
-        return _LONG_DOMAIN_REGEX + cls._URL_REGEX
+        return LONG_DOMAIN_REGEX + cls._URL_REGEX
 
     # TODO: Validate
     @property
@@ -103,8 +98,8 @@ class VideoURLHandler(YouTubeURLHandler):
     @classmethod
     @override
     def url_regex(cls, domain_regex: str) -> str:
-        long_paths = rf"{_LONG_DOMAIN_REGEX}\/(?:watch\?v=|shorts\/)"
-        short_path = rf"{_SHORT_DOMAIN_REGEX}\/"
+        long_paths = rf"{LONG_DOMAIN_REGEX}\/(?:watch\?v=|shorts\/)"
+        short_path = rf"{SHORT_DOMAIN_REGEX}\/"
         return rf"(?:{long_paths}|{short_path})" + cls._URL_REGEX
 
     # TODO: Validate
@@ -265,7 +260,7 @@ class PlaylistVideoURLHandler(PlaylistBasedURLHandler):
     @classmethod
     @override
     def url_regex(cls, domain_regex: str) -> str:
-        return rf"(?:{_LONG_DOMAIN_REGEX}|{_SHORT_DOMAIN_REGEX})" + cls._URL_REGEX
+        return rf"(?:{LONG_DOMAIN_REGEX}|{SHORT_DOMAIN_REGEX})" + cls._URL_REGEX
 
     # TODO: Validate
     @property

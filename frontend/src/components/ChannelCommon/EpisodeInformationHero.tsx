@@ -8,7 +8,7 @@ import { InformationHero } from "@/components/ChannelCommon/InformationHero"
 import { formatInformationDate } from "@/components/ChannelCommon/InformationTable"
 
 // TODO: Validate
-export function formatDuration(value: number | null) {
+export function formatDuration(value: number | null | undefined) {
   if (value == null) return null
   const minutes = Math.floor(value / 60)
   const seconds = value % 60
@@ -16,7 +16,7 @@ export function formatDuration(value: number | null) {
 }
 
 // TODO: Validate
-export function durationText(value: number | null) {
+export function durationText(value: number | null | undefined) {
   if (value == null) return null
   return `${Math.floor(value / 60)}m ${value % 60}s`
 }
@@ -37,13 +37,13 @@ export function primarySide(
 // TODO: Validate
 function heroSubtitle(data: EpisodeInformationOutput, preferSource: boolean) {
   const side = primarySide(data, preferSource)
-  const seasonNumber = side.season_number
-  const episodeNumber = side.episode_number
+  const seasonNumber = side.season.season_number
+  const episodeNumber = side.episode.episode_number
   const placement = [
-    seasonNumber != null ? `Season ${seasonNumber}` : side.season_name,
+    seasonNumber != null ? `Season ${seasonNumber}` : side.season.name,
     episodeNumber != null ? `Episode ${episodeNumber}` : null,
   ].filter(Boolean)
-  return [side.show_name, ...placement].filter(Boolean).join(" · ")
+  return [side.show.name, ...placement].filter(Boolean).join(" · ")
 }
 
 // TODO: Validate
@@ -55,9 +55,9 @@ function heroFacts(
   const side = primarySide(data, preferSource)
   const facts = [
     spelledOutDuration
-      ? durationText(side.duration)
-      : formatDuration(side.duration),
-    formatInformationDate(side.air_date),
+      ? durationText(side.episode.duration)
+      : formatDuration(side.episode.duration),
+    formatInformationDate(side.episode.air_date),
     // What TMDB has to do with the episode is no part of one website's own
     // account of it, so it is left out where the website's row is what was
     // opened.
@@ -70,11 +70,11 @@ function heroFacts(
 // TODO: Validate
 function heroLinks(data: EpisodeInformationOutput, preferSource: boolean) {
   const links = []
-  if (data.source.url) {
-    links.push({ label: data.source.label, href: data.source.url })
+  if (data.source.episode.url) {
+    links.push({ label: data.source.label, href: data.source.episode.url })
   }
-  if (!preferSource && data.tmdb?.url) {
-    links.push({ label: data.tmdb.label, href: data.tmdb.url })
+  if (!preferSource && data.tmdb?.episode.url) {
+    links.push({ label: data.tmdb.label, href: data.tmdb.episode.url })
   }
   return links
 }
@@ -149,10 +149,10 @@ export function EpisodeInformationHero({
 
   return (
     <InformationHero
-      title={side.name ?? "Unnamed episode"}
+      title={side.episode.name ?? "Unnamed episode"}
       subtitle={heroSubtitle(data, preferSource)}
-      description={side.description}
-      imageUrl={side.image_url}
+      description={side.episode.description}
+      imageUrl={side.episode.image_url}
       facts={heroFacts(data, preferSource, spelledOutDuration)}
       links={heroLinks(data, preferSource)}
       titleAction={titleAction}

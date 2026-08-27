@@ -24,16 +24,11 @@ from wholoo.tv import TV
 from wholoo.tv.models import TVModel
 
 from app.plugins.models import Plugin
+from plugins.Hulu.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import BaseFile, EndpointFile
 from plugins.utils.base_plugin.media_type import MediaTypeMixin
 from plugins.utils.get_around_client import get_around_client
-
-MOVIE_MEDIA_TYPE = "movie"
-"""What Hulu calls a title that is a film rather than a series."""
-
-SERIES_MEDIA_TYPE = "series"
-"""What Hulu calls a title that is a series rather than a film."""
 
 
 # TODO: Validate

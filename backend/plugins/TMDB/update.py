@@ -15,6 +15,11 @@ from tminidb.changes.tv_series.models import Item
 
 from app.media.media_type import MediaType
 from app.utils import tz_datetime
+from plugins.TMDB.constants import (
+    EPISODE_TRANSLATIONS_CHANGE_KEYS,
+    SEASON_DETAIL_CHANGE_KEYS,
+    SHOW_DETAIL_CHANGE_KEYS,
+)
 from plugins.TMDB.files import ShowChanges, change_datetime
 from plugins.TMDB.import_url import ImportURLMixin
 from plugins.TMDB.keys import parse_show_key, season_key
@@ -24,89 +29,6 @@ if TYPE_CHECKING:
     from datetime import datetime
 
     from app.shows.models import Show
-
-SHOW_DETAIL_CHANGE_KEYS = frozenset(
-    {
-        "adult",
-        "also_known_as",
-        "alternative_titles",
-        "biography",
-        "birthday",
-        "budget",
-        "cast",
-        "certifications",
-        "character_names",
-        "created_by",
-        "crew",
-        "deathday",
-        "episode_run_time",
-        "freebase_id",
-        "freebase_mid",
-        "general",
-        "genres",
-        "homepage",
-        "images",
-        "imdb_id",
-        "languages",
-        "name",
-        "network",
-        "origin_country",
-        "original_name",
-        "original_title",
-        "overview",
-        "parts",
-        "place_of_birth",
-        "plot_keywords",
-        "production_companies",
-        "production_countries",
-        "releases",
-        "revenue",
-        "season_regular",
-        "spoken_languages",
-        "status",
-        "tagline",
-        "title",
-        "translations",
-        "tvdb_id",
-        "tvrage_id",
-        "type",
-        "videos",
-    },
-)
-
-SEASON_DETAIL_CHANGE_KEYS = frozenset(
-    {
-        "air_date",
-        "cast",
-        "crew",
-        "episode",
-        "episode_number",
-        "general",
-        "guest_stars",
-        "images",
-        "name",
-        "overview",
-        "production_code",
-        "runtime",
-        "season",
-        "season_number",
-        "season_regular",
-        "translations",
-        "video",
-    },
-)
-
-EPISODE_TRANSLATIONS_CHANGE_KEYS = frozenset(
-    {
-        "translations",
-    },
-)
-
-SUPPORTED_CHANGE_KEYS = (
-    SHOW_DETAIL_CHANGE_KEYS
-    | SEASON_DETAIL_CHANGE_KEYS
-    | EPISODE_TRANSLATIONS_CHANGE_KEYS
-)
 
 
 # TODO: Validate
@@ -159,7 +81,11 @@ class UpdateMixin(ImportURLMixin, register=False):
                     self._update_changed_season_files(show_key, item, changed_at)
                 if change.key in EPISODE_TRANSLATIONS_CHANGE_KEYS:
                     self._download_outdated_files(translations_files, changed_at)
-                if change.key not in SUPPORTED_CHANGE_KEYS:
+                if change.key not in (
+                    SHOW_DETAIL_CHANGE_KEYS
+                    | SEASON_DETAIL_CHANGE_KEYS
+                    | EPISODE_TRANSLATIONS_CHANGE_KEYS
+                ):
                     message = f"{show_key} has an unknown change key: {change.key}"
                     raise ValueError(message)
 

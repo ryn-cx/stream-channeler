@@ -24,36 +24,22 @@ class MusicCategory(StrEnum):
 
 
 # The prefix Crunchyroll issues ids under, which is what a key is recognised by.
-ARTIST_ID_PREFIX = "MA"
-SERIES_ID_PREFIX = "G"
 CATEGORY_ID_PREFIXES = {
     "MV": MusicCategory.MUSIC_VIDEO,
     "MC": MusicCategory.CONCERT,
-}
-CATEGORY_ID_PREFIX_LENGTH = 2
-
-# Music is its own `Source` so a channel can take an artist without the video
-# catalogue coming with it, and so the two can be scheduled apart. Each source is
-# keyed by the name it is shown under, and the plugin owned channel every artist
-# is queued into is named after the music source it collects.
-VIDEO_SOURCE = "Crunchyroll"
-MUSIC_SOURCE = "Crunchyroll Music"
-MUSIC_CATEGORY_TO_NAME = {
-    MusicCategory.CONCERT: "Concerts",
-    MusicCategory.MUSIC_VIDEO: "Music Videos",
 }
 
 
 # TODO: Validate
 def is_music_show_key(show_key: str) -> bool:
     """Report whether a `Show` key belongs to an artist rather than a series."""
-    return show_key.startswith(ARTIST_ID_PREFIX)
+    return show_key.startswith("MA")
 
 
 # TODO: Validate
 def is_video_show_key(show_key: str) -> bool:
     """Report whether a `Show` key belongs to a series rather than an artist."""
-    return show_key.startswith(SERIES_ID_PREFIX)
+    return show_key.startswith("G")
 
 
 # TODO: Validate
@@ -71,4 +57,4 @@ def is_music_episode_key(episode_key: str) -> bool:
 # TODO: Validate
 def music_episode_category(episode_key: str) -> MusicCategory:
     """Return the listing an episode is a video or a concert of."""
-    return CATEGORY_ID_PREFIXES[episode_key[:CATEGORY_ID_PREFIX_LENGTH]]
+    return CATEGORY_ID_PREFIXES[episode_key[:2]]

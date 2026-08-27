@@ -7,10 +7,12 @@ from urllib.parse import quote, quote_plus
 from wholoo.movies.models import MoviesModel
 
 from app.shows.models import Show
-from plugins.Hulu.files import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE, FileMixin
-
-# What splits the two halves of what a search result is asked for by.
-_MEDIA_IDENTIFIER_SEPARATOR = " "
+from plugins.Hulu.constants import (
+    MEDIA_IDENTIFIER_SEPARATOR,
+    MOVIE_MEDIA_TYPE,
+    SERIES_MEDIA_TYPE,
+)
+from plugins.Hulu.files import FileMixin
 
 
 # TODO: Validate
@@ -44,14 +46,14 @@ class HelperMixin(FileMixin, register=False):
         Hulu names a film and a series the same way, so which of the two the id
         belongs to is written alongside it.
         """
-        return f"{media_type}{_MEDIA_IDENTIFIER_SEPARATOR}{title_key}"
+        return f"{media_type}{MEDIA_IDENTIFIER_SEPARATOR}{title_key}"
 
     # TODO: Validate
     @staticmethod
     def split_media_identifier(media_identifier: str) -> tuple[str, str]:
         """Return the media type and the id `media_identifier` was built from."""
         media_type, _, title_key = media_identifier.partition(
-            _MEDIA_IDENTIFIER_SEPARATOR,
+            MEDIA_IDENTIFIER_SEPARATOR,
         )
         return media_type, title_key
 

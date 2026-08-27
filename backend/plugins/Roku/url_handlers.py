@@ -5,15 +5,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
+from plugins.Roku.constants import CONTENT_ID_REGEX
 from plugins.Roku.files import content_id
 from plugins.utils.base_plugin.url import URLHandler
 
 if TYPE_CHECKING:
     from plugins.Roku import Roku
-
-# Movies, series and episodes use a plain content id, a season appends its number.
-_CONTENT_ID_REGEX = r"[0-9a-f]{32}(?:-\d+)?"
-_SLUG_REGEX = r"[^\/?#]+"
 
 
 # TODO: Validate
@@ -53,8 +50,8 @@ class DetailsURLHandler(RokuURLHandler):
 
     # The title slug after the content id is decorative, only the id matters.
     _URL_REGEX = (
-        rf"\/details\/(?P<details_content_id>{_CONTENT_ID_REGEX})"
-        rf"(?:\/{_SLUG_REGEX})?(?:\/|$)"
+        rf"\/details\/(?P<details_content_id>{CONTENT_ID_REGEX})"
+        r"(?:\/[^\/?#]+)?(?:\/|$)"
     )
 
 
@@ -65,4 +62,4 @@ class WatchURLHandler(RokuURLHandler):
     Example URL https://therokuchannel.roku.com/watch/db1607f1cff2522bb795382bb4b5bcae
     """
 
-    _URL_REGEX = rf"\/watch\/(?P<watch_content_id>{_CONTENT_ID_REGEX})(?:\/|$)"
+    _URL_REGEX = rf"\/watch\/(?P<watch_content_id>{CONTENT_ID_REGEX})(?:\/|$)"

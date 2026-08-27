@@ -16,11 +16,6 @@ from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import EndpointFile
 from plugins.utils.get_around_client import get_around_client
 
-# The region a title's listing is asked for. Watchmode answers with every region
-# the key is enabled for when it is not told one, and a listing of the rest is
-# both larger and of no use to a `User` watching from here.
-REGION = "US"
-
 
 # TODO: Validate
 @cache
@@ -46,7 +41,11 @@ class TitleSources(EndpointFile[TitleSourcesModel]):
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self.API_ENDPOINT.download(self.unique_identifier, regions=REGION)
+        # The region a title's listing is asked for. Watchmode answers with
+        # every region the key is enabled for when it is not told one, and a
+        # listing of the rest is both larger and of no use to a `User` watching
+        # from here.
+        return self.API_ENDPOINT.download(self.unique_identifier, regions="US")
 
     # Occurs when Watchmode does not carry the title TMDB named.
     # TODO: Validate

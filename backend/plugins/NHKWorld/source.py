@@ -65,7 +65,7 @@ class SourceMixin(FileMixin, register=False):
         return Source(
             key=self.plugin_key(),
             name=self.plugin_name(),
-            favicon_url=self.FAVICON_URL,
+            favicon_url=self.favicon_url(),
             update_at=data_timestamp + timedelta(days=1),
             data_timestamp=data_timestamp,
             plugin_id=self.plugin.id,

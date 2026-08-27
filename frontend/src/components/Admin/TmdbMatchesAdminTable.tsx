@@ -10,7 +10,7 @@ import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { Link2, Link2Off } from "lucide-react"
 import { useState } from "react"
 
-import { EpisodesService, type UnmatchedEpisodeOutput } from "@/client"
+import { EpisodesService } from "@/client"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable, serializeTableQuery } from "@/components/Common/DataTable"
 import { DataTableSkeleton } from "@/components/Common/DataTableSkeleton"
@@ -19,7 +19,9 @@ import EditEpisode from "@/components/Episodes/Edit"
 import { Button } from "@/components/ui/button"
 import { usePersistedJsonState } from "@/hooks/usePersistedState"
 import {
+  asTmdbMatchRows,
   TMDB_MATCH_DEFAULT_VISIBILITY,
+  type TmdbMatchRow,
   tmdbMatchColumns,
 } from "./tmdbMatchColumns"
 import { OpenEpisodeEditorProvider } from "./tmdbMatchEditing"
@@ -47,7 +49,7 @@ export function TmdbMatchesAdminTable() {
   ])
   const [filterOptions, setFilterOptions] = useState<ColumnFiltersState>([])
   const [nonCanonicalShowsOnly, setNonCanonicalShowsOnly] = useState(true)
-  const [editing, setEditing] = useState<UnmatchedEpisodeOutput | null>(null)
+  const [editing, setEditing] = useState<TmdbMatchRow | null>(null)
 
   const params = {
     offset: pagination.pageIndex * pagination.pageSize,
@@ -72,7 +74,7 @@ export function TmdbMatchesAdminTable() {
     refetchOnWindowFocus: false,
   })
 
-  const episodes = query.data?.data
+  const episodes = query.data ? asTmdbMatchRows(query.data.data) : undefined
 
   const table = useReactTable({
     data: episodes ?? [],
@@ -131,7 +133,7 @@ export function TmdbMatchesAdminTable() {
       </div>
       {editing ? (
         <EditEpisode
-          episode={editing}
+          episode={editing.episode}
           open
           onOpenChange={(open) => {
             if (!open) setEditing(null)

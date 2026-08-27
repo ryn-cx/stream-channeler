@@ -3,12 +3,12 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import TYPE_CHECKING
 
 from loguru import logger
 
 from app.utils import tz_datetime
+from plugins.YouTube.constants import FEED_UPDATE_DELAY
 from plugins.YouTube.files import FileMixin
 
 if TYPE_CHECKING:
@@ -16,8 +16,6 @@ if TYPE_CHECKING:
 
     from app.seasons.models import Season
     from app.shows.models import Show
-
-_FEED_UPDATE_DELAY = timedelta(hours=1)
 
 
 # TODO: Validate
@@ -88,10 +86,10 @@ class UpdaterMixin(FileMixin, register=False):
                 "PlaylistFeed for season {} is unavailable, skipping new video check.",
                 season.key,
             )
-            season.update_at = tz_datetime.now() + _FEED_UPDATE_DELAY
+            season.update_at = tz_datetime.now() + FEED_UPDATE_DELAY
             return False
 
-        season.update_at = playlist_feed.data_timestamp + _FEED_UPDATE_DELAY
+        season.update_at = playlist_feed.data_timestamp + FEED_UPDATE_DELAY
         if not has_stored_feed:
             return False
 

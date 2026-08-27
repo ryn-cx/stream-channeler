@@ -14,7 +14,7 @@ from app.shows.models import Show
 from app.shows.service import find_and_add_canonical_show
 from app.sources.models import Source
 from app.utils import tz_datetime
-from plugins.Hulu.files import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
+from plugins.Hulu.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
 from plugins.Hulu.helpers import HelperMixin
 
 

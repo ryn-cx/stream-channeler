@@ -23,11 +23,23 @@ class Netflix(
 ):
     """Netflix plugin."""
 
-    _VERSION = "0.0.1"
-    TMDB_PROVIDER_NAMES = ("Netflix", "Netflix Standard with Ads")
-    FAVICON_URL = "https://www.netflix.com/favicon.ico"
+    # TODO: Validate
+    @classmethod
+    @override
+    def tmdb_provider_names(cls) -> tuple[str, ...]:
+        return ("Netflix", "Netflix Standard with Ads")
 
-    _URL_HANDLERS = (TitleURLHandler,)
+    # TODO: Validate
+    @classmethod
+    @override
+    def favicon_url(cls) -> str:
+        return "https://www.netflix.com/favicon.ico"
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_handlers(cls) -> tuple[type[NetflixURLHandler], ...]:
+        return (TitleURLHandler,)
 
     # TODO: Validate
     @classmethod

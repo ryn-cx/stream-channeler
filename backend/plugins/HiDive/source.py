@@ -16,9 +16,6 @@ from plugins.utils.base_plugin.files import COMPLETED_STATUS, EXTRA_STATUS_FIELD
 
 # TODO: Add support for individual episodes of a series.
 
-# What separates a card's show name from the episode title it is written with.
-_SHOW_NAME_SEPARATOR = " - "
-
 
 # TODO: Validate
 def _element_text(element: schedule_models.Element2) -> str:
@@ -74,10 +71,9 @@ class SourceMixin(HelperMixin, register=False):
                         # elements[1] is "Show Name - Episode Title".
                         elements = card.attributes.content[0].attributes.elements
                         release_date = _element_release_date(elements[0])
-                        show_name = _element_text(elements[1]).split(
-                            _SHOW_NAME_SEPARATOR,
-                            1,
-                        )[0]
+                        # What separates a card's show name from the episode
+                        # title it is written with.
+                        show_name = _element_text(elements[1]).split(" - ", 1)[0]
                         if show := shows_by_name.get(show_name):
                             show.set_update_at(release_date)
                             for season in show.seasons:
@@ -98,7 +94,7 @@ class SourceMixin(HelperMixin, register=False):
         return Source(
             key=self.plugin_key(),
             name=self.plugin_name(),
-            favicon_url=self.FAVICON_URL,
+            favicon_url=self.favicon_url(),
             update_at=data_timestamp + timedelta(days=1),
             data_timestamp=data_timestamp,
             plugin_id=self.plugin.id,

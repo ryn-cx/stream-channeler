@@ -5,10 +5,8 @@ from typing import override
 from urllib.parse import quote
 
 from app.shows.models import Show
+from plugins.Pluto.constants import LOCALE
 from plugins.Pluto.files import FileMixin
-
-# The website serves every on-demand page under a locale segment.
-_LOCALE = "en"
 
 
 # TODO: Validate
@@ -26,18 +24,18 @@ class HelperMixin(FileMixin, register=False):
     # TODO: Validate
     @classmethod
     def _series_url(cls, show_key: str) -> str:
-        return cls.build_url(f"{_LOCALE}/on-demand/series/{show_key}/details")
+        return cls.build_url(f"{LOCALE}/on-demand/series/{show_key}/details")
 
     # TODO: Validate
     @classmethod
     def _movie_url(cls, show_key: str) -> str:
-        return cls.build_url(f"{_LOCALE}/on-demand/movies/{show_key}/details")
+        return cls.build_url(f"{LOCALE}/on-demand/movies/{show_key}/details")
 
     # TODO: Validate
     @classmethod
     def _season_url(cls, show_key: str, season_number: int) -> str:
         return cls.build_url(
-            f"{_LOCALE}/on-demand/series/{show_key}/season/{season_number}",
+            f"{LOCALE}/on-demand/series/{show_key}/season/{season_number}",
         )
 
     # TODO: Validate
@@ -49,7 +47,7 @@ class HelperMixin(FileMixin, register=False):
         episode_key: str,
     ) -> str:
         return cls.build_url(
-            f"{_LOCALE}/on-demand/series/{show_key}/season/{season_number}"
+            f"{LOCALE}/on-demand/series/{show_key}/season/{season_number}"
             f"/episode/{episode_key}",
         )
 
@@ -57,4 +55,4 @@ class HelperMixin(FileMixin, register=False):
     @override
     @classmethod
     def search_url(cls, query: str) -> str | None:
-        return cls.build_url(f"{_LOCALE}/search?query={quote(query)}")
+        return cls.build_url(f"{LOCALE}/search?query={quote(query)}")

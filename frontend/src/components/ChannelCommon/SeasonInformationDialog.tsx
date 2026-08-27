@@ -33,16 +33,19 @@ interface SeasonInformationDialogProps {
 
 // TODO: Validate
 function sideRows(side: SeasonInformationSide): InformationRows {
+  const season = side.season
   return {
-    Name: side.name,
-    "Season number": side.season_number,
-    "Sort order": side.sort_order,
-    Show: side.show_name,
-    Link: side.url ? <ExternalAnchor href={side.url} label={side.url} /> : null,
-    Image: side.image_url ? (
-      <ExternalAnchor href={side.image_url} label={side.image_url} />
+    Name: season.name,
+    "Season number": season.season_number,
+    "Sort order": season.sort_order,
+    Show: side.show.name,
+    Link: season.url ? (
+      <ExternalAnchor href={season.url} label={season.url} />
     ) : null,
-    Key: side.key,
+    Image: season.image_url ? (
+      <ExternalAnchor href={season.image_url} label={season.image_url} />
+    ) : null,
+    Key: season.key,
   }
 }
 
@@ -103,7 +106,7 @@ function SeasonInformation({
 
       <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
         <dt className="text-muted-foreground">Season identifier</dt>
-        <dd className="break-all">{data.season_id}</dd>
+        <dd className="break-all">{data.source.season.id}</dd>
       </dl>
 
       <IssueReportsSection

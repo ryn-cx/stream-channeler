@@ -6,14 +6,6 @@ from typing import override
 
 from plugins.DisneyPlus.files import FileMixin, required_value
 
-# Season names are the only place the real season number appears, the position of a
-# season in the list is not reliable because shows can start at a season other than 1.
-_SEASON_NUMBER_REGEX = re.compile(r"\d+")
-
-# Disney+ writes a release year as a year on its own or as a range of them, and
-# the year the title came out is the first one either way.
-_RELEASE_YEAR_REGEX = re.compile(r"\d{4}")
-
 
 # TODO: Validate
 class HelperMixin(FileMixin, register=False):
@@ -22,7 +14,10 @@ class HelperMixin(FileMixin, register=False):
     # TODO: Validate
     @staticmethod
     def _season_number_from_name(name: str, fallback: int) -> int:
-        if number := _SEASON_NUMBER_REGEX.search(name):
+        # Season names are the only place the real season number appears, the
+        # position of a season in the list is not reliable because shows can
+        # start at a season other than 1.
+        if number := re.search(r"\d+", name):
             return int(number.group())
         return fallback
 
@@ -31,7 +26,9 @@ class HelperMixin(FileMixin, register=False):
         release_year = self._hero(show_key).release_year
         if release_year is None:
             return None
-        if year := _RELEASE_YEAR_REGEX.search(release_year):
+        # Disney+ writes a release year as a year on its own or as a range of
+        # them, and the year the title came out is the first one either way.
+        if year := re.search(r"\d{4}", release_year):
             return int(year.group())
         return None
 

@@ -22,8 +22,6 @@ from plugins.utils.abstract_plugin import (
     PluginSearchResults,
 )
 
-_SEARCH_MAX_AGE = timedelta(days=7)
-
 
 # TODO: Validate
 def _decode_cursor(cursor: str | None) -> tuple[int, int]:
@@ -58,7 +56,7 @@ class SearchMixin(LookupMixin, register=False):
         results: list[PluginSearchResult] = []
         next_cursor: str | None = None
 
-        while len(results) < self.SEARCH_PAGE_SIZE:
+        while len(results) < self.search_page_size():
             parsed = self._multi_search_page(query, page)
             matches = [
                 self._search_result(result)
@@ -66,7 +64,7 @@ class SearchMixin(LookupMixin, register=False):
                 if result.media_type in self._SEARCH_MEDIA_TYPES
             ][offset:]
 
-            wanted = self.SEARCH_PAGE_SIZE - len(results)
+            wanted = self.search_page_size() - len(results)
             results.extend(matches[:wanted])
             if len(matches) > wanted:
                 next_cursor = _encode_cursor(page, offset + wanted)
@@ -84,7 +82,7 @@ class SearchMixin(LookupMixin, register=False):
     # TODO: Validate
     def _multi_search_page(self, query: str, page: int) -> SearchMultiModel:
         search_file = self.multi_search_file(query, page)
-        search_file.download_if_outdated(tz_datetime.now() - _SEARCH_MAX_AGE)
+        search_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         return search_file.parsed()
 
     # TODO: Validate

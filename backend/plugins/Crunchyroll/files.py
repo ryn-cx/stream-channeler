@@ -217,7 +217,11 @@ class BrowseMusic(PagedEndpointFile[BrowseMusicModel]):
 class FileMixin(BasePlugin, register=False):
     """File mixin."""
 
-    _PLUGIN_WIDE_FILES = (BrowseSeries, BrowseMusic)
+    # TODO: Validate
+    @classmethod
+    @override
+    def _plugin_wide_files(cls) -> tuple[type[BaseFile[Any]], ...]:
+        return (BrowseSeries, BrowseMusic)
 
     # TODO: Validate
     def series_file(self, show_key: str) -> Series:

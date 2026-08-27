@@ -11,13 +11,10 @@ from typing import override
 from app.canonical_media.service import add_canonical_show
 from app.shows.models import Show
 from app.sources.models import Source
+from plugins.Crunchyroll.constants import MUSIC_SOURCE, VIDEO_SOURCE
 from plugins.Crunchyroll.helpers import HelperMixin
 from plugins.Crunchyroll.media_info import MediaInfoMixin
-from plugins.Crunchyroll.music_keys import (
-    MUSIC_SOURCE,
-    VIDEO_SOURCE,
-    is_music_show_key,
-)
+from plugins.Crunchyroll.music_keys import is_music_show_key
 from plugins.Crunchyroll.search import SearchMixin
 from plugins.Crunchyroll.update import UpdateMixin
 from plugins.Crunchyroll.upsert import UpsertMixin
@@ -48,19 +45,29 @@ class Crunchyroll(
 ):
     """Crunchyroll plugin."""
 
-    _VERSION = "0.0.1"
-    TMDB_PROVIDER_NAMES = ("Crunchyroll",)
-    FAVICON_URL = (
-        "https://crunchyroll.com/build/assets/img/favicons/favicon-v2-96x96.png"
-    )
+    # TODO: Validate
+    @classmethod
+    @override
+    def tmdb_provider_names(cls) -> tuple[str, ...]:
+        return ("Crunchyroll",)
 
-    _URL_HANDLERS = (
-        CrunchyrollMusicVideoURLHandler,  # Must be listed first due to URL overlap.
-        CrunchyrollConcertURLHandler,
-        CrunchyrollArtistURLHandler,
-        CrunchyrollSeriesURLHandler,
-        CrunchyrollEpisodeURLHandler,
-    )
+    # TODO: Validate
+    @classmethod
+    @override
+    def favicon_url(cls) -> str:
+        return "https://crunchyroll.com/build/assets/img/favicons/favicon-v2-96x96.png"
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_handlers(cls) -> tuple[type[CrunchyrollURLHandler], ...]:
+        return (
+            CrunchyrollMusicVideoURLHandler,  # Must be listed first due to URL overlap.
+            CrunchyrollConcertURLHandler,
+            CrunchyrollArtistURLHandler,
+            CrunchyrollSeriesURLHandler,
+            CrunchyrollEpisodeURLHandler,
+        )
 
     # TODO: Validate
     @classmethod

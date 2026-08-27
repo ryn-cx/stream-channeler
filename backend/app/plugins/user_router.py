@@ -52,7 +52,7 @@ def import_url_information(
         PluginImportURLInformation(
             name=plugin_cls.plugin_key(),
             instructions=plugin_cls.import_url_instructions(),
-            favicon_url=plugin_cls.FAVICON_URL,
+            favicon_url=plugin_cls.favicon_url(),
         )
         for plugin_cls in sorted_plugins()
         if plugin_cls.implements("import_url")
@@ -78,13 +78,13 @@ def search_information(
     _current_user: CurrentUser,
 ) -> list[PluginSearchInformation]:
     searchable = [
-        plugin_cls for plugin_cls in sorted_plugins() if plugin_cls.USER_SEARCHABLE
+        plugin_cls for plugin_cls in sorted_plugins() if plugin_cls.user_searchable()
     ]
     in_app_search = [
         PluginSearchInformation(
             plugin_key=plugin_cls.plugin_key(),
             name=plugin_cls.plugin_key(),
-            favicon_url=plugin_cls.FAVICON_URL,
+            favicon_url=plugin_cls.favicon_url(),
         )
         for plugin_cls in searchable
         if plugin_cls.implements("search")
@@ -94,7 +94,7 @@ def search_information(
             plugin_key=plugin_cls.plugin_key(),
             name=plugin_cls.plugin_key(),
             manual_search_only=True,
-            favicon_url=plugin_cls.FAVICON_URL,
+            favicon_url=plugin_cls.favicon_url(),
         )
         for plugin_cls in searchable
         if not plugin_cls.implements("search") and plugin_cls.implements("search_url")
@@ -112,7 +112,7 @@ def search_url(
     """Return a plugin website's own search-page URL for `query`."""
     for plugin_cls in sorted_plugins():
         if plugin_cls.plugin_key() == plugin_key:
-            if not plugin_cls.USER_SEARCHABLE:
+            if not plugin_cls.user_searchable():
                 raise HTTPException(
                     status_code=422,
                     detail=f"Plugin '{plugin_key}' cannot be searched.",
@@ -136,7 +136,7 @@ def search_plugin(
     """
     for plugin_cls in sorted_plugins():
         if plugin_cls.plugin_key() == plugin_key:
-            if not plugin_cls.USER_SEARCHABLE:
+            if not plugin_cls.user_searchable():
                 raise HTTPException(
                     status_code=422,
                     detail=f"Plugin '{plugin_key}' cannot be searched.",

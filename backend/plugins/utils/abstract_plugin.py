@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from functools import cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, override
+from typing import TYPE_CHECKING, Any, override
 
 from pydantic import BaseModel, Field
 
@@ -35,7 +35,10 @@ class AbstractPlugin(ABC):
 
     # The favicon shown next to this plugin's name in the UI; None when the plugin
     # has no icon of its own.
-    FAVICON_URL: ClassVar[str | None] = None
+    # TODO: Validate
+    @classmethod
+    @abstractmethod
+    def favicon_url(cls) -> str | None: ...
 
     # Whether a `User` may search this plugin to find media to add. Off unless a
     # plugin says otherwise, because every other plugin's search exists to cross
@@ -43,7 +46,15 @@ class AbstractPlugin(ABC):
     # through directly. Turning it off closes the search endpoints to the plugin
     # as well as hiding it, so `search` and `search_url` stay available to the
     # cross referencing that calls them in process.
-    USER_SEARCHABLE: ClassVar[bool] = False
+    # TODO: Validate
+    @classmethod
+    def user_searchable(cls) -> bool:
+        return False
+
+    # TODO: Validate
+    @classmethod
+    def specialized_updater(cls) -> bool:
+        return False
 
     # TODO: Validate
     @classmethod
@@ -153,7 +164,10 @@ class AbstractPlugin(ABC):
         return instructions_file.read_text(encoding="utf-8")
 
     # The markdown file, stored next to the plugin, describing the URLs it supports.
-    IMPORT_URL_INSTRUCTIONS_FILE: ClassVar[str] = "import_url_instructions.md"
+    # TODO: Validate
+    @classmethod
+    def import_url_instructions_file(cls) -> str:
+        return "import_url_instructions.md"
 
     # TODO: Validate
     @classmethod
@@ -161,12 +175,12 @@ class AbstractPlugin(ABC):
     def import_url_instructions(cls) -> str:
         """Markdown describing what URLs this plugin supports.
 
-        Read once per plugin from `IMPORT_URL_INSTRUCTIONS_FILE`, so the examples can
+        Read once per plugin from `import_url_instructions_file`, so the examples can
         be edited without touching the plugin. Add that file to include example URLs
         so users know what to paste.
         """
         return cls._read_instructions_file(
-            cls.IMPORT_URL_INSTRUCTIONS_FILE,
+            cls.import_url_instructions_file(),
             "This plugin does not have specific URL import instructions.",
         )
 
@@ -310,9 +324,10 @@ class AbstractPlugin(ABC):
     # The markdown file, stored next to the plugin, describing how to export a watch
     # history. Whether a plugin can import one is decided by `import_watch_history`,
     # not by this file existing.
-    IMPORT_WATCH_HISTORY_INSTRUCTIONS_FILE: ClassVar[str] = (
-        "import_watch_history_instructions.md"
-    )
+    # TODO: Validate
+    @classmethod
+    def import_watch_history_instructions_file(cls) -> str:
+        return "import_watch_history_instructions.md"
 
     # TODO: Validate
     @classmethod
@@ -320,11 +335,11 @@ class AbstractPlugin(ABC):
     def import_watch_history_instructions(cls) -> str:
         """Markdown text describing how to export and upload watch history.
 
-        Read once per plugin from `IMPORT_WATCH_HISTORY_INSTRUCTIONS_FILE`, so the
+        Read once per plugin from `import_watch_history_instructions_file`, so the
         steps can be edited without touching the plugin.
         """
         return cls._read_instructions_file(
-            cls.IMPORT_WATCH_HISTORY_INSTRUCTIONS_FILE,
+            cls.import_watch_history_instructions_file(),
             "This plugin does not have specific watch history import instructions.",
         )
 
@@ -355,7 +370,7 @@ class AbstractPlugin(ABC):
 
         Called to cross reference a title against what this plugin's service
         carries, rather than to be searched through by a `User`. Only a plugin
-        setting `USER_SEARCHABLE` is offered to one.
+        setting `user_searchable` is offered to one.
 
         Args:
             query: The text to search for.

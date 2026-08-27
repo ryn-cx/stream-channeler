@@ -98,7 +98,7 @@ const EditEpisode = ({ episode, open, onOpenChange }: EditEpisodeProps) => {
   const isOpen = open ?? isOpenHere
   const setIsOpen = onOpenChange ?? setIsOpenHere
   const information = useEpisodeInformation(episode.id, isOpen)
-  const showId = information.data?.source.show_id
+  const showId = information.data?.source.show.id
   const [canonicalEpisodeIds, setCanonicalEpisodeIds] = useState(
     episode.canonical_episode_ids ?? [],
   )

@@ -14,15 +14,13 @@ from app.shows.models import Show
 from app.sources.models import Source
 from app.users.service import get_or_create_plugin_user
 from app.utils import tz_datetime
+from plugins.Crunchyroll.constants import MUSIC_SOURCE, VIDEO_SOURCE
 from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries
-from plugins.Crunchyroll.music_keys import MUSIC_SOURCE, VIDEO_SOURCE
 from plugins.Crunchyroll.upsert import UpsertMixin
 from plugins.utils.base_plugin.files import (
     COMPLETED_STATUS,
     EXTRA_STATUS_FIELD,
 )
-
-MUSIC_CHANNEL_DESCRIPTION_PATH = Path(__file__).parent / "music_channel_description.md"
 
 
 # TODO: Validate
@@ -142,7 +140,9 @@ class UpdateMixin(UpsertMixin, register=False):
 
         channel = Channel(
             name=MUSIC_SOURCE,
-            description=MUSIC_CHANNEL_DESCRIPTION_PATH.read_text(encoding="utf-8"),
+            description=(
+                Path(__file__).parent / "music_channel_description.md"
+            ).read_text(encoding="utf-8"),
             visibility=Visibility.public,
             anonymous=False,
             user_id=plugin_user.id,

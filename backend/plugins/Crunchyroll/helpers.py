@@ -6,10 +6,9 @@ from chirashi.series.models import Datum as SeriesDatum
 
 from app.media.media_type import MediaType
 from app.sources.models import Source
+from plugins.Crunchyroll.constants import MUSIC_SOURCE, VIDEO_SOURCE
 from plugins.Crunchyroll.files import FileMixin
 from plugins.Crunchyroll.music_keys import (
-    MUSIC_SOURCE,
-    VIDEO_SOURCE,
     is_music_episode_key,
     is_music_show_key,
     music_episode_category,

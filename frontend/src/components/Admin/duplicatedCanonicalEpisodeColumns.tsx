@@ -8,88 +8,96 @@ export const duplicatedCanonicalEpisodeColumns: ColumnDef<DuplicatedCanonicalEpi
   [
     {
       id: "source_name",
-      accessorFn: (row) => row.source_name ?? "",
+      accessorFn: (row) => row.source.name ?? "",
       header: "Colliding Source",
       meta: { filterVariant: "select" },
       filterFn: "equalsString",
     },
     {
       id: "plugin_name",
-      accessorFn: (row) => row.plugin_name ?? "",
+      accessorFn: (row) => row.source.plugin_name ?? "",
       header: "Colliding Plugin",
       meta: { filterVariant: "select" },
       filterFn: "equalsString",
     },
     {
       id: "show_name",
-      accessorFn: (row) => row.show_name ?? "",
+      accessorFn: (row) => row.canonical.show.name ?? "",
       header: "Canonical Show",
-      cell: ({ row }) =>
-        row.original.show_url ? (
+      cell: ({ row }) => {
+        const show = row.original.canonical.show
+        const url = show.tmdb_url ?? show.url
+        return url ? (
           <a
-            href={row.original.show_url}
+            href={url}
             target="_blank"
             rel="noreferrer"
             className="hover:underline"
           >
-            {row.original.show_name ?? "Unnamed"}
+            {show.name ?? "Unnamed"}
           </a>
         ) : (
-          (row.original.show_name ?? "Unnamed")
-        ),
+          (show.name ?? "Unnamed")
+        )
+      },
     },
     {
       id: "show_year",
-      accessorFn: (row) => row.show_year ?? 0,
+      accessorFn: (row) => row.canonical.show.year ?? 0,
       header: "Year",
-      cell: ({ row }) => row.original.show_year ?? "",
+      cell: ({ row }) => row.original.canonical.show.year ?? "",
     },
     {
       id: "season_number",
-      accessorFn: (row) => row.season_number ?? 0,
+      accessorFn: (row) => row.canonical.season.season_number ?? 0,
       header: "Season",
     },
     {
       id: "episode_number",
-      accessorFn: (row) => row.episode_number ?? 0,
+      accessorFn: (row) => row.canonical.episode.episode_number ?? 0,
       header: "Episode",
     },
     {
       id: "name",
-      accessorFn: (row) => row.name ?? "",
+      accessorFn: (row) => row.canonical.episode.name ?? "",
       header: "Canonical Episode",
-      cell: ({ row }) =>
-        row.original.url ? (
+      cell: ({ row }) => {
+        const episode = row.original.canonical.episode
+        const url = episode.tmdb_url ?? episode.url
+        return url ? (
           <a
-            href={row.original.url}
+            href={url}
             target="_blank"
             rel="noreferrer"
             className="hover:underline"
           >
-            {row.original.name ?? "Unnamed"}
+            {episode.name ?? "Unnamed"}
           </a>
         ) : (
-          (row.original.name ?? "Unnamed")
-        ),
+          (episode.name ?? "Unnamed")
+        )
+      },
     },
     {
       id: "key",
-      accessorFn: (row) => row.key,
+      accessorFn: (row) => row.canonical.episode.key,
       header: "Key",
       cell: ({ row }) => (
-        <span className="font-mono text-xs">{row.original.key}</span>
+        <span className="font-mono text-xs">
+          {row.original.canonical.episode.key}
+        </span>
       ),
     },
     {
       id: "canonical_plugin_name",
-      accessorFn: (row) => row.canonical_plugin_name ?? "",
+      accessorFn: (row) => row.canonical.source.plugin_name ?? "",
       header: "Canonical Plugin",
       meta: { filterVariant: "select" },
       filterFn: "equalsString",
     },
     {
       id: "canonical_source_name",
-      accessorFn: (row) => row.canonical_source_name ?? "",
+      accessorFn: (row) => row.canonical.source.name ?? "",
       header: "Canonical Source",
       meta: { filterVariant: "select" },
       filterFn: "equalsString",

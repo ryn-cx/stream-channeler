@@ -38,8 +38,6 @@ from plugins.utils.abstract_plugin import (
 from plugins.utils.base_plugin.plugin import BasePlugin
 from plugins.utils.manage_plugins import sorted_plugins
 
-STREAMING_CATEGORIES = ("flatrate", "free", "ads")
-
 type WatchProviders = MovieWatchProvidersModel | TvSeriesWatchProvidersModel
 type Provider = (
     MovieFlatrateItem
@@ -50,8 +48,6 @@ type Provider = (
     | TvBuyItem
     | TvRentItem
 )
-
-_MEDIA_TYPE_LABELS = {MediaType.movie: "Movie", MediaType.tv: "TV Show"}
 
 
 # TODO: Validate
@@ -110,7 +106,7 @@ class MediaInfoMixin(LookupMixin, register=False):
         backdrop_path = detail.backdrop_path
         return PluginMediaInfo(
             title=title,
-            media_type=_MEDIA_TYPE_LABELS[media_type],
+            media_type={MediaType.movie: "Movie", MediaType.tv: "TV Show"}[media_type],
             tagline=detail.tagline or None,
             overview=detail.overview or None,
             poster_url=poster_image_url(poster_path or backdrop_path),
@@ -136,7 +132,7 @@ def streaming_providers(
         return []
 
     providers_by_id: dict[int, Provider] = {}
-    for category in STREAMING_CATEGORIES:
+    for category in ("flatrate", "free", "ads"):
         providers: Sequence[Provider] = getattr(united_states, category, None) or []
         for provider in providers:
             providers_by_id.setdefault(provider.provider_id, provider)

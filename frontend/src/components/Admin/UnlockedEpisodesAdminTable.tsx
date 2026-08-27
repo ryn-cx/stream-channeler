@@ -9,7 +9,7 @@ import { DataTable } from "@/components/Common/DataTable"
 import { DataTableSkeleton } from "@/components/Common/DataTableSkeleton"
 import { PageHeader } from "@/components/Common/PageHeader"
 import { usePersistedJsonState } from "@/hooks/usePersistedState"
-import { tmdbMatchColumns } from "./tmdbMatchColumns"
+import { asTmdbMatchRows, tmdbMatchColumns } from "./tmdbMatchColumns"
 import { UNLOCKED_EPISODES_QUERY_KEY } from "./unlockedEpisodesQuery"
 
 const STORAGE_KEY = "admin-unlocked-episodes"
@@ -19,10 +19,11 @@ export function UnlockedEpisodesAdminTable() {
   const [columnVisibility, setColumnVisibility] =
     usePersistedJsonState<VisibilityState>(`${STORAGE_KEY}-visibility`, {})
 
-  const { data: episodes } = useQuery({
+  const { data } = useQuery({
     queryKey: UNLOCKED_EPISODES_QUERY_KEY,
     queryFn: () => EpisodesService.adminGetUnlockedEpisodes({ limit: 1000 }),
   })
+  const episodes = data ? asTmdbMatchRows(data) : undefined
 
   const table = useReactTable({
     data: episodes ?? [],

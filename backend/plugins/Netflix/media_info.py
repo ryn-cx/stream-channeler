@@ -10,8 +10,6 @@ from app.utils import tz_datetime
 from plugins.Netflix.helpers import HelperMixin
 from plugins.utils.abstract_plugin import PluginMediaInfo, PluginWatchProviderItem
 
-_TITLE_MAX_AGE = timedelta(days=7)
-
 
 # TODO: Validate
 class MediaInfoMixin(HelperMixin, register=False):
@@ -21,7 +19,7 @@ class MediaInfoMixin(HelperMixin, register=False):
     @override
     def media_info(self, media_identifier: str) -> PluginMediaInfo | None:
         self.title_file(media_identifier).download_if_outdated(
-            tz_datetime.now() - _TITLE_MAX_AGE,
+            tz_datetime.now() - timedelta(days=7),
         )
         video = self._title_video(media_identifier)
         is_movie = self._is_movie(media_identifier)
@@ -42,7 +40,7 @@ class MediaInfoMixin(HelperMixin, register=False):
             providers=[
                 PluginWatchProviderItem(
                     name=self.plugin_name(),
-                    icon_url=self.FAVICON_URL,
+                    icon_url=self.favicon_url(),
                     plugin_key=self.plugin_key(),
                     search_url=self._show_url(media_identifier),
                 ),

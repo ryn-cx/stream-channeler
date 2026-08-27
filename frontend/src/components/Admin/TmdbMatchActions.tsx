@@ -2,11 +2,11 @@
 import { useMutation } from "@tanstack/react-query"
 import { Check, CircleSlash, Hash, ListOrdered, ListTree } from "lucide-react"
 
-import type { UnmatchedEpisodeOutput } from "@/client"
 import { EpisodesService } from "@/client"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
+import type { TmdbMatchRow } from "./tmdbMatchColumns"
 import { useOpenEpisodeEditor } from "./tmdbMatchEditing"
 import { useSettleTmdbMatch } from "./tmdbMatchesQuery"
 
@@ -26,7 +26,7 @@ export function TmdbMatchConfirmButton({
   kind,
 }: {
   episodeId: string
-  match: NonNullable<UnmatchedEpisodeOutput["best_match"]>
+  match: NonNullable<TmdbMatchRow["best_match"]>
   kind: "name" | "season_episode" | "absolute"
 }) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -36,11 +36,13 @@ export function TmdbMatchConfirmButton({
     mutationFn: () =>
       EpisodesService.adminLinkEpisodeToTmdb({
         episodeId,
-        canonicalEpisodeId: match.canonical_episode_id,
+        canonicalEpisodeId: match.episode.id,
       }),
     onMutate: () => settle(episodeId),
     onSuccess: () =>
-      showSuccessToast(`Linked to ${match.name ?? "the suggested episode"}`),
+      showSuccessToast(
+        `Linked to ${match.episode.name ?? "the suggested episode"}`,
+      ),
     onError: (error: unknown, _variables, previous) => {
       restore(previous)
       handleError.call(
@@ -66,7 +68,7 @@ export function TmdbMatchConfirmButton({
         variant="outline"
         size="sm"
         disabled={confirmMutation.isPending}
-        title={`Link to ${match.name ?? `the episode this ${label} offers`}`}
+        title={`Link to ${match.episode.name ?? `the episode this ${label} offers`}`}
         onClick={() => confirmMutation.mutate()}
       >
         <Icon className="h-4 w-4" />
@@ -94,19 +96,17 @@ export function TmdbMatchConfirmButton({
  * A settled episode is no longer waiting on anybody, so the row leaves the table
  * as soon as any way of settling it succeeds.
  */
-export function TmdbMatchActions({
-  episode,
-}: {
-  episode: UnmatchedEpisodeOutput
-}) {
+export function TmdbMatchActions({ episode }: { episode: TmdbMatchRow }) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const { settle, restore, reread } = useSettleTmdbMatch()
   const openEditor = useOpenEpisodeEditor()
 
   const absentMutation = useMutation({
     mutationFn: () =>
-      EpisodesService.adminMarkEpisodeAbsentFromTmdb({ episodeId: episode.id }),
-    onMutate: () => settle(episode.id),
+      EpisodesService.adminMarkEpisodeAbsentFromTmdb({
+        episodeId: episode.episode.id,
+      }),
+    onMutate: () => settle(episode.episode.id),
     onSuccess: () => showSuccessToast("Marked as not on TMDB"),
     onError: (error: unknown, _variables, previous) => {
       restore(previous)

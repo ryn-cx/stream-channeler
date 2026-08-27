@@ -5,18 +5,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
-from plugins.Amazon.keys import TITLE_KEY_REGEX
+from plugins.Amazon.constants import TITLE_KEY_REGEX
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.url import URLHandler
 
 if TYPE_CHECKING:
     from plugins.Amazon import Amazon
-
-_TITLE_KEY_REGEX = TITLE_KEY_REGEX
-
-# The id Amazon writes into a share link, which names the title in a different
-# id space to the one its own pages are keyed by.
-_GTI_REGEX = r"amzn1\.dv\.gti\.[0-9a-f-]+"
 
 
 # TODO: Validate
@@ -54,7 +48,7 @@ class PrimeVideoDetailURLHandler(AmazonURLHandler):
 
     # The region a link was written in is the region of whoever wrote it, and the
     # title is the same title whichever region asked for it.
-    _URL_REGEX = rf"(?:\/region\/[a-z]{{2}})?\/detail\/(?P<prime_video_title_key>{_TITLE_KEY_REGEX})"
+    _URL_REGEX = rf"(?:\/region\/[a-z]{{2}})?\/detail\/(?P<prime_video_title_key>{TITLE_KEY_REGEX})"
 
 
 # TODO: Validate
@@ -66,7 +60,7 @@ class AmazonDetailURLHandler(AmazonURLHandler):
 
     # The title slug Amazon puts in front of /dp/ is decorative, only the id
     # after it matters.
-    _URL_REGEX = rf"(?:\/[^\/]+)?\/(?:dp|gp\/video\/detail)\/(?P<amazon_title_key>{_TITLE_KEY_REGEX})"
+    _URL_REGEX = rf"(?:\/[^\/]+)?\/(?:dp|gp\/video\/detail)\/(?P<amazon_title_key>{TITLE_KEY_REGEX})"
 
 
 # TODO: Validate
@@ -94,4 +88,6 @@ class WatchAmazonDetailURLHandler(RedirectURLHandler):
     https://watch.amazon.com/detail?gti=amzn1.dv.gti.92ad2133-d35e-1cb1-5d8e-f7b122a68228
     """
 
-    _URL_REGEX = rf"\/detail\?gti=(?P<watch_amazon_title_key>{_GTI_REGEX})"
+    # The id Amazon writes into a share link, which names the title in a
+    # different id space to the one its own pages are keyed by.
+    _URL_REGEX = r"\/detail\?gti=(?P<watch_amazon_title_key>amzn1\.dv\.gti\.[0-9a-f-]+)"

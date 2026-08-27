@@ -17,12 +17,10 @@ from app.shows.models import Show
 from app.shows.service import find_and_add_canonical_show
 from app.sources.models import Source
 from app.utils import tz_datetime
+from plugins.Crunchyroll.constants import MUSIC_SOURCE, VIDEO_SOURCE
 from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries
 from plugins.Crunchyroll.helpers import HelperMixin, SizedImage
 from plugins.Crunchyroll.music_keys import (
-    MUSIC_CATEGORY_TO_NAME,
-    MUSIC_SOURCE,
-    VIDEO_SOURCE,
     MusicCategory,
     is_music_show_key,
     is_video_show_key,
@@ -78,7 +76,7 @@ class UpsertMixin(HelperMixin, register=False):
         return Source(
             key=source_key,
             name=source_key,
-            favicon_url=self.FAVICON_URL,
+            favicon_url=self.favicon_url(),
             data_timestamp=data_timestamp,
             update_at=data_timestamp + update_interval,
             plugin_id=self.plugin.id,
@@ -213,7 +211,10 @@ class UpsertMixin(HelperMixin, register=False):
             if self._season_is_outdated(season, show.key, force=force):
                 season = Season(
                     key=category,
-                    name=MUSIC_CATEGORY_TO_NAME[category],
+                    name={
+                        MusicCategory.CONCERT: "Concerts",
+                        MusicCategory.MUSIC_VIDEO: "Music Videos",
+                    }[category],
                     url=self._artist_url(show.key),
                     data_timestamp=self.season_data_timestamp(category, show.key),
                     show_id=show.id,

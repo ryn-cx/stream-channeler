@@ -32,16 +32,29 @@ class Amazon(
 ):
     """Amazon Prime Video plugin."""
 
-    _VERSION = "0.0.1"
-    _URL_HANDLERS = (
-        # Must be listed first: a share link's path is also a detail path, and
-        # only this one carries the id in the query rather than the path.
-        WatchAmazonDetailURLHandler,
-        PrimeVideoDetailURLHandler,
-        AmazonDetailURLHandler,
-    )
-    TMDB_PROVIDER_NAMES = ("Amazon Prime Video", "Amazon Video", "Prime Video")
-    FAVICON_URL = "https://www.primevideo.com/favicon.ico"
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_handlers(cls) -> tuple[type[AmazonURLHandler], ...]:
+        return (
+            # Must be listed first: a share link's path is also a detail path, and
+            # only this one carries the id in the query rather than the path.
+            WatchAmazonDetailURLHandler,
+            PrimeVideoDetailURLHandler,
+            AmazonDetailURLHandler,
+        )
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def tmdb_provider_names(cls) -> tuple[str, ...]:
+        return ("Amazon Prime Video", "Amazon Video", "Prime Video")
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def favicon_url(cls) -> str:
+        return "https://www.primevideo.com/favicon.ico"
 
     # TODO: Validate
     @classmethod

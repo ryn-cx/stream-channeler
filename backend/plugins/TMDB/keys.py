@@ -25,11 +25,6 @@ from app.canonical_media.keys import (
 )
 from app.media.media_type import MediaType
 
-# A movie has no seasons or episodes of its own, so it is stored as a single
-# season holding a single episode, both numbered zero.
-MOVIE_SEASON_NUMBER = 0
-MOVIE_EPISODE_NUMBER = 0
-
 
 # TODO: Validate
 class RecordKey(NamedTuple):

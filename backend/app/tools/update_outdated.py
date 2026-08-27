@@ -360,11 +360,7 @@ def _installed_plugin_keys() -> list[str]:
 # TODO: Validate
 def _specialized_plugin_keys() -> set[str]:
     """Return the keys of the plugins that have an update run of their own."""
-    return {
-        plugin.plugin_key()
-        for plugin in plugins
-        if getattr(plugin, "SPECIALIZED_UPDATER", False)
-    }
+    return {plugin.plugin_key() for plugin in plugins if plugin.specialized_updater()}
 
 
 # TODO: Validate

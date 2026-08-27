@@ -20,12 +20,19 @@ class NHKWorld(
     URLHandlerPlugin[NHKWorldURLHandler],
     register=True,
 ):
-    _VERSION = "0.0.1"
-
     # TODO: Add support for single episodes
-    _URL_HANDLERS = (ShowURLHandler,)
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_handlers(cls) -> tuple[type[NHKWorldURLHandler], ...]:
+        return (ShowURLHandler,)
+
     # TODO: Don't hardcode the favicon URL
-    FAVICON_URL = "https://www3.nhk.or.jp/nhkworld/common/site_images/nw_webapp.ico"
+    # TODO: Validate
+    @classmethod
+    @override
+    def favicon_url(cls) -> str:
+        return "https://www3.nhk.or.jp/nhkworld/common/site_images/nw_webapp.ico"
 
     # TODO: Validate
     @classmethod

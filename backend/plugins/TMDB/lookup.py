@@ -10,6 +10,7 @@ from tminidb.details.tv_series.models import Season
 from app.files.models import File
 from app.media.media_type import MediaType
 from app.utils import tz_datetime
+from plugins.TMDB.constants import MEDIA_INFO_MAX_AGE
 from plugins.TMDB.files import (
     FileMixin,
     MovieDetails,
@@ -20,11 +21,6 @@ from plugins.TMDB.files import (
     TvSeriesDetails,
     TvWatchProviders,
 )
-
-_SEARCH_MAX_AGE = timedelta(days=7)
-
-
-_MEDIA_INFO_MAX_AGE = timedelta(days=7)
 
 
 # TODO: Validate
@@ -93,7 +89,7 @@ class LookupMixin(FileMixin, register=False):
             search_file = self.tv_search_file(query, year)
         else:
             search_file = self.multi_search_file(query)
-        search_file.download_if_outdated(tz_datetime.now() - _SEARCH_MAX_AGE)
+        search_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         return search_file
 
     # TODO: Validate
@@ -103,7 +99,7 @@ class LookupMixin(FileMixin, register=False):
         tmdb_id: int,
     ) -> MovieWatchProviders | TvWatchProviders:
         providers_file = self.watch_providers_file(media_type, tmdb_id)
-        providers_file.download_if_outdated(tz_datetime.now() - _MEDIA_INFO_MAX_AGE)
+        providers_file.download_if_outdated(tz_datetime.now() - MEDIA_INFO_MAX_AGE)
         return providers_file
 
     # TODO: Validate
@@ -119,7 +115,7 @@ class LookupMixin(FileMixin, register=False):
         file this reads cannot be assumed to exist.
         """
         detail_file = self.media_detail_file(media_type, tmdb_id)
-        detail_file.download_if_outdated(tz_datetime.now() - _MEDIA_INFO_MAX_AGE)
+        detail_file.download_if_outdated(tz_datetime.now() - MEDIA_INFO_MAX_AGE)
         return detail_file
 
     # TODO: Validate

@@ -29,6 +29,7 @@ from app.shows.schemas import (
     UnvalidatedLinkedShowOutput,
     UnvalidatedShowOutput,
 )
+from app.sources.schemas import SourceListPublic
 from app.utils import tz_datetime
 
 _TMDB_TITLE_URL = re.compile(r"themoviedb\.org/(?:movie|tv)/(?P<tmdb_id>\d+)")
@@ -542,13 +543,9 @@ def _show_output(show: Show) -> ShowPublic:
 
 
 # TODO: Validate
-def _information_side(label: str, show: Show, url: str | None) -> ShowInformationSide:
+def _information_side(label: str, show: Show) -> ShowInformationSide:
     return ShowInformationSide(
         label=label,
-        name=show.name,
-        media_type=show.media_type,
-        description=show.description,
-        image_url=show.image_url,
-        url=url,
-        key=show.key,
+        show=ShowPublic.model_validate(show),
+        source=SourceListPublic.model_validate(show.source),
     )

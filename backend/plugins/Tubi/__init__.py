@@ -27,14 +27,27 @@ class Tubi(
 ):
     """Tubi plugin."""
 
-    _VERSION = "0.0.1"
-    _URL_HANDLERS = (
-        MovieURLHandler,
-        SeriesURLHandler,
-        EpisodeURLHandler,
-    )
-    TMDB_PROVIDER_NAMES = ("Tubi TV", "Tubi")
-    FAVICON_URL = "https://tubitv.com/favicon.ico"
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_handlers(cls) -> tuple[type[TubiURLHandler], ...]:
+        return (
+            MovieURLHandler,
+            SeriesURLHandler,
+            EpisodeURLHandler,
+        )
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def tmdb_provider_names(cls) -> tuple[str, ...]:
+        return ("Tubi TV", "Tubi")
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def favicon_url(cls) -> str:
+        return "https://tubitv.com/favicon.ico"
 
     # TODO: Validate
     @classmethod

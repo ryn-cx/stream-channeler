@@ -17,9 +17,6 @@ from plugins.utils.base_plugin.files import BaseFile, EndpointFile
 from plugins.utils.base_plugin.media_type import MediaTypeMixin
 from plugins.utils.get_around_client import get_around_client
 
-# A movie has no seasons of its own so its single season is given a fixed number.
-_MOVIE_SEASON_NUMBER = 0
-
 
 # TODO: Validate
 @cache
@@ -141,7 +138,9 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
     # TODO: Validate
     @classmethod
     def _movie_season_key(cls, show_key: str) -> str:
-        return cls._season_key(show_key, _MOVIE_SEASON_NUMBER)
+        # A movie has no seasons of its own so its single season is given a
+        # fixed number.
+        return cls._season_key(show_key, 0)
 
     # TODO: Validate
     @staticmethod

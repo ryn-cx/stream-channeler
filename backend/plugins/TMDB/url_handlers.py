@@ -20,13 +20,6 @@ def _url_regex(media_type: MediaType) -> str:
 
 # TODO: Validate
 class TMDBURLHandler(URLHandler["TMDB"]):
-    """Base URL handler for the TMDB plugin.
-
-    TMDB numbers films and series separately and gives each half of its
-    catalogue a path of its own, so which half a URL points at is read off the
-    path rather than looked up.
-    """
-
     media_type: ClassVar[MediaType]
 
     # TODO: Validate

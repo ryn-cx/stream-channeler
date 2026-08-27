@@ -15,11 +15,6 @@ from app.media.media_type import MediaType
 from app.shows.models import Show
 from plugins.TMDB import TMDB
 
-_SEARCHED_MEDIA_TYPES = {
-    "movie": MediaType.movie,
-    "tv": MediaType.tv,
-}
-
 
 # TODO: Validate
 class Media(NamedTuple):
@@ -69,7 +64,12 @@ class TMDBLinker:
             (
                 Media(half, result.id)
                 for result in found
-                if (half := _SEARCHED_MEDIA_TYPES.get(result.media_type)) is not None
+                if (
+                    half := {"movie": MediaType.movie, "tv": MediaType.tv}.get(
+                        result.media_type,
+                    )
+                )
+                is not None
             ),
             None,
         )

@@ -3,20 +3,20 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import override
 
 from diving_board.series import models as series_models
 
 from app.utils import tz_datetime
+from plugins.HiDive.constants import (
+    DETAIL_MAX_AGE,
+    MOVIE_IDENTIFIER_PREFIX,
+    MOVIE_MEDIA_TYPE,
+    SERIES_MEDIA_TYPE,
+)
 from plugins.HiDive.files import vod_hero
-from plugins.HiDive.helpers import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE, HelperMixin
+from plugins.HiDive.helpers import HelperMixin
 from plugins.utils.abstract_plugin import PluginMediaInfo, PluginWatchProviderItem
-
-_DETAIL_MAX_AGE = timedelta(days=7)
-
-# What a search result's identifier writes in front of the key of a film.
-_MOVIE_IDENTIFIER_PREFIX = "VOD"
 
 
 # TODO: Validate
@@ -26,21 +26,21 @@ class MediaInfoMixin(HelperMixin, register=False):
     # TODO: Validate
     @override
     def _media_identifier(self, show_key: str) -> str:
-        prefix = _MOVIE_IDENTIFIER_PREFIX if self._is_movie() else "SERIES"
+        prefix = MOVIE_IDENTIFIER_PREFIX if self._is_movie() else "SERIES"
         return f"{prefix}#{show_key}"
 
     # TODO: Validate
     @override
     def media_info(self, media_identifier: str) -> PluginMediaInfo | None:
         type_prefix, _, key = media_identifier.partition("#")
-        if type_prefix == _MOVIE_IDENTIFIER_PREFIX:
+        if type_prefix == MOVIE_IDENTIFIER_PREFIX:
             return self._movie_media_info(key)
         return self._series_media_info(key)
 
     # TODO: Validate
     def _series_media_info(self, show_key: str) -> PluginMediaInfo:
         series_file = self.series_file(show_key)
-        series_file.download_if_outdated(tz_datetime.now() - _DETAIL_MAX_AGE)
+        series_file.download_if_outdated(tz_datetime.now() - DETAIL_MAX_AGE)
         series_data = series_file.parsed()
         seasons = self._series_season_items(series_data)
         return PluginMediaInfo(
@@ -56,7 +56,7 @@ class MediaInfoMixin(HelperMixin, register=False):
     # TODO: Validate
     def _movie_media_info(self, show_key: str) -> PluginMediaInfo:
         vod_file = self.vod_file(show_key)
-        vod_file.download_if_outdated(tz_datetime.now() - _DETAIL_MAX_AGE)
+        vod_file.download_if_outdated(tz_datetime.now() - DETAIL_MAX_AGE)
         hero = vod_hero(vod_file.parsed())
         release_date = self._release_date(hero)
         return PluginMediaInfo(
@@ -78,7 +78,7 @@ class MediaInfoMixin(HelperMixin, register=False):
     def _own_provider(cls, url: str) -> PluginWatchProviderItem:
         return PluginWatchProviderItem(
             name=cls.plugin_name(),
-            icon_url=cls.FAVICON_URL,
+            icon_url=cls.favicon_url(),
             plugin_key=cls.plugin_key(),
             search_url=url,
         )

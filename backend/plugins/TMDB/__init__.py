@@ -3,7 +3,8 @@
 
 from typing import override
 
-from plugins.TMDB.files import TMDB_DOMAIN, FileMixin
+from plugins.TMDB.constants import TMDB_DOMAIN
+from plugins.TMDB.files import FileMixin
 from plugins.TMDB.helpers import HelperMixin
 from plugins.TMDB.media_info import MediaInfoMixin
 from plugins.TMDB.search import SearchMixin
@@ -26,10 +27,23 @@ class TMDB(
 ):
     """TMDB Plugin."""
 
-    _VERSION = "0.0.1"
-    FAVICON_URL = "https://www.themoviedb.org/favicon.ico"
-    _URL_HANDLERS = (MovieURLHandler, TvURLHandler)
-    USER_SEARCHABLE = True
+    # TODO: Validate
+    @classmethod
+    @override
+    def favicon_url(cls) -> str:
+        return "https://www.themoviedb.org/favicon.ico"
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_handlers(cls) -> tuple[type[TMDBURLHandler], ...]:
+        return (MovieURLHandler, TvURLHandler)
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def user_searchable(cls) -> bool:
+        return True
 
     # TODO: Validate
     @classmethod

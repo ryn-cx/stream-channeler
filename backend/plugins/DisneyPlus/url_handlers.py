@@ -10,10 +10,6 @@ from plugins.utils.base_plugin.url import URLHandler
 if TYPE_CHECKING:
     from plugins.DisneyPlus import DisneyPlus
 
-_UUID_REGEX = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
-# Optional locale segment, e.g. /en-gb or /de.
-_LOCALE_REGEX = r"(?:\/[a-z]{2}(?:-[a-z]{2})?)?"
-
 
 # TODO: Validate
 class DisneyPlusURLHandler(URLHandler["DisneyPlus"]):
@@ -40,8 +36,11 @@ class EntityURLHandler(DisneyPlusURLHandler):
     Example URL https://www.disneyplus.com/en-gb/browse/entity-3135b0cb-a002-438d-a9fd-60d86284c93f
     """
 
+    # The optional locale segment, e.g. /en-gb or /de.
     _URL_REGEX = (
-        rf"{_LOCALE_REGEX}\/browse\/entity-(?P<entity_id>{_UUID_REGEX})(?:\/|$)"
+        r"(?:\/[a-z]{2}(?:-[a-z]{2})?)?\/browse\/entity-"
+        r"(?P<entity_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"
+        r"(?:\/|$)"
     )
 
     # TODO: Validate

@@ -111,7 +111,11 @@ class NewVideoEpisodes(EndpointFile[VideoEpisodesModel]):
 # TODO: Validate
 class FileMixin(BasePlugin, register=False):
     # The new episodes feed belongs to the source, so every show reads the same one.
-    _PLUGIN_WIDE_FILES = (NewVideoEpisodes,)
+    # TODO: Validate
+    @classmethod
+    @override
+    def _plugin_wide_files(cls) -> tuple[type[BaseFile[Any]], ...]:
+        return (NewVideoEpisodes,)
 
     # TODO: Validate
     def video_program_file(self, show_key: str) -> VideoProgram:

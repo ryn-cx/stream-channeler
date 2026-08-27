@@ -35,13 +35,6 @@ from plugins.utils.base_plugin.url import URLHandler
 from plugins.utils.manage_plugins import plugin_for_url
 from plugins.WatchMode import WatchMode
 
-# Which half of the catalogue a search of both says a result came from. A multi
-# search also returns people, who are no title and cannot be imported.
-_SEARCHED_MEDIA_TYPES = {
-    "movie": MediaType.movie,
-    "tv": MediaType.tv,
-}
-
 
 # TODO: Validate
 class ImportURLMixin(
@@ -313,7 +306,12 @@ class ImportURLMixin(
         for result in (
             self.auto_updating_search_media(None, name, year).parsed().results
         ):
-            half = _SEARCHED_MEDIA_TYPES.get(result.media_type)
+            # Which half of the catalogue a search of both says a result came
+            # from. A multi search also returns people, who are no title and
+            # cannot be imported.
+            half = {"movie": MediaType.movie, "tv": MediaType.tv}.get(
+                result.media_type,
+            )
             if half is not None:
                 return half, result.id
         return None
