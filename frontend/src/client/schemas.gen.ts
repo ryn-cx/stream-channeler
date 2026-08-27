@@ -5011,7 +5011,7 @@ export const PluginMediaInfoSchema = {
     },
     type: 'object',
     title: 'PluginMediaInfo',
-    description: `Everything a plugin knows about a single title it can be searched for.
+    description: `The catalogue detail a searchable plugin shows for one of its results.
 
 Modelled on what TMDB returns, since it is the richest source, and left
 optional throughout so a service that only knows a title and a description
@@ -5190,12 +5190,7 @@ export const PluginSearchResultSchema = {
     type: 'object',
     required: ['title', 'url'],
     title: 'PluginSearchResult',
-    description: `Search result from a plugin.
-
-Every plugin searches its own catalogue, so a result maps directly to an importable
-URL and carries the identifier that plugin files the title under. Details for the
-result are read back from the same plugin under that identifier rather than being
-matched onto some other service's non-canonical row.`
+    description: 'Search result from a plugin.'
 } as const;
 
 export const PluginSearchResultsSchema = {

@@ -51,29 +51,19 @@ from app.episodes.service import (
     list_unmatched_episodes,
 )
 from app.media.service import delete_record
-from app.plugins.dependencies import ExistingPlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
 from app.seasons.dependencies import ExistingSeason
 from app.seasons.models import Season
 from app.service import list_response
-from app.shows.dependencies import AdminCanonicalShow, ExistingShow
 from app.shows.models import Show
-from app.sources.dependencies import ExistingSource
 from app.sources.models import Source
-from app.users.dependencies import OptionalUser
 
 """Episodes router."""
 
 
 canonical_episodes_router = APIRouter(
     prefix="/episodes/canonical",
-    tags=["canonical-episodes"],
-)
-
-
-canonical_show_episodes_router = APIRouter(
-    prefix="/shows/canonical/{canonical_show_id}",
     tags=["canonical-episodes"],
 )
 
@@ -87,27 +77,6 @@ episodes_router = APIRouter(
 
 season_episodes_router = APIRouter(
     prefix="/seasons/{season_id}",
-    tags=["episodes"],
-    dependencies=[Depends(get_current_active_superuser)],
-)
-
-
-show_episodes_router = APIRouter(
-    prefix="/shows/{show_id}",
-    tags=["episodes"],
-    dependencies=[Depends(get_current_active_superuser)],
-)
-
-
-source_episodes_router = APIRouter(
-    prefix="/sources/{source_id}",
-    tags=["episodes"],
-    dependencies=[Depends(get_current_active_superuser)],
-)
-
-
-plugin_episodes_router = APIRouter(
-    prefix="/plugins/{plugin_id}",
     tags=["episodes"],
     dependencies=[Depends(get_current_active_superuser)],
 )
@@ -158,90 +127,6 @@ def get_episodes(
     episodes = list_response(
         session=session,
         base=Episode.select_with_plugin_eager(),
-        response_model=EpisodesPublic,
-        schema=EpisodeListOutput,
-        params=read_options,
-        current_user=current_user,
-        extra_columns=EPISODE_EXTRA_COLUMNS,
-    )
-    fill_episodes(session, episodes.data)
-    return episodes
-
-
-# TODO: Validate
-@season_episodes_router.get("/episodes")
-def get_season_episodes(
-    session: SessionDep,
-    season: ExistingSeason,
-    current_user: OptionalUser,
-    read_options: Annotated[ReadOptions, Query()],
-) -> EpisodesPublic:
-    episodes = list_response(
-        session=session,
-        base=Episode.select_with_plugin_eager().where(Episode.season_id == season.id),
-        response_model=EpisodesPublic,
-        schema=EpisodeListOutput,
-        params=read_options,
-        current_user=current_user,
-        extra_columns=EPISODE_EXTRA_COLUMNS,
-    )
-    fill_episodes(session, episodes.data)
-    return episodes
-
-
-# TODO: Validate
-@plugin_episodes_router.get("/episodes")
-def get_plugin_episodes(
-    session: SessionDep,
-    plugin: ExistingPlugin,
-    current_user: OptionalUser,
-    read_options: Annotated[ReadOptions, Query()],
-) -> EpisodesPublic:
-    episodes = list_response(
-        session=session,
-        base=Episode.select_with_plugin_eager().where(Source.plugin_id == plugin.id),
-        response_model=EpisodesPublic,
-        schema=EpisodeListOutput,
-        params=read_options,
-        current_user=current_user,
-        extra_columns=EPISODE_EXTRA_COLUMNS,
-    )
-    fill_episodes(session, episodes.data)
-    return episodes
-
-
-# TODO: Validate
-@source_episodes_router.get("/episodes")
-def get_source_episodes(
-    session: SessionDep,
-    source: ExistingSource,
-    current_user: OptionalUser,
-    read_options: Annotated[ReadOptions, Query()],
-) -> EpisodesPublic:
-    episodes = list_response(
-        session=session,
-        base=Episode.select_with_plugin_eager().where(Show.source_id == source.id),
-        response_model=EpisodesPublic,
-        schema=EpisodeListOutput,
-        params=read_options,
-        current_user=current_user,
-        extra_columns=EPISODE_EXTRA_COLUMNS,
-    )
-    fill_episodes(session, episodes.data)
-    return episodes
-
-
-# TODO: Validate
-@show_episodes_router.get("/episodes")
-def get_show_episodes(
-    session: SessionDep,
-    show: ExistingShow,
-    current_user: OptionalUser,
-    read_options: Annotated[ReadOptions, Query()],
-) -> EpisodesPublic:
-    episodes = list_response(
-        session=session,
-        base=Episode.select_with_plugin_eager().where(Season.show_id == show.id),
         response_model=EpisodesPublic,
         schema=EpisodeListOutput,
         params=read_options,
@@ -459,35 +344,10 @@ def get_canonical_episodes(
     )
 
 
-# TODO: Validate
-@canonical_show_episodes_router.get("/episodes")
-def get_canonical_show_episodes(
-    session: SessionDep,
-    canonical_show: AdminCanonicalShow,
-    current_user: SuperUser,
-    read_options: Annotated[ReadOptions, Query()],
-) -> CanonicalEpisodesPublic:
-    """Get every `Episode` under one `Show`, across its seasons."""
-    return canonical_list_response(
-        session=session,
-        base=_select_with_canonical_season_and_show().where(
-            Season.show_id == canonical_show.id,
-        ),
-        response_model=CanonicalEpisodesPublic,
-        schema=CanonicalEpisodeListOutput,
-        read_options=read_options,
-        current_user=current_user,
-        extra_columns=CANONICAL_EPISODE_EXTRA_COLUMNS,
-    )
-
-
 router = APIRouter()
 
 
 router.include_router(canonical_episodes_router)
-
-
-router.include_router(canonical_show_episodes_router)
 
 
 router.include_router(episodes_router)
@@ -496,10 +356,3 @@ router.include_router(episodes_router)
 router.include_router(season_episodes_router)
 
 
-router.include_router(show_episodes_router)
-
-
-router.include_router(source_episodes_router)
-
-
-router.include_router(plugin_episodes_router)

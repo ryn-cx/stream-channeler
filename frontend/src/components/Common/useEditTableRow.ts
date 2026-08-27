@@ -29,9 +29,6 @@ export function useEditTableRow<TVariables extends object>({
     mutationFn,
     // When mutate is called:
     onMutate: async (newData, context) => {
-      // Match every cached table holding this row, regardless of which page's
-      // query key it belongs to (rows appear on both the top-level list and
-      // the scoped detail pages, which use different keys).
       const filters = { predicate: queryHasRow(rowId) }
       // Cancel any outgoing refetches
       // (so they don't overwrite our optimistic update)

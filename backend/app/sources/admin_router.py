@@ -26,7 +26,6 @@ from app.sources.schemas import (
     SourcesPublic,
     SourceUpdate,
 )
-from app.users.dependencies import OptionalUser
 
 sources_router = APIRouter(
     prefix="/sources",
@@ -68,25 +67,6 @@ def get_sources(
     return list_response(
         session=session,
         base=Source.select_with_plugin_eager(),
-        response_model=SourcesPublic,
-        schema=SourceListPublic,
-        params=read_options,
-        current_user=current_user,
-        extra_columns=SOURCE_EXTRA_COLUMNS,
-    )
-
-
-# TODO: Validate
-@plugin_sources_router.get("/sources")
-def get_plugin_sources(
-    session: SessionDep,
-    plugin: ExistingPlugin,
-    current_user: OptionalUser,
-    read_options: Annotated[ReadOptions, Query()],
-) -> SourcesPublic:
-    return list_response(
-        session=session,
-        base=Source.select_with_plugin_eager().where(Source.plugin_id == plugin.id),
         response_model=SourcesPublic,
         schema=SourceListPublic,
         params=read_options,

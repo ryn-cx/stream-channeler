@@ -216,8 +216,8 @@ export function SeasonEpisodes({
                 <EditEpisode episode={episode} />
               </AdminOnly>
               <MediaPageButton
-                to="/season/$seasonKey"
-                params={{ seasonKey: seasonId }}
+                to="/episodes"
+                search={{ season_id: seasonId }}
                 label="Open this episode's season here"
               />
             </div>

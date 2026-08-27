@@ -62,7 +62,7 @@ const AddSource = ({ pluginId }: AddSourceProps) => {
     },
     onSettled: () => {
       queryClient.invalidateQueries({
-        queryKey: ["plugins", pluginId, "sources"],
+        queryKey: ["media-table", "Sources"],
       })
     },
   })

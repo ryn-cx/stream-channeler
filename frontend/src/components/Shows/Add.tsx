@@ -42,7 +42,7 @@ const AddShow = ({ sourceKey }: AddShowProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
-  const queryKey = ["sources", sourceKey, "shows"]
+  const queryKey = ["media-table", "Shows"]
 
   const form = useForm<FormInput, unknown, FormOutput>({
     resolver: zodResolver(formSchema),

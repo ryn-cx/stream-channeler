@@ -140,8 +140,8 @@ export function SourceGroupRow({
         {single ? markButton(single) : null}
         {single ? <RowControls row={single} /> : null}
         <MediaPageButton
-          to="/source/$sourceKey"
-          params={{ sourceKey: group.sourceId }}
+          to="/shows"
+          search={{ source_id: group.sourceId }}
           label="Open this source here"
         />
       </div>

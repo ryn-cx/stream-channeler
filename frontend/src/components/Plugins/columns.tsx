@@ -26,8 +26,8 @@ export function pluginColumns(isAdmin = false): ColumnDef<PluginTableData>[] {
         return (
           <div className="flex items-center gap-2">
             <Link
-              to="/plugin/$pluginId"
-              params={{ pluginId: row.original.id }}
+              to="/sources"
+              search={{ plugin_id: row.original.id }}
               className="font-medium text-primary hover:underline"
             >
               {label}
@@ -35,8 +35,8 @@ export function pluginColumns(isAdmin = false): ColumnDef<PluginTableData>[] {
             {isAdmin && (
               <TooltipIconLink label="Files">
                 <Link
-                  to="/plugin/$pluginId/files"
-                  params={{ pluginId: row.original.id }}
+                  to="/files"
+                  search={{ plugin_id: row.original.id }}
                   className="text-muted-foreground hover:text-foreground"
                   aria-label="Files"
                 >
@@ -46,8 +46,8 @@ export function pluginColumns(isAdmin = false): ColumnDef<PluginTableData>[] {
             )}
             <TooltipIconLink label="Shows">
               <Link
-                to="/plugin/$pluginId/shows"
-                params={{ pluginId: row.original.id }}
+                to="/shows"
+                search={{ plugin_id: row.original.id }}
                 className="text-muted-foreground hover:text-foreground"
                 aria-label="Shows"
               >
@@ -56,8 +56,8 @@ export function pluginColumns(isAdmin = false): ColumnDef<PluginTableData>[] {
             </TooltipIconLink>
             <TooltipIconLink label="Seasons">
               <Link
-                to="/plugin/$pluginId/seasons"
-                params={{ pluginId: row.original.id }}
+                to="/seasons"
+                search={{ plugin_id: row.original.id }}
                 className="text-muted-foreground hover:text-foreground"
                 aria-label="Seasons"
               >
@@ -66,8 +66,8 @@ export function pluginColumns(isAdmin = false): ColumnDef<PluginTableData>[] {
             </TooltipIconLink>
             <TooltipIconLink label="Episodes">
               <Link
-                to="/plugin/$pluginId/episodes"
-                params={{ pluginId: row.original.id }}
+                to="/episodes"
+                search={{ plugin_id: row.original.id }}
                 className="text-muted-foreground hover:text-foreground"
                 aria-label="Episodes"
               >

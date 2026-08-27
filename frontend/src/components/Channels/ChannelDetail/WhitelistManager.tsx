@@ -387,8 +387,8 @@ export function WhitelistManager({
                     </Button>
                   )}
                   <MediaPageButton
-                    to="/show/$showKey"
-                    params={{ showKey: canonicalShowId }}
+                    to="/seasons"
+                    search={{ show_id: canonicalShowId }}
                     label="Edit this show"
                   />
                 </div>
@@ -543,8 +543,8 @@ export function WhitelistManager({
                                 <EditSeason season={season} />
                               </AdminOnly>
                               <MediaPageButton
-                                to="/season/$seasonKey"
-                                params={{ seasonKey: season.id }}
+                                to="/episodes"
+                                search={{ season_id: season.id }}
                                 label="Open this season here"
                               />
                             </div>

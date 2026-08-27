@@ -1,6 +1,7 @@
 # TODO: Validate
 
 import dataclasses
+import json
 import uuid
 from collections.abc import Sequence
 from typing import Literal
@@ -46,6 +47,12 @@ def episode_url(episode_id: uuid.UUID | str) -> str:
 # TODO: Validate
 def season_episodes_url(season_id: uuid.UUID | str) -> str:
     return f"{settings.API_V1_STR}/seasons/{season_id}/episodes"
+
+
+# TODO: Validate
+def season_episodes_list_url(season_id: uuid.UUID | str) -> str:
+    filter_options = json.dumps([{"id": "season_id", "value": str(season_id)}])
+    return f"{settings.API_V1_STR}/episodes?filter_options={filter_options}"
 
 
 # TODO: Validate
@@ -349,23 +356,21 @@ class TestGetEpisodes:
         season = setup.episode.season
 
         response = session_scoped_client.get(
-            season_episodes_url(season.id),
+            season_episodes_list_url(season.id),
             headers=setup.headers,
         )
 
-        can_read = record_is_public or (
-            user_is_authenticated and (user_is_owner or user_is_superuser)
-        )
-        if can_read:
+        if user_is_authenticated and user_is_superuser:
             assert response.status_code == status.HTTP_200_OK
             returned = EpisodesPublic.model_validate(response.json())
             assert [item.id for item in returned.data] == [setup.episode.id]
-        else:
-            assert_denied(
-                response,
-                user_is_authenticated=user_is_authenticated,
-                model_name="Season",
+        elif user_is_authenticated:
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            assert (
+                response.json()["detail"] == "The user doesn't have enough privileges"
             )
+        else:
+            assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     # TODO: Validate
     @pytest.mark.parametrize("episode_count", [0, 1, 2])
@@ -381,6 +386,7 @@ class TestGetEpisodes:
             user_is_owner=True,
             user_is_authenticated=True,
             record_is_public=False,
+            user_is_superuser=True,
         )
         season = setup.episode.season
         session_scoped_session.delete(setup.episode)
@@ -389,7 +395,7 @@ class TestGetEpisodes:
             create_random_episode(session_scoped_session, season)
 
         response = session_scoped_client.get(
-            season_episodes_url(season.id),
+            season_episodes_list_url(season.id),
             headers=setup.headers,
         )
 
@@ -399,7 +405,7 @@ class TestGetEpisodes:
             select(Episode).where(Episode.season_id == season.id),
         ).all()
         assert len(returned.data) == episode_count
-        assert returned.total_count == episode_count
+        assert returned.filtered_count == episode_count
 
         returned_by_id = {item.id: item for item in returned.data}
         for record in records:

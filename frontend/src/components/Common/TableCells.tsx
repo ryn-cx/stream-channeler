@@ -7,28 +7,28 @@ interface CellProps {
 
 type ParentLinkCellProps =
   | {
-      to: "/season/$seasonKey"
-      params: { seasonKey: string }
+      to: "/episodes"
+      search: { season_id: string }
       name: string | null
     }
-  | { to: "/show/$showKey"; params: { showKey: string }; name: string | null }
+  | { to: "/seasons"; search: { show_id: string }; name: string | null }
   | {
-      to: "/source/$sourceKey"
-      params: { sourceKey: string }
+      to: "/shows"
+      search: { source_id: string }
       name: string | null
     }
   | {
-      to: "/plugin/$pluginId"
-      params: { pluginId: string }
+      to: "/sources"
+      search: { plugin_id: string }
       name: string | null
     }
 
 // TODO: Validate
-export function ParentLinkCell({ to, params, name }: ParentLinkCellProps) {
+export function ParentLinkCell({ to, search, name }: ParentLinkCellProps) {
   return (
     <Link
       to={to}
-      params={params}
+      search={search}
       className="text-primary hover:underline text-sm truncate max-w-40 block"
     >
       {name || "Unnamed"}

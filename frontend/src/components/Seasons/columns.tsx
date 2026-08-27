@@ -18,8 +18,8 @@ export const seasonColumns: ColumnDef<SeasonTableData>[] = [
     header: "Plugin",
     cell: ({ row }) => (
       <ParentLinkCell
-        to="/plugin/$pluginId"
-        params={{ pluginId: row.original.plugin_id }}
+        to="/sources"
+        search={{ plugin_id: row.original.plugin_id }}
         name={row.original.plugin_name}
       />
     ),
@@ -29,8 +29,8 @@ export const seasonColumns: ColumnDef<SeasonTableData>[] = [
     header: "Source",
     cell: ({ row }) => (
       <ParentLinkCell
-        to="/source/$sourceKey"
-        params={{ sourceKey: row.original.source_id }}
+        to="/shows"
+        search={{ source_id: row.original.source_id }}
         name={row.original.source_name}
       />
     ),
@@ -40,8 +40,8 @@ export const seasonColumns: ColumnDef<SeasonTableData>[] = [
     header: "Show",
     cell: ({ row }) => (
       <ParentLinkCell
-        to="/show/$showKey"
-        params={{ showKey: row.original.show_id }}
+        to="/seasons"
+        search={{ show_id: row.original.show_id }}
         name={row.original.show_name}
       />
     ),
@@ -56,8 +56,8 @@ export const seasonColumns: ColumnDef<SeasonTableData>[] = [
         </span>
       ) : (
         <Link
-          to="/season/$seasonKey"
-          params={{ seasonKey: row.original.id }}
+          to="/episodes"
+          search={{ season_id: row.original.id }}
           className="font-medium text-primary hover:underline block max-w-48 whitespace-normal wrap-break-word"
         >
           {row.original.name || `No Name (${row.original.key})`}

@@ -14,6 +14,7 @@ from sqlalchemy import (
     Numeric,
     String,
     UnaryExpression,
+    Uuid,
     asc,
     cast,
     desc,
@@ -71,6 +72,17 @@ def _str_to_number(number_string: str) -> float:
 
 
 # TODO: Validate
+def _str_to_uuid(uuid_string: str) -> uuid.UUID:
+    try:
+        return uuid.UUID(uuid_string)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid uuid value: {uuid_string!r}",
+        ) from error
+
+
+# TODO: Validate
 def _range_bounds(value: str | list[str], label: str) -> tuple[str, str]:
     if not isinstance(value, list):
         raise HTTPException(
@@ -124,6 +136,9 @@ def _apply_filter_options[T](
             statement = _apply_number_filter(statement, column, option.value)
         elif isinstance(column.type, Boolean):
             statement = statement.where(column == (option.value == "true"))
+        elif isinstance(column.type, Uuid):
+            if isinstance(option.value, str) and (text := option.value.strip()):
+                statement = statement.where(column == _str_to_uuid(text))
         elif isinstance(option.value, str) and (text := option.value.strip()):
             statement = statement.where(cast(column, String).ilike(f"%{text}%"))
 
@@ -186,19 +201,20 @@ def get_read_results[T](  # noqa: PLR0913
     if extra_columns:
         columns.update(extra_columns)
     total_count = session.exec(select(func.count()).select_from(base.subquery())).one()
+    filtered = _apply_filter_options(base, params.filter_options, columns)
 
     if total_count < threshold:
         ordered = _apply_sort_options(
-            base,
+            filtered,
             [],
             columns,
             default_sort,
             tiebreaker,
             random_tiebreaker=random_tiebreaker,
         )
-        return session.exec(ordered).all(), total_count, total_count, False
+        rows = session.exec(ordered).all()
+        return rows, total_count, len(rows), False
 
-    filtered = _apply_filter_options(base, params.filter_options, columns)
     filtered_count = session.exec(
         select(func.count()).select_from(filtered.subquery()),
     ).one()

@@ -41,8 +41,8 @@ function SourceAdminLink({ sourceId }: { sourceId: string }) {
   if (!isAdmin) return null
   return (
     <Link
-      to="/source/$sourceKey"
-      params={{ sourceKey: sourceId }}
+      to="/shows"
+      search={{ source_id: sourceId }}
       aria-label="Open source admin page"
       className={adminLinkClassName}
     >
@@ -57,8 +57,8 @@ function ShowAdminLink({ showId }: { showId: string }) {
   if (!isAdmin) return null
   return (
     <Link
-      to="/show/$showKey"
-      params={{ showKey: showId }}
+      to="/seasons"
+      search={{ show_id: showId }}
       aria-label="Open show admin page"
       className={adminLinkClassName}
     >
@@ -73,8 +73,8 @@ function SeasonAdminLink({ seasonId }: { seasonId: string }) {
   if (!isAdmin) return null
   return (
     <Link
-      to="/season/$seasonKey"
-      params={{ seasonKey: seasonId }}
+      to="/episodes"
+      search={{ season_id: seasonId }}
       aria-label="Open season admin page"
       className={adminLinkClassName}
     >

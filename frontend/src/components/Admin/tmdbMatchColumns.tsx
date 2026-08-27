@@ -226,8 +226,8 @@ function MatchSummary({
       <span className="block text-xs text-muted-foreground">
         {record.source_id ? (
           <Link
-            to="/source/$sourceKey"
-            params={{ sourceKey: record.source_id }}
+            to="/shows"
+            search={{ source_id: record.source_id }}
             className="hover:underline"
           >
             {record.source_name ?? "Unknown source"}
@@ -242,8 +242,8 @@ function MatchSummary({
       </span>
       <span className="flex flex-wrap items-center gap-1 font-medium">
         <Link
-          to="/show/$showKey"
-          params={{ showKey: record.show_id }}
+          to="/seasons"
+          search={{ show_id: record.show_id }}
           className="min-w-0 hover:underline"
         >
           {record.show_name ?? "Unnamed"}
@@ -257,8 +257,8 @@ function MatchSummary({
       </span>
       <span className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
         <Link
-          to="/season/$seasonKey"
-          params={{ seasonKey: record.season_id }}
+          to="/episodes"
+          search={{ season_id: record.season_id }}
           className="min-w-0 hover:underline"
         >
           Season {record.season_number ?? "?"}
@@ -503,8 +503,8 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
     cell: ({ row }) => (
       <WrappingCell className="max-w-48">
         <Link
-          to="/show/$showKey"
-          params={{ showKey: row.original.show.id }}
+          to="/seasons"
+          search={{ show_id: row.original.show.id }}
           className="hover:underline"
         >
           {row.original.show.name ?? "Unnamed"}
@@ -529,8 +529,8 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
     cell: ({ row }) => (
       <WrappingCell className="max-w-32">
         <Link
-          to="/source/$sourceKey"
-          params={{ sourceKey: row.original.source.id }}
+          to="/shows"
+          search={{ source_id: row.original.source.id }}
           className="hover:underline"
         >
           {row.original.source.name ?? "Unknown source"}
@@ -545,8 +545,8 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
     cell: ({ row }) => (
       <WrappingCell className="max-w-40">
         <Link
-          to="/season/$seasonKey"
-          params={{ seasonKey: row.original.season.id }}
+          to="/episodes"
+          search={{ season_id: row.original.season.id }}
           className="hover:underline"
         >
           {row.original.season.name ?? "Unnamed"}

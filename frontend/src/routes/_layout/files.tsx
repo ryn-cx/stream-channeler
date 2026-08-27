@@ -8,6 +8,7 @@ import {
   serializeTableQuery,
   validateMediaSearch,
 } from "@/components/Common/DataTable"
+import AddFile from "@/components/Files/Add"
 import { type FileTableData, fileColumns } from "@/components/Files/columns"
 import { requireSuperuser } from "@/hooks/useAuth"
 
@@ -22,6 +23,8 @@ export const Route = createFileRoute("/_layout/files")({
 
 // TODO: Validate
 function AllFilesPage() {
+  const { plugin_id } = Route.useSearch()
+
   return (
     <MediaListPage<FileTableData>
       title="Files"
@@ -30,6 +33,7 @@ function AllFilesPage() {
       columnVisibilityKey="files-column-visibility"
       defaultHidden={{ id: false }}
       emptyIcon={FileText}
+      headerActions={plugin_id ? <AddFile pluginId={plugin_id} /> : undefined}
       fetchTable={async (params) => {
         const result = await FilesService.getFiles({
           offset: params.offset,

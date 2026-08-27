@@ -8,6 +8,7 @@ import {
   serializeTableQuery,
   validateMediaSearch,
 } from "@/components/Common/DataTable"
+import AddSource from "@/components/Sources/Add"
 import {
   type SourceTableData,
   sourceColumns,
@@ -25,6 +26,8 @@ export const Route = createFileRoute("/_layout/sources")({
 
 // TODO: Validate
 function SourcesPage() {
+  const { plugin_id } = Route.useSearch()
+
   return (
     <MediaListPage<SourceTableData>
       title="Sources"
@@ -33,6 +36,7 @@ function SourcesPage() {
       columnVisibilityKey="sources-column-visibility"
       defaultHidden={{ key: false, id: false }}
       emptyIcon={Database}
+      headerActions={plugin_id ? <AddSource pluginId={plugin_id} /> : undefined}
       fetchTable={async (params) => {
         const result = await SourcesService.getSources({
           offset: params.offset,

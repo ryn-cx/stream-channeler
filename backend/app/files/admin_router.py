@@ -75,26 +75,6 @@ def get_files(
 
 
 # TODO: Validate
-@plugin_files_router.get("/files")
-def get_plugin_files(
-    plugin: ExistingPlugin,
-    session: SessionDep,
-    current_user: SuperUser,
-    read_options: Annotated[ReadOptions, Query()],
-) -> FilesPublic:
-    base = File.select_with_plugin_eager().where(File.plugin_id == plugin.id)
-    return list_response(
-        session=session,
-        base=base,
-        response_model=FilesPublic,
-        schema=FileListPublic,
-        params=read_options,
-        extra_columns=FILE_PARENT_COLUMNS,
-        current_user=current_user,
-    )
-
-
-# TODO: Validate
 @files_router.get("/{file_id}", response_model=FilePublic)  # noqa: FAST003 - Used by ExistingFile.
 def get_file(file: ExistingFile) -> File:
     return file

@@ -63,7 +63,7 @@ const AddFile = ({ pluginId }: AddFileProps) => {
     },
     onSettled: () => {
       queryClient.invalidateQueries({
-        queryKey: ["plugins", pluginId, "files"],
+        queryKey: ["media-table", "Files"],
       })
     },
   })

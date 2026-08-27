@@ -8,6 +8,7 @@ import {
   serializeTableQuery,
   validateMediaSearch,
 } from "@/components/Common/DataTable"
+import AddSeason from "@/components/Seasons/Add"
 import {
   type SeasonTableData,
   seasonColumns,
@@ -25,6 +26,8 @@ export const Route = createFileRoute("/_layout/seasons")({
 
 // TODO: Validate
 function SeasonsPage() {
+  const { show_id } = Route.useSearch()
+
   return (
     <MediaListPage<SeasonTableData>
       title="Seasons"
@@ -33,6 +36,7 @@ function SeasonsPage() {
       columnVisibilityKey="seasons-column-visibility"
       defaultHidden={{ key: false, id: false }}
       emptyIcon={Layers}
+      headerActions={show_id ? <AddSeason showKey={show_id} /> : undefined}
       fetchTable={async (params) => {
         const result = await SeasonsService.getSeasons({
           offset: params.offset,
