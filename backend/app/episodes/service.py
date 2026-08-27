@@ -1,4 +1,6 @@
 # TODO: Validate
+
+
 """Which TMDB episode an `Episode` is linked to, and the ones it could be.
 
 An import points an episode at TMDB by name, and an episode whose name matched
@@ -27,6 +29,7 @@ from app.canonical_media.keys import (
     tmdb_key_clause,
 )
 from app.canonical_media.metadata import (
+    fill_episodes,
     tmdb_episode_url,
     tmdb_season_url,
     tmdb_show_url,
@@ -39,6 +42,7 @@ from app.episodes.name_matching import plaintext, similarity
 from app.episodes.schemas import (
     DuplicatedCanonicalEpisodeOutput,
     DuplicatedLinkEpisodeOutput,
+    EpisodeInformationSide,
     EpisodeOutput,
     EpisodeUsingTmdb,
     TmdbEpisodeChoice,
@@ -59,9 +63,12 @@ from app.sources.models import Source
 # An unnumbered season or episode is ordered after every numbered one.
 _UNNUMBERED = float("inf")
 
+
 # What an `Episode` can be pointed at: the episode itself, the season holding
 # it, and the title above that, all as TMDB has them.
 type _Candidate = tuple[Episode, Season, Show]
+
+
 type Numbering = tuple[uuid.UUID, int | None, int | None]
 
 
@@ -1115,4 +1122,63 @@ def get_duplicated_canonical_episodes(
             output.season_number or 0,
             output.episode_number or 0,
         ),
+    )
+
+
+# TODO: Validate
+def _episode_output(session: Session, episode: Episode) -> EpisodeOutput:
+    """Return an `Episode` as TMDB has it, falling back on what its website said."""
+    return fill_episodes(session, [EpisodeOutput.model_validate(episode)])[0]
+
+
+# TODO: Validate
+def _select_with_canonical_season_and_show() -> SelectOfScalar[Episode]:
+    """Select episodes with the season and title above each one already loaded."""
+    return (
+        select(Episode)
+        .join(
+            Season,
+            onclause=col(Episode.season_id) == Season.id,
+        )
+        .join(
+            Show,
+            onclause=col(Season.show_id) == Show.id,
+        )
+        .where(is_canonical(Episode), is_canonical(Show))
+        .options(
+            contains_eager(Episode.season).contains_eager(  # type: ignore[arg-type]
+                Season.show,  # type: ignore[arg-type]
+            ),
+        )
+    )
+
+
+# TODO: Validate
+def _information_side(
+    label: str,
+    episode: Episode,
+    season: Season,
+    show: Show,
+    url: str | None,
+) -> EpisodeInformationSide:
+    return EpisodeInformationSide(
+        label=label,
+        name=episode.name,
+        description=episode.description,
+        image_url=episode.image_url,
+        duration=episode.duration,
+        air_date=episode.air_date,
+        episode_number=episode.episode_number,
+        sort_order=episode.sort_order,
+        season_number=season.season_number,
+        season_name=season.name,
+        show_id=show.id,
+        show_name=show.name,
+        url=url,
+        key=episode.key,
+        canonical_episode_validated_at=episode.canonical_episode_validated_at,
+        canonical_episode_note=episode.canonical_episode_note,
+        data_timestamp=episode.data_timestamp,
+        update_at=episode.update_at,
+        modified_at=episode.modified_at,
     )

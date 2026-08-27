@@ -1,4 +1,6 @@
 # TODO: Validate
+
+
 """Which canonical show a show is linked to, and the settling of it."""
 
 import re
@@ -20,7 +22,9 @@ from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.shows.schemas import (
+    ShowInformationSide,
     ShowListPublic,
+    ShowPublic,
     TmdbEpisodeGroupOption,
     UnvalidatedLinkedShowOutput,
     UnvalidatedShowOutput,
@@ -529,3 +533,22 @@ def list_unvalidated_shows(session: Session, limit: int) -> list[UnvalidatedShow
         )
         for show in shows
     ]
+
+
+# TODO: Validate
+def _show_output(show: Show) -> ShowPublic:
+    """Return a `Show` as the website that holds it stored it."""
+    return ShowPublic.model_validate(show)
+
+
+# TODO: Validate
+def _information_side(label: str, show: Show, url: str | None) -> ShowInformationSide:
+    return ShowInformationSide(
+        label=label,
+        name=show.name,
+        media_type=show.media_type,
+        description=show.description,
+        image_url=show.image_url,
+        url=url,
+        key=show.key,
+    )
