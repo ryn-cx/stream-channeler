@@ -110,13 +110,6 @@ function deleteReport(target: IssueReportTarget, issueReportId: string) {
 }
 
 // TODO: Validate
-/**
- * Every issue reported against one record, and the box for adding another.
- *
- * Anyone reading the media can report what is wrong with it, so the box is open
- * to visitors with no account. A report left without one has nobody to claim it,
- * so only a superuser can edit or delete it afterwards.
- */
 export function IssueReportsSection({
   target,
   mediaId,
@@ -247,24 +240,26 @@ export function IssueReportsSection({
         </ul>
       )}
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor={`issue-report-${mediaId}`}>Report an issue</Label>
-        <Textarea
-          id={`issue-report-${mediaId}`}
-          rows={3}
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder={wording.placeholder}
-        />
-        <Button
-          className="self-start"
-          disabled={draft.trim().length === 0 || createMutation.isPending}
-          onClick={() => createMutation.mutate()}
-        >
-          <Flag />
-          Report Issue
-        </Button>
-      </div>
+      {user && (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={`issue-report-${mediaId}`}>Report an issue</Label>
+          <Textarea
+            id={`issue-report-${mediaId}`}
+            rows={3}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder={wording.placeholder}
+          />
+          <Button
+            className="self-start"
+            disabled={draft.trim().length === 0 || createMutation.isPending}
+            onClick={() => createMutation.mutate()}
+          >
+            <Flag />
+            Report Issue
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
