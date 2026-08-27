@@ -5,7 +5,7 @@ import re
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Any, cast, override
+from typing import Any, Self, cast, override
 
 from loguru import logger
 from sqlmodel import Session
@@ -25,6 +25,11 @@ from plugins.utils.abstract_plugin import (
     URLImportResult,
 )
 from plugins.utils.base_plugin.check import CheckMixin
+from plugins.utils.base_plugin.context import (
+    PluginContext,
+    plugin_context,
+    store_plugin_context,
+)
 from plugins.utils.base_plugin.files import INITIAL_FILE_IDENTIFIER, BaseFile
 from plugins.utils.base_plugin.preload import PreloadMixin
 from plugins.utils.base_plugin.url import URLHandler, URLMixin
@@ -60,86 +65,25 @@ class BasePlugin(
     def tmdb_provider_names(cls) -> tuple[str, ...]:
         return ()
 
-    _current_show: str | None = None
-    """What the values cached on this instance belong to."""
-
-    _canonical_source_record: Source | None = None
-    """The source the canonical rows this plugin mints belong to, once looked up."""
-
+    _context: PluginContext
     _file_cache: dict[object, Any]
-    _reusable_file_cache: dict[object, Any]
 
     # TODO: Validate
     @classmethod
     def _plugin_wide_files(cls) -> tuple[type[BaseFile[Any]], ...]:
         """The file types that describe the plugin or a source rather than one show.
 
-        `_file` caches these separately so they survive a change of show, since
-        re-reading a provider list or a feed for every show would be wasted work.
+        `_file` caches these against the session rather than against one view of
+        the plugin, since re-reading a provider list or a feed for every show
+        would be wasted work.
         """
         return ()
-
-    # TODO: Validate
-    @classmethod
-    def show_independent_attributes(cls) -> frozenset[str]:
-        """The instance attributes that describe the plugin rather than a show.
-
-        Everything else is dropped by `_reset_show_state`, so an attribute only
-        survives a change of show by being named here.
-        """
-        return frozenset(
-            {
-                "session",
-                "plugin",
-                "_sources",
-                "_canonical_source_record",
-                "_current_show",
-                "_reusable_file_cache",
-            },
-        )
 
     # TODO: Validate
     @classmethod
     def matches_tmdb_provider(cls, provider_name: str) -> bool:
         folded_name = provider_name.casefold()
         return any(folded_name == name.casefold() for name in cls.tmdb_provider_names())
-
-    # TODO: Validate
-    def _set_current_show(self, show: str) -> None:
-        """Record which show the instance is working on, dropping the last one's.
-
-        Plugins cache values for the show they are working on, which the next
-        show must not read. Moving to a different show drops them, so a single
-        instance can be used for any number of shows without carrying the
-        previous show's data or holding on to it.
-
-        Called by the wrapper `__init_subclass__` puts around every entry point,
-        so a plugin cannot miss it by overriding one. An entry point that spans
-        several shows, like `update_source`, has to call this itself for each.
-        """
-        if self._current_show == show:
-            return
-        # The first call has no earlier show to drop, so whatever construction
-        # cached is kept rather than thrown away before it has been read.
-        if self._current_show is not None:
-            self._reset_show_state()
-        self._current_show = show
-
-    # TODO: Validate
-    def _reset_show_state(self) -> None:
-        """Drop everything cached for the show the instance has moved off.
-
-        Every instance attribute goes except the ones named in
-        `show_independent_attributes`, so a plugin caches whatever it likes
-        without having to remember to clear it. An attribute that is read after
-        being dropped falls back to its class-level default, which is where a
-        per-show value's "nothing cached yet" state belongs.
-        """
-        show_independent_attributes = self.show_independent_attributes()
-        for name in list(vars(self)):
-            if name not in show_independent_attributes:
-                delattr(self, name)
-        self._file_cache = {}
 
     # TODO: Validate
     def _canonical_source(self) -> Source:
@@ -150,8 +94,8 @@ class BasePlugin(
         stood for by listings from every provider the plugin tracks. Picking one
         of those providers would be picking whichever was imported first.
         """
-        if self._canonical_source_record is not None:
-            return self._canonical_source_record
+        if self._context.canonical_source is not None:
+            return self._context.canonical_source
 
         source = Source.get(self.session, self.plugin, self.plugin_key())
         if source is None:
@@ -160,19 +104,46 @@ class BasePlugin(
                 name=self.plugin_name(),
                 plugin_id=self.plugin.id,
             ).upsert(self.plugin, None)
-        self._canonical_source_record = source
+        self._context.canonical_source = source
         return source
 
     # TODO: Validate
     @override
     def __init__(self, session: Session) -> None:
         self.session = session
-        self._sources: dict[str, Source] = {}
-        self._canonical_source_record = None
-        self._reusable_file_cache = {}
-        # Creates the show file cache, which `initialize_database` needs below.
-        self._reset_show_state()
-        self.initialize_database()
+        self._file_cache = {}
+        if (context := plugin_context(session, self.plugin_key())) is None:
+            self.initialize_database()
+            store_plugin_context(session, self.plugin_key(), self._context)
+        else:
+            self._context = context
+
+    # TODO: Validate
+    def _fresh(self) -> Self:
+        """Return a second view over the same session, for another show.
+
+        A plugin caches what it reads for the show it is working on, which the
+        next show must not read. The next show gets a view of its own and the
+        last one's is let go with it. What the plugin knows about itself is held
+        by the session rather than by the view, so a view costs nothing to make.
+        """
+        return type(self)(self.session)
+
+    # TODO: Validate
+    @property
+    @override
+    def plugin(self) -> Plugin:
+        return self._context.plugin
+
+    # TODO: Validate
+    @property
+    def _sources(self) -> dict[str, Source]:
+        return self._context.sources
+
+    # TODO: Validate
+    @property
+    def _reusable_file_cache(self) -> dict[object, Any]:
+        return self._context.reusable_files
 
     # TODO: Validate
     @property
@@ -204,31 +175,37 @@ class BasePlugin(
 
     # TODO: Validate
     def initialize_database(self) -> None:
-        """Create the `Plugin` and its `Source` record(s) and set instance attributes.
-
-        Sets `self.plugin` if only a single `Plugin` record exists.
-        Sets `self.source` if only a single `Source` record exists.
-        """
-        self.initialize_plugin()
+        """Create the `Plugin` and its `Source` record(s) and set instance attributes."""
+        self._context = PluginContext(plugin=self._plugin_record())
         self.initialize_sources()
 
     # TODO: Validate
-    def initialize_plugin(self) -> None:
-        """Create the `Plugin` record(s) and set `self.plugin`.
+    def _plugin_record(self) -> Plugin:
+        """Return the `Plugin` record, creating it where there is not one yet.
 
-        A newly created row is committed before anything else happens. A file
-        download writes through a session of its own, so that it is kept even
+        A file download writes through a session of its own, so that it is kept even
         when the import that triggered it fails, and a session of its own cannot
-        see a `Plugin` this one has not committed yet. Nothing else is pending
-        this early, so the commit carries only the plugin.
+        see a `Plugin` this one has not committed yet.
         """
-        if hasattr(self, "plugin") and self.plugin:
-            return
-        if existing_plugin := Plugin.get(self.session, self.plugin_key()):
-            self.plugin = existing_plugin
-        else:
-            self.plugin = self._upsert_plugin(existing_plugin)
-            self.session.commit()
+        if (existing_plugin := Plugin.get(self.session, self.plugin_key())) is None:
+            self._write_plugin_record()
+            existing_plugin = Plugin.get(self.session, self.plugin_key())
+        if existing_plugin is None:
+            msg = f"{self.plugin_key()} could not be written."
+            raise RuntimeError(msg)
+        return existing_plugin
+
+    # TODO: Validate
+    def _write_plugin_record(self) -> None:
+        with Session(self.session.get_bind()) as plugin_session:
+            Plugin(
+                key=self.plugin_key(),
+                name=self.plugin_name(),
+            ).upsert_and_set_update_at(
+                plugin_session,
+                Plugin.get(plugin_session, self.plugin_key()),
+            )
+            plugin_session.commit()
 
     # TODO: Validate
     def initialize_sources(self) -> None:
@@ -241,14 +218,6 @@ class BasePlugin(
             Source.get(self.session, self.plugin, self.plugin_key())
             or self._upsert_source()
         )
-
-    # TODO: Validate
-    def _upsert_plugin(self, existing_plugin: Plugin | None) -> Plugin:
-        """Create or update the `Plugin` record."""
-        return Plugin(
-            key=self.plugin_key(),
-            name=self.plugin_name(),
-        ).upsert_and_set_update_at(self.session, existing_plugin)
 
     # TODO: Validate
     @staticmethod
@@ -305,7 +274,6 @@ class BasePlugin(
     @override
     def update_show(self, show: Show, *, force: bool = False) -> None:
         logger.info("Updating show: {}", show.key)
-        self._set_current_show(show.key)
         show = self._preload_show(show.key, source_key=show.source.key).one()
         self._update_and_upsert_show(show, show.update_at, force=force)
 
@@ -313,7 +281,6 @@ class BasePlugin(
     @override
     def update_season(self, season: Season) -> None:
         logger.info("Updating season: {}", season.key)
-        self._set_current_show(season.show.key)
         season = self._preload_season(season.id, preload_show=True).one()
         self._download_season_files_and_children(season, update_at=season.update_at)
         self._update_and_upsert_show(season.show)
@@ -322,7 +289,6 @@ class BasePlugin(
     @override
     def update_episode(self, episode: Episode) -> None:
         logger.info("Updating episode: {}", episode.key)
-        self._set_current_show(episode.season.show.key)
         episode = self._preload_episode(episode.id, preload_source=True).one()
         self._download_episode_files(episode, update_at=episode.update_at)
         self._update_and_upsert_show(episode.season.show)
@@ -609,7 +575,6 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
         *,
         force: bool = False,
     ) -> list[URLImportResult]:
-        self._set_current_show(url)
         handler = self.get_url_handler(url)
         handler.raise_if_invalid()
         return self._import_handler(handler, canonical_show, force=force)

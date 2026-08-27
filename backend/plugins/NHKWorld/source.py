@@ -50,8 +50,11 @@ class SourceMixin(FileMixin, register=False):
                     # NHK World has a small library so new shows can be imported
                     # immediately.
                     logger.info("Importing new show: {}", show_id)
-                    self._download_show_files_and_children(show_id)
-                    self.upsert_show(source, show_id)
+                    # A view of its own per show, so the feed's whole library is
+                    # not held as one show after another is read.
+                    view = self._fresh()
+                    view._download_show_files_and_children(show_id)  # noqa: SLF001 - Another view of this plugin.
+                    view.upsert_show(source, show_id)
 
             feed_file.database_record.extra = {EXTRA_STATUS_FIELD: COMPLETED_STATUS}
 

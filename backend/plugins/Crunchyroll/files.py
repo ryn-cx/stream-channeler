@@ -79,7 +79,6 @@ class Objects(EndpointFile[ObjectsModel]):
 
 
 class Seasons(EndpointFile[SeasonsModel]):
-    # TODO: Validate
     @override
     def _endpoint(self) -> SeasonsEndpoint:
         return chirashi().seasons
@@ -103,100 +102,66 @@ class BrowseSeries(PagedEndpointFile[BrowseSeriesModel]):
         )
 
 
-# TODO: Validate
 class Artist(EndpointFile[ArtistModel]):
-    """Data for an artist."""
-
-    # TODO: Validate
     @override
     def _endpoint(self) -> ArtistEndpoint:
         return chirashi().artist
 
     # Occurs when a user puts in an invalid artist URL.
-    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ArtistNotFoundError)
 
 
-# TODO: Validate
 class ArtistMusicVideos(EndpointFile[ArtistMusicVideosModel]):
-    """Data for an artist's music videos."""
-
-    # TODO: Validate
     @override
     def _endpoint(self) -> ArtistMusicVideosEndpoint:
         return chirashi().artist_music_videos
 
 
-# TODO: Validate
 class ArtistConcerts(EndpointFile[ArtistConcertsModel]):
-    """Data for an artist's concerts."""
-
-    # TODO: Validate
     @override
     def _endpoint(self) -> ArtistConcertsEndpoint:
         return chirashi().artist_concerts
 
 
-# TODO: Validate
 class MusicVideo(EndpointFile[MusicVideoModel]):
-    """Data for a music video."""
-
-    # TODO: Validate
     @override
     def _endpoint(self) -> MusicVideoEndpoint:
         return chirashi().music_video
 
     # Occurs when a user puts in an invalid music video URL.
-    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, MusicVideoNotFoundError)
 
 
-# TODO: Validate
 class Concert(EndpointFile[ConcertModel]):
-    """Data for a concert."""
-
-    # TODO: Validate
     @override
     def _endpoint(self) -> ConcertEndpoint:
         return chirashi().concert
 
     # Occurs when a user puts in an invalid concert URL.
-    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ConcertNotFoundError)
 
 
-# TODO: Validate
 class BrowseMusic(PagedEndpointFile[BrowseMusicModel]):
-    """Data for all of the music."""
-
-    # TODO: Validate
     @override
     def _endpoint(self) -> BrowseMusicEndpoint:
         return chirashi().browse_music
 
-    # Music seems to be ordered randomly so downloading all of it is required.
-    # TODO: Validate
     @override
     def _download_pages(self) -> list[str]:
         return self._endpoint().download_all()
 
 
-# TODO: Validate
 class Search(EndpointFile[SearchModel]):
-    """Data for search results."""
-
-    # TODO: Validate
     @override
     def _endpoint(self) -> SearchEndpoint:
         return chirashi().search
 
-    # TODO: Validate
     @override
     def _next_update_at(self) -> datetime:
         return tz_datetime.now() + timedelta(days=30)
@@ -204,38 +169,40 @@ class Search(EndpointFile[SearchModel]):
 
 # TODO: Validate
 class FileMixin(BasePlugin, register=False):
-    """File mixin."""
-
-    # TODO: Validate
     @classmethod
     @override
     def _plugin_wide_files(cls) -> tuple[type[BaseFile[Any]], ...]:
         return (BrowseSeries, BrowseMusic)
 
-    # TODO: Validate
     def search_file(self, query: str) -> Search:
-        """Return data for search results."""
         return self._file(Search, query)
 
-    # TODO: Validate
     def series_file(self, show_key: str) -> Series:
-        """Return data for a show."""
         return self._file(Series, show_key)
 
-    # TODO: Validate
     def objects_file(self, episode_key: str) -> Objects:
-        """Return data for an episode."""
         return self._file(Objects, episode_key)
 
-    # TODO: Validate
     def seasons_file(self, show_key: str) -> Seasons:
-        """Return data for the seasons."""
         return self._file(Seasons, show_key)
 
-    # TODO: Validate
     def season_episodes_file(self, season_key: str) -> SeasonEpisodes:
-        """Return data for the episodes in a season."""
         return self._file(SeasonEpisodes, season_key)
+
+    def artist_file(self, artist_id: str) -> Artist:
+        return self._file(Artist, artist_id)
+
+    def artist_music_videos_file(self, artist_id: str) -> ArtistMusicVideos:
+        return self._file(ArtistMusicVideos, artist_id)
+
+    def artist_concerts_file(self, artist_id: str) -> ArtistConcerts:
+        return self._file(ArtistConcerts, artist_id)
+
+    def music_video_file(self, music_video_id: str) -> MusicVideo:
+        return self._file(MusicVideo, music_video_id)
+
+    def concert_file(self, concert_id: str) -> Concert:
+        return self._file(Concert, concert_id)
 
     # TODO: Validate
     def browse_series_file(
@@ -246,21 +213,6 @@ class FileMixin(BasePlugin, register=False):
         if isinstance(browse, File):
             browse = BrowseSeries.file_key_to_unique_identifier(browse.key)
         return self._file(BrowseSeries, str(browse))
-
-    # TODO: Validate
-    def artist_file(self, artist_id: str) -> Artist:
-        """Return data for an artist."""
-        return self._file(Artist, artist_id)
-
-    # TODO: Validate
-    def artist_music_videos_file(self, artist_id: str) -> ArtistMusicVideos:
-        """Return data for an artist's music videos."""
-        return self._file(ArtistMusicVideos, artist_id)
-
-    # TODO: Validate
-    def artist_concerts_file(self, artist_id: str) -> ArtistConcerts:
-        """Return data for an artist's concerts."""
-        return self._file(ArtistConcerts, artist_id)
 
     # TODO: Validate
     def artist_concerts_or_artist_music_videos_file(
@@ -277,16 +229,6 @@ class FileMixin(BasePlugin, register=False):
         if category is MusicCategory.CONCERT:
             return self.artist_concerts_file(artist_id)
         return self.artist_music_videos_file(artist_id)
-
-    # TODO: Validate
-    def music_video_file(self, music_video_id: str) -> MusicVideo:
-        """Return data for a music video."""
-        return self._file(MusicVideo, music_video_id)
-
-    # TODO: Validate
-    def concert_file(self, concert_id: str) -> Concert:
-        """Return data for a concert."""
-        return self._file(Concert, concert_id)
 
     # TODO: Validate
     def concert_or_music_video_file(self, episode_key: str) -> MusicVideo | Concert:
@@ -440,7 +382,7 @@ class FileMixin(BasePlugin, register=False):
 
     # TODO: Validate
     def get_newest_browse_series_file(self) -> BrowseSeries:
-        """Return newest browse series file or raises if one does not exist.
+        """Return newest browse series file or raises if no browse series file exists.
 
         Raise:
             FileNotFoundError: If no browse file exists.

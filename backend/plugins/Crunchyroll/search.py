@@ -1,12 +1,10 @@
 # TODO: Validate
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import override
 
 from chirashi.search.models import Item as SearchItem
 
-from app.utils import tz_datetime
 from plugins.Crunchyroll.helpers import HelperMixin
 from plugins.Crunchyroll.music_keys import is_music_episode_key, is_music_show_key
 
@@ -17,7 +15,7 @@ class SearchMixin(HelperMixin, register=False):
     @override
     def search(self, query: str) -> str | None:
         search_file = self.search_file(query)
-        search_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
+        search_file.download_if_outdated()
         for datum in search_file.parsed().data:
             for item in datum.items:
                 return self._search_result_url(item)

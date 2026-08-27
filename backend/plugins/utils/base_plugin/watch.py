@@ -1,6 +1,6 @@
 # TODO: Validate
 import uuid
-from abc import ABC
+from abc import ABC, abstractmethod
 from datetime import datetime
 
 from sqlmodel import Session, col, select
@@ -18,7 +18,11 @@ from app.watches.identifiers import watched_dates_by_canonical_id
 # TODO: Validate
 class WatchMixin(ABC):
     session: Session
-    plugin: Plugin
+
+    # TODO: Validate
+    @property
+    @abstractmethod
+    def plugin(self) -> Plugin: ...
 
     # TODO: Validate
     def _get_episodes_by_key(self, episode_keys: list[str]) -> dict[str, Episode]:

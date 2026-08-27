@@ -283,10 +283,7 @@ class DatabaseMixinAlt[PluginT: BasePlugin]:
         be the plugin under test.
 
         One plugin is built per key and kept for as long as the session it reads
-        through, because building one reaches the database - it looks up the user
-        every plugin runs as - and a test that updates every record of a kind
-        would otherwise build the same plugin once per record and pay for it
-        every time.
+        through.
         """
         plugin_key = self._owning_plugin_key(entity)
         if plugin_key == self.plugin_class.plugin_key():

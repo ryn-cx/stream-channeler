@@ -118,7 +118,6 @@ class StreamChanneler(WatchHistoryMixin, BasePlugin, register=False):
         *,
         force: bool = False,
     ) -> list[URLImportResult]:
-        self._set_current_show(url)
         return self.get_url_handler(url).import_results()
 
     # TODO: Validate

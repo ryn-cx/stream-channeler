@@ -2,7 +2,7 @@
 # pyright: reportArgumentType=false
 
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import datetime
 from typing import Any
 
@@ -263,6 +263,44 @@ def _restrict_to_media_in_channel[ResultT](
 
 
 # TODO: Validate
+def _show_key(item: MediaMixin[Any]) -> str | None:
+    """Return the key of the show `item` belongs to, where it belongs to one."""
+    if isinstance(item, Show):
+        return item.key
+    if isinstance(item, Season):
+        return item.show.key
+    if isinstance(item, Episode):
+        return item.season.show.key
+    return None
+
+
+# TODO: Validate
+def _grouped_by_show[ItemT: MediaMixin[Any]](
+    items: Sequence[ItemT],
+) -> list[list[ItemT]]:
+    """Gather `items` into runs of one show, in the order the shows first appear.
+
+    A plugin reads a show's files once and answers every item of that show out of
+    what it read, so the items of one show are handed to one view of the plugin
+    rather than to one view each. Ordering is only permuted within a show, never
+    across them, so the oldest show is still updated first.
+    """
+    groups: list[list[ItemT]] = []
+    group_by_show_key: dict[str, list[ItemT]] = {}
+    for item in items:
+        show_key = _show_key(item)
+        if show_key is None:
+            groups.append([item])
+            continue
+        if (group := group_by_show_key.get(show_key)) is None:
+            group = []
+            group_by_show_key[show_key] = group
+            groups.append(group)
+        group.append(item)
+    return groups
+
+
+# TODO: Validate
 def _process_outdated_items(
     session: Session,
     media_class: MediaClass,
@@ -292,36 +330,41 @@ def _process_outdated_items(
     log_msg = f"[{plugin_key}] Found {len(outdated_items)} outdated {media_type_name}"
     logger.info(log_msg)
 
-    plugin_instance = plugin_class(session)
     updated_count = 0
-    for item in outdated_items:
-        log_msg = f"[{plugin_key}] Updating {media_type_name}: {item.key}"
-        logger.info(log_msg)
-        try:
-            getattr(plugin_instance, update_method_name)(item)
-
-            log_msg = (
-                f"[{plugin_key}] Successfully updated {media_type_name}: {item.key}"
-            )
+    for group in _grouped_by_show(outdated_items):
+        # One view of the plugin per show, so what it read for the show answers
+        # every item of it and is let go when the show is done with.
+        plugin_instance = plugin_class(session)
+        for item in group:
+            log_msg = f"[{plugin_key}] Updating {media_type_name}: {item.key}"
             logger.info(log_msg)
-            updated_count += 1
-
-            session.commit()
-        except Exception as error:
-            log_msg = f"[{plugin_key}] Failed to update {media_type_name}: {item.key}"
-            logger.exception(log_msg)
-            # Roll back partial changes, then let the plugin decide how to
-            # reschedule the failed item.
-            session.rollback()
-            session.refresh(item)
-            failure_method_name = f"on_update_{media_type_name}_failure"
             try:
-                getattr(plugin_instance, failure_method_name)(item, error)
-            except Exception:  # noqa: BLE001 - The plugin re-raised its default.
-                # Set update_at to the maximum possible value to avoid retrying
-                # the update until the issue is resolved.
-                item.update_at = tz_datetime.max()
-            session.commit()
+                getattr(plugin_instance, update_method_name)(item)
+
+                log_msg = (
+                    f"[{plugin_key}] Successfully updated {media_type_name}: {item.key}"
+                )
+                logger.info(log_msg)
+                updated_count += 1
+
+                session.commit()
+            except Exception as error:
+                log_msg = (
+                    f"[{plugin_key}] Failed to update {media_type_name}: {item.key}"
+                )
+                logger.exception(log_msg)
+                # Roll back partial changes, then let the plugin decide how to
+                # reschedule the failed item.
+                session.rollback()
+                session.refresh(item)
+                failure_method_name = f"on_update_{media_type_name}_failure"
+                try:
+                    getattr(plugin_instance, failure_method_name)(item, error)
+                except Exception:  # noqa: BLE001 - The plugin re-raised its default.
+                    # Set update_at to the maximum possible value to avoid retrying
+                    # the update until the issue is resolved.
+                    item.update_at = tz_datetime.max()
+                session.commit()
 
     log_msg = (
         f"[{plugin_key}] Updated {updated_count} out of {len(outdated_items)} "
