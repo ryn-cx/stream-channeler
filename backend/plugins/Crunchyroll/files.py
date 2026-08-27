@@ -1,6 +1,6 @@
 # TODO: Validate
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import cache
 from typing import Any, Literal, override
 
@@ -28,6 +28,8 @@ from chirashi.music_video import MusicVideo as MusicVideoEndpoint
 from chirashi.music_video.models import MusicVideoModel
 from chirashi.objects import Objects as ObjectsEndpoint
 from chirashi.objects.models import ObjectsModel
+from chirashi.search import Search as SearchEndpoint
+from chirashi.search.models import SearchModel
 from chirashi.season_episodes import SeasonEpisodes as SeasonEpisodesEndpoint
 from chirashi.season_episodes.models import SeasonEpisodesModel
 from chirashi.seasons import Seasons as SeasonsEndpoint
@@ -36,6 +38,7 @@ from chirashi.series import Series as SeriesEndpoint
 from chirashi.series.models import SeriesModel
 
 from app.files.models import File
+from app.utils import tz_datetime
 from plugins.Crunchyroll.music_keys import (
     MusicCategory,
     is_music_episode_key,
@@ -48,87 +51,51 @@ from plugins.utils.base_plugin.files import BaseFile, EndpointFile, PagedEndpoin
 from plugins.utils.get_around_client import get_around_client
 
 
-# TODO: Validate
 @cache
 def chirashi() -> Chirashi:
-    """Return a cached Chirashi client."""
     return Chirashi(get_around_client=get_around_client())
 
 
-# TODO: Validate
 class Series(EndpointFile[SeriesModel]):
-    """Data for a show."""
-
-    # TODO: Validate
     @override
     def _endpoint(self) -> SeriesEndpoint:
         return chirashi().series
 
-    # Occurs when a user puts in an invalid series URL.
-    # TODO: Validate
+    # Occurs when a user puts in an invalid show URL.
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, SeriesNotFoundError)
 
-    # TODO: Validate
-    @override
-    def acceptable_error_extra_value(self) -> str:
-        return f"Invalid series_id {self.unique_identifier}"
 
-
-# TODO: Validate
 class Objects(EndpointFile[ObjectsModel]):
-    """Data for an episode."""
-
-    # TODO: Validate
     @override
     def _endpoint(self) -> ObjectsEndpoint:
         return chirashi().objects
 
     # Occurs when a user puts in an invalid episode URL.
-    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, EpisodeNotFoundError)
 
-    # TODO: Validate
-    @override
-    def acceptable_error_extra_value(self) -> str:
-        return f"Invalid episode_id {self.unique_identifier}"
 
-
-# TODO: Validate
 class Seasons(EndpointFile[SeasonsModel]):
-    """Data for the seasons."""
-
     # TODO: Validate
     @override
     def _endpoint(self) -> SeasonsEndpoint:
         return chirashi().seasons
 
 
-# TODO: Validate
 class SeasonEpisodes(EndpointFile[SeasonEpisodesModel]):
-    """Data for the episodes in a season."""
-
-    # TODO: Validate
     @override
     def _endpoint(self) -> SeasonEpisodesEndpoint:
         return chirashi().season_episodes
 
 
-# TODO: Validate
 class BrowseSeries(PagedEndpointFile[BrowseSeriesModel]):
-    """Data for recently aired shows."""
-
-    IMMUTABLE = True  # Files are stamped with a datetime
-
-    # TODO: Validate
     @override
     def _endpoint(self) -> BrowseSeriesEndpoint:
         return chirashi().browse_series
 
-    # TODO: Validate
     @override
     def _download_pages(self) -> list[str]:
         return self._endpoint().download_until_datetime(
@@ -150,11 +117,6 @@ class Artist(EndpointFile[ArtistModel]):
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ArtistNotFoundError)
-
-    # TODO: Validate
-    @override
-    def acceptable_error_extra_value(self) -> str:
-        return f"Invalid artist_id {self.unique_identifier}"
 
 
 # TODO: Validate
@@ -192,11 +154,6 @@ class MusicVideo(EndpointFile[MusicVideoModel]):
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, MusicVideoNotFoundError)
 
-    # TODO: Validate
-    @override
-    def acceptable_error_extra_value(self) -> str:
-        return f"Invalid music_video_id {self.unique_identifier}"
-
 
 # TODO: Validate
 class Concert(EndpointFile[ConcertModel]):
@@ -213,17 +170,10 @@ class Concert(EndpointFile[ConcertModel]):
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ConcertNotFoundError)
 
-    # TODO: Validate
-    @override
-    def acceptable_error_extra_value(self) -> str:
-        return f"Invalid concert_id {self.unique_identifier}"
-
 
 # TODO: Validate
 class BrowseMusic(PagedEndpointFile[BrowseMusicModel]):
     """Data for all of the music."""
-
-    IMMUTABLE = True
 
     # TODO: Validate
     @override
@@ -238,6 +188,21 @@ class BrowseMusic(PagedEndpointFile[BrowseMusicModel]):
 
 
 # TODO: Validate
+class Search(EndpointFile[SearchModel]):
+    """Data for search results."""
+
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> SearchEndpoint:
+        return chirashi().search
+
+    # TODO: Validate
+    @override
+    def _next_update_at(self) -> datetime:
+        return tz_datetime.now() + timedelta(days=30)
+
+
+# TODO: Validate
 class FileMixin(BasePlugin, register=False):
     """File mixin."""
 
@@ -246,6 +211,11 @@ class FileMixin(BasePlugin, register=False):
     @override
     def _plugin_wide_files(cls) -> tuple[type[BaseFile[Any]], ...]:
         return (BrowseSeries, BrowseMusic)
+
+    # TODO: Validate
+    def search_file(self, query: str) -> Search:
+        """Return data for search results."""
+        return self._file(Search, query)
 
     # TODO: Validate
     def series_file(self, show_key: str) -> Series:

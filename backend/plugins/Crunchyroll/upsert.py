@@ -14,7 +14,7 @@ from app.episodes.models import Episode
 from app.files.models import File
 from app.seasons.models import Season
 from app.shows.models import Show
-from app.shows.service import find_and_add_canonical_show
+from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.Crunchyroll.constants import MUSIC_SOURCE, VIDEO_SOURCE
@@ -100,7 +100,7 @@ class UpsertMixin(HelperMixin, register=False):
             msg = f"Show key {show_key} is invalid and not supported."
             raise ValueError(msg)
 
-        find_and_add_canonical_show(self.session, show, canonical_show)
+        add_canonical_show_and_link_episodes(self.session, show, canonical_show)
         return show
 
     # TODO: Validate

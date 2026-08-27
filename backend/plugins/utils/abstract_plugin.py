@@ -354,11 +354,27 @@ class AbstractPlugin(ABC):
         raise NotImplementedError(msg)
 
     # TODO: Validate
+    def search(self, query: str) -> str | None:
+        """Return the address of the one title `query` names here, or None.
+
+        What TMDB cross references a title against, so the closest match is all
+        that matters and its address is all that is read off it. A service a
+        user searches for themselves offers `in_app_search` instead.
+        """
+        msg = "search is not supported by this plugin."
+        raise NotImplementedError(msg)
+
+    # TODO: Validate
     def in_app_search(
         self,
         query: str,
         cursor: str | None = None,
     ) -> PluginSearchResults:
+        """Return a page of everything `query` matches, for a user to pick from.
+
+        Paged, since a user reads the results and chooses among them rather than
+        taking whatever came first.
+        """
         msg = "in_app_search is not supported by this plugin."
         raise NotImplementedError(msg)
 
@@ -571,7 +587,7 @@ class PluginSearchResults(BaseModel):
     results: list[PluginSearchResult]
 
     next_cursor: str | None = None
-    """Cursor to pass back to `in_app_search` for the next page.
+    """Cursor to pass back to `search` for the next page.
 
     None on the last page. Only ever interpreted by the plugin that produced it.
     """

@@ -1,13 +1,9 @@
-# TODO: Validate
-"""YouTube plugin."""
-
 import re
 from datetime import timedelta
 from typing import override
 
 from loguru import logger
 
-from app.canonical_media.service import add_canonical_show
 from app.channels.models import ChannelQueue, URLStatus
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -41,7 +37,6 @@ from plugins.YouTube.upsert import UpsertMixin
 from plugins.YouTube.watch_history import WatchHistoryMixin
 
 
-# TODO: Validate
 class YouTube(
     SourceMixin,
     UpsertMixin,
@@ -50,17 +45,11 @@ class YouTube(
     HelperMixin,
     register=True,
 ):
-    """YouTube plugin."""
-
-    # TODO: Validate
-    # TODO: Validate
     @classmethod
     @override
     def specialized_updater(cls) -> bool:
         return True
 
-    # TODO: Don't hardcode the favicon URL
-    # TODO: Validate
     @classmethod
     @override
     def favicon_url(cls) -> str:
@@ -68,7 +57,6 @@ class YouTube(
             "https://www.youtube.com/s/desktop/45ea6c88/img/logos/favicon_144x144.png"
         )
 
-    # TODO: Validate
     @classmethod
     def _url_handlers(cls) -> tuple[type[YouTubeURLHandler], ...]:
         return (
@@ -82,7 +70,6 @@ class YouTube(
             ChannelHandleURLHandler,
         )
 
-    # TODO: Validate
     @classmethod
     @override
     def domains(cls) -> list[str]:
@@ -167,33 +154,33 @@ class YouTube(
         show_key = handler.show_key
         playlist_key = handler.playlist_key
         show_preload = self._preload_show(show_key, preload_episodes=True)
-        if not (show := show_preload.one_or_none()):
+        existing_show = show_preload.one_or_none()
+
+        if not existing_show or force:
             _cache = self._download_show_files_and_children(show_key)
-            show = self.upsert_show(
-                self.source,
-                show_key,
-                canonical_show=canonical_show,
-                force=force,
-            )
-        # Checking for playlists here allows support for adding multiple albums from a
-        # single artist's channel.
-        elif force or self._playlist_is_missing(show, playlist_key):
-            _cache = self._download_show_files_and_children(show, tz_datetime.now())
-            show = self.upsert_show(
+            existing_show = self.upsert_show(
                 self.source,
                 show_key,
                 canonical_show=canonical_show,
                 force=force,
             )
 
-        # Before `import_results`, which names what the URL brought in by the keys of
-        # the listing's own rows: a channel resolves each of those to the row it is
-        # linked to, so the non-canonical rows have to exist before it is asked. A
-        # branch that wrote the listing settled it as it wrote; this is for the one that
-        # found it already stored and read nothing.
-        if canonical_show:
-            add_canonical_show(self.session, show, canonical_show)
-        return handler.import_results(show)
+        # If a channel is imported but a new playlist is added and that playlist is the
+        # URL being imported this will update the channel information to include that
+        # playlist.
+        elif self._playlist_is_missing(existing_show, playlist_key):
+            self._download_outdated_files(
+                self._show_files(show_key),
+                tz_datetime.now(),
+            )
+            existing_show = self.upsert_show(
+                self.source,
+                show_key,
+                canonical_show=canonical_show,
+                force=force,
+            )
+
+        return handler.import_results(existing_show)
 
     # TODO: Validate
     def _playlist_is_missing(self, show: Show, playlist_key: str) -> bool:

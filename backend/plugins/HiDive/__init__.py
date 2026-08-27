@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from typing import override
 
+from plugins.HiDive.search import SearchMixin
 from plugins.HiDive.source import SourceMixin
 from plugins.HiDive.upsert import UpsertMixin
 from plugins.HiDive.url_handlers import (
@@ -22,6 +23,7 @@ from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
 class HiDive(
     UpsertMixin,
     SourceMixin,
+    SearchMixin,
     MediaTypeImportMixin[HiDiveURLHandler],
     register=True,
 ):

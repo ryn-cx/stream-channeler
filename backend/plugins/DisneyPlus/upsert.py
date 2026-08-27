@@ -9,7 +9,7 @@ from typing import override
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
-from app.shows.service import find_and_add_canonical_show
+from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from plugins.DisneyPlus.helpers import required_value
 from plugins.DisneyPlus.source import SourceMixin
@@ -35,7 +35,7 @@ class UpsertMixin(SourceMixin, register=False):
             show = self._upsert_series_show(source, show_key, force=force)
         self._soft_delete_missing(show_key)
         self._set_weekly_updates_from_episodes(show, update_show=False)
-        find_and_add_canonical_show(self.session, show, canonical_show)
+        add_canonical_show_and_link_episodes(self.session, show, canonical_show)
         return show
 
     # TODO: Validate

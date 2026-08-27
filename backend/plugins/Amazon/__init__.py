@@ -5,8 +5,8 @@ from __future__ import annotations
 
 from typing import override
 
-from app.canonical_media.service import add_canonical_show
 from app.shows.models import Show
+from plugins.Amazon.search import SearchMixin
 from plugins.Amazon.source import SourceMixin
 from plugins.Amazon.upsert import UpsertMixin
 from plugins.Amazon.url_handlers import (
@@ -22,6 +22,7 @@ from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 # TODO: Validate
 class Amazon(
     UpsertMixin,
+    SearchMixin,
     SourceMixin,
     URLHandlerPlugin[AmazonURLHandler],
     register=True,
@@ -87,18 +88,12 @@ class Amazon(
     ) -> list[URLImportResult]:
         show_key = handler.show_key
         if not force and (shows := self._preload_show(show_key).all()):
-            if canonical_show:
-                for show in shows:
-                    add_canonical_show(self.session, show, canonical_show)
             return [result for show in shows for result in handler.import_results(show)]
 
         _cache = self._download_show_files_and_children(show_key)
         if canonical_show is None:
             canonical_show = self._tmdb_show(show_key, force=force)
             if not force and (shows := self._preload_show(show_key).all()):
-                if canonical_show:
-                    for show in shows:
-                        add_canonical_show(self.session, show, canonical_show)
                 return [
                     result for show in shows for result in handler.import_results(show)
                 ]

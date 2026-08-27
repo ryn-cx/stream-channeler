@@ -46,8 +46,6 @@ of the current time never is.
 
 # TODO: Validate
 class BaseFile[T](ABC):
-    IMMUTABLE: bool = False
-
     # TODO: Validate
     def __init__(self, session: Session, plugin: Plugin) -> None:
         """Initialize the file."""
@@ -204,6 +202,11 @@ class BaseFile[T](ABC):
         raise NotImplementedError(msg)
 
     # TODO: Validate
+    def _next_update_at(self) -> datetime | None:
+        """Return when the file should be downloaded again, if it should be."""
+        return None
+
+    # TODO: Validate
     def write(self, content: str | None, extra: str | None = None) -> None:
         """Write content to the file and commit it to the database.
 
@@ -222,6 +225,7 @@ class BaseFile[T](ABC):
                 data_timestamp=tz_datetime.now(),
                 extra=extra,
                 plugin_id=plugin.id,
+                update_at=self._next_update_at(),
             ).upsert_and_set_update_at(
                 plugin,
                 File.get(file_session, plugin, self.file_key()),
@@ -261,11 +265,16 @@ class BaseFile[T](ABC):
     # TODO: Validate
     def is_outdated(self, minimum_timestamp: datetime | None = None) -> bool:
         """Check if the file is outdated."""
-        if self.IMMUTABLE and self._existing_database_record:
-            return False
-
         # If there is no database record the file is outdated.
         if not self._existing_database_record:
+            return True
+
+        # A file that asked to be downloaded again by now is outdated whatever it
+        # is being read against, so a file type that refreshes on its own says so
+        # once through `_next_update_at` rather than every caller passing a
+        # timestamp it has no reason to know.
+        record_update_at = self._existing_database_record.update_at
+        if record_update_at and record_update_at <= tz_datetime.now():
             return True
 
         # If there is no minimum timestamp and the file exists it is up to date.

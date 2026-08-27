@@ -6,6 +6,7 @@ their episodes all come out of the one file the title is downloaded as.
 """
 
 from collections.abc import Sequence
+from datetime import datetime, timedelta
 from functools import cache
 from typing import Any, override
 
@@ -17,9 +18,18 @@ from meshfilm.lodp_title_and_plans_page.models import (
 from meshfilm.lodp_title_and_plans_page.models import Node as SeasonNode
 from meshfilm.lodp_title_and_plans_page.models import Node1 as EpisodeNode
 from meshfilm.lodp_title_and_plans_page.models import Video1 as TitleVideo
+from meshfilm.search_page_results import SearchPageResults
+from meshfilm.search_page_results.models import SearchPageResultsModel
+from sqlmodel import Session
 
+from app.plugins.models import Plugin
+from app.utils import tz_datetime
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import BaseFile, IntegerEndpointFile
+from plugins.utils.base_plugin.files import (
+    BaseFile,
+    EndpointFile,
+    IntegerEndpointFile,
+)
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -41,8 +51,45 @@ class Title(IntegerEndpointFile[LodpTitleAndPlansPageModel]):
 
 
 # TODO: Validate
+class Search(EndpointFile[SearchPageResultsModel]):
+    """Search file."""
+
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> SearchPageResults:
+        return meshfilm().search_page_results
+
+    # TODO: Validate
+    def __init__(
+        self,
+        session: Session,
+        plugin: Plugin,
+        query: str,
+        cursor: str,
+    ) -> None:
+        self.query = query
+        self.cursor = cursor
+        super().__init__(session, plugin, f"{query}/{cursor}")
+
+    # TODO: Validate
+    @override
+    def _download_file(self) -> str:
+        return self._endpoint().download(self.query, self.cursor or None)
+
+    # TODO: Validate
+    @override
+    def _next_update_at(self) -> datetime:
+        return tz_datetime.now() + timedelta(days=30)
+
+
+# TODO: Validate
 class FileMixin(BasePlugin, register=False):
     """The files a Netflix title is read out of."""
+
+    # TODO: Validate
+    def search_file(self, query: str, cursor: str | None) -> Search:
+        """Contains one page of Netflix's movie and TV search results."""
+        return self._file(Search, query, cursor or "")
 
     # TODO: Validate
     def title_file(self, title_key: str) -> Title:

@@ -3,6 +3,7 @@
 
 import json
 from collections.abc import Sequence
+from datetime import datetime, timedelta
 from functools import cache
 from typing import Any, override
 
@@ -15,6 +16,8 @@ from wholoo.exceptions import (
 )
 from wholoo.movies import Movies as MoviesEndpoint
 from wholoo.movies.models import MoviesModel
+from wholoo.search import Search as SearchEndpoint
+from wholoo.search.models import SearchModel
 from wholoo.season import Season as SeasonEndpoint
 from wholoo.season.models import Item as SeasonItem
 from wholoo.season.models import SeasonModel
@@ -22,6 +25,7 @@ from wholoo.tv import TV
 from wholoo.tv.models import TVModel
 
 from app.plugins.models import Plugin
+from app.utils import tz_datetime
 from plugins.Hulu.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import BaseFile, EndpointFile
@@ -146,8 +150,28 @@ class EpisodeHub(EndpointFile[dict[str, Any]]):
 
 
 # TODO: Validate
+class SearchFile(EndpointFile[SearchModel]):
+    """Search file."""
+
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> SearchEndpoint:
+        return wholoo().search
+
+    # TODO: Validate
+    @override
+    def _next_update_at(self) -> datetime:
+        return tz_datetime.now() + timedelta(days=30)
+
+
+# TODO: Validate
 class FileMixin(MediaTypeMixin, BasePlugin, register=False):
     """The files a title is read out of."""
+
+    # TODO: Validate
+    def search_file(self, query: str) -> SearchFile:
+        """Return SearchFile file."""
+        return self._file(SearchFile, query)
 
     # TODO: Validate
     def series_file(self, series_id: str) -> Series:

@@ -1,6 +1,6 @@
 # TODO: Validate
 from collections.abc import Sequence
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from functools import cache
 from typing import (
     Any,
@@ -262,6 +262,11 @@ class MultiSearch(EndpointFile[SearchMultiModel]):
     def _download_file(self) -> str:
         return self._endpoint().download(self.query, page=self.page)
 
+    # TODO: Validate
+    @override
+    def _next_update_at(self) -> datetime:
+        return tz_datetime.now() + timedelta(days=30)
+
 
 class TitlePage(HTMLFile):
     def __init__(
@@ -300,6 +305,11 @@ class MovieSearch(EndpointFile[SearchMovieModel]):
     def _download_file(self) -> str:
         return self._endpoint().download(self.query, year=self.year)
 
+    # TODO: Validate
+    @override
+    def _next_update_at(self) -> datetime:
+        return tz_datetime.now() + timedelta(days=30)
+
 
 class TvSearch(EndpointFile[SearchTvModel]):
     @override
@@ -321,8 +331,14 @@ class TvSearch(EndpointFile[SearchTvModel]):
     def _download_file(self) -> str:
         return self._endpoint().download(self.query, year=self.year)
 
+    # TODO: Validate
 
-# TODO: Validate
+    # TODO: Validate
+    @override
+    def _next_update_at(self) -> datetime:
+        return tz_datetime.now() + timedelta(days=30)
+
+
 class FileMixin(BasePlugin, register=False):
     # TODO: Validate
     def multi_search_file(self, query: str, page: int = 1) -> MultiSearch:

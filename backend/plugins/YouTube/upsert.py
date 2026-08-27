@@ -8,7 +8,7 @@ from not_yt_dlapi.playlists.models import Item as PlaylistsItem
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
-from app.shows.service import find_and_add_canonical_show
+from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.YouTube.files import (
@@ -41,15 +41,15 @@ class UpsertMixin(HelperMixin, register=False):
         if is_video_key(show_key):
             show = self._upsert_show_movie(show_key, force=force)
             if self.is_free_movie(show_key):
-                find_and_add_canonical_show(self.session, show, canonical_show)
+                add_canonical_show_and_link_episodes(self.session, show, canonical_show)
         elif is_show_key(show_key):
             show = self._upsert_show_series(show_key, force=force)
-            find_and_add_canonical_show(self.session, show, canonical_show)
+            add_canonical_show_and_link_episodes(self.session, show, canonical_show)
         elif is_an_album(show_key):
             show = self._upsert_show_music(show_key, force=force)
         elif is_user_playlist(show_key):
             show = self._upsert_show_playlist(show_key, force=force)
-            find_and_add_canonical_show(self.session, show, canonical_show)
+            add_canonical_show_and_link_episodes(self.session, show, canonical_show)
         elif self.is_topic_channel(show_key):
             show = self._upsert_show_topic(show_key, force=force)
         elif self.is_movies_channel(show_key):
@@ -58,7 +58,7 @@ class UpsertMixin(HelperMixin, register=False):
                 show_key,
                 force=force,
             )
-            find_and_add_canonical_show(self.session, show, canonical_show)
+            add_canonical_show_and_link_episodes(self.session, show, canonical_show)
         else:
             show = self._upsert_show_channel(source, show_key, force=force)
 

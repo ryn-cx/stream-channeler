@@ -6,13 +6,17 @@ from typing import Any, override
 
 from naphki import Naphki
 from naphki.exceptions import ProgramNotFoundError
+from naphki.shows_search import ShowsSearch as ShowsSearchEndpoint
+from naphki.shows_search.models import ShowsSearchModel
 from naphki.video_episodes import VideoEpisodes as VideoEpisodesEndpoint
 from naphki.video_episodes.models import Image as EpisodeImage
 from naphki.video_episodes.models import Item, VideoEpisodesModel
 from naphki.video_program import VideoProgram as VideoProgramEndpoint
 from naphki.video_program.models import LandscapeItem, PortraitItem, VideoProgramModel
+from sqlmodel import Session
 
 from app.files.models import File
+from app.plugins.models import Plugin
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import PluginShowIdentity
 from plugins.utils.base_plugin import BasePlugin
@@ -65,8 +69,6 @@ class VideoEpisodes(EndpointFile[VideoEpisodesModel]):
 class NewVideoEpisodes(EndpointFile[VideoEpisodesModel]):
     """New video episodes file."""
 
-    IMMUTABLE = True
-
     # TODO: Validate
     @override
     def _endpoint(self) -> VideoEpisodesEndpoint:
@@ -90,6 +92,40 @@ class NewVideoEpisodes(EndpointFile[VideoEpisodesModel]):
 
 
 # TODO: Validate
+class ShowsSearch(EndpointFile[ShowsSearchModel]):
+    """Shows search file."""
+
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ShowsSearchEndpoint:
+        return naphki().shows_search
+
+    # TODO: Validate
+    def __init__(
+        self,
+        session: Session,
+        plugin: Plugin,
+        query: str,
+        offset: int,
+    ) -> None:
+        self.query = query
+        self.offset = offset
+        super().__init__(session, plugin, f"{query}/{offset}")
+
+    # `size` keeps its default so a page request looks exactly like the one the
+    # website makes.
+    # TODO: Validate
+    @override
+    def _download_file(self) -> str:
+        return self._endpoint().download(self.query, from_=self.offset)
+
+    # TODO: Validate
+    @override
+    def _next_update_at(self) -> datetime:
+        return tz_datetime.now() + timedelta(days=30)
+
+
+# TODO: Validate
 class FileMixin(BasePlugin, register=False):
     # The new episodes feed belongs to the source, so every show reads the same one.
     # TODO: Validate
@@ -97,6 +133,11 @@ class FileMixin(BasePlugin, register=False):
     @override
     def _plugin_wide_files(cls) -> tuple[type[BaseFile[Any]], ...]:
         return (NewVideoEpisodes,)
+
+    # TODO: Validate
+    def shows_search_file(self, query: str, offset: int) -> ShowsSearch:
+        """Contains one page of results for a search query."""
+        return self._file(ShowsSearch, query, offset)
 
     # TODO: Validate
     def video_program_file(self, show_key: str) -> VideoProgram:

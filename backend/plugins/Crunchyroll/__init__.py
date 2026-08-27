@@ -8,12 +8,12 @@ from __future__ import annotations
 
 from typing import override
 
-from app.canonical_media.service import add_canonical_show
 from app.shows.models import Show
 from app.sources.models import Source
 from plugins.Crunchyroll.constants import MUSIC_SOURCE, VIDEO_SOURCE
 from plugins.Crunchyroll.helpers import HelperMixin
 from plugins.Crunchyroll.music_keys import is_music_show_key
+from plugins.Crunchyroll.search import SearchMixin
 from plugins.Crunchyroll.update import UpdateMixin
 from plugins.Crunchyroll.upsert import UpsertMixin
 from plugins.Crunchyroll.url_handlers import (
@@ -35,6 +35,7 @@ class Crunchyroll(
     WatchHistoryMixin,
     UpdateMixin,
     UpsertMixin,
+    SearchMixin,
     HelperMixin,
     URLHandlerPlugin[CrunchyrollURLHandler],
     register=True,
@@ -103,8 +104,6 @@ class Crunchyroll(
         show_key = handler.show_key
         source = self._source_from_show_key(show_key)
         if not force and (show := self._preload_show(show_key).one_or_none()):
-            if canonical_show:
-                add_canonical_show(self.session, show, canonical_show)
             return handler.import_results(show)
 
         # The files come down first because the search is made on the name and
@@ -114,8 +113,6 @@ class Crunchyroll(
         if canonical_show is None:
             canonical_show = self._tmdb_show(show_key, force=force)
             if not force and (show := self._preload_show(show_key).one_or_none()):
-                if canonical_show:
-                    add_canonical_show(self.session, show, canonical_show)
                 return handler.import_results(show)
 
         show = self.upsert_show(source, show_key, canonical_show, force=force)

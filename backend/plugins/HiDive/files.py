@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import cache
 from typing import Any, override
 
@@ -16,6 +16,8 @@ from diving_board.exceptions import (
 )
 from diving_board.schedule import Schedule as ScheduleEndpoint
 from diving_board.schedule import models as schedule_models
+from diving_board.search import Search as SearchEndpoint
+from diving_board.search import models as search_models
 from diving_board.season import Season as SeasonEndpoint
 from diving_board.season import models as season_models
 from diving_board.series import Series as SeriesEndpoint
@@ -24,6 +26,7 @@ from diving_board.vod import Vod as VodEndpoint
 from diving_board.vod import models as vod_models
 
 from app.files.models import File
+from app.utils import tz_datetime
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import (
     BaseFile,
@@ -137,6 +140,21 @@ class Schedule(PagedEndpointFile[schedule_models.ScheduleModel]):
 
 
 # TODO: Validate
+class Search(EndpointFile[search_models.SearchModel]):
+    """Search file."""
+
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> SearchEndpoint:
+        return diving_board().search
+
+    # TODO: Validate
+    @override
+    def _next_update_at(self) -> datetime:
+        return tz_datetime.now() + timedelta(days=30)
+
+
+# TODO: Validate
 class FileMixin(MediaTypeMixin, BasePlugin, register=False):
     """The files a title is read out of."""
 
@@ -159,6 +177,11 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
         """Return a cached Vod for the given vod key."""
         key = str(vod_key)
         return self._file(Vod, key)
+
+    # TODO: Validate
+    def search_file(self, query: str) -> Search:
+        """Return a cached Search for the given query."""
+        return self._file(Search, query)
 
     # TODO: Validate
     def series_file(self, series_key: str | int) -> Series:

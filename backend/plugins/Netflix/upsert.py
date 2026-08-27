@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, ClassVar, override
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
-from app.shows.service import find_and_add_canonical_show
+from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.Netflix.helpers import HelperMixin
@@ -49,7 +49,7 @@ class UpsertMixin(HelperMixin, register=False):
             show = self._upsert_tv_show(source, show_key, force=force)
 
         self._soft_delete_missing(show_key)
-        find_and_add_canonical_show(self.session, show, canonical_show)
+        add_canonical_show_and_link_episodes(self.session, show, canonical_show)
         return show
 
     # TODO: Validate

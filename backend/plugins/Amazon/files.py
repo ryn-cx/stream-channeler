@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import cache
 from typing import Any, override
 
@@ -22,10 +22,13 @@ from deforestation.detail_widgets import DetailWidgets as DetailWidgetsEndpoint
 from deforestation.detail_widgets.models import DetailWidgetsModel
 from deforestation.detail_widgets.models import Episode as WidgetEpisode
 from deforestation.exceptions import RedirectedError, TitleNotFoundError
+from deforestation.search import Search as SearchEndpoint
+from deforestation.search.models import SearchModel
 from pydantic import BaseModel
 from sqlmodel import Session
 
 from app.plugins.models import Plugin
+from app.utils import tz_datetime
 from plugins.Amazon.constants import (
     IMAGE_PREFERENCE,
     MOVIE_ENTITY_TYPE,
@@ -618,8 +621,57 @@ class EpisodeList(EndpointFile[DetailWidgetsModel]):
 
 
 # TODO: Validate
+class Search(EndpointFile[SearchModel]):
+    """Everything one search query matched.
+
+    Prime Video answers a search with every match at once, so there is a single
+    file for a query rather than one for each page of it.
+    """
+
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> SearchEndpoint:
+        return deforestation().search
+
+    # TODO: Validate
+    @override
+    def _next_update_at(self) -> datetime:
+        return tz_datetime.now() + timedelta(days=30)
+
+    # TODO: Validate
+    def results(self) -> list[str]:
+        """Return the key of each title the query matched, best match first.
+
+        Prime Video answers a search with the titles it matched and with rows of
+        titles like them, and only the matches are results of the search. The
+        matches are the ones it lays out as a grid; the rows it suggests are
+        carousels.
+        """
+        keys: list[str] = []
+        seen: set[str] = set()
+        for container in self.parsed().body.containers:
+            # What a search lays its matches out as, which is what tells them
+            # apart from the rows of titles like them that it suggests
+            # alongside.
+            if container.container_type != "Grid":
+                continue
+            for entity in container.entities:
+                key = _compact_key_from_link(entity.link.url)
+                if key in seen:
+                    continue
+                seen.add(key)
+                keys.append(key)
+        return keys
+
+
+# TODO: Validate
 class FileMixin(BasePlugin, register=False):
     """The files a title is read out of."""
+
+    # TODO: Validate
+    def search_file(self, query: str) -> Search:
+        """Return data for search results."""
+        return self._file(Search, query)
 
     # TODO: Validate
     def detail_file(self, title_key: str) -> Detail:

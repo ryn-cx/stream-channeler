@@ -82,6 +82,7 @@ class LookupMixin(FileMixin, register=False):
             search_file = self.tv_search_file(query, year)
         else:
             search_file = self.multi_search_file(query)
+        search_file.download_if_outdated()
         return search_file
 
     # TODO: Validate

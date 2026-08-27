@@ -10,7 +10,6 @@ from typing import Any, cast, override
 from loguru import logger
 from sqlmodel import Session
 
-from app.canonical_media.service import add_canonical_show
 from app.episodes.models import Episode
 from app.episodes.preload import preload_episodes
 from app.media.media_type import MediaType
@@ -581,22 +580,16 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
         itself, since that is what a caller asking for a URL to be imported is
         asking for, and it is the handler that says what the URL named.
 
-        A title that is already stored is only reconciled against the title it
-        was told it is linked to, there being nothing else to read. `force` is
-        what says to write it out again anyway.
+        `force` is what says to write a title that is already stored out again.
         """
         show_key = handler.show_key
         if not force and (show := self._preload_show(show_key).one_or_none()):
-            if canonical_show:
-                add_canonical_show(self.session, show, canonical_show)
             return handler.import_results(show)
 
         _cache = self._download_show_files_and_children(show_key)
         if canonical_show is None:
             canonical_show = self._tmdb_show(show_key, force=force)
             if not force and (show := self._preload_show(show_key).one_or_none()):
-                if canonical_show:
-                    add_canonical_show(self.session, show, canonical_show)
                 return handler.import_results(show)
 
         show = self.upsert_show(

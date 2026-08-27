@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import override
 from urllib.parse import quote_plus
 
+from plugins.NHKWorld.search import SearchMixin
 from plugins.NHKWorld.source import SourceMixin
 from plugins.NHKWorld.upsert import UpsertMixin
 from plugins.NHKWorld.url_handlers import NHKWorldURLHandler, ShowURLHandler
@@ -14,6 +15,7 @@ from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 class NHKWorld(
     SourceMixin,
     UpsertMixin,
+    SearchMixin,
     URLHandlerPlugin[NHKWorldURLHandler],
     register=True,
 ):

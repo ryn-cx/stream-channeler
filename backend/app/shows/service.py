@@ -36,7 +36,7 @@ _TMDB_TITLE_URL = re.compile(r"themoviedb\.org/(?:movie|tv)/(?P<tmdb_id>\d+)")
 
 
 # TODO: Validate
-def find_and_add_canonical_show(
+def add_canonical_show_and_link_episodes(
     session: Session,
     show: Show,
     canonical_show: Show | None = None,

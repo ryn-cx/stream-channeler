@@ -52,22 +52,22 @@ class ImportURLMixin(
         force: bool = False,
     ) -> list[URLImportResult]:
         show_key = handler.show_key
-        stored = self._preload_show(show_key).one_or_none()
-        if stored and not force:
-            return handler.import_results(stored)
+        show_preload = self._preload_show(show_key, preload_episodes=True)
+        existing_show = show_preload.one_or_none()
+        if not existing_show or force:
+            _cache = self._download_show_files_and_children(show_key)
+            existing_show = self.upsert_show(self.source, show_key, force=force)
 
-        # This title's own rows are written before anything is handed on. A
-        # website's plugin resolves the title it carries by asking TMDB for it,
-        # so a hand-off made first would be asking for a title that is not
-        # stored yet and would send the import straight back round; made after,
-        # that ask is answered by the row written here and the chain ends.
-        self._download_title_files(show_key)
-        show = self.upsert_show(self.source, show_key, force=force)
+            # This title's own rows are written before anything is handed on. A
+            # website's plugin resolves the title it carries by asking TMDB for
+            # it, so a hand-off made first would be asking for a title that is
+            # not stored yet and would send the import straight back round; made
+            # after, that ask is answered by the row written here and the chain
+            # ends.
+            if canonical_show is None:
+                self._import_listed_sources(show_key, existing_show, force=force)
 
-        if canonical_show is None:
-            self._import_listed_sources(show_key, show, force=force)
-
-        return handler.import_results(show)
+        return handler.import_results(existing_show)
 
     # TODO: Validate
     def _import_listed_sources(
@@ -80,9 +80,9 @@ class ImportURLMixin(
         """Import the title from every service Watchmode or JustWatch lists it on.
 
         Both name each service by a link to the title on it, so the listing a
-        website carries is reached by the address of that listing rather than by
-        searching the website for the title's name and taking whichever result
-        looks closest.
+        website carries is reached by the address of that listing first. A
+        service listed without a usable address is searched for the title's name
+        on its own website instead, and the closest result taken.
 
         An address a plugin turns out not to be able to import is passed over
         rather than raised on. Both lookups list a service that sells a disc of
@@ -107,7 +107,7 @@ class ImportURLMixin(
                 self._note_new_links(show, noted, "Automatic: Watchmode listing")
                 imported.add(plugin_class)
 
-        self._record_unmatched_sources(providers, show, imported)
+        self._import_searched_sources(providers, show, imported, force=force)
 
     # TODO: Validate
     def _linked_show_ids(self, show: Show) -> set[uuid.UUID]:
@@ -138,26 +138,34 @@ class ImportURLMixin(
             noted.add(link.show_id)
 
     # TODO: Validate
-    def _record_unmatched_sources(
+    def _import_searched_sources(
         self,
         providers: list[Provider],
         show: Show,
         imported: set[type[AbstractPlugin]],
+        *,
+        force: bool = False,
     ) -> None:
+        noted = self._linked_show_ids(show)
         linked = self._linked_plugin_keys(show)
         for provider in providers:
             plugin_class = plugin_for_tmdb_name(provider.provider_name)
             already_linked = (
                 plugin_class is not None and plugin_class.plugin_key() in linked
             )
-            if plugin_class in imported or already_linked:
+            if (
+                plugin_class in imported
+                or already_linked
+                or self._import_searched_source(plugin_class, show, force=force)
+            ):
                 if plugin_class is not None:
                     imported.add(plugin_class)
-                clear_unmatched_source(
-                    self.session,
-                    show.id,
-                    provider.provider_name,
+                self._note_new_links(
+                    show,
+                    noted,
+                    "Automatic: Source website search",
                 )
+                clear_unmatched_source(self.session, show.id, provider.provider_name)
                 continue
 
             record_unmatched_source(
@@ -166,6 +174,43 @@ class ImportURLMixin(
                 provider.provider_name,
                 plugin_class.plugin_key() if plugin_class else None,
             )
+
+    # TODO: Validate
+    def _import_searched_source(
+        self,
+        plugin_class: type[AbstractPlugin] | None,
+        show: Show,
+        *,
+        force: bool = False,
+    ) -> bool:
+        if (
+            plugin_class is None
+            or not plugin_class.implements("search")
+            or not show.name
+        ):
+            return False
+
+        url = self._searched_source_url(plugin_class, show.name)
+        if url is None:
+            return False
+
+        return self._import_child_url(plugin_class, url, show, force=force)
+
+    # TODO: Validate
+    def _searched_source_url(
+        self,
+        plugin_class: type[AbstractPlugin],
+        name: str,
+    ) -> str | None:
+        savepoint = self.session.begin_nested()
+        try:
+            url = plugin_class(self.session).search(name)
+        except Exception:  # noqa: BLE001
+            savepoint.rollback()
+            logger.exception("Searching {} for {}", plugin_class.plugin_key(), name)
+            return None
+        savepoint.commit()
+        return url
 
     # TODO: Validate
     def _import_child_url(
@@ -195,20 +240,6 @@ class ImportURLMixin(
         """Return every address either lookup gives for the title, without repeats."""
         media_type, tmdb_id = parse_show_key(show_key)
         return WatchMode(self.session).source_urls(media_type, tmdb_id)
-
-    # TODO: Validate
-    def _download_title_files(self, show_key: str) -> None:
-        """Read the title's own file and its seasons', and nothing below them.
-
-        A season carries every episode of it, which is all an upsert here reads,
-        so the episode files are left alone. They are two downloads apiece and a
-        title runs to hundreds of them; what wants one - matching a website's
-        episode to TMDB's - asks for it when it gets there.
-        """
-        _cache = self._preload_show_files(show_key)
-        self._download_outdated_files(self._show_files(show_key))
-        for season_key in self._season_keys_from_file(show_key):
-            self._download_outdated_files(self._season_files(season_key, show_key))
 
     # TODO: Validate
     def import_search(
