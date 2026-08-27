@@ -7,9 +7,9 @@ from contextlib import contextmanager
 from datetime import datetime
 from typing import (
     Any,
-    ClassVar,
     Final,
     Protocol,
+    cast,
     final,
     override,
 )
@@ -23,6 +23,7 @@ from app.files.models import File
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
 from app.utils.sentinels import Sentinel
+from plugins.utils.get_around_client import get_around_client
 
 # What `File.extra` says about a file that has been read to the end. `extra` is an
 # object now, so the mark is a field of it rather than the whole of it, which
@@ -331,6 +332,19 @@ class HTMLFile(BaseFile[BeautifulSoup], ABC):
         super().__init__(session, plugin)
 
     # TODO: Validate
+    @abstractmethod
+    def _url(self) -> str:
+        """Return the address the page is served from."""
+
+    # TODO: Validate
+    @override
+    def _download(self) -> None:
+        with self._log_download(self.unique_identifier):
+            response = get_around_client().get(self._url(), follow_redirects=True)
+            response.raise_for_status()
+            self.write(response.text)
+
+    # TODO: Validate
     @override
     def _parse(self, content: str) -> BeautifulSoup:
         return BeautifulSoup(content, "html.parser")
@@ -343,26 +357,34 @@ class HTMLFile(BaseFile[BeautifulSoup], ABC):
 
 
 # TODO: Validate
-class LoadEndpoint[T](Protocol):
-    # TODO: Validate
-    def download(self, unique_identifier: str, /) -> str: ...
-
+class Endpoint[T](Protocol):
     # TODO: Validate
     def load(self, data: str, log_id: str = "") -> T: ...
 
 
 # TODO: Validate
-class PagedLoadEndpoint[T](Protocol):
+class LoadEndpoint[T](Endpoint[T], Protocol):
+    # TODO: Validate
+    def download(self, unique_identifier: str, /) -> str: ...
+
+
+# TODO: Validate
+class IntegerLoadEndpoint[T](Endpoint[T], Protocol):
+    # TODO: Validate
+    def download(self, unique_identifier: int, /) -> str: ...
+
+
+# TODO: Validate
+class PagedLoadEndpoint[T](Endpoint[T], Protocol):
     # TODO: Validate
     def download_all(self, unique_identifier: str, /) -> list[str]: ...
-
-    # TODO: Validate
-    def load(self, data: str, log_id: str = "") -> T: ...
 
 
 # TODO: Validate
 class DownloadedFile[T](BaseFile[T], ABC):
-    API_ENDPOINT: ClassVar[Any]
+    # TODO: Validate
+    @abstractmethod
+    def _endpoint(self) -> Endpoint[Any]: ...
 
     # TODO: Validate
     def __init__(
@@ -375,15 +397,10 @@ class DownloadedFile[T](BaseFile[T], ABC):
         super().__init__(session, plugin)
 
     # TODO: Validate
-    def _download_endpoint(self) -> LoadEndpoint[T]:
-        """Return the endpoint the file is downloaded from."""
-        endpoint: LoadEndpoint[T] = self.API_ENDPOINT
-        return endpoint
-
-    # TODO: Validate
     def _download_file(self) -> str:
         """Download the file and return the body as it was served."""
-        return self._download_endpoint().download(self.unique_identifier)
+        endpoint = cast("LoadEndpoint[T]", self._endpoint())
+        return endpoint.download(self.unique_identifier)
 
     # TODO: Validate
     def _is_acceptable_error(self, error: Exception) -> bool:  # noqa: ARG002
@@ -417,28 +434,41 @@ class DownloadedFile[T](BaseFile[T], ABC):
 # TODO: Validate
 class EndpointFile[T](DownloadedFile[T], ABC):
     # TODO: Validate
-    def _load_endpoint(self) -> LoadEndpoint[T]:
-        """Return the endpoint the stored file is read back through."""
-        endpoint: LoadEndpoint[T] = self.API_ENDPOINT
-        return endpoint
+    @abstractmethod
+    @override
+    def _endpoint(self) -> Endpoint[T]: ...
 
     # TODO: Validate
     @override
     def _parse(self, content: str) -> T:
-        return self._load_endpoint().load(content, self.file_key())
+        return self._endpoint().load(content, self.file_key())
+
+
+# TODO: Validate
+class IntegerEndpointFile[T](EndpointFile[T], ABC):
+    # TODO: Validate
+    @abstractmethod
+    @override
+    def _endpoint(self) -> IntegerLoadEndpoint[T]: ...
+
+    # TODO: Validate
+    @override
+    def _download_file(self) -> str:
+        return self._endpoint().download(int(self.unique_identifier))
 
 
 # TODO: Validate
 class PagedEndpointFile[T](DownloadedFile[list[T]], ABC):
     # TODO: Validate
-    def _load_endpoint(self) -> PagedLoadEndpoint[T]:
-        endpoint: PagedLoadEndpoint[T] = self.API_ENDPOINT
-        return endpoint
+    @abstractmethod
+    @override
+    def _endpoint(self) -> Endpoint[T]: ...
 
     # TODO: Validate
     def _download_pages(self) -> list[str]:
         """Download every page of the file, first to last."""
-        return self._load_endpoint().download_all(self.unique_identifier)
+        endpoint = cast("PagedLoadEndpoint[T]", self._endpoint())
+        return endpoint.download_all(self.unique_identifier)
 
     # TODO: Validate
     @override
@@ -449,5 +479,5 @@ class PagedEndpointFile[T](DownloadedFile[list[T]], ABC):
     @override
     def _parse(self, content: str) -> list[T]:
         pages: list[str] = json.loads(content)
-        endpoint = self._load_endpoint()
+        endpoint = self._endpoint()
         return [endpoint.load(page, self.file_key()) for page in pages]

@@ -2,7 +2,7 @@
 from collections.abc import Sequence
 from datetime import datetime, timedelta
 from functools import cache
-from typing import Any, ClassVar, override
+from typing import Any, override
 
 from naphki import Naphki
 from naphki.exceptions import ProgramNotFoundError
@@ -30,7 +30,10 @@ def naphki() -> Naphki:
 class VideoProgram(EndpointFile[VideoProgramModel]):
     """Video program file."""
 
-    API_ENDPOINT: ClassVar[VideoProgramEndpoint] = naphki().video_program
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> VideoProgramEndpoint:
+        return naphki().video_program
 
     # Occurs when a user puts in an invalid URL.
     # TODO: Validate
@@ -43,12 +46,15 @@ class VideoProgram(EndpointFile[VideoProgramModel]):
 class VideoEpisodes(EndpointFile[VideoEpisodesModel]):
     """Video episodes file."""
 
-    API_ENDPOINT: ClassVar[VideoEpisodesEndpoint] = naphki().video_episodes
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> VideoEpisodesEndpoint:
+        return naphki().video_episodes
 
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self.API_ENDPOINT.download_merged_until_datetime(self.unique_identifier)
+        return self._endpoint().download_merged_until_datetime(self.unique_identifier)
 
     # TODO: Validate
     def items(self) -> list[Item]:
@@ -61,7 +67,10 @@ class NewVideoEpisodes(EndpointFile[VideoEpisodesModel]):
 
     IMMUTABLE = True
 
-    API_ENDPOINT: ClassVar[VideoEpisodesEndpoint] = naphki().video_episodes
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> VideoEpisodesEndpoint:
+        return naphki().video_episodes
 
     # TODO: Consider moving this login into naphki
     # TODO: Validate
@@ -71,7 +80,7 @@ class NewVideoEpisodes(EndpointFile[VideoEpisodesModel]):
         # get_all() uses. The initial baseline (to_datetime == now) stops after
         # the first page, and day-to-day there are rarely more than a handful of
         # new episodes, so a single page almost always covers the gap.
-        return self.API_ENDPOINT.download_merged_until_datetime(
+        return self._endpoint().download_merged_until_datetime(
             end_datetime=self.identifier_datetime(),
         )
 

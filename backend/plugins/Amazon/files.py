@@ -13,7 +13,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from functools import cache
-from typing import Any, ClassVar, override
+from typing import Any, override
 
 import httpx
 from deforestation import Deforestation
@@ -251,7 +251,10 @@ class Detail(DownloadedFile[dict[str, Any]]):
     searching a list for it.
     """
 
-    API_ENDPOINT: ClassVar[DetailEndpoint] = deforestation().detail
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> DetailEndpoint:
+        return deforestation().detail
 
     # TODO: Validate
     def __init__(self, session: Session, plugin: Plugin, title_key: str) -> None:
@@ -288,7 +291,7 @@ class Detail(DownloadedFile[dict[str, Any]]):
             landing_key = title_key_from_location(error.location)
             if landing_key is None:
                 raise
-            return self._download_endpoint().download(landing_key)
+            return self._endpoint().download(landing_key)
 
     # TODO: Validate
     @override
@@ -580,7 +583,10 @@ class EpisodeList(EndpointFile[DetailWidgetsModel]):
     of them is asked for by the token the season's page carries for it.
     """
 
-    API_ENDPOINT: ClassVar[DetailWidgetsEndpoint] = deforestation().detail_widgets
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> DetailWidgetsEndpoint:
+        return deforestation().detail_widgets
 
     # TODO: Validate
     def __init__(
@@ -602,7 +608,7 @@ class EpisodeList(EndpointFile[DetailWidgetsModel]):
     def _download_file(self) -> str:
         detail = Detail(self.session, self.plugin, self.season_key)
         token = detail.episode_page_token(self.page_index)
-        return self.API_ENDPOINT.download(self.season_key, token)
+        return self._endpoint().download(self.season_key, token)
 
     # TODO: Validate
     def episodes(self) -> list[AmazonEpisode]:

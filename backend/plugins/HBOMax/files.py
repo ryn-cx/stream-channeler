@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from functools import cache
-from typing import TYPE_CHECKING, Any, ClassVar, override
+from typing import TYPE_CHECKING, Any, override
 
 from minbo import MinBO
 from minbo.exceptions import MovieNotFoundError, ShowNotFoundError
@@ -39,7 +39,10 @@ def minbo() -> MinBO:
 class ShowFile(EndpointFile[ShowModel]):
     """Show file."""
 
-    API_ENDPOINT: ClassVar[ShowEndpoint] = minbo().show
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ShowEndpoint:
+        return minbo().show
 
     # TODO: Validate
     @override
@@ -51,7 +54,10 @@ class ShowFile(EndpointFile[ShowModel]):
 class SeasonFile(EndpointFile[ShowModel]):
     """Season file."""
 
-    API_ENDPOINT: ClassVar[ShowEndpoint] = minbo().show
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ShowEndpoint:
+        return minbo().show
 
     # TODO: Validate
     def __init__(
@@ -69,7 +75,7 @@ class SeasonFile(EndpointFile[ShowModel]):
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self.API_ENDPOINT.download(self.show_id, self.season_number)
+        return self._endpoint().download(self.show_id, self.season_number)
 
     # TODO: Validate
     @override
@@ -81,7 +87,10 @@ class SeasonFile(EndpointFile[ShowModel]):
 class MovieFile(EndpointFile[MovieModel]):
     """Movie file."""
 
-    API_ENDPOINT: ClassVar[MovieEndpoint] = minbo().movie
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> MovieEndpoint:
+        return minbo().movie
 
     # TODO: Validate
     @override

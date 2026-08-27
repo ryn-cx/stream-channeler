@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from functools import cache
-from typing import ClassVar, override
+from typing import override
 
 from wampi import Wampi
 from wampi.exceptions import TitleNotFoundError
@@ -36,7 +36,10 @@ class TitleSources(EndpointFile[TitleSourcesModel]):
     has just read in is looked up without anything being searched for.
     """
 
-    API_ENDPOINT: ClassVar[TitleSourcesEndpoint] = wampi().title_sources
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> TitleSourcesEndpoint:
+        return wampi().title_sources
 
     # TODO: Validate
     @override
@@ -45,7 +48,7 @@ class TitleSources(EndpointFile[TitleSourcesModel]):
         # every region the key is enabled for when it is not told one, and a
         # listing of the rest is both larger and of no use to a `User` watching
         # from here.
-        return self.API_ENDPOINT.download(self.unique_identifier, regions="US")
+        return self._endpoint().download(self.unique_identifier, regions="US")
 
     # Occurs when Watchmode does not carry the title TMDB named.
     # TODO: Validate

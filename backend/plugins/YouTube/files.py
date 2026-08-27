@@ -6,7 +6,7 @@ from collections import Counter
 from collections.abc import Sequence
 from datetime import datetime
 from functools import cache
-from typing import Any, ClassVar, override
+from typing import Any, override
 from urllib.parse import parse_qs, urlsplit
 
 from loguru import logger
@@ -132,12 +132,15 @@ def get_first_item[T](items: Sequence[T] | None) -> T:
 
 # TODO: Validate
 class ChannelByChannelId(EndpointFile[ChannelsModel]):
-    API_ENDPOINT: ClassVar[ChannelsEndpoint] = not_yt_dlapi().channels
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ChannelsEndpoint:
+        return not_yt_dlapi().channels
 
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self.API_ENDPOINT.download(channel_id=self.unique_identifier)
+        return self._endpoint().download(channel_id=self.unique_identifier)
 
     # Occurs when importing an invalid channel URL.
     # TODO: Validate
@@ -148,12 +151,15 @@ class ChannelByChannelId(EndpointFile[ChannelsModel]):
 
 # TODO: Validate
 class ChannelByHandle(EndpointFile[ChannelsModel]):
-    API_ENDPOINT: ClassVar[ChannelsEndpoint] = not_yt_dlapi().channels
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ChannelsEndpoint:
+        return not_yt_dlapi().channels
 
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self.API_ENDPOINT.download(channel_handle=self.unique_identifier)
+        return self._endpoint().download(channel_handle=self.unique_identifier)
 
     # Occurs when importing an invalid channel URL.
     # TODO: Validate
@@ -164,12 +170,15 @@ class ChannelByHandle(EndpointFile[ChannelsModel]):
 
 # TODO: Validate
 class ChannelByUsername(EndpointFile[ChannelsModel]):
-    API_ENDPOINT: ClassVar[ChannelsEndpoint] = not_yt_dlapi().channels
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ChannelsEndpoint:
+        return not_yt_dlapi().channels
 
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self.API_ENDPOINT.download(channel_username=self.unique_identifier)
+        return self._endpoint().download(channel_username=self.unique_identifier)
 
     # Occurs when importing an invalid channel URL.
     # TODO: Validate
@@ -180,29 +189,38 @@ class ChannelByUsername(EndpointFile[ChannelsModel]):
 
 # TODO: Validate
 class ChannelPlaylists(EndpointFile[PlaylistsModel]):
-    API_ENDPOINT: ClassVar[PlaylistsEndpoint] = not_yt_dlapi().playlists
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> PlaylistsEndpoint:
+        return not_yt_dlapi().playlists
 
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self.API_ENDPOINT.download_merged(channel_id=self.unique_identifier)
+        return self._endpoint().download_merged(channel_id=self.unique_identifier)
 
 
 # TODO: Validate
 class PlaylistInfo(EndpointFile[PlaylistsModel]):
-    API_ENDPOINT: ClassVar[PlaylistsEndpoint] = not_yt_dlapi().playlists
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> PlaylistsEndpoint:
+        return not_yt_dlapi().playlists
 
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self.API_ENDPOINT.download(playlist_ids=self.unique_identifier)
+        return self._endpoint().download(playlist_ids=self.unique_identifier)
 
 
 # TODO: Validate
 class PlaylistItems(EndpointFile[PlaylistItemsModel]):
     """Playlist items file."""
 
-    API_ENDPOINT: ClassVar[PlaylistItemsEndpoint] = not_yt_dlapi().playlist_items
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> PlaylistItemsEndpoint:
+        return not_yt_dlapi().playlist_items
 
     # TODO: Validate
     def items(self) -> list[Item]:
@@ -217,19 +235,19 @@ class PlaylistItems(EndpointFile[PlaylistItemsModel]):
     def _download_file(self) -> str:
         # If this is the first time downloading the file download all of the pages.
         if not self._existing_database_record:
-            return self.API_ENDPOINT.download_merged(self.unique_identifier)
+            return self._endpoint().download_merged(self.unique_identifier)
 
         pages: list[str] = []
         page_token: str | None = None
         reached_existing_video = False
         downloaded_all_pages = False
         while not (reached_existing_video or downloaded_all_pages):
-            downloaded_page = self.API_ENDPOINT.download(
+            downloaded_page = self._endpoint().download(
                 self.unique_identifier,
                 page_token=page_token,
             )
             pages.append(downloaded_page)
-            loaded_page = self.API_ENDPOINT.load(downloaded_page)
+            loaded_page = self._endpoint().load(downloaded_page)
             page_token = loaded_page.next_page_token
             downloaded_all_pages = page_token is None
 
@@ -239,7 +257,7 @@ class PlaylistItems(EndpointFile[PlaylistItemsModel]):
             )
 
         if downloaded_all_pages:
-            return self.API_ENDPOINT.merge_pages(pages)
+            return self._endpoint().merge_pages(pages)
         return self._merged_items(pages, self._remove_deleted_items(pages))
 
     # TODO: Validate
@@ -291,12 +309,18 @@ class PlaylistItems(EndpointFile[PlaylistItemsModel]):
 
 # TODO: Validate
 class Videos(EndpointFile[VideosModel]):
-    API_ENDPOINT: ClassVar[VideosEndpoint] = not_yt_dlapi().videos
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> VideosEndpoint:
+        return not_yt_dlapi().videos
 
 
 # TODO: Validate
 class MusicPlaylistFile(EndpointFile[MusicModel]):
-    API_ENDPOINT: ClassVar[MusicEndpoint] = not_yt_dlapi().music
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> MusicEndpoint:
+        return not_yt_dlapi().music
 
     # TODO: Validate
     @override
@@ -370,7 +394,10 @@ class TopicReleasesFile(PagedEndpointFile[TopicModel]):
     named once.
     """
 
-    API_ENDPOINT: ClassVar[TopicEndpoint] = not_yt_dlapi().topic
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> TopicEndpoint:
+        return not_yt_dlapi().topic
 
     # TODO: Validate
     @override
@@ -426,7 +453,10 @@ class ShowListing(PagedEndpointFile[ShowsModel]):
     the stretch that begins a season says which season the ones after it are of.
     """
 
-    API_ENDPOINT: ClassVar[ShowsEndpoint] = not_yt_dlapi().shows
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ShowsEndpoint:
+        return not_yt_dlapi().shows
 
     # TODO: Validate
     @override
@@ -520,7 +550,7 @@ class PlaylistFeed(EndpointFile[ChannelFeedModel | PlaylistFeedModel]):
 
     # TODO: Validate
     @override
-    def _load_endpoint(self) -> LoadEndpoint[ChannelFeedModel | PlaylistFeedModel]:
+    def _endpoint(self) -> LoadEndpoint[ChannelFeedModel | PlaylistFeedModel]:
         if self._is_channel_feed():
             return not_yt_dlapi().channel_feed
         return not_yt_dlapi().playlist_feed
@@ -580,11 +610,14 @@ class ShowPage(HTMLFile):
 
     # TODO: Validate
     @override
+    def _url(self) -> str:
+        return f"https://www.youtube.com/show/{self.show_key}"
+
+    # TODO: Validate
+    @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
-            response = get_around_client().get(
-                f"https://www.youtube.com/show/{self.show_key}",
-            )
+            response = get_around_client().get(self._url())
             if not response.is_success:
                 logger.warning(
                     "ShowPage fetch for {} returned HTTP {}; keeping the existing page.",

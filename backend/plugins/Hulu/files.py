@@ -4,7 +4,7 @@
 import json
 from collections.abc import Sequence
 from functools import cache
-from typing import Any, ClassVar, override
+from typing import Any, override
 
 from sqlmodel import Session
 from wholoo import Wholoo
@@ -70,7 +70,10 @@ class EpisodeHubEndpoint:
 class Series(EndpointFile[TVModel]):
     """Series file."""
 
-    API_ENDPOINT: ClassVar[TV] = wholoo().tv
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> TV:
+        return wholoo().tv
 
     # TODO: Validate
     @override
@@ -82,7 +85,10 @@ class Series(EndpointFile[TVModel]):
 class Movie(EndpointFile[MoviesModel]):
     """Movie file."""
 
-    API_ENDPOINT: ClassVar[MoviesEndpoint] = wholoo().movies
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> MoviesEndpoint:
+        return wholoo().movies
 
     # TODO: Validate
     @override
@@ -94,7 +100,10 @@ class Movie(EndpointFile[MoviesModel]):
 class SeasonFile(EndpointFile[SeasonModel]):
     """Season file."""
 
-    API_ENDPOINT: ClassVar[SeasonEndpoint] = wholoo().season
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> SeasonEndpoint:
+        return wholoo().season
 
     # TODO: Validate
     def __init__(
@@ -112,14 +121,17 @@ class SeasonFile(EndpointFile[SeasonModel]):
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self.API_ENDPOINT.download(self.series_id, self.season_number)
+        return self._endpoint().download(self.series_id, self.season_number)
 
 
 # TODO: Validate
 class EpisodeHub(EndpointFile[dict[str, Any]]):
     """Episode file."""
 
-    API_ENDPOINT: ClassVar[EpisodeHubEndpoint] = EpisodeHubEndpoint(wholoo())
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> EpisodeHubEndpoint:
+        return EpisodeHubEndpoint(wholoo())
 
     # TODO: Validate
     @override

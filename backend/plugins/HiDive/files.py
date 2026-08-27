@@ -6,7 +6,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from datetime import datetime
 from functools import cache
-from typing import Any, ClassVar, override
+from typing import Any, override
 
 from diving_board import DivingBoard
 from diving_board.exceptions import (
@@ -69,7 +69,10 @@ def season_bucket(season_data: season_models.SeasonModel) -> season_models.Eleme
 class Season(EndpointFile[season_models.SeasonModel]):
     """Season file."""
 
-    API_ENDPOINT: ClassVar[SeasonEndpoint] = diving_board().season
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> SeasonEndpoint:
+        return diving_board().season
 
     # Occurs when the user imports an invalid TV show url.
     # TODO: Validate
@@ -82,7 +85,10 @@ class Season(EndpointFile[season_models.SeasonModel]):
 class Vod(EndpointFile[vod_models.VodModel]):
     """Vod file."""
 
-    API_ENDPOINT: ClassVar[VodEndpoint] = diving_board().vod
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> VodEndpoint:
+        return diving_board().vod
 
     # Occurs when the user imports an invalid movie url.
     # TODO: Validate
@@ -95,7 +101,10 @@ class Vod(EndpointFile[vod_models.VodModel]):
 class Series(EndpointFile[series_models.SeriesModel]):
     """Series file."""
 
-    API_ENDPOINT: ClassVar[SeriesEndpoint] = diving_board().series
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> SeriesEndpoint:
+        return diving_board().series
 
     # Occurs when the user imports an invalid series url.
     # TODO: Validate
@@ -108,7 +117,10 @@ class Series(EndpointFile[series_models.SeriesModel]):
 class Schedule(PagedEndpointFile[schedule_models.ScheduleModel]):
     """Schedule file."""
 
-    API_ENDPOINT: ClassVar[ScheduleEndpoint] = diving_board().schedule
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ScheduleEndpoint:
+        return diving_board().schedule
 
     # TODO: Validate
     @override
@@ -121,7 +133,7 @@ class Schedule(PagedEndpointFile[schedule_models.ScheduleModel]):
             second=0,
             microsecond=0,
         )
-        return self.API_ENDPOINT.download_all(from_)
+        return self._endpoint().download_all(from_)
 
 
 # TODO: Validate

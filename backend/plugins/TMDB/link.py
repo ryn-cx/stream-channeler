@@ -49,7 +49,7 @@ class TMDBLinker:
         """
         if media_type is not None:
             results = (
-                self.tmdb.auto_updating_search_media(
+                self.tmdb.search_media(
                     media_type,
                     name,
                     year,
@@ -59,7 +59,7 @@ class TMDBLinker:
             )
             return Media(media_type, results[0].id) if results else None
 
-        found = self.tmdb.auto_updating_search_media(None, name, year).parsed().results
+        found = self.tmdb.search_media(None, name, year).parsed().results
         return next(
             (
                 Media(half, result.id)

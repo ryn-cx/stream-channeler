@@ -3,7 +3,7 @@
 
 from collections.abc import Sequence
 from functools import cache
-from typing import Any, ClassVar, override
+from typing import Any, override
 
 from plugi import Plugi
 from plugi.content import Content as ContentEndpoint
@@ -28,7 +28,10 @@ def plugi() -> Plugi:
 class ContentFile(EndpointFile[ContentModel]):
     """Content file."""
 
-    API_ENDPOINT: ClassVar[ContentEndpoint] = plugi().content
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ContentEndpoint:
+        return plugi().content
 
     # TODO: Validate
     @override

@@ -14,7 +14,7 @@ from app.unmatched_sources.service import (
     clear_unmatched_source,
     record_unmatched_source,
 )
-from plugins.TMDB.files import title_page_url
+from plugins.TMDB.constants import media_url
 from plugins.TMDB.keys import parse_show_key, show_key
 from plugins.TMDB.lookup import LookupMixin
 from plugins.TMDB.media_info import (
@@ -91,7 +91,7 @@ class ImportURLMixin(
         """
         media_type, tmdb_id = parse_show_key(show_key)
         providers = streaming_providers(
-            self.auto_updating_watch_providers(media_type, tmdb_id).parsed(),
+            self.watch_providers_file(media_type, tmdb_id).parsed(),
         )
 
         imported: set[type[AbstractPlugin]] = set()
@@ -246,16 +246,12 @@ class ImportURLMixin(
     ) -> tuple[MediaType, int] | None:
         """Return which half the first title TMDB returns is from, and its id."""
         if media_type is not None:
-            results = (
-                self.auto_updating_search_media(media_type, name, year).parsed().results
-            )
+            results = self.search_media(media_type, name, year).parsed().results
             return (media_type, results[0].id) if results else None
 
         # A search of both halves also returns people, who are no title and are
         # passed over rather than taken as the first result.
-        for result in (
-            self.auto_updating_search_media(None, name, year).parsed().results
-        ):
+        for result in self.search_media(None, name, year).parsed().results:
             # Which half of the catalogue a search of both says a result came
             # from. A multi search also returns people, who are no title and
             # cannot be imported.
@@ -269,11 +265,11 @@ class ImportURLMixin(
     # TODO: Validate
     def import_show(self, tmdb_id: int, *, force: bool = False) -> Show:
         """Import a TMDB tv entry using a tmdb_id."""
-        self.import_url(title_page_url(MediaType.tv, tmdb_id), force=force)
+        self.import_url(media_url(MediaType.tv, tmdb_id), force=force)
         return self._preload_show(show_key(MediaType.tv, tmdb_id)).one()
 
     # TODO: Validate
     def import_movie(self, tmdb_id: int, *, force: bool = False) -> Show:
         """Import a TMDB movie entry using a tmdb_id."""
-        self.import_url(title_page_url(MediaType.movie, tmdb_id), force=force)
+        self.import_url(media_url(MediaType.movie, tmdb_id), force=force)
         return self._preload_show(show_key(MediaType.movie, tmdb_id)).one()

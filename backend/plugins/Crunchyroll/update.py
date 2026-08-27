@@ -15,7 +15,7 @@ from app.sources.models import Source
 from app.users.service import get_or_create_plugin_user
 from app.utils import tz_datetime
 from plugins.Crunchyroll.constants import MUSIC_SOURCE, VIDEO_SOURCE
-from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries
+from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries, chirashi
 from plugins.Crunchyroll.upsert import UpsertMixin
 from plugins.utils.base_plugin.files import (
     COMPLETED_STATUS,
@@ -61,7 +61,7 @@ class UpdateMixin(UpsertMixin, register=False):
             self.browse_series_file,
         ):
             logger.info("Processing browse file: {}", browse_json.database_record.key)
-            releases = BrowseSeries.API_ENDPOINT.extract_data(
+            releases = chirashi().browse_series.extract_data(
                 browse_json.parsed(),
             )
             for release in releases:
@@ -93,7 +93,7 @@ class UpdateMixin(UpsertMixin, register=False):
                 "Processing music browse file: {}",
                 browse_json.database_record.key,
             )
-            artists = BrowseMusic.API_ENDPOINT.extract_data(
+            artists = chirashi().browse_music.extract_data(
                 browse_json.parsed(),
             )
             new_artist_urls: list[str] = []

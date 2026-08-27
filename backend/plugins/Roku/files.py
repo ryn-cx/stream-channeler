@@ -8,7 +8,7 @@ episode are all read out of the same file under an id of their own.
 from abc import ABC
 from collections.abc import Sequence
 from functools import cache
-from typing import Any, ClassVar, override
+from typing import Any, override
 from uuid import UUID
 
 from nana import Nana
@@ -41,7 +41,10 @@ def content_id(value: str | UUID) -> str:
 class BaseContentFile(EndpointFile[ContentModel], ABC):
     """What every file read off the content endpoint has in common."""
 
-    API_ENDPOINT: ClassVar[ContentEndpoint] = nana().content
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ContentEndpoint:
+        return nana().content
 
 
 # TODO: Validate

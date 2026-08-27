@@ -11,10 +11,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
-from tminidb.changes.tv_series.models import Item
+from tminidb.tv_series.changes.models import Item
 
 from app.media.media_type import MediaType
 from app.utils import tz_datetime
+from plugins.TMDB.episode_groups import show_chosen_group_id
 from plugins.TMDB.files import ShowChanges
 from plugins.TMDB.helpers import change_datetime
 from plugins.TMDB.import_url import ImportURLMixin
@@ -68,7 +69,7 @@ class UpdateMixin(ImportURLMixin, register=False):
         _, tmdb_id = parse_show_key(show_key)
         translations_files = self.stored_episode_translations_files(tmdb_id)
 
-        for change in changes_file.changes():
+        for change in changes_file.parsed().changes:
             for item in change.items:
                 changed_at = change_datetime(item.time)
                 if change.key in {"season", "episode"}:
@@ -96,7 +97,7 @@ class UpdateMixin(ImportURLMixin, register=False):
         changed = item.value
         named = (
             None
-            if self._chosen_group_id(show_key) is not None
+            if show_chosen_group_id(self.session, self.source, show_key) is not None
             else getattr(changed, "season_id", None)
         )
         key = None if named is None else season_key(MediaType.tv, named)

@@ -3,7 +3,7 @@
 
 from collections.abc import Sequence
 from functools import cache
-from typing import Any, ClassVar, override
+from typing import Any, override
 
 from notaplanet import NotAPlanet
 from notaplanet.exceptions import NotAPlanetError, SeriesNotFoundError
@@ -40,13 +40,16 @@ class ItemNotFoundError(NotAPlanetError):
 class ItemsFile(EndpointFile[ItemsModel]):
     """Items file."""
 
-    API_ENDPOINT: ClassVar[ItemsEndpoint] = notaplanet().items
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ItemsEndpoint:
+        return notaplanet().items
 
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        data = self.API_ENDPOINT.download([self.unique_identifier])
-        if not self.API_ENDPOINT.load(data).root:
+        data = self._endpoint().download([self.unique_identifier])
+        if not self._endpoint().load(data).root:
             raise ItemNotFoundError(self.unique_identifier)
         return data
 
@@ -66,7 +69,10 @@ class ItemsFile(EndpointFile[ItemsModel]):
 class SeasonsFile(EndpointFile[SeasonsModel]):
     """Seasons file."""
 
-    API_ENDPOINT: ClassVar[SeasonsEndpoint] = notaplanet().seasons
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> SeasonsEndpoint:
+        return notaplanet().seasons
 
     # TODO: Validate
     @override

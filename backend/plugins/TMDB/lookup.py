@@ -1,24 +1,18 @@
 # TODO: Validate
 from collections.abc import Sequence
-from datetime import timedelta
 from typing import overload
 
-from tminidb.details.movie.models import MovieModel
-from tminidb.details.tv_season.models import Episode
-from tminidb.details.tv_series.models import Season
+from tminidb.movie.details.models import MovieDetailsModel
+from tminidb.tv_season.details.models import Episode
+from tminidb.tv_series.details.models import Season
 
 from app.files.models import File
 from app.media.media_type import MediaType
-from app.utils import tz_datetime
 from plugins.TMDB.files import (
     FileMixin,
-    MovieDetails,
     MovieSearch,
-    MovieWatchProviders,
     MultiSearch,
     TvSearch,
-    TvSeriesDetails,
-    TvWatchProviders,
 )
 
 
@@ -38,7 +32,7 @@ def _found_something(search_file: MovieSearch | TvSearch | MultiSearch) -> bool:
 class LookupMixin(FileMixin, register=False):
     # TODO: Validate
     @overload
-    def auto_updating_search_media(
+    def search_media(
         self,
         media_type: None,
         query: str,
@@ -46,20 +40,20 @@ class LookupMixin(FileMixin, register=False):
     ) -> MultiSearch: ...
     # TODO: Validate
     @overload
-    def auto_updating_search_media(
+    def search_media(
         self,
         media_type: MediaType,
         query: str,
         year: int | None = None,
     ) -> MovieSearch | TvSearch: ...
     # TODO: Validate
-    def auto_updating_search_media(
+    def search_media(
         self,
         media_type: MediaType | None,
         query: str,
         year: int | None = None,
     ) -> MovieSearch | TvSearch | MultiSearch:
-        """Return what TMDB answers a name with, downloading it when it is stale.
+        """Return what TMDB answers a name with.
 
         A search narrowed to a year that comes back with nothing is asked again
         without one. The year a website carries is the year the title turned up
@@ -80,7 +74,7 @@ class LookupMixin(FileMixin, register=False):
         query: str,
         year: int | None,
     ) -> MovieSearch | TvSearch | MultiSearch:
-        """Return the search file for one name, downloading it when it is stale."""
+        """Return the search file for one name."""
         search_file: MovieSearch | TvSearch | MultiSearch
         if media_type == MediaType.movie:
             search_file = self.movie_search_file(query, year)
@@ -88,37 +82,10 @@ class LookupMixin(FileMixin, register=False):
             search_file = self.tv_search_file(query, year)
         else:
             search_file = self.multi_search_file(query)
-        search_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         return search_file
 
     # TODO: Validate
-    def auto_updating_watch_providers(
-        self,
-        media_type: MediaType,
-        tmdb_id: int,
-    ) -> MovieWatchProviders | TvWatchProviders:
-        providers_file = self.watch_providers_file(media_type, tmdb_id)
-        providers_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        return providers_file
-
-    # TODO: Validate
-    def auto_updating_media_detail(
-        self,
-        media_type: MediaType,
-        tmdb_id: int,
-    ) -> MovieDetails | TvSeriesDetails:
-        """Return the detail file for a title, downloading it when needed.
-
-        A title can be looked up without ever having been imported, and a show
-        that was imported stores its details under `ShowDetail` instead, so the
-        file this reads cannot be assumed to exist.
-        """
-        detail_file = self.media_detail_file(media_type, tmdb_id)
-        detail_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        return detail_file
-
-    # TODO: Validate
-    def movie_detail(self, tmdb_id: int) -> MovieModel | None:
+    def movie_detail(self, tmdb_id: int) -> MovieDetailsModel | None:
         """Return a film's details, downloading them if needed.
 
         A film is reached by whatever is linked to it as much as by this

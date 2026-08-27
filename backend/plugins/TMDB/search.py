@@ -9,7 +9,7 @@ from tminidb.search.multi.models import SearchMultiModel
 
 from app.media.media_type import MediaType
 from app.utils import tz_datetime
-from plugins.TMDB.files import title_page_url
+from plugins.TMDB.constants import media_url
 from plugins.TMDB.helpers import (
     backdrop_image_url,
     poster_image_url,
@@ -115,7 +115,7 @@ class SearchMixin(LookupMixin, register=False):
 
         return PluginSearchResult(
             title=title,
-            url=title_page_url(media_type, result.id),
+            url=media_url(media_type, result.id),
             year=year,
             image_url=poster_image_url(result.poster_path)
             or backdrop_image_url(result.backdrop_path),

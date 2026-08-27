@@ -2,7 +2,7 @@
 from collections.abc import Sequence
 from datetime import datetime
 from functools import cache
-from typing import Any, ClassVar, Literal, override
+from typing import Any, Literal, override
 
 from chirashi import Chirashi
 from chirashi.artist import Artist as ArtistEndpoint
@@ -59,7 +59,10 @@ def chirashi() -> Chirashi:
 class Series(EndpointFile[SeriesModel]):
     """Data for a show."""
 
-    API_ENDPOINT: ClassVar[SeriesEndpoint] = chirashi().series
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> SeriesEndpoint:
+        return chirashi().series
 
     # Occurs when a user puts in an invalid series URL.
     # TODO: Validate
@@ -77,7 +80,10 @@ class Series(EndpointFile[SeriesModel]):
 class Objects(EndpointFile[ObjectsModel]):
     """Data for an episode."""
 
-    API_ENDPOINT: ClassVar[ObjectsEndpoint] = chirashi().objects
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ObjectsEndpoint:
+        return chirashi().objects
 
     # Occurs when a user puts in an invalid episode URL.
     # TODO: Validate
@@ -95,14 +101,20 @@ class Objects(EndpointFile[ObjectsModel]):
 class Seasons(EndpointFile[SeasonsModel]):
     """Data for the seasons."""
 
-    API_ENDPOINT: ClassVar[SeasonsEndpoint] = chirashi().seasons
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> SeasonsEndpoint:
+        return chirashi().seasons
 
 
 # TODO: Validate
 class SeasonEpisodes(EndpointFile[SeasonEpisodesModel]):
     """Data for the episodes in a season."""
 
-    API_ENDPOINT: ClassVar[SeasonEpisodesEndpoint] = chirashi().season_episodes
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> SeasonEpisodesEndpoint:
+        return chirashi().season_episodes
 
 
 # TODO: Validate
@@ -111,12 +123,15 @@ class BrowseSeries(PagedEndpointFile[BrowseSeriesModel]):
 
     IMMUTABLE = True  # Files are stamped with a datetime
 
-    API_ENDPOINT: ClassVar[BrowseSeriesEndpoint] = chirashi().browse_series
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> BrowseSeriesEndpoint:
+        return chirashi().browse_series
 
     # TODO: Validate
     @override
     def _download_pages(self) -> list[str]:
-        return self.API_ENDPOINT.download_until_datetime(
+        return self._endpoint().download_until_datetime(
             end_datetime=self.identifier_datetime(),
         )
 
@@ -125,7 +140,10 @@ class BrowseSeries(PagedEndpointFile[BrowseSeriesModel]):
 class Artist(EndpointFile[ArtistModel]):
     """Data for an artist."""
 
-    API_ENDPOINT: ClassVar[ArtistEndpoint] = chirashi().artist
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ArtistEndpoint:
+        return chirashi().artist
 
     # Occurs when a user puts in an invalid artist URL.
     # TODO: Validate
@@ -143,21 +161,30 @@ class Artist(EndpointFile[ArtistModel]):
 class ArtistMusicVideos(EndpointFile[ArtistMusicVideosModel]):
     """Data for an artist's music videos."""
 
-    API_ENDPOINT: ClassVar[ArtistMusicVideosEndpoint] = chirashi().artist_music_videos
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ArtistMusicVideosEndpoint:
+        return chirashi().artist_music_videos
 
 
 # TODO: Validate
 class ArtistConcerts(EndpointFile[ArtistConcertsModel]):
     """Data for an artist's concerts."""
 
-    API_ENDPOINT: ClassVar[ArtistConcertsEndpoint] = chirashi().artist_concerts
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ArtistConcertsEndpoint:
+        return chirashi().artist_concerts
 
 
 # TODO: Validate
 class MusicVideo(EndpointFile[MusicVideoModel]):
     """Data for a music video."""
 
-    API_ENDPOINT: ClassVar[MusicVideoEndpoint] = chirashi().music_video
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> MusicVideoEndpoint:
+        return chirashi().music_video
 
     # Occurs when a user puts in an invalid music video URL.
     # TODO: Validate
@@ -175,7 +202,10 @@ class MusicVideo(EndpointFile[MusicVideoModel]):
 class Concert(EndpointFile[ConcertModel]):
     """Data for a concert."""
 
-    API_ENDPOINT: ClassVar[ConcertEndpoint] = chirashi().concert
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ConcertEndpoint:
+        return chirashi().concert
 
     # Occurs when a user puts in an invalid concert URL.
     # TODO: Validate
@@ -195,13 +225,16 @@ class BrowseMusic(PagedEndpointFile[BrowseMusicModel]):
 
     IMMUTABLE = True
 
-    API_ENDPOINT: ClassVar[BrowseMusicEndpoint] = chirashi().browse_music
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> BrowseMusicEndpoint:
+        return chirashi().browse_music
 
     # Music seems to be ordered randomly so downloading all of it is required.
     # TODO: Validate
     @override
     def _download_pages(self) -> list[str]:
-        return self.API_ENDPOINT.download_all()
+        return self._endpoint().download_all()
 
 
 # TODO: Validate
