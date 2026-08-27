@@ -12,7 +12,7 @@ from app.shows.models import Show
 from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from app.utils import tz_datetime
-from plugins.Netflix.helpers import HelperMixin
+from plugins.Netflix.utils import HelperMixin
 
 if TYPE_CHECKING:
     from meshfilm.lodp_title_and_plans_page.models import Video1 as TitleVideo

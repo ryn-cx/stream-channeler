@@ -9,10 +9,7 @@ from __future__ import annotations
 from typing import override
 
 from app.shows.models import Show
-from app.sources.models import Source
-from plugins.Crunchyroll.constants import MUSIC_SOURCE, VIDEO_SOURCE
-from plugins.Crunchyroll.helpers import HelperMixin
-from plugins.Crunchyroll.music_keys import is_music_show_key
+from plugins.Crunchyroll.constants import MUSIC_SOURCE, VIDEO_SOURCE, show_is_an_artist
 from plugins.Crunchyroll.search import SearchMixin
 from plugins.Crunchyroll.update import UpdateMixin
 from plugins.Crunchyroll.upsert import UpsertMixin
@@ -24,6 +21,7 @@ from plugins.Crunchyroll.url_handlers import (
     CrunchyrollSeriesURLHandler,
     CrunchyrollURLHandler,
 )
+from plugins.Crunchyroll.utils import HelperMixin
 from plugins.Crunchyroll.watch_history import WatchHistoryMixin
 from plugins.TMDB import TMDB
 from plugins.utils.abstract_plugin import URLImportResult
@@ -79,20 +77,6 @@ class Crunchyroll(
         self._initialize_source(MUSIC_SOURCE, self._music_source)
 
     # TODO: Validate
-    def _anime_source(self) -> Source:
-        return (
-            Source.get(self.session, self.plugin, VIDEO_SOURCE)
-            or self._upsert_anime_source()
-        )
-
-    # TODO: Validate
-    def _music_source(self) -> Source:
-        return (
-            Source.get(self.session, self.plugin, MUSIC_SOURCE)
-            or self._upsert_music_source()
-        )
-
-    # TODO: Validate
     @override  # Determines which source to use based on the show key.
     def _import_handler(
         self,
@@ -102,7 +86,7 @@ class Crunchyroll(
         force: bool = False,
     ) -> list[URLImportResult]:
         show_key = handler.show_key
-        source = self._source_from_show_key(show_key)
+        source = handler.source
         if not force and (show := self._preload_show(show_key).one_or_none()):
             return handler.import_results(show)
 
@@ -122,7 +106,7 @@ class Crunchyroll(
     @override  # Crunchyroll's own music has no TMDB title to be searched for.
     def _tmdb_show(self, show_key: str, *, force: bool = False) -> Show | None:
         # Music is Crunchyroll's own, so there is no TMDB title to be of.
-        if is_music_show_key(show_key):
+        if show_is_an_artist(show_key):
             return None
 
         series_data = self._series_datum(show_key)

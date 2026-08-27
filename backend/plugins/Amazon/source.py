@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from app.sources.models import Source
 from plugins.Amazon.constants import PURCHASE_SOURCE_SUFFIX
-from plugins.Amazon.helpers import HelperMixin
+from plugins.Amazon.utils import HelperMixin
 
 
 # TODO: Validate

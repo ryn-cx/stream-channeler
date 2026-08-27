@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from app.sources.models import Source
-from plugins.Hulu.helpers import HelperMixin
+from plugins.Hulu.utils import HelperMixin
 
 
 # TODO: Validate

@@ -21,7 +21,7 @@ from plugins.YouTube.files import (
     is_video_key,
     split_show_season_key,
 )
-from plugins.YouTube.helpers import HelperMixin
+from plugins.YouTube.utils import HelperMixin
 
 
 # TODO: Validate

@@ -11,7 +11,7 @@ from loguru import logger
 
 from app.sources.models import Source
 from plugins.HiDive.files import Schedule
-from plugins.HiDive.helpers import HelperMixin, schedule_group_list
+from plugins.HiDive.utils import HelperMixin, schedule_group_list
 from plugins.utils.base_plugin.files import COMPLETED_STATUS, EXTRA_STATUS_FIELD
 
 # TODO: Add support for individual episodes of a series.

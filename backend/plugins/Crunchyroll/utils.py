@@ -1,44 +1,36 @@
 # TODO: Validate
 
-from typing import Protocol, override
+from typing import override
 from urllib.parse import quote_plus
 
 from chirashi.series.models import Datum as SeriesDatum
 
 from app.media.media_type import MediaType
 from app.sources.models import Source
-from plugins.Crunchyroll.constants import MUSIC_SOURCE, VIDEO_SOURCE
-from plugins.Crunchyroll.files import FileMixin
-from plugins.Crunchyroll.music_keys import (
-    is_music_episode_key,
-    is_music_show_key,
+from plugins.Crunchyroll.constants import (
+    MUSIC_SOURCE,
+    VIDEO_SOURCE,
+    episode_is_music,
     music_episode_category,
 )
-
-
-# TODO: Validate
-class SizedImage(Protocol):
-    width: int
-    source: str
+from plugins.Crunchyroll.files import FileMixin
 
 
 # TODO: Validate
 class HelperMixin(FileMixin, register=False):
-    # TODO: Validate
     @property
     def video_source(self) -> Source:
-        return self._source_record(VIDEO_SOURCE)
+        """Return the plugin's video `Source`.
 
-    # TODO: Validate
+        This is a property so the `Source` will be cached."""
+        return self._source_db_entry(VIDEO_SOURCE)
+
     @property
     def music_source(self) -> Source:
-        return self._source_record(MUSIC_SOURCE)
+        """Return the plugin's music `Source`.
 
-    # TODO: Validate
-    def _source_from_show_key(self, show_key: str) -> Source:
-        if is_music_show_key(show_key):
-            return self.music_source
-        return self.video_source
+        This is a property so the `Source` will be cached."""
+        return self._source_db_entry(MUSIC_SOURCE)
 
     # TODO: Validate
     def _series_datum(self, show_key: str) -> SeriesDatum:
@@ -67,7 +59,7 @@ class HelperMixin(FileMixin, register=False):
     def _episode_url(cls, episode_key: str) -> str:
         # Crunchyroll files a music video or a concert under the listing it
         # belongs to, which its id says but the url still has to be told.
-        if is_music_episode_key(episode_key):
+        if episode_is_music(episode_key):
             category = music_episode_category(episode_key)
             return cls.build_url(f"watch/{category}/{episode_key}")
         return cls.build_url(f"watch/{episode_key}")

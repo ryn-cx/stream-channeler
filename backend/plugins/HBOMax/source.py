@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from app.sources.models import Source
-from plugins.HBOMax.helpers import HelperMixin
+from plugins.HBOMax.utils import HelperMixin
 
 
 # TODO: Validate

@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from app.sources.models import Source
-from plugins.ParamountPlus.helpers import HelperMixin
+from plugins.ParamountPlus.utils import HelperMixin
 
 
 # TODO: Validate

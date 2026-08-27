@@ -15,6 +15,7 @@ from plugins.Amazon.url_handlers import (
     PrimeVideoDetailURLHandler,
     WatchAmazonDetailURLHandler,
 )
+from plugins.Amazon.utils import canonical_show_of
 from plugins.utils.abstract_plugin import URLImportResult
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
@@ -104,14 +105,6 @@ class Amazon(
             # The title the first listing was found to be linked to is the title
             # the rest of them are linked to too, so it is handed to them rather
             # than searched for once for each way of watching the same title.
-            canonical_show = canonical_show or _canonical_show(show)
+            canonical_show = canonical_show or canonical_show_of(show)
             results += handler.import_results(show)
         return results
-
-
-# TODO: Validate
-def _canonical_show(show: Show) -> Show | None:
-    """Return the title `show` was found to be linked to, where there is one."""
-    if show.canonical_shows:
-        return show.canonical_shows[0]
-    return None

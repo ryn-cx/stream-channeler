@@ -5,8 +5,11 @@ from collections.abc import Callable, Sequence
 from datetime import datetime, timedelta
 from typing import Literal, override
 
+from chirashi.artist.models import PosterWideItem as ArtistPosterWideItem
 from chirashi.artist_concerts.models import Datum as ConcertListingDatum
 from chirashi.artist_music_videos.models import Datum as MusicVideoListingDatum
+from chirashi.concert.models import ThumbnailItem as ConcertThumbnailItem
+from chirashi.music_video.models import ThumbnailItem as MusicVideoThumbnailItem
 from chirashi.season_episodes.models import Images as EpisodeImages
 from chirashi.series.models import Images as SeriesImages
 
@@ -17,20 +20,35 @@ from app.shows.models import Show
 from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from app.utils import tz_datetime
-from plugins.Crunchyroll.constants import MUSIC_SOURCE, VIDEO_SOURCE
-from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries
-from plugins.Crunchyroll.helpers import HelperMixin, SizedImage
-from plugins.Crunchyroll.music_keys import (
+from plugins.Crunchyroll.constants import (
+    MUSIC_SOURCE,
+    VIDEO_SOURCE,
     MusicCategory,
-    is_music_show_key,
-    is_video_show_key,
+    show_is_a_series,
+    show_is_an_artist,
 )
+from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries
+from plugins.Crunchyroll.utils import HelperMixin
 from plugins.utils.base_plugin.files import INITIAL_FILE_IDENTIFIER
 
 
 # TODO: Validate
 class UpsertMixin(HelperMixin, register=False):
     """Mixin containing all upsert functions."""
+
+    # TODO: Validate
+    def _anime_source(self) -> Source:
+        return (
+            Source.get(self.session, self.plugin, VIDEO_SOURCE)
+            or self._upsert_anime_source()
+        )
+
+    # TODO: Validate
+    def _music_source(self) -> Source:
+        return (
+            Source.get(self.session, self.plugin, MUSIC_SOURCE)
+            or self._upsert_music_source()
+        )
 
     # TODO: Validate
     def _upsert_anime_source(self) -> Source:
@@ -92,9 +110,9 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> Show:
-        if is_music_show_key(show_key):
+        if show_is_an_artist(show_key):
             show = self._upsert_music_show(source, show_key, force=force)
-        elif is_video_show_key(show_key):
+        elif show_is_a_series(show_key):
             show = self._upsert_video_show(source, show_key, force=force)
         else:
             msg = f"Show key {show_key} is invalid and not supported."
@@ -346,13 +364,12 @@ class UpsertMixin(HelperMixin, register=False):
         the tall one being what is left for a listing Crunchyroll has only a
         portrait poster of.
         """
-        shapes: tuple[Sequence[Sequence[SizedImage]], ...] = (
-            images.poster_wide,
-            images.poster_tall,
-        )
-        for sizes in shapes:
-            if sizes and sizes[0]:
-                return max(sizes[0], key=lambda image: image.width).source
+        wide = images.poster_wide
+        if wide and wide[0]:
+            return max(wide[0], key=lambda image: image.width).source
+        tall = images.poster_tall
+        if tall and tall[0]:
+            return max(tall[0], key=lambda image: image.width).source
         return None
 
     # TODO: Validate
@@ -370,7 +387,11 @@ class UpsertMixin(HelperMixin, register=False):
 
     # TODO: Validate
     @staticmethod
-    def _largest_image(images: Sequence[SizedImage]) -> str | None:
+    def _largest_image(
+        images: Sequence[
+            ArtistPosterWideItem | ConcertThumbnailItem | MusicVideoThumbnailItem
+        ],
+    ) -> str | None:
         """Return the source of the widest size Crunchyroll offers an image in."""
         if not images:
             return None

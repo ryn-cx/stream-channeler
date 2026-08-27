@@ -8,7 +8,7 @@ from typing import override
 
 from app.utils import tz_datetime
 from plugins.Hulu.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
-from plugins.Hulu.helpers import HelperMixin
+from plugins.Hulu.utils import HelperMixin
 
 
 # TODO: Validate

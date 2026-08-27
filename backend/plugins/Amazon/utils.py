@@ -7,6 +7,7 @@ from datetime import timedelta
 from typing import override
 from urllib.parse import quote_plus
 
+from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.Amazon.files import FileMixin
 from plugins.Amazon.keys import title_key_from_location
@@ -77,3 +78,11 @@ class HelperMixin(FileMixin, register=False):
             media_type=detail_file.entity_type(),
             year=detail_file.release_year(),
         )
+
+
+# TODO: Validate
+def canonical_show_of(show: Show) -> Show | None:
+    """Return the title `show` was found to be linked to, where there is one."""
+    if show.canonical_shows:
+        return show.canonical_shows[0]
+    return None

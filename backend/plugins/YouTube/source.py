@@ -10,7 +10,7 @@ from plugins.YouTube.constants import (
     LINKS_SOURCE_KEY,
     PAID_SOURCE_KEY,
 )
-from plugins.YouTube.helpers import HelperMixin
+from plugins.YouTube.utils import HelperMixin
 
 
 # TODO: Validate

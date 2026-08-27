@@ -17,9 +17,9 @@ from app.media.media_type import MediaType
 from app.utils import tz_datetime
 from plugins.TMDB.episode_groups import show_chosen_group_id
 from plugins.TMDB.files import ShowChanges
-from plugins.TMDB.helpers import change_datetime
 from plugins.TMDB.import_url import ImportURLMixin
 from plugins.TMDB.keys import parse_show_key, season_key
+from plugins.TMDB.utils import change_datetime
 from plugins.utils.base_plugin.files import COMPLETED_STATUS, EXTRA_STATUS_FIELD
 
 if TYPE_CHECKING:

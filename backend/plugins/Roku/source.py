@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from app.sources.models import Source
-from plugins.Roku.helpers import HelperMixin
+from plugins.Roku.utils import HelperMixin
 
 
 # TODO: Validate

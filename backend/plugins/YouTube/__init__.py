@@ -11,9 +11,7 @@ from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from plugins.YouTube.constants import LONG_DOMAIN, SHORT_DOMAIN
 from plugins.YouTube.files import (
-    get_first_item,
     is_an_album,
-    is_show_key,
     is_show_season_key,
     is_user_playlist,
     is_video_key,
@@ -30,10 +28,10 @@ from plugins.YouTube.handlers import (
     VideoURLHandler,
     YouTubeURLHandler,
 )
-from plugins.YouTube.helpers import HelperMixin, is_quota_error
 from plugins.YouTube.source import SourceMixin
 from plugins.YouTube.updater import UpdaterMixin
 from plugins.YouTube.upsert import UpsertMixin
+from plugins.YouTube.utils import HelperMixin, is_quota_error
 from plugins.YouTube.watch_history import WatchHistoryMixin
 
 
@@ -180,28 +178,6 @@ class YouTube(
             )
 
         return handler.import_results(existing_show)
-
-    # TODO: Validate
-    def _playlist_is_missing(self, show: Show, playlist_key: str) -> bool:
-        # A URL for a whole show asks for every season it has, so nothing is missing
-        # as long as it has been imported with seasons.
-        if is_show_key(playlist_key) and not is_show_season_key(playlist_key):
-            return not show.active_children
-
-        # A URL for a Topic channel asks for every release the musician has, which
-        # is the whole show, so nothing is missing once it has been imported with
-        # seasons.
-        if playlist_key == show.key and self.is_topic_channel(show.key):
-            return not show.active_children
-
-        # If the playlist being checked is the channel uploads playlist it should only
-        # be considered missing if the channel has at least one upload.
-        if playlist_key == self.channel_uploads_playlist_key(show.key):
-            channel_by_channel_id = self.channel_by_channel_id_file(show.key)
-            channel_item = get_first_item(channel_by_channel_id.parsed().items)
-            if int(channel_item.statistics.video_count) == 0:
-                return False
-        return not Season.get_from_memory(self.session, show, playlist_key)
 
     # TODO: Validate
     @override

@@ -8,7 +8,7 @@ from typing import ClassVar, override
 
 from app.utils import tz_datetime
 from plugins.HiDive.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
-from plugins.HiDive.helpers import HelperMixin
+from plugins.HiDive.utils import HelperMixin
 
 # TODO: Add support for individual episodes of a series.
 

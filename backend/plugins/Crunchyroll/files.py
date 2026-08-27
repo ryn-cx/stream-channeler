@@ -39,12 +39,12 @@ from chirashi.series.models import SeriesModel
 
 from app.files.models import File
 from app.utils import tz_datetime
-from plugins.Crunchyroll.music_keys import (
+from plugins.Crunchyroll.constants import (
     MusicCategory,
-    is_music_episode_key,
-    is_music_season_key,
-    is_music_show_key,
+    episode_is_music,
     music_episode_category,
+    season_is_music,
+    show_is_an_artist,
 )
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import BaseFile, EndpointFile, PagedEndpointFile
@@ -68,6 +68,8 @@ class Series(EndpointFile[SeriesModel]):
 
 
 class Objects(EndpointFile[ObjectsModel]):
+    """Episode information."""
+
     @override
     def _endpoint(self) -> ObjectsEndpoint:
         return chirashi().objects
@@ -282,7 +284,7 @@ class FileMixin(BasePlugin, register=False):
     # TODO: Validate
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
-        if is_music_show_key(show_key):
+        if show_is_an_artist(show_key):
             return [
                 # Required to detect changes to the artist.
                 self.artist_file(show_key),
@@ -304,7 +306,7 @@ class FileMixin(BasePlugin, register=False):
         season_key: str,
         show_key: str,
     ) -> Sequence[BaseFile[Any]]:
-        if is_music_season_key(season_key):
+        if season_is_music(season_key):
             category = MusicCategory(season_key)
             return [
                 # Required to detect new music videos or concerts.
@@ -327,7 +329,7 @@ class FileMixin(BasePlugin, register=False):
         season_key: str,
         show_key: str,
     ) -> Sequence[BaseFile[Any]]:
-        if is_music_episode_key(episode_key):
+        if episode_is_music(episode_key):
             # A music video or concert carries its own details, unlike a series
             # episode which is read out of its season's listing.
             return [self.concert_or_music_video_file(episode_key)]
@@ -336,7 +338,7 @@ class FileMixin(BasePlugin, register=False):
     # TODO: Validate
     @override
     def _season_keys_from_file(self, show_key: str) -> list[str]:
-        if is_music_show_key(show_key):
+        if show_is_an_artist(show_key):
             # Both categories are always seasons of the artist, even while one is
             # empty, so a first release into it is a new episode rather than a
             # new season the show has to notice.
@@ -356,7 +358,7 @@ class FileMixin(BasePlugin, register=False):
             season_keys = [season_keys]
         episode_keys: list[str] = []
         for season_key in season_keys:
-            if is_music_season_key(season_key):
+            if season_is_music(season_key):
                 episode_keys += self._music_episode_keys(season_key, show_key)
                 continue
             episode_keys += [

@@ -5,8 +5,8 @@ from typing import override
 
 from chirashi.search.models import Item as SearchItem
 
-from plugins.Crunchyroll.helpers import HelperMixin
-from plugins.Crunchyroll.music_keys import is_music_episode_key, is_music_show_key
+from plugins.Crunchyroll.constants import episode_is_music, show_is_an_artist
+from plugins.Crunchyroll.utils import HelperMixin
 
 
 # TODO: Validate
@@ -24,8 +24,8 @@ class SearchMixin(HelperMixin, register=False):
     # TODO: Validate
     def _search_result_url(self, item: SearchItem) -> str:
         item_key = item.id
-        if is_music_show_key(item_key):
+        if show_is_an_artist(item_key):
             return self._artist_url(item_key)
-        if is_music_episode_key(item_key) or item.type == "episode":
+        if episode_is_music(item_key) or item.type == "episode":
             return self._episode_url(item_key)
         return self._series_url(item_key)

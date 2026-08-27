@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from abc import abstractmethod
 from typing import TYPE_CHECKING, override
 
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
@@ -11,6 +12,7 @@ from plugins.utils.base_plugin.url import URLHandler
 if TYPE_CHECKING:
     from app.episodes.models import Episode
     from app.shows.models import Show
+    from app.sources.models import Source
     from plugins.Crunchyroll import Crunchyroll
 
 
@@ -39,6 +41,17 @@ class CrunchyrollURLHandler(URLHandler["Crunchyroll"]):
         self._key = key
         super().__init__(plugin, url)
 
+    # TODO: Validate
+    @property
+    @abstractmethod
+    def source(self) -> Source:
+        """Return the `Source` the listing this URL names is filed under.
+
+        Crunchyroll keeps its music apart from its video, and which of the two a
+        URL is for is settled by the kind of address it is rather than by
+        anything read back out of the key.
+        """
+
 
 # TODO: Validate
 class CrunchyrollSeriesURLHandler(CrunchyrollURLHandler):
@@ -48,6 +61,12 @@ class CrunchyrollSeriesURLHandler(CrunchyrollURLHandler):
     """
 
     _URL_REGEX = _build_crunchyroll_url_regex("series", group="show_key")
+
+    # TODO: Validate
+    @property
+    @override
+    def source(self) -> Source:
+        return self.plugin.video_source
 
     # TODO: Validate
     @property
@@ -70,6 +89,12 @@ class CrunchyrollEpisodeURLHandler(CrunchyrollURLHandler):
     """
 
     _URL_REGEX = _build_crunchyroll_url_regex("watch", group="episode_key")
+
+    # TODO: Validate
+    @property
+    @override
+    def source(self) -> Source:
+        return self.plugin.video_source
 
     # TODO: Validate
     @property
@@ -127,6 +152,12 @@ class CrunchyrollArtistURLHandler(CrunchyrollURLHandler):
     # TODO: Validate
     @property
     @override
+    def source(self) -> Source:
+        return self.plugin.music_source
+
+    # TODO: Validate
+    @property
+    @override
     def show_key(self) -> str:
         return self._key
 
@@ -139,6 +170,12 @@ class CrunchyrollArtistURLHandler(CrunchyrollURLHandler):
 
 # TODO: Validate
 class _CrunchyrollMusicURLHandler(CrunchyrollURLHandler):
+    # TODO: Validate
+    @property
+    @override
+    def source(self) -> Source:
+        return self.plugin.music_source
+
     # TODO: Validate
     @property
     @override

@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from app.sources.models import Source
-from plugins.DisneyPlus.helpers import HelperMixin
+from plugins.DisneyPlus.utils import HelperMixin
 
 
 # TODO: Validate

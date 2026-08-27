@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from app.sources.models import Source
-from plugins.Tubi.helpers import HelperMixin
+from plugins.Tubi.utils import HelperMixin
 
 
 # TODO: Validate

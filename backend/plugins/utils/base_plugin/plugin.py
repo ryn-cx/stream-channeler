@@ -149,7 +149,7 @@ class BasePlugin(
     @property
     def source(self) -> Source:
         """Return the plugin's `Source` record or raise if not initialized."""
-        return self._source_record(self.plugin_key())
+        return self._source_db_entry(self.plugin_key())
 
     # TODO: Validate
     @property
@@ -158,7 +158,7 @@ class BasePlugin(
         return self.plugin_key() in self._sources
 
     # TODO: Validate
-    def _source_record(self, source_key: str) -> Source:
+    def _source_db_entry(self, source_key: str) -> Source:
         if source_key not in self._sources:
             msg = f"Source {source_key} has not been initialized."
             raise AttributeError(msg)

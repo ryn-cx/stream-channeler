@@ -24,13 +24,13 @@ from tminidb.tv_series.watch_providers.models import (
 
 from app.media.media_type import MediaType
 from plugins.TMDB.files import MovieDetails
-from plugins.TMDB.helpers import (
+from plugins.TMDB.lookup import LookupMixin
+from plugins.TMDB.utils import (
     backdrop_image_url,
     logo_image_url,
     poster_image_url,
     release_year,
 )
-from plugins.TMDB.lookup import LookupMixin
 from plugins.utils.abstract_plugin import (
     PluginMediaInfo,
     PluginWatchProviderItem,

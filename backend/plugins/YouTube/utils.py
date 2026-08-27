@@ -6,6 +6,8 @@ from urllib.parse import quote
 from not_yt_dlapi.exceptions import APIError
 
 from app.media.media_type import MediaType
+from app.seasons.models import Season
+from app.shows.models import Show
 from app.sources.models import Source
 from plugins.YouTube.constants import (
     FREE_SOURCE_KEY,
@@ -14,6 +16,7 @@ from plugins.YouTube.constants import (
 )
 from plugins.YouTube.files import (
     FileMixin,
+    get_first_item,
     is_an_album,
     is_channel_key,
     is_channel_uploads_playlist_key,
@@ -78,17 +81,17 @@ class HelperMixin(FileMixin, register=False):
     # TODO: Validate
     @property
     def free_source(self) -> Source:
-        return self._source_record(FREE_SOURCE_KEY)
+        return self._source_db_entry(FREE_SOURCE_KEY)
 
     # TODO: Validate
     @property
     def paid_source(self) -> Source:
-        return self._source_record(PAID_SOURCE_KEY)
+        return self._source_db_entry(PAID_SOURCE_KEY)
 
     # TODO: Validate
     @property
     def links_source(self) -> Source:
-        return self._source_record(LINKS_SOURCE_KEY)
+        return self._source_db_entry(LINKS_SOURCE_KEY)
 
     # TODO: Validate
     def show_channel_key(self, show_key: str) -> str | None:
@@ -134,7 +137,7 @@ class HelperMixin(FileMixin, register=False):
             source_key,
             partial(self._upsert_source, source_key),
         )
-        return self._source_record(source_key)
+        return self._source_db_entry(source_key)
 
     # TODO: Validate
     def paid_or_free_source(self, show_key: str) -> Source:
@@ -186,3 +189,25 @@ class HelperMixin(FileMixin, register=False):
             if thumb := getattr(thumbnails, quality, None):
                 return thumb.url
         return None
+
+    # TODO: Validate
+    def _playlist_is_missing(self, show: Show, playlist_key: str) -> bool:
+        # A URL for a whole show asks for every season it has, so nothing is missing
+        # as long as it has been imported with seasons.
+        if is_show_key(playlist_key) and not is_show_season_key(playlist_key):
+            return not show.active_children
+
+        # A URL for a Topic channel asks for every release the musician has, which
+        # is the whole show, so nothing is missing once it has been imported with
+        # seasons.
+        if playlist_key == show.key and self.is_topic_channel(show.key):
+            return not show.active_children
+
+        # If the playlist being checked is the channel uploads playlist it should only
+        # be considered missing if the channel has at least one upload.
+        if playlist_key == self.channel_uploads_playlist_key(show.key):
+            channel_by_channel_id = self.channel_by_channel_id_file(show.key)
+            channel_item = get_first_item(channel_by_channel_id.parsed().items)
+            if int(channel_item.statistics.video_count) == 0:
+                return False
+        return not Season.get_from_memory(self.session, show, playlist_key)

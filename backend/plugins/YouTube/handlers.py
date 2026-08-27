@@ -16,7 +16,7 @@ from plugins.YouTube.files import (
     is_video_key,
     show_season_key,
 )
-from plugins.YouTube.helpers import (
+from plugins.YouTube.utils import (
     channel_key_from_uploads_playlist_key,
     is_free_movies_channel,
 )

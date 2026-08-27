@@ -7,7 +7,7 @@ from datetime import timedelta
 from typing import ClassVar, override
 
 from app.utils import tz_datetime
-from plugins.Netflix.helpers import HelperMixin
+from plugins.Netflix.utils import HelperMixin
 
 
 # TODO: Validate
