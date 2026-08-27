@@ -27,7 +27,6 @@ from plugins.TMDB.url_handlers import TMDBURLHandler
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
     InvalidURLError,
-    PluginSearchResult,
     URLImportResult,
 )
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
@@ -108,7 +107,7 @@ class ImportURLMixin(
                 self._note_new_links(show, noted, "Automatic: Watchmode listing")
                 imported.add(plugin_class)
 
-        self._import_searched_sources(providers, show, imported, force=force)
+        self._record_unmatched_sources(providers, show, imported)
 
     # TODO: Validate
     def _linked_show_ids(self, show: Show) -> set[uuid.UUID]:
@@ -139,33 +138,21 @@ class ImportURLMixin(
             noted.add(link.show_id)
 
     # TODO: Validate
-    def _import_searched_sources(
+    def _record_unmatched_sources(
         self,
         providers: list[Provider],
         show: Show,
         imported: set[type[AbstractPlugin]],
-        *,
-        force: bool = False,
     ) -> None:
-        noted = self._linked_show_ids(show)
         linked = self._linked_plugin_keys(show)
         for provider in providers:
             plugin_class = plugin_for_tmdb_name(provider.provider_name)
             already_linked = (
                 plugin_class is not None and plugin_class.plugin_key() in linked
             )
-            if (
-                plugin_class in imported
-                or already_linked
-                or self._import_searched_source(plugin_class, show, force=force)
-            ):
+            if plugin_class in imported or already_linked:
                 if plugin_class is not None:
                     imported.add(plugin_class)
-                self._note_new_links(
-                    show,
-                    noted,
-                    "Automatic: Source website search",
-                )
                 clear_unmatched_source(
                     self.session,
                     show.id,
@@ -179,43 +166,6 @@ class ImportURLMixin(
                 provider.provider_name,
                 plugin_class.plugin_key() if plugin_class else None,
             )
-
-    # TODO: Validate
-    def _import_searched_source(
-        self,
-        plugin_class: type[AbstractPlugin] | None,
-        show: Show,
-        *,
-        force: bool = False,
-    ) -> bool:
-        if (
-            plugin_class is None
-            or not plugin_class.implements("search")
-            or not show.name
-        ):
-            return False
-
-        results = self._searched_source_results(plugin_class, show.name)
-        if not results:
-            return False
-
-        return self._import_child_url(plugin_class, results[0].url, show, force=force)
-
-    # TODO: Validate
-    def _searched_source_results(
-        self,
-        plugin_class: type[AbstractPlugin],
-        name: str,
-    ) -> list[PluginSearchResult]:
-        savepoint = self.session.begin_nested()
-        try:
-            results = plugin_class(self.session).search(name).results
-        except Exception:  # noqa: BLE001
-            savepoint.rollback()
-            logger.exception("Searching {} for {}", plugin_class.plugin_key(), name)
-            return []
-        savepoint.commit()
-        return results
 
     # TODO: Validate
     def _import_child_url(

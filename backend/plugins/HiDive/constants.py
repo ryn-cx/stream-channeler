@@ -11,6 +11,3 @@ SERIES_MEDIA_TYPE = "Series"
 RELEASE_DATE_PREFIX = "Original Premiere: "
 
 DETAIL_MAX_AGE = timedelta(days=7)
-
-# What a search result's identifier writes in front of the key of a film.
-MOVIE_IDENTIFIER_PREFIX = "VOD"

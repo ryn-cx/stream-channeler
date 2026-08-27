@@ -40,17 +40,6 @@ class AbstractPlugin(ABC):
     @abstractmethod
     def favicon_url(cls) -> str | None: ...
 
-    # Whether a `User` may search this plugin to find media to add. Off unless a
-    # plugin says otherwise, because every other plugin's search exists to cross
-    # reference a title against what a service carries, not to be searched
-    # through directly. Turning it off closes the search endpoints to the plugin
-    # as well as hiding it, so `search` and `search_url` stay available to the
-    # cross referencing that calls them in process.
-    # TODO: Validate
-    @classmethod
-    def user_searchable(cls) -> bool:
-        return False
-
     # TODO: Validate
     @classmethod
     def specialized_updater(cls) -> bool:
@@ -365,25 +354,17 @@ class AbstractPlugin(ABC):
         raise NotImplementedError(msg)
 
     # TODO: Validate
-    def search(self, query: str, cursor: str | None = None) -> PluginSearchResults:
-        """Search for media.
-
-        Called to cross reference a title against what this plugin's service
-        carries, rather than to be searched through by a `User`. Only a plugin
-        setting `user_searchable` is offered to one.
-
-        Args:
-            query: The text to search for.
-            cursor: Opaque marker for the page to return, taken from the
-                `next_cursor` of a previous call. None returns the first page.
-
-        """
-        msg = "search is not supported by this plugin."
+    def in_app_search(
+        self,
+        query: str,
+        cursor: str | None = None,
+    ) -> PluginSearchResults:
+        msg = "in_app_search is not supported by this plugin."
         raise NotImplementedError(msg)
 
     # TODO: Validate
     def media_info(self, media_identifier: str) -> PluginMediaInfo | None:
-        """Return everything the plugin knows about one title.
+        """Return the catalogue detail shown for one of the plugin's own results.
 
         Args:
             media_identifier: The `media_identifier` of a `PluginSearchResult`
@@ -394,8 +375,19 @@ class AbstractPlugin(ABC):
         raise NotImplementedError(msg)
 
     # TODO: Validate
+    def show_identity(self, show_key: str) -> PluginShowIdentity:
+        """Return the name, media type and year the plugin files a show under.
+
+        Args:
+            show_key: The plugin's own key for the show.
+
+        """
+        msg = "show_identity is not supported by this plugin."
+        raise NotImplementedError(msg)
+
+    # TODO: Validate
     @classmethod
-    def search_url(cls, query: str) -> str | None:  # noqa: ARG003 - `query` is used by overrides.
+    def manual_search(cls, query: str) -> str | None:  # noqa: ARG003 - `query` is used by overrides.
         """Return the plugin website's own search-page URL for `query`.
 
         Lets a user open the source site's search directly to find and non-canonical row
@@ -419,11 +411,7 @@ class AbstractPlugin(ABC):
     # TODO: Validate
     @classmethod
     def implements(cls, method_name: str) -> bool:
-        """Return True when the subclass has overridden `method_name`.
-
-        Used to determine if a plugins supports `Plugin.import_url()`,
-        `Plugin.search()`, or `Plugin.import_watch_history()`.
-        """
+        """Return True when the subclass has overridden `method_name`."""
         child_implementation = inspect.getattr_static(cls, method_name)
         abstract_implementation = inspect.getattr_static(AbstractPlugin, method_name)
         return child_implementation is not abstract_implementation
@@ -509,13 +497,7 @@ class URLImportResult(BaseModel):
 
 # TODO: Validate
 class PluginSearchResult(BaseModel):
-    """Search result from a plugin.
-
-    Every plugin searches its own catalogue, so a result maps directly to an importable
-    URL and carries the identifier that plugin files the title under. Details for the
-    result are read back from the same plugin under that identifier rather than being
-    matched onto some other service's non-canonical row.
-    """
+    """Search result from a plugin."""
 
     title: str
     """Title of the search result."""
@@ -531,8 +513,7 @@ class PluginSearchResult(BaseModel):
     """What the plugin that produced the result knows the title by.
 
     Passed back to that same plugin's `media_info` to open the result. Its
-    format is the plugin's own — TMDB writes `tv 1399` and `movie 27205`, a
-    single-catalogue service writes whatever id it files the title under. None
+    format is the plugin's own — TMDB writes `tv 1399` and `movie 27205`. None
     when the plugin has no details to offer beyond the result itself.
     """
 
@@ -548,8 +529,17 @@ class PluginWatchProviderItem(BaseModel):
 
 
 # TODO: Validate
+class PluginShowIdentity(BaseModel):
+    """How a plugin names one show, for matching it against another service."""
+
+    title: str
+    media_type: str
+    year: int | None = None
+
+
+# TODO: Validate
 class PluginMediaInfo(BaseModel):
-    """Everything a plugin knows about a single title it can be searched for.
+    """The catalogue detail a searchable plugin shows for one of its results.
 
     Modelled on what TMDB returns, since it is the richest source, and left
     optional throughout so a service that only knows a title and a description
@@ -581,29 +571,7 @@ class PluginSearchResults(BaseModel):
     results: list[PluginSearchResult]
 
     next_cursor: str | None = None
-    """Cursor to pass back to `search` for the next page, None on the last page.
+    """Cursor to pass back to `in_app_search` for the next page.
 
-    Every source pages differently — some hand out opaque cursors, others take
-    an offset — so the value is only ever interpreted by the plugin that
-    produced it.
+    None on the last page. Only ever interpreted by the plugin that produced it.
     """
-
-
-# TODO: Validate
-def paginate_search_results(
-    results: list[PluginSearchResult],
-    cursor: str | None,
-    page_size: int,
-) -> PluginSearchResults:
-    """Cut `results` into a page, using the cursor as an offset into them.
-
-    For sources that answer a search with every match at once instead of a page
-    at a time, so the whole batch is downloaded once and paged through locally.
-    """
-    offset = int(cursor) if cursor else 0
-    page = results[offset : offset + page_size]
-    next_offset = offset + len(page)
-    return PluginSearchResults(
-        results=page,
-        next_cursor=str(next_offset) if next_offset < len(results) else None,
-    )

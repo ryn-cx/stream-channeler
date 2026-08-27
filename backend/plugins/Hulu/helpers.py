@@ -7,12 +7,14 @@ from urllib.parse import quote, quote_plus
 from wholoo.movies.models import MoviesModel
 
 from app.shows.models import Show
+from app.utils import tz_datetime
 from plugins.Hulu.constants import (
-    MEDIA_IDENTIFIER_SEPARATOR,
+    DETAIL_MAX_AGE,
     MOVIE_MEDIA_TYPE,
     SERIES_MEDIA_TYPE,
 )
 from plugins.Hulu.files import FileMixin
+from plugins.utils.abstract_plugin import PluginShowIdentity
 
 
 # TODO: Validate
@@ -39,25 +41,6 @@ class HelperMixin(FileMixin, register=False):
         return parsed.series_grouping_metadata.grouping_name
 
     # TODO: Validate
-    @staticmethod
-    def media_identifier(media_type: str, title_key: str) -> str:
-        """Return what a search result of `title_key` is asked back for by.
-
-        Hulu names a film and a series the same way, so which of the two the id
-        belongs to is written alongside it.
-        """
-        return f"{media_type}{MEDIA_IDENTIFIER_SEPARATOR}{title_key}"
-
-    # TODO: Validate
-    @staticmethod
-    def split_media_identifier(media_identifier: str) -> tuple[str, str]:
-        """Return the media type and the id `media_identifier` was built from."""
-        media_type, _, title_key = media_identifier.partition(
-            MEDIA_IDENTIFIER_SEPARATOR,
-        )
-        return media_type, title_key
-
-    # TODO: Validate
     @classmethod
     def _show_url(cls, show_key: str, media_type: str) -> str:
         return cls.build_url(f"{media_type}/{show_key}")
@@ -70,7 +53,7 @@ class HelperMixin(FileMixin, register=False):
     # TODO: Validate
     @override
     @classmethod
-    def search_url(cls, query: str) -> str | None:
+    def manual_search(cls, query: str) -> str | None:
         return cls.build_url(f"search?q={quote_plus(query)}")
 
     # TODO: Validate
@@ -78,3 +61,32 @@ class HelperMixin(FileMixin, register=False):
     def _image_url(path: str) -> str:
         operations = quote('[{"resize":"600x600|max"},{"format":"webp"}]', safe=":,")
         return f"{path}&operations={operations}"
+
+    # TODO: Validate
+    @override
+    def show_identity(self, show_key: str) -> PluginShowIdentity:
+        if self._is_movie():
+            return self._movie_identity(show_key)
+        return self._series_identity(show_key)
+
+    # TODO: Validate
+    def _movie_identity(self, movie_id: str) -> PluginShowIdentity:
+        movie_file = self.movie_file(movie_id)
+        movie_file.download_if_outdated(tz_datetime.now() - DETAIL_MAX_AGE)
+        model = movie_file.parsed()
+        return PluginShowIdentity(
+            title=model.name,
+            media_type="Movie",
+            year=model.details.entity.premiere_date.year,
+        )
+
+    # TODO: Validate
+    def _series_identity(self, series_id: str) -> PluginShowIdentity:
+        series_file = self.series_file(series_id)
+        series_file.download_if_outdated(tz_datetime.now() - DETAIL_MAX_AGE)
+        model = series_file.parsed()
+        return PluginShowIdentity(
+            title=model.name,
+            media_type="Series",
+            year=model.details.entity.premiere_date.year,
+        )

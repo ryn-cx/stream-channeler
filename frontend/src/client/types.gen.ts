@@ -2735,20 +2735,20 @@ export type PluginsMatchUrlResponse = (PluginURLMatch);
 
 export type PluginsSearchInformationResponse = (Array<PluginSearchInformation>);
 
-export type PluginsSearchUrlData = {
+export type PluginsManualSearchData = {
     pluginKey: string;
     query: string;
 };
 
-export type PluginsSearchUrlResponse = (PluginSearchUrl);
+export type PluginsManualSearchResponse = (PluginSearchUrl);
 
-export type PluginsSearchPluginData = {
+export type PluginsInAppSearchData = {
     cursor?: (string | null);
     pluginKey: string;
     query: string;
 };
 
-export type PluginsSearchPluginResponse = (PluginSearchResults);
+export type PluginsInAppSearchResponse = (PluginSearchResults);
 
 export type PluginsMediaInfoData = {
     mediaIdentifier: string;

@@ -10,13 +10,15 @@ from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from plugins.utils.base_plugin.url import URLHandler
 from plugins.YouTube.constants import LONG_DOMAIN_REGEX, SHORT_DOMAIN_REGEX
 from plugins.YouTube.files import (
-    channel_key_from_uploads_playlist_key,
     get_first_item,
     is_an_album,
     is_channel_uploads_playlist_key,
-    is_free_movies_channel,
     is_video_key,
     show_season_key,
+)
+from plugins.YouTube.helpers import (
+    channel_key_from_uploads_playlist_key,
+    is_free_movies_channel,
 )
 
 if TYPE_CHECKING:

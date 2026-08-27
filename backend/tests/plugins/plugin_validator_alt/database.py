@@ -10,7 +10,7 @@ same stored file the other one reads.
 import json
 from collections.abc import Generator
 from contextlib import contextmanager
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -30,7 +30,7 @@ from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from plugins.utils.abstract_plugin import PluginSearchResults, URLImportResult
+from plugins.utils.abstract_plugin import URLImportResult
 from plugins.utils.base_plugin import BaseFile, BasePlugin
 from plugins.utils.manage_plugins import import_plugins, plugins
 from tests.conftest import init_db, savepoint_session, test_engine
@@ -126,8 +126,6 @@ class DatabaseMixinAlt[PluginT: BasePlugin]:
 
     plugin_class: type[PluginT]
     urls: tuple[str, ...] = ()
-    search_url: str | None = None
-    search_query: str | None = None
     invalid_url: bool = False
     imported_plugin: PluginT
 
@@ -359,23 +357,6 @@ class DatabaseMixinAlt[PluginT: BasePlugin]:
         session.expire_all()
 
         return output
-
-    # TODO: Validate
-    def _search(self, session: Session, query: str) -> PluginSearchResults:
-        with freeze_time(self._search_files_freeze_target(session)):
-            return self.plugin_class(session).search(query)
-
-    # TODO: Validate
-    def _search_files_freeze_target(self, session: Session) -> datetime | None:
-        plugin = self.select_plugin_with_children(session)
-        search_timestamps = [
-            file.data_timestamp
-            for file in plugin.files
-            if file.key.startswith("Search")
-        ]
-        if not search_timestamps:
-            return None
-        return max(search_timestamps) + timedelta(seconds=1)
 
     # TODO: Validate
     def _import_files(self, session: Session) -> None:

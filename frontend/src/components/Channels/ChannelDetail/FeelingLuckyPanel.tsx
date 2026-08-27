@@ -114,7 +114,7 @@ export function FeelingLuckyPanel({ channelId }: { channelId: string }) {
     // and so the list fills in as it goes rather than all at the end.
     for (const title of titles) {
       try {
-        const page = await PluginsService.searchPlugin({
+        const page = await PluginsService.inAppSearch({
           pluginKey: PLUGIN_KEY,
           query: title,
         })

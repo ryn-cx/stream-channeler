@@ -11,6 +11,7 @@ watched on TMDB, so its records are left out wherever media is being chosen to p
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import override
 
 from app.canonical_media.service import (
@@ -24,18 +25,16 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
-from plugins.TMDB.constants import CHANGES_INTERVAL
-from plugins.TMDB.files import (
-    SeasonSource,
+from plugins.TMDB.files import SeasonSource, title_page_url
+from plugins.TMDB.helpers import (
+    HelperMixin,
     air_datetime,
     backdrop_image_url,
     duration_seconds,
     poster_image_url,
     release_year,
     still_image_url,
-    title_page_url,
 )
-from plugins.TMDB.helpers import HelperMixin
 from plugins.TMDB.keys import (
     episode_key,
     parse_show_key,
@@ -127,7 +126,7 @@ class UpsertMixin(HelperMixin, register=False):
                 year=release_year(series.first_air_date),
                 media_type="TV Show",
                 data_timestamp=data_timestamp,
-                update_at=data_timestamp + CHANGES_INTERVAL,
+                update_at=data_timestamp + timedelta(days=7),
                 canonical_show_validated_at=tz_datetime.now(),
                 source_id=source.id,
             )
@@ -238,7 +237,7 @@ class UpsertMixin(HelperMixin, register=False):
                 year=release_year(movie.release_date),
                 media_type="Movie",
                 data_timestamp=data_timestamp,
-                update_at=data_timestamp + CHANGES_INTERVAL,
+                update_at=data_timestamp + timedelta(days=7),
                 canonical_show_validated_at=tz_datetime.now(),
                 source_id=source.id,
             )

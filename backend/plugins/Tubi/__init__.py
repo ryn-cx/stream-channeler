@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.Tubi.media_info import MediaInfoMixin
 from plugins.Tubi.source import SourceMixin
 from plugins.Tubi.upsert import UpsertMixin
 from plugins.Tubi.url_handlers import (
@@ -20,7 +19,6 @@ from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 # TODO: Validate
 class Tubi(
     UpsertMixin,
-    MediaInfoMixin,
     SourceMixin,
     URLHandlerPlugin[TubiURLHandler],
     register=True,

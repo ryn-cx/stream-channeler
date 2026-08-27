@@ -19,7 +19,6 @@ from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
     InvalidURLError,
-    PluginSearchResults,
     URLImportResult,
 )
 from plugins.utils.base_plugin import BasePlugin
@@ -37,10 +36,8 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
     """Base class for testing plugins."""
 
     plugin_class: type[PluginT]
-    search_url: str | None = None
     parse_url_response: object | None = None
     invalid_url = False
-    search_query: str | None = None
 
     # TODO: Validate
     def pytest_generate_tests(self, metafunc: pytest.Metafunc) -> None:
@@ -379,11 +376,6 @@ class PluginValidator[PluginT: BasePlugin](DatabaseMixin[PluginT]):
             if self.url:
                 self._initialize_import_data(session_with_files)
                 self._initialize_extra_files(session_with_files)
-
-            if self.search_query:
-                # _search freezes the clock so stored search files stay within
-                # their TTL.
-                self._search(session_with_files, self.search_query)
         finally:
             # Written even when the run failed, so the files it did reach are
             # recorded rather than downloaded again by the next run.
@@ -722,37 +714,6 @@ class DeletedSeasonWithEpisodeTests[PluginT: BasePlugin](PluginValidator[PluginT
 
 
 # TODO: Validate
-class SearchTests[PluginT: BasePlugin](PluginValidator[PluginT]):
-    """Tests that searching returns results."""
-
-    # TODO: Validate
-    def test_search(self, session_with_files: Session) -> None:
-        if not self.search_query:
-            pytest.skip()
-
-        with log_stats(self):
-            result = self._search(session_with_files, self.search_query)
-
-        assert isinstance(result, PluginSearchResults)
-        assert len(result.results) > 0
-
-        url = self.search_url or self.url
-        assert url
-
-        stripped_url = (
-            url.removeprefix("https://")
-            .removeprefix("http://")
-            .removeprefix("www.")
-            .removesuffix("/")
-        )
-        found_urls = [search_result.url for search_result in result.results]
-        assert any(stripped_url in found_url for found_url in found_urls), (
-            f"Expected URL {stripped_url} to be in search results. "
-            f"Found URLs: {found_urls}"
-        )
-
-
-# TODO: Validate
 class AllUpdatesTests[PluginT: BasePlugin](PluginValidator[PluginT]):
     """Exhaustive test that updates every entity individually."""
 
@@ -817,7 +778,6 @@ class StandardTests[PluginT: BasePlugin](
     URLTests[PluginT],
     UpdateTests[PluginT],
     DeletionTests[PluginT],
-    SearchTests[PluginT],
     AllUpdatesTests[PluginT],
 ):
     """The standard set of tests for a plugin with URL import support."""

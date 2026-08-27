@@ -3,12 +3,14 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import override
 from urllib.parse import quote_plus
 
+from app.utils import tz_datetime
 from plugins.Amazon.files import FileMixin
 from plugins.Amazon.keys import title_key_from_location
-from plugins.utils.abstract_plugin import InvalidURLError
+from plugins.utils.abstract_plugin import InvalidURLError, PluginShowIdentity
 
 
 # TODO: Validate
@@ -62,5 +64,16 @@ class HelperMixin(FileMixin, register=False):
     # TODO: Validate
     @override
     @classmethod
-    def search_url(cls, query: str) -> str | None:
+    def manual_search(cls, query: str) -> str | None:
         return cls.build_url(f"region/na/search?phrase={quote_plus(query)}")
+
+    # TODO: Validate
+    @override
+    def show_identity(self, show_key: str) -> PluginShowIdentity:
+        detail_file = self.detail_file(show_key)
+        detail_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
+        return PluginShowIdentity(
+            title=detail_file.series_title(),
+            media_type=detail_file.entity_type(),
+            year=detail_file.release_year(),
+        )

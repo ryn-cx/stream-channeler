@@ -3,7 +3,6 @@ from plugins.TMDB import TMDB
 from tests.old_mess.plugins.plugin_validator import (
     InvalidURLValidator,
     PluginValidator,
-    SearchTests,
     URLTests,
 )
 
@@ -25,19 +24,17 @@ class TMDBValidator(PluginValidator[TMDB]):
 # comes back is stored under the plugin of the service it streams on. TMDB owns
 # no show of its own for the update and deletion tests to work on.
 # TODO: Validate
-class TestShow(URLTests[TMDB], SearchTests[TMDB], TMDBValidator):
+class TestShow(URLTests[TMDB], TMDBValidator):
     media_type = "tv"
     parse_url_response = "85937"
     show_slug = "demon-slayer-kimetsu-no-yaiba"
-    search_query = "Demon Slayer"
 
 
 # TODO: Validate
-class TestCrunchyrollShow(URLTests[TMDB], SearchTests[TMDB], TMDBValidator):
+class TestCrunchyrollShow(URLTests[TMDB], TMDBValidator):
     media_type = "tv"
     parse_url_response = "64196"
     show_slug = "overlord"
-    search_query = "Overlord"
 
 
 # TODO: Validate

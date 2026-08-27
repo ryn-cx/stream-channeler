@@ -1,6 +1,3 @@
-# TODO: Validate
-"""TMDB Plugin."""
-
 from typing import override
 
 from plugins.TMDB.constants import TMDB_DOMAIN
@@ -25,27 +22,16 @@ class TMDB(
     URLHandlerPlugin[TMDBURLHandler],
     register=True,
 ):
-    """TMDB Plugin."""
-
-    # TODO: Validate
     @classmethod
     @override
     def favicon_url(cls) -> str:
         return "https://www.themoviedb.org/favicon.ico"
 
-    # TODO: Validate
     @classmethod
     @override
     def _url_handlers(cls) -> tuple[type[TMDBURLHandler], ...]:
         return (MovieURLHandler, TvURLHandler)
 
-    # TODO: Validate
-    @classmethod
-    @override
-    def user_searchable(cls) -> bool:
-        return True
-
-    # TODO: Validate
     @classmethod
     @override
     def _domain(cls) -> str:

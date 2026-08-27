@@ -17,11 +17,7 @@ from meshfilm.lodp_title_and_plans_page.models import (
 from meshfilm.lodp_title_and_plans_page.models import Node as SeasonNode
 from meshfilm.lodp_title_and_plans_page.models import Node1 as EpisodeNode
 from meshfilm.lodp_title_and_plans_page.models import Video1 as TitleVideo
-from meshfilm.search_page_results import SearchPageResults
-from meshfilm.search_page_results.models import SearchPageResultsModel
-from sqlmodel import Session
 
-from app.plugins.models import Plugin
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
@@ -47,31 +43,6 @@ class Title(EndpointFile[LodpTitleAndPlansPageModel]):
 
 
 # TODO: Validate
-class Search(EndpointFile[SearchPageResultsModel]):
-    """Search file."""
-
-    API_ENDPOINT: ClassVar[SearchPageResults] = meshfilm().search_page_results
-
-    # TODO: Validate
-    def __init__(
-        self,
-        session: Session,
-        plugin: Plugin,
-        query: str,
-        cursor: str,
-    ) -> None:
-        """Initialize the file."""
-        self.query = query
-        self.cursor = cursor
-        super().__init__(session, plugin, f"{query}/{cursor}")
-
-    # TODO: Validate
-    @override
-    def _download_file(self) -> str:
-        return self.API_ENDPOINT.download(self.query, self.cursor or None)
-
-
-# TODO: Validate
 class FileMixin(BasePlugin, register=False):
     """The files a Netflix title is read out of."""
 
@@ -79,11 +50,6 @@ class FileMixin(BasePlugin, register=False):
     def title_file(self, title_key: str) -> Title:
         """Contains all of a Netflix title's data (show, seasons, episodes)."""
         return self._file(Title, title_key)
-
-    # TODO: Validate
-    def search_file(self, query: str, cursor: str | None) -> Search:
-        """Contains one page of Netflix's movie and TV search results."""
-        return self._file(Search, query, cursor or "")
 
     # TODO: Validate
     def _title_video(self, show_key: str) -> TitleVideo:

@@ -13,9 +13,7 @@ from app.shows.models import Show
 from app.sources.models import Source
 from plugins.Crunchyroll.constants import MUSIC_SOURCE, VIDEO_SOURCE
 from plugins.Crunchyroll.helpers import HelperMixin
-from plugins.Crunchyroll.media_info import MediaInfoMixin
 from plugins.Crunchyroll.music_keys import is_music_show_key
-from plugins.Crunchyroll.search import SearchMixin
 from plugins.Crunchyroll.update import UpdateMixin
 from plugins.Crunchyroll.upsert import UpsertMixin
 from plugins.Crunchyroll.url_handlers import (
@@ -37,8 +35,6 @@ class Crunchyroll(
     WatchHistoryMixin,
     UpdateMixin,
     UpsertMixin,
-    SearchMixin,
-    MediaInfoMixin,
     HelperMixin,
     URLHandlerPlugin[CrunchyrollURLHandler],
     register=True,

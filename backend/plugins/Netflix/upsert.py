@@ -11,6 +11,7 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.shows.service import find_and_add_canonical_show
 from app.sources.models import Source
+from app.utils import tz_datetime
 from plugins.Netflix.helpers import HelperMixin
 
 if TYPE_CHECKING:
@@ -20,6 +21,17 @@ if TYPE_CHECKING:
 # TODO: Validate
 class UpsertMixin(HelperMixin, register=False):
     """Mixin containing all upsert functions."""
+
+    # TODO: Validate
+    def _upsert_source(self) -> Source:
+        source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
+        return Source(
+            key=self.plugin_key(),
+            name=self.plugin_name(),
+            favicon_url=self.favicon_url(),
+            data_timestamp=tz_datetime.now(),
+            plugin_id=self.plugin.id,
+        ).upsert_and_set_update_at(self.plugin, source)
 
     # TODO: Validate
     @override

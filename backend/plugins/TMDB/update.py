@@ -15,12 +15,8 @@ from tminidb.changes.tv_series.models import Item
 
 from app.media.media_type import MediaType
 from app.utils import tz_datetime
-from plugins.TMDB.constants import (
-    EPISODE_TRANSLATIONS_CHANGE_KEYS,
-    SEASON_DETAIL_CHANGE_KEYS,
-    SHOW_DETAIL_CHANGE_KEYS,
-)
-from plugins.TMDB.files import ShowChanges, change_datetime
+from plugins.TMDB.files import ShowChanges
+from plugins.TMDB.helpers import change_datetime
 from plugins.TMDB.import_url import ImportURLMixin
 from plugins.TMDB.keys import parse_show_key, season_key
 from plugins.utils.base_plugin.files import COMPLETED_STATUS, EXTRA_STATUS_FIELD
@@ -75,19 +71,12 @@ class UpdateMixin(ImportURLMixin, register=False):
         for change in changes_file.changes():
             for item in change.items:
                 changed_at = change_datetime(item.time)
-                if change.key in SHOW_DETAIL_CHANGE_KEYS:
-                    self._update_changed_show_files(tmdb_id, changed_at)
-                if change.key in SEASON_DETAIL_CHANGE_KEYS:
+                if change.key in {"season", "episode"}:
                     self._update_changed_season_files(show_key, item, changed_at)
-                if change.key in EPISODE_TRANSLATIONS_CHANGE_KEYS:
+                else:
+                    self._update_changed_show_files(tmdb_id, changed_at)
+                if change.key == "translations":
                     self._download_outdated_files(translations_files, changed_at)
-                if change.key not in (
-                    SHOW_DETAIL_CHANGE_KEYS
-                    | SEASON_DETAIL_CHANGE_KEYS
-                    | EPISODE_TRANSLATIONS_CHANGE_KEYS
-                ):
-                    message = f"{show_key} has an unknown change key: {change.key}"
-                    raise ValueError(message)
 
     # TODO: Validate
     def _update_changed_show_files(self, tmdb_id: int, changed_at: datetime) -> None:

@@ -1,22 +1,20 @@
 # TODO: Validate
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import cache
 from typing import Any, ClassVar, override
 
 from naphki import Naphki
 from naphki.exceptions import ProgramNotFoundError
-from naphki.shows_search import ShowsSearch as ShowsSearchEndpoint
-from naphki.shows_search.models import ShowsSearchModel
 from naphki.video_episodes import VideoEpisodes as VideoEpisodesEndpoint
 from naphki.video_episodes.models import Image as EpisodeImage
 from naphki.video_episodes.models import Item, VideoEpisodesModel
 from naphki.video_program import VideoProgram as VideoProgramEndpoint
 from naphki.video_program.models import LandscapeItem, PortraitItem, VideoProgramModel
-from sqlmodel import Session
 
 from app.files.models import File
-from app.plugins.models import Plugin
+from app.utils import tz_datetime
+from plugins.utils.abstract_plugin import PluginShowIdentity
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
@@ -55,32 +53,6 @@ class VideoEpisodes(EndpointFile[VideoEpisodesModel]):
     # TODO: Validate
     def items(self) -> list[Item]:
         return self.parsed().items
-
-
-# TODO: Validate
-class ShowsSearch(EndpointFile[ShowsSearchModel]):
-    """Shows search file."""
-
-    API_ENDPOINT: ClassVar[ShowsSearchEndpoint] = naphki().shows_search
-
-    # TODO: Validate
-    def __init__(
-        self,
-        session: Session,
-        plugin: Plugin,
-        query: str,
-        offset: int,
-    ) -> None:
-        self.query = query
-        self.offset = offset
-        super().__init__(session, plugin, f"{query}/{offset}")
-
-    # `size` keeps its default so a page request looks exactly like the one the
-    # website makes.
-    # TODO: Validate
-    @override
-    def _download_file(self) -> str:
-        return self.API_ENDPOINT.download(self.query, from_=self.offset)
 
 
 # TODO: Validate
@@ -126,11 +98,6 @@ class FileMixin(BasePlugin, register=False):
     def video_episodes_file(self, program_id: str) -> VideoEpisodes:
         """Contains a show's episodes."""
         return self._file(VideoEpisodes, program_id)
-
-    # TODO: Validate
-    def shows_search_file(self, query: str, offset: int) -> ShowsSearch:
-        """Contains one page of results for a search query."""
-        return self._file(ShowsSearch, query, offset)
 
     # TODO: Consider making this a generic function
     # TODO: Validate
@@ -221,3 +188,13 @@ class FileMixin(BasePlugin, register=False):
     ) -> str:
         largest = max(images, key=lambda image: image.width)
         return self.build_url(largest.url)
+
+    # TODO: Validate
+    @override
+    def show_identity(self, show_key: str) -> PluginShowIdentity:
+        program_file = self.video_program_file(show_key)
+        program_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
+        return PluginShowIdentity(
+            title=program_file.parsed().title,
+            media_type="TV Show",
+        )

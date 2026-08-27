@@ -12,8 +12,8 @@ from app.shows.models import Show
 from app.shows.service import find_and_add_canonical_show
 from app.sources.models import Source
 from plugins.HiDive.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
-from plugins.HiDive.files import season_bucket, season_hero, vod_hero
-from plugins.HiDive.helpers import HelperMixin
+from plugins.HiDive.files import season_bucket
+from plugins.HiDive.helpers import HelperMixin, season_hero, vod_hero
 
 # TODO: Add support for individual episodes of a series.
 

@@ -2,9 +2,21 @@
 """What every other part of the plugin reads a title by."""
 
 import re
+from datetime import timedelta
 from typing import override
 
-from plugins.DisneyPlus.files import FileMixin, required_value
+from app.utils import tz_datetime
+from plugins.DisneyPlus.files import FileMixin
+from plugins.utils.abstract_plugin import PluginShowIdentity
+
+
+# TODO: Validate
+def required_value[ValueT](value: ValueT | None, description: str) -> ValueT:
+    """Return `value`, raising when the page left it out."""
+    if value is None:
+        msg = f"The page carries no {description}."
+        raise ValueError(msg)
+    return value
 
 
 # TODO: Validate
@@ -53,5 +65,16 @@ class HelperMixin(FileMixin, register=False):
     # TODO: Validate
     @override
     @classmethod
-    def search_url(cls, query: str) -> str | None:
+    def manual_search(cls, query: str) -> str | None:
         return cls.build_url("browse/search")
+
+    # TODO: Validate
+    @override
+    def show_identity(self, show_key: str) -> PluginShowIdentity:
+        entity_file = self.entity_file(show_key)
+        entity_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
+        return PluginShowIdentity(
+            title=required_value(self._media_details(show_key).title, "title"),
+            media_type="Movie" if self._is_movie(show_key) else "Series",
+            year=self._release_year(show_key),
+        )

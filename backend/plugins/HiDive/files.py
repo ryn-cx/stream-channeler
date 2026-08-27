@@ -16,8 +16,6 @@ from diving_board.exceptions import (
 )
 from diving_board.schedule import Schedule as ScheduleEndpoint
 from diving_board.schedule import models as schedule_models
-from diving_board.search import Search as SearchEndpoint
-from diving_board.search import models as search_models
 from diving_board.season import Season as SeasonEndpoint
 from diving_board.season import models as season_models
 from diving_board.series import Series as SeriesEndpoint
@@ -44,7 +42,7 @@ def diving_board() -> DivingBoard:
 
 
 # TODO: Validate
-def _single_element[ElementT](elements: list[ElementT], description: str) -> ElementT:
+def single_element[ElementT](elements: list[ElementT], description: str) -> ElementT:
     if not elements:
         msg = f"No {description} element found"
         raise ValueError(msg)
@@ -55,48 +53,15 @@ def _single_element[ElementT](elements: list[ElementT], description: str) -> Ele
 
 
 # TODO: Validate
-def vod_hero(vod_data: vod_models.VodModel) -> vod_models.Element:
-    """Return the hero element of a parsed vod file."""
-    return _single_element(
-        [element for element in vod_data.elements if element.field_type == "hero"],
-        "hero",
-    )
-
-
-# TODO: Validate
-def season_hero(season_data: season_models.SeasonModel) -> season_models.Element:
-    """Return the hero element of a parsed season file."""
-    return _single_element(
-        [element for element in season_data.elements if element.field_type == "hero"],
-        "hero",
-    )
-
-
-# TODO: Validate
 def season_bucket(season_data: season_models.SeasonModel) -> season_models.Element:
     """Return the element a season's own episodes are listed in."""
-    return _single_element(
+    return single_element(
         [
             element
             for element in season_data.elements
             if element.field_type == "bucket" and element.attributes.type == "season"
         ],
         "'season' bucket",
-    )
-
-
-# TODO: Validate
-def schedule_group_list(
-    schedule_data: schedule_models.ScheduleModel,
-) -> schedule_models.Element:
-    """Return the element a page of the schedule lists its days in."""
-    return _single_element(
-        [
-            element
-            for element in schedule_data.elements
-            if element.field_type == "groupList"
-        ],
-        "groupList",
     )
 
 
@@ -160,13 +125,6 @@ class Schedule(PagedEndpointFile[schedule_models.ScheduleModel]):
 
 
 # TODO: Validate
-class Search(EndpointFile[search_models.SearchModel]):
-    """Search file."""
-
-    API_ENDPOINT: ClassVar[SearchEndpoint] = diving_board().search
-
-
-# TODO: Validate
 class FileMixin(MediaTypeMixin, BasePlugin, register=False):
     """The files a title is read out of."""
 
@@ -204,11 +162,6 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
         else:
             identifier = input_date.isoformat()
         return self._file(Schedule, identifier)
-
-    # TODO: Validate
-    def search_file(self, query: str) -> Search:
-        """Return a cached Search for the given query."""
-        return self._file(Search, query)
 
     # TODO: Validate
     def get_latest_schedule_file(self) -> Schedule | None:

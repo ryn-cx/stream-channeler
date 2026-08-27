@@ -11,7 +11,7 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.shows.service import find_and_add_canonical_show
 from app.sources.models import Source
-from plugins.DisneyPlus.files import required_value
+from plugins.DisneyPlus.helpers import required_value
 from plugins.DisneyPlus.source import SourceMixin
 
 

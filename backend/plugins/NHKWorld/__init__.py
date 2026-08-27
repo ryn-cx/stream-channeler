@@ -2,9 +2,8 @@
 from __future__ import annotations
 
 from typing import override
+from urllib.parse import quote_plus
 
-from plugins.NHKWorld.media_info import MediaInfoMixin
-from plugins.NHKWorld.search import SearchMixin
 from plugins.NHKWorld.source import SourceMixin
 from plugins.NHKWorld.upsert import UpsertMixin
 from plugins.NHKWorld.url_handlers import NHKWorldURLHandler, ShowURLHandler
@@ -15,8 +14,6 @@ from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 class NHKWorld(
     SourceMixin,
     UpsertMixin,
-    SearchMixin,
-    MediaInfoMixin,
     URLHandlerPlugin[NHKWorldURLHandler],
     register=True,
 ):
@@ -45,3 +42,9 @@ class NHKWorld(
     @override
     def plugin_name(cls) -> str:
         return "NHK World"
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def manual_search(cls, query: str) -> str:
+        return cls.build_url(f"nhkworld/en/shows/search/?q={quote_plus(query)}")

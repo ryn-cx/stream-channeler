@@ -1,12 +1,10 @@
 # TODO: Validate
 import json
 from collections.abc import Generator
-from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 import pytest
-from freezegun import freeze_time
 from loguru import logger
 from sqlalchemy import Connection
 from sqlalchemy.orm import selectinload
@@ -21,7 +19,6 @@ from app.shows.models import Show
 from app.sources.models import Source
 from app.users.service import get_or_create_plugin_user
 from plugins.utils.abstract_plugin import (
-    PluginSearchResults,
     URLImportResult,
 )
 from plugins.utils.base_plugin import BasePlugin
@@ -64,7 +61,6 @@ def _plugin_class(plugin_key: str) -> type[BasePlugin]:
 class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
     plugin_class: type[PluginT]
     urls: tuple[str, ...] = ()
-    search_query: str | None = None
     invalid_url: bool
     imported_plugin: PluginT
 
@@ -332,23 +328,6 @@ class DatabaseMixin[PluginT: BasePlugin](SerializationMixin):
         session.expire_all()
 
         return output
-
-    # TODO: Validate
-    def _search(self, session: Session, query: str) -> PluginSearchResults:
-        with freeze_time(self._search_files_freeze_target(session)):
-            return self.plugin_class(session).search(query)
-
-    # TODO: Validate
-    def _search_files_freeze_target(self, session: Session) -> datetime | None:
-        plugin = self.select_plugin_with_children(session)
-        search_timestamps = [
-            file.data_timestamp
-            for file in plugin.files
-            if file.key.startswith("Search")
-        ]
-        if not search_timestamps:
-            return None
-        return max(search_timestamps) + timedelta(seconds=1)
 
     # TODO: Validate
     def _import_files(self, session: Session) -> None:

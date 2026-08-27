@@ -9,11 +9,11 @@ from tminidb.search.multi.models import SearchMultiModel
 
 from app.media.media_type import MediaType
 from app.utils import tz_datetime
-from plugins.TMDB.files import (
+from plugins.TMDB.files import title_page_url
+from plugins.TMDB.helpers import (
     backdrop_image_url,
     poster_image_url,
     release_year,
-    title_page_url,
 )
 from plugins.TMDB.lookup import LookupMixin
 from plugins.TMDB.media_info import media_identifier
@@ -45,8 +45,17 @@ class SearchMixin(LookupMixin, register=False):
     }
 
     # TODO: Validate
+    @classmethod
+    def search_page_size(cls) -> int:
+        return 20
+
+    # TODO: Validate
     @override
-    def search(self, query: str, cursor: str | None = None) -> PluginSearchResults:
+    def in_app_search(
+        self,
+        query: str,
+        cursor: str | None = None,
+    ) -> PluginSearchResults:
         """Search every title TMDB knows about, whatever it streams on.
 
         A result's URL is the title's own TMDB page rather than a stream, since

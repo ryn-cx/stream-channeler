@@ -17,7 +17,6 @@ from plugins.YouTube.constants import LONG_DOMAIN, SHORT_DOMAIN
 from plugins.YouTube.files import (
     get_first_item,
     is_an_album,
-    is_quota_error,
     is_show_key,
     is_show_season_key,
     is_user_playlist,
@@ -35,7 +34,7 @@ from plugins.YouTube.handlers import (
     VideoURLHandler,
     YouTubeURLHandler,
 )
-from plugins.YouTube.helpers import HelperMixin
+from plugins.YouTube.helpers import HelperMixin, is_quota_error
 from plugins.YouTube.source import SourceMixin
 from plugins.YouTube.updater import UpdaterMixin
 from plugins.YouTube.upsert import UpsertMixin
@@ -54,11 +53,6 @@ class YouTube(
     """YouTube plugin."""
 
     # TODO: Validate
-    @classmethod
-    @override
-    def user_searchable(cls) -> bool:
-        return True
-
     # TODO: Validate
     @classmethod
     @override

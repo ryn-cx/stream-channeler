@@ -52,15 +52,6 @@ def required_main_content_item(
 
 
 # TODO: Validate
-def required_value[ValueT](value: ValueT | None, description: str) -> ValueT:
-    """Return `value`, raising when the page left it out."""
-    if value is None:
-        msg = f"The page carries no {description}."
-        raise ValueError(msg)
-    return value
-
-
-# TODO: Validate
 class EntityFile(EndpointFile[EntityModel]):
     """Entity file."""
 

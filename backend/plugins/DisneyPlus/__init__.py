@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.DisneyPlus.media_info import MediaInfoMixin
 from plugins.DisneyPlus.source import SourceMixin
 from plugins.DisneyPlus.upsert import UpsertMixin
 from plugins.DisneyPlus.url_handlers import DisneyPlusURLHandler, EntityURLHandler
@@ -19,7 +18,6 @@ from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 # TODO: Validate
 class DisneyPlus(
     UpsertMixin,
-    MediaInfoMixin,
     SourceMixin,
     URLHandlerPlugin[DisneyPlusURLHandler],
     # Temporarily disabled until a solution is found to get episodes past episode 24

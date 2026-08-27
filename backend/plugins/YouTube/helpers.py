@@ -3,6 +3,8 @@ from functools import partial
 from typing import Any, override
 from urllib.parse import quote
 
+from not_yt_dlapi.exceptions import APIError
+
 from app.media.media_type import MediaType
 from app.sources.models import Source
 from plugins.YouTube.constants import (
@@ -14,11 +16,44 @@ from plugins.YouTube.files import (
     FileMixin,
     is_an_album,
     is_channel_key,
-    is_free_movies_channel,
+    is_channel_uploads_playlist_key,
     is_show_key,
     is_show_season_key,
     is_video_key,
 )
+
+
+# TODO: Validate
+def is_free_movies_channel(channel_key: str) -> bool:
+    """Report whether a channel is the one YouTube's free catalogue is published on.
+
+    Everything YouTube serves free with ads is owned by this one channel, and a
+    title that has to be bought or rented is owned by a channel generated for
+    that title alone, so who owns a video is what says which of the two it is.
+    """
+    return channel_key == "UCuVPpxrm2VAgpH3Ktln4HXg"
+
+
+# TODO: Validate
+def is_regular_playlist(key: str) -> bool:
+    return key.startswith("PL") or is_channel_uploads_playlist_key(key)
+
+
+# TODO: Validate
+def channel_key_from_uploads_playlist_key(key: str) -> str:
+    return key[:1] + "C" + key[2:]
+
+
+# TODO: Validate
+def is_quota_error(error: BaseException) -> bool:
+    """Report whether `error` is the YouTube API refusing calls until quota resets."""
+    if not isinstance(error, APIError):
+        return False
+    errors = error.error.get("errors", [])
+    return any(
+        item.get("reason") in frozenset({"dailyLimitExceeded", "quotaExceeded"})
+        for item in errors
+    )
 
 
 # TODO: Validate
@@ -140,7 +175,7 @@ class HelperMixin(FileMixin, register=False):
     # TODO: Validate
     @override
     @classmethod
-    def search_url(cls, query: str) -> str | None:
+    def manual_search(cls, query: str) -> str | None:
         return cls.build_url(f"results?search_query={quote(query)}")
 
     # TODO: Validate

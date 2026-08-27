@@ -61,12 +61,6 @@ class BasePlugin(
     def tmdb_provider_names(cls) -> tuple[str, ...]:
         return ()
 
-    # How many search results make up a single page of `search` output.
-    # TODO: Validate
-    @classmethod
-    def search_page_size(cls) -> int:
-        return 20
-
     _current_show: str | None = None
     """What the values cached on this instance belong to."""
 
@@ -518,28 +512,22 @@ class BasePlugin(
         return self._file(file_type, INITIAL_FILE_IDENTIFIER)
 
     # TODO: Validate
-    def _media_identifier(self, show_key: str) -> str:
-        return show_key
-
-    # TODO: Validate
     def _tmdb_show(self, show_key: str, *, force: bool = False) -> Show | None:
-        if not self.implements("media_info"):
+        if not self.implements("show_identity"):
             return None
 
-        media_info = self.media_info(self._media_identifier(show_key))
-        if media_info is None or not media_info.title:
-            return None
+        identity = self.show_identity(show_key)
 
-        media_type = _TMDB_MEDIA_TYPES.get(media_info.media_type or "")
+        media_type = _TMDB_MEDIA_TYPES.get(identity.media_type)
         if media_type is None:
             return None
 
         from plugins.TMDB import TMDB  # noqa: PLC0415
 
         return TMDB(self.session).import_search(
-            media_info.title,
+            identity.title,
             media_type,
-            media_info.year,
+            identity.year,
             force=force,
         )
 

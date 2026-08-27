@@ -88,7 +88,6 @@ class TestShow(NHKWorldStandardTests, NHKWorldUpdateSourceTest):
         "/nhkworld/en/shows/{parse_url_response}/",
         "/nhkworld/en/shows/{parse_url_response}",
     )
-    search_query = "Dining with the Chef"
 
 
 # TODO: Validate

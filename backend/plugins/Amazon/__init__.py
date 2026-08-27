@@ -7,8 +7,6 @@ from typing import override
 
 from app.canonical_media.service import add_canonical_show
 from app.shows.models import Show
-from plugins.Amazon.media_info import MediaInfoMixin
-from plugins.Amazon.search import SearchMixin
 from plugins.Amazon.source import SourceMixin
 from plugins.Amazon.upsert import UpsertMixin
 from plugins.Amazon.url_handlers import (
@@ -24,8 +22,6 @@ from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 # TODO: Validate
 class Amazon(
     UpsertMixin,
-    SearchMixin,
-    MediaInfoMixin,
     SourceMixin,
     URLHandlerPlugin[AmazonURLHandler],
     register=True,

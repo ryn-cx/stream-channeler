@@ -15,7 +15,6 @@ from not_yt_dlapi.channel_feed.models import ChannelFeedModel
 from not_yt_dlapi.channels import Channels as ChannelsEndpoint
 from not_yt_dlapi.channels.models import ChannelsModel
 from not_yt_dlapi.exceptions import (
-    APIError,
     ChannelFeedNotFoundError,
     PlaylistFeedNotFoundError,
     ResourceNotFoundError,
@@ -84,17 +83,6 @@ def is_user_playlist(key: str) -> bool:
 
 
 # TODO: Validate
-def is_free_movies_channel(channel_key: str) -> bool:
-    """Report whether a channel is the one YouTube's free catalogue is published on.
-
-    Everything YouTube serves free with ads is owned by this one channel, and a
-    title that has to be bought or rented is owned by a channel generated for
-    that title alone, so who owns a video is what says which of the two it is.
-    """
-    return channel_key == "UCuVPpxrm2VAgpH3Ktln4HXg"
-
-
-# TODO: Validate
 def is_video_key(key: str) -> bool:
     """Return whether a  is for a video.
 
@@ -116,16 +104,6 @@ def is_channel_uploads_playlist_key(key: str) -> bool:
 
 
 # TODO: Validate
-def is_regular_playlist(key: str) -> bool:
-    return key.startswith("PL") or is_channel_uploads_playlist_key(key)
-
-
-# TODO: Validate
-def channel_key_from_uploads_playlist_key(key: str) -> str:
-    return key[:1] + "C" + key[2:]
-
-
-# TODO: Validate
 def show_season_key(show_key: str, season_number: str) -> str:
     """Return the season key for one season of a show."""
     return f"{show_key}/{season_number}"
@@ -142,18 +120,6 @@ def split_show_season_key(season_key: str) -> tuple[str, str]:
     """Split a season key back into its show key and season number."""
     show_key, _, season_number = season_key.partition("/")
     return show_key, season_number
-
-
-# TODO: Validate
-def is_quota_error(error: BaseException) -> bool:
-    """Report whether `error` is the YouTube API refusing calls until quota resets."""
-    if not isinstance(error, APIError):
-        return False
-    errors = error.error.get("errors", [])
-    return any(
-        item.get("reason") in frozenset({"dailyLimitExceeded", "quotaExceeded"})
-        for item in errors
-    )
 
 
 # TODO: Validate

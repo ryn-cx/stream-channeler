@@ -1,6 +1,7 @@
 # TODO: Validate
 
-from typing import Protocol
+from typing import Protocol, override
+from urllib.parse import quote_plus
 
 from chirashi.series.models import Datum as SeriesDatum
 
@@ -70,3 +71,9 @@ class HelperMixin(FileMixin, register=False):
             category = music_episode_category(episode_key)
             return cls.build_url(f"watch/{category}/{episode_key}")
         return cls.build_url(f"watch/{episode_key}")
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def manual_search(cls, query: str) -> str:
+        return cls.build_url(f"search?q={quote_plus(query)}")

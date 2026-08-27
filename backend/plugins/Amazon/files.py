@@ -22,8 +22,6 @@ from deforestation.detail_widgets import DetailWidgets as DetailWidgetsEndpoint
 from deforestation.detail_widgets.models import DetailWidgetsModel
 from deforestation.detail_widgets.models import Episode as WidgetEpisode
 from deforestation.exceptions import RedirectedError, TitleNotFoundError
-from deforestation.search import Search as SearchEndpoint
-from deforestation.search.models import Entity, SearchModel
 from pydantic import BaseModel
 from sqlmodel import Session
 
@@ -81,18 +79,6 @@ class AmazonEpisode:
     synopsis: str | None
     duration: int | None
     release_date: str | None
-    image_url: str | None
-
-
-# TODO: Validate
-@dataclass
-class AmazonSearchResult:
-    """One title a search matched."""
-
-    key: str
-    title: str
-    entity_type: str
-    year: int | None
     image_url: str | None
 
 
@@ -190,17 +176,6 @@ def _episode_from_widget(episode: WidgetEpisode) -> AmazonEpisode:
         duration=detail.duration,
         release_date=detail.release_date,
         image_url=_pick_image(detail.images),
-    )
-
-
-# TODO: Validate
-def _search_result(entity: Entity) -> AmazonSearchResult:
-    return AmazonSearchResult(
-        key=_compact_key_from_link(entity.link.url),
-        title=entity.title,
-        entity_type=entity.entity_type,
-        year=int(entity.release_year) if entity.release_year else None,
-        image_url=entity.images.cover.url,
     )
 
 
@@ -637,42 +612,6 @@ class EpisodeList(EndpointFile[DetailWidgetsModel]):
 
 
 # TODO: Validate
-class Search(EndpointFile[SearchModel]):
-    """Everything one search query matched.
-
-    Prime Video answers a search with every match at once, so there is a single
-    file for a query rather than one for each page of it.
-    """
-
-    API_ENDPOINT: ClassVar[SearchEndpoint] = deforestation().search
-
-    # TODO: Validate
-    def results(self) -> list[AmazonSearchResult]:
-        """Return the titles the query matched, best match first.
-
-        Prime Video answers a search with the titles it matched and with rows of
-        titles like them, and only the matches are results of the search. The
-        matches are the ones it lays out as a grid; the rows it suggests are
-        carousels.
-        """
-        results: list[AmazonSearchResult] = []
-        seen: set[str] = set()
-        for container in self.parsed().body.containers:
-            # What a search lays its matches out as, which is what tells them
-            # apart from the rows of titles like them that it suggests
-            # alongside.
-            if container.container_type != "Grid":
-                continue
-            for entity in container.entities:
-                result = _search_result(entity)
-                if result.key in seen:
-                    continue
-                seen.add(result.key)
-                results.append(result)
-        return results
-
-
-# TODO: Validate
 class FileMixin(BasePlugin, register=False):
     """The files a title is read out of."""
 
@@ -685,11 +624,6 @@ class FileMixin(BasePlugin, register=False):
     def share_link_file(self, share_key: str) -> ShareLinkRedirect:
         """Return where the share link written with `share_key` points."""
         return self._file(ShareLinkRedirect, share_key)
-
-    # TODO: Validate
-    def search_file(self, query: str) -> Search:
-        """Return data for search results."""
-        return self._file(Search, query)
 
     # TODO: Validate
     def _is_movie(self, title_key: str) -> bool:

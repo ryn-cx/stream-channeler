@@ -45,7 +45,6 @@ from app.episodes.schemas import (
     UnmatchedEpisodesPublic,
     UnmatchedReadOptions,
 )
-from app.media.media_type import MediaType
 from app.plugins.identifiers import TMDB_PLUGIN_KEY, YOUTUBE_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.schemas import SortOption
@@ -741,28 +740,11 @@ def _tmdb_ids_used_by_show(
 
 
 # TODO: Validate
-def _import_tmdb_show(session: Session, media_type: MediaType, tmdb_id: int) -> Show:
-    """Read a TMDB title in and return the row standing for it.
-
-    Read in rather than looked for, since a title nothing has imported has no
-    episodes stored to choose from and naming it is the asking for it. Whatever
-    is already stored costs nothing to ask for again.
-
-    Imported here rather than at the top of the module because the TMDB plugin
-    is built on the base every plugin is, which reads this module in turn.
-    """
-    from plugins.TMDB import TMDB  # noqa: PLC0415
-
-    tmdb = TMDB(session)
-    if media_type is MediaType.movie:
-        return tmdb.import_movie(tmdb_id)
-    return tmdb.import_show(tmdb_id)
-
-
-# TODO: Validate
 def _imported_title(session: Session, tmdb_show_id: int) -> uuid.UUID:
     """Read a TMDB series in and return the title its episodes are under."""
-    return _import_tmdb_show(session, MediaType.tv, tmdb_show_id).id
+    from plugins.TMDB import TMDB  # noqa: PLC0415
+
+    return TMDB(session).import_show(tmdb_show_id).id
 
 
 # TODO: Validate

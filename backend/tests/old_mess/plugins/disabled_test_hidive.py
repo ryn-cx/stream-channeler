@@ -117,15 +117,11 @@ class HiDiveUpdateSourceTest(UpdateSourceTests[HiDive], HiDiveValidator):
 # TODO: Validate
 class TestSingleSeasonShow(HiDiveStandardTests, HiDiveUpdateSourceTest):
     parse_url_response = "20022"
-    search_query = "Tamako Market"
-    search_url = "https://www.hidive.com/series/1286"
 
 
 # TODO: Validate
 class TestMultipleSeasonsShow(HiDiveStandardTests, HiDiveUpdateSourceTest):
     parse_url_response = "19427"
-    search_query = "K-On"
-    search_url = "https://www.hidive.com/series/1091"
 
 
 # TODO: Validate
@@ -134,8 +130,6 @@ class TestMultipleSeasonsShowSecondSeasonURL(
     HiDiveUpdateSourceTest,
 ):
     parse_url_response = "19425"
-    search_query = "Non Non Biyori"
-    search_url = "https://www.hidive.com/series/1189"
 
 
 # TODO: Validate
@@ -150,7 +144,6 @@ class HiDiveMovieStandardTests(
 # TODO: Validate
 class TestMovie(HiDiveMovieStandardTests, HiDiveUpdateSourceTest):
     parse_url_response = "586784"
-    search_query = "K-ON!: The Movie"
 
 
 # TODO: Validate

@@ -55,8 +55,6 @@ class TestAiringShow(HuluStandardTests):
         "/series/{parse_url_response}/",
         "/series/rick-and-morty-{parse_url_response}",
     )
-    search_query = "Rick and Morty"
-    search_url = "https://www.hulu.com/series/4e0f6374-fc81-4da2-b7a9-f7f8c29e7acc"
 
 
 # TODO: Validate
@@ -69,5 +67,3 @@ class TestMovie(HuluMovieStandardTests):
         "/movie/{parse_url_response}/",
         "/movie/the-wolf-of-wallstreet-{parse_url_response}",
     )
-    search_query = "The Wolf of Wall Street"
-    search_url = "https://www.hulu.com/series/4ee4f57e-19bd-493f-96f9-ad3e753af981"

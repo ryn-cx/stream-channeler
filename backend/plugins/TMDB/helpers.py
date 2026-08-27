@@ -1,7 +1,9 @@
 # TODO: Validate
+from datetime import date, datetime
 from typing import override
 
 from app.media.media_type import MediaType
+from app.utils import tz_datetime
 from plugins.TMDB.files import FileMixin
 from plugins.TMDB.keys import (
     episode_key,
@@ -10,6 +12,60 @@ from plugins.TMDB.keys import (
     parse_show_key,
     season_key,
 )
+
+
+# TODO: Validate
+def _image_url(base_url: str, path: str | None) -> str | None:
+    return f"{base_url}{path}" if path else None
+
+
+# TODO: Validate
+def release_year(value: str | date | None) -> int | None:
+    if isinstance(value, date):
+        return value.year
+    return int(value[:4]) if value else None
+
+
+# TODO: Validate
+def poster_image_url(path: str | None) -> str | None:
+    return _image_url("https://image.tmdb.org/t/p/w342", path)
+
+
+# TODO: Validate
+def backdrop_image_url(path: str | None) -> str | None:
+    return _image_url("https://image.tmdb.org/t/p/original", path)
+
+
+# TODO: Validate
+def still_image_url(path: str | None) -> str | None:
+    return _image_url("https://image.tmdb.org/t/p/original", path)
+
+
+# TODO: Validate
+def logo_image_url(path: str | None) -> str | None:
+    return _image_url("https://image.tmdb.org/t/p/w92", path)
+
+
+# TODO: Validate
+def duration_seconds(runtime: int | None) -> int | None:
+    return runtime * 60 if runtime else None
+
+
+# TODO: Validate
+def air_datetime(air_date: str | date | None) -> datetime | None:
+    # A date TMDB does not have yet comes back as an empty string rather than
+    # being left out, and every date the API answers with arrives as the text
+    # TMDB wrote rather than as a date.
+    if not air_date:
+        return None
+    if isinstance(air_date, str):
+        air_date = date.fromisoformat(air_date)
+    return tz_datetime.combine(air_date, datetime.min.time())
+
+
+# TODO: Validate
+def change_datetime(changed_at: str) -> datetime:
+    return tz_datetime.fromisoformat(changed_at.replace(" UTC", "+00:00"))
 
 
 # TODO: Validate

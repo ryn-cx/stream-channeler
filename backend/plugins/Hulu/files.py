@@ -15,8 +15,6 @@ from wholoo.exceptions import (
 )
 from wholoo.movies import Movies as MoviesEndpoint
 from wholoo.movies.models import MoviesModel
-from wholoo.search import Search as SearchEndpoint
-from wholoo.search.models import SearchModel
 from wholoo.season import Season as SeasonEndpoint
 from wholoo.season.models import Item as SeasonItem
 from wholoo.season.models import SeasonModel
@@ -93,13 +91,6 @@ class Movie(EndpointFile[MoviesModel]):
 
 
 # TODO: Validate
-class SearchFile(EndpointFile[SearchModel]):
-    """Search file."""
-
-    API_ENDPOINT: ClassVar[SearchEndpoint] = wholoo().search
-
-
-# TODO: Validate
 class SeasonFile(EndpointFile[SeasonModel]):
     """Season file."""
 
@@ -155,11 +146,6 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
     def episode_hub_file(self, episode_id: str) -> EpisodeHub:
         """Return EpisodeHub file."""
         return self._file(EpisodeHub, episode_id)
-
-    # TODO: Validate
-    def search_file(self, query: str) -> SearchFile:
-        """Return SearchFile file."""
-        return self._file(SearchFile, query)
 
     # TODO: Validate
     def movie_file(self, movie_id: str) -> Movie:

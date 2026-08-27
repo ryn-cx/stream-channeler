@@ -7,17 +7,54 @@ from datetime import datetime
 from typing import override
 from urllib.parse import quote_plus
 
+from diving_board.schedule import models as schedule_models
 from diving_board.season import models as season_models
 from diving_board.series import models as series_models
 from diving_board.vod import models as vod_models
 
 from app.shows.models import Show
+from app.utils import tz_datetime
 from plugins.HiDive.constants import (
+    DETAIL_MAX_AGE,
     MOVIE_MEDIA_TYPE,
     RELEASE_DATE_PREFIX,
     SERIES_MEDIA_TYPE,
 )
-from plugins.HiDive.files import FileMixin
+from plugins.HiDive.files import FileMixin, single_element
+from plugins.utils.abstract_plugin import PluginShowIdentity
+
+
+# TODO: Validate
+def vod_hero(vod_data: vod_models.VodModel) -> vod_models.Element:
+    """Return the hero element of a parsed vod file."""
+    return single_element(
+        [element for element in vod_data.elements if element.field_type == "hero"],
+        "hero",
+    )
+
+
+# TODO: Validate
+def season_hero(season_data: season_models.SeasonModel) -> season_models.Element:
+    """Return the hero element of a parsed season file."""
+    return single_element(
+        [element for element in season_data.elements if element.field_type == "hero"],
+        "hero",
+    )
+
+
+# TODO: Validate
+def schedule_group_list(
+    schedule_data: schedule_models.ScheduleModel,
+) -> schedule_models.Element:
+    """Return the element a page of the schedule lists its days in."""
+    return single_element(
+        [
+            element
+            for element in schedule_data.elements
+            if element.field_type == "groupList"
+        ],
+        "groupList",
+    )
 
 
 # TODO: Validate
@@ -112,5 +149,33 @@ class HelperMixin(FileMixin, register=False):
     # TODO: Validate
     @override
     @classmethod
-    def search_url(cls, query: str) -> str | None:
+    def manual_search(cls, query: str) -> str | None:
         return cls.build_url(f"search?q={quote_plus(query)}")
+
+    # TODO: Validate
+    @override
+    def show_identity(self, show_key: str) -> PluginShowIdentity:
+        if self._is_movie():
+            return self._movie_identity(show_key)
+        return self._series_identity(show_key)
+
+    # TODO: Validate
+    def _series_identity(self, show_key: str) -> PluginShowIdentity:
+        series_file = self.series_file(show_key)
+        series_file.download_if_outdated(tz_datetime.now() - DETAIL_MAX_AGE)
+        return PluginShowIdentity(
+            title=series_file.parsed().metadata.series.title,
+            media_type=SERIES_MEDIA_TYPE,
+        )
+
+    # TODO: Validate
+    def _movie_identity(self, show_key: str) -> PluginShowIdentity:
+        vod_file = self.vod_file(show_key)
+        vod_file.download_if_outdated(tz_datetime.now() - DETAIL_MAX_AGE)
+        hero = vod_hero(vod_file.parsed())
+        release_date = self._release_date(hero)
+        return PluginShowIdentity(
+            title=self._movie_title(hero),
+            media_type=MOVIE_MEDIA_TYPE,
+            year=release_date.year if release_date else None,
+        )

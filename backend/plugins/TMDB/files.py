@@ -1,6 +1,6 @@
 # TODO: Validate
 from collections.abc import Sequence
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from functools import cache
 from http import HTTPStatus
 from typing import (
@@ -12,7 +12,6 @@ from typing import (
     override,
 )
 
-from pydantic import BaseModel
 from sqlmodel import Session, col, select
 from tminidb import TMiniDB
 from tminidb.changes.tv_series import TvSeriesChanges as TvSeriesChangesEndpoint
@@ -71,12 +70,8 @@ from plugins.utils.base_plugin.plugin import BasePlugin
 from plugins.utils.get_around_client import get_around_client
 
 
-# TMDB is a public API, so a direct client is used rather than the get-around
-# proxy. The read access token is stored in the keyring.
-# TODO: Validate
 @cache
 def tminidb() -> TMiniDB:
-    """Return a cached TMiniDB client."""
     return TMiniDB(settings.TMDB_API_READ_TOKEN)
 
 
@@ -87,90 +82,39 @@ def title_page_url(media_type: str, tmdb_id: int) -> str:
 
 
 # TODO: Validate
-def _image_url(base_url: str, path: str | None) -> str | None:
-    return f"{base_url}{path}" if path else None
+class MovieDetails(EndpointFile[MovieModel]):
 
+    API_ENDPOINT: ClassVar[MovieEndpoint] = tminidb().movie
 
-# TODO: Validate
-def release_year(value: str | date | None) -> int | None:
-    if isinstance(value, date):
-        return value.year
-    return int(value[:4]) if value else None
-
-
-# TODO: Validate
-def poster_image_url(path: str | None) -> str | None:
-    return _image_url("https://image.tmdb.org/t/p/w342", path)
-
-
-# TODO: Validate
-def backdrop_image_url(path: str | None) -> str | None:
-    return _image_url("https://image.tmdb.org/t/p/original", path)
-
-
-# TODO: Validate
-def still_image_url(path: str | None) -> str | None:
-    return _image_url("https://image.tmdb.org/t/p/original", path)
-
-
-# TODO: Validate
-def logo_image_url(path: str | None) -> str | None:
-    return _image_url("https://image.tmdb.org/t/p/w92", path)
-
-
-# TODO: Validate
-def duration_seconds(runtime: int | None) -> int | None:
-    return runtime * 60 if runtime else None
-
-
-# TODO: Validate
-def air_datetime(air_date: str | date | None) -> datetime | None:
-    # A date TMDB does not have yet comes back as an empty string rather than
-    # being left out, and every date the API answers with arrives as the text
-    # TMDB wrote rather than as a date.
-    if not air_date:
-        return None
-    if isinstance(air_date, str):
-        air_date = date.fromisoformat(air_date)
-    return tz_datetime.combine(air_date, datetime.min.time())
-
-
-# TODO: Validate
-class _TMDBEndpointFile[T: BaseModel](EndpointFile[T]):
-    # Occurs when a user puts in a URL for a title TMDB does not have, and when a
-    # season or an episode is asked for by a number the title does not run to.
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ResourceNotFoundError)
 
-
-# TODO: Validate
-class MovieDetails(_TMDBEndpointFile[MovieModel]):
-    """Movie details file."""
-
-    API_ENDPOINT: ClassVar[MovieEndpoint] = tminidb().movie
-
-    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self.API_ENDPOINT.download(int(self.unique_identifier))
 
 
 # TODO: Validate
-class TvSeriesDetails(_TMDBEndpointFile[TvSeriesModel]):
+class TvSeriesDetails(EndpointFile[TvSeriesModel]):
     """TV series details file."""
 
     API_ENDPOINT: ClassVar[TvSeriesEndpoint] = tminidb().tv_series
 
     # TODO: Validate
     @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ResourceNotFoundError)
+
+    # TODO: Validate
+    @override
     def _download_file(self) -> str:
         return self.API_ENDPOINT.download(int(self.unique_identifier))
 
 
 # TODO: Validate
-class MovieWatchProviders(_TMDBEndpointFile[MovieWatchProvidersModel]):
+class MovieWatchProviders(EndpointFile[MovieWatchProvidersModel]):
     """Movie watch providers file."""
 
     API_ENDPOINT: ClassVar[MovieWatchProvidersEndpoint] = (
@@ -184,7 +128,7 @@ class MovieWatchProviders(_TMDBEndpointFile[MovieWatchProvidersModel]):
 
 
 # TODO: Validate
-class TvWatchProviders(_TMDBEndpointFile[TvSeriesWatchProvidersModel]):
+class TvWatchProviders(EndpointFile[TvSeriesWatchProvidersModel]):
     """TV watch providers file."""
 
     API_ENDPOINT: ClassVar[TvSeriesWatchProvidersEndpoint] = (
@@ -198,7 +142,7 @@ class TvWatchProviders(_TMDBEndpointFile[TvSeriesWatchProvidersModel]):
 
 
 # TODO: Validate
-class ShowDetail(_TMDBEndpointFile[TvSeriesModel]):
+class ShowDetail(EndpointFile[TvSeriesModel]):
     """Show detail file.
 
     The seasons and episodes under a title are reached through
@@ -210,12 +154,17 @@ class ShowDetail(_TMDBEndpointFile[TvSeriesModel]):
 
     # TODO: Validate
     @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ResourceNotFoundError)
+
+    # TODO: Validate
+    @override
     def _download_file(self) -> str:
         return self.API_ENDPOINT.download(int(self.unique_identifier))
 
 
 # TODO: Validate
-class EpisodeGroups(_TMDBEndpointFile[TvSeriesEpisodeGroupsModel]):
+class EpisodeGroups(EndpointFile[TvSeriesEpisodeGroupsModel]):
     """Every episode order TMDB holds for a title, beside the title's own.
 
     Only what each order is called and how big it is - the episodes an order
@@ -229,12 +178,17 @@ class EpisodeGroups(_TMDBEndpointFile[TvSeriesEpisodeGroupsModel]):
 
     # TODO: Validate
     @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ResourceNotFoundError)
+
+    # TODO: Validate
+    @override
     def _download_file(self) -> str:
         return self.API_ENDPOINT.download(int(self.unique_identifier))
 
 
 # TODO: Validate
-class EpisodeGroupDetail(_TMDBEndpointFile[TvEpisodeGroupModel]):
+class EpisodeGroupDetail(EndpointFile[TvEpisodeGroupModel]):
     """One episode order, and the episodes each of its groups holds.
 
     Keyed by the order's own id rather than by the title's, because that is what
@@ -245,12 +199,22 @@ class EpisodeGroupDetail(_TMDBEndpointFile[TvEpisodeGroupModel]):
 
     API_ENDPOINT: ClassVar[TvEpisodeGroupEndpoint] = tminidb().tv_episode_group
 
+    # TODO: Validate
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ResourceNotFoundError)
+
 
 # TODO: Validate
-class SeasonDetail(_TMDBEndpointFile[TvSeasonModel]):
+class SeasonDetail(EndpointFile[TvSeasonModel]):
     """Season detail file."""
 
     API_ENDPOINT: ClassVar[TvSeasonEndpoint] = tminidb().tv_season
+
+    # TODO: Validate
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ResourceNotFoundError)
 
     # TODO: Validate
     def __init__(
@@ -271,7 +235,7 @@ class SeasonDetail(_TMDBEndpointFile[TvSeasonModel]):
 
 
 # TODO: Validate
-class EpisodeDetail(_TMDBEndpointFile[TvEpisodeModel]):
+class EpisodeDetail(EndpointFile[TvEpisodeModel]):
     """Episode detail file."""
 
     API_ENDPOINT: ClassVar[TvEpisodeEndpoint] = tminidb().tv_episode
@@ -305,12 +269,17 @@ class EpisodeDetail(_TMDBEndpointFile[TvEpisodeModel]):
 
 
 # TODO: Validate
-class EpisodeTranslations(_TMDBEndpointFile[TvEpisodeTranslationsModel]):
+class EpisodeTranslations(EndpointFile[TvEpisodeTranslationsModel]):
     """Every language's name for a single episode."""
 
     API_ENDPOINT: ClassVar[TvEpisodeTranslationsEndpoint] = (
         tminidb().tv_episode_translations
     )
+
+    # TODO: Validate
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ResourceNotFoundError)
 
     # TODO: Validate
     def __init__(
@@ -341,13 +310,13 @@ class EpisodeTranslations(_TMDBEndpointFile[TvEpisodeTranslationsModel]):
 
 
 # TODO: Validate
-def change_datetime(changed_at: str) -> datetime:
-    return tz_datetime.fromisoformat(changed_at.replace(" UTC", "+00:00"))
-
-
-# TODO: Validate
-class ShowChanges(_TMDBEndpointFile[TvSeriesChangesModel]):
+class ShowChanges(EndpointFile[TvSeriesChangesModel]):
     API_ENDPOINT: ClassVar[TvSeriesChangesEndpoint] = tminidb().tv_series_changes
+
+    # TODO: Validate
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ResourceNotFoundError)
 
     # TODO: Validate
     def __init__(
@@ -388,7 +357,7 @@ class ShowChanges(_TMDBEndpointFile[TvSeriesChangesModel]):
 
 
 # TODO: Validate
-class MultiSearch(_TMDBEndpointFile[SearchMultiModel]):
+class MultiSearch(EndpointFile[SearchMultiModel]):
     """Multi search file."""
 
     API_ENDPOINT: ClassVar[SearchMultiEndpoint] = tminidb().search_multi
@@ -445,7 +414,7 @@ class TitlePage(HTMLFile):
 
 
 # TODO: Validate
-class MovieSearch(_TMDBEndpointFile[SearchMovieModel]):
+class MovieSearch(EndpointFile[SearchMovieModel]):
     """Movie search file."""
 
     API_ENDPOINT: ClassVar[SearchMovieEndpoint] = tminidb().search_movie
@@ -470,7 +439,7 @@ class MovieSearch(_TMDBEndpointFile[SearchMovieModel]):
 
 
 # TODO: Validate
-class TvSearch(_TMDBEndpointFile[SearchTvModel]):
+class TvSearch(EndpointFile[SearchTvModel]):
     """TV search file."""
 
     API_ENDPOINT: ClassVar[SearchTvEndpoint] = tminidb().search_tv

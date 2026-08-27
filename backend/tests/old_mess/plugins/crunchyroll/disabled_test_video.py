@@ -71,8 +71,6 @@ class TestAiringSingleSeasonShow(
 ):
     parse_url_response = "GT00371926"
     show_slug = "please-excuse-my-younger-brothers"
-    search_query = "Please Excuse My Younger Brothers"
-    search_url = "https://www.crunchyroll.com/series/GT00371926"
 
 
 # class TestAiringMultipleSeasonsShow(
@@ -81,8 +79,6 @@ class TestAiringSingleSeasonShow(
 # ):
 #     parse_url_response = "GQWH0MXPQ"
 #     show_slug = "anime-azurlane-slow-ahead"
-#     search_query = "Anime AzurLane: Slow Ahead!"
-#     search_url = "https://www.crunchyroll.com/series/GQWH0MXPQ"
 
 
 # class TestCompletedSingleSeasonShow(
@@ -91,8 +87,6 @@ class TestAiringSingleSeasonShow(
 # ):
 #     parse_url_response = "GEXH3W29Z"
 #     show_slug = "compass20-animation-project"
-#     search_query = "#COMPASS2.0 ANIMATION PROJECT"
-#     search_url = "https://www.crunchyroll.com/series/GEXH3W29Z"
 
 
 # class TestCompletedMultipleSeasonsShow(
@@ -101,8 +95,6 @@ class TestAiringSingleSeasonShow(
 # ):
 #     parse_url_response = "GRVNZK5PY"
 #     show_slug = "a-certain-magical-index"
-#     search_query = "A Certain Magical Index"
-#     search_url = "https://www.crunchyroll.com/series/GRVNZK5PY"
 
 
 # class TestSingleEpisode(
@@ -119,8 +111,6 @@ class TestAiringSingleSeasonShow(
 # class TestMovie(CrunchyrollVideoStandardTests, CrunchyrollVideoUpdateSourceTest):
 #     parse_url_response = "GMTE00335490"
 #     show_slug = "spy-x-family-code-white"
-#     search_query = "Spy x Family: Code White"
-#     search_url = "https://www.crunchyroll.com/series/GMTE00335490"
 
 
 # class TestMovieEpisode(CrunchyrollVideoStandardTests, CrunchyrollVideoUpdateSourceTest):
@@ -129,14 +119,11 @@ class TestAiringSingleSeasonShow(
 #     episode_key = "GMEE00380050JAJP"
 #     episode_slug = "x-the-movie"
 #     urls = crunchyroll_urls("watch/{episode_key}", "{episode_slug}")
-#     search_query = "X: The Movie"
 
 
 # class TestTMDBMismatch(CrunchyrollVideoStandardTests, CrunchyrollVideoUpdateSourceTest):
 #     parse_url_response = "GG5H5XQX4"
 #     show_slug = "frieren-beyond-journeys-end"
-#     search_query = "Frieren: Beyond Journey's End"
-#     search_url = "https://www.crunchyroll.com/series/GG5H5XQX4"
 
 
 # class TestInvalidSeriesKey(InvalidCrunchyrollURLValidator):

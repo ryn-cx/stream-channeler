@@ -23,8 +23,8 @@ from tminidb.watch_providers.tv_series.models import (
 )
 
 from app.media.media_type import MediaType
-from plugins.TMDB.files import (
-    MovieDetails,
+from plugins.TMDB.files import MovieDetails
+from plugins.TMDB.helpers import (
     backdrop_image_url,
     logo_image_url,
     poster_image_url,
@@ -164,7 +164,7 @@ def _watch_provider_items(
     for provider in streaming_providers(watch_providers):
         plugin_class = plugin_for_tmdb_name(provider.provider_name)
         search_url = (
-            plugin_class.search_url(title)
+            plugin_class.manual_search(title)
             if plugin_class is not None and title
             else None
         )

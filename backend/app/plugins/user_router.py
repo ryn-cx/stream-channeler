@@ -61,10 +61,7 @@ def import_url_information(
 
 # TODO: Validate
 @plugins_router.get("/match-url")
-def match_url(
-    url: str,
-    _current_user: CurrentUser,
-) -> PluginURLMatch:
+def match_url(url: str, _current_user: CurrentUser) -> PluginURLMatch:
     """Return whether any plugin can import `url`."""
     for plugin_cls in sorted_plugins():
         if plugin_cls.implements("import_url") and plugin_cls.is_valid_url_format(url):
@@ -74,37 +71,31 @@ def match_url(
 
 # TODO: Validate
 @plugins_router.get("/search-information")
-def search_information(
-    _current_user: CurrentUser,
-) -> list[PluginSearchInformation]:
-    searchable = [
-        plugin_cls for plugin_cls in sorted_plugins() if plugin_cls.user_searchable()
-    ]
-    in_app_search = [
+def search_information(_current_user: CurrentUser) -> list[PluginSearchInformation]:
+    return [
         PluginSearchInformation(
             plugin_key=plugin_cls.plugin_key(),
             name=plugin_cls.plugin_key(),
             favicon_url=plugin_cls.favicon_url(),
         )
-        for plugin_cls in searchable
-        if plugin_cls.implements("search")
-    ]
-    manual_search = [
+        for plugin_cls in sorted_plugins()
+        if plugin_cls.implements("in_app_search")
+    ] + [
         PluginSearchInformation(
             plugin_key=plugin_cls.plugin_key(),
             name=plugin_cls.plugin_key(),
             manual_search_only=True,
             favicon_url=plugin_cls.favicon_url(),
         )
-        for plugin_cls in searchable
-        if not plugin_cls.implements("search") and plugin_cls.implements("search_url")
+        for plugin_cls in sorted_plugins()
+        if not plugin_cls.implements("in_app_search")
+        and plugin_cls.implements("manual_search")
     ]
-    return in_app_search + manual_search
 
 
 # TODO: Validate
-@plugins_router.get("/search-url")
-def search_url(
+@plugins_router.get("/manual-search")
+def manual_search(
     plugin_key: str,
     query: str,
     _current_user: CurrentUser,
@@ -112,18 +103,18 @@ def search_url(
     """Return a plugin website's own search-page URL for `query`."""
     for plugin_cls in sorted_plugins():
         if plugin_cls.plugin_key() == plugin_key:
-            if not plugin_cls.user_searchable():
+            if not plugin_cls.implements("manual_search"):
                 raise HTTPException(
                     status_code=422,
                     detail=f"Plugin '{plugin_key}' cannot be searched.",
                 )
-            return PluginSearchUrl(url=plugin_cls.search_url(query))
+            return PluginSearchUrl(url=plugin_cls.manual_search(query))
     raise HTTPException(status_code=404, detail=f"Plugin '{plugin_key}' not found.")
 
 
 # TODO: Validate
-@plugins_router.get("/search")
-def search_plugin(
+@plugins_router.get("/in-app-search")
+def in_app_search(
     plugin_key: str,
     query: str,
     session: SessionDep,
@@ -136,17 +127,12 @@ def search_plugin(
     """
     for plugin_cls in sorted_plugins():
         if plugin_cls.plugin_key() == plugin_key:
-            if not plugin_cls.user_searchable():
-                raise HTTPException(
-                    status_code=422,
-                    detail=f"Plugin '{plugin_key}' cannot be searched.",
-                )
-            if not plugin_cls.implements("search"):
+            if not plugin_cls.implements("in_app_search"):
                 raise HTTPException(
                     status_code=422,
                     detail=f"Plugin '{plugin_key}' does not support search.",
                 )
-            return plugin_cls(session).search(query, cursor)
+            return plugin_cls(session).in_app_search(query, cursor)
 
     raise HTTPException(status_code=404, detail=f"Plugin '{plugin_key}' not found.")
 

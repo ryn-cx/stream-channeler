@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.Roku.media_info import MediaInfoMixin
 from plugins.Roku.source import SourceMixin
 from plugins.Roku.upsert import UpsertMixin
 from plugins.Roku.url_handlers import (
@@ -19,7 +18,6 @@ from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 # TODO: Validate
 class Roku(
     UpsertMixin,
-    MediaInfoMixin,
     SourceMixin,
     URLHandlerPlugin[RokuURLHandler],
     register=True,

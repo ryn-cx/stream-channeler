@@ -7,9 +7,6 @@ MOVIE_MEDIA_TYPE = "movie"
 SERIES_MEDIA_TYPE = "series"
 """What Hulu calls a title that is a series rather than a film."""
 
-# What splits the two halves of what a search result is asked for by.
-MEDIA_IDENTIFIER_SEPARATOR = " "
-
 DETAIL_MAX_AGE = timedelta(days=7)
 
 UUID_REGEX = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"

@@ -4,10 +4,13 @@
 from __future__ import annotations
 
 import re
+from datetime import timedelta
 from typing import override
 from urllib.parse import quote
 
+from app.utils import tz_datetime
 from plugins.Tubi.files import FileMixin
+from plugins.utils.abstract_plugin import PluginShowIdentity
 
 
 # TODO: Validate
@@ -44,5 +47,17 @@ class HelperMixin(FileMixin, register=False):
     # TODO: Validate
     @override
     @classmethod
-    def search_url(cls, query: str) -> str | None:
+    def manual_search(cls, query: str) -> str | None:
         return cls.build_url(f"search/{quote(query)}")
+
+    # TODO: Validate
+    @override
+    def show_identity(self, show_key: str) -> PluginShowIdentity:
+        content_file = self.content_file(show_key)
+        content_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
+        content = content_file.parsed()
+        return PluginShowIdentity(
+            title=content.title,
+            media_type="Movie" if self._is_movie(show_key) else "Series",
+            year=content.year,
+        )

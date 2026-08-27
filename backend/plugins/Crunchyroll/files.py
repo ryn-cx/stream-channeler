@@ -28,8 +28,6 @@ from chirashi.music_video import MusicVideo as MusicVideoEndpoint
 from chirashi.music_video.models import MusicVideoModel
 from chirashi.objects import Objects as ObjectsEndpoint
 from chirashi.objects.models import ObjectsModel
-from chirashi.search import Search as SearchEndpoint
-from chirashi.search.models import SearchModel
 from chirashi.season_episodes import SeasonEpisodes as SeasonEpisodesEndpoint
 from chirashi.season_episodes.models import SeasonEpisodesModel
 from chirashi.seasons import Seasons as SeasonsEndpoint
@@ -121,13 +119,6 @@ class BrowseSeries(PagedEndpointFile[BrowseSeriesModel]):
         return self.API_ENDPOINT.download_until_datetime(
             end_datetime=self.identifier_datetime(),
         )
-
-
-# TODO: Validate
-class Search(EndpointFile[SearchModel]):
-    """Data for search results."""
-
-    API_ENDPOINT: ClassVar[SearchEndpoint] = chirashi().search
 
 
 # TODO: Validate
@@ -252,11 +243,6 @@ class FileMixin(BasePlugin, register=False):
         if isinstance(browse, File):
             browse = BrowseSeries.file_key_to_unique_identifier(browse.key)
         return self._file(BrowseSeries, str(browse))
-
-    # TODO: Validate
-    def search_file(self, query: str) -> Search:
-        """Return data for search results."""
-        return self._file(Search, query)
 
     # TODO: Validate
     def artist_file(self, artist_id: str) -> Artist:

@@ -576,7 +576,7 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
     ],
     queryFn: async () => {
       try {
-        return await PluginsService.searchPlugin({
+        return await PluginsService.inAppSearch({
           pluginKey: activeSearch!.pluginKey,
           query: activeSearch!.query,
           cursor,
@@ -644,7 +644,7 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
       const newTab = window.open("", "_blank")
       if (newTab) newTab.opener = null
       try {
-        const { url } = await PluginsService.searchUrl({
+        const { url } = await PluginsService.manualSearch({
           pluginKey: key,
           query: trimmed,
         })
