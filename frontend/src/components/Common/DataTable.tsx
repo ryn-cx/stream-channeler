@@ -90,6 +90,7 @@ declare module "@tanstack/react-table" {
     // server-side table offers neither on it rather than asking for a column
     // the API will answer 422 to.
     serverBacked?: boolean
+    cellClassName?: string
     serverFilter?: {
       value: string
       onChange: (value: string) => void
@@ -333,7 +334,10 @@ export function DataTable<TData extends { id: string }, TValue>({
             table.getRowModel().rows.map((row) => (
               <TableRow key={row.id} className={rowClassName?.(row.original)}>
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
+                  <TableCell
+                    key={cell.id}
+                    className={cell.column.columnDef.meta?.cellClassName}
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}

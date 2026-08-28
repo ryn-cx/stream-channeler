@@ -63,7 +63,7 @@ export function TmdbMatchConfirmButton({
   const label = labels[kind]
 
   return (
-    <span className="mt-1 flex items-center gap-2">
+    <span className="mb-1 flex items-center gap-2">
       <Button
         variant="outline"
         size="sm"

@@ -218,6 +218,7 @@ function MatchSummary({
 
   return (
     <WrappingCell className="max-w-72">
+      {action}
       {/*
         Named even on the TMDB side, where it says TMDB twice and tells nobody
         anything, because the two columns are read across rather than down and a
@@ -301,7 +302,6 @@ function MatchSummary({
         />
       </span>
       {note}
-      {action}
     </WrappingCell>
   )
 }
@@ -392,6 +392,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
     id: "summary",
     accessorFn: (row) => row.show.name ?? "Unnamed",
     header: "Combined Episode",
+    meta: { cellClassName: "align-top" },
     cell: ({ row }) => (
       <MatchSummary
         record={episodeSummarised(row.original)}
@@ -404,7 +405,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
     id: "match_summary",
     accessorFn: (row) => row.best_match?.show.name ?? "No match",
     header: "TMDB by name",
-    meta: { serverBacked: false },
+    meta: { serverBacked: false, cellClassName: "align-top" },
     cell: ({ row }) => {
       const nameMatch = row.original.best_match
       const match = choiceSummarised(nameMatch)
@@ -436,7 +437,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
     id: "number_match_summary",
     accessorFn: (row) => row.season_episode_match?.show.name ?? "No match",
     header: "TMDB by season & episode #",
-    meta: { serverBacked: false },
+    meta: { serverBacked: false, cellClassName: "align-top" },
     cell: ({ row }) => {
       const seasonEpisodeMatch = row.original.season_episode_match
       const match = choiceSummarised(seasonEpisodeMatch)
@@ -468,7 +469,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
     id: "absolute_match_summary",
     accessorFn: (row) => row.absolute_number_match?.show.name ?? "No match",
     header: "TMDB by sequential #",
-    meta: { serverBacked: false },
+    meta: { serverBacked: false, cellClassName: "align-top" },
     cell: ({ row }) => {
       const absoluteMatch = row.original.absolute_number_match
       const match = choiceSummarised(absoluteMatch)
@@ -719,6 +720,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
   {
     id: "actions",
     header: "Actions",
+    meta: { cellClassName: "align-top" },
     enableSorting: false,
     enableColumnFilter: false,
     cell: ({ row }) => <TmdbMatchActions episode={row.original} />,
