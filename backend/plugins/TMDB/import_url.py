@@ -90,9 +90,9 @@ class ImportURLMixin(
         like that is a shop page rather than a listing anything watches.
         """
         media_type, tmdb_id = parse_show_key(show_key)
-        providers = streaming_providers(
-            self.watch_providers_file(media_type, tmdb_id).parsed(),
-        )
+        providers_file = self.watch_providers_file(media_type, tmdb_id)
+        providers_file.download_if_outdated()
+        providers = streaming_providers(providers_file.parsed())
 
         imported: set[type[AbstractPlugin]] = set()
         if providers:

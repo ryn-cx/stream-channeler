@@ -70,7 +70,10 @@ class MediaInfoMixin(LookupMixin, register=False):
     def media_info(self, media_identifier: str) -> PluginMediaInfo | None:
         media_type, tmdb_id = parse_media_identifier(media_identifier)
         detail_file = self.media_detail_file(media_type, tmdb_id)
-        providers = self.watch_providers_file(media_type, tmdb_id).parsed()
+        detail_file.download_if_outdated()
+        providers_file = self.watch_providers_file(media_type, tmdb_id)
+        providers_file.download_if_outdated()
+        providers = providers_file.parsed()
         # Which of the two shapes the detail is has to be read off the file rather
         # than the parsed model, because a model whose module was reloaded after a
         # schema change is no longer an instance of the class imported here.
