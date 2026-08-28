@@ -53,6 +53,7 @@ interface CanonicalEpisodeRowProps {
   middle?: ReactNode
   /** After the dates, where the row's own control goes. */
   trailing?: ReactNode
+  className?: string
 }
 
 // TODO: Validate
@@ -70,9 +71,15 @@ export function CanonicalEpisodeRow({
   disagreement,
   middle,
   trailing,
+  className,
 }: CanonicalEpisodeRowProps) {
   return (
-    <div className="flex items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0">
+    <div
+      className={cn(
+        "flex items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0",
+        className,
+      )}
+    >
       <span className="w-36 shrink-0 tabular-nums">
         <span
           className={

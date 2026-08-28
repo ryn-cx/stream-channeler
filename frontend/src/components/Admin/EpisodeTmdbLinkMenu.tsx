@@ -208,6 +208,7 @@ export function TmdbLinkPicker({
   const offered = choices ?? []
   const inScope = offered.filter(
     (choice) =>
+      (order === "similarity" || choice.from_show !== false) &&
       (showUsed || !choice.already_used) &&
       (isSearch ||
         wanted.length === 0 ||
@@ -311,6 +312,11 @@ export function TmdbLinkPicker({
               disagreement={agreementWith(choice)}
               middle={
                 choice.already_used ? <UsedByDetails choice={choice} /> : null
+              }
+              className={
+                choice.from_show === false
+                  ? "text-blue-600 dark:text-blue-400"
+                  : undefined
               }
               trailing={
                 <>
