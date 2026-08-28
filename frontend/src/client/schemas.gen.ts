@@ -7382,6 +7382,11 @@ export const TmdbEpisodeChoiceSchema = {
             type: 'number',
             title: 'Similarity'
         },
+        from_show: {
+            type: 'boolean',
+            title: 'From Show',
+            default: true
+        },
         already_used: {
             type: 'boolean',
             title: 'Already Used',

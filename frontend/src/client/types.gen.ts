@@ -1487,6 +1487,7 @@ export type TmdbEpisodeChoice = {
     source: SourceListPublic;
     absolute_number: (number | null);
     similarity: number;
+    from_show?: boolean;
     already_used?: boolean;
     used_by?: Array<EpisodeRecord>;
 };

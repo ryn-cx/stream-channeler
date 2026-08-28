@@ -829,7 +829,8 @@ def list_tmdb_episode_choices(
     titles = [
         by_title.get(canonical_show_id, []) for canonical_show_id in canonical_show_ids
     ]
-    choices = _title_choices(session, episode, titles)
+    show_ids = set(canonical_show_ids)
+    choices = _title_choices(session, episode, titles, show_ids)
     named = {choice.episode.id for choice in choices}
     choices += [
         choice
@@ -837,6 +838,7 @@ def list_tmdb_episode_choices(
             session,
             episode,
             _similar_canonical_episodes(session, episode.name, 10),
+            show_ids,
         )
         if choice.episode.id not in named
     ]
@@ -912,6 +914,7 @@ def _title_choices(
     session: Session,
     episode: Episode,
     titles: list[list[_Candidate]],
+    show_ids: set[uuid.UUID],
     keep: set[uuid.UUID] | None = None,
 ) -> list[TmdbEpisodeChoice]:
     used_tmdb_ids = _tmdb_ids_used_by_show(session, episode)
@@ -928,6 +931,7 @@ def _title_choices(
             )
             if choice is None:
                 continue
+            choice.from_show = choice.show.id in show_ids
             choice.used_by = used_tmdb_ids.get(choice.episode.tmdb_id or 0, [])
             choice.already_used = bool(choice.used_by)
             choices.append(choice)
@@ -939,6 +943,7 @@ def _matched_choices(
     session: Session,
     episode: Episode,
     matches: list[tuple[uuid.UUID, uuid.UUID]],
+    show_ids: set[uuid.UUID],
 ) -> list[TmdbEpisodeChoice]:
     if not matches:
         return []
@@ -948,6 +953,7 @@ def _matched_choices(
         session,
         episode,
         list(by_title.values()),
+        show_ids,
         {episode_id for episode_id, _show_id in matches},
     )
 
@@ -963,6 +969,7 @@ def _named_tmdb_episode_choices(
         session,
         episode,
         _named_canonical_episodes(session, wanted, limit),
+        set(episode.season.show.canonical_show_ids),
     )
     return sorted(choices, key=lambda choice: -choice.similarity)
 

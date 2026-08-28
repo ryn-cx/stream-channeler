@@ -188,6 +188,7 @@ class TmdbEpisodeChoice(EpisodeRecord):
 
     absolute_number: int | None
     similarity: float
+    from_show: bool = True
     already_used: bool = False
     # Which of the show's episodes are the ones using it. `already_used` is
     # whether there are any, kept as its own field because that is what the
