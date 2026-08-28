@@ -3,7 +3,7 @@
 
 from collections.abc import Sequence
 from functools import cache
-from typing import Any, ClassVar, override
+from typing import Any, override
 
 from notaplanet import NotAPlanet
 from notaplanet.exceptions import NotAPlanetError, SeriesNotFoundError
@@ -16,9 +16,6 @@ from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import BaseFile, EndpointFile
 from plugins.utils.base_plugin.media_type import MediaTypeMixin
 from plugins.utils.get_around_client import get_around_client
-
-# A movie has no seasons of its own so its single season is given a fixed number.
-_MOVIE_SEASON_NUMBER = 0
 
 
 # TODO: Validate
@@ -43,13 +40,16 @@ class ItemNotFoundError(NotAPlanetError):
 class ItemsFile(EndpointFile[ItemsModel]):
     """Items file."""
 
-    API_ENDPOINT: ClassVar[ItemsEndpoint] = notaplanet().items
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ItemsEndpoint:
+        return notaplanet().items
 
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        data = self.API_ENDPOINT.download([self.unique_identifier])
-        if not self.API_ENDPOINT.load(data).root:
+        data = self._endpoint().download([self.unique_identifier])
+        if not self._endpoint().load(data).root:
             raise ItemNotFoundError(self.unique_identifier)
         return data
 
@@ -69,7 +69,10 @@ class ItemsFile(EndpointFile[ItemsModel]):
 class SeasonsFile(EndpointFile[SeasonsModel]):
     """Seasons file."""
 
-    API_ENDPOINT: ClassVar[SeasonsEndpoint] = notaplanet().seasons
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> SeasonsEndpoint:
+        return notaplanet().seasons
 
     # TODO: Validate
     @override
@@ -141,7 +144,9 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
     # TODO: Validate
     @classmethod
     def _movie_season_key(cls, show_key: str) -> str:
-        return cls._season_key(show_key, _MOVIE_SEASON_NUMBER)
+        # A movie has no seasons of its own so its single season is given a
+        # fixed number.
+        return cls._season_key(show_key, 0)
 
     # TODO: Validate
     @staticmethod

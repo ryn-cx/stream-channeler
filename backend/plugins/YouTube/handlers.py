@@ -7,15 +7,18 @@ from typing import TYPE_CHECKING, override
 from urllib.parse import parse_qs, urlparse
 
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from plugins.utils.base_plugin.url import URLHandler, URLMixin
+from plugins.utils.base_plugin.url import URLHandler
+from plugins.YouTube.constants import LONG_DOMAIN_REGEX, SHORT_DOMAIN_REGEX
 from plugins.YouTube.files import (
-    channel_key_from_uploads_playlist_key,
     get_first_item,
-    is_channel_uploads_playlist_key,
-    is_free_movies_channel,
     is_an_album,
+    is_channel_uploads_playlist_key,
     is_video_key,
     show_season_key,
+)
+from plugins.YouTube.utils import (
+    channel_key_from_uploads_playlist_key,
+    is_free_movies_channel,
 )
 
 if TYPE_CHECKING:
@@ -29,12 +32,6 @@ if TYPE_CHECKING:
         ChannelByHandle,
         ChannelByUsername,
     )
-
-
-LONG_DOMAIN = "youtube.com"
-SHORT_DOMAIN = "youtu.be"
-_LONG_DOMAIN_REGEX = URLMixin._regex_escape_domain(LONG_DOMAIN)  # noqa: SLF001 - Same package.
-_SHORT_DOMAIN_REGEX = URLMixin._regex_escape_domain(SHORT_DOMAIN)  # noqa: SLF001 - Same package.
 
 
 # TODO: Validate
@@ -68,7 +65,7 @@ class YouTubeURLHandler(URLHandler["YouTube"]):
     @classmethod
     @override
     def url_regex(cls, domain_regex: str) -> str:
-        return _LONG_DOMAIN_REGEX + cls._URL_REGEX
+        return LONG_DOMAIN_REGEX + cls._URL_REGEX
 
     # TODO: Validate
     @property
@@ -103,8 +100,8 @@ class VideoURLHandler(YouTubeURLHandler):
     @classmethod
     @override
     def url_regex(cls, domain_regex: str) -> str:
-        long_paths = rf"{_LONG_DOMAIN_REGEX}\/(?:watch\?v=|shorts\/)"
-        short_path = rf"{_SHORT_DOMAIN_REGEX}\/"
+        long_paths = rf"{LONG_DOMAIN_REGEX}\/(?:watch\?v=|shorts\/)"
+        short_path = rf"{SHORT_DOMAIN_REGEX}\/"
         return rf"(?:{long_paths}|{short_path})" + cls._URL_REGEX
 
     # TODO: Validate
@@ -184,6 +181,8 @@ class PlaylistBasedURLHandler(YouTubeURLHandler):
     @property
     @override
     def show_key(self) -> str:
+        if self.plugin.is_linking_playlist(self.playlist_key):
+            return self.playlist_key
         # A channel's uploads are a season of that channel rather than a listing of
         # their own, and the playlist they are listed as is named after the channel,
         # so the channel is read off the key rather than looked up.
@@ -210,6 +209,13 @@ class PlaylistBasedURLHandler(YouTubeURLHandler):
     # TODO: Validate
     @override
     def raise_if_invalid(self) -> None:
+        if self.plugin.is_linking_playlist(self.playlist_key):
+            self.plugin.raise_if_invalid_file(
+                self.plugin.playlist_items_file(self.playlist_key),
+                self.url,
+            )
+            return
+
         if is_channel_uploads_playlist_key(self.playlist_key):
             self._raise_if_invalid_channel(self.show_key)
             return
@@ -237,6 +243,8 @@ class PlaylistURLHandler(PlaylistBasedURLHandler):
     # TODO: Validate
     @override
     def import_results(self, show: Show) -> list[URLImportResult]:
+        if self.plugin.is_linking_playlist(self.playlist_key):
+            return [URLImportResult.for_show(show)]
         seasons = [season for season in show.seasons if season.key == self.playlist_key]
         return [URLImportResult.for_seasons(show, seasons)]
 
@@ -254,7 +262,7 @@ class PlaylistVideoURLHandler(PlaylistBasedURLHandler):
     @classmethod
     @override
     def url_regex(cls, domain_regex: str) -> str:
-        return rf"(?:{_LONG_DOMAIN_REGEX}|{_SHORT_DOMAIN_REGEX})" + cls._URL_REGEX
+        return rf"(?:{LONG_DOMAIN_REGEX}|{SHORT_DOMAIN_REGEX})" + cls._URL_REGEX
 
     # TODO: Validate
     @property

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from functools import cache
-from typing import Any, ClassVar, override
+from typing import Any, override
 from uuid import UUID
 
 from kneeminus import KneeMinus
@@ -52,24 +52,18 @@ def required_main_content_item(
 
 
 # TODO: Validate
-def required_value[ValueT](value: ValueT | None, description: str) -> ValueT:
-    """Return `value`, raising when the page left it out."""
-    if value is None:
-        msg = f"The page carries no {description}."
-        raise ValueError(msg)
-    return value
-
-
-# TODO: Validate
 class EntityFile(EndpointFile[EntityModel]):
     """Entity file."""
 
-    API_ENDPOINT: ClassVar[Entity] = kneeminus().entity
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> Entity:
+        return kneeminus().entity
 
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self.API_ENDPOINT.download(UUID(self.unique_identifier))
+        return self._endpoint().download(UUID(self.unique_identifier))
 
     # Occurs when importing an invalid entity URL.
     # TODO: Validate
@@ -82,7 +76,10 @@ class EntityFile(EndpointFile[EntityModel]):
 class SeasonEntityFile(EndpointFile[EntityModel]):
     """Season entity file."""
 
-    API_ENDPOINT: ClassVar[Entity] = kneeminus().entity
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> Entity:
+        return kneeminus().entity
 
     # TODO: Validate
     def __init__(
@@ -100,7 +97,7 @@ class SeasonEntityFile(EndpointFile[EntityModel]):
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self.API_ENDPOINT.download(
+        return self._endpoint().download(
             UUID(self.entity_id),
             season_id=UUID(self.season_id),
         )

@@ -1,4 +1,6 @@
 # TODO: Validate
+
+
 """Which TMDB episode an `Episode` is linked to, and the ones it could be.
 
 An import points an episode at TMDB by name, and an episode whose name matched
@@ -14,9 +16,10 @@ from collections import defaultdict
 from collections.abc import Collection, Sequence
 from typing import Any
 
+from sqlalchemy import nullslast
 from sqlalchemy.orm import aliased, contains_eager
 from sqlalchemy.sql.expression import ColumnElement
-from sqlmodel import Session, col, func, select
+from sqlmodel import Session, and_, col, func, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.canonical_media.episodes import canonical_episode_link, links_of
@@ -26,42 +29,75 @@ from app.canonical_media.keys import (
     tmdb_id_of,
     tmdb_key_clause,
 )
-from app.canonical_media.metadata import (
-    tmdb_episode_url,
-    tmdb_season_url,
-    tmdb_show_url,
-)
+from app.canonical_media.metadata import canonical_episode_of, tmdb_episode_url
 from app.episodes.models import (
     Episode,
     EpisodeCanonicalEpisode,
 )
 from app.episodes.name_matching import plaintext, similarity
 from app.episodes.schemas import (
+    CanonicalEpisodeRecord,
     DuplicatedCanonicalEpisodeOutput,
-    DuplicatedLinkEpisodeOutput,
+    EpisodeInformationOutput,
+    EpisodeInformationSide,
+    EpisodeListOutput,
     EpisodeOutput,
-    EpisodeUsingTmdb,
+    EpisodeRecord,
     TmdbEpisodeChoice,
     UnlockedEpisodeOutput,
     UnmatchedEpisodeOutput,
     UnmatchedEpisodesPublic,
     UnmatchedReadOptions,
+    UserEpisodeUrlOutput,
 )
-from app.media.media_type import MediaType
+from app.episodes.user_urls import (
+    canonical_episode_for_url,
+    clear_user_episode_url,
+    set_user_episode_url,
+    single_canonical_episode_id,
+    user_episode_url,
+)
+from app.issue_reports.service import list_episode_issue_reports
 from app.plugins.identifiers import TMDB_PLUGIN_KEY, YOUTUBE_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.schemas import SortOption
 from app.seasons.models import Season
+from app.seasons.schemas import SeasonOutput
 from app.service import _apply_filter_options, _apply_sort_options
 from app.shows.models import Show, ShowCanonicalShow
+from app.shows.schemas import ShowPublic
 from app.sources.models import Source
+from app.sources.schemas import SourceListPublic
+from app.users.models import User
 
 # An unnumbered season or episode is ordered after every numbered one.
 _UNNUMBERED = float("inf")
 
+
+# TODO: Validate
+def episode_record(episode: Episode) -> EpisodeRecord:
+    """Return an `Episode` with the season, the title and the website above it."""
+    season = episode.season
+    show = season.show
+    return EpisodeRecord(**_record_fields(episode, season, show))
+
+
+# TODO: Validate
+def _record_fields(episode: Episode, season: Season, show: Show) -> dict[str, Any]:
+    """Return an episode and everything above it, each as the record it is."""
+    return {
+        "episode": EpisodeOutput.model_validate(episode),
+        "season": SeasonOutput.model_validate(season),
+        "show": ShowPublic.model_validate(show),
+        "source": SourceListPublic.model_validate(show.source),
+    }
+
+
 # What an `Episode` can be pointed at: the episode itself, the season holding
 # it, and the title above that, all as TMDB has them.
 type _Candidate = tuple[Episode, Season, Show]
+
+
 type Numbering = tuple[uuid.UUID, int | None, int | None]
 
 
@@ -88,7 +124,10 @@ def absolute_numbers(numberings: Sequence[Numbering]) -> dict[uuid.UUID, int]:
     """
     ordered = sorted(
         numberings,
-        key=lambda numbering: _order(numbering[1], numbering[2]),
+        key=lambda numbering: (
+            *_order(numbering[1], numbering[2]),
+            numbering[0].bytes,
+        ),
     )
     numbers: dict[uuid.UUID, int] = {}
     for record_id, season_number, _episode_number in ordered:
@@ -131,32 +170,12 @@ def _choice(
     similarity: float,
 ) -> TmdbEpisodeChoice | None:
     episode, season, show = candidate
-    tmdb_episode_id = tmdb_id_of(episode.key, EPISODE_LEVEL)
-    if tmdb_episode_id is None:
+    if tmdb_id_of(episode.key, EPISODE_LEVEL) is None:
         return None
 
     return TmdbEpisodeChoice(
-        canonical_episode_id=episode.id,
-        season_id=season.id,
-        show_id=show.id,
-        tmdb_episode_id=tmdb_episode_id,
-        name=episode.name,  # type: ignore[arg-type]
-        show_name=show.name,  # type: ignore[arg-type]
-        show_year=show.year,
-        source_name=show.source.name,
-        plugin_name=show.source.plugin.name,
-        season_number=season.season_number,  # type: ignore[arg-type]
-        episode_number=episode.episode_number,  # type: ignore[arg-type]
+        **_record_fields(episode, season, show),
         absolute_number=absolute_numbers.get(episode.id),
-        duration=episode.duration,
-        air_date=episode.air_date,
-        url=tmdb_episode_url(  # type: ignore[arg-type]
-            show.key,
-            season.season_number,
-            episode.episode_number,
-        ),
-        show_url=tmdb_show_url(show.key),
-        season_url=tmdb_season_url(show.key, season.season_number),
         similarity=similarity,
     )
 
@@ -399,38 +418,61 @@ def _candidates_for_shows(
 
 
 # TODO: Validate
-def _source_absolute_numbers(
-    session: Session,
-    show_ids: set[uuid.UUID],
-) -> dict[uuid.UUID, int]:
-    """Count every episode of each website's own title, and return that count by id.
+def _counted_episodes() -> ColumnElement[bool]:
+    """Which of a title's episodes the count runs over.
 
-    The whole title is read rather than only the episodes being listed, since an
+    A season nothing numbered and season zero are both outside it, so a special
+    is left with no number rather than given one and does not push the episode
+    after it along.
+    """
+    return and_(
+        col(Episode.deleted_at).is_(None),
+        col(Season.deleted_at).is_(None),
+        col(Season.season_number).is_not(None),
+        col(Season.season_number) != 0,
+    )
+
+
+# TODO: Validate
+def _absolute_number_column() -> ColumnElement[int]:
+    """Count each title through from its first episode.
+
+    `nullslast` is what Postgres does with an ascending sort anyway, said outright
+    because it is what stands in for `_UNNUMBERED`, and the id is what settles two
+    episodes a website gave the very same numbering.
+    """
+    return func.row_number().over(
+        partition_by=col(Season.show_id),
+        order_by=(
+            col(Season.season_number),
+            nullslast(col(Episode.episode_number)),
+            col(Episode.id),
+        ),
+    )
+
+
+# TODO: Validate
+def absolute_numbers_of(
+    session: Session,
+    show_ids: Collection[uuid.UUID],
+) -> dict[uuid.UUID, int]:
+    """Count every episode of each title, and return that count by episode id.
+
+    The whole title is counted rather than only the episodes being listed, since an
     episode's place in a title is decided by how many come before it, which the
-    ones left over from a name match say nothing about.
+    ones left over from a name match say nothing about. Nothing says which rows are
+    canonical, so a website's own title and a canonical title are both counted the
+    way the title they are counts.
     """
     if not show_ids:
         return {}
 
     statement = (
-        select(Episode.id, Season.show_id, Season.season_number, Episode.episode_number)
+        select(Episode.id, _absolute_number_column())
         .join(Season, onclause=col(Episode.season_id) == Season.id)
-        .where(
-            col(Season.show_id).in_(show_ids),
-            col(Episode.deleted_at).is_(None),
-            col(Season.deleted_at).is_(None),
-        )
+        .where(col(Season.show_id).in_(show_ids), _counted_episodes())
     )
-    per_show: dict[uuid.UUID, list[Numbering]] = defaultdict(list)
-    for episode_id, show_id, season_number, episode_number in session.exec(
-        statement,
-    ).all():
-        per_show[show_id].append((episode_id, season_number, episode_number))
-
-    numbers: dict[uuid.UUID, int] = {}
-    for numberings in per_show.values():
-        numbers |= absolute_numbers(numberings)
-    return numbers
+    return dict(session.exec(statement).all())
 
 
 # TODO: Validate
@@ -510,7 +552,7 @@ def _unmatched_outputs(
         session,
         {show for _episode, _season, show, _source in rows},
     )
-    source_numbers = _source_absolute_numbers(
+    source_numbers = absolute_numbers_of(
         session,
         {show.id for _episode, _season, show, _source in rows},
     )
@@ -521,18 +563,8 @@ def _unmatched_outputs(
 
     return [
         UnmatchedEpisodeOutput(
-            **EpisodeOutput.model_validate(episode).model_dump(),
+            **_record_fields(episode, season, show),
             absolute_number=source_numbers.get(episode.id),
-            season_name=season.name,
-            season_number=season.season_number,
-            show_id=show.id,
-            show_name=show.name,
-            show_year=show.year,
-            show_url=show.url,
-            season_url=season.url,
-            source_id=source.id,
-            source_name=source.name,
-            plugin_name=source.plugin.name,
             best_match=_marked_used(
                 _best_match(
                     episode,
@@ -564,7 +596,7 @@ def _unmatched_outputs(
                 used.get(show.id, {}),
             ),
         )
-        for episode, season, show, source in rows
+        for episode, season, show, _source in rows
     ]
 
 
@@ -572,7 +604,7 @@ def _unmatched_outputs(
 def _marked_used(
     choice: TmdbEpisodeChoice | None,
     episode_id: uuid.UUID,
-    used: dict[int, list[EpisodeUsingTmdb]],
+    used: dict[int, list[EpisodeRecord]],
 ) -> TmdbEpisodeChoice | None:
     """Say which of the show's other episodes already point at `choice`.
 
@@ -585,8 +617,8 @@ def _marked_used(
         return None
     choice.used_by = [
         entry
-        for entry in used.get(choice.tmdb_episode_id, [])
-        if entry.id != episode_id
+        for entry in used.get(choice.episode.tmdb_id or 0, [])
+        if entry.episode.id != episode_id
     ]
     choice.already_used = bool(choice.used_by)
     return choice
@@ -643,13 +675,13 @@ def list_unlocked_episodes(
         session,
         {show for _episode, _season, show, _source in rows},
     )
-    source_numbers = _source_absolute_numbers(
+    source_numbers = absolute_numbers_of(
         session,
         {show.id for _episode, _season, show, _source in rows},
     )
 
     outputs: list[UnlockedEpisodeOutput] = []
-    for episode, season, show, source in rows:
+    for episode, season, show, _source in rows:
         best_match = _best_match(
             episode,
             season,
@@ -658,18 +690,8 @@ def list_unlocked_episodes(
         )
         outputs.append(
             UnlockedEpisodeOutput(
-                **EpisodeOutput.model_validate(episode).model_dump(),
+                **_record_fields(episode, season, show),
                 absolute_number=source_numbers.get(episode.id),
-                season_name=season.name,
-                season_number=season.season_number,
-                show_id=show.id,
-                show_name=show.name,
-                show_year=show.year,
-                show_url=show.url,
-                season_url=season.url,
-                source_id=source.id,
-                source_name=source.name,
-                plugin_name=source.plugin.name,
                 best_match=best_match,
                 season_episode_match=_season_and_episode_match(
                     episode,
@@ -686,7 +708,7 @@ def list_unlocked_episodes(
                 name_matches=bool(
                     best_match
                     and plaintext(episode.name)
-                    and plaintext(episode.name) == plaintext(best_match.name),
+                    and plaintext(episode.name) == plaintext(best_match.episode.name),
                 ),
             ),
         )
@@ -698,7 +720,7 @@ def _tmdb_ids_used_by_shows(
     session: Session,
     show_ids: set[uuid.UUID],
     /,
-) -> dict[uuid.UUID, dict[int, list[EpisodeUsingTmdb]]]:
+) -> dict[uuid.UUID, dict[int, list[EpisodeRecord]]]:
     """Return the episodes of each show using each TMDB episode already.
 
     Only the show an episode belongs to is read, since another website's non-canonical
@@ -716,7 +738,7 @@ def _tmdb_ids_used_by_shows(
     canonical_episode = aliased(Episode)
     canonical_link = canonical_episode_link()
     statement = (
-        select(Season.show_id, canonical_episode.key, Episode, Season)  # type: ignore[call-overload]
+        select(Season.show_id, canonical_episode.key, Episode, Season, Show)  # type: ignore[call-overload]
         .select_from(Episode)
         .join(canonical_link, links_of(Episode, canonical_link))
         .join(
@@ -724,6 +746,7 @@ def _tmdb_ids_used_by_shows(
             onclause=col(canonical_link.canonical_episode_id) == canonical_episode.id,
         )
         .join(Season, onclause=col(Episode.season_id) == Season.id)
+        .join(Show, onclause=col(Season.show_id) == Show.id)
         .where(
             is_canonical(canonical_episode),
             col(Season.show_id).in_(show_ids),
@@ -732,21 +755,15 @@ def _tmdb_ids_used_by_shows(
             col(Season.deleted_at).is_(None),
         )
     )
-    using: dict[uuid.UUID, dict[int, list[EpisodeUsingTmdb]]] = defaultdict(
+    using: dict[uuid.UUID, dict[int, list[EpisodeRecord]]] = defaultdict(
         lambda: defaultdict(list),
     )
-    for show_id, key, used_by, season in session.exec(statement).all():
+    for show_id, key, used_by, season, show in session.exec(statement).all():
         tmdb_id = tmdb_id_of(key, EPISODE_LEVEL)
         if tmdb_id is None:
             continue
         using[show_id][tmdb_id].append(
-            EpisodeUsingTmdb(
-                id=used_by.id,
-                name=used_by.name,
-                season_number=season.season_number,
-                episode_number=used_by.episode_number,
-                url=used_by.url,
-            ),
+            EpisodeRecord(**_record_fields(used_by, season, show)),
         )
     return using
 
@@ -755,7 +772,7 @@ def _tmdb_ids_used_by_shows(
 def _tmdb_ids_used_by_show(
     session: Session,
     episode: Episode,
-) -> dict[int, list[EpisodeUsingTmdb]]:
+) -> dict[int, list[EpisodeRecord]]:
     """Return the episodes of `episode`'s show using each TMDB episode already.
 
     The episode being linked is left out so the record it already points at is
@@ -763,7 +780,7 @@ def _tmdb_ids_used_by_show(
     """
     show_id = episode.season.show_id
     return {
-        tmdb_id: [entry for entry in entries if entry.id != episode.id]
+        tmdb_id: [entry for entry in entries if entry.episode.id != episode.id]
         for tmdb_id, entries in _tmdb_ids_used_by_shows(session, {show_id})
         .get(show_id, {})
         .items()
@@ -771,28 +788,11 @@ def _tmdb_ids_used_by_show(
 
 
 # TODO: Validate
-def _import_tmdb_show(session: Session, media_type: MediaType, tmdb_id: int) -> Show:
-    """Read a TMDB title in and return the row standing for it.
-
-    Read in rather than looked for, since a title nothing has imported has no
-    episodes stored to choose from and naming it is the asking for it. Whatever
-    is already stored costs nothing to ask for again.
-
-    Imported here rather than at the top of the module because the TMDB plugin
-    is built on the base every plugin is, which reads this module in turn.
-    """
-    from plugins.TMDB import TMDB  # noqa: PLC0415
-
-    tmdb = TMDB(session)
-    if media_type is MediaType.movie:
-        return tmdb.import_movie(tmdb_id)
-    return tmdb.import_show(tmdb_id)
-
-
-# TODO: Validate
 def _imported_title(session: Session, tmdb_show_id: int) -> uuid.UUID:
     """Read a TMDB series in and return the title its episodes are under."""
-    return _import_tmdb_show(session, MediaType.tv, tmdb_show_id).id
+    from plugins.TMDB import TMDB  # noqa: PLC0415
+
+    return TMDB(session).import_show(tmdb_show_id).id
 
 
 # TODO: Validate
@@ -830,7 +830,7 @@ def list_tmdb_episode_choices(
         by_title.get(canonical_show_id, []) for canonical_show_id in canonical_show_ids
     ]
     choices = _title_choices(session, episode, titles)
-    named = {choice.canonical_episode_id for choice in choices}
+    named = {choice.episode.id for choice in choices}
     choices += [
         choice
         for choice in _matched_choices(
@@ -838,11 +838,14 @@ def list_tmdb_episode_choices(
             episode,
             _similar_canonical_episodes(session, episode.name, 10),
         )
-        if choice.canonical_episode_id not in named
+        if choice.episode.id not in named
     ]
     return sorted(
         choices,
-        key=lambda choice: _order(choice.season_number, choice.episode_number),
+        key=lambda choice: _order(
+            choice.season.season_number,
+            choice.episode.episode_number,
+        ),
     )
 
 
@@ -925,7 +928,7 @@ def _title_choices(
             )
             if choice is None:
                 continue
-            choice.used_by = used_tmdb_ids.get(choice.tmdb_episode_id, [])
+            choice.used_by = used_tmdb_ids.get(choice.episode.tmdb_id or 0, [])
             choice.already_used = bool(choice.used_by)
             choices.append(choice)
     return choices
@@ -1001,14 +1004,15 @@ def _duplicated_link_pairs(
 def _episodes_linking_to(
     session: Session,
     pairs: Collection[tuple[uuid.UUID, uuid.UUID]],
-) -> dict[tuple[uuid.UUID, uuid.UUID], list[DuplicatedLinkEpisodeOutput]]:
+) -> dict[tuple[uuid.UUID, uuid.UUID], list[EpisodeRecord]]:
     canonical_episode_ids = {canonical_id for canonical_id, _source_id in pairs}
     statement = (
-        select(
+        select(  # type: ignore[call-overload]
             col(EpisodeCanonicalEpisode.canonical_episode_id),
             col(Show.source_id),
             Episode,
             Season,
+            Show,
         )
         .join(Episode, onclause=col(EpisodeCanonicalEpisode.episode_id) == Episode.id)
         .join(Season, onclause=col(Episode.season_id) == Season.id)
@@ -1026,14 +1030,14 @@ def _episodes_linking_to(
     wanted = set(pairs)
     linking: dict[
         tuple[uuid.UUID, uuid.UUID],
-        list[DuplicatedLinkEpisodeOutput],
+        list[EpisodeRecord],
     ] = defaultdict(list)
-    for canonical_id, source_id, episode, season in session.exec(statement).all():
+    for canonical_id, source_id, episode, season, show in session.exec(statement).all():
         if (canonical_id, source_id) not in wanted:
             continue
-        output = DuplicatedLinkEpisodeOutput.model_validate(episode)
-        output.season_number = season.season_number
-        linking[canonical_id, source_id].append(output)
+        linking[canonical_id, source_id].append(
+            EpisodeRecord(**_record_fields(episode, season, show)),
+        )
     return linking
 
 
@@ -1079,40 +1083,183 @@ def get_duplicated_canonical_episodes(
         source = sources.get(source_id)
         if found is None or source is None:
             continue
-        episode, season, show, canonical_source = found
+        episode, season, show, _canonical_source = found
         outputs.append(
             DuplicatedCanonicalEpisodeOutput(
                 id=f"{episode.id}:{source.id}",
-                canonical_episode_id=episode.id,
-                season_id=season.id,
-                show_id=show.id,
-                key=episode.key,
-                name=episode.name,
-                season_number=season.season_number,
-                episode_number=episode.episode_number,
-                show_name=show.name,
-                show_year=show.year,
-                url=tmdb_episode_url(
-                    show.key,
-                    season.season_number,
-                    episode.episode_number,
-                )
-                or episode.url,
-                show_url=tmdb_show_url(show.key) or show.url,
-                canonical_source_name=canonical_source.name,
-                canonical_plugin_name=canonical_source.plugin.name,
-                source_id=source.id,
-                source_name=source.name,
-                plugin_name=source.plugin.name,
+                canonical=EpisodeRecord(**_record_fields(episode, season, show)),
+                source=SourceListPublic.model_validate(source),
                 linked_episodes=linking.get((canonical_id, source_id), []),
             ),
         )
     return sorted(
         outputs,
         key=lambda output: (
-            output.source_name or "",
-            output.show_name or "",
-            output.season_number or 0,
-            output.episode_number or 0,
+            output.source.name or "",
+            output.canonical.show.name or "",
+            output.canonical.season.season_number or 0,
+            output.canonical.episode.episode_number or 0,
         ),
+    )
+
+
+# TODO: Validate
+def _select_with_canonical_season_and_show() -> SelectOfScalar[Episode]:
+    """Select episodes with the season and title above each one already loaded."""
+    return (
+        select(Episode)
+        .join(
+            Season,
+            onclause=col(Episode.season_id) == Season.id,
+        )
+        .join(
+            Show,
+            onclause=col(Season.show_id) == Show.id,
+        )
+        .where(is_canonical(Episode), is_canonical(Show))
+        .options(
+            contains_eager(Episode.season).contains_eager(  # type: ignore[arg-type]
+                Season.show,  # type: ignore[arg-type]
+            ),
+        )
+    )
+
+
+# TODO: Validate
+def _information_side(  # noqa: PLR0913 - one side of the comparison, field by field.
+    label: str,
+    episode: Episode,
+    season: Season,
+    show: Show,
+    url: str | None,
+    absolute_number: int | None,
+) -> EpisodeInformationSide:
+    return EpisodeInformationSide(
+        label=label,
+        url=url,
+        absolute_number=absolute_number,
+        **_record_fields(episode, season, show),
+    )
+
+
+# TODO: Validate
+def episode_information(
+    session: Session,
+    episode: Episode,
+    user: User | None,
+) -> EpisodeInformationOutput:
+    """Return what the website and TMDB each say about an `Episode`.
+
+    The website's own account is what it stored rather than what is served, since
+    what is served already reads as TMDB has it and would leave nothing to
+    compare.
+    """
+    season = episode.season
+    show = season.show
+    source = show.source
+
+    # The episode itself, beside the website's account of it. Named for TMDB because
+    # that is where a canonical row's values come from when TMDB has a record; media it
+    # has never heard of is described by its one non-canonical row, so the two sides
+    # read alike and the comparison is empty rather than misleading.
+    counterpart = canonical_episode_of(session, episode.sole_canonical_episode_id)
+    # Each side counts through its own title, so both titles are counted in one
+    # go rather than a query apiece.
+    numbers = absolute_numbers_of(
+        session,
+        {show.id} if counterpart is None else {show.id, counterpart[2].id},
+    )
+    tmdb: EpisodeInformationSide | None = None
+    if counterpart:
+        canonical_episode, canonical_season, canonical_show = counterpart
+        tmdb = _information_side(
+            TMDB_PLUGIN_KEY,
+            canonical_episode,
+            canonical_season,
+            canonical_show,
+            tmdb_episode_url(
+                canonical_show.key,
+                canonical_season.season_number,
+                canonical_episode.episode_number,
+            ),
+            numbers.get(canonical_episode.id),
+        )
+
+    canonical_episode_id = single_canonical_episode_id(episode)
+    stored_url = (
+        user_episode_url(session, user, canonical_episode_id)
+        if canonical_episode_id
+        else None
+    )
+
+    return EpisodeInformationOutput(
+        episode_id=episode.id,
+        user_url=stored_url.url if stored_url else None,
+        canonical_episode_validated_at=episode.canonical_episode_validated_at,
+        canonical_episode_note=episode.canonical_episode_note,
+        issue_reports=list_episode_issue_reports(session, episode.id),
+        source=_information_side(
+            source.name or source.plugin.name or source.plugin.key,
+            episode,
+            season,
+            show,
+            episode.url,
+            numbers.get(episode.id),
+        ),
+        tmdb=tmdb,
+    )
+
+
+# TODO: Validate
+def non_canonical_episodes(episode: Episode) -> list[EpisodeListOutput]:
+    """Get every website's row standing for an `Episode`.
+
+    The other end of the link the non-canonical rows are settled by, which only a
+    canonical episode ever has any of. Read by anybody, signed in or not: which
+    websites carry an episode is as much a part of the episode as its name.
+    """
+    return [
+        EpisodeListOutput.model_validate(link.episode)
+        for link in episode.non_canonical_episodes
+    ]
+
+
+# TODO: Validate
+def set_episode_url_for_user(
+    session: Session,
+    episode: Episode,
+    current_user: User,
+    url: str,
+) -> UserEpisodeUrlOutput:
+    """Point a `User`'s own copy of an `Episode` at a URL of their choosing."""
+    canonical_episode_id = canonical_episode_for_url(episode)
+    record = set_user_episode_url(session, current_user, canonical_episode_id, url)
+    return UserEpisodeUrlOutput(
+        canonical_episode_id=canonical_episode_id,
+        url=record.url,
+    )
+
+
+# TODO: Validate
+def clear_episode_url_for_user(
+    session: Session,
+    episode: Episode,
+    current_user: User,
+) -> UserEpisodeUrlOutput:
+    """Drop the URL a `User` gave for an `Episode`."""
+    canonical_episode_id = canonical_episode_for_url(episode)
+    clear_user_episode_url(session, current_user, canonical_episode_id)
+    return UserEpisodeUrlOutput(canonical_episode_id=canonical_episode_id, url=None)
+
+
+# TODO: Validate
+def canonical_episode_record(
+    session: Session,
+    canonical_episode: Episode,
+) -> CanonicalEpisodeRecord:
+    """Read an `Episode` with the season and title above it."""
+    numbers = absolute_numbers_of(session, {canonical_episode.season.show_id})
+    return CanonicalEpisodeRecord(
+        absolute_number=numbers.get(canonical_episode.id),
+        **episode_record(canonical_episode).model_dump(),
     )

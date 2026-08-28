@@ -9,9 +9,10 @@ from typing import TYPE_CHECKING, ClassVar, override
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
-from app.shows.service import find_and_add_canonical_show
+from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
-from plugins.Netflix.helpers import HelperMixin
+from app.utils import tz_datetime
+from plugins.Netflix.utils import HelperMixin
 
 if TYPE_CHECKING:
     from meshfilm.lodp_title_and_plans_page.models import Video1 as TitleVideo
@@ -20,6 +21,17 @@ if TYPE_CHECKING:
 # TODO: Validate
 class UpsertMixin(HelperMixin, register=False):
     """Mixin containing all upsert functions."""
+
+    # TODO: Validate
+    def _upsert_source(self) -> Source:
+        source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
+        return Source(
+            key=self.plugin_key(),
+            name=self.plugin_name(),
+            favicon_url=self.favicon_url(),
+            data_timestamp=tz_datetime.now(),
+            plugin_id=self.plugin.id,
+        ).upsert_and_set_update_at(self.plugin, source)
 
     # TODO: Validate
     @override
@@ -37,7 +49,7 @@ class UpsertMixin(HelperMixin, register=False):
             show = self._upsert_tv_show(source, show_key, force=force)
 
         self._soft_delete_missing(show_key)
-        find_and_add_canonical_show(self.session, show, canonical_show)
+        add_canonical_show_and_link_episodes(self.session, show, canonical_show)
         return show
 
     # TODO: Validate

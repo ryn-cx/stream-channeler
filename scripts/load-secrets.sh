@@ -1,4 +1,5 @@
 #! /usr/bin/env bash
+# TODO: Validate
 
 # Read dev secrets from the OS keyring (the same store the host app uses) and
 # export them so Compose substitutes them into the containers. Keeps real secrets

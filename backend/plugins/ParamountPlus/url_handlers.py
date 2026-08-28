@@ -10,9 +10,6 @@ from plugins.utils.base_plugin.media_type import MediaTypeURLHandler
 if TYPE_CHECKING:
     from plugins.ParamountPlus import ParamountPlus
 
-_SHOW_SLUG_REGEX = r"[a-z0-9-]+"
-_MOVIE_ID_REGEX = r"[A-Za-z0-9]+"
-
 
 # TODO: Validate
 class ParamountPlusURLHandler(MediaTypeURLHandler["ParamountPlus"]):
@@ -39,7 +36,7 @@ class ShowURLHandler(ParamountPlusURLHandler):
     """
 
     media_type = "series"
-    _URL_REGEX = rf"\/shows\/(?P<show_id>{_SHOW_SLUG_REGEX})(?:\/|$)"
+    _URL_REGEX = r"\/shows\/(?P<show_id>[a-z0-9-]+)(?:\/|$)"
 
     # TODO: Validate
     @override
@@ -58,7 +55,7 @@ class MovieURLHandler(ParamountPlusURLHandler):
     """
 
     media_type = "movie"
-    _URL_REGEX = rf"\/movies\/video\/(?P<movie_id>{_MOVIE_ID_REGEX})(?:\/|$)"
+    _URL_REGEX = r"\/movies\/video\/(?P<movie_id>[A-Za-z0-9]+)(?:\/|$)"
 
     # TODO: Validate
     @override

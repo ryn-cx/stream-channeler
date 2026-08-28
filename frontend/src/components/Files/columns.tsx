@@ -18,8 +18,8 @@ export const fileColumns: ColumnDef<FileTableData>[] = [
     header: "Plugin",
     cell: ({ row }) => (
       <ParentLinkCell
-        to="/plugin/$pluginId"
-        params={{ pluginId: row.original.plugin_id }}
+        to="/sources"
+        search={{ plugin_id: row.original.plugin_id }}
         name={row.original.plugin_name}
       />
     ),

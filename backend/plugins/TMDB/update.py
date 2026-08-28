@@ -11,13 +11,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
-from tminidb.changes.tv_series.models import Item
+from tminidb.tv_series.changes.models import Item
 
 from app.media.media_type import MediaType
 from app.utils import tz_datetime
-from plugins.TMDB.files import ShowChanges, change_datetime
+from plugins.TMDB.episode_groups import show_chosen_group_id
+from plugins.TMDB.files import ShowChanges
 from plugins.TMDB.import_url import ImportURLMixin
 from plugins.TMDB.keys import parse_show_key, season_key
+from plugins.TMDB.utils import change_datetime
 from plugins.utils.base_plugin.files import COMPLETED_STATUS, EXTRA_STATUS_FIELD
 
 if TYPE_CHECKING:
@@ -25,96 +27,12 @@ if TYPE_CHECKING:
 
     from app.shows.models import Show
 
-SHOW_DETAIL_CHANGE_KEYS = frozenset(
-    {
-        "adult",
-        "also_known_as",
-        "alternative_titles",
-        "biography",
-        "birthday",
-        "budget",
-        "cast",
-        "certifications",
-        "character_names",
-        "created_by",
-        "crew",
-        "deathday",
-        "episode_run_time",
-        "freebase_id",
-        "freebase_mid",
-        "general",
-        "genres",
-        "homepage",
-        "images",
-        "imdb_id",
-        "languages",
-        "name",
-        "network",
-        "origin_country",
-        "original_name",
-        "original_title",
-        "overview",
-        "parts",
-        "place_of_birth",
-        "plot_keywords",
-        "production_companies",
-        "production_countries",
-        "releases",
-        "revenue",
-        "season_regular",
-        "spoken_languages",
-        "status",
-        "tagline",
-        "title",
-        "translations",
-        "tvdb_id",
-        "tvrage_id",
-        "type",
-        "videos",
-    },
-)
-
-SEASON_DETAIL_CHANGE_KEYS = frozenset(
-    {
-        "air_date",
-        "cast",
-        "crew",
-        "episode",
-        "episode_number",
-        "general",
-        "guest_stars",
-        "images",
-        "name",
-        "overview",
-        "production_code",
-        "runtime",
-        "season",
-        "season_number",
-        "season_regular",
-        "translations",
-        "video",
-    },
-)
-
-EPISODE_TRANSLATIONS_CHANGE_KEYS = frozenset(
-    {
-        "translations",
-    },
-)
-
-SUPPORTED_CHANGE_KEYS = (
-    SHOW_DETAIL_CHANGE_KEYS
-    | SEASON_DETAIL_CHANGE_KEYS
-    | EPISODE_TRANSLATIONS_CHANGE_KEYS
-)
-
 
 # TODO: Validate
 class UpdateMixin(ImportURLMixin, register=False):
     # TODO: Validate
     @override
     def update_show(self, show: Show, *, force: bool = False) -> None:
-        self._set_current_show(show.key)
         media_type, _ = parse_show_key(show.key)
         if media_type == MediaType.movie:
             # Movie ignores changes because there is only a single file so i is more
@@ -150,18 +68,15 @@ class UpdateMixin(ImportURLMixin, register=False):
         _, tmdb_id = parse_show_key(show_key)
         translations_files = self.stored_episode_translations_files(tmdb_id)
 
-        for change in changes_file.changes():
+        for change in changes_file.parsed().changes:
             for item in change.items:
                 changed_at = change_datetime(item.time)
-                if change.key in SHOW_DETAIL_CHANGE_KEYS:
-                    self._update_changed_show_files(tmdb_id, changed_at)
-                if change.key in SEASON_DETAIL_CHANGE_KEYS:
+                if change.key in {"season", "episode"}:
                     self._update_changed_season_files(show_key, item, changed_at)
-                if change.key in EPISODE_TRANSLATIONS_CHANGE_KEYS:
+                else:
+                    self._update_changed_show_files(tmdb_id, changed_at)
+                if change.key == "translations":
                     self._download_outdated_files(translations_files, changed_at)
-                if change.key not in SUPPORTED_CHANGE_KEYS:
-                    message = f"{show_key} has an unknown change key: {change.key}"
-                    raise ValueError(message)
 
     # TODO: Validate
     def _update_changed_show_files(self, tmdb_id: int, changed_at: datetime) -> None:
@@ -181,7 +96,7 @@ class UpdateMixin(ImportURLMixin, register=False):
         changed = item.value
         named = (
             None
-            if self._chosen_group_id(show_key) is not None
+            if show_chosen_group_id(self.session, self.source, show_key) is not None
             else getattr(changed, "season_id", None)
         )
         key = None if named is None else season_key(MediaType.tv, named)

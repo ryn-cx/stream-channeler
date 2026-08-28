@@ -1,4 +1,5 @@
 #! /usr/bin/env bash
+# TODO: Validate
 
 set -e
 set -x

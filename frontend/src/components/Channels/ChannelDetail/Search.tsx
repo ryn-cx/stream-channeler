@@ -189,6 +189,7 @@ function ResultCard({
       >
         {imageUrl && (
           <img
+            referrerPolicy="no-referrer"
             loading="lazy"
             decoding="async"
             src={imageUrl}
@@ -214,14 +215,16 @@ function ResultCard({
 }
 
 // TODO: Validate
-function PluginResultCard({
+export function PluginResultCard({
   result,
   channelId,
   onSelect,
+  extraFooter,
 }: {
   result: PluginSearchResult
   channelId: string
   onSelect?: (result: PluginSearchResult) => void
+  extraFooter?: React.ReactNode
 }) {
   return (
     <ResultCard
@@ -236,7 +239,12 @@ function PluginResultCard({
       // A result carries the id its own plugin issued, so opening the details
       // asks that plugin about it rather than matching it against another.
       onClick={onSelect ? () => onSelect(result) : undefined}
-      footer={<AddToQueueButton url={result.url} channelId={channelId} />}
+      footer={
+        <>
+          <AddToQueueButton url={result.url} channelId={channelId} />
+          {extraFooter}
+        </>
+      }
     />
   )
 }
@@ -370,6 +378,7 @@ function WatchProviders({
               <>
                 {provider.icon_url && (
                   <img
+                    referrerPolicy="no-referrer"
                     src={provider.icon_url}
                     alt=""
                     className="size-5 rounded"
@@ -441,6 +450,7 @@ export function MediaInfoModal({
         <div className="relative">
           {info?.backdrop_url ? (
             <img
+              referrerPolicy="no-referrer"
               src={info.backdrop_url}
               alt=""
               className="h-44 w-full object-cover"
@@ -452,6 +462,7 @@ export function MediaInfoModal({
           <div className="absolute inset-x-0 bottom-0 flex items-end gap-4 p-4">
             {info?.poster_url && (
               <img
+                referrerPolicy="no-referrer"
                 src={info.poster_url}
                 alt={title}
                 className="h-32 w-22 shrink-0 rounded object-cover shadow-lg"
@@ -576,7 +587,7 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
     ],
     queryFn: async () => {
       try {
-        return await PluginsService.searchPlugin({
+        return await PluginsService.inAppSearch({
           pluginKey: activeSearch!.pluginKey,
           query: activeSearch!.query,
           cursor,
@@ -644,7 +655,7 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
       const newTab = window.open("", "_blank")
       if (newTab) newTab.opener = null
       try {
-        const { url } = await PluginsService.searchUrl({
+        const { url } = await PluginsService.manualSearch({
           pluginKey: key,
           query: trimmed,
         })

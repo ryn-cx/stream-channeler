@@ -1,225 +1,219 @@
 # TODO: Validate
-import uuid
-from collections.abc import Generator
-from typing import Any, NamedTuple
-from urllib.parse import parse_qs, urlparse
+"""How a watch changes what a channel offers.
+
+An episode is unwatched, started, or finished, and the three filters between them
+say which of those a `User` wants to see. A started watch is one that was
+recorded but never verified; a finished one has been verified.
+"""
 
 import pytest
-from fastapi import status
-from fastapi.testclient import TestClient
-from sqlmodel import Session, col, select
+from sqlmodel import Session
 
-from app.config import settings
-from app.episodes.models import Episode
+from app.channels import service
+from app.channels.models import Channel
+from app.channels.schemas import ChannelOptions
 from app.users.models import User
 from app.watches.models import Watch
-from app.watches.schemas import WatchCreate, WatchUpdate
-from app.watches.services import create_watch, update_watch
 from tests.app.channels.utils import (
-    create_channel,
-    import_url,
-    whitelist_every_season,
+    channel_show_show,
+    create_random_channel,
+    create_random_channel_show,
 )
-from tests.app.users.utils import create_logged_in_user
-from tests.old_mess.plugins.plugin_validator.context_managers import (
-    check_episodes_before_grouped_download,
-    serve_downloads_from_disk,
-)
+from tests.app.episodes.utils import create_random_episode
+from tests.app.users.utils import create_random_user
+from tests.app.watches.utils import create_random_watch
 
 
 # TODO: Validate
-class ImportedChannel(NamedTuple):
-    client: TestClient
-    session: Session
-    headers: dict[str, str]
-    user_id: uuid.UUID
-    channel_id: str
+@pytest.fixture
+def owner(session_scoped_session: Session) -> User:
+    return create_random_user(session_scoped_session)
 
 
 # TODO: Validate
-@pytest.fixture(scope="module", autouse=True)
-def _stored_downloads() -> Generator[None]:
-    with check_episodes_before_grouped_download(), serve_downloads_from_disk():
-        yield
-
-
-# TODO: Validate
-def _channel_episodes(
-    channel: ImportedChannel,
-    **options: bool,
-) -> list[dict[str, Any]]:
-    response = channel.client.get(
-        f"{settings.API_V1_STR}/channels/{channel.channel_id}/episodes",
-        headers=channel.headers,
-        params=options,
+@pytest.fixture
+def channel(session_scoped_session: Session, owner: User) -> Channel:
+    """Build a channel holding one episode, which each test watches or does not."""
+    channel = create_random_channel(session_scoped_session, user=owner.id)
+    channel_show = create_random_channel_show(
+        session_scoped_session,
+        channel,
+        is_whitelist=False,
     )
-    assert response.status_code == status.HTTP_200_OK, response.text
-    return [
-        episode
-        for episode in response.json()["episodes"]
-        if episode["key"] == TestWatchStatus.EPISODE_KEY
-    ]
+    create_random_episode(
+        session_scoped_session,
+        channel_show_show(session_scoped_session, channel_show),
+    )
+    session_scoped_session.flush()
+    return channel
 
 
 # TODO: Validate
-class TestWatchStatus:
-    CHANNEL_URL = "https://www.youtube.com/@jawed"
-    EPISODE_URL = "https://www.youtube.com/watch?v=jNQXAC9IVRw"
-    EPISODE_KEY = parse_qs(urlparse(EPISODE_URL).query)["v"][0]
-    EXPECTED_COPIES = 2
+def episodes(
+    session: Session,
+    channel: Channel,
+    owner: User,
+    **options: bool,
+) -> list[object]:
+    output = service.channel_episodes_output(
+        channel,
+        ChannelOptions(random_seed=1, **options),
+        owner,
+        session,
+    )
+    return output.episodes
 
-    # TODO: Validate
-    class TestDuplicateEpisodeIdentifiers:
-        # TODO: Validate
-        @pytest.fixture(scope="class")
-        def imported_channel(
-            self,
-            function_scoped_client: TestClient,
-            function_scoped_session: Session,
-        ) -> ImportedChannel:
-            user = create_logged_in_user(
-                function_scoped_client,
-                function_scoped_session,
-            )
-            channel_id = create_channel(
-                function_scoped_session,
-                function_scoped_session.get_one(User, user.id),
-            )
-            import_url(
-                function_scoped_client,
-                function_scoped_session,
-                user.headers,
-                channel_id,
-                TestWatchStatus.CHANNEL_URL,
-            )
-            whitelist_every_season(
-                function_scoped_client,
-                user.headers,
-                channel_id,
-            )
-            return ImportedChannel(
-                function_scoped_client,
-                function_scoped_session,
-                user.headers,
-                user.id,
-                channel_id,
-            )
 
-        # TODO: Validate
-        @pytest.fixture
-        def started_watch(self, imported_channel: ImportedChannel) -> Watch:
-            episodes = imported_channel.session.exec(
-                select(Episode).where(
-                    col(Episode.key) == TestWatchStatus.EPISODE_KEY,
-                ),
-            ).all()
-            episode = episodes[0]
-            return create_watch(
-                imported_channel.session,
-                imported_channel.user_id,
-                episode,
-                WatchCreate(verified=False),
-            )
+# TODO: Validate
+def watch(session: Session, channel: Channel, owner: User, *, verified: bool) -> Watch:
+    """Record the owner having watched the channel's one episode."""
+    show = channel_show_show(session, channel.shows[0])
+    return create_random_watch(
+        session,
+        show.seasons[0].episodes[0],
+        watch_user=owner,
+        verified=verified,
+    )
 
-        # TODO: Validate
-        @pytest.fixture
-        def verified_watch(
-            self,
-            imported_channel: ImportedChannel,
-            started_watch: Watch,
-        ) -> Watch:
-            watch = update_watch(
-                imported_channel.session,
-                imported_channel.session.get_one(Watch, started_watch.id),
-                WatchUpdate(verified=True),
-            )
-            assert watch.verified is True
-            return started_watch
 
-        # TODO: Validate
-        def test_episode_is_listed_once_per_season(
-            self,
-            imported_channel: ImportedChannel,
-        ) -> None:
-            episodes = _channel_episodes(imported_channel)
-            assert len(episodes) == TestWatchStatus.EXPECTED_COPIES
-            assert (
-                len({episode["id"] for episode in episodes})
-                == TestWatchStatus.EXPECTED_COPIES
-            )
+# TODO: Validate
+def test_an_unwatched_episode_is_offered(
+    session_scoped_session: Session,
+    channel: Channel,
+    owner: User,
+) -> None:
+    assert len(episodes(session_scoped_session, channel, owner)) == 1
 
-        # TODO: Validate
-        def test_started_watch_covers_every_copy(
-            self,
-            imported_channel: ImportedChannel,
-            started_watch: Watch,
-        ) -> None:
-            episodes = _channel_episodes(imported_channel)
-            assert len(episodes) == TestWatchStatus.EXPECTED_COPIES
-            assert all(
-                episode["episode_watch_id"] == str(started_watch.id)
-                for episode in episodes
-            )
-            assert all(episode["verified"] is False for episode in episodes)
 
-        # TODO: Validate
-        def test_started_only_keeps_a_started_watch(
-            self,
-            imported_channel: ImportedChannel,
-            started_watch: Watch,
-        ) -> None:
-            episodes = _channel_episodes(
-                imported_channel,
-                hideWatched=True,
-                hideUnwatched=True,
-            )
-            assert len(episodes) == TestWatchStatus.EXPECTED_COPIES
-            assert all(
-                episode["episode_watch_id"] == str(started_watch.id)
-                for episode in episodes
-            )
+# TODO: Validate
+def test_a_started_watch_comes_back_with_the_episode(
+    session_scoped_session: Session,
+    channel: Channel,
+    owner: User,
+) -> None:
+    started = watch(session_scoped_session, channel, owner, verified=False)
 
-        # TODO: Validate
-        def test_hide_partially_watched_hides_a_started_watch(
-            self,
-            imported_channel: ImportedChannel,
-            started_watch: Watch,  # noqa: ARG002 - The watch is what the filter acts on.
-        ) -> None:
-            assert _channel_episodes(imported_channel, hidePartiallyWatched=True) == []
+    offered = episodes(session_scoped_session, channel, owner)
 
-        # TODO: Validate
-        def test_hide_partially_watched_keeps_a_verified_watch(
-            self,
-            imported_channel: ImportedChannel,
-            verified_watch: Watch,
-        ) -> None:
-            episodes = _channel_episodes(imported_channel, hidePartiallyWatched=True)
-            assert len(episodes) == TestWatchStatus.EXPECTED_COPIES
-            assert all(
-                episode["episode_watch_id"] == str(verified_watch.id)
-                for episode in episodes
-            )
-            assert all(episode["verified"] is True for episode in episodes)
+    assert [episode.episode_watch_id for episode in offered] == [started.id]
+    assert [episode.verified for episode in offered] == [False]
 
-        # TODO: Validate
-        def test_hide_watched_hides_a_verified_watch(
-            self,
-            imported_channel: ImportedChannel,
-            verified_watch: Watch,  # noqa: ARG002 - The watch is what the filter acts on.
-        ) -> None:
-            assert _channel_episodes(imported_channel, hideWatched=True) == []
 
-        # TODO: Validate
-        def test_started_only_hides_a_verified_watch(
-            self,
-            imported_channel: ImportedChannel,
-            verified_watch: Watch,  # noqa: ARG002 - The watch is what the filter acts on.
-        ) -> None:
-            assert (
-                _channel_episodes(
-                    imported_channel,
-                    hideWatched=True,
-                    hideUnwatched=True,
-                )
-                == []
-            )
+# TODO: Validate
+def test_hiding_partially_watched_hides_a_started_watch(
+    session_scoped_session: Session,
+    channel: Channel,
+    owner: User,
+) -> None:
+    watch(session_scoped_session, channel, owner, verified=False)
+
+    assert (
+        episodes(
+            session_scoped_session,
+            channel,
+            owner,
+            hide_partially_watched=True,
+        )
+        == []
+    )
+
+
+# TODO: Validate
+def test_hiding_partially_watched_keeps_a_finished_watch(
+    session_scoped_session: Session,
+    channel: Channel,
+    owner: User,
+) -> None:
+    finished = watch(session_scoped_session, channel, owner, verified=True)
+
+    offered = episodes(
+        session_scoped_session,
+        channel,
+        owner,
+        hide_partially_watched=True,
+    )
+
+    assert [episode.episode_watch_id for episode in offered] == [finished.id]
+
+
+# TODO: Validate
+def test_hiding_watched_hides_a_finished_watch(
+    session_scoped_session: Session,
+    channel: Channel,
+    owner: User,
+) -> None:
+    watch(session_scoped_session, channel, owner, verified=True)
+
+    assert episodes(session_scoped_session, channel, owner, hide_watched=True) == []
+
+
+# TODO: Validate
+def test_hiding_watched_keeps_a_started_watch(
+    session_scoped_session: Session,
+    channel: Channel,
+    owner: User,
+) -> None:
+    """A watch that was never finished is not something the `User` has watched."""
+    started = watch(session_scoped_session, channel, owner, verified=False)
+
+    offered = episodes(session_scoped_session, channel, owner, hide_watched=True)
+
+    assert [episode.episode_watch_id for episode in offered] == [started.id]
+
+
+# TODO: Validate
+def test_asking_for_started_episodes_only(
+    session_scoped_session: Session,
+    channel: Channel,
+    owner: User,
+) -> None:
+    """Hiding both the watched and the unwatched leaves what was started."""
+    started = watch(session_scoped_session, channel, owner, verified=False)
+
+    offered = episodes(
+        session_scoped_session,
+        channel,
+        owner,
+        hide_watched=True,
+        hide_unwatched=True,
+    )
+
+    assert [episode.episode_watch_id for episode in offered] == [started.id]
+
+
+# TODO: Validate
+def test_asking_for_started_episodes_hides_a_finished_watch(
+    session_scoped_session: Session,
+    channel: Channel,
+    owner: User,
+) -> None:
+    watch(session_scoped_session, channel, owner, verified=True)
+
+    assert (
+        episodes(
+            session_scoped_session,
+            channel,
+            owner,
+            hide_watched=True,
+            hide_unwatched=True,
+        )
+        == []
+    )
+
+
+# TODO: Validate
+def test_asking_for_started_episodes_hides_an_unwatched_one(
+    session_scoped_session: Session,
+    channel: Channel,
+    owner: User,
+) -> None:
+    assert (
+        episodes(
+            session_scoped_session,
+            channel,
+            owner,
+            hide_watched=True,
+            hide_unwatched=True,
+        )
+        == []
+    )

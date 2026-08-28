@@ -5,16 +5,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
+from plugins.Tubi.constants import CONTENT_ID_REGEX, SLUG_REGEX
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from plugins.utils.base_plugin.url import URLHandler
 
 if TYPE_CHECKING:
     from app.shows.models import Show
     from plugins.Tubi import Tubi
-
-_CONTENT_ID_REGEX = r"\d+"
-# Every title path ends with an optional slug, e.g. /megamind or /season-1.
-_SLUG_REGEX = r"(?:\/[^\/?#]*)?"
 
 
 # TODO: Validate
@@ -49,7 +46,7 @@ class MovieURLHandler(TubiURLHandler):
     Example URL https://tubitv.com/movies/100029837/megamind
     """
 
-    _URL_REGEX = rf"\/movies\/(?P<movie_id>{_CONTENT_ID_REGEX}){_SLUG_REGEX}(?:\/|$)"
+    _URL_REGEX = rf"\/movies\/(?P<movie_id>{CONTENT_ID_REGEX}){SLUG_REGEX}(?:\/|$)"
 
 
 # TODO: Validate
@@ -59,7 +56,7 @@ class SeriesURLHandler(TubiURLHandler):
     Example URL https://tubitv.com/series/300006854/scooby-doo-where-are-you
     """
 
-    _URL_REGEX = rf"\/series\/(?P<series_id>{_CONTENT_ID_REGEX}){_SLUG_REGEX}(?:\/|$)"
+    _URL_REGEX = rf"\/series\/(?P<series_id>{CONTENT_ID_REGEX}){SLUG_REGEX}(?:\/|$)"
 
 
 # TODO: Validate
@@ -69,9 +66,7 @@ class EpisodeURLHandler(TubiURLHandler):
     Example URL https://tubitv.com/tv-shows/595036/s01-e01-what-a-night-for-a-knight
     """
 
-    _URL_REGEX = (
-        rf"\/tv-shows\/(?P<episode_id>{_CONTENT_ID_REGEX}){_SLUG_REGEX}(?:\/|$)"
-    )
+    _URL_REGEX = rf"\/tv-shows\/(?P<episode_id>{CONTENT_ID_REGEX}){SLUG_REGEX}(?:\/|$)"
 
     # TODO: Validate
     @property

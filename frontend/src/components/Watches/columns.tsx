@@ -41,8 +41,8 @@ function SourceAdminLink({ sourceId }: { sourceId: string }) {
   if (!isAdmin) return null
   return (
     <Link
-      to="/source/$sourceKey"
-      params={{ sourceKey: sourceId }}
+      to="/shows"
+      search={{ source_id: sourceId }}
       aria-label="Open source admin page"
       className={adminLinkClassName}
     >
@@ -57,8 +57,8 @@ function ShowAdminLink({ showId }: { showId: string }) {
   if (!isAdmin) return null
   return (
     <Link
-      to="/show/$showKey"
-      params={{ showKey: showId }}
+      to="/seasons"
+      search={{ show_id: showId }}
       aria-label="Open show admin page"
       className={adminLinkClassName}
     >
@@ -73,8 +73,8 @@ function SeasonAdminLink({ seasonId }: { seasonId: string }) {
   if (!isAdmin) return null
   return (
     <Link
-      to="/season/$seasonKey"
-      params={{ seasonKey: seasonId }}
+      to="/episodes"
+      search={{ season_id: seasonId }}
       aria-label="Open season admin page"
       className={adminLinkClassName}
     >
@@ -83,6 +83,7 @@ function SeasonAdminLink({ seasonId }: { seasonId: string }) {
   )
 }
 
+// TODO: Validate
 export const columns: ColumnDef<WatchWithDetails>[] = [
   {
     accessorKey: "id",
@@ -112,6 +113,7 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
         <div className="flex items-center gap-2">
           {source.favicon_url && (
             <img
+              referrerPolicy="no-referrer"
               src={source.favicon_url}
               alt={`${source.name} favicon`}
               className="size-4"

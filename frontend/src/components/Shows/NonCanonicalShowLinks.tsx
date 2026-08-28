@@ -71,8 +71,8 @@ export function NonCanonicalShowLinks({
           >
             <span className="flex-1 whitespace-normal wrap-break-word">
               <Link
-                to="/show/$showKey"
-                params={{ showKey: linked.id }}
+                to="/seasons"
+                search={{ show_id: linked.id }}
                 className="hover:underline"
               >
                 {linked.name ?? "Unnamed"}

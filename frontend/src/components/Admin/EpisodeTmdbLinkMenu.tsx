@@ -1,13 +1,11 @@
 // TODO: Validate
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Eye, EyeOff, Search } from "lucide-react"
-import type { ReactNode } from "react"
 import { useState } from "react"
 
 import type { EpisodeOutput, TmdbEpisodeChoice } from "@/client"
 import { EpisodesService } from "@/client"
 import { CollapsibleSection } from "@/components/ChannelCommon/CollapsibleSection"
-import { formatDuration } from "@/components/ChannelCommon/formatters"
 import { AdminZone } from "@/components/Common/AdminZone"
 import { EditEpisodeById } from "@/components/Episodes/EditEpisodeById"
 import { Button } from "@/components/ui/button"
@@ -15,57 +13,24 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
-import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
+import {
+  CanonicalEpisodeRow,
+  numbering,
+  TmdbPageLink,
+} from "./CanonicalEpisodeRow"
 import { useSettleTmdbMatch } from "./tmdbMatchesQuery"
-import { type Numbered, numberingAgreement } from "./tmdbNumbering"
+import { type Numbered, numberingAgreement, numberingOf } from "./tmdbNumbering"
 
 type ChoiceOrder = "sequential" | "similarity"
 
 interface EpisodeTmdbLinkMenuProps {
   episodeId: string
-  seasonNumber: number | null
-  episodeNumber: number | null
+  seasonNumber: number | null | undefined
+  episodeNumber: number | null | undefined
   /** Query key of the information the episode was read off. */
   informationQueryKey: unknown[]
   onLinksChanged?: (episode: EpisodeOutput) => void
-}
-
-// TODO: Validate
-/** "S1E1", or as much of it as the record was numbered with. */
-function numbering(
-  seasonNumber: number | null,
-  episodeNumber: number | null,
-): string {
-  return `S${seasonNumber ?? "?"}E${episodeNumber ?? "?"}`
-}
-
-// TODO: Validate
-/**
- * A name that opens its own page on themoviedb.org, where TMDB has one.
- *
- * Which episode a choice is comes down to reading it on TMDB, so the names are
- * what open it rather than a link beside them: the whole row is already as much
- * as fits, and a name is what somebody goes to click.
- */
-function TmdbPageLink({
-  url,
-  children,
-}: {
-  url: string | null
-  children: ReactNode
-}) {
-  if (!url) return <>{children}</>
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="hover:underline"
-    >
-      {children}
-    </a>
-  )
 }
 
 // TODO: Validate
@@ -96,16 +61,19 @@ function UsedByDetails({ choice }: { choice: TmdbEpisodeChoice }) {
         <span className="mt-1 block space-y-0.5">
           {usedBy.map((used) => (
             <span
-              key={used.id}
+              key={used.episode.id}
               className="flex items-center gap-1 text-muted-foreground"
             >
               <span className="tabular-nums">
-                {numbering(used.season_number, used.episode_number)}
+                {numbering(
+                  used.season.season_number,
+                  used.episode.episode_number,
+                )}
               </span>{" "}
-              <TmdbPageLink url={used.url}>
-                {used.name ?? "Unnamed"}
+              <TmdbPageLink url={used.episode.url}>
+                {used.episode.name ?? "Unnamed"}
               </TmdbPageLink>
-              <EditEpisodeById episodeId={used.id} />
+              <EditEpisodeById episodeId={used.episode.id} />
             </span>
           ))}
         </span>
@@ -116,10 +84,13 @@ function UsedByDetails({ choice }: { choice: TmdbEpisodeChoice }) {
 
 // TODO: Validate
 /** Order two numbers, putting the one nothing numbered last. */
-function compareNumbers(left: number | null, right: number | null): number {
+function compareNumbers(
+  left: number | null | undefined,
+  right: number | null | undefined,
+): number {
   if (left === right) return 0
-  if (left === null) return 1
-  if (right === null) return -1
+  if (left == null) return 1
+  if (right == null) return -1
   return left - right
 }
 
@@ -222,14 +193,14 @@ export function TmdbLinkPicker({
   })
 
   const episodeNumbering: Numbered = {
-    season_number: seasonNumber,
-    episode_number: episodeNumber,
+    season_number: seasonNumber ?? null,
+    episode_number: episodeNumber ?? null,
     absolute_number: null,
   }
 
   // TODO: Validate
   const agreementWith = (choice: TmdbEpisodeChoice) =>
-    numberingAgreement(choice, episodeNumbering)
+    numberingAgreement(numberingOf(choice), episodeNumbering)
 
   const wanted = nameDraft.trim().toLowerCase()
   const isSearch = searchedName !== null
@@ -240,8 +211,8 @@ export function TmdbLinkPicker({
       (showUsed || !choice.already_used) &&
       (isSearch ||
         wanted.length === 0 ||
-        choice.name.toLowerCase().includes(wanted) ||
-        choice.show_name.toLowerCase().includes(wanted)),
+        (choice.episode.name ?? "").toLowerCase().includes(wanted) ||
+        (choice.show.name ?? "").toLowerCase().includes(wanted)),
   )
 
   // TODO: Validate
@@ -255,8 +226,11 @@ export function TmdbLinkPicker({
     (left: TmdbEpisodeChoice, right: TmdbEpisodeChoice) => {
       if (order === "similarity") return right.similarity - left.similarity
       return (
-        compareNumbers(left.season_number, right.season_number) ||
-        compareNumbers(left.episode_number, right.episode_number)
+        compareNumbers(left.season.season_number, right.season.season_number) ||
+        compareNumbers(
+          left.episode.episode_number,
+          right.episode.episode_number,
+        )
       )
     },
   )
@@ -330,64 +304,32 @@ export function TmdbLinkPicker({
           </p>
         ) : (
           ordered.map((choice) => (
-            <div
-              key={choice.tmdb_episode_id}
-              className="flex items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0"
-            >
-              <span className="w-24 shrink-0 tabular-nums">
-                <span
-                  className={
-                    agreementWith(choice).seasonAndEpisode
-                      ? "text-destructive"
-                      : "text-muted-foreground"
-                  }
-                >
-                  {numbering(choice.season_number, choice.episode_number)}
-                </span>
-                <span
-                  className={cn(
-                    "block text-xs",
-                    agreementWith(choice).absolute
-                      ? "text-destructive"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  {choice.absolute_number === null
-                    ? "N/A"
-                    : `#${choice.absolute_number}`}
-                </span>
-              </span>
-              <span className="flex-1 whitespace-normal wrap-break-word">
-                <TmdbPageLink url={choice.url}>{choice.name}</TmdbPageLink>
-                <span className="block text-xs text-muted-foreground">
-                  <TmdbPageLink url={choice.show_url}>
-                    {choice.show_name}
-                  </TmdbPageLink>
-                </span>
-              </span>
-              {choice.already_used ? <UsedByDetails choice={choice} /> : null}
-              <span className="w-20 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
-                {choice.air_date
-                  ? new Date(choice.air_date).toLocaleDateString()
-                  : "No air date"}
-                <span className="block">
-                  {formatDuration(choice.duration) ?? "No duration"}
-                </span>
-              </span>
-              <span className="shrink-0 tabular-nums text-muted-foreground">
-                {Math.round(choice.similarity * 100)}%
-              </span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                disabled={linkMutation.isPending}
-                onClick={() => linkMutation.mutate(choice.canonical_episode_id)}
-              >
-                Link
-              </Button>
-            </div>
+            <CanonicalEpisodeRow
+              key={choice.episode.id}
+              record={choice}
+              absoluteNumber={choice.absolute_number}
+              disagreement={agreementWith(choice)}
+              middle={
+                choice.already_used ? <UsedByDetails choice={choice} /> : null
+              }
+              trailing={
+                <>
+                  <span className="shrink-0 tabular-nums text-muted-foreground">
+                    {Math.round(choice.similarity * 100)}%
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    disabled={linkMutation.isPending}
+                    onClick={() => linkMutation.mutate(choice.episode.id)}
+                  >
+                    Link
+                  </Button>
+                </>
+              }
+            />
           ))
         )}
       </div>

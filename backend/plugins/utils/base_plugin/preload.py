@@ -1,6 +1,6 @@
 # TODO: Validate
 import uuid
-from abc import ABC
+from abc import ABC, abstractmethod
 from collections.abc import Callable
 from datetime import datetime
 from typing import Any
@@ -25,7 +25,11 @@ from plugins.utils.base_plugin.files import (
 # TODO: Validate
 class PreloadMixin(ABC):
     session: Session
-    plugin: Plugin
+
+    # TODO: Validate
+    @property
+    @abstractmethod
+    def plugin(self) -> Plugin: ...
 
     # TODO: Validate
     def _preload_sources(

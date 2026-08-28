@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.HiDive.media_info import MediaInfoMixin
 from plugins.HiDive.search import SearchMixin
 from plugins.HiDive.source import SourceMixin
 from plugins.HiDive.upsert import UpsertMixin
@@ -25,20 +24,32 @@ class HiDive(
     UpsertMixin,
     SourceMixin,
     SearchMixin,
-    MediaInfoMixin,
     MediaTypeImportMixin[HiDiveURLHandler],
     register=True,
 ):
     """HiDive plugin."""
 
-    _VERSION = "0.0.1"
-    _URL_HANDLERS = (SeriesURLHandler, SeasonURLHandler, MovieURLHandler)
-    TMDB_PROVIDER_NAMES = ("HIDIVE",)
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_handlers(cls) -> tuple[type[HiDiveURLHandler], ...]:
+        return (SeriesURLHandler, SeasonURLHandler, MovieURLHandler)
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def tmdb_provider_names(cls) -> tuple[str, ...]:
+        return ("HIDIVE",)
+
     # TODO: Don't hardcode the favicon URL
-    FAVICON_URL = (
-        "https://static.diceplatform.com/prod/original/dce.hidive/settings/"
-        "HIDIVE_Logo_iOS_1024x1024_281_29.Y3YMf.vMQ59.png?ts=1727963356"
-    )
+    # TODO: Validate
+    @classmethod
+    @override
+    def favicon_url(cls) -> str:
+        return (
+            "https://static.diceplatform.com/prod/original/dce.hidive/settings/"
+            "HIDIVE_Logo_iOS_1024x1024_281_29.Y3YMf.vMQ59.png?ts=1727963356"
+        )
 
     # TODO: Validate
     @classmethod

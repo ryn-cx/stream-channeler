@@ -17,8 +17,8 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
     header: "Plugin",
     cell: ({ row }) => (
       <ParentLinkCell
-        to="/plugin/$pluginId"
-        params={{ pluginId: row.original.plugin_id }}
+        to="/sources"
+        search={{ plugin_id: row.original.plugin_id }}
         name={row.original.plugin_name}
       />
     ),
@@ -28,8 +28,8 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
     header: "Source",
     cell: ({ row }) => (
       <ParentLinkCell
-        to="/source/$sourceKey"
-        params={{ sourceKey: row.original.source_id }}
+        to="/shows"
+        search={{ source_id: row.original.source_id }}
         name={row.original.source_name}
       />
     ),
@@ -39,8 +39,8 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
     header: "Show",
     cell: ({ row }) => (
       <ParentLinkCell
-        to="/show/$showKey"
-        params={{ showKey: row.original.show_id }}
+        to="/seasons"
+        search={{ show_id: row.original.show_id }}
         name={row.original.show_name}
       />
     ),
@@ -50,8 +50,8 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
     header: "Season",
     cell: ({ row }) => (
       <ParentLinkCell
-        to="/season/$seasonKey"
-        params={{ seasonKey: row.original.season_id }}
+        to="/episodes"
+        search={{ season_id: row.original.season_id }}
         name={row.original.season_name}
       />
     ),

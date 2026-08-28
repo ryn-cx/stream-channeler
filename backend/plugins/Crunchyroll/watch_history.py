@@ -6,7 +6,7 @@ from typing import override
 
 from app.utils import tz_datetime
 from app.watches.schemas import WatchImportResult
-from plugins.Crunchyroll.helpers import HelperMixin
+from plugins.Crunchyroll.utils import HelperMixin
 from plugins.utils.base_plugin.watch_history import (
     ParsedWatchEntry,
 )

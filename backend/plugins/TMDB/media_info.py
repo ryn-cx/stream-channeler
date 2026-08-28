@@ -4,41 +4,39 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import override
 
-from tminidb.details.movie.models import MovieModel
-from tminidb.details.tv_series.models import TvSeriesModel
-from tminidb.watch_providers.movie.models import BuyItem as MovieBuyItem
-from tminidb.watch_providers.movie.models import (
+from tminidb.movie.details.models import MovieDetailsModel
+from tminidb.movie.watch_providers.models import BuyItem as MovieBuyItem
+from tminidb.movie.watch_providers.models import (
     FlatrateItem as MovieFlatrateItem,
 )
-from tminidb.watch_providers.movie.models import MovieWatchProvidersModel
-from tminidb.watch_providers.movie.models import RentItem as MovieRentItem
-from tminidb.watch_providers.tv_series.models import BuyItem as TvBuyItem
-from tminidb.watch_providers.tv_series.models import (
+from tminidb.movie.watch_providers.models import MovieWatchProvidersModel
+from tminidb.movie.watch_providers.models import RentItem as MovieRentItem
+from tminidb.tv_series.details.models import TvSeriesDetailsModel
+from tminidb.tv_series.watch_providers.models import BuyItem as TvBuyItem
+from tminidb.tv_series.watch_providers.models import (
     FlatrateItem as TvFlatrateItem,
 )
-from tminidb.watch_providers.tv_series.models import FreeItem as TvFreeItem
-from tminidb.watch_providers.tv_series.models import RentItem as TvRentItem
-from tminidb.watch_providers.tv_series.models import (
+from tminidb.tv_series.watch_providers.models import FreeItem as TvFreeItem
+from tminidb.tv_series.watch_providers.models import RentItem as TvRentItem
+from tminidb.tv_series.watch_providers.models import (
     TvSeriesWatchProvidersModel,
 )
 
 from app.media.media_type import MediaType
-from plugins.TMDB.files import (
-    MovieDetails,
+from plugins.TMDB.files import MovieDetails
+from plugins.TMDB.lookup import LookupMixin
+from plugins.TMDB.utils import (
     backdrop_image_url,
     logo_image_url,
     poster_image_url,
     release_year,
 )
-from plugins.TMDB.lookup import LookupMixin
 from plugins.utils.abstract_plugin import (
     PluginMediaInfo,
     PluginWatchProviderItem,
 )
 from plugins.utils.base_plugin.plugin import BasePlugin
 from plugins.utils.manage_plugins import sorted_plugins
-
-STREAMING_CATEGORIES = ("flatrate", "free", "ads")
 
 type WatchProviders = MovieWatchProvidersModel | TvSeriesWatchProvidersModel
 type Provider = (
@@ -50,8 +48,6 @@ type Provider = (
     | TvBuyItem
     | TvRentItem
 )
-
-_MEDIA_TYPE_LABELS = {MediaType.movie: "Movie", MediaType.tv: "TV Show"}
 
 
 # TODO: Validate
@@ -73,12 +69,12 @@ class MediaInfoMixin(LookupMixin, register=False):
     @override
     def media_info(self, media_identifier: str) -> PluginMediaInfo | None:
         media_type, tmdb_id = parse_media_identifier(media_identifier)
-        detail_file = self.auto_updating_media_detail(media_type, tmdb_id)
-        providers = self.auto_updating_watch_providers(media_type, tmdb_id).parsed()
+        detail_file = self.media_detail_file(media_type, tmdb_id)
+        providers = self.watch_providers_file(media_type, tmdb_id).parsed()
         # Which of the two shapes the detail is has to be read off the file rather
         # than the parsed model, because a model whose module was reloaded after a
         # schema change is no longer an instance of the class imported here.
-        detail: MovieModel | TvSeriesModel
+        detail: MovieDetailsModel | TvSeriesDetailsModel
         # A title with no poster of its own can still be shown by a poster one of
         # its seasons carries.
         season_poster_path: str | None
@@ -110,7 +106,7 @@ class MediaInfoMixin(LookupMixin, register=False):
         backdrop_path = detail.backdrop_path
         return PluginMediaInfo(
             title=title,
-            media_type=_MEDIA_TYPE_LABELS[media_type],
+            media_type={MediaType.movie: "Movie", MediaType.tv: "TV Show"}[media_type],
             tagline=detail.tagline or None,
             overview=detail.overview or None,
             poster_url=poster_image_url(poster_path or backdrop_path),
@@ -136,7 +132,7 @@ def streaming_providers(
         return []
 
     providers_by_id: dict[int, Provider] = {}
-    for category in STREAMING_CATEGORIES:
+    for category in ("flatrate", "free", "ads"):
         providers: Sequence[Provider] = getattr(united_states, category, None) or []
         for provider in providers:
             providers_by_id.setdefault(provider.provider_id, provider)
@@ -168,7 +164,7 @@ def _watch_provider_items(
     for provider in streaming_providers(watch_providers):
         plugin_class = plugin_for_tmdb_name(provider.provider_name)
         search_url = (
-            plugin_class.search_url(title)
+            plugin_class.manual_search(title)
             if plugin_class is not None and title
             else None
         )

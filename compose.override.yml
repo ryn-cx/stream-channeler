@@ -1,3 +1,4 @@
+# TODO: Validate
 services:
 
   # Local services are available on their ports, but also available on:
@@ -62,6 +63,10 @@ services:
     restart: "no"
     ports:
       - "${BACKEND_PORT}:8000"
+    env_file:
+      - .env
+      - path: .env.local
+        required: false
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -109,6 +114,8 @@ services:
     command: bash scripts/prestart.sh
     env_file:
       - .env
+      - path: .env.local
+        required: false
     environment:
       - FRONTEND_HOST=http://localhost:${FRONTEND_TEST_PORT}
       - POSTGRES_SERVER=db
@@ -137,6 +144,8 @@ services:
         condition: service_completed_successfully
     env_file:
       - .env
+      - path: .env.local
+        required: false
     environment:
       - FRONTEND_HOST=http://localhost:${FRONTEND_TEST_PORT}
       - POSTGRES_SERVER=db
@@ -238,6 +247,8 @@ services:
       - mailcatcher
     env_file:
       - .env
+      - path: .env.local
+        required: false
     environment:
       - VITE_API_URL=http://backend:8000
       - MAILCATCHER_HOST=http://mailcatcher:1080

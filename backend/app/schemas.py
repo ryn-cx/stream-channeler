@@ -24,9 +24,7 @@ from app.watches.models import Watch
 
 USER_OWNED_MODELS = Channel | Watch | ChannelOrder | Comment
 
-DELETABLE_MODELS = (
-    USER_OWNED_MODELS | Episode | Season | Show | Source | Plugin | File
-)
+DELETABLE_MODELS = USER_OWNED_MODELS | Episode | Season | Show | Source | Plugin | File
 
 
 # TODO: This can be improved upstream, this one changes return to Any as a workaround.

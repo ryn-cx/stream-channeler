@@ -2,9 +2,11 @@
 """Season schemas."""
 
 import uuid
+from typing import Self
 
-from pydantic import AliasPath, BaseModel, ConfigDict, Field
+from pydantic import AliasPath, BaseModel, ConfigDict, Field, model_validator
 
+from app.canonical_media.metadata import tmdb_season_url
 from app.issue_reports.schemas import IssueReportOutput
 from app.schemas import (
     BaseCreateWithParentAndKey,
@@ -13,6 +15,8 @@ from app.schemas import (
 )
 from app.seasons.models import BaseSeason, Season
 from app.shows.models import Show
+from app.shows.schemas import ShowPublic
+from app.sources.schemas import SourceListPublic
 
 
 # TODO: Validate
@@ -34,6 +38,10 @@ class SeasonOutput(BaseSeason):
 
     show_id: uuid.UUID
     id: uuid.UUID
+    # The season's own page on themoviedb.org. TMDB builds the address out of the
+    # key of the title above the season rather than out of anything the season
+    # carries, so it is filled in where the title is at hand and left empty here.
+    tmdb_url: str | None = None
 
 
 # TODO: Consider reworking this into seperate models for each parent.
@@ -57,17 +65,28 @@ class SeasonListOutput(SeasonOutput):
 
 
 # TODO: Validate
-class SeasonInformationSide(BaseModel):
+class SeasonRecord(BaseModel):
+    """A `Season` and what holds it, each served as the record it already is."""
+
+    season: SeasonOutput
+    show: ShowPublic
+    source: SourceListPublic
+
+    # TODO: Validate
+    @model_validator(mode="after")
+    def _read_tmdb_url(self) -> Self:
+        self.season.tmdb_url = tmdb_season_url(
+            self.show.key,
+            self.season.season_number,
+        )
+        return self
+
+
+# TODO: Validate
+class SeasonInformationSide(SeasonRecord):
     """One record's own account of a season, as the website that holds it has it."""
 
     label: str
-    name: str | None
-    season_number: int | None
-    sort_order: int | None
-    image_url: str | None
-    show_name: str | None
-    url: str | None
-    key: str
 
 
 # TODO: Validate
@@ -79,7 +98,6 @@ class SeasonInformationOutput(BaseModel):
     the other.
     """
 
-    season_id: uuid.UUID
     issue_reports: list[IssueReportOutput]
     source: SeasonInformationSide
     tmdb: SeasonInformationSide | None

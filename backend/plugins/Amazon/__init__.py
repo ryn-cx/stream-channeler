@@ -5,9 +5,7 @@ from __future__ import annotations
 
 from typing import override
 
-from app.canonical_media.service import add_canonical_show
 from app.shows.models import Show
-from plugins.Amazon.media_info import MediaInfoMixin
 from plugins.Amazon.search import SearchMixin
 from plugins.Amazon.source import SourceMixin
 from plugins.Amazon.upsert import UpsertMixin
@@ -17,6 +15,7 @@ from plugins.Amazon.url_handlers import (
     PrimeVideoDetailURLHandler,
     WatchAmazonDetailURLHandler,
 )
+from plugins.Amazon.utils import canonical_show_of
 from plugins.utils.abstract_plugin import URLImportResult
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
@@ -25,23 +24,35 @@ from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 class Amazon(
     UpsertMixin,
     SearchMixin,
-    MediaInfoMixin,
     SourceMixin,
     URLHandlerPlugin[AmazonURLHandler],
     register=True,
 ):
     """Amazon Prime Video plugin."""
 
-    _VERSION = "0.0.1"
-    _URL_HANDLERS = (
-        # Must be listed first: a share link's path is also a detail path, and
-        # only this one carries the id in the query rather than the path.
-        WatchAmazonDetailURLHandler,
-        PrimeVideoDetailURLHandler,
-        AmazonDetailURLHandler,
-    )
-    TMDB_PROVIDER_NAMES = ("Amazon Prime Video", "Amazon Video", "Prime Video")
-    FAVICON_URL = "https://www.primevideo.com/favicon.ico"
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_handlers(cls) -> tuple[type[AmazonURLHandler], ...]:
+        return (
+            # Must be listed first: a share link's path is also a detail path, and
+            # only this one carries the id in the query rather than the path.
+            WatchAmazonDetailURLHandler,
+            PrimeVideoDetailURLHandler,
+            AmazonDetailURLHandler,
+        )
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def tmdb_provider_names(cls) -> tuple[str, ...]:
+        return ("Amazon Prime Video", "Amazon Video", "Prime Video")
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def favicon_url(cls) -> str:
+        return "https://www.primevideo.com/favicon.ico"
 
     # TODO: Validate
     @classmethod
@@ -78,18 +89,12 @@ class Amazon(
     ) -> list[URLImportResult]:
         show_key = handler.show_key
         if not force and (shows := self._preload_show(show_key).all()):
-            if canonical_show:
-                for show in shows:
-                    add_canonical_show(self.session, show, canonical_show)
             return [result for show in shows for result in handler.import_results(show)]
 
         _cache = self._download_show_files_and_children(show_key)
         if canonical_show is None:
             canonical_show = self._tmdb_show(show_key, force=force)
             if not force and (shows := self._preload_show(show_key).all()):
-                if canonical_show:
-                    for show in shows:
-                        add_canonical_show(self.session, show, canonical_show)
                 return [
                     result for show in shows for result in handler.import_results(show)
                 ]
@@ -100,14 +105,6 @@ class Amazon(
             # The title the first listing was found to be linked to is the title
             # the rest of them are linked to too, so it is handed to them rather
             # than searched for once for each way of watching the same title.
-            canonical_show = canonical_show or _canonical_show(show)
+            canonical_show = canonical_show or canonical_show_of(show)
             results += handler.import_results(show)
         return results
-
-
-# TODO: Validate
-def _canonical_show(show: Show) -> Show | None:
-    """Return the title `show` was found to be linked to, where there is one."""
-    if show.canonical_shows:
-        return show.canonical_shows[0]
-    return None

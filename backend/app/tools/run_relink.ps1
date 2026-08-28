@@ -1,3 +1,4 @@
+# TODO: Validate
 # Re-import every show on the host, against the compose database.
 #
 # The same run as `run_import_queue_local.ps1` - the repo's own venv, the working

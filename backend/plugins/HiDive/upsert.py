@@ -9,25 +9,20 @@ from typing import override
 from app.episodes.models import Episode
 from app.seasons.models import Season as SeasonModel
 from app.shows.models import Show
-from app.shows.service import find_and_add_canonical_show
+from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
-from plugins.HiDive.files import season_bucket, season_hero, vod_hero
-from plugins.HiDive.helpers import (
-    MOVIE_MEDIA_TYPE,
-    SERIES_MEDIA_TYPE,
-    HelperMixin,
-)
+from plugins.HiDive.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
+from plugins.HiDive.files import season_bucket
+from plugins.HiDive.utils import HelperMixin, season_hero, vod_hero
 
 # TODO: Add support for individual episodes of a series.
-
-# HiDive puts the episode number as an E## prefix in the title.
-_EPISODE_NUMBER_REGEX = r"^E(\d+)"
 
 
 # TODO: Validate
 def _episode_number(title: str | None) -> int | None:
     # TODO: Double check there really is no better way to get this information.
-    match = re.match(_EPISODE_NUMBER_REGEX, title) if title else None
+    # HiDive puts the episode number as an E## prefix in the title.
+    match = re.match(r"^E(\d+)", title) if title else None
     return int(match.group(1)) if match else None
 
 
@@ -50,7 +45,7 @@ class UpsertMixin(HelperMixin, register=False):
         else:
             show = self._upsert_series_show(source, show_key, force=force)
         self._soft_delete_missing(show_key)
-        find_and_add_canonical_show(self.session, show, canonical_show)
+        add_canonical_show_and_link_episodes(self.session, show, canonical_show)
         return show
 
     # TODO: Validate

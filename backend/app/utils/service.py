@@ -7,6 +7,7 @@ import emails  # type: ignore[import-untyped]
 from jinja2 import Template
 
 from app.config import settings
+from app.schemas import Message
 from app.utils.schemas import EmailData
 
 logging.basicConfig(level=logging.INFO)
@@ -98,3 +99,14 @@ def generate_new_account_email(
         },
     )
     return EmailData(html_content=html_content, subject=subject)
+
+
+# TODO: Validate
+def send_test_email(email_to: str) -> Message:
+    email_data = generate_test_email(email_to=email_to)
+    send_email(
+        email_to=email_to,
+        subject=email_data.subject,
+        html_content=email_data.html_content,
+    )
+    return Message(message="Test email sent")

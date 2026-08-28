@@ -85,16 +85,6 @@ class BaseEpisode(BaseCanonicalEpisode):
 
 # TODO: Validate
 class Episode(BaseEpisode, ChildMediaMixin[Season, Never], table=True):
-    """Model representing an episode, and a website's non-canonical row of one.
-
-    A row is the episode itself, or one website's non-canonical row standing for however
-    many episodes that website ran together. The episode itself hangs off the season
-    itself the way a non-canonical row hangs off the season's non-canonical row, by the
-    same `season_id`, so one primary key covers both, and `is_canonical` is the whole of
-    what tells the two apart. Which episodes a non-canonical row stands for is stored in
-    `EpisodeCanonicalEpisode` alone, where no one of them stands above the rest.
-    """
-
     PARENT_ID_FIELD: ClassVar[str] = "season_id"
     CANONICAL_FLAG_FIELD: ClassVar[str] = "is_canonical"
 

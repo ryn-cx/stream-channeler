@@ -5,7 +5,7 @@ import uuid
 from collections import Counter
 from collections.abc import Sequence
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from sqlmodel import Session, col, func, select
 
 from app.channels.models import Channel
@@ -250,6 +250,11 @@ def get_channel_comments(  # noqa: PLR0913 - Paging plus scope plus filter.
     The `owned` scope is limited to the `User`'s own channels; `all` covers every
     channel and is only reachable by a superuser.
     """
+    if scope == CommentScope.all and not user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only a superuser can read every channel's comments.",
+        )
     statement = (
         select(Comment, Channel.name, CommentNotification)
         .join(Channel, col(Channel.id) == col(Comment.channel_id))

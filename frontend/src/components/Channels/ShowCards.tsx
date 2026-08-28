@@ -43,6 +43,7 @@ const OTHER_SOURCE_KEY = "Other"
 
 // TODO: Validate
 /** The source's favicon, naming the source when it is hovered. */
+// TODO: Validate
 function SourceFavicon({
   source,
   disabled,
@@ -54,6 +55,7 @@ function SourceFavicon({
 
   const favicon = (
     <img
+      referrerPolicy="no-referrer"
       loading="lazy"
       decoding="async"
       src={source.favicon_url}
@@ -205,6 +207,7 @@ function showFacts(
  * the title are their favicons and the few facts the listing knows sit under the
  * name.
  */
+// TODO: Validate
 export function ShowCards({
   shows,
   sources,
@@ -229,7 +232,7 @@ export function ShowCards({
   const { groups, isShowDisabled } = useShowGroups(shows, sources)
 
   return (
-    <div className="grid items-start gap-3 grid-cols-[repeat(auto-fill,minmax(220px,1fr))]">
+    <div className="grid items-start justify-start gap-3 grid-cols-[repeat(auto-fill,minmax(min(100%,320px),320px))]">
       {groups.map((group) => {
         const [firstShow] = group
         const canonicalShowId = firstShow.canonical_show_id ?? firstShow.id
@@ -270,6 +273,7 @@ export function ShowCards({
                 <div className="relative aspect-video w-full bg-muted">
                   {artwork && (
                     <img
+                      referrerPolicy="no-referrer"
                       loading="lazy"
                       decoding="async"
                       src={artwork}

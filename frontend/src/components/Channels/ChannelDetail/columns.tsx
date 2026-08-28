@@ -58,6 +58,7 @@ function EpisodeLink({ episode }: { episode: EpisodeWithDetails }) {
   )
 }
 
+// TODO: Validate
 export const columns: ColumnDef<EpisodeWithDetails>[] = [
   {
     accessorKey: "id",
@@ -83,6 +84,7 @@ export const columns: ColumnDef<EpisodeWithDetails>[] = [
         <div className="flex items-center gap-2">
           {source.favicon_url && (
             <img
+              referrerPolicy="no-referrer"
               src={source.favicon_url}
               alt={`${source.name} favicon`}
               className="size-4"

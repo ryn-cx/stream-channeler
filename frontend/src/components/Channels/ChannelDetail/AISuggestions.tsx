@@ -431,6 +431,7 @@ export function AISuggestions({
                   <div className="relative aspect-[2/3] bg-muted shrink-0">
                     {suggestion.image_url ? (
                       <img
+                        referrerPolicy="no-referrer"
                         src={suggestion.image_url}
                         alt={suggestion.title}
                         onError={(e) => {

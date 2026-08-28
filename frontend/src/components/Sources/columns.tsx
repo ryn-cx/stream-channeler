@@ -20,8 +20,8 @@ export const sourceColumns: ColumnDef<SourceTableData>[] = [
     header: "Plugin",
     cell: ({ row }) => (
       <ParentLinkCell
-        to="/plugin/$pluginId"
-        params={{ pluginId: row.original.plugin_id }}
+        to="/sources"
+        search={{ plugin_id: row.original.plugin_id }}
         name={row.original.plugin_name}
       />
     ),
@@ -37,16 +37,16 @@ export const sourceColumns: ColumnDef<SourceTableData>[] = [
       ) : (
         <div className="flex items-center gap-2">
           <Link
-            to="/source/$sourceKey"
-            params={{ sourceKey: row.original.id }}
+            to="/shows"
+            search={{ source_id: row.original.id }}
             className="font-medium text-primary hover:underline block max-w-48 whitespace-normal wrap-break-word"
           >
             {row.original.name || `No Name (${row.original.key})`}
           </Link>
           <TooltipIconLink label="Seasons">
             <Link
-              to="/source/$sourceKey/seasons"
-              params={{ sourceKey: row.original.id }}
+              to="/seasons"
+              search={{ source_id: row.original.id }}
               className="text-muted-foreground hover:text-foreground shrink-0"
               aria-label="Seasons"
             >
@@ -55,8 +55,8 @@ export const sourceColumns: ColumnDef<SourceTableData>[] = [
           </TooltipIconLink>
           <TooltipIconLink label="Episodes">
             <Link
-              to="/source/$sourceKey/episodes"
-              params={{ sourceKey: row.original.id }}
+              to="/episodes"
+              search={{ source_id: row.original.id }}
               className="text-muted-foreground hover:text-foreground shrink-0"
               aria-label="Episodes"
             >

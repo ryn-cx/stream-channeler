@@ -9,14 +9,9 @@ from typing import override
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
-from app.shows.service import find_and_add_canonical_show
+from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from plugins.Tubi.source import SourceMixin
-
-_SERIES_UPDATE_INTERVAL = timedelta(days=7)
-
-
-_MOVIE_UPDATE_INTERVAL = timedelta(days=30)
 
 
 # TODO: Validate
@@ -39,7 +34,7 @@ class UpsertMixin(SourceMixin, register=False):
             show = self._upsert_series_show(source, show_key, force=force)
 
         self._soft_delete_missing(show_key)
-        find_and_add_canonical_show(self.session, show, canonical_show)
+        add_canonical_show_and_link_episodes(self.session, show, canonical_show)
         return show
 
     # TODO: Validate
@@ -62,7 +57,7 @@ class UpsertMixin(SourceMixin, register=False):
                 url=self._series_url(show_key),
                 image_url=self._first_image(content.backgrounds),
                 data_timestamp=data_timestamp,
-                update_at=data_timestamp + _SERIES_UPDATE_INTERVAL,
+                update_at=data_timestamp + timedelta(days=7),
                 source_id=source.id,
             )
             show = self._upsert_show_object(new_show, source, show, show_key)
@@ -160,7 +155,7 @@ class UpsertMixin(SourceMixin, register=False):
                 url=self._movie_url(show_key),
                 image_url=self._first_image(content.backgrounds),
                 data_timestamp=data_timestamp,
-                update_at=data_timestamp + _MOVIE_UPDATE_INTERVAL,
+                update_at=data_timestamp + timedelta(days=30),
                 source_id=source.id,
             )
             show = self._upsert_show_object(new_show, source, show, show_key)

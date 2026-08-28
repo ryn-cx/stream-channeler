@@ -41,6 +41,7 @@ export function HeroBillboard({
     <div className="relative w-full md:aspect-video md:max-h-[65vh]">
       {imageUrl && (
         <img
+          referrerPolicy="no-referrer"
           src={imageUrl}
           alt=""
           className="absolute inset-0 w-full h-full object-cover"

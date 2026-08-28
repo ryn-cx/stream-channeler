@@ -1,3 +1,4 @@
+<!-- TODO: Validate -->
 1. Go to [takeout.google.com](https://takeout.google.com)
 2. Deselect all products, then select only 'YouTube and YouTube Music'
 3. Click 'All YouTube data included', then select only 'history'

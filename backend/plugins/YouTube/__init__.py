@@ -1,32 +1,26 @@
-# TODO: Validate
-"""YouTube plugin."""
-
 import re
 from datetime import timedelta
 from typing import override
 
 from loguru import logger
 
-from app.canonical_media.service import add_canonical_show
 from app.channels.models import ChannelQueue, URLStatus
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
+from plugins.YouTube.constants import LONG_DOMAIN, SHORT_DOMAIN
 from plugins.YouTube.files import (
-    get_first_item,
     is_an_album,
-    is_quota_error,
-    is_show_key,
     is_show_season_key,
+    is_user_playlist,
     is_video_key,
 )
 from plugins.YouTube.handlers import (
-    LONG_DOMAIN,
-    SHORT_DOMAIN,
     ChannelHandleURLHandler,
     ChannelKeyURLHandler,
     ChannelUsernameURLHandler,
+    PlaylistBasedURLHandler,
     PlaylistURLHandler,
     PlaylistVideoURLHandler,
     ShowPlaylistURLHandler,
@@ -34,15 +28,13 @@ from plugins.YouTube.handlers import (
     VideoURLHandler,
     YouTubeURLHandler,
 )
-from plugins.YouTube.helpers import HelperMixin
 from plugins.YouTube.source import SourceMixin
 from plugins.YouTube.updater import UpdaterMixin
 from plugins.YouTube.upsert import UpsertMixin
+from plugins.YouTube.utils import HelperMixin, is_quota_error
 from plugins.YouTube.watch_history import WatchHistoryMixin
 
 
-
-# TODO: Validate
 class YouTube(
     SourceMixin,
     UpsertMixin,
@@ -51,31 +43,31 @@ class YouTube(
     HelperMixin,
     register=True,
 ):
-    """YouTube plugin."""
+    @classmethod
+    @override
+    def specialized_updater(cls) -> bool:
+        return True
 
-    _VERSION = "0.0.1"
-    USER_SEARCHABLE = True
-    SPECIALIZED_UPDATER = True
+    @classmethod
+    @override
+    def favicon_url(cls) -> str:
+        return (
+            "https://www.youtube.com/s/desktop/45ea6c88/img/logos/favicon_144x144.png"
+        )
 
-    # TODO: Don't hardcode the favicon URL
-    FAVICON_URL = (
-        "https://www.youtube.com/s/desktop/45ea6c88/img/logos/favicon_144x144.png"
-    )
+    @classmethod
+    def _url_handlers(cls) -> tuple[type[YouTubeURLHandler], ...]:
+        return (
+            PlaylistVideoURLHandler,  # Must be first due to regex overlap
+            ShowPlaylistURLHandler,
+            PlaylistURLHandler,
+            VideoURLHandler,
+            ChannelKeyURLHandler,
+            ShowURLHandler,
+            ChannelUsernameURLHandler,
+            ChannelHandleURLHandler,
+        )
 
-    # _playlist_video before _video, and _username and _show before _handle, due to
-    # regex overlap.
-    _URL_HANDLERS = (
-        PlaylistVideoURLHandler,
-        ShowPlaylistURLHandler,
-        PlaylistURLHandler,
-        VideoURLHandler,
-        ChannelKeyURLHandler,
-        ShowURLHandler,
-        ChannelUsernameURLHandler,
-        ChannelHandleURLHandler,
-    )
-
-    # TODO: Validate
     @classmethod
     @override
     def domains(cls) -> list[str]:
@@ -94,14 +86,14 @@ class YouTube(
                 "(?:",
                 handler_class.url_regex(domain_regex),
             )
-            for handler_class in cls._URL_HANDLERS
+            for handler_class in cls._url_handlers()
         )
         return f"(?:{alternatives})"
 
     # TODO: Validate
     def get_url_handler(self, url: str) -> YouTubeURLHandler:
         domain_regex = self._domain_regex()
-        for handler_class in self._URL_HANDLERS:
+        for handler_class in self._url_handlers():
             if match := re.match(handler_class.url_regex(domain_regex), url):
                 return handler_class(self, url, match)
 
@@ -117,8 +109,13 @@ class YouTube(
         *,
         force: bool = False,
     ) -> list[URLImportResult]:
-        self._set_current_show(url)
         handler = self.get_url_handler(url)
+        if (
+            canonical_show is not None
+            and isinstance(handler, PlaylistBasedURLHandler)
+            and is_user_playlist(handler.playlist_key)
+        ):
+            self.record_linking_playlist_key(handler.playlist_key)
         handler.raise_if_invalid()
         return self._import_handler(handler, canonical_show, force=force)
 
@@ -154,60 +151,37 @@ class YouTube(
         show_key = handler.show_key
         playlist_key = handler.playlist_key
         show_preload = self._preload_show(show_key, preload_episodes=True)
-        if not (show := show_preload.one_or_none()):
+        existing_show = show_preload.one_or_none()
+
+        if not existing_show or force:
             _cache = self._download_show_files_and_children(show_key)
-            show = self.upsert_show(
-                self.source,
-                show_key,
-                canonical_show=canonical_show,
-                force=force,
-            )
-        # Checking for playlists here allows support for adding multiple albums from a
-        # single artist's channel.
-        elif force or self._playlist_is_missing(show, playlist_key):
-            _cache = self._download_show_files_and_children(show, tz_datetime.now())
-            show = self.upsert_show(
+            existing_show = self.upsert_show(
                 self.source,
                 show_key,
                 canonical_show=canonical_show,
                 force=force,
             )
 
-        # Before `import_results`, which names what the URL brought in by the keys of
-        # the listing's own rows: a channel resolves each of those to the row it is
-        # linked to, so the non-canonical rows have to exist before it is asked. A
-        # branch that wrote the listing settled it as it wrote; this is for the one that
-        # found it already stored and read nothing.
-        if canonical_show:
-            add_canonical_show(self.session, show, canonical_show)
-        return handler.import_results(show)
+        # If a channel is imported but a new playlist is added and that playlist is the
+        # URL being imported this will update the channel information to include that
+        # playlist.
+        elif self._playlist_is_missing(existing_show, playlist_key):
+            self._download_outdated_files(
+                self._show_files(show_key),
+                tz_datetime.now(),
+            )
+            existing_show = self.upsert_show(
+                self.source,
+                show_key,
+                canonical_show=canonical_show,
+                force=force,
+            )
 
-    # TODO: Validate
-    def _playlist_is_missing(self, show: Show, playlist_key: str) -> bool:
-        # A URL for a whole show asks for every season it has, so nothing is missing
-        # as long as it has been imported with seasons.
-        if is_show_key(playlist_key) and not is_show_season_key(playlist_key):
-            return not show.active_children
-
-        # A URL for a Topic channel asks for every release the musician has, which
-        # is the whole show, so nothing is missing once it has been imported with
-        # seasons.
-        if playlist_key == show.key and self.is_topic_channel(show.key):
-            return not show.active_children
-
-        # If the playlist being checked is the channel uploads playlist it should only
-        # be considered missing if the channel has at least one upload.
-        if playlist_key == self.channel_uploads_playlist_key(show.key):
-            channel_by_channel_id = self.channel_by_channel_id_file(show.key)
-            channel_item = get_first_item(channel_by_channel_id.parsed().items)
-            if int(channel_item.statistics.video_count) == 0:
-                return False
-        return not Season.get_from_memory(self.session, show, playlist_key)
+        return handler.import_results(existing_show)
 
     # TODO: Validate
     @override
     def update_season(self, season: Season) -> None:
-        self._set_current_show(season.show.key)
         logger.info("Updating season: {}", season.key)
         season = self._preload_season(season.id, preload_show=True).one()
         # A season that is a single video has no feed to check for new videos.

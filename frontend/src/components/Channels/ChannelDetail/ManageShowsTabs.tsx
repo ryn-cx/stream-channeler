@@ -8,6 +8,8 @@ import {
   Link2,
   List,
   ListX,
+  Maximize2,
+  Minimize2,
   Search,
   Sparkles,
   Trash2,
@@ -24,12 +26,13 @@ import {
   type Source,
 } from "@/components/Channels/ShowCards"
 import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
+import { ModalContent } from "@/components/Common/ModalContent"
+import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
 import {
   Dialog,
-  DialogBody,
   DialogContent,
   DialogFooter,
   DialogHeader,
@@ -103,6 +106,7 @@ export function ManageShowsTabs({
   const [noteDialogOpen, setNoteDialogOpen] = useState(false)
   const [selectedNote, setSelectedNote] = useState<string | null>(null)
   const [selectedTitle, setSelectedTitle] = useState<ShowGroup | null>(null)
+  const [isTitleFullScreen, setIsTitleFullScreen] = useState(false)
   const [blacklistTitle, setBlacklistTitle] = useState<ShowGroup | null>(null)
   const [removeTitle, setRemoveTitle] = useState<ShowGroup | null>(null)
   const [activeTab, setActiveTabState] = useState<string>("search")
@@ -295,31 +299,32 @@ export function ManageShowsTabs({
       >
         <TabsList
           className={cn(
-            "h-auto w-auto self-stretch flex-wrap gap-1",
+            "h-auto w-auto self-stretch flex-nowrap justify-start gap-1",
+            "overflow-x-auto no-scrollbar *:flex-none",
             tabsListClassName,
           )}
         >
           <TabsTrigger value="search">
-            <Search className="h-4 w-4 mr-1" /> Search
+            <Search className="h-4 w-4" /> Search
           </TabsTrigger>
           <TabsTrigger value="bulk">
-            <Upload className="h-4 w-4 mr-1" /> Bulk Import
+            <Upload className="h-4 w-4" /> Import
           </TabsTrigger>
           <TabsTrigger value="shows">
-            <List className="h-4 w-4 mr-1" /> Edit Shows
+            <List className="h-4 w-4" /> Edit
             {showCount > 0 && ` (${showCount})`}
           </TabsTrigger>
           <TabsTrigger value="queue">
-            <Inbox className="h-4 w-4 mr-1" /> Queue
+            <Inbox className="h-4 w-4" /> Queue
             {pendingQueueCount > 0 && ` (${pendingQueueCount})`}
           </TabsTrigger>
           {combinedChannels && (
             <TabsTrigger value="channels">
-              <Antenna className="h-4 w-4 mr-1" /> Combined Channels
+              <Antenna className="h-4 w-4" /> Channels
             </TabsTrigger>
           )}
           <TabsTrigger value="ai">
-            <Bot className="h-4 w-4 mr-1" /> AI Suggestions
+            <Bot className="h-4 w-4" /> Suggestions
           </TabsTrigger>
         </TabsList>
 
@@ -400,23 +405,40 @@ export function ManageShowsTabs({
               if (!open) setSelectedTitle(null)
             }}
           >
-            <DialogContent className="sm:max-w-[calc(100%-2rem)] max-h-[85vh] flex flex-col overflow-hidden">
-              <DialogHeader>
+            <ModalContent
+              size={isTitleFullScreen ? "full" : "4xl"}
+              className={
+                isTitleFullScreen
+                  ? "max-h-none h-[calc(100dvh-2rem)] flex flex-col overflow-hidden"
+                  : "max-h-[85vh] flex flex-col overflow-hidden"
+              }
+            >
+              <DialogHeader className="px-8">
                 <DialogTitle>
                   {selectedTitle?.name || "Unknown Show"}
                 </DialogTitle>
               </DialogHeader>
               {selectedTitle && (
-                <DialogBody>
+                <div className="no-scrollbar flex-1 min-h-0 overflow-y-auto px-8 py-4">
                   <WhitelistManager
                     channelId={channelId}
                     canonicalShowId={selectedTitle.canonicalShowId}
                     showName={selectedTitle.name || "Unknown Show"}
                     onClose={() => setSelectedTitle(null)}
                   />
-                </DialogBody>
+                </div>
               )}
-            </DialogContent>
+
+              <TooltipIconButton
+                label={
+                  isTitleFullScreen ? "Shrink to a window" : "Fill the screen"
+                }
+                icon={isTitleFullScreen ? <Minimize2 /> : <Maximize2 />}
+                size="icon-sm"
+                className="absolute left-4 top-4 z-10"
+                onClick={() => setIsTitleFullScreen(!isTitleFullScreen)}
+              />
+            </ModalContent>
           </Dialog>
 
           {filterOnlyShowsList.length > 0 && (

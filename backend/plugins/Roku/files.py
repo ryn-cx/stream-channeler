@@ -8,7 +8,7 @@ episode are all read out of the same file under an id of their own.
 from abc import ABC
 from collections.abc import Sequence
 from functools import cache
-from typing import Any, ClassVar, override
+from typing import Any, override
 from uuid import UUID
 
 from nana import Nana
@@ -18,12 +18,10 @@ from nana.content.models import Episode as ContentEpisode
 from nana.content.models import Episode2 as SeasonEpisode
 from nana.exceptions import ContentNotFoundError
 
+from plugins.Roku.constants import MOVIE_TYPE
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
-
-MOVIE_TYPE = "movie"
-SERIES_TYPE = "series"
 
 
 # TODO: Validate
@@ -43,7 +41,10 @@ def content_id(value: str | UUID) -> str:
 class BaseContentFile(EndpointFile[ContentModel], ABC):
     """What every file read off the content endpoint has in common."""
 
-    API_ENDPOINT: ClassVar[ContentEndpoint] = nana().content
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ContentEndpoint:
+        return nana().content
 
 
 # TODO: Validate
@@ -82,7 +83,7 @@ class FileMixin(BasePlugin, register=False):
     # TODO: Validate
     def _is_movie(self, show_key: str) -> bool:
         content_type = self._content(show_key).type
-        if content_type not in (MOVIE_TYPE, SERIES_TYPE):
+        if content_type not in (MOVIE_TYPE, "series"):
             msg = f"Invalid media type: {content_type}"
             raise RuntimeError(msg)
         return content_type == MOVIE_TYPE

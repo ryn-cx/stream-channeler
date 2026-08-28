@@ -1,10 +1,10 @@
 // TODO: Validate
 import { createContext, useContext } from "react"
 
-import type { UnmatchedEpisodeOutput } from "@/client"
+import type { TmdbMatchRow } from "./tmdbMatchColumns"
 
 const OpenEpisodeEditorContext = createContext<
-  ((episode: UnmatchedEpisodeOutput) => void) | null
+  ((episode: TmdbMatchRow) => void) | null
 >(null)
 
 export const OpenEpisodeEditorProvider = OpenEpisodeEditorContext.Provider

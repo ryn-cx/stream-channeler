@@ -21,7 +21,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 
-type EntityKey = "plugin" | "source" | "show" | "season"
+export type EntityKey = "plugin" | "source" | "show" | "season"
 
 interface DetailBreadcrumbProps {
   plugin?: PluginOutput
@@ -52,7 +52,7 @@ export function DetailBreadcrumb({
       key: "plugin",
       label: plugin.name || plugin.key,
       link: (
-        <Link to="/plugin/$pluginId" params={{ pluginId: plugin.id }}>
+        <Link to="/sources" search={{ plugin_id: plugin.id }}>
           {plugin.name || plugin.key}
         </Link>
       ),
@@ -64,7 +64,7 @@ export function DetailBreadcrumb({
       key: "source",
       label: source.name || source.key,
       link: (
-        <Link to="/source/$sourceKey" params={{ sourceKey: source.id }}>
+        <Link to="/shows" search={{ source_id: source.id }}>
           {source.name || source.key}
         </Link>
       ),
@@ -76,7 +76,7 @@ export function DetailBreadcrumb({
       key: "show",
       label: show.name || show.key,
       link: (
-        <Link to="/show/$showKey" params={{ showKey: show.id }}>
+        <Link to="/seasons" search={{ show_id: show.id }}>
           {show.name || show.key}
         </Link>
       ),
@@ -93,7 +93,7 @@ export function DetailBreadcrumb({
       key: "season",
       label: season.name || season.key,
       link: (
-        <Link to="/season/$seasonKey" params={{ seasonKey: season.id }}>
+        <Link to="/episodes" search={{ season_id: season.id }}>
           {season.name || season.key}
         </Link>
       ),

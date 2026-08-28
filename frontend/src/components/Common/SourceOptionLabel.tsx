@@ -14,7 +14,12 @@ export function SourceOptionLabel({
   return (
     <span className="flex items-center gap-2">
       {faviconUrl ? (
-        <img src={faviconUrl} alt="" className="size-4 shrink-0 rounded-sm" />
+        <img
+          referrerPolicy="no-referrer"
+          src={faviconUrl}
+          alt=""
+          className="size-4 shrink-0 rounded-sm"
+        />
       ) : (
         <Globe className="size-4 shrink-0 text-muted-foreground" />
       )}

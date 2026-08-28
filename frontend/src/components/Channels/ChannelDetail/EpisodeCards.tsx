@@ -13,6 +13,7 @@ import {
 } from "@/components/ChannelCommon/episodeGrid"
 import { LastWatchedBadge } from "@/components/ChannelCommon/LastWatchedBadge"
 import { useEpisodeActions } from "@/components/ChannelCommon/useEpisodeActions"
+import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import type { WatchFilters } from "@/lib/watchFilters"
 import type { EpisodeWithDetails } from "./columns"
@@ -47,6 +48,7 @@ export function EpisodeCard({
   index?: number
 }) {
   const [clicked, setClicked] = useState(false)
+  const { user } = useAuth()
   const { menuItems, dialogs, watchedMutation } = useEpisodeActions({
     episode,
     channelId,
@@ -58,7 +60,11 @@ export function EpisodeCard({
   // TODO: Validate
   const onCardClick = () => {
     setClicked(true)
-    watchedMutation.mutate(episode.id)
+    // A watch is recorded against whoever watched it, so there is nothing to
+    // record when nobody is signed in and the card goes straight to the episode.
+    if (user) {
+      watchedMutation.mutate(episode.id)
+    }
     if (episode.url) {
       window.open(episode.url, "_blank", "noopener,noreferrer")
     }

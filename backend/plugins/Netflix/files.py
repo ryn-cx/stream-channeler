@@ -6,8 +6,9 @@ their episodes all come out of the one file the title is downloaded as.
 """
 
 from collections.abc import Sequence
+from datetime import datetime, timedelta
 from functools import cache
-from typing import Any, ClassVar, override
+from typing import Any, override
 
 from meshfilm import Meshfilm
 from meshfilm.lodp_title_and_plans_page import LodpTitleAndPlansPage
@@ -22,8 +23,13 @@ from meshfilm.search_page_results.models import SearchPageResultsModel
 from sqlmodel import Session
 
 from app.plugins.models import Plugin
+from app.utils import tz_datetime
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import BaseFile, EndpointFile
+from plugins.utils.base_plugin.files import (
+    BaseFile,
+    EndpointFile,
+    IntegerEndpointFile,
+)
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -35,22 +41,23 @@ def meshfilm() -> Meshfilm:
 
 
 # TODO: Validate
-class Title(EndpointFile[LodpTitleAndPlansPageModel]):
+class Title(IntegerEndpointFile[LodpTitleAndPlansPageModel]):
     """Title file."""
-
-    API_ENDPOINT: ClassVar[LodpTitleAndPlansPage] = meshfilm().lodp_title_and_plans_page
 
     # TODO: Validate
     @override
-    def _download_file(self) -> str:
-        return self.API_ENDPOINT.download(int(self.unique_identifier))
+    def _endpoint(self) -> LodpTitleAndPlansPage:
+        return meshfilm().lodp_title_and_plans_page
 
 
 # TODO: Validate
 class Search(EndpointFile[SearchPageResultsModel]):
     """Search file."""
 
-    API_ENDPOINT: ClassVar[SearchPageResults] = meshfilm().search_page_results
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> SearchPageResults:
+        return meshfilm().search_page_results
 
     # TODO: Validate
     def __init__(
@@ -60,7 +67,6 @@ class Search(EndpointFile[SearchPageResultsModel]):
         query: str,
         cursor: str,
     ) -> None:
-        """Initialize the file."""
         self.query = query
         self.cursor = cursor
         super().__init__(session, plugin, f"{query}/{cursor}")
@@ -68,7 +74,12 @@ class Search(EndpointFile[SearchPageResultsModel]):
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self.API_ENDPOINT.download(self.query, self.cursor or None)
+        return self._endpoint().download(self.query, self.cursor or None)
+
+    # TODO: Validate
+    @override
+    def _next_update_at(self) -> datetime:
+        return tz_datetime.now() + timedelta(days=30)
 
 
 # TODO: Validate
@@ -76,14 +87,14 @@ class FileMixin(BasePlugin, register=False):
     """The files a Netflix title is read out of."""
 
     # TODO: Validate
-    def title_file(self, title_key: str) -> Title:
-        """Contains all of a Netflix title's data (show, seasons, episodes)."""
-        return self._file(Title, title_key)
-
-    # TODO: Validate
     def search_file(self, query: str, cursor: str | None) -> Search:
         """Contains one page of Netflix's movie and TV search results."""
         return self._file(Search, query, cursor or "")
+
+    # TODO: Validate
+    def title_file(self, title_key: str) -> Title:
+        """Contains all of a Netflix title's data (show, seasons, episodes)."""
+        return self._file(Title, title_key)
 
     # TODO: Validate
     def _title_video(self, show_key: str) -> TitleVideo:

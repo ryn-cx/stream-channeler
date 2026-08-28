@@ -43,7 +43,7 @@ const AddSeason = ({ showKey }: AddSeasonProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
-  const queryKey = ["shows", showKey, "seasons"]
+  const queryKey = ["media-table", "Seasons"]
 
   const form = useForm<FormInput, unknown, FormOutput>({
     resolver: zodResolver(formSchema),

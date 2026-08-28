@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from functools import cache
-from typing import Any, ClassVar, override
+from typing import Any, override
 
 from sqlmodel import Session
 from trivial_minus import TrivialMinus
@@ -34,7 +34,10 @@ def trivial_minus() -> TrivialMinus:
 class ShowPage(EndpointFile[ShowModel]):
     """Show page file."""
 
-    API_ENDPOINT: ClassVar[ShowEndpoint] = trivial_minus().show
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ShowEndpoint:
+        return trivial_minus().show
 
     # TODO: Validate
     @classmethod
@@ -62,7 +65,10 @@ class ShowPage(EndpointFile[ShowModel]):
 class EpisodesFile(EndpointFile[EpisodesModel]):
     """Episodes file."""
 
-    API_ENDPOINT: ClassVar[EpisodesEndpoint] = trivial_minus().episodes
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> EpisodesEndpoint:
+        return trivial_minus().episodes
 
     # TODO: Validate
     def __init__(
@@ -80,7 +86,7 @@ class EpisodesFile(EndpointFile[EpisodesModel]):
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self.API_ENDPOINT.download(
+        return self._endpoint().download(
             self.show_id,
             season_number=self.season_number,
         )
@@ -90,7 +96,10 @@ class EpisodesFile(EndpointFile[EpisodesModel]):
 class MovieFile(EndpointFile[MovieModel]):
     """Movie file."""
 
-    API_ENDPOINT: ClassVar[MovieEndpoint] = trivial_minus().movie
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> MovieEndpoint:
+        return trivial_minus().movie
 
     # TODO: Validate
     @override

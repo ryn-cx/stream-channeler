@@ -8,7 +8,7 @@ import { InformationHero } from "@/components/ChannelCommon/InformationHero"
 import { formatInformationDate } from "@/components/ChannelCommon/InformationTable"
 
 // TODO: Validate
-export function formatDuration(value: number | null) {
+export function formatDuration(value: number | null | undefined) {
   if (value == null) return null
   const minutes = Math.floor(value / 60)
   const seconds = value % 60
@@ -16,7 +16,7 @@ export function formatDuration(value: number | null) {
 }
 
 // TODO: Validate
-export function durationText(value: number | null) {
+export function durationText(value: number | null | undefined) {
   if (value == null) return null
   return `${Math.floor(value / 60)}m ${value % 60}s`
 }
@@ -35,15 +35,23 @@ export function primarySide(
 }
 
 // TODO: Validate
+/** Where one side puts the episode, in the words that side would use. */
+function placement(side: EpisodeInformationSide) {
+  const seasonNumber = side.season.season_number
+  const episodeNumber = side.episode.episode_number
+  return [
+    seasonNumber != null ? `Season ${seasonNumber}` : side.season.name,
+    episodeNumber != null ? `Episode ${episodeNumber}` : null,
+    side.absolute_number != null
+      ? `Absolute Episode #${side.absolute_number}`
+      : null,
+  ].filter(Boolean)
+}
+
+// TODO: Validate
 function heroSubtitle(data: EpisodeInformationOutput, preferSource: boolean) {
   const side = primarySide(data, preferSource)
-  const seasonNumber = side.season_number
-  const episodeNumber = side.episode_number
-  const placement = [
-    seasonNumber != null ? `Season ${seasonNumber}` : side.season_name,
-    episodeNumber != null ? `Episode ${episodeNumber}` : null,
-  ].filter(Boolean)
-  return [side.show_name, ...placement].filter(Boolean).join(" · ")
+  return [side.show.name, ...placement(side)].filter(Boolean).join(" · ")
 }
 
 // TODO: Validate
@@ -55,13 +63,18 @@ function heroFacts(
   const side = primarySide(data, preferSource)
   const facts = [
     spelledOutDuration
-      ? durationText(side.duration)
-      : formatDuration(side.duration),
-    formatInformationDate(side.air_date),
+      ? durationText(side.episode.duration)
+      : formatDuration(side.episode.duration),
+    formatInformationDate(side.episode.air_date),
     // What TMDB has to do with the episode is no part of one website's own
     // account of it, so it is left out where the website's row is what was
     // opened.
     preferSource ? null : data.tmdb ? "Linked to TMDB" : "Not linked to TMDB",
+    // Where the website itself files the episode, which is a different answer
+    // to the one above it as often as not, and the reason somebody opened this.
+    preferSource || !data.tmdb
+      ? null
+      : [data.source.label, ...placement(data.source)].join(" · "),
     data.source.label,
   ]
   return facts.filter((fact): fact is string => !!fact)
@@ -70,15 +83,16 @@ function heroFacts(
 // TODO: Validate
 function heroLinks(data: EpisodeInformationOutput, preferSource: boolean) {
   const links = []
-  if (data.source.url) {
-    links.push({ label: data.source.label, href: data.source.url })
+  if (data.source.episode.url) {
+    links.push({ label: data.source.label, href: data.source.episode.url })
   }
-  if (!preferSource && data.tmdb?.url) {
-    links.push({ label: data.tmdb.label, href: data.tmdb.url })
+  if (!preferSource && data.tmdb?.episode.url) {
+    links.push({ label: data.tmdb.label, href: data.tmdb.episode.url })
   }
   return links
 }
 
+// TODO: Validate
 /** Where the episode's information is held, which every reader of it shares. */
 export const episodeInformationQueryKey = (episodeId: string) => [
   "episode-information",
@@ -148,10 +162,10 @@ export function EpisodeInformationHero({
 
   return (
     <InformationHero
-      title={side.name ?? "Unnamed episode"}
+      title={side.episode.name ?? "Unnamed episode"}
       subtitle={heroSubtitle(data, preferSource)}
-      description={side.description}
-      imageUrl={side.image_url}
+      description={side.episode.description}
+      imageUrl={side.episode.image_url}
       facts={heroFacts(data, preferSource, spelledOutDuration)}
       links={heroLinks(data, preferSource)}
       titleAction={titleAction}

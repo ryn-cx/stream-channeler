@@ -11,7 +11,7 @@ logger = logger.bind(source="updater")
 
 
 # TODO: Validate
-def run(stop_event: threading.Event) -> None:  # noqa: D103
+def run(stop_event: threading.Event) -> None:
     with ThreadPoolExecutor(max_workers=3) as executor:
         futures = [
             executor.submit(update_outdated._update_outdated_forever),
@@ -23,7 +23,7 @@ def run(stop_event: threading.Event) -> None:  # noqa: D103
 
 
 # TODO: Validate
-def start() -> None:  # noqa: D103
+def start() -> None:
     threading.Thread(target=run, args=(threading.Event(),), daemon=True).start()
 
 

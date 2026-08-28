@@ -13,9 +13,9 @@ _STDOUT_FORMAT = (
 
 
 # TODO: Validate
-class InterceptHandler(logging.Handler):  # noqa: D101
+class InterceptHandler(logging.Handler):
     # TODO: Validate
-    def emit(self, record: logging.LogRecord) -> None:  # noqa: D102
+    def emit(self, record: logging.LogRecord) -> None:
         try:
             level = logger.level(record.levelname).name
         except ValueError:
@@ -33,7 +33,7 @@ class InterceptHandler(logging.Handler):  # noqa: D101
 
 
 # TODO: Validate
-def configure_logging() -> None:  # noqa: D103
+def configure_logging() -> None:
     logger.remove()
     logger.configure(extra={"source": "app"})
     logger.add(sys.stdout, level="INFO", colorize=True, format=_STDOUT_FORMAT)

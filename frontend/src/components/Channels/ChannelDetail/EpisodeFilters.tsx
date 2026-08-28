@@ -1381,6 +1381,7 @@ export function EpisodeFilters({
                                     />
                                     {source.favicon_url && (
                                       <img
+                                        referrerPolicy="no-referrer"
                                         src={source.favicon_url}
                                         alt={`${source.name} favicon`}
                                         className="size-4"

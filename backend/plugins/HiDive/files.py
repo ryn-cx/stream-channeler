@@ -4,9 +4,9 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import cache
-from typing import Any, ClassVar, override
+from typing import Any, override
 
 from diving_board import DivingBoard
 from diving_board.exceptions import (
@@ -26,6 +26,7 @@ from diving_board.vod import Vod as VodEndpoint
 from diving_board.vod import models as vod_models
 
 from app.files.models import File
+from app.utils import tz_datetime
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import (
     BaseFile,
@@ -44,7 +45,7 @@ def diving_board() -> DivingBoard:
 
 
 # TODO: Validate
-def _single_element[ElementT](elements: list[ElementT], description: str) -> ElementT:
+def single_element[ElementT](elements: list[ElementT], description: str) -> ElementT:
     if not elements:
         msg = f"No {description} element found"
         raise ValueError(msg)
@@ -55,27 +56,9 @@ def _single_element[ElementT](elements: list[ElementT], description: str) -> Ele
 
 
 # TODO: Validate
-def vod_hero(vod_data: vod_models.VodModel) -> vod_models.Element:
-    """Return the hero element of a parsed vod file."""
-    return _single_element(
-        [element for element in vod_data.elements if element.field_type == "hero"],
-        "hero",
-    )
-
-
-# TODO: Validate
-def season_hero(season_data: season_models.SeasonModel) -> season_models.Element:
-    """Return the hero element of a parsed season file."""
-    return _single_element(
-        [element for element in season_data.elements if element.field_type == "hero"],
-        "hero",
-    )
-
-
-# TODO: Validate
 def season_bucket(season_data: season_models.SeasonModel) -> season_models.Element:
     """Return the element a season's own episodes are listed in."""
-    return _single_element(
+    return single_element(
         [
             element
             for element in season_data.elements
@@ -86,25 +69,13 @@ def season_bucket(season_data: season_models.SeasonModel) -> season_models.Eleme
 
 
 # TODO: Validate
-def schedule_group_list(
-    schedule_data: schedule_models.ScheduleModel,
-) -> schedule_models.Element:
-    """Return the element a page of the schedule lists its days in."""
-    return _single_element(
-        [
-            element
-            for element in schedule_data.elements
-            if element.field_type == "groupList"
-        ],
-        "groupList",
-    )
-
-
-# TODO: Validate
 class Season(EndpointFile[season_models.SeasonModel]):
     """Season file."""
 
-    API_ENDPOINT: ClassVar[SeasonEndpoint] = diving_board().season
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> SeasonEndpoint:
+        return diving_board().season
 
     # Occurs when the user imports an invalid TV show url.
     # TODO: Validate
@@ -117,7 +88,10 @@ class Season(EndpointFile[season_models.SeasonModel]):
 class Vod(EndpointFile[vod_models.VodModel]):
     """Vod file."""
 
-    API_ENDPOINT: ClassVar[VodEndpoint] = diving_board().vod
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> VodEndpoint:
+        return diving_board().vod
 
     # Occurs when the user imports an invalid movie url.
     # TODO: Validate
@@ -130,7 +104,10 @@ class Vod(EndpointFile[vod_models.VodModel]):
 class Series(EndpointFile[series_models.SeriesModel]):
     """Series file."""
 
-    API_ENDPOINT: ClassVar[SeriesEndpoint] = diving_board().series
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> SeriesEndpoint:
+        return diving_board().series
 
     # Occurs when the user imports an invalid series url.
     # TODO: Validate
@@ -143,7 +120,10 @@ class Series(EndpointFile[series_models.SeriesModel]):
 class Schedule(PagedEndpointFile[schedule_models.ScheduleModel]):
     """Schedule file."""
 
-    API_ENDPOINT: ClassVar[ScheduleEndpoint] = diving_board().schedule
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ScheduleEndpoint:
+        return diving_board().schedule
 
     # TODO: Validate
     @override
@@ -156,14 +136,22 @@ class Schedule(PagedEndpointFile[schedule_models.ScheduleModel]):
             second=0,
             microsecond=0,
         )
-        return self.API_ENDPOINT.download_all(from_)
+        return self._endpoint().download_all(from_)
 
 
 # TODO: Validate
 class Search(EndpointFile[search_models.SearchModel]):
     """Search file."""
 
-    API_ENDPOINT: ClassVar[SearchEndpoint] = diving_board().search
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> SearchEndpoint:
+        return diving_board().search
+
+    # TODO: Validate
+    @override
+    def _next_update_at(self) -> datetime:
+        return tz_datetime.now() + timedelta(days=30)
 
 
 # TODO: Validate
@@ -191,6 +179,11 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
         return self._file(Vod, key)
 
     # TODO: Validate
+    def search_file(self, query: str) -> Search:
+        """Return a cached Search for the given query."""
+        return self._file(Search, query)
+
+    # TODO: Validate
     def series_file(self, series_key: str | int) -> Series:
         """Return a cached Series for the given series key."""
         key = str(series_key)
@@ -204,11 +197,6 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
         else:
             identifier = input_date.isoformat()
         return self._file(Schedule, identifier)
-
-    # TODO: Validate
-    def search_file(self, query: str) -> Search:
-        """Return a cached Search for the given query."""
-        return self._file(Search, query)
 
     # TODO: Validate
     def get_latest_schedule_file(self) -> Schedule | None:

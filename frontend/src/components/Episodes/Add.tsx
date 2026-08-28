@@ -45,7 +45,7 @@ const AddEpisode = ({ seasonKey }: AddEpisodeProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
-  const queryKey = ["seasons", seasonKey, "episodes"]
+  const queryKey = ["media-table", "Episodes"]
 
   const form = useForm<FormInput, unknown, FormOutput>({
     resolver: zodResolver(formSchema),

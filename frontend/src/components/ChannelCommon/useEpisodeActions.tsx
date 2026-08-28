@@ -11,11 +11,11 @@ import {
 } from "lucide-react"
 import { useState } from "react"
 import { type ChannelEpisodesOutput, WatchesService } from "@/client"
-import { EpisodeInformationDialog } from "@/components/ChannelCommon/EpisodeInformationDialog"
 import { BlacklistEpisodeDialog } from "@/components/Channels/ChannelDetail/BlacklistEpisodeDialog"
 import type { EpisodeWithDetails } from "@/components/Channels/ChannelDetail/columns"
 import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
 import type { ActionMenuItem } from "@/components/Common/ResponsiveActionMenu"
+import { EditEpisodeById } from "@/components/Episodes/EditEpisodeById"
 import useCustomToast from "@/hooks/useCustomToast"
 import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"
 import { isHiddenByWatchFilters, type WatchFilters } from "@/lib/watchFilters"
@@ -238,9 +238,14 @@ export function useEpisodeActions({
 
   const dialogs = (
     <>
+      {/*
+        The episode rather than the channel's row of it. A card already reads as
+        the episode, so opening the row behind it would answer with a different
+        account of the thing that was clicked.
+      */}
       {showInformation && (
-        <EpisodeInformationDialog
-          episodeId={episode.id}
+        <EditEpisodeById
+          episodeId={episode.canonical_episode_id ?? episode.id}
           open={showInformation}
           onOpenChange={setShowInformation}
         />

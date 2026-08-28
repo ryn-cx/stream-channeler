@@ -9,9 +9,8 @@ allowed to see.
 from collections.abc import Collection, Sequence
 from uuid import UUID
 
-from sqlmodel import col, or_, select
+from sqlmodel import Session, col, or_, select
 
-from app.auth.dependencies import SessionDep
 from app.channels.models import Channel
 from app.models import Visibility
 from app.users.models import User
@@ -25,7 +24,7 @@ def child_channel_ids(channel: Channel) -> list[UUID]:
 
 # TODO: Validate
 def readable_channels(
-    session: SessionDep,
+    session: Session,
     user: User | None,
     channel_ids: Collection[UUID],
 ) -> Sequence[Channel]:
@@ -44,7 +43,7 @@ def readable_channels(
 
 # TODO: Validate
 def channel_attribution(
-    session: SessionDep,
+    session: Session,
     user: User | None,
     main_channel: Channel,
 ) -> dict[UUID, UUID]:
@@ -79,7 +78,7 @@ def channel_attribution(
 
 # TODO: Validate
 def resolve_channel_ids(
-    session: SessionDep,
+    session: Session,
     user: User | None,
     main_channel: Channel,
     additional_channels: Collection[UUID],

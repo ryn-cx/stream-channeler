@@ -5,18 +5,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
+from plugins.Pluto.constants import DETAILS_REGEX, ITEM_ID_REGEX, LOCALE_REGEX
 from plugins.utils.base_plugin.media_type import MediaTypeURLHandler
 
 if TYPE_CHECKING:
     from plugins.Pluto import Pluto
-
-_ITEM_ID_REGEX = r"[0-9a-f]{24}"
-# Optional locale segment, e.g. /en, /us or /en-gb.
-_LOCALE_REGEX = r"(?:\/[a-z]{2}(?:-[a-z]{2})?)?"
-# Optional suffix the website adds to the canonical URL of a title.
-_DETAILS_REGEX = r"(?:\/details)?"
-# Optional segments of a link that points at a season or an episode of a series.
-_SEASON_REGEX = rf"(?:\/season\/\d+(?:\/episode\/{_ITEM_ID_REGEX})?)?"
 
 
 # TODO: Validate
@@ -47,8 +40,8 @@ class MovieURLHandler(PlutoURLHandler):
     # https://pluto.tv/en/on-demand/movies/68a54f49df1220b53566f16e/details
     # https://pluto.tv/us/on-demand/movies/68a54f49df1220b53566f16e
     _URL_REGEX = (
-        rf"{_LOCALE_REGEX}\/on-demand\/movies\/(?P<movie_id>{_ITEM_ID_REGEX})"
-        rf"{_DETAILS_REGEX}(?:\/|$)"
+        rf"{LOCALE_REGEX}\/on-demand\/movies\/(?P<movie_id>{ITEM_ID_REGEX})"
+        rf"{DETAILS_REGEX}(?:\/|$)"
     )
 
     # TODO: Validate
@@ -72,8 +65,11 @@ class SeriesURLHandler(PlutoURLHandler):
     # https://pluto.tv/us/on-demand/series/5ef05c6acdce3c001a779a79/season/1
     # https://pluto.tv/us/on-demand/series/5ef05c6acdce3c001a779a79/season/1/episode/5ef05c6ecdce3c001a779a95
     _URL_REGEX = (
-        rf"{_LOCALE_REGEX}\/on-demand\/series\/(?P<series_id>{_ITEM_ID_REGEX})"
-        rf"{_SEASON_REGEX}{_DETAILS_REGEX}(?:\/|$)"
+        rf"{LOCALE_REGEX}\/on-demand\/series\/(?P<series_id>{ITEM_ID_REGEX})"
+        # The optional segments of a link that points at a season or an
+        # episode of a series.
+        rf"(?:\/season\/\d+(?:\/episode\/{ITEM_ID_REGEX})?)?"
+        rf"{DETAILS_REGEX}(?:\/|$)"
     )
 
     # TODO: Validate

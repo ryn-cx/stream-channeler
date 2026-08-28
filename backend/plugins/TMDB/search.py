@@ -1,28 +1,24 @@
 # TODO: Validate
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import ClassVar, override
 
 from tminidb.search.multi.models import Result as MultiResult
 from tminidb.search.multi.models import SearchMultiModel
 
 from app.media.media_type import MediaType
-from app.utils import tz_datetime
-from plugins.TMDB.files import (
+from plugins.TMDB.constants import media_url
+from plugins.TMDB.lookup import LookupMixin
+from plugins.TMDB.media_info import media_identifier
+from plugins.TMDB.utils import (
     backdrop_image_url,
     poster_image_url,
     release_year,
-    title_page_url,
 )
-from plugins.TMDB.lookup import LookupMixin
-from plugins.TMDB.media_info import media_identifier
 from plugins.utils.abstract_plugin import (
     PluginSearchResult,
     PluginSearchResults,
 )
-
-_SEARCH_MAX_AGE = timedelta(days=7)
 
 
 # TODO: Validate
@@ -47,8 +43,17 @@ class SearchMixin(LookupMixin, register=False):
     }
 
     # TODO: Validate
+    @classmethod
+    def search_page_size(cls) -> int:
+        return 20
+
+    # TODO: Validate
     @override
-    def search(self, query: str, cursor: str | None = None) -> PluginSearchResults:
+    def in_app_search(
+        self,
+        query: str,
+        cursor: str | None = None,
+    ) -> PluginSearchResults:
         """Search every title TMDB knows about, whatever it streams on.
 
         A result's URL is the title's own TMDB page rather than a stream, since
@@ -58,7 +63,7 @@ class SearchMixin(LookupMixin, register=False):
         results: list[PluginSearchResult] = []
         next_cursor: str | None = None
 
-        while len(results) < self.SEARCH_PAGE_SIZE:
+        while len(results) < self.search_page_size():
             parsed = self._multi_search_page(query, page)
             matches = [
                 self._search_result(result)
@@ -66,7 +71,7 @@ class SearchMixin(LookupMixin, register=False):
                 if result.media_type in self._SEARCH_MEDIA_TYPES
             ][offset:]
 
-            wanted = self.SEARCH_PAGE_SIZE - len(results)
+            wanted = self.search_page_size() - len(results)
             results.extend(matches[:wanted])
             if len(matches) > wanted:
                 next_cursor = _encode_cursor(page, offset + wanted)
@@ -84,7 +89,7 @@ class SearchMixin(LookupMixin, register=False):
     # TODO: Validate
     def _multi_search_page(self, query: str, page: int) -> SearchMultiModel:
         search_file = self.multi_search_file(query, page)
-        search_file.download_if_outdated(tz_datetime.now() - _SEARCH_MAX_AGE)
+        search_file.download_if_outdated()
         return search_file.parsed()
 
     # TODO: Validate
@@ -108,7 +113,7 @@ class SearchMixin(LookupMixin, register=False):
 
         return PluginSearchResult(
             title=title,
-            url=title_page_url(media_type, result.id),
+            url=media_url(media_type, result.id),
             year=year,
             image_url=poster_image_url(result.poster_path)
             or backdrop_image_url(result.backdrop_path),

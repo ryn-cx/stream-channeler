@@ -71,6 +71,7 @@ export function AddToChannelButton({ showId }: AddToChannelButtonProps) {
   // remembered is not silently dropped; it is the button that says there is
   // nothing left to do.
   const selectedCarries = selected?.carries_show === true
+  // TODO: Validate
   const channelLabel = (channel: { name?: string | null; id: string }) =>
     channel.name ?? channel.id
 

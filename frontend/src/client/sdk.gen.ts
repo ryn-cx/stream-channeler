@@ -3,9 +3,30 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { CanonicalEpisodesGetCanonicalEpisodesData, CanonicalEpisodesGetCanonicalEpisodesResponse, CanonicalEpisodesGetCanonicalEpisodeByIdData, CanonicalEpisodesGetCanonicalEpisodeByIdResponse, CanonicalEpisodesGetCanonicalShowEpisodesData, CanonicalEpisodesGetCanonicalShowEpisodesResponse, CanonicalShowsGetCanonicalShowsData, CanonicalShowsGetCanonicalShowsResponse, CanonicalShowsGetCanonicalShowByIdData, CanonicalShowsGetCanonicalShowByIdResponse, ChannelOrdersCreateChannelOrderData, ChannelOrdersCreateChannelOrderResponse, ChannelOrdersGetChannelOrdersData, ChannelOrdersGetChannelOrdersResponse, ChannelOrdersGetFeaturedChannelOrdersResponse, ChannelOrdersGetFavoriteChannelOrderIdsResponse, ChannelOrdersFavoriteChannelOrderData, ChannelOrdersFavoriteChannelOrderResponse, ChannelOrdersUnfavoriteChannelOrderData, ChannelOrdersUnfavoriteChannelOrderResponse, ChannelOrdersCopyChannelOrderData, ChannelOrdersCopyChannelOrderResponse, ChannelOrdersGetChannelOrderData, ChannelOrdersGetChannelOrderResponse, ChannelOrdersUpdateChannelOrderData, ChannelOrdersUpdateChannelOrderResponse, ChannelOrdersDeleteChannelOrderData, ChannelOrdersDeleteChannelOrderResponse, ChannelOrdersAdminUpdateChannelOrderData, ChannelOrdersAdminUpdateChannelOrderResponse, ChannelsCreateChannelData, ChannelsCreateChannelResponse, ChannelsGetChannelsData, ChannelsGetChannelsResponse, ChannelsUpdateChannelData, ChannelsUpdateChannelResponse, ChannelsDeleteChannelData, ChannelsDeleteChannelResponse, ChannelsGetChannelData, ChannelsGetChannelResponse, ChannelsGetSortOptionsResponse, ChannelsBulkImportQueueUrlsData, ChannelsBulkImportQueueUrlsResponse, ChannelsGetFavoriteChannelIdsResponse, ChannelsFavoriteChannelData, ChannelsFavoriteChannelResponse, ChannelsUpdateFavoriteChannelData, ChannelsUpdateFavoriteChannelResponse, ChannelsUnfavoriteChannelData, ChannelsUnfavoriteChannelResponse, ChannelsGetChannelCombinedChannelsData, ChannelsGetChannelCombinedChannelsResponse, ChannelsUpdateChannelCombinedChannelsData, ChannelsUpdateChannelCombinedChannelsResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelShowsData, ChannelsGetChannelShowsResponse, ChannelsGetChannelSourcesData, ChannelsGetChannelSourcesResponse, ChannelsGetChannelWhitelistData, ChannelsGetChannelWhitelistResponse, ChannelsUpdateChannelWhitelistData, ChannelsUpdateChannelWhitelistResponse, ChannelsGetChannelWhitelistEpisodesData, ChannelsGetChannelWhitelistEpisodesResponse, ChannelsGetChannelWhitelistFilteredEpisodesData, ChannelsGetChannelWhitelistFilteredEpisodesResponse, ChannelsBlacklistChannelEpisodeData, ChannelsBlacklistChannelEpisodeResponse, ChannelsUpdateChannelDefaultOrderData, ChannelsUpdateChannelDefaultOrderResponse, ChannelsUpdateChannelOrderData, ChannelsUpdateChannelOrderResponse, ChannelsGetChannelsForShowData, ChannelsGetChannelsForShowResponse, ChannelsAddChannelShowData, ChannelsAddChannelShowResponse, ChannelsDeleteChannelShowData, ChannelsDeleteChannelShowResponse, ChannelsGetChannelQueueData, ChannelsGetChannelQueueResponse, ChannelsCreateChannelQueueUrlsData, ChannelsCreateChannelQueueUrlsResponse, ChannelsDeleteChannelQueueUrlData, ChannelsDeleteChannelQueueUrlResponse, ChannelsClearChannelCompletedQueueData, ChannelsClearChannelCompletedQueueResponse, ChannelsAdminCreateChannelData, ChannelsAdminCreateChannelResponse, ChannelsAdminUpdateChannelData, ChannelsAdminUpdateChannelResponse, ChannelsGetAllChannelQueuesData, ChannelsGetAllChannelQueuesResponse, ChannelsAdminUpdateChannelQueueData, ChannelsAdminUpdateChannelQueueResponse, ChannelsAdminDeleteChannelQueueData, ChannelsAdminDeleteChannelQueueResponse, CommentsReadMyChannelCommentsData, CommentsReadMyChannelCommentsResponse, CommentsReadCommentRepliesData, CommentsReadCommentRepliesResponse, CommentsReadUnreadCommentCountResponse, CommentsMarkCommentsReadData, CommentsMarkCommentsReadResponse, CommentsUpdateChannelCommentData, CommentsUpdateChannelCommentResponse, CommentsDeleteChannelCommentData, CommentsDeleteChannelCommentResponse, CommentsReadChannelCommentsData, CommentsReadChannelCommentsResponse, CommentsCreateChannelCommentData, CommentsCreateChannelCommentResponse, EpisodesGetEpisodesData, EpisodesGetEpisodesResponse, EpisodesAdminGetUnmatchedEpisodesData, EpisodesAdminGetUnmatchedEpisodesResponse, EpisodesAdminGetUnlockedEpisodesData, EpisodesAdminGetUnlockedEpisodesResponse, EpisodesAdminGetDuplicatedCanonicalEpisodesData, EpisodesAdminGetDuplicatedCanonicalEpisodesResponse, EpisodesAdminGetTmdbEpisodeChoicesData, EpisodesAdminGetTmdbEpisodeChoicesResponse, EpisodesAdminLinkEpisodeByTmdbUrlData, EpisodesAdminLinkEpisodeByTmdbUrlResponse, EpisodesAdminLinkEpisodeToTmdbData, EpisodesAdminLinkEpisodeToTmdbResponse, EpisodesAdminUnlinkEpisodeFromCanonicalData, EpisodesAdminUnlinkEpisodeFromCanonicalResponse, EpisodesAdminUnlinkEpisodeFromTmdbData, EpisodesAdminUnlinkEpisodeFromTmdbResponse, EpisodesAdminMarkEpisodeAbsentFromTmdbData, EpisodesAdminMarkEpisodeAbsentFromTmdbResponse, EpisodesAdminVerifyCanonicalLinkData, EpisodesAdminVerifyCanonicalLinkResponse, EpisodesGetEpisodeInformationData, EpisodesGetEpisodeInformationResponse, EpisodesSetEpisodeUserUrlData, EpisodesSetEpisodeUserUrlResponse, EpisodesDeleteEpisodeUserUrlData, EpisodesDeleteEpisodeUserUrlResponse, EpisodesGetEpisodeData, EpisodesGetEpisodeResponse, EpisodesUpdateEpisodeData, EpisodesUpdateEpisodeResponse, EpisodesDeleteEpisodeData, EpisodesDeleteEpisodeResponse, EpisodesCreateEpisodeData, EpisodesCreateEpisodeResponse, EpisodesGetSeasonEpisodesData, EpisodesGetSeasonEpisodesResponse, EpisodesGetShowEpisodesData, EpisodesGetShowEpisodesResponse, EpisodesGetSourceEpisodesData, EpisodesGetSourceEpisodesResponse, EpisodesGetPluginEpisodesData, EpisodesGetPluginEpisodesResponse, FilesGetFilesData, FilesGetFilesResponse, FilesGetFileData, FilesGetFileResponse, FilesUpdateFileData, FilesUpdateFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, FilesCreateFileData, FilesCreateFileResponse, FilesGetPluginFilesData, FilesGetPluginFilesResponse, IssueReportsGetIssueReportsData, IssueReportsGetIssueReportsResponse, IssueReportsGetEpisodeIssueReportsData, IssueReportsGetEpisodeIssueReportsResponse, IssueReportsCreateEpisodeIssueReportData, IssueReportsCreateEpisodeIssueReportResponse, IssueReportsGetSeasonIssueReportsData, IssueReportsGetSeasonIssueReportsResponse, IssueReportsCreateSeasonIssueReportData, IssueReportsCreateSeasonIssueReportResponse, IssueReportsGetShowIssueReportsData, IssueReportsGetShowIssueReportsResponse, IssueReportsCreateShowIssueReportData, IssueReportsCreateShowIssueReportResponse, IssueReportsUpdateEpisodeIssueReportData, IssueReportsUpdateEpisodeIssueReportResponse, IssueReportsDeleteEpisodeIssueReportData, IssueReportsDeleteEpisodeIssueReportResponse, IssueReportsUpdateSeasonIssueReportData, IssueReportsUpdateSeasonIssueReportResponse, IssueReportsDeleteSeasonIssueReportData, IssueReportsDeleteSeasonIssueReportResponse, IssueReportsUpdateShowIssueReportData, IssueReportsUpdateShowIssueReportResponse, IssueReportsDeleteShowIssueReportData, IssueReportsDeleteShowIssueReportResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PluginsCreatePluginData, PluginsCreatePluginResponse, PluginsGetPluginsData, PluginsGetPluginsResponse, PluginsUpdatePluginData, PluginsUpdatePluginResponse, PluginsDeletePluginData, PluginsDeletePluginResponse, PluginsGetPluginData, PluginsGetPluginResponse, PluginsImportWatchHistoryInformationResponse, PluginsImportUrlInformationResponse, PluginsMatchUrlData, PluginsMatchUrlResponse, PluginsSearchInformationResponse, PluginsSearchUrlData, PluginsSearchUrlResponse, PluginsSearchPluginData, PluginsSearchPluginResponse, PluginsMediaInfoData, PluginsMediaInfoResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetSeasonsData, SeasonsGetSeasonsResponse, SeasonsGetSeasonInformationData, SeasonsGetSeasonInformationResponse, SeasonsGetSeasonData, SeasonsGetSeasonResponse, SeasonsUpdateSeasonData, SeasonsUpdateSeasonResponse, SeasonsDeleteSeasonData, SeasonsDeleteSeasonResponse, SeasonsCreateSeasonData, SeasonsCreateSeasonResponse, SeasonsGetShowSeasonsData, SeasonsGetShowSeasonsResponse, SeasonsGetSourceSeasonsData, SeasonsGetSourceSeasonsResponse, SeasonsGetPluginSeasonsData, SeasonsGetPluginSeasonsResponse, ShowsGetShowsData, ShowsGetShowsResponse, ShowsAdminGetUnvalidatedShowsData, ShowsAdminGetUnvalidatedShowsResponse, ShowsGetShowInformationData, ShowsGetShowInformationResponse, ShowsGetShowData, ShowsGetShowResponse, ShowsUpdateShowData, ShowsUpdateShowResponse, ShowsDeleteShowData, ShowsDeleteShowResponse, ShowsGetNonCanonicalShowsData, ShowsGetNonCanonicalShowsResponse, ShowsAdminLinkShowToCanonicalData, ShowsAdminLinkShowToCanonicalResponse, ShowsAdminUnlinkShowFromCanonicalData, ShowsAdminUnlinkShowFromCanonicalResponse, ShowsAdminLinkShowByTmdbUrlData, ShowsAdminLinkShowByTmdbUrlResponse, ShowsAdminImportNonCanonicalShowData, ShowsAdminImportNonCanonicalShowResponse, ShowsAdminCanonicalizeShowData, ShowsAdminCanonicalizeShowResponse, ShowsAdminValidateShowData, ShowsAdminValidateShowResponse, ShowsAdminRelinkShowEpisodesData, ShowsAdminRelinkShowEpisodesResponse, ShowsAdminForceUpdateShowData, ShowsAdminForceUpdateShowResponse, ShowsGetShowTmdbEpisodeGroupsData, ShowsGetShowTmdbEpisodeGroupsResponse, ShowsCreateShowData, ShowsCreateShowResponse, ShowsGetSourceShowsData, ShowsGetSourceShowsResponse, ShowsGetPluginShowsData, ShowsGetPluginShowsResponse, SourcesGetSourcesData, SourcesGetSourcesResponse, SourcesGetSourceData, SourcesGetSourceResponse, SourcesUpdateSourceData, SourcesUpdateSourceResponse, SourcesDeleteSourceData, SourcesDeleteSourceResponse, SourcesCreateSourceData, SourcesCreateSourceResponse, SourcesGetPluginSourcesData, SourcesGetPluginSourcesResponse, UnmatchedSourcesAdminGetUnmatchedSourcesResponse, UnmatchedSourcesAdminImportUnmatchedSourceData, UnmatchedSourcesAdminImportUnmatchedSourceResponse, UnmatchedSourcesAdminIgnoreUnmatchedSourceData, UnmatchedSourcesAdminIgnoreUnmatchedSourceResponse, UnmatchedSourcesAdminDeleteUnmatchedSourceData, UnmatchedSourcesAdminDeleteUnmatchedSourceResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersReadSourcePreferencesResponse, UsersUpdateSourcePreferencesData, UsersUpdateSourcePreferencesResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersGetUserPublicChannelsData, UsersGetUserPublicChannelsResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersAdminListUserChannelsData, UsersAdminListUserChannelsResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsHealthCheckResponse, UtilsTestEmailData, UtilsTestEmailResponse, WatchesGetWatchesData, WatchesGetWatchesResponse, WatchesUpdateWatchData, WatchesUpdateWatchResponse, WatchesDeleteWatchData, WatchesDeleteWatchResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse, WatchesExportWatchHistoryResponse, WatchesAdminRelinkWatchesResponse, WatchesCreateWatchData, WatchesCreateWatchResponse } from './types.gen';
+import type { CanonicalEpisodesGetCanonicalEpisodeByIdData, CanonicalEpisodesGetCanonicalEpisodeByIdResponse, CanonicalEpisodesGetCanonicalEpisodesData, CanonicalEpisodesGetCanonicalEpisodesResponse, CanonicalShowsGetCanonicalShowByIdData, CanonicalShowsGetCanonicalShowByIdResponse, CanonicalShowsGetCanonicalShowsData, CanonicalShowsGetCanonicalShowsResponse, ChannelOrdersCreateChannelOrderData, ChannelOrdersCreateChannelOrderResponse, ChannelOrdersGetChannelOrdersData, ChannelOrdersGetChannelOrdersResponse, ChannelOrdersGetFavoriteChannelOrderIdsResponse, ChannelOrdersFavoriteChannelOrderData, ChannelOrdersFavoriteChannelOrderResponse, ChannelOrdersUnfavoriteChannelOrderData, ChannelOrdersUnfavoriteChannelOrderResponse, ChannelOrdersCopyChannelOrderData, ChannelOrdersCopyChannelOrderResponse, ChannelOrdersUpdateChannelOrderData, ChannelOrdersUpdateChannelOrderResponse, ChannelOrdersDeleteChannelOrderData, ChannelOrdersDeleteChannelOrderResponse, ChannelOrdersGetChannelOrderData, ChannelOrdersGetChannelOrderResponse, ChannelOrdersGetFeaturedChannelOrdersResponse, ChannelOrdersAdminUpdateChannelOrderData, ChannelOrdersAdminUpdateChannelOrderResponse, ChannelsCreateChannelData, ChannelsCreateChannelResponse, ChannelsGetChannelsData, ChannelsGetChannelsResponse, ChannelsUpdateChannelData, ChannelsUpdateChannelResponse, ChannelsDeleteChannelData, ChannelsDeleteChannelResponse, ChannelsGetChannelData, ChannelsGetChannelResponse, ChannelsBulkImportQueueUrlsData, ChannelsBulkImportQueueUrlsResponse, ChannelsGetFavoriteChannelIdsResponse, ChannelsFavoriteChannelData, ChannelsFavoriteChannelResponse, ChannelsUpdateFavoriteChannelData, ChannelsUpdateFavoriteChannelResponse, ChannelsUnfavoriteChannelData, ChannelsUnfavoriteChannelResponse, ChannelsUpdateChannelCombinedChannelsData, ChannelsUpdateChannelCombinedChannelsResponse, ChannelsGetChannelCombinedChannelsData, ChannelsGetChannelCombinedChannelsResponse, ChannelsGetChannelWhitelistFilteredEpisodesData, ChannelsGetChannelWhitelistFilteredEpisodesResponse, ChannelsUpdateChannelWhitelistData, ChannelsUpdateChannelWhitelistResponse, ChannelsGetChannelWhitelistData, ChannelsGetChannelWhitelistResponse, ChannelsBlacklistChannelEpisodeData, ChannelsBlacklistChannelEpisodeResponse, ChannelsUpdateChannelDefaultOrderData, ChannelsUpdateChannelDefaultOrderResponse, ChannelsUpdateChannelOrderData, ChannelsUpdateChannelOrderResponse, ChannelsGetChannelsForShowData, ChannelsGetChannelsForShowResponse, ChannelsAddChannelShowData, ChannelsAddChannelShowResponse, ChannelsDeleteChannelShowData, ChannelsDeleteChannelShowResponse, ChannelsGetChannelQueueData, ChannelsGetChannelQueueResponse, ChannelsCreateChannelQueueUrlsData, ChannelsCreateChannelQueueUrlsResponse, ChannelsDeleteChannelQueueUrlData, ChannelsDeleteChannelQueueUrlResponse, ChannelsClearChannelCompletedQueueData, ChannelsClearChannelCompletedQueueResponse, ChannelsGetSortOptionsResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelShowsData, ChannelsGetChannelShowsResponse, ChannelsGetChannelSourcesData, ChannelsGetChannelSourcesResponse, ChannelsGetChannelWhitelistEpisodesData, ChannelsGetChannelWhitelistEpisodesResponse, ChannelsAdminCreateChannelData, ChannelsAdminCreateChannelResponse, ChannelsAdminUpdateChannelData, ChannelsAdminUpdateChannelResponse, ChannelsGetAllChannelQueuesData, ChannelsGetAllChannelQueuesResponse, ChannelsAdminUpdateChannelQueueData, ChannelsAdminUpdateChannelQueueResponse, ChannelsAdminDeleteChannelQueueData, ChannelsAdminDeleteChannelQueueResponse, CommentsReadMyChannelCommentsData, CommentsReadMyChannelCommentsResponse, CommentsReadUnreadCommentCountResponse, CommentsMarkCommentsReadData, CommentsMarkCommentsReadResponse, CommentsUpdateChannelCommentData, CommentsUpdateChannelCommentResponse, CommentsDeleteChannelCommentData, CommentsDeleteChannelCommentResponse, CommentsCreateChannelCommentData, CommentsCreateChannelCommentResponse, CommentsReadChannelCommentsData, CommentsReadChannelCommentsResponse, CommentsReadCommentRepliesData, CommentsReadCommentRepliesResponse, EpisodesSetEpisodeUserUrlData, EpisodesSetEpisodeUserUrlResponse, EpisodesDeleteEpisodeUserUrlData, EpisodesDeleteEpisodeUserUrlResponse, EpisodesGetEpisodeInformationData, EpisodesGetEpisodeInformationResponse, EpisodesGetNonCanonicalEpisodesData, EpisodesGetNonCanonicalEpisodesResponse, EpisodesGetEpisodesData, EpisodesGetEpisodesResponse, EpisodesAdminGetUnmatchedEpisodesData, EpisodesAdminGetUnmatchedEpisodesResponse, EpisodesAdminGetUnlockedEpisodesData, EpisodesAdminGetUnlockedEpisodesResponse, EpisodesAdminGetDuplicatedCanonicalEpisodesData, EpisodesAdminGetDuplicatedCanonicalEpisodesResponse, EpisodesAdminGetTmdbEpisodeChoicesData, EpisodesAdminGetTmdbEpisodeChoicesResponse, EpisodesAdminLinkEpisodeByTmdbUrlData, EpisodesAdminLinkEpisodeByTmdbUrlResponse, EpisodesAdminLinkEpisodeToTmdbData, EpisodesAdminLinkEpisodeToTmdbResponse, EpisodesAdminUnlinkEpisodeFromCanonicalData, EpisodesAdminUnlinkEpisodeFromCanonicalResponse, EpisodesAdminUnlinkEpisodeFromTmdbData, EpisodesAdminUnlinkEpisodeFromTmdbResponse, EpisodesAdminMarkEpisodeAbsentFromTmdbData, EpisodesAdminMarkEpisodeAbsentFromTmdbResponse, EpisodesAdminVerifyCanonicalLinkData, EpisodesAdminVerifyCanonicalLinkResponse, EpisodesGetEpisodeData, EpisodesGetEpisodeResponse, EpisodesUpdateEpisodeData, EpisodesUpdateEpisodeResponse, EpisodesDeleteEpisodeData, EpisodesDeleteEpisodeResponse, EpisodesCreateEpisodeData, EpisodesCreateEpisodeResponse, FilesGetFilesData, FilesGetFilesResponse, FilesGetFileData, FilesGetFileResponse, FilesUpdateFileData, FilesUpdateFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, FilesCreateFileData, FilesCreateFileResponse, IssueReportsUpdateEpisodeIssueReportData, IssueReportsUpdateEpisodeIssueReportResponse, IssueReportsDeleteEpisodeIssueReportData, IssueReportsDeleteEpisodeIssueReportResponse, IssueReportsUpdateSeasonIssueReportData, IssueReportsUpdateSeasonIssueReportResponse, IssueReportsDeleteSeasonIssueReportData, IssueReportsDeleteSeasonIssueReportResponse, IssueReportsUpdateShowIssueReportData, IssueReportsUpdateShowIssueReportResponse, IssueReportsDeleteShowIssueReportData, IssueReportsDeleteShowIssueReportResponse, IssueReportsGetEpisodeIssueReportsData, IssueReportsGetEpisodeIssueReportsResponse, IssueReportsCreateEpisodeIssueReportData, IssueReportsCreateEpisodeIssueReportResponse, IssueReportsGetSeasonIssueReportsData, IssueReportsGetSeasonIssueReportsResponse, IssueReportsCreateSeasonIssueReportData, IssueReportsCreateSeasonIssueReportResponse, IssueReportsGetShowIssueReportsData, IssueReportsGetShowIssueReportsResponse, IssueReportsCreateShowIssueReportData, IssueReportsCreateShowIssueReportResponse, IssueReportsGetIssueReportsData, IssueReportsGetIssueReportsResponse, LoginTestTokenResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PluginsImportWatchHistoryInformationResponse, PluginsImportUrlInformationResponse, PluginsMatchUrlData, PluginsMatchUrlResponse, PluginsSearchInformationResponse, PluginsManualSearchData, PluginsManualSearchResponse, PluginsInAppSearchData, PluginsInAppSearchResponse, PluginsMediaInfoData, PluginsMediaInfoResponse, PluginsCreatePluginData, PluginsCreatePluginResponse, PluginsGetPluginsData, PluginsGetPluginsResponse, PluginsUpdatePluginData, PluginsUpdatePluginResponse, PluginsDeletePluginData, PluginsDeletePluginResponse, PluginsGetPluginData, PluginsGetPluginResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetSeasonInformationData, SeasonsGetSeasonInformationResponse, SeasonsGetSeasonsData, SeasonsGetSeasonsResponse, SeasonsGetSeasonData, SeasonsGetSeasonResponse, SeasonsUpdateSeasonData, SeasonsUpdateSeasonResponse, SeasonsDeleteSeasonData, SeasonsDeleteSeasonResponse, SeasonsCreateSeasonData, SeasonsCreateSeasonResponse, ShowsGetShowInformationData, ShowsGetShowInformationResponse, ShowsGetShowsData, ShowsGetShowsResponse, ShowsAdminGetUnvalidatedShowsData, ShowsAdminGetUnvalidatedShowsResponse, ShowsGetShowData, ShowsGetShowResponse, ShowsUpdateShowData, ShowsUpdateShowResponse, ShowsDeleteShowData, ShowsDeleteShowResponse, ShowsGetNonCanonicalShowsData, ShowsGetNonCanonicalShowsResponse, ShowsAdminLinkShowToCanonicalData, ShowsAdminLinkShowToCanonicalResponse, ShowsAdminUnlinkShowFromCanonicalData, ShowsAdminUnlinkShowFromCanonicalResponse, ShowsAdminLinkShowByTmdbUrlData, ShowsAdminLinkShowByTmdbUrlResponse, ShowsAdminImportNonCanonicalShowData, ShowsAdminImportNonCanonicalShowResponse, ShowsAdminCanonicalizeShowData, ShowsAdminCanonicalizeShowResponse, ShowsAdminValidateShowData, ShowsAdminValidateShowResponse, ShowsAdminRelinkShowEpisodesData, ShowsAdminRelinkShowEpisodesResponse, ShowsAdminForceUpdateShowData, ShowsAdminForceUpdateShowResponse, ShowsGetShowTmdbEpisodeGroupsData, ShowsGetShowTmdbEpisodeGroupsResponse, ShowsCreateShowData, ShowsCreateShowResponse, SourcesGetSourcesData, SourcesGetSourcesResponse, SourcesGetSourceData, SourcesGetSourceResponse, SourcesUpdateSourceData, SourcesUpdateSourceResponse, SourcesDeleteSourceData, SourcesDeleteSourceResponse, SourcesCreateSourceData, SourcesCreateSourceResponse, UnmatchedSourcesAdminGetUnmatchedSourcesResponse, UnmatchedSourcesAdminImportUnmatchedSourceData, UnmatchedSourcesAdminImportUnmatchedSourceResponse, UnmatchedSourcesAdminIgnoreUnmatchedSourceData, UnmatchedSourcesAdminIgnoreUnmatchedSourceResponse, UnmatchedSourcesAdminDeleteUnmatchedSourceData, UnmatchedSourcesAdminDeleteUnmatchedSourceResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersReadSourcePreferencesResponse, UsersUpdateSourcePreferencesData, UsersUpdateSourcePreferencesResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersGetUserPublicChannelsData, UsersGetUserPublicChannelsResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersAdminListUserChannelsData, UsersAdminListUserChannelsResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsHealthCheckResponse, UtilsTestEmailData, UtilsTestEmailResponse, WatchesGetWatchesData, WatchesGetWatchesResponse, WatchesUpdateWatchData, WatchesUpdateWatchResponse, WatchesDeleteWatchData, WatchesDeleteWatchResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse, WatchesExportWatchHistoryResponse, WatchesCreateWatchData, WatchesCreateWatchResponse, WatchesAdminRelinkWatchesResponse } from './types.gen';
 
 export class CanonicalEpisodesService {
+    /**
+     * Get Canonical Episode By Id
+     * Get a `Episode`, with the season and title above it.
+     * @param data The data for the request.
+     * @param data.canonicalEpisodeId
+     * @returns CanonicalEpisodeRecord Successful Response
+     * @throws ApiError
+     */
+    public static getCanonicalEpisodeById(data: CanonicalEpisodesGetCanonicalEpisodeByIdData): CancelablePromise<CanonicalEpisodesGetCanonicalEpisodeByIdResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/episodes/canonical/{canonical_episode_id}',
+            path: {
+                canonical_episode_id: data.canonicalEpisodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
     /**
      * Get Canonical Episodes
      * Get every `Episode`.
@@ -32,61 +53,30 @@ export class CanonicalEpisodesService {
             }
         });
     }
-    
-    /**
-     * Get Canonical Episode By Id
-     * Get a `Episode`.
-     * @param data The data for the request.
-     * @param data.canonicalEpisodeId
-     * @returns CanonicalEpisodeOutput Successful Response
-     * @throws ApiError
-     */
-    public static getCanonicalEpisodeById(data: CanonicalEpisodesGetCanonicalEpisodeByIdData): CancelablePromise<CanonicalEpisodesGetCanonicalEpisodeByIdResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/episodes/canonical/{canonical_episode_id}',
-            path: {
-                canonical_episode_id: data.canonicalEpisodeId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get Canonical Show Episodes
-     * Get every `Episode` under one `Show`, across its seasons.
-     * @param data The data for the request.
-     * @param data.canonicalShowId
-     * @param data.sortOptions
-     * @param data.filterOptions
-     * @param data.offset
-     * @param data.limit
-     * @returns CanonicalEpisodesPublic Successful Response
-     * @throws ApiError
-     */
-    public static getCanonicalShowEpisodes(data: CanonicalEpisodesGetCanonicalShowEpisodesData): CancelablePromise<CanonicalEpisodesGetCanonicalShowEpisodesResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/shows/canonical/{canonical_show_id}/episodes',
-            path: {
-                canonical_show_id: data.canonicalShowId
-            },
-            query: {
-                sort_options: data.sortOptions,
-                filter_options: data.filterOptions,
-                offset: data.offset,
-                limit: data.limit
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
 }
 
 export class CanonicalShowsService {
+    /**
+     * Get Canonical Show By Id
+     * Get a `Show`.
+     * @param data The data for the request.
+     * @param data.canonicalShowId
+     * @returns CanonicalShowOutput Successful Response
+     * @throws ApiError
+     */
+    public static getCanonicalShowById(data: CanonicalShowsGetCanonicalShowByIdData): CancelablePromise<CanonicalShowsGetCanonicalShowByIdResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/shows/canonical/{canonical_show_id}',
+            path: {
+                canonical_show_id: data.canonicalShowId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
     /**
      * Get Canonical Shows
      * Get every `Show`.
@@ -107,27 +97,6 @@ export class CanonicalShowsService {
                 filter_options: data.filterOptions,
                 offset: data.offset,
                 limit: data.limit
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get Canonical Show By Id
-     * Get a `Show`.
-     * @param data The data for the request.
-     * @param data.canonicalShowId
-     * @returns CanonicalShowOutput Successful Response
-     * @throws ApiError
-     */
-    public static getCanonicalShowById(data: CanonicalShowsGetCanonicalShowByIdData): CancelablePromise<CanonicalShowsGetCanonicalShowByIdResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/shows/canonical/{canonical_show_id}',
-            path: {
-                canonical_show_id: data.canonicalShowId
             },
             errors: {
                 422: 'Validation Error'
@@ -187,24 +156,8 @@ export class ChannelOrdersService {
     }
     
     /**
-     * Get Featured Channel Orders
-     * List public `ChannelOrder`s with a positive score for onboarding.
-     * @returns ChannelOrderListOutput Successful Response
-     * @throws ApiError
-     */
-    public static getFeaturedChannelOrders(): CancelablePromise<ChannelOrdersGetFeaturedChannelOrdersResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/channel-orders/featured'
-        });
-    }
-    
-    /**
      * Get Favorite Channel Order Ids
      * List the ids of the `ChannelOrder`s the current `User` has favorited.
-     *
-     * Unreadable favorites are left in because this only drives the favorite toggle;
-     * the `favorites` scope of the list endpoint is what applies the read rules.
      * @returns string Successful Response
      * @throws ApiError
      */
@@ -282,27 +235,6 @@ export class ChannelOrdersService {
     }
     
     /**
-     * Get Channel Order
-     * Return a `ChannelOrder` if it's readable by the `User`.
-     * @param data The data for the request.
-     * @param data.channelOrderId
-     * @returns ChannelOrderOutput Successful Response
-     * @throws ApiError
-     */
-    public static getChannelOrder(data: ChannelOrdersGetChannelOrderData): CancelablePromise<ChannelOrdersGetChannelOrderResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/channel-orders/{channel_order_id}',
-            path: {
-                channel_order_id: data.channelOrderId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
      * Update Channel Order
      * Update and return a `ChannelOrder` if it's editable by the `User`.
      * @param data The data for the request.
@@ -344,6 +276,40 @@ export class ChannelOrdersService {
             errors: {
                 422: 'Validation Error'
             }
+        });
+    }
+    
+    /**
+     * Get Channel Order
+     * Return a `ChannelOrder` if it's readable by the `User`.
+     * @param data The data for the request.
+     * @param data.channelOrderId
+     * @returns ChannelOrderOutput Successful Response
+     * @throws ApiError
+     */
+    public static getChannelOrder(data: ChannelOrdersGetChannelOrderData): CancelablePromise<ChannelOrdersGetChannelOrderResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channel-orders/{channel_order_id}',
+            path: {
+                channel_order_id: data.channelOrderId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Featured Channel Orders
+     * List public `ChannelOrder`s with a positive score for onboarding.
+     * @returns ChannelOrderListOutput Successful Response
+     * @throws ApiError
+     */
+    public static getFeaturedChannelOrders(): CancelablePromise<ChannelOrdersGetFeaturedChannelOrdersResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channel-orders/featured'
         });
     }
     
@@ -489,19 +455,6 @@ export class ChannelsService {
     }
     
     /**
-     * Get Sort Options
-     * Get a list of all possible sorting options.
-     * @returns SortOptionOutput Successful Response
-     * @throws ApiError
-     */
-    public static getSortOptions(): CancelablePromise<ChannelsGetSortOptionsResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/channels/sort-options'
-        });
-    }
-    
-    /**
      * Bulk Import Queue Urls
      * Add URLs to multiple channels' import queues at once.
      * @param data The data for the request.
@@ -524,9 +477,6 @@ export class ChannelsService {
     /**
      * Get Favorite Channel Ids
      * List the ids of the `Channel`s the current `User` has favorited.
-     *
-     * Unreadable favorites are left in because this only drives the favorite toggle;
-     * the `favorites` scope of the list endpoint is what applies the read rules.
      * @returns string Successful Response
      * @throws ApiError
      */
@@ -561,9 +511,6 @@ export class ChannelsService {
     /**
      * Update Favorite Channel
      * Set the `User`'s private name/number for a favorited `Channel`.
-     *
-     * Favoriting the channel first if it isn't already, so personalizing it from the
-     * favorites view can never race against the favorite not yet existing.
      * @param data The data for the request.
      * @param data.channelId
      * @param data.requestBody
@@ -607,27 +554,6 @@ export class ChannelsService {
     }
     
     /**
-     * Get Channel Combined Channels
-     * Return a `Channel`'s `CombinedChannel`s.
-     * @param data The data for the request.
-     * @param data.channelId
-     * @returns CombinedChannelOutput Successful Response
-     * @throws ApiError
-     */
-    public static getChannelCombinedChannels(data: ChannelsGetChannelCombinedChannelsData): CancelablePromise<ChannelsGetChannelCombinedChannelsResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/channels/{channel_id}/combined-channels',
-            path: {
-                channel_id: data.channelId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
      * Update Channel Combined Channels
      * Replace a `Channel`'s `CombinedChannel`s.
      * @param data The data for the request.
@@ -652,82 +578,17 @@ export class ChannelsService {
     }
     
     /**
-     * Get Channel Episodes
-     * Read the episodes for a channel.
+     * Get Channel Combined Channels
+     * Return a `Channel`'s `CombinedChannel`s.
      * @param data The data for the request.
      * @param data.channelId
-     * @param data.sortBy
-     * @param data.orderPresetId
-     * @param data.sourceIds
-     * @param data.sourceIdsIsBlacklist
-     * @param data.randomSeed
-     * @param data.hideWatched
-     * @param data.hideUnwatched
-     * @param data.hidePartiallyWatched
-     * @param data.maximumWatchDateAbsolute
-     * @param data.minimumAirDateAbsolute
-     * @param data.maximumAirDateAbsolute
-     * @param data.maximumWatchDateRelative
-     * @param data.minimumAirDateRelative
-     * @param data.maximumAirDateRelative
-     * @param data.totalShowsCount
-     * @param data.startedShowsCount
-     * @param data.newShowsCount
-     * @param data.minimumDuration
-     * @param data.maximumDuration
-     * @param data.limit
-     * @param data.offset
-     * @returns ChannelEpisodesOutput Successful Response
+     * @returns CombinedChannelOutput Successful Response
      * @throws ApiError
      */
-    public static getChannelEpisodes(data: ChannelsGetChannelEpisodesData): CancelablePromise<ChannelsGetChannelEpisodesResponse> {
+    public static getChannelCombinedChannels(data: ChannelsGetChannelCombinedChannelsData): CancelablePromise<ChannelsGetChannelCombinedChannelsResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/channels/{channel_id}/episodes',
-            path: {
-                channel_id: data.channelId
-            },
-            query: {
-                sortBy: data.sortBy,
-                orderPresetId: data.orderPresetId,
-                sourceIds: data.sourceIds,
-                sourceIdsIsBlacklist: data.sourceIdsIsBlacklist,
-                randomSeed: data.randomSeed,
-                hideWatched: data.hideWatched,
-                hideUnwatched: data.hideUnwatched,
-                hidePartiallyWatched: data.hidePartiallyWatched,
-                maximumWatchDateAbsolute: data.maximumWatchDateAbsolute,
-                minimumAirDateAbsolute: data.minimumAirDateAbsolute,
-                maximumAirDateAbsolute: data.maximumAirDateAbsolute,
-                maximumWatchDateRelative: data.maximumWatchDateRelative,
-                minimumAirDateRelative: data.minimumAirDateRelative,
-                maximumAirDateRelative: data.maximumAirDateRelative,
-                totalShowsCount: data.totalShowsCount,
-                startedShowsCount: data.startedShowsCount,
-                newShowsCount: data.newShowsCount,
-                minimumDuration: data.minimumDuration,
-                maximumDuration: data.maximumDuration,
-                limit: data.limit,
-                offset: data.offset
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get Channel Shows
-     * Read all shows for a channel, including those from its child channels.
-     * @param data The data for the request.
-     * @param data.channelId
-     * @returns ChannelShowsOutput Successful Response
-     * @throws ApiError
-     */
-    public static getChannelShows(data: ChannelsGetChannelShowsData): CancelablePromise<ChannelsGetChannelShowsResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/channels/{channel_id}/shows',
+            url: '/api/v1/channels/{channel_id}/combined-channels',
             path: {
                 channel_id: data.channelId
             },
@@ -738,45 +599,18 @@ export class ChannelsService {
     }
     
     /**
-     * Get Channel Sources
-     * Read all unique sources for a channel.
-     * @param data The data for the request.
-     * @param data.channelId
-     * @returns SourcePublic Successful Response
-     * @throws ApiError
-     */
-    public static getChannelSources(data: ChannelsGetChannelSourcesData): CancelablePromise<ChannelsGetChannelSourcesResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/channels/{channel_id}/sources',
-            path: {
-                channel_id: data.channelId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get Channel Whitelist
-     * Read the sites and seasons of a title's filters in a channel.
-     *
-     * A filter is about the media rather than one website's non-canonical row of it, so
-     * every non-canonical row's seasons are listed, with the non-canonical rows of the
-     * same season collapsed into the one row the filter applies to. The episodes are read
-     * separately, a season at a time, since a title's whole catalogue is far more than the
-     * page opens on.
+     * Get Channel Whitelist Filtered Episodes
+     * Read the episodes of a title that an entry names, whatever season they are in.
      * @param data The data for the request.
      * @param data.canonicalShowId
      * @param data.channelId
-     * @returns WhitelistShowOutput Successful Response
+     * @returns WhitelistEpisodeOutput Successful Response
      * @throws ApiError
      */
-    public static getChannelWhitelist(data: ChannelsGetChannelWhitelistData): CancelablePromise<ChannelsGetChannelWhitelistResponse> {
+    public static getChannelWhitelistFilteredEpisodes(data: ChannelsGetChannelWhitelistFilteredEpisodesData): CancelablePromise<ChannelsGetChannelWhitelistFilteredEpisodesResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/channels/{channel_id}/whitelist/{canonical_show_id}',
+            url: '/api/v1/channels/{channel_id}/whitelist/{canonical_show_id}/filtered-episodes',
             path: {
                 canonical_show_id: data.canonicalShowId,
                 channel_id: data.channelId
@@ -814,57 +648,18 @@ export class ChannelsService {
     }
     
     /**
-     * Get Channel Whitelist Episodes
-     * Read one page of a season's episodes, as the filter page expands it.
-     *
-     * A filter is about the media rather than one website's non-canonical row of it, so
-     * the non-canonical rows of an episode are collapsed into the one row the filter
-     * applies to, and each non-canonical row is carried alongside as a link of its own.
-     * @param data The data for the request.
-     * @param data.seasonId
-     * @param data.canonicalShowId
-     * @param data.channelId
-     * @param data.offset
-     * @param data.limit
-     * @returns WhitelistEpisodesOutput Successful Response
-     * @throws ApiError
-     */
-    public static getChannelWhitelistEpisodes(data: ChannelsGetChannelWhitelistEpisodesData): CancelablePromise<ChannelsGetChannelWhitelistEpisodesResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/channels/{channel_id}/whitelist/{canonical_show_id}/seasons/{season_id}/episodes',
-            path: {
-                season_id: data.seasonId,
-                canonical_show_id: data.canonicalShowId,
-                channel_id: data.channelId
-            },
-            query: {
-                offset: data.offset,
-                limit: data.limit
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get Channel Whitelist Filtered Episodes
-     * Read the episodes of a title that an entry names, whatever season they are in.
-     *
-     * The entries are what is being listed rather than the title's catalogue, so
-     * this stays small however many episodes the title has, which is what lets the
-     * blacklist be read without paging through everything it does not name.
+     * Get Channel Whitelist
+     * Read the sites and seasons of a title's filters in a channel.
      * @param data The data for the request.
      * @param data.canonicalShowId
      * @param data.channelId
-     * @returns WhitelistEpisodeOutput Successful Response
+     * @returns WhitelistShowOutput Successful Response
      * @throws ApiError
      */
-    public static getChannelWhitelistFilteredEpisodes(data: ChannelsGetChannelWhitelistFilteredEpisodesData): CancelablePromise<ChannelsGetChannelWhitelistFilteredEpisodesResponse> {
+    public static getChannelWhitelist(data: ChannelsGetChannelWhitelistData): CancelablePromise<ChannelsGetChannelWhitelistResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/channels/{channel_id}/whitelist/{canonical_show_id}/filtered-episodes',
+            url: '/api/v1/channels/{channel_id}/whitelist/{canonical_show_id}',
             path: {
                 canonical_show_id: data.canonicalShowId,
                 channel_id: data.channelId
@@ -878,10 +673,6 @@ export class ChannelsService {
     /**
      * Blacklist Channel Episode
      * Blacklist a single episode for a `Channel`.
-     *
-     * When the show is not already on the channel a filter-only `ChannelShow` is
-     * created so the episode can be hidden without making the whole show a member of the
-     * channel. An optional `expires_at` makes the blacklist temporary.
      * @param data The data for the request.
      * @param data.channelId
      * @param data.requestBody
@@ -1108,6 +899,155 @@ export class ChannelsService {
     }
     
     /**
+     * Get Sort Options
+     * Return every sort option a `Channel` can be ordered by.
+     * @returns SortOptionOutput Successful Response
+     * @throws ApiError
+     */
+    public static getSortOptions(): CancelablePromise<ChannelsGetSortOptionsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/sort-options'
+        });
+    }
+    
+    /**
+     * Get Channel Episodes
+     * Read the episodes for a channel.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @param data.sortBy
+     * @param data.orderPresetId
+     * @param data.sourceIds
+     * @param data.sourceIdsIsBlacklist
+     * @param data.randomSeed
+     * @param data.hideWatched
+     * @param data.hideUnwatched
+     * @param data.hidePartiallyWatched
+     * @param data.maximumWatchDateAbsolute
+     * @param data.minimumAirDateAbsolute
+     * @param data.maximumAirDateAbsolute
+     * @param data.maximumWatchDateRelative
+     * @param data.minimumAirDateRelative
+     * @param data.maximumAirDateRelative
+     * @param data.totalShowsCount
+     * @param data.startedShowsCount
+     * @param data.newShowsCount
+     * @param data.minimumDuration
+     * @param data.maximumDuration
+     * @param data.limit
+     * @returns ChannelEpisodesOutput Successful Response
+     * @throws ApiError
+     */
+    public static getChannelEpisodes(data: ChannelsGetChannelEpisodesData): CancelablePromise<ChannelsGetChannelEpisodesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/{channel_id}/episodes',
+            path: {
+                channel_id: data.channelId
+            },
+            query: {
+                sortBy: data.sortBy,
+                orderPresetId: data.orderPresetId,
+                sourceIds: data.sourceIds,
+                sourceIdsIsBlacklist: data.sourceIdsIsBlacklist,
+                randomSeed: data.randomSeed,
+                hideWatched: data.hideWatched,
+                hideUnwatched: data.hideUnwatched,
+                hidePartiallyWatched: data.hidePartiallyWatched,
+                maximumWatchDateAbsolute: data.maximumWatchDateAbsolute,
+                minimumAirDateAbsolute: data.minimumAirDateAbsolute,
+                maximumAirDateAbsolute: data.maximumAirDateAbsolute,
+                maximumWatchDateRelative: data.maximumWatchDateRelative,
+                minimumAirDateRelative: data.minimumAirDateRelative,
+                maximumAirDateRelative: data.maximumAirDateRelative,
+                totalShowsCount: data.totalShowsCount,
+                startedShowsCount: data.startedShowsCount,
+                newShowsCount: data.newShowsCount,
+                minimumDuration: data.minimumDuration,
+                maximumDuration: data.maximumDuration,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Channel Shows
+     * Read all shows for a channel, including those from its child channels.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @returns ChannelShowsOutput Successful Response
+     * @throws ApiError
+     */
+    public static getChannelShows(data: ChannelsGetChannelShowsData): CancelablePromise<ChannelsGetChannelShowsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/{channel_id}/shows',
+            path: {
+                channel_id: data.channelId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Channel Sources
+     * Read all unique sources for a channel.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @returns SourcePublic Successful Response
+     * @throws ApiError
+     */
+    public static getChannelSources(data: ChannelsGetChannelSourcesData): CancelablePromise<ChannelsGetChannelSourcesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/{channel_id}/sources',
+            path: {
+                channel_id: data.channelId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Channel Whitelist Episodes
+     * Read one page of a season's episodes, as the filter page expands it.
+     * @param data The data for the request.
+     * @param data.seasonId
+     * @param data.canonicalShowId
+     * @param data.channelId
+     * @param data.offset
+     * @param data.limit
+     * @returns WhitelistEpisodesOutput Successful Response
+     * @throws ApiError
+     */
+    public static getChannelWhitelistEpisodes(data: ChannelsGetChannelWhitelistEpisodesData): CancelablePromise<ChannelsGetChannelWhitelistEpisodesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/{channel_id}/whitelist/{canonical_show_id}/seasons/{season_id}/episodes',
+            path: {
+                season_id: data.seasonId,
+                canonical_show_id: data.canonicalShowId,
+                channel_id: data.channelId
+            },
+            query: {
+                offset: data.offset,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
      * Admin Create Channel
      * Create a `Channel` owned by any `User`, with its `score`, as an admin.
      * @param data The data for the request.
@@ -1247,27 +1187,6 @@ export class CommentsService {
     }
     
     /**
-     * Read Comment Replies
-     * Get the whole thread below a `Comment`, nested by parent.
-     * @param data The data for the request.
-     * @param data.commentId
-     * @returns CommentsListOutput Successful Response
-     * @throws ApiError
-     */
-    public static readCommentReplies(data: CommentsReadCommentRepliesData): CancelablePromise<CommentsReadCommentRepliesResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/comments/{comment_id}/replies',
-            path: {
-                comment_id: data.commentId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
      * Read Unread Comment Count
      * Get how many comment notifications the `User` has not read.
      * @returns number Successful Response
@@ -1347,6 +1266,30 @@ export class CommentsService {
     }
     
     /**
+     * Create Channel Comment
+     * Leave a `Comment` on a `Channel` the `User` can read.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @param data.requestBody
+     * @returns CommentOutput Successful Response
+     * @throws ApiError
+     */
+    public static createChannelComment(data: CommentsCreateChannelCommentData): CancelablePromise<CommentsCreateChannelCommentResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/channels/{channel_id}/comments',
+            path: {
+                channel_id: data.channelId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
      * Read Channel Comments
      * Get one page of the top level `Comment`s on a `Channel`.
      * @param data The data for the request.
@@ -1374,23 +1317,20 @@ export class CommentsService {
     }
     
     /**
-     * Create Channel Comment
-     * Leave a `Comment` on a `Channel` the `User` can read.
+     * Read Comment Replies
+     * Get the whole thread below a `Comment`, nested by parent.
      * @param data The data for the request.
-     * @param data.channelId
-     * @param data.requestBody
-     * @returns CommentOutput Successful Response
+     * @param data.commentId
+     * @returns CommentsListOutput Successful Response
      * @throws ApiError
      */
-    public static createChannelComment(data: CommentsCreateChannelCommentData): CancelablePromise<CommentsCreateChannelCommentResponse> {
+    public static readCommentReplies(data: CommentsReadCommentRepliesData): CancelablePromise<CommentsReadCommentRepliesResponse> {
         return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/channels/{channel_id}/comments',
+            method: 'GET',
+            url: '/api/v1/comments/{comment_id}/replies',
             path: {
-                channel_id: data.channelId
+                comment_id: data.commentId
             },
-            body: data.requestBody,
-            mediaType: 'application/json',
             errors: {
                 422: 'Validation Error'
             }
@@ -1399,6 +1339,91 @@ export class CommentsService {
 }
 
 export class EpisodesService {
+    /**
+     * Set Episode User Url
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @param data.requestBody
+     * @returns UserEpisodeUrlOutput Successful Response
+     * @throws ApiError
+     */
+    public static setEpisodeUserUrl(data: EpisodesSetEpisodeUserUrlData): CancelablePromise<EpisodesSetEpisodeUserUrlResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/episodes/{episode_id}/user-url',
+            path: {
+                episode_id: data.episodeId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Episode User Url
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @returns UserEpisodeUrlOutput Successful Response
+     * @throws ApiError
+     */
+    public static deleteEpisodeUserUrl(data: EpisodesDeleteEpisodeUserUrlData): CancelablePromise<EpisodesDeleteEpisodeUserUrlResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/episodes/{episode_id}/user-url',
+            path: {
+                episode_id: data.episodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Episode Information
+     * Return what the website and TMDB each say about an `Episode`.
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @returns EpisodeInformationOutput Successful Response
+     * @throws ApiError
+     */
+    public static getEpisodeInformation(data: EpisodesGetEpisodeInformationData): CancelablePromise<EpisodesGetEpisodeInformationResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/episodes/{episode_id}/information',
+            path: {
+                episode_id: data.episodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Non Canonical Episodes
+     * Get every website's row standing for an `Episode`.
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @returns EpisodeListOutput Successful Response
+     * @throws ApiError
+     */
+    public static getNonCanonicalEpisodes(data: EpisodesGetNonCanonicalEpisodesData): CancelablePromise<EpisodesGetNonCanonicalEpisodesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/episodes/{episode_id}/non-canonical',
+            path: {
+                episode_id: data.episodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
     /**
      * Get Episodes
      * Get `Episode`s.
@@ -1676,74 +1701,6 @@ export class EpisodesService {
     }
     
     /**
-     * Get Episode Information
-     * Return what the website and TMDB each say about an `Episode`.
-     *
-     * The website's own account is what it stored rather than what is served, since
-     * what is served already reads as TMDB has it and would leave nothing to
-     * compare.
-     * @param data The data for the request.
-     * @param data.episodeId
-     * @returns EpisodeInformationOutput Successful Response
-     * @throws ApiError
-     */
-    public static getEpisodeInformation(data: EpisodesGetEpisodeInformationData): CancelablePromise<EpisodesGetEpisodeInformationResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/episodes/{episode_id}/information',
-            path: {
-                episode_id: data.episodeId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Set Episode User Url
-     * @param data The data for the request.
-     * @param data.episodeId
-     * @param data.requestBody
-     * @returns UserEpisodeUrlOutput Successful Response
-     * @throws ApiError
-     */
-    public static setEpisodeUserUrl(data: EpisodesSetEpisodeUserUrlData): CancelablePromise<EpisodesSetEpisodeUserUrlResponse> {
-        return __request(OpenAPI, {
-            method: 'PUT',
-            url: '/api/v1/episodes/{episode_id}/user-url',
-            path: {
-                episode_id: data.episodeId
-            },
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Delete Episode User Url
-     * @param data The data for the request.
-     * @param data.episodeId
-     * @returns UserEpisodeUrlOutput Successful Response
-     * @throws ApiError
-     */
-    public static deleteEpisodeUserUrl(data: EpisodesDeleteEpisodeUserUrlData): CancelablePromise<EpisodesDeleteEpisodeUserUrlResponse> {
-        return __request(OpenAPI, {
-            method: 'DELETE',
-            url: '/api/v1/episodes/{episode_id}/user-url',
-            path: {
-                episode_id: data.episodeId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
      * Get Episode
      * @param data The data for the request.
      * @param data.episodeId
@@ -1825,126 +1782,6 @@ export class EpisodesService {
             },
             body: data.requestBody,
             mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get Season Episodes
-     * @param data The data for the request.
-     * @param data.seasonId
-     * @param data.sortOptions
-     * @param data.filterOptions
-     * @param data.offset
-     * @param data.limit
-     * @returns EpisodesPublic Successful Response
-     * @throws ApiError
-     */
-    public static getSeasonEpisodes(data: EpisodesGetSeasonEpisodesData): CancelablePromise<EpisodesGetSeasonEpisodesResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/seasons/{season_id}/episodes',
-            path: {
-                season_id: data.seasonId
-            },
-            query: {
-                sort_options: data.sortOptions,
-                filter_options: data.filterOptions,
-                offset: data.offset,
-                limit: data.limit
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get Show Episodes
-     * @param data The data for the request.
-     * @param data.showId
-     * @param data.sortOptions
-     * @param data.filterOptions
-     * @param data.offset
-     * @param data.limit
-     * @returns EpisodesPublic Successful Response
-     * @throws ApiError
-     */
-    public static getShowEpisodes(data: EpisodesGetShowEpisodesData): CancelablePromise<EpisodesGetShowEpisodesResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/shows/{show_id}/episodes',
-            path: {
-                show_id: data.showId
-            },
-            query: {
-                sort_options: data.sortOptions,
-                filter_options: data.filterOptions,
-                offset: data.offset,
-                limit: data.limit
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get Source Episodes
-     * @param data The data for the request.
-     * @param data.sourceId
-     * @param data.sortOptions
-     * @param data.filterOptions
-     * @param data.offset
-     * @param data.limit
-     * @returns EpisodesPublic Successful Response
-     * @throws ApiError
-     */
-    public static getSourceEpisodes(data: EpisodesGetSourceEpisodesData): CancelablePromise<EpisodesGetSourceEpisodesResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/sources/{source_id}/episodes',
-            path: {
-                source_id: data.sourceId
-            },
-            query: {
-                sort_options: data.sortOptions,
-                filter_options: data.filterOptions,
-                offset: data.offset,
-                limit: data.limit
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get Plugin Episodes
-     * @param data The data for the request.
-     * @param data.pluginId
-     * @param data.sortOptions
-     * @param data.filterOptions
-     * @param data.offset
-     * @param data.limit
-     * @returns EpisodesPublic Successful Response
-     * @throws ApiError
-     */
-    public static getPluginEpisodes(data: EpisodesGetPluginEpisodesData): CancelablePromise<EpisodesGetPluginEpisodesResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/plugins/{plugin_id}/episodes',
-            path: {
-                plugin_id: data.pluginId
-            },
-            query: {
-                sort_options: data.sortOptions,
-                filter_options: data.filterOptions,
-                offset: data.offset,
-                limit: data.limit
-            },
             errors: {
                 422: 'Validation Error'
             }
@@ -2064,53 +1901,137 @@ export class FilesService {
             }
         });
     }
-    
+}
+
+export class IssueReportsService {
     /**
-     * Get Plugin Files
+     * Update Episode Issue Report
+     * Rewrite an `EpisodeIssueReport` the `User` left.
      * @param data The data for the request.
-     * @param data.pluginId
-     * @param data.sortOptions
-     * @param data.filterOptions
-     * @param data.offset
-     * @param data.limit
-     * @returns FilesPublic Successful Response
+     * @param data.issueReportId
+     * @param data.requestBody
+     * @returns IssueReportOutput Successful Response
      * @throws ApiError
      */
-    public static getPluginFiles(data: FilesGetPluginFilesData): CancelablePromise<FilesGetPluginFilesResponse> {
+    public static updateEpisodeIssueReport(data: IssueReportsUpdateEpisodeIssueReportData): CancelablePromise<IssueReportsUpdateEpisodeIssueReportResponse> {
         return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/admin/plugins/{plugin_id}/files',
+            method: 'PATCH',
+            url: '/api/v1/episode-issue-reports/{issue_report_id}',
             path: {
-                plugin_id: data.pluginId
+                issue_report_id: data.issueReportId
             },
-            query: {
-                sort_options: data.sortOptions,
-                filter_options: data.filterOptions,
-                offset: data.offset,
-                limit: data.limit
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Episode Issue Report
+     * Drop an `EpisodeIssueReport` the `User` left.
+     * @param data The data for the request.
+     * @param data.issueReportId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteEpisodeIssueReport(data: IssueReportsDeleteEpisodeIssueReportData): CancelablePromise<IssueReportsDeleteEpisodeIssueReportResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/episode-issue-reports/{issue_report_id}',
+            path: {
+                issue_report_id: data.issueReportId
             },
             errors: {
                 422: 'Validation Error'
             }
         });
     }
-}
-
-export class IssueReportsService {
+    
     /**
-     * Get Issue Reports
-     * Get every issue report on the site, newest first.
+     * Update Season Issue Report
+     * Rewrite a `SeasonIssueReport` the `User` left.
      * @param data The data for the request.
-     * @param data.mediaType
-     * @returns IssueReportListOutput Successful Response
+     * @param data.issueReportId
+     * @param data.requestBody
+     * @returns IssueReportOutput Successful Response
      * @throws ApiError
      */
-    public static getIssueReports(data: IssueReportsGetIssueReportsData = {}): CancelablePromise<IssueReportsGetIssueReportsResponse> {
+    public static updateSeasonIssueReport(data: IssueReportsUpdateSeasonIssueReportData): CancelablePromise<IssueReportsUpdateSeasonIssueReportResponse> {
         return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/issue-reports',
-            query: {
-                media_type: data.mediaType
+            method: 'PATCH',
+            url: '/api/v1/season-issue-reports/{issue_report_id}',
+            path: {
+                issue_report_id: data.issueReportId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Season Issue Report
+     * Drop a `SeasonIssueReport` the `User` left.
+     * @param data The data for the request.
+     * @param data.issueReportId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteSeasonIssueReport(data: IssueReportsDeleteSeasonIssueReportData): CancelablePromise<IssueReportsDeleteSeasonIssueReportResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/season-issue-reports/{issue_report_id}',
+            path: {
+                issue_report_id: data.issueReportId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Show Issue Report
+     * Rewrite a `ShowIssueReport` the `User` left.
+     * @param data The data for the request.
+     * @param data.issueReportId
+     * @param data.requestBody
+     * @returns IssueReportOutput Successful Response
+     * @throws ApiError
+     */
+    public static updateShowIssueReport(data: IssueReportsUpdateShowIssueReportData): CancelablePromise<IssueReportsUpdateShowIssueReportResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/show-issue-reports/{issue_report_id}',
+            path: {
+                issue_report_id: data.issueReportId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Show Issue Report
+     * Drop a `ShowIssueReport` the `User` left.
+     * @param data The data for the request.
+     * @param data.issueReportId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteShowIssueReport(data: IssueReportsDeleteShowIssueReportData): CancelablePromise<IssueReportsDeleteShowIssueReportResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/show-issue-reports/{issue_report_id}',
+            path: {
+                issue_report_id: data.issueReportId
             },
             errors: {
                 422: 'Validation Error'
@@ -2254,133 +2175,19 @@ export class IssueReportsService {
     }
     
     /**
-     * Update Episode Issue Report
-     * Rewrite an `EpisodeIssueReport` the `User` left.
+     * Get Issue Reports
+     * Get every issue report on the site, newest first.
      * @param data The data for the request.
-     * @param data.issueReportId
-     * @param data.requestBody
-     * @returns IssueReportOutput Successful Response
+     * @param data.mediaType
+     * @returns IssueReportListOutput Successful Response
      * @throws ApiError
      */
-    public static updateEpisodeIssueReport(data: IssueReportsUpdateEpisodeIssueReportData): CancelablePromise<IssueReportsUpdateEpisodeIssueReportResponse> {
+    public static getIssueReports(data: IssueReportsGetIssueReportsData = {}): CancelablePromise<IssueReportsGetIssueReportsResponse> {
         return __request(OpenAPI, {
-            method: 'PATCH',
-            url: '/api/v1/episode-issue-reports/{issue_report_id}',
-            path: {
-                issue_report_id: data.issueReportId
-            },
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Delete Episode Issue Report
-     * Drop an `EpisodeIssueReport` the `User` left.
-     * @param data The data for the request.
-     * @param data.issueReportId
-     * @returns Message Successful Response
-     * @throws ApiError
-     */
-    public static deleteEpisodeIssueReport(data: IssueReportsDeleteEpisodeIssueReportData): CancelablePromise<IssueReportsDeleteEpisodeIssueReportResponse> {
-        return __request(OpenAPI, {
-            method: 'DELETE',
-            url: '/api/v1/episode-issue-reports/{issue_report_id}',
-            path: {
-                issue_report_id: data.issueReportId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Update Season Issue Report
-     * Rewrite a `SeasonIssueReport` the `User` left.
-     * @param data The data for the request.
-     * @param data.issueReportId
-     * @param data.requestBody
-     * @returns IssueReportOutput Successful Response
-     * @throws ApiError
-     */
-    public static updateSeasonIssueReport(data: IssueReportsUpdateSeasonIssueReportData): CancelablePromise<IssueReportsUpdateSeasonIssueReportResponse> {
-        return __request(OpenAPI, {
-            method: 'PATCH',
-            url: '/api/v1/season-issue-reports/{issue_report_id}',
-            path: {
-                issue_report_id: data.issueReportId
-            },
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Delete Season Issue Report
-     * Drop a `SeasonIssueReport` the `User` left.
-     * @param data The data for the request.
-     * @param data.issueReportId
-     * @returns Message Successful Response
-     * @throws ApiError
-     */
-    public static deleteSeasonIssueReport(data: IssueReportsDeleteSeasonIssueReportData): CancelablePromise<IssueReportsDeleteSeasonIssueReportResponse> {
-        return __request(OpenAPI, {
-            method: 'DELETE',
-            url: '/api/v1/season-issue-reports/{issue_report_id}',
-            path: {
-                issue_report_id: data.issueReportId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Update Show Issue Report
-     * Rewrite a `ShowIssueReport` the `User` left.
-     * @param data The data for the request.
-     * @param data.issueReportId
-     * @param data.requestBody
-     * @returns IssueReportOutput Successful Response
-     * @throws ApiError
-     */
-    public static updateShowIssueReport(data: IssueReportsUpdateShowIssueReportData): CancelablePromise<IssueReportsUpdateShowIssueReportResponse> {
-        return __request(OpenAPI, {
-            method: 'PATCH',
-            url: '/api/v1/show-issue-reports/{issue_report_id}',
-            path: {
-                issue_report_id: data.issueReportId
-            },
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Delete Show Issue Report
-     * Drop a `ShowIssueReport` the `User` left.
-     * @param data The data for the request.
-     * @param data.issueReportId
-     * @returns Message Successful Response
-     * @throws ApiError
-     */
-    public static deleteShowIssueReport(data: IssueReportsDeleteShowIssueReportData): CancelablePromise<IssueReportsDeleteShowIssueReportResponse> {
-        return __request(OpenAPI, {
-            method: 'DELETE',
-            url: '/api/v1/show-issue-reports/{issue_report_id}',
-            path: {
-                issue_report_id: data.issueReportId
+            method: 'GET',
+            url: '/api/v1/issue-reports',
+            query: {
+                media_type: data.mediaType
             },
             errors: {
                 422: 'Validation Error'
@@ -2390,6 +2197,19 @@ export class IssueReportsService {
 }
 
 export class LoginService {
+    /**
+     * Test Token
+     * Test access token.
+     * @returns UserPublic Successful Response
+     * @throws ApiError
+     */
+    public static testToken(): CancelablePromise<LoginTestTokenResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/login/test-token'
+        });
+    }
+    
     /**
      * Login Access Token
      * OAuth2 compatible token login, get an access token for future requests.
@@ -2407,19 +2227,6 @@ export class LoginService {
             errors: {
                 422: 'Validation Error'
             }
-        });
-    }
-    
-    /**
-     * Test Token
-     * Test access token.
-     * @returns UserPublic Successful Response
-     * @throws ApiError
-     */
-    public static testToken(): CancelablePromise<LoginTestTokenResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/login/test-token'
         });
     }
     
@@ -2487,6 +2294,139 @@ export class LoginService {
 }
 
 export class PluginsService {
+    /**
+     * Import Watch History Information
+     * Return information about all plugins that support importing watch history.
+     * @returns PluginImportWatchHistoryInformation Successful Response
+     * @throws ApiError
+     */
+    public static importWatchHistoryInformation(): CancelablePromise<PluginsImportWatchHistoryInformationResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/import-watch-history-information'
+        });
+    }
+    
+    /**
+     * Import Url Information
+     * Return information about the plugins offered as ways to add by URL.
+     * @returns PluginImportURLInformation Successful Response
+     * @throws ApiError
+     */
+    public static importUrlInformation(): CancelablePromise<PluginsImportUrlInformationResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/import-url-information'
+        });
+    }
+    
+    /**
+     * Match Url
+     * Return whether any plugin can import `url`.
+     * @param data The data for the request.
+     * @param data.url
+     * @returns PluginURLMatch Successful Response
+     * @throws ApiError
+     */
+    public static matchUrl(data: PluginsMatchUrlData): CancelablePromise<PluginsMatchUrlResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/match-url',
+            query: {
+                url: data.url
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Search Information
+     * Return every plugin a `User` may search.
+     * @returns PluginSearchInformation Successful Response
+     * @throws ApiError
+     */
+    public static searchInformation(): CancelablePromise<PluginsSearchInformationResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/search-information'
+        });
+    }
+    
+    /**
+     * Manual Search
+     * Return a plugin website's own search-page URL for `query`.
+     * @param data The data for the request.
+     * @param data.pluginKey
+     * @param data.query
+     * @returns PluginSearchUrl Successful Response
+     * @throws ApiError
+     */
+    public static manualSearch(data: PluginsManualSearchData): CancelablePromise<PluginsManualSearchResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/manual-search',
+            query: {
+                plugin_key: data.pluginKey,
+                query: data.query
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * In App Search
+     * Search for shows/movies on a plugin's platform.
+     *
+     * `cursor` is the `next_cursor` of an earlier page; omit it for the first one.
+     * @param data The data for the request.
+     * @param data.pluginKey
+     * @param data.query
+     * @param data.cursor
+     * @returns PluginSearchResults Successful Response
+     * @throws ApiError
+     */
+    public static inAppSearch(data: PluginsInAppSearchData): CancelablePromise<PluginsInAppSearchResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/in-app-search',
+            query: {
+                plugin_key: data.pluginKey,
+                query: data.query,
+                cursor: data.cursor
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Media Info
+     * Return everything a plugin knows about one of its own search results.
+     * @param data The data for the request.
+     * @param data.pluginKey
+     * @param data.mediaIdentifier
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static mediaInfo(data: PluginsMediaInfoData): CancelablePromise<PluginsMediaInfoResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/media-info',
+            query: {
+                plugin_key: data.pluginKey,
+                media_identifier: data.mediaIdentifier
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
     /**
      * Create Plugin
      * Create a `Plugin`.
@@ -2596,146 +2536,6 @@ export class PluginsService {
             }
         });
     }
-    
-    /**
-     * Import Watch History Information
-     * Return information about all plugins that support importing watch history.
-     * @returns PluginImportWatchHistoryInformation Successful Response
-     * @throws ApiError
-     */
-    public static importWatchHistoryInformation(): CancelablePromise<PluginsImportWatchHistoryInformationResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/plugins/import-watch-history-information'
-        });
-    }
-    
-    /**
-     * Import Url Information
-     * Return information about the plugins offered as ways to add by URL.
-     *
-     * A plugin that imports URLs but is only reached through another one is left
-     * out. `match-url` still resolves its URLs, so one a `User` pastes anyway is
-     * imported rather than rejected.
-     * @returns PluginImportURLInformation Successful Response
-     * @throws ApiError
-     */
-    public static importUrlInformation(): CancelablePromise<PluginsImportUrlInformationResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/plugins/import-url-information'
-        });
-    }
-    
-    /**
-     * Match Url
-     * Return whether any plugin can import `url`.
-     * @param data The data for the request.
-     * @param data.url
-     * @returns PluginURLMatch Successful Response
-     * @throws ApiError
-     */
-    public static matchUrl(data: PluginsMatchUrlData): CancelablePromise<PluginsMatchUrlResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/plugins/match-url',
-            query: {
-                url: data.url
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Search Information
-     * @returns PluginSearchInformation Successful Response
-     * @throws ApiError
-     */
-    public static searchInformation(): CancelablePromise<PluginsSearchInformationResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/plugins/search-information'
-        });
-    }
-    
-    /**
-     * Search Url
-     * Return a plugin website's own search-page URL for `query`.
-     * @param data The data for the request.
-     * @param data.pluginKey
-     * @param data.query
-     * @returns PluginSearchUrl Successful Response
-     * @throws ApiError
-     */
-    public static searchUrl(data: PluginsSearchUrlData): CancelablePromise<PluginsSearchUrlResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/plugins/search-url',
-            query: {
-                plugin_key: data.pluginKey,
-                query: data.query
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Search Plugin
-     * Search for shows/movies on a plugin's platform.
-     *
-     * `cursor` is the `next_cursor` of an earlier page; omit it for the first one.
-     * @param data The data for the request.
-     * @param data.pluginKey
-     * @param data.query
-     * @param data.cursor
-     * @returns PluginSearchResults Successful Response
-     * @throws ApiError
-     */
-    public static searchPlugin(data: PluginsSearchPluginData): CancelablePromise<PluginsSearchPluginResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/plugins/search',
-            query: {
-                plugin_key: data.pluginKey,
-                query: data.query,
-                cursor: data.cursor
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Media Info
-     * Return everything a plugin knows about one of its own search results.
-     *
-     * Answered by the same plugin the result came from, under the identifier that
-     * plugin issued, so a title's detail is the source's own rather than whatever
-     * a search of some other service turned up.
-     * @param data The data for the request.
-     * @param data.pluginKey
-     * @param data.mediaIdentifier
-     * @returns unknown Successful Response
-     * @throws ApiError
-     */
-    public static mediaInfo(data: PluginsMediaInfoData): CancelablePromise<PluginsMediaInfoResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/plugins/media-info',
-            query: {
-                plugin_key: data.pluginKey,
-                media_identifier: data.mediaIdentifier
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
 }
 
 export class PrivateService {
@@ -2762,6 +2562,27 @@ export class PrivateService {
 
 export class SeasonsService {
     /**
+     * Get Season Information
+     * Return what the website and TMDB each say about a `Season`.
+     * @param data The data for the request.
+     * @param data.seasonId
+     * @returns SeasonInformationOutput Successful Response
+     * @throws ApiError
+     */
+    public static getSeasonInformation(data: SeasonsGetSeasonInformationData): CancelablePromise<SeasonsGetSeasonInformationResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/seasons/{season_id}/information',
+            path: {
+                season_id: data.seasonId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
      * Get Seasons
      * Get `Season`s.
      * @param data The data for the request.
@@ -2781,31 +2602,6 @@ export class SeasonsService {
                 filter_options: data.filterOptions,
                 offset: data.offset,
                 limit: data.limit
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get Season Information
-     * Return what the website and TMDB each say about a `Season`.
-     *
-     * The website's own account is what it stored rather than what is served, since
-     * what is served already reads as TMDB has it and would leave nothing to
-     * compare.
-     * @param data The data for the request.
-     * @param data.seasonId
-     * @returns SeasonInformationOutput Successful Response
-     * @throws ApiError
-     */
-    public static getSeasonInformation(data: SeasonsGetSeasonInformationData): CancelablePromise<SeasonsGetSeasonInformationResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/seasons/{season_id}/information',
-            path: {
-                season_id: data.seasonId
             },
             errors: {
                 422: 'Validation Error'
@@ -2898,99 +2694,30 @@ export class SeasonsService {
             }
         });
     }
-    
-    /**
-     * Get Show Seasons
-     * @param data The data for the request.
-     * @param data.showId
-     * @param data.sortOptions
-     * @param data.filterOptions
-     * @param data.offset
-     * @param data.limit
-     * @returns SeasonsPublic Successful Response
-     * @throws ApiError
-     */
-    public static getShowSeasons(data: SeasonsGetShowSeasonsData): CancelablePromise<SeasonsGetShowSeasonsResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/shows/{show_id}/seasons',
-            path: {
-                show_id: data.showId
-            },
-            query: {
-                sort_options: data.sortOptions,
-                filter_options: data.filterOptions,
-                offset: data.offset,
-                limit: data.limit
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get Source Seasons
-     * @param data The data for the request.
-     * @param data.sourceId
-     * @param data.sortOptions
-     * @param data.filterOptions
-     * @param data.offset
-     * @param data.limit
-     * @returns SeasonsPublic Successful Response
-     * @throws ApiError
-     */
-    public static getSourceSeasons(data: SeasonsGetSourceSeasonsData): CancelablePromise<SeasonsGetSourceSeasonsResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/sources/{source_id}/seasons',
-            path: {
-                source_id: data.sourceId
-            },
-            query: {
-                sort_options: data.sortOptions,
-                filter_options: data.filterOptions,
-                offset: data.offset,
-                limit: data.limit
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get Plugin Seasons
-     * @param data The data for the request.
-     * @param data.pluginId
-     * @param data.sortOptions
-     * @param data.filterOptions
-     * @param data.offset
-     * @param data.limit
-     * @returns SeasonsPublic Successful Response
-     * @throws ApiError
-     */
-    public static getPluginSeasons(data: SeasonsGetPluginSeasonsData): CancelablePromise<SeasonsGetPluginSeasonsResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/plugins/{plugin_id}/seasons',
-            path: {
-                plugin_id: data.pluginId
-            },
-            query: {
-                sort_options: data.sortOptions,
-                filter_options: data.filterOptions,
-                offset: data.offset,
-                limit: data.limit
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
 }
 
 export class ShowsService {
+    /**
+     * Get Show Information
+     * Return what the website and TMDB each say about a `Show`.
+     * @param data The data for the request.
+     * @param data.showId
+     * @returns ShowInformationOutput Successful Response
+     * @throws ApiError
+     */
+    public static getShowInformation(data: ShowsGetShowInformationData): CancelablePromise<ShowsGetShowInformationResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/shows/{show_id}/information',
+            path: {
+                show_id: data.showId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
     /**
      * Get Shows
      * Get `Show`s.
@@ -3040,31 +2767,6 @@ export class ShowsService {
     }
     
     /**
-     * Get Show Information
-     * Return what the website and TMDB each say about a `Show`.
-     *
-     * The website's own account is what it stored rather than what is served, since
-     * what is served already reads as TMDB has it and would leave nothing to
-     * compare.
-     * @param data The data for the request.
-     * @param data.showId
-     * @returns ShowInformationOutput Successful Response
-     * @throws ApiError
-     */
-    public static getShowInformation(data: ShowsGetShowInformationData): CancelablePromise<ShowsGetShowInformationResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/shows/{show_id}/information',
-            path: {
-                show_id: data.showId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
      * Get Show
      * @param data The data for the request.
      * @param data.showId
@@ -3086,14 +2788,7 @@ export class ShowsService {
     
     /**
      * Update Show
-     * Which canonical show this stands for is not something an update writes: it is
-     * linker's to work out during an import, or a `User`'s to settle through the
-     * TMDB matching screens, so there is nothing to repoint here.
-     *
-     * `extra` goes through its own service rather than being written with the rest, since
-     * what a TMDB row keeps there is the episode order the title is read in and changing
-     * that means reading the title again and matching every non-canonical row of it
-     * afresh.
+     * Update a `Show`.
      * @param data The data for the request.
      * @param data.showId
      * @param data.requestBody
@@ -3380,66 +3075,6 @@ export class ShowsService {
             }
         });
     }
-    
-    /**
-     * Get Source Shows
-     * @param data The data for the request.
-     * @param data.sourceId
-     * @param data.sortOptions
-     * @param data.filterOptions
-     * @param data.offset
-     * @param data.limit
-     * @returns ShowsPublic Successful Response
-     * @throws ApiError
-     */
-    public static getSourceShows(data: ShowsGetSourceShowsData): CancelablePromise<ShowsGetSourceShowsResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/sources/{source_id}/shows',
-            path: {
-                source_id: data.sourceId
-            },
-            query: {
-                sort_options: data.sortOptions,
-                filter_options: data.filterOptions,
-                offset: data.offset,
-                limit: data.limit
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get Plugin Shows
-     * @param data The data for the request.
-     * @param data.pluginId
-     * @param data.sortOptions
-     * @param data.filterOptions
-     * @param data.offset
-     * @param data.limit
-     * @returns ShowsPublic Successful Response
-     * @throws ApiError
-     */
-    public static getPluginShows(data: ShowsGetPluginShowsData): CancelablePromise<ShowsGetPluginShowsResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/plugins/{plugin_id}/shows',
-            path: {
-                plugin_id: data.pluginId
-            },
-            query: {
-                sort_options: data.sortOptions,
-                filter_options: data.filterOptions,
-                offset: data.offset,
-                limit: data.limit
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
 }
 
 export class SourcesService {
@@ -3550,36 +3185,6 @@ export class SourcesService {
             },
             body: data.requestBody,
             mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get Plugin Sources
-     * @param data The data for the request.
-     * @param data.pluginId
-     * @param data.sortOptions
-     * @param data.filterOptions
-     * @param data.offset
-     * @param data.limit
-     * @returns SourcesPublic Successful Response
-     * @throws ApiError
-     */
-    public static getPluginSources(data: SourcesGetPluginSourcesData): CancelablePromise<SourcesGetPluginSourcesResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/plugins/{plugin_id}/sources',
-            path: {
-                plugin_id: data.pluginId
-            },
-            query: {
-                sort_options: data.sortOptions,
-                filter_options: data.filterOptions,
-                offset: data.offset,
-                limit: data.limit
-            },
             errors: {
                 422: 'Validation Error'
             }
@@ -3767,26 +3372,6 @@ export class UsersService {
     }
     
     /**
-     * Register User
-     * Create new user without the need to be logged in.
-     * @param data The data for the request.
-     * @param data.requestBody
-     * @returns UserPublic Successful Response
-     * @throws ApiError
-     */
-    public static registerUser(data: UsersRegisterUserData): CancelablePromise<UsersRegisterUserResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/users/signup',
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
      * Read User By Id
      * Get a specific user by id.
      * @param data The data for the request.
@@ -3801,6 +3386,26 @@ export class UsersService {
             path: {
                 user_id: data.userId
             },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Register User
+     * Create new user without the need to be logged in.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns UserPublic Successful Response
+     * @throws ApiError
+     */
+    public static registerUser(data: UsersRegisterUserData): CancelablePromise<UsersRegisterUserResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/users/signup',
+            body: data.requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: 'Validation Error'
             }
@@ -4088,19 +3693,6 @@ export class WatchesService {
     }
     
     /**
-     * Admin Relink Watches
-     * Point every watch left without an episode back at one.
-     * @returns WatchRelinkResults Successful Response
-     * @throws ApiError
-     */
-    public static adminRelinkWatches(): CancelablePromise<WatchesAdminRelinkWatchesResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/watches/relink'
-        });
-    }
-    
-    /**
      * Create Watch
      * @param data The data for the request.
      * @param data.episodeId
@@ -4120,6 +3712,19 @@ export class WatchesService {
             errors: {
                 422: 'Validation Error'
             }
+        });
+    }
+    
+    /**
+     * Admin Relink Watches
+     * Point every watch left without an episode back at one.
+     * @returns WatchRelinkResults Successful Response
+     * @throws ApiError
+     */
+    public static adminRelinkWatches(): CancelablePromise<WatchesAdminRelinkWatchesResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/watches/relink'
         });
     }
 }

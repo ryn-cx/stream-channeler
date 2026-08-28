@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from app.sources.models import Source
-from plugins.Tubi.helpers import HelperMixin
+from plugins.Tubi.utils import HelperMixin
 
 
 # TODO: Validate
@@ -17,6 +17,6 @@ class SourceMixin(HelperMixin, register=False):
         return Source(
             key=self.plugin_key(),
             name=self.plugin_name(),
-            favicon_url=self.FAVICON_URL,
+            favicon_url=self.favicon_url(),
             plugin_id=self.plugin.id,
         ).upsert_and_set_update_at(self.plugin, source)

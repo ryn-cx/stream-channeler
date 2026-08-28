@@ -20,8 +20,8 @@ export const showColumns: ColumnDef<ShowTableData>[] = [
     header: "Plugin",
     cell: ({ row }) => (
       <ParentLinkCell
-        to="/plugin/$pluginId"
-        params={{ pluginId: row.original.plugin_id }}
+        to="/sources"
+        search={{ plugin_id: row.original.plugin_id }}
         name={row.original.plugin_name}
       />
     ),
@@ -31,8 +31,8 @@ export const showColumns: ColumnDef<ShowTableData>[] = [
     header: "Source",
     cell: ({ row }) => (
       <ParentLinkCell
-        to="/source/$sourceKey"
-        params={{ sourceKey: row.original.source_id }}
+        to="/shows"
+        search={{ source_id: row.original.source_id }}
         name={row.original.source_name}
       />
     ),
@@ -48,16 +48,16 @@ export const showColumns: ColumnDef<ShowTableData>[] = [
       ) : (
         <div className="flex items-center gap-2">
           <Link
-            to="/show/$showKey"
-            params={{ showKey: row.original.id }}
+            to="/seasons"
+            search={{ show_id: row.original.id }}
             className="font-medium text-primary hover:underline block max-w-48 whitespace-normal wrap-break-word"
           >
             {row.original.name || `No Name (${row.original.key})`}
           </Link>
           <TooltipIconLink label="Episodes">
             <Link
-              to="/show/$showKey/episodes"
-              params={{ showKey: row.original.id }}
+              to="/episodes"
+              search={{ show_id: row.original.id }}
               className="text-muted-foreground hover:text-foreground shrink-0"
               aria-label="Episodes"
             >

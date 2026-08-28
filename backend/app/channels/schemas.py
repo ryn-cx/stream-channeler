@@ -240,7 +240,6 @@ class ChannelEpisodesOutput(BaseModel):
     sources: dict[uuid.UUID, SourcePublic]
     plugins: dict[uuid.UUID, PluginOutput]
     channels: dict[uuid.UUID, ChannelOutput]
-    has_more: bool = False
 
 
 # TODO: Validate
@@ -508,4 +507,3 @@ class ChannelOptions(BaseInput):
     minimum_duration: int | None = Field(default=None)
     maximum_duration: int | None = Field(default=None)
     limit: int | None = Field(default=1000, ge=1, le=1000)
-    offset: int = Field(default=0, ge=0)

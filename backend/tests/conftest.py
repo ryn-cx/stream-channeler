@@ -4,11 +4,13 @@ import sys
 from collections.abc import Generator
 
 import pytest
+from alembic import command
+from alembic.config import Config
 from fastapi.testclient import TestClient
 from loguru import logger
 from pydantic_core import MultiHostUrl
 from sqlalchemy import Connection
-from sqlmodel import Session, SQLModel, create_engine, text
+from sqlmodel import Session, create_engine, text
 
 # reportUnusedImport/F401 - This loads variables into the environment even if it looks
 # like it does nothing. It's easier to do this on import than import it then have a
@@ -17,10 +19,10 @@ from app.auth.dependencies import get_db
 from app.config import settings
 from app.database import init_db, load_models
 from app.main import app
+from tests.app.helpers.utils import get_superuser_token_headers
 from tests.app.users.utils import (
     authentication_token_from_email,
 )
-from tests.app.utils.utils import get_superuser_token_headers
 
 # Remove the uncolorized logger and replace it with a colorized one that captures debug
 # logs.
@@ -67,7 +69,28 @@ def create_test_database() -> None:
 
     with test_engine.begin() as conn:
         conn.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'))
-    SQLModel.metadata.create_all(test_engine)
+
+    # Built by the migrations rather than by `SQLModel.metadata.create_all`, which
+    # writes the tables and nothing else. Whether a row is canonical is kept by a
+    # trigger a migration installs, so a schema built from the models alone has
+    # the column without the thing that maintains it, and every test of the
+    # canonical rows reads a value nothing is keeping true.
+    _run_migrations()
+
+
+# TODO: Validate
+def _run_migrations() -> None:
+    """Bring the test database up to head.
+
+    `alembic/env.py` reads the URL off `settings`, so the setting is what has to
+    point at the test database while the migrations run.
+    """
+    original_database = settings.POSTGRES_DB
+    settings.POSTGRES_DB = TEST_DB_NAME
+    try:
+        command.upgrade(Config("alembic.ini"), "head")
+    finally:
+        settings.POSTGRES_DB = original_database
 
 
 # TODO: Validate

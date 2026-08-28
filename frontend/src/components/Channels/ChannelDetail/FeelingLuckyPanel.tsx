@@ -1,6 +1,6 @@
 // TODO: Validate
 import { useQueryClient } from "@tanstack/react-query"
-import { Sparkles, X } from "lucide-react"
+import { Check, Sparkles, X } from "lucide-react"
 import { useState } from "react"
 
 import {
@@ -9,11 +9,10 @@ import {
   PluginsService,
 } from "@/client"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
-import { MediaInfoModal, type SelectedTitle } from "./Search"
+import { MediaInfoModal, PluginResultCard, type SelectedTitle } from "./Search"
 
 /** What became of one title the search was run for. */
 interface LuckyOutcome {
@@ -65,6 +64,7 @@ export function FeelingLuckyPanel({ channelId }: { channelId: string }) {
 
   const titles = parseTitles(titlesText)
   const matched = outcomes.filter((outcome) => outcome.result !== null)
+  const unmatched = outcomes.filter((outcome) => outcome.result === null)
   const approved = matched.filter((outcome) => outcome.approved)
 
   // A result already says which plugin issued it and under what id, so opening a
@@ -114,7 +114,7 @@ export function FeelingLuckyPanel({ channelId }: { channelId: string }) {
     // and so the list fills in as it goes rather than all at the end.
     for (const title of titles) {
       try {
-        const page = await PluginsService.searchPlugin({
+        const page = await PluginsService.inAppSearch({
           pluginKey: PLUGIN_KEY,
           query: title,
         })
@@ -160,8 +160,8 @@ export function FeelingLuckyPanel({ channelId }: { channelId: string }) {
   return (
     <div className="border rounded-lg p-4 space-y-3">
       <p className="text-sm text-muted-foreground">
-        One title per line. Each is searched and its first result is offered for
-        approval, and the ones left ticked are added to the import queue.
+        One title per line. Each is searched and its first result is shown as a
+        card, and the ones left on Importing are added to the import queue.
       </p>
 
       <Textarea
@@ -185,56 +185,66 @@ export function FeelingLuckyPanel({ channelId }: { channelId: string }) {
                 size="sm"
                 onClick={() => setEveryApproval(true)}
               >
-                Tick all
+                Import all
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setEveryApproval(false)}
               >
-                Untick all
+                Skip all
               </Button>
             </div>
           )}
 
-          <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border p-2 text-sm">
-            {outcomes.map((outcome) => (
-              <div key={outcome.title} className="flex items-start gap-2">
-                {outcome.result ? (
-                  <Checkbox
-                    className="mt-0.5 shrink-0"
-                    checked={outcome.approved}
-                    onCheckedChange={(checked) =>
-                      setApproval(outcome.title, checked === true)
-                    }
-                    aria-label={`Add ${outcome.title}`}
-                  />
-                ) : (
-                  <X className="mt-0.5 size-4 shrink-0 text-destructive" />
-                )}
-                <span className="min-w-0 whitespace-normal wrap-break-word">
-                  <span className="font-medium">{outcome.title}</span>
-                  {outcome.result ? (
-                    <>
-                      <span className="text-muted-foreground">{" → "}</span>
-                      <button
-                        type="button"
-                        className="underline"
+          <div className="max-h-96 overflow-y-auto rounded-lg border p-2">
+            <div className="flex flex-wrap gap-3">
+              {matched.map((outcome) => (
+                <div key={outcome.title} className="flex flex-col gap-1">
+                  <span className="max-w-36 truncate text-xs text-muted-foreground">
+                    {outcome.title}
+                  </span>
+                  <PluginResultCard
+                    result={outcome.result!}
+                    channelId={channelId}
+                    onSelect={openTitle}
+                    extraFooter={
+                      <Button
+                        size="sm"
+                        variant={outcome.approved ? "secondary" : "outline"}
+                        className="mt-2 w-full"
                         onClick={() =>
-                          outcome.result && openTitle(outcome.result)
+                          setApproval(outcome.title, !outcome.approved)
                         }
                       >
-                        {outcome.result.title}
-                      </button>
-                    </>
-                  ) : (
-                    <span className="text-muted-foreground">
-                      {outcome.failed ? " — search failed" : " — no results"}
+                        {outcome.approved ? (
+                          <Check className="h-3 w-3 mr-1" />
+                        ) : (
+                          <X className="h-3 w-3 mr-1" />
+                        )}
+                        {outcome.approved ? "Importing" : "Skipped"}
+                      </Button>
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+
+            {unmatched.length > 0 && (
+              <div className="mt-2 space-y-1 text-sm">
+                {unmatched.map((outcome) => (
+                  <div key={outcome.title} className="flex items-start gap-2">
+                    <X className="mt-0.5 size-4 shrink-0 text-destructive" />
+                    <span className="min-w-0 whitespace-normal wrap-break-word">
+                      <span className="font-medium">{outcome.title}</span>
+                      <span className="text-muted-foreground">
+                        {outcome.failed ? " — search failed" : " — no results"}
+                      </span>
                     </span>
-                  )}
-                </span>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         </div>
       )}

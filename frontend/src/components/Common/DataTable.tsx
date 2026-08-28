@@ -41,6 +41,10 @@ import {
 
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTableSkeleton } from "@/components/Common/DataTableSkeleton"
+import {
+  DetailBreadcrumb,
+  type EntityKey,
+} from "@/components/Common/DetailBreadcrumb"
 import { EmptyState } from "@/components/Common/EmptyState"
 import { MediaSubNav } from "@/components/Media/MediaSubNav"
 import { Button } from "@/components/ui/button"
@@ -61,6 +65,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { usePlugin, useSeason, useShow, useSource } from "@/hooks/useEntities"
 import {
   usePersistedJsonState,
   usePersistedState,
@@ -877,67 +882,57 @@ export function MediaTablePage<TData extends { id: string }>({
   )
 }
 
-interface DetailTablePageProps<TData extends { id: string }> {
-  title: ReactNode
-  columns: ColumnDef<TData>[]
-  queryKey: unknown[]
-  fetchTable: (params: MediaPageParams) => Promise<MediaTableResult<TData>>
-  columnVisibilityKey: string
-  defaultHidden?: VisibilityState
-  emptyIcon: LucideIcon
-  emptyTitle: string
-  emptyDescription: string
-  headerActions?: ReactNode
-  backButton?: ReactNode
-}
-
-// TODO: Validate
-export function DetailTablePage<TData extends { id: string }>({
-  title,
-  columns,
-  queryKey,
-  fetchTable,
-  columnVisibilityKey,
-  defaultHidden = { key: false, id: false },
-  emptyIcon,
-  emptyTitle,
-  emptyDescription,
-  headerActions,
-  backButton,
-}: DetailTablePageProps<TData>) {
-  return (
-    <MediaTablePage
-      columns={columns}
-      queryKey={queryKey}
-      fetchTable={fetchTable}
-      columnVisibilityKey={columnVisibilityKey}
-      defaultHidden={defaultHidden}
-      headerActions={headerActions}
-      header={
-        <div className="flex items-center gap-2">
-          {backButton}
-          {title}
-        </div>
-      }
-      emptyState={
-        <EmptyState
-          icon={emptyIcon}
-          title={emptyTitle}
-          description={emptyDescription}
-        />
-      }
-    />
-  )
-}
-
 export const CANONICAL_TAB = "canonical"
 
 export const MEDIA_TAB = "media"
 
 export type MediaTab = typeof MEDIA_TAB | typeof CANONICAL_TAB
 
-export type MediaSearch = {
+export type MediaScope = {
+  plugin_id?: string
+  source_id?: string
+  show_id?: string
+  season_id?: string
+}
+
+export type MediaSearch = MediaScope & {
   view?: typeof CANONICAL_TAB
+}
+
+export type ScopeColumn = keyof MediaScope
+
+const SCOPE_COLUMNS: ScopeColumn[] = [
+  "season_id",
+  "show_id",
+  "source_id",
+  "plugin_id",
+]
+
+const SCOPE_ENTITIES: Record<ScopeColumn, EntityKey> = {
+  season_id: "season",
+  show_id: "show",
+  source_id: "source",
+  plugin_id: "plugin",
+}
+
+const SCOPE_PATHS: Record<EntityKey, MediaPath> = {
+  season: "/episodes",
+  show: "/seasons",
+  source: "/shows",
+  plugin: "/sources",
+}
+
+// TODO: Validate
+export const childmostScope = (
+  search: MediaScope,
+): { column: ScopeColumn; value: string } | undefined => {
+  for (const column of SCOPE_COLUMNS) {
+    const value = search[column]
+    if (value) {
+      return { column, value }
+    }
+  }
+  return undefined
 }
 
 export type MediaPath =
@@ -953,6 +948,13 @@ export const validateMediaSearch = (
   search: Record<string, unknown>,
 ): MediaSearch => ({
   view: search.view === CANONICAL_TAB ? search.view : undefined,
+  plugin_id:
+    typeof search.plugin_id === "string" ? search.plugin_id : undefined,
+  source_id:
+    typeof search.source_id === "string" ? search.source_id : undefined,
+  show_id: typeof search.show_id === "string" ? search.show_id : undefined,
+  season_id:
+    typeof search.season_id === "string" ? search.season_id : undefined,
 })
 
 const SCOPE_TABS: { value: MediaTab; label: string }[] = [
@@ -986,6 +988,42 @@ interface MediaListPageProps<
 }
 
 // TODO: Validate
+function ScopedHeader({
+  scope,
+  title,
+  path,
+}: {
+  scope: { column: ScopeColumn; value: string }
+  title: string
+  path: MediaPath
+}) {
+  const entity = SCOPE_ENTITIES[scope.column]
+  const { data: season } = useSeason(
+    entity === "season" ? scope.value : undefined,
+  )
+  const { data: show } = useShow(
+    entity === "show" ? scope.value : season?.show_id,
+  )
+  const { data: source } = useSource(
+    entity === "source" ? scope.value : show?.source_id,
+  )
+  const { data: plugin } = usePlugin(
+    entity === "plugin" ? scope.value : source?.plugin_id,
+  )
+
+  return (
+    <DetailBreadcrumb
+      plugin={plugin}
+      source={source}
+      show={show}
+      season={season}
+      trailing={title}
+      current={SCOPE_PATHS[entity] === path ? entity : undefined}
+    />
+  )
+}
+
+// TODO: Validate
 export function MediaListPage<
   TData extends { id: string },
   TCanonical extends { id: string } = TData,
@@ -1002,13 +1040,28 @@ export function MediaListPage<
 }: MediaListPageProps<TData, TCanonical>) {
   const search = useSearch({ strict: false }) as MediaSearch
   const navigate = useNavigate()
+  const scope = childmostScope(search)
   const [rememberedTab, setRememberedTab] = usePersistedState<MediaTab>(
     `media-scope:${path}`,
     MEDIA_TAB,
   )
   const requestedTab: MediaTab = search.view ?? rememberedTab
   const activeTab: MediaTab =
-    requestedTab === CANONICAL_TAB && !canonical ? MEDIA_TAB : requestedTab
+    requestedTab === CANONICAL_TAB && (!canonical || scope)
+      ? MEDIA_TAB
+      : requestedTab
+
+  // TODO: Validate
+  const scopedParams = (params: MediaPageParams): MediaPageParams =>
+    scope
+      ? {
+          ...params,
+          filterOptions: [
+            ...params.filterOptions,
+            { id: scope.column, value: scope.value },
+          ],
+        }
+      : params
 
   useEffect(() => {
     if (search.view && search.view !== rememberedTab) {
@@ -1019,14 +1072,17 @@ export function MediaListPage<
   // TODO: Validate
   const setTab = (next: MediaTab) => {
     setRememberedTab(next)
+    const scopeSearch: MediaScope = scope ? { [scope.column]: scope.value } : {}
     navigate({
       to: path,
-      search: next === MEDIA_TAB ? {} : { view: next },
+      search: next === MEDIA_TAB ? scopeSearch : { ...scopeSearch, view: next },
       replace: true,
     })
   }
 
-  const header = (
+  const header = scope ? (
+    <ScopedHeader scope={scope} title={title} path={path} />
+  ) : (
     <div className="flex flex-wrap items-center gap-3">
       <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
       {canonical && (
@@ -1071,11 +1127,11 @@ export function MediaListPage<
   return (
     <MediaTablePage
       columns={columns}
-      queryKey={["media-table", title, MEDIA_TAB]}
-      fetchTable={fetchTable}
+      queryKey={["media-table", title, MEDIA_TAB, scope?.value ?? null]}
+      fetchTable={(params) => fetchTable(scopedParams(params))}
       columnVisibilityKey={columnVisibilityKey}
       defaultHidden={defaultHidden}
-      resetKey={MEDIA_TAB}
+      resetKey={`${MEDIA_TAB}:${scope?.value ?? ""}`}
       headerActions={headerActions}
       header={header}
       emptyState={emptyState}

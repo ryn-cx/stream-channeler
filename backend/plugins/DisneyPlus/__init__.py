@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.DisneyPlus.media_info import MediaInfoMixin
 from plugins.DisneyPlus.source import SourceMixin
 from plugins.DisneyPlus.upsert import UpsertMixin
 from plugins.DisneyPlus.url_handlers import DisneyPlusURLHandler, EntityURLHandler
@@ -19,7 +18,6 @@ from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 # TODO: Validate
 class DisneyPlus(
     UpsertMixin,
-    MediaInfoMixin,
     SourceMixin,
     URLHandlerPlugin[DisneyPlusURLHandler],
     # Temporarily disabled until a solution is found to get episodes past episode 24
@@ -27,10 +25,23 @@ class DisneyPlus(
 ):
     """Disney+ plugin."""
 
-    _VERSION = "0.0.1"
-    _URL_HANDLERS = (EntityURLHandler,)
-    TMDB_PROVIDER_NAMES = ("Disney+",)
-    FAVICON_URL = "https://www.disneyplus.com/favicon.ico"
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_handlers(cls) -> tuple[type[DisneyPlusURLHandler], ...]:
+        return (EntityURLHandler,)
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def tmdb_provider_names(cls) -> tuple[str, ...]:
+        return ("Disney+",)
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def favicon_url(cls) -> str:
+        return "https://www.disneyplus.com/favicon.ico"
 
     # TODO: Validate
     @classmethod

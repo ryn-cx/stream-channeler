@@ -3,7 +3,7 @@
 
 from collections.abc import Sequence
 from functools import cache
-from typing import Any, ClassVar, override
+from typing import Any, override
 
 from plugi import Plugi
 from plugi.content import Content as ContentEndpoint
@@ -15,13 +15,6 @@ from plugi.exceptions import ContentNotFoundError
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
-
-# The `type` field of a Tubi content response marks a series; a movie and a single
-# episode both use "v".
-_SERIES_TYPE = "s"
-
-# A movie has no seasons of its own so its single season is given a fixed id.
-_MOVIE_SEASON_ID = "0"
 
 
 # TODO: Validate
@@ -35,7 +28,10 @@ def plugi() -> Plugi:
 class ContentFile(EndpointFile[ContentModel]):
     """Content file."""
 
-    API_ENDPOINT: ClassVar[ContentEndpoint] = plugi().content
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ContentEndpoint:
+        return plugi().content
 
     # TODO: Validate
     @override
@@ -63,7 +59,9 @@ class FileMixin(BasePlugin, register=False):
 
     # TODO: Validate
     def _is_movie(self, show_key: str) -> bool:
-        return self._content(show_key).type != _SERIES_TYPE
+        # The `type` field of a Tubi content response marks a series; a movie
+        # and a single episode both use "v".
+        return self._content(show_key).type != "s"
 
     # TODO: Validate
     def _seasons(self, show_key: str) -> list[SeasonChild]:
@@ -94,7 +92,9 @@ class FileMixin(BasePlugin, register=False):
     # TODO: Validate
     @classmethod
     def _movie_season_key(cls, show_key: str) -> str:
-        return cls._season_key(show_key, _MOVIE_SEASON_ID)
+        # A movie has no seasons of its own so its single season is given a
+        # fixed id.
+        return cls._season_key(show_key, "0")
 
     # TODO: Validate
     @staticmethod

@@ -11,9 +11,9 @@ from __future__ import annotations
 import json
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import cache
-from typing import Any, ClassVar, override
+from typing import Any, override
 
 import httpx
 from deforestation import Deforestation
@@ -23,11 +23,17 @@ from deforestation.detail_widgets.models import DetailWidgetsModel
 from deforestation.detail_widgets.models import Episode as WidgetEpisode
 from deforestation.exceptions import RedirectedError, TitleNotFoundError
 from deforestation.search import Search as SearchEndpoint
-from deforestation.search.models import Entity, SearchModel
+from deforestation.search.models import SearchModel
 from pydantic import BaseModel
 from sqlmodel import Session
 
 from app.plugins.models import Plugin
+from app.utils import tz_datetime
+from plugins.Amazon.constants import (
+    IMAGE_PREFERENCE,
+    MOVIE_ENTITY_TYPE,
+    PRIME_BENEFIT_ID,
+)
 from plugins.Amazon.keys import title_key_from_location
 from plugins.utils.base_plugin import BasePlugin
 from plugins.utils.base_plugin.files import (
@@ -37,40 +43,6 @@ from plugins.utils.base_plugin.files import (
     TextFile,
 )
 from plugins.utils.get_around_client import get_around_client
-
-# Where a share link is written, which is its own domain rather than a path on
-# Prime Video's.
-_SHARE_LINK_URL = "https://watch.amazon.com/detail"
-
-# How long the redirect a share link answers with is waited for.
-_REDIRECT_TIMEOUT_SECONDS = 30
-
-# Which of a title's images stands for it, most wanted first.
-_IMAGE_PREFERENCE = ("covershot", "packshot", "titleshot", "heroshot")
-
-MOVIE_ENTITY_TYPE = "Movie"
-"""What Prime Video calls a title that is a film rather than a series."""
-
-# Prime itself is offered through the same payload as a channel, but a title
-# included with Prime belongs to Prime Video rather than to a separate source.
-_PRIME_BENEFIT_ID = "Prime"
-
-# What a channel's own name is written after in the label it is offered under.
-_CHANNEL_LABEL_PREFIXES = (
-    "Watch with ",
-    "Start your free trial to ",
-    "Subscribe to ",
-)
-
-# What splits the two lines of an offer's label.
-_LABEL_LINE_BREAK = "{lineBreak}"
-
-# What a card writes the name of what it offers as.
-_HEADING_TEXT_TYPE = "HEADING"
-
-# What a search lays its matches out as, which is what tells them apart from the
-# rows of titles like them that it suggests alongside.
-_GRID_CONTAINER_TYPE = "Grid"
 
 
 # TODO: Validate
@@ -114,20 +86,8 @@ class AmazonEpisode:
 
 
 # TODO: Validate
-@dataclass
-class AmazonSearchResult:
-    """One title a search matched."""
-
-    key: str
-    title: str
-    entity_type: str
-    year: int | None
-    image_url: str | None
-
-
-# TODO: Validate
 def _pick_image(images: BaseModel) -> str | None:
-    for name in _IMAGE_PREFERENCE:
+    for name in IMAGE_PREFERENCE:
         if url := getattr(images, name, None):
             return str(url)
     return None
@@ -159,15 +119,19 @@ def _card_channel_name(card: dict[str, Any]) -> str | None:
     with the channel, so more than one channel is offered under the same label.
     """
     for text in _card_texts(card):
-        if text["textType"] == _HEADING_TEXT_TYPE:
+        # What a card writes the name of what it offers as.
+        if text["textType"] == "HEADING":
             return text["text"].strip()
     return None
 
 
 # TODO: Validate
 def _channel_name(label: str) -> str:
-    name = label.split(_LABEL_LINE_BREAK, 1)[0].strip()
-    for prefix in _CHANNEL_LABEL_PREFIXES:
+    # What splits the two lines of an offer's label.
+    name = label.split("{lineBreak}", 1)[0].strip()
+    # What a channel's own name is written after in the label it is offered
+    # under.
+    for prefix in ("Watch with ", "Start your free trial to ", "Subscribe to "):
         name = name.removeprefix(prefix)
     if not name:
         msg = f"No channel name in {label!r}"
@@ -177,7 +141,7 @@ def _channel_name(label: str) -> str:
 
 # TODO: Validate
 def _pick_raw_image(images: dict[str, Any]) -> str | None:
-    for name in _IMAGE_PREFERENCE:
+    for name in IMAGE_PREFERENCE:
         if url := images.get(name):
             return str(url)
     return None
@@ -219,17 +183,6 @@ def _episode_from_widget(episode: WidgetEpisode) -> AmazonEpisode:
 
 
 # TODO: Validate
-def _search_result(entity: Entity) -> AmazonSearchResult:
-    return AmazonSearchResult(
-        key=_compact_key_from_link(entity.link.url),
-        title=entity.title,
-        entity_type=entity.entity_type,
-        year=int(entity.release_year) if entity.release_year else None,
-        image_url=entity.images.cover.url,
-    )
-
-
-# TODO: Validate
 class ShareLinkRedirect(TextFile):
     """Where a share link points.
 
@@ -258,7 +211,9 @@ class ShareLinkRedirect(TextFile):
             # request naming no browser is sent to the page advertising its app
             # rather than to the title, and that address carries no id.
             response = httpx.get(
-                _SHARE_LINK_URL,
+                # Where a share link is written, which is its own domain rather
+                # than a path on Prime Video's.
+                "https://watch.amazon.com/detail",
                 params={"gti": self.share_key},
                 headers={
                     "User-Agent": (
@@ -268,7 +223,9 @@ class ShareLinkRedirect(TextFile):
                     ),
                 },
                 follow_redirects=False,
-                timeout=_REDIRECT_TIMEOUT_SECONDS,
+                # How long the redirect a share link answers with is waited
+                # for.
+                timeout=30,
             )
             self.write(response.headers.get("location"))
 
@@ -297,7 +254,10 @@ class Detail(DownloadedFile[dict[str, Any]]):
     searching a list for it.
     """
 
-    API_ENDPOINT: ClassVar[DetailEndpoint] = deforestation().detail
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> DetailEndpoint:
+        return deforestation().detail
 
     # TODO: Validate
     def __init__(self, session: Session, plugin: Plugin, title_key: str) -> None:
@@ -334,7 +294,7 @@ class Detail(DownloadedFile[dict[str, Any]]):
             landing_key = title_key_from_location(error.location)
             if landing_key is None:
                 raise
-            return self._download_endpoint().download(landing_key)
+            return self._endpoint().download(landing_key)
 
     # TODO: Validate
     @override
@@ -580,7 +540,7 @@ class Detail(DownloadedFile[dict[str, Any]]):
                 if not subscription:
                     continue
                 benefit_id = subscription["benefitId"]
-                if benefit_id == _PRIME_BENEFIT_ID or benefit_id in seen:
+                if benefit_id == PRIME_BENEFIT_ID or benefit_id in seen:
                     continue
                 seen.add(benefit_id)
                 name = _card_channel_name(card) or _channel_name(subscription["label"])
@@ -591,7 +551,7 @@ class Detail(DownloadedFile[dict[str, Any]]):
     def included_with_prime(self) -> bool:
         """Report whether a Prime subscription is enough to watch this title."""
         return any(
-            subscription["benefitId"] == _PRIME_BENEFIT_ID
+            subscription["benefitId"] == PRIME_BENEFIT_ID
             for subscription in self._subscriptions()
         )
 
@@ -626,7 +586,10 @@ class EpisodeList(EndpointFile[DetailWidgetsModel]):
     of them is asked for by the token the season's page carries for it.
     """
 
-    API_ENDPOINT: ClassVar[DetailWidgetsEndpoint] = deforestation().detail_widgets
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> DetailWidgetsEndpoint:
+        return deforestation().detail_widgets
 
     # TODO: Validate
     def __init__(
@@ -648,7 +611,7 @@ class EpisodeList(EndpointFile[DetailWidgetsModel]):
     def _download_file(self) -> str:
         detail = Detail(self.session, self.plugin, self.season_key)
         token = detail.episode_page_token(self.page_index)
-        return self.API_ENDPOINT.download(self.season_key, token)
+        return self._endpoint().download(self.season_key, token)
 
     # TODO: Validate
     def episodes(self) -> list[AmazonEpisode]:
@@ -665,34 +628,50 @@ class Search(EndpointFile[SearchModel]):
     file for a query rather than one for each page of it.
     """
 
-    API_ENDPOINT: ClassVar[SearchEndpoint] = deforestation().search
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> SearchEndpoint:
+        return deforestation().search
 
     # TODO: Validate
-    def results(self) -> list[AmazonSearchResult]:
-        """Return the titles the query matched, best match first.
+    @override
+    def _next_update_at(self) -> datetime:
+        return tz_datetime.now() + timedelta(days=30)
+
+    # TODO: Validate
+    def results(self) -> list[str]:
+        """Return the key of each title the query matched, best match first.
 
         Prime Video answers a search with the titles it matched and with rows of
         titles like them, and only the matches are results of the search. The
         matches are the ones it lays out as a grid; the rows it suggests are
         carousels.
         """
-        results: list[AmazonSearchResult] = []
+        keys: list[str] = []
         seen: set[str] = set()
         for container in self.parsed().body.containers:
-            if container.container_type != _GRID_CONTAINER_TYPE:
+            # What a search lays its matches out as, which is what tells them
+            # apart from the rows of titles like them that it suggests
+            # alongside.
+            if container.container_type != "Grid":
                 continue
             for entity in container.entities:
-                result = _search_result(entity)
-                if result.key in seen:
+                key = _compact_key_from_link(entity.link.url)
+                if key in seen:
                     continue
-                seen.add(result.key)
-                results.append(result)
-        return results
+                seen.add(key)
+                keys.append(key)
+        return keys
 
 
 # TODO: Validate
 class FileMixin(BasePlugin, register=False):
     """The files a title is read out of."""
+
+    # TODO: Validate
+    def search_file(self, query: str) -> Search:
+        """Return data for search results."""
+        return self._file(Search, query)
 
     # TODO: Validate
     def detail_file(self, title_key: str) -> Detail:
@@ -703,11 +682,6 @@ class FileMixin(BasePlugin, register=False):
     def share_link_file(self, share_key: str) -> ShareLinkRedirect:
         """Return where the share link written with `share_key` points."""
         return self._file(ShareLinkRedirect, share_key)
-
-    # TODO: Validate
-    def search_file(self, query: str) -> Search:
-        """Return data for search results."""
-        return self._file(Search, query)
 
     # TODO: Validate
     def _is_movie(self, title_key: str) -> bool:

@@ -4,10 +4,8 @@
 from __future__ import annotations
 
 from app.sources.models import Source
-from plugins.Amazon.helpers import HelperMixin
-
-# Names the source that holds the titles that have to be bought or rented.
-_PURCHASE_SOURCE_SUFFIX = "Purchase"
+from plugins.Amazon.constants import PURCHASE_SOURCE_SUFFIX
+from plugins.Amazon.utils import HelperMixin
 
 
 # TODO: Validate
@@ -20,7 +18,7 @@ class SourceMixin(HelperMixin, register=False):
         return Source(
             key=self.plugin_key(),
             name=self.plugin_name(),
-            favicon_url=self.FAVICON_URL,
+            favicon_url=self.favicon_url(),
             plugin_id=self.plugin.id,
         ).upsert_and_set_update_at(self.plugin, source)
 
@@ -46,8 +44,8 @@ class SourceMixin(HelperMixin, register=False):
         if detail_file.purchasable():
             sources.append(
                 self._extra_source(
-                    f"{self.plugin_key()}:{_PURCHASE_SOURCE_SUFFIX}",
-                    f"{self.plugin_name()} ({_PURCHASE_SOURCE_SUFFIX})",
+                    f"{self.plugin_key()}:{PURCHASE_SOURCE_SUFFIX}",
+                    f"{self.plugin_name()} ({PURCHASE_SOURCE_SUFFIX})",
                 ),
             )
         # A title with no way to watch it listed still belongs somewhere.
@@ -63,6 +61,6 @@ class SourceMixin(HelperMixin, register=False):
         return Source(
             key=source_key,
             name=name,
-            favicon_url=self.FAVICON_URL,
+            favicon_url=self.favicon_url(),
             plugin_id=self.plugin.id,
         ).upsert_and_set_update_at(self.plugin, existing_source)

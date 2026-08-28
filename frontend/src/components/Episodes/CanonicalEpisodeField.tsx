@@ -3,77 +3,42 @@ import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query"
 import { Check, X } from "lucide-react"
 
 import {
-  type CanonicalEpisodeOutput,
   CanonicalEpisodesService,
   type EpisodeOutput,
   EpisodesService,
 } from "@/client"
+import { CanonicalEpisodeRow } from "@/components/Admin/CanonicalEpisodeRow"
 import { TmdbLinkPicker } from "@/components/Admin/EpisodeTmdbLinkMenu"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
-interface CanonicalEpisodeFieldProps {
+interface CanonicalEpisodeListProps {
   episodeId: string
   canonicalEpisodeIds: string[]
-  seasonNumber: number | null
-  episodeNumber: number | null
-  canonicalEpisodeValidatedAt: string | null | undefined
-  /** Only asked for while the form is open, since each is a query of its own. */
+  /** Only asked for while the window is open, since each is a query of its own. */
   enabled: boolean
-  /** Called once the links have been settled, so a form holding the row's own
-   * copy of the lock can be brought in line with what was just written. */
-  onVerified?: () => void
+  /** Whether the rows carry the control that takes one off. */
+  editable?: boolean
   onLinksChanged?: (episode: EpisodeOutput) => void
 }
 
 // TODO: Validate
-function CanonicalEpisodeName({
-  episode,
-}: {
-  episode: CanonicalEpisodeOutput
-}) {
-  return (
-    <span className="flex-1 whitespace-normal wrap-break-word">
-      {episode.name ?? "Unnamed"}
-      <span className="block text-xs text-muted-foreground">
-        {episode.key}
-        {episode.episode_number === null || episode.episode_number === undefined
-          ? ""
-          : ` — episode ${episode.episode_number}`}
-      </span>
-    </span>
-  )
-}
-
-// TODO: Validate
 /**
- * Which episodes this row stands for, and the choosing of another.
+ * Which episodes this row stands for.
  *
- * A website runs two episodes together in one listing often enough - a
- * double-length first airing, a recap paired with the episode it recaps - that
- * choosing here adds to what the row already stands for rather than replacing
- * it. Taking one off is the X beside it.
- *
- * The choosing is the same picker the matching screens use, so the one place
- * that knows how to offer TMDB episodes and link one is the place doing it here
- * too, and a link chosen here reads exactly as one chosen there.
- *
- * The links are written as soon as they are chosen rather than with the rest of
- * the form: they are rows of their own, and what they drag along is not
- * something a write of the episode's own columns does.
+ * Read by anybody, since what a listing is of is as much a part of the episode
+ * as its name. Only an admin is given the control that takes one off, which is
+ * the whole of the difference between the two readings.
  */
-export function CanonicalEpisodeField({
+export function CanonicalEpisodeList({
   episodeId,
   canonicalEpisodeIds,
-  seasonNumber,
-  episodeNumber,
-  canonicalEpisodeValidatedAt,
   enabled,
-  onVerified,
+  editable = false,
   onLinksChanged,
-}: CanonicalEpisodeFieldProps) {
+}: CanonicalEpisodeListProps) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
 
@@ -89,7 +54,7 @@ export function CanonicalEpisodeField({
   })
   const linked = linkedQueries
     .map((query) => query.data)
-    .filter((episode) => episode !== undefined)
+    .filter((record) => record !== undefined)
 
   const unlinkMutation = useMutation({
     mutationFn: (droppedId: string) =>
@@ -109,6 +74,104 @@ export function CanonicalEpisodeField({
         error as Parameters<typeof handleError>[0],
       ),
   })
+
+  return (
+    <div className="space-y-2">
+      <Label>Canonical Episodes</Label>
+      {canonicalEpisodeIds.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Linked to no canonical episode.
+        </p>
+      ) : (
+        <div className="rounded-lg border">
+          {canonicalEpisodeIds.map((canonicalEpisodeId) => {
+            const record = linked.find(
+              (each) => each.episode.id === canonicalEpisodeId,
+            )
+            const unlink = editable ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="shrink-0"
+                title="Unlink from this canonical episode"
+                disabled={unlinkMutation.isPending}
+                onClick={() => unlinkMutation.mutate(canonicalEpisodeId)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            ) : null
+            if (!record) {
+              return (
+                <div
+                  key={canonicalEpisodeId}
+                  className="flex items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0"
+                >
+                  <span className="flex-1 text-muted-foreground">
+                    Reading the linked episode…
+                  </span>
+                  {unlink}
+                </div>
+              )
+            }
+            return (
+              <CanonicalEpisodeRow
+                key={canonicalEpisodeId}
+                record={record}
+                absoluteNumber={record.absolute_number}
+                trailing={unlink}
+              />
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+interface CanonicalEpisodeControlsProps {
+  episodeId: string
+  seasonNumber: number | null
+  episodeNumber: number | null
+  canonicalEpisodeValidatedAt: string | null | undefined
+  /** Whether there is a link to settle, since there is nothing to lock without one. */
+  hasLinks: boolean
+  enabled: boolean
+  /** Called once the links have been settled, so a form holding the row's own
+   * copy of the lock can be brought in line with what was just written. */
+  onVerified?: () => void
+  onLinksChanged?: (episode: EpisodeOutput) => void
+}
+
+// TODO: Validate
+/**
+ * The settling of which episodes a row stands for.
+ *
+ * A website runs two episodes together in one listing often enough - a
+ * double-length first airing, a recap paired with the episode it recaps - that
+ * choosing here adds to what the row already stands for rather than replacing
+ * it. Taking one off is the X beside it in the list above.
+ *
+ * The choosing is the same picker the matching screens use, so the one place
+ * that knows how to offer TMDB episodes and link one is the place doing it here
+ * too, and a link chosen here reads exactly as one chosen there.
+ *
+ * The links are written as soon as they are chosen rather than with the rest of
+ * the form: they are rows of their own, and what they drag along is not
+ * something a write of the episode's own columns does.
+ */
+export function CanonicalEpisodeControls({
+  episodeId,
+  seasonNumber,
+  episodeNumber,
+  canonicalEpisodeValidatedAt,
+  hasLinks,
+  enabled,
+  onVerified,
+  onLinksChanged,
+}: CanonicalEpisodeControlsProps) {
+  const { showSuccessToast, showErrorToast } = useCustomToast()
+  const queryClient = useQueryClient()
 
   const verifyMutation = useMutation({
     mutationFn: () => EpisodesService.adminVerifyCanonicalLink({ episodeId }),
@@ -130,46 +193,7 @@ export function CanonicalEpisodeField({
 
   return (
     <div className="space-y-2">
-      <Label>Canonical Episodes</Label>
-      {canonicalEpisodeIds.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Linked to no canonical episode.
-        </p>
-      ) : (
-        <div className="rounded-lg border">
-          {canonicalEpisodeIds.map((canonicalEpisodeId) => {
-            const episode = linked.find(
-              (each) => each.id === canonicalEpisodeId,
-            )
-            return (
-              <div
-                key={canonicalEpisodeId}
-                className="flex items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0"
-              >
-                {episode ? (
-                  <CanonicalEpisodeName episode={episode} />
-                ) : (
-                  <span className="flex-1 text-muted-foreground">
-                    Reading the linked episode…
-                  </span>
-                )}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="shrink-0"
-                  title="Unlink from this canonical episode"
-                  disabled={unlinkMutation.isPending}
-                  onClick={() => unlinkMutation.mutate(canonicalEpisodeId)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            )
-          })}
-        </div>
-      )}
-      {canonicalEpisodeIds.length > 0 ? (
+      {hasLinks ? (
         <Button
           type="button"
           variant={canonicalEpisodeValidatedAt ? "outline" : "default"}

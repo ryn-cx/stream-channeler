@@ -7,12 +7,11 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import case, distinct
-from sqlalchemy.orm import Mapped, aliased, selectinload
+from sqlalchemy.orm import Mapped, selectinload
 from sqlalchemy.sql.expression import ColumnElement, Subquery, UnaryExpression
-from sqlmodel import and_, col, func, or_, select
+from sqlmodel import Session, and_, col, func, or_, select
 from sqlmodel.sql.expression import Select
 
-from app.auth.dependencies import CurrentUser, SessionDep
 from app.canonical_media.episodes import canonical_id_of, links_of
 from app.canonical_media.filters import is_canonical, is_non_canonical
 from app.canonical_media.keys import not_tmdb_key_clause, same_issuer_clause
@@ -64,6 +63,7 @@ from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show, ShowCanonicalShow
 from app.sources.models import Source
+from app.users.models import User
 from app.utils import tz_datetime
 from app.watches.models import Watch
 
@@ -90,16 +90,14 @@ class EpisodeQueryBuilder:
     # TODO: Validate
     def __init__(
         self,
-        session: SessionDep,
+        session: Session,
         channel: Channel,
         channel_options: ChannelOptions,
-        user: CurrentUser | None = None,
+        user: User | None = None,
     ) -> None:
         self._session = session
         self._channel = channel
         self._user = user
-        self._episode_entity: Any = Episode
-        self.has_more = False
         self._set_channel_options(channel_options)
 
         self._channel_ids = self._fetch_channel_ids()
@@ -246,10 +244,7 @@ class EpisodeQueryBuilder:
         )
         if shows is not None:
             ordered_episodes, channels_by_media = self._read_ordered_episodes(shows)
-        page_start = self._channel_options.offset
-        page_end = page_start + self._result_limit()
-        self.has_more = len(ordered_episodes) > page_end
-        ordered_episodes = ordered_episodes[page_start:page_end]
+        ordered_episodes = ordered_episodes[: self._result_limit()]
 
         watches = (
             latest_watch_by_identifier(
@@ -275,10 +270,8 @@ class EpisodeQueryBuilder:
         self,
         shows: set[UUID] | None = None,
     ) -> tuple[list[Episode], dict[UUID, list[UUID]]]:
-        self._episode_entity = Episode
         query = self._base_query()
         query = self._join_whitelist(query)
-        query = self._join_last_watched(query)
         query = self._join_saved_order(query)
         query = self._filter_deleted_media(query)
         query = self._filter_episodes_by_channels(query)
@@ -290,19 +283,16 @@ class EpisodeQueryBuilder:
         query = self._filter_by_ranges(query)
         if shows is not None:
             query = query.where(self._canonical_columns.show_id().in_(shows))
-        query = self._sort_and_deduplicate(query)
-        query = self._apply_limit(query, restricted=shows is not None)
-        query = query.options(
-            selectinload(self._episode_entity.season)
-            .selectinload(Season.show)  # type: ignore[arg-type]
-            .selectinload(Show.source)  # type: ignore[arg-type]
-            .selectinload(Source.plugin),  # type: ignore[arg-type]
-            selectinload(self._episode_entity.canonical_episode_links),
-        )
+        narrowed = self._sort_and_deduplicate(query)
+        narrowed = self._apply_limit(narrowed, restricted=shows is not None)
+
+        rows = self._session.exec(narrowed).all()
+        episodes_by_id = self._load_episodes({row[0] for row in rows})
 
         ordered_episodes: list[Episode] = []
         channels_by_media: dict[UUID, list[UUID]] = {}
-        for episode, channel_id in self._session.exec(query).all():
+        for row_episode_id, channel_id in rows:
+            episode = episodes_by_id[row_episode_id]
             media_id = _media_id(episode)
             if media_id not in channels_by_media:
                 channels_by_media[media_id] = []
@@ -310,6 +300,33 @@ class EpisodeQueryBuilder:
             if channel_id not in channels_by_media[media_id]:
                 channels_by_media[media_id].append(channel_id)
         return ordered_episodes, channels_by_media
+
+    # TODO: Validate
+    def _load_episodes(self, episode_ids: set[UUID]) -> dict[UUID, Episode]:
+        query = (
+            select(Episode)
+            .where(col(Episode.id).in_(episode_ids))
+            .options(
+                selectinload(Episode.season)  # type: ignore[arg-type]
+                .selectinload(Season.show)  # type: ignore[arg-type]
+                .selectinload(Show.source)  # type: ignore[arg-type]
+                .selectinload(Source.plugin),  # type: ignore[arg-type]
+                selectinload(Episode.canonical_episode_links),  # type: ignore[arg-type]
+            )
+        )
+        return {episode.id: episode for episode in self._session.exec(query).all()}
+
+    # TODO: Validate
+    def _narrowed(
+        self,
+        query: Select[tuple[Episode, UUID]],
+        extra_columns: list[ColumnElement[Any]],
+    ) -> Subquery:
+        return query.with_only_columns(
+            col(Episode.id).label("id"),
+            col(ChannelShow.channel_id).label("channel_id"),
+            *extra_columns,
+        ).subquery()
 
     # TODO: Validate
     def _base_query(self) -> Select[tuple[Episode, UUID]]:
@@ -325,7 +342,7 @@ class EpisodeQueryBuilder:
         # Every join here is now the same table reached again, so each side says
         # which of the two it means. What the query returns is the listings, and
         # what it walks up through is the media they are listings of.
-        return (
+        query: Select[tuple[Episode, UUID]] = (
             select(Episode, ChannelShow.channel_id)  # type: ignore[call-overload]
             .select_from(Episode)
             .join(Season, col(Episode.season_id) == col(Season.id))
@@ -338,7 +355,10 @@ class EpisodeQueryBuilder:
                 CANONICAL_EPISODE_LINK,
                 links_of(Episode, CANONICAL_EPISODE_LINK),
             )
-            .outerjoin(
+        )
+        query = self._join_last_watched(query)
+        return (
+            query.outerjoin(
                 CANONICAL_EPISODE,
                 and_(
                     col(CANONICAL_EPISODE_LINK.canonical_episode_id)
@@ -631,10 +651,10 @@ class EpisodeQueryBuilder:
     # TODO: Validate
     def _apply_limit(
         self,
-        query: Select[tuple[Episode, UUID]],
+        query: Select[tuple[UUID, UUID]],
         *,
         restricted: bool = False,
-    ) -> Select[tuple[Episode, UUID]]:
+    ) -> Select[tuple[UUID, UUID]]:
         # Fetch up to the hard cap regardless of the requested limit so that the
         # show counts, which drop episodes after the read, can still fill it.
         return query.limit(self._sql_limit(restricted=restricted))
@@ -649,7 +669,7 @@ class EpisodeQueryBuilder:
         ):
             return MAX_EPISODES_RETURNED
         rows_per_episode = max(len(self._channel_ids), 1)
-        wanted = options.offset + self._result_limit() + 1
+        wanted = self._result_limit()
         return min(wanted * rows_per_episode, MAX_EPISODES_RETURNED)
 
     # TODO: Validate
@@ -703,14 +723,16 @@ class EpisodeQueryBuilder:
     def _deduplicate_unsorted(
         self,
         query: Select[tuple[Episode, UUID]],
-    ) -> Select[tuple[Episode, UUID]]:
+    ) -> Select[tuple[UUID, UUID]]:
         """Collapse an episode's non-canonical rows when nothing asked for an order."""
         if not self._holds_copied_titles:
-            return query
-        subquery = query.add_columns(self._source_rank_column()).subquery()
-        self._episode_entity = aliased(Episode, subquery)
-        return select(  # type: ignore[return-value]
-            self._episode_entity,
+            return query.with_only_columns(  # type: ignore[return-value]
+                col(Episode.id).label("id"),
+                col(ChannelShow.channel_id).label("channel_id"),
+            )
+        subquery = self._narrowed(query, [self._source_rank_column()])
+        return select(
+            subquery.c.id,
             subquery.c.channel_id,
         ).where(subquery.c.source_rank == 1)
 
@@ -728,7 +750,7 @@ class EpisodeQueryBuilder:
         ]
         carried_rank = [subquery.c.source_rank] if self._holds_copied_titles else []
         return (
-            select(aliased(Episode, subquery), subquery.c.channel_id)
+            select(subquery.c.id, subquery.c.channel_id)
             .add_columns(
                 subquery.c.show_id,
                 *carried_rank,
@@ -745,7 +767,7 @@ class EpisodeQueryBuilder:
     def _sort_and_deduplicate(
         self,
         query: Select[tuple[Episode, UUID]],
-    ) -> Select[tuple[Episode, UUID]]:
+    ) -> Select[tuple[UUID, UUID]]:
         if not self._channel_options.sort_by:
             return self._deduplicate_unsorted(query)
         expressions = self._sort_expressions
@@ -759,7 +781,7 @@ class EpisodeQueryBuilder:
             self._canonical_columns.show_id().label("show_id"),
         )
         labeled_values.extend(self._source_rank_columns())
-        subquery = query.add_columns(*labeled_values).subquery()
+        subquery = self._narrowed(query, labeled_values)
 
         raws = [
             getattr(subquery.c, f"sort_value_{i}")
@@ -790,9 +812,8 @@ class EpisodeQueryBuilder:
         ).compose(subquery)
         order_by.extend([subquery.c.show_id, subquery.c.id])
 
-        self._episode_entity = aliased(Episode, subquery)
-        outer: Select[tuple[Episode, UUID]] = select(  # type: ignore[assignment]
-            self._episode_entity,
+        outer: Select[tuple[UUID, UUID]] = select(
+            subquery.c.id,
             subquery.c.channel_id,
         )
         return outer.order_by(*order_by)

@@ -3,12 +3,12 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import TYPE_CHECKING
 
 from loguru import logger
 
 from app.utils import tz_datetime
+from plugins.YouTube.constants import FEED_UPDATE_DELAY
 from plugins.YouTube.files import FileMixin
 
 if TYPE_CHECKING:
@@ -16,8 +16,6 @@ if TYPE_CHECKING:
 
     from app.seasons.models import Season
     from app.shows.models import Show
-
-_FEED_UPDATE_DELAY = timedelta(hours=1)
 
 
 # TODO: Validate
@@ -35,33 +33,38 @@ class UpdaterMixin(FileMixin, register=False):
         covering fifty playlists costs the same requests as the videos would
         have cost had they all been in one.
         """
-        changed_seasons = [
-            season for season in seasons if self._refresh_season_listing(season)
-        ]
-        if not changed_seasons:
-            return
-
         seasons_by_show: dict[Show, list[Season]] = {}
-        for season in changed_seasons:
+        for season in seasons:
             seasons_by_show.setdefault(season.show, []).append(season)
 
         video_keys: list[str] = []
+        views: dict[Show, UpdaterMixin] = {}
         for show, show_seasons in seasons_by_show.items():
-            season_keys = [season.key for season in show_seasons]
-            self._set_current_show(show.key)
-            _cache = self._preload_all_episode_files(season_keys, show.key)
+            view = self._fresh()
+            changed_seasons = [
+                season
+                for season in show_seasons
+                if view._refresh_season_listing(season)  # noqa: SLF001 - Another view of this plugin.
+            ]
+            if not changed_seasons:
+                continue
+            views[show] = view
+            season_keys = [season.key for season in changed_seasons]
+            _cache = view._preload_all_episode_files(season_keys, show.key)  # noqa: SLF001 - Another view of this plugin.
             for season_key in season_keys:
                 video_keys.extend(
                     key
-                    for key in self._episode_keys_from_file(season_key, show.key)
+                    for key in view._episode_keys_from_file(season_key, show.key)  # noqa: SLF001 - Another view of this plugin.
                     if key not in video_keys
                 )
 
+        if not views:
+            return
+
         self._batch_download_videos(video_keys)
 
-        for show in seasons_by_show:
-            self._set_current_show(show.key)
-            self._update_and_upsert_show(show)
+        for show, view in views.items():
+            view._update_and_upsert_show(show)  # noqa: SLF001 - Another view of this plugin.
 
     # TODO: Validate
     def _refresh_season_listing(self, season: Season) -> bool:
@@ -70,7 +73,6 @@ class UpdaterMixin(FileMixin, register=False):
         Returns whether the listing was read again, which is what decides
         whether the season's videos are part of the run's batch.
         """
-        self._set_current_show(season.show.key)
         playlist_feed = self.playlist_feed_file(season.key)
         # Without a stored feed there is nothing to compare the download against, so
         # this run only stores the feed and the next one checks it for new videos.
@@ -88,10 +90,10 @@ class UpdaterMixin(FileMixin, register=False):
                 "PlaylistFeed for season {} is unavailable, skipping new video check.",
                 season.key,
             )
-            season.update_at = tz_datetime.now() + _FEED_UPDATE_DELAY
+            season.update_at = tz_datetime.now() + FEED_UPDATE_DELAY
             return False
 
-        season.update_at = playlist_feed.data_timestamp + _FEED_UPDATE_DELAY
+        season.update_at = playlist_feed.data_timestamp + FEED_UPDATE_DELAY
         if not has_stored_feed:
             return False
 

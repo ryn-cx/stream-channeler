@@ -31,15 +31,16 @@ interface ShowInformationDialogProps {
 
 // TODO: Validate
 function sideRows(side: ShowInformationSide): InformationRows {
+  const show = side.show
   return {
-    Name: side.name,
-    "Media type": side.media_type,
-    Description: side.description,
-    Link: side.url ? <ExternalAnchor href={side.url} label={side.url} /> : null,
-    Image: side.image_url ? (
-      <ExternalAnchor href={side.image_url} label={side.image_url} />
+    Name: show.name,
+    "Media type": show.media_type,
+    Description: show.description,
+    Link: show.url ? <ExternalAnchor href={show.url} label={show.url} /> : null,
+    Image: show.image_url ? (
+      <ExternalAnchor href={show.image_url} label={show.image_url} />
     ) : null,
-    Key: side.key,
+    Key: show.key,
   }
 }
 
@@ -47,7 +48,7 @@ const ROW_LABELS = ["Name", "Media type", "Description", "Link", "Image", "Key"]
 
 // TODO: Validate
 function heroFacts(data: ShowInformationOutput) {
-  const facts = [data.source.media_type]
+  const facts = [data.source.show.media_type]
   facts.push(data.tmdb ? "Linked to TMDB" : "Not linked to TMDB")
   facts.push(data.source.label)
   return facts.filter((fact): fact is string => !!fact)
@@ -56,11 +57,11 @@ function heroFacts(data: ShowInformationOutput) {
 // TODO: Validate
 function heroLinks(data: ShowInformationOutput) {
   const links = []
-  if (data.source.url) {
-    links.push({ label: data.source.label, href: data.source.url })
+  if (data.source.show.url) {
+    links.push({ label: data.source.label, href: data.source.show.url })
   }
-  if (data.tmdb?.url) {
-    links.push({ label: data.tmdb.label, href: data.tmdb.url })
+  if (data.tmdb?.show.url) {
+    links.push({ label: data.tmdb.label, href: data.tmdb.show.url })
   }
   return links
 }
@@ -92,9 +93,9 @@ function showHero(
 ) {
   return (
     <InformationHero
-      title={data.source.name ?? "Unnamed show"}
-      description={data.source.description}
-      imageUrl={data.source.image_url}
+      title={data.source.show.name ?? "Unnamed show"}
+      description={data.source.show.description}
+      imageUrl={data.source.show.image_url}
       facts={facts}
       links={links}
     />
@@ -111,14 +112,14 @@ function showHero(
  * having failed to reach the very record it is.
  */
 function summaryFacts(data: ShowInformationOutput) {
-  const facts = [data.source.media_type, data.source.label]
+  const facts = [data.source.show.media_type, data.source.label]
   return facts.filter((fact): fact is string => !!fact)
 }
 
 // TODO: Validate
 function summaryHero(data: ShowInformationOutput) {
-  const links = data.source.url
-    ? [{ label: data.source.label, href: data.source.url }]
+  const links = data.source.show.url
+    ? [{ label: data.source.label, href: data.source.show.url }]
     : []
   return showHero(data, summaryFacts(data), links)
 }
@@ -226,7 +227,11 @@ export function ShowInformationPanel({
       <div className="grid items-start gap-4 sm:grid-cols-2">
         <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
           <dt className="text-muted-foreground">Link validated at</dt>
-          <dd>{formatInformationDate(data.canonical_show_validated_at)}</dd>
+          <dd>
+            {formatInformationDate(
+              data.source.show.canonical_show_validated_at,
+            )}
+          </dd>
         </dl>
 
         <IssueReportsSection

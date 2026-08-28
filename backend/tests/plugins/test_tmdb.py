@@ -40,7 +40,6 @@ class TMDBValidatorAlt(PluginValidatorAlt[TMDB]):
     )
 
 
-
 # TODO: Validate
 class TestTVShow(
     URLTestsAlt[TMDB],
@@ -55,7 +54,6 @@ class TestTVShow(
         *TMDBValidatorAlt.urls,
         "/{media_type}/{parse_url_response}/seasons?language=en-US",
     )
-
 
 
 # TODO: Validate

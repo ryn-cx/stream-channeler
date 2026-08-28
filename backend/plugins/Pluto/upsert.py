@@ -9,15 +9,10 @@ from typing import override
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
-from app.shows.service import find_and_add_canonical_show
+from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
+from plugins.Pluto.constants import MILLISECONDS_PER_SECOND
 from plugins.Pluto.source import SourceMixin
-
-_SERIES_UPDATE_INTERVAL = timedelta(days=7)
-
-_MOVIE_UPDATE_INTERVAL = timedelta(days=30)
-
-_MILLISECONDS_PER_SECOND = 1000
 
 
 # TODO: Validate
@@ -39,7 +34,7 @@ class UpsertMixin(SourceMixin, register=False):
         else:
             show = self._upsert_series_show(source, show_key, force=force)
         self._soft_delete_missing(show_key)
-        find_and_add_canonical_show(self.session, show, canonical_show)
+        add_canonical_show_and_link_episodes(self.session, show, canonical_show)
         return show
 
     # TODO: Validate
@@ -62,7 +57,7 @@ class UpsertMixin(SourceMixin, register=False):
                 url=self._series_url(show_key),
                 image_url=series.featured_image.path,
                 data_timestamp=data_timestamp,
-                update_at=data_timestamp + _SERIES_UPDATE_INTERVAL,
+                update_at=data_timestamp + timedelta(days=7),
                 source_id=source.id,
             )
             show = self._upsert_show_object(new_show, source, show, show_key)
@@ -130,7 +125,7 @@ class UpsertMixin(SourceMixin, register=False):
                 url=self._episode_url(show_key, season_number, episode_key),
                 image_url=series_episode.poster16_9.path,
                 duration=(
-                    series_episode.original_content_duration // _MILLISECONDS_PER_SECOND
+                    series_episode.original_content_duration // MILLISECONDS_PER_SECOND
                 ),
                 air_date=series_episode.clip.original_release_date,
                 sort_order=sort_order,
@@ -163,7 +158,7 @@ class UpsertMixin(SourceMixin, register=False):
                 url=self._movie_url(show_key),
                 image_url=item.featured_image.path,
                 data_timestamp=data_timestamp,
-                update_at=data_timestamp + _MOVIE_UPDATE_INTERVAL,
+                update_at=data_timestamp + timedelta(days=30),
                 source_id=source.id,
             )
             show = self._upsert_show_object(new_show, source, show, show_key)
@@ -212,7 +207,7 @@ class UpsertMixin(SourceMixin, register=False):
                 episode_number=0,
                 url=self._movie_url(show_key),
                 image_url=item.featured_image.path,
-                duration=(item.original_content_duration // _MILLISECONDS_PER_SECOND),
+                duration=(item.original_content_duration // MILLISECONDS_PER_SECOND),
                 sort_order=0,
                 data_timestamp=self.episode_data_timestamp(
                     show_key,

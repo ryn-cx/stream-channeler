@@ -1,6 +1,4 @@
 # TODO: Validate
-"""Comment dependencies."""
-
 from typing import Annotated
 
 from fastapi import Depends

@@ -4,8 +4,9 @@ import { ChevronDown, ChevronRight } from "lucide-react"
 import { useState } from "react"
 import type { WhitelistEpisodeOutput, WhitelistSourceOutput } from "@/client"
 import { ChannelsService } from "@/client"
-import { EpisodeInformationPanel } from "@/components/ChannelCommon/EpisodeInformationDialog"
-import EditEpisode from "@/components/Episodes/Edit"
+import EditEpisode, {
+  EpisodeInformationContent,
+} from "@/components/Episodes/Edit"
 import { Button } from "@/components/ui/button"
 import {
   AdminOnly,
@@ -62,6 +63,7 @@ interface SeasonEpisodesProps {
  * A title's whole catalogue is far more than the filter page ever shows at
  * once, so a season's episodes are asked for only when somebody opens it.
  */
+// TODO: Validate
 export function SeasonEpisodes({
   channelId,
   canonicalShowId,
@@ -216,8 +218,8 @@ export function SeasonEpisodes({
                 <EditEpisode episode={episode} />
               </AdminOnly>
               <MediaPageButton
-                to="/season/$seasonKey"
-                params={{ seasonKey: seasonId }}
+                to="/episodes"
+                search={{ season_id: seasonId }}
                 label="Open this episode's season here"
               />
             </div>
@@ -241,6 +243,7 @@ export function SeasonEpisodes({
                         </Button>
                         {linkSource?.favicon_url && (
                           <img
+                            referrerPolicy="no-referrer"
                             src={linkSource.favicon_url}
                             alt=""
                             className="size-6 shrink-0"
@@ -263,10 +266,7 @@ export function SeasonEpisodes({
                       </div>
                       {informationLinkEpisodeId === link.episode_id && (
                         <div className="ml-8 rounded border bg-muted/30 p-4">
-                          <EpisodeInformationPanel
-                            episodeId={link.episode_id}
-                            preferSource
-                          />
+                          <EpisodeInformationContent episode={link} enabled />
                         </div>
                       )}
                     </div>

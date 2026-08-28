@@ -5,8 +5,11 @@ from collections.abc import Callable, Sequence
 from datetime import datetime, timedelta
 from typing import Literal, override
 
+from chirashi.artist.models import PosterWideItem as ArtistPosterWideItem
 from chirashi.artist_concerts.models import Datum as ConcertListingDatum
 from chirashi.artist_music_videos.models import Datum as MusicVideoListingDatum
+from chirashi.concert.models import ThumbnailItem as ConcertThumbnailItem
+from chirashi.music_video.models import ThumbnailItem as MusicVideoThumbnailItem
 from chirashi.season_episodes.models import Images as EpisodeImages
 from chirashi.series.models import Images as SeriesImages
 
@@ -14,44 +17,22 @@ from app.episodes.models import Episode
 from app.files.models import File
 from app.seasons.models import Season
 from app.shows.models import Show
-from app.shows.service import find_and_add_canonical_show
+from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from app.utils import tz_datetime
-from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries
-from plugins.Crunchyroll.helpers import HelperMixin, SizedImage
-from plugins.Crunchyroll.music_keys import (
-    MUSIC_CATEGORY_TO_NAME,
-    MUSIC_SOURCE,
-    VIDEO_SOURCE,
+from plugins.Crunchyroll.constants import (
     MusicCategory,
-    is_music_show_key,
-    is_video_show_key,
+    show_is_a_series,
+    show_is_an_artist,
 )
+from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries
+from plugins.Crunchyroll.utils import HelperMixin
 from plugins.utils.base_plugin.files import INITIAL_FILE_IDENTIFIER
 
 
 # TODO: Validate
 class UpsertMixin(HelperMixin, register=False):
     """Mixin containing all upsert functions."""
-
-    # TODO: Validate
-    def _upsert_anime_source(self) -> Source:
-        return self._upsert_source(
-            VIDEO_SOURCE,
-            self.find_newest_browse_series_file(),
-            self.browse_series_file,
-            timedelta(days=1),
-        )
-
-    # TODO: Validate
-    def _upsert_music_source(self) -> Source:
-        return self._upsert_source(
-            MUSIC_SOURCE,
-            self.find_newest_browse_music_file(),
-            self.browse_music_file,
-            # Check weekly for new music because updates do not need to be frequent.
-            timedelta(days=7),
-        )
 
     # TODO: Validate
     @override
@@ -78,7 +59,7 @@ class UpsertMixin(HelperMixin, register=False):
         return Source(
             key=source_key,
             name=source_key,
-            favicon_url=self.FAVICON_URL,
+            favicon_url=self.favicon_url(),
             data_timestamp=data_timestamp,
             update_at=data_timestamp + update_interval,
             plugin_id=self.plugin.id,
@@ -94,15 +75,15 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> Show:
-        if is_music_show_key(show_key):
+        if show_is_an_artist(show_key):
             show = self._upsert_music_show(source, show_key, force=force)
-        elif is_video_show_key(show_key):
+        elif show_is_a_series(show_key):
             show = self._upsert_video_show(source, show_key, force=force)
         else:
             msg = f"Show key {show_key} is invalid and not supported."
             raise ValueError(msg)
 
-        find_and_add_canonical_show(self.session, show, canonical_show)
+        add_canonical_show_and_link_episodes(self.session, show, canonical_show)
         return show
 
     # TODO: Validate
@@ -213,7 +194,10 @@ class UpsertMixin(HelperMixin, register=False):
             if self._season_is_outdated(season, show.key, force=force):
                 season = Season(
                     key=category,
-                    name=MUSIC_CATEGORY_TO_NAME[category],
+                    name={
+                        MusicCategory.CONCERT: "Concerts",
+                        MusicCategory.MUSIC_VIDEO: "Music Videos",
+                    }[category],
                     url=self._artist_url(show.key),
                     data_timestamp=self.season_data_timestamp(category, show.key),
                     show_id=show.id,
@@ -345,13 +329,12 @@ class UpsertMixin(HelperMixin, register=False):
         the tall one being what is left for a listing Crunchyroll has only a
         portrait poster of.
         """
-        shapes: tuple[Sequence[Sequence[SizedImage]], ...] = (
-            images.poster_wide,
-            images.poster_tall,
-        )
-        for sizes in shapes:
-            if sizes and sizes[0]:
-                return max(sizes[0], key=lambda image: image.width).source
+        wide = images.poster_wide
+        if wide and wide[0]:
+            return max(wide[0], key=lambda image: image.width).source
+        tall = images.poster_tall
+        if tall and tall[0]:
+            return max(tall[0], key=lambda image: image.width).source
         return None
 
     # TODO: Validate
@@ -369,7 +352,11 @@ class UpsertMixin(HelperMixin, register=False):
 
     # TODO: Validate
     @staticmethod
-    def _largest_image(images: Sequence[SizedImage]) -> str | None:
+    def _largest_image(
+        images: Sequence[
+            ArtistPosterWideItem | ConcertThumbnailItem | MusicVideoThumbnailItem
+        ],
+    ) -> str | None:
         """Return the source of the widest size Crunchyroll offers an image in."""
         if not images:
             return None

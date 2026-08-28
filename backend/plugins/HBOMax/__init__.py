@@ -24,10 +24,23 @@ class HBOMax(
 ):
     """HBO Max plugin."""
 
-    _VERSION = "0.0.1"
-    _URL_HANDLERS = (MovieURLHandler, ShowURLHandler)
-    TMDB_PROVIDER_NAMES = ("HBO Max", "Max")
-    FAVICON_URL = "https://www.hbomax.com/favicon.ico"
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_handlers(cls) -> tuple[type[HBOMaxURLHandler], ...]:
+        return (MovieURLHandler, ShowURLHandler)
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def tmdb_provider_names(cls) -> tuple[str, ...]:
+        return ("HBO Max", "Max")
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def favicon_url(cls) -> str:
+        return "https://www.hbomax.com/favicon.ico"
 
     # TODO: Validate
     @classmethod

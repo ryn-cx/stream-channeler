@@ -6,7 +6,7 @@ from collections import Counter
 from collections.abc import Sequence
 from datetime import datetime
 from functools import cache
-from typing import Any, ClassVar, override
+from typing import Any, override
 from urllib.parse import parse_qs, urlsplit
 
 from loguru import logger
@@ -15,7 +15,6 @@ from not_yt_dlapi.channel_feed.models import ChannelFeedModel
 from not_yt_dlapi.channels import Channels as ChannelsEndpoint
 from not_yt_dlapi.channels.models import ChannelsModel
 from not_yt_dlapi.exceptions import (
-    APIError,
     ChannelFeedNotFoundError,
     PlaylistFeedNotFoundError,
     ResourceNotFoundError,
@@ -53,6 +52,7 @@ from plugins.utils.base_plugin.files import (
 from plugins.utils.get_around_client import get_around_client
 
 
+# TODO: Validate
 @cache
 def not_yt_dlapi() -> NotYTDLAPI:
     return NotYTDLAPI(
@@ -69,18 +69,17 @@ def is_an_album(key: str) -> bool:
 # TODO: Validate
 def is_channel_key(key: str) -> bool:
     """Report whether a key belongs to a channel rather than to what one holds."""
-    return not (is_video_key(key) or is_show_key(key) or is_an_album(key))
+    return not (
+        is_video_key(key)
+        or is_show_key(key)
+        or is_an_album(key)
+        or is_user_playlist(key)
+    )
 
 
 # TODO: Validate
-def is_free_movies_channel(channel_key: str) -> bool:
-    """Report whether a channel is the one YouTube's free catalogue is published on.
-
-    Everything YouTube serves free with ads is owned by this one channel, and a
-    title that has to be bought or rented is owned by a channel generated for
-    that title alone, so who owns a video is what says which of the two it is.
-    """
-    return channel_key == "UCuVPpxrm2VAgpH3Ktln4HXg"
+def is_user_playlist(key: str) -> bool:
+    return key.startswith("PL")
 
 
 # TODO: Validate
@@ -105,16 +104,6 @@ def is_channel_uploads_playlist_key(key: str) -> bool:
 
 
 # TODO: Validate
-def is_regular_playlist(key: str) -> bool:
-    return key.startswith("PL") or is_channel_uploads_playlist_key(key)
-
-
-# TODO: Validate
-def channel_key_from_uploads_playlist_key(key: str) -> str:
-    return key[:1] + "C" + key[2:]
-
-
-# TODO: Validate
 def show_season_key(show_key: str, season_number: str) -> str:
     """Return the season key for one season of a show."""
     return f"{show_key}/{season_number}"
@@ -134,18 +123,6 @@ def split_show_season_key(season_key: str) -> tuple[str, str]:
 
 
 # TODO: Validate
-def is_quota_error(error: BaseException) -> bool:
-    """Report whether `error` is the YouTube API refusing calls until quota resets."""
-    if not isinstance(error, APIError):
-        return False
-    errors = error.error.get("errors", [])
-    return any(
-        item.get("reason") in frozenset({"dailyLimitExceeded", "quotaExceeded"})
-        for item in errors
-    )
-
-
-# TODO: Validate
 def get_first_item[T](items: Sequence[T] | None) -> T:
     if not items:
         msg = "Expected at least one item, got none"
@@ -153,67 +130,99 @@ def get_first_item[T](items: Sequence[T] | None) -> T:
     return items[0]
 
 
+# TODO: Validate
 class ChannelByChannelId(EndpointFile[ChannelsModel]):
-    API_ENDPOINT: ClassVar[ChannelsEndpoint] = not_yt_dlapi().channels
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ChannelsEndpoint:
+        return not_yt_dlapi().channels
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self.API_ENDPOINT.download(channel_id=self.unique_identifier)
+        return self._endpoint().download(channel_id=self.unique_identifier)
 
     # Occurs when importing an invalid channel URL.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ResourceNotFoundError)
 
 
+# TODO: Validate
 class ChannelByHandle(EndpointFile[ChannelsModel]):
-    API_ENDPOINT: ClassVar[ChannelsEndpoint] = not_yt_dlapi().channels
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ChannelsEndpoint:
+        return not_yt_dlapi().channels
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self.API_ENDPOINT.download(channel_handle=self.unique_identifier)
+        return self._endpoint().download(channel_handle=self.unique_identifier)
 
     # Occurs when importing an invalid channel URL.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ResourceNotFoundError)
 
 
+# TODO: Validate
 class ChannelByUsername(EndpointFile[ChannelsModel]):
-    API_ENDPOINT: ClassVar[ChannelsEndpoint] = not_yt_dlapi().channels
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ChannelsEndpoint:
+        return not_yt_dlapi().channels
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self.API_ENDPOINT.download(channel_username=self.unique_identifier)
+        return self._endpoint().download(channel_username=self.unique_identifier)
 
     # Occurs when importing an invalid channel URL.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ResourceNotFoundError)
 
 
+# TODO: Validate
 class ChannelPlaylists(EndpointFile[PlaylistsModel]):
-    API_ENDPOINT: ClassVar[PlaylistsEndpoint] = not_yt_dlapi().playlists
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> PlaylistsEndpoint:
+        return not_yt_dlapi().playlists
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self.API_ENDPOINT.download_merged(channel_id=self.unique_identifier)
+        return self._endpoint().download_merged(channel_id=self.unique_identifier)
 
 
+# TODO: Validate
 class PlaylistInfo(EndpointFile[PlaylistsModel]):
-    API_ENDPOINT: ClassVar[PlaylistsEndpoint] = not_yt_dlapi().playlists
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> PlaylistsEndpoint:
+        return not_yt_dlapi().playlists
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self.API_ENDPOINT.download(playlist_ids=self.unique_identifier)
+        return self._endpoint().download(playlist_ids=self.unique_identifier)
 
 
 # TODO: Validate
 class PlaylistItems(EndpointFile[PlaylistItemsModel]):
     """Playlist items file."""
 
-    API_ENDPOINT: ClassVar[PlaylistItemsEndpoint] = not_yt_dlapi().playlist_items
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> PlaylistItemsEndpoint:
+        return not_yt_dlapi().playlist_items
 
+    # TODO: Validate
     def items(self) -> list[Item]:
         """Return the items the file holds."""
         return self.parsed().items
@@ -226,19 +235,19 @@ class PlaylistItems(EndpointFile[PlaylistItemsModel]):
     def _download_file(self) -> str:
         # If this is the first time downloading the file download all of the pages.
         if not self._existing_database_record:
-            return self.API_ENDPOINT.download_merged(self.unique_identifier)
+            return self._endpoint().download_merged(self.unique_identifier)
 
         pages: list[str] = []
         page_token: str | None = None
         reached_existing_video = False
         downloaded_all_pages = False
         while not (reached_existing_video or downloaded_all_pages):
-            downloaded_page = self.API_ENDPOINT.download(
+            downloaded_page = self._endpoint().download(
                 self.unique_identifier,
                 page_token=page_token,
             )
             pages.append(downloaded_page)
-            loaded_page = self.API_ENDPOINT.load(downloaded_page)
+            loaded_page = self._endpoint().load(downloaded_page)
             page_token = loaded_page.next_page_token
             downloaded_all_pages = page_token is None
 
@@ -248,7 +257,7 @@ class PlaylistItems(EndpointFile[PlaylistItemsModel]):
             )
 
         if downloaded_all_pages:
-            return self.API_ENDPOINT.merge_pages(pages)
+            return self._endpoint().merge_pages(pages)
         return self._merged_items(pages, self._remove_deleted_items(pages))
 
     # TODO: Validate
@@ -298,18 +307,27 @@ class PlaylistItems(EndpointFile[PlaylistItemsModel]):
         return json.dumps(document)
 
 
+# TODO: Validate
 class Videos(EndpointFile[VideosModel]):
-    API_ENDPOINT: ClassVar[VideosEndpoint] = not_yt_dlapi().videos
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> VideosEndpoint:
+        return not_yt_dlapi().videos
 
 
 # TODO: Validate
 class MusicPlaylistFile(EndpointFile[MusicModel]):
-    API_ENDPOINT: ClassVar[MusicEndpoint] = not_yt_dlapi().music
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> MusicEndpoint:
+        return not_yt_dlapi().music
 
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ResourceNotFoundError)
 
+    # TODO: Validate
     def _header(self) -> MusicHeaderRenderer:
         return self.parsed().header.playlist_header_renderer
 
@@ -376,7 +394,10 @@ class TopicReleasesFile(PagedEndpointFile[TopicModel]):
     named once.
     """
 
-    API_ENDPOINT: ClassVar[TopicEndpoint] = not_yt_dlapi().topic
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> TopicEndpoint:
+        return not_yt_dlapi().topic
 
     # TODO: Validate
     @override
@@ -432,7 +453,10 @@ class ShowListing(PagedEndpointFile[ShowsModel]):
     the stretch that begins a season says which season the ones after it are of.
     """
 
-    API_ENDPOINT: ClassVar[ShowsEndpoint] = not_yt_dlapi().shows
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ShowsEndpoint:
+        return not_yt_dlapi().shows
 
     # TODO: Validate
     @override
@@ -526,7 +550,7 @@ class PlaylistFeed(EndpointFile[ChannelFeedModel | PlaylistFeedModel]):
 
     # TODO: Validate
     @override
-    def _load_endpoint(self) -> LoadEndpoint[ChannelFeedModel | PlaylistFeedModel]:
+    def _endpoint(self) -> LoadEndpoint[ChannelFeedModel | PlaylistFeedModel]:
         if self._is_channel_feed():
             return not_yt_dlapi().channel_feed
         return not_yt_dlapi().playlist_feed
@@ -586,11 +610,14 @@ class ShowPage(HTMLFile):
 
     # TODO: Validate
     @override
+    def _url(self) -> str:
+        return f"https://www.youtube.com/show/{self.show_key}"
+
+    # TODO: Validate
+    @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
-            response = get_around_client().get(
-                f"https://www.youtube.com/show/{self.show_key}",
-            )
+            response = get_around_client().get(self._url())
             if not response.is_success:
                 logger.warning(
                     "ShowPage fetch for {} returned HTTP {}; keeping the existing page.",
@@ -623,6 +650,7 @@ class ShowPage(HTMLFile):
 # TODO: Validate
 class FileMixin(BasePlugin, register=False):
     _importing_album_playlist_key: str | None = None
+    _linking_playlist_key: str | None = None
 
     # TODO: Validate
     def channel_by_channel_id_file(self, show_key: str) -> ChannelByChannelId:
@@ -757,11 +785,13 @@ class FileMixin(BasePlugin, register=False):
 
     # TODO: Validate
     @override
-    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
+    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:  # noqa: PLR0911
         if is_video_key(show_key):
             return [self.videos_file(show_key)]
         if is_an_album(show_key):
             return [self.music_playlist_file(show_key)]
+        if is_user_playlist(show_key):
+            return [self.playlist_info_file(show_key)]
         # A show has no API of its own, so its page lists its seasons.
         if is_show_key(show_key):
             # The page comes first because it is what names the playlist the
@@ -806,6 +836,11 @@ class FileMixin(BasePlugin, register=False):
             return [self.show_listing_file_for_show(show_key)]
         if is_an_album(season_key):
             return [self.music_playlist_file(season_key)]
+        if is_user_playlist(show_key):
+            return [
+                self.playlist_items_file(season_key),
+                self.playlist_info_file(show_key),
+            ]
         return [
             # Required to detect new episodes (videos). Must stay first because
             # season_data_timestamp reads files[0].
@@ -842,7 +877,7 @@ class FileMixin(BasePlugin, register=False):
         if is_video_key(show_key):
             return [show_key]
 
-        if is_an_album(show_key):
+        if is_an_album(show_key) or is_user_playlist(show_key):
             return [show_key]
 
         # A show has one season for every season its page lists.

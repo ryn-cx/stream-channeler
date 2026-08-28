@@ -15,6 +15,7 @@ export function CardTextArea({ children }: { children: React.ReactNode }) {
  * Displays the favicon + show name on the left and a list of detail strings on the right.
  * Null values in `details` are filtered out.
  */
+// TODO: Validate
 export function CardSourceRow({
   episode,
   details,
@@ -33,6 +34,7 @@ export function CardSourceRow({
       <div className="flex items-center gap-2 flex-1 min-w-0">
         {episode.source.favicon_url && (
           <img
+            referrerPolicy="no-referrer"
             src={episode.source.favicon_url}
             alt={episode.source.name ?? undefined}
             className="size-6"

@@ -15,6 +15,7 @@ from pydantic import (
 )
 
 from app.canonical_media.keys import EPISODE_LEVEL, tmdb_id_of
+from app.canonical_media.metadata import tmdb_episode_url, tmdb_season_url
 from app.episodes.models import BaseCanonicalEpisode, BaseEpisode, Episode
 from app.issue_reports.schemas import IssueReportOutput
 from app.schemas import (
@@ -25,6 +26,9 @@ from app.schemas import (
     make_model_with_all_fields_optional,
 )
 from app.seasons.models import Season
+from app.seasons.schemas import SeasonOutput
+from app.shows.schemas import ShowPublic
+from app.sources.schemas import SourceListPublic
 
 
 # TODO: Validate
@@ -48,10 +52,7 @@ class EpisodeOutput(BaseEpisode):
 
     id: uuid.UUID
     season_id: uuid.UUID
-    # The episode this is a link to, which is what the record is served as and
-    # what a watch, a channel filter and a saved position all name. Nothing when
-    # the row is the episode itself, which is what the admin lists serve
-    # alongside the links.
+    modified_at: datetime
     canonical_episode_id: uuid.UUID | None = Field(
         default=None,
         validation_alias=AliasChoices(
@@ -59,21 +60,10 @@ class EpisodeOutput(BaseEpisode):
             "sole_canonical_episode_id",
         ),
     )
-    # Every episode it stands for, which is what the screens that settle the
-    # links by hand work on: one of them is what the field above reads as, and a
-    # row standing for two has none to read there at all.
     canonical_episode_ids: list[uuid.UUID] = Field(default_factory=list)
-    # Where the row sits, as the link that was made for it says. `sort_order` is
-    # the row's own column, which is what a website filed it under and what a row
-    # with no link is ordered by; this is what the link holding it says instead.
     linked_sort_order: int | None = None
-    # The TMDB episode behind that, when TMDB has a record of it.
     tmdb_id: int | None = None
-    # What the episode is, said the same way wherever it turns up. Two rows
-    # sharing it are the same episode listed twice -- deliberately, so each
-    # listing can be filtered on its own -- and this is what collapses them
-    # when a normalised view is wanted.
-    canonical_key: str | None = None
+    tmdb_url: str | None = None
 
 
 # TODO: Consider reworking this into seperate models for each parent.
@@ -103,28 +93,60 @@ class EpisodeListOutput(EpisodeOutput):
 
 
 # TODO: Validate
-class EpisodeInformationSide(BaseModel):
+class EpisodeRecord(BaseModel):
+    """An `Episode` and everything above it, each served as the record it is.
+
+    The season, the title and the website are handed over whole rather than
+    picked apart into a name and a number, so a screen reading any of them reads
+    the same shape it would have been served on its own page.
+    """
+
+    episode: EpisodeOutput
+    season: SeasonOutput
+    show: ShowPublic
+    source: SourceListPublic
+
+    # TODO: Validate
+    @model_validator(mode="after")
+    def _read_key(self) -> Self:
+        own_tmdb_id = tmdb_id_of(self.episode.key, EPISODE_LEVEL)
+        if own_tmdb_id is not None:
+            self.episode.tmdb_id = own_tmdb_id
+        self.episode.tmdb_url = tmdb_episode_url(
+            self.show.key,
+            self.season.season_number,
+            self.episode.episode_number,
+        )
+        self.season.tmdb_url = tmdb_season_url(
+            self.show.key,
+            self.season.season_number,
+        )
+        return self
+
+
+# TODO: Validate
+class CanonicalEpisodeRecord(EpisodeRecord):
+    """A canonical episode, with how far into its title the episode is.
+
+    The count is not a column of the episode: it is where the episode falls among
+    the ones the title holds, so it is worked out against the title each time
+    rather than stored and left to go stale as the title grows.
+    """
+
+    absolute_number: int | None
+
+
+# TODO: Validate
+class EpisodeInformationSide(EpisodeRecord):
     """One record's own account of an episode, as the website that holds it has it."""
 
     label: str
-    name: str | None
-    description: str | None
-    image_url: str | None
-    duration: int | None
-    air_date: datetime | None
-    episode_number: int | None
-    sort_order: int | None
-    season_number: int | None
-    season_name: str | None
-    show_id: uuid.UUID
-    show_name: str | None
     url: str | None
-    key: str
-    canonical_episode_validated_at: datetime | None
-    canonical_episode_note: str | None
-    data_timestamp: datetime | None
-    update_at: datetime | None
-    modified_at: datetime | None
+    # How far into its own title this side puts the episode, which is a question
+    # each side answers for itself: a website numbering a title straight through
+    # and TMDB numbering it by season disagree here as readily as they do on the
+    # name.
+    absolute_number: int | None
 
 
 # TODO: Validate
@@ -157,64 +179,28 @@ class UserEpisodeUrlOutput(BaseModel):
 
 
 # TODO: Validate
-class EpisodeUsingTmdb(BaseModel):
-    """One of the show's episodes that already points at a TMDB episode."""
+class TmdbEpisodeChoice(EpisodeRecord):
+    """A TMDB episode, as one of the episodes an `Episode` can be linked to.
 
-    id: uuid.UUID
-    name: str | None
-    season_number: int | None
-    episode_number: int | None
-    url: str | None
+    A canonical record, so the season and the title handed over with it are the
+    very rows TMDB holds rather than non-canonical rows of them.
+    """
 
-
-# TODO: Validate
-class TmdbEpisodeChoice(BaseModel):
-    """A TMDB episode, as one of the episodes an `Episode` can be linked to."""
-
-    canonical_episode_id: uuid.UUID
-    # The rows themselves, so the match can be opened on its own page here the same way
-    # the episode beside it can. TMDB's records are canonical rows, so these are the ids
-    # of the very rows, not of non-canonical rows of them.
-    season_id: uuid.UUID
-    show_id: uuid.UUID
-    tmdb_episode_id: int
-    name: str
-    show_name: str
-    show_year: int | None
-    source_name: str | None
-    plugin_name: str | None
-    season_number: int
-    episode_number: int
     absolute_number: int | None
-    duration: int | None
-    air_date: datetime | None
-    url: str
-    show_url: str | None
-    season_url: str | None
     similarity: float
     already_used: bool = False
     # Which of the show's episodes are the ones using it. `already_used` is
     # whether there are any, kept as its own field because that is what the
     # choices are filtered on and a caller reading only the flag should not have
     # to count a list to get it.
-    used_by: list[EpisodeUsingTmdb] = []
+    used_by: list[EpisodeRecord] = []
 
 
 # TODO: Validate
-class UnmatchedEpisodeOutput(EpisodeOutput):
+class UnmatchedEpisodeOutput(EpisodeRecord):
     """An episode no TMDB record was found for, beside the closest TMDB episode."""
 
     absolute_number: int | None = None
-    season_name: str | None
-    season_number: int | None
-    show_id: uuid.UUID
-    show_name: str | None
-    show_year: int | None
-    show_url: str | None
-    season_url: str | None
-    source_id: uuid.UUID
-    source_name: str | None
-    plugin_name: str | None
     best_match: TmdbEpisodeChoice | None
     # The episode TMDB numbers the same way, which is a different question to
     # the one the name asks and often a different episode. Both are offered so
@@ -257,17 +243,6 @@ class UnlockedEpisodeOutput(UnmatchedEpisodeOutput):
 
 
 # TODO: Validate
-class DuplicatedLinkEpisodeOutput(EpisodeOutput):
-    """One of the episodes that collided on a canonical episode.
-
-    Served as the whole row rather than as a name and a number, since the window
-    opened to correct one of them edits the row itself.
-    """
-
-    season_number: int | None = None
-
-
-# TODO: Validate
 class DuplicatedCanonicalEpisodeOutput(BaseModel):
     """A canonical episode more than one episode of a single source is linked to.
 
@@ -279,23 +254,9 @@ class DuplicatedCanonicalEpisodeOutput(BaseModel):
     id: str
     """The canonical episode and the source together, since a row is the pair."""
 
-    canonical_episode_id: uuid.UUID
-    season_id: uuid.UUID
-    show_id: uuid.UUID
-    key: str
-    name: str | None
-    season_number: int | None
-    episode_number: int | None
-    show_name: str | None
-    show_year: int | None
-    url: str | None
-    show_url: str | None
-    canonical_source_name: str | None
-    canonical_plugin_name: str | None
-    source_id: uuid.UUID
-    source_name: str | None
-    plugin_name: str | None
-    linked_episodes: list[DuplicatedLinkEpisodeOutput]
+    canonical: EpisodeRecord
+    source: SourceListPublic
+    linked_episodes: list[EpisodeRecord]
 
 
 # TODO: Validate

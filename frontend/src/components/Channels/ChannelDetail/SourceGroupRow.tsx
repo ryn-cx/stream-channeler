@@ -74,6 +74,7 @@ interface SourceGroupRowProps {
  * carrying it more than once opens instead into the rows it holds, each of
  * which opens its own information.
  */
+// TODO: Validate
 export function SourceGroupRow({
   group,
   isWhitelist,
@@ -123,7 +124,12 @@ export function SourceGroupRow({
           )}
         </Button>
         {group.faviconUrl && (
-          <img src={group.faviconUrl} alt="" className="size-6 shrink-0" />
+          <img
+            referrerPolicy="no-referrer"
+            src={group.faviconUrl}
+            alt=""
+            className="size-6 shrink-0"
+          />
         )}
         <button
           type="button"
@@ -140,8 +146,8 @@ export function SourceGroupRow({
         {single ? markButton(single) : null}
         {single ? <RowControls row={single} /> : null}
         <MediaPageButton
-          to="/source/$sourceKey"
-          params={{ sourceKey: group.sourceId }}
+          to="/shows"
+          search={{ source_id: group.sourceId }}
           label="Open this source here"
         />
       </div>

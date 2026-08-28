@@ -6,38 +6,14 @@ from typing import override
 
 from app.utils import tz_datetime
 from plugins.NHKWorld.files import FileMixin
-from plugins.utils.abstract_plugin import (
-    PluginSearchResult,
-    PluginSearchResults,
-)
 
 
 # TODO: Validate
 class SearchMixin(FileMixin, register=False):
     # TODO: Validate
     @override
-    def search(self, query: str, cursor: str | None = None) -> PluginSearchResults:
-        offset = int(cursor) if cursor else 0
-        search_file = self.shows_search_file(query, offset)
-        minimum_timestamp = tz_datetime.now() - timedelta(days=7)
-        search_file.download_if_outdated(minimum_timestamp)
-        parsed = search_file.parsed()
-        results = [
-            PluginSearchResult(
-                title=hit.field_source.title,
-                url=self.build_url(hit.field_source.url),
-                image_url=self.build_url(hit.field_source.thumbnail),
-                media_type="TV Show",
-                media_identifier=hit.field_source.slug,
-            )
-            for hit in parsed.hits.hits
-        ]
-        next_offset = offset + len(results)
-        return PluginSearchResults(
-            results=results,
-            next_cursor=(
-                str(next_offset)
-                if results and next_offset < parsed.hits.total.value
-                else None
-            ),
-        )
+    def search(self, query: str) -> str | None:
+        search_file = self.shows_search_file(query, 0)
+        search_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
+        hits = search_file.parsed().hits.hits
+        return self.build_url(hits[0].field_source.url) if hits else None

@@ -1,2 +1,0 @@
-# TODO: Validate
-"""App tests."""

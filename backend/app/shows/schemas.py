@@ -24,6 +24,7 @@ from app.schemas import (
 )
 from app.shows.models import BaseCanonicalShow, BaseShow, Show
 from app.sources.models import Source
+from app.sources.schemas import SourceListPublic
 
 
 # TODO: Validate
@@ -82,10 +83,19 @@ class ShowPublic(BaseShow):
     canonical_show_ids: list[uuid.UUID] = Field(default_factory=list)
     # The TMDB id behind that, when TMDB has a record of it.
     tmdb_id: int | None = None
+    # The row's own page on themoviedb.org, read back out of its own key, so a
+    # row TMDB issued carries one and a website's row carries none.
+    tmdb_url: str | None = None
     plugin_name: str | None = Field(
         default=None,
         validation_alias=AliasPath("source", "plugin", "name"),
     )
+
+    # TODO: Validate
+    @model_validator(mode="after")
+    def _read_own_key(self) -> Self:
+        self.tmdb_url = tmdb_show_url(self.key)
+        return self
 
 
 # TODO: Consider reworking this into seperate models for each parent.
@@ -103,16 +113,18 @@ class ShowListPublic(ShowPublic):
 
 
 # TODO: Validate
-class ShowInformationSide(BaseModel):
+class ShowRecord(BaseModel):
+    """A `Show` and what holds it, each served as the record it already is."""
+
+    show: ShowPublic
+    source: SourceListPublic
+
+
+# TODO: Validate
+class ShowInformationSide(ShowRecord):
     """One record's own account of a show, as the website holding it has it."""
 
     label: str
-    name: str | None
-    media_type: str | None
-    description: str | None
-    image_url: str | None
-    url: str | None
-    key: str
 
 
 # TODO: Validate
@@ -124,8 +136,6 @@ class ShowInformationOutput(BaseModel):
     the other.
     """
 
-    show_id: uuid.UUID
-    canonical_show_validated_at: datetime | None
     editable: bool
     issue_reports: list[IssueReportOutput]
     source: ShowInformationSide

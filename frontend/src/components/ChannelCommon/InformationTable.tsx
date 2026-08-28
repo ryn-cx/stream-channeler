@@ -32,7 +32,7 @@ export function ExternalAnchor({
 }
 
 // TODO: Validate
-export function formatInformationDate(value: string | null) {
+export function formatInformationDate(value: string | null | undefined) {
   if (!value) return null
   return new Date(value).toLocaleString()
 }
