@@ -167,6 +167,14 @@ def _episode_from_detail(
 
 
 # TODO: Validate
+def _widget_episode_available(episode: WidgetEpisode) -> bool:
+    return any(
+        primary_action.payload.expanding_card or primary_action.payload.card_options
+        for primary_action in episode.action.primary_actions
+    )
+
+
+# TODO: Validate
 def _episode_from_widget(episode: WidgetEpisode) -> AmazonEpisode:
     """Return an episode read off a page of the season's episode list."""
     detail = episode.detail
@@ -465,6 +473,7 @@ class Detail(DownloadedFile[dict[str, Any]]):
                 compact_keys[title_id]["compactGTI"],
             )
             for title_id in card_title_ids
+            if self._episode_available(title_id)
         ]
 
     # TODO: Validate
@@ -492,12 +501,25 @@ class Detail(DownloadedFile[dict[str, Any]]):
         """
         cards: list[dict[str, Any]] = []
         for action in self._offer_actions():
-            for primary_action in action["primaryActions"]:
-                payload = primary_action["payload"]
-                if card := payload.get("expandingCard"):
-                    cards.append(card)
-                cards += payload.get("cardOptions") or []
+            cards += self._action_cards(action)
         return cards
+
+    # TODO: Validate
+    def _action_cards(self, action: dict[str, Any]) -> list[dict[str, Any]]:
+        cards: list[dict[str, Any]] = []
+        for primary_action in action["primaryActions"]:
+            payload = primary_action["payload"]
+            if card := payload.get("expandingCard"):
+                cards.append(card)
+            cards += payload.get("cardOptions") or []
+        return cards
+
+    # TODO: Validate
+    def _episode_available(self, title_id: str) -> bool:
+        action = self._btf_state()["action"]["btf"].get(title_id)
+        if not action:
+            return True
+        return any(card["actions"] for card in self._action_cards(action))
 
     # TODO: Validate
     def _offer_payloads(self) -> list[dict[str, Any]]:
@@ -617,7 +639,11 @@ class EpisodeList(EndpointFile[DetailWidgetsModel]):
     def episodes(self) -> list[AmazonEpisode]:
         """Return the episodes this page holds."""
         episode_list = self.parsed().widgets.episode_list
-        return [_episode_from_widget(episode) for episode in episode_list.episodes]
+        return [
+            _episode_from_widget(episode)
+            for episode in episode_list.episodes
+            if _widget_episode_available(episode)
+        ]
 
 
 # TODO: Validate
