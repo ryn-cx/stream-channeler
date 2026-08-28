@@ -331,12 +331,8 @@ def update_show_extra(
 
     Changing the episode order is the case that drags something along. The order decides
     which season an episode sits in and what it is numbered, and a non-canonical row is
-    matched to an episode by exactly those, so a link made under the old order was made
-    against numbering that no longer exists. The title is read again so the new order is
-    written down, and then every non-canonical row of it is matched afresh.
-
-    Only the links nobody settled are dropped. One a `User` locked was decided by
-    hand and is no more wrong under one order than another.
+    matched to an episode by exactly those. The title is read again so the new order is
+    written down.
     """
     validate_extra(session, show, extra)
 
@@ -350,7 +346,7 @@ def update_show_extra(
 
     if reordered:
         _reread_in_new_order(session, show)
-        _relink_non_canonical_shows(session, show)
+        _link_unlinked_episodes(session, show)
     session.commit()
 
 
@@ -392,6 +388,12 @@ def _reread_in_new_order(session: Session, show: Show) -> None:
     from plugins.TMDB import TMDB  # noqa: PLC0415
 
     TMDB(session).update_show(show, force=True)
+
+
+# TODO: Validate
+def _link_unlinked_episodes(session: Session, canonical_show: Show) -> None:
+    for link in list(canonical_show.non_canonical_shows):
+        EpisodeLinker(session, link.show).link_show()
 
 
 # TODO: Validate

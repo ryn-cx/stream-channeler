@@ -36,7 +36,7 @@ def is_only_numbered_name(name: str) -> bool:
 
 
 # TODO: Validate
-@lru_cache(maxsize=16384)
+@lru_cache(maxsize=131072)
 def plaintext(name: str | None) -> str:
     if not name or is_untitled_name(name):
         return ""
@@ -44,7 +44,7 @@ def plaintext(name: str | None) -> str:
 
 
 # TODO: Validate
-@lru_cache(maxsize=16384)
+@lru_cache(maxsize=131072)
 def loose_plaintext(name: str | None) -> str:
     if not name:
         return ""
@@ -55,7 +55,7 @@ def loose_plaintext(name: str | None) -> str:
 
 
 # TODO: Validate
-@lru_cache(maxsize=16384)
+@lru_cache(maxsize=131072)
 def name_parts(name: str | None) -> tuple[str, ...]:
     if not name or not plaintext(name):
         return ()
@@ -77,10 +77,7 @@ def contains_name(name: str, other_name: str) -> bool:
 
 
 # TODO: Validate
-@lru_cache(maxsize=65536)
-def similarity(name: str | None, other_name: str | None) -> float:
-    stripped = plaintext(name)
-    other_stripped = plaintext(other_name)
+def plaintext_similarity(stripped: str, other_stripped: str) -> float:
     if not stripped or not other_stripped:
         return 0.0
     if stripped == other_stripped:
@@ -92,3 +89,9 @@ def similarity(name: str | None, other_name: str | None) -> float:
 
     shorter, longer = sorted((stripped, other_stripped), key=len)
     return max(ratio, len(shorter) / len(longer))
+
+
+# TODO: Validate
+@lru_cache(maxsize=65536)
+def similarity(name: str | None, other_name: str | None) -> float:
+    return plaintext_similarity(plaintext(name), plaintext(other_name))

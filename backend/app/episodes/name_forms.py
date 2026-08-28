@@ -44,6 +44,7 @@ def _kanwa() -> Kanwa:
 
 
 # TODO: Validate
+@cache
 def plaintext(name: str | None) -> str:
     """Return `name` with its case, punctuation and spacing taken out."""
     if not name:

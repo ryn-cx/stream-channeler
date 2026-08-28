@@ -15,7 +15,7 @@ from app.canonical_media.keys import (
 )
 from app.episodes.models import Episode
 from app.episodes.name_forms import plaintext_forms
-from app.episodes.name_matching import similarity
+from app.episodes.name_matching import plaintext_similarity, similarity
 from app.media.media_type import MediaType
 from app.shows.models import Show
 
@@ -140,7 +140,7 @@ class TmdbEpisodeFacts:
             translated_forms = self.forms_of(tmdb_episode)
             for form in plaintext_forms(episode.name):
                 for translated_form in translated_forms:
-                    best = max(best, similarity(form, translated_form))
+                    best = max(best, plaintext_similarity(form, translated_form))
                     if best >= 1.0:
                         break
                 if best >= 1.0:
