@@ -5,6 +5,7 @@ import { Pencil, SquareArrowOutUpRight } from "lucide-react"
 import { type ReactNode, useState } from "react"
 
 import type { UnlockedEpisodeOutput, UnmatchedEpisodeOutput } from "@/client"
+import { ClampedContent } from "@/components/ChannelCommon/ClampedContent"
 import { TmdbLink } from "@/components/ChannelCommon/TmdbLink"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { EditEpisodeById } from "@/components/Episodes/EditEpisodeById"
@@ -49,9 +50,9 @@ function WrappingCell({
   children: ReactNode
 }) {
   return (
-    <span className={cn("block whitespace-normal wrap-break-word", className)}>
+    <div className={cn("whitespace-normal wrap-break-word", className)}>
       {children}
-    </span>
+    </div>
   )
 }
 
@@ -83,6 +84,7 @@ interface Summarised extends Numbered {
   show_url: string | null
   season_url: string | null
   name: string | null
+  description: string | null
   url: string | null
   /** The rows themselves, for the pages this site holds them on. */
   source_id: string | null
@@ -280,7 +282,7 @@ function MatchSummary({
                   : "text-muted-foreground"
               }
             >
-              {record.episode_number ?? "?"}
+              Episode {record.episode_number ?? "?"}
             </span>
             {record.absolute_number === null ? null : (
               <span
@@ -289,7 +291,7 @@ function MatchSummary({
                 }
               >
                 {" "}
-                ({record.absolute_number})
+                (Absolute {record.absolute_number})
               </span>
             )}
           </span>{" "}
@@ -301,6 +303,11 @@ function MatchSummary({
           label="Open this episode on the site it came from"
         />
       </span>
+      {record.description ? (
+        <ClampedContent lines={5} className="text-xs text-muted-foreground">
+          {record.description}
+        </ClampedContent>
+      ) : null}
       {note}
     </WrappingCell>
   )
@@ -363,6 +370,7 @@ function choiceSummarised(
     episode_number: match.episode.episode_number ?? null,
     absolute_number: match.absolute_number ?? null,
     name: match.episode.name ?? null,
+    description: match.episode.description ?? null,
     url: match.episode.tmdb_url ?? null,
   }
 }
@@ -383,6 +391,7 @@ function episodeSummarised(row: UnmatchedEpisodeOutput): Summarised {
     episode_number: row.episode.episode_number ?? null,
     absolute_number: row.absolute_number ?? null,
     name: row.episode.name ?? null,
+    description: row.episode.description ?? null,
     url: row.episode.url ?? null,
   }
 }
@@ -421,6 +430,12 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
           record={match}
           counterpart={episodeSummarised(row.original)}
           note={<AlreadyUsedNote match={nameMatch} />}
+          editEpisode={
+            <EditEpisodeById
+              episodeId={nameMatch.episode.id}
+              label="Edit this TMDB episode"
+            />
+          }
           isTmdbSide
           action={
             <TmdbMatchConfirmButton
@@ -453,6 +468,12 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
           record={match}
           counterpart={episodeSummarised(row.original)}
           note={<AlreadyUsedNote match={seasonEpisodeMatch} />}
+          editEpisode={
+            <EditEpisodeById
+              episodeId={seasonEpisodeMatch.episode.id}
+              label="Edit this TMDB episode"
+            />
+          }
           isTmdbSide
           action={
             <TmdbMatchConfirmButton
@@ -485,6 +506,12 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
           record={match}
           counterpart={episodeSummarised(row.original)}
           note={<AlreadyUsedNote match={absoluteMatch} />}
+          editEpisode={
+            <EditEpisodeById
+              episodeId={absoluteMatch.episode.id}
+              label="Edit this TMDB episode"
+            />
+          }
           isTmdbSide
           action={
             <TmdbMatchConfirmButton

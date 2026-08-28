@@ -4,6 +4,7 @@ import { type ReactNode, useLayoutEffect, useRef, useState } from "react"
 interface ClampedContentProps {
   children: ReactNode
   className?: string
+  lines?: 4 | 5
 }
 
 // TODO: Validate
@@ -14,7 +15,11 @@ interface ClampedContentProps {
  * leaves a record's own line taller than everything around it. The button is
  * only there when there is more to read.
  */
-export function ClampedContent({ children, className }: ClampedContentProps) {
+export function ClampedContent({
+  children,
+  className,
+  lines = 4,
+}: ClampedContentProps) {
   const [expanded, setExpanded] = useState(false)
   const [clipped, setClipped] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -27,7 +32,12 @@ export function ClampedContent({ children, className }: ClampedContentProps) {
 
   return (
     <div className={className}>
-      <div ref={contentRef} className={expanded ? undefined : "line-clamp-4"}>
+      <div
+        ref={contentRef}
+        className={
+          expanded ? undefined : { 4: "line-clamp-4", 5: "line-clamp-5" }[lines]
+        }
+      >
         {children}
       </div>
       {(clipped || expanded) && (
