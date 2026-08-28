@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+s#! /usr/bin/env bash
 # TODO: Validate
 
 # Bring the local dev stack up with keyring secrets and watch for source changes.
@@ -15,4 +15,9 @@ cd "$(dirname "$0")/.."
 
 source scripts/load-secrets.sh
 
-docker compose --env-file .env watch "$@"
+env_file_args=(--env-file .env)
+if [ -f .env.local ]; then
+  env_file_args+=(--env-file .env.local)
+fi
+
+docker compose "${env_file_args[@]}" watch "$@"

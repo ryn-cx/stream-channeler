@@ -98,7 +98,6 @@ class EpisodeQueryBuilder:
         self._session = session
         self._channel = channel
         self._user = user
-        self.has_more = False
         self._set_channel_options(channel_options)
 
         self._channel_ids = self._fetch_channel_ids()
@@ -245,10 +244,7 @@ class EpisodeQueryBuilder:
         )
         if shows is not None:
             ordered_episodes, channels_by_media = self._read_ordered_episodes(shows)
-        page_start = self._channel_options.offset
-        page_end = page_start + self._result_limit()
-        self.has_more = len(ordered_episodes) > page_end
-        ordered_episodes = ordered_episodes[page_start:page_end]
+        ordered_episodes = ordered_episodes[: self._result_limit()]
 
         watches = (
             latest_watch_by_identifier(
@@ -673,7 +669,7 @@ class EpisodeQueryBuilder:
         ):
             return MAX_EPISODES_RETURNED
         rows_per_episode = max(len(self._channel_ids), 1)
-        wanted = options.offset + self._result_limit() + 1
+        wanted = self._result_limit()
         return min(wanted * rows_per_episode, MAX_EPISODES_RETURNED)
 
     # TODO: Validate

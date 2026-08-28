@@ -215,14 +215,16 @@ function ResultCard({
 }
 
 // TODO: Validate
-function PluginResultCard({
+export function PluginResultCard({
   result,
   channelId,
   onSelect,
+  extraFooter,
 }: {
   result: PluginSearchResult
   channelId: string
   onSelect?: (result: PluginSearchResult) => void
+  extraFooter?: React.ReactNode
 }) {
   return (
     <ResultCard
@@ -237,7 +239,12 @@ function PluginResultCard({
       // A result carries the id its own plugin issued, so opening the details
       // asks that plugin about it rather than matching it against another.
       onClick={onSelect ? () => onSelect(result) : undefined}
-      footer={<AddToQueueButton url={result.url} channelId={channelId} />}
+      footer={
+        <>
+          <AddToQueueButton url={result.url} channelId={channelId} />
+          {extraFooter}
+        </>
+      }
     />
   )
 }

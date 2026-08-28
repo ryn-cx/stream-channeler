@@ -198,7 +198,6 @@ export type ChannelEpisodesOutput = {
     channels: {
         [key: string]: ChannelOutput;
     };
-    has_more?: boolean;
 };
 
 /**
@@ -252,7 +251,6 @@ export type ChannelOptions = {
     minimumDuration?: (number | null);
     maximumDuration?: (number | null);
     limit?: (number | null);
-    offset?: number;
 };
 
 /**
@@ -2257,7 +2255,6 @@ export type ChannelsGetChannelEpisodesData = {
     minimumAirDateRelative?: (number | null);
     minimumDuration?: (number | null);
     newShowsCount?: (number | null);
-    offset?: number;
     orderPresetId?: (string | null);
     randomSeed?: number;
     sortBy?: Array<SortKeyInput>;

@@ -936,7 +936,6 @@ export class ChannelsService {
      * @param data.minimumDuration
      * @param data.maximumDuration
      * @param data.limit
-     * @param data.offset
      * @returns ChannelEpisodesOutput Successful Response
      * @throws ApiError
      */
@@ -967,8 +966,7 @@ export class ChannelsService {
                 newShowsCount: data.newShowsCount,
                 minimumDuration: data.minimumDuration,
                 maximumDuration: data.maximumDuration,
-                limit: data.limit,
-                offset: data.offset
+                limit: data.limit
             },
             errors: {
                 422: 'Validation Error'
