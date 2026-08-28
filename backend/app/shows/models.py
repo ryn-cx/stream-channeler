@@ -236,8 +236,7 @@ class Show(BaseShow, ChildMediaMixin[Source, "Season"], table=True):
     @classmethod
     def select_with_plugin_eager(cls) -> SelectOfScalar[Self]:
         return cls.select_with_plugin().options(
-            contains_eager(cls.source)  # type: ignore[arg-type]
-            .contains_eager(Source.plugin),  # type: ignore[arg-type]
+            contains_eager(cls.source).contains_eager(Source.plugin),  # type: ignore[arg-type]  # type: ignore[arg-type]
             # Which canonical shows a row stands for is read off every row
             # that is served, and it is a table away now rather than a column
             # of the row, so it is fetched with them rather than one at a

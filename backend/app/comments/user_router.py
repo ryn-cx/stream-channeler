@@ -6,17 +6,16 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Query
 
 from app.auth.dependencies import CurrentUser, SessionDep
 from app.channels.dependencies import ReadableChannel
-from app.comments.dependencies import EditableComment, ReadableComment
+from app.comments.dependencies import EditableComment
 from app.comments.schemas import (
     ChannelCommentsListOutput,
     CommentCreate,
     CommentOutput,
     CommentScope,
-    CommentsListOutput,
     CommentUpdate,
 )
 from app.comments.service import (
@@ -24,8 +23,6 @@ from app.comments.service import (
     create_comment,
     delete_comment,
     get_channel_comments,
-    get_comments,
-    get_replies,
     mark_notifications_read,
     unread_notification_count,
     update_comment,
@@ -39,18 +36,6 @@ channel_comments_router = APIRouter(
     prefix="/channels/{channel_id}/comments",
     tags=["comments"],
 )
-
-
-# TODO: Validate
-@channel_comments_router.get("")
-def read_channel_comments(
-    session: SessionDep,
-    channel: ReadableChannel,
-    offset: Annotated[int, Query(ge=0)] = 0,
-    limit: Annotated[int, Query(ge=1, le=100)] = COMMENTS_PAGE_SIZE,
-) -> CommentsListOutput:
-    """Get one page of the top level `Comment`s on a `Channel`."""
-    return get_comments(session, channel, offset, limit)
 
 
 # TODO: Validate
@@ -77,11 +62,6 @@ def read_my_channel_comments(  # noqa: PLR0913 - Paging plus scope plus filter.
     unread_only: bool = False,
 ) -> ChannelCommentsListOutput:
     """Get one page of the `Comment`s on the `User`'s `Channel`s, or on all of them."""
-    if scope == CommentScope.all and not current_user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only a superuser can read every channel's comments.",
-        )
     return get_channel_comments(
         session,
         current_user,
@@ -90,16 +70,6 @@ def read_my_channel_comments(  # noqa: PLR0913 - Paging plus scope plus filter.
         scope,
         unread_only=unread_only,
     )
-
-
-# TODO: Validate
-@comments_router.get("/{comment_id}/replies")  # noqa: FAST003 - Used by ReadableComment.
-def read_comment_replies(
-    session: SessionDep,
-    comment: ReadableComment,
-) -> CommentsListOutput:
-    """Get the whole thread below a `Comment`, nested by parent."""
-    return get_replies(session, comment)
 
 
 # TODO: Validate

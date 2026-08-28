@@ -6,9 +6,9 @@ from sqlmodel import Session
 from app.plugins.models import Plugin
 from app.sources.models import Source
 from app.users.models import User
+from tests.app.helpers.utils import build_random_model
 from tests.app.plugins.utils import create_random_plugin
 from tests.app.users.utils import CreatedUser
-from tests.app.utils.utils import build_random_model
 
 
 # TODO: Validate
@@ -18,7 +18,7 @@ def create_random_source(
     **kwargs: object,
 ) -> Source:
     if not isinstance(parent, Plugin):
-        parent = create_random_plugin(session, parent)
+        parent = create_random_plugin(session)
     source = build_random_model(Source, plugin_id=parent.id, deleted_at=None, **kwargs)
     session.add(source)
     session.flush()  # Allows source.plugin and source.shows to be accessed.

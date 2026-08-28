@@ -4385,7 +4385,7 @@ export const IssueReportListOutputSchema = {
         }
     },
     type: 'object',
-    required: ['id', 'report', 'created_at', 'modified_at', 'user_id', 'username', 'media_type', 'media_id', 'media_name', 'season_name', 'show_name', 'source_name'],
+    required: ['id', 'report', 'created_at', 'modified_at', 'user_id', 'media_type', 'media_id', 'media_name', 'season_name', 'show_name', 'source_name'],
     title: 'IssueReportListOutput',
     description: 'Schema for returning an `IssueReport` alongside the record it was left on.'
 } as const;
@@ -4443,7 +4443,7 @@ export const IssueReportOutputSchema = {
         }
     },
     type: 'object',
-    required: ['id', 'report', 'created_at', 'modified_at', 'user_id', 'username'],
+    required: ['id', 'report', 'created_at', 'modified_at', 'user_id'],
     title: 'IssueReportOutput',
     description: `Schema for returning an \`IssueReport\`.
 

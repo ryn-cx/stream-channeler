@@ -3,6 +3,7 @@ import uuid
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
+from fastapi import HTTPException, UploadFile
 from sqlalchemy import ScalarSelect, Subquery
 from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, func, select
@@ -40,11 +41,15 @@ from app.watches.models import Watch
 from app.watches.schemas import (
     WatchCreate,
     WatchesListOutput,
+    WatchExportEntry,
+    WatchImportInput,
+    WatchImportResults,
     WatchItem,
     WatchOutput,
     WatchRelinkResults,
     WatchUpdate,
 )
+from plugins.StreamChanneler import StreamChanneler
 from plugins.utils.manage_plugins import import_plugins, plugins
 
 if TYPE_CHECKING:
@@ -407,3 +412,42 @@ def get_installed_plugin(plugin_key: str) -> type[AbstractPlugin] | None:
         if plugin_cls.plugin_key() == plugin_key:
             return plugin_cls
     return None
+
+
+# TODO: Validate
+def import_watch_history_file(
+    session: Session,
+    current_user: User,
+    file: UploadFile,
+    params: WatchImportInput,
+) -> WatchImportResults:
+    """Read a watch history a plugin wrote out and record what it says."""
+    plugin = get_installed_plugin(params.plugin_key)
+    if not plugin:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Plugin {params.plugin_key!r} not found.",
+        )
+    if not plugin.implements("import_watch_history"):
+        raise HTTPException(
+            status_code=422,
+            detail=f"Plugin {params.plugin_key!r} does not support watch history import.",
+        )
+
+    result = plugin(session=session).import_watch_history(
+        content=file.file.read().decode("utf-8"),
+        user=current_user,
+        new_only=params.new_only,
+        verified=params.verified,
+    )
+    session.commit()
+    return result
+
+
+# TODO: Validate
+def export_watch_history_entries(
+    session: Session,
+    current_user: User,
+) -> list[WatchExportEntry]:
+    """Write out the `User`'s watches as a Stream Channeler watch history."""
+    return StreamChanneler(session=session).export_watch_history(current_user)

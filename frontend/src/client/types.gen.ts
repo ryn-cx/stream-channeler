@@ -878,7 +878,7 @@ export type IssueReportListOutput = {
     created_at: string;
     modified_at: string;
     user_id: (string | null);
-    username: (string | null);
+    username?: (string | null);
     media_type: IssueReportMediaType;
     media_id: string;
     media_name: (string | null);
@@ -904,7 +904,7 @@ export type IssueReportOutput = {
     created_at: string;
     modified_at: string;
     user_id: (string | null);
-    username: (string | null);
+    username?: (string | null);
 };
 
 /**
@@ -2025,8 +2025,6 @@ export type ChannelOrdersGetChannelOrdersData = {
 
 export type ChannelOrdersGetChannelOrdersResponse = (ChannelOrdersPublic);
 
-export type ChannelOrdersGetFeaturedChannelOrdersResponse = (Array<ChannelOrderListOutput>);
-
 export type ChannelOrdersGetFavoriteChannelOrderIdsResponse = (Array<(string)>);
 
 export type ChannelOrdersFavoriteChannelOrderData = {
@@ -2048,12 +2046,6 @@ export type ChannelOrdersCopyChannelOrderData = {
 
 export type ChannelOrdersCopyChannelOrderResponse = (ChannelOrderOutput);
 
-export type ChannelOrdersGetChannelOrderData = {
-    channelOrderId: string;
-};
-
-export type ChannelOrdersGetChannelOrderResponse = (ChannelOrderOutput);
-
 export type ChannelOrdersUpdateChannelOrderData = {
     channelOrderId: string;
     requestBody: ChannelOrderUpdate;
@@ -2066,6 +2058,14 @@ export type ChannelOrdersDeleteChannelOrderData = {
 };
 
 export type ChannelOrdersDeleteChannelOrderResponse = (Message);
+
+export type ChannelOrdersGetChannelOrderData = {
+    channelOrderId: string;
+};
+
+export type ChannelOrdersGetChannelOrderResponse = (ChannelOrderOutput);
+
+export type ChannelOrdersGetFeaturedChannelOrdersResponse = (Array<ChannelOrderListOutput>);
 
 export type ChannelOrdersAdminUpdateChannelOrderData = {
     channelOrderId: string;
@@ -2109,8 +2109,6 @@ export type ChannelsGetChannelData = {
 
 export type ChannelsGetChannelResponse = (ChannelOutput);
 
-export type ChannelsGetSortOptionsResponse = (Array<SortOptionOutput>);
-
 export type ChannelsBulkImportQueueUrlsData = {
     requestBody: {
         [key: string]: Array<(string)>;
@@ -2140,12 +2138,6 @@ export type ChannelsUnfavoriteChannelData = {
 
 export type ChannelsUnfavoriteChannelResponse = (Message);
 
-export type ChannelsGetChannelCombinedChannelsData = {
-    channelId: string;
-};
-
-export type ChannelsGetChannelCombinedChannelsResponse = (Array<CombinedChannelOutput>);
-
 export type ChannelsUpdateChannelCombinedChannelsData = {
     channelId: string;
     requestBody: Array<CombinedChannelInput>;
@@ -2153,51 +2145,18 @@ export type ChannelsUpdateChannelCombinedChannelsData = {
 
 export type ChannelsUpdateChannelCombinedChannelsResponse = (Message);
 
-export type ChannelsGetChannelEpisodesData = {
-    channelId: string;
-    hidePartiallyWatched?: boolean;
-    hideUnwatched?: boolean;
-    hideWatched?: boolean;
-    limit?: (number | null);
-    maximumAirDateAbsolute?: (string | null);
-    maximumAirDateRelative?: (number | null);
-    maximumDuration?: (number | null);
-    maximumWatchDateAbsolute?: (string | null);
-    maximumWatchDateRelative?: (number | null);
-    minimumAirDateAbsolute?: (string | null);
-    minimumAirDateRelative?: (number | null);
-    minimumDuration?: (number | null);
-    newShowsCount?: (number | null);
-    offset?: number;
-    orderPresetId?: (string | null);
-    randomSeed?: number;
-    sortBy?: Array<SortKeyInput>;
-    sourceIds?: Array<(string)>;
-    sourceIdsIsBlacklist?: boolean;
-    startedShowsCount?: (number | null);
-    totalShowsCount?: (number | null);
-};
-
-export type ChannelsGetChannelEpisodesResponse = (ChannelEpisodesOutput);
-
-export type ChannelsGetChannelShowsData = {
+export type ChannelsGetChannelCombinedChannelsData = {
     channelId: string;
 };
 
-export type ChannelsGetChannelShowsResponse = (ChannelShowsOutput);
+export type ChannelsGetChannelCombinedChannelsResponse = (Array<CombinedChannelOutput>);
 
-export type ChannelsGetChannelSourcesData = {
-    channelId: string;
-};
-
-export type ChannelsGetChannelSourcesResponse = (Array<SourcePublic>);
-
-export type ChannelsGetChannelWhitelistData = {
+export type ChannelsGetChannelWhitelistFilteredEpisodesData = {
     canonicalShowId: string;
     channelId: string;
 };
 
-export type ChannelsGetChannelWhitelistResponse = (WhitelistShowOutput);
+export type ChannelsGetChannelWhitelistFilteredEpisodesResponse = (Array<WhitelistEpisodeOutput>);
 
 export type ChannelsUpdateChannelWhitelistData = {
     canonicalShowId: string;
@@ -2207,22 +2166,12 @@ export type ChannelsUpdateChannelWhitelistData = {
 
 export type ChannelsUpdateChannelWhitelistResponse = (WhitelistShowOutput);
 
-export type ChannelsGetChannelWhitelistEpisodesData = {
-    canonicalShowId: string;
-    channelId: string;
-    limit?: number;
-    offset?: number;
-    seasonId: string;
-};
-
-export type ChannelsGetChannelWhitelistEpisodesResponse = (WhitelistEpisodesOutput);
-
-export type ChannelsGetChannelWhitelistFilteredEpisodesData = {
+export type ChannelsGetChannelWhitelistData = {
     canonicalShowId: string;
     channelId: string;
 };
 
-export type ChannelsGetChannelWhitelistFilteredEpisodesResponse = (Array<WhitelistEpisodeOutput>);
+export type ChannelsGetChannelWhitelistResponse = (WhitelistShowOutput);
 
 export type ChannelsBlacklistChannelEpisodeData = {
     channelId: string;
@@ -2291,6 +2240,57 @@ export type ChannelsClearChannelCompletedQueueData = {
 
 export type ChannelsClearChannelCompletedQueueResponse = (Message);
 
+export type ChannelsGetSortOptionsResponse = (Array<SortOptionOutput>);
+
+export type ChannelsGetChannelEpisodesData = {
+    channelId: string;
+    hidePartiallyWatched?: boolean;
+    hideUnwatched?: boolean;
+    hideWatched?: boolean;
+    limit?: (number | null);
+    maximumAirDateAbsolute?: (string | null);
+    maximumAirDateRelative?: (number | null);
+    maximumDuration?: (number | null);
+    maximumWatchDateAbsolute?: (string | null);
+    maximumWatchDateRelative?: (number | null);
+    minimumAirDateAbsolute?: (string | null);
+    minimumAirDateRelative?: (number | null);
+    minimumDuration?: (number | null);
+    newShowsCount?: (number | null);
+    offset?: number;
+    orderPresetId?: (string | null);
+    randomSeed?: number;
+    sortBy?: Array<SortKeyInput>;
+    sourceIds?: Array<(string)>;
+    sourceIdsIsBlacklist?: boolean;
+    startedShowsCount?: (number | null);
+    totalShowsCount?: (number | null);
+};
+
+export type ChannelsGetChannelEpisodesResponse = (ChannelEpisodesOutput);
+
+export type ChannelsGetChannelShowsData = {
+    channelId: string;
+};
+
+export type ChannelsGetChannelShowsResponse = (ChannelShowsOutput);
+
+export type ChannelsGetChannelSourcesData = {
+    channelId: string;
+};
+
+export type ChannelsGetChannelSourcesResponse = (Array<SourcePublic>);
+
+export type ChannelsGetChannelWhitelistEpisodesData = {
+    canonicalShowId: string;
+    channelId: string;
+    limit?: number;
+    offset?: number;
+    seasonId: string;
+};
+
+export type ChannelsGetChannelWhitelistEpisodesResponse = (WhitelistEpisodesOutput);
+
 export type ChannelsAdminCreateChannelData = {
     requestBody: ChannelAdminCreate;
 };
@@ -2332,12 +2332,6 @@ export type CommentsReadMyChannelCommentsData = {
 
 export type CommentsReadMyChannelCommentsResponse = (ChannelCommentsListOutput);
 
-export type CommentsReadCommentRepliesData = {
-    commentId: string;
-};
-
-export type CommentsReadCommentRepliesResponse = (CommentsListOutput);
-
 export type CommentsReadUnreadCommentCountResponse = (number);
 
 export type CommentsMarkCommentsReadData = {
@@ -2359,6 +2353,13 @@ export type CommentsDeleteChannelCommentData = {
 
 export type CommentsDeleteChannelCommentResponse = (Message);
 
+export type CommentsCreateChannelCommentData = {
+    channelId: string;
+    requestBody: CommentCreate;
+};
+
+export type CommentsCreateChannelCommentResponse = (CommentOutput);
+
 export type CommentsReadChannelCommentsData = {
     channelId: string;
     limit?: number;
@@ -2367,24 +2368,11 @@ export type CommentsReadChannelCommentsData = {
 
 export type CommentsReadChannelCommentsResponse = (CommentsListOutput);
 
-export type CommentsCreateChannelCommentData = {
-    channelId: string;
-    requestBody: CommentCreate;
+export type CommentsReadCommentRepliesData = {
+    commentId: string;
 };
 
-export type CommentsCreateChannelCommentResponse = (CommentOutput);
-
-export type EpisodesGetEpisodeInformationData = {
-    episodeId: string;
-};
-
-export type EpisodesGetEpisodeInformationResponse = (EpisodeInformationOutput);
-
-export type EpisodesGetNonCanonicalEpisodesData = {
-    episodeId: string;
-};
-
-export type EpisodesGetNonCanonicalEpisodesResponse = (Array<EpisodeListOutput>);
+export type CommentsReadCommentRepliesResponse = (CommentsListOutput);
 
 export type EpisodesSetEpisodeUserUrlData = {
     episodeId: string;
@@ -2398,6 +2386,18 @@ export type EpisodesDeleteEpisodeUserUrlData = {
 };
 
 export type EpisodesDeleteEpisodeUserUrlResponse = (UserEpisodeUrlOutput);
+
+export type EpisodesGetEpisodeInformationData = {
+    episodeId: string;
+};
+
+export type EpisodesGetEpisodeInformationResponse = (EpisodeInformationOutput);
+
+export type EpisodesGetNonCanonicalEpisodesData = {
+    episodeId: string;
+};
+
+export type EpisodesGetNonCanonicalEpisodesResponse = (Array<EpisodeListOutput>);
 
 export type EpisodesGetEpisodesData = {
     filterOptions?: string;
@@ -2539,45 +2539,6 @@ export type FilesCreateFileData = {
 
 export type FilesCreateFileResponse = (FilePublic);
 
-export type IssueReportsGetEpisodeIssueReportsData = {
-    episodeId: string;
-};
-
-export type IssueReportsGetEpisodeIssueReportsResponse = (Array<IssueReportOutput>);
-
-export type IssueReportsCreateEpisodeIssueReportData = {
-    episodeId: string;
-    requestBody: IssueReportCreate;
-};
-
-export type IssueReportsCreateEpisodeIssueReportResponse = (IssueReportOutput);
-
-export type IssueReportsGetSeasonIssueReportsData = {
-    seasonId: string;
-};
-
-export type IssueReportsGetSeasonIssueReportsResponse = (Array<IssueReportOutput>);
-
-export type IssueReportsCreateSeasonIssueReportData = {
-    requestBody: IssueReportCreate;
-    seasonId: string;
-};
-
-export type IssueReportsCreateSeasonIssueReportResponse = (IssueReportOutput);
-
-export type IssueReportsGetShowIssueReportsData = {
-    showId: string;
-};
-
-export type IssueReportsGetShowIssueReportsResponse = (Array<IssueReportOutput>);
-
-export type IssueReportsCreateShowIssueReportData = {
-    requestBody: IssueReportCreate;
-    showId: string;
-};
-
-export type IssueReportsCreateShowIssueReportResponse = (IssueReportOutput);
-
 export type IssueReportsUpdateEpisodeIssueReportData = {
     issueReportId: string;
     requestBody: IssueReportUpdate;
@@ -2617,19 +2578,58 @@ export type IssueReportsDeleteShowIssueReportData = {
 
 export type IssueReportsDeleteShowIssueReportResponse = (Message);
 
+export type IssueReportsGetEpisodeIssueReportsData = {
+    episodeId: string;
+};
+
+export type IssueReportsGetEpisodeIssueReportsResponse = (Array<IssueReportOutput>);
+
+export type IssueReportsCreateEpisodeIssueReportData = {
+    episodeId: string;
+    requestBody: IssueReportCreate;
+};
+
+export type IssueReportsCreateEpisodeIssueReportResponse = (IssueReportOutput);
+
+export type IssueReportsGetSeasonIssueReportsData = {
+    seasonId: string;
+};
+
+export type IssueReportsGetSeasonIssueReportsResponse = (Array<IssueReportOutput>);
+
+export type IssueReportsCreateSeasonIssueReportData = {
+    requestBody: IssueReportCreate;
+    seasonId: string;
+};
+
+export type IssueReportsCreateSeasonIssueReportResponse = (IssueReportOutput);
+
+export type IssueReportsGetShowIssueReportsData = {
+    showId: string;
+};
+
+export type IssueReportsGetShowIssueReportsResponse = (Array<IssueReportOutput>);
+
+export type IssueReportsCreateShowIssueReportData = {
+    requestBody: IssueReportCreate;
+    showId: string;
+};
+
+export type IssueReportsCreateShowIssueReportResponse = (IssueReportOutput);
+
 export type IssueReportsGetIssueReportsData = {
     mediaType?: (IssueReportMediaType | null);
 };
 
 export type IssueReportsGetIssueReportsResponse = (Array<IssueReportListOutput>);
 
+export type LoginTestTokenResponse = (UserPublic);
+
 export type LoginLoginAccessTokenData = {
     formData: Body_login_login_access_token;
 };
 
 export type LoginLoginAccessTokenResponse = (Token);
-
-export type LoginTestTokenResponse = (UserPublic);
 
 export type LoginRecoverPasswordData = {
     email: string;
@@ -2955,17 +2955,17 @@ export type UsersUpdateSourcePreferencesData = {
 
 export type UsersUpdateSourcePreferencesResponse = (Array<SourcePreferenceOutput>);
 
-export type UsersRegisterUserData = {
-    requestBody: UserRegister;
-};
-
-export type UsersRegisterUserResponse = (UserPublic);
-
 export type UsersReadUserByIdData = {
     userId: string;
 };
 
 export type UsersReadUserByIdResponse = (UserPublic);
+
+export type UsersRegisterUserData = {
+    requestBody: UserRegister;
+};
+
+export type UsersRegisterUserResponse = (UserPublic);
 
 export type UsersGetUserPublicChannelsData = {
     userId: string;

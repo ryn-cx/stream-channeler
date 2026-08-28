@@ -201,7 +201,9 @@ def admin_link_episode_by_tmdb_url(
     pointed at, and so that a title the show was not a non-canonical row of is linked to
     it as well.
     """
-    return EpisodeOutput.model_validate(link_episode_using_tmdb_url(session, episode, url_input.url))
+    return EpisodeOutput.model_validate(
+        link_episode_using_tmdb_url(session, episode, url_input.url),
+    )
 
 
 # TODO: Validate
@@ -222,7 +224,9 @@ def admin_link_episode_to_tmdb(
     since a website running two episodes together in one listing is a thing
     websites do. Taking one off is `admin_unlink_episode_from_canonical`.
     """
-    return EpisodeOutput.model_validate(link_episode(session, episode, canonical_episode))
+    return EpisodeOutput.model_validate(
+        link_episode(session, episode, canonical_episode),
+    )
 
 
 # TODO: Validate
@@ -235,7 +239,9 @@ def admin_unlink_episode_from_canonical(
     canonical_episode: AdminCanonicalEpisode,
 ) -> EpisodeOutput:
     """Take one episode off what an `Episode` stands for."""
-    return EpisodeOutput.model_validate(unlink_episode(session, episode, canonical_episode))
+    return EpisodeOutput.model_validate(
+        unlink_episode(session, episode, canonical_episode),
+    )
 
 
 # TODO: Validate

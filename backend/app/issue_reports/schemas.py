@@ -46,7 +46,10 @@ class IssueReportOutput(BaseModel):
     created_at: datetime
     modified_at: datetime
     user_id: uuid.UUID | None
-    username: str | None = Field(validation_alias=AliasPath("user", "username"))
+    username: str | None = Field(
+        default=None,
+        validation_alias=AliasPath("user", "username"),
+    )
 
 
 # TODO: Validate

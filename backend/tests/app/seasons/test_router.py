@@ -1,47 +1,38 @@
 # TODO: Validate
+"""Who the season routes let through."""
 
+import pytest
+from fastapi.testclient import TestClient
+from sqlmodel import Session
 
-from app.seasons.models import Season
-from app.seasons.schemas import (
-    SeasonCreate,
-    SeasonOutput,
-    SeasonUpdate,
-)
+from tests.app.helpers.admin_routes import MISSING, assert_admin_only
+from tests.app.helpers.permissions import Method, assert_allowed
 from tests.app.seasons.utils import create_random_season
-from tests.app.shows.utils import create_random_show
-from tests.app.utils.base import BaseTests
-from tests.app.utils.base_create import BaseCreateTests
-from tests.app.utils.base_delete import BaseDeleteTests
-from tests.app.utils.base_get import BaseGetTests
-from tests.app.utils.base_update import BaseUpdateTests
+
+ADMIN_ROUTES: list[tuple[Method, str]] = [
+    ("post", f"/shows/{MISSING}/seasons"),
+    ("get", "/seasons"),
+    ("get", f"/seasons/{MISSING}"),
+    ("patch", f"/seasons/{MISSING}"),
+    ("delete", f"/seasons/{MISSING}"),
+]
 
 
 # TODO: Validate
-class SeasonTestMixin(BaseTests[Season]):
-    database_model = Season
-    create_schema = SeasonCreate
-    output_schema = SeasonOutput
-    update_schema = SeasonUpdate
-
-    create_parent_function = staticmethod(create_random_show)
-    create_record_function = staticmethod(create_random_season)
-
-
-# TODO: Validate
-class TestCreateSeason(SeasonTestMixin, BaseCreateTests[Season]):
-    pass
+@pytest.mark.parametrize(("method", "path"), ADMIN_ROUTES)
+def test_season_admin_routes_are_admin_only(
+    session_scoped_client: TestClient,
+    session_scoped_session: Session,
+    method: Method,
+    path: str,
+) -> None:
+    assert_admin_only(session_scoped_client, session_scoped_session, method, path)
 
 
 # TODO: Validate
-class TestGetSeason(SeasonTestMixin, BaseGetTests[Season]):
-    pass
-
-
-# TODO: Validate
-class TestUpdateSeason(SeasonTestMixin, BaseUpdateTests[Season]):
-    pass
-
-
-# TODO: Validate
-class TestDeleteSeason(SeasonTestMixin, BaseDeleteTests[Season]):
-    pass
+def test_season_information_is_readable_by_anybody(
+    session_scoped_client: TestClient,
+    session_scoped_session: Session,
+) -> None:
+    season = create_random_season(session_scoped_session)
+    assert_allowed(session_scoped_client, "get", f"/seasons/{season.id}/information")

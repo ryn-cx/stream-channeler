@@ -1,27 +1,18 @@
 # TODO: Validate
-import uuid
-
 from sqlmodel import Session
 
 from app.plugins.models import Plugin
-from app.users.models import User
-from tests.app.users.utils import CreatedUser, create_random_user
-from tests.app.utils.utils import build_random_model
-
-PluginParent = User | CreatedUser | uuid.UUID
+from tests.app.helpers.utils import build_random_model
 
 
 # TODO: Validate
-def create_random_plugin(
-    session: Session,
-    parent: User | CreatedUser | uuid.UUID | None = None,
-    **kwargs: object,
-) -> Plugin:
-    if parent is None:
-        parent = create_random_user(session)
-    if isinstance(parent, (User, CreatedUser)):
-        parent = parent.id
-    plugin = build_random_model(Plugin, user_id=parent, deleted_at=None, **kwargs)
+def create_random_plugin(session: Session, **kwargs: object) -> Plugin:
+    """Create a `Plugin`.
+
+    A plugin belongs to nobody and is the same for everybody, so there is no owner
+    to give it and no visibility to set on it.
+    """
+    plugin = build_random_model(Plugin, deleted_at=None, **kwargs)
     session.add(plugin)
-    session.flush()  # Allows plugin.user, plugin.sources, and plugin.files to be accessed.
+    session.flush()  # Allows plugin.sources and plugin.files to be accessed.
     return plugin

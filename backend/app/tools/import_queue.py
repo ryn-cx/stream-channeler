@@ -36,16 +36,17 @@ from plugins.utils.abstract_plugin import (
     InvalidURLError,
     URLImportResult,
 )
-from plugins.utils.manage_plugins import import_plugins, plugins
+from plugins.utils.manage_plugins import sorted_plugins
 
 logger = logger.bind(source="import_queue")
 
-import_plugins()
-PLUGIN_LOCKS = {plugin_class.plugin_key(): threading.Lock() for plugin_class in plugins}
+PLUGIN_LOCKS = {
+    plugin_class.plugin_key(): threading.Lock() for plugin_class in sorted_plugins()
+}
 
 
 # TODO: Validate
-def run_forever(stop_event: threading.Event | None = None) -> None:  # noqa: D103
+def run_forever(stop_event: threading.Event | None = None) -> None:
     stop_event = stop_event or threading.Event()
     while not stop_event.is_set():
         with Session(engine) as session:
@@ -66,7 +67,11 @@ def import_queue(session: Session) -> None:
 
 # TODO: Validate
 def _get_plugin(url: str) -> type[AbstractPlugin] | None:
-    for plugin_class in plugins:
+    # `sorted_plugins` rather than the registry itself, which is only filled in
+    # once something has imported the plugins. Nothing here can count on that
+    # having happened: the queue is worked by a job that need never have served a
+    # request, and an empty registry would fail every URL as unmatched.
+    for plugin_class in sorted_plugins():
         # A plugin that imports no URL carries no pattern to match one against.
         if not plugin_class.implements("import_url"):
             continue

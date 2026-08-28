@@ -9,10 +9,9 @@ from uuid import UUID
 from sqlalchemy import case, distinct
 from sqlalchemy.orm import Mapped, selectinload
 from sqlalchemy.sql.expression import ColumnElement, Subquery, UnaryExpression
-from sqlmodel import and_, col, func, or_, select
+from sqlmodel import Session, and_, col, func, or_, select
 from sqlmodel.sql.expression import Select
 
-from app.auth.dependencies import CurrentUser, SessionDep
 from app.canonical_media.episodes import canonical_id_of, links_of
 from app.canonical_media.filters import is_canonical, is_non_canonical
 from app.canonical_media.keys import not_tmdb_key_clause, same_issuer_clause
@@ -64,6 +63,7 @@ from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show, ShowCanonicalShow
 from app.sources.models import Source
+from app.users.models import User
 from app.utils import tz_datetime
 from app.watches.models import Watch
 
@@ -90,10 +90,10 @@ class EpisodeQueryBuilder:
     # TODO: Validate
     def __init__(
         self,
-        session: SessionDep,
+        session: Session,
         channel: Channel,
         channel_options: ChannelOptions,
-        user: CurrentUser | None = None,
+        user: User | None = None,
     ) -> None:
         self._session = session
         self._channel = channel

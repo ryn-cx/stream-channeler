@@ -18,7 +18,7 @@ def serve_downloads_from_test_files() -> Generator[None]:
         yield
         return
 
-    from tests.old_mess.plugins.plugin_validator.context_managers import (  # noqa: PLC0415 - Only reached on a local run, where the tests are on disk.
+    from tests.plugins.plugin_validator_v2.stored_files import (  # noqa: PLC0415 - Only reached on a local run, where the tests are on disk.
         _exists,
         _owner_key,
         restore_stored_metadata,

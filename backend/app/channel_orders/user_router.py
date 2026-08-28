@@ -2,10 +2,8 @@
 
 
 import uuid
-from typing import Annotated
 
-from fastapi import APIRouter, Query
-from sqlmodel import select
+from fastapi import APIRouter
 
 from app.auth.dependencies import (
     CurrentUser,
@@ -16,20 +14,15 @@ from app.channel_orders.dependencies import (
     EditableChannelOrder,
     ReadableChannelOrder,
 )
-from app.channel_orders.models import ChannelOrder, ChannelOrderFavorite
+from app.channel_orders.models import ChannelOrder
 from app.channel_orders.schemas import (
     ChannelOrderCopyInput,
     ChannelOrderCreate,
-    ChannelOrderListOutput,
     ChannelOrderOutput,
-    ChannelOrderReadOptions,
-    ChannelOrdersPublic,
     ChannelOrderUpdate,
 )
 from app.media.service import delete_record
-from app.models import Visibility
 from app.schemas import Message
-from app.users.dependencies import OptionalUser
 
 channel_orders_router = APIRouter(
     prefix="/channel-orders",
@@ -45,34 +38,7 @@ def create_channel_order(
     order_input: ChannelOrderCreate,
 ) -> ChannelOrder:
     """Create a `ChannelOrder` owned by the `User`."""
-    order = ChannelOrder.model_validate(
-        order_input,
-        update={"user_id": current_user.id},
-    )
-    session.add(order)
-    session.commit()
-    session.refresh(order)
-    return order
-
-
-# TODO: Validate
-@channel_orders_router.get("")
-def get_channel_orders(
-    session: SessionDep,
-    current_user: OptionalUser,
-    read_options: Annotated[ChannelOrderReadOptions, Query()],
-) -> ChannelOrdersPublic:
-    """Get `ChannelOrder`s."""
-    return service.scoped_channel_order_list_output(session, current_user, read_options)
-
-
-# TODO: Validate
-@channel_orders_router.get("/featured")
-def get_featured_channel_orders(
-    session: SessionDep,
-) -> list[ChannelOrderListOutput]:
-    """List public `ChannelOrder`s with a positive score for onboarding."""
-    return service.featured_channel_orders(session)
+    return service.create_channel_order(session, current_user, order_input)
 
 
 # TODO: Validate
@@ -81,18 +47,8 @@ def get_favorite_channel_order_ids(
     session: SessionDep,
     current_user: CurrentUser,
 ) -> list[uuid.UUID]:
-    """List the ids of the `ChannelOrder`s the current `User` has favorited.
-
-    Unreadable favorites are left in because this only drives the favorite toggle;
-    the `favorites` scope of the list endpoint is what applies the read rules.
-    """
-    return list(
-        session.exec(
-            select(ChannelOrderFavorite.channel_order_id).where(
-                ChannelOrderFavorite.user_id == current_user.id,
-            ),
-        ).all(),
-    )
+    """List the ids of the `ChannelOrder`s the current `User` has favorited."""
+    return service.favorite_channel_order_ids(session, current_user)
 
 
 # TODO: Validate
@@ -103,13 +59,7 @@ def favorite_channel_order(
     order: ReadableChannelOrder,
 ) -> Message:
     """Favorite a `ChannelOrder` if it's readable by the `User`."""
-    favorite = session.get(ChannelOrderFavorite, (current_user.id, order.id))
-    if favorite is None:
-        session.add(
-            ChannelOrderFavorite(user_id=current_user.id, channel_order_id=order.id),
-        )
-        session.commit()
-    return Message(message="Order favorited successfully")
+    return service.favorite_channel_order(session, current_user, order)
 
 
 # TODO: Validate
@@ -120,11 +70,7 @@ def unfavorite_channel_order(
     order: ReadableChannelOrder,
 ) -> Message:
     """Remove a `ChannelOrder` from the `User`'s favorites."""
-    favorite = session.get(ChannelOrderFavorite, (current_user.id, order.id))
-    if favorite is not None:
-        session.delete(favorite)
-        session.commit()
-    return Message(message="Order unfavorited successfully")
+    return service.unfavorite_channel_order(session, current_user, order)
 
 
 # TODO: Validate
@@ -139,30 +85,7 @@ def copy_channel_order(
     copy_in: ChannelOrderCopyInput,
 ) -> ChannelOrder:
     """Copy a readable `ChannelOrder` into the current `User`'s account."""
-    fallback_name = f"Copy of {order.name}" if order.name else "Copied order"
-    new_order = ChannelOrder(
-        name=copy_in.name or fallback_name,
-        description=order.description,
-        visibility=Visibility.private,
-        anonymous=False,
-        config=order.config,
-        icon=order.icon,
-        user_id=current_user.id,
-    )
-    session.add(new_order)
-    session.commit()
-    session.refresh(new_order)
-    return new_order
-
-
-# TODO: Validate
-@channel_orders_router.get("/{channel_order_id}", response_model=ChannelOrderOutput)  # noqa: FAST003 - Used by ReadableChannelOrder
-def get_channel_order(
-    order: ReadableChannelOrder,
-    optional_user: OptionalUser,
-) -> ChannelOrderOutput:
-    """Return a `ChannelOrder` if it's readable by the `User`."""
-    return service.channel_order_output(order, optional_user)
+    return service.copy_channel_order(session, current_user, order, copy_in)
 
 
 # TODO: Validate

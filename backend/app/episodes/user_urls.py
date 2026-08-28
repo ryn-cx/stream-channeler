@@ -92,7 +92,9 @@ def canonical_episode_for_url(episode: Episode) -> uuid.UUID:
 # TODO: Validate
 def user_episode_url_count(session: Session, user: User) -> int:
     return session.exec(
-        select(func.count()).select_from(UserEpisodeUrl).where(
+        select(func.count())
+        .select_from(UserEpisodeUrl)
+        .where(
             UserEpisodeUrl.user_id == user.id,
         ),
     ).one()

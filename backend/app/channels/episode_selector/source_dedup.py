@@ -9,7 +9,8 @@ highest-ranked row is the one that stands for the episode.
 
 from dataclasses import dataclass
 
-from app.auth.dependencies import SessionDep
+from sqlmodel import Session
+
 from app.sources.service import OTHER_SOURCE_KEY
 from app.users.models import User
 from app.users.service import effective_source_preferences, stored_preferences
@@ -36,7 +37,7 @@ class SourceDedupConfig:
 
 # TODO: Validate
 def source_dedup_config(
-    session: SessionDep,
+    session: Session,
     user: User | None,
 ) -> SourceDedupConfig:
     """Resolve a user's effective preferences into priorities and enabled sets."""

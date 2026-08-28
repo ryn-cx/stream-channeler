@@ -11,8 +11,8 @@ from app.sources.models import Source
 from app.users.models import User
 from app.watches.models import Watch
 from tests.app.episodes.utils import create_random_episode
+from tests.app.helpers.utils import build_random_model
 from tests.app.users.utils import CreatedUser, create_random_user
-from tests.app.utils.utils import build_random_model
 
 
 # TODO: Validate
@@ -41,6 +41,9 @@ def create_random_watch(
         watch_user = create_random_user(session).id
     if not isinstance(parent, Episode):
         parent = create_random_episode(session, parent or watch_user)
+    # A watch is matched back to what it played by the identifier it carries, not
+    # by the episode id, so a random identifier is a watch of nothing.
+    kwargs.setdefault("watch_identifier", parent.watch_identifier)
     watch = build_random_model(
         Watch,
         user_id=watch_user,

@@ -1,131 +1,101 @@
 # TODO: Validate
-# TODO: This was completely AI generated just to have a temporary baseline and should be
-# replaced with real tests.
-import uuid
+"""What working a channel's import queue does to the entries in it.
 
-from sqlmodel import Session, select
+Importing a URL is the plugin's own work and is tested against the plugins. What
+is here is the queue around it: which entries are picked up, and what an entry
+nothing can import is left saying.
+"""
 
-from app.channels.models import ChannelQueue, ChannelShow, URLStatus
+from datetime import timedelta
+
+from sqlmodel import Session
+
+from app.channels.models import URLStatus
 from app.tools.import_queue import import_queue
-from tests.app.channels.utils import create_random_channel
-from tests.app.shows.utils import create_random_show
-from tests.app.utils.utils import random_lower_string
+from app.utils import tz_datetime
+from tests.app.channels.utils import create_random_channel, create_random_channel_queue
+from tests.app.helpers.utils import random_lower_string
 
 
 # TODO: Validate
-def _queue(
-    session: Session,
-    channel_id: uuid.UUID,
-    url: str,
-) -> ChannelQueue:
-    item = ChannelQueue(channel_id=channel_id, url=url, status=URLStatus.PENDING)
-    session.add(item)
-    session.commit()
-    return item
+def test_a_url_no_plugin_can_import_is_failed(
+    function_scoped_session: Session,
+) -> None:
+    channel = create_random_channel(function_scoped_session)
+    item = create_random_channel_queue(
+        function_scoped_session,
+        channel,
+        url=random_lower_string(),
+        status=URLStatus.PENDING,
+        import_at=None,
+    )
+    function_scoped_session.commit()
+
+    import_queue(function_scoped_session)
+
+    function_scoped_session.refresh(item)
+    assert item.status == URLStatus.FAILED
+    assert item.note == "No valid plugin found."
 
 
 # TODO: Validate
-class TestImportQueue:
-    # TODO: Validate
-    def test_imports_matching_url_into_channel(
-        self,
-        function_scoped_session: Session,
-    ) -> None:
-        show = create_random_show(function_scoped_session)
-        channel = create_random_channel(function_scoped_session)
-        item = _queue(
-            function_scoped_session,
-            channel.id,
-            f"streamchanneler.com/show/{show.id}/",
-        )
+def test_an_entry_waiting_for_its_turn_is_left_alone(
+    function_scoped_session: Session,
+) -> None:
+    """An entry rescheduled for later is not picked up before then."""
+    channel = create_random_channel(function_scoped_session)
+    item = create_random_channel_queue(
+        function_scoped_session,
+        channel,
+        url=random_lower_string(),
+        status=URLStatus.PENDING,
+        import_at=tz_datetime.now() + timedelta(hours=1),
+    )
+    function_scoped_session.commit()
 
-        import_queue(function_scoped_session)
+    import_queue(function_scoped_session)
 
-        function_scoped_session.refresh(item)
-        assert item.status == URLStatus.IMPORTED
+    function_scoped_session.refresh(item)
+    assert item.status == URLStatus.PENDING
 
-        channel_shows = function_scoped_session.exec(
-            select(ChannelShow).where(ChannelShow.channel_id == channel.id),
-        ).all()
-        assert len(channel_shows) == 1
-        assert channel_shows[0].canonical_show_id in show.canonical_show_ids
 
-    # TODO: Validate
-    def test_uses_the_callers_session_database(
-        self,
-        function_scoped_session: Session,
-    ) -> None:
-        # The show exists only inside this test's uncommitted transaction. If the import
-        # ran on a different engine/connection it could not find it and would fail, so a
-        # successful import proves the caller's session (and its database) is used.
-        show = create_random_show(function_scoped_session)
-        channel = create_random_channel(function_scoped_session)
-        item = _queue(
-            function_scoped_session,
-            channel.id,
-            f"streamchanneler.com/show/{show.id}/",
-        )
+# TODO: Validate
+def test_an_entry_already_imported_is_not_picked_up_again(
+    function_scoped_session: Session,
+) -> None:
+    channel = create_random_channel(function_scoped_session)
+    item = create_random_channel_queue(
+        function_scoped_session,
+        channel,
+        url=random_lower_string(),
+        status=URLStatus.IMPORTED,
+        import_at=None,
+    )
+    function_scoped_session.commit()
 
-        import_queue(function_scoped_session)
+    import_queue(function_scoped_session)
 
-        function_scoped_session.refresh(item)
-        assert item.status == URLStatus.IMPORTED
+    function_scoped_session.refresh(item)
+    assert item.status == URLStatus.IMPORTED
 
-    # TODO: Validate
-    def test_only_imports_the_matching_plugin(
-        self,
-        function_scoped_session: Session,
-    ) -> None:
-        # Two shows, only one queued; importing StreamChanneler must import exactly the
-        # queued one and leave nothing else pending.
-        show = create_random_show(function_scoped_session)
-        create_random_show(function_scoped_session)
-        channel = create_random_channel(function_scoped_session)
-        item = _queue(
-            function_scoped_session,
-            channel.id,
-            f"streamchanneler.com/show/{show.id}/",
-        )
 
-        import_queue(function_scoped_session)
+# TODO: Validate
+def test_an_entry_that_already_failed_is_not_failed_again(
+    function_scoped_session: Session,
+) -> None:
+    channel = create_random_channel(function_scoped_session)
+    note = random_lower_string()
+    item = create_random_channel_queue(
+        function_scoped_session,
+        channel,
+        url=random_lower_string(),
+        status=URLStatus.FAILED,
+        note=note,
+        import_at=None,
+    )
+    function_scoped_session.commit()
 
-        function_scoped_session.refresh(item)
-        assert item.status == URLStatus.IMPORTED
-        channel_shows = function_scoped_session.exec(
-            select(ChannelShow).where(ChannelShow.channel_id == channel.id),
-        ).all()
-        assert {
-            channel_show.canonical_show_id for channel_show in channel_shows
-        } == set(show.canonical_show_ids)
+    import_queue(function_scoped_session)
 
-    # TODO: Validate
-    def test_marks_unmatched_url_failed(
-        self,
-        function_scoped_session: Session,
-    ) -> None:
-        channel = create_random_channel(function_scoped_session)
-        item = _queue(function_scoped_session, channel.id, random_lower_string())
-
-        import_queue(function_scoped_session)
-
-        function_scoped_session.refresh(item)
-        assert item.status == URLStatus.FAILED
-        assert item.note == "No valid plugin found."
-
-    # TODO: Validate
-    def test_marks_invalid_url_failed(
-        self,
-        function_scoped_session: Session,
-    ) -> None:
-        # Correct StreamChanneler URL shape, but the show does not exist, so the plugin
-        # raises InvalidURLError and the item is failed rather than importing.
-        channel = create_random_channel(function_scoped_session)
-        url = f"streamchanneler.com/show/{uuid.uuid4()}/"
-        item = _queue(function_scoped_session, channel.id, url)
-
-        import_queue(function_scoped_session)
-
-        function_scoped_session.refresh(item)
-        assert item.status == URLStatus.FAILED
-        # The plugin's own explanation is what the user is left with.
-        assert item.note == f"Show not found: {url}"
+    function_scoped_session.refresh(item)
+    assert item.note == note

@@ -1,45 +1,28 @@
 # TODO: Validate
-from app.sources.models import Source
-from app.sources.schemas import (
-    SourceCreate,
-    SourcePublic,
-    SourceUpdate,
-)
-from tests.app.plugins.utils import create_random_plugin
-from tests.app.sources.utils import create_random_source
-from tests.app.utils.base import BaseTests
-from tests.app.utils.base_create import BaseCreateTests
-from tests.app.utils.base_delete import BaseDeleteTests
-from tests.app.utils.base_get import BaseGetTests
-from tests.app.utils.base_update import BaseUpdateTests
+"""Who the source routes let through."""
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlmodel import Session
+
+from tests.app.helpers.admin_routes import MISSING, assert_admin_only
+from tests.app.helpers.permissions import Method
+
+ADMIN_ROUTES: list[tuple[Method, str]] = [
+    ("post", f"/plugins/{MISSING}/sources"),
+    ("get", "/sources"),
+    ("get", f"/sources/{MISSING}"),
+    ("patch", f"/sources/{MISSING}"),
+    ("delete", f"/sources/{MISSING}"),
+]
 
 
 # TODO: Validate
-class SourceTestMixin(BaseTests[Source]):
-    database_model = Source
-    create_schema = SourceCreate
-    output_schema = SourcePublic
-    update_schema = SourceUpdate
-
-    create_parent_function = staticmethod(create_random_plugin)
-    create_record_function = staticmethod(create_random_source)
-
-
-# TODO: Validate
-class TestCreateSource(SourceTestMixin, BaseCreateTests[Source]):
-    pass
-
-
-# TODO: Validate
-class TestGetSource(SourceTestMixin, BaseGetTests[Source]):
-    pass
-
-
-# TODO: Validate
-class TestUpdateSource(SourceTestMixin, BaseUpdateTests[Source]):
-    pass
-
-
-# TODO: Validate
-class TestDeleteSource(SourceTestMixin, BaseDeleteTests[Source]):
-    pass
+@pytest.mark.parametrize(("method", "path"), ADMIN_ROUTES)
+def test_source_routes_are_admin_only(
+    session_scoped_client: TestClient,
+    session_scoped_session: Session,
+    method: Method,
+    path: str,
+) -> None:
+    assert_admin_only(session_scoped_client, session_scoped_session, method, path)

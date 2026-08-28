@@ -44,7 +44,7 @@ from app.shows.service import (
     set_canonical_show,
     set_canonical_show_using_tmdb_url,
     unset_canonical_show,
-    update_show_extra,
+    update_show_record,
     validate_show,
 )
 from app.sources.dependencies import ExistingSource
@@ -148,21 +148,8 @@ def update_show(
     show: ExistingShow,
     show_input: ShowUpdate,
 ) -> ShowPublic:
-    """Which canonical show this stands for is not something an update writes: it is
-    linker's to work out during an import, or a `User`'s to settle through the
-    TMDB matching screens, so there is nothing to repoint here.
-
-    `extra` goes through its own service rather than being written with the rest, since
-    what a TMDB row keeps there is the episode order the title is read in and changing
-    that means reading the title again and matching every non-canonical row of it
-    afresh.
-    """
-    # Before the rest of the update, because what it does depends on the order
-    # the title is read in now and the general write would already have replaced
-    # it. The same value going down twice writes nothing the second time.
-    if "extra" in show_input.model_fields_set:
-        update_show_extra(session, show, show_input.extra)
-    return _show_output(show_input.update(session, show))
+    """Update a `Show`."""
+    return update_show_record(session, show, show_input)
 
 
 # TODO: Validate
@@ -315,5 +302,3 @@ router.include_router(shows_router)
 
 
 router.include_router(source_shows_router)
-
-

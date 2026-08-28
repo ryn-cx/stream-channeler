@@ -8,9 +8,9 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.users.models import User
+from tests.app.helpers.utils import build_random_model
 from tests.app.shows.utils import create_random_show
 from tests.app.users.utils import CreatedUser
-from tests.app.utils.utils import build_random_model
 
 
 # TODO: Validate

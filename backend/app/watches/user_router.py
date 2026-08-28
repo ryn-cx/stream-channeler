@@ -3,7 +3,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Query, UploadFile
 
 from app.auth.dependencies import (
     CurrentUser,
@@ -25,10 +25,10 @@ from app.watches.schemas import (
 )
 from app.watches.services import (
     delete_watches,
-    get_installed_plugin,
+    export_watch_history_entries,
     get_watched_episodes,
+    import_watch_history_file,
 )
-from plugins.StreamChanneler import StreamChanneler
 
 watches_router = APIRouter(prefix="/watches", tags=["watches"])
 
@@ -92,29 +92,7 @@ def import_watch_history(
     current_user: CurrentUser,
 ) -> WatchImportResults:
     """Import watch history from an uploaded file for a specific plugin."""
-    plugin = get_installed_plugin(params.plugin_key)
-    if not plugin:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Plugin '{params.plugin_key}' not found.",
-        )
-    if not plugin.implements("import_watch_history"):
-        raise HTTPException(
-            status_code=422,
-            detail=f"Plugin '{params.plugin_key}' does not support watch history import.",
-        )
-
-    content = file.file.read().decode("utf-8")
-
-    plugin_instance = plugin(session=session)
-    result = plugin_instance.import_watch_history(
-        content=content,
-        user=current_user,
-        new_only=params.new_only,
-        verified=params.verified,
-    )
-    session.commit()
-    return result
+    return import_watch_history_file(session, current_user, file, params)
 
 
 # TODO: Validate
@@ -124,7 +102,7 @@ def export_watch_history(
     current_user: CurrentUser,
 ) -> list[WatchExportEntry]:
     """Export the `User`'s watches as a Stream Channeler watch history."""
-    return StreamChanneler(session=session).export_watch_history(current_user)
+    return export_watch_history_entries(session, current_user)
 
 
 router = APIRouter()

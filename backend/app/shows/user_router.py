@@ -3,22 +3,10 @@
 
 from fastapi import APIRouter
 
-from app.auth.dependencies import (
-    SessionDep,
-)
-from app.canonical_media.metadata import canonical_show_of
-from app.issue_reports.service import list_show_issue_reports
-from app.plugins.identifiers import TMDB_PLUGIN_KEY
-from app.shows.dependencies import AdminCanonicalShow, ExistingShow
+from app.shows.dependencies import AdminCanonicalShow
 from app.shows.schemas import (
     CanonicalShowOutput,
-    ShowInformationOutput,
-    ShowInformationSide,
 )
-from app.shows.service import (
-    _information_side,
-)
-from app.users.dependencies import OptionalUser
 
 """Show router."""
 
@@ -27,42 +15,6 @@ canonical_shows_router = APIRouter(
     prefix="/shows/canonical",
     tags=["canonical-shows"],
 )
-
-
-shows_router = APIRouter(prefix="/shows", tags=["shows"])
-
-
-# TODO: Validate
-@shows_router.get("/{show_id}/information")  # noqa: FAST003 - Used by ExistingShow.
-def get_show_information(
-    session: SessionDep,
-    show: ExistingShow,
-    current_user: OptionalUser,
-) -> ShowInformationOutput:
-    """Return what the website and TMDB each say about a `Show`.
-
-    The website's own account is what it stored rather than what is served, since
-    what is served already reads as TMDB has it and would leave nothing to
-    compare.
-    """
-    source = show.source
-
-    counterpart = canonical_show_of(session, show)
-    tmdb: ShowInformationSide | None = None
-    if counterpart:
-        tmdb = _information_side(TMDB_PLUGIN_KEY, counterpart)
-
-    editable = current_user is not None and current_user.is_superuser
-
-    return ShowInformationOutput(
-        editable=editable,
-        issue_reports=list_show_issue_reports(session, show.id),
-        source=_information_side(
-            source.name or source.plugin.name or source.plugin.key,
-            show,
-        ),
-        tmdb=tmdb,
-    )
 
 
 # TODO: Validate
@@ -78,6 +30,3 @@ router = APIRouter()
 
 
 router.include_router(canonical_shows_router)
-
-
-router.include_router(shows_router)
