@@ -53,10 +53,6 @@ class EpisodeOutput(BaseEpisode):
     id: uuid.UUID
     season_id: uuid.UUID
     modified_at: datetime
-    # The episode this is a link to, which is what the record is served as and
-    # what a watch, a channel filter and a saved position all name. Nothing when
-    # the row is the episode itself, which is what the admin lists serve
-    # alongside the links.
     canonical_episode_id: uuid.UUID | None = Field(
         default=None,
         validation_alias=AliasChoices(
@@ -64,25 +60,10 @@ class EpisodeOutput(BaseEpisode):
             "sole_canonical_episode_id",
         ),
     )
-    # Every episode it stands for, which is what the screens that settle the
-    # links by hand work on: one of them is what the field above reads as, and a
-    # row standing for two has none to read there at all.
     canonical_episode_ids: list[uuid.UUID] = Field(default_factory=list)
-    # Where the row sits, as the link that was made for it says. `sort_order` is
-    # the row's own column, which is what a website filed it under and what a row
-    # with no link is ordered by; this is what the link holding it says instead.
     linked_sort_order: int | None = None
-    # The TMDB episode behind that, when TMDB has a record of it.
     tmdb_id: int | None = None
-    # The episode's own page on themoviedb.org. TMDB builds the address out of
-    # the key of the title the episode sits under rather than out of anything the
-    # episode carries, so it is filled in where the title is at hand.
     tmdb_url: str | None = None
-    # What the episode is, said the same way wherever it turns up. Two rows
-    # sharing it are the same episode listed twice -- deliberately, so each
-    # listing can be filtered on its own -- and this is what collapses them
-    # when a normalised view is wanted.
-    canonical_key: str | None = None
 
 
 # TODO: Consider reworking this into seperate models for each parent.
@@ -144,10 +125,28 @@ class EpisodeRecord(BaseModel):
 
 
 # TODO: Validate
+class CanonicalEpisodeRecord(EpisodeRecord):
+    """A canonical episode, with how far into its title the episode is.
+
+    The count is not a column of the episode: it is where the episode falls among
+    the ones the title holds, so it is worked out against the title each time
+    rather than stored and left to go stale as the title grows.
+    """
+
+    absolute_number: int | None
+
+
+# TODO: Validate
 class EpisodeInformationSide(EpisodeRecord):
     """One record's own account of an episode, as the website that holds it has it."""
 
     label: str
+    url: str | None
+    # How far into its own title this side puts the episode, which is a question
+    # each side answers for itself: a website numbering a title straight through
+    # and TMDB numbering it by season disagree here as readily as they do on the
+    # name.
+    absolute_number: int | None
 
 
 # TODO: Validate
@@ -159,6 +158,9 @@ class EpisodeInformationOutput(BaseModel):
     the other.
     """
 
+    episode_id: uuid.UUID
+    canonical_episode_validated_at: datetime | None
+    canonical_episode_note: str | None
     issue_reports: list[IssueReportOutput]
     source: EpisodeInformationSide
     tmdb: EpisodeInformationSide | None

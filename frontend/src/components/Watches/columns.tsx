@@ -83,6 +83,7 @@ function SeasonAdminLink({ seasonId }: { seasonId: string }) {
   )
 }
 
+// TODO: Validate
 export const columns: ColumnDef<WatchWithDetails>[] = [
   {
     accessorKey: "id",
@@ -112,6 +113,7 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
         <div className="flex items-center gap-2">
           {source.favicon_url && (
             <img
+              referrerPolicy="no-referrer"
               src={source.favicon_url}
               alt={`${source.name} favicon`}
               className="size-4"

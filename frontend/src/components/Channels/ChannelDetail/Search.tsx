@@ -189,6 +189,7 @@ function ResultCard({
       >
         {imageUrl && (
           <img
+            referrerPolicy="no-referrer"
             loading="lazy"
             decoding="async"
             src={imageUrl}
@@ -370,6 +371,7 @@ function WatchProviders({
               <>
                 {provider.icon_url && (
                   <img
+                    referrerPolicy="no-referrer"
                     src={provider.icon_url}
                     alt=""
                     className="size-5 rounded"
@@ -441,6 +443,7 @@ export function MediaInfoModal({
         <div className="relative">
           {info?.backdrop_url ? (
             <img
+              referrerPolicy="no-referrer"
               src={info.backdrop_url}
               alt=""
               className="h-44 w-full object-cover"
@@ -452,6 +455,7 @@ export function MediaInfoModal({
           <div className="absolute inset-x-0 bottom-0 flex items-end gap-4 p-4">
             {info?.poster_url && (
               <img
+                referrerPolicy="no-referrer"
                 src={info.poster_url}
                 alt={title}
                 className="h-32 w-22 shrink-0 rounded object-cover shadow-lg"

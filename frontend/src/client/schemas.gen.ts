@@ -315,111 +315,21 @@ export const CanonicalEpisodeListOutputSchema = {
     description: 'Schema for returning a list of `Episode`s, with what holds them.'
 } as const;
 
-export const CanonicalEpisodeOutputSchema = {
+export const CanonicalEpisodeRecordSchema = {
     properties: {
-        key: {
-            type: 'string',
-            minLength: 1,
-            title: 'Key'
+        episode: {
+            '$ref': '#/components/schemas/EpisodeOutput'
         },
-        data_timestamp: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Data Timestamp'
+        season: {
+            '$ref': '#/components/schemas/SeasonOutput'
         },
-        update_at: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Update At'
+        show: {
+            '$ref': '#/components/schemas/ShowPublic'
         },
-        deleted_at: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Deleted At'
+        source: {
+            '$ref': '#/components/schemas/SourceListPublic'
         },
-        extra: {
-            additionalProperties: true,
-            type: 'object',
-            title: 'Extra'
-        },
-        url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Url'
-        },
-        name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
-        },
-        description: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Description'
-        },
-        image_url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Image Url'
-        },
-        air_date: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Air Date'
-        },
-        episode_number: {
+        absolute_number: {
             anyOf: [
                 {
                     type: 'integer'
@@ -428,71 +338,17 @@ export const CanonicalEpisodeOutputSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Episode Number'
-        },
-        duration: {
-            anyOf: [
-                {
-                    type: 'integer',
-                    minimum: 0
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Duration'
-        },
-        sort_order: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Sort Order'
-        },
-        canonical_season_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Canonical Season Id'
-        },
-        id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Id'
-        },
-        created_at: {
-            type: 'string',
-            format: 'date-time',
-            title: 'Created At'
-        },
-        modified_at: {
-            type: 'string',
-            format: 'date-time',
-            title: 'Modified At'
-        },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
+            title: 'Absolute Number'
         }
     },
     type: 'object',
-    required: ['key', 'canonical_season_id', 'id', 'created_at', 'modified_at'],
-    title: 'CanonicalEpisodeOutput',
-    description: `Schema for returning a \`Episode\`.
+    required: ['episode', 'season', 'show', 'source', 'absolute_number'],
+    title: 'CanonicalEpisodeRecord',
+    description: `A canonical episode, with how far into its title the episode is.
 
-An episode hangs off its season by the same column a non-canonical row hangs off the
-non-canonical row's season by, so what is served as the canonical season is read off
-\`season_id\`. The name it is served under does not change.`
+The count is not a column of the episode: it is where the episode falls among
+the ones the title holds, so it is worked out against the title each time
+rather than stored and left to go stale as the title grows.`
 } as const;
 
 export const CanonicalEpisodesPublicSchema = {
@@ -2856,6 +2712,34 @@ export const EpisodeCreateSchema = {
 
 export const EpisodeInformationOutputSchema = {
     properties: {
+        episode_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Episode Id'
+        },
+        canonical_episode_validated_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Episode Validated At'
+        },
+        canonical_episode_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Canonical Episode Note'
+        },
         issue_reports: {
             items: {
                 '$ref': '#/components/schemas/IssueReportOutput'
@@ -2889,7 +2773,7 @@ export const EpisodeInformationOutputSchema = {
         }
     },
     type: 'object',
-    required: ['issue_reports', 'source', 'tmdb', 'user_url'],
+    required: ['episode_id', 'canonical_episode_validated_at', 'canonical_episode_note', 'issue_reports', 'source', 'tmdb', 'user_url'],
     title: 'EpisodeInformationOutput',
     description: `What the website and TMDB each say about an episode, side by side.
 
@@ -2915,10 +2799,32 @@ export const EpisodeInformationSideSchema = {
         label: {
             type: 'string',
             title: 'Label'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        },
+        absolute_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Absolute Number'
         }
     },
     type: 'object',
-    required: ['episode', 'season', 'show', 'source', 'label'],
+    required: ['episode', 'season', 'show', 'source', 'label', 'url', 'absolute_number'],
     title: 'EpisodeInformationSide',
     description: "One record's own account of an episode, as the website that holds it has it."
 } as const;
@@ -3151,17 +3057,6 @@ export const EpisodeListOutputSchema = {
                 }
             ],
             title: 'Tmdb Url'
-        },
-        canonical_key: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Key'
         },
         season_name: {
             anyOf: [
@@ -3457,17 +3352,6 @@ export const EpisodeOutputSchema = {
                 }
             ],
             title: 'Tmdb Url'
-        },
-        canonical_key: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Key'
         }
     },
     type: 'object',
@@ -3917,17 +3801,6 @@ export const EpisodeWithDetailsSchema = {
                 }
             ],
             title: 'Tmdb Url'
-        },
-        canonical_key: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Key'
         },
         watch_date: {
             anyOf: [
@@ -9085,17 +8958,6 @@ export const WhitelistEpisodeLinkOutputSchema = {
             ],
             title: 'Tmdb Url'
         },
-        canonical_key: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Key'
-        },
         show_id: {
             type: 'string',
             format: 'uuid',
@@ -9354,17 +9216,6 @@ export const WhitelistEpisodeOutputSchema = {
                 }
             ],
             title: 'Tmdb Url'
-        },
-        canonical_key: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Key'
         },
         filtered: {
             type: 'boolean',

@@ -6,9 +6,11 @@ Detects new media much faster than JustWatch and supports music.
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import override
 
 from app.shows.models import Show
+from app.sources.models import Source
 from plugins.Crunchyroll.constants import MUSIC_SOURCE, VIDEO_SOURCE, show_is_an_artist
 from plugins.Crunchyroll.search import SearchMixin
 from plugins.Crunchyroll.update import UpdateMixin
@@ -73,8 +75,27 @@ class Crunchyroll(
     # TODO: Validate
     @override  # Initializes 2 sources instead of 1.
     def initialize_sources(self) -> None:
-        self._initialize_source(VIDEO_SOURCE, self._anime_source)
-        self._initialize_source(MUSIC_SOURCE, self._music_source)
+        self._initialize_source(VIDEO_SOURCE, self._upsert_anime_source)
+        self._initialize_source(MUSIC_SOURCE, self._upsert_music_source)
+
+    # TODO: Validate
+    def _upsert_anime_source(self) -> Source:
+        return self._upsert_source(
+            VIDEO_SOURCE,
+            self.find_newest_browse_series_file(),
+            self.browse_series_file,
+            timedelta(days=1),
+        )
+
+    # TODO: Validate
+    def _upsert_music_source(self) -> Source:
+        return self._upsert_source(
+            MUSIC_SOURCE,
+            self.find_newest_browse_music_file(),
+            self.browse_music_file,
+            # Check weekly for new music because updates do not need to be frequent.
+            timedelta(days=7),
+        )
 
     # TODO: Validate
     @override  # Determines which source to use based on the show key.

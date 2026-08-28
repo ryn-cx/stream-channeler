@@ -21,8 +21,6 @@ from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.Crunchyroll.constants import (
-    MUSIC_SOURCE,
-    VIDEO_SOURCE,
     MusicCategory,
     show_is_a_series,
     show_is_an_artist,
@@ -35,39 +33,6 @@ from plugins.utils.base_plugin.files import INITIAL_FILE_IDENTIFIER
 # TODO: Validate
 class UpsertMixin(HelperMixin, register=False):
     """Mixin containing all upsert functions."""
-
-    # TODO: Validate
-    def _anime_source(self) -> Source:
-        return (
-            Source.get(self.session, self.plugin, VIDEO_SOURCE)
-            or self._upsert_anime_source()
-        )
-
-    # TODO: Validate
-    def _music_source(self) -> Source:
-        return (
-            Source.get(self.session, self.plugin, MUSIC_SOURCE)
-            or self._upsert_music_source()
-        )
-
-    # TODO: Validate
-    def _upsert_anime_source(self) -> Source:
-        return self._upsert_source(
-            VIDEO_SOURCE,
-            self.find_newest_browse_series_file(),
-            self.browse_series_file,
-            timedelta(days=1),
-        )
-
-    # TODO: Validate
-    def _upsert_music_source(self) -> Source:
-        return self._upsert_source(
-            MUSIC_SOURCE,
-            self.find_newest_browse_music_file(),
-            self.browse_music_file,
-            # Check weekly for new music because updates do not need to be frequent.
-            timedelta(days=7),
-        )
 
     # TODO: Validate
     @override

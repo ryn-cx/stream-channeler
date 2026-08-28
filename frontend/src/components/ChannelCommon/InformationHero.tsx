@@ -29,6 +29,7 @@ interface InformationHeroProps {
  * The artwork and the few facts worth reading first are laid out on their own so
  * the table below is there to be checked rather than to be read.
  */
+// TODO: Validate
 export function InformationHero({
   title,
   subtitle,
@@ -43,6 +44,7 @@ export function InformationHero({
       <div className="flex flex-col gap-4 p-4 sm:flex-row sm:gap-6">
         {imageUrl && (
           <img
+            referrerPolicy="no-referrer"
             src={imageUrl}
             alt={title}
             className="max-h-64 w-full shrink-0 self-start rounded-lg object-cover sm:w-48"

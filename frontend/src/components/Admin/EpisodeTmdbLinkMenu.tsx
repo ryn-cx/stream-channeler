@@ -1,13 +1,11 @@
 // TODO: Validate
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Eye, EyeOff, Search } from "lucide-react"
-import type { ReactNode } from "react"
 import { useState } from "react"
 
 import type { EpisodeOutput, TmdbEpisodeChoice } from "@/client"
 import { EpisodesService } from "@/client"
 import { CollapsibleSection } from "@/components/ChannelCommon/CollapsibleSection"
-import { formatDuration } from "@/components/ChannelCommon/formatters"
 import { AdminZone } from "@/components/Common/AdminZone"
 import { EditEpisodeById } from "@/components/Episodes/EditEpisodeById"
 import { Button } from "@/components/ui/button"
@@ -15,8 +13,12 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
-import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
+import {
+  CanonicalEpisodeRow,
+  numbering,
+  TmdbPageLink,
+} from "./CanonicalEpisodeRow"
 import { useSettleTmdbMatch } from "./tmdbMatchesQuery"
 import { type Numbered, numberingAgreement, numberingOf } from "./tmdbNumbering"
 
@@ -29,43 +31,6 @@ interface EpisodeTmdbLinkMenuProps {
   /** Query key of the information the episode was read off. */
   informationQueryKey: unknown[]
   onLinksChanged?: (episode: EpisodeOutput) => void
-}
-
-// TODO: Validate
-/** "S1E1", or as much of it as the record was numbered with. */
-function numbering(
-  seasonNumber: number | null | undefined,
-  episodeNumber: number | null | undefined,
-): string {
-  return `S${seasonNumber ?? "?"}E${episodeNumber ?? "?"}`
-}
-
-// TODO: Validate
-/**
- * A name that opens its own page on themoviedb.org, where TMDB has one.
- *
- * Which episode a choice is comes down to reading it on TMDB, so the names are
- * what open it rather than a link beside them: the whole row is already as much
- * as fits, and a name is what somebody goes to click.
- */
-function TmdbPageLink({
-  url,
-  children,
-}: {
-  url: string | null | undefined
-  children: ReactNode
-}) {
-  if (!url) return <>{children}</>
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="hover:underline"
-    >
-      {children}
-    </a>
-  )
 }
 
 // TODO: Validate
@@ -339,69 +304,32 @@ export function TmdbLinkPicker({
           </p>
         ) : (
           ordered.map((choice) => (
-            <div
+            <CanonicalEpisodeRow
               key={choice.episode.id}
-              className="flex items-center gap-3 border-b px-3 py-2 text-sm last:border-b-0"
-            >
-              <span className="w-24 shrink-0 tabular-nums">
-                <span
-                  className={
-                    agreementWith(choice).seasonAndEpisode
-                      ? "text-destructive"
-                      : "text-muted-foreground"
-                  }
-                >
-                  {numbering(
-                    choice.season.season_number,
-                    choice.episode.episode_number,
-                  )}
-                </span>
-                <span
-                  className={cn(
-                    "block text-xs",
-                    agreementWith(choice).absolute
-                      ? "text-destructive"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  {choice.absolute_number == null
-                    ? "N/A"
-                    : `#${choice.absolute_number}`}
-                </span>
-              </span>
-              <span className="flex-1 whitespace-normal wrap-break-word">
-                <TmdbPageLink url={choice.episode.tmdb_url}>
-                  {choice.episode.name}
-                </TmdbPageLink>
-                <span className="block text-xs text-muted-foreground">
-                  <TmdbPageLink url={choice.show.tmdb_url}>
-                    {choice.show.name}
-                  </TmdbPageLink>
-                </span>
-              </span>
-              {choice.already_used ? <UsedByDetails choice={choice} /> : null}
-              <span className="w-20 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
-                {choice.episode.air_date
-                  ? new Date(choice.episode.air_date).toLocaleDateString()
-                  : "No air date"}
-                <span className="block">
-                  {formatDuration(choice.episode.duration) ?? "No duration"}
-                </span>
-              </span>
-              <span className="shrink-0 tabular-nums text-muted-foreground">
-                {Math.round(choice.similarity * 100)}%
-              </span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                disabled={linkMutation.isPending}
-                onClick={() => linkMutation.mutate(choice.episode.id)}
-              >
-                Link
-              </Button>
-            </div>
+              record={choice}
+              absoluteNumber={choice.absolute_number}
+              disagreement={agreementWith(choice)}
+              middle={
+                choice.already_used ? <UsedByDetails choice={choice} /> : null
+              }
+              trailing={
+                <>
+                  <span className="shrink-0 tabular-nums text-muted-foreground">
+                    {Math.round(choice.similarity * 100)}%
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    disabled={linkMutation.isPending}
+                    onClick={() => linkMutation.mutate(choice.episode.id)}
+                  >
+                    Link
+                  </Button>
+                </>
+              }
+            />
           ))
         )}
       </div>

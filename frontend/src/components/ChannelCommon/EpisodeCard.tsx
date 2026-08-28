@@ -232,6 +232,7 @@ export function EpisodeCard({
           </>
         )}
         <img
+          referrerPolicy="no-referrer"
           loading="lazy"
           src={imageUrl}
           alt={altText}

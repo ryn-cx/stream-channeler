@@ -16,9 +16,10 @@ from collections import defaultdict
 from collections.abc import Collection, Sequence
 from typing import Any
 
+from sqlalchemy import nullslast
 from sqlalchemy.orm import aliased, contains_eager
 from sqlalchemy.sql.expression import ColumnElement
-from sqlmodel import Session, col, func, select
+from sqlmodel import Session, and_, col, func, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.canonical_media.episodes import canonical_episode_link, links_of
@@ -28,7 +29,6 @@ from app.canonical_media.keys import (
     tmdb_id_of,
     tmdb_key_clause,
 )
-from app.canonical_media.metadata import fill_episodes
 from app.episodes.models import (
     Episode,
     EpisodeCanonicalEpisode,
@@ -58,6 +58,14 @@ from app.sources.schemas import SourceListPublic
 
 # An unnumbered season or episode is ordered after every numbered one.
 _UNNUMBERED = float("inf")
+
+
+# TODO: Validate
+def episode_record(episode: Episode) -> EpisodeRecord:
+    """Return an `Episode` with the season, the title and the website above it."""
+    season = episode.season
+    show = season.show
+    return EpisodeRecord(**_record_fields(episode, season, show))
 
 
 # TODO: Validate
@@ -102,7 +110,10 @@ def absolute_numbers(numberings: Sequence[Numbering]) -> dict[uuid.UUID, int]:
     """
     ordered = sorted(
         numberings,
-        key=lambda numbering: _order(numbering[1], numbering[2]),
+        key=lambda numbering: (
+            *_order(numbering[1], numbering[2]),
+            numbering[0].bytes,
+        ),
     )
     numbers: dict[uuid.UUID, int] = {}
     for record_id, season_number, _episode_number in ordered:
@@ -393,38 +404,61 @@ def _candidates_for_shows(
 
 
 # TODO: Validate
-def _source_absolute_numbers(
-    session: Session,
-    show_ids: set[uuid.UUID],
-) -> dict[uuid.UUID, int]:
-    """Count every episode of each website's own title, and return that count by id.
+def _counted_episodes() -> ColumnElement[bool]:
+    """Which of a title's episodes the count runs over.
 
-    The whole title is read rather than only the episodes being listed, since an
+    A season nothing numbered and season zero are both outside it, so a special
+    is left with no number rather than given one and does not push the episode
+    after it along.
+    """
+    return and_(
+        col(Episode.deleted_at).is_(None),
+        col(Season.deleted_at).is_(None),
+        col(Season.season_number).is_not(None),
+        col(Season.season_number) != 0,
+    )
+
+
+# TODO: Validate
+def _absolute_number_column() -> ColumnElement[int]:
+    """Count each title through from its first episode.
+
+    `nullslast` is what Postgres does with an ascending sort anyway, said outright
+    because it is what stands in for `_UNNUMBERED`, and the id is what settles two
+    episodes a website gave the very same numbering.
+    """
+    return func.row_number().over(
+        partition_by=col(Season.show_id),
+        order_by=(
+            col(Season.season_number),
+            nullslast(col(Episode.episode_number)),
+            col(Episode.id),
+        ),
+    )
+
+
+# TODO: Validate
+def absolute_numbers_of(
+    session: Session,
+    show_ids: Collection[uuid.UUID],
+) -> dict[uuid.UUID, int]:
+    """Count every episode of each title, and return that count by episode id.
+
+    The whole title is counted rather than only the episodes being listed, since an
     episode's place in a title is decided by how many come before it, which the
-    ones left over from a name match say nothing about.
+    ones left over from a name match say nothing about. Nothing says which rows are
+    canonical, so a website's own title and a canonical title are both counted the
+    way the title they are counts.
     """
     if not show_ids:
         return {}
 
     statement = (
-        select(Episode.id, Season.show_id, Season.season_number, Episode.episode_number)
+        select(Episode.id, _absolute_number_column())
         .join(Season, onclause=col(Episode.season_id) == Season.id)
-        .where(
-            col(Season.show_id).in_(show_ids),
-            col(Episode.deleted_at).is_(None),
-            col(Season.deleted_at).is_(None),
-        )
+        .where(col(Season.show_id).in_(show_ids), _counted_episodes())
     )
-    per_show: dict[uuid.UUID, list[Numbering]] = defaultdict(list)
-    for episode_id, show_id, season_number, episode_number in session.exec(
-        statement,
-    ).all():
-        per_show[show_id].append((episode_id, season_number, episode_number))
-
-    numbers: dict[uuid.UUID, int] = {}
-    for numberings in per_show.values():
-        numbers |= absolute_numbers(numberings)
-    return numbers
+    return dict(session.exec(statement).all())
 
 
 # TODO: Validate
@@ -504,7 +538,7 @@ def _unmatched_outputs(
         session,
         {show for _episode, _season, show, _source in rows},
     )
-    source_numbers = _source_absolute_numbers(
+    source_numbers = absolute_numbers_of(
         session,
         {show.id for _episode, _season, show, _source in rows},
     )
@@ -627,7 +661,7 @@ def list_unlocked_episodes(
         session,
         {show for _episode, _season, show, _source in rows},
     )
-    source_numbers = _source_absolute_numbers(
+    source_numbers = absolute_numbers_of(
         session,
         {show.id for _episode, _season, show, _source in rows},
     )
@@ -1056,12 +1090,6 @@ def get_duplicated_canonical_episodes(
 
 
 # TODO: Validate
-def _episode_output(session: Session, episode: Episode) -> EpisodeOutput:
-    """Return an `Episode` as TMDB has it, falling back on what its website said."""
-    return fill_episodes(session, [EpisodeOutput.model_validate(episode)])[0]
-
-
-# TODO: Validate
 def _select_with_canonical_season_and_show() -> SelectOfScalar[Episode]:
     """Select episodes with the season and title above each one already loaded."""
     return (
@@ -1084,13 +1112,17 @@ def _select_with_canonical_season_and_show() -> SelectOfScalar[Episode]:
 
 
 # TODO: Validate
-def _information_side(
+def _information_side(  # noqa: PLR0913 - one side of the comparison, field by field.
     label: str,
     episode: Episode,
     season: Season,
     show: Show,
+    url: str | None,
+    absolute_number: int | None,
 ) -> EpisodeInformationSide:
     return EpisodeInformationSide(
         label=label,
+        url=url,
+        absolute_number=absolute_number,
         **_record_fields(episode, season, show),
     )

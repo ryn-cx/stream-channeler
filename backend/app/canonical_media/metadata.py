@@ -56,13 +56,10 @@ EPISODE_FIELDS = (
 
 EPISODE_ID_FIELD = "canonical_episode_id"
 
-CANONICAL_KEY_FIELD = "canonical_key"
-
 TMDB_SEASON_NUMBER_FIELD = "tmdb_season_number"
 TMDB_SEASON_NAME_FIELD = "tmdb_season_name"
 TMDB_EPISODE_NUMBER_FIELD = "tmdb_episode_number"
 TMDB_URL_FIELD = "tmdb_url"
-NAME_FIELD = "name"
 
 TMDB_PAGE_URL = "https://www.themoviedb.org"
 
@@ -91,109 +88,6 @@ def _canonical_rows(
 
 
 # TODO: Validate
-def _fill[RowT](
-    session: Session,
-    rows: Sequence[RowT],
-    id_field: str,
-    model: MediaModel,
-    fields: tuple[str, ...],
-) -> Sequence[RowT]:
-    """Fill every unset `fields` value on `rows` from their canonical row.
-
-    `rows` are output schemas rather than stored records, so filling them leaves
-    nothing to be written back to the database.
-    """
-    incomplete = [
-        row for row in rows if any(getattr(row, field) is None for field in fields)
-    ]
-    canonical_rows = _canonical_rows(session, incomplete, id_field, model)
-    for row in incomplete:
-        canonical = canonical_rows.get(getattr(row, id_field, None))
-        if canonical is None:
-            continue
-        for field in fields:
-            if getattr(row, field) is None:
-                setattr(row, field, getattr(canonical, field))
-        _label(row, canonical)
-    return rows
-
-
-# TODO: Validate
-def _prefer[RowT](
-    session: Session,
-    rows: Sequence[RowT],
-    id_field: str,
-    model: MediaModel,
-    fields: tuple[str, ...],
-) -> Sequence[RowT]:
-    """Replace every `fields` value on `rows` with their canonical row's.
-
-    What the canonical row holds is what the media is served as, and what the website
-    said is kept only where the canonical row has nothing of its own to say. A
-    non-canonical row that is not yet of anything is served entirely as it stored
-    itself.
-    """
-    canonical_rows = _canonical_rows(session, rows, id_field, model)
-    for row in rows:
-        canonical = canonical_rows.get(getattr(row, id_field, None))
-        if canonical is None:
-            continue
-        for field in fields:
-            value = getattr(canonical, field)
-            if value is not None:
-                setattr(row, field, value)
-        _label(row, canonical)
-    return rows
-
-
-# TODO: Validate
-def _label(row: Any, canonical: Any) -> None:  # noqa: ANN401 - Any output row.
-    """Hand the row what says what it is, where it has somewhere to put it.
-
-    The identifier rather than the key, since a key is a website's own id and two
-    websites can issue the same one. Collapsing on the key alone would take two
-    rows that merely read alike for one episode listed twice.
-    """
-    if hasattr(row, CANONICAL_KEY_FIELD):
-        setattr(row, CANONICAL_KEY_FIELD, canonical.watch_identifier)
-
-
-# TODO: Validate
-def fill_episodes[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
-    """Serve each `Episode` row as the episode is, falling back on the site."""
-    return _prefer(session, rows, EPISODE_ID_FIELD, Episode, EPISODE_FIELDS)
-
-
-# TODO: Validate
-def prefer_canonical_episodes[RowT](
-    session: Session,
-    rows: Sequence[RowT],
-) -> Sequence[RowT]:
-    """Replace each `Episode` row's name and season with the episode's own.
-
-    Which season an episode belongs to, where in it, and what it is called are
-    all things two websites disagree about. The season comes off the canonical
-    episode rather than off the row's own season, since a site can file an
-    episode under a season the canonical hierarchy does not, which is what puts
-    one site's finale in another's specials.
-    """
-    canonical_rows = _canonical_rows(session, rows, EPISODE_ID_FIELD, Episode)
-    seasons = _seasons_of(session, canonical_rows.values())
-    for row in rows:
-        canonical = canonical_rows.get(getattr(row, EPISODE_ID_FIELD, None))
-        if canonical is None:
-            continue
-        season = seasons.get(canonical.season_id)
-        setattr(row, TMDB_EPISODE_NUMBER_FIELD, canonical.episode_number)
-        if season is not None:
-            setattr(row, TMDB_SEASON_NUMBER_FIELD, season.season_number)
-            setattr(row, TMDB_SEASON_NAME_FIELD, season.name)
-        if canonical.name:
-            setattr(row, NAME_FIELD, canonical.name)
-    return rows
-
-
-# TODO: Validate
 def _seasons_of(
     session: Session,
     canonical_episodes: Any,  # noqa: ANN401 - Any iterable of `Episode`.
@@ -211,36 +105,6 @@ def _seasons_of(
 
 
 # TODO: Validate
-def fill_tmdb_urls[RowT](session: Session, rows: Sequence[RowT]) -> Sequence[RowT]:
-    """Set each `Episode` row's page on themoviedb.org, where it has one.
-
-    TMDB has no page for an episode id on its own, so the address is built from the
-    title it belongs to and the numbering the episode itself carries, which is not
-    always the numbering the website gave its own non-canonical row. Media TMDB has no
-    record of has no page, and is left with none rather than a broken one.
-    """
-    canonical_rows = _canonical_rows(session, rows, EPISODE_ID_FIELD, Episode)
-    seasons = _seasons_of(session, canonical_rows.values())
-    shows = _shows_of(session, seasons.values())
-    for row in rows:
-        canonical = canonical_rows.get(getattr(row, EPISODE_ID_FIELD, None))
-        if canonical is None:
-            continue
-        season = seasons.get(canonical.season_id)
-        show = shows.get(season.show_id) if season else None
-        if show is None:
-            continue
-        url = tmdb_episode_url(
-            show.key,
-            season.season_number if season else None,
-            canonical.episode_number,
-        )
-        if url:
-            setattr(row, TMDB_URL_FIELD, url)
-    return rows
-
-
-# TODO: Validate
 def _shows_of(
     session: Session,
     canonical_seasons: Any,  # noqa: ANN401 - Any iterable of `Season`.
@@ -255,6 +119,47 @@ def _shows_of(
             select(Show).where(is_canonical(Show), col(Show.id).in_(ids)),
         ).all()
     }
+
+
+# TODO: Validate
+def serve_as_canonical_episodes[RowT](
+    session: Session,
+    rows: Sequence[RowT],
+) -> Sequence[RowT]:
+    """Serve each `Episode` row as the canonical episode it stands for.
+
+    Every value a reader is shown comes off the canonical row, with nothing of the
+    website's own standing in where that row has nothing to say. The row keeps its own
+    id and address, which is what points back at the website holding it.
+    """
+    canonical_rows = _canonical_rows(session, rows, EPISODE_ID_FIELD, Episode)
+    seasons = _seasons_of(session, canonical_rows.values())
+    shows = _shows_of(session, seasons.values())
+    for row in rows:
+        canonical = canonical_rows.get(getattr(row, EPISODE_ID_FIELD, None))
+        if canonical is None:
+            continue
+        for field in EPISODE_FIELDS:
+            setattr(row, field, getattr(canonical, field))
+        season = seasons.get(canonical.season_id)
+        show = shows.get(season.show_id) if season else None
+        setattr(row, TMDB_EPISODE_NUMBER_FIELD, canonical.episode_number)
+        setattr(
+            row,
+            TMDB_SEASON_NUMBER_FIELD,
+            season.season_number if season else None,
+        )
+        setattr(row, TMDB_SEASON_NAME_FIELD, season.name if season else None)
+        setattr(
+            row,
+            TMDB_URL_FIELD,
+            tmdb_episode_url(
+                show.key if show else None,
+                season.season_number if season else None,
+                canonical.episode_number,
+            ),
+        )
+    return rows
 
 
 # TODO: Validate

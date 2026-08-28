@@ -163,6 +163,7 @@ const SourcePreferences = () => {
             </Button>
             {preference.favicon_url ? (
               <img
+                referrerPolicy="no-referrer"
                 src={preference.favicon_url}
                 alt=""
                 className="size-4 shrink-0 rounded-sm"

@@ -35,15 +35,23 @@ export function primarySide(
 }
 
 // TODO: Validate
-function heroSubtitle(data: EpisodeInformationOutput, preferSource: boolean) {
-  const side = primarySide(data, preferSource)
+/** Where one side puts the episode, in the words that side would use. */
+function placement(side: EpisodeInformationSide) {
   const seasonNumber = side.season.season_number
   const episodeNumber = side.episode.episode_number
-  const placement = [
+  return [
     seasonNumber != null ? `Season ${seasonNumber}` : side.season.name,
     episodeNumber != null ? `Episode ${episodeNumber}` : null,
+    side.absolute_number != null
+      ? `Absolute Episode #${side.absolute_number}`
+      : null,
   ].filter(Boolean)
-  return [side.show.name, ...placement].filter(Boolean).join(" · ")
+}
+
+// TODO: Validate
+function heroSubtitle(data: EpisodeInformationOutput, preferSource: boolean) {
+  const side = primarySide(data, preferSource)
+  return [side.show.name, ...placement(side)].filter(Boolean).join(" · ")
 }
 
 // TODO: Validate
@@ -62,6 +70,11 @@ function heroFacts(
     // account of it, so it is left out where the website's row is what was
     // opened.
     preferSource ? null : data.tmdb ? "Linked to TMDB" : "Not linked to TMDB",
+    // Where the website itself files the episode, which is a different answer
+    // to the one above it as often as not, and the reason somebody opened this.
+    preferSource || !data.tmdb
+      ? null
+      : [data.source.label, ...placement(data.source)].join(" · "),
     data.source.label,
   ]
   return facts.filter((fact): fact is string => !!fact)

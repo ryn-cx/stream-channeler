@@ -11,9 +11,6 @@ from app.auth.dependencies import (
     SuperUser,
     get_current_active_superuser,
 )
-from app.canonical_media.metadata import (
-    fill_episodes,
-)
 from app.canonical_media.read import canonical_list_response
 from app.episodes.canonical_links import (
     link_episode,
@@ -43,7 +40,6 @@ from app.episodes.schemas import (
     UnmatchedReadOptions,
 )
 from app.episodes.service import (
-    _episode_output,
     _select_with_canonical_season_and_show,
     get_duplicated_canonical_episodes,
     list_tmdb_episode_choices,
@@ -113,7 +109,7 @@ def create_episode(
     season: ExistingSeason,
     episode_input: EpisodeCreate,
 ) -> EpisodeOutput:
-    return _episode_output(session, episode_input.create(session, Episode, season))
+    return EpisodeOutput.model_validate(episode_input.create(session, Episode, season))
 
 
 # TODO: Validate
@@ -124,7 +120,7 @@ def get_episodes(
     read_options: Annotated[ReadOptions, Query()],
 ) -> EpisodesPublic:
     """Get `Episode`s."""
-    episodes = list_response(
+    return list_response(
         session=session,
         base=Episode.select_with_plugin_eager(),
         response_model=EpisodesPublic,
@@ -133,14 +129,10 @@ def get_episodes(
         current_user=current_user,
         extra_columns=EPISODE_EXTRA_COLUMNS,
     )
-    fill_episodes(session, episodes.data)
-    return episodes
 
 
 # TODO: Validate
-@episodes_router.get(
-    "/tmdb-matches",
-)
+@episodes_router.get("/tmdb-matches")
 def admin_get_unmatched_episodes(
     session: SessionDep,
     read_options: Annotated[UnmatchedReadOptions, Query()],
@@ -209,10 +201,7 @@ def admin_link_episode_by_tmdb_url(
     pointed at, and so that a title the show was not a non-canonical row of is linked to
     it as well.
     """
-    return _episode_output(
-        session,
-        link_episode_using_tmdb_url(session, episode, url_input.url),
-    )
+    return EpisodeOutput.model_validate(link_episode_using_tmdb_url(session, episode, url_input.url))
 
 
 # TODO: Validate
@@ -233,10 +222,7 @@ def admin_link_episode_to_tmdb(
     since a website running two episodes together in one listing is a thing
     websites do. Taking one off is `admin_unlink_episode_from_canonical`.
     """
-    return _episode_output(
-        session,
-        link_episode(session, episode, canonical_episode),
-    )
+    return EpisodeOutput.model_validate(link_episode(session, episode, canonical_episode))
 
 
 # TODO: Validate
@@ -249,10 +235,7 @@ def admin_unlink_episode_from_canonical(
     canonical_episode: AdminCanonicalEpisode,
 ) -> EpisodeOutput:
     """Take one episode off what an `Episode` stands for."""
-    return _episode_output(
-        session,
-        unlink_episode(session, episode, canonical_episode),
-    )
+    return EpisodeOutput.model_validate(unlink_episode(session, episode, canonical_episode))
 
 
 # TODO: Validate
@@ -264,7 +247,7 @@ def admin_unlink_episode_from_tmdb(
     episode: ExistingEpisode,
 ) -> EpisodeOutput:
     """Take an `Episode` off the TMDB episode it was pointed at."""
-    return _episode_output(session, unlink_episode(session, episode))
+    return EpisodeOutput.model_validate(unlink_episode(session, episode))
 
 
 # TODO: Validate
@@ -276,10 +259,7 @@ def admin_mark_episode_absent_from_tmdb(
     episode: ExistingEpisode,
 ) -> EpisodeOutput:
     """Settle an `Episode` as one TMDB has no record of, and lock it there."""
-    return _episode_output(
-        session,
-        mark_episode_absent_from_tmdb(session, episode),
-    )
+    return EpisodeOutput.model_validate(mark_episode_absent_from_tmdb(session, episode))
 
 
 # TODO: Validate
@@ -291,15 +271,15 @@ def admin_verify_canonical_link(
     episode: ExistingEpisode,
 ) -> EpisodeOutput:
     """Settle the canonical links an `Episode` already carries, and lock them."""
-    return _episode_output(session, verify_canonical_link(session, episode))
+    return EpisodeOutput.model_validate(verify_canonical_link(session, episode))
 
 
 # TODO: Validate
 @episodes_router.get(
     "/{episode_id}",  # noqa: FAST003 - Used by ExistingEpisode.
 )
-def get_episode(session: SessionDep, episode: ExistingEpisode) -> EpisodeOutput:
-    return _episode_output(session, episode)
+def get_episode(episode: ExistingEpisode) -> EpisodeOutput:
+    return EpisodeOutput.model_validate(episode)
 
 
 # TODO: Validate
@@ -314,7 +294,7 @@ def update_episode(
     """Which episode this is linked to is settled by the TMDB matching screens
     rather than written here, so there is nothing to check.
     """
-    return _episode_output(session, episode_input.update(session, episode))
+    return EpisodeOutput.model_validate(episode_input.update(session, episode))
 
 
 # TODO: Validate
@@ -354,5 +334,3 @@ router.include_router(episodes_router)
 
 
 router.include_router(season_episodes_router)
-
-

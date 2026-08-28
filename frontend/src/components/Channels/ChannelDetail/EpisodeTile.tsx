@@ -18,6 +18,7 @@ import {
   ResponsiveActionMenu,
 } from "@/components/Common/ResponsiveActionMenu"
 import { Button } from "@/components/ui/button"
+import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"
 import { cn } from "@/lib/utils"
@@ -95,6 +96,7 @@ export function EpisodeTile({
 }: EpisodeTileProps) {
   const [hovered, setHovered] = useState(false)
   const [confirmBlacklist, setConfirmBlacklist] = useState(false)
+  const { user } = useAuth()
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const watchedMutation = useMarkWatched(channelId)
   const queryClient = useQueryClient()
@@ -142,7 +144,11 @@ export function EpisodeTile({
 
   // TODO: Validate
   const handlePlay = () => {
-    watchedMutation.mutate(episode.id)
+    // A watch is recorded against whoever watched it, so there is nothing to
+    // record when nobody is signed in and the tile goes straight to the episode.
+    if (user) {
+      watchedMutation.mutate(episode.id)
+    }
     if (episode.url) {
       window.open(episode.url, "_blank", "noopener,noreferrer")
     }
@@ -191,6 +197,7 @@ export function EpisodeTile({
           <div className="relative aspect-video bg-zinc-900">
             {imageUrl && (
               <img
+                referrerPolicy="no-referrer"
                 loading="lazy"
                 src={imageUrl}
                 alt={episode.name ?? ""}

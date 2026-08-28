@@ -18,9 +18,7 @@ from app.canonical_media.episodes import (
     canonical_id_of,
 )
 from app.canonical_media.metadata import (
-    fill_episodes,
-    fill_tmdb_urls,
-    prefer_canonical_episodes,
+    serve_as_canonical_episodes,
 )
 from app.channels import service
 from app.channels.channel_scope import (
@@ -384,14 +382,7 @@ def get_channel_episodes(
         if source.plugin_id not in output.plugins:
             output.plugins[source.plugin_id] = PluginOutput.model_validate(plugin)
 
-    # An episode is the media rather than one website's non-canonical row of it, so
-    # every row reads as TMDB has it, with the website standing in only where TMDB has
-    # nothing of its own to say. A listing is linked to however many titles a website
-    # mixed into it and has no one title to read as, so it is served as the website
-    # stored it.
-    fill_episodes(session, output.episodes)
-    fill_tmdb_urls(session, output.episodes)
-    prefer_canonical_episodes(session, output.episodes)
+    serve_as_canonical_episodes(session, output.episodes)
     custom_source = apply_user_episode_urls(
         session,
         user,
@@ -744,11 +735,7 @@ def get_channel_whitelist_episodes(
         for row in page_rows
     ]
 
-    fill_episodes(session, page)
-    # A filter is about the media rather than one website's non-canonical row of it, so
-    # the rows read as TMDB has the media, with the website only standing in for what
-    # TMDB has no record of.
-    prefer_canonical_episodes(session, page)
+    serve_as_canonical_episodes(session, page)
 
     return WhitelistEpisodesOutput(episodes=page, total_count=len(representatives))
 
@@ -823,8 +810,7 @@ def get_channel_whitelist_filtered_episodes(
         episode_output.show_ids = episode_show_ids[episode_output.canonical_episode_id]
         episode_output.links = episode_links[episode_output.canonical_episode_id]
 
-    fill_episodes(session, episodes)
-    prefer_canonical_episodes(session, episodes)
+    serve_as_canonical_episodes(session, episodes)
     return episodes
 
 

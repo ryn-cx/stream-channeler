@@ -16,14 +16,17 @@ from app.episodes.dependencies import (
     ExistingEpisode,
 )
 from app.episodes.schemas import (
-    CanonicalEpisodeOutput,
+    CanonicalEpisodeRecord,
     EpisodeInformationOutput,
     EpisodeInformationSide,
+    EpisodeListOutput,
     UserEpisodeUrlInput,
     UserEpisodeUrlOutput,
 )
 from app.episodes.service import (
     _information_side,
+    absolute_numbers_of,
+    episode_record,
 )
 from app.episodes.user_urls import (
     canonical_episode_for_url,
@@ -70,6 +73,12 @@ def get_episode_information(
     # has never heard of is described by its one non-canonical row, so the two sides
     # read alike and the comparison is empty rather than misleading.
     counterpart = canonical_episode_of(session, episode.sole_canonical_episode_id)
+    # Each side counts through its own title, so both titles are counted in one
+    # go rather than a query apiece.
+    numbers = absolute_numbers_of(
+        session,
+        {show.id} if counterpart is None else {show.id, counterpart[2].id},
+    )
     tmdb: EpisodeInformationSide | None = None
     if counterpart:
         canonical_episode, canonical_season, canonical_show = counterpart
@@ -83,6 +92,7 @@ def get_episode_information(
                 canonical_season.season_number,
                 canonical_episode.episode_number,
             ),
+            numbers.get(canonical_episode.id),
         )
 
     canonical_episode_id = single_canonical_episode_id(episode)
@@ -104,9 +114,27 @@ def get_episode_information(
             season,
             show,
             episode.url,
+            numbers.get(episode.id),
         ),
         tmdb=tmdb,
     )
+
+
+# TODO: Validate
+@episodes_router.get(
+    "/{episode_id}/non-canonical",  # noqa: FAST003 - Used by ExistingEpisode.
+)
+def get_non_canonical_episodes(episode: ExistingEpisode) -> list[EpisodeListOutput]:
+    """Get every website's row standing for an `Episode`.
+
+    The other end of the link the non-canonical rows are settled by, which only a
+    canonical episode ever has any of. Read by anybody, signed in or not: which
+    websites carry an episode is as much a part of the episode as its name.
+    """
+    return [
+        EpisodeListOutput.model_validate(link.episode)
+        for link in episode.non_canonical_episodes
+    ]
 
 
 # TODO: Validate
@@ -148,10 +176,16 @@ def delete_episode_user_url(
 # TODO: Validate
 @canonical_episodes_router.get("/{canonical_episode_id}")  # noqa: FAST003 - Used by AdminCanonicalEpisode.
 def get_canonical_episode_by_id(
+    session: SessionDep,
     canonical_episode: AdminCanonicalEpisode,
-) -> CanonicalEpisodeOutput:
-    """Get a `Episode`."""
-    return CanonicalEpisodeOutput.model_validate(canonical_episode)
+) -> CanonicalEpisodeRecord:
+    """Get a `Episode`, with the season and title above it."""
+    show_id = canonical_episode.season.show_id
+    numbers = absolute_numbers_of(session, {show_id})
+    return CanonicalEpisodeRecord(
+        absolute_number=numbers.get(canonical_episode.id),
+        **episode_record(canonical_episode).model_dump(),
+    )
 
 
 router = APIRouter()

@@ -50,33 +50,18 @@ export type CanonicalEpisodeListOutput = {
 };
 
 /**
- * Schema for returning a `Episode`.
+ * A canonical episode, with how far into its title the episode is.
  *
- * An episode hangs off its season by the same column a non-canonical row hangs off the
- * non-canonical row's season by, so what is served as the canonical season is read off
- * `season_id`. The name it is served under does not change.
+ * The count is not a column of the episode: it is where the episode falls among
+ * the ones the title holds, so it is worked out against the title each time
+ * rather than stored and left to go stale as the title grows.
  */
-export type CanonicalEpisodeOutput = {
-    key: string;
-    data_timestamp?: (string | null);
-    update_at?: (string | null);
-    deleted_at?: (string | null);
-    extra?: {
-        [key: string]: unknown;
-    };
-    url?: (string | null);
-    name?: (string | null);
-    description?: (string | null);
-    image_url?: (string | null);
-    air_date?: (string | null);
-    episode_number?: (number | null);
-    duration?: (number | null);
-    sort_order?: (number | null);
-    canonical_season_id: string;
-    id: string;
-    created_at: string;
-    modified_at: string;
-    tmdb_id?: (number | null);
+export type CanonicalEpisodeRecord = {
+    episode: EpisodeOutput;
+    season: SeasonOutput;
+    show: ShowPublic;
+    source: SourceListPublic;
+    absolute_number: (number | null);
 };
 
 /**
@@ -608,6 +593,9 @@ export type EpisodeCreate = {
  * the other.
  */
 export type EpisodeInformationOutput = {
+    episode_id: string;
+    canonical_episode_validated_at: (string | null);
+    canonical_episode_note: (string | null);
     issue_reports: Array<IssueReportOutput>;
     source: EpisodeInformationSide;
     tmdb: (EpisodeInformationSide | null);
@@ -623,6 +611,8 @@ export type EpisodeInformationSide = {
     show: ShowPublic;
     source: SourceListPublic;
     label: string;
+    url: (string | null);
+    absolute_number: (number | null);
 };
 
 /**
@@ -654,7 +644,6 @@ export type EpisodeListOutput = {
     linked_sort_order?: (number | null);
     tmdb_id?: (number | null);
     tmdb_url?: (string | null);
-    canonical_key?: (string | null);
     season_name: (string | null);
     show_id: string;
     show_name: (string | null);
@@ -693,7 +682,6 @@ export type EpisodeOutput = {
     linked_sort_order?: (number | null);
     tmdb_id?: (number | null);
     tmdb_url?: (string | null);
-    canonical_key?: (string | null);
 };
 
 /**
@@ -776,7 +764,6 @@ export type EpisodeWithDetails = {
     linked_sort_order?: (number | null);
     tmdb_id?: (number | null);
     tmdb_url?: (string | null);
-    canonical_key?: (string | null);
     watch_date?: (string | null);
     verified?: (boolean | null);
     episode_watch_id?: (string | null);
@@ -1857,7 +1844,6 @@ export type WhitelistEpisodeLinkOutput = {
     linked_sort_order?: (number | null);
     tmdb_id?: (number | null);
     tmdb_url?: (string | null);
-    canonical_key?: (string | null);
     show_id: string;
     episode_id: string;
     filtered: boolean;
@@ -1890,7 +1876,6 @@ export type WhitelistEpisodeOutput = {
     linked_sort_order?: (number | null);
     tmdb_id?: (number | null);
     tmdb_url?: (string | null);
-    canonical_key?: (string | null);
     filtered: boolean;
     expires_at?: (string | null);
     show_ids: Array<(string)>;
@@ -1998,7 +1983,7 @@ export type CanonicalEpisodesGetCanonicalEpisodeByIdData = {
     canonicalEpisodeId: string;
 };
 
-export type CanonicalEpisodesGetCanonicalEpisodeByIdResponse = (CanonicalEpisodeOutput);
+export type CanonicalEpisodesGetCanonicalEpisodeByIdResponse = (CanonicalEpisodeRecord);
 
 export type CanonicalEpisodesGetCanonicalEpisodesData = {
     filterOptions?: string;
@@ -2394,6 +2379,12 @@ export type EpisodesGetEpisodeInformationData = {
 };
 
 export type EpisodesGetEpisodeInformationResponse = (EpisodeInformationOutput);
+
+export type EpisodesGetNonCanonicalEpisodesData = {
+    episodeId: string;
+};
+
+export type EpisodesGetNonCanonicalEpisodesResponse = (Array<EpisodeListOutput>);
 
 export type EpisodesSetEpisodeUserUrlData = {
     episodeId: string;

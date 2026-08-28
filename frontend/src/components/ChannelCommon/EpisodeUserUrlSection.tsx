@@ -6,6 +6,7 @@ import { EpisodesService } from "@/client"
 import { ExternalAnchor } from "@/components/ChannelCommon/InformationTable"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
@@ -28,6 +29,7 @@ export function EpisodeUserUrlSection({
 }: EpisodeUserUrlSectionProps) {
   const [draft, setDraft] = useState(userUrl ?? "")
   const queryClient = useQueryClient()
+  const { user } = useAuth()
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   useEffect(() => {
@@ -68,6 +70,10 @@ export function EpisodeUserUrlSection({
   })
 
   const isPending = saveMutation.isPending || clearMutation.isPending
+
+  // What is saved here is saved against the reader, so there is nothing to show
+  // and nowhere to put it until there is a reader to save it against.
+  if (!user) return null
 
   return (
     <div className="flex flex-col gap-2 rounded border p-3">
