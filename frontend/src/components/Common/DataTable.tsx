@@ -379,13 +379,15 @@ function TablePagination<TData>({
   isFiltered: boolean
 }) {
   const { pageIndex, pageSize } = table.getState().pagination
+  const shownRows = table.getRowModel().rows.length
+  const firstShownRow = shownRows === 0 ? 0 : pageIndex * pageSize + 1
+  const lastShownRow = pageIndex * pageSize + shownRows
 
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 border-t bg-muted/20">
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
         <div className="text-sm text-muted-foreground">
-          Showing {pageIndex * pageSize + 1} to{" "}
-          {Math.min((pageIndex + 1) * pageSize, filteredRows)} of{" "}
+          Showing {firstShownRow} to {lastShownRow} of{" "}
           <span className="font-medium text-foreground">{filteredRows}</span>{" "}
           entries
           {isFiltered && (

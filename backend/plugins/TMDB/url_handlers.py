@@ -5,8 +5,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, override
 
+from app.canonical_media.keys import tmdb_show_key
 from app.media.media_type import MediaType
-from plugins.TMDB.keys import show_key
 from plugins.utils.base_plugin.url import URLHandler
 
 if TYPE_CHECKING:
@@ -32,7 +32,7 @@ class TMDBURLHandler(URLHandler["TMDB"]):
     @property
     @override
     def show_key(self) -> str:
-        return show_key(self.media_type, self.tmdb_id)
+        return tmdb_show_key(self.media_type, self.tmdb_id)
 
     # TODO: Validate
     @override

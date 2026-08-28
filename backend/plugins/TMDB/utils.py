@@ -4,16 +4,18 @@ from typing import NamedTuple, override
 
 from tminidb.tv_episode_group.details.models import TvEpisodeGroupDetailsModel
 
+from app.canonical_media.keys import (
+    tmdb_episode_key,
+    tmdb_season_key,
+)
 from app.media.media_type import MediaType
 from app.utils import tz_datetime
 from plugins.TMDB.episode_groups import show_chosen_group_id
 from plugins.TMDB.files import FileMixin
 from plugins.TMDB.keys import (
-    episode_key,
     parse_episode_key,
     parse_season_key,
     parse_show_key,
-    season_key,
 )
 
 
@@ -82,6 +84,8 @@ class EpisodeSource(NamedTuple):
     still_path: str | None
     runtime: int | None
     air_date: date | None
+    native_season_number: int
+    native_episode_number: int
 
 
 # TODO: Validate
@@ -134,7 +138,7 @@ class HelperMixin(FileMixin, register=False):
         if group is not None:
             return [
                 SeasonSource(
-                    key=season_key(MediaType.tv, order),
+                    key=tmdb_season_key(MediaType.tv, order),
                     name=entry.name,
                     season_number=order + 1,
                     poster_path=None,
@@ -147,6 +151,8 @@ class HelperMixin(FileMixin, register=False):
                             still_path=episode.still_path,
                             runtime=episode.runtime,
                             air_date=episode.air_date,
+                            native_season_number=episode.season_number,
+                            native_episode_number=episode.episode_number,
                         )
                         for number, episode in enumerate(entry.episodes, start=1)
                     ],
@@ -170,7 +176,7 @@ class HelperMixin(FileMixin, register=False):
             detail = season_file.parsed()
             seasons.append(
                 SeasonSource(
-                    key=season_key(MediaType.tv, season.id),
+                    key=tmdb_season_key(MediaType.tv, season.id),
                     name=detail.name,
                     season_number=season.season_number,
                     poster_path=detail.poster_path,
@@ -183,6 +189,8 @@ class HelperMixin(FileMixin, register=False):
                             still_path=episode.still_path,
                             runtime=episode.runtime,
                             air_date=episode.air_date,
+                            native_season_number=season.season_number,
+                            native_episode_number=episode.episode_number,
                         )
                         for episode in detail.episodes
                     ],
@@ -226,7 +234,7 @@ class HelperMixin(FileMixin, register=False):
     def _season_keys_from_file(self, show_key: str) -> list[str]:
         media_type, tmdb_id = parse_show_key(show_key)
         if media_type == MediaType.movie:
-            return [season_key(media_type, tmdb_id)]
+            return [tmdb_season_key(media_type, tmdb_id)]
         return [season.key for season in self.series_seasons(show_key)]
 
     # TODO: Validate
@@ -241,11 +249,11 @@ class HelperMixin(FileMixin, register=False):
 
         media_type, tmdb_id = parse_show_key(show_key)
         if media_type == MediaType.movie:
-            return [episode_key(media_type, tmdb_id)]
+            return [tmdb_episode_key(media_type, tmdb_id)]
 
         wanted = set(season_keys)
         return [
-            episode_key(media_type, episode.id)
+            tmdb_episode_key(media_type, episode.id)
             for season in self.series_seasons(show_key)
             if season.key in wanted
             for episode in season.episodes

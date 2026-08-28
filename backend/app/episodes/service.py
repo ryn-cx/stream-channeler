@@ -237,16 +237,12 @@ def _absolute_number_match(
     absolute_numbers: dict[uuid.UUID, int],
     own_absolute: int | None,
 ) -> TmdbEpisodeChoice | None:
+    if own_absolute is None:
+        return None
     for candidate in candidates:
         candidate_episode = candidate[0]
         candidate_absolute = absolute_numbers.get(candidate_episode.id)
-        if (
-            episode.episode_number is not None
-            and episode.episode_number == candidate_absolute
-        ) or (
-            own_absolute is not None
-            and own_absolute in (candidate_absolute, candidate_episode.episode_number)
-        ):
+        if own_absolute == candidate_absolute:
             return _choice(
                 candidate,
                 absolute_numbers,

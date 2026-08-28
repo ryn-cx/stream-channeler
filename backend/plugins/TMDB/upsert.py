@@ -14,6 +14,10 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import override
 
+from app.canonical_media.keys import (
+    tmdb_episode_key,
+    tmdb_season_key,
+)
 from app.canonical_media.service import (
     canonical_episode_by_key,
     canonical_season_by_key,
@@ -26,11 +30,8 @@ from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.TMDB.constants import media_url
-from plugins.TMDB.keys import (
-    episode_key,
-    parse_show_key,
-    season_key,
-)
+from plugins.TMDB.episode_groups import dump_episode_extra
+from plugins.TMDB.keys import parse_show_key
 from plugins.TMDB.utils import (
     HelperMixin,
     SeasonSource,
@@ -190,7 +191,7 @@ class UpsertMixin(HelperMixin, register=False):
     ) -> None:
         season_key = source.key
         for sort_order, episode_source in enumerate(source.episodes):
-            key = episode_key(MediaType.tv, episode_source.id)
+            key = tmdb_episode_key(MediaType.tv, episode_source.id)
             episode = self._stored_episode(season, key)
             if not self._episode_is_outdated(
                 episode,
@@ -210,6 +211,10 @@ class UpsertMixin(HelperMixin, register=False):
                 air_date=air_datetime(episode_source.air_date),
                 episode_number=episode_source.number,
                 sort_order=sort_order,
+                extra=dump_episode_extra(
+                    episode_source.native_season_number,
+                    episode_source.native_episode_number,
+                ),
                 data_timestamp=data_timestamp,
                 update_at=None,
                 season_id=season.id,
@@ -259,7 +264,7 @@ class UpsertMixin(HelperMixin, register=False):
         force: bool = False,
     ) -> None:
         movie = self.movie_detail_file(tmdb_id).parsed()
-        key = season_key(MediaType.movie, tmdb_id)
+        key = tmdb_season_key(MediaType.movie, tmdb_id)
         season = self._stored_season(show, key)
         if self._season_is_outdated(season, show_key, force=force):
             data_timestamp = self.season_data_timestamp(key, show_key)
@@ -289,7 +294,7 @@ class UpsertMixin(HelperMixin, register=False):
         force: bool = False,
     ) -> None:
         movie = self.movie_detail_file(tmdb_id).parsed()
-        key = episode_key(MediaType.movie, tmdb_id)
+        key = tmdb_episode_key(MediaType.movie, tmdb_id)
         episode = self._stored_episode(season, key)
         if not self._episode_is_outdated(episode, season_key, show_key, force=force):
             return

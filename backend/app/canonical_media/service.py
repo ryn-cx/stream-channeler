@@ -134,6 +134,33 @@ def canonical_season_by_key(
 
 
 # TODO: Validate
+def _episode_moved_season(
+    session: Session,
+    key: str,
+    canonical_season: Season,
+) -> Episode | None:
+    moved = session.exec(
+        select(Episode)
+        .join(Season, onclause=col(Episode.season_id) == Season.id)
+        .where(
+            is_canonical(Episode),
+            Episode.key == key,
+            Season.show_id == canonical_season.show_id,
+        ),
+    ).first()
+    if moved is None:
+        return None
+
+    if moved.season is canonical_season:
+        return moved
+
+    moved.season = canonical_season
+    moved.season_id = canonical_season.id
+    session.add(moved)
+    return moved
+
+
+# TODO: Validate
 def canonical_episode_by_key(
     session: Session,
     key: str,
@@ -161,6 +188,10 @@ def canonical_episode_by_key(
         if existing:
             _remember(session, existing, cache_key)
             return existing
+
+    if moved := _episode_moved_season(session, key, canonical_season):
+        _remember(session, moved, cache_key)
+        return moved
 
     canonical = Episode(
         key=key,

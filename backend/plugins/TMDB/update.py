@@ -13,12 +13,15 @@ from typing import TYPE_CHECKING, override
 
 from tminidb.tv_series.changes.models import Item
 
+from app.canonical_media.keys import (
+    tmdb_season_key,
+)
 from app.media.media_type import MediaType
 from app.utils import tz_datetime
 from plugins.TMDB.episode_groups import show_chosen_group_id
 from plugins.TMDB.files import ShowChanges
 from plugins.TMDB.import_url import ImportURLMixin
-from plugins.TMDB.keys import parse_show_key, season_key
+from plugins.TMDB.keys import parse_show_key
 from plugins.TMDB.utils import change_datetime
 from plugins.utils.base_plugin.files import COMPLETED_STATUS, EXTRA_STATUS_FIELD
 
@@ -99,7 +102,7 @@ class UpdateMixin(ImportURLMixin, register=False):
             if show_chosen_group_id(self.session, self.source, show_key) is not None
             else getattr(changed, "season_id", None)
         )
-        key = None if named is None else season_key(MediaType.tv, named)
+        key = None if named is None else tmdb_season_key(MediaType.tv, named)
         changed_keys: list[str]
         if key is None:
             changed_keys = stored_keys

@@ -35,6 +35,33 @@ class TmdbShowExtra(BaseModel):
 
 
 # TODO: Validate
+class TmdbEpisodeExtra(BaseModel):
+    tmdb_season_number: int | None = None
+    tmdb_episode_number: int | None = None
+
+
+# TODO: Validate
+def parse_episode_extra(extra: dict[str, Any] | None) -> TmdbEpisodeExtra:
+    if not extra:
+        return TmdbEpisodeExtra()
+    try:
+        return TmdbEpisodeExtra.model_validate(extra)
+    except ValidationError:
+        return TmdbEpisodeExtra()
+
+
+# TODO: Validate
+def dump_episode_extra(
+    tmdb_season_number: int | None,
+    tmdb_episode_number: int | None,
+) -> dict[str, Any]:
+    return TmdbEpisodeExtra(
+        tmdb_season_number=tmdb_season_number,
+        tmdb_episode_number=tmdb_episode_number,
+    ).model_dump()
+
+
+# TODO: Validate
 def parse_extra(extra: dict[str, Any] | None) -> TmdbShowExtra:
     """Return what `extra` says, or an empty answer where it says nothing.
 

@@ -107,17 +107,21 @@ const EditShow = ({ show, size, open, onOpenChange }: EditShowProps) => {
   })
 
   // TODO: Validate
+  const onEpisodeGroupChange = (groupId: string) => {
+    setEpisodeGroupId(groupId)
+    const extra = withEpisodeGroupId(
+      parseExtraText(form.getValues("extra") ?? ""),
+      groupId,
+    )
+    form.setValue("extra", extraText(extra), { shouldDirty: true })
+  }
+
+  // TODO: Validate
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
-    // The order is written onto whatever else `extra` holds rather than over
-    // it, since the box above edits the same column and a plugin keeps its own
-    // things there too.
-    const extra = parseExtraText(data.extra ?? "")
     mutation.mutate({
       ...nullifyBlanks(data),
-      extra: showsEpisodeOrder
-        ? withEpisodeGroupId(extra, episodeGroupId)
-        : extra,
+      extra: parseExtraText(data.extra ?? ""),
     })
   }
 
@@ -168,7 +172,7 @@ const EditShow = ({ show, size, open, onOpenChange }: EditShowProps) => {
         <TmdbEpisodeOrderField
           showId={show.id}
           value={episodeGroupId}
-          onChange={setEpisodeGroupId}
+          onChange={onEpisodeGroupChange}
           enabled={isOpen}
         />
       )}

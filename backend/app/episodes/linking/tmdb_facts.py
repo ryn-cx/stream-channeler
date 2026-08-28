@@ -152,15 +152,24 @@ class TmdbEpisodeFacts:
     # TODO: Validate
     @staticmethod
     def _episode_numbering(tmdb_episode: Episode) -> tuple[int, int, int] | None:
+        from plugins.TMDB.episode_groups import parse_episode_extra  # noqa: PLC0415
+
+        native = parse_episode_extra(tmdb_episode.extra)
         season = tmdb_episode.season
         tmdb_show_id = tmdb_id_of(season.show.key, SHOW_LEVEL)
-        if (
-            tmdb_show_id is None
-            or season.season_number is None
-            or tmdb_episode.episode_number is None
-        ):
+        season_number = (
+            native.tmdb_season_number
+            if native.tmdb_season_number is not None
+            else season.season_number
+        )
+        episode_number = (
+            native.tmdb_episode_number
+            if native.tmdb_episode_number is not None
+            else tmdb_episode.episode_number
+        )
+        if tmdb_show_id is None or season_number is None or episode_number is None:
             return None
-        return (tmdb_show_id, season.season_number, tmdb_episode.episode_number)
+        return (tmdb_show_id, season_number, episode_number)
 
     # TODO: Validate
     @staticmethod

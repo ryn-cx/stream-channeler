@@ -19,9 +19,6 @@ from app.canonical_media.keys import (
     SEASON_LEVEL,
     SHOW_LEVEL,
     parse_tmdb_key,
-    tmdb_episode_key,
-    tmdb_season_key,
-    tmdb_show_key,
 )
 from app.media.media_type import MediaType
 
@@ -41,24 +38,6 @@ def _parse(key: str, level: str) -> RecordKey:
         message = f"{key!r} does not name a TMDB {level}"
         raise ValueError(message)
     return RecordKey(*parsed)
-
-
-# TODO: Validate
-def show_key(media_type: MediaType, tmdb_id: int) -> str:
-    """Return the `Show` key for a title."""
-    return tmdb_show_key(media_type, tmdb_id)
-
-
-# TODO: Validate
-def season_key(media_type: MediaType, tmdb_id: int) -> str:
-    """Return the `Season` key for a season, keyed by the season's own id."""
-    return tmdb_season_key(media_type, tmdb_id)
-
-
-# TODO: Validate
-def episode_key(media_type: MediaType, tmdb_id: int) -> str:
-    """Return the `Episode` key for an episode, keyed by the episode's own id."""
-    return tmdb_episode_key(media_type, tmdb_id)
 
 
 # TODO: Validate

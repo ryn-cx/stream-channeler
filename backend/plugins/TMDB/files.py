@@ -117,18 +117,31 @@ class ShowDetail(IntegerEndpointFile[TvSeriesDetailsModel]):
         return isinstance(error, ResourceNotFoundError)
 
 
+# TODO: Validate
 class EpisodeGroups(IntegerEndpointFile[TvSeriesEpisodeGroupsModel]):
     @override
     def _endpoint(self) -> TvSeriesEpisodeGroupsEndpoint:
         return tminidb().tv_series.episode_groups
 
+    # TODO: Validate
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ResourceNotFoundError)
 
+
+# TODO: Validate
 class EpisodeGroupDetail(EndpointFile[TvEpisodeGroupDetailsModel]):
     @override
     def _endpoint(self) -> TvEpisodeGroupEndpoint:
         return tminidb().tv_episode_group.details
 
+    # TODO: Validate
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ResourceNotFoundError)
 
+
+# TODO: Validate
 class SeasonDetail(EndpointFile[TvSeasonDetailsModel]):
     @override
     def _endpoint(self) -> TvSeasonEndpoint:
@@ -148,6 +161,11 @@ class SeasonDetail(EndpointFile[TvSeasonDetailsModel]):
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(self.tmdb_show_id, self.season_number)
+
+    # TODO: Validate
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ResourceNotFoundError)
 
 
 class EpisodeDetail(EndpointFile[TvEpisodeDetailsModel]):
@@ -181,6 +199,7 @@ class EpisodeDetail(EndpointFile[TvEpisodeDetailsModel]):
         )
 
 
+# TODO: Validate
 class EpisodeTranslations(EndpointFile[TvEpisodeTranslationsModel]):
     @override
     def _endpoint(self) -> TvEpisodeTranslationsEndpoint:
@@ -210,6 +229,11 @@ class EpisodeTranslations(EndpointFile[TvEpisodeTranslationsModel]):
             self.season_number,
             self.episode_number,
         )
+
+    # TODO: Validate
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ResourceNotFoundError)
 
 
 class ShowChanges(EndpointFile[TvSeriesChangesModel]):

@@ -150,16 +150,38 @@ def serve_as_canonical_episodes[RowT](
             season.season_number if season else None,
         )
         setattr(row, TMDB_SEASON_NAME_FIELD, season.name if season else None)
+        native_season, native_episode = native_numbering(canonical, season)
         setattr(
             row,
             TMDB_URL_FIELD,
             tmdb_episode_url(
                 show.key if show else None,
-                season.season_number if season else None,
-                canonical.episode_number,
+                native_season,
+                native_episode,
             ),
         )
     return rows
+
+
+# TODO: Validate
+def native_numbering(
+    canonical_episode: Episode,
+    season: Season | None,
+) -> tuple[int | None, int | None]:
+    from plugins.TMDB.episode_groups import parse_episode_extra  # noqa: PLC0415
+
+    native = parse_episode_extra(canonical_episode.extra)
+    season_number = (
+        native.tmdb_season_number
+        if native.tmdb_season_number is not None
+        else (season.season_number if season else None)
+    )
+    episode_number = (
+        native.tmdb_episode_number
+        if native.tmdb_episode_number is not None
+        else canonical_episode.episode_number
+    )
+    return season_number, episode_number
 
 
 # TODO: Validate
@@ -294,17 +316,3 @@ def canonical_show_of(session: Session, show: Show) -> Show | None:
     ).first()
 
 
-# TODO: Validate
-def canonical_numberings(
-    canonical_show: Show,
-) -> list[tuple[UUID, int | None, int | None]]:
-    """Return how a title numbers each of its episodes, for counting them through.
-
-    The canonical mirror of `_numberings` in the base plugin: canonical rows are
-    never soft-deleted, so every season and episode under the title counts.
-    """
-    return [
-        (episode.id, season.season_number, episode.episode_number)
-        for season in canonical_show.seasons
-        for episode in season.episodes
-    ]

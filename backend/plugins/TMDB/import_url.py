@@ -8,6 +8,9 @@ from typing import Any, override
 
 from loguru import logger
 
+from app.canonical_media.keys import (
+    tmdb_show_key,
+)
 from app.media.media_type import MediaType
 from app.shows.models import Show
 from app.unmatched_sources.service import (
@@ -15,7 +18,7 @@ from app.unmatched_sources.service import (
     record_unmatched_source,
 )
 from plugins.TMDB.constants import media_url
-from plugins.TMDB.keys import parse_show_key, show_key
+from plugins.TMDB.keys import parse_show_key
 from plugins.TMDB.lookup import LookupMixin
 from plugins.TMDB.media_info import (
     Provider,
@@ -297,10 +300,10 @@ class ImportURLMixin(
     def import_show(self, tmdb_id: int, *, force: bool = False) -> Show:
         """Import a TMDB tv entry using a tmdb_id."""
         self.import_url(media_url(MediaType.tv, tmdb_id), force=force)
-        return self._preload_show(show_key(MediaType.tv, tmdb_id)).one()
+        return self._preload_show(tmdb_show_key(MediaType.tv, tmdb_id)).one()
 
     # TODO: Validate
     def import_movie(self, tmdb_id: int, *, force: bool = False) -> Show:
         """Import a TMDB movie entry using a tmdb_id."""
         self.import_url(media_url(MediaType.movie, tmdb_id), force=force)
-        return self._preload_show(show_key(MediaType.movie, tmdb_id)).one()
+        return self._preload_show(tmdb_show_key(MediaType.movie, tmdb_id)).one()
