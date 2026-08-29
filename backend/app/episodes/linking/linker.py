@@ -153,6 +153,7 @@ class EpisodeLinker:
                 self._by_similar_name_and_episode_index(
                     alternate_numbers,
                     "Automatic: Similar name and alternate order number match",
+                    self.facts.alternate_order_names_of,
                 ),
                 self._by_name(episode_name, "Automatic: Name match"),
                 self._by_name(plaintext_name, "Automatic: Plaintext name match"),
@@ -356,6 +357,7 @@ class EpisodeLinker:
         self,
         numbers_of: Callable[[Episode], Collection[int]],
         note: str,
+        order_names_of: Callable[[Episode, int], Collection[str]] | None = None,
     ) -> Callable[[list[Episode]], list[Episode]]:
         # TODO: Validate
         def step(episodes: list[Episode]) -> list[Episode]:
@@ -403,10 +405,34 @@ class EpisodeLinker:
                 if scored[0][0] < max(score for score, _episode in every_score):
                     continue
 
-                self._claim(episode, scored[0][1], note)
+                self._claim(
+                    episode,
+                    scored[0][1],
+                    self._noted_order(
+                        note,
+                        order_names_of,
+                        scored[0][1],
+                        episode.episode_number,
+                    ),
+                )
             return self._unlinked(episodes)
 
         return step
+
+    # TODO: Validate
+    @staticmethod
+    def _noted_order(
+        note: str,
+        order_names_of: Callable[[Episode, int], Collection[str]] | None,
+        tmdb_episode: Episode,
+        episode_number: int | None,
+    ) -> str:
+        if order_names_of is None or episode_number is None:
+            return note
+        order_names = sorted(order_names_of(tmdb_episode, episode_number))
+        if not order_names:
+            return note
+        return f"{note} ({', '.join(order_names)})"
 
     # TODO: Validate
     def _claimed_by_source(self) -> set[uuid.UUID]:

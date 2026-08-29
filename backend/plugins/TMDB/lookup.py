@@ -155,7 +155,10 @@ class LookupMixin(FileMixin, register=False):
         ]
 
     # TODO: Validate
-    def alternate_episode_numbers(self, tmdb_id: int) -> dict[int, frozenset[int]]:
+    def alternate_episode_numbers(
+        self,
+        tmdb_id: int,
+    ) -> dict[int, dict[int, frozenset[str]]]:
         """Return every number each episode of a title carries in some other order.
 
         TMDB keeps the other ways of ordering a title - the DVD order, the story
@@ -180,17 +183,25 @@ class LookupMixin(FileMixin, register=False):
         if not groups_file.database_record.content:
             return {}
 
-        numbers: dict[int, set[int]] = {}
+        numbers: dict[int, dict[int, set[str]]] = {}
         for option in groups_file.parsed().results:
             detail_file = self.episode_group_detail_file(option.id)
             detail_file.download_if_outdated()
             if not detail_file.database_record.content:
                 continue
-            for group in detail_file.parsed().groups:
+            detail = detail_file.parsed()
+            for group in detail.groups:
                 for number, episode in enumerate(group.episodes, start=1):
-                    numbers.setdefault(episode.id, set()).add(number)
+                    order_names = numbers.setdefault(episode.id, {}).setdefault(
+                        number,
+                        set(),
+                    )
+                    order_names.add(detail.name)
         return {
-            episode_id: frozenset(episode_numbers)
+            episode_id: {
+                number: frozenset(order_names)
+                for number, order_names in episode_numbers.items()
+            }
             for episode_id, episode_numbers in numbers.items()
         }
 

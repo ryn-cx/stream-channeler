@@ -120,7 +120,7 @@ class UpsertMixin(HelperMixin, register=False):
         *,
         force: bool = False,
     ) -> None:
-        episodes = self._season_episodes(show_key, season_id)
+        episodes = self._season_episodes(season_id)
         for sort_order, episode_data in enumerate(episodes):
             episode_key = str(episode_data.video_id)
             episode = Episode.get_from_memory(self.session, season, episode_key)
@@ -137,9 +137,9 @@ class UpsertMixin(HelperMixin, register=False):
                 name=episode_data.title,
                 episode_number=episode_data.number,
                 url=self._episode_url(episode_key),
-                description=episode_data.short_synopsis,
-                image_url=episode_data.merch_still300.url,
-                thumbnail_url=episode_data.merch_still300.url,
+                description=episode_data.contextual_synopsis.text,
+                image_url=episode_data.artwork.url,
+                thumbnail_url=episode_data.artwork.url,
                 duration=episode_data.runtime_sec,
                 sort_order=sort_order,
                 data_timestamp=self.episode_data_timestamp(

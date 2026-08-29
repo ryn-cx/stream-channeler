@@ -93,12 +93,12 @@ class TmdbEpisodeFacts:
 
     # TODO: Validate
     @cached_property
-    def alternate_episode_numbers(self) -> dict[uuid.UUID, frozenset[int]]:
-        cache: dict[int, dict[int, frozenset[int]]] = self._cache(
+    def alternate_episode_numbers(self) -> dict[uuid.UUID, dict[int, frozenset[str]]]:
+        cache: dict[int, dict[int, dict[int, frozenset[str]]]] = self._cache(
             "alternate_tmdb_episode_numbers",
         )
         tmdb = self._tmdb(self.session)
-        by_tmdb_id: dict[int, frozenset[int]] = {}
+        by_tmdb_id: dict[int, dict[int, frozenset[str]]] = {}
         for canonical_show in self.canonical_shows:
             tmdb_show_id = tmdb_id_of(canonical_show.key, SHOW_LEVEL)
             media_type = tmdb_media_type_of(canonical_show.key, SHOW_LEVEL)
@@ -108,7 +108,7 @@ class TmdbEpisodeFacts:
                 cache[tmdb_show_id] = tmdb.alternate_episode_numbers(tmdb_show_id)
             by_tmdb_id |= cache[tmdb_show_id]
 
-        alternate_numbers: dict[uuid.UUID, frozenset[int]] = {}
+        alternate_numbers: dict[uuid.UUID, dict[int, frozenset[str]]] = {}
         for tmdb_episode in self.canonical_episodes:
             tmdb_episode_id = tmdb_id_of(tmdb_episode.key, EPISODE_LEVEL)
             if tmdb_episode_id is None:
@@ -119,7 +119,16 @@ class TmdbEpisodeFacts:
 
     # TODO: Validate
     def alternate_numbers_of(self, tmdb_episode: Episode) -> Collection[int]:
-        return self.alternate_episode_numbers.get(tmdb_episode.id, frozenset())
+        return self.alternate_episode_numbers.get(tmdb_episode.id, {}).keys()
+
+    # TODO: Validate
+    def alternate_order_names_of(
+        self,
+        tmdb_episode: Episode,
+        episode_number: int,
+    ) -> Collection[str]:
+        numbers = self.alternate_episode_numbers.get(tmdb_episode.id, {})
+        return numbers.get(episode_number, frozenset())
 
     # TODO: Validate
     @staticmethod

@@ -15,9 +15,21 @@ from meshfilm.lodp_title_and_plans_page import LodpTitleAndPlansPage
 from meshfilm.lodp_title_and_plans_page.models import (
     LodpTitleAndPlansPageModel,
 )
-from meshfilm.lodp_title_and_plans_page.models import Node as SeasonNode
-from meshfilm.lodp_title_and_plans_page.models import Node1 as EpisodeNode
 from meshfilm.lodp_title_and_plans_page.models import Video1 as TitleVideo
+from meshfilm.preview_modal_episode_selector import PreviewModalEpisodeSelector
+from meshfilm.preview_modal_episode_selector.models import Node as SeasonNode
+from meshfilm.preview_modal_episode_selector.models import (
+    PreviewModalEpisodeSelectorModel,
+)
+from meshfilm.preview_modal_episode_selector_season_episodes import (
+    PreviewModalEpisodeSelectorSeasonEpisodes,
+)
+from meshfilm.preview_modal_episode_selector_season_episodes.models import (
+    Node as EpisodeNode,
+)
+from meshfilm.preview_modal_episode_selector_season_episodes.models import (
+    PreviewModalEpisodeSelectorSeasonEpisodesModel,
+)
 from meshfilm.search_page_results import SearchPageResults
 from meshfilm.search_page_results.models import SearchPageResultsModel
 from sqlmodel import Session
@@ -48,6 +60,38 @@ class Title(IntegerEndpointFile[LodpTitleAndPlansPageModel]):
     @override
     def _endpoint(self) -> LodpTitleAndPlansPage:
         return meshfilm().lodp_title_and_plans_page
+
+
+# TODO: Validate
+class Seasons(IntegerEndpointFile[PreviewModalEpisodeSelectorModel]):
+    """Seasons file."""
+
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> PreviewModalEpisodeSelector:
+        return meshfilm().preview_modal_episode_selector
+
+    # TODO: Validate
+    @override
+    def _download_file(self) -> str:
+        return self._endpoint().download(int(self.unique_identifier), 500)
+
+
+# TODO: Validate
+class SeasonEpisodes(
+    IntegerEndpointFile[PreviewModalEpisodeSelectorSeasonEpisodesModel],
+):
+    """Season episodes file."""
+
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> PreviewModalEpisodeSelectorSeasonEpisodes:
+        return meshfilm().preview_modal_episode_selector_season_episodes
+
+    # TODO: Validate
+    @override
+    def _download_file(self) -> str:
+        return self._endpoint().download(int(self.unique_identifier), 500)
 
 
 # TODO: Validate
@@ -97,6 +141,24 @@ class FileMixin(BasePlugin, register=False):
         return self._file(Title, title_key)
 
     # TODO: Validate
+    def seasons_file(self, show_key: str) -> Seasons:
+        """Contains every season of a title.
+
+        The title file holds only the first ten seasons, so the seasons a title
+        has are read from here instead.
+        """
+        return self._file(Seasons, show_key)
+
+    # TODO: Validate
+    def season_episodes_file(self, season_id: str | int) -> SeasonEpisodes:
+        """Contains every episode of one season.
+
+        The title file holds only the first ten episodes of a season, so the
+        episodes a season has are read from here instead.
+        """
+        return self._file(SeasonEpisodes, str(season_id))
+
+    # TODO: Validate
     def _title_video(self, show_key: str) -> TitleVideo:
         parsed = self.title_file(show_key).parsed()
         video = next(
@@ -114,21 +176,17 @@ class FileMixin(BasePlugin, register=False):
 
     # TODO: Validate
     def _ordered_seasons(self, show_key: str) -> list[SeasonNode]:
-        seasons = self._title_video(show_key).seasons
-        if seasons is None:
+        video = self.seasons_file(show_key).parsed().data.videos[0]
+        if video.seasons is None:
             return []
-        return [edge.node for edge in seasons.edges]
+        return [edge.node for edge in video.seasons.edges]
 
     # TODO: Validate
-    def _season_episodes(
-        self,
-        show_key: str,
-        season_id: int,
-    ) -> list[EpisodeNode]:
-        for season in self._ordered_seasons(show_key):
-            if season.video_id == season_id:
-                return [edge.node for edge in season.episodes.edges]
-        return []
+    def _season_episodes(self, season_id: str | int) -> list[EpisodeNode]:
+        video = self.season_episodes_file(season_id).parsed().data.videos[0]
+        if video.episodes is None:
+            return []
+        return [edge.node for edge in video.episodes.edges]
 
     # TODO: Validate
     @staticmethod
@@ -151,14 +209,15 @@ class FileMixin(BasePlugin, register=False):
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
         # Required to detect changes to the show and new seasons of it.
-        return [self.title_file(show_key)]
+        return [self.title_file(show_key), self.seasons_file(show_key)]
 
     # TODO: Validate
     @override
     def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
-        # A season is read out of the show's own file, so that is what says
-        # whether the season has changed or gained an episode.
-        return [self.title_file(show_key)]
+        if self._is_movie(show_key):
+            return [self.title_file(show_key)]
+        _show_key, season_id = self._split_season_key(season_key)
+        return [self.season_episodes_file(season_id), self.seasons_file(show_key)]
 
     # TODO: Validate
     @override
@@ -168,7 +227,7 @@ class FileMixin(BasePlugin, register=False):
         season_key: str,
         show_key: str,
     ) -> Sequence[BaseFile[Any]]:
-        return [self.title_file(show_key)]
+        return self._season_files(season_key, show_key)
 
     # TODO: Validate
     @override
@@ -197,6 +256,6 @@ class FileMixin(BasePlugin, register=False):
             else:
                 episode_keys += [
                     str(episode.video_id)
-                    for episode in self._season_episodes(show_key, int(season_id))
+                    for episode in self._season_episodes(season_id)
                 ]
         return episode_keys
