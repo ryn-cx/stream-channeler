@@ -156,6 +156,8 @@ class TmdbEpisodeFacts:
 
         native = parse_episode_extra(tmdb_episode.extra)
         season = tmdb_episode.season
+        if tmdb_media_type_of(season.show.key, SHOW_LEVEL) is not MediaType.tv:
+            return None
         tmdb_show_id = tmdb_id_of(season.show.key, SHOW_LEVEL)
         season_number = (
             native.tmdb_season_number
