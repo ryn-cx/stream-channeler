@@ -47,6 +47,7 @@ class BaseSeason(BaseMediaMixin):
     url: str | None = Field(default=None)
     season_number: int | None = Field(default=None)
     image_url: str | None = Field(default=None)
+    thumbnail_url: str | None = Field(default=None)
     sort_order: int | None = Field(default=None)
 
 

@@ -104,6 +104,7 @@ class UpsertMixin(HelperMixin, register=False):
                 media_type="Movie" if self._is_movie(show_key) else "Series",
                 url=self._series_url(series_data.id),
                 image_url=self._show_image(series_data.images),
+                thumbnail_url=self._show_thumbnail(series_data.images),
                 year=series_data.series_launch_year,
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
@@ -134,6 +135,7 @@ class UpsertMixin(HelperMixin, register=False):
                 media_type="Music",
                 url=self._artist_url(show_key),
                 image_url=self._largest_image(artist_data.images.poster_wide),
+                thumbnail_url=self._nearest_thumbnail(artist_data.images.poster_wide),
                 data_timestamp=self.show_data_timestamp(show_key),
                 canonical_show_validated_at=tz_datetime.now(),
                 source_id=source.id,
@@ -244,6 +246,7 @@ class UpsertMixin(HelperMixin, register=False):
                 url=self._episode_url(episode_data.id),
                 description=episode_data.description,
                 image_url=self._episode_thumbnail(episode_data.images),
+                thumbnail_url=self._episode_thumbnail_image(episode_data.images),
                 duration=episode_data.duration_ms // 1000,
                 sort_order=index,
                 air_date=episode_data.episode_air_date,
@@ -305,6 +308,7 @@ class UpsertMixin(HelperMixin, register=False):
                 description=details.description,
                 url=self._episode_url(episode_key),
                 image_url=self._largest_image(details.images.thumbnail),
+                thumbnail_url=self._nearest_thumbnail(details.images.thumbnail),
                 duration=details.duration_ms // 1000,
                 sort_order=sort_order,
                 air_date=details.original_release,
@@ -349,6 +353,39 @@ class UpsertMixin(HelperMixin, register=False):
         if not thumbnails or not thumbnails[0]:
             return None
         return thumbnails[0][-1].source
+
+    # TODO: Validate
+    @staticmethod
+    def _nearest_thumbnail(
+        images: Sequence[
+            ArtistPosterWideItem | ConcertThumbnailItem | MusicVideoThumbnailItem
+        ],
+    ) -> str | None:
+        if not images:
+            return None
+        wide_enough = [image for image in images if image.width >= 480]  # noqa: PLR2004
+        if wide_enough:
+            return min(wide_enough, key=lambda image: image.width).source
+        return max(images, key=lambda image: image.width).source
+
+    # TODO: Validate
+    @staticmethod
+    def _show_thumbnail(images: SeriesImages) -> str | None:
+        wide = images.poster_wide
+        if wide and wide[0]:
+            return UpsertMixin._nearest_thumbnail(wide[0])
+        tall = images.poster_tall
+        if tall and tall[0]:
+            return UpsertMixin._nearest_thumbnail(tall[0])
+        return None
+
+    # TODO: Validate
+    @staticmethod
+    def _episode_thumbnail_image(images: EpisodeImages) -> str | None:
+        thumbnails = images.thumbnail
+        if not thumbnails or not thumbnails[0]:
+            return None
+        return UpsertMixin._nearest_thumbnail(thumbnails[0])
 
     # TODO: Validate
     @staticmethod

@@ -37,10 +37,13 @@ from plugins.TMDB.utils import (
     SeasonSource,
     air_datetime,
     backdrop_image_url,
+    backdrop_thumbnail_url,
     duration_seconds,
     poster_image_url,
+    poster_original_url,
     release_year,
     still_image_url,
+    still_thumbnail_url,
 )
 
 
@@ -124,6 +127,8 @@ class UpsertMixin(HelperMixin, register=False):
                 description=series.overview,
                 url=media_url(MediaType.tv, tmdb_id),
                 image_url=backdrop_image_url(series.backdrop_path)
+                or poster_original_url(series.poster_path),
+                thumbnail_url=backdrop_thumbnail_url(series.backdrop_path)
                 or poster_image_url(series.poster_path),
                 year=release_year(series.first_air_date),
                 media_type="TV Show",
@@ -160,7 +165,8 @@ class UpsertMixin(HelperMixin, register=False):
                     season_number=source.season_number,
                     sort_order=source.season_number,
                     url=media_url(MediaType.tv, tmdb_id),
-                    image_url=poster_image_url(source.poster_path),
+                    image_url=poster_original_url(source.poster_path),
+                    thumbnail_url=poster_image_url(source.poster_path),
                     data_timestamp=data_timestamp,
                     update_at=None,
                     show_id=show.id,
@@ -207,6 +213,7 @@ class UpsertMixin(HelperMixin, register=False):
                 description=episode_source.overview,
                 url=media_url(MediaType.tv, tmdb_id),
                 image_url=still_image_url(episode_source.still_path),
+                thumbnail_url=still_thumbnail_url(episode_source.still_path),
                 duration=duration_seconds(episode_source.runtime),
                 air_date=air_datetime(episode_source.air_date),
                 episode_number=episode_source.number,
@@ -240,6 +247,8 @@ class UpsertMixin(HelperMixin, register=False):
                 description=movie.overview,
                 url=media_url(MediaType.movie, tmdb_id),
                 image_url=backdrop_image_url(movie.backdrop_path)
+                or poster_original_url(movie.poster_path),
+                thumbnail_url=backdrop_thumbnail_url(movie.backdrop_path)
                 or poster_image_url(movie.poster_path),
                 year=release_year(movie.release_date),
                 media_type="Movie",
@@ -274,7 +283,8 @@ class UpsertMixin(HelperMixin, register=False):
                 season_number=0,
                 sort_order=0,
                 url=media_url(MediaType.movie, tmdb_id),
-                image_url=poster_image_url(movie.poster_path),
+                image_url=poster_original_url(movie.poster_path),
+                thumbnail_url=poster_image_url(movie.poster_path),
                 data_timestamp=data_timestamp,
                 update_at=None,
                 show_id=show.id,
@@ -305,6 +315,7 @@ class UpsertMixin(HelperMixin, register=False):
             description=movie.overview,
             url=media_url(MediaType.movie, tmdb_id),
             image_url=backdrop_image_url(movie.backdrop_path),
+            thumbnail_url=backdrop_thumbnail_url(movie.backdrop_path),
             duration=duration_seconds(movie.runtime),
             air_date=air_datetime(movie.release_date),
             episode_number=0,

@@ -154,6 +154,7 @@ class UpsertMixin(HelperMixin, register=False):
                 else tz_datetime.now(),
                 source_id=source.id,
                 image_url=self._best_thumbnail_url(channel_item.snippet.thumbnails),
+                thumbnail_url=self._thumbnail_url(channel_item.snippet.thumbnails),
             )
             show = self._upsert_show_object(new_show, source, show, show_key)
 
@@ -201,6 +202,7 @@ class UpsertMixin(HelperMixin, register=False):
                 url=self.build_url(f"watch?v={show_key}"),
                 media_type="Movie",
                 image_url=self._best_thumbnail_url(video_item.snippet.thumbnails),
+                thumbnail_url=self._thumbnail_url(video_item.snippet.thumbnails),
                 data_timestamp=data_timestamp,
                 # Movies are only updated once a year to make sure they are still
                 # available.
@@ -236,6 +238,7 @@ class UpsertMixin(HelperMixin, register=False):
                 name=video_item.snippet.title,
                 url=self.build_url(f"watch?v={show_key}"),
                 image_url=self._best_thumbnail_url(video_item.snippet.thumbnails),
+                thumbnail_url=self._thumbnail_url(video_item.snippet.thumbnails),
                 data_timestamp=data_timestamp,
                 update_at=data_timestamp,
                 show_id=show.id,
@@ -270,6 +273,7 @@ class UpsertMixin(HelperMixin, register=False):
                 url=self.build_url(f"playlist?list={show_key}"),
                 media_type="TV Show",
                 image_url=self._best_thumbnail_url(playlist_item.snippet.thumbnails),
+                thumbnail_url=self._thumbnail_url(playlist_item.snippet.thumbnails),
                 data_timestamp=data_timestamp,
                 update_at=data_timestamp + timedelta(hours=6),
                 source_id=source.id,
@@ -307,6 +311,7 @@ class UpsertMixin(HelperMixin, register=False):
                 url=self.build_url(f"playlist?list={show_key}"),
                 media_type=f"YouTube {music_playlist.release_type() or 'Album'}",
                 image_url=music_playlist.image_url(),
+                thumbnail_url=music_playlist.image_url(),
                 data_timestamp=data_timestamp,
                 update_at=data_timestamp + timedelta(days=365),
                 source_id=source.id,
@@ -351,6 +356,7 @@ class UpsertMixin(HelperMixin, register=False):
                 url=self.build_url(f"channel/{show_key}"),
                 media_type="YouTube Artist",
                 image_url=self._best_thumbnail_url(channel_item.snippet.thumbnails),
+                thumbnail_url=self._thumbnail_url(channel_item.snippet.thumbnails),
                 data_timestamp=data_timestamp,
                 # A musician only changes when they put something out.
                 update_at=data_timestamp + timedelta(days=365),
@@ -390,6 +396,7 @@ class UpsertMixin(HelperMixin, register=False):
                 name=name,
                 url=self.build_url(f"playlist?list={season_key}"),
                 image_url=music_playlist.image_url(),
+                thumbnail_url=music_playlist.image_url(),
                 data_timestamp=data_timestamp,
                 update_at=data_timestamp + timedelta(days=365),
                 show_id=show.id,
@@ -458,6 +465,7 @@ class UpsertMixin(HelperMixin, register=False):
                 name=name,
                 url=self.build_url(f"playlist?list={season_key}"),
                 image_url=self._best_thumbnail_url(playlist.snippet.thumbnails),
+                thumbnail_url=self._thumbnail_url(playlist.snippet.thumbnails),
                 data_timestamp=data_timestamp,
                 update_at=data_timestamp + timedelta(hours=6),
                 show_id=show.id,
@@ -590,6 +598,7 @@ class UpsertMixin(HelperMixin, register=False):
             air_date=video_snippet.published_at,
             duration=duration,
             image_url=self._best_thumbnail_url(video_snippet.thumbnails),
+            thumbnail_url=self._thumbnail_url(video_snippet.thumbnails),
             sort_order=sort_order,
             episode_number=self._get_episode_number(episode_key, season.key, show_key),
             data_timestamp=self.episode_data_timestamp(

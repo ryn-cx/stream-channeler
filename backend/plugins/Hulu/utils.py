@@ -59,7 +59,13 @@ class HelperMixin(FileMixin, register=False):
     # TODO: Validate
     @staticmethod
     def _image_url(path: str) -> str:
-        operations = quote('[{"resize":"600x600|max"},{"format":"webp"}]', safe=":,")
+        operations = quote('[{"resize":"1920x1920|max"},{"format":"webp"}]', safe=":,")
+        return f"{path}&operations={operations}"
+
+    # TODO: Validate
+    @staticmethod
+    def _thumbnail_url(path: str) -> str:
+        operations = quote('[{"resize":"480x480|max"},{"format":"webp"}]', safe=":,")
         return f"{path}&operations={operations}"
 
     # TODO: Validate

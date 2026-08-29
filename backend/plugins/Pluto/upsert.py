@@ -56,6 +56,7 @@ class UpsertMixin(SourceMixin, register=False):
                 media_type="TV Show",
                 url=self._series_url(show_key),
                 image_url=series.featured_image.path,
+                thumbnail_url=series.featured_image.path,
                 data_timestamp=data_timestamp,
                 update_at=data_timestamp + timedelta(days=7),
                 source_id=source.id,
@@ -124,6 +125,7 @@ class UpsertMixin(SourceMixin, register=False):
                 episode_number=series_episode.number,
                 url=self._episode_url(show_key, season_number, episode_key),
                 image_url=series_episode.poster16_9.path,
+                thumbnail_url=series_episode.poster16_9.path,
                 duration=(
                     series_episode.original_content_duration // MILLISECONDS_PER_SECOND
                 ),
@@ -157,6 +159,7 @@ class UpsertMixin(SourceMixin, register=False):
                 media_type="Movie",
                 url=self._movie_url(show_key),
                 image_url=item.featured_image.path,
+                thumbnail_url=item.featured_image.path,
                 data_timestamp=data_timestamp,
                 update_at=data_timestamp + timedelta(days=30),
                 source_id=source.id,
@@ -207,6 +210,7 @@ class UpsertMixin(SourceMixin, register=False):
                 episode_number=0,
                 url=self._movie_url(show_key),
                 image_url=item.featured_image.path,
+                thumbnail_url=item.featured_image.path,
                 duration=(item.original_content_duration // MILLISECONDS_PER_SECOND),
                 sort_order=0,
                 data_timestamp=self.episode_data_timestamp(

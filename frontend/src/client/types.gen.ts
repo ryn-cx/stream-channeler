@@ -34,6 +34,7 @@ export type CanonicalEpisodeListOutput = {
     name?: (string | null);
     description?: (string | null);
     image_url?: (string | null);
+    thumbnail_url?: (string | null);
     air_date?: (string | null);
     episode_number?: (number | null);
     duration?: (number | null);
@@ -95,6 +96,7 @@ export type CanonicalShowOutput = {
     description?: (string | null);
     url?: (string | null);
     image_url?: (string | null);
+    thumbnail_url?: (string | null);
     year?: (number | null);
     id: string;
     created_at: string;
@@ -575,6 +577,7 @@ export type EpisodeCreate = {
     name?: (string | null);
     description?: (string | null);
     image_url?: (string | null);
+    thumbnail_url?: (string | null);
     air_date?: (string | null);
     episode_number?: (number | null);
     duration?: (number | null);
@@ -628,6 +631,7 @@ export type EpisodeListOutput = {
     name?: (string | null);
     description?: (string | null);
     image_url?: (string | null);
+    thumbnail_url?: (string | null);
     air_date?: (string | null);
     episode_number?: (number | null);
     duration?: (number | null);
@@ -666,6 +670,7 @@ export type EpisodeOutput = {
     name?: (string | null);
     description?: (string | null);
     image_url?: (string | null);
+    thumbnail_url?: (string | null);
     air_date?: (string | null);
     episode_number?: (number | null);
     duration?: (number | null);
@@ -728,6 +733,7 @@ export type EpisodeUpdate = {
     name?: (string | null);
     description?: (string | null);
     image_url?: (string | null);
+    thumbnail_url?: (string | null);
     air_date?: (string | null);
     episode_number?: (number | null);
     duration?: (number | null);
@@ -748,6 +754,7 @@ export type EpisodeWithDetails = {
     name?: (string | null);
     description?: (string | null);
     image_url?: (string | null);
+    thumbnail_url?: (string | null);
     air_date?: (string | null);
     episode_number?: (number | null);
     duration?: (number | null);
@@ -1109,6 +1116,7 @@ export type SeasonCreate = {
     url?: (string | null);
     season_number?: (number | null);
     image_url?: (string | null);
+    thumbnail_url?: (string | null);
     sort_order?: (number | null);
 };
 
@@ -1150,6 +1158,7 @@ export type SeasonListOutput = {
     url?: (string | null);
     season_number?: (number | null);
     image_url?: (string | null);
+    thumbnail_url?: (string | null);
     sort_order?: (number | null);
     show_id: string;
     id: string;
@@ -1176,6 +1185,7 @@ export type SeasonOutput = {
     url?: (string | null);
     season_number?: (number | null);
     image_url?: (string | null);
+    thumbnail_url?: (string | null);
     sort_order?: (number | null);
     show_id: string;
     id: string;
@@ -1207,6 +1217,7 @@ export type SeasonUpdate = {
     url?: (string | null);
     season_number?: (number | null);
     image_url?: (string | null);
+    thumbnail_url?: (string | null);
     sort_order?: (number | null);
 };
 
@@ -1226,6 +1237,7 @@ export type ShowCreate = {
     description?: (string | null);
     url?: (string | null);
     image_url?: (string | null);
+    thumbnail_url?: (string | null);
     year?: (number | null);
     canonical_show_validated_at?: (string | null);
     canonical_show_note?: (string | null);
@@ -1274,6 +1286,7 @@ export type ShowListPublic = {
     description?: (string | null);
     url?: (string | null);
     image_url?: (string | null);
+    thumbnail_url?: (string | null);
     year?: (number | null);
     canonical_show_validated_at?: (string | null);
     canonical_show_note?: (string | null);
@@ -1304,6 +1317,7 @@ export type ShowPublic = {
     description?: (string | null);
     url?: (string | null);
     image_url?: (string | null);
+    thumbnail_url?: (string | null);
     year?: (number | null);
     canonical_show_validated_at?: (string | null);
     canonical_show_note?: (string | null);
@@ -1346,6 +1360,7 @@ export type ShowUpdate = {
     description?: (string | null);
     url?: (string | null);
     image_url?: (string | null);
+    thumbnail_url?: (string | null);
     year?: (number | null);
     canonical_show_validated_at?: (string | null);
     canonical_show_note?: (string | null);
@@ -1608,6 +1623,7 @@ export type UnvalidatedShowOutput = {
     description?: (string | null);
     url?: (string | null);
     image_url?: (string | null);
+    thumbnail_url?: (string | null);
     year?: (number | null);
     canonical_show_validated_at?: (string | null);
     canonical_show_note?: (string | null);
@@ -1831,6 +1847,7 @@ export type WhitelistEpisodeLinkOutput = {
     name?: (string | null);
     description?: (string | null);
     image_url?: (string | null);
+    thumbnail_url?: (string | null);
     air_date?: (string | null);
     episode_number?: (number | null);
     duration?: (number | null);
@@ -1863,6 +1880,7 @@ export type WhitelistEpisodeOutput = {
     name?: (string | null);
     description?: (string | null);
     image_url?: (string | null);
+    thumbnail_url?: (string | null);
     air_date?: (string | null);
     episode_number?: (number | null);
     duration?: (number | null);
@@ -1916,6 +1934,7 @@ export type WhitelistSeasonOutput = {
     url?: (string | null);
     season_number?: (number | null);
     image_url?: (string | null);
+    thumbnail_url?: (string | null);
     sort_order?: (number | null);
     show_id: string;
     id: string;
@@ -1952,6 +1971,7 @@ export type WhitelistShowOutput = {
     description?: (string | null);
     url?: (string | null);
     image_url?: (string | null);
+    thumbnail_url?: (string | null);
     year?: (number | null);
     canonical_show_validated_at?: (string | null);
     canonical_show_note?: (string | null);

@@ -165,7 +165,7 @@ export function EpisodeInformationHero({
       title={side.episode.name ?? "Unnamed episode"}
       subtitle={heroSubtitle(data, preferSource)}
       description={side.episode.description}
-      imageUrl={side.episode.image_url}
+      imageUrl={side.episode.thumbnail_url ?? side.episode.image_url}
       facts={heroFacts(data, preferSource, spelledOutDuration)}
       links={heroLinks(data, preferSource)}
       titleAction={titleAction}

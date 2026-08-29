@@ -50,6 +50,7 @@ EPISODE_FIELDS = (
     "name",
     "description",
     "image_url",
+    "thumbnail_url",
     "duration",
     "air_date",
 )

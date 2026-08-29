@@ -95,7 +95,7 @@ function showHero(
     <InformationHero
       title={data.source.show.name ?? "Unnamed show"}
       description={data.source.show.description}
-      imageUrl={data.source.show.image_url}
+      imageUrl={data.source.show.thumbnail_url ?? data.source.show.image_url}
       facts={facts}
       links={links}
     />

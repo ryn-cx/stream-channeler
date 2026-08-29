@@ -33,7 +33,7 @@ def release_year(value: str | date | None) -> int | None:
 
 # TODO: Validate
 def poster_image_url(path: str | None) -> str | None:
-    return _image_url("https://image.tmdb.org/t/p/w342", path)
+    return _image_url("https://image.tmdb.org/t/p/w480", path)
 
 
 # TODO: Validate
@@ -47,8 +47,23 @@ def still_image_url(path: str | None) -> str | None:
 
 
 # TODO: Validate
+def poster_original_url(path: str | None) -> str | None:
+    return _image_url("https://image.tmdb.org/t/p/original", path)
+
+
+# TODO: Validate
+def backdrop_thumbnail_url(path: str | None) -> str | None:
+    return _image_url("https://image.tmdb.org/t/p/w480", path)
+
+
+# TODO: Validate
+def still_thumbnail_url(path: str | None) -> str | None:
+    return _image_url("https://image.tmdb.org/t/p/w480", path)
+
+
+# TODO: Validate
 def logo_image_url(path: str | None) -> str | None:
-    return _image_url("https://image.tmdb.org/t/p/w92", path)
+    return _image_url("https://image.tmdb.org/t/p/original", path)
 
 
 # TODO: Validate

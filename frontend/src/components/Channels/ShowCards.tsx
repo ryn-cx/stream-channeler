@@ -21,6 +21,7 @@ export interface Show {
   tmdb_id?: number | null
   canonical_show_id?: string | null
   image_url?: string | null
+  thumbnail_url?: string | null
   year?: number | null
 }
 
@@ -244,7 +245,7 @@ export function ShowCards({
         // The title's own artwork, for the same reason as its name: a card is
         // one title, and a website's listing of it is only what is left when
         // nothing catalogued the title or the cataloguer held no image.
-        const artwork = canonicalShow?.image_url
+        const artwork = canonicalShow?.thumbnail_url ?? canonicalShow?.image_url
         const expanded = renderExpanded?.(showGroup)
         const actions = renderActions?.(showGroup)
         // A favicon is how a card names a site, so a listing whose site has none

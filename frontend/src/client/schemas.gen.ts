@@ -193,6 +193,17 @@ export const CanonicalEpisodeListOutputSchema = {
             ],
             title: 'Image Url'
         },
+        thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Thumbnail Url'
+        },
         air_date: {
             anyOf: [
                 {
@@ -481,6 +492,17 @@ export const CanonicalShowOutputSchema = {
                 }
             ],
             title: 'Image Url'
+        },
+        thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Thumbnail Url'
         },
         year: {
             anyOf: [
@@ -2622,6 +2644,17 @@ export const EpisodeCreateSchema = {
             ],
             title: 'Image Url'
         },
+        thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Thumbnail Url'
+        },
         air_date: {
             anyOf: [
                 {
@@ -2909,6 +2942,17 @@ export const EpisodeListOutputSchema = {
                 }
             ],
             title: 'Image Url'
+        },
+        thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Thumbnail Url'
         },
         air_date: {
             anyOf: [
@@ -3205,6 +3249,17 @@ export const EpisodeOutputSchema = {
             ],
             title: 'Image Url'
         },
+        thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Thumbnail Url'
+        },
         air_date: {
             anyOf: [
                 {
@@ -3486,6 +3541,17 @@ export const EpisodeUpdateSchema = {
             ],
             title: 'Image Url'
         },
+        thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Thumbnail Url'
+        },
         air_date: {
             anyOf: [
                 {
@@ -3653,6 +3719,17 @@ export const EpisodeWithDetailsSchema = {
                 }
             ],
             title: 'Image Url'
+        },
+        thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Thumbnail Url'
         },
         air_date: {
             anyOf: [
@@ -5404,6 +5481,17 @@ export const SeasonCreateSchema = {
             ],
             title: 'Image Url'
         },
+        thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Thumbnail Url'
+        },
         sort_order: {
             anyOf: [
                 {
@@ -5569,6 +5657,17 @@ export const SeasonListOutputSchema = {
                 }
             ],
             title: 'Image Url'
+        },
+        thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Thumbnail Url'
         },
         sort_order: {
             anyOf: [
@@ -5744,6 +5843,17 @@ export const SeasonOutputSchema = {
             ],
             title: 'Image Url'
         },
+        thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Thumbnail Url'
+        },
         sort_order: {
             anyOf: [
                 {
@@ -5881,6 +5991,17 @@ export const SeasonUpdateSchema = {
                 }
             ],
             title: 'Image Url'
+        },
+        thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Thumbnail Url'
         },
         sort_order: {
             anyOf: [
@@ -6029,6 +6150,17 @@ export const ShowCreateSchema = {
                 }
             ],
             title: 'Image Url'
+        },
+        thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Thumbnail Url'
         },
         year: {
             anyOf: [
@@ -6242,6 +6374,17 @@ export const ShowListPublicSchema = {
                 }
             ],
             title: 'Image Url'
+        },
+        thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Thumbnail Url'
         },
         year: {
             anyOf: [
@@ -6465,6 +6608,17 @@ export const ShowPublicSchema = {
                 }
             ],
             title: 'Image Url'
+        },
+        thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Thumbnail Url'
         },
         year: {
             anyOf: [
@@ -6691,6 +6845,17 @@ export const ShowUpdateSchema = {
                 }
             ],
             title: 'Image Url'
+        },
+        thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Thumbnail Url'
         },
         year: {
             anyOf: [
@@ -7900,6 +8065,17 @@ export const UnvalidatedShowOutputSchema = {
             ],
             title: 'Image Url'
         },
+        thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Thumbnail Url'
+        },
         year: {
             anyOf: [
                 {
@@ -8835,6 +9011,17 @@ export const WhitelistEpisodeLinkOutputSchema = {
             ],
             title: 'Image Url'
         },
+        thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Thumbnail Url'
+        },
         air_date: {
             anyOf: [
                 {
@@ -9100,6 +9287,17 @@ export const WhitelistEpisodeOutputSchema = {
                 }
             ],
             title: 'Image Url'
+        },
+        thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Thumbnail Url'
         },
         air_date: {
             anyOf: [
@@ -9449,6 +9647,17 @@ export const WhitelistSeasonOutputSchema = {
             ],
             title: 'Image Url'
         },
+        thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Thumbnail Url'
+        },
         sort_order: {
             anyOf: [
                 {
@@ -9648,6 +9857,17 @@ export const WhitelistShowOutputSchema = {
                 }
             ],
             title: 'Image Url'
+        },
+        thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Thumbnail Url'
         },
         year: {
             anyOf: [

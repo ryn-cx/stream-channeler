@@ -155,7 +155,7 @@ export function EpisodeTile({
   }
 
   const watched = !!episode.watch_date
-  const imageUrl = episode.image_url || ""
+  const imageUrl = episode.thumbnail_url || episode.image_url || ""
 
   const tileMenuItems: ActionMenuItem[] = [
     {

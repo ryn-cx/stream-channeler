@@ -126,7 +126,7 @@ export function EpisodeCard({
   onMove,
   onDrop,
 }: EpisodeCardProps) {
-  const imageUrl = episode.image_url || ""
+  const imageUrl = episode.thumbnail_url || episode.image_url || ""
 
   const episodeNumber = episode.tmdb_episode_number
   const altText = [

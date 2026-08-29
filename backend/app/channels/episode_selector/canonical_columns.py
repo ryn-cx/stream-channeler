@@ -47,14 +47,19 @@ class CanonicalColumns:
                 "name",
                 "description",
                 "image_url",
+                "thumbnail_url",
                 "episode_number",
                 "duration",
                 "air_date",
                 "sort_order",
             },
         ),
-        "season": frozenset({"name", "season_number", "image_url", "sort_order"}),
-        "show": frozenset({"name", "media_type", "description", "image_url"}),
+        "season": frozenset(
+            {"name", "season_number", "image_url", "thumbnail_url", "sort_order"},
+        ),
+        "show": frozenset(
+            {"name", "media_type", "description", "image_url", "thumbnail_url"},
+        ),
     }
 
     _NUMBER_FIELDS: ClassVar = {

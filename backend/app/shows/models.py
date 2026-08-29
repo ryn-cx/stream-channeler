@@ -49,6 +49,7 @@ class BaseCanonicalShow(BaseMediaMixin):
     description: str | None = Field(default=None)
     url: str | None = Field(default=None)
     image_url: str | None = Field(default=None)
+    thumbnail_url: str | None = Field(default=None)
     # What TMDB is searched under along with the name, so a show sharing its
     # name with another is still told apart. A website that does not say when
     # its shows came out leaves this empty and is matched on the name alone.

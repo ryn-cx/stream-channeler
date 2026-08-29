@@ -240,6 +240,19 @@ class FileMixin(BasePlugin, register=False):
         return self.build_url(largest.url)
 
     # TODO: Validate
+    def _get_thumbnail_url(
+        self,
+        images: Sequence[LandscapeItem | PortraitItem | EpisodeImage],
+    ) -> str:
+        wide_enough = [image for image in images if image.width >= 480]  # noqa: PLR2004
+        chosen = (
+            min(wide_enough, key=lambda image: image.width)
+            if wide_enough
+            else max(images, key=lambda image: image.width)
+        )
+        return self.build_url(chosen.url)
+
+    # TODO: Validate
     @override
     def show_identity(self, show_key: str) -> PluginShowIdentity:
         program_file = self.video_program_file(show_key)

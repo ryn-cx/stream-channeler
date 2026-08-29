@@ -191,6 +191,14 @@ class HelperMixin(FileMixin, register=False):
         return None
 
     # TODO: Validate
+    @staticmethod
+    def _thumbnail_url(thumbnails: Any) -> str | None:  # noqa: ANN401 - TODO: Add a specific type for thumbnails
+        for quality in ("standard", "high", "medium", "default", "maxres"):
+            if thumb := getattr(thumbnails, quality, None):
+                return thumb.url
+        return None
+
+    # TODO: Validate
     def _playlist_is_missing(self, show: Show, playlist_key: str) -> bool:
         # A URL for a whole show asks for every season it has, so nothing is missing
         # as long as it has been imported with seasons.
