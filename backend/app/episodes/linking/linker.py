@@ -1,7 +1,6 @@
 # TODO: Validate
 
 from collections.abc import Callable, Collection, Hashable, Iterable, Sequence
-from itertools import pairwise
 
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import instance_state, set_committed_value
@@ -16,9 +15,9 @@ from app.episodes.linking.rules import (
 from app.episodes.linking.tmdb_facts import TmdbEpisodeFacts
 from app.episodes.models import Episode, EpisodeCanonicalEpisode
 from app.episodes.name_matching import (
-    contains_name,
     is_only_numbered_name,
     is_untitled_name,
+    name_parts,
     plaintext,
 )
 from app.episodes.preload import preload_episodes
@@ -100,6 +99,12 @@ class EpisodeLinker:
         return self._link_by_tests(
             self._unlinked(episodes),
             [
+                self._exact_test(self.facts.names_of, self._own_name, "Exact name"),
+                self._exact_test(
+                    self._descriptions_of,
+                    self._own_description,
+                    "Exact description",
+                ),
                 *self._scored_tests(
                     self.facts.names_of,
                     self._own_name,
@@ -107,7 +112,7 @@ class EpisodeLinker:
                     blended=(0.5, 0.1),
                     embedding=(0.6, 0.1),
                 ),
-                self._contained_test("Contained name"),
+                self._split_test("Split name"),
                 *self._scored_tests(
                     self._descriptions_of,
                     self._own_description,
@@ -123,14 +128,80 @@ class EpisodeLinker:
         numbered = self._by_season_and_episode_number("Automatic: Numbering match")
         return self._link_by_tests(
             numbered(self._unlinked(episodes)),
-            self._scored_tests(
-                self._descriptions_of,
-                self._own_description,
-                "description",
-                blended=(0.4, 0.05),
-                embedding=(0.5, 0.05),
-            ),
+            [
+                self._exact_test(
+                    self._descriptions_of,
+                    self._own_description,
+                    "Exact description",
+                ),
+                *self._scored_tests(
+                    self._descriptions_of,
+                    self._own_description,
+                    "description",
+                    blended=(0.4, 0.05),
+                    embedding=(0.5, 0.05),
+                ),
+            ],
         )
+
+    # TODO: Validate
+    def _exact_index(
+        self,
+        texts_of: Callable[[Episode], Collection[str]],
+    ) -> dict[str, set[Episode]]:
+        index: dict[str, set[Episode]] = {}
+        for tmdb_episode in self.canonical_episodes:
+            for candidate_text in texts_of(tmdb_episode):
+                if key := plaintext(candidate_text):
+                    index.setdefault(key, set()).add(tmdb_episode)
+        return index
+
+    # TODO: Validate
+    @staticmethod
+    def _sole_match(index: dict[str, set[Episode]], text: str | None) -> Episode | None:
+        key = plaintext(text)
+        if not key:
+            return None
+        found = index.get(key, set())
+        return next(iter(found)) if len(found) == 1 else None
+
+    # TODO: Validate
+    def _split_test(
+        self,
+        label: str,
+    ) -> tuple[str, Callable[[Episode], list[tuple[float, Episode]]]]:
+        index = self._exact_index(self.facts.names_of)
+
+        # TODO: Validate
+        def test(episode: Episode) -> list[tuple[float, Episode]]:
+            parts = name_parts(episode.name)[1:]
+            if not parts:
+                return []
+            matched: list[Episode] = []
+            for part in parts:
+                found = self._sole_match(index, part)
+                if found is None or found in matched:
+                    return []
+                matched.append(found)
+            return [(1.0, tmdb_episode) for tmdb_episode in matched]
+
+        return (label, test)
+
+    # TODO: Validate
+    def _exact_test(
+        self,
+        texts_of: Callable[[Episode], Collection[str]],
+        own_text_of: Callable[[Episode], str | None],
+        label: str,
+    ) -> tuple[str, Callable[[Episode], list[tuple[float, Episode]]]]:
+        index = self._exact_index(texts_of)
+
+        # TODO: Validate
+        def test(episode: Episode) -> list[tuple[float, Episode]]:
+            found = self._sole_match(index, own_text_of(episode))
+            return [(1.0, found)] if found else []
+
+        return (label, test)
 
     # TODO: Validate
     def _link_by_tests(
@@ -277,58 +348,6 @@ class EpisodeLinker:
         ):
             return None
         return ranked[0]
-
-    # TODO: Validate
-    @staticmethod
-    def _contained_spans(
-        own_name: str,
-        candidates: list[tuple[Episode, str]],
-    ) -> dict[Episode, tuple[int, int]]:
-        around: dict[Episode, list[tuple[int, int]]] = {}
-        within: set[Episode] = set()
-        for tmdb_episode, name in candidates:
-            if contains_name(own_name, name):
-                start = own_name.find(name)
-                around.setdefault(tmdb_episode, []).append((start, start + len(name)))
-            elif contains_name(name, own_name):
-                within.add(tmdb_episode)
-
-        spans = {
-            tmdb_episode: max(found, key=lambda span: span[1] - span[0])
-            for tmdb_episode, found in around.items()
-        }
-        for tmdb_episode in within:
-            spans.setdefault(tmdb_episode, (0, len(own_name)))
-        return spans
-
-    # TODO: Validate
-    @staticmethod
-    def _spans_overlap(spans: Collection[tuple[int, int]]) -> bool:
-        return any(later[0] < earlier[1] for earlier, later in pairwise(sorted(spans)))
-
-    # TODO: Validate
-    def _contained_test(
-        self,
-        label: str,
-    ) -> tuple[str, Callable[[Episode], list[tuple[float, Episode]]]]:
-        candidates = [
-            (tmdb_episode, plaintext(name))
-            for tmdb_episode in self.canonical_episodes
-            for name in self.facts.names_of(tmdb_episode)
-            if plaintext(name)
-        ]
-
-        # TODO: Validate
-        def test(episode: Episode) -> list[tuple[float, Episode]]:
-            own_name = plaintext(episode.name)
-            if not own_name or not candidates:
-                return []
-            spans = self._contained_spans(own_name, candidates)
-            if not spans or self._spans_overlap(spans.values()):
-                return []
-            return [(1.0, tmdb_episode) for tmdb_episode in spans]
-
-        return (label, test)
 
     # TODO: Validate
     @staticmethod

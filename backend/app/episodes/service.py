@@ -250,17 +250,17 @@ def _text_matchers(
 
 
 # TODO: Validate
-def _text_match(
+def _text_matches(
     episode: Episode,
     matcher: tuple[list[_Candidate], TextMatcher] | None,
     absolute_numbers: dict[uuid.UUID, int],
     *,
     titles: bool,
     blended: bool,
-) -> TmdbEpisodeChoice | None:
+) -> list[TmdbEpisodeChoice]:
     text = _episode_text(episode, titles=titles)
     if matcher is None or not text:
-        return None
+        return []
 
     written_candidates, text_matcher = matcher
     scores = (
@@ -268,15 +268,13 @@ def _text_match(
         if blended
         else text_matcher.embedding_scores(text)
     )
-    best_index = max(range(len(scores)), key=lambda index: scores[index])
-    if scores[best_index] <= 0.0:
-        return None
-
-    return _choice(
-        written_candidates[best_index],
-        absolute_numbers,
-        scores[best_index],
-    )
+    ranked = sorted(range(len(scores)), key=lambda index: scores[index], reverse=True)
+    choices = [
+        _choice(written_candidates[index], absolute_numbers, scores[index])
+        for index in ranked[:2]
+        if scores[index] > 0.0
+    ]
+    return [choice for choice in choices if choice is not None]
 
 
 # TODO: Validate
@@ -694,50 +692,62 @@ def _unmatched_outputs(
                 episode.id,
                 used.get(show.id, {}),
             ),
-            description_embedding_match=_marked_used(
-                _text_match(
-                    episode,
-                    description_matchers.get(show.id),
-                    candidate_numbers.get(show.id, {}),
-                    titles=False,
-                    blended=False,
-                ),
-                episode.id,
-                used.get(show.id, {}),
-            ),
-            description_blended_match=_marked_used(
-                _text_match(
-                    episode,
-                    description_matchers.get(show.id),
-                    candidate_numbers.get(show.id, {}),
-                    titles=False,
-                    blended=True,
-                ),
-                episode.id,
-                used.get(show.id, {}),
-            ),
-            title_embedding_match=_marked_used(
-                _text_match(
-                    episode,
-                    title_matchers.get(show.id),
-                    candidate_numbers.get(show.id, {}),
-                    titles=True,
-                    blended=False,
-                ),
-                episode.id,
-                used.get(show.id, {}),
-            ),
-            title_blended_match=_marked_used(
-                _text_match(
-                    episode,
-                    title_matchers.get(show.id),
-                    candidate_numbers.get(show.id, {}),
-                    titles=True,
-                    blended=True,
-                ),
-                episode.id,
-                used.get(show.id, {}),
-            ),
+            description_embedding_matches=[
+                choice
+                for choice in (
+                    _marked_used(match, episode.id, used.get(show.id, {}))
+                    for match in _text_matches(
+                        episode,
+                        description_matchers.get(show.id),
+                        candidate_numbers.get(show.id, {}),
+                        titles=False,
+                        blended=False,
+                    )
+                )
+                if choice is not None
+            ],
+            description_blended_matches=[
+                choice
+                for choice in (
+                    _marked_used(match, episode.id, used.get(show.id, {}))
+                    for match in _text_matches(
+                        episode,
+                        description_matchers.get(show.id),
+                        candidate_numbers.get(show.id, {}),
+                        titles=False,
+                        blended=True,
+                    )
+                )
+                if choice is not None
+            ],
+            title_embedding_matches=[
+                choice
+                for choice in (
+                    _marked_used(match, episode.id, used.get(show.id, {}))
+                    for match in _text_matches(
+                        episode,
+                        title_matchers.get(show.id),
+                        candidate_numbers.get(show.id, {}),
+                        titles=True,
+                        blended=False,
+                    )
+                )
+                if choice is not None
+            ],
+            title_blended_matches=[
+                choice
+                for choice in (
+                    _marked_used(match, episode.id, used.get(show.id, {}))
+                    for match in _text_matches(
+                        episode,
+                        title_matchers.get(show.id),
+                        candidate_numbers.get(show.id, {}),
+                        titles=True,
+                        blended=True,
+                    )
+                )
+                if choice is not None
+            ],
         )
         for episode, season, show, _source in rows
     ]

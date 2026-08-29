@@ -1546,10 +1546,10 @@ export type UnlockedEpisodeOutput = {
     season_episode_match: (TmdbEpisodeChoice | null);
     absolute_number_match: (TmdbEpisodeChoice | null);
     episode_number_absolute_match: (TmdbEpisodeChoice | null);
-    description_embedding_match?: (TmdbEpisodeChoice | null);
-    description_blended_match?: (TmdbEpisodeChoice | null);
-    title_embedding_match?: (TmdbEpisodeChoice | null);
-    title_blended_match?: (TmdbEpisodeChoice | null);
+    description_embedding_matches?: Array<TmdbEpisodeChoice>;
+    description_blended_matches?: Array<TmdbEpisodeChoice>;
+    title_embedding_matches?: Array<TmdbEpisodeChoice>;
+    title_blended_matches?: Array<TmdbEpisodeChoice>;
     name_matches: boolean;
 };
 
@@ -1566,10 +1566,10 @@ export type UnmatchedEpisodeOutput = {
     season_episode_match: (TmdbEpisodeChoice | null);
     absolute_number_match: (TmdbEpisodeChoice | null);
     episode_number_absolute_match: (TmdbEpisodeChoice | null);
-    description_embedding_match?: (TmdbEpisodeChoice | null);
-    description_blended_match?: (TmdbEpisodeChoice | null);
-    title_embedding_match?: (TmdbEpisodeChoice | null);
-    title_blended_match?: (TmdbEpisodeChoice | null);
+    description_embedding_matches?: Array<TmdbEpisodeChoice>;
+    description_blended_matches?: Array<TmdbEpisodeChoice>;
+    title_embedding_matches?: Array<TmdbEpisodeChoice>;
+    title_blended_matches?: Array<TmdbEpisodeChoice>;
 };
 
 /**

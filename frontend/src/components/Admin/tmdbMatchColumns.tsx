@@ -419,44 +419,6 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
     ),
   },
   {
-    id: "match_summary",
-    accessorFn: (row) => row.best_match?.show.name ?? "No match",
-    header: "TMDB by name",
-    meta: { serverBacked: false, cellClassName: "align-top" },
-    cell: ({ row }) => {
-      const nameMatch = row.original.best_match
-      const match = choiceSummarised(nameMatch)
-      if (!nameMatch || !match) {
-        return (
-          <WrappingCell className="max-w-72 text-muted-foreground">
-            No match
-          </WrappingCell>
-        )
-      }
-      return (
-        <MatchSummary
-          record={match}
-          counterpart={episodeSummarised(row.original)}
-          note={<AlreadyUsedNote match={nameMatch} />}
-          editEpisode={
-            <EditEpisodeById
-              episodeId={nameMatch.episode.id}
-              label="Edit this TMDB episode"
-            />
-          }
-          isTmdbSide
-          action={
-            <TmdbMatchConfirmButton
-              episodeId={row.original.episode.id}
-              match={nameMatch}
-              kind="name"
-            />
-          }
-        />
-      )
-    },
-  },
-  {
     id: "number_match_summary",
     accessorFn: (row) => row.season_episode_match?.show.name ?? "No match",
     header: "Episode Number → Episode Number",
@@ -576,13 +538,12 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
   {
     id: "description_embedding_match_summary",
     accessorFn: (row) =>
-      row.description_embedding_match?.show.name ?? "No match",
+      row.description_embedding_matches?.[0]?.show.name ?? "No match",
     header: "Description → Description (embedding)",
     meta: { serverBacked: false, cellClassName: "align-top" },
     cell: ({ row }) => {
-      const descriptionMatch = row.original.description_embedding_match ?? null
-      const match = choiceSummarised(descriptionMatch)
-      if (!descriptionMatch || !match) {
+      const found = row.original.description_embedding_matches ?? []
+      if (found.length === 0) {
         return (
           <WrappingCell className="max-w-72 text-muted-foreground">
             No match
@@ -590,37 +551,46 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
         )
       }
       return (
-        <MatchSummary
-          record={match}
-          counterpart={episodeSummarised(row.original)}
-          note={<AlreadyUsedNote match={descriptionMatch} />}
-          editEpisode={
-            <EditEpisodeById
-              episodeId={descriptionMatch.episode.id}
-              label="Edit this TMDB episode"
-            />
-          }
-          isTmdbSide
-          action={
-            <TmdbMatchConfirmButton
-              episodeId={row.original.episode.id}
-              match={descriptionMatch}
-              kind="description_embedding"
-            />
-          }
-        />
+        <div className="space-y-3">
+          {found.map((textMatch) => {
+            const match = choiceSummarised(textMatch)
+            if (!match) return null
+            return (
+              <MatchSummary
+                key={textMatch.episode.id}
+                record={match}
+                counterpart={episodeSummarised(row.original)}
+                note={<AlreadyUsedNote match={textMatch} />}
+                editEpisode={
+                  <EditEpisodeById
+                    episodeId={textMatch.episode.id}
+                    label="Edit this TMDB episode"
+                  />
+                }
+                isTmdbSide
+                action={
+                  <TmdbMatchConfirmButton
+                    episodeId={row.original.episode.id}
+                    match={textMatch}
+                    kind="description_embedding"
+                  />
+                }
+              />
+            )
+          })}
+        </div>
       )
     },
   },
   {
     id: "description_blended_match_summary",
-    accessorFn: (row) => row.description_blended_match?.show.name ?? "No match",
+    accessorFn: (row) =>
+      row.description_blended_matches?.[0]?.show.name ?? "No match",
     header: "Description → Description (blended)",
     meta: { serverBacked: false, cellClassName: "align-top" },
     cell: ({ row }) => {
-      const descriptionMatch = row.original.description_blended_match ?? null
-      const match = choiceSummarised(descriptionMatch)
-      if (!descriptionMatch || !match) {
+      const found = row.original.description_blended_matches ?? []
+      if (found.length === 0) {
         return (
           <WrappingCell className="max-w-72 text-muted-foreground">
             No match
@@ -628,37 +598,46 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
         )
       }
       return (
-        <MatchSummary
-          record={match}
-          counterpart={episodeSummarised(row.original)}
-          note={<AlreadyUsedNote match={descriptionMatch} />}
-          editEpisode={
-            <EditEpisodeById
-              episodeId={descriptionMatch.episode.id}
-              label="Edit this TMDB episode"
-            />
-          }
-          isTmdbSide
-          action={
-            <TmdbMatchConfirmButton
-              episodeId={row.original.episode.id}
-              match={descriptionMatch}
-              kind="description_blended"
-            />
-          }
-        />
+        <div className="space-y-3">
+          {found.map((textMatch) => {
+            const match = choiceSummarised(textMatch)
+            if (!match) return null
+            return (
+              <MatchSummary
+                key={textMatch.episode.id}
+                record={match}
+                counterpart={episodeSummarised(row.original)}
+                note={<AlreadyUsedNote match={textMatch} />}
+                editEpisode={
+                  <EditEpisodeById
+                    episodeId={textMatch.episode.id}
+                    label="Edit this TMDB episode"
+                  />
+                }
+                isTmdbSide
+                action={
+                  <TmdbMatchConfirmButton
+                    episodeId={row.original.episode.id}
+                    match={textMatch}
+                    kind="description_blended"
+                  />
+                }
+              />
+            )
+          })}
+        </div>
       )
     },
   },
   {
     id: "title_embedding_match_summary",
-    accessorFn: (row) => row.title_embedding_match?.show.name ?? "No match",
+    accessorFn: (row) =>
+      row.title_embedding_matches?.[0]?.show.name ?? "No match",
     header: "Title → Title (embedding)",
     meta: { serverBacked: false, cellClassName: "align-top" },
     cell: ({ row }) => {
-      const textMatch = row.original.title_embedding_match ?? null
-      const match = choiceSummarised(textMatch)
-      if (!textMatch || !match) {
+      const found = row.original.title_embedding_matches ?? []
+      if (found.length === 0) {
         return (
           <WrappingCell className="max-w-72 text-muted-foreground">
             No match
@@ -666,37 +645,46 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
         )
       }
       return (
-        <MatchSummary
-          record={match}
-          counterpart={episodeSummarised(row.original)}
-          note={<AlreadyUsedNote match={textMatch} />}
-          editEpisode={
-            <EditEpisodeById
-              episodeId={textMatch.episode.id}
-              label="Edit this TMDB episode"
-            />
-          }
-          isTmdbSide
-          action={
-            <TmdbMatchConfirmButton
-              episodeId={row.original.episode.id}
-              match={textMatch}
-              kind="title_embedding"
-            />
-          }
-        />
+        <div className="space-y-3">
+          {found.map((textMatch) => {
+            const match = choiceSummarised(textMatch)
+            if (!match) return null
+            return (
+              <MatchSummary
+                key={textMatch.episode.id}
+                record={match}
+                counterpart={episodeSummarised(row.original)}
+                note={<AlreadyUsedNote match={textMatch} />}
+                editEpisode={
+                  <EditEpisodeById
+                    episodeId={textMatch.episode.id}
+                    label="Edit this TMDB episode"
+                  />
+                }
+                isTmdbSide
+                action={
+                  <TmdbMatchConfirmButton
+                    episodeId={row.original.episode.id}
+                    match={textMatch}
+                    kind="title_embedding"
+                  />
+                }
+              />
+            )
+          })}
+        </div>
       )
     },
   },
   {
     id: "title_blended_match_summary",
-    accessorFn: (row) => row.title_blended_match?.show.name ?? "No match",
+    accessorFn: (row) =>
+      row.title_blended_matches?.[0]?.show.name ?? "No match",
     header: "Title → Title (blended)",
     meta: { serverBacked: false, cellClassName: "align-top" },
     cell: ({ row }) => {
-      const textMatch = row.original.title_blended_match ?? null
-      const match = choiceSummarised(textMatch)
-      if (!textMatch || !match) {
+      const found = row.original.title_blended_matches ?? []
+      if (found.length === 0) {
         return (
           <WrappingCell className="max-w-72 text-muted-foreground">
             No match
@@ -704,25 +692,34 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
         )
       }
       return (
-        <MatchSummary
-          record={match}
-          counterpart={episodeSummarised(row.original)}
-          note={<AlreadyUsedNote match={textMatch} />}
-          editEpisode={
-            <EditEpisodeById
-              episodeId={textMatch.episode.id}
-              label="Edit this TMDB episode"
-            />
-          }
-          isTmdbSide
-          action={
-            <TmdbMatchConfirmButton
-              episodeId={row.original.episode.id}
-              match={textMatch}
-              kind="title_blended"
-            />
-          }
-        />
+        <div className="space-y-3">
+          {found.map((textMatch) => {
+            const match = choiceSummarised(textMatch)
+            if (!match) return null
+            return (
+              <MatchSummary
+                key={textMatch.episode.id}
+                record={match}
+                counterpart={episodeSummarised(row.original)}
+                note={<AlreadyUsedNote match={textMatch} />}
+                editEpisode={
+                  <EditEpisodeById
+                    episodeId={textMatch.episode.id}
+                    label="Edit this TMDB episode"
+                  />
+                }
+                isTmdbSide
+                action={
+                  <TmdbMatchConfirmButton
+                    episodeId={row.original.episode.id}
+                    match={textMatch}
+                    kind="title_blended"
+                  />
+                }
+              />
+            )
+          })}
+        </div>
       )
     },
   },

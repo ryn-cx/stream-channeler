@@ -31,22 +31,22 @@ export const MATCH_KINDS = [
   {
     kind: "description_embedding",
     label: "Description (embedding)",
-    field: "description_embedding_match",
+    field: "description_embedding_matches",
   },
   {
     kind: "description_blended",
     label: "Description (blended)",
-    field: "description_blended_match",
+    field: "description_blended_matches",
   },
   {
     kind: "title_embedding",
     label: "Title (embedding)",
-    field: "title_embedding_match",
+    field: "title_embedding_matches",
   },
   {
     kind: "title_blended",
     label: "Title (blended)",
-    field: "title_blended_match",
+    field: "title_blended_matches",
   },
 ] as const
 

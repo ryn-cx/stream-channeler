@@ -14,12 +14,20 @@ import {
 } from "@/components/ui/dropdown-menu"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
+import type { TmdbMatchRow } from "./tmdbMatchColumns"
 import { useSettleTmdbMatch } from "./tmdbMatchesQuery"
 import {
   MATCH_KINDS,
   type MatchField,
   useTmdbMatchSelection,
 } from "./tmdbMatchSelection"
+
+// TODO: Validate
+// TODO: Validate
+function firstMatch(row: TmdbMatchRow, field: MatchField) {
+  const found = row[field]
+  return Array.isArray(found) ? found[0] : found
+}
 
 // TODO: Validate
 export function TmdbLinkMultipleButton() {
@@ -30,7 +38,7 @@ export function TmdbLinkMultipleButton() {
   const linkMutation = useMutation({
     mutationFn: async (field: MatchField) => {
       const linkable = (selection?.selectedRows ?? []).flatMap((row) => {
-        const match = row[field]
+        const match = firstMatch(row, field)
         return match
           ? [
               {
@@ -102,8 +110,8 @@ export function TmdbLinkMultipleButton() {
         <DropdownMenuLabel>Link {count} by</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {MATCH_KINDS.map(({ kind, label, field }) => {
-          const offered = selection.selectedRows.filter(
-            (row) => row[field],
+          const offered = selection.selectedRows.filter((row) =>
+            firstMatch(row, field),
           ).length
           return (
             <DropdownMenuItem
