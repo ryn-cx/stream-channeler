@@ -2199,7 +2199,7 @@ wheels = [
 [[package]]
 name = "tminidb"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/tminidb#979917adddaa6449ba8b9a345c3711dd185c5042" }
+source = { git = "https://github.com/ryn-cx/tminidb#3202cabf9ee9f5a5867f869f864258c7c9f16b95" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },

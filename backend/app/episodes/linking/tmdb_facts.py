@@ -63,6 +63,9 @@ class TmdbEpisodeFacts:
                 tmdb_episode.id: self._episode_numbering(tmdb_episode)
                 for tmdb_episode in unread
             }
+            movie_ids = {
+                tmdb_episode.id: self._movie_id(tmdb_episode) for tmdb_episode in unread
+            }
             tmdb.preload_episode_translations(
                 [
                     numbering
@@ -70,10 +73,14 @@ class TmdbEpisodeFacts:
                     if numbering is not None
                 ],
             )
+            tmdb.preload_movie_translations(
+                [movie_id for movie_id in movie_ids.values() if movie_id is not None],
+            )
             for tmdb_episode in unread:
-                cache[tmdb_episode.id] = self._episode_names(
+                cache[tmdb_episode.id] = self._names(
                     tmdb,
                     numberings[tmdb_episode.id],
+                    movie_ids[tmdb_episode.id],
                 )
 
         return {
@@ -152,10 +159,21 @@ class TmdbEpisodeFacts:
 
     # TODO: Validate
     @staticmethod
-    def _episode_names(
+    def _movie_id(tmdb_episode: Episode) -> int | None:
+        show = tmdb_episode.season.show
+        if tmdb_media_type_of(show.key, SHOW_LEVEL) is not MediaType.movie:
+            return None
+        return tmdb_id_of(show.key, SHOW_LEVEL)
+
+    # TODO: Validate
+    @staticmethod
+    def _names(
         tmdb: TMDB,
         numbering: tuple[int, int, int] | None,
+        movie_id: int | None,
     ) -> tuple[str, ...]:
-        if numbering is None:
-            return ()
-        return tuple(tmdb.translated_episode_names(*numbering))
+        if numbering is not None:
+            return tuple(tmdb.translated_episode_names(*numbering))
+        if movie_id is not None:
+            return tuple(tmdb.translated_movie_names(movie_id))
+        return ()

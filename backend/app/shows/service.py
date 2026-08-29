@@ -64,7 +64,7 @@ def add_canonical_show_and_link_episodes(
     """
     if canonical_show:
         add_canonical_show(session, show, canonical_show)
-    EpisodeLinker(session, show).link_show()
+    _relink_non_canonical_show(session, show)
 
 
 # TODO: Validate
@@ -98,7 +98,7 @@ def set_canonical_show(
     show.canonical_show_validated_at = tz_datetime.now()
     session.add(show)
 
-    EpisodeLinker(session, show).link_show()
+    _relink_non_canonical_show(session, show)
     session.commit()
     session.refresh(show)
     return show
@@ -159,7 +159,7 @@ def import_non_canonical_show_from_url(
         link.note = f"{MANUAL_NOTE_PREFIX}Selection"
         session.add(link.show)
         session.add(link)
-        EpisodeLinker(session, link.show).link_show()
+        _relink_non_canonical_show(session, link.show)
 
     session.commit()
     session.refresh(canonical_show)
@@ -193,7 +193,7 @@ def unset_canonical_show(
     session.expire(show, ["canonical_show_links", "is_canonical"])
 
     _unlink_unlisted_episodes(session, show)
-    EpisodeLinker(session, show).link_show()
+    _relink_non_canonical_show(session, show)
     session.commit()
     session.refresh(show)
     return show
@@ -342,7 +342,7 @@ def update_show_extra(
 
     if reordered:
         _reread_in_new_order(session, show)
-        _link_unlinked_episodes(session, show)
+        _relink_non_canonical_shows(session, show)
     session.commit()
 
 
@@ -384,12 +384,6 @@ def _reread_in_new_order(session: Session, show: Show) -> None:
     from plugins.TMDB import TMDB  # noqa: PLC0415
 
     TMDB(session).update_show(show, force=True)
-
-
-# TODO: Validate
-def _link_unlinked_episodes(session: Session, canonical_show: Show) -> None:
-    for link in list(canonical_show.non_canonical_shows):
-        EpisodeLinker(session, link.show).link_show()
 
 
 # TODO: Validate

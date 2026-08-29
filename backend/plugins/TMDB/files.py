@@ -14,6 +14,10 @@ from tminidb import TMiniDB
 from tminidb.exceptions import ResourceNotFoundError
 from tminidb.movie.details import MovieDetails as MovieEndpoint
 from tminidb.movie.details.models import MovieDetailsModel
+from tminidb.movie.translations import (
+    MovieTranslations as MovieTranslationsEndpoint,
+)
+from tminidb.movie.translations.models import MovieTranslationsModel
 from tminidb.movie.watch_providers import (
     MovieWatchProviders as MovieWatchProvidersEndpoint,
 )
@@ -79,6 +83,16 @@ class MovieDetails(IntegerEndpointFile[MovieDetailsModel]):
     @override
     def _endpoint(self) -> MovieEndpoint:
         return tminidb().movie.details
+
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ResourceNotFoundError)
+
+
+class MovieTranslations(IntegerEndpointFile[MovieTranslationsModel]):
+    @override
+    def _endpoint(self) -> MovieTranslationsEndpoint:
+        return tminidb().movie.translations
 
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
@@ -388,6 +402,11 @@ class FileMixin(BasePlugin, register=False):
     def movie_detail_file(self, tmdb_id: int) -> MovieDetails:
         """Return MovieDetails file."""
         return self._file(MovieDetails, str(tmdb_id))
+
+    # TODO: Validate
+    def movie_translations_file(self, tmdb_id: int) -> MovieTranslations:
+        """Return MovieTranslations file."""
+        return self._file(MovieTranslations, str(tmdb_id))
 
     # TODO: Validate
     def show_detail_file(self, tmdb_id: int) -> ShowDetail:

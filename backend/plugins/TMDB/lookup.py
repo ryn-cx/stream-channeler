@@ -155,6 +155,37 @@ class LookupMixin(FileMixin, register=False):
         ]
 
     # TODO: Validate
+    def preload_movie_translations(self, tmdb_ids: Sequence[int]) -> Sequence[File]:
+        """Read the rows holding every named film's translations, in one query.
+
+        The same reason the episodes of a title are read together: a film reached
+        for on its own is a row read on its own, and whatever matches films by
+        name reads them one after another.
+        """
+        return self._get_files_by_keys(
+            [self.movie_translations_file(tmdb_id).file_key() for tmdb_id in tmdb_ids],
+        )
+
+    # TODO: Validate
+    def translated_movie_names(self, tmdb_id: int) -> Sequence[str]:
+        """Return every language's title for one film.
+
+        A film's translations are not stored alongside it, the same way an
+        episode's are not, so whatever matches a film by name reads them through
+        here. A film TMDB has no translations for is stored empty and has no
+        names to give.
+        """
+        translations_file = self.movie_translations_file(tmdb_id)
+        translations_file.download_if_outdated()
+        if not translations_file.database_record.content:
+            return []
+        return [
+            translation.data.title
+            for translation in translations_file.parsed().translations
+            if translation.data and translation.data.title
+        ]
+
+    # TODO: Validate
     def alternate_episode_numbers(
         self,
         tmdb_id: int,

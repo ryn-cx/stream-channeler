@@ -17,7 +17,6 @@ from app.episodes.models import Episode, EpisodeCanonicalEpisode
 from app.episodes.name_matching import is_only_numbered_name, is_untitled_name
 from app.episodes.preload import preload_episodes
 from app.episodes.text_matching import TextMatcher
-from app.media.media_type import MediaType
 from app.shows.models import Show
 
 
@@ -94,7 +93,6 @@ class EpisodeLinker:
     def link_named_episodes(self, episodes: list[Episode]) -> list[Episode]:
         return self._run(
             (
-                self._link_movie,
                 self._by_blended_text(
                     self.facts.names_of,
                     self._own_name,
@@ -117,7 +115,6 @@ class EpisodeLinker:
     def link_unnamed_episodes(self, episodes: list[Episode]) -> list[Episode]:
         return self._run(
             (
-                self._link_movie,
                 self._by_season_and_episode_number("Automatic: Numbering match"),
                 self._by_blended_text(
                     self._descriptions_of,
@@ -215,23 +212,6 @@ class EpisodeLinker:
     ) -> Callable[[list[Episode]], list[Episode]]:
         key_of = season_and_episode_number_key(self._season_number_of)
         return self._by_key(single(key_of), key_of, note)
-
-    # TODO: Validate
-    def _link_movie(self, episodes: list[Episode]) -> list[Episode]:
-        if (
-            len(episodes) != 1
-            or len(self.canonical_episodes) != 1
-            or episodes[0].season.show.media_type is None
-            or episodes[0].season.show.media_type.lower() != MediaType.movie
-            or self.canonical_episodes[0].season.show.media_type != MediaType.movie
-        ):
-            return episodes
-
-        episode = episodes[0]
-        canonical_episode = self.canonical_episodes[0]
-        if episode.canonical_episode_validated_at is None:
-            self._claim(episode, canonical_episode, "Automatic: Movie match")
-        return []
 
     # TODO: Validate
     def _orders_of(self, tmdb_episode: Episode) -> set[int]:
