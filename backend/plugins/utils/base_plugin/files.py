@@ -135,6 +135,10 @@ class BaseFile[T](ABC):
         )
 
     # TODO: Validate
+    def log_id(self) -> str:
+        return f"{self.__plugin.key} - {self.file_key()}"
+
+    # TODO: Validate
     @classmethod
     def file_key_to_unique_identifier(cls, file_key: str) -> str:
         """Convert File.key to the value that uniquely identifies this file."""
@@ -450,7 +454,7 @@ class EndpointFile[T](DownloadedFile[T], ABC):
     # TODO: Validate
     @override
     def _parse(self, content: str) -> T:
-        return self._endpoint().load(content, self.file_key())
+        return self._endpoint().load(content, self.log_id())
 
 
 # TODO: Validate
@@ -489,4 +493,4 @@ class PagedEndpointFile[T](DownloadedFile[list[T]], ABC):
     def _parse(self, content: str) -> list[T]:
         pages: list[str] = json.loads(content)
         endpoint = self._endpoint()
-        return [endpoint.load(page, self.file_key()) for page in pages]
+        return [endpoint.load(page, self.log_id()) for page in pages]

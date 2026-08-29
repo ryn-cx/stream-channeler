@@ -49,7 +49,7 @@ class ItemsFile(EndpointFile[ItemsModel]):
     @override
     def _download_file(self) -> str:
         data = self._endpoint().download([self.unique_identifier])
-        if not self._endpoint().load(data).root:
+        if not self._endpoint().load(data, self.log_id()).root:
             raise ItemNotFoundError(self.unique_identifier)
         return data
 

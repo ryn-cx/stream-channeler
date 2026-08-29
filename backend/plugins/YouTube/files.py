@@ -247,7 +247,7 @@ class PlaylistItems(EndpointFile[PlaylistItemsModel]):
                 page_token=page_token,
             )
             pages.append(downloaded_page)
-            loaded_page = self._endpoint().load(downloaded_page)
+            loaded_page = self._endpoint().load(downloaded_page, self.log_id())
             page_token = loaded_page.next_page_token
             downloaded_all_pages = page_token is None
 
