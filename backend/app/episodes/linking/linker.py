@@ -14,7 +14,12 @@ from app.episodes.linking.rules import (
 )
 from app.episodes.linking.tmdb_facts import TmdbEpisodeFacts
 from app.episodes.models import Episode, EpisodeCanonicalEpisode
-from app.episodes.name_matching import is_only_numbered_name, is_untitled_name
+from app.episodes.name_matching import (
+    contains_name,
+    is_only_numbered_name,
+    is_untitled_name,
+    plaintext,
+)
 from app.episodes.preload import preload_episodes
 from app.episodes.text_matching import TextMatcher
 from app.shows.models import Show
@@ -100,6 +105,7 @@ class EpisodeLinker:
                     floor=0.5,
                     margin=0.1,
                 ),
+                self._by_contained_name("Automatic: Contained name match"),
                 self._by_blended_text(
                     self._descriptions_of,
                     self._own_description,
@@ -243,6 +249,45 @@ class EpisodeLinker:
         ):
             return None
         return ranked[0]
+
+    # TODO: Validate
+    def _by_contained_name(
+        self,
+        note: str,
+    ) -> Callable[[list[Episode]], list[Episode]]:
+        # TODO: Validate
+        def step(episodes: list[Episode]) -> list[Episode]:
+            candidates = [
+                (tmdb_episode, plaintext(name))
+                for tmdb_episode in self.canonical_episodes
+                for name in self.facts.names_of(tmdb_episode)
+                if plaintext(name)
+            ]
+            if not candidates:
+                return episodes
+
+            for episode in episodes:
+                own_name = plaintext(episode.name)
+                if not own_name:
+                    continue
+
+                within = {
+                    tmdb_episode
+                    for tmdb_episode, name in candidates
+                    if contains_name(name, own_name)
+                }
+                around = {
+                    tmdb_episode
+                    for tmdb_episode, name in candidates
+                    if contains_name(own_name, name)
+                }
+                matched = within if len(within) == 1 else around
+                if len(matched) != 1:
+                    continue
+                self._claim(episode, next(iter(matched)), note)
+            return self._unlinked(episodes)
+
+        return step
 
     # TODO: Validate
     def _by_blended_text(
