@@ -1,4 +1,5 @@
 # TODO: Validate
+scratch/
 .vscode/*
 !.vscode/extensions.json
 .env.test

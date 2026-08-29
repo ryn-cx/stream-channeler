@@ -12,7 +12,7 @@ from model2vec import StaticModel
 # TODO: Validate
 @lru_cache(maxsize=1)
 def _model() -> StaticModel:
-    return StaticModel.from_pretrained("minishlab/potion-base-8M")
+    return StaticModel.from_pretrained("minishlab/potion-multilingual-128M")
 
 
 # TODO: Validate

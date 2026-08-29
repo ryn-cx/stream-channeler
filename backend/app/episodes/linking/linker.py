@@ -1,6 +1,5 @@
 # TODO: Validate
 
-import uuid
 from collections.abc import Callable, Collection, Hashable, Iterable, Sequence
 
 from sqlalchemy.orm import selectinload
@@ -9,30 +8,16 @@ from sqlmodel import Session, col, select
 
 from app.canonical_media.keys import is_tmdb_key
 from app.episodes.linking.rules import (
-    episode_name,
-    loose_name,
-    name_and_episode_index_key,
-    name_and_episode_indexes_keys,
-    name_key,
-    name_season_and_episode_number_key,
-    plaintext_description,
-    plaintext_name,
     season_and_episode_number_key,
     single,
     unambiguous_lookup,
 )
-from app.episodes.linking.split_names import SplitNameLinker
 from app.episodes.linking.tmdb_facts import TmdbEpisodeFacts
 from app.episodes.models import Episode, EpisodeCanonicalEpisode
-from app.episodes.name_forms import plaintext_forms
-from app.episodes.name_matching import (
-    is_only_numbered_name,
-    is_untitled_name,
-    name_parts,
-)
+from app.episodes.name_matching import is_only_numbered_name, is_untitled_name
 from app.episodes.preload import preload_episodes
+from app.episodes.text_matching import TextMatcher
 from app.media.media_type import MediaType
-from app.seasons.models import Season
 from app.shows.models import Show
 
 
@@ -107,67 +92,26 @@ class EpisodeLinker:
 
     # TODO: Validate
     def link_named_episodes(self, episodes: list[Episode]) -> list[Episode]:
-        named = episodes
-        own_numbers: Callable[[Episode], Collection[int]] = Episode.own_episode_numbers
-        alternate_numbers = self.facts.alternate_numbers_of
-        episodes = self._run(
+        return self._run(
             (
                 self._link_movie,
-                self._by_name_season_and_episode_number(
-                    episode_name,
-                    "Automatic: Name and full numbering match",
+                self._by_blended_text(
+                    self.facts.names_of,
+                    self._own_name,
+                    "Name",
+                    floor=0.5,
+                    margin=0.1,
                 ),
-                self._by_name_season_and_episode_number(
-                    plaintext_name,
-                    "Automatic: Plaintext name and full numbering match",
+                self._by_blended_text(
+                    self._descriptions_of,
+                    self._own_description,
+                    "Description",
+                    floor=0.4,
+                    margin=0.15,
                 ),
-                self._by_name_and_episode_index(
-                    episode_name,
-                    own_numbers,
-                    "Automatic: Name and number match",
-                ),
-                self._by_name_and_episode_index(
-                    plaintext_name,
-                    own_numbers,
-                    "Automatic: Plaintext name and number match",
-                ),
-                self._by_name_and_episode_index(
-                    plaintext_description,
-                    own_numbers,
-                    "Automatic: Description and number match",
-                ),
-                self._by_name_and_episode_index(
-                    episode_name,
-                    alternate_numbers,
-                    "Automatic: Name and alternate order number match",
-                ),
-                self._by_name_and_episode_index(
-                    plaintext_name,
-                    alternate_numbers,
-                    "Automatic: Plaintext name and alternate order number match",
-                ),
-                self._by_similar_name_and_episode_index(
-                    own_numbers,
-                    "Automatic: Similar name and number match",
-                ),
-                self._by_similar_name_and_episode_index(
-                    alternate_numbers,
-                    "Automatic: Similar name and alternate order number match",
-                    self.facts.alternate_order_names_of,
-                ),
-                self._by_name(episode_name, "Automatic: Name match"),
-                self._by_name(plaintext_name, "Automatic: Plaintext name match"),
-                self._by_name(loose_name, "Automatic: Loose name match"),
-                self._by_name(plaintext_description, "Automatic: Description match"),
-                self._link_translated_name,
             ),
             self._unlinked(episodes),
         )
-        episodes = self._link_name_parts(self._with_split_names(episodes, named))
-        episodes = self._by_best_name("Automatic: Best name match")(episodes)
-        return self._by_untitled_season_and_episode_number(
-            "Automatic: Untitled numbering match",
-        )(episodes)
 
     # TODO: Validate
     def link_unnamed_episodes(self, episodes: list[Episode]) -> list[Episode]:
@@ -175,15 +119,32 @@ class EpisodeLinker:
             (
                 self._link_movie,
                 self._by_season_and_episode_number("Automatic: Numbering match"),
-                self._by_name_and_episode_index(
-                    plaintext_description,
-                    Episode.own_episode_numbers,
-                    "Automatic: Description and number match",
+                self._by_blended_text(
+                    self._descriptions_of,
+                    self._own_description,
+                    "Description",
+                    floor=0.4,
+                    margin=0.15,
                 ),
-                self._by_name(plaintext_description, "Automatic: Description match"),
             ),
             self._unlinked(episodes),
         )
+
+    # TODO: Validate
+    @staticmethod
+    def _own_name(episode: Episode) -> str | None:
+        return episode.name
+
+    # TODO: Validate
+    @staticmethod
+    def _own_description(episode: Episode) -> str | None:
+        return episode.description
+
+    # TODO: Validate
+    @staticmethod
+    def _descriptions_of(tmdb_episode: Episode) -> tuple[str, ...]:
+        description = (tmdb_episode.description or "").strip()
+        return (description,) if description else ()
 
     # TODO: Validate
     @staticmethod
@@ -228,30 +189,15 @@ class EpisodeLinker:
         self.session.add(link)
 
     # TODO: Validate
-    def _claim_once(self, episode: Episode, tmdb_episode: Episode, note: str) -> None:
-        already_linked = any(
-            link.canonical_episode_id == tmdb_episode.id
-            for link in episode.canonical_episode_links
-        )
-        if not already_linked:
-            self._claim(episode, tmdb_episode, note)
-
-    # TODO: Validate
     def _by_key(
         self,
         keys_of: Callable[[Episode], Iterable[Hashable | None]],
         key_of: Callable[[Episode], Hashable | None],
         note: str,
-        canonical_episodes: Collection[Episode] | None = None,
     ) -> Callable[[list[Episode]], list[Episode]]:
         # TODO: Validate
         def step(episodes: list[Episode]) -> list[Episode]:
-            index = unambiguous_lookup(
-                self.canonical_episodes
-                if canonical_episodes is None
-                else canonical_episodes,
-                keys_of,
-            )
+            index = unambiguous_lookup(self.canonical_episodes, keys_of)
             for episode in episodes:
                 key = key_of(episode)
                 if key is None:
@@ -263,60 +209,12 @@ class EpisodeLinker:
         return step
 
     # TODO: Validate
-    def _by_name(
-        self,
-        name_of: Callable[[Episode], str | None],
-        note: str,
-    ) -> Callable[[list[Episode]], list[Episode]]:
-        key_of = name_key(name_of)
-        return self._by_key(single(key_of), key_of, note)
-
-    # TODO: Validate
-    def _by_name_season_and_episode_number(
-        self,
-        name_of: Callable[[Episode], str | None],
-        note: str,
-    ) -> Callable[[list[Episode]], list[Episode]]:
-        key_of = name_season_and_episode_number_key(name_of, self._season_number_of)
-        return self._by_key(single(key_of), key_of, note)
-
-    # TODO: Validate
     def _by_season_and_episode_number(
         self,
         note: str,
     ) -> Callable[[list[Episode]], list[Episode]]:
         key_of = season_and_episode_number_key(self._season_number_of)
         return self._by_key(single(key_of), key_of, note)
-
-    # TODO: Validate
-    def _by_untitled_season_and_episode_number(
-        self,
-        note: str,
-    ) -> Callable[[list[Episode]], list[Episode]]:
-        key_of = season_and_episode_number_key(self._season_number_of)
-        return self._by_key(
-            single(key_of),
-            key_of,
-            note,
-            [
-                tmdb_episode
-                for tmdb_episode in self.canonical_episodes
-                if is_untitled_name(tmdb_episode.name)
-            ],
-        )
-
-    # TODO: Validate
-    def _by_name_and_episode_index(
-        self,
-        name_of: Callable[[Episode], str | None],
-        numbers_of: Callable[[Episode], Collection[int]],
-        note: str,
-    ) -> Callable[[list[Episode]], list[Episode]]:
-        return self._by_key(
-            name_and_episode_indexes_keys(name_of, numbers_of),
-            name_and_episode_index_key(name_of),
-            note,
-        )
 
     # TODO: Validate
     def _link_movie(self, episodes: list[Episode]) -> list[Episode]:
@@ -336,177 +234,82 @@ class EpisodeLinker:
         return []
 
     # TODO: Validate
-    def _link_translated_name(self, episodes: list[Episode]) -> list[Episode]:
-        forms_by_tmdb_episode = self.facts.translated_name_forms
-        for episode in episodes:
-            if not (targets := plaintext_forms(episode.name)):
-                continue
-
-            matches = [
-                tmdb_episode
-                for tmdb_episode in self.canonical_episodes
-                if forms_by_tmdb_episode.get(tmdb_episode.id, frozenset()) & targets
-            ]
-            if len(matches) != 1:
-                continue
-            self._claim(episode, matches[0], "Automatic: Translated name match")
-        return self._unlinked(episodes)
+    def _orders_of(self, tmdb_episode: Episode) -> set[int]:
+        orders = set(self.facts.alternate_numbers_of(tmdb_episode))
+        if tmdb_episode.episode_number is not None:
+            orders.add(tmdb_episode.episode_number)
+        return orders
 
     # TODO: Validate
-    def _by_similar_name_and_episode_index(
+    def _confident_match(
         self,
-        numbers_of: Callable[[Episode], Collection[int]],
-        note: str,
-        order_names_of: Callable[[Episode, int], Collection[str]] | None = None,
+        episode: Episode,
+        ranked: list[tuple[float, Episode]],
+        floor: float,
+        margin: float,
+    ) -> tuple[float, Episode] | None:
+        if not ranked:
+            return None
+
+        score, tmdb_episode = ranked[0]
+        if score < floor:
+            return None
+        if len(ranked) > 1 and score - ranked[1][0] < margin:
+            return None
+        if score >= 0.99:  # noqa: PLR2004 - Written the very same way on both sides.
+            return ranked[0]
+        if episode.episode_number is None or episode.episode_number not in (
+            self._orders_of(tmdb_episode)
+        ):
+            return None
+        return ranked[0]
+
+    # TODO: Validate
+    def _by_blended_text(
+        self,
+        texts_of: Callable[[Episode], Collection[str]],
+        own_text_of: Callable[[Episode], str | None],
+        label: str,
+        *,
+        floor: float,
+        margin: float,
     ) -> Callable[[list[Episode]], list[Episode]]:
         # TODO: Validate
         def step(episodes: list[Episode]) -> list[Episode]:
-            numbered_episodes = [
-                episode for episode in episodes if episode.episode_number is not None
+            entries = [
+                (tmdb_episode, text)
+                for tmdb_episode in self.canonical_episodes
+                for text in texts_of(tmdb_episode)
             ]
-            if not numbered_episodes:
+            if not entries:
                 return episodes
 
-            named_canonical_episodes = unambiguous_lookup(
-                self.canonical_episodes,
-                single(name_key(plaintext_name)),
-            )
-            translated_episodes = {
-                episode.id
-                for episode in numbered_episodes
-                if plaintext_name(episode) not in named_canonical_episodes
-            }
-            if translated_episodes:
-                self.facts.preload_translations()
-
-            for episode in numbered_episodes:
-                score_of = (
-                    self.facts.best_name_similarity
-                    if episode.id in translated_episodes
-                    else self.facts.raw_name_similarity
-                )
-                every_score = [
-                    (score_of(episode, tmdb_episode), tmdb_episode)
-                    for tmdb_episode in self.canonical_episodes
-                ]
-                scored = sorted(
-                    (
-                        (score, tmdb_episode)
-                        for score, tmdb_episode in every_score
-                        if episode.episode_number in numbers_of(tmdb_episode)
-                    ),
-                    key=lambda scoring: scoring[0],
-                    reverse=True,
-                )
-                if not scored or scored[0][0] < 0.5:  # noqa: PLR2004
-                    continue
-                if len(scored) > 1 and scored[0][0] - scored[1][0] < 0.1:  # noqa: PLR2004
-                    continue
-                if scored[0][0] < max(score for score, _episode in every_score):
-                    continue
-
-                self._claim(
-                    episode,
-                    scored[0][1],
-                    self._noted_order(
-                        note,
-                        order_names_of,
-                        scored[0][1],
-                        episode.episode_number,
-                    ),
-                )
-            return self._unlinked(episodes)
-
-        return step
-
-    # TODO: Validate
-    @staticmethod
-    def _noted_order(
-        note: str,
-        order_names_of: Callable[[Episode, int], Collection[str]] | None,
-        tmdb_episode: Episode,
-        episode_number: int | None,
-    ) -> str:
-        if order_names_of is None or episode_number is None:
-            return note
-        order_names = sorted(order_names_of(tmdb_episode, episode_number))
-        if not order_names:
-            return note
-        return f"{note} ({', '.join(order_names)})"
-
-    # TODO: Validate
-    def _claimed_by_source(self) -> set[uuid.UUID]:
-        statement = (
-            select(col(EpisodeCanonicalEpisode.canonical_episode_id))
-            .join(
-                Episode,
-                onclause=col(EpisodeCanonicalEpisode.episode_id) == Episode.id,
-            )
-            .join(Season, onclause=col(Episode.season_id) == Season.id)
-            .join(Show, onclause=col(Season.show_id) == Show.id)
-            .where(
-                Show.source_id == self.show.source_id,
-                col(Episode.deleted_at).is_(None),
-            )
-        )
-        claimed = set(self.session.exec(statement).all())
-        for episode in (*self.episodes, *self.unnamed_episodes):
-            claimed.update(
-                link.canonical_episode_id for link in episode.canonical_episode_links
-            )
-        return claimed
-
-    # TODO: Validate
-    def _by_best_name(self, note: str) -> Callable[[list[Episode]], list[Episode]]:
-        # TODO: Validate
-        def step(episodes: list[Episode]) -> list[Episode]:
-            if not episodes:
-                return episodes
-
-            claimed = self._claimed_by_source()
-            self.facts.preload_translations()
+            matcher = TextMatcher([text for _tmdb_episode, text in entries])
             for episode in episodes:
-                scored = sorted(
-                    (
-                        (
-                            self.facts.best_name_similarity(episode, tmdb_episode),
-                            tmdb_episode,
-                        )
-                        for tmdb_episode in self.canonical_episodes
-                        if tmdb_episode.id not in claimed
-                    ),
+                own_text = (own_text_of(episode) or "").strip()
+                if not own_text:
+                    continue
+
+                best: dict[Episode, float] = {}
+                for (tmdb_episode, _text), score in zip(
+                    entries,
+                    matcher.blended_scores(own_text),
+                    strict=True,
+                ):
+                    if score > best.get(tmdb_episode, -1.0):
+                        best[tmdb_episode] = score
+                ranked = sorted(
+                    ((score, tmdb_episode) for tmdb_episode, score in best.items()),
                     key=lambda scoring: scoring[0],
                     reverse=True,
                 )
-                if not scored or scored[0][0] <= 0.8:  # noqa: PLR2004
-                    continue
-                self._claim(episode, scored[0][1], note)
-                claimed.add(scored[0][1].id)
+
+                if found := self._confident_match(episode, ranked, floor, margin):
+                    self._claim(
+                        episode,
+                        found[1],
+                        f"Automatic: {label} match ({round(found[0] * 100)}%)",
+                    )
             return self._unlinked(episodes)
 
         return step
-
-    # TODO: Validate
-    @staticmethod
-    def _with_split_names(
-        episodes: list[Episode],
-        named: list[Episode],
-    ) -> list[Episode]:
-        waiting = {episode.id for episode in episodes}
-        return [
-            *episodes,
-            *(
-                episode
-                for episode in named
-                if episode.id not in waiting and len(name_parts(episode.name)) > 1
-            ),
-        ]
-
-    # TODO: Validate
-    def _link_name_parts(self, episodes: list[Episode]) -> list[Episode]:
-        SplitNameLinker(
-            self.canonical_episodes,
-            episodes,
-            self._claim_once,
-        ).link()
-        return self._unlinked(episodes)

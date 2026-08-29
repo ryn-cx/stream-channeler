@@ -14,8 +14,6 @@ from app.canonical_media.keys import (
     tmdb_media_type_of,
 )
 from app.episodes.models import Episode
-from app.episodes.name_forms import plaintext_forms
-from app.episodes.name_matching import plaintext_similarity, similarity
 from app.media.media_type import MediaType
 from app.shows.models import Show
 
@@ -50,9 +48,9 @@ class TmdbEpisodeFacts:
 
     # TODO: Validate
     @cached_property
-    def translated_name_forms(self) -> dict[uuid.UUID, frozenset[str]]:
-        cache: dict[uuid.UUID, frozenset[str]] = self._cache(
-            "translated_episode_name_forms",
+    def translated_names(self) -> dict[uuid.UUID, tuple[str, ...]]:
+        cache: dict[uuid.UUID, tuple[str, ...]] = self._cache(
+            "translated_episode_names",
         )
         unread = [
             tmdb_episode
@@ -73,7 +71,7 @@ class TmdbEpisodeFacts:
                 ],
             )
             for tmdb_episode in unread:
-                cache[tmdb_episode.id] = self._episode_name_forms(
+                cache[tmdb_episode.id] = self._episode_names(
                     tmdb,
                     numberings[tmdb_episode.id],
                 )
@@ -84,12 +82,10 @@ class TmdbEpisodeFacts:
         }
 
     # TODO: Validate
-    def preload_translations(self) -> None:
-        _forms = self.translated_name_forms
-
-    # TODO: Validate
-    def forms_of(self, tmdb_episode: Episode) -> frozenset[str]:
-        return self.translated_name_forms.get(tmdb_episode.id, frozenset())
+    def names_of(self, tmdb_episode: Episode) -> tuple[str, ...]:
+        names = [tmdb_episode.name] if tmdb_episode.name else []
+        names.extend(self.translated_names.get(tmdb_episode.id, ()))
+        return tuple(dict.fromkeys(name.strip() for name in names if name.strip()))
 
     # TODO: Validate
     @cached_property
@@ -132,34 +128,6 @@ class TmdbEpisodeFacts:
 
     # TODO: Validate
     @staticmethod
-    def raw_name_similarity(episode: Episode, tmdb_episode: Episode) -> float:
-        return similarity(episode.name, tmdb_episode.name)
-
-    # TODO: Validate
-    def best_name_similarity(self, episode: Episode, tmdb_episode: Episode) -> float:
-        cache: dict[tuple[str | None, uuid.UUID], float] = self._cache(
-            "episode_name_similarity",
-        )
-        cache_key = (episode.name, tmdb_episode.id)
-        if (cached := cache.get(cache_key)) is not None:
-            return cached
-
-        best = similarity(episode.name, tmdb_episode.name)
-        if best < 1.0:
-            translated_forms = self.forms_of(tmdb_episode)
-            for form in plaintext_forms(episode.name):
-                for translated_form in translated_forms:
-                    best = max(best, plaintext_similarity(form, translated_form))
-                    if best >= 1.0:
-                        break
-                if best >= 1.0:
-                    break
-
-        cache[cache_key] = best
-        return best
-
-    # TODO: Validate
-    @staticmethod
     def _episode_numbering(tmdb_episode: Episode) -> tuple[int, int, int] | None:
         from plugins.TMDB.episode_groups import parse_episode_extra  # noqa: PLC0415
 
@@ -184,14 +152,10 @@ class TmdbEpisodeFacts:
 
     # TODO: Validate
     @staticmethod
-    def _episode_name_forms(
+    def _episode_names(
         tmdb: TMDB,
         numbering: tuple[int, int, int] | None,
-    ) -> frozenset[str]:
+    ) -> tuple[str, ...]:
         if numbering is None:
-            return frozenset()
-        return frozenset(
-            form
-            for name in tmdb.translated_episode_names(*numbering)
-            for form in plaintext_forms(name)
-        )
+            return ()
+        return tuple(tmdb.translated_episode_names(*numbering))
