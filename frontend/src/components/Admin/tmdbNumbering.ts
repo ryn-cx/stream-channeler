@@ -39,16 +39,6 @@ function sameSeasonAndEpisode(own: Numbered, other: Numbered): boolean {
 }
 
 // TODO: Validate
-/**
- * Which of `own`'s numbers the other record puts the episode at too.
- *
- * The two are compared across as well as like for like, since a website that
- * numbers a title straight through calls TMDB's `S2E8` its own episode 57, so
- * its episode number is answered by TMDB's count through the whole title rather
- * than by TMDB's episode number. Either way of agreeing is worth seeing, since
- * a website and TMDB that put an episode in the same place are far likelier to
- * be talking about the same episode than their differing names suggest.
- */
 export function numberingAgreement(
   own: Numbered,
   other: Numbered,
@@ -57,9 +47,7 @@ export function numberingAgreement(
     seasonAndEpisode:
       sameSeasonAndEpisode(own, other) ||
       sameNumber(own.episode_number, other.absolute_number),
-    absolute:
-      sameNumber(own.absolute_number, other.absolute_number) ||
-      sameNumber(own.absolute_number, other.episode_number),
+    absolute: sameNumber(own.absolute_number, other.absolute_number),
   }
 }
 

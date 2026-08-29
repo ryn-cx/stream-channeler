@@ -11,7 +11,6 @@ import {
   ListTree,
   Sparkles,
   Type,
-  Unlink,
 } from "lucide-react"
 
 import { EpisodesService } from "@/client"
@@ -157,20 +156,6 @@ export function TmdbMatchActions({ episode }: { episode: TmdbMatchRow }) {
     onSettled: reread,
   })
 
-  const quickUnlinkMutation = useMutation({
-    mutationFn: () =>
-      EpisodesService.adminQuickUnlinkEpisode({
-        episodeId: episode.episode.id,
-      }),
-    onSuccess: () => showSuccessToast("Unlinked"),
-    onError: (error: unknown) =>
-      handleError.call(
-        showErrorToast,
-        error as Parameters<typeof handleError>[0],
-      ),
-    onSettled: reread,
-  })
-
   return (
     <div className="flex items-center gap-1">
       {selection ? (
@@ -201,16 +186,6 @@ export function TmdbMatchActions({ episode }: { episode: TmdbMatchRow }) {
       >
         <CircleSlash className="h-4 w-4" />
         Not on TMDB
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={quickUnlinkMutation.isPending}
-        title="Take this off every TMDB episode, leaving it to be matched again"
-        onClick={() => quickUnlinkMutation.mutate()}
-      >
-        <Unlink className="h-4 w-4" />
-        Unlink
       </Button>
     </div>
   )

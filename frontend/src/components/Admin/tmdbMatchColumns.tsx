@@ -211,12 +211,14 @@ function MatchSummary({
     counterpart ?? NOTHING_TO_AGREE_WITH,
   )
   const seasonsAgree =
-    isTmdbSide === true &&
     record.season_number !== null &&
     record.season_number === (counterpart?.season_number ?? null)
-  const agreeingNumber = seasonsAgree
-    ? "text-blue-600 dark:text-blue-400"
-    : "text-destructive"
+  const agreeingNumber =
+    isTmdbSide !== true
+      ? "text-muted-foreground"
+      : seasonsAgree
+        ? "text-blue-600 dark:text-blue-400"
+        : "text-emerald-600 dark:text-emerald-400"
 
   return (
     <WrappingCell className="max-w-72">
@@ -331,7 +333,7 @@ function AlreadyUsedNote({
     return null
   }
   return (
-    <span className="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-pink-600 dark:text-pink-400">
+    <span className="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-destructive">
       Already used by
       {match.used_by.map((used) => (
         <span key={used.episode.id} className="inline-flex items-center gap-1">
