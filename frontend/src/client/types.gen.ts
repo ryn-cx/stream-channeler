@@ -1529,6 +1529,7 @@ export type UnlockedEpisodeOutput = {
     best_match: (TmdbEpisodeChoice | null);
     season_episode_match: (TmdbEpisodeChoice | null);
     absolute_number_match: (TmdbEpisodeChoice | null);
+    episode_number_absolute_match: (TmdbEpisodeChoice | null);
     name_matches: boolean;
 };
 
@@ -1544,6 +1545,7 @@ export type UnmatchedEpisodeOutput = {
     best_match: (TmdbEpisodeChoice | null);
     season_episode_match: (TmdbEpisodeChoice | null);
     absolute_number_match: (TmdbEpisodeChoice | null);
+    episode_number_absolute_match: (TmdbEpisodeChoice | null);
 };
 
 /**

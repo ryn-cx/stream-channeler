@@ -451,7 +451,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
   {
     id: "number_match_summary",
     accessorFn: (row) => row.season_episode_match?.show.name ?? "No match",
-    header: "TMDB by season & episode #",
+    header: "Episode Number → Episode Number",
     meta: { serverBacked: false, cellClassName: "align-top" },
     cell: ({ row }) => {
       const seasonEpisodeMatch = row.original.season_episode_match
@@ -489,7 +489,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
   {
     id: "absolute_match_summary",
     accessorFn: (row) => row.absolute_number_match?.show.name ?? "No match",
-    header: "TMDB by sequential #",
+    header: "Absolute Number → Absolute Number",
     meta: { serverBacked: false, cellClassName: "align-top" },
     cell: ({ row }) => {
       const absoluteMatch = row.original.absolute_number_match
@@ -518,6 +518,45 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
               episodeId={row.original.episode.id}
               match={absoluteMatch}
               kind="absolute"
+            />
+          }
+        />
+      )
+    },
+  },
+  {
+    id: "episode_absolute_match_summary",
+    accessorFn: (row) =>
+      row.episode_number_absolute_match?.show.name ?? "No match",
+    header: "Episode Number → Absolute Number",
+    meta: { serverBacked: false, cellClassName: "align-top" },
+    cell: ({ row }) => {
+      const episodeAbsoluteMatch = row.original.episode_number_absolute_match
+      const match = choiceSummarised(episodeAbsoluteMatch)
+      if (!episodeAbsoluteMatch || !match) {
+        return (
+          <WrappingCell className="max-w-72 text-muted-foreground">
+            No match
+          </WrappingCell>
+        )
+      }
+      return (
+        <MatchSummary
+          record={match}
+          counterpart={episodeSummarised(row.original)}
+          note={<AlreadyUsedNote match={episodeAbsoluteMatch} />}
+          editEpisode={
+            <EditEpisodeById
+              episodeId={episodeAbsoluteMatch.episode.id}
+              label="Edit this TMDB episode"
+            />
+          }
+          isTmdbSide
+          action={
+            <TmdbMatchConfirmButton
+              episodeId={row.original.episode.id}
+              match={episodeAbsoluteMatch}
+              kind="episode_absolute"
             />
           }
         />
@@ -605,7 +644,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
   {
     id: "absolute_number",
     accessorFn: (row) => row.absolute_number ?? "",
-    header: "Sequential #",
+    header: "Absolute Number",
     meta: { serverBacked: false },
     cell: ({ row }) => (
       <span className="tabular-nums">{row.original.absolute_number ?? ""}</span>
@@ -687,7 +726,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
   {
     id: "match_absolute_number",
     accessorFn: (row) => row.best_match?.absolute_number ?? "",
-    header: "Match sequential #",
+    header: "Match absolute number",
     meta: { serverBacked: false },
     cell: ({ row }) => (
       <span className="tabular-nums">

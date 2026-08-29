@@ -208,6 +208,7 @@ class UnmatchedEpisodeOutput(EpisodeRecord):
     # a row can be settled on whichever of the two is the one to trust.
     season_episode_match: TmdbEpisodeChoice | None
     absolute_number_match: TmdbEpisodeChoice | None
+    episode_number_absolute_match: TmdbEpisodeChoice | None
 
 
 # TODO: Validate

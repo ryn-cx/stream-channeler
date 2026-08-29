@@ -18,6 +18,7 @@ import { PageHeader } from "@/components/Common/PageHeader"
 import EditEpisode from "@/components/Episodes/Edit"
 import { Button } from "@/components/ui/button"
 import { usePersistedJsonState } from "@/hooks/usePersistedState"
+import { TmdbLinkMultipleButton } from "./TmdbLinkMultipleButton"
 import {
   asTmdbMatchRows,
   TMDB_MATCH_DEFAULT_VISIBILITY,
@@ -26,6 +27,7 @@ import {
 } from "./tmdbMatchColumns"
 import { OpenEpisodeEditorProvider } from "./tmdbMatchEditing"
 import { TMDB_MATCHES_QUERY_KEY } from "./tmdbMatchesQuery"
+import { TmdbMatchSelectionProvider } from "./tmdbMatchSelection"
 
 const STORAGE_KEY = "admin-tmdb-matches"
 
@@ -86,51 +88,54 @@ export function TmdbMatchesAdminTable() {
 
   return (
     <OpenEpisodeEditorProvider value={setEditing}>
-      <div
-        className={
-          query.isPlaceholderData
-            ? "opacity-60 transition-opacity duration-200"
-            : undefined
-        }
-      >
-        <PageHeader title="TMDB Matches">
-          <Button
-            variant={nonCanonicalShowsOnly ? "default" : "outline"}
-            onClick={() => {
-              setNonCanonicalShowsOnly(!nonCanonicalShowsOnly)
-              setPagination({ ...pagination, pageIndex: 0 })
-            }}
-            title="Show only the episodes of shows linked to a title"
-          >
-            {nonCanonicalShowsOnly ? <Link2 /> : <Link2Off />}
-            {nonCanonicalShowsOnly ? "Linked shows only" : "Every show"}
-          </Button>
-          <ColumnVisibilityButton table={table} />
-        </PageHeader>
-        <div className="px-[4%]">
-          {!episodes ? (
-            <DataTableSkeleton table={table} />
-          ) : (
-            <DataTable
-              columns={tmdbMatchColumns}
-              data={episodes}
-              storageKey={STORAGE_KEY}
-              columnVisibility={columnVisibility}
-              onColumnVisibilityChange={setColumnVisibility}
-              serverSide={{
-                pagination,
-                sortOptions,
-                filterOptions,
-                onPaginationChange: setPagination,
-                onSortOptionsChange: setSortOptions,
-                onFilterOptionsChange: setFilterOptions,
-                rowCount: query.data?.filtered_count ?? 0,
-                totalRowCount: query.data?.total_count ?? 0,
+      <TmdbMatchSelectionProvider rows={episodes ?? []}>
+        <div
+          className={
+            query.isPlaceholderData
+              ? "opacity-60 transition-opacity duration-200"
+              : undefined
+          }
+        >
+          <PageHeader title="TMDB Matches">
+            <Button
+              variant={nonCanonicalShowsOnly ? "default" : "outline"}
+              onClick={() => {
+                setNonCanonicalShowsOnly(!nonCanonicalShowsOnly)
+                setPagination({ ...pagination, pageIndex: 0 })
               }}
-            />
-          )}
+              title="Show only the episodes of shows linked to a title"
+            >
+              {nonCanonicalShowsOnly ? <Link2 /> : <Link2Off />}
+              {nonCanonicalShowsOnly ? "Linked shows only" : "Every show"}
+            </Button>
+            <TmdbLinkMultipleButton />
+            <ColumnVisibilityButton table={table} />
+          </PageHeader>
+          <div className="px-[4%]">
+            {!episodes ? (
+              <DataTableSkeleton table={table} />
+            ) : (
+              <DataTable
+                columns={tmdbMatchColumns}
+                data={episodes}
+                storageKey={STORAGE_KEY}
+                columnVisibility={columnVisibility}
+                onColumnVisibilityChange={setColumnVisibility}
+                serverSide={{
+                  pagination,
+                  sortOptions,
+                  filterOptions,
+                  onPaginationChange: setPagination,
+                  onSortOptionsChange: setSortOptions,
+                  onFilterOptionsChange: setFilterOptions,
+                  rowCount: query.data?.filtered_count ?? 0,
+                  totalRowCount: query.data?.total_count ?? 0,
+                }}
+              />
+            )}
+          </div>
         </div>
-      </div>
+      </TmdbMatchSelectionProvider>
       {editing ? (
         <EditEpisode
           episode={editing.episode}

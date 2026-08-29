@@ -1,8 +1,15 @@
 // TODO: Validate
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import { ChevronLeft, ChevronRight, Pencil, Star, Trash2 } from "lucide-react"
-import { useRef, useState } from "react"
+import {
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Pencil,
+  Star,
+  Trash2,
+} from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
 import { getChannelEpisodes } from "@/api/channels"
@@ -24,6 +31,11 @@ import { ChannelDetailsButton } from "./ChannelDetailsButton"
 import DeleteChannel from "./DeleteChannel"
 import EditChannel from "./EditChannel"
 import EditFavoriteChannel from "./EditFavoriteChannel"
+import {
+  readEpisodePreview,
+  writeChannelDetails,
+  writeEpisodePreview,
+} from "./episodePreviewCache"
 import { FavoriteChannel, useFavoriteChannelIds } from "./FavoriteChannel"
 
 // Owner channels (full ChannelOutput) render edit controls; public channels
@@ -117,16 +129,29 @@ function ChannelRow({
 
   const hasDefaultOrder = Object.keys(defaultOrder).length > 0
 
+  const cachedPreview = useMemo(
+    () => readEpisodePreview(channel.id),
+    [channel.id],
+  )
+
+  useEffect(() => {
+    writeChannelDetails(channel as ChannelOutput)
+  }, [channel])
   const orderedQuery = useQuery({
     queryKey: ["episodes-preview", channel.id, defaultOrder],
-    queryFn: () =>
-      getChannelEpisodes({
+    queryFn: async () => {
+      const preview = await getChannelEpisodes({
         channelId: channel.id,
         limit: 20,
         ...defaultOrder,
-      }),
+      })
+      writeEpisodePreview(channel.id, preview)
+      return preview
+    },
+    initialData: cachedPreview,
+    initialDataUpdatedAt: 0,
+    staleTime: 300_000,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
     retry: false,
   })
 
@@ -135,10 +160,17 @@ function ChannelRow({
   const orderRejected = orderedQuery.isError && hasDefaultOrder
   const fallbackQuery = useQuery({
     queryKey: ["episodes-preview", channel.id, "no-options"],
-    queryFn: () => getChannelEpisodes({ channelId: channel.id, limit: 10 }),
+    queryFn: async () => {
+      const preview = await getChannelEpisodes({
+        channelId: channel.id,
+        limit: 10,
+      })
+      writeEpisodePreview(channel.id, preview)
+      return preview
+    },
     enabled: orderRejected,
+    staleTime: 300_000,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
     retry: false,
   })
 
@@ -146,6 +178,7 @@ function ChannelRow({
   const data = query.data
   const isLoading =
     orderedQuery.isPending || (orderRejected && fallbackQuery.isPending)
+  const isRefreshing = query.isFetching && data !== undefined
   const loadFailed = orderRejected
     ? fallbackQuery.isError
     : orderedQuery.isError
@@ -204,6 +237,12 @@ function ChannelRow({
         >
           {displayName}
         </Link>
+        {isRefreshing && (
+          <Loader2
+            className="ml-2 inline size-5 animate-spin align-text-bottom text-muted-foreground"
+            aria-label="Checking for newer episodes"
+          />
+        )}
       </div>
 
       {showCreatedBy && (

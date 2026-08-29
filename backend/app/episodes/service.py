@@ -252,6 +252,25 @@ def _absolute_number_match(
 
 
 # TODO: Validate
+def _episode_number_absolute_match(
+    episode: Episode,
+    candidates: list[_Candidate],
+    absolute_numbers: dict[uuid.UUID, int],
+) -> TmdbEpisodeChoice | None:
+    if episode.episode_number is None:
+        return None
+    for candidate in candidates:
+        candidate_episode = candidate[0]
+        if episode.episode_number == absolute_numbers.get(candidate_episode.id):
+            return _choice(
+                candidate,
+                absolute_numbers,
+                similarity(episode.name, candidate_episode.name),
+            )
+    return None
+
+
+# TODO: Validate
 def _has_tmdb_title() -> ColumnElement[bool]:
     """Whether TMDB holds any of the titles the outer `Show` is linked to.
 
@@ -591,6 +610,15 @@ def _unmatched_outputs(
                 episode.id,
                 used.get(show.id, {}),
             ),
+            episode_number_absolute_match=_marked_used(
+                _episode_number_absolute_match(
+                    episode,
+                    candidates.get(show.id, []),
+                    candidate_numbers.get(show.id, {}),
+                ),
+                episode.id,
+                used.get(show.id, {}),
+            ),
         )
         for episode, season, show, _source in rows
     ]
@@ -700,6 +728,11 @@ def list_unlocked_episodes(
                     candidates.get(show.id, []),
                     candidate_numbers.get(show.id, {}),
                     source_numbers.get(episode.id),
+                ),
+                episode_number_absolute_match=_episode_number_absolute_match(
+                    episode,
+                    candidates.get(show.id, []),
+                    candidate_numbers.get(show.id, {}),
                 ),
                 name_matches=bool(
                     best_match

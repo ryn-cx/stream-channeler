@@ -1,14 +1,23 @@
 // TODO: Validate
 import { useMutation } from "@tanstack/react-query"
-import { Check, CircleSlash, Hash, ListOrdered, ListTree } from "lucide-react"
+import {
+  ArrowRightLeft,
+  Check,
+  CircleSlash,
+  Hash,
+  ListOrdered,
+  ListTree,
+} from "lucide-react"
 
 import { EpisodesService } from "@/client"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import type { TmdbMatchRow } from "./tmdbMatchColumns"
 import { useOpenEpisodeEditor } from "./tmdbMatchEditing"
 import { useSettleTmdbMatch } from "./tmdbMatchesQuery"
+import { useTmdbMatchSelection } from "./tmdbMatchSelection"
 
 // TODO: Validate
 /**
@@ -27,7 +36,7 @@ export function TmdbMatchConfirmButton({
 }: {
   episodeId: string
   match: NonNullable<TmdbMatchRow["best_match"]>
-  kind: "name" | "season_episode" | "absolute"
+  kind: "name" | "season_episode" | "absolute" | "episode_absolute"
 }) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const { settle, restore, reread } = useSettleTmdbMatch()
@@ -53,11 +62,17 @@ export function TmdbMatchConfirmButton({
     onSettled: reread,
   })
 
-  const icons = { name: Check, season_episode: Hash, absolute: ListOrdered }
+  const icons = {
+    name: Check,
+    season_episode: Hash,
+    absolute: ListOrdered,
+    episode_absolute: ArrowRightLeft,
+  }
   const labels = {
     name: "Name Match",
     season_episode: "Number Match",
-    absolute: "Sequential Match",
+    absolute: "Absolute Match",
+    episode_absolute: "Episode as Absolute Match",
   }
   const Icon = icons[kind]
   const label = labels[kind]
@@ -100,6 +115,7 @@ export function TmdbMatchActions({ episode }: { episode: TmdbMatchRow }) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const { settle, restore, reread } = useSettleTmdbMatch()
   const openEditor = useOpenEpisodeEditor()
+  const selection = useTmdbMatchSelection()
 
   const absentMutation = useMutation({
     mutationFn: () =>
@@ -120,6 +136,16 @@ export function TmdbMatchActions({ episode }: { episode: TmdbMatchRow }) {
 
   return (
     <div className="flex items-center gap-1">
+      {selection ? (
+        <Checkbox
+          className="mr-1"
+          checked={selection.isSelected(episode.episode.id)}
+          title="Select this row, or hold shift to select up to it"
+          onClick={(event) =>
+            selection.toggle(episode.episode.id, event.shiftKey)
+          }
+        />
+      ) : null}
       <Button
         variant="outline"
         size="sm"

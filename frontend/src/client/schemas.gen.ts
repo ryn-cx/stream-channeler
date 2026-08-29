@@ -7533,13 +7533,23 @@ export const UnlockedEpisodeOutputSchema = {
                 }
             ]
         },
+        episode_number_absolute_match: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/TmdbEpisodeChoice'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
         name_matches: {
             type: 'boolean',
             title: 'Name Matches'
         }
     },
     type: 'object',
-    required: ['episode', 'season', 'show', 'source', 'best_match', 'season_episode_match', 'absolute_number_match', 'name_matches'],
+    required: ['episode', 'season', 'show', 'source', 'best_match', 'season_episode_match', 'absolute_number_match', 'episode_number_absolute_match', 'name_matches'],
     title: 'UnlockedEpisodeOutput',
     description: `An episode whose TMDB link no \`User\` has settled, matched or not.
 
@@ -7602,10 +7612,20 @@ export const UnmatchedEpisodeOutputSchema = {
                     type: 'null'
                 }
             ]
+        },
+        episode_number_absolute_match: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/TmdbEpisodeChoice'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         }
     },
     type: 'object',
-    required: ['episode', 'season', 'show', 'source', 'best_match', 'season_episode_match', 'absolute_number_match'],
+    required: ['episode', 'season', 'show', 'source', 'best_match', 'season_episode_match', 'absolute_number_match', 'episode_number_absolute_match'],
     title: 'UnmatchedEpisodeOutput',
     description: 'An episode no TMDB record was found for, beside the closest TMDB episode.'
 } as const;

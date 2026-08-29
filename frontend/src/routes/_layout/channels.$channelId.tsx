@@ -3,11 +3,17 @@ import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import type { VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { EllipsisVertical, LayoutGrid, Table as TableIcon } from "lucide-react"
-import { Suspense, useEffect, useState } from "react"
+import {
+  EllipsisVertical,
+  LayoutGrid,
+  Loader2,
+  Table as TableIcon,
+} from "lucide-react"
+import { Suspense, useEffect, useMemo, useState } from "react"
 import { getChannelEpisodes } from "@/api/channels"
 import {
   ChannelOrdersService,
+  type ChannelsGetChannelEpisodesResponse,
   ChannelsService,
   type SortKeyInput,
 } from "@/client"
@@ -28,6 +34,12 @@ import { EpisodeFilters } from "@/components/Channels/ChannelDetail/EpisodeFilte
 import { SaveOrderButton } from "@/components/Channels/ChannelDetail/SaveOrderButton"
 import { ChannelDetailsButton } from "@/components/Channels/ChannelList/ChannelDetailsButton"
 import EditChannel from "@/components/Channels/ChannelList/EditChannel"
+import {
+  readChannelDetails,
+  readEpisodePreview,
+  writeChannelDetails,
+  writeEpisodePreview,
+} from "@/components/Channels/ChannelList/episodePreviewCache"
 import { FavoriteChannel } from "@/components/Channels/ChannelList/FavoriteChannel"
 import { ChannelNumber } from "@/components/Channels/ChannelNumber"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
@@ -50,11 +62,17 @@ import type { WatchFilters } from "@/lib/watchFilters"
 
 // TODO: Validate
 function getChannelQueryOptions(channelId: string) {
+  const cached = readChannelDetails(channelId)
   return {
-    queryFn: () => ChannelsService.getChannel({ channelId }),
+    queryFn: async () => {
+      const channel = await ChannelsService.getChannel({ channelId })
+      writeChannelDetails(channel)
+      return channel
+    },
     queryKey: ["channels", channelId],
+    initialData: cached,
+    initialDataUpdatedAt: cached ? 0 : undefined,
     refetchOnWindowFocus: false,
-    refetchOnMount: false,
   }
 }
 
@@ -129,14 +147,20 @@ export const Route = createFileRoute("/_layout/channels/$channelId")({
 function getEpisodesQueryOptions(
   channelId: string,
   searchParams: ChannelSearchParams,
+  cached: ChannelsGetChannelEpisodesResponse | undefined,
 ) {
   return {
-    queryFn: () =>
-      getChannelEpisodes({
+    queryFn: async () => {
+      const episodes = await getChannelEpisodes({
         channelId,
         ...searchParams,
-      }),
+      })
+      writeEpisodePreview(channelId, episodes)
+      return episodes
+    },
     queryKey: ["episodes", channelId, searchParams],
+    initialData: cached,
+    initialDataUpdatedAt: 0,
     refetchOnWindowFocus: false,
     staleTime: PAGE_CACHE_MILLISECONDS,
     placeholderData: (previousData: any) => previousData,
@@ -187,7 +211,11 @@ function HeroWithActions({
 // TODO: Validate
 function ChannelDetailContent({ channelId }: { channelId: string }) {
   const { user } = useAuth()
-  const { data: channel } = useSuspenseQuery(getChannelQueryOptions(channelId))
+  const channelOptions = useMemo(
+    () => getChannelQueryOptions(channelId),
+    [channelId],
+  )
+  const { data: channel } = useSuspenseQuery(channelOptions)
 
   useEffect(() => {
     document.title = `${channel.name} - Stream Channeler`
@@ -202,9 +230,18 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
     ...search,
     randomSeed: search.randomSeed ?? fallbackRandomSeed,
   }
-  const { data: episodesData, isPlaceholderData } = useQuery(
-    getEpisodesQueryOptions(channelId, episodesSearch),
+  const episodesCached = useMemo(
+    () => readEpisodePreview(channelId),
+    [channelId],
   )
+  const {
+    data: episodesData,
+    isPlaceholderData,
+    isFetching: isFetchingEpisodes,
+  } = useQuery(
+    getEpisodesQueryOptions(channelId, episodesSearch, episodesCached),
+  )
+  const isRefreshingEpisodes = isFetchingEpisodes && episodesData !== undefined
   const episodesSearchKey = JSON.stringify(episodesSearch)
 
   // A referenced preset holds the options the backend actually applies, and the URL
@@ -300,7 +337,15 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
         )}
 
         <div className="mr-2">
-          <h1 className="text-2xl font-bold tracking-tight">{channel.name}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {channel.name}
+            {isRefreshingEpisodes && (
+              <Loader2
+                className="ml-2 inline size-5 animate-spin align-text-bottom text-muted-foreground"
+                aria-label="Checking for newer episodes"
+              />
+            )}
+          </h1>
           <ChannelCreatedBy channel={channel} className="text-xs" />
         </div>
 
