@@ -53,7 +53,7 @@ class UpsertMixin(HelperMixin, register=False):
             latest_browse_file.download_if_outdated()
         data_timestamp = latest_browse_file.data_timestamp
 
-        existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
+        existing_source = Source.get(self.session, self.plugin, source_key)
         # TODO: Consider implementing something like _upsert_show_object but for
         # sources.
         return Source(
