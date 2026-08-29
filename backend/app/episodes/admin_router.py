@@ -1,6 +1,7 @@
 # TODO: Validate
 
 
+import uuid
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query
@@ -15,7 +16,9 @@ from app.canonical_media.read import canonical_list_response
 from app.episodes.canonical_links import (
     link_episode,
     link_episode_using_tmdb_url,
+    link_episodes,
     mark_episode_absent_from_tmdb,
+    mark_episodes_absent_from_tmdb,
     unlink_episode,
     verify_canonical_link,
 )
@@ -28,6 +31,7 @@ from app.episodes.schemas import (
     CanonicalEpisodeListOutput,
     CanonicalEpisodesPublic,
     DuplicatedCanonicalEpisodeOutput,
+    EpisodeCanonicalLinkInput,
     EpisodeCreate,
     EpisodeListOutput,
     EpisodeOutput,
@@ -164,6 +168,30 @@ def admin_get_duplicated_canonical_episodes(
     """Get every canonical `Episode` that has multiple non-canonical `Episode`s linked to
     it from a single source."""
     return get_duplicated_canonical_episodes(session, limit)
+
+
+# TODO: Validate
+@episodes_router.put("/tmdb-links")
+def admin_link_episodes_to_tmdb(
+    session: SessionDep,
+    links: list[EpisodeCanonicalLinkInput],
+) -> list[EpisodeOutput]:
+    return [
+        EpisodeOutput.model_validate(episode)
+        for episode in link_episodes(session, links)
+    ]
+
+
+# TODO: Validate
+@episodes_router.put("/tmdb-absent")
+def admin_mark_episodes_absent_from_tmdb(
+    session: SessionDep,
+    episode_ids: list[uuid.UUID],
+) -> list[EpisodeOutput]:
+    return [
+        EpisodeOutput.model_validate(episode)
+        for episode in mark_episodes_absent_from_tmdb(session, episode_ids)
+    ]
 
 
 # TODO: Validate

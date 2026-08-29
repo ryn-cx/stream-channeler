@@ -2553,6 +2553,24 @@ provider can be pointed at twice, so what is served is the canonical episode
 itself and the source that collided on it rather than anything TMDB's own.`
 } as const;
 
+export const EpisodeCanonicalLinkInputSchema = {
+    properties: {
+        episode_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Episode Id'
+        },
+        canonical_episode_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Canonical Episode Id'
+        }
+    },
+    type: 'object',
+    required: ['episode_id', 'canonical_episode_id'],
+    title: 'EpisodeCanonicalLinkInput'
+} as const;
+
 export const EpisodeCreateSchema = {
     properties: {
         key: {

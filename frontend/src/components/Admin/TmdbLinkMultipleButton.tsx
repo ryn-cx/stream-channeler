@@ -31,14 +31,16 @@ export function TmdbLinkMultipleButton() {
     mutationFn: async (field: MatchField) => {
       const linkable = (selection?.selectedRows ?? []).flatMap((row) => {
         const match = row[field]
-        return match ? [{ episodeId: row.episode.id, match }] : []
+        return match
+          ? [
+              {
+                episode_id: row.episode.id,
+                canonical_episode_id: match.episode.id,
+              },
+            ]
+          : []
       })
-      for (const { episodeId, match } of linkable) {
-        await EpisodesService.adminLinkEpisodeToTmdb({
-          episodeId,
-          canonicalEpisodeId: match.episode.id,
-        })
-      }
+      await EpisodesService.adminLinkEpisodesToTmdb({ requestBody: linkable })
       return {
         linked: linkable.length,
         skipped: (selection?.selectedRows.length ?? 0) - linkable.length,
@@ -63,11 +65,9 @@ export function TmdbLinkMultipleButton() {
   const absentMutation = useMutation({
     mutationFn: async () => {
       const rows = selection?.selectedRows ?? []
-      for (const row of rows) {
-        await EpisodesService.adminMarkEpisodeAbsentFromTmdb({
-          episodeId: row.episode.id,
-        })
-      }
+      await EpisodesService.adminMarkEpisodesAbsentFromTmdb({
+        requestBody: rows.map((row) => row.episode.id),
+      })
       return rows.length
     },
     onSuccess: (marked) => {

@@ -1,6 +1,8 @@
 # TODO: Validate
 
 import re
+import uuid
+from collections.abc import Sequence
 
 from fastapi import HTTPException
 from sqlmodel import Session, col, select
@@ -12,6 +14,7 @@ from app.episodes.models import (
     Episode,
     EpisodeCanonicalEpisode,
 )
+from app.episodes.schemas import EpisodeCanonicalLinkInput
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.utils import tz_datetime
@@ -207,3 +210,55 @@ def mark_episode_absent_from_tmdb(session: Session, episode: Episode) -> Episode
     session.commit()
     session.refresh(episode)
     return episode
+
+
+# TODO: Validate
+def _existing_episode(session: Session, episode_id: uuid.UUID) -> Episode:
+    episode = session.exec(
+        select(Episode).where(col(Episode.id) == episode_id),
+    ).first()
+    if episode is None:
+        raise HTTPException(status_code=404, detail="Episode not found")
+    return episode
+
+
+# TODO: Validate
+def _existing_canonical_episode(
+    session: Session,
+    canonical_episode_id: uuid.UUID,
+) -> Episode:
+    canonical_episode = session.exec(
+        select(Episode).where(
+            is_canonical(Episode),
+            col(Episode.id) == canonical_episode_id,
+        ),
+    ).first()
+    if canonical_episode is None:
+        raise HTTPException(status_code=404, detail="Canonical episode not found")
+    return canonical_episode
+
+
+# TODO: Validate
+def link_episodes(
+    session: Session,
+    links: Sequence[EpisodeCanonicalLinkInput],
+) -> list[Episode]:
+    return [
+        link_episode(
+            session,
+            _existing_episode(session, link.episode_id),
+            _existing_canonical_episode(session, link.canonical_episode_id),
+        )
+        for link in links
+    ]
+
+
+# TODO: Validate
+def mark_episodes_absent_from_tmdb(
+    session: Session,
+    episode_ids: Sequence[uuid.UUID],
+) -> list[Episode]:
+    return [
+        mark_episode_absent_from_tmdb(session, _existing_episode(session, episode_id))
+        for episode_id in episode_ids
+    ]

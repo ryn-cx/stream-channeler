@@ -562,6 +562,11 @@ export type DuplicatedCanonicalEpisodeOutput = {
     linked_episodes: Array<EpisodeRecord>;
 };
 
+export type EpisodeCanonicalLinkInput = {
+    episode_id: string;
+    canonical_episode_id: string;
+};
+
 /**
  * Schema for creating an `Episode`.
  */
@@ -2444,6 +2449,18 @@ export type EpisodesAdminGetDuplicatedCanonicalEpisodesData = {
 };
 
 export type EpisodesAdminGetDuplicatedCanonicalEpisodesResponse = (Array<DuplicatedCanonicalEpisodeOutput>);
+
+export type EpisodesAdminLinkEpisodesToTmdbData = {
+    requestBody: Array<EpisodeCanonicalLinkInput>;
+};
+
+export type EpisodesAdminLinkEpisodesToTmdbResponse = (Array<EpisodeOutput>);
+
+export type EpisodesAdminMarkEpisodesAbsentFromTmdbData = {
+    requestBody: Array<(string)>;
+};
+
+export type EpisodesAdminMarkEpisodesAbsentFromTmdbResponse = (Array<EpisodeOutput>);
 
 export type EpisodesAdminGetTmdbEpisodeChoicesData = {
     episodeId: string;

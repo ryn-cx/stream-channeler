@@ -269,6 +269,12 @@ class EpisodeTmdbUrlInput(BaseModel):
 
 
 # TODO: Validate
+class EpisodeCanonicalLinkInput(BaseModel):
+    episode_id: uuid.UUID
+    canonical_episode_id: uuid.UUID
+
+
+# TODO: Validate
 class EpisodesPublic(BaseModel):
     """Schema for returning a list of `Episode`s."""
 
