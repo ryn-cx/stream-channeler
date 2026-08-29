@@ -866,7 +866,7 @@ def list_tmdb_episode_choices(
         for choice in _matched_choices(
             session,
             episode,
-            _similar_canonical_episodes(session, episode.name, 10),
+            _similar_canonical_episodes(session, episode.name, 25),
             show_ids,
         )
         if choice.episode.id not in named

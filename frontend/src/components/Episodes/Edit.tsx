@@ -197,6 +197,7 @@ export function EpisodeInformationContent({
       <EpisodeInformationHero
         episodeId={episode.id}
         enabled={enabled}
+        preferSource
         spelledOutDuration
         titleAction={
           isAdmin && showId ? <EditShowOfEpisode showId={showId} /> : null

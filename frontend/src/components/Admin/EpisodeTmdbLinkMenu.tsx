@@ -22,7 +22,7 @@ import {
 import { useSettleTmdbMatch } from "./tmdbMatchesQuery"
 import { type Numbered, numberingAgreement, numberingOf } from "./tmdbNumbering"
 
-type ChoiceOrder = "sequential" | "similarity"
+type ChoiceOrder = "sequential" | "similarity" | "other"
 
 interface EpisodeTmdbLinkMenuProps {
   episodeId: string
@@ -208,7 +208,7 @@ export function TmdbLinkPicker({
   const offered = choices ?? []
   const inScope = offered.filter(
     (choice) =>
-      (order === "similarity" || choice.from_show !== false) &&
+      (isSearch || (choice.from_show === false) === (order === "other")) &&
       (showUsed || !choice.already_used) &&
       (isSearch ||
         wanted.length === 0 ||
@@ -225,7 +225,7 @@ export function TmdbLinkPicker({
 
   const ordered = [...inScope].sort(
     (left: TmdbEpisodeChoice, right: TmdbEpisodeChoice) => {
-      if (order === "similarity") return right.similarity - left.similarity
+      if (order !== "sequential") return right.similarity - left.similarity
       return (
         compareNumbers(left.season.season_number, right.season.season_number) ||
         compareNumbers(
@@ -270,6 +270,7 @@ export function TmdbLinkPicker({
           <TabsList>
             <TabsTrigger value="similarity">Closest name</TabsTrigger>
             <TabsTrigger value="sequential">Sequential</TabsTrigger>
+            <TabsTrigger value="other">Other Show Name Matches</TabsTrigger>
           </TabsList>
         </Tabs>
         <Button
@@ -297,11 +298,13 @@ export function TmdbLinkPicker({
               ? offered.length === 0
                 ? "No TMDB episode anywhere in the database is named that."
                 : "Every TMDB episode named that is already used by another episode of this show."
-              : offered.length === 0
-                ? "No TMDB episodes to choose from. Paste the address of the episode on TMDB to link it and read its title in."
-                : wanted.length > 0
-                  ? "No TMDB episode of this title is named that."
-                  : "Every TMDB episode of this title is already used by another episode of this show."}
+              : order === "other"
+                ? "No TMDB episode of any other show reads close enough to this name."
+                : offered.length === 0
+                  ? "No TMDB episodes to choose from. Paste the address of the episode on TMDB to link it and read its title in."
+                  : wanted.length > 0
+                    ? "No TMDB episode of this title is named that."
+                    : "Every TMDB episode of this title is already used by another episode of this show."}
           </p>
         ) : (
           ordered.map((choice) => (
