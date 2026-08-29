@@ -28,4 +28,6 @@ class _InterceptHandler(logging.Handler):
         )
 
 
-logging.getLogger("good_ass_pydantic_integrator").addHandler(_InterceptHandler())
+_package_logger = logging.getLogger("good_ass_pydantic_integrator")
+_package_logger.addHandler(_InterceptHandler())
+_package_logger.propagate = False
