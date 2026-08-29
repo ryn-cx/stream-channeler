@@ -16,7 +16,11 @@ import { useSeason } from "@/hooks/useEntities"
 import { cn } from "@/lib/utils"
 import { TmdbMatchActions, TmdbMatchConfirmButton } from "./TmdbMatchActions"
 import { useOpenEpisodeEditor } from "./tmdbMatchEditing"
-import { type Numbered, numberingAgreement } from "./tmdbNumbering"
+import {
+  type Numbered,
+  type NumberingAgreement,
+  numberingAgreement,
+} from "./tmdbNumbering"
 
 /**
  * A row of the table, which is a served record with the id the table keys rows
@@ -198,6 +202,7 @@ function MatchSummary({
   action,
   editEpisode,
   isTmdbSide,
+  guaranteed,
 }: {
   record: Summarised
   counterpart: Numbered | null
@@ -205,11 +210,17 @@ function MatchSummary({
   action?: ReactNode
   editEpisode?: ReactNode
   isTmdbSide?: boolean
+  guaranteed?: keyof NumberingAgreement
 }) {
-  const agreement = numberingAgreement(
+  const agreed = numberingAgreement(
     record,
     counterpart ?? NOTHING_TO_AGREE_WITH,
   )
+  const agreement = {
+    seasonAndEpisode:
+      agreed.seasonAndEpisode && guaranteed !== "seasonAndEpisode",
+    absolute: agreed.absolute && guaranteed !== "absolute",
+  }
   const agreeingNumber =
     isTmdbSide === true
       ? "text-emerald-600 dark:text-emerald-400"
@@ -472,6 +483,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
             />
           }
           isTmdbSide
+          guaranteed="seasonAndEpisode"
           action={
             <TmdbMatchConfirmButton
               episodeId={row.original.episode.id}
@@ -510,6 +522,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
             />
           }
           isTmdbSide
+          guaranteed="absolute"
           action={
             <TmdbMatchConfirmButton
               episodeId={row.original.episode.id}

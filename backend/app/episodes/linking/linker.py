@@ -112,8 +112,8 @@ class EpisodeLinker:
                     self._descriptions_of,
                     self._own_description,
                     "description",
-                    blended=(0.4, 0.15),
-                    embedding=(0.5, 0.15),
+                    blended=(0.4, 0.05),
+                    embedding=(0.5, 0.05),
                 ),
             ],
         )
@@ -127,8 +127,8 @@ class EpisodeLinker:
                 self._descriptions_of,
                 self._own_description,
                 "description",
-                blended=(0.4, 0.15),
-                embedding=(0.5, 0.15),
+                blended=(0.4, 0.05),
+                embedding=(0.5, 0.05),
             ),
         )
 
