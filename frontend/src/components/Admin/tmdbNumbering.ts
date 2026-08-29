@@ -44,9 +44,7 @@ export function numberingAgreement(
   other: Numbered,
 ): NumberingAgreement {
   return {
-    seasonAndEpisode:
-      sameSeasonAndEpisode(own, other) ||
-      sameNumber(own.episode_number, other.absolute_number),
+    seasonAndEpisode: sameSeasonAndEpisode(own, other),
     absolute: sameNumber(own.absolute_number, other.absolute_number),
   }
 }

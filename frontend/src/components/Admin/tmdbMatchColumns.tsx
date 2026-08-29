@@ -210,15 +210,10 @@ function MatchSummary({
     record,
     counterpart ?? NOTHING_TO_AGREE_WITH,
   )
-  const seasonsAgree =
-    record.season_number !== null &&
-    record.season_number === (counterpart?.season_number ?? null)
   const agreeingNumber =
-    isTmdbSide !== true
-      ? "text-muted-foreground"
-      : seasonsAgree
-        ? "text-blue-600 dark:text-blue-400"
-        : "text-emerald-600 dark:text-emerald-400"
+    isTmdbSide === true
+      ? "text-emerald-600 dark:text-emerald-400"
+      : "text-muted-foreground"
 
   return (
     <WrappingCell className="max-w-72">
