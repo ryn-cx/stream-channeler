@@ -9,7 +9,7 @@ from typing import Any, override
 from uuid import UUID
 
 from kneeminus import KneeMinus
-from kneeminus.entity import Entity
+from kneeminus.entity import Entity as EntityEndpoint
 from kneeminus.entity.models import EntityModel, MainContentItem
 from kneeminus.entity.models import Episode as EntityEpisode
 from kneeminus.entity.models import Season as EntitySeason
@@ -52,12 +52,12 @@ def required_main_content_item(
 
 
 # TODO: Validate
-class EntityFile(EndpointFile[EntityModel]):
+class Entity(EndpointFile[EntityModel]):
     """Entity file."""
 
     # TODO: Validate
     @override
-    def _endpoint(self) -> Entity:
+    def _endpoint(self) -> EntityEndpoint:
         return kneeminus().entity
 
     # TODO: Validate
@@ -78,7 +78,7 @@ class SeasonEntityFile(EndpointFile[EntityModel]):
 
     # TODO: Validate
     @override
-    def _endpoint(self) -> Entity:
+    def _endpoint(self) -> EntityEndpoint:
         return kneeminus().entity
 
     # TODO: Validate
@@ -114,9 +114,8 @@ class FileMixin(BasePlugin, register=False):
     """The files a title is read out of."""
 
     # TODO: Validate
-    def entity_file(self, entity_id: str) -> EntityFile:
-        """Return EntityFile file."""
-        return self._file(EntityFile, entity_id)
+    def entity_file(self, entity_id: str) -> Entity:
+        return self._file(Entity, entity_id)
 
     # TODO: Validate
     def season_file(self, entity_id: str, season_id: str) -> SeasonEntityFile:

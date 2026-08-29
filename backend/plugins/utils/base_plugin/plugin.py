@@ -273,7 +273,13 @@ class BasePlugin(
     # TODO: Validate
     @override
     def update_show(self, show: Show, *, force: bool = False) -> None:
-        logger.info("Updating show: {}", show.key)
+        source_name = show.source.name or show.source.key
+        show_name: str
+        if show.name:
+            show_name = f"{show.name} ({show.key})"
+        else:
+            show_name = show.key
+        logger.info("Updating show: {} - {}", source_name, show_name)
         show = self._preload_show(show.key, source_key=show.source.key).one()
         self._update_and_upsert_show(show, show.update_at, force=force)
 

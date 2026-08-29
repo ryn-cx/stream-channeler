@@ -1053,7 +1053,7 @@ wheels = [
 [[package]]
 name = "kneeminus"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/knee-minus#3c0d7ad63ef24401c5fdc5851a16ab0fec04a729" }
+source = { git = "https://github.com/ryn-cx/knee-minus#f156a2cb9565fd86fb2fca7442ca2e576be60cb9" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -1278,7 +1278,7 @@ dependencies = [
 [[package]]
 name = "naphki"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/naphki#b6a5486572650ec92231b8e75204a90200bbba8e" }
+source = { git = "https://github.com/ryn-cx/naphki#639f13b187ec1805506aa427d6ca8d8c4a179b4d" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -2035,7 +2035,7 @@ wheels = [
 [[package]]
 name = "tminidb"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/tminidb#3169cb1f7153f0d4b170d03d15db2eef152eedb8" }
+source = { git = "https://github.com/ryn-cx/tminidb#1bd423813d30d5f739aff8da52ed2238a74310a8" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
