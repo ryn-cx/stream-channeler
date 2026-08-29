@@ -34,7 +34,12 @@ from app.episodes.models import (
     Episode,
     EpisodeCanonicalEpisode,
 )
-from app.episodes.name_matching import plaintext, similarity
+from app.episodes.name_matching import (
+    is_only_numbered_name,
+    is_untitled_name,
+    plaintext,
+    similarity,
+)
 from app.episodes.schemas import (
     CanonicalEpisodeRecord,
     DuplicatedCanonicalEpisodeOutput,
@@ -50,6 +55,7 @@ from app.episodes.schemas import (
     UnmatchedReadOptions,
     UserEpisodeUrlOutput,
 )
+from app.episodes.text_matching import TextMatcher
 from app.episodes.user_urls import (
     canonical_episode_for_url,
     clear_user_episode_url,
@@ -205,6 +211,72 @@ def _best_match(
         return None
 
     return _choice(candidate, absolute_numbers, similarity)
+
+
+# TODO: Validate
+def _episode_text(episode: Episode, *, titles: bool) -> str:
+    if not titles:
+        return (episode.description or "").strip()
+    name = (episode.name or "").strip()
+    if not name or is_untitled_name(name) or is_only_numbered_name(name):
+        return ""
+    return name
+
+
+# TODO: Validate
+def _text_matchers(
+    candidates: dict[uuid.UUID, list[_Candidate]],
+    *,
+    titles: bool,
+) -> dict[uuid.UUID, tuple[list[_Candidate], TextMatcher]]:
+    matchers: dict[uuid.UUID, tuple[list[_Candidate], TextMatcher]] = {}
+    for show_id, show_candidates in candidates.items():
+        written = [
+            candidate
+            for candidate in show_candidates
+            if _episode_text(candidate[0], titles=titles)
+        ]
+        if written:
+            matchers[show_id] = (
+                written,
+                TextMatcher(
+                    [
+                        _episode_text(candidate[0], titles=titles)
+                        for candidate in written
+                    ],
+                ),
+            )
+    return matchers
+
+
+# TODO: Validate
+def _text_match(
+    episode: Episode,
+    matcher: tuple[list[_Candidate], TextMatcher] | None,
+    absolute_numbers: dict[uuid.UUID, int],
+    *,
+    titles: bool,
+    blended: bool,
+) -> TmdbEpisodeChoice | None:
+    text = _episode_text(episode, titles=titles)
+    if matcher is None or not text:
+        return None
+
+    written_candidates, text_matcher = matcher
+    scores = (
+        text_matcher.blended_scores(text)
+        if blended
+        else text_matcher.embedding_scores(text)
+    )
+    best_index = max(range(len(scores)), key=lambda index: scores[index])
+    if scores[best_index] <= 0.0:
+        return None
+
+    return _choice(
+        written_candidates[best_index],
+        absolute_numbers,
+        scores[best_index],
+    )
 
 
 # TODO: Validate
@@ -575,6 +647,8 @@ def _unmatched_outputs(
         session,
         {show.id for _episode, _season, show, _source in rows},
     )
+    description_matchers = _text_matchers(candidates, titles=False)
+    title_matchers = _text_matchers(candidates, titles=True)
 
     return [
         UnmatchedEpisodeOutput(
@@ -615,6 +689,50 @@ def _unmatched_outputs(
                     episode,
                     candidates.get(show.id, []),
                     candidate_numbers.get(show.id, {}),
+                ),
+                episode.id,
+                used.get(show.id, {}),
+            ),
+            description_embedding_match=_marked_used(
+                _text_match(
+                    episode,
+                    description_matchers.get(show.id),
+                    candidate_numbers.get(show.id, {}),
+                    titles=False,
+                    blended=False,
+                ),
+                episode.id,
+                used.get(show.id, {}),
+            ),
+            description_blended_match=_marked_used(
+                _text_match(
+                    episode,
+                    description_matchers.get(show.id),
+                    candidate_numbers.get(show.id, {}),
+                    titles=False,
+                    blended=True,
+                ),
+                episode.id,
+                used.get(show.id, {}),
+            ),
+            title_embedding_match=_marked_used(
+                _text_match(
+                    episode,
+                    title_matchers.get(show.id),
+                    candidate_numbers.get(show.id, {}),
+                    titles=True,
+                    blended=False,
+                ),
+                episode.id,
+                used.get(show.id, {}),
+            ),
+            title_blended_match=_marked_used(
+                _text_match(
+                    episode,
+                    title_matchers.get(show.id),
+                    candidate_numbers.get(show.id, {}),
+                    titles=True,
+                    blended=True,
                 ),
                 episode.id,
                 used.get(show.id, {}),

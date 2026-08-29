@@ -2,11 +2,15 @@
 import { useMutation } from "@tanstack/react-query"
 import {
   ArrowRightLeft,
+  Blend,
   Check,
   CircleSlash,
+  Combine,
   Hash,
   ListOrdered,
   ListTree,
+  Sparkles,
+  Type,
 } from "lucide-react"
 
 import { EpisodesService } from "@/client"
@@ -36,7 +40,15 @@ export function TmdbMatchConfirmButton({
 }: {
   episodeId: string
   match: NonNullable<TmdbMatchRow["best_match"]>
-  kind: "name" | "season_episode" | "absolute" | "episode_absolute"
+  kind:
+    | "name"
+    | "season_episode"
+    | "absolute"
+    | "episode_absolute"
+    | "description_embedding"
+    | "description_blended"
+    | "title_embedding"
+    | "title_blended"
 }) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const { settle, restore, reread } = useSettleTmdbMatch()
@@ -67,12 +79,20 @@ export function TmdbMatchConfirmButton({
     season_episode: Hash,
     absolute: ListOrdered,
     episode_absolute: ArrowRightLeft,
+    description_embedding: Sparkles,
+    description_blended: Blend,
+    title_embedding: Type,
+    title_blended: Combine,
   }
   const labels = {
     name: "Name Match",
     season_episode: "Number Match",
     absolute: "Absolute Match",
     episode_absolute: "Episode as Absolute Match",
+    description_embedding: "Description Match",
+    description_blended: "Blended Description Match",
+    title_embedding: "Title Match",
+    title_blended: "Blended Title Match",
   }
   const Icon = icons[kind]
   const label = labels[kind]

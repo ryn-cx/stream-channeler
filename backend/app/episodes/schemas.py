@@ -209,6 +209,10 @@ class UnmatchedEpisodeOutput(EpisodeRecord):
     season_episode_match: TmdbEpisodeChoice | None
     absolute_number_match: TmdbEpisodeChoice | None
     episode_number_absolute_match: TmdbEpisodeChoice | None
+    description_embedding_match: TmdbEpisodeChoice | None = None
+    description_blended_match: TmdbEpisodeChoice | None = None
+    title_embedding_match: TmdbEpisodeChoice | None = None
+    title_blended_match: TmdbEpisodeChoice | None = None
 
 
 # TODO: Validate

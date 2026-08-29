@@ -28,6 +28,26 @@ export const MATCH_KINDS = [
     label: "Episode Number → Absolute Number",
     field: "episode_number_absolute_match",
   },
+  {
+    kind: "description_embedding",
+    label: "Description (embedding)",
+    field: "description_embedding_match",
+  },
+  {
+    kind: "description_blended",
+    label: "Description (blended)",
+    field: "description_blended_match",
+  },
+  {
+    kind: "title_embedding",
+    label: "Title (embedding)",
+    field: "title_embedding_match",
+  },
+  {
+    kind: "title_blended",
+    label: "Title (blended)",
+    field: "title_blended_match",
+  },
 ] as const
 
 export type MatchKind = (typeof MATCH_KINDS)[number]["kind"]

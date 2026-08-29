@@ -7682,6 +7682,46 @@ export const UnlockedEpisodeOutputSchema = {
                 }
             ]
         },
+        description_embedding_match: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/TmdbEpisodeChoice'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        description_blended_match: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/TmdbEpisodeChoice'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        title_embedding_match: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/TmdbEpisodeChoice'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        title_blended_match: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/TmdbEpisodeChoice'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
         name_matches: {
             type: 'boolean',
             title: 'Name Matches'
@@ -7753,6 +7793,46 @@ export const UnmatchedEpisodeOutputSchema = {
             ]
         },
         episode_number_absolute_match: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/TmdbEpisodeChoice'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        description_embedding_match: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/TmdbEpisodeChoice'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        description_blended_match: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/TmdbEpisodeChoice'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        title_embedding_match: {
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/TmdbEpisodeChoice'
+                },
+                {
+                    type: 'null'
+                }
+            ]
+        },
+        title_blended_match: {
             anyOf: [
                 {
                     '$ref': '#/components/schemas/TmdbEpisodeChoice'
