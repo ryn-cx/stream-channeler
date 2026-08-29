@@ -98,9 +98,11 @@ class EpisodeLinker:
     # TODO: Validate
     def link_named_episodes(self, episodes: list[Episode]) -> list[Episode]:
         return self._link_by_tests(
-            self._unlinked(episodes),
-            [
+            self._link_by_single_test(
+                self._unlinked(episodes),
                 self._exact_test(self.facts.names_of, self._own_name, "Exact name"),
+            ),
+            [
                 self._exact_test(
                     self._descriptions_of,
                     self._own_description,
@@ -236,6 +238,22 @@ class EpisodeLinker:
             return [(1.0, found)] if found else []
 
         return (label, test)
+
+    # TODO: Validate
+    def _link_by_single_test(
+        self,
+        episodes: list[Episode],
+        test: tuple[str, Callable[[Episode], list[tuple[float, Episode]]]],
+    ) -> list[Episode]:
+        label, run = test
+        for episode in episodes:
+            for score, tmdb_episode in run(episode):
+                self._claim(
+                    episode,
+                    tmdb_episode,
+                    f"Automatic: {label} match ({round(score * 100)}%)",
+                )
+        return self._unlinked(episodes)
 
     # TODO: Validate
     def _link_by_tests(
