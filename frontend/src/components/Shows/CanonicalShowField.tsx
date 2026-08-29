@@ -48,10 +48,10 @@ function CanonicalShowName({ show }: { show: CanonicalShowOutput }) {
       ) : (
         (show.name ?? "Unnamed")
       )}
-      <span className="block text-xs text-muted-foreground">
-        {show.key}
-        {show.year ? ` — ${show.year}` : ""}
-      </span>
+      {show.year ? (
+        <span className="text-muted-foreground"> ({show.year})</span>
+      ) : null}
+      <span className="block text-xs text-muted-foreground">{show.key}</span>
     </span>
   )
 }

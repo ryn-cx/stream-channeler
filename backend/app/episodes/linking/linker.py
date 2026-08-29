@@ -17,6 +17,7 @@ from app.episodes.models import Episode, EpisodeCanonicalEpisode
 from app.episodes.name_matching import (
     is_only_numbered_name,
     is_untitled_name,
+    loose_plaintext,
     name_parts,
     plaintext,
 )
@@ -166,11 +167,41 @@ class EpisodeLinker:
         return next(iter(found)) if len(found) == 1 else None
 
     # TODO: Validate
+    def _loose_index(
+        self,
+        texts_of: Callable[[Episode], Collection[str]],
+    ) -> dict[str, set[Episode]]:
+        index: dict[str, set[Episode]] = {}
+        for tmdb_episode in self.canonical_episodes:
+            for candidate_text in texts_of(tmdb_episode):
+                if key := loose_plaintext(candidate_text):
+                    index.setdefault(key, set()).add(tmdb_episode)
+        return index
+
+    # TODO: Validate
+    @staticmethod
+    def _contained_match(
+        index: dict[str, set[Episode]],
+        text: str | None,
+    ) -> Episode | None:
+        key = loose_plaintext(text)
+        if not key:
+            return None
+        found = {
+            tmdb_episode
+            for candidate_key, tmdb_episodes in index.items()
+            if candidate_key in key
+            for tmdb_episode in tmdb_episodes
+        }
+        return next(iter(found)) if len(found) == 1 else None
+
+    # TODO: Validate
     def _split_test(
         self,
         label: str,
     ) -> tuple[str, Callable[[Episode], list[tuple[float, Episode]]]]:
         index = self._exact_index(self.facts.names_of)
+        loose_index = self._loose_index(self.facts.names_of)
 
         # TODO: Validate
         def test(episode: Episode) -> list[tuple[float, Episode]]:
@@ -179,7 +210,10 @@ class EpisodeLinker:
                 return []
             matched: list[Episode] = []
             for part in parts:
-                found = self._sole_match(index, part)
+                found = self._sole_match(index, part) or self._contained_match(
+                    loose_index,
+                    part,
+                )
                 if found is None or found in matched:
                     return []
                 matched.append(found)
@@ -220,9 +254,16 @@ class EpisodeLinker:
                 frozenset(tmdb_episode.id for _score, tmdb_episode in found)
                 for _label, found in results
             }
-            if len(matched) != 1:
+            widest = max(matched, key=len)
+            if any(not found <= widest for found in matched):
                 continue
 
+            results = [
+                (label, found)
+                for label, found in results
+                if frozenset(tmdb_episode.id for _score, tmdb_episode in found)
+                == widest
+            ]
             labels = ", ".join(label for label, _found in results)
             for score, tmdb_episode in results[0][1]:
                 self._claim(

@@ -134,6 +134,7 @@ interface CanonicalEpisodeControlsProps {
   seasonNumber: number | null
   episodeNumber: number | null
   canonicalEpisodeValidatedAt: string | null | undefined
+  canonicalEpisodeNote: string | null | undefined
   /** Whether there is a link to settle, since there is nothing to lock without one. */
   hasLinks: boolean
   enabled: boolean
@@ -165,6 +166,7 @@ export function CanonicalEpisodeControls({
   seasonNumber,
   episodeNumber,
   canonicalEpisodeValidatedAt,
+  canonicalEpisodeNote,
   hasLinks,
   enabled,
   onVerified,
@@ -178,6 +180,33 @@ export function CanonicalEpisodeControls({
     onSuccess: () => {
       showSuccessToast("Canonical link verified and locked")
       onVerified?.()
+      queryClient.invalidateQueries({ queryKey: ["episodes"] })
+      queryClient.invalidateQueries({ queryKey: ["admin-tmdb-choices"] })
+      queryClient.invalidateQueries({
+        queryKey: ["admin-duplicated-canonical-episodes"],
+      })
+    },
+    onError: (error: unknown) =>
+      handleError.call(
+        showErrorToast,
+        error as Parameters<typeof handleError>[0],
+      ),
+  })
+
+  const verifyLinkMutation = useMutation({
+    mutationFn: () =>
+      EpisodesService.updateEpisode({
+        episodeId,
+        requestBody: {
+          canonical_episode_note: canonicalEpisodeNote
+            ? `Manual: Verified - ${canonicalEpisodeNote}`
+            : "Manual: Verified",
+          canonical_episode_validated_at: new Date().toISOString(),
+        },
+      }),
+    onSuccess: (updated) => {
+      showSuccessToast("Canonical link verified and locked")
+      onLinksChanged?.(updated)
       queryClient.invalidateQueries({ queryKey: ["episodes"] })
       queryClient.invalidateQueries({ queryKey: ["admin-tmdb-choices"] })
       queryClient.invalidateQueries({
@@ -215,6 +244,20 @@ export function CanonicalEpisodeControls({
           informationQueryKey={["episodes"]}
           onLinksChanged={onLinksChanged}
         />
+      ) : null}
+      {hasLinks ? (
+        <div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={verifyLinkMutation.isPending}
+            onClick={() => verifyLinkMutation.mutate()}
+          >
+            <Check className="h-4 w-4" />
+            Verify Link
+          </Button>
+        </div>
       ) : null}
     </div>
   )

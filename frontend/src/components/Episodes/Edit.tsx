@@ -240,6 +240,7 @@ export function EpisodeInformationContent({
             canonicalEpisodeValidatedAt={form.watch(
               "canonical_episode_validated_at",
             )}
+            canonicalEpisodeNote={form.watch("canonical_episode_note")}
             hasLinks={canonicalEpisodeIds.length > 0}
             enabled={enabled}
             onVerified={() => {
