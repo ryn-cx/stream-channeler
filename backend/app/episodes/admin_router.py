@@ -19,6 +19,7 @@ from app.episodes.canonical_links import (
     link_episodes,
     mark_episode_absent_from_tmdb,
     mark_episodes_absent_from_tmdb,
+    quick_unlink_episode,
     unlink_episode,
     verify_canonical_link,
 )
@@ -270,6 +271,17 @@ def admin_unlink_episode_from_canonical(
     return EpisodeOutput.model_validate(
         unlink_episode(session, episode, canonical_episode),
     )
+
+
+# TODO: Validate
+@episodes_router.put(
+    "/{episode_id}/tmdb-quick-unlink",  # noqa: FAST003 - Used by ExistingEpisode.
+)
+def admin_quick_unlink_episode(
+    session: SessionDep,
+    episode: ExistingEpisode,
+) -> EpisodeOutput:
+    return EpisodeOutput.model_validate(quick_unlink_episode(session, episode))
 
 
 # TODO: Validate

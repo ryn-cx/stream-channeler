@@ -2500,6 +2500,12 @@ export type EpisodesAdminUnlinkEpisodeFromCanonicalData = {
 
 export type EpisodesAdminUnlinkEpisodeFromCanonicalResponse = (EpisodeOutput);
 
+export type EpisodesAdminQuickUnlinkEpisodeData = {
+    episodeId: string;
+};
+
+export type EpisodesAdminQuickUnlinkEpisodeResponse = (EpisodeOutput);
+
 export type EpisodesAdminUnlinkEpisodeFromTmdbData = {
     episodeId: string;
 };

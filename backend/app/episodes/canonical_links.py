@@ -180,6 +180,18 @@ def unlink_episode(
 
 
 # TODO: Validate
+def quick_unlink_episode(session: Session, episode: Episode) -> Episode:
+    _drop_links(session, episode)
+
+    episode.canonical_episode_validated_at = None
+    episode.canonical_episode_note = None
+    session.add(episode)
+    session.commit()
+    session.refresh(episode)
+    return episode
+
+
+# TODO: Validate
 def verify_canonical_link(session: Session, episode: Episode) -> Episode:
     """Settle the links an `Episode` already carries as the right ones.
 

@@ -215,7 +215,7 @@ function MatchSummary({
     record.season_number !== null &&
     record.season_number === (counterpart?.season_number ?? null)
   const agreeingNumber = seasonsAgree
-    ? "text-emerald-600 dark:text-emerald-400"
+    ? "text-blue-600 dark:text-blue-400"
     : "text-destructive"
 
   return (
@@ -331,7 +331,7 @@ function AlreadyUsedNote({
     return null
   }
   return (
-    <span className="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-destructive">
+    <span className="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-pink-600 dark:text-pink-400">
       Already used by
       {match.used_by.map((used) => (
         <span key={used.episode.id} className="inline-flex items-center gap-1">

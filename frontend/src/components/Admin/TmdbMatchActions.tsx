@@ -11,6 +11,7 @@ import {
   ListTree,
   Sparkles,
   Type,
+  Unlink,
 } from "lucide-react"
 
 import { EpisodesService } from "@/client"
@@ -96,6 +97,7 @@ export function TmdbMatchConfirmButton({
   }
   const Icon = icons[kind]
   const label = labels[kind]
+  const matchColor = `oklch(0.6 0.15 ${25 + match.similarity * 120})`
 
   return (
     <span className="mb-1 flex items-center gap-2">
@@ -105,13 +107,14 @@ export function TmdbMatchConfirmButton({
         disabled={confirmMutation.isPending}
         title={`Link to ${match.episode.name ?? `the episode this ${label} offers`}`}
         onClick={() => confirmMutation.mutate()}
+        style={{ color: matchColor, borderColor: matchColor }}
       >
         <Icon className="h-4 w-4" />
         {label}
       </Button>
       <span
         className="text-xs font-medium tabular-nums"
-        style={{ color: `oklch(0.6 0.15 ${25 + match.similarity * 120})` }}
+        style={{ color: matchColor }}
       >
         {Math.round(match.similarity * 100)}%
       </span>
@@ -154,6 +157,20 @@ export function TmdbMatchActions({ episode }: { episode: TmdbMatchRow }) {
     onSettled: reread,
   })
 
+  const quickUnlinkMutation = useMutation({
+    mutationFn: () =>
+      EpisodesService.adminQuickUnlinkEpisode({
+        episodeId: episode.episode.id,
+      }),
+    onSuccess: () => showSuccessToast("Unlinked"),
+    onError: (error: unknown) =>
+      handleError.call(
+        showErrorToast,
+        error as Parameters<typeof handleError>[0],
+      ),
+    onSettled: reread,
+  })
+
   return (
     <div className="flex items-center gap-1">
       {selection ? (
@@ -184,6 +201,16 @@ export function TmdbMatchActions({ episode }: { episode: TmdbMatchRow }) {
       >
         <CircleSlash className="h-4 w-4" />
         Not on TMDB
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={quickUnlinkMutation.isPending}
+        title="Take this off every TMDB episode, leaving it to be matched again"
+        onClick={() => quickUnlinkMutation.mutate()}
+      >
+        <Unlink className="h-4 w-4" />
+        Unlink
       </Button>
     </div>
   )
