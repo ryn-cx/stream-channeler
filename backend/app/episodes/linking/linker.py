@@ -97,42 +97,69 @@ class EpisodeLinker:
 
     # TODO: Validate
     def link_named_episodes(self, episodes: list[Episode]) -> list[Episode]:
-        return self._run(
-            (
-                self._by_blended_text(
+        return self._link_by_tests(
+            self._unlinked(episodes),
+            [
+                *self._scored_tests(
                     self.facts.names_of,
                     self._own_name,
-                    "Name",
-                    floor=0.5,
-                    margin=0.1,
+                    "name",
+                    blended=(0.5, 0.1),
+                    embedding=(0.6, 0.1),
                 ),
-                self._by_contained_name("Automatic: Contained name match"),
-                self._by_blended_text(
+                self._contained_test("Contained name"),
+                *self._scored_tests(
                     self._descriptions_of,
                     self._own_description,
-                    "Description",
-                    floor=0.4,
-                    margin=0.15,
+                    "description",
+                    blended=(0.4, 0.15),
+                    embedding=(0.5, 0.15),
                 ),
-            ),
-            self._unlinked(episodes),
+            ],
         )
 
     # TODO: Validate
     def link_unnamed_episodes(self, episodes: list[Episode]) -> list[Episode]:
-        return self._run(
-            (
-                self._by_season_and_episode_number("Automatic: Numbering match"),
-                self._by_blended_text(
-                    self._descriptions_of,
-                    self._own_description,
-                    "Description",
-                    floor=0.4,
-                    margin=0.15,
-                ),
+        numbered = self._by_season_and_episode_number("Automatic: Numbering match")
+        return self._link_by_tests(
+            numbered(self._unlinked(episodes)),
+            self._scored_tests(
+                self._descriptions_of,
+                self._own_description,
+                "description",
+                blended=(0.4, 0.15),
+                embedding=(0.5, 0.15),
             ),
-            self._unlinked(episodes),
         )
+
+    # TODO: Validate
+    def _link_by_tests(
+        self,
+        episodes: list[Episode],
+        tests: list[tuple[str, Callable[[Episode], list[tuple[float, Episode]]]]],
+    ) -> list[Episode]:
+        for episode in episodes:
+            results = [
+                (label, found) for label, test in tests if (found := test(episode))
+            ]
+            if not results:
+                continue
+
+            matched = {
+                frozenset(tmdb_episode.id for _score, tmdb_episode in found)
+                for _label, found in results
+            }
+            if len(matched) != 1:
+                continue
+
+            labels = ", ".join(label for label, _found in results)
+            for score, tmdb_episode in results[0][1]:
+                self._claim(
+                    episode,
+                    tmdb_episode,
+                    f"Automatic: {labels} match ({round(score * 100)}%)",
+                )
+        return self._unlinked(episodes)
 
     # TODO: Validate
     @staticmethod
@@ -280,81 +307,86 @@ class EpisodeLinker:
         return any(later[0] < earlier[1] for earlier, later in pairwise(sorted(spans)))
 
     # TODO: Validate
-    def _by_contained_name(
+    def _contained_test(
         self,
-        note: str,
-    ) -> Callable[[list[Episode]], list[Episode]]:
+        label: str,
+    ) -> tuple[str, Callable[[Episode], list[tuple[float, Episode]]]]:
+        candidates = [
+            (tmdb_episode, plaintext(name))
+            for tmdb_episode in self.canonical_episodes
+            for name in self.facts.names_of(tmdb_episode)
+            if plaintext(name)
+        ]
+
         # TODO: Validate
-        def step(episodes: list[Episode]) -> list[Episode]:
-            candidates = [
-                (tmdb_episode, plaintext(name))
-                for tmdb_episode in self.canonical_episodes
-                for name in self.facts.names_of(tmdb_episode)
-                if plaintext(name)
-            ]
-            if not candidates:
-                return episodes
+        def test(episode: Episode) -> list[tuple[float, Episode]]:
+            own_name = plaintext(episode.name)
+            if not own_name or not candidates:
+                return []
+            spans = self._contained_spans(own_name, candidates)
+            if not spans or self._spans_overlap(spans.values()):
+                return []
+            return [(1.0, tmdb_episode) for tmdb_episode in spans]
 
-            for episode in episodes:
-                own_name = plaintext(episode.name)
-                if not own_name:
-                    continue
-
-                spans = self._contained_spans(own_name, candidates)
-                if not spans or self._spans_overlap(spans.values()):
-                    continue
-                for tmdb_episode in spans:
-                    self._claim(episode, tmdb_episode, note)
-            return self._unlinked(episodes)
-
-        return step
+        return (label, test)
 
     # TODO: Validate
-    def _by_blended_text(
+    @staticmethod
+    def _ranked(
+        entries: list[tuple[Episode, str]],
+        scores: list[float],
+    ) -> list[tuple[float, Episode]]:
+        best: dict[Episode, float] = {}
+        for (tmdb_episode, _text), score in zip(entries, scores, strict=True):
+            if score > best.get(tmdb_episode, -1.0):
+                best[tmdb_episode] = score
+        return sorted(
+            ((score, tmdb_episode) for tmdb_episode, score in best.items()),
+            key=lambda scoring: scoring[0],
+            reverse=True,
+        )
+
+    # TODO: Validate
+    def _scored_tests(
         self,
         texts_of: Callable[[Episode], Collection[str]],
         own_text_of: Callable[[Episode], str | None],
         label: str,
         *,
-        floor: float,
-        margin: float,
-    ) -> Callable[[list[Episode]], list[Episode]]:
-        # TODO: Validate
-        def step(episodes: list[Episode]) -> list[Episode]:
-            entries = [
-                (tmdb_episode, text)
-                for tmdb_episode in self.canonical_episodes
-                for text in texts_of(tmdb_episode)
-            ]
-            if not entries:
-                return episodes
+        blended: tuple[float, float],
+        embedding: tuple[float, float],
+    ) -> list[tuple[str, Callable[[Episode], list[tuple[float, Episode]]]]]:
+        entries = [
+            (tmdb_episode, text)
+            for tmdb_episode in self.canonical_episodes
+            for text in texts_of(tmdb_episode)
+        ]
+        if not entries:
+            return []
+        matcher = TextMatcher([text for _tmdb_episode, text in entries])
 
-            matcher = TextMatcher([text for _tmdb_episode, text in entries])
-            for episode in episodes:
+        # TODO: Validate
+        def scored(
+            scores_of: Callable[[str], list[float]],
+            floor: float,
+            margin: float,
+        ) -> Callable[[Episode], list[tuple[float, Episode]]]:
+            # TODO: Validate
+            def test(episode: Episode) -> list[tuple[float, Episode]]:
                 own_text = (own_text_of(episode) or "").strip()
                 if not own_text:
-                    continue
-
-                best: dict[Episode, float] = {}
-                for (tmdb_episode, _text), score in zip(
-                    entries,
-                    matcher.blended_scores(own_text),
-                    strict=True,
-                ):
-                    if score > best.get(tmdb_episode, -1.0):
-                        best[tmdb_episode] = score
-                ranked = sorted(
-                    ((score, tmdb_episode) for tmdb_episode, score in best.items()),
-                    key=lambda scoring: scoring[0],
-                    reverse=True,
+                    return []
+                found = self._confident_match(
+                    episode,
+                    self._ranked(entries, scores_of(own_text)),
+                    floor,
+                    margin,
                 )
+                return [found] if found else []
 
-                if found := self._confident_match(episode, ranked, floor, margin):
-                    self._claim(
-                        episode,
-                        found[1],
-                        f"Automatic: {label} match ({round(found[0] * 100)}%)",
-                    )
-            return self._unlinked(episodes)
+            return test
 
-        return step
+        return [
+            (f"Blended {label}", scored(matcher.blended_scores, *blended)),
+            (f"Embedding {label}", scored(matcher.embedding_scores, *embedding)),
+        ]
