@@ -21,10 +21,10 @@ from plugins.utils.base_plugin import BaseFile, BasePlugin
 from plugins.utils.manage_plugins import import_plugins
 
 IMPORT_TIME = datetime(2026, 1, 1, tzinfo=UTC)
-"""When every import is taken to have happened."""
+"""When every import is taken to have happened, and every file arrived."""
 
-UPDATE_TIME = datetime(2026, 2, 1, tzinfo=UTC)
-"""When every update is taken to have happened, a month after the import."""
+UPDATE_TIME = datetime(2026, 1, 2, tzinfo=UTC)
+"""When every update is taken to have happened, the day after the import."""
 
 ESCAPE_PREFIX = "%"
 """What marks a character that a file name cannot hold as it is."""
@@ -163,7 +163,7 @@ def write_stored_metadata(owner_key: str, file_key: str, record: File) -> None:
 
 
 # TODO: Validate
-def date_at_import_time(record: File, stored_update_at: datetime | None) -> None:
+def date_at_import_time(record: File, import_time: datetime = IMPORT_TIME) -> None:
     """Date `record` as though it had been downloaded at `IMPORT_TIME`.
 
     A stored file is dated by when it was really downloaded, which is whenever
@@ -172,15 +172,21 @@ def date_at_import_time(record: File, stored_update_at: datetime | None) -> None
     though it arrived at the moment the test is frozen to is what leaves the
     records built from it the same on every run.
 
-    How long the file was good for is carried over as the gap it was stored
-    with, so a file is still refreshed when the plugin says it should be rather
-    than being made to look fresh forever.
+    It is also what keeps a plugin doing what it does in production. A file left
+    at the day it was really downloaded is a file the frozen clock is years past,
+    so every record read out of it is due a refresh the moment it is written, and
+    an import ends up walking the paths that only a stale record reaches.
+
+    How long the file was good for is carried over as the gap it was stored with,
+    so a file is still refreshed when the plugin says it should be rather than
+    being made to look fresh forever. The gap survives the shift, which leaves
+    dating a record that has already been dated a no-op.
     """
-    refresh_gap = stored_update_at - record.data_timestamp if stored_update_at else None
-    record.created_at = IMPORT_TIME
-    record.modified_at = IMPORT_TIME
-    record.data_timestamp = IMPORT_TIME
-    record.update_at = IMPORT_TIME + refresh_gap if refresh_gap else None
+    refresh_gap = record.update_at - record.data_timestamp if record.update_at else None
+    record.created_at = import_time
+    record.modified_at = import_time
+    record.data_timestamp = import_time
+    record.update_at = import_time + refresh_gap if refresh_gap else None
 
 
 # TODO: Validate
@@ -204,12 +210,12 @@ def stored_file_record(owner_key: str, file_key: str, path: Path) -> File:
             content=content,
             data_timestamp=_stored_data_timestamp(path),
         )
-        date_at_import_time(record, None)
+        date_at_import_time(record)
         return record
 
     stored = metadata.model_dump()
     record = File(**stored, content=content)
-    date_at_import_time(record, stored["update_at"])
+    date_at_import_time(record)
     return record
 
 
@@ -225,12 +231,12 @@ def restore_stored_metadata(record: File, owner_key: str, path: Path) -> None:
     if metadata is None:
         record.data_timestamp = _stored_data_timestamp(path)
         write_stored_metadata(owner_key, record.key, record)
-        date_at_import_time(record, None)
+        date_at_import_time(record)
         return
     stored = metadata.model_dump()
     for field, value in stored.items():
         setattr(record, field, value)
-    date_at_import_time(record, stored["update_at"])
+    date_at_import_time(record)
 
 
 # TODO: Validate

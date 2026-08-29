@@ -135,10 +135,10 @@ class TimestampIdAndHashMixin(SQLModel):
     # and the key field.
     id: uuid.UUID = Field(unique=True, default_factory=uuid.uuid4)
 
-    created_at: datetime = DateTimeField(default_factory=tz_datetime.now)
+    created_at: datetime = DateTimeField(default_factory=tz_datetime.current_time)
     modified_at: datetime = DateTimeField(
-        sa_column_kwargs={"onupdate": tz_datetime.now},
-        default_factory=tz_datetime.now,
+        sa_column_kwargs={"onupdate": tz_datetime.current_time},
+        default_factory=tz_datetime.current_time,
     )
 
     # TODO: Validate

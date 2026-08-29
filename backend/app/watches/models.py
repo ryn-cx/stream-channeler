@@ -23,7 +23,7 @@ class BaseWatch(SQLModel):
     # call-overload - See TimestampAndIdMixin for an explanation.
     watch_date: datetime = Field(
         sa_type=DateTime(timezone=True),  # type: ignore[call-overload]
-        default_factory=tz_datetime.now,
+        default_factory=tz_datetime.current_time,
     )
 
     verified: bool = Field(default=False)

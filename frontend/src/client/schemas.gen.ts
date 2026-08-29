@@ -6184,17 +6184,6 @@ export const ShowCreateSchema = {
                 }
             ],
             title: 'Canonical Show Validated At'
-        },
-        canonical_show_note: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Show Note'
         }
     },
     additionalProperties: false,
@@ -6408,17 +6397,6 @@ export const ShowListPublicSchema = {
                 }
             ],
             title: 'Canonical Show Validated At'
-        },
-        canonical_show_note: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Show Note'
         },
         source_id: {
             type: 'string',
@@ -6642,17 +6620,6 @@ export const ShowPublicSchema = {
                 }
             ],
             title: 'Canonical Show Validated At'
-        },
-        canonical_show_note: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Show Note'
         },
         source_id: {
             type: 'string',
@@ -6879,17 +6846,6 @@ export const ShowUpdateSchema = {
                 }
             ],
             title: 'Canonical Show Validated At'
-        },
-        canonical_show_note: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Show Note'
         }
     },
     additionalProperties: false,
@@ -7951,10 +7907,21 @@ export const UnvalidatedLinkedShowOutputSchema = {
                 }
             ],
             title: 'Tmdb Id'
+        },
+        note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Note'
         }
     },
     type: 'object',
-    required: ['id', 'name', 'year', 'url', 'image_url', 'tmdb_id'],
+    required: ['id', 'name', 'year', 'url', 'image_url', 'tmdb_id', 'note'],
     title: 'UnvalidatedLinkedShowOutput',
     description: `One of the canonical shows an unvalidated row stands for.
 
@@ -8098,17 +8065,6 @@ export const UnvalidatedShowOutputSchema = {
                 }
             ],
             title: 'Canonical Show Validated At'
-        },
-        canonical_show_note: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Show Note'
         },
         source_id: {
             type: 'string',
@@ -9891,17 +9847,6 @@ export const WhitelistShowOutputSchema = {
                 }
             ],
             title: 'Canonical Show Validated At'
-        },
-        canonical_show_note: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Show Note'
         },
         source_id: {
             type: 'string',

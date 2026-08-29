@@ -1,5 +1,6 @@
 # TODO: Validate
 from plugins.JustWatch import JustWatch
+
 from tests.plugins.plugin_validator_alt import PluginValidatorAlt, StandardTestsAlt
 
 

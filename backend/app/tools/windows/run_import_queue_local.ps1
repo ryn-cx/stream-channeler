@@ -1,21 +1,27 @@
 # TODO: Validate
-# Re-import every show on the host, against the compose database.
+# Run the import queue on the host, against the compose database.
 #
-# The same run as `run_import_queue_local.ps1` - the repo's own venv, the working
-# tree as it is on disk, the database compose publishes - pointed at the reimport
-# tool instead of the import queue. Every show the plugin user owns is updated with
-# `force=True`, so nothing is skipped for being current and the run takes as long
-# as the whole library does.
+# The simple counterpart of `run_import_queue.ps1`: no image build, no dependency
+# dump, no container. The tool runs out of the repo's own venv, so the code it runs
+# is the working tree as it is on disk and anything it writes into its dependencies
+# stays there. Everything it talks to - the database, the plugins' APIs - is the
+# same as the container run.
 #
-# Run it from anywhere:  powershell -File backend\app\tools\run_reimport_all_local.ps1
+# The database is the one compose publishes, which `.env` gives the container as
+# port 5432 (its own port inside the compose network) and the host as `DB_PORT`.
+# Only the host port can be reached from here, so it is what gets used.
+#
+# It keeps running: once a pass finishes it waits `IntervalSeconds` and starts the
+# next one. Ctrl-C stops it.
 
 [CmdletBinding()]
-param()
+param(
+    [int]$IntervalSeconds = 60
+)
 
 $ErrorActionPreference = "Stop"
 
-# The script lives in backend/app/tools, so the repo root is three levels up.
-$repoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
+$repoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)))
 
 $keyring = Join-Path $repoRoot ".venv\Scripts\keyring.exe"
 if (-not (Test-Path $keyring)) {
@@ -57,5 +63,14 @@ $env:POSTGRES_SERVER = "localhost"
 $env:POSTGRES_PORT = $databasePort
 
 # `.env` is loaded from the working directory, which is also where `app` is importable.
-Set-Location (Join-Path $repoRoot "backend")
-uv run python -m app.tools.reimport_all
+Push-Location (Join-Path $repoRoot "backend")
+try {
+    while ($true) {
+        uv run python -m app.tools.import_queue
+        Write-Host "Next run in $IntervalSeconds seconds. Ctrl-C to stop."
+        Start-Sleep -Seconds $IntervalSeconds
+    }
+}
+finally {
+    Pop-Location
+}

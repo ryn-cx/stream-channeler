@@ -40,7 +40,6 @@ import {
 const formSchema = z.object({
   year: optionalInt,
   canonical_show_validated_at: optionalString,
-  canonical_show_note: optionalString,
   deleted_at: optionalString,
   extra: optionalString,
   key: requiredKey,
@@ -84,7 +83,6 @@ const EditShow = ({ show, size, open, onOpenChange }: EditShowProps) => {
       year: show.year == null ? "" : String(show.year),
       canonical_show_validated_at:
         show.canonical_show_validated_at?.slice(0, 16) ?? "",
-      canonical_show_note: show.canonical_show_note ?? "",
       deleted_at: show.deleted_at?.slice(0, 16) ?? "",
       extra: extraText(show.extra),
       key: show.key ?? "",
@@ -223,11 +221,6 @@ const EditShow = ({ show, size, open, onOpenChange }: EditShowProps) => {
             />
             <FormTextField control={form.control} label="Key" type="text" />
             <FormTextField control={form.control} label="Year" type="number" />
-            <FormTextField
-              control={form.control}
-              label="Canonical Show Note"
-              type="text"
-            />
             <FormTextField
               control={form.control}
               label="Canonical Show Validated At"

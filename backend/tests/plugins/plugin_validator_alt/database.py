@@ -4,13 +4,12 @@
 import json
 from collections.abc import Generator
 from contextlib import contextmanager
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
 import pytest
-from freezegun import freeze_time
 from loguru import logger
 from sqlalchemy import Connection
 from sqlalchemy.orm import selectinload
@@ -28,48 +27,19 @@ from plugins.utils.abstract_plugin import URLImportResult
 from plugins.utils.base_plugin import BaseFile, BasePlugin
 from plugins.utils.manage_plugins import import_plugins, plugins
 from tests.conftest import init_db, savepoint_session, test_engine
-from tests.plugins.plugin_validator_v2.stored_files import (
+from tests.plugins.frozen_clock import frozen_clock
+from tests.plugins.plugin_validator_alt.stored_files import (
+    IMPORT_TIME,
+    UPDATE_TIME,
+    date_at_import_time,
     stored_file_record,
     stored_path,
 )
 
-IMPORT_TIME = datetime(2026, 1, 1, tzinfo=UTC)
-"""When every import is taken to have happened, and every file arrived."""
-
-UPDATE_TIME = datetime(2026, 1, 2, tzinfo=UTC)
-"""When every update is taken to have happened, the day after the import."""
-
-
-# TODO: Validate
-def date_at_import_time(record: File) -> None:
-    """Date `record` as though it had been downloaded at `IMPORT_TIME`.
-
-    A stored file is dated by when it was really downloaded, which is whenever
-    the store was last topped up and never the same twice, and everything a
-    plugin works out from a file is dated from the file. Reading every file as
-    though it arrived at the moment the test is frozen to is what leaves the
-    records built from it the same on every run.
-
-    It is also what keeps a plugin doing what it does in production. A file left
-    at the day it was really downloaded is a file the frozen clock is years past,
-    so every record read out of it is due a refresh the moment it is written, and
-    an import ends up walking the paths that only a stale record reaches.
-
-    How long the file was good for is carried over as the gap it was stored with,
-    so a file is still refreshed when the plugin says it should be rather than
-    being made to look fresh forever. The gap survives the shift, which leaves
-    dating a record that has already been dated a no-op.
-    """
-    refresh_gap = record.update_at - record.data_timestamp if record.update_at else None
-    record.created_at = IMPORT_TIME
-    record.modified_at = IMPORT_TIME
-    record.data_timestamp = IMPORT_TIME
-    record.update_at = IMPORT_TIME + refresh_gap if refresh_gap else None
-
 
 # TODO: Validate
 @contextmanager
-def date_downloads_at_import_time() -> Generator[None]:
+def date_downloads_at_import_time(import_time: datetime) -> Generator[None]:
     """Date every file served during the run at `IMPORT_TIME`.
 
     Wrapped around whatever is already serving downloads rather than replacing
@@ -86,7 +56,7 @@ def date_downloads_at_import_time() -> Generator[None]:
         served_download_if_outdated(self, update_at)
         record = self._existing_database_record
         if record is not None:
-            date_at_import_time(record)
+            date_at_import_time(record, import_time)
 
     with patch.object(BaseFile, "download_if_outdated", _download_if_outdated):
         yield
@@ -120,6 +90,8 @@ class DatabaseMixinAlt[PluginT: BasePlugin]:
 
     plugin_class: type[PluginT]
     urls: tuple[str, ...] = ()
+    import_time: datetime = IMPORT_TIME
+    update_time: datetime = UPDATE_TIME
     invalid_url: bool = False
     imported_plugin: PluginT
 
@@ -401,7 +373,7 @@ class DatabaseMixinAlt[PluginT: BasePlugin]:
             if file_key in existing_keys[plugin_key]:
                 continue
             record = stored_file_record(plugin_key, file_key, path)
-            date_at_import_time(record)
+            date_at_import_time(record, self.import_time)
             plugin_records[plugin_key].files.append(record)
             existing_keys[plugin_key].add(file_key)
 
@@ -441,8 +413,8 @@ class DatabaseMixinAlt[PluginT: BasePlugin]:
                     bind=connection,
                     join_transaction_mode="create_savepoint",
                 ) as session,
-                freeze_time(IMPORT_TIME),
-                date_downloads_at_import_time(),
+                frozen_clock(self.import_time),
+                date_downloads_at_import_time(self.import_time),
             ):
                 init_db(session)
                 self._import_files(session)
@@ -463,5 +435,5 @@ class DatabaseMixinAlt[PluginT: BasePlugin]:
         of the test; the import runs inside the per-test savepoint and rolls back with
         it, so each test owns its own initialized plugin without any shared URL fixture.
         """
-        with date_downloads_at_import_time():
+        with date_downloads_at_import_time(self.import_time):
             yield from savepoint_session(_connection_with_files, nested=True)

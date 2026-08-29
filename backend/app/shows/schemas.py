@@ -211,6 +211,7 @@ class UnvalidatedLinkedShowOutput(BaseModel):
     url: str | None
     image_url: str | None
     tmdb_id: int | None
+    note: str | None
 
 
 # TODO: Validate

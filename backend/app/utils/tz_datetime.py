@@ -30,6 +30,11 @@ def now(*args: Any, **kwargs: Any) -> datetime:  # noqa: ANN401
 
 
 # TODO: Validate
+def current_time() -> datetime:
+    return now()
+
+
+# TODO: Validate
 @copy_func_params(datetime.strptime)
 def strptime(*args: Any, **kwargs: Any) -> datetime:  # noqa: ANN401
     """Construct a timezone-aware datetime from a string and format."""

@@ -135,13 +135,6 @@ export const showColumns: ColumnDef<ShowTableData>[] = [
     ),
   },
   {
-    accessorKey: "canonical_show_note",
-    header: "Link Note",
-    cell: ({ row }) => (
-      <TruncatedCell value={row.original.canonical_show_note} />
-    ),
-  },
-  {
     accessorKey: "extra",
     header: "Extra",
     cell: ({ row }) => <TruncatedCell value={extraText(row.original.extra)} />,

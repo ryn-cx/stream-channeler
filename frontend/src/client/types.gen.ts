@@ -1240,7 +1240,6 @@ export type ShowCreate = {
     thumbnail_url?: (string | null);
     year?: (number | null);
     canonical_show_validated_at?: (string | null);
-    canonical_show_note?: (string | null);
 };
 
 export type ShowImportUrlInput = {
@@ -1289,7 +1288,6 @@ export type ShowListPublic = {
     thumbnail_url?: (string | null);
     year?: (number | null);
     canonical_show_validated_at?: (string | null);
-    canonical_show_note?: (string | null);
     source_id: string;
     id: string;
     canonical_show_id?: (string | null);
@@ -1320,7 +1318,6 @@ export type ShowPublic = {
     thumbnail_url?: (string | null);
     year?: (number | null);
     canonical_show_validated_at?: (string | null);
-    canonical_show_note?: (string | null);
     source_id: string;
     id: string;
     canonical_show_id?: (string | null);
@@ -1363,7 +1360,6 @@ export type ShowUpdate = {
     thumbnail_url?: (string | null);
     year?: (number | null);
     canonical_show_validated_at?: (string | null);
-    canonical_show_note?: (string | null);
 };
 
 export type SortKeyInput = {
@@ -1600,6 +1596,7 @@ export type UnvalidatedLinkedShowOutput = {
     url: (string | null);
     image_url: (string | null);
     tmdb_id: (number | null);
+    note: (string | null);
 };
 
 /**
@@ -1626,7 +1623,6 @@ export type UnvalidatedShowOutput = {
     thumbnail_url?: (string | null);
     year?: (number | null);
     canonical_show_validated_at?: (string | null);
-    canonical_show_note?: (string | null);
     source_id: string;
     id: string;
     canonical_show_id?: (string | null);
@@ -1974,7 +1970,6 @@ export type WhitelistShowOutput = {
     thumbnail_url?: (string | null);
     year?: (number | null);
     canonical_show_validated_at?: (string | null);
-    canonical_show_note?: (string | null);
     source_id: string;
     id: string;
     canonical_show_id?: (string | null);

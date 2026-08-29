@@ -156,8 +156,9 @@ def import_non_canonical_show_from_url(
         if link.show.key not in imported_keys:
             continue
         link.show.canonical_show_validated_at = tz_datetime.now()
-        link.show.canonical_show_note = f"{MANUAL_NOTE_PREFIX}Selection"
+        link.note = f"{MANUAL_NOTE_PREFIX}Selection"
         session.add(link.show)
+        session.add(link)
         EpisodeLinker(session, link.show).link_show()
 
     session.commit()
@@ -191,10 +192,6 @@ def unset_canonical_show(
     # episodes below are settled against.
     session.expire(show, ["canonical_show_links", "is_canonical"])
 
-    if not show.canonical_show_links:
-        show.canonical_show_note = None
-        session.add(show)
-
     _unlink_unlisted_episodes(session, show)
     EpisodeLinker(session, show).link_show()
     session.commit()
@@ -217,7 +214,6 @@ def canonicalize_show(session: Session, show: Show) -> Show:
 
     _unlink_unlisted_episodes(session, show)
     show.canonical_show_validated_at = tz_datetime.now()
-    show.canonical_show_note = f"{MANUAL_NOTE_PREFIX}Canonicalized"
     session.add(show)
     session.commit()
     session.refresh(show)
@@ -529,14 +525,15 @@ def list_unvalidated_shows(session: Session, limit: int) -> list[UnvalidatedShow
             created_at=show.created_at,
             linked_shows=[
                 UnvalidatedLinkedShowOutput(
-                    id=linked.id,
-                    name=linked.name,
-                    year=linked.year,
-                    url=linked.url,
-                    image_url=linked.image_url,
-                    tmdb_id=tmdb_id_of(linked.key, SHOW_LEVEL),
+                    id=link.canonical_show.id,
+                    name=link.canonical_show.name,
+                    year=link.canonical_show.year,
+                    url=link.canonical_show.url,
+                    image_url=link.canonical_show.image_url,
+                    tmdb_id=tmdb_id_of(link.canonical_show.key, SHOW_LEVEL),
+                    note=link.note,
                 )
-                for linked in show.canonical_shows
+                for link in show.canonical_show_links
             ],
         )
         for show in shows

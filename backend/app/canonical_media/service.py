@@ -242,10 +242,10 @@ def add_canonical_show(
             break
 
     if existing_canonical_show is None:
-        show.canonical_show_note = note
         existing_canonical_show = ShowCanonicalShow(
             show=show,
             canonical_show=canonical_show,
+            note=note,
         )
         session.add(existing_canonical_show)
 

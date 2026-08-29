@@ -4,21 +4,22 @@
 from datetime import timedelta
 from typing import override
 
-from freezegun import freeze_time
 from sqlmodel import Session
 
 from app.shows.models import Show
 from plugins.TMDB import TMDB
 from plugins.Tubi import Tubi
+from tests.plugins.frozen_clock import frozen_clock
 from tests.plugins.plugin_validator_alt import (
     PluginValidatorAlt,
     UpdatePluginTestsAlt,
     UpdateTestsAlt,
     URLTestsAlt,
 )
-from tests.plugins.plugin_validator_alt.database import IMPORT_TIME, UPDATE_TIME
 from tests.plugins.plugin_validator_alt.log_stats import log_stats
-from tests.plugins.plugin_validator_v2.stored_files import mock_update
+from tests.plugins.plugin_validator_alt.stored_files import (
+    mock_update,
+)
 
 SEPARATOR = "/"
 """What separates the keys naming where an episode sits."""
@@ -168,7 +169,7 @@ class TestSupermanRelinkedTubi(TMDBValidatorAlt):
         session_with_files.flush()
         session_with_files.expire_all()
 
-        with freeze_time(IMPORT_TIME):
+        with frozen_clock(self.import_time):
             Tubi(session_with_files).import_url(self.relinked_url, tmdb_show)
         session_with_files.flush()
         session_with_files.expire_all()
@@ -176,7 +177,7 @@ class TestSupermanRelinkedTubi(TMDBValidatorAlt):
         relinked_keys = {show.key for show in self.shows_of(session_with_files, "Tubi")}
         assert relinked_keys == {"300001134"}
 
-        with log_stats(self), freeze_time(UPDATE_TIME), mock_update():
+        with log_stats(self), frozen_clock(self.update_time), mock_update():
             assert tmdb_show.data_timestamp
             tmdb_show.update_at = tmdb_show.data_timestamp + timedelta(seconds=1)
             TMDB(session_with_files).update_show(tmdb_show, force=True)

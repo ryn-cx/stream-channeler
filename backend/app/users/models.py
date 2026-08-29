@@ -44,7 +44,7 @@ class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
     created_at: datetime | None = Field(
-        default_factory=tz_datetime.now,
+        default_factory=tz_datetime.current_time,
         sa_type=DateTime(timezone=True),  # type: ignore[call-overload]
     )
     channels: list[Channel] = Relationship(back_populates="user", cascade_delete=True)

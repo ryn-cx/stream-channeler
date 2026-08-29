@@ -1,5 +1,4 @@
 # TODO: Validate
-from freezegun import freeze_time
 from sqlmodel import Session, select
 
 from app.canonical_media.keys import is_tmdb_key
@@ -13,9 +12,11 @@ from app.watches.schemas import WatchCreate
 from app.watches.services import create_watch
 from plugins.Crunchyroll import Crunchyroll
 from plugins.TMDB.episode_groups import dump_extra
+from tests.plugins.frozen_clock import frozen_clock
 from tests.plugins.plugin_validator_alt import PluginValidatorAlt, StandardTestsAlt
-from tests.plugins.plugin_validator_alt.database import IMPORT_TIME, UPDATE_TIME
-from tests.plugins.plugin_validator_v2.stored_files import mock_update
+from tests.plugins.plugin_validator_alt.stored_files import (
+    mock_update,
+)
 
 
 # TODO: Validate
@@ -110,7 +111,7 @@ class TestSwappingEpisodeGroup(StandardTestsAlt[Crunchyroll], CrunchyrollValidat
         """
         self.import_url(session_with_files)
         tmdb_show = self.tmdb_show(session_with_files)
-        with freeze_time(UPDATE_TIME), mock_update():
+        with frozen_clock(self.update_time), mock_update():
             update_show_extra(
                 session_with_files,
                 tmdb_show,
@@ -213,7 +214,7 @@ class TestEpisodeGroupNameMatching(
             episode.canonical_episode_note = None
         session_with_files.flush()
 
-        with freeze_time(UPDATE_TIME), mock_update():
+        with frozen_clock(self.update_time), mock_update():
             self.plugin_class(session_with_files).update_show(show, force=True)
             session_with_files.flush()
 
@@ -252,7 +253,7 @@ class TestEpisodeGroupNameMatching(
         assert canonical.name == episode_name
         assert canonical.episode_number == episode_number
 
-        with freeze_time(IMPORT_TIME):
+        with frozen_clock(self.import_time):
             create_watch(
                 session_with_files,
                 user.id,
@@ -261,7 +262,7 @@ class TestEpisodeGroupNameMatching(
             )
 
         tmdb_show = self.tmdb_show(session_with_files)
-        with freeze_time(UPDATE_TIME), mock_update():
+        with frozen_clock(self.update_time), mock_update():
             update_show_episode_group(
                 session_with_files,
                 tmdb_show,

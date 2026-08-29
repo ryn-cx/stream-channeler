@@ -16,9 +16,9 @@ import os
 from datetime import datetime, timedelta
 
 import pytest
-from freezegun import freeze_time
 from sqlmodel import Session
 
+from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -30,14 +30,11 @@ from plugins.utils.abstract_plugin import (
     URLImportResult,
 )
 from plugins.utils.base_plugin import BasePlugin
-from tests.plugins.plugin_validator_alt.database import (
-    IMPORT_TIME,
-    UPDATE_TIME,
-    DatabaseMixinAlt,
-)
+from tests.plugins.frozen_clock import frozen_clock
+from tests.plugins.plugin_validator_alt.database import DatabaseMixinAlt
 from tests.plugins.plugin_validator_alt.log_stats import log_stats
 from tests.plugins.plugin_validator_alt.state import database_json, state_diff
-from tests.plugins.plugin_validator_v2.stored_files import (
+from tests.plugins.plugin_validator_alt.stored_files import (
     encode_name,
     mock_update,
 )
@@ -140,7 +137,7 @@ class PluginValidatorAlt[PluginT: BasePlugin](DatabaseMixinAlt[PluginT]):
         force: bool = False,
     ) -> list[URLImportResult]:
         """Import the test's URL as of `IMPORT_TIME`."""
-        with freeze_time(IMPORT_TIME):
+        with frozen_clock(self.import_time):
             return self._import_url(session, url, force=force)
 
     # TODO: Validate
@@ -150,7 +147,7 @@ class PluginValidatorAlt[PluginT: BasePlugin](DatabaseMixinAlt[PluginT]):
         entity: Plugin | Source | Show | Season | Episode,
     ) -> None:
         """Update `entity` as of `UPDATE_TIME`."""
-        with freeze_time(UPDATE_TIME), mock_update():
+        with frozen_clock(self.update_time), mock_update():
             self._update(session, entity)
             session.flush()
 
@@ -217,6 +214,44 @@ class PluginValidatorAlt[PluginT: BasePlugin](DatabaseMixinAlt[PluginT]):
         ]
 
     # TODO: Validate
+    def plugin_sources(self, session: Session) -> list[Source]:
+        return [
+            source
+            for source in sorted(
+                self.select_plugin_with_children(session).sources,
+                key=lambda source: source.key,
+            )
+            if source.deleted_at is None
+        ]
+
+    # TODO: Validate
+    def plugin_shows(self, session: Session) -> list[Show]:
+        return [
+            show
+            for source in self.plugin_sources(session)
+            for show in sorted(source.shows, key=lambda show: show.key)
+            if show.deleted_at is None
+        ]
+
+    # TODO: Validate
+    def plugin_seasons(self, session: Session) -> list[Season]:
+        return [
+            season
+            for show in self.plugin_shows(session)
+            for season in sorted(show.seasons, key=lambda season: season.key)
+            if season.deleted_at is None
+        ]
+
+    # TODO: Validate
+    def plugin_episodes(self, session: Session) -> list[Episode]:
+        return [
+            episode
+            for season in self.plugin_seasons(session)
+            for episode in sorted(season.episodes, key=lambda episode: episode.key)
+            if episode.deleted_at is None
+        ]
+
+    # TODO: Validate
     def selected_source(self, session: Session) -> Source:
         """Return the source a test that works on one takes.
 
@@ -224,22 +259,22 @@ class PluginValidatorAlt[PluginT: BasePlugin](DatabaseMixinAlt[PluginT]):
         against a recorded dump cannot do, so the one the class names is taken
         instead and the first is what it names unless it says otherwise.
         """
-        return self.all_sources(session)[self.source_index]
+        return self.plugin_sources(session)[self.source_index]
 
     # TODO: Validate
     def selected_show(self, session: Session) -> Show:
         """Return the show a test that works on one takes."""
-        return self.all_shows(session)[self.show_index]
+        return self.plugin_shows(session)[self.show_index]
 
     # TODO: Validate
     def selected_season(self, session: Session) -> Season:
         """Return the season a test that works on one takes."""
-        return self.all_seasons(session)[self.season_index]
+        return self.plugin_seasons(session)[self.season_index]
 
     # TODO: Validate
     def selected_episode(self, session: Session) -> Episode:
         """Return the episode a test that works on one takes."""
-        return self.all_episodes(session)[self.episode_index]
+        return self.plugin_episodes(session)[self.episode_index]
 
     # TODO: Validate
     def fake_season(self, show: Show) -> Season:
@@ -275,6 +310,10 @@ class PluginValidatorAlt[PluginT: BasePlugin](DatabaseMixinAlt[PluginT]):
             duration=1,
             season_id=season.id,
             plugin_key=season.show.source.plugin.key,
+            watch_identifier=watch_identifier(
+                season.show.source.plugin.key,
+                FAKE_EPISODE_KEY,
+            ),
             data_timestamp=tz_datetime.now(),
             deleted_at=tz_datetime.now(),
         )
@@ -441,8 +480,8 @@ class UpdateSourceTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
 
         self.import_url(session_with_files)
         source = self.selected_source(session_with_files)
-        timestamp = UPDATE_TIME + timedelta(minutes=1)
-        with freeze_time(UPDATE_TIME):
+        timestamp = self.update_time + timedelta(minutes=1)
+        with frozen_clock(self.update_time):
             self._create_source_update_entry(self.imported_plugin, source, timestamp)
             # Seed update_at later than the pending air_date so set_update_at
             # overwrites it with the earlier value.
@@ -502,7 +541,7 @@ class DeletedEpisodeTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
         self.import_url(session_with_files)
         season = self.selected_season(session_with_files)
 
-        with freeze_time(UPDATE_TIME):
+        with frozen_clock(self.update_time):
             fake_episode = self.fake_episode(season)
             season.episodes.append(fake_episode)
             fake_episode.soft_undelete()
@@ -514,8 +553,10 @@ class DeletedEpisodeTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
         # stamped when it reaches the database and not when it was worked out,
         # and a row left to be flushed by the comparison is a row stamped by the
         # clock the machine happened to be at.
-        with log_stats(self), freeze_time(UPDATE_TIME):
-            self.plugin_class(session_with_files).update_season(season=season)
+        with log_stats(self), frozen_clock(self.update_time):
+            self.owning_plugin(session_with_files, season).update_season(
+                season=season,
+            )
             session_with_files.flush()
 
         self.assert_state(session_with_files, "deleted_episode")
@@ -530,14 +571,14 @@ class DeletedSeasonTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
         self.import_url(session_with_files)
         show = self.selected_show(session_with_files)
 
-        with freeze_time(UPDATE_TIME):
+        with frozen_clock(self.update_time):
             fake_season = self.fake_season(show)
             show.seasons.append(fake_season)
             fake_season.soft_undelete()
             session_with_files.flush()
 
-        with log_stats(self), freeze_time(UPDATE_TIME):
-            self.plugin_class(session_with_files).update_show(show=show)
+        with log_stats(self), frozen_clock(self.update_time):
+            self.owning_plugin(session_with_files, show).update_show(show=show)
             session_with_files.flush()
 
         self.assert_state(session_with_files, "deleted_season")
@@ -555,14 +596,14 @@ class DeletedEpisodeUpdateShowTestsAlt[PluginT: BasePlugin](
         season = self.selected_season(session_with_files)
         show = season.show
 
-        with freeze_time(UPDATE_TIME):
+        with frozen_clock(self.update_time):
             fake_episode = self.fake_episode(season)
             season.episodes.append(fake_episode)
             fake_episode.soft_undelete()
             session_with_files.flush()
 
-        with log_stats(self), freeze_time(UPDATE_TIME):
-            self.plugin_class(session_with_files).update_show(show=show)
+        with log_stats(self), frozen_clock(self.update_time):
+            self.owning_plugin(session_with_files, show).update_show(show=show)
             session_with_files.flush()
 
         self.assert_state(session_with_files, "deleted_episode_update_show")
@@ -579,15 +620,15 @@ class DeletedSeasonWithEpisodeTestsAlt[PluginT: BasePlugin](
         self.import_url(session_with_files)
         show = self.selected_show(session_with_files)
 
-        with freeze_time(UPDATE_TIME):
+        with frozen_clock(self.update_time):
             fake_season = self.fake_season(show)
             show.seasons.append(fake_season)
             fake_season.episodes.append(self.fake_episode(fake_season))
             fake_season.soft_undelete()
             session_with_files.flush()
 
-        with log_stats(self), freeze_time(UPDATE_TIME):
-            self.plugin_class(session_with_files).update_show(show=show)
+        with log_stats(self), frozen_clock(self.update_time):
+            self.owning_plugin(session_with_files, show).update_show(show=show)
             session_with_files.flush()
 
         self.assert_state(session_with_files, "deleted_season_with_episode")

@@ -136,8 +136,8 @@ class ImportURLMixin(
         for link in show.non_canonical_shows:
             if link.show_id in noted:
                 continue
-            link.show.canonical_show_note = note
-            self.session.add(link.show)
+            link.note = note
+            self.session.add(link)
             noted.add(link.show_id)
 
     # TODO: Validate

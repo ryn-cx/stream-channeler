@@ -71,6 +71,9 @@ export const unvalidatedShowColumns: ColumnDef<UnvalidatedShowOutput>[] = [
               ) : (
                 (linked.name ?? "Unnamed")
               )}
+              {linked.note ? (
+                <span className="text-muted-foreground"> — {linked.note}</span>
+              ) : null}
             </span>
           ))}
         </div>

@@ -61,7 +61,6 @@ class BaseShow(BaseCanonicalShow):
     """Base model for a `Show`."""
 
     canonical_show_validated_at: datetime | None = DateTimeField(default=None)
-    canonical_show_note: str | None = Field(default=None)
 
 
 # TODO: Validate
@@ -312,6 +311,7 @@ class BaseShowCanonicalShow(SQLModel):
         foreign_key="show.id",
         ondelete="CASCADE",
     )
+    note: str | None = Field(default=None)
 
 
 # TODO: Validate
