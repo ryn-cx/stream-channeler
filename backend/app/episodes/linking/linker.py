@@ -1,6 +1,7 @@
 # TODO: Validate
 
 from collections.abc import Callable, Collection, Hashable, Iterable, Sequence
+from itertools import pairwise
 
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import instance_state, set_committed_value
@@ -251,6 +252,34 @@ class EpisodeLinker:
         return ranked[0]
 
     # TODO: Validate
+    @staticmethod
+    def _contained_spans(
+        own_name: str,
+        candidates: list[tuple[Episode, str]],
+    ) -> dict[Episode, tuple[int, int]]:
+        around: dict[Episode, list[tuple[int, int]]] = {}
+        within: set[Episode] = set()
+        for tmdb_episode, name in candidates:
+            if contains_name(own_name, name):
+                start = own_name.find(name)
+                around.setdefault(tmdb_episode, []).append((start, start + len(name)))
+            elif contains_name(name, own_name):
+                within.add(tmdb_episode)
+
+        spans = {
+            tmdb_episode: max(found, key=lambda span: span[1] - span[0])
+            for tmdb_episode, found in around.items()
+        }
+        for tmdb_episode in within:
+            spans.setdefault(tmdb_episode, (0, len(own_name)))
+        return spans
+
+    # TODO: Validate
+    @staticmethod
+    def _spans_overlap(spans: Collection[tuple[int, int]]) -> bool:
+        return any(later[0] < earlier[1] for earlier, later in pairwise(sorted(spans)))
+
+    # TODO: Validate
     def _by_contained_name(
         self,
         note: str,
@@ -271,20 +300,11 @@ class EpisodeLinker:
                 if not own_name:
                     continue
 
-                within = {
-                    tmdb_episode
-                    for tmdb_episode, name in candidates
-                    if contains_name(name, own_name)
-                }
-                around = {
-                    tmdb_episode
-                    for tmdb_episode, name in candidates
-                    if contains_name(own_name, name)
-                }
-                matched = within if len(within) == 1 else around
-                if len(matched) != 1:
+                spans = self._contained_spans(own_name, candidates)
+                if not spans or self._spans_overlap(spans.values()):
                     continue
-                self._claim(episode, next(iter(matched)), note)
+                for tmdb_episode in spans:
+                    self._claim(episode, tmdb_episode, note)
             return self._unlinked(episodes)
 
         return step
