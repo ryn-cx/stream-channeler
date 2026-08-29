@@ -4,7 +4,7 @@
 from contextlib import AbstractContextManager
 from typing import TYPE_CHECKING, Any
 
-from tests.old_mess.plugins.plugin_validator.log_stats import (
+from tests.plugins.plugin_validator_v2.log_stats import (
     log_stats as _log_stats,
 )
 

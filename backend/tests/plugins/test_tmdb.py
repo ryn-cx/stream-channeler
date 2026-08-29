@@ -10,7 +10,6 @@ from sqlmodel import Session
 from app.shows.models import Show
 from plugins.TMDB import TMDB
 from plugins.Tubi import Tubi
-from tests.old_mess.plugins.plugin_validator.context_managers import mock_update
 from tests.plugins.plugin_validator_alt import (
     PluginValidatorAlt,
     UpdatePluginTestsAlt,
@@ -19,6 +18,7 @@ from tests.plugins.plugin_validator_alt import (
 )
 from tests.plugins.plugin_validator_alt.database import IMPORT_TIME, UPDATE_TIME
 from tests.plugins.plugin_validator_alt.log_stats import log_stats
+from tests.plugins.plugin_validator_v2.stored_files import mock_update
 
 SEPARATOR = "/"
 """What separates the keys naming where an episode sits."""

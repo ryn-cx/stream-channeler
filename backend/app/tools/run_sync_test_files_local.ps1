@@ -44,7 +44,7 @@ $env:POSTGRES_PORT = $databasePort
 
 Push-Location (Join-Path $repoRoot "backend")
 try {
-    uv run python -m app.tools.sync_test_files
+    uv run python -m tests.plugins.sync_test_files
 }
 finally {
     Pop-Location

@@ -7,3 +7,5 @@ app.egg-info
 htmlcov
 .cache
 .venv
+
+/tests/plugins/_files/

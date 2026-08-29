@@ -89,6 +89,28 @@ def stored_metadata_path(owner_key: str, file_key: str) -> Path:
 
 
 # TODO: Validate
+def decode_name(segment: str) -> str:
+    """Return the part of a key that `encode_name` built `segment` from."""
+    characters: list[str] = []
+    index = 0
+    while index < len(segment):
+        if segment[index] != ESCAPE_PREFIX:
+            characters.append(segment[index])
+            index += 1
+            continue
+        characters.append(chr(int(segment[index + 1 : index + 3], 16)))
+        index += 3
+    return "".join(characters)
+
+
+# TODO: Validate
+def stored_key(path: Path) -> tuple[str, str]:
+    """Return the owning plugin and file key that `path` was stored for."""
+    owner, *rest = path.relative_to(ALL_TEST_FILES_FOLDER).parts
+    return decode_name(owner), "/".join(decode_name(part) for part in rest)
+
+
+# TODO: Validate
 def stored_file_path(file: BaseFile[Any]) -> Path:
     """Return where `file` is kept among the stored test files."""
     return stored_path(_owner_key(file), file.file_key())

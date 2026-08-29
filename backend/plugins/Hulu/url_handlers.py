@@ -29,6 +29,11 @@ class HuluURLHandler(MediaTypeURLHandler["Hulu"]):
 
     # TODO: Validate
     @property
+    def key(self) -> str:
+        return self._key
+
+    # TODO: Validate
+    @property
     @override
     def show_key(self) -> str:
         return self._key
@@ -66,6 +71,12 @@ class WatchURLHandler(HuluURLHandler):
     # A watch URL points at a single episode, so the series it belongs to has to be
     # looked up before the show can be imported.
     _URL_REGEX = rf"\/watch\/(?P<episode_id>{UUID_REGEX})"
+
+    # TODO: Validate
+    def is_episode(self) -> bool:
+        episode_hub = self.plugin.episode_hub_file(self._key)
+        episode_hub.download_if_outdated()
+        return bool(episode_hub.database_record.content)
 
     # TODO: Validate
     @property

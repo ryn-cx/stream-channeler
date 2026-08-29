@@ -30,10 +30,6 @@ from plugins.utils.abstract_plugin import (
     URLImportResult,
 )
 from plugins.utils.base_plugin import BasePlugin
-from tests.old_mess.plugins.plugin_validator.context_managers import (
-    encode_name,
-    mock_update,
-)
 from tests.plugins.plugin_validator_alt.database import (
     IMPORT_TIME,
     UPDATE_TIME,
@@ -41,6 +37,10 @@ from tests.plugins.plugin_validator_alt.database import (
 )
 from tests.plugins.plugin_validator_alt.log_stats import log_stats
 from tests.plugins.plugin_validator_alt.state import database_json, state_diff
+from tests.plugins.plugin_validator_v2.stored_files import (
+    encode_name,
+    mock_update,
+)
 
 FAKE_SEASON_KEY = "plugin-validator-alt-fake-season"
 """The key of the season a deletion test adds for the update to soft delete."""

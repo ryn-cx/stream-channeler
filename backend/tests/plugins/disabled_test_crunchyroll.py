@@ -13,9 +13,9 @@ from app.watches.schemas import WatchCreate
 from app.watches.services import create_watch
 from plugins.Crunchyroll import Crunchyroll
 from plugins.TMDB.episode_groups import dump_extra
-from tests.old_mess.plugins.plugin_validator.context_managers import mock_update
 from tests.plugins.plugin_validator_alt import PluginValidatorAlt, StandardTestsAlt
 from tests.plugins.plugin_validator_alt.database import IMPORT_TIME, UPDATE_TIME
+from tests.plugins.plugin_validator_v2.stored_files import mock_update
 
 
 # TODO: Validate

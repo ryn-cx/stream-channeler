@@ -34,6 +34,14 @@ class Hulu(
         return (SeriesURLHandler, MovieURLHandler, WatchURLHandler)
 
     # TODO: Validate
+    @override
+    def get_url_handler(self, url: str) -> HuluURLHandler:
+        handler = super().get_url_handler(url)
+        if isinstance(handler, WatchURLHandler) and not handler.is_episode():
+            return MovieURLHandler(self, url, handler.key)
+        return handler
+
+    # TODO: Validate
     @classmethod
     @override
     def tmdb_provider_names(cls) -> tuple[str, ...]:

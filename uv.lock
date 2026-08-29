@@ -379,7 +379,7 @@ wheels = [
 [[package]]
 name = "chirashi"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/chirashi#6d70f2c8a5ff5121ece1db091852955c07f767e2" }
+source = { git = "https://github.com/ryn-cx/chirashi#86e05fee760617afd3c7ace6a26d1bddff49ec02" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -2035,7 +2035,7 @@ wheels = [
 [[package]]
 name = "tminidb"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/tminidb#1bd423813d30d5f739aff8da52ed2238a74310a8" }
+source = { git = "https://github.com/ryn-cx/tminidb#979917adddaa6449ba8b9a345c3711dd185c5042" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },

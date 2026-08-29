@@ -1,11 +1,5 @@
 # TODO: Validate
-"""Putting the stored files in place and reading back what they built.
-
-The store itself, and everything that serves a download out of it, is the
-existing validator's: `tests.old_mess.plugins.plugin_validator.context_managers`
-is imported rather than copied, so a file downloaded by either validator is the
-same stored file the other one reads.
-"""
+"""Putting the stored files in place and reading back what they built."""
 
 import json
 from collections.abc import Generator
@@ -34,7 +28,7 @@ from plugins.utils.abstract_plugin import URLImportResult
 from plugins.utils.base_plugin import BaseFile, BasePlugin
 from plugins.utils.manage_plugins import import_plugins, plugins
 from tests.conftest import init_db, savepoint_session, test_engine
-from tests.old_mess.plugins.plugin_validator.context_managers import (
+from tests.plugins.plugin_validator_v2.stored_files import (
     stored_file_record,
     stored_path,
 )

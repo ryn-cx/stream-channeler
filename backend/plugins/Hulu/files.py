@@ -5,11 +5,13 @@ import json
 from collections.abc import Sequence
 from datetime import datetime, timedelta
 from functools import cache
+from http import HTTPStatus
 from typing import Any, override
 
 from sqlmodel import Session
 from wholoo import Wholoo
 from wholoo.exceptions import (
+    HTTPError,
     MovieNotFoundError,
     ResourceNotFoundError,
     SeriesNotFoundError,
@@ -140,7 +142,11 @@ class EpisodeHub(EndpointFile[dict[str, Any]]):
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ResourceNotFoundError)
+        if isinstance(error, ResourceNotFoundError):
+            return True
+        return (
+            isinstance(error, HTTPError) and error.status_code == HTTPStatus.BAD_REQUEST
+        )
 
     # TODO: Validate
     def series_id(self) -> str:

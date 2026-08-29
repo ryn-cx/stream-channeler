@@ -179,7 +179,9 @@ class UpsertMixin(HelperMixin, register=False):
                 url=self._episode_url(episode_key),
                 description=item.description,
                 image_url=self._image_url(hero_artwork.path) if hero_artwork else None,
-                thumbnail_url=self._thumbnail_url(hero_artwork.path) if hero_artwork else None,
+                thumbnail_url=self._thumbnail_url(hero_artwork.path)
+                if hero_artwork
+                else None,
                 duration=item.duration,
                 air_date=item.premiere_date,
                 sort_order=sort_order,

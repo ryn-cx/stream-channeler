@@ -9,7 +9,7 @@ from app.database import engine, load_models
 from app.files.models import File
 from app.plugins.models import Plugin
 from plugins.utils.manage_plugins import import_plugins, plugins
-from tests.old_mess.plugins.plugin_validator.context_managers import (
+from tests.plugins.plugin_validator_v2.stored_files import (
     stored_file_record,
     stored_key,
 )
