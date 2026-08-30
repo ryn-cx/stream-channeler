@@ -42,7 +42,7 @@ class UpdateMixin(ImportURLMixin, register=False):
             # efficient to directly update it instead of checking for changes.
             super().update_show(show, force=force)
         else:
-            self._download_and_import_changed_title_files(show.key)
+            self._download_and_import_changed_title_files(show.key, show.update_at)
             self._preload_show(show.id, preload_episodes=True).one()
             self.upsert_show(show.source, show.key, force=force)
         self._import_listed_sources(show.key, show)
@@ -51,11 +51,13 @@ class UpdateMixin(ImportURLMixin, register=False):
     def _download_and_import_changed_title_files(
         self,
         show_key: str,
+        update_at: datetime | None,
     ) -> None:
-        self.show_changes_file(
-            show_key,
-            tz_datetime.now().date(),
-        ).download_if_outdated()
+        if update_at is not None:
+            self.show_changes_file(
+                show_key,
+                tz_datetime.now().date(),
+            ).download_if_outdated()
 
         _cache = self._preload_show_files(show_key)
         for changes_file in self.incomplete_show_changes_files(show_key):
