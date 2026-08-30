@@ -573,7 +573,7 @@ wheels = [
 [[package]]
 name = "diving-board"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/diving-board#db6429f48a45f70058c566971145134f1b874003" }
+source = { git = "https://github.com/ryn-cx/diving-board#a838893b0a296b25a9ba335151822df5a297293a" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },

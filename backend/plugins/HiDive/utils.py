@@ -25,6 +25,14 @@ from plugins.utils.abstract_plugin import PluginShowIdentity
 
 
 # TODO: Validate
+def _tag_text(tag: vod_models.Tag) -> str | None:
+    text = tag.attributes.text
+    if text is None or isinstance(text, str):
+        return text
+    return text.attributes.text
+
+
+# TODO: Validate
 def vod_hero(vod_data: vod_models.VodModel) -> vod_models.Element:
     """Return the hero element of a parsed vod file."""
     return single_element(
@@ -114,7 +122,7 @@ class HelperMixin(FileMixin, register=False):
         """Return the day the title came out, as its hero's tags give it."""
         for content in hero.attributes.content or []:
             for tag in content.attributes.tags or []:
-                text = tag.attributes.text
+                text = _tag_text(tag)
                 if text and text.startswith(RELEASE_DATE_PREFIX):
                     date_string = text.removeprefix(RELEASE_DATE_PREFIX)
                     return datetime.strptime(date_string, "%B %d, %Y").astimezone()
