@@ -402,12 +402,18 @@ class EpisodeLinker:
             and episode.episode_number == tmdb_episode.episode_number
         ):
             return True
+        canonical_absolute = self._absolute_number_of(tmdb_episode)
+        if canonical_absolute is not None and (
+            episode.episode_number == canonical_absolute
+        ):
+            return True
         absolute_number = self._absolute_number_of(episode)
         if absolute_number is None:
             return False
-        return absolute_number == self._absolute_number_of(
-            tmdb_episode,
-        ) or absolute_number in self.facts.alternate_numbers_of(tmdb_episode)
+        return (
+            absolute_number == canonical_absolute
+            or absolute_number in self.facts.alternate_numbers_of(tmdb_episode)
+        )
 
     # TODO: Validate
     def _confident_match(
