@@ -35,7 +35,8 @@ from plugins.utils.abstract_plugin import (
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 from plugins.utils.base_plugin.url import URLHandler
 from plugins.utils.manage_plugins import plugin_for_url
-from plugins.WatchMode import WatchMode
+
+# from plugins.WatchMode import WatchMode  # noqa: ERA001
 
 
 # TODO: Validate
@@ -239,10 +240,11 @@ class ImportURLMixin(
         return True
 
     # TODO: Validate
-    def _listed_source_urls(self, show_key: str) -> list[str]:
+    def _listed_source_urls(self, show_key: str) -> list[str]:  # noqa: ARG002
         """Return every address either lookup gives for the title, without repeats."""
-        media_type, tmdb_id = parse_show_key(show_key)
-        return WatchMode(self.session).source_urls(media_type, tmdb_id)
+        # media_type, tmdb_id = parse_show_key(show_key)  # noqa: ERA001
+        # return WatchMode(self.session).source_urls(media_type, tmdb_id)  # noqa: ERA001
+        return []
 
     # TODO: Validate
     def import_search(
