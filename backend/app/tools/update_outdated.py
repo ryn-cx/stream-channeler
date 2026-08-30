@@ -16,6 +16,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 from app.canonical_media.episodes import canonical_episode_link, links_of
 from app.channels.episode_selector.visibility import channel_access_condition
 from app.channels.models import (
+    Channel,
     ChannelEpisodeFilter,
     ChannelEpisodeSourceFilter,
     ChannelSeasonFilter,
@@ -30,6 +31,8 @@ from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show, ShowCanonicalShow
 from app.sources.models import Source
+from app.users.constants import PLUGIN_USER_EMAIL
+from app.users.models import User
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.manage_plugins import import_plugins, plugins
@@ -45,8 +48,14 @@ MediaClass = type[MediaMixin[Any]]
 
 
 # TODO: Validate
-def _channel_inclusion_clause() -> ColumnElement[bool]:
-    return col(ChannelShow.is_blacklist_only).is_(False) & channel_access_condition()
+def _channel_inclusion_clause(
+    channel_owner: Any,  # noqa: ANN401 - The `User` alias the channel is joined to.
+) -> ColumnElement[bool]:
+    return (
+        col(ChannelShow.is_blacklist_only).is_(False)
+        & channel_access_condition()
+        & (col(channel_owner.email) != PLUGIN_USER_EMAIL)
+    )
 
 
 # TODO: Validate
@@ -71,6 +80,7 @@ def _channel_season_exists(
     canonical_season = aliased(Season)
     copy_show = aliased(Show)
     copy_show_link = aliased(ShowCanonicalShow)
+    channel_owner = aliased(User)
     season_id = func.coalesce(
         col(canonical_episode.season_id),
         col(copy_episode.season_id),
@@ -117,6 +127,8 @@ def _channel_season_exists(
                 col(copy_show.id),
             ),
         )
+        .join(Channel, col(Channel.id) == col(ChannelShow.channel_id))
+        .join(channel_owner, col(Channel.user_id) == col(channel_owner.id))
         .outerjoin(
             ChannelSeasonFilter,
             (col(ChannelSeasonFilter.channel_show_id) == col(ChannelShow.id))
@@ -154,7 +166,7 @@ def _channel_season_exists(
         )
         .where(
             col(copy_episode.season_id) == col(season.id),
-            _channel_inclusion_clause(),
+            _channel_inclusion_clause(channel_owner),
             *conditions,
         )
         .correlate(outer)
@@ -225,7 +237,15 @@ def _any_channel_holds_a_title_exists() -> ColumnElement[bool]:
     other clauses ask. Its rows are what every channel reads a title out of, so
     a channel holding anything at all is a channel its rows are behind.
     """
-    return select(ChannelShow.id).exists()
+    channel_owner = aliased(User)
+    return (
+        select(ChannelShow.id)
+        .select_from(ChannelShow)
+        .join(Channel, col(Channel.id) == col(ChannelShow.channel_id))
+        .join(channel_owner, col(Channel.user_id) == col(channel_owner.id))
+        .where(col(channel_owner.email) != PLUGIN_USER_EMAIL)
+        .exists()
+    )
 
 
 # Media classes are updated in this order per plugin because updating a plugin can mark
