@@ -115,7 +115,7 @@ class UpsertMixin(SourceMixin, register=False):
 
             new_episode = Episode(
                 key=episode_key,
-                name=item.title,
+                name=item.title.removeprefix("EPISODE_NAME - ") if item.title else None,
                 episode_number=int(item.episode_number),
                 url=item.url,
                 description=item.description,
