@@ -48,6 +48,8 @@ from tminidb.tv_series.episode_groups import (
     TvSeriesEpisodeGroups as TvSeriesEpisodeGroupsEndpoint,
 )
 from tminidb.tv_series.episode_groups.models import TvSeriesEpisodeGroupsModel
+from tminidb.tv_series.images import TvSeriesImages as TvSeriesImagesEndpoint
+from tminidb.tv_series.images.models import TvSeriesImagesModel
 from tminidb.tv_series.watch_providers import (
     TvSeriesWatchProviders as TvSeriesWatchProvidersEndpoint,
 )
@@ -126,6 +128,27 @@ class ShowDetail(IntegerEndpointFile[TvSeriesDetailsModel]):
     def _endpoint(self) -> TvSeriesEndpoint:
         return tminidb().tv_series.details
 
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ResourceNotFoundError)
+
+
+# TODO: Validate
+class ShowImages(IntegerEndpointFile[TvSeriesImagesModel]):
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> TvSeriesImagesEndpoint:
+        return tminidb().tv_series.images
+
+    # TODO: Validate
+    @override
+    def _download_file(self) -> str:
+        return self._endpoint().download(
+            int(self.unique_identifier),
+            include_image_language="en,null",
+        )
+
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ResourceNotFoundError)
@@ -515,6 +538,10 @@ class FileMixin(BasePlugin, register=False):
                 ),
             )
         return files
+
+    # TODO: Validate
+    def show_images_file(self, tmdb_id: int) -> ShowImages:
+        return self._file(ShowImages, tmdb_id)
 
     # TODO: Validate
     def episode_groups_file(self, tmdb_id: int) -> EpisodeGroups:

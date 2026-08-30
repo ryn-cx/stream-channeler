@@ -12,6 +12,7 @@ watched on TMDB, so its records are left out wherever media is being chosen to p
 from __future__ import annotations
 
 from datetime import timedelta
+from random import Random
 from typing import override
 
 from app.canonical_media.keys import (
@@ -207,13 +208,17 @@ class UpsertMixin(HelperMixin, register=False):
             ):
                 continue
             data_timestamp = self.episode_data_timestamp(key, season_key, show_key)
+            still_path = episode_source.still_path or self._fallback_backdrop_path(
+                tmdb_id,
+                episode_source.id,
+            )
             new_episode = Episode(
                 key=key,
                 name=episode_source.name,
                 description=episode_source.overview,
                 url=media_url(MediaType.tv, tmdb_id),
-                image_url=still_image_url(episode_source.still_path),
-                thumbnail_url=still_thumbnail_url(episode_source.still_path),
+                image_url=still_image_url(still_path),
+                thumbnail_url=still_thumbnail_url(still_path),
                 duration=duration_seconds(episode_source.runtime),
                 air_date=air_datetime(episode_source.air_date),
                 episode_number=episode_source.number,
@@ -227,6 +232,33 @@ class UpsertMixin(HelperMixin, register=False):
                 season_id=season.id,
             )
             self._upsert_episode_object(new_episode, season, episode, show_key)
+
+    # TODO: Validate
+    def _show_backdrop_paths(self, tmdb_id: int) -> list[str]:
+        cached: dict[int, list[str]] = self.session.info.setdefault(
+            "tmdb_show_backdrop_paths",
+            {},
+        )
+        if tmdb_id not in cached:
+            images_file = self.show_images_file(tmdb_id)
+            images_file.download_if_outdated()
+            cached[tmdb_id] = (
+                [backdrop.file_path for backdrop in images_file.parsed().backdrops]
+                if images_file.database_record.content
+                else []
+            )
+        return cached[tmdb_id]
+
+    # TODO: Validate
+    def _fallback_backdrop_path(
+        self,
+        tmdb_id: int,
+        episode_tmdb_id: int,
+    ) -> str | None:
+        backdrop_paths = self._show_backdrop_paths(tmdb_id)
+        if not backdrop_paths:
+            return None
+        return Random(episode_tmdb_id).choice(backdrop_paths)  # noqa: S311
 
     # TODO: Validate
     def _upsert_movie_show(

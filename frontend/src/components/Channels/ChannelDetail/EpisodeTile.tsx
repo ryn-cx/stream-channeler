@@ -155,7 +155,7 @@ export function EpisodeTile({
   }
 
   const watched = !!episode.watch_date
-  const imageUrl = episode.thumbnail_url || episode.image_url || ""
+  const imageUrl = episode.thumbnail_url || episode.image_url || "/no-image.svg"
 
   const tileMenuItems: ActionMenuItem[] = [
     {
@@ -195,15 +195,13 @@ export function EpisodeTile({
         >
           {/* Thumbnail */}
           <div className="relative aspect-video bg-zinc-900">
-            {imageUrl && (
-              <img
-                referrerPolicy="no-referrer"
-                loading="lazy"
-                src={imageUrl}
-                alt={episode.name ?? ""}
-                className="w-full h-full object-cover"
-              />
-            )}
+            <img
+              referrerPolicy="no-referrer"
+              loading="lazy"
+              src={imageUrl}
+              alt={episode.name ?? ""}
+              className="w-full h-full object-cover"
+            />
 
             {/* Watched progress bar */}
             {watched && (

@@ -1117,17 +1117,36 @@ def _matched_choices(
 
 
 # TODO: Validate
+def _blended_name_scored(
+    episode: Episode,
+    choices: list[TmdbEpisodeChoice],
+) -> list[TmdbEpisodeChoice]:
+    own_name = _episode_text(episode, titles=True)
+    named = [choice for choice in choices if (choice.episode.name or "").strip()]
+    if not own_name or not named:
+        return choices
+
+    matcher = TextMatcher([(choice.episode.name or "").strip() for choice in named])
+    for choice, score in zip(named, matcher.blended_scores(own_name), strict=True):
+        choice.similarity = score
+    return choices
+
+
+# TODO: Validate
 def _named_tmdb_episode_choices(
     session: Session,
     episode: Episode,
     wanted: str,
     limit: int,
 ) -> list[TmdbEpisodeChoice]:
-    choices = _matched_choices(
-        session,
+    choices = _blended_name_scored(
         episode,
-        _named_canonical_episodes(session, wanted, limit),
-        set(episode.season.show.canonical_show_ids),
+        _matched_choices(
+            session,
+            episode,
+            _named_canonical_episodes(session, wanted, limit),
+            set(episode.season.show.canonical_show_ids),
+        ),
     )
     return sorted(choices, key=lambda choice: -choice.similarity)
 

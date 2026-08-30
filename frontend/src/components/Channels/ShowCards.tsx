@@ -272,16 +272,14 @@ export function ShowCards({
                 onClick={() => onSelect?.(showGroup)}
               >
                 <div className="relative aspect-video w-full bg-muted">
-                  {artwork && (
-                    <img
-                      referrerPolicy="no-referrer"
-                      loading="lazy"
-                      decoding="async"
-                      src={artwork}
-                      alt={name}
-                      className="size-full object-cover"
-                    />
-                  )}
+                  <img
+                    referrerPolicy="no-referrer"
+                    loading="lazy"
+                    decoding="async"
+                    src={artwork ?? "/no-image.svg"}
+                    alt={name}
+                    className="size-full object-cover"
+                  />
                   {/* Who the title is catalogued by sits over the artwork, apart
                       from the row of sites it can be watched on. */}
                   {canonicalSource?.favicon_url && (

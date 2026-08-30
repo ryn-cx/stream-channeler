@@ -81,13 +81,26 @@ function heroFacts(
 }
 
 // TODO: Validate
+function sideLinks(side: EpisodeInformationSide) {
+  return [
+    { label: `${side.label} episode`, href: side.episode.url },
+    { label: `${side.label} season`, href: side.season.url },
+    { label: `${side.label} show`, href: side.show.url },
+  ]
+}
+
+// TODO: Validate
 function heroLinks(data: EpisodeInformationOutput, preferSource: boolean) {
-  const links = []
-  if (data.source.episode.url) {
-    links.push({ label: data.source.label, href: data.source.episode.url })
-  }
-  if (!preferSource && data.tmdb?.episode.url) {
-    links.push({ label: data.tmdb.label, href: data.tmdb.episode.url })
+  const sides = [data.source]
+  if (!preferSource && data.tmdb) sides.push(data.tmdb)
+
+  const links: { label: string; href: string }[] = []
+  for (const side of sides) {
+    for (const { label, href } of sideLinks(side)) {
+      if (href && !links.some((link) => link.href === href)) {
+        links.push({ label, href })
+      }
+    }
   }
   return links
 }
