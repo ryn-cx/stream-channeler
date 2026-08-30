@@ -1,6 +1,7 @@
 # TODO: Validate
 """Shared models."""
 
+
 import hashlib
 import uuid
 from abc import ABC, abstractmethod
