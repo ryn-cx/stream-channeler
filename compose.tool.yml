@@ -11,6 +11,8 @@ services:
     networks:
       - main-network
     command: python -m app.tools.${TOOL?Variable not set}
+    volumes:
+      - huggingface-cache:/root/.cache/huggingface
     env_file:
       - .env
     environment:
@@ -40,6 +42,10 @@ services:
       - TMDB_API_READ_TOKEN=${TMDB_API_READ_TOKEN}
       - LOGURU_COLORIZE=YES
       - LOGLEVEL=INFO
+
+volumes:
+  huggingface-cache:
+    name: stream-channeler-huggingface-cache
 
 networks:
   main-network:
