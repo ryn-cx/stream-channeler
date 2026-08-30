@@ -11,6 +11,7 @@ export interface Numbered {
 
 /** Which parts of a record's numbering the other record agrees with. */
 export interface NumberingAgreement {
+  season: boolean
   seasonAndEpisode: boolean
   absolute: boolean
 }
@@ -44,6 +45,7 @@ export function numberingAgreement(
   other: Numbered,
 ): NumberingAgreement {
   return {
+    season: sameNumber(own.season_number, other.season_number),
     seasonAndEpisode: sameSeasonAndEpisode(own, other),
     absolute: sameNumber(own.absolute_number, other.absolute_number),
   }

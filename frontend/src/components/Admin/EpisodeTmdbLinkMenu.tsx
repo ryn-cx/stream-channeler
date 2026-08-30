@@ -1,5 +1,10 @@
 // TODO: Validate
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  type QueryKey,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import { Eye, EyeOff, Search } from "lucide-react"
 import { useState } from "react"
 
@@ -23,6 +28,9 @@ import { useSettleTmdbMatch } from "./tmdbMatchesQuery"
 import { type Numbered, numberingAgreement, numberingOf } from "./tmdbNumbering"
 
 type ChoiceOrder = "sequential" | "similarity" | "other"
+
+/** Every list of choices as it read before one of them was linked. */
+type DroppedChoices = Array<[QueryKey, TmdbEpisodeChoice[] | undefined]>
 
 interface EpisodeTmdbLinkMenuProps {
   episodeId: string
@@ -140,7 +148,7 @@ export function TmdbLinkPicker({
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
   const { settle, restore, reread } = useSettleTmdbMatch()
-  const [order, setOrder] = useState<ChoiceOrder>("similarity")
+  const [order, setOrder] = useState<ChoiceOrder>("sequential")
   // The episodes still going spare are what a title is usually missing, so they
   // are what is offered until the whole title is asked for.
   const [showUsed, setShowUsed] = useState(false)
@@ -156,17 +164,43 @@ export function TmdbLinkPicker({
       }),
   })
 
+  // TODO: Validate
+  const dropChoice = async (canonicalEpisodeId: string) => {
+    const choicesKey = ["admin-tmdb-choices", episodeId]
+    await queryClient.cancelQueries({ queryKey: choicesKey })
+    const previous = queryClient.getQueriesData<TmdbEpisodeChoice[]>({
+      queryKey: choicesKey,
+    })
+    queryClient.setQueriesData<TmdbEpisodeChoice[]>(
+      { queryKey: choicesKey },
+      (offered) =>
+        offered?.filter((choice) => choice.episode.id !== canonicalEpisodeId),
+    )
+    return previous
+  }
+
+  // TODO: Validate
+  const restoreChoices = (previous: DroppedChoices | undefined) => {
+    for (const [queryKey, offered] of previous ?? []) {
+      queryClient.setQueryData(queryKey, offered)
+    }
+  }
+
   const linkMutation = useMutation({
     mutationFn: (canonicalEpisodeId: string) =>
       EpisodesService.adminLinkEpisodeToTmdb({ episodeId, canonicalEpisodeId }),
-    onMutate: () => settle(episodeId),
+    onMutate: async (canonicalEpisodeId: string) => ({
+      matches: await settle(episodeId),
+      choices: await dropChoice(canonicalEpisodeId),
+    }),
     onSuccess: (linked) => {
       showSuccessToast("Episode linked to TMDB")
       queryClient.invalidateQueries({ queryKey: informationQueryKey })
       onLinksChanged?.(linked)
     },
     onError: (error: unknown, _variables, previous) => {
-      restore(previous)
+      restore(previous?.matches)
+      restoreChoices(previous?.choices)
       handleError.call(showErrorToast, error as any)
     },
     onSettled: reread,
@@ -268,8 +302,8 @@ export function TmdbLinkPicker({
           onValueChange={(value) => setOrder(value as ChoiceOrder)}
         >
           <TabsList>
-            <TabsTrigger value="similarity">Closest name</TabsTrigger>
             <TabsTrigger value="sequential">Sequential</TabsTrigger>
+            <TabsTrigger value="similarity">Closest name</TabsTrigger>
             <TabsTrigger value="other">Other Show Name Matches</TabsTrigger>
           </TabsList>
         </Tabs>

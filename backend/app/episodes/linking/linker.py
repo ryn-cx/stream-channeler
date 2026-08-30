@@ -1,5 +1,6 @@
 # TODO: Validate
 
+import uuid
 from collections.abc import Callable, Collection, Hashable, Iterable, Sequence
 
 from sqlalchemy.orm import selectinload
@@ -22,6 +23,7 @@ from app.episodes.name_matching import (
     plaintext,
 )
 from app.episodes.preload import preload_episodes
+from app.episodes.service import absolute_numbers
 from app.episodes.text_matching import TextMatcher
 from app.shows.models import Show
 
@@ -57,6 +59,15 @@ class EpisodeLinker:
             for season in parent.active_children
             for episode in season.active_children
         }
+        self.absolute_numbers: dict[uuid.UUID, int] = {}
+        for parent in (show, *show.canonical_shows):
+            self.absolute_numbers |= absolute_numbers(
+                [
+                    (episode.id, season.season_number, episode.episode_number)
+                    for season in parent.active_children
+                    for episode in season.active_children
+                ],
+            )
         self._load_existing_links(
             [*self.episodes, *self.unnamed_episodes, *self.canonical_episodes],
         )
@@ -378,11 +389,25 @@ class EpisodeLinker:
         return self._by_key(single(key_of), key_of, note)
 
     # TODO: Validate
-    def _orders_of(self, tmdb_episode: Episode) -> set[int]:
-        orders = set(self.facts.alternate_numbers_of(tmdb_episode))
-        if tmdb_episode.episode_number is not None:
-            orders.add(tmdb_episode.episode_number)
-        return orders
+    def _absolute_number_of(self, episode: Episode) -> int | None:
+        return self.absolute_numbers.get(episode.id)
+
+    # TODO: Validate
+    def _numbering_agrees(self, episode: Episode, tmdb_episode: Episode) -> bool:
+        season_number = self._season_number_of(episode)
+        if (
+            season_number is not None
+            and episode.episode_number is not None
+            and season_number == self._season_number_of(tmdb_episode)
+            and episode.episode_number == tmdb_episode.episode_number
+        ):
+            return True
+        absolute_number = self._absolute_number_of(episode)
+        if absolute_number is None:
+            return False
+        return absolute_number == self._absolute_number_of(
+            tmdb_episode,
+        ) or absolute_number in self.facts.alternate_numbers_of(tmdb_episode)
 
     # TODO: Validate
     def _confident_match(
@@ -402,9 +427,7 @@ class EpisodeLinker:
             return None
         if score >= 0.99:  # noqa: PLR2004 - Written the very same way on both sides.
             return ranked[0]
-        if episode.episode_number is None or episode.episode_number not in (
-            self._orders_of(tmdb_episode)
-        ):
+        if not self._numbering_agrees(episode, tmdb_episode):
             return None
         return ranked[0]
 

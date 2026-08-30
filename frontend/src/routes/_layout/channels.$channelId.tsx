@@ -159,11 +159,9 @@ function getEpisodesQueryOptions(
       return episodes
     },
     queryKey: ["episodes", channelId, searchParams],
-    initialData: cached,
-    initialDataUpdatedAt: 0,
     refetchOnWindowFocus: false,
     staleTime: PAGE_CACHE_MILLISECONDS,
-    placeholderData: (previousData: any) => previousData,
+    placeholderData: (previousData: any) => previousData ?? cached,
   }
 }
 

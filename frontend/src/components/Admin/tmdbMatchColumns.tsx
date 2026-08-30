@@ -217,6 +217,7 @@ function MatchSummary({
     counterpart ?? NOTHING_TO_AGREE_WITH,
   )
   const agreement = {
+    season: agreed.season && guaranteed !== "seasonAndEpisode",
     seasonAndEpisode:
       agreed.seasonAndEpisode && guaranteed !== "seasonAndEpisode",
     absolute: agreed.absolute && guaranteed !== "absolute",
@@ -270,7 +271,10 @@ function MatchSummary({
         <Link
           to="/episodes"
           search={{ season_id: record.season_id }}
-          className="min-w-0 hover:underline"
+          className={cn(
+            "min-w-0 hover:underline",
+            agreement.season && agreeingNumber,
+          )}
         >
           Season {record.season_number ?? "?"}
         </Link>
