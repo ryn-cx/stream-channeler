@@ -176,7 +176,6 @@ class UpsertMixin(SourceMixin, register=False):
                 key=show.key,
                 season_number=0,
                 sort_order=0,
-                url=self._title_url(show.key),
                 data_timestamp=self.season_data_timestamp(show.key, show.key),
                 show_id=show.id,
             )

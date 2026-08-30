@@ -135,6 +135,11 @@ class FileMixin(BasePlugin, register=False):
         return (NewVideoEpisodes,)
 
     # TODO: Validate
+    @classmethod
+    def show_url(cls, show_key: str) -> str:
+        return cls.build_url(f"nhkworld/en/shows/{show_key}/")
+
+    # TODO: Validate
     def shows_search_file(self, query: str, offset: int) -> ShowsSearch:
         """Contains one page of results for a search query."""
         return self._file(ShowsSearch, query, offset)

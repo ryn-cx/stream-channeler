@@ -83,6 +83,7 @@ dependencies = [
     { name = "notaplanet" },
     { name = "numpy" },
     { name = "plugi" },
+    { name = "pools-closed" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pwdlib", extra = ["argon2", "bcrypt"] },
     { name = "pydantic" },
@@ -140,6 +141,7 @@ requires-dist = [
     { name = "notaplanet", git = "https://github.com/ryn-cx/notaplanet" },
     { name = "numpy", specifier = ">=2.0" },
     { name = "plugi", git = "https://github.com/ryn-cx/plugi" },
+    { name = "pools-closed", git = "https://github.com/ryn-cx/pools-closed" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.1.13,<4.0.0" },
     { name = "pwdlib", extras = ["argon2", "bcrypt"], specifier = ">=0.3.0" },
     { name = "pydantic", specifier = ">=2.11" },
@@ -1472,6 +1474,15 @@ wheels = [
 name = "plugi"
 version = "0.1.0"
 source = { git = "https://github.com/ryn-cx/plugi#cf2f9ed5a54c778a0e8962e363ca7054e708ee26" }
+dependencies = [
+    { name = "get-around" },
+    { name = "good-ass-pydantic-integrator" },
+]
+
+[[package]]
+name = "pools-closed"
+version = "0.1.0"
+source = { git = "https://github.com/ryn-cx/pools-closed#809e5f902b3c1d75f501fed11d7ba49dd5620809" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },

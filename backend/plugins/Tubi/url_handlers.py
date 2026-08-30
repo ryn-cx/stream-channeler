@@ -85,7 +85,7 @@ class EpisodeURLHandler(TubiURLHandler):
             for episode in season.episodes:
                 if episode.key == self._key:
                     return [
-                        URLImportResult.for_episodes(show, [episode]),
+                        URLImportResult.episode_import_results(show, [episode]),
                     ]
 
         msg = f"Episode {self._key} not found in show {show.key}"

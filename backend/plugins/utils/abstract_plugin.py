@@ -486,13 +486,13 @@ class URLImportResult(BaseModel):
 
     # TODO: Validate
     @classmethod
-    def for_show(cls, show: Show, *, is_whitelist: bool = False) -> URLImportResult:
+    def show_import_results(cls, show: Show, *, is_whitelist: bool = False) -> URLImportResult:
         """Return the result of importing the whole of `show`."""
         return cls(show_key=show.key, is_whitelist=is_whitelist)
 
     # TODO: Validate
     @classmethod
-    def for_seasons(cls, show: Show, seasons: Sequence[Season]) -> URLImportResult:
+    def season_import_results(cls, show: Show, seasons: Sequence[Season]) -> URLImportResult:
         """Return the result of importing only `seasons` of `show`."""
         return cls(
             show_key=show.key,
@@ -502,7 +502,7 @@ class URLImportResult(BaseModel):
 
     # TODO: Validate
     @classmethod
-    def for_episodes(cls, show: Show, episodes: Sequence[Episode]) -> URLImportResult:
+    def episode_import_results(cls, show: Show, episodes: Sequence[Episode]) -> URLImportResult:
         """Return the result of importing only `episodes` of `show`."""
         return cls(
             show_key=show.key,

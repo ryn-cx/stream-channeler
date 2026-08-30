@@ -236,7 +236,6 @@ class UpsertMixin(HelperMixin, register=False):
             new_season = Season(
                 key=show_key,
                 name=video_item.snippet.title,
-                url=self.build_url(f"watch?v={show_key}"),
                 image_url=self._best_thumbnail_url(video_item.snippet.thumbnails),
                 thumbnail_url=self._thumbnail_url(video_item.snippet.thumbnails),
                 data_timestamp=data_timestamp,

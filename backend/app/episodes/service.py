@@ -19,7 +19,7 @@ from typing import Any
 from sqlalchemy import nullslast
 from sqlalchemy.orm import aliased, contains_eager
 from sqlalchemy.sql.expression import ColumnElement
-from sqlmodel import Session, and_, col, func, select
+from sqlmodel import Session, and_, col, func, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.canonical_media.episodes import canonical_episode_link, links_of
@@ -30,6 +30,7 @@ from app.canonical_media.keys import (
     tmdb_key_clause,
 )
 from app.canonical_media.metadata import canonical_episode_of, tmdb_episode_url
+from app.channels.models import Channel, ChannelShow
 from app.episodes.models import (
     Episode,
     EpisodeCanonicalEpisode,
@@ -74,6 +75,7 @@ from app.shows.models import Show, ShowCanonicalShow
 from app.shows.schemas import ShowPublic
 from app.sources.models import Source
 from app.sources.schemas import SourceListPublic
+from app.users.constants import PLUGIN_USER_EMAIL
 from app.users.models import User
 
 # An unnumbered season or episode is ordered after every numbered one.
@@ -367,6 +369,34 @@ def _has_tmdb_title() -> ColumnElement[bool]:
 
 
 # TODO: Validate
+def _in_a_channel() -> ColumnElement[bool]:
+    channel_owner = aliased(User)
+    return (
+        select(ChannelShow.channel_id)
+        .select_from(ChannelShow)
+        .join(Channel, onclause=col(ChannelShow.channel_id) == Channel.id)
+        .join(channel_owner, onclause=col(Channel.user_id) == channel_owner.id)
+        .where(
+            col(ChannelShow.is_blacklist_only).is_(False),
+            col(channel_owner.email) != PLUGIN_USER_EMAIL,
+            or_(
+                col(ChannelShow.canonical_show_id).in_(
+                    select(ShowCanonicalShow.canonical_show_id)
+                    .where(col(ShowCanonicalShow.show_id) == col(Show.id))
+                    .correlate(Show),
+                ),
+                and_(
+                    is_canonical(Show),
+                    col(ChannelShow.canonical_show_id) == col(Show.id),
+                ),
+            ),
+        )
+        .correlate(Show)
+        .exists()
+    )
+
+
+# TODO: Validate
 # Which joined column each sortable name is, since a name a non-canonical row is not
 # sorted by on its own row - the show it is under, the source that carries it - has no
 # column of `Episode` to be read off.
@@ -426,6 +456,7 @@ def _unmatched_base(
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
             col(Show.deleted_at).is_(None),
+            _in_a_channel(),
             *([is_non_canonical(Show)] if non_canonical_shows_only else []),
         )
     )

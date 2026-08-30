@@ -200,7 +200,6 @@ class UpsertMixin(HelperMixin, register=False):
                         MusicCategory.CONCERT: "Concerts",
                         MusicCategory.MUSIC_VIDEO: "Music Videos",
                     }[category],
-                    url=self._artist_url(show.key),
                     data_timestamp=self.season_data_timestamp(category, show.key),
                     show_id=show.id,
                 ).upsert_and_set_update_at(

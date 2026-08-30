@@ -47,7 +47,7 @@ class PluginURLHandler(StreamChannelerURLHandler):
             msg = f"Plugin not found: {self.url}"
             raise InvalidURLError(msg)
         return [
-            URLImportResult.for_show(show)
+            URLImportResult.show_import_results(show)
             for source in plugin_entity.sources
             for show in source.shows
         ]
@@ -66,7 +66,7 @@ class SourceURLHandler(StreamChannelerURLHandler):
         if not source:
             msg = f"Source not found: {self.url}"
             raise InvalidURLError(msg)
-        return [URLImportResult.for_show(show) for show in source.shows]
+        return [URLImportResult.show_import_results(show) for show in source.shows]
 
 
 # TODO: Validate
@@ -82,7 +82,7 @@ class ShowURLHandler(StreamChannelerURLHandler):
         if not show:
             msg = f"Show not found: {self.url}"
             raise InvalidURLError(msg)
-        return [URLImportResult.for_show(show)]
+        return [URLImportResult.show_import_results(show)]
 
 
 # TODO: Validate
@@ -99,7 +99,7 @@ class SeasonURLHandler(StreamChannelerURLHandler):
             msg = f"Season not found: {self.url}"
             raise InvalidURLError(msg)
         return [
-            URLImportResult.for_seasons(season.show, [season]),
+            URLImportResult.season_import_results(season.show, [season]),
         ]
 
 
@@ -117,5 +117,5 @@ class EpisodeURLHandler(StreamChannelerURLHandler):
             msg = f"Episode not found: {self.url}"
             raise InvalidURLError(msg)
         return [
-            URLImportResult.for_episodes(episode.season.show, [episode]),
+            URLImportResult.episode_import_results(episode.season.show, [episode]),
         ]

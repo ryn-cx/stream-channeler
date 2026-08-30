@@ -16,6 +16,7 @@ import type { EpisodeWithDetails } from "@/components/Channels/ChannelDetail/col
 import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
 import type { ActionMenuItem } from "@/components/Common/ResponsiveActionMenu"
 import { EditEpisodeById } from "@/components/Episodes/EditEpisodeById"
+import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"
 import { isHiddenByWatchFilters, type WatchFilters } from "@/lib/watchFilters"
@@ -160,6 +161,8 @@ export function useEpisodeActions({
     },
   })
 
+  const { user } = useAuth()
+
   const menuItems: ActionMenuItem[] = []
   if (episode.watch_date && !episode.verified && episode.episode_watch_id) {
     menuItems.push({
@@ -171,7 +174,7 @@ export function useEpisodeActions({
         verifyMutation.mutate(undefined)
       },
     })
-  } else {
+  } else if (user) {
     menuItems.push({
       key: "watched",
       icon: <Check />,
@@ -206,15 +209,17 @@ export function useEpisodeActions({
       },
     })
   }
-  menuItems.push({
-    key: "blacklist",
-    icon: <EyeOff />,
-    label: "Blacklist Episode",
-    onClick: (event) => {
-      event.stopPropagation()
-      setConfirmBlacklist(true)
-    },
-  })
+  if (user) {
+    menuItems.push({
+      key: "blacklist",
+      icon: <EyeOff />,
+      label: "Blacklist Episode",
+      onClick: (event) => {
+        event.stopPropagation()
+        setConfirmBlacklist(true)
+      },
+    })
+  }
   menuItems.push({
     key: "information",
     icon: <Info />,

@@ -80,7 +80,6 @@ class UpsertMixin(SourceMixin, register=False):
                     key=season_key,
                     season_number=season_number,
                     sort_order=sort_order,
-                    url=self._show_url(show.key),
                     data_timestamp=self.season_data_timestamp(season_key, show.key),
                     show_id=show.id,
                 )
@@ -170,7 +169,6 @@ class UpsertMixin(SourceMixin, register=False):
                 key=season_key,
                 season_number=0,
                 sort_order=0,
-                url=self._show_url(show.key),
                 data_timestamp=self.season_data_timestamp(season_key, show.key),
                 show_id=show.id,
             )

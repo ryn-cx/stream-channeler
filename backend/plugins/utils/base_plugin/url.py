@@ -47,9 +47,9 @@ class URLHandler[PluginT](ABC):
         to every one of them. A record that is the title itself has none to add and
         stands alone.
         """
-        results = [URLImportResult.for_show(show)]
+        results = [URLImportResult.show_import_results(show)]
         results += [
-            URLImportResult.for_show(canonical_show)
+            URLImportResult.show_import_results(canonical_show)
             for canonical_show in show.canonical_shows
         ]
         return results
@@ -114,7 +114,7 @@ class URLMixin(ABC):
     def _base_url(cls) -> str:
         """Return the base URL for the source.
 
-        The base url is in the format of https://www.example.com/
+        The base url is in the format of https://example.com/
         """
         return f"https://{cls._domain()}/"
 

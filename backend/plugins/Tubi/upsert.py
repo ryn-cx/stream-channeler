@@ -83,7 +83,6 @@ class UpsertMixin(SourceMixin, register=False):
                     name=season_content.title,
                     season_number=int(season_content.id),
                     sort_order=sort_order,
-                    url=self._series_url(show.key),
                     data_timestamp=self.season_data_timestamp(season_key, show.key),
                     show_id=show.id,
                 )
@@ -181,7 +180,6 @@ class UpsertMixin(SourceMixin, register=False):
                 key=season_key,
                 season_number=0,
                 sort_order=0,
-                url=self._movie_url(show.key),
                 data_timestamp=self.season_data_timestamp(season_key, show.key),
                 show_id=show.id,
             )

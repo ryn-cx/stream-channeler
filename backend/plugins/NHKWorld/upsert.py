@@ -59,7 +59,6 @@ class UpsertMixin(FileMixin, register=False):
                 key=show_key,
                 season_number=1,
                 sort_order=0,
-                url=show.url,
                 data_timestamp=self.season_data_timestamp(show_key, show_key),
                 show_id=show.id,
             )

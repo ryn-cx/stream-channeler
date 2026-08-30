@@ -54,16 +54,20 @@ class UpdateMixin(UpsertMixin, register=False):
 
     # TODO: Validate
     def _process_new_browse_files(self, source: Source) -> None:
-        _cache = self._preload_sources(preload_seasons=True).all()
-
         for browse_json in self.get_incomplete_files(
             BrowseSeries,
             self.browse_series_file,
         ):
+            # Queueing the series a file found commits, which lets go of every
+            # show read for it, and a show nothing holds is not in memory to be
+            # matched. Read back per file rather than once, so that a file after
+            # the first still recognises the series already imported.
+            _cache = self._preload_sources(preload_seasons=True).all()
             logger.info("Processing browse file: {}", browse_json.database_record.key)
             releases = chirashi().browse_series.extract_data(
                 browse_json.parsed(),
             )
+            new_series_urls: list[str] = []
             for release in releases:
                 if show := Show.get_from_memory(self.session, source, release.id):
                     logger.info("Matched show: {}", show.name or release.id)
@@ -75,6 +79,17 @@ class UpdateMixin(UpsertMixin, register=False):
                     show.set_update_at(release.last_public)
                     for season in show.seasons:
                         season.set_update_at(release.last_public)
+                else:
+                    logger.info("Queueing new series: {}", release.id)
+                    new_series_urls.append(self._series_url(release.id))
+
+            # Queued in one call so the whole browse file costs a single commit.
+            if new_series_urls:
+                add_urls_to_channel_import_queue(
+                    self.session,
+                    self._video_channel(),
+                    new_series_urls,
+                )
 
             browse_json.database_record.extra = {EXTRA_STATUS_FIELD: COMPLETED_STATUS}
 
@@ -129,20 +144,34 @@ class UpdateMixin(UpsertMixin, register=False):
         collects the whole of it and is created the first time an artist is found
         rather than by hand.
         """
+        return self._plugin_channel(MUSIC_SOURCE, "music_channel_description.md")
+
+    # TODO: Validate
+    def _video_channel(self) -> Channel:
+        """Return the plugin owned channel every Crunchyroll series is queued into.
+
+        Crunchyroll's new releases page only reaches back so far, so the channel
+        collects every series the browse files have named and is created the first
+        time one is found rather than by hand.
+        """
+        return self._plugin_channel(VIDEO_SOURCE, "video_channel_description.md")
+
+    # TODO: Validate
+    def _plugin_channel(self, name: str, description_file: str) -> Channel:
         plugin_user = get_or_create_plugin_user(session=self.session)
         channel = self.session.exec(
             select(Channel)
             .where(Channel.user_id == plugin_user.id)
-            .where(Channel.name == MUSIC_SOURCE),
+            .where(Channel.name == name),
         ).first()
         if channel:
             return channel
 
         channel = Channel(
-            name=MUSIC_SOURCE,
-            description=(
-                Path(__file__).parent / "music_channel_description.md"
-            ).read_text(encoding="utf-8"),
+            name=name,
+            description=(Path(__file__).parent / description_file).read_text(
+                encoding="utf-8",
+            ),
             visibility=Visibility.public,
             anonymous=False,
             user_id=plugin_user.id,

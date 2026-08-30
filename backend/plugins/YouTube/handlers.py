@@ -41,7 +41,7 @@ def _single_video_import_results(
     video_key: str,
 ) -> list[URLImportResult]:
     return [
-        URLImportResult.for_episodes(
+        URLImportResult.episode_import_results(
             show,
             [
                 episode
@@ -156,7 +156,7 @@ class VideoURLHandler(YouTubeURLHandler):
         # named no release and the show holds one season for each of them.
         if self.playlist_key == show.key and not is_video_key(show.key):
             return [
-                URLImportResult.for_episodes(
+                URLImportResult.episode_import_results(
                     show,
                     [
                         episode
@@ -244,9 +244,9 @@ class PlaylistURLHandler(PlaylistBasedURLHandler):
     @override
     def import_results(self, show: Show) -> list[URLImportResult]:
         if self.plugin.is_linking_playlist(self.playlist_key):
-            return [URLImportResult.for_show(show)]
+            return [URLImportResult.show_import_results(show)]
         seasons = [season for season in show.seasons if season.key == self.playlist_key]
-        return [URLImportResult.for_seasons(show, seasons)]
+        return [URLImportResult.season_import_results(show, seasons)]
 
 
 # TODO: Validate
@@ -317,7 +317,7 @@ class ShowPlaylistURLHandler(YouTubeURLHandler):
     # TODO: Validate
     @override
     def import_results(self, show: Show) -> list[URLImportResult]:
-        return [URLImportResult.for_show(show)]
+        return [URLImportResult.show_import_results(show)]
 
 
 # TODO: Validate
@@ -371,9 +371,9 @@ class ShowURLHandler(YouTubeURLHandler):
         # A URL for one season only asks for that season, where a URL for the show
         # asks for all of it.
         if self._season_number is None:
-            return [URLImportResult.for_show(show)]
+            return [URLImportResult.show_import_results(show)]
         seasons = [season for season in show.seasons if season.key == self.playlist_key]
-        return [URLImportResult.for_seasons(show, seasons)]
+        return [URLImportResult.season_import_results(show, seasons)]
 
 
 # TODO: Validate
@@ -419,9 +419,9 @@ class ChannelURLHandler(YouTubeURLHandler):
     @override
     def import_results(self, show: Show) -> list[URLImportResult]:
         if self.plugin.is_topic_channel(self.show_key):
-            return [URLImportResult.for_show(show)]
+            return [URLImportResult.show_import_results(show)]
         seasons = [season for season in show.seasons if season.key == self.playlist_key]
-        return [URLImportResult.for_seasons(show, seasons)]
+        return [URLImportResult.season_import_results(show, seasons)]
 
 
 # TODO: Validate

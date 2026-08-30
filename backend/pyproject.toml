@@ -28,6 +28,7 @@ dependencies = [
   "not-yt-dlapi",
   "notaplanet",
   "plugi",
+  "pools-closed",
   "psycopg[binary]<4.0.0,>=3.1.13",
   "pwdlib[argon2,bcrypt]>=0.3.0",
   "pydantic>=2.11",
@@ -131,6 +132,7 @@ kneeminus = { git = "https://github.com/ryn-cx/knee-minus" }
 trivial-minus = { git = "https://github.com/ryn-cx/trivial-minus" }
 nana = { git = "https://github.com/ryn-cx/nana" }
 plugi = { git = "https://github.com/ryn-cx/plugi" }
+pools-closed = { git = "https://github.com/ryn-cx/pools-closed" }
 notaplanet = { git = "https://github.com/ryn-cx/notaplanet" }
 just-scrape = { git = "https://github.com/ryn-cx/just-scrape" }
 wampi = { git = "https://github.com/ryn-cx/wampi" }

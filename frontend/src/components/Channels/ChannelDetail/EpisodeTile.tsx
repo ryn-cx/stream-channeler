@@ -157,14 +157,15 @@ export function EpisodeTile({
   const watched = !!episode.watch_date
   const imageUrl = episode.thumbnail_url || episode.image_url || "/no-image.svg"
 
-  const tileMenuItems: ActionMenuItem[] = [
-    {
+  const tileMenuItems: ActionMenuItem[] = []
+  if (user) {
+    tileMenuItems.push({
       key: "blacklist",
       icon: <ListX />,
       label: "Blacklist Episode",
       onClick: () => setConfirmBlacklist(true),
-    },
-  ]
+    })
+  }
   if (episode.url) {
     tileMenuItems.push({
       key: "open-url",
@@ -240,18 +241,20 @@ export function EpisodeTile({
             <div className="bg-zinc-800 p-3 flex flex-col gap-2">
               {/* Action buttons row */}
               <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="size-8 rounded-full border-zinc-500 bg-transparent hover:border-white"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    watchedMutation.mutate(episode.id)
-                  }}
-                  title="Mark as Watched"
-                >
-                  <Check className="size-4" />
-                </Button>
+                {user && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-8 rounded-full border-zinc-500 bg-transparent hover:border-white"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      watchedMutation.mutate(episode.id)
+                    }}
+                    title="Mark as Watched"
+                  >
+                    <Check className="size-4" />
+                  </Button>
+                )}
 
                 {episode.watch_date &&
                   !episode.verified &&
