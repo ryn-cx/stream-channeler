@@ -1,10 +1,11 @@
 # TODO: Validate
 """Shared models."""
 
+import hashlib
 import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import StrEnum
 from functools import partial
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, Self, TypeVar
@@ -177,6 +178,14 @@ class BaseMediaMixin(SQLModel):
         sa_type=JSONB,
         nullable=False,
     )
+
+
+# TODO: Validate
+def staggered_update_at(key: str, data_timestamp: datetime) -> datetime:
+    seed = hashlib.sha256(key.encode()).digest()
+    slot = int.from_bytes(seed) % 28
+    days_ahead = (slot - data_timestamp.toordinal()) % 28 or 28
+    return data_timestamp + timedelta(days=days_ahead)
 
 
 ChildT = TypeVar("ChildT", bound="Plugin | Source | Show | Season | Episode | File")

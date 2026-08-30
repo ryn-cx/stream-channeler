@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, ClassVar, override
 
 from app.episodes.models import Episode
+from app.models import staggered_update_at
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.shows.service import add_canonical_show_and_link_episodes
@@ -252,7 +253,7 @@ class UpsertMixin(HelperMixin, register=False):
         """
         weekday = self._upcoming_weekday(show_key)
         if weekday is None:
-            return data_timestamp + timedelta(days=30)
+            return staggered_update_at(show_key, data_timestamp)
         days_ahead = (weekday - data_timestamp.weekday()) % 7
         # The scheduled day is the current day, so check again the following day.
         if days_ahead == 0:

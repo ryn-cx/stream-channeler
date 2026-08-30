@@ -3,12 +3,12 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import override
 
 from minbo.movie.models import Idref14 as MovieContent
 
 from app.episodes.models import Episode
+from app.models import staggered_update_at
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.shows.service import add_canonical_show_and_link_episodes
@@ -61,7 +61,7 @@ class UpsertMixin(HelperMixin, register=False):
                 thumbnail_url=content.image_url_link,
                 data_timestamp=data_timestamp,
                 source_id=source.id,
-                update_at=data_timestamp + timedelta(days=30),
+                update_at=staggered_update_at(show_key, data_timestamp),
             )
             show = self._upsert_show_object(new_show, source, show, show_key)
 
@@ -91,7 +91,7 @@ class UpsertMixin(HelperMixin, register=False):
                 thumbnail_url=content.image_url_link,
                 data_timestamp=data_timestamp,
                 source_id=source.id,
-                update_at=data_timestamp + timedelta(days=30),
+                update_at=staggered_update_at(show_key, data_timestamp),
             )
             show = self._upsert_show_object(new_show, source, show, show_key)
 

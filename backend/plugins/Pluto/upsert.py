@@ -7,6 +7,7 @@ from datetime import timedelta
 from typing import override
 
 from app.episodes.models import Episode
+from app.models import staggered_update_at
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.shows.service import add_canonical_show_and_link_episodes
@@ -161,7 +162,7 @@ class UpsertMixin(SourceMixin, register=False):
                 image_url=item.featured_image.path,
                 thumbnail_url=item.featured_image.path,
                 data_timestamp=data_timestamp,
-                update_at=data_timestamp + timedelta(days=30),
+                update_at=staggered_update_at(show_key, data_timestamp),
                 source_id=source.id,
             )
             show = self._upsert_show_object(new_show, source, show, show_key)

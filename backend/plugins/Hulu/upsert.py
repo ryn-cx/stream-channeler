@@ -3,12 +3,12 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import override
 
 from wholoo.movies.models import MoviesModel
 
 from app.episodes.models import Episode
+from app.models import staggered_update_at
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.shows.service import add_canonical_show_and_link_episodes
@@ -67,7 +67,7 @@ class UpsertMixin(HelperMixin, register=False):
             show = self._upsert_show_object(new_show, source, show, show_key)
 
         self._upsert_tv_seasons(show, force=force)
-        show.set_update_at(data_timestamp + timedelta(days=30))
+        show.set_update_at(staggered_update_at(show_key, data_timestamp))
 
         return show
 

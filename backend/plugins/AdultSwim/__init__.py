@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, override
 
 from app.shows.models import Show
 from plugins.AdultSwim.constants import FREE, SUBSCRIPTION
-from plugins.AdultSwim.search import SearchMixin
 from plugins.AdultSwim.update import UpdateMixin
 from plugins.AdultSwim.url_handlers import (
     AdultSwimURLHandler,
@@ -14,6 +13,7 @@ from plugins.AdultSwim.url_handlers import (
 )
 from plugins.utils.abstract_plugin import URLImportResult
 from plugins.utils.base_plugin.plugin import URLHandlerPlugin
+from plugins.utils.base_plugin.search import CatalogueSearchMixin
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -30,7 +30,7 @@ def _import_results(
 # TODO: Validate
 class AdultSwim(
     UpdateMixin,
-    SearchMixin,
+    CatalogueSearchMixin,
     URLHandlerPlugin[AdultSwimURLHandler],
     register=True,
 ):
