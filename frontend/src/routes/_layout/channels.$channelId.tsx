@@ -308,7 +308,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
   })
 
   const isOwner = user?.id === channel.user_id
-  const canManageShows = isOwner || Boolean(user?.is_superuser)
+  const canEdit = isOwner || Boolean(user?.is_superuser)
   const showHero = viewMode === "cards" && episodesWithDetails.length > 0
   const [heroIndex, setHeroIndex] = useState(0)
 
@@ -349,7 +349,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
 
         <ChannelDescription channel={channel} />
 
-        {(isOwner || user?.is_superuser) && <EditChannel channel={channel} />}
+        {canEdit && <EditChannel channel={channel} />}
 
         {/* Smaller screens: Use a hamburger menu */}
         <div className="xl:hidden">
@@ -380,7 +380,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
               )}
 
               <DropdownMenuSeparator />
-              {canManageShows ? (
+              {canEdit ? (
                 <ManageShowsButton
                   channelId={channelId}
                   channelName={channel?.name}
@@ -399,7 +399,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
                 channelId={channelId}
                 randomSeed={filterParams.randomSeed}
                 variant="menu"
-                isOwner={isOwner}
+                canSaveDefault={canEdit}
               />
 
               {viewMode === "cards" && (
@@ -410,7 +410,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
                 />
               )}
 
-              {isOwner && viewMode === "cards" && editOrder && (
+              {canEdit && viewMode === "cards" && editOrder && (
                 <SaveOrderButton
                   channelId={channelId}
                   episodes={episodesData?.episodes ?? []}
@@ -449,7 +449,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
               Cards
             </Button>
           )}
-          {canManageShows ? (
+          {canEdit ? (
             <ManageShowsButton
               channelId={channelId}
               channelName={channel?.name}
@@ -464,7 +464,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
             routeFullPath={routeFullPath}
             channelId={channelId}
             randomSeed={filterParams.randomSeed}
-            isOwner={isOwner}
+            canSaveDefault={canEdit}
           />
           {viewMode === "cards" && (
             <EditOrderButton
@@ -472,7 +472,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
               onToggle={() => setEditOrder(!editOrder)}
             />
           )}
-          {isOwner && viewMode === "cards" && editOrder && (
+          {canEdit && viewMode === "cards" && editOrder && (
             <SaveOrderButton
               channelId={channelId}
               episodes={episodesData?.episodes ?? []}

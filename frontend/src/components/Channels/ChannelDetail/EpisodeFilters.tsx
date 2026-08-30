@@ -239,7 +239,7 @@ interface EpisodeFiltersProps {
   channelId?: string
   randomSeed?: number
   variant?: "button" | "menu"
-  isOwner?: boolean
+  canSaveDefault?: boolean
   /**
    * When set, the dialog edits a saved `ChannelOrder` instead of a channel's
    * live options: the Saved tab is replaced by a Details tab (name, icon,
@@ -270,7 +270,7 @@ export function EpisodeFilters({
   channelId,
   randomSeed,
   variant = "button",
-  isOwner = false,
+  canSaveDefault = false,
   orderEdit,
   open,
   onOpenChange,
@@ -1584,7 +1584,7 @@ export function EpisodeFilters({
               >
                 Cancel
               </Button>
-              {isOwner && !isOrderMode && (
+              {canSaveDefault && !isOrderMode && (
                 <Button
                   type="button"
                   variant="secondary"
