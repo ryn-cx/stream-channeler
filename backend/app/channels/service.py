@@ -190,21 +190,12 @@ def shows_by_canonical_id(
     if not canonical_show_ids:
         return grouped
 
-    listed: dict[UUID, set[UUID]] = defaultdict(set)
-
-    # TODO: Validate
-    def add(canonical_show_id: UUID, show: Show) -> None:
-        if show.id in listed[canonical_show_id]:
-            return
-        listed[canonical_show_id].add(show.id)
-        grouped[canonical_show_id].append(show)
-
     copy_season = aliased(Season)
     canonical_episode = aliased(Episode)
     canonical_season = aliased(Season)
     canonical_link = canonical_episode_link()
     carried = session.exec(
-        select(canonical_season.show_id, Show)  # type: ignore[call-overload]
+        select(canonical_season.show_id, Show.id)
         .select_from(Episode)
         .join(canonical_link, links_of(Episode, canonical_link))
         .join(
@@ -230,11 +221,9 @@ def shows_by_canonical_id(
         )
         .distinct(),
     ).all()
-    for canonical_show_id, show in carried:
-        add(canonical_show_id, show)
 
     linked = session.exec(
-        select(ShowCanonicalShow.canonical_show_id, Show)  # type: ignore[call-overload]
+        select(ShowCanonicalShow.canonical_show_id, Show.id)
         .select_from(Show)
         .join(ShowCanonicalShow, col(ShowCanonicalShow.show_id) == col(Show.id))
         .join(Source, col(Source.id) == col(Show.source_id))
@@ -247,15 +236,13 @@ def shows_by_canonical_id(
         )
         .distinct(),
     ).all()
-    for canonical_show_id, show in linked:
-        add(canonical_show_id, show)
 
     # A title nothing else holds a record of is the row that is the record, and
     # that row is where it is watched, so it stands for itself and no link points
     # at it. TMDB's own rows are gathered by `tmdb_shows_by_canonical_id`, since
     # TMDB is not somewhere anything is watched.
     standalone = session.exec(
-        select(Show)
+        select(Show.id)
         .join(Source, col(Source.id) == col(Show.source_id))
         .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
         .where(
@@ -265,8 +252,23 @@ def shows_by_canonical_id(
             Plugin.key != TMDB_PLUGIN_KEY,
         ),
     ).all()
-    for show in standalone:
-        add(show.id, show)
+
+    pairs = [*carried, *linked, *[(show_id, show_id) for show_id in standalone]]
+    shows_by_id = {
+        show.id: show
+        for show in session.exec(
+            select(Show)
+            .where(col(Show.id).in_({show_id for _canonical_id, show_id in pairs}))
+            .options(selectinload(Show.source).selectinload(Source.plugin)),  # type: ignore[arg-type]
+        ).all()
+    }
+
+    listed: dict[UUID, set[UUID]] = defaultdict(set)
+    for canonical_show_id, show_id in pairs:
+        if show_id in listed[canonical_show_id]:
+            continue
+        listed[canonical_show_id].add(show_id)
+        grouped[canonical_show_id].append(shows_by_id[show_id])
 
     return grouped
 
