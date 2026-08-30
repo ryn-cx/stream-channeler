@@ -124,7 +124,7 @@ class EpisodeLinker:
                     self._own_name,
                     "name",
                     blended=(0.5, 0.1),
-                    embedding=(0.6, 0.1),
+                    embedding=(0.6, 0.0),
                 ),
                 self._split_test("Split name"),
                 *self._scored_tests(
@@ -132,7 +132,7 @@ class EpisodeLinker:
                     self._own_description,
                     "description",
                     blended=(0.4, 0.05),
-                    embedding=(0.5, 0.05),
+                    embedding=(0.5, 0.0),
                 ),
             ],
         )
@@ -153,7 +153,7 @@ class EpisodeLinker:
                     self._own_description,
                     "description",
                     blended=(0.4, 0.05),
-                    embedding=(0.5, 0.05),
+                    embedding=(0.5, 0.0),
                 ),
             ],
         )
