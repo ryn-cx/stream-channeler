@@ -2,16 +2,21 @@
 from __future__ import annotations
 
 import re
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from plugins.Pluto.base import PlutoBase
 from plugins.Pluto.constants import DETAILS_REGEX, ITEM_ID_REGEX, LOCALE_REGEX
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v2.workers import URLImporter
+from plugins.utils.base_plugin_v2.workers import Importer
+
+if TYPE_CHECKING:
+    from app.episodes.models import Episode
+    from app.seasons.models import Season
+    from app.shows.models import Show
 
 
 # TODO: Validate
-class PlutoImportURL(URLImporter, PlutoBase):
+class PlutoImporter(Importer, PlutoBase):
     # https://pluto.tv/en/on-demand/movies/68a54f49df1220b53566f16e/details
     # https://pluto.tv/us/on-demand/movies/68a54f49df1220b53566f16e
     _MOVIE_URL_REGEX = (
@@ -53,3 +58,9 @@ class PlutoImportURL(URLImporter, PlutoBase):
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
+
+    # TODO: Validate
+    @override
+    def _set_record(self, record: Show | Season | Episode) -> None:
+        super()._set_record(record)
+        self._set_media_type_from_show(self.show)

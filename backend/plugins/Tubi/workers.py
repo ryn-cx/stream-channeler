@@ -8,11 +8,11 @@ from app.shows.models import Show
 from plugins.Tubi.base import TubiBase
 from plugins.Tubi.constants import CONTENT_ID_REGEX, SLUG_REGEX
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from plugins.utils.base_plugin_v2.workers import URLImporter
+from plugins.utils.base_plugin_v2.workers import Importer
 
 
 # TODO: Validate
-class TubiImportURL(URLImporter, TubiBase):
+class TubiImporter(Importer, TubiBase):
     # https://tubitv.com/movies/100029837/megamind
     _MOVIE_URL_REGEX = (
         rf"\/movies\/(?P<movie_id>{CONTENT_ID_REGEX}){SLUG_REGEX}(?:\/|$)"

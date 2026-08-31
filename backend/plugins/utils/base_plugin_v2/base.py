@@ -20,6 +20,7 @@ from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
     InvalidURLError,
+    PluginShowIdentity,
     URLImportResult,
 )
 from plugins.utils.base_plugin_v2.files import INITIAL_FILE_IDENTIFIER, BaseFile
@@ -30,10 +31,7 @@ from plugins.utils.base_plugin_v2.url import URLMixin
 if TYPE_CHECKING:
     from app.users.models import User
     from plugins.utils.base_plugin_v2.initialize import PluginInitializer
-    from plugins.utils.base_plugin_v2.workers import (
-        Updater,
-        URLImporter,
-    )
+    from plugins.utils.base_plugin_v2.workers import Importer
 
 _TMDB_MEDIA_TYPES = {
     "Movie": MediaType.movie,
@@ -54,8 +52,7 @@ class PluginBase(PreloadMixin, OutdatedCheckMixin, URLMixin, ABC):
     _sources: dict[str, Source]
     _file_cache: dict[object, Any]
     initializer: ClassVar[type[PluginInitializer]]
-    url_importer: ClassVar[type[URLImporter]]
-    updater: ClassVar[type[Updater]]
+    importer: ClassVar[type[Importer]]
 
     def __init__(self, session: Session) -> None:
         self.session = session
@@ -311,11 +308,14 @@ class PluginBase(PreloadMixin, OutdatedCheckMixin, URLMixin, ABC):
         return self._file(file_type, INITIAL_FILE_IDENTIFIER)
 
     # TODO: Validate
-    def _tmdb_show(self, show_key: str, *, force: bool = False) -> Show | None:
-        if not self.implements("show_identity"):
-            return None
+    def show_identity(self, show_key: str) -> PluginShowIdentity | None:  # noqa: ARG002
+        return None
 
+    # TODO: Validate
+    def _tmdb_show(self, show_key: str, *, force: bool = False) -> Show | None:
         identity = self.show_identity(show_key)
+        if identity is None:
+            return None
 
         media_type = _TMDB_MEDIA_TYPES.get(identity.media_type)
         if media_type is None:
@@ -338,7 +338,7 @@ class PluginBase(PreloadMixin, OutdatedCheckMixin, URLMixin, ABC):
     # TODO: Validate
     @classmethod
     def url_regex(cls) -> str:
-        return cls.url_importer.url_regex()
+        return cls.importer.url_regex()
 
     # TODO: Validate
     def import_url(
@@ -348,31 +348,31 @@ class PluginBase(PreloadMixin, OutdatedCheckMixin, URLMixin, ABC):
         *,
         force: bool = False,
     ) -> list[URLImportResult]:
-        return self.url_importer(self, url).import_url(canonical_show, force=force)
+        return self.importer(self).import_url(url, canonical_show, force=force)
 
     # TODO: Validate
     def update_show(self, show: Show, *, force: bool = False) -> None:
-        self.updater(self, show).update(force=force)
+        self.importer(self).update(show, force=force)
 
     # TODO: Validate
     def update_season(self, season: Season) -> None:
-        self.updater(self, season).update()
+        self.importer(self).update(season)
 
     # TODO: Validate
     def update_episode(self, episode: Episode) -> None:
-        self.updater(self, episode).update()
+        self.importer(self).update(episode)
 
     # TODO: Validate
     def on_update_show_failure(self, show: Show, error: Exception) -> None:
-        self.updater(self, show).on_failure(error)
+        self.importer(self).on_failure(show, error)
 
     # TODO: Validate
     def on_update_season_failure(self, season: Season, error: Exception) -> None:
-        self.updater(self, season).on_failure(error)
+        self.importer(self).on_failure(season, error)
 
     # TODO: Validate
     def on_update_episode_failure(self, episode: Episode, error: Exception) -> None:
-        self.updater(self, episode).on_failure(error)
+        self.importer(self).on_failure(episode, error)
 
     # TODO: Validate
     def raise_if_invalid_file(self, file: BaseFile[Any], url: str) -> None:

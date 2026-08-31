@@ -12,5 +12,5 @@ class WatchModeInitializer(PluginInitializer, WatchModeBase):
     # Watchmode holds no listing of its own, so it has no `Source` to create.
     # TODO: Validate
     @override
-    def initialize_sources(self) -> None:
+    def _initialize_sources(self) -> None:
         return

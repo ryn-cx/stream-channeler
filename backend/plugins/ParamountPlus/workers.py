@@ -2,15 +2,20 @@
 from __future__ import annotations
 
 import re
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from plugins.ParamountPlus.base import ParamountPlusBase
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v2.workers import URLImporter
+from plugins.utils.base_plugin_v2.workers import Importer
+
+if TYPE_CHECKING:
+    from app.episodes.models import Episode
+    from app.seasons.models import Season
+    from app.shows.models import Show
 
 
 # TODO: Validate
-class ParamountPlusImportURL(URLImporter, ParamountPlusBase):
+class ParamountPlusImporter(Importer, ParamountPlusBase):
     # https://www.paramountplus.com/movies/video/ALVE01KT235XQDEK58R7H2012VNZMK/
     _MOVIE_URL_REGEX = r"\/movies\/video\/(?P<movie_id>[A-Za-z0-9]+)(?:\/|$)"
     # https://www.paramountplus.com/shows/south-park/
@@ -40,3 +45,9 @@ class ParamountPlusImportURL(URLImporter, ParamountPlusBase):
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
+
+    # TODO: Validate
+    @override
+    def _set_record(self, record: Show | Season | Episode) -> None:
+        super()._set_record(record)
+        self._set_media_type_from_show(self.show)

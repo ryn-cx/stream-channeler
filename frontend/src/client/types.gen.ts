@@ -2052,6 +2052,7 @@ export type ChannelOrdersGetChannelOrdersData = {
     filterOptions?: string;
     limit?: number;
     offset?: number;
+    randomSeed?: (number | null);
     scope?: RecordScope;
     sortOptions?: string;
 };
@@ -2117,6 +2118,7 @@ export type ChannelsGetChannelsData = {
     filterOptions?: string;
     limit?: number;
     offset?: number;
+    randomSeed?: (number | null);
     scope?: RecordScope;
     sortOptions?: string;
 };

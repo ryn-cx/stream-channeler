@@ -29,8 +29,32 @@ class TestPrincessMononoke(StandardTestsAlt[Hulu], HuluValidatorAlt):
 
 
 # TODO: Validate
+class TestODessa(StandardTestsAlt[Hulu], HuluValidatorAlt):
+    movie_id = "ea3ee5c6-ee7f-4556-9431-0563b971b8fb"
+    show_slug = "odessa"
+    urls = (
+        "/movie/{movie_id}",
+        "/movie/{movie_id}/",
+        "/movie/{show_slug}-{movie_id}",
+    )
+
+
+# TODO: Validate
+class TestSpyXFamily(StandardTestsAlt[Hulu], HuluValidatorAlt):
+    series_id = "65d158d4-443f-44c7-bd2c-eae39f6c60e9"
+    show_slug = "spy-x-family"
+    urls = (
+        "/series/{series_id}",
+        "/series/{series_id}/",
+        "/series/{show_slug}-{series_id}",
+    )
+
+
+# TODO: Validate
 class TestInitializeChannel(HuluValidatorAlt):
     """Test the channels Hulu's catalogue is read into."""
+
+    initializes_channels = True
 
     # TODO: Validate
     @pytest.mark.enable_socket

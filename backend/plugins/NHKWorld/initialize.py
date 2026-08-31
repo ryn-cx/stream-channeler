@@ -11,6 +11,6 @@ from plugins.utils.base_plugin_v2.initialize import PluginInitializer
 class NHKWorldInitializer(PluginInitializer, NHKWorldBase):
     # TODO: Validate
     @override
-    def initialize_channels(self) -> None:
+    def _initialize_channels(self) -> None:
         self._feed_channel()
         self._process_new_episodes_files(self._sources[self.plugin_name()])

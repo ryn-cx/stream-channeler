@@ -2,8 +2,8 @@
 """Putting the stored files in place and reading back what they built."""
 
 import json
-from collections.abc import Generator
-from contextlib import contextmanager
+from collections.abc import Generator, Iterable
+from contextlib import ExitStack, contextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -32,7 +32,6 @@ from tests.plugins.plugin_validator_alt.stored_files import (
     IMPORT_TIME,
     UPDATE_TIME,
     date_at_import_time,
-    stored_file_record,
     stored_path,
 )
 
@@ -59,6 +58,23 @@ def date_downloads_at_import_time(import_time: datetime) -> Generator[None]:
             date_at_import_time(record, import_time)
 
     with patch.object(BaseFile, "download_if_outdated", _download_if_outdated):
+        yield
+
+
+# TODO: Validate
+@contextmanager
+def no_channel_initialization(
+    plugin_classes: Iterable[type[AbstractPlugin]],
+) -> Generator[None]:
+    with ExitStack() as stack:
+        for plugin_class in plugin_classes:
+            stack.enter_context(
+                patch.object(
+                    plugin_class.initializer,  # type: ignore[attr-defined]
+                    "_initialize_channels",
+                    lambda _self: None,
+                ),
+            )
         yield
 
 
@@ -93,6 +109,7 @@ class DatabaseMixinAlt[PluginT: AbstractPlugin]:
     import_time: datetime = IMPORT_TIME
     update_time: datetime = UPDATE_TIME
     invalid_url: bool = False
+    initializes_channels: bool = False
     imported_plugin: PluginT
 
     # TODO: Validate
@@ -311,7 +328,7 @@ class DatabaseMixinAlt[PluginT: AbstractPlugin]:
         *,
         force: bool = False,
     ) -> list[URLImportResult]:
-        """Import the URL using the plugin. Files are pre-imported by the class fixture."""
+        """Import the URL using the plugin."""
         url = url or self.url
         assert url, "URL must be provided for URL import tests"
         self.imported_plugin = self.plugin_class(session)
@@ -323,64 +340,32 @@ class DatabaseMixinAlt[PluginT: AbstractPlugin]:
         return output
 
     # TODO: Validate
-    def _import_files(self, session: Session) -> None:
-        """Store every stored test file as a `File` of the plugin that owns it.
+    def _initialize_plugins(self, session: Session) -> None:
+        logger.info(f"Initializing plugins for {type(self).__name__}")
 
-        The files are put in place before a test runs so nothing has to be
-        downloaded during it. `serve_downloads_from_disk`, which the plugin
-        conftest holds open for the whole session, is what covers a file that has
-        not been stored yet, which is only ever the case while a test's data is
-        being recorded.
-
-        Held at the frozen import time because this is also where a plugin's
-        sources are initialized, and a source dated by the clock the machine
-        happened to be at is a record that is different on every run.
-        """
-        logger.info(f"Importing files for {type(self).__name__}")
-
-        stored = self._files_to_import()
-
-        # A file can belong to a different plugin than the one under test (e.g. TMDB
-        # fallback files), so create a record for each owning plugin. Sources are
-        # only initialized for the plugin under test, at the end.
-        plugin_keys = {plugin_key for plugin_key, _key, _path in stored}
-        plugin_keys.add(self.plugin_class.plugin_name())
-
-        plugin_records: dict[str, Plugin] = {}
-        for plugin_key in plugin_keys:
-            plugin_records[plugin_key] = Plugin(
-                key=plugin_key,
-            ).upsert_and_set_update_at(session, Plugin.get(session, plugin_key))
-
-        existing_keys = {
-            plugin_key: {file.key for file in record.files}
-            for plugin_key, record in plugin_records.items()
+        plugin_keys = {
+            plugin_key for plugin_key, _key, _path in self._files_to_import()
         }
-        for plugin_key, file_key, path in stored:
-            if file_key in existing_keys[plugin_key]:
-                continue
-            record = stored_file_record(plugin_key, file_key, path)
-            date_at_import_time(record, self.import_time)
-            plugin_records[plugin_key].files.append(record)
-            existing_keys[plugin_key].add(file_key)
+        plugin_keys.add("TMDB")
+        if self.initializes_channels:
+            plugin_keys.discard(self.plugin_class.plugin_name())
+        else:
+            plugin_keys.add(self.plugin_class.plugin_name())
 
-        # Files imported from disk have raw Python types. Expiring forces SQLAlchemy to
-        # re-read from the DB with proper type coercion. This is required to validate
-        # datetime values.
+        plugin_classes = [
+            plugin_class_for(plugin_key) for plugin_key in sorted(plugin_keys)
+        ]
+        with no_channel_initialization(plugin_classes):
+            for plugin_class in plugin_classes:
+                plugin_class.initialize_db(session)
+
         session.expire_all()
-
-        # Files are imported so now the plugin under test's source can be run.
-        self.plugin_class.initialize_db(session)
-
         session.commit()  # Set the rollback point.
 
     # TODO: Validate
     @pytest.fixture(scope="class")
     def _connection_with_files(self) -> Generator[Connection]:
-        """One class-scoped connection with files imported once for the whole class.
-
-        The files are imported once here and reused by every test in the class via
-        per-test savepoints, so no test re-inserts the shared `File` rows.
+        """One class-scoped connection set up once for the whole class.
 
         One connection and no more, because a second one would sit behind this
         one's open transaction the moment it wrote a row this one had already
@@ -403,7 +388,7 @@ class DatabaseMixinAlt[PluginT: AbstractPlugin]:
                 date_downloads_at_import_time(self.import_time),
             ):
                 init_db(session)
-                self._import_files(session)
+                self._initialize_plugins(session)
             yield connection
         finally:
             transaction.rollback()

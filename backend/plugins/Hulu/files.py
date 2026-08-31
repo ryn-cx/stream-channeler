@@ -93,7 +93,6 @@ class Series(EndpointFile[TVModel]):
 
     # TODO: Validate
     def identity(self) -> PluginShowIdentity:
-        self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         model = self.parsed()
         return PluginShowIdentity(
             title=model.name,
@@ -118,7 +117,6 @@ class Movie(EndpointFile[MoviesModel]):
 
     # TODO: Validate
     def identity(self) -> PluginShowIdentity:
-        self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         model = self.parsed()
         return PluginShowIdentity(
             title=model.name,

@@ -2,16 +2,21 @@
 from __future__ import annotations
 
 import re
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from plugins.HiDive.base import HiDiveBase
 from plugins.HiDive.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v2.workers import URLImporter
+from plugins.utils.base_plugin_v2.workers import Importer
+
+if TYPE_CHECKING:
+    from app.episodes.models import Episode
+    from app.seasons.models import Season
+    from app.shows.models import Show
 
 
 # TODO: Validate
-class HiDiveImportURL(URLImporter, HiDiveBase):
+class HiDiveImporter(Importer, HiDiveBase):
     # https://www.hidive.com/series/1286
     _SERIES_URL_REGEX = r"\/series\/(?P<series_key>\d+)(?:\/|$)"
     # https://www.hidive.com/season/20022
@@ -58,3 +63,9 @@ class HiDiveImportURL(URLImporter, HiDiveBase):
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
+
+    # TODO: Validate
+    @override
+    def _set_record(self, record: Show | Season | Episode) -> None:
+        super()._set_record(record)
+        self._set_media_type_from_show(self.show)

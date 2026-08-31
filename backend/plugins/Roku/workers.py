@@ -8,11 +8,11 @@ from plugins.Roku.base import RokuBase
 from plugins.Roku.constants import CONTENT_ID_REGEX
 from plugins.Roku.files import content_id
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v2.workers import URLImporter
+from plugins.utils.base_plugin_v2.workers import Importer
 
 
 # TODO: Validate
-class RokuImportURL(URLImporter, RokuBase):
+class RokuImporter(Importer, RokuBase):
     # https://therokuchannel.roku.com/details/db1607f1cff2522bb795382bb4b5bcae
     # The title slug after the content id is decorative, only the id matters.
     _DETAILS_URL_REGEX = (

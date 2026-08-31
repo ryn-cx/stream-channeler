@@ -11,16 +11,10 @@ from loguru import logger
 from app.channels.models import ChannelQueue, URLStatus
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin
-from plugins.utils.base_plugin_v2.workers import Updater
 from plugins.YouTube.base import YouTubeBase
-from plugins.YouTube.import_url import YouTubeImportURL
 from plugins.YouTube.initialize import YouTubeInitializer
 from plugins.YouTube.utils import is_quota_error
-
-
-# TODO: Validate
-class YouTubeUpdater(Updater, YouTubeBase):
-    pass
+from plugins.YouTube.workers import YouTubeImporter
 
 
 # TODO: Validate
@@ -28,8 +22,7 @@ class YouTube(YouTubeBase, AbstractPlugin, register=True):
     """YouTube plugin."""
 
     initializer = YouTubeInitializer
-    url_importer = YouTubeImportURL
-    updater = YouTubeUpdater
+    importer = YouTubeImporter
 
     # TODO: Validate
     @override

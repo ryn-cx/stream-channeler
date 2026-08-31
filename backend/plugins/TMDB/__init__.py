@@ -9,9 +9,8 @@ from app.canonical_media.keys import tmdb_show_key
 from app.media.media_type import MediaType
 from plugins.TMDB.base import TMDBBase
 from plugins.TMDB.constants import media_url
-from plugins.TMDB.import_url import TMDBImportURL
 from plugins.TMDB.initialize import TMDBInitializer
-from plugins.TMDB.update import TMDBUpdater
+from plugins.TMDB.workers import TMDBImporter
 from plugins.utils.abstract_plugin import AbstractPlugin
 
 if TYPE_CHECKING:
@@ -23,8 +22,7 @@ class TMDB(TMDBBase, AbstractPlugin, register=True):
     """The Movie Database plugin."""
 
     initializer = TMDBInitializer
-    url_importer = TMDBImportURL
-    updater = TMDBUpdater
+    importer = TMDBImporter
 
     # TODO: Validate
     def import_search(

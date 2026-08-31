@@ -8,7 +8,7 @@ from urllib.parse import parse_qs, urlparse
 from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from plugins.utils.base_plugin_v2.workers import URLImporter
+from plugins.utils.base_plugin_v2.workers import Importer
 from plugins.YouTube.base import YouTubeBase
 from plugins.YouTube.constants import LONG_DOMAIN_REGEX, SHORT_DOMAIN_REGEX
 from plugins.YouTube.files import (
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class YouTubeImportURL(URLImporter, YouTubeBase):
+class YouTubeImporter(Importer, YouTubeBase):
     # https://www.youtube.com/watch?v=lVI_J1cbFb4&list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh
     # https://youtu.be/lVI_J1cbFb4?list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh
     _PLAYLIST_VIDEO_URL_REGEX = (
@@ -327,7 +327,7 @@ class YouTubeImportURL(URLImporter, YouTubeBase):
     # A YouTube show is always imported for a specific playlist.
     # TODO: Validate
     @override
-    def import_url(
+    def _import_url(
         self,
         canonical_show: Show | None = None,
         *,

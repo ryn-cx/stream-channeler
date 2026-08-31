@@ -26,14 +26,9 @@ class PluginWorker(PluginBase, ABC):
 
 
 # TODO: Validate
-class URLImporter(PluginWorker, ReadURLBase, ABC):
+class Importer(PluginWorker, ReadURLBase, ABC):
     url: str
-
-    # TODO: Validate
-    def __init__(self, owner: PluginBase, url: str) -> None:
-        super().__init__(owner)
-        self.url = url
-        self._parse_url(url)
+    record: Show | Season | Episode
 
     # TODO: Validate
     def _url_source(self) -> Source:
@@ -41,6 +36,18 @@ class URLImporter(PluginWorker, ReadURLBase, ABC):
 
     # TODO: Validate
     def import_url(
+        self,
+        url: str,
+        canonical_show: Show | None = None,
+        *,
+        force: bool = False,
+    ) -> list[URLImportResult]:
+        self.url = url
+        self._parse_url(url)
+        return self._import_url(canonical_show, force=force)
+
+    # TODO: Validate
+    def _import_url(
         self,
         canonical_show: Show | None = None,
         *,
@@ -64,14 +71,8 @@ class URLImporter(PluginWorker, ReadURLBase, ABC):
         )
         return self._import_results(show)
 
-
-# TODO: Validate
-class Updater(PluginWorker, ABC):
-    record: Show | Season | Episode
-
     # TODO: Validate
-    def __init__(self, owner: PluginBase, record: Show | Season | Episode) -> None:
-        super().__init__(owner)
+    def _set_record(self, record: Show | Season | Episode) -> None:
         self.record = record
 
     # TODO: Validate
@@ -85,8 +86,8 @@ class Updater(PluginWorker, ABC):
         return record
 
     # TODO: Validate
-    def update(self, *, force: bool = False) -> None:
-        record = self.record
+    def update(self, record: Show | Season | Episode, *, force: bool = False) -> None:
+        self._set_record(record)
         if isinstance(record, Season):
             self._update_season(record)
         elif isinstance(record, Episode):
@@ -123,5 +124,10 @@ class Updater(PluginWorker, ABC):
         self._update_and_upsert_show(stored_episode.season.show)
 
     # TODO: Validate
-    def on_failure(self, error: Exception) -> None:  # noqa: ARG002 - `error` is used by overrides.
-        self.record.update_at = tz_datetime.max()
+    def on_failure(
+        self,
+        record: Show | Season | Episode,
+        error: Exception,  # noqa: ARG002 - `error` is used by overrides.
+    ) -> None:
+        self._set_record(record)
+        record.update_at = tz_datetime.max()

@@ -23,10 +23,10 @@ class PluginInitializer(PluginBase, ABC):
         if plugin and plugin.extra.get(EXTRA_STATUS_FIELD) != "Incomplete":
             return
 
-        cls.initialize_plugin(session)
+        cls._initialize_plugin(session)
         plugin_initializator = cls(session)
-        plugin_initializator.initialize_sources()
-        plugin_initializator.initialize_channels()
+        plugin_initializator._initialize_sources()
+        plugin_initializator._initialize_channels()
         plugin_initializator.plugin.extra = {
             field: value
             for field, value in plugin_initializator.plugin.extra.items()
@@ -35,7 +35,7 @@ class PluginInitializer(PluginBase, ABC):
 
     # TODO: Validate
     @classmethod
-    def initialize_plugin(cls, session: Session) -> Plugin:
+    def _initialize_plugin(cls, session: Session) -> Plugin:
         if plugin := Plugin.get(session, cls.plugin_name()):
             return plugin
 
@@ -55,12 +55,12 @@ class PluginInitializer(PluginBase, ABC):
         return Plugin.get_one(session, cls.plugin_name())
 
     # TODO: Validate
-    def initialize_sources(self) -> None:
+    def _initialize_sources(self) -> None:
         """Create the sources in the database for the plugin."""
         for source_key in self._source_keys():
             if Source.get(self.session, self.plugin, source_key) is None:
                 self.upsert_source(source_key)
         self._sources = {source.key: source for source in self.plugin.sources}
 
-    def initialize_channels(self) -> None:
+    def _initialize_channels(self) -> None:
         """Create the channels in the database for the plugin."""

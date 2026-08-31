@@ -12,13 +12,13 @@ from plugins.utils.base_plugin_v2.initialize import PluginInitializer
 class AdultSwimInitializer(PluginInitializer, AdultSwimBase):
     # TODO: Validate
     @override
-    def initialize_sources(self) -> None:
-        super().initialize_sources()
+    def _initialize_sources(self) -> None:
+        super()._initialize_sources()
         if self.plugin.update_at is None:
             self.plugin.update_at = tz_datetime.now()
 
     # TODO: Validate
     @override
-    def initialize_channels(self) -> None:
+    def _initialize_channels(self) -> None:
         self._channels()
         self._process_new_shows()

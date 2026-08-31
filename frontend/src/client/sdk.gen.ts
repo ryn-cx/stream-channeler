@@ -135,6 +135,7 @@ export class ChannelOrdersService {
      * @param data.offset
      * @param data.limit
      * @param data.scope
+     * @param data.randomSeed
      * @returns ChannelOrdersPublic Successful Response
      * @throws ApiError
      */
@@ -147,7 +148,8 @@ export class ChannelOrdersService {
                 filter_options: data.filterOptions,
                 offset: data.offset,
                 limit: data.limit,
-                scope: data.scope
+                scope: data.scope,
+                random_seed: data.randomSeed
             },
             errors: {
                 422: 'Validation Error'
@@ -368,6 +370,7 @@ export class ChannelsService {
      * @param data.offset
      * @param data.limit
      * @param data.scope
+     * @param data.randomSeed
      * @returns ChannelsPublic Successful Response
      * @throws ApiError
      */
@@ -380,7 +383,8 @@ export class ChannelsService {
                 filter_options: data.filterOptions,
                 offset: data.offset,
                 limit: data.limit,
-                scope: data.scope
+                scope: data.scope,
+                random_seed: data.randomSeed
             },
             errors: {
                 422: 'Validation Error'

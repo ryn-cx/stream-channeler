@@ -6,11 +6,11 @@ from typing import override
 
 from plugins.NHKWorld.base import NHKWorldBase
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v2.workers import URLImporter
+from plugins.utils.base_plugin_v2.workers import Importer
 
 
 # TODO: Validate
-class NHKWorldImportURL(URLImporter, NHKWorldBase):
+class NHKWorldImporter(Importer, NHKWorldBase):
     # https://www3.nhk.or.jp/nhkworld/en/shows/100years-midosuji/
     # The lookahead requires a non-numeric character so this matches show slugs but
     # not numeric episode URLs like https://www3.nhk.or.jp/nhkworld/en/shows/5001461/

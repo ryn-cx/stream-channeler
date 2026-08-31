@@ -2,16 +2,21 @@
 from __future__ import annotations
 
 import re
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from plugins.Hulu.base import HuluBase
 from plugins.Hulu.utils import HuluMediaType
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v2.workers import URLImporter
+from plugins.utils.base_plugin_v2.workers import Importer
+
+if TYPE_CHECKING:
+    from app.episodes.models import Episode
+    from app.seasons.models import Season
+    from app.shows.models import Show
 
 
 # TODO: Validate
-class HuluImportURL(URLImporter, HuluBase):
+class HuluImporter(Importer, HuluBase):
     UUID_REGEX = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
     SLUG_REGEX = r"(?:[a-z0-9-]+-)?"
     _SERIES_URL_REGEX = rf"\/series\/{SLUG_REGEX}(?P<series_id>{UUID_REGEX})"
@@ -57,3 +62,9 @@ class HuluImportURL(URLImporter, HuluBase):
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
+
+    # TODO: Validate
+    @override
+    def _set_record(self, record: Show | Season | Episode) -> None:
+        super()._set_record(record)
+        self._set_media_type_from_show(self.show)

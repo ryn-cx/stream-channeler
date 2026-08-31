@@ -154,6 +154,7 @@ def _apply_sort_options[T](  # noqa: PLR0913
     tiebreaker: uuid.UUID | None,
     *,
     random_tiebreaker: bool = False,
+    random_seed: int | None = None,
 ) -> SelectOfScalar[T]:
     order_by: list[UnaryExpression[Any]] = [
         desc(column) if option.desc else asc(column)
@@ -164,9 +165,14 @@ def _apply_sort_options[T](  # noqa: PLR0913
         order_by.extend(desc(default_sort) for default_sort in default_sorts)
 
     # Break ties randomly (e.g. to shuffle equally scored rows) rather than by the
-    # stable `id`. Only sound when the whole list is read in one query, since a fresh
-    # `random()` per query would make offset/limit pages overlap.
-    if random_tiebreaker:
+    # stable `id`. A seed makes the shuffle deterministic, so offset/limit pages of
+    # the same seeded read stay consistent; an unseeded `random()` is only sound when
+    # the whole list is read in one query.
+    if random_tiebreaker and random_seed is not None:
+        order_by.append(
+            asc(func.md5(func.concat(cast(col(tiebreaker), String), str(random_seed)))),
+        )
+    elif random_tiebreaker:
         order_by.append(func.random())
     else:
         order_by.append(asc(col(tiebreaker)))
@@ -186,6 +192,7 @@ def get_read_results[T](  # noqa: PLR0913
     current_user: User | None,
     extra_columns: dict[str, Any] | None = None,
     random_tiebreaker: bool = False,
+    random_seed: int | None = None,
 ) -> tuple[Sequence[T], int, int, bool]:
     if current_user:
         threshold = current_user.server_side_threshold
@@ -211,6 +218,7 @@ def get_read_results[T](  # noqa: PLR0913
             default_sorts,
             tiebreaker,
             random_tiebreaker=random_tiebreaker,
+            random_seed=random_seed,
         )
         rows = session.exec(ordered).all()
         return rows, total_count, len(rows), False
@@ -225,6 +233,8 @@ def get_read_results[T](  # noqa: PLR0913
             columns,
             default_sorts,
             tiebreaker,
+            random_tiebreaker=random_tiebreaker and random_seed is not None,
+            random_seed=random_seed,
         )
         .offset(params.offset)
         .limit(params.limit)
@@ -366,6 +376,7 @@ def scoped_list_response[ResponseT: BaseModel](  # noqa: PLR0913
         current_user=viewer,
         extra_columns=extra_columns,
         random_tiebreaker=random_tiebreaker,
+        random_seed=read_options.random_seed,
     )
     return response_model(
         data=[

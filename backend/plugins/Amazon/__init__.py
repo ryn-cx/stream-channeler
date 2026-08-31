@@ -4,9 +4,8 @@
 from __future__ import annotations
 
 from plugins.Amazon.base import AmazonBase
-from plugins.Amazon.import_url import AmazonImportURL
 from plugins.Amazon.initialize import AmazonInitializer
-from plugins.Amazon.update import AmazonUpdater
+from plugins.Amazon.workers import AmazonImporter
 from plugins.utils.abstract_plugin import AbstractPlugin
 
 
@@ -15,5 +14,4 @@ class Amazon(AmazonBase, AbstractPlugin, register=True):
     """Amazon Prime Video plugin."""
 
     initializer = AmazonInitializer
-    url_importer = AmazonImportURL
-    updater = AmazonUpdater
+    importer = AmazonImporter

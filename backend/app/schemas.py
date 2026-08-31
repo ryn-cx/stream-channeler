@@ -127,6 +127,7 @@ class ScopedReadOptions(ReadOptions):
     """
 
     scope: RecordScope = RecordScope.all
+    random_seed: int | None = None
 
 
 # TODO: Validate

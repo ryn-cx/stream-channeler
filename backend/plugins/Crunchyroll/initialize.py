@@ -12,7 +12,7 @@ from plugins.utils.base_plugin_v2.initialize import PluginInitializer
 class CrunchyrollInitializer(PluginInitializer, CrunchyrollBase):
     # TODO: Validate
     @override
-    def initialize_channels(self) -> None:
+    def _initialize_channels(self) -> None:
         self._video_channel()
         self._music_channel()
         self._process_new_browse_files(self._sources[VIDEO_SOURCE])

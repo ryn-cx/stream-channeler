@@ -60,6 +60,7 @@ from app.files.models import File
 from app.media.media_type import MediaType
 from app.plugins.models import Plugin
 from app.shows.models import Show
+from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.TMDB.constants import media_url
 from plugins.TMDB.episode_groups import show_chosen_group_id
@@ -400,7 +401,13 @@ class TvSearch(EndpointFile[SearchTvModel]):
         return tz_datetime.now() + timedelta(days=30)
 
 
+# TODO: Validate
 class FileMixin(PluginBase):
+    # TODO: Validate
+    @property
+    def source(self) -> Source:
+        return self._sources[self.plugin_name()]
+
     # TODO: Validate
     def multi_search_file(self, query: str, page: int = 1) -> MultiSearch:
         """Return MultiSearch file."""

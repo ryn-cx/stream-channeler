@@ -2,16 +2,21 @@
 from __future__ import annotations
 
 import re
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from plugins.HBOMax.base import HBOMaxBase
 from plugins.HBOMax.constants import SLUG_REGEX, UUID_REGEX
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v2.workers import URLImporter
+from plugins.utils.base_plugin_v2.workers import Importer
+
+if TYPE_CHECKING:
+    from app.episodes.models import Episode
+    from app.seasons.models import Season
+    from app.shows.models import Show
 
 
 # TODO: Validate
-class HBOMaxImportURL(URLImporter, HBOMaxBase):
+class HBOMaxImporter(Importer, HBOMaxBase):
     # The title slug HBO Max puts in front of the id is decorative, such as in
     # https://www.hbomax.com/movies/the-batman/4ee4f57e-19bd-493f-96f9-ad3e753af981
     _MOVIE_URL_REGEX = rf"\/movies?\/{SLUG_REGEX}(?P<movie_id>{UUID_REGEX})"
@@ -47,3 +52,9 @@ class HBOMaxImportURL(URLImporter, HBOMaxBase):
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
+
+    # TODO: Validate
+    @override
+    def _set_record(self, record: Show | Season | Episode) -> None:
+        super()._set_record(record)
+        self._set_media_type_from_show(self.show)

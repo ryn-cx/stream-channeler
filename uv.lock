@@ -756,7 +756,7 @@ wheels = [
 [[package]]
 name = "get-around"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/get-around#5ec8dad3985c0ab547a72fd1c374688af354e4e3" }
+source = { git = "https://github.com/ryn-cx/get-around#0a78e2b98e3e6e938ae56c6713cfbb8de380b16a" }
 dependencies = [
     { name = "httpx" },
     { name = "keyring" },
@@ -2482,7 +2482,7 @@ wheels = [
 [[package]]
 name = "wholoo"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/wholoo#e5be4739fb72c5a389d45d7d999dc0c44970fb87" }
+source = { git = "https://github.com/ryn-cx/wholoo#05ef5c2470d4bbd9a051be35eb254e89fb614063" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
