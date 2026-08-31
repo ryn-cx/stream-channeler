@@ -211,7 +211,6 @@ class BasePlugin(
         """Create the `Source` record(s) and set `self.source`."""
         self.initialize_source(self.plugin_key(), self._upsert_source)
 
-
     # TODO: Validate
     def _upsert_source(self, *args: Any, **kwargs: Any) -> Source:  # noqa: ANN401 - Child signatures vary.
         """Create or update the plugin's `Source` record(s)."""
@@ -479,7 +478,6 @@ class BasePlugin(
         which is what an import handing a title from one plugin to another knows
         and nothing else does.
         """
-
 
     # TODO: Validate
     def soft_delete_missing_seasons(self, show_key: str) -> None:
