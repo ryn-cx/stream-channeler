@@ -144,7 +144,7 @@ class TestSupermanRelinkedTubi(TMDBValidatorAlt):
     # TODO: Validate
     @override
     def _initialize_extra_files(self, session: Session) -> None:
-        Tubi(session, url=self.relinked_url).import_url()
+        Tubi(session).import_url(self.relinked_url)
 
     # TODO: Validate
     def shows_of(self, session: Session, plugin_key: str) -> list[Show]:
@@ -170,7 +170,7 @@ class TestSupermanRelinkedTubi(TMDBValidatorAlt):
         session_with_files.expire_all()
 
         with frozen_clock(self.import_time):
-            Tubi(session_with_files, url=self.relinked_url).import_url(tmdb_show)
+            Tubi(session_with_files).import_url(self.relinked_url, tmdb_show)
         session_with_files.flush()
         session_with_files.expire_all()
 
@@ -180,7 +180,7 @@ class TestSupermanRelinkedTubi(TMDBValidatorAlt):
         with log_stats(self), frozen_clock(self.update_time), mock_update():
             assert tmdb_show.data_timestamp
             tmdb_show.update_at = tmdb_show.data_timestamp + timedelta(seconds=1)
-            TMDB(session_with_files, show=tmdb_show).update_show(force=True)
+            TMDB(session_with_files).update_show(tmdb_show, force=True)
             session_with_files.flush()
         session_with_files.expire_all()
 

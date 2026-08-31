@@ -8,7 +8,7 @@ from typing import override
 from plugins.HiDive.import_url import ImportURLMixin
 from plugins.HiDive.source import SourceMixin
 from plugins.HiDive.upsert import UpsertMixin
-from plugins.utils.base_plugin.search import CatalogueSearchMixin
+from plugins.utils.base_plugin_v2.search import CatalogueSearchMixin
 
 # TODO: Add support for individual episodes of a series.
 

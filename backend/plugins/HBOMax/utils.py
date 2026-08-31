@@ -18,7 +18,7 @@ class HelperMixin(FileMixin, register=False):
         if not show.media_type:
             msg = "Show.media_type is not set."
             raise AttributeError(msg)
-        self._media_type_value = "movie" if show.media_type == "Movie" else "series"
+        self._media_type = "movie" if show.media_type == "Movie" else "series"
 
     # TODO: Validate
     @classmethod

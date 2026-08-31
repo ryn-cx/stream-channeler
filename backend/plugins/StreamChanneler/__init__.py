@@ -19,7 +19,7 @@ from plugins.StreamChanneler.handlers import (
 from plugins.StreamChanneler.watch_history import WatchHistoryMixin
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import BaseFile
+from plugins.utils.base_plugin_v2.files import BaseFile
 
 
 # TODO: Validate
@@ -113,11 +113,12 @@ class StreamChanneler(WatchHistoryMixin, BasePlugin, register=False):
     @override
     def import_url(
         self,
+        url: str,
         canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> list[URLImportResult]:
-        return self.get_url_handler(self.url).import_results()
+        return self.get_url_handler(url).import_results()
 
     # TODO: Validate
     def get_url_handler(self, url: str) -> StreamChannelerURLHandler:

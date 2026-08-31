@@ -27,7 +27,7 @@ from plugins.Crunchyroll.constants import (
 )
 from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries
 from plugins.Crunchyroll.utils import HelperMixin
-from plugins.utils.base_plugin.files import INITIAL_FILE_IDENTIFIER
+from plugins.utils.base_plugin_v2.files import INITIAL_FILE_IDENTIFIER
 
 
 # TODO: Validate

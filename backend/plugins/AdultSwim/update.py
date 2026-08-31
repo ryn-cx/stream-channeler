@@ -20,7 +20,7 @@ from app.utils import tz_datetime
 from plugins.AdultSwim.constants import FREE, SUBSCRIPTION
 from plugins.AdultSwim.files import ShowsPage
 from plugins.AdultSwim.upsert import UpsertMixin
-from plugins.utils.base_plugin.files import (
+from plugins.utils.base_plugin_v2.files import (
     COMPLETED_STATUS,
     EXTRA_STATUS_FIELD,
 )

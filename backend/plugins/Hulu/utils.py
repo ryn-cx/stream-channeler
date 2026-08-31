@@ -8,11 +8,7 @@ from wholoo.movies.models import MoviesModel
 
 from app.shows.models import Show
 from app.utils import tz_datetime
-from plugins.Hulu.constants import (
-    DETAIL_MAX_AGE,
-    MOVIE_MEDIA_TYPE,
-    SERIES_MEDIA_TYPE,
-)
+from plugins.Hulu.constants import DETAIL_MAX_AGE, HuluMediaType
 from plugins.Hulu.files import FileMixin
 from plugins.utils.abstract_plugin import PluginShowIdentity
 
@@ -27,8 +23,10 @@ class HelperMixin(FileMixin, register=False):
         if not show.media_type:
             msg = "Show.media_type is not set."
             raise AttributeError(msg)
-        self._media_type_value = (
-            MOVIE_MEDIA_TYPE if show.media_type == "Movie" else SERIES_MEDIA_TYPE
+        self._media_type = (
+            HuluMediaType.MOVIE
+            if show.media_type == "Movie"
+            else HuluMediaType.SERIES
         )
 
     # TODO: Validate
@@ -42,7 +40,7 @@ class HelperMixin(FileMixin, register=False):
 
     # TODO: Validate
     @classmethod
-    def _show_url(cls, show_key: str, media_type: str) -> str:
+    def _show_url(cls, show_key: str, media_type: HuluMediaType) -> str:
         return cls.build_url(f"{media_type}/{show_key}")
 
     # TODO: Validate

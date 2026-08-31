@@ -25,8 +25,8 @@ def reimport_all_shows(session: Session) -> None:
 
     for show in shows:
         plugin_class = plugin_classes_by_key[show.source.plugin.key]
-        plugin_instance = plugin_class.init_with_show(session, show)
-        plugin_instance.update_show(force=True)
+        plugin_instance = plugin_class(session)
+        plugin_instance.update_show(show, force=True)
         session.commit()
 
 

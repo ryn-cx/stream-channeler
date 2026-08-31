@@ -104,7 +104,7 @@ def import_unmatched_source(
         raise HTTPException(status_code=404, detail="Show not found")
 
     try:
-        plugin_class.init_with_url(session, url).import_url(show)
+        plugin_class(session).import_url(url, show)
     except InvalidURLError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 

@@ -28,12 +28,12 @@ from diving_board.vod import models as vod_models
 from app.files.models import File
 from app.utils import tz_datetime
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import (
+from plugins.utils.base_plugin_v2.files import (
     BaseFile,
     EndpointFile,
     PagedEndpointFile,
 )
-from plugins.utils.base_plugin.media_type import MediaTypeMixin
+from plugins.utils.base_plugin_v2.media_type import MediaTypeMixin
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -160,11 +160,11 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
 
     # TODO: Validate
     def _is_movie(self) -> bool:
-        if self._media_type_value not in ("Movie", "Series"):
-            msg = f"Invalid media type: {self._media_type_value}"
+        if self._media_type not in ("Movie", "Series"):
+            msg = f"Invalid media type: {self._media_type}"
             raise RuntimeError(msg)
 
-        return self._media_type_value == "Movie"
+        return self._media_type == "Movie"
 
     # TODO: Validate
     def season_file(self, season_key: str | int) -> Season:

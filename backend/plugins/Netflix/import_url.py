@@ -22,7 +22,7 @@ class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
 
     # TODO: Validate
     @override
-    def _read_url(self, url: str) -> None:
+    def _parse_url(self, url: str) -> None:
         domain_regex = self._domain_regex()
         if match := re.match(domain_regex + self._TITLE_URL_REGEX, url):
             self._show_key = match.group("title_key")

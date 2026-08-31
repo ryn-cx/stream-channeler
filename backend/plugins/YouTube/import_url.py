@@ -27,7 +27,7 @@ from plugins.YouTube.utils import (
 if TYPE_CHECKING:
     from not_yt_dlapi.channels.models import ChannelsModel
 
-    from plugins.utils.base_plugin.files import BaseFile
+    from plugins.utils.base_plugin_v2.files import BaseFile
 
 
 # TODO: Validate
@@ -114,6 +114,7 @@ class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
     @override
     def import_url(
         self,
+        url: str,
         canonical_show: Show | None = None,
         *,
         force: bool = False,
@@ -121,8 +122,8 @@ class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
         # Recorded before the URL is read, because whether a playlist links a title
         # of its own is what says which show the address names.
         if canonical_show is not None:
-            self._record_linking_playlist(self.url)
-        return super().import_url(canonical_show, force=force)
+            self._record_linking_playlist(url)
+        return super().import_url(url, canonical_show, force=force)
 
     # TODO: Validate
     def _record_linking_playlist(self, url: str) -> None:
@@ -135,7 +136,7 @@ class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
 
     # TODO: Validate
     @override
-    def _read_url(self, url: str) -> None:  # noqa: PLR0911 - One return per kind of address.
+    def _parse_url(self, url: str) -> None:  # noqa: PLR0911 - One return per kind of address.
         self._video_key = None
         self._whole_show = False
         self._musician_track = False

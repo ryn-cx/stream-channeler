@@ -16,8 +16,8 @@ from minbo.show.models import Episode, Season, ShowModel
 from minbo.show.models import Idref14 as ShowContent
 
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import BaseFile, EndpointFile
-from plugins.utils.base_plugin.media_type import MediaTypeMixin
+from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
+from plugins.utils.base_plugin_v2.media_type import MediaTypeMixin
 from plugins.utils.get_around_client import get_around_client
 
 if TYPE_CHECKING:
@@ -119,11 +119,11 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
 
     # TODO: Validate
     def _is_movie(self) -> bool:
-        if self._media_type_value not in ("movie", "series"):
-            msg = f"Invalid media type: {self._media_type_value}"
+        if self._media_type not in ("movie", "series"):
+            msg = f"Invalid media type: {self._media_type}"
             raise RuntimeError(msg)
 
-        return self._media_type_value == "movie"
+        return self._media_type == "movie"
 
     # TODO: Validate
     @staticmethod

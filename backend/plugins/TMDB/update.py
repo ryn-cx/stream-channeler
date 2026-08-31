@@ -23,23 +23,24 @@ from plugins.TMDB.files import ShowChanges
 from plugins.TMDB.import_url import ImportURLMixin
 from plugins.TMDB.keys import parse_show_key
 from plugins.TMDB.utils import change_datetime
-from plugins.utils.base_plugin.files import COMPLETED_STATUS, EXTRA_STATUS_FIELD
+from plugins.utils.base_plugin_v2.files import COMPLETED_STATUS, EXTRA_STATUS_FIELD
 
 if TYPE_CHECKING:
     from datetime import datetime
+
+    from app.shows.models import Show
 
 
 # TODO: Validate
 class UpdateMixin(ImportURLMixin, register=False):
     # TODO: Validate
     @override
-    def update_show(self, *, force: bool = False) -> None:
-        show = self.show
+    def update_show(self, show: Show, *, force: bool = False) -> None:
         media_type, _ = parse_show_key(show.key)
         if media_type == MediaType.movie:
             # Movie ignores changes because there is only a single file so i is more
             # efficient to directly update it instead of checking for changes.
-            super().update_show(force=force)
+            super().update_show(show, force=force)
         else:
             self._download_and_import_changed_title_files(show.key, show.update_at)
             self._preload_show(show.id, preload_episodes=True).one()

@@ -15,7 +15,7 @@ from app.shows.models import Show
 from app.sources.models import Source
 from app.users.service import get_or_create_plugin_user
 from plugins.NHKWorld.files import FileMixin, NewVideoEpisodes
-from plugins.utils.base_plugin.files import (
+from plugins.utils.base_plugin_v2.files import (
     COMPLETED_STATUS,
     EXTRA_STATUS_FIELD,
 )

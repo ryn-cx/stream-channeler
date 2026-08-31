@@ -75,7 +75,7 @@ class HelperMixin(FileMixin, register=False):
         if not show.media_type:
             msg = "Show.media_type is not set."
             raise AttributeError(msg)
-        self._media_type_value = show.media_type
+        self._media_type = show.media_type
 
     # TODO: Validate
     @staticmethod

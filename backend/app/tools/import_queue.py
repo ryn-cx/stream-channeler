@@ -123,9 +123,7 @@ def _import_one(
     logger.info(f"[{plugin_key}] Importing URL: {queue_item.url}")
     try:
         queue_item.status = URLStatus.IMPORTING
-        import_results = plugin_class.init_with_url(
-            session, queue_item.url
-        ).import_url()
+        import_results = plugin_class(session).import_url(queue_item.url)
         add_results_to_channel(session, import_results, queue_item.channel)
     except InvalidURLError as error:
         logger.warning(f"[{plugin_key}] Invalid URL: {queue_item.url}")
@@ -141,7 +139,7 @@ def _import_one(
         session.rollback()
         session.refresh(queue_item)
         try:
-            plugin_class.init_with_url(session, queue_item.url).on_import_url_failure(
+            plugin_class(session).on_import_url_failure(
                 queue_item,
                 error,
             )

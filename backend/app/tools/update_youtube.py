@@ -95,7 +95,7 @@ def update_youtube() -> None:
             session.rollback()
             for season in seasons:
                 session.refresh(season)
-                plugin.linked_to(season=season).on_update_season_failure(error)
+                plugin.on_update_season_failure(season, error)
             session.commit()
             return
 

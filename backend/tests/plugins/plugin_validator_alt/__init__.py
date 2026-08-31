@@ -29,7 +29,7 @@ from plugins.utils.abstract_plugin import (
     InvalidURLError,
     URLImportResult,
 )
-from plugins.utils.base_plugin import BasePlugin
+from plugins.utils.base_plugin_v2.facade import FacadePlugin
 from tests.plugins.frozen_clock import frozen_clock
 from tests.plugins.plugin_validator_alt.database import DatabaseMixinAlt
 from tests.plugins.plugin_validator_alt.log_stats import log_stats
@@ -47,7 +47,7 @@ FAKE_EPISODE_KEY = "plugin-validator-alt-fake-episode"
 
 
 # TODO: Validate
-class PluginValidatorAlt[PluginT: BasePlugin](DatabaseMixinAlt[PluginT]):
+class PluginValidatorAlt[PluginT: FacadePlugin](DatabaseMixinAlt[PluginT]):
     """A plugin test whose clock is fixed and whose check is one recorded dump."""
 
     parse_url_response: object | None = None
@@ -167,11 +167,11 @@ class PluginValidatorAlt[PluginT: BasePlugin](DatabaseMixinAlt[PluginT]):
             case Source() as source:
                 owner.update_source(source=source)
             case Show() as show:
-                owner.linked_to(show=show).update_show()
+                owner.update_show(show)
             case Season() as season:
-                owner.linked_to(season=season).update_season()
+                owner.update_season(season)
             case Episode() as episode:
-                owner.linked_to(episode=episode).update_episode()
+                owner.update_episode(episode)
 
     # TODO: Validate
     def all_sources(self, session: Session) -> list[Source]:
@@ -368,7 +368,7 @@ class PluginValidatorAlt[PluginT: BasePlugin](DatabaseMixinAlt[PluginT]):
 
 
 # TODO: Validate
-class ImportURLTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class ImportURLTestsAlt[PluginT: FacadePlugin](PluginValidatorAlt[PluginT]):
     """Tests that importing a URL leaves the database as it was recorded."""
 
     # TODO: Validate
@@ -383,7 +383,7 @@ class ImportURLTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
 
 
 # TODO: Validate
-class ImportURLVariantTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class ImportURLVariantTestsAlt[PluginT: FacadePlugin](PluginValidatorAlt[PluginT]):
     """Tests that every domain and path a URL can be written as imports the same.
 
     Checked against what the import itself said it produced rather than against
@@ -405,7 +405,7 @@ class ImportURLVariantTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT])
 
 
 # TODO: Validate
-class InvalidImportURLTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class InvalidImportURLTestsAlt[PluginT: FacadePlugin](PluginValidatorAlt[PluginT]):
     """Tests that importing an invalid URL raises InvalidURLError."""
 
     # TODO: Validate
@@ -418,7 +418,7 @@ class InvalidImportURLTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT])
 
 
 # TODO: Validate
-class ImportExistingURLTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class ImportExistingURLTestsAlt[PluginT: FacadePlugin](PluginValidatorAlt[PluginT]):
     """Tests that re-importing a URL leaves the database where the first import put it.
 
     Compared against the dump the import test recorded rather than against one
@@ -438,7 +438,7 @@ class ImportExistingURLTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]
 
 
 # TODO: Validate
-class UpdatePluginTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class UpdatePluginTestsAlt[PluginT: FacadePlugin](PluginValidatorAlt[PluginT]):
     """Tests that updating the plugin refreshes what the plugin itself holds.
 
     Kept out of `UpdateTestsAlt` because most plugins hold their media under a
@@ -456,7 +456,7 @@ class UpdatePluginTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
 
 
 # TODO: Validate
-class UpdateSourceTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class UpdateSourceTestsAlt[PluginT: FacadePlugin](PluginValidatorAlt[PluginT]):
     """Tests that updating a source propagates upstream changes."""
 
     # TODO: Validate
@@ -497,7 +497,7 @@ class UpdateSourceTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
 
 
 # TODO: Validate
-class UpdateShowTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class UpdateShowTestsAlt[PluginT: FacadePlugin](PluginValidatorAlt[PluginT]):
     """Tests that updating a show leaves the database as it was recorded."""
 
     # TODO: Validate
@@ -509,7 +509,7 @@ class UpdateShowTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
 
 
 # TODO: Validate
-class UpdateSeasonTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class UpdateSeasonTestsAlt[PluginT: FacadePlugin](PluginValidatorAlt[PluginT]):
     """Tests that updating a season leaves the database as it was recorded."""
 
     # TODO: Validate
@@ -521,7 +521,7 @@ class UpdateSeasonTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
 
 
 # TODO: Validate
-class UpdateEpisodeTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class UpdateEpisodeTestsAlt[PluginT: FacadePlugin](PluginValidatorAlt[PluginT]):
     """Tests that updating an episode leaves the database as it was recorded."""
 
     # TODO: Validate
@@ -533,7 +533,7 @@ class UpdateEpisodeTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
 
 
 # TODO: Validate
-class DeletedEpisodeTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class DeletedEpisodeTestsAlt[PluginT: FacadePlugin](PluginValidatorAlt[PluginT]):
     """Tests that a fake episode gets soft deleted during update_season."""
 
     # TODO: Validate
@@ -554,16 +554,14 @@ class DeletedEpisodeTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
         # and a row left to be flushed by the comparison is a row stamped by the
         # clock the machine happened to be at.
         with log_stats(self), frozen_clock(self.update_time):
-            self.owning_plugin(session_with_files, season).linked_to(
-                season=season,
-            ).update_season()
+            self.owning_plugin(session_with_files, season).update_season(season)
             session_with_files.flush()
 
         self.assert_state(session_with_files, "deleted_episode")
 
 
 # TODO: Validate
-class DeletedSeasonTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class DeletedSeasonTestsAlt[PluginT: FacadePlugin](PluginValidatorAlt[PluginT]):
     """Tests that a fake season gets soft deleted during update_show."""
 
     # TODO: Validate
@@ -578,16 +576,14 @@ class DeletedSeasonTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
             session_with_files.flush()
 
         with log_stats(self), frozen_clock(self.update_time):
-            self.owning_plugin(session_with_files, show).linked_to(
-                show=show,
-            ).update_show()
+            self.owning_plugin(session_with_files, show).update_show(show)
             session_with_files.flush()
 
         self.assert_state(session_with_files, "deleted_season")
 
 
 # TODO: Validate
-class DeletedEpisodeUpdateShowTestsAlt[PluginT: BasePlugin](
+class DeletedEpisodeUpdateShowTestsAlt[PluginT: FacadePlugin](
     PluginValidatorAlt[PluginT],
 ):
     """Tests that a fake episode in an existing season is soft deleted by update_show."""
@@ -605,16 +601,14 @@ class DeletedEpisodeUpdateShowTestsAlt[PluginT: BasePlugin](
             session_with_files.flush()
 
         with log_stats(self), frozen_clock(self.update_time):
-            self.owning_plugin(session_with_files, show).linked_to(
-                show=show,
-            ).update_show()
+            self.owning_plugin(session_with_files, show).update_show(show)
             session_with_files.flush()
 
         self.assert_state(session_with_files, "deleted_episode_update_show")
 
 
 # TODO: Validate
-class DeletedSeasonWithEpisodeTestsAlt[PluginT: BasePlugin](
+class DeletedSeasonWithEpisodeTestsAlt[PluginT: FacadePlugin](
     PluginValidatorAlt[PluginT],
 ):
     """Tests that a fake season and its fake episode are soft deleted by update_show."""
@@ -632,16 +626,14 @@ class DeletedSeasonWithEpisodeTestsAlt[PluginT: BasePlugin](
             session_with_files.flush()
 
         with log_stats(self), frozen_clock(self.update_time):
-            self.owning_plugin(session_with_files, show).linked_to(
-                show=show,
-            ).update_show()
+            self.owning_plugin(session_with_files, show).update_show(show)
             session_with_files.flush()
 
         self.assert_state(session_with_files, "deleted_season_with_episode")
 
 
 # TODO: Validate
-class AllUpdatesTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class AllUpdatesTestsAlt[PluginT: FacadePlugin](PluginValidatorAlt[PluginT]):
     """Exhaustive test that updates every entity on its own."""
 
     # TODO: Validate
@@ -661,7 +653,7 @@ class AllUpdatesTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
 
 
 # TODO: Validate
-class URLTestsAlt[PluginT: BasePlugin](
+class URLTestsAlt[PluginT: FacadePlugin](
     ImportURLVariantTestsAlt[PluginT],
     ImportURLTestsAlt[PluginT],
     ImportExistingURLTestsAlt[PluginT],
@@ -670,7 +662,7 @@ class URLTestsAlt[PluginT: BasePlugin](
 
 
 # TODO: Validate
-class UpdateTestsAlt[PluginT: BasePlugin](
+class UpdateTestsAlt[PluginT: FacadePlugin](
     UpdateShowTestsAlt[PluginT],
     UpdateSeasonTestsAlt[PluginT],
     UpdateEpisodeTestsAlt[PluginT],
@@ -679,7 +671,7 @@ class UpdateTestsAlt[PluginT: BasePlugin](
 
 
 # TODO: Validate
-class DeletionTestsAlt[PluginT: BasePlugin](
+class DeletionTestsAlt[PluginT: FacadePlugin](
     DeletedEpisodeTestsAlt[PluginT],
     DeletedSeasonTestsAlt[PluginT],
     DeletedEpisodeUpdateShowTestsAlt[PluginT],
@@ -689,7 +681,7 @@ class DeletionTestsAlt[PluginT: BasePlugin](
 
 
 # TODO: Validate
-class StandardTestsAlt[PluginT: BasePlugin](
+class StandardTestsAlt[PluginT: FacadePlugin](
     URLTestsAlt[PluginT],
     UpdateTestsAlt[PluginT],
     DeletionTestsAlt[PluginT],
@@ -699,7 +691,7 @@ class StandardTestsAlt[PluginT: BasePlugin](
 
 
 # TODO: Validate
-class InvalidURLValidatorAlt[PluginT: BasePlugin](
+class InvalidURLValidatorAlt[PluginT: FacadePlugin](
     InvalidImportURLTestsAlt[PluginT],
     PluginValidatorAlt[PluginT],
 ):

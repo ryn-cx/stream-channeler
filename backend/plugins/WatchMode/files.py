@@ -13,7 +13,7 @@ from wampi.title_sources.models import TitleSourcesModel
 
 from app.config import settings
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import EndpointFile
+from plugins.utils.base_plugin_v2.files import EndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 

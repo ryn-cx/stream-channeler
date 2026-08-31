@@ -31,11 +31,11 @@ class ImportURLMixin(HelperMixin, MediaTypeReadURLPlugin, register=False):
 
     # TODO: Validate
     @override
-    def _read_url(self, url: str) -> None:
+    def _parse_url(self, url: str) -> None:
         domain_regex = self._domain_regex()
         if match := re.match(domain_regex + self._SERIES_URL_REGEX, url):
             self._show_key = match.group("series_key")
-            self._media_type_value = SERIES_MEDIA_TYPE
+            self._media_type = SERIES_MEDIA_TYPE
             self.raise_if_invalid_file(self.series_file(self._show_key), url)
             return
 
@@ -44,7 +44,7 @@ class ImportURLMixin(HelperMixin, MediaTypeReadURLPlugin, register=False):
         # URL for a more intuitive user experience.
         if match := re.match(domain_regex + self._SEASON_URL_REGEX, url):
             season_key = match.group("season_key")
-            self._media_type_value = SERIES_MEDIA_TYPE
+            self._media_type = SERIES_MEDIA_TYPE
             self.raise_if_invalid_file(self.season_file(season_key), url)
             season_data = self.season_file(season_key).parsed()
             self._show_key = str(season_data.metadata.series.series_id)
@@ -52,7 +52,7 @@ class ImportURLMixin(HelperMixin, MediaTypeReadURLPlugin, register=False):
 
         if match := re.match(domain_regex + self._MOVIE_URL_REGEX, url):
             self._show_key = match.group("movie_vod_key")
-            self._media_type_value = MOVIE_MEDIA_TYPE
+            self._media_type = MOVIE_MEDIA_TYPE
             self.raise_if_invalid_file(self.vod_file(self._show_key), url)
             return
 

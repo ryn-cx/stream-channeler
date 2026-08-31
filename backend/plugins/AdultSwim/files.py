@@ -16,7 +16,7 @@ from pools_closed.shows.models import ShowsModel
 from app.files.models import File
 from plugins.utils.abstract_plugin import PluginShowIdentity
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import BaseFile, EndpointFile
+from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 

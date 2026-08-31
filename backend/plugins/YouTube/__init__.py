@@ -4,6 +4,7 @@ from typing import override
 from loguru import logger
 
 from app.channels.models import ChannelQueue, URLStatus
+from app.seasons.models import Season
 from app.utils import tz_datetime
 from plugins.YouTube.constants import LONG_DOMAIN, SHORT_DOMAIN
 from plugins.YouTube.files import (
@@ -66,8 +67,7 @@ class YouTube(
 
     # TODO: Validate
     @override
-    def update_season(self) -> None:
-        season = self.season
+    def update_season(self, season: Season) -> None:
         logger.info("Updating season: {}", season.key)
         season = self._preload_season(season.id, preload_show=True).one()
         # A season that is a single video has no feed to check for new videos.
@@ -128,5 +128,5 @@ class YouTube(
 
     # TODO: Validate
     @override
-    def on_update_season_failure(self, error: Exception) -> None:
-        self.season.update_at = tz_datetime.now() + timedelta(hours=1)
+    def on_update_season_failure(self, season: Season, error: Exception) -> None:
+        season.update_at = tz_datetime.now() + timedelta(hours=1)
