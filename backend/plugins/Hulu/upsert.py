@@ -14,12 +14,12 @@ from app.shows.models import Show
 from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from app.utils import tz_datetime
-from plugins.Hulu.constants import HuluMediaType
-from plugins.Hulu.utils import HelperMixin
+from plugins.Hulu.files import FileMixin
+from plugins.Hulu.utils import HuluMediaType, UtilsMixin
 
 
 # TODO: Validate
-class UpsertMixin(HelperMixin):
+class UpsertMixin(UtilsMixin, FileMixin):
     """Mixin containing all upsert functions."""
 
     # TODO: Validate
@@ -79,7 +79,7 @@ class UpsertMixin(HelperMixin):
         *,
         force: bool = False,
     ) -> Show:
-        model = self._movie_model(show_key)
+        model = self.movie_file(show_key).parsed()
         show = Show.get_from_memory(self.session, source, show_key)
         if self._show_is_outdated(show, force=force):
             new_show = Show(
@@ -112,7 +112,7 @@ class UpsertMixin(HelperMixin):
             if self._season_is_outdated(season, show.key, force=force):
                 new_season = Season(
                     key=season_key,
-                    name=self._season_name(show.key, season_number),
+                    name=self.season_file(show.key, season_number).season_name(),
                     season_number=season_number,
                     sort_order=sort_order,
                     data_timestamp=self.season_data_timestamp(season_key, show.key),
@@ -129,7 +129,7 @@ class UpsertMixin(HelperMixin):
         *,
         force: bool = False,
     ) -> None:
-        model = self._movie_model(show.key)
+        model = self.movie_file(show.key).parsed()
         season_key = self._season_key(show.key, 0)
         season = Season.get_from_memory(self.session, show, season_key)
         if self._season_is_outdated(season, show.key, force=force):

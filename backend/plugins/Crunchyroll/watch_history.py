@@ -6,7 +6,7 @@ from typing import override
 
 from app.utils import tz_datetime
 from app.watches.schemas import WatchImportResult
-from plugins.Crunchyroll.utils import HelperMixin
+from plugins.Crunchyroll.utils import UtilsMixin
 from plugins.utils.base_plugin_v2.watch_history import (
     ParsedWatchEntry,
 )
@@ -16,7 +16,7 @@ from plugins.utils.base_plugin_v2.watch_history import (
 
 
 # TODO: Validate
-class WatchHistoryMixin(BaseWatchHistoryMixin, HelperMixin):
+class WatchHistoryMixin(BaseWatchHistoryMixin, UtilsMixin):
     import_watch_history_file_extension = ".json"
 
     # TODO: Validate

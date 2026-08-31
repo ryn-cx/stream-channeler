@@ -35,6 +35,7 @@ from plugins.Amazon.constants import (
     PRIME_BENEFIT_ID,
 )
 from plugins.Amazon.keys import title_key_from_location
+from plugins.utils.abstract_plugin import InvalidURLError, PluginShowIdentity
 from plugins.utils.base_plugin_v2.base import PluginBase
 from plugins.utils.base_plugin_v2.files import (
     BaseFile,
@@ -241,6 +242,22 @@ class ShareLinkRedirect(TextFile):
     def location(self) -> str | None:
         """Return the address the share link pointed at."""
         return self.database_record.content
+
+    # TODO: Validate
+    def title_key(self) -> str:
+        """Return the id of the title this share link names.
+
+        A share link carries an id of Amazon's own that none of Prime Video's
+        pages are keyed by, so the id is read off the address the link points
+        at rather than out of the link itself.
+        """
+        self.download_if_outdated()
+        location = self.location() or ""
+        landing_key = title_key_from_location(location)
+        if landing_key is None:
+            msg = f"Amazon share link {self.share_key} points at no title: {location!r}"
+            raise InvalidURLError(msg)
+        return landing_key
 
 
 # TODO: Validate
@@ -587,6 +604,33 @@ class Detail(DownloadedFile[dict[str, Any]]):
         return any(payload.get("transaction") for payload in self._offer_payloads())
 
     # TODO: Validate
+    def show_key(self) -> str:
+        """Return the key the title this page is for is stored under.
+
+        A title can be reached by more than one id, so the key is the id the
+        page it opens is addressed by rather than the one the link carried, and
+        a title pasted in either way is the one show.
+
+        A series has no page of its own, so every one of its seasons carries the
+        whole series and any of them would do as the series. The first is picked
+        so that a series pasted in as one season and again as another is the one
+        show either way, rather than a show for each way in.
+        """
+        seasons = self.seasons()
+        if not seasons:
+            return self.compact_key()
+        return min(seasons, key=lambda season: season.season_number).key
+
+    # TODO: Validate
+    def identity(self) -> PluginShowIdentity:
+        self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
+        return PluginShowIdentity(
+            title=self.series_title(),
+            media_type=self.entity_type(),
+            year=self.release_year(),
+        )
+
+    # TODO: Validate
     def unavailable_message(self) -> str | None:
         if self._offer_payloads():
             return None
@@ -714,6 +758,19 @@ class FileMixin(PluginBase):
         return self.detail_file(title_key).entity_type() == MOVIE_ENTITY_TYPE
 
     # TODO: Validate
+    def title_key_from_share_key(self, share_key: str) -> str:
+        return self.share_link_file(share_key).title_key()
+
+    # TODO: Validate
+    def show_key_from_title_key(self, title_key: str) -> str:
+        return self.detail_file(title_key).show_key()
+
+    # TODO: Validate
+    @override
+    def show_identity(self, show_key: str) -> PluginShowIdentity:
+        return self.detail_file(show_key).identity()
+
+    # TODO: Validate
     def _season_available(self, season_key: str) -> bool:
         detail = self.detail_file(season_key)
         detail.download_if_outdated()
@@ -761,12 +818,12 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     @override
-    def _season_keys_from_file(self, show_key: str) -> list[str]:
+    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
         return [season.key for season in self._season_entries(show_key)]
 
     # TODO: Validate
     @override
-    def _episode_keys_from_file(
+    def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
         show_key: str,

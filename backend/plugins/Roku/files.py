@@ -7,6 +7,7 @@ episode are all read out of the same file under an id of their own.
 
 from abc import ABC
 from collections.abc import Sequence
+from datetime import timedelta
 from functools import cache
 from typing import Any, override
 from uuid import UUID
@@ -18,7 +19,9 @@ from nana.content.models import Episode as ContentEpisode
 from nana.content.models import Episode2 as SeasonEpisode
 from nana.exceptions import ContentNotFoundError
 
+from app.utils import tz_datetime
 from plugins.Roku.constants import MOVIE_TYPE
+from plugins.utils.abstract_plugin import PluginShowIdentity
 from plugins.utils.base_plugin_v2.base import PluginBase
 from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
@@ -56,6 +59,24 @@ class ContentFile(BaseContentFile):
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ContentNotFoundError)
 
+    # TODO: Validate
+    def is_movie(self) -> bool:
+        content_type = self.parsed().type
+        if content_type not in (MOVIE_TYPE, "series"):
+            msg = f"Invalid media type: {content_type}"
+            raise RuntimeError(msg)
+        return content_type == MOVIE_TYPE
+
+    # TODO: Validate
+    def identity(self) -> PluginShowIdentity:
+        self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
+        content = self.parsed()
+        return PluginShowIdentity(
+            title=content.title,
+            media_type="Movie" if content.type == MOVIE_TYPE else "TV Show",
+            year=content.release_year,
+        )
+
 
 # TODO: Validate
 class SeasonEpisodesFile(BaseContentFile):
@@ -82,11 +103,12 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     def _is_movie(self, show_key: str) -> bool:
-        content_type = self._content(show_key).type
-        if content_type not in (MOVIE_TYPE, "series"):
-            msg = f"Invalid media type: {content_type}"
-            raise RuntimeError(msg)
-        return content_type == MOVIE_TYPE
+        return self.content_file(show_key).is_movie()
+
+    # TODO: Validate
+    @override
+    def show_identity(self, show_key: str) -> PluginShowIdentity:
+        return self.content_file(show_key).identity()
 
     # TODO: Validate
     def _show_episodes(self, show_key: str) -> list[ContentEpisode]:
@@ -166,7 +188,7 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     @override
-    def _season_keys_from_file(self, show_key: str) -> list[str]:
+    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
         if self._is_movie(show_key):
             return [self._season_key(show_key, 0)]
         return [
@@ -176,7 +198,7 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     @override
-    def _episode_keys_from_file(
+    def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
         show_key: str,

@@ -3,12 +3,11 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.Roku.source import SourceMixin
 from plugins.Roku.upsert import UpsertMixin
 
 
 # TODO: Validate
-class RokuBase(UpsertMixin, SourceMixin):
+class RokuBase(UpsertMixin):
     # TODO: Validate
     @classmethod
     @override

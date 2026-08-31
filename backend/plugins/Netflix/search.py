@@ -7,11 +7,12 @@ from datetime import timedelta
 from typing import ClassVar, override
 
 from app.utils import tz_datetime
-from plugins.Netflix.utils import HelperMixin
+from plugins.Netflix.files import FileMixin
+from plugins.Netflix.utils import UtilsMixin
 
 
 # TODO: Validate
-class SearchMixin(HelperMixin):
+class SearchMixin(UtilsMixin, FileMixin):
     """Searching Netflix."""
 
     # Netflix tags each search result with the media type of its title.

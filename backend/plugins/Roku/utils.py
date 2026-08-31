@@ -3,17 +3,13 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import override
 
-from app.utils import tz_datetime
-from plugins.Roku.constants import MOVIE_TYPE
-from plugins.Roku.files import FileMixin
-from plugins.utils.abstract_plugin import PluginShowIdentity
+from plugins.utils.base_plugin_v2.base import PluginBase
 
 
 # TODO: Validate
-class HelperMixin(FileMixin):
+class UtilsMixin(PluginBase):
     """The URLs of a title and the pages it is watched from."""
 
     # TODO: Validate
@@ -31,15 +27,3 @@ class HelperMixin(FileMixin):
     @classmethod
     def manual_search(cls, query: str) -> str | None:
         return cls.build_url("search")
-
-    # TODO: Validate
-    @override
-    def show_identity(self, show_key: str) -> PluginShowIdentity:
-        content_file = self.content_file(show_key)
-        content_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        content = content_file.parsed()
-        return PluginShowIdentity(
-            title=content.title,
-            media_type="Movie" if content.type == MOVIE_TYPE else "TV Show",
-            year=content.release_year,
-        )

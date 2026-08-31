@@ -13,11 +13,12 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
-from plugins.HBOMax.utils import HelperMixin
+from plugins.HBOMax.files import FileMixin
+from plugins.HBOMax.utils import UtilsMixin
 
 
 # TODO: Validate
-class UpsertMixin(HelperMixin):
+class UpsertMixin(UtilsMixin, FileMixin):
     """Mixin containing all upsert functions."""
 
     # TODO: Validate

@@ -2,6 +2,7 @@
 """The files a Tubi title is read out of."""
 
 from collections.abc import Sequence
+from datetime import timedelta
 from functools import cache
 from typing import Any, override
 
@@ -12,6 +13,8 @@ from plugi.content.models import Child1 as EpisodeChild
 from plugi.content.models import ContentModel
 from plugi.exceptions import ContentNotFoundError
 
+from app.utils import tz_datetime
+from plugins.utils.abstract_plugin import PluginShowIdentity
 from plugins.utils.base_plugin_v2.base import PluginBase
 from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
@@ -43,6 +46,22 @@ class ContentFile(EndpointFile[ContentModel]):
     def acceptable_error_extra_value(self) -> str:
         return f"Invalid content_id {self.unique_identifier}"
 
+    # TODO: Validate
+    def is_movie(self) -> bool:
+        # The `type` field of a Tubi content response marks a series; a movie
+        # and a single episode both use "v".
+        return self.parsed().type != "s"
+
+    # TODO: Validate
+    def identity(self) -> PluginShowIdentity:
+        self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
+        content = self.parsed()
+        return PluginShowIdentity(
+            title=content.title,
+            media_type="Movie" if self.is_movie() else "Series",
+            year=content.year,
+        )
+
 
 # TODO: Validate
 class FileMixin(PluginBase):
@@ -59,9 +78,12 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     def _is_movie(self, show_key: str) -> bool:
-        # The `type` field of a Tubi content response marks a series; a movie
-        # and a single episode both use "v".
-        return self._content(show_key).type != "s"
+        return self.content_file(show_key).is_movie()
+
+    # TODO: Validate
+    @override
+    def show_identity(self, show_key: str) -> PluginShowIdentity:
+        return self.content_file(show_key).identity()
 
     # TODO: Validate
     def _seasons(self, show_key: str) -> list[SeasonChild]:
@@ -127,7 +149,7 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     @override
-    def _season_keys_from_file(self, show_key: str) -> list[str]:
+    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
         if self._is_movie(show_key):
             return [self._movie_season_key(show_key)]
         return [
@@ -136,7 +158,7 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     @override
-    def _episode_keys_from_file(
+    def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
         show_key: str,

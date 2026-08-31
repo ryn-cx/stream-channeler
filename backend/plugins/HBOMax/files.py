@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from sqlmodel import Session
 
     from app.plugins.models import Plugin
+    from app.shows.models import Show as DatabaseShow
 
 
 # TODO: Validate
@@ -101,6 +102,14 @@ class MovieFile(EndpointFile[MovieModel]):
 # TODO: Validate
 class FileMixin(MediaTypeMixin, PluginBase):
     """The files a title is read out of."""
+
+    # TODO: Validate
+    @override
+    def _set_media_type_from_show(self, show: DatabaseShow) -> None:
+        if not show.media_type:
+            msg = "Show.media_type is not set."
+            raise AttributeError(msg)
+        self._media_type = "movie" if show.media_type == "Movie" else "series"
 
     # TODO: Validate
     def show_file(self, show_id: str) -> ShowFile:
@@ -212,7 +221,7 @@ class FileMixin(MediaTypeMixin, PluginBase):
 
     # TODO: Validate
     @override
-    def _season_keys_from_file(self, show_key: str) -> list[str]:
+    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
         if self._is_movie():
             return [self._season_key(show_key, 0)]
         return [
@@ -222,7 +231,7 @@ class FileMixin(MediaTypeMixin, PluginBase):
 
     # TODO: Validate
     @override
-    def _episode_keys_from_file(
+    def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
         show_key: str,

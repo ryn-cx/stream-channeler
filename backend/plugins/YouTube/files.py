@@ -199,6 +199,14 @@ class ChannelPlaylists(EndpointFile[PlaylistsModel]):
     def _download_file(self) -> str:
         return self._endpoint().download_merged(channel_id=self.unique_identifier)
 
+    # TODO: Validate
+    def has_only_uploads(self) -> bool:
+        if not self.database_record.content:
+            return True
+        return not any(
+            item.content_details.item_count > 0 for item in self.parsed().items
+        )
+
 
 # TODO: Validate
 class PlaylistInfo(EndpointFile[PlaylistsModel]):
@@ -760,7 +768,7 @@ class FileMixin(PluginBase):
         return "US" in restriction.allowed
 
     # TODO: Validate
-    def topic_release_keys(self, channel_key: str) -> list[str]:
+    def topic_release_keys_from_file(self, channel_key: str) -> list[str]:
         """Return the playlist key of every release a Topic channel lists."""
         return [
             release_key
@@ -769,17 +777,17 @@ class FileMixin(PluginBase):
         ]
 
     # TODO: Validate
-    def show_season_numbers(self, show_key: str) -> list[str]:
+    def show_season_numbers_from_file(self, show_key: str) -> list[str]:
         return [
             str(number)
             for number in self.show_listing_file_for_show(show_key).season_numbers()
         ]
 
     # TODO: Validate
-    def show_episode_keys(self, show_key: str) -> list[str]:
+    def show_episode_keys_from_files(self, show_key: str) -> list[str]:
         """Return the episode keys of every season of a show, in season order."""
-        return self._episode_keys_from_file(
-            self._season_keys_from_file(show_key),
+        return self._episode_keys_from_season_files(
+            self._season_keys_from_show_files(show_key),
             show_key,
         )
 
@@ -872,7 +880,7 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     @override
-    def _season_keys_from_file(self, show_key: str) -> list[str]:
+    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
         # A show that is a single video has that video as its only season.
         if is_video_key(show_key):
             return [show_key]
@@ -884,13 +892,13 @@ class FileMixin(PluginBase):
         if is_show_key(show_key):
             return [
                 show_season_key(show_key, season_number)
-                for season_number in self.show_season_numbers(show_key)
+                for season_number in self.show_season_numbers_from_file(show_key)
             ]
 
         # A Topic channel has one season for every release it lists.
         if self.is_topic_channel(show_key):
             return self._with_album_seasons(
-                self.topic_release_keys(show_key),
+                self.topic_release_keys_from_file(show_key),
                 show_key,
             )
 
@@ -928,11 +936,11 @@ class FileMixin(PluginBase):
         # An album playlist is auto-generated and listed by no channel, so it is only
         # ever added by an importing URL naming it and then always kept.
         return season_keys + [
-            key for key in self._album_season_keys(show_key) if key not in season_keys
+            key for key in self._album_season_keys_from_database(show_key) if key not in season_keys
         ]
 
     # TODO: Validate
-    def _album_season_keys(self, show_key: str) -> list[str]:
+    def _album_season_keys_from_database(self, show_key: str) -> list[str]:
         season_keys: list[str] = []
         if self._importing_album_playlist_key:
             season_keys.append(self._importing_album_playlist_key)
@@ -948,7 +956,7 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     @override
-    def _episode_keys_from_file(
+    def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
         show_key: str,
@@ -962,7 +970,7 @@ class FileMixin(PluginBase):
         seen: set[str] = set()
         video_keys: list[str] = []
         for season_key in season_keys:
-            for video_key in self._season_episode_keys(season_key):
+            for video_key in self._season_episode_keys_from_file(season_key):
                 if video_key in seen:
                     continue
                 if usa_only and not self.is_usa_video(video_key):
@@ -972,7 +980,7 @@ class FileMixin(PluginBase):
         return video_keys
 
     # TODO: Validate
-    def _season_episode_keys(self, season_key: str) -> list[str]:
+    def _season_episode_keys_from_file(self, season_key: str) -> list[str]:
         """Return the episode keys held by a single season."""
         # A season that is a single video holds only that video.
         if is_video_key(season_key):
@@ -1063,7 +1071,7 @@ class FileMixin(PluginBase):
     def _download_all_season_files(self, show: str | Show) -> list[File]:
         """Batch download the videos of every playlist in a single API call."""
         show_key = self._get_key(show)
-        season_keys = self._season_keys_from_file(show_key)
+        season_keys = self._season_keys_from_show_files(show_key)
         _cache = self._preload_season_files(season_keys, show_key)
         all_files: list[File] = []
         for season_key in season_keys:
@@ -1072,7 +1080,7 @@ class FileMixin(PluginBase):
 
         episode_cache = self._preload_all_episode_files(season_keys, show_key)
         self._batch_download_missing_videos(
-            self._episode_keys_from_file(season_keys, show_key),
+            self._episode_keys_from_season_files(season_keys, show_key),
         )
         for season_key in season_keys:
             all_files.extend(
@@ -1095,7 +1103,7 @@ class FileMixin(PluginBase):
         """Batch download all videos for a season in a single API call."""
         season_key = self._get_key(season)
         show_key = self._get_show_key(season, show)
-        video_keys = self._episode_keys_from_file(season_key, show_key)
+        video_keys = self._episode_keys_from_season_files(season_key, show_key)
         self._preload_episode_files(video_keys, season_key, show_key, preloaded_files)
         self._batch_download_missing_videos(video_keys)
         return [self.videos_file(video_id).database_record for video_id in video_keys]

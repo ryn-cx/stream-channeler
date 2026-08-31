@@ -1,5 +1,4 @@
 # TODO: Validate
-from functools import partial
 from typing import Any, override
 from urllib.parse import quote
 
@@ -60,7 +59,7 @@ def is_quota_error(error: BaseException) -> bool:
 
 
 # TODO: Validate
-class HelperMixin(FileMixin):
+class UtilsMixin(FileMixin):
     # TODO: Validate
     def record_album_playlist_key(self, playlist_key: str) -> None:
         self._importing_album_playlist_key = playlist_key
@@ -102,7 +101,7 @@ class HelperMixin(FileMixin):
         if is_video_key(show_key):
             episode_key = show_key
         else:
-            episode_keys = self.show_episode_keys(show_key)
+            episode_keys = self.show_episode_keys_from_files(show_key)
             if not episode_keys:
                 return None
             episode_key = episode_keys[0]
@@ -116,7 +115,7 @@ class HelperMixin(FileMixin):
 
     # TODO: Validate
     def show_channel_title(self, show_key: str) -> str | None:
-        episode_keys = self.show_episode_keys(show_key)
+        episode_keys = self.show_episode_keys_from_files(show_key)
         if not episode_keys:
             return None
         items = self.videos_file(episode_keys[0]).parsed().items
@@ -133,11 +132,7 @@ class HelperMixin(FileMixin):
             return None
 
         source_key = f"{self.plugin_name()} {channel_title}"
-        self.initialize_source(
-            source_key,
-            partial(self._upsert_source, source_key),
-        )
-        return self._source_db_entry(source_key)
+        return self.upsert_source(source_key)
 
     # TODO: Validate
     def paid_or_free_source(self, show_key: str) -> Source:
@@ -160,20 +155,14 @@ class HelperMixin(FileMixin):
     ) -> int | None:
         if not (is_show_season_key(season_key) or is_an_album(season_key)):
             return None
-        episode_keys = self._season_episode_keys(season_key)
+        episode_keys = self._season_episode_keys_from_file(season_key)
         if episode_key not in episode_keys:
             return None
         return episode_keys.index(episode_key) + 1
 
     # TODO: Validate
     def _channel_has_only_uploads(self, show_key: str) -> bool:
-        channel_playlists_file = self.channel_playlists_file(show_key)
-        if not channel_playlists_file.database_record.content:
-            return True
-        return not any(
-            item.content_details.item_count > 0
-            for item in channel_playlists_file.parsed().items
-        )
+        return self.channel_playlists_file(show_key).has_only_uploads()
 
     # TODO: Validate
     @override

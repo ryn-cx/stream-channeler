@@ -348,7 +348,7 @@ def _serve_before_grouping(
     ) -> list[File]:
         season_key = self._get_key(season)
         show_key = self._get_show_key(season, show)
-        episode_keys = self._episode_keys_from_file(season_key, show_key)
+        episode_keys = self._episode_keys_from_season_files(season_key, show_key)
         # Held for as long as the files are being reached for, because a preload
         # only warms the session and what it warmed is dropped once it is let go.
         _cache = self._preload_episode_files(

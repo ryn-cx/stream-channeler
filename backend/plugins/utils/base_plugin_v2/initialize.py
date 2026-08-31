@@ -8,6 +8,7 @@ from sqlmodel import Session
 from app.plugins.models import Plugin
 from app.sources.models import Source
 from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.files import EXTRA_STATUS_FIELD
 
 
 # TODO: Validate
@@ -15,29 +16,50 @@ class PluginInitializer(PluginBase, ABC):
     # TODO: Validate
     @classmethod
     def initialize_db(cls, session: Session) -> None:
-        plugin = cls.initialize_plugin(session)
-        cls.initialize_sources(session, plugin)
+        """Initialize the database for the plugin.
+
+        Calls `initialize_plugin`, `initialize_sources` and `initialize_channels`."""
+        plugin = Plugin.get(session, cls.plugin_name())
+        if plugin and plugin.extra.get(EXTRA_STATUS_FIELD) != "Incomplete":
+            return
+
+        cls.initialize_plugin(session)
+        plugin_initializator = cls(session)
+        plugin_initializator.initialize_sources()
+        plugin_initializator.initialize_channels()
+        plugin_initializator.plugin.extra = {
+            field: value
+            for field, value in plugin_initializator.plugin.extra.items()
+            if field != EXTRA_STATUS_FIELD
+        }
 
     # TODO: Validate
     @classmethod
     def initialize_plugin(cls, session: Session) -> Plugin:
-        plugin = Plugin.get(session, cls.plugin_name())
-        if plugin is not None:
+        if plugin := Plugin.get(session, cls.plugin_name()):
             return plugin
 
+        # Commit the plugin to the database because initialize_sources will be called
+        # after this and some plugins require files to be downloaded to initialize the
+        # sources.
         with Session(session.get_bind()) as plugin_session:
-            Plugin(
+            plugin = Plugin(
                 key=cls.plugin_name(),
-            ).upsert_and_set_update_at(
-                plugin_session,
-                Plugin.get(plugin_session, cls.plugin_name()),
+                extra={EXTRA_STATUS_FIELD: "Incomplete"},
             )
+            plugin.upsert_and_set_update_at(plugin_session, None)
             plugin_session.commit()
+
+        # The plugin returned needs to be for the original session because the other
+        # session has been closed.
         return Plugin.get_one(session, cls.plugin_name())
 
     # TODO: Validate
-    @classmethod
-    def initialize_sources(cls, session: Session, plugin: Plugin) -> None:
-        for source_key in cls._source_keys():
-            if Source.get(session, plugin, source_key) is None:
-                cls._upsert_source(session, plugin, source_key)
+    def initialize_sources(self) -> None:
+        """Create the sources in the database for the plugin."""
+        for source_key in self._source_keys():
+            if Source.get(self.session, self.plugin, source_key) is None:
+                self.upsert_source(source_key)
+
+    def initialize_channels(self) -> None:
+        """Create the channels in the database for the plugin."""

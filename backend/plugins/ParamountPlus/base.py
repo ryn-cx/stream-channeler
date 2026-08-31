@@ -3,12 +3,11 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.ParamountPlus.source import SourceMixin
 from plugins.ParamountPlus.upsert import UpsertMixin
 
 
 # TODO: Validate
-class ParamountPlusBase(UpsertMixin, SourceMixin):
+class ParamountPlusBase(UpsertMixin):
     # TODO: Validate
     @classmethod
     @override

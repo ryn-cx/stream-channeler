@@ -286,7 +286,7 @@ class YouTubeImportURL(URLImporter, YouTubeBase):
         # before the listing rather than beside it.
         self.raise_if_invalid_file(self.show_page_file(show_key), url)
         self.raise_if_invalid_file(self.show_listing_file_for_show(show_key), url)
-        if not self.show_season_numbers(show_key):
+        if not self.show_season_numbers_from_file(show_key):
             msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
 

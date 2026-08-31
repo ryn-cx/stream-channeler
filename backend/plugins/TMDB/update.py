@@ -65,7 +65,7 @@ class TMDBUpdater(Updater, TMDBBase):
             self._import_show_changes(show_key, changes_file)
             changes_file.database_record.extra = {EXTRA_STATUS_FIELD: COMPLETED_STATUS}
 
-        for key in self._season_keys_from_file(show_key):
+        for key in self._season_keys_from_show_files(show_key):
             self._download_outdated_files(self._season_files(key, show_key))
 
     # TODO: Validate
@@ -95,7 +95,7 @@ class TMDBUpdater(Updater, TMDBBase):
         item: Item,
         changed_at: datetime,
     ) -> None:
-        stored_keys = self._season_keys_from_file(show_key)
+        stored_keys = self._season_keys_from_show_files(show_key)
         # What a change carries is whatever JSON TMDB wrote for that key, which
         # for a season is an object naming the season and for everything else is
         # a string or a number that names no season at all.

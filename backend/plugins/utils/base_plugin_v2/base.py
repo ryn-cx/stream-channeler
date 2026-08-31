@@ -208,21 +208,20 @@ class PluginBase(PreloadMixin, OutdatedCheckMixin, URLMixin, ABC):
         """
 
     # TODO: Validate
-    @classmethod
-    def _upsert_source(
-        cls,
-        session: Session,
-        plugin: Plugin,
-        source_key: str,
-    ) -> Source:
+    def upsert_source(self, source_key: str) -> Source:
         """Create or update the plugin's `Source` record(s)."""
-        msg = f"{cls.plugin_name()} does not implement _upsert_source."
-        raise NotImplementedError(msg)
+        source = Source.get_from_memory(self.session, self.plugin, source_key)
+        return Source(
+            key=source_key,
+            name=self.plugin_name(),
+            favicon_url=self.favicon_url(),
+            plugin_id=self.plugin.id,
+        ).upsert_and_set_update_at(self.plugin, source)
 
     # TODO: Validate
     def soft_delete_missing_seasons(self, show_key: str) -> None:
         """Soft-delete seasons whose keys are not in the show's season file."""
-        season_keys = self._season_keys_from_file(show_key)
+        season_keys = self._season_keys_from_show_files(show_key)
         source_ids = {source.id for source in self.plugin.sources}
         for obj in list(self.session.identity_map.values()):
             if (
@@ -235,7 +234,7 @@ class PluginBase(PreloadMixin, OutdatedCheckMixin, URLMixin, ABC):
     # TODO: Validate
     def soft_delete_missing_episodes(self, season_key: str, show_key: str) -> None:
         """Soft-delete episodes whose keys are not in the season's episode file."""
-        episode_keys = self._episode_keys_from_file(season_key, show_key)
+        episode_keys = self._episode_keys_from_season_files(season_key, show_key)
         source_ids = {source.id for source in self.plugin.sources}
         show_ids = {
             obj.id
@@ -254,7 +253,7 @@ class PluginBase(PreloadMixin, OutdatedCheckMixin, URLMixin, ABC):
     def _soft_delete_missing(self, show_key: str) -> None:
         _cache = self._preload_show(show_key, preload_episodes=True).all()
         self.soft_delete_missing_seasons(show_key)
-        for season_key in self._season_keys_from_file(show_key):
+        for season_key in self._season_keys_from_show_files(show_key):
             self.soft_delete_missing_episodes(season_key, show_key)
 
     # TODO: Validate

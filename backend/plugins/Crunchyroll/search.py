@@ -6,11 +6,12 @@ from typing import override
 from chirashi.search.models import Item as SearchItem
 
 from plugins.Crunchyroll.constants import episode_is_music, show_is_an_artist
-from plugins.Crunchyroll.utils import HelperMixin
+from plugins.Crunchyroll.files import FileMixin
+from plugins.Crunchyroll.utils import UtilsMixin
 
 
 # TODO: Validate
-class SearchMixin(HelperMixin):
+class SearchMixin(UtilsMixin, FileMixin):
     # TODO: Validate
     @override
     def search(self, query: str) -> str | None:

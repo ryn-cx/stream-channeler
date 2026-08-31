@@ -1,41 +1,22 @@
 # TODO: Validate
 """What every other part of the plugin reads a title by."""
 
-from datetime import timedelta
+from enum import StrEnum
 from typing import override
 from urllib.parse import quote, quote_plus
 
-from wholoo.movies.models import MoviesModel
-
-from app.shows.models import Show
-from app.utils import tz_datetime
-from plugins.Hulu.constants import HuluMediaType
-from plugins.Hulu.files import FileMixin
-from plugins.utils.abstract_plugin import PluginShowIdentity
+from plugins.utils.base_plugin_v2.base import PluginBase
 
 
 # TODO: Validate
-class HelperMixin(FileMixin):
+class HuluMediaType(StrEnum):
+    MOVIE = "movie"
+    SERIES = "series"
+
+
+# TODO: Validate
+class UtilsMixin(PluginBase):
     """The URLs of a title and what a search result of it is asked for by."""
-
-    # TODO: Validate
-    @override
-    def _set_media_type_from_show(self, show: Show) -> None:
-        if not show.media_type:
-            msg = "Show.media_type is not set."
-            raise AttributeError(msg)
-        self._media_type = (
-            HuluMediaType.MOVIE if show.media_type == "Movie" else HuluMediaType.SERIES
-        )
-
-    # TODO: Validate
-    def _movie_model(self, movie_id: str) -> MoviesModel:
-        return self.movie_file(movie_id).parsed()
-
-    # TODO: Validate
-    def _season_name(self, series_id: str, season_number: int) -> str:
-        parsed = self.season_file(series_id, season_number).parsed()
-        return parsed.series_grouping_metadata.grouping_name
 
     # TODO: Validate
     @classmethod
@@ -64,32 +45,3 @@ class HelperMixin(FileMixin):
     def _thumbnail_url(path: str) -> str:
         operations = quote('[{"resize":"480x480|max"},{"format":"webp"}]', safe=":,")
         return f"{path}&operations={operations}"
-
-    # TODO: Validate
-    @override
-    def show_identity(self, show_key: str) -> PluginShowIdentity:
-        if self._is_movie():
-            return self._movie_identity(show_key)
-        return self._series_identity(show_key)
-
-    # TODO: Validate
-    def _movie_identity(self, movie_id: str) -> PluginShowIdentity:
-        movie_file = self.movie_file(movie_id)
-        movie_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        model = movie_file.parsed()
-        return PluginShowIdentity(
-            title=model.name,
-            media_type="Movie",
-            year=model.details.entity.premiere_date.year,
-        )
-
-    # TODO: Validate
-    def _series_identity(self, series_id: str) -> PluginShowIdentity:
-        series_file = self.series_file(series_id)
-        series_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        model = series_file.parsed()
-        return PluginShowIdentity(
-            title=model.name,
-            media_type="Series",
-            year=model.details.entity.premiere_date.year,
-        )

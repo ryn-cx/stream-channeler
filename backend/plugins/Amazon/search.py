@@ -7,11 +7,12 @@ from datetime import timedelta
 from typing import override
 
 from app.utils import tz_datetime
-from plugins.Amazon.utils import HelperMixin
+from plugins.Amazon.files import FileMixin
+from plugins.Amazon.utils import UtilsMixin
 
 
 # TODO: Validate
-class SearchMixin(HelperMixin):
+class SearchMixin(UtilsMixin, FileMixin):
     """Searching Prime Video."""
 
     # TODO: Validate

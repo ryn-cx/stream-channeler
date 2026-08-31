@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
+from datetime import timedelta
 from functools import cache
 from typing import Any, override
 from uuid import UUID
@@ -17,6 +19,9 @@ from kneeminus.exceptions import EntityNotFoundError
 from sqlmodel import Session
 
 from app.plugins.models import Plugin
+from app.utils import tz_datetime
+from plugins.DisneyPlus.utils import required_value
+from plugins.utils.abstract_plugin import PluginShowIdentity
 from plugins.utils.base_plugin_v2.base import PluginBase
 from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
@@ -70,6 +75,46 @@ class Entity(EndpointFile[EntityModel]):
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, EntityNotFoundError)
+
+    # TODO: Validate
+    def media_details(self) -> MainContentItem:
+        return required_main_content_item(self.parsed(), "MediaDetails")
+
+    # TODO: Validate
+    def hero(self) -> MainContentItem:
+        return required_main_content_item(self.parsed(), "DetailEntityHero")
+
+    # TODO: Validate
+    def is_movie(self) -> bool:
+        return main_content_item(self.parsed(), "Episodes") is None
+
+    # TODO: Validate
+    def release_year(self) -> int | None:
+        release_year = self.hero().release_year
+        if release_year is None:
+            return None
+        # Disney+ writes a release year as a year on its own or as a range of
+        # them, and the year the title came out is the first one either way.
+        if year := re.search(r"\d{4}", release_year):
+            return int(year.group())
+        return None
+
+    # TODO: Validate
+    def background_image_url(self) -> str:
+        background_image = required_value(
+            self.hero().background_image,
+            "background image",
+        )
+        return background_image.default_image.source
+
+    # TODO: Validate
+    def identity(self) -> PluginShowIdentity:
+        self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
+        return PluginShowIdentity(
+            title=required_value(self.media_details().title, "title"),
+            media_type="Movie" if self.is_movie() else "Series",
+            year=self.release_year(),
+        )
 
 
 # TODO: Validate
@@ -132,15 +177,24 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     def _media_details(self, show_key: str) -> MainContentItem:
-        return required_main_content_item(self._entity(show_key), "MediaDetails")
-
-    # TODO: Validate
-    def _hero(self, show_key: str) -> MainContentItem:
-        return required_main_content_item(self._entity(show_key), "DetailEntityHero")
+        return self.entity_file(show_key).media_details()
 
     # TODO: Validate
     def _is_movie(self, show_key: str) -> bool:
-        return main_content_item(self._entity(show_key), "Episodes") is None
+        return self.entity_file(show_key).is_movie()
+
+    # TODO: Validate
+    def _release_year(self, show_key: str) -> int | None:
+        return self.entity_file(show_key).release_year()
+
+    # TODO: Validate
+    def _background_image_url(self, show_key: str) -> str:
+        return self.entity_file(show_key).background_image_url()
+
+    # TODO: Validate
+    @override
+    def show_identity(self, show_key: str) -> PluginShowIdentity:
+        return self.entity_file(show_key).identity()
 
     # TODO: Validate
     def _seasons(self, show_key: str) -> list[EntitySeason]:
@@ -206,7 +260,7 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     @override
-    def _season_keys_from_file(self, show_key: str) -> list[str]:
+    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
         if self._is_movie(show_key):
             return [self._season_key(show_key, show_key)]
         return [
@@ -216,7 +270,7 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     @override
-    def _episode_keys_from_file(
+    def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
         show_key: str,

@@ -2,7 +2,6 @@
 """The files Hulu is read out of."""
 
 import json
-from abc import abstractmethod
 from collections.abc import Sequence
 from datetime import datetime, timedelta
 from functools import cache
@@ -35,7 +34,8 @@ from wholoo.tv.models import TVModel
 from app.plugins.models import Plugin
 from app.shows.models import Show
 from app.utils import tz_datetime
-from plugins.Hulu.constants import HuluMediaType
+from plugins.Hulu.utils import HuluMediaType
+from plugins.utils.abstract_plugin import PluginShowIdentity
 from plugins.utils.base_plugin_v2.base import PluginBase
 from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
@@ -91,6 +91,16 @@ class Series(EndpointFile[TVModel]):
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, SeriesNotFoundError)
 
+    # TODO: Validate
+    def identity(self) -> PluginShowIdentity:
+        self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
+        model = self.parsed()
+        return PluginShowIdentity(
+            title=model.name,
+            media_type="Series",
+            year=model.details.entity.premiere_date.year,
+        )
+
 
 # TODO: Validate
 class Movie(EndpointFile[MoviesModel]):
@@ -105,6 +115,16 @@ class Movie(EndpointFile[MoviesModel]):
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, MovieNotFoundError)
+
+    # TODO: Validate
+    def identity(self) -> PluginShowIdentity:
+        self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
+        model = self.parsed()
+        return PluginShowIdentity(
+            title=model.name,
+            media_type="Movie",
+            year=model.details.entity.premiere_date.year,
+        )
 
 
 # TODO: Validate
@@ -133,6 +153,10 @@ class SeasonFile(EndpointFile[SeasonModel]):
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(self.series_id, self.season_number)
+
+    # TODO: Validate
+    def season_name(self) -> str:
+        return self.parsed().series_grouping_metadata.grouping_name
 
 
 # TODO: Validate
@@ -227,8 +251,20 @@ class FileMixin(PluginBase):
     _media_type: HuluMediaType
 
     # TODO: Validate
-    @abstractmethod
-    def _set_media_type_from_show(self, show: Show) -> None: ...
+    def _set_media_type_from_show(self, show: Show) -> None:
+        if not show.media_type:
+            msg = "Show.media_type is not set."
+            raise AttributeError(msg)
+        self._media_type = (
+            HuluMediaType.MOVIE if show.media_type == "Movie" else HuluMediaType.SERIES
+        )
+
+    # TODO: Validate
+    @override
+    def show_identity(self, show_key: str) -> PluginShowIdentity:
+        if self._is_movie():
+            return self.movie_file(show_key).identity()
+        return self.series_file(show_key).identity()
 
     # TODO: Validate
     def genres_page_file(self) -> GenresPage:
@@ -332,7 +368,7 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     @override
-    def _season_keys_from_file(self, show_key: str) -> list[str]:
+    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
         if self._is_movie():
             return [self._season_key(show_key, 0)]
         return [
@@ -342,7 +378,7 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     @override
-    def _episode_keys_from_file(
+    def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
         show_key: str,

@@ -46,7 +46,7 @@ class UpdaterMixin(FileMixin):
         for season in seasons:
             video_keys.extend(
                 key
-                for key in self._episode_keys_from_file(season.key, season.show.key)
+                for key in self._episode_keys_from_season_files(season.key, season.show.key)
                 if key not in video_keys
             )
 

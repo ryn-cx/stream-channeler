@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, override
+from typing import override
 
 from diving_board.schedule import models as schedule_models
 from loguru import logger
@@ -16,14 +16,9 @@ from app.channels.service import add_urls_to_channel_import_queue
 from app.models import Visibility
 from app.sources.models import Source
 from app.users.service import get_or_create_plugin_user
-from plugins.HiDive.files import Schedule
-from plugins.HiDive.utils import HelperMixin, schedule_group_list
+from plugins.HiDive.files import FileMixin, Schedule, schedule_group_list
+from plugins.HiDive.utils import UtilsMixin
 from plugins.utils.base_plugin_v2.files import COMPLETED_STATUS, EXTRA_STATUS_FIELD
-
-if TYPE_CHECKING:
-    from sqlmodel import Session
-
-    from app.plugins.models import Plugin
 
 # TODO: Add support for individual episodes of a series.
 
@@ -59,7 +54,7 @@ def _card_show_name(text: str) -> str:
 
 
 # TODO: Validate
-class SourceMixin(HelperMixin):
+class SourceMixin(UtilsMixin, FileMixin):
     """Reading the schedule for what the source's titles are about to gain."""
 
     # TODO: Validate
@@ -126,11 +121,8 @@ class SourceMixin(HelperMixin):
 
         # Queued in one call so the whole schedule file costs a single commit.
         if new_show_urls:
-            add_urls_to_channel_import_queue(
-                self.session,
-                self._schedule_channel(),
-                new_show_urls,
-            )
+            channel = self._schedule_channel()
+            add_urls_to_channel_import_queue(self.session, channel, new_show_urls)
 
     # TODO: Validate
     def _schedule_channel(self) -> Channel:
@@ -163,17 +155,7 @@ class SourceMixin(HelperMixin):
         return channel
 
     # TODO: Validate
-    @classmethod
     @override
-    def _upsert_source(
-        cls,
-        session: Session,
-        plugin: Plugin,
-        source_key: str,
-    ) -> Source:
-        return cls(session).upsert_source(source_key)
-
-    # TODO: Validate
     def upsert_source(self, source_key: str) -> Source:
         if not (latest_schedule_file := self.get_latest_schedule_file()):
             latest_schedule_file = self._initial_file(Schedule)

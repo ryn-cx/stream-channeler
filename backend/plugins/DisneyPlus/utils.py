@@ -2,12 +2,9 @@
 """What every other part of the plugin reads a title by."""
 
 import re
-from datetime import timedelta
 from typing import override
 
-from app.utils import tz_datetime
-from plugins.DisneyPlus.files import FileMixin
-from plugins.utils.abstract_plugin import PluginShowIdentity
+from plugins.utils.base_plugin_v2.base import PluginBase
 
 
 # TODO: Validate
@@ -20,7 +17,7 @@ def required_value[ValueT](value: ValueT | None, description: str) -> ValueT:
 
 
 # TODO: Validate
-class HelperMixin(FileMixin):
+class UtilsMixin(PluginBase):
     """The URLs of a title and the numbers Disney+ only writes into names."""
 
     # TODO: Validate
@@ -32,25 +29,6 @@ class HelperMixin(FileMixin):
         if number := re.search(r"\d+", name):
             return int(number.group())
         return fallback
-
-    # TODO: Validate
-    def _release_year(self, show_key: str) -> int | None:
-        release_year = self._hero(show_key).release_year
-        if release_year is None:
-            return None
-        # Disney+ writes a release year as a year on its own or as a range of
-        # them, and the year the title came out is the first one either way.
-        if year := re.search(r"\d{4}", release_year):
-            return int(year.group())
-        return None
-
-    # TODO: Validate
-    def _background_image_url(self, show_key: str) -> str:
-        background_image = required_value(
-            self._hero(show_key).background_image,
-            "background image",
-        )
-        return background_image.default_image.source
 
     # TODO: Validate
     @classmethod
@@ -67,14 +45,3 @@ class HelperMixin(FileMixin):
     @classmethod
     def manual_search(cls, query: str) -> str | None:
         return cls.build_url("browse/search")
-
-    # TODO: Validate
-    @override
-    def show_identity(self, show_key: str) -> PluginShowIdentity:
-        entity_file = self.entity_file(show_key)
-        entity_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        return PluginShowIdentity(
-            title=required_value(self._media_details(show_key).title, "title"),
-            media_type="Movie" if self._is_movie(show_key) else "Series",
-            year=self._release_year(show_key),
-        )

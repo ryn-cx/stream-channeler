@@ -121,7 +121,7 @@ class SeasonSource(NamedTuple):
 
 
 # TODO: Validate
-class HelperMixin(FileMixin):
+class UtilsMixin(FileMixin):
     """The files and keys the TMDB plugin imports its own media from.
 
     A season and an episode are keyed by their own TMDB ids, which is what names
@@ -246,7 +246,7 @@ class HelperMixin(FileMixin):
 
     # TODO: Validate
     @override
-    def _season_keys_from_file(self, show_key: str) -> list[str]:
+    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
         media_type, tmdb_id = parse_show_key(show_key)
         if media_type == MediaType.movie:
             return [tmdb_season_key(media_type, tmdb_id)]
@@ -254,7 +254,7 @@ class HelperMixin(FileMixin):
 
     # TODO: Validate
     @override
-    def _episode_keys_from_file(
+    def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
         show_key: str,

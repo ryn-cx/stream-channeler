@@ -1,9 +1,9 @@
 # TODO: Validate
-"""The records Hulu is given before anything is imported into it."""
+"""The plugin owned channels every Hulu title is queued into."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING
 
 from loguru import logger
 from sqlmodel import select
@@ -14,10 +14,10 @@ from app.models import Visibility
 from app.users.service import get_or_create_plugin_user
 from plugins.Hulu.base import HuluBase
 from plugins.Hulu.utils import HuluMediaType
-from plugins.utils.base_plugin_v2.initialize import PluginInitializer
+from plugins.utils.base_plugin_v2.workers import PluginWorker
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Collection, Sequence
 
     from wholoo.genre.models import GenreModel
     from wholoo.genres.models import GenresModel
@@ -41,12 +41,21 @@ def _listed_items(page: GenresModel | GenreModel) -> list[tuple[str, str]]:
 
 
 # TODO: Validate
-class HuluInitializer(PluginInitializer, HuluBase):
+class HuluChannels(PluginWorker, HuluBase):
     """The channels Hulu's whole catalogue is read into."""
 
     # TODO: Validate
-    @override
-    def initialize_channels(self) -> None:
+    def run(self, genre_ids: Collection[str] | None = None) -> None:
+        """Queue every title Hulu lists, genre by genre, into its channels.
+
+        Hulu files its catalogue under a genre at a time and nowhere else, so
+        the genre pages together are the catalogue and each one is a channel of
+        its own. The three channels across all of them are filled from the same
+        pass rather than from a second read of every page.
+
+        `genre_ids` narrows the run to the genres it names, which is what reads
+        one genre again without the other ninety behind it.
+        """
         genres_page = self.genres_page_file()
         genres_page.download_if_outdated()
 
@@ -55,12 +64,17 @@ class HuluInitializer(PluginInitializer, HuluBase):
         series: list[str] = []
         for genre_name, genre_href in _listed_items(genres_page.parsed()):
             genre_id = genre_href.rsplit("/", 1)[-1]
+            if genre_ids is not None and genre_id not in genre_ids:
+                continue
             genre_page = self.genre_page_file(genre_id)
             genre_page.download_if_outdated()
             urls = self._title_urls(genre_page.parsed())
+            if not urls:
+                logger.info("No titles listed under genre: {}", genre_id)
+                continue
+
             logger.info("Queueing {} titles from genre: {}", len(urls), genre_id)
             self._queue(f"Hulu {genre_name}", f"All {genre_name} on Hulu.", urls)
-
             everything += urls
             movies += [url for url in urls if f"/{HuluMediaType.MOVIE}/" in url]
             series += [url for url in urls if f"/{HuluMediaType.SERIES}/" in url]
@@ -76,14 +90,14 @@ class HuluInitializer(PluginInitializer, HuluBase):
         paths = {
             href: None
             for _name, href in _listed_items(page)
-            if href.startswith(
-                (f"/{HuluMediaType.MOVIE}/", f"/{HuluMediaType.SERIES}/"),
-            )
+            if href.startswith((f"/{HuluMediaType.MOVIE}/", f"/{HuluMediaType.SERIES}/"))
         }
         return [cls.build_url(path) for path in paths]
 
     # TODO: Validate
     def _queue(self, name: str, description: str, urls: Sequence[str]) -> None:
+        if not urls:
+            return
         channel = self._channel(name, description)
         add_urls_to_channel_import_queue(self.session, channel, urls)
 
@@ -91,19 +105,21 @@ class HuluInitializer(PluginInitializer, HuluBase):
     def _channel(self, name: str, description: str) -> Channel:
         """Return the plugin owned channel `name`, creating it the first time."""
         plugin_user = get_or_create_plugin_user(session=self.session)
-        channel_query = (
+        channel = self.session.exec(
             select(Channel)
             .where(Channel.user_id == plugin_user.id)
-            .where(Channel.name == name)
+            .where(Channel.name == name),
+        ).first()
+        if channel:
+            return channel
+
+        channel = Channel(
+            name=name,
+            description=description,
+            visibility=Visibility.public,
+            anonymous=False,
+            user_id=plugin_user.id,
         )
-        if not (channel := self.session.exec(channel_query).first()):
-            channel = Channel(
-                name=name,
-                description=description,
-                visibility=Visibility.public,
-                anonymous=False,
-                user_id=plugin_user.id,
-            )
-            self.session.add(channel)
-            self.session.commit()
+        self.session.add(channel)
+        self.session.commit()
         return channel

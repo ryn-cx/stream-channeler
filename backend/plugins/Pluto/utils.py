@@ -4,22 +4,13 @@
 from typing import override
 from urllib.parse import quote
 
-from app.shows.models import Show
 from plugins.Pluto.constants import LOCALE
-from plugins.Pluto.files import FileMixin
+from plugins.utils.base_plugin_v2.base import PluginBase
 
 
 # TODO: Validate
-class HelperMixin(FileMixin):
+class UtilsMixin(PluginBase):
     """The URLs Pluto TV writes a title under."""
-
-    # TODO: Validate
-    @override
-    def _set_media_type_from_show(self, show: Show) -> None:
-        if not show.media_type:
-            msg = "Show.media_type is not set."
-            raise AttributeError(msg)
-        self._media_type = "movie" if show.media_type == "Movie" else "series"
 
     # TODO: Validate
     @classmethod

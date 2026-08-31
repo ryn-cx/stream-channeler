@@ -3,12 +3,11 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.DisneyPlus.source import SourceMixin
 from plugins.DisneyPlus.upsert import UpsertMixin
 
 
 # TODO: Validate
-class DisneyPlusBase(UpsertMixin, SourceMixin):
+class DisneyPlusBase(UpsertMixin):
     # TODO: Validate
     @classmethod
     @override

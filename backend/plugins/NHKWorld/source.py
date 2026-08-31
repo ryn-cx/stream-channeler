@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, override
+from typing import override
 
 from loguru import logger
 from sqlmodel import select
@@ -19,11 +19,6 @@ from plugins.utils.base_plugin_v2.files import (
     COMPLETED_STATUS,
     EXTRA_STATUS_FIELD,
 )
-
-if TYPE_CHECKING:
-    from sqlmodel import Session
-
-    from app.plugins.models import Plugin
 
 
 # TODO: Validate
@@ -77,11 +72,8 @@ class SourceMixin(FileMixin):
 
         # Queued in one call so the whole feed file costs a single commit.
         if new_show_urls:
-            add_urls_to_channel_import_queue(
-                self.session,
-                self._feed_channel(),
-                new_show_urls,
-            )
+            channel = self._feed_channel()
+            add_urls_to_channel_import_queue(self.session, channel, new_show_urls)
 
     # TODO: Validate
     def _feed_channel(self) -> Channel:
@@ -115,17 +107,7 @@ class SourceMixin(FileMixin):
         return channel
 
     # TODO: Validate
-    @classmethod
     @override
-    def _upsert_source(
-        cls,
-        session: Session,
-        plugin: Plugin,
-        source_key: str,
-    ) -> Source:
-        return cls(session).upsert_source(source_key)
-
-    # TODO: Validate
     def upsert_source(self, source_key: str) -> Source:
         if not (latest_feed_file := self.latest_new_video_episodes_file()):
             latest_feed_file = self._initial_file(NewVideoEpisodes)

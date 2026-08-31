@@ -3,12 +3,11 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.Pluto.source import SourceMixin
 from plugins.Pluto.upsert import UpsertMixin
 
 
 # TODO: Validate
-class PlutoBase(UpsertMixin, SourceMixin):
+class PlutoBase(UpsertMixin):
     # TODO: Validate
     @classmethod
     @override

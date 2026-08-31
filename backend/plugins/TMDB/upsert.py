@@ -34,8 +34,8 @@ from plugins.TMDB.constants import media_url
 from plugins.TMDB.episode_groups import dump_episode_extra
 from plugins.TMDB.keys import parse_show_key
 from plugins.TMDB.utils import (
-    HelperMixin,
     SeasonSource,
+    UtilsMixin,
     air_datetime,
     backdrop_image_url,
     backdrop_thumbnail_url,
@@ -49,15 +49,15 @@ from plugins.TMDB.utils import (
 
 
 # TODO: Validate
-class UpsertMixin(HelperMixin):
+class UpsertMixin(UtilsMixin):
     """Reads TMDB into records of TMDB's own."""
 
     # TODO: Validate
     @override
-    def _upsert_source(self) -> Source:
-        source = Source.get_from_memory(self.session, self.plugin, self.plugin_name())
+    def upsert_source(self, source_key: str) -> Source:
+        source = Source.get_from_memory(self.session, self.plugin, source_key)
         return Source(
-            key=self.plugin_name(),
+            key=source_key,
             name=self.plugin_name(),
             favicon_url=self.favicon_url(),
             data_timestamp=self._existing_data_timestamp_or_now(source),

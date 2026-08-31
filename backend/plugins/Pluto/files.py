@@ -12,6 +12,7 @@ from notaplanet.items.models import ItemsModel, ItemsModelItem
 from notaplanet.seasons import Seasons as SeasonsEndpoint
 from notaplanet.seasons.models import Episode, Season, SeasonsModel
 
+from app.shows.models import Show
 from plugins.utils.base_plugin_v2.base import PluginBase
 from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.base_plugin_v2.media_type import MediaTypeMixin
@@ -89,6 +90,14 @@ class SeasonsFile(EndpointFile[SeasonsModel]):
 # TODO: Validate
 class FileMixin(MediaTypeMixin, PluginBase):
     """The files a title is read out of."""
+
+    # TODO: Validate
+    @override
+    def _set_media_type_from_show(self, show: Show) -> None:
+        if not show.media_type:
+            msg = "Show.media_type is not set."
+            raise AttributeError(msg)
+        self._media_type = "movie" if show.media_type == "Movie" else "series"
 
     # TODO: Validate
     def items_file(self, item_id: str) -> ItemsFile:
@@ -184,7 +193,7 @@ class FileMixin(MediaTypeMixin, PluginBase):
 
     # TODO: Validate
     @override
-    def _season_keys_from_file(self, show_key: str) -> list[str]:
+    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
         if self._is_movie():
             return [self._movie_season_key(show_key)]
         return [
@@ -194,7 +203,7 @@ class FileMixin(MediaTypeMixin, PluginBase):
 
     # TODO: Validate
     @override
-    def _episode_keys_from_file(
+    def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
         show_key: str,

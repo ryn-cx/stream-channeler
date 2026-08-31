@@ -21,11 +21,11 @@ from plugins.YouTube.files import (
     is_video_key,
     split_show_season_key,
 )
-from plugins.YouTube.utils import HelperMixin
+from plugins.YouTube.utils import UtilsMixin
 
 
 # TODO: Validate
-class UpsertMixin(HelperMixin):
+class UpsertMixin(UtilsMixin):
     # TODO: Validate
     @override
     def upsert_show(
@@ -102,7 +102,7 @@ class UpsertMixin(HelperMixin):
         *,
         force: bool = False,
     ) -> None:
-        for season_key in self._season_keys_from_file(show_key):
+        for season_key in self._season_keys_from_show_files(show_key):
             _, season_number = split_show_season_key(season_key)
             season = Season.get_from_memory(self.session, show, season_key)
             if self._season_is_outdated(season, show_key, force=force):
@@ -174,7 +174,7 @@ class UpsertMixin(HelperMixin):
         # the channel uploaded, which is that one title however many times over.
         if not self.is_movies_channel(show_key):
             return channel_item.snippet.title
-        episode_keys = self.show_episode_keys(show_key)
+        episode_keys = self.show_episode_keys_from_files(show_key)
         if not episode_keys:
             return channel_item.snippet.title
         items = self.videos_file(episode_keys[0]).parsed().items
@@ -363,7 +363,7 @@ class UpsertMixin(HelperMixin):
             )
             show = self._upsert_show_object(new_show, source, show, show_key)
 
-        for season_key in self._season_keys_from_file(show_key):
+        for season_key in self._season_keys_from_show_files(show_key):
             music_playlist = self.music_playlist_file(season_key)
             self._upsert_season_music(
                 show,
@@ -434,7 +434,7 @@ class UpsertMixin(HelperMixin):
         *,
         force: bool = False,
     ) -> None:
-        for season_key in self._album_season_keys(show_key):
+        for season_key in self._album_season_keys_from_database(show_key):
             music_playlist = self.music_playlist_file(season_key)
             self._upsert_season_music(
                 show,
@@ -510,7 +510,7 @@ class UpsertMixin(HelperMixin):
             for parsed_playlist in channel_playlists_file.parsed().items
         }
         uploads_key = self.channel_uploads_playlist_key(show.key)
-        for season_key in self._season_keys_from_file(show_key):
+        for season_key in self._season_keys_from_show_files(show_key):
             if season_key != uploads_key and season_key in playlists_by_key:
                 playlist = playlists_by_key[season_key]
                 self._upsert_season(
@@ -537,7 +537,7 @@ class UpsertMixin(HelperMixin):
 
         # A season of a show holds the episodes its page lists, in page order.
         if is_show_season_key(season.key) or is_an_album(season.key):
-            episode_keys = self._season_episode_keys(season.key)
+            episode_keys = self._season_episode_keys_from_file(season.key)
             for position, episode_key in enumerate(episode_keys):
                 self._upsert_episode(
                     season,

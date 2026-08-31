@@ -2,16 +2,27 @@
 from __future__ import annotations
 
 import re
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from plugins.Hulu.base import HuluBase
 from plugins.Hulu.utils import HuluMediaType
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v2.workers import URLImporter
+from plugins.utils.base_plugin_v2.workers import (
+    EpisodeUpdater,
+    SeasonUpdater,
+    ShowUpdater,
+    URLImporter,
+)
+
+if TYPE_CHECKING:
+    from app.episodes.models import Episode
+    from app.seasons.models import Season
+    from app.shows.models import Show
+    from plugins.utils.base_plugin_v2.core import PluginCore
 
 
 # TODO: Validate
-class HuluImportURL(URLImporter, HuluBase):
+class HuluImportURL(URLImporter, HuluBase, register=False):
     UUID_REGEX = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
     SLUG_REGEX = r"(?:[a-z0-9-]+-)?"
     _SERIES_URL_REGEX = rf"\/series\/{SLUG_REGEX}(?P<series_id>{UUID_REGEX})"
@@ -20,10 +31,15 @@ class HuluImportURL(URLImporter, HuluBase):
 
     _show_key: str
 
+    # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
-        return (cls._SERIES_URL_REGEX, cls._MOVIE_URL_REGEX, cls._WATCH_URL_REGEX)
+        return (
+            cls._SERIES_URL_REGEX,
+            cls._MOVIE_URL_REGEX,
+            cls._WATCH_URL_REGEX,
+        )
 
     # TODO: Validate
     @override
@@ -55,5 +71,29 @@ class HuluImportURL(URLImporter, HuluBase):
                 self.raise_if_invalid_file(self.movie_file(episode_key), url)
             return
 
-        msg = f"Invalid {self.plugin_name()} URL: {url}"
+        msg = f"Invalid {self.plugin_key()} URL: {url}"
         raise InvalidURLError(msg)
+
+
+# TODO: Validate
+class HuluShowUpdater(ShowUpdater, HuluBase, register=False):
+    # TODO: Validate
+    def __init__(self, owner: PluginCore, show: Show) -> None:
+        super().__init__(owner, show)
+        self._set_media_type_from_show(show)
+
+
+# TODO: Validate
+class HuluSeasonUpdater(SeasonUpdater, HuluBase, register=False):
+    # TODO: Validate
+    def __init__(self, owner: PluginCore, season: Season) -> None:
+        super().__init__(owner, season)
+        self._set_media_type_from_show(season.show)
+
+
+# TODO: Validate
+class HulueEpisodeUpdater(EpisodeUpdater, HuluBase, register=False):
+    # TODO: Validate
+    def __init__(self, owner: PluginCore, episode: Episode) -> None:
+        super().__init__(owner, episode)
+        self._set_media_type_from_show(episode.season.show)

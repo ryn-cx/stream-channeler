@@ -3,12 +3,11 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.Tubi.source import SourceMixin
 from plugins.Tubi.upsert import UpsertMixin
 
 
 # TODO: Validate
-class TubiBase(UpsertMixin, SourceMixin):
+class TubiBase(UpsertMixin):
     # TODO: Validate
     @classmethod
     @override

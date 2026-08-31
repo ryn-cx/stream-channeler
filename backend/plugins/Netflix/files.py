@@ -36,6 +36,7 @@ from sqlmodel import Session
 
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
+from plugins.utils.abstract_plugin import PluginShowIdentity
 from plugins.utils.base_plugin_v2.base import PluginBase
 from plugins.utils.base_plugin_v2.files import (
     BaseFile,
@@ -55,6 +56,36 @@ def meshfilm() -> Meshfilm:
 # TODO: Validate
 class Title(IntegerEndpointFile[LodpTitleAndPlansPageModel]):
     """Title file."""
+
+    # TODO: Validate
+    def video(self) -> TitleVideo:
+        parsed = self.parsed()
+        video = next(
+            (
+                video
+                for video in parsed.data.videos
+                if video.video_id == int(self.unique_identifier)
+            ),
+            None,
+        )
+        if video is None:
+            msg = f"No title found for {self.unique_identifier}"
+            raise ValueError(msg)
+        return video
+
+    # TODO: Validate
+    def is_movie(self) -> bool:
+        return self.video().field__typename == "Movie"
+
+    # TODO: Validate
+    def identity(self) -> PluginShowIdentity:
+        self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
+        video = self.video()
+        return PluginShowIdentity(
+            title=video.title,
+            media_type="Movie" if self.is_movie() else "TV Show",
+            year=video.latest_year,
+        )
 
     # TODO: Validate
     @override
@@ -160,19 +191,16 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     def _title_video(self, show_key: str) -> TitleVideo:
-        parsed = self.title_file(show_key).parsed()
-        video = next(
-            (video for video in parsed.data.videos if video.video_id == int(show_key)),
-            None,
-        )
-        if video is None:
-            msg = f"No title found for {show_key}"
-            raise ValueError(msg)
-        return video
+        return self.title_file(show_key).video()
 
     # TODO: Validate
     def _is_movie(self, show_key: str) -> bool:
-        return self._title_video(show_key).field__typename == "Movie"
+        return self.title_file(show_key).is_movie()
+
+    # TODO: Validate
+    @override
+    def show_identity(self, show_key: str) -> PluginShowIdentity:
+        return self.title_file(show_key).identity()
 
     # TODO: Validate
     def _ordered_seasons(self, show_key: str) -> list[SeasonNode]:
@@ -231,7 +259,7 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     @override
-    def _season_keys_from_file(self, show_key: str) -> list[str]:
+    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
         if self._is_movie(show_key):
             return [self._season_key(show_key, show_key)]
         return [
@@ -241,7 +269,7 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     @override
-    def _episode_keys_from_file(
+    def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
         show_key: str,

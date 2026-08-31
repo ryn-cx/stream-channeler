@@ -85,11 +85,8 @@ class UpdateMixin(UpsertMixin):
 
             # Queued in one call so the whole browse file costs a single commit.
             if new_series_urls:
-                add_urls_to_channel_import_queue(
-                    self.session,
-                    self._video_channel(),
-                    new_series_urls,
-                )
+                channel = self._video_channel()
+                add_urls_to_channel_import_queue(self.session, channel, new_series_urls)
 
             browse_json.database_record.extra = {EXTRA_STATUS_FIELD: COMPLETED_STATUS}
 
@@ -128,11 +125,8 @@ class UpdateMixin(UpsertMixin):
 
             # Queued in one call so the whole browse file costs a single commit.
             if new_artist_urls:
-                add_urls_to_channel_import_queue(
-                    self.session,
-                    self._music_channel(),
-                    new_artist_urls,
-                )
+                channel = self._music_channel()
+                add_urls_to_channel_import_queue(self.session, channel, new_artist_urls)
 
             browse_json.database_record.extra = {EXTRA_STATUS_FIELD: COMPLETED_STATUS}
 

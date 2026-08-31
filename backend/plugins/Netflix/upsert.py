@@ -13,21 +13,23 @@ from app.shows.models import Show
 from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from app.utils import tz_datetime
-from plugins.Netflix.utils import HelperMixin
+from plugins.Netflix.files import FileMixin
+from plugins.Netflix.utils import UtilsMixin
 
 if TYPE_CHECKING:
     from meshfilm.lodp_title_and_plans_page.models import Video1 as TitleVideo
 
 
 # TODO: Validate
-class UpsertMixin(HelperMixin):
+class UpsertMixin(UtilsMixin, FileMixin):
     """Mixin containing all upsert functions."""
 
     # TODO: Validate
-    def _upsert_source(self) -> Source:
-        source = Source.get_from_memory(self.session, self.plugin, self.plugin_name())
+    @override
+    def upsert_source(self, source_key: str) -> Source:
+        source = Source.get_from_memory(self.session, self.plugin, source_key)
         return Source(
-            key=self.plugin_name(),
+            key=source_key,
             name=self.plugin_name(),
             favicon_url=self.favicon_url(),
             data_timestamp=tz_datetime.now(),

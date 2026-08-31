@@ -3,12 +3,11 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.HBOMax.source import SourceMixin
 from plugins.HBOMax.upsert import UpsertMixin
 
 
 # TODO: Validate
-class HBOMaxBase(UpsertMixin, SourceMixin):
+class HBOMaxBase(UpsertMixin):
     # TODO: Validate
     @classmethod
     @override

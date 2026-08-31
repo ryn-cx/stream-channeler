@@ -12,8 +12,8 @@ from app.shows.models import Show
 from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from plugins.HiDive.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
-from plugins.HiDive.files import season_bucket
-from plugins.HiDive.utils import HelperMixin, season_hero, vod_hero
+from plugins.HiDive.files import FileMixin, season_bucket, season_hero, vod_hero
+from plugins.HiDive.utils import UtilsMixin
 
 # TODO: Add support for individual episodes of a series.
 
@@ -27,7 +27,7 @@ def _episode_number(title: str | None) -> int | None:
 
 
 # TODO: Validate
-class UpsertMixin(HelperMixin):
+class UpsertMixin(UtilsMixin, FileMixin):
     """Mixin containing all upsert functions."""
 
     # TODO: Validate
@@ -148,7 +148,7 @@ class UpsertMixin(HelperMixin):
         force: bool = False,
     ) -> None:
         for sort_order, season_key in enumerate(
-            self._season_keys_from_file(show.key),
+            self._season_keys_from_show_files(show.key),
         ):
             hero = vod_hero(self.vod_file(show.key).parsed())
 

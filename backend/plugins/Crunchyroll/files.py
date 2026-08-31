@@ -35,9 +35,11 @@ from chirashi.season_episodes.models import SeasonEpisodesModel
 from chirashi.seasons import Seasons as SeasonsEndpoint
 from chirashi.seasons.models import SeasonsModel
 from chirashi.series import Series as SeriesEndpoint
+from chirashi.series.models import Datum as SeriesDatum
 from chirashi.series.models import SeriesModel
 
 from app.files.models import File
+from app.media.media_type import MediaType
 from app.utils import tz_datetime
 from plugins.Crunchyroll.constants import (
     MusicCategory,
@@ -65,6 +67,14 @@ class Series(EndpointFile[SeriesModel]):
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, SeriesNotFoundError)
+
+    # TODO: Validate
+    def datum(self) -> SeriesDatum:
+        return self.parsed().data[0]
+
+    # TODO: Validate
+    def is_movie(self) -> bool:
+        return "type:movie" in self.datum().keywords
 
 
 class Objects(EndpointFile[ObjectsModel]):
@@ -179,6 +189,18 @@ class FileMixin(PluginBase):
     def search_file(self, query: str) -> Search:
         return self._file(Search, query)
 
+    def _series_datum(self, show_key: str) -> SeriesDatum:
+        return self.series_file(show_key).datum()
+
+    # TODO: Validate
+    def _is_movie(self, show_key: str) -> bool:
+        return self.series_file(show_key).is_movie()
+
+    # TODO: Validate
+    def tmdb_media_type(self, show_key: str) -> MediaType:
+        return MediaType.movie if self._is_movie(show_key) else MediaType.tv
+
+    # TODO: Validate
     def series_file(self, show_key: str) -> Series:
         return self._file(Series, show_key)
 
@@ -337,7 +359,7 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     @override
-    def _season_keys_from_file(self, show_key: str) -> list[str]:
+    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
         if show_is_an_artist(show_key):
             # Both categories are always seasons of the artist, even while one is
             # empty, so a first release into it is a new episode rather than a
@@ -349,7 +371,7 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     @override
-    def _episode_keys_from_file(
+    def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
         show_key: str,

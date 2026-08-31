@@ -3,38 +3,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, override
-
 from app.sources.models import Source
 from plugins.Amazon.constants import PURCHASE_SOURCE_SUFFIX
-from plugins.Amazon.utils import HelperMixin
-
-if TYPE_CHECKING:
-    from sqlmodel import Session
-
-    from app.plugins.models import Plugin
+from plugins.Amazon.files import FileMixin
+from plugins.Amazon.utils import UtilsMixin
 
 
 # TODO: Validate
-class SourceMixin(HelperMixin):
+class SourceMixin(UtilsMixin, FileMixin):
     """The plugin's own source and the one it keeps each channel's titles in."""
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _upsert_source(
-        cls,
-        session: Session,
-        plugin: Plugin,
-        source_key: str,
-    ) -> Source:
-        source = Source.get_from_memory(session, plugin, source_key)
-        return Source(
-            key=source_key,
-            name=cls.plugin_name(),
-            favicon_url=cls.favicon_url(),
-            plugin_id=plugin.id,
-        ).upsert_and_set_update_at(plugin, source)
 
     # TODO: Validate
     def title_sources(self, show_key: str) -> list[Source]:

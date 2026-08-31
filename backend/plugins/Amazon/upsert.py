@@ -13,7 +13,8 @@ from app.shows.models import Show
 from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from app.utils import tz_datetime
-from plugins.Amazon.utils import HelperMixin
+from plugins.Amazon.files import FileMixin
+from plugins.Amazon.utils import UtilsMixin
 
 
 # TODO: Validate
@@ -26,8 +27,12 @@ def _parse_date(value: str | None) -> datetime | None:
 
 
 # TODO: Validate
-class UpsertMixin(HelperMixin):
+class UpsertMixin(UtilsMixin, FileMixin):
     """Mixin containing all upsert functions."""
+
+    # TODO: Validate
+    def _title_url(self, title_key: str) -> str:
+        return self._detail_url(self.detail_file(title_key).compact_key())
 
     # TODO: Validate
     @override
