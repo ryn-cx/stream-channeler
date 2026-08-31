@@ -81,19 +81,16 @@ def initialize_plugins() -> None:
     _plugins_initialized = True
 
     from app.database import engine  # noqa: PLC0415
+    from plugins.StreamChanneler import StreamChanneler  # noqa: PLC0415
 
-    for plugin_class in sorted_plugins():
+    plugin_classes: tuple[type[AbstractPlugin], ...] = (
+        *sorted_plugins(),
+        StreamChanneler,
+    )
+    for plugin_class in plugin_classes:
         with Session(engine) as session:
-            plugin_class.initialize(session)
+            plugin_class.initialize_db(session)
             session.commit()
-
-
-# TODO: Validate
-def assume_plugins_initialized() -> None:
-    global _plugins_initialized  # noqa: PLW0603
-    _plugins_initialized = True
-    for plugin_class in sorted_plugins():
-        plugin_class.assume_initialized()
 
 
 # TODO: Validate

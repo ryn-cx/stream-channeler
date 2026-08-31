@@ -37,13 +37,6 @@ CHANNEL_DESCRIPTION_FILES = {
 class UpdateMixin(UpsertMixin, register=False):
     # TODO: Validate
     @override
-    def initialize_database(self) -> None:
-        super().initialize_database()
-        if self.plugin.update_at is None:
-            self.plugin.update_at = tz_datetime.now()
-
-    # TODO: Validate
-    @override
     def update_plugin(self, plugin: Plugin) -> None:
         logger.info("Checking Adult Swim for new shows")
         self.shows_file().download_if_outdated(tz_datetime.now())

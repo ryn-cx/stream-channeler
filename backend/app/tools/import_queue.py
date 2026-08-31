@@ -36,11 +36,9 @@ from plugins.utils.abstract_plugin import (
     InvalidURLError,
     URLImportResult,
 )
-from plugins.utils.manage_plugins import assume_plugins_initialized, sorted_plugins
+from plugins.utils.manage_plugins import sorted_plugins
 
 logger = logger.bind(source="import_queue")
-
-assume_plugins_initialized()
 
 PLUGIN_LOCKS = {
     plugin_class.plugin_key(): threading.Lock() for plugin_class in sorted_plugins()

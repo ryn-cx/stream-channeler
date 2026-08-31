@@ -24,7 +24,7 @@ COMMIT_EVERY = 500
 def _plugin_records_by_owner_key(session: Session) -> dict[str, Plugin]:
     records: dict[str, Plugin] = {}
     for plugin_class in plugins:
-        plugin_class(session)
+        plugin_class.create_plugin_db_entry(session)
         owner_key = plugin_class.__module__.split(".")[1]
         records[owner_key] = Plugin.get_one(session, plugin_class.plugin_key())
     return records

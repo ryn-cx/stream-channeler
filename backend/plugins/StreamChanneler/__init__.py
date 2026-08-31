@@ -39,6 +39,12 @@ class StreamChanneler(WatchHistoryMixin, BasePlugin, register=False):
     # StreamChanneler does not use files, so these abstract methods are no-ops.
 
     # TODO: Validate
+    @classmethod
+    @override
+    def _source_keys(cls) -> tuple[str, ...]:
+        return ()
+
+    # TODO: Validate
     @override
     def initialize_sources(self) -> None:
         return

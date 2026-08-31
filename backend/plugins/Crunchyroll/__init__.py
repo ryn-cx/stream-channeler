@@ -50,10 +50,16 @@ class Crunchyroll(
         return "crunchyroll.com"
 
     # TODO: Validate
+    @classmethod
+    @override
+    def _source_keys(cls) -> tuple[str, ...]:
+        return (VIDEO_SOURCE, MUSIC_SOURCE)
+
+    # TODO: Validate
     @override  # Initializes 2 sources instead of 1.
     def initialize_sources(self) -> None:
-        self._initialize_source(VIDEO_SOURCE, self._upsert_anime_source)
-        self._initialize_source(MUSIC_SOURCE, self._upsert_music_source)
+        self.initialize_source(VIDEO_SOURCE, self._upsert_anime_source)
+        self.initialize_source(MUSIC_SOURCE, self._upsert_music_source)
 
     # TODO: Validate
     def _upsert_anime_source(self) -> Source:

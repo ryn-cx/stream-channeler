@@ -6,13 +6,11 @@ from sqlmodel import Session
 from app.database import engine, load_models
 from app.shows.models import Show
 from plugins.utils.manage_plugins import (
-    assume_plugins_initialized,
     import_plugins,
     plugins,
 )
 
 import_plugins()
-assume_plugins_initialized()
 load_models()
 
 

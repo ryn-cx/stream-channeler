@@ -37,8 +37,6 @@ from plugins.utils.base_plugin.url import URLMixin
 from plugins.utils.base_plugin.watch import WatchMixin
 from plugins.utils.manage_plugins import register_plugins
 
-_initialized_plugin_keys: set[str] = set()
-
 _TMDB_MEDIA_TYPES = {
     "Movie": MediaType.movie,
     "Series": MediaType.tv,
@@ -69,10 +67,24 @@ class BasePlugin(
         self.session = session
         self._file_cache = {}
         if (context := plugin_context(session, self.plugin_key())) is None:
-            self.initialize_database()
+            self._context = self._load_context()
             store_plugin_context(session, self.plugin_key(), self._context)
         else:
             self._context = context
+
+    # TODO: Validate
+    def _load_context(self) -> PluginContext:
+        plugin = Plugin.get(self.session, self.plugin_key())
+        if plugin is None:
+            msg = f"{self.plugin_key()} has not been initialized."
+            raise RuntimeError(msg)
+
+        context = PluginContext(plugin=plugin)
+        for source_key in self._source_keys():
+            source = Source.get(self.session, plugin, source_key)
+            if source is not None:
+                context.sources[source_key] = source
+        return context
 
     # TODO: Validate
     def __init_subclass__(cls, *, register: bool = True, **kwargs: Any) -> None:  # noqa: ANN401 - Handed straight to `super`.
@@ -189,14 +201,54 @@ class BasePlugin(
 
     # TODO: Validate
     @classmethod
-    def initialize(cls, session: Session) -> None:
-        cls(session)
-        cls.assume_initialized()
+    @override
+    def initialize_db(cls, session: Session) -> None:
+        cls.create_plugin_db_entry(session)
+        cls(session).initialize_sources()
+
+    # TODO: Validate
+    def initialize_sources(self) -> None:
+        """Create the `Source` record(s) and set `self.source`."""
+        self.initialize_source(self.plugin_key(), self._upsert_source)
+
+
+    # TODO: Validate
+    def _upsert_source(self, *args: Any, **kwargs: Any) -> Source:  # noqa: ANN401 - Child signatures vary.
+        """Create or update the plugin's `Source` record(s)."""
+        msg = f"{self.plugin_key()} does not implement _upsert_source."
+        raise NotImplementedError(msg)
+
+    # TODO: Validate
+    def initialize_source(
+        self,
+        source_key: str,
+        build_source: Callable[[], Source],
+    ) -> None:
+        if source_key in self._sources:
+            return
+
+        existing_source = Source.get(self.session, self.plugin, source_key)
+        self._sources[source_key] = existing_source or build_source()
 
     # TODO: Validate
     @classmethod
-    def assume_initialized(cls) -> None:
-        _initialized_plugin_keys.add(cls.plugin_key())
+    @override
+    def create_plugin_db_entry(cls, session: Session) -> None:
+        if Plugin.get(session, cls.plugin_key()):
+            return
+
+        with Session(session.get_bind()) as plugin_session:
+            Plugin(
+                key=cls.plugin_key(),
+                name=cls.plugin_name(),
+            ).upsert_and_set_update_at(
+                plugin_session,
+                Plugin.get(plugin_session, cls.plugin_key()),
+            )
+            plugin_session.commit()
+        if Plugin.get(session, cls.plugin_key()) is None:
+            msg = f"{cls.plugin_key()} could not be written."
+            raise RuntimeError(msg)
 
     # TODO: Validate
     def _fresh(self) -> Self:
@@ -244,67 +296,9 @@ class BasePlugin(
         return self._sources[source_key]
 
     # TODO: Validate
-    def _initialize_source(
-        self,
-        source_key: str,
-        build_source: Callable[[], Source],
-    ) -> None:
-        if source_key in self._sources:
-            return
-
-        if self.plugin_key() in _initialized_plugin_keys:
-            existing_source = Source.get(self.session, self.plugin, source_key)
-            if existing_source is not None:
-                self._sources[source_key] = existing_source
-                return
-
-        self._sources[source_key] = build_source()
-
-    # TODO: Validate
-    def initialize_database(self) -> None:
-        """Create the `Plugin` and its `Source` record(s) and set instance attributes."""
-        self._context = PluginContext(plugin=self._plugin_record())
-        self.initialize_sources()
-
-    # TODO: Validate
-    def _plugin_record(self) -> Plugin:
-        """Return the `Plugin` record, creating it where there is not one yet.
-
-        A file download writes through a session of its own, so that it is kept even
-        when the import that triggered it fails, and a session of its own cannot
-        see a `Plugin` this one has not committed yet.
-        """
-        if (existing_plugin := Plugin.get(self.session, self.plugin_key())) is None:
-            self._write_plugin_record()
-            existing_plugin = Plugin.get(self.session, self.plugin_key())
-        if existing_plugin is None:
-            msg = f"{self.plugin_key()} could not be written."
-            raise RuntimeError(msg)
-        return existing_plugin
-
-    # TODO: Validate
-    def _write_plugin_record(self) -> None:
-        with Session(self.session.get_bind()) as plugin_session:
-            Plugin(
-                key=self.plugin_key(),
-                name=self.plugin_name(),
-            ).upsert_and_set_update_at(
-                plugin_session,
-                Plugin.get(plugin_session, self.plugin_key()),
-            )
-            plugin_session.commit()
-
-    # TODO: Validate
-    def initialize_sources(self) -> None:
-        """Create the `Source` record(s) and set `self.source`."""
-        self._initialize_source(self.plugin_key(), self._default_source)
-
-    # TODO: Validate
-    def _default_source(self) -> Source:
-        return (
-            Source.get(self.session, self.plugin, self.plugin_key())
-            or self._upsert_source()
-        )
+    @classmethod
+    def _source_keys(cls) -> tuple[str, ...]:
+        return (cls.plugin_key(),)
 
     # TODO: Validate
     @staticmethod
@@ -486,11 +480,6 @@ class BasePlugin(
         and nothing else does.
         """
 
-    # TODO: Validate
-    def _upsert_source(self, *args: Any, **kwargs: Any) -> Source:  # noqa: ANN401 - Child signatures vary.
-        """Create or update the plugin's `Source` record(s)."""
-        msg = f"{self.plugin_key()} does not implement _upsert_source."
-        raise NotImplementedError(msg)
 
     # TODO: Validate
     def soft_delete_missing_seasons(self, show_key: str) -> None:

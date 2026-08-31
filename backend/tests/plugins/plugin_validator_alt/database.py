@@ -340,12 +340,6 @@ class DatabaseMixinAlt[PluginT: BasePlugin]:
 
         stored = self._files_to_import()
 
-        # Do not initialize the source until after the files are imported because
-        # initializing the source often requires downloading files.
-        # TODO: Validate
-        def no_operation(_plugin: BasePlugin) -> None:
-            """No operation function."""
-
         # A file can belong to a different plugin than the one under test (e.g. TMDB
         # fallback files), so create a record for each owning plugin. Sources are
         # only initialized for the plugin under test, at the end.
@@ -353,17 +347,8 @@ class DatabaseMixinAlt[PluginT: BasePlugin]:
         plugin_keys.add(self.plugin_class.plugin_key())
 
         plugin_records: dict[str, Plugin] = {}
-        plugin_under_test: BasePlugin | None = None
         for plugin_key in plugin_keys:
-            plugin_class = plugin_class_for(plugin_key)
-            initialize_sources = plugin_class.initialize_sources
-            plugin_class.initialize_sources = no_operation  # type: ignore[assignment]
-            try:
-                plugin_instance = plugin_class(session)
-            finally:
-                plugin_class.initialize_sources = initialize_sources  # type: ignore[method-assign]
-            if plugin_key == self.plugin_class.plugin_key():
-                plugin_under_test = plugin_instance
+            plugin_class_for(plugin_key).create_plugin_db_entry(session)
             plugin_records[plugin_key] = Plugin.get_one(session, plugin_key)
 
         existing_keys = {
@@ -384,8 +369,7 @@ class DatabaseMixinAlt[PluginT: BasePlugin]:
         session.expire_all()
 
         # Files are imported so now the plugin under test's source can be run.
-        assert plugin_under_test is not None
-        plugin_under_test.initialize_sources()
+        self.plugin_class.initialize_db(session)
 
         session.commit()  # Set the rollback point.
 

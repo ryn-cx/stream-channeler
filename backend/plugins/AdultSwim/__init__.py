@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from app.shows.models import Show
+from app.utils import tz_datetime
 from plugins.AdultSwim.constants import FREE, SUBSCRIPTION
 from plugins.AdultSwim.import_url import ImportURLMixin
 from plugins.AdultSwim.update import UpdateMixin
@@ -42,10 +43,18 @@ class AdultSwim(
         return "Adult Swim"
 
     # TODO: Validate
+    @classmethod
+    @override
+    def _source_keys(cls) -> tuple[str, ...]:
+        return (FREE, SUBSCRIPTION)
+
+    # TODO: Validate
     @override
     def initialize_sources(self) -> None:
-        self._initialize_source(FREE, lambda: self._upsert_source(FREE))
-        self._initialize_source(SUBSCRIPTION, lambda: self._upsert_source(SUBSCRIPTION))
+        self.initialize_source(FREE, lambda: self._upsert_source(FREE))
+        self.initialize_source(SUBSCRIPTION, lambda: self._upsert_source(SUBSCRIPTION))
+        if self.plugin.update_at is None:
+            self.plugin.update_at = tz_datetime.now()
 
     # TODO: Validate
     @override

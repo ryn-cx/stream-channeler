@@ -16,15 +16,16 @@ from plugins.YouTube.utils import HelperMixin
 # TODO: Validate
 class SourceMixin(HelperMixin, register=False):
     # TODO: Validate
+    @classmethod
+    @override
+    def _source_keys(cls) -> tuple[str, ...]:
+        return (cls.plugin_key(), FREE_SOURCE_KEY, PAID_SOURCE_KEY, LINKS_SOURCE_KEY)
+
+    # TODO: Validate
     @override
     def initialize_sources(self) -> None:
-        for source_key in (
-            self.plugin_key(),
-            FREE_SOURCE_KEY,
-            PAID_SOURCE_KEY,
-            LINKS_SOURCE_KEY,
-        ):
-            self._initialize_source(
+        for source_key in self._source_keys():
+            self.initialize_source(
                 source_key,
                 partial(self._upsert_source, source_key),
             )

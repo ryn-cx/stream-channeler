@@ -36,7 +36,6 @@ from app.users.models import User
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.manage_plugins import (
-    assume_plugins_initialized,
     import_plugins,
     plugins,
 )
@@ -44,7 +43,6 @@ from plugins.utils.manage_plugins import (
 logger = logger.bind(source="updater")
 
 import_plugins()
-assume_plugins_initialized()
 load_models()
 
 # Every media class updated by this script; typed as the shared `MediaMixin` base so

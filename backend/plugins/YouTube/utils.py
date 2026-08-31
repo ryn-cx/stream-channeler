@@ -133,7 +133,7 @@ class HelperMixin(FileMixin, register=False):
             return None
 
         source_key = f"{self.plugin_key()} {channel_title}"
-        self._initialize_source(
+        self.initialize_source(
             source_key,
             partial(self._upsert_source, source_key),
         )

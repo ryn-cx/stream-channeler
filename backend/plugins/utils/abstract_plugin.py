@@ -75,12 +75,12 @@ class AbstractPlugin(ABC):
 
     # TODO: Validate
     @classmethod
-    def initialize(cls, session: Session) -> None:
+    def initialize_db(cls, session: Session) -> None:
         cls(session)
 
     # TODO: Validate
     @classmethod
-    def assume_initialized(cls) -> None:
+    def create_plugin_db_entry(cls, session: Session) -> None:  # noqa: ARG003
         return
 
     # TODO: Validate
