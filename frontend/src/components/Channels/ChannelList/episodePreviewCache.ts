@@ -15,8 +15,7 @@ function looksLikePreview(value: unknown): value is Preview {
     typeof preview.seasons === "object" &&
     typeof preview.shows === "object" &&
     typeof preview.sources === "object" &&
-    typeof preview.plugins === "object" &&
-    typeof preview.channels === "object"
+    typeof preview.plugins === "object"
   )
 }
 
@@ -55,10 +54,6 @@ function trimmed(preview: Preview): Preview {
     plugins: pick(
       preview.plugins,
       Object.values(sources).map((source) => source.plugin_id),
-    ),
-    channels: pick(
-      preview.channels,
-      episodes.map((episode) => episode.channel_id),
     ),
   }
 }

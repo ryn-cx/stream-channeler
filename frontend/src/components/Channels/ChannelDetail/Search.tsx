@@ -8,6 +8,7 @@ import type {
   PluginWatchProviderItem,
 } from "@/client"
 import { ChannelsService, PluginsService } from "@/client"
+import { useAllChannelShows } from "@/components/Channels/useChannelShows"
 import { SourceOptionLabel } from "@/components/Common/SourceOptionLabel"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
@@ -80,10 +81,7 @@ const TMDB_TITLE_URL_PATTERN = /themoviedb\.org\/(tv|movie)\/(\d+)/
 // a service is matched on its own URL, and a TMDB result on the title it names.
 // TODO: Validate
 function useIsInChannel(channelId: string) {
-  const { data: showsData } = useQuery({
-    queryKey: ["channel-shows", channelId],
-    queryFn: () => ChannelsService.getChannelShows({ channelId }),
-  })
+  const { data: showsData } = useAllChannelShows(channelId)
 
   const shows = showsData?.shows ?? []
   const urls = new Set(shows.map((show) => show.url))

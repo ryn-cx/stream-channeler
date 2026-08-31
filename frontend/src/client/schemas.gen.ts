@@ -915,6 +915,139 @@ export const ChannelCreateSchema = {
     description: 'Schema for creating a `Channel`.'
 } as const;
 
+export const ChannelEpisodePluginSchema = {
+    properties: {
+        key: {
+            type: 'string',
+            title: 'Key'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        }
+    },
+    type: 'object',
+    required: ['key'],
+    title: 'ChannelEpisodePlugin'
+} as const;
+
+export const ChannelEpisodeSeasonSchema = {
+    properties: {
+        show_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Show Id'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        season_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Season Number'
+        }
+    },
+    type: 'object',
+    required: ['show_id'],
+    title: 'ChannelEpisodeSeason'
+} as const;
+
+export const ChannelEpisodeShowSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        source_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Source Id'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        media_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Media Type'
+        }
+    },
+    type: 'object',
+    required: ['id', 'source_id'],
+    title: 'ChannelEpisodeShow'
+} as const;
+
+export const ChannelEpisodeSourceSchema = {
+    properties: {
+        plugin_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Plugin Id'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        favicon_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Favicon Url'
+        }
+    },
+    type: 'object',
+    required: ['plugin_id'],
+    title: 'ChannelEpisodeSource'
+} as const;
+
 export const ChannelEpisodesOutputSchema = {
     properties: {
         episodes: {
@@ -926,7 +1059,7 @@ export const ChannelEpisodesOutputSchema = {
         },
         seasons: {
             additionalProperties: {
-                '$ref': '#/components/schemas/SeasonOutput'
+                '$ref': '#/components/schemas/ChannelEpisodeSeason'
             },
             propertyNames: {
                 format: 'uuid'
@@ -936,7 +1069,7 @@ export const ChannelEpisodesOutputSchema = {
         },
         shows: {
             additionalProperties: {
-                '$ref': '#/components/schemas/ShowPublic'
+                '$ref': '#/components/schemas/ChannelEpisodeShow'
             },
             propertyNames: {
                 format: 'uuid'
@@ -946,7 +1079,7 @@ export const ChannelEpisodesOutputSchema = {
         },
         sources: {
             additionalProperties: {
-                '$ref': '#/components/schemas/SourcePublic'
+                '$ref': '#/components/schemas/ChannelEpisodeSource'
             },
             propertyNames: {
                 format: 'uuid'
@@ -956,27 +1089,17 @@ export const ChannelEpisodesOutputSchema = {
         },
         plugins: {
             additionalProperties: {
-                '$ref': '#/components/schemas/PluginOutput'
+                '$ref': '#/components/schemas/ChannelEpisodePlugin'
             },
             propertyNames: {
                 format: 'uuid'
             },
             type: 'object',
             title: 'Plugins'
-        },
-        channels: {
-            additionalProperties: {
-                '$ref': '#/components/schemas/ChannelOutput'
-            },
-            propertyNames: {
-                format: 'uuid'
-            },
-            type: 'object',
-            title: 'Channels'
         }
     },
     type: 'object',
-    required: ['episodes', 'seasons', 'shows', 'sources', 'plugins', 'channels'],
+    required: ['episodes', 'seasons', 'shows', 'sources', 'plugins'],
     title: 'ChannelEpisodesOutput'
 } as const;
 
@@ -2221,15 +2344,10 @@ export const ChannelShowsOutputSchema = {
             type: 'array',
             title: 'Groups'
         },
-        stats: {
-            additionalProperties: {
-                '$ref': '#/components/schemas/ChannelShowStats'
-            },
-            propertyNames: {
-                format: 'uuid'
-            },
-            type: 'object',
-            title: 'Stats'
+        total: {
+            type: 'integer',
+            title: 'Total',
+            default: 0
         }
     },
     type: 'object',
@@ -3648,51 +3766,15 @@ export const EpisodeUpdateSchema = {
 
 export const EpisodeWithDetailsSchema = {
     properties: {
-        key: {
+        id: {
             type: 'string',
-            minLength: 1,
-            title: 'Key'
+            format: 'uuid',
+            title: 'Id'
         },
-        data_timestamp: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Data Timestamp'
-        },
-        update_at: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Update At'
-        },
-        deleted_at: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Deleted At'
-        },
-        extra: {
-            additionalProperties: true,
-            type: 'object',
-            title: 'Extra'
+        season_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Season Id'
         },
         url: {
             anyOf: [
@@ -3715,17 +3797,6 @@ export const EpisodeWithDetailsSchema = {
                 }
             ],
             title: 'Name'
-        },
-        description: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Description'
         },
         image_url: {
             anyOf: [
@@ -3775,63 +3846,13 @@ export const EpisodeWithDetailsSchema = {
         duration: {
             anyOf: [
                 {
-                    type: 'integer',
-                    minimum: 0
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Duration'
-        },
-        sort_order: {
-            anyOf: [
-                {
                     type: 'integer'
                 },
                 {
                     type: 'null'
                 }
             ],
-            title: 'Sort Order'
-        },
-        canonical_episode_validated_at: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Episode Validated At'
-        },
-        canonical_episode_note: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Canonical Episode Note'
-        },
-        id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Id'
-        },
-        season_id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Season Id'
-        },
-        modified_at: {
-            type: 'string',
-            format: 'date-time',
-            title: 'Modified At'
+            title: 'Duration'
         },
         canonical_episode_id: {
             anyOf: [
@@ -3844,47 +3865,6 @@ export const EpisodeWithDetailsSchema = {
                 }
             ],
             title: 'Canonical Episode Id'
-        },
-        canonical_episode_ids: {
-            items: {
-                type: 'string',
-                format: 'uuid'
-            },
-            type: 'array',
-            title: 'Canonical Episode Ids'
-        },
-        linked_sort_order: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Linked Sort Order'
-        },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
-        },
-        tmdb_url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Url'
         },
         watch_date: {
             anyOf: [
@@ -3920,6 +3900,17 @@ export const EpisodeWithDetailsSchema = {
                 }
             ],
             title: 'Episode Watch Id'
+        },
+        tmdb_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Url'
         },
         channel_id: {
             type: 'string',
@@ -3981,7 +3972,7 @@ export const EpisodeWithDetailsSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'id', 'season_id', 'modified_at', 'channel_id'],
+    required: ['id', 'season_id', 'channel_id'],
     title: 'EpisodeWithDetails'
 } as const;
 

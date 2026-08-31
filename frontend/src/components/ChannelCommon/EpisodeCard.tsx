@@ -10,11 +10,11 @@ import {
 import { lazy, Suspense } from "react"
 
 import type {
+  ChannelEpisodePlugin,
+  ChannelEpisodeSeason,
+  ChannelEpisodeShow,
+  ChannelEpisodeSource,
   EpisodeWithDetails,
-  PluginOutput,
-  SeasonOutput,
-  ShowPublic,
-  SourcePublic,
 } from "@/client"
 import {
   type ActionMenuItem,
@@ -24,10 +24,10 @@ import { Card } from "@/components/ui/card"
 
 /** Episode shape required by the shared card layout and overlays. */
 export type BaseEpisodeWithDetails = EpisodeWithDetails & {
-  season: SeasonOutput
-  show: ShowPublic
-  source: SourcePublic
-  plugin: PluginOutput
+  season: ChannelEpisodeSeason
+  show: ChannelEpisodeShow
+  source: ChannelEpisodeSource
+  plugin: ChannelEpisodePlugin
 }
 
 export type MoveDirection = "up" | "down" | "left" | "right" | "first" | "last"

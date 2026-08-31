@@ -20,7 +20,6 @@ from app.channels.models import (
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
 from app.plugins.models import Plugin
-from app.plugins.schemas import PluginOutput
 from app.schemas import (
     BaseInput,
     BaseUpdateWithoutKey,
@@ -214,7 +213,20 @@ class ChannelOrderInput(BaseInput):
 
 
 # TODO: Validate
-class EpisodeWithDetails(EpisodeOutput):
+class EpisodeWithDetails(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    season_id: uuid.UUID
+    url: str | None = Field(default=None)
+    name: str | None = Field(default=None)
+    description: str | None = Field(default=None, exclude=True)
+    image_url: str | None = Field(default=None)
+    thumbnail_url: str | None = Field(default=None)
+    air_date: datetime | None = Field(default=None)
+    episode_number: int | None = Field(default=None)
+    duration: int | None = Field(default=None)
+    canonical_episode_id: uuid.UUID | None = Field(default=None)
     watch_date: datetime | None = Field(default=None)
     verified: bool | None = Field(default=None)
     episode_watch_id: uuid.UUID | None = Field(default=None)
@@ -233,13 +245,48 @@ class EpisodeWithDetails(EpisodeOutput):
 
 
 # TODO: Validate
+class ChannelEpisodeSeason(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    show_id: uuid.UUID
+    name: str | None = Field(default=None)
+    season_number: int | None = Field(default=None)
+
+
+# TODO: Validate
+class ChannelEpisodeShow(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    source_id: uuid.UUID
+    name: str | None = Field(default=None)
+    media_type: str | None = Field(default=None)
+
+
+# TODO: Validate
+class ChannelEpisodeSource(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    plugin_id: uuid.UUID
+    name: str | None = Field(default=None)
+    favicon_url: str | None = Field(default=None)
+
+
+# TODO: Validate
+class ChannelEpisodePlugin(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    key: str
+    name: str | None = Field(default=None)
+
+
+# TODO: Validate
 class ChannelEpisodesOutput(BaseModel):
     episodes: list[EpisodeWithDetails]
-    seasons: dict[uuid.UUID, SeasonOutput]
-    shows: dict[uuid.UUID, ShowPublic]
-    sources: dict[uuid.UUID, SourcePublic]
-    plugins: dict[uuid.UUID, PluginOutput]
-    channels: dict[uuid.UUID, ChannelOutput]
+    seasons: dict[uuid.UUID, ChannelEpisodeSeason]
+    shows: dict[uuid.UUID, ChannelEpisodeShow]
+    sources: dict[uuid.UUID, ChannelEpisodeSource]
+    plugins: dict[uuid.UUID, ChannelEpisodePlugin]
 
 
 # TODO: Validate
@@ -281,9 +328,7 @@ class ChannelShowsOutput(BaseModel):
     # The regular shows grouped by the channel they come from, with the channel this
     # endpoint was called on first and combined channels after it, sorted by name.
     groups: list[ChannelShowGroup] = Field(default_factory=list)
-    # What each canonical show adds up to, keyed by `canonical_show_id` because
-    # the stats are about the show rather than one website's row.
-    stats: dict[uuid.UUID, ChannelShowStats] = Field(default_factory=dict)
+    total: int = Field(default=0)
 
 
 # TODO: Validate

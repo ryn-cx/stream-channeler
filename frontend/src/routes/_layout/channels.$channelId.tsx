@@ -292,8 +292,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
       episodesData!.sources[episode.source_id ?? show.source_id] ??
       episodesData!.sources[show.source_id]
     const plugin = episodesData!.plugins[source.plugin_id]
-    const channel = episodesData!.channels[episode.channel_id]
-    return { ...episode, season, show, source, plugin, channel }
+    return { ...episode, season, show, source, plugin }
   })
 
   // From: https://tanstack.com/table/v8/docs/framework/react/examples/column-visibility

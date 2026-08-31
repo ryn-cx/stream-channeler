@@ -4,6 +4,7 @@ import { Check, Copy, ExternalLink, Loader2, Sparkles } from "lucide-react"
 import { useState } from "react"
 
 import { ChannelsService, type ShowPublic, UsersService } from "@/client"
+import { useAllChannelShows } from "@/components/Channels/useChannelShows"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -248,11 +249,10 @@ export function AISuggestions({
   const [copiedMore, setCopiedMore] = useState(false)
   const [addingTitle, setAddingTitle] = useState<string | null>(null)
 
-  const { data: channelShows, isLoading: isLoadingShows } = useQuery({
-    queryKey: ["channel-shows-ai", channelId],
-    queryFn: () => ChannelsService.getChannelShows({ channelId }),
-    refetchOnWindowFocus: false,
-  })
+  const { data: channelShows, isLoading: isLoadingShows } = useAllChannelShows(
+    channelId,
+    { refetchOnWindowFocus: false },
+  )
 
   const { data: sourcePreferences } = useQuery({
     queryKey: ["source-preferences"],

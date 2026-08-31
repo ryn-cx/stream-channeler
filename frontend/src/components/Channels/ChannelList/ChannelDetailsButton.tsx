@@ -1,11 +1,12 @@
-// TODO: Validate
-import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { Info } from "lucide-react"
 import { useState } from "react"
-import { ChannelsService } from "@/client"
 import { ChannelDescriptionMarkdown } from "@/components/Channels/ChannelDetail/ChannelDescription"
 import { ShowCardsWithInformation } from "@/components/Channels/ShowCardsWithInformation"
+import {
+  useAllChannelShows,
+  useChannelShowStats,
+} from "@/components/Channels/useChannelShows"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import {
   type TriggerVariant,
@@ -35,9 +36,7 @@ export function ChannelDetailsButton({
 }: ChannelDetailsButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["channelShows", channel.id],
-    queryFn: () => ChannelsService.getChannelShows({ channelId: channel.id }),
+  const { data, isLoading } = useAllChannelShows(channel.id, {
     enabled: isOpen,
   })
 
@@ -52,6 +51,18 @@ export function ChannelDetailsButton({
       ),
     }))
     .filter((group) => group.shows.length > 0)
+
+  const listedCanonicalShowIds = [
+    ...new Set(
+      groups.flatMap((group) =>
+        group.shows.map((show) => show.canonical_show_id ?? show.id),
+      ),
+    ),
+  ]
+  const { data: stats } = useChannelShowStats(
+    channel.id,
+    listedCanonicalShowIds,
+  )
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -107,7 +118,7 @@ export function ChannelDetailsButton({
                   sources={data?.sources ?? {}}
                   canonicalShows={data?.canonical_shows ?? {}}
                   canonicalSources={data?.canonical_sources ?? {}}
-                  stats={data?.stats ?? {}}
+                  stats={stats ?? {}}
                 />
               </div>
             ))

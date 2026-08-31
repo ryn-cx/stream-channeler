@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Antenna,
   Bot,
+  ChevronLeft,
+  ChevronRight,
   Inbox,
   Info,
   Link2,
@@ -15,16 +17,20 @@ import {
   Trash2,
   Upload,
 } from "lucide-react"
-import { useState } from "react"
-import type { ChannelQueueOutput, ChannelShowStats } from "@/client"
+import { useEffect, useState } from "react"
+import type { ChannelQueueOutput } from "@/client"
 import { ChannelsService } from "@/client"
 import {
-  groupShows,
   type Show,
   ShowCards,
   type ShowGroup,
   type Source,
 } from "@/components/Channels/ShowCards"
+import {
+  CHANNEL_SHOW_PAGE,
+  useChannelShowStats,
+  useChannelShowsPage,
+} from "@/components/Channels/useChannelShows"
 import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
 import { ModalContent } from "@/components/Common/ModalContent"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
@@ -117,6 +123,7 @@ export function ManageShowsTabs({
   }
   const [searchQuery, setSearchQuery] = useState<string | undefined>(undefined)
   const [bulkMode, setBulkMode] = useState<"url" | "name">("url")
+  const [pageIndex, setPageIndex] = useState(0)
 
   // region Queries
 
@@ -126,18 +133,23 @@ export function ManageShowsTabs({
     refetchInterval: queueRefetchInterval,
   })
 
-  const { data: showsData } = useQuery({
-    queryKey: ["channel-shows", channelId],
-    queryFn: () =>
-      ChannelsService.getChannelShows({ channelId }) as unknown as Promise<{
+  const { data: showsPage } = useChannelShowsPage(channelId, pageIndex)
+  const showsData = showsPage as unknown as
+    | {
         shows: Show[]
         filter_only_shows: Show[]
         sources: Record<string, Source>
         canonical_shows: Record<string, Show>
         canonical_sources: Record<string, Source>
-        stats: Record<string, ChannelShowStats>
-      }>,
-  })
+        total: number
+      }
+    | undefined
+  const showCount = showsData?.total ?? 0
+  const pageCount = Math.max(1, Math.ceil(showCount / CHANNEL_SHOW_PAGE))
+
+  useEffect(() => {
+    if (pageIndex >= pageCount) setPageIndex(pageCount - 1)
+  }, [pageIndex, pageCount])
 
   const queueEntries = queueData ?? []
   const pendingQueueCount = queueEntries.filter(
@@ -162,7 +174,11 @@ export function ManageShowsTabs({
   const filterOnlyShowsList = (showsData?.filter_only_shows ?? []).sort(
     byTitleName,
   )
-  const showCount = groupShows(showsList).length
+
+  const listedCanonicalShowIds = [
+    ...new Set(showsList.map((show) => show.canonical_show_id ?? show.id)),
+  ]
+  const { data: stats } = useChannelShowStats(channelId, listedCanonicalShowIds)
 
   // endregion Queries
 
@@ -242,9 +258,10 @@ export function ManageShowsTabs({
       const previousShowsData = queryClient.getQueryData([
         "channel-shows",
         channelId,
+        pageIndex,
       ])
       queryClient.setQueryData(
-        ["channel-shows", channelId],
+        ["channel-shows", channelId, pageIndex],
         (oldData: any) => ({
           ...oldData,
           shows: oldData.shows.filter(
@@ -261,7 +278,7 @@ export function ManageShowsTabs({
       }
       if (context?.previousShowsData) {
         queryClient.setQueryData(
-          ["channel-shows", channelId],
+          ["channel-shows", channelId, pageIndex],
           context.previousShowsData,
         )
       }
@@ -273,6 +290,9 @@ export function ManageShowsTabs({
       })
       queryClient.invalidateQueries({
         queryKey: ["episodes", channelId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ["channel-show-stats", channelId],
       })
     },
   })
@@ -370,7 +390,7 @@ export function ManageShowsTabs({
               sources={sources}
               canonicalShows={canonicalShows}
               canonicalSources={canonicalSources}
-              stats={showsData?.stats ?? {}}
+              stats={stats ?? {}}
               onSelect={(group) =>
                 setSelectedTitle(
                   selectedTitle?.canonicalShowId === group.canonicalShowId
@@ -392,6 +412,32 @@ export function ManageShowsTabs({
                 </div>
               )}
             />
+          )}
+
+          {pageCount > 1 && (
+            <div className="flex items-center justify-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPageIndex(pageIndex - 1)}
+                disabled={pageIndex === 0}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Page {pageIndex + 1} of {pageCount}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPageIndex(pageIndex + 1)}
+                disabled={pageIndex >= pageCount - 1}
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           )}
 
           {/*

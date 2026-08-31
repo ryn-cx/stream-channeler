@@ -20,13 +20,14 @@ from app.channels.schemas import (
     ChannelOutput,
     ChannelReadOptions,
     ChannelShowsOutput,
+    ChannelShowStats,
     ChannelsPublic,
     CombinedChannelOutput,
     SortOptionOutput,
     WhitelistEpisodesOutput,
     WhitelistShowOutput,
 )
-from app.channels.service import WHITELIST_EPISODE_PAGE
+from app.channels.service import CHANNEL_SHOW_PAGE, WHITELIST_EPISODE_PAGE
 from app.sources.schemas import SourcePublic
 from app.users.dependencies import OptionalUser
 
@@ -82,9 +83,21 @@ def get_channel_shows(
     channel: ReadableChannel,
     user: OptionalUser,
     session: SessionDep,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=CHANNEL_SHOW_PAGE)] = CHANNEL_SHOW_PAGE,
 ) -> ChannelShowsOutput:
     """Read all shows for a channel, including those from its child channels."""
-    return service.channel_shows_output(channel, user, session)
+    return service.channel_shows_output(channel, user, session, offset, limit)
+
+
+# TODO: Validate
+@channels_router.get("/{channel_id}/shows/stats")  # noqa: FAST003
+def get_channel_show_stats(
+    channel: ReadableChannel,  # noqa: ARG001
+    session: SessionDep,
+    canonical_show_ids: Annotated[list[uuid.UUID], Query()],
+) -> dict[uuid.UUID, ChannelShowStats]:
+    return service.channel_show_stats_output(session, canonical_show_ids)
 
 
 # FAST003 - Parameter is used by ReadableChannel.

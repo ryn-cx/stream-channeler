@@ -183,22 +183,43 @@ export type ChannelCreate = {
     anonymous: boolean;
 };
 
+export type ChannelEpisodePlugin = {
+    key: string;
+    name?: (string | null);
+};
+
+export type ChannelEpisodeSeason = {
+    show_id: string;
+    name?: (string | null);
+    season_number?: (number | null);
+};
+
+export type ChannelEpisodeShow = {
+    id: string;
+    source_id: string;
+    name?: (string | null);
+    media_type?: (string | null);
+};
+
+export type ChannelEpisodeSource = {
+    plugin_id: string;
+    name?: (string | null);
+    favicon_url?: (string | null);
+};
+
 export type ChannelEpisodesOutput = {
     episodes: Array<EpisodeWithDetails>;
     seasons: {
-        [key: string]: SeasonOutput;
+        [key: string]: ChannelEpisodeSeason;
     };
     shows: {
-        [key: string]: ShowPublic;
+        [key: string]: ChannelEpisodeShow;
     };
     sources: {
-        [key: string]: SourcePublic;
+        [key: string]: ChannelEpisodeSource;
     };
     plugins: {
-        [key: string]: PluginOutput;
-    };
-    channels: {
-        [key: string]: ChannelOutput;
+        [key: string]: ChannelEpisodePlugin;
     };
 };
 
@@ -447,9 +468,7 @@ export type ChannelShowsOutput = {
         [key: string]: SourcePublic;
     };
     groups?: Array<ChannelShowGroup>;
-    stats?: {
-        [key: string]: ChannelShowStats;
-    };
+    total?: number;
 };
 
 /**
@@ -748,35 +767,20 @@ export type EpisodeUpdate = {
 };
 
 export type EpisodeWithDetails = {
-    key: string;
-    data_timestamp?: (string | null);
-    update_at?: (string | null);
-    deleted_at?: (string | null);
-    extra?: {
-        [key: string]: unknown;
-    };
+    id: string;
+    season_id: string;
     url?: (string | null);
     name?: (string | null);
-    description?: (string | null);
     image_url?: (string | null);
     thumbnail_url?: (string | null);
     air_date?: (string | null);
     episode_number?: (number | null);
     duration?: (number | null);
-    sort_order?: (number | null);
-    canonical_episode_validated_at?: (string | null);
-    canonical_episode_note?: (string | null);
-    id: string;
-    season_id: string;
-    modified_at: string;
     canonical_episode_id?: (string | null);
-    canonical_episode_ids?: Array<(string)>;
-    linked_sort_order?: (number | null);
-    tmdb_id?: (number | null);
-    tmdb_url?: (string | null);
     watch_date?: (string | null);
     verified?: (boolean | null);
     episode_watch_id?: (string | null);
+    tmdb_url?: (string | null);
     channel_id: string;
     channel_ids?: Array<(string)>;
     tmdb_season_number?: (number | null);
@@ -2299,9 +2303,20 @@ export type ChannelsGetChannelEpisodesResponse = (ChannelEpisodesOutput);
 
 export type ChannelsGetChannelShowsData = {
     channelId: string;
+    limit?: number;
+    offset?: number;
 };
 
 export type ChannelsGetChannelShowsResponse = (ChannelShowsOutput);
+
+export type ChannelsGetChannelShowStatsData = {
+    canonicalShowIds: Array<(string)>;
+    channelId: string;
+};
+
+export type ChannelsGetChannelShowStatsResponse = ({
+    [key: string]: ChannelShowStats;
+});
 
 export type ChannelsGetChannelSourcesData = {
     channelId: string;

@@ -3,12 +3,11 @@ import { useParams, useSearch } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 
 import type {
-  ChannelOutput,
+  ChannelEpisodePlugin,
+  ChannelEpisodeSeason,
+  ChannelEpisodeShow,
+  ChannelEpisodeSource,
   EpisodeWithDetails as EpisodeWithDetailsOutput,
-  PluginOutput,
-  SeasonOutput,
-  ShowPublic,
-  SourcePublic,
 } from "@/client"
 import { CopyId } from "@/components/Common/CopyId"
 import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"
@@ -16,11 +15,10 @@ import { cn } from "@/lib/utils"
 import type { WatchFilters } from "@/lib/watchFilters"
 
 export type EpisodeWithDetails = EpisodeWithDetailsOutput & {
-  season: SeasonOutput
-  show: ShowPublic
-  source: SourcePublic
-  plugin: PluginOutput
-  channel: ChannelOutput
+  season: ChannelEpisodeSeason
+  show: ChannelEpisodeShow
+  source: ChannelEpisodeSource
+  plugin: ChannelEpisodePlugin
 }
 
 // TODO: Validate

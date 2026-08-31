@@ -60,6 +60,10 @@ from app.channels.schemas import (
     ChannelAdminCreate,
     ChannelAdminUpdate,
     ChannelCreate,
+    ChannelEpisodePlugin,
+    ChannelEpisodeSeason,
+    ChannelEpisodeShow,
+    ChannelEpisodeSource,
     ChannelEpisodesOutput,
     ChannelFavoriteUpdate,
     ChannelListOutput,
@@ -92,10 +96,8 @@ from app.episodes.models import Episode, EpisodeCanonicalEpisode
 from app.models import ZERO_LAST_SUFFIX, Visibility
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
-from app.plugins.schemas import PluginOutput
 from app.schemas import Message, RecordScope, ScopedReadOptions
 from app.seasons.models import Season
-from app.seasons.schemas import SeasonOutput
 from app.service import scoped_list_response
 from app.shows.models import Show, ShowCanonicalShow
 from app.shows.schemas import ShowPublic
@@ -107,6 +109,8 @@ from app.users.service import get_or_create_plugin_user
 
 # How many of a season's episodes are read at once on the filter page.
 WHITELIST_EPISODE_PAGE = 100
+
+CHANNEL_SHOW_PAGE = 100
 
 
 # One row of a channel's show list: the title it is listed under and the website's
@@ -1673,22 +1677,12 @@ def channel_episodes_output(
         shows={},
         sources={},
         plugins={},
-        channels={},
     )
 
     start = time.time()
 
     builder = EpisodeQueryBuilder(session, channel, channel_options, user)
     results = builder.get_episodes()
-
-    unique_channel_ids = {
-        channel_id for result in results for channel_id in result.channel_ids
-    }
-    channels = session.exec(
-        select(Channel).where(col(Channel.id).in_(unique_channel_ids)),
-    ).all()
-    for channel_obj in channels:
-        output.channels[channel_obj.id] = channel_output(channel_obj, user)
 
     source_keys: dict[uuid.UUID, str] = {}
     for result in results:
@@ -1717,16 +1711,20 @@ def channel_episodes_output(
         )
 
         if episode.season_id not in output.seasons:
-            output.seasons[episode.season_id] = SeasonOutput.model_validate(season)
+            output.seasons[episode.season_id] = ChannelEpisodeSeason.model_validate(
+                season,
+            )
         if season.show_id not in output.shows:
-            output.shows[season.show_id] = ShowPublic.model_validate(show)
+            output.shows[season.show_id] = ChannelEpisodeShow.model_validate(show)
         # The website is read off the row itself rather than off the id column on
         # the listing, which a title leaves empty. Only listings are ever here,
         # so the two say the same thing and only one of them says it in a type.
         if source.id not in output.sources:
-            output.sources[source.id] = SourcePublic.model_validate(source)
+            output.sources[source.id] = ChannelEpisodeSource.model_validate(source)
         if source.plugin_id not in output.plugins:
-            output.plugins[source.plugin_id] = PluginOutput.model_validate(plugin)
+            output.plugins[source.plugin_id] = ChannelEpisodePlugin.model_validate(
+                plugin,
+            )
 
     serve_as_canonical_episodes(session, output.episodes)
     custom_source = apply_user_episode_urls(
@@ -1738,8 +1736,10 @@ def channel_episodes_output(
         channel_options,
     )
     if custom_source:
-        output.sources[custom_source.id] = SourcePublic.model_validate(custom_source)
-        output.plugins[custom_source.plugin_id] = PluginOutput.model_validate(
+        output.sources[custom_source.id] = ChannelEpisodeSource.model_validate(
+            custom_source,
+        )
+        output.plugins[custom_source.plugin_id] = ChannelEpisodePlugin.model_validate(
             custom_source.plugin,
         )
 
@@ -1748,10 +1748,81 @@ def channel_episodes_output(
 
 
 # TODO: Validate
+def _paged_canonical_show_ids(
+    session: Session,
+    channel_ids: Collection[uuid.UUID],
+    offset: int,
+    limit: int,
+) -> tuple[list[uuid.UUID], int]:
+    total = session.exec(
+        select(func.count(distinct(col(ChannelShow.canonical_show_id)))).where(
+            col(ChannelShow.channel_id).in_(channel_ids),
+            col(ChannelShow.is_blacklist_only).is_(False),
+        ),
+    ).one()
+
+    canonical_show_ids = session.exec(
+        select(ChannelShow.canonical_show_id)
+        .join(
+            Show,
+            col(Show.id) == col(ChannelShow.canonical_show_id),
+            isouter=True,
+        )
+        .where(
+            col(ChannelShow.channel_id).in_(channel_ids),
+            col(ChannelShow.is_blacklist_only).is_(False),
+        )
+        .group_by(col(ChannelShow.canonical_show_id), func.lower(col(Show.name)))
+        .order_by(func.lower(col(Show.name)), col(ChannelShow.canonical_show_id))
+        .offset(offset)
+        .limit(limit),
+    ).all()
+    return list(canonical_show_ids), total
+
+
+# TODO: Validate
+def _filter_only_canonical_show_ids(
+    session: Session,
+    channel_ids: Collection[uuid.UUID],
+) -> list[uuid.UUID]:
+    regular = aliased(ChannelShow)
+    return list(
+        session.exec(
+            select(ChannelShow.canonical_show_id)
+            .where(
+                col(ChannelShow.channel_id).in_(channel_ids),
+                col(ChannelShow.is_blacklist_only).is_(True),
+                ~exists(
+                    select(regular.canonical_show_id)
+                    .where(
+                        col(regular.channel_id).in_(channel_ids),
+                        col(regular.canonical_show_id)
+                        == col(ChannelShow.canonical_show_id),
+                        col(regular.is_blacklist_only).is_(False),
+                    )
+                    .correlate(ChannelShow),
+                ),
+            )
+            .distinct(),
+        ).all(),
+    )
+
+
+# TODO: Validate
+def channel_show_stats_output(
+    session: Session,
+    canonical_show_ids: Collection[uuid.UUID],
+) -> dict[uuid.UUID, ChannelShowStats]:
+    return _channel_show_stats(session, set(canonical_show_ids))
+
+
+# TODO: Validate
 def channel_shows_output(
     channel: Channel,
     user: User | None,
     session: Session,
+    offset: int = 0,
+    limit: int = CHANNEL_SHOW_PAGE,
 ) -> ChannelShowsOutput:
     """Read all shows for a channel, including those from its child channels."""
     output = ChannelShowsOutput()
@@ -1762,8 +1833,22 @@ def channel_shows_output(
         channel,
         child_channel_ids(channel),
     )
+
+    paged_show_ids, output.total = _paged_canonical_show_ids(
+        session,
+        channel_ids,
+        offset,
+        limit,
+    )
+    listed_show_ids = {
+        *paged_show_ids,
+        *_filter_only_canonical_show_ids(session, channel_ids),
+    }
     channel_shows = session.exec(
-        select(ChannelShow).where(col(ChannelShow.channel_id).in_(channel_ids)),
+        select(ChannelShow).where(
+            col(ChannelShow.channel_id).in_(channel_ids),
+            col(ChannelShow.canonical_show_id).in_(listed_show_ids),
+        ),
     ).all()
     # A `ChannelShow` is a title, so each one stands for every website's non-canonical
     # row of it.
@@ -1858,7 +1943,6 @@ def channel_shows_output(
     # Every title the channel holds rather than every title its non-canonical rows are
     # of, since a non-canonical row that mixes titles is listed under whichever of them
     # the channel was told to hold.
-    output.stats = _channel_show_stats(session, canonical_show_ids)
     output.canonical_sources = _canonical_sources(session, canonical_show_ids)
     output.canonical_shows = _canonical_shows(session, canonical_show_ids)
 

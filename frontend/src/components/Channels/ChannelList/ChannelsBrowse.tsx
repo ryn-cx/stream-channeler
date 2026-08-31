@@ -210,8 +210,7 @@ function ChannelRow({
       const show = data!.shows[season.show_id]
       const source = data!.sources[show.source_id]
       const plugin = data!.plugins[source.plugin_id]
-      const channel = data!.channels[episode.channel_id]
-      return { ...episode, season, show, source, plugin, channel }
+      return { ...episode, season, show, source, plugin }
     },
   )
 
