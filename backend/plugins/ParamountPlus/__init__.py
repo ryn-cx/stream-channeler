@@ -5,33 +5,19 @@ from __future__ import annotations
 
 from typing import override
 
+from plugins.ParamountPlus.import_url import ImportURLMixin
 from plugins.ParamountPlus.source import SourceMixin
 from plugins.ParamountPlus.upsert import UpsertMixin
-from plugins.ParamountPlus.url_handlers import (
-    MovieURLHandler,
-    ParamountPlusURLHandler,
-    ShowURLHandler,
-)
-from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
 
 
 # TODO: Validate
 class ParamountPlus(
     UpsertMixin,
     SourceMixin,
-    MediaTypeImportMixin[ParamountPlusURLHandler],
+    ImportURLMixin,
     register=True,
 ):
     """Paramount+ plugin."""
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _url_handlers(cls) -> tuple[type[ParamountPlusURLHandler], ...]:
-        return (
-            MovieURLHandler,
-            ShowURLHandler,
-        )
 
     # TODO: Validate
     @classmethod

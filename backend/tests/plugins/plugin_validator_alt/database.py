@@ -313,8 +313,8 @@ class DatabaseMixinAlt[PluginT: BasePlugin]:
         """Import the URL using the plugin. Files are pre-imported by the class fixture."""
         url = url or self.url
         assert url, "URL must be provided for URL import tests"
-        self.imported_plugin = self.plugin_class(session)
-        output = self.imported_plugin.import_url(url, force=force)
+        self.imported_plugin = self.plugin_class(session, url=url)
+        output = self.imported_plugin.import_url(force=force)
 
         session.flush()
         session.expire_all()

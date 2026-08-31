@@ -5,30 +5,19 @@ from __future__ import annotations
 
 from typing import override
 
+from plugins.HBOMax.import_url import ImportURLMixin
 from plugins.HBOMax.source import SourceMixin
 from plugins.HBOMax.upsert import UpsertMixin
-from plugins.HBOMax.url_handlers import (
-    HBOMaxURLHandler,
-    MovieURLHandler,
-    ShowURLHandler,
-)
-from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
 
 
 # TODO: Validate
 class HBOMax(
     UpsertMixin,
     SourceMixin,
-    MediaTypeImportMixin[HBOMaxURLHandler],
+    ImportURLMixin,
     register=True,
 ):
     """HBO Max plugin."""
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _url_handlers(cls) -> tuple[type[HBOMaxURLHandler], ...]:
-        return (MovieURLHandler, ShowURLHandler)
 
     # TODO: Validate
     @classmethod

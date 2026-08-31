@@ -1,11 +1,10 @@
 # TODO: Validate
 from __future__ import annotations
 
-import re
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Any, Self, cast, override
+from typing import Any, Self, overload, override
 
 from loguru import logger
 from sqlmodel import Session
@@ -21,8 +20,12 @@ from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
+    EpisodeTarget,
     InvalidURLError,
+    SeasonTarget,
+    ShowTarget,
     URLImportResult,
+    URLTarget,
 )
 from plugins.utils.base_plugin.check import CheckMixin
 from plugins.utils.base_plugin.context import (
@@ -32,8 +35,10 @@ from plugins.utils.base_plugin.context import (
 )
 from plugins.utils.base_plugin.files import INITIAL_FILE_IDENTIFIER, BaseFile
 from plugins.utils.base_plugin.preload import PreloadMixin
-from plugins.utils.base_plugin.url import URLHandler, URLMixin
+from plugins.utils.base_plugin.url import URLMixin
 from plugins.utils.base_plugin.watch import WatchMixin
+
+_initialized_plugin_keys: set[str] = set()
 
 _TMDB_MEDIA_TYPES = {
     "Movie": MediaType.movie,
@@ -109,14 +114,71 @@ class BasePlugin(
 
     # TODO: Validate
     @override
-    def __init__(self, session: Session) -> None:
+    def __init__(
+        self,
+        session: Session,
+        url: str | None = None,
+        show: Show | None = None,
+        season: Season | None = None,
+        episode: Episode | None = None,
+    ) -> None:
         self.session = session
+        if url is not None:
+            self.url = url
+        if show is not None:
+            self.show = show
+        if season is not None:
+            self.season = season
+        if episode is not None:
+            self.episode = episode
         self._file_cache = {}
         if (context := plugin_context(session, self.plugin_key())) is None:
             self.initialize_database()
             store_plugin_context(session, self.plugin_key(), self._context)
         else:
             self._context = context
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def initialize(cls, session: Session) -> None:
+        super().initialize(session)
+        cls.assume_initialized()
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def assume_initialized(cls) -> None:
+        _initialized_plugin_keys.add(cls.plugin_key())
+
+    # TODO: Validate
+    @overload
+    def linked_to(self, *, url: str) -> AbstractPlugin[URLTarget]: ...
+
+    # TODO: Validate
+    @overload
+    def linked_to(self, *, show: Show) -> AbstractPlugin[ShowTarget]: ...
+
+    # TODO: Validate
+    @overload
+    def linked_to(self, *, season: Season) -> AbstractPlugin[SeasonTarget]: ...
+
+    # TODO: Validate
+    @overload
+    def linked_to(self, *, episode: Episode) -> AbstractPlugin[EpisodeTarget]: ...
+
+    # TODO: Validate
+    @override
+    def linked_to(
+        self,
+        url: str | None = None,
+        show: Show | None = None,
+        season: Season | None = None,
+        episode: Episode | None = None,
+    ) -> AbstractPlugin[Any]:
+        view = self._construct(self.session, url, show, season, episode)
+        view._file_cache = self._file_cache  # noqa: SLF001 - Another view of this plugin.
+        return view
 
     # TODO: Validate
     def _fresh(self) -> Self:
@@ -127,7 +189,7 @@ class BasePlugin(
         last one's is let go with it. What the plugin knows about itself is held
         by the session rather than by the view, so a view costs nothing to make.
         """
-        return type(self)(self.session)
+        return self._construct(self.session)
 
     # TODO: Validate
     @property
@@ -170,8 +232,16 @@ class BasePlugin(
         source_key: str,
         build_source: Callable[[], Source],
     ) -> None:
-        if source_key not in self._sources:
-            self._sources[source_key] = build_source()
+        if source_key in self._sources:
+            return
+
+        if self.plugin_key() in _initialized_plugin_keys:
+            existing_source = Source.get(self.session, self.plugin, source_key)
+            if existing_source is not None:
+                self._sources[source_key] = existing_source
+                return
+
+        self._sources[source_key] = build_source()
 
     # TODO: Validate
     def initialize_database(self) -> None:
@@ -272,7 +342,8 @@ class BasePlugin(
 
     # TODO: Validate
     @override
-    def update_show(self, show: Show, *, force: bool = False) -> None:
+    def update_show(self, *, force: bool = False) -> None:
+        show = self.show
         source_name = show.source.name or show.source.key
         show_name: str
         if show.name:
@@ -285,7 +356,8 @@ class BasePlugin(
 
     # TODO: Validate
     @override
-    def update_season(self, season: Season) -> None:
+    def update_season(self) -> None:
+        season = self.season
         logger.info("Updating season: {}", season.key)
         season = self._preload_season(season.id, preload_show=True).one()
         self._download_season_files_and_children(season, update_at=season.update_at)
@@ -293,7 +365,8 @@ class BasePlugin(
 
     # TODO: Validate
     @override
-    def update_episode(self, episode: Episode) -> None:
+    def update_episode(self) -> None:
+        episode = self.episode
         logger.info("Updating episode: {}", episode.key)
         episode = self._preload_episode(episode.id, preload_source=True).one()
         self._download_episode_files(episode, update_at=episode.update_at)
@@ -311,18 +384,18 @@ class BasePlugin(
 
     # TODO: Validate
     @override
-    def on_update_show_failure(self, show: Show, error: Exception) -> None:
-        show.update_at = tz_datetime.max()
+    def on_update_show_failure(self, error: Exception) -> None:
+        self.show.update_at = tz_datetime.max()
 
     # TODO: Validate
     @override
-    def on_update_season_failure(self, season: Season, error: Exception) -> None:
-        season.update_at = tz_datetime.max()
+    def on_update_season_failure(self, error: Exception) -> None:
+        self.season.update_at = tz_datetime.max()
 
     # TODO: Validate
     @override
-    def on_update_episode_failure(self, episode: Episode, error: Exception) -> None:
-        episode.update_at = tz_datetime.max()
+    def on_update_episode_failure(self, error: Exception) -> None:
+        self.episode.update_at = tz_datetime.max()
 
     # TODO: Validate
     def _upsert_show_object(
@@ -511,21 +584,13 @@ class BasePlugin(
 
 
 # TODO: Validate
-class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=False):
+class ReadURLPlugin(BasePlugin, ABC, register=False):
+    _show_key: str
+
     # TODO: Validate
     @classmethod
     @abstractmethod
-    def _url_handlers(cls) -> tuple[type[URLHandler[Any]], ...]: ...
-
-    # TODO: Validate
-    def get_url_handler(self, url: str) -> HandlerT:
-        domain_regex = self._domain_regex()
-        for handler_class in self._url_handlers():
-            if match := re.match(handler_class.url_regex(domain_regex), url):
-                return cast("HandlerT", handler_class(self, url, match.group(1)))  # type: ignore[call-arg]  # ty: ignore[too-many-positional-arguments]
-
-        msg = f"Invalid {self.plugin_key()} URL: {url}"
-        raise InvalidURLError(msg)
+    def _url_regexes(cls) -> tuple[str, ...]: ...
 
     # TODO: Validate
     @classmethod
@@ -533,54 +598,59 @@ class URLHandlerPlugin[HandlerT: URLHandler[Any]](BasePlugin, ABC, register=Fals
     def url_regex(cls) -> str:
         domain_regex = cls._domain_regex()
         alternatives = "|".join(
-            handler_class.url_regex(domain_regex)
-            for handler_class in cls._url_handlers()
+            domain_regex + url_regex for url_regex in cls._url_regexes()
         )
         return f"(?:{alternatives})"
 
     # TODO: Validate
-    def _import_handler(
+    @abstractmethod
+    def _read_url(self, url: str) -> None: ...
+
+    # TODO: Validate
+    def _url_source(self) -> Source:
+        return self.source
+
+    # TODO: Validate
+    def _import_results(self, show: Show) -> list[URLImportResult]:
+        results = [URLImportResult.show_import_results(show)]
+        results += [
+            URLImportResult.show_import_results(canonical_show)
+            for canonical_show in show.canonical_shows
+        ]
+        return results
+
+    # TODO: Validate
+    def _import_read_url(
         self,
-        handler: HandlerT,
         canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> list[URLImportResult]:
-        """Set up, then call upsert_show to import a new show.
-
-        What a channel takes on from the import is returned rather than the show
-        itself, since that is what a caller asking for a URL to be imported is
-        asking for, and it is the handler that says what the URL named.
-
-        `force` is what says to write a title that is already stored out again.
-        """
-        show_key = handler.show_key
+        show_key = self._show_key
         if not force and (show := self._preload_show(show_key).one_or_none()):
-            return handler.import_results(show)
+            return self._import_results(show)
 
         _cache = self._download_show_files_and_children(show_key)
         if canonical_show is None:
             canonical_show = self._tmdb_show(show_key, force=force)
             if not force and (show := self._preload_show(show_key).one_or_none()):
-                return handler.import_results(show)
+                return self._import_results(show)
 
         show = self.upsert_show(
-            self.source,
+            self._url_source(),
             show_key,
             canonical_show=canonical_show,
             force=force,
         )
-        return handler.import_results(show)
+        return self._import_results(show)
 
     # TODO: Validate
     @override
     def import_url(
         self,
-        url: str,
         canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> list[URLImportResult]:
-        handler = self.get_url_handler(url)
-        handler.raise_if_invalid()
-        return self._import_handler(handler, canonical_show, force=force)
+        self._read_url(self.url)
+        return self._import_read_url(canonical_show, force=force)

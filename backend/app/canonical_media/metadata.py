@@ -315,5 +315,3 @@ def canonical_show_of(session: Session, show: Show) -> Show | None:
     return session.exec(
         select(Show).where(is_canonical(Show), Show.id == canonical_show_id),
     ).first()
-
-

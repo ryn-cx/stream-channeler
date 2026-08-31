@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from typing import Any, override
 
@@ -26,36 +27,74 @@ from plugins.TMDB.media_info import (
     streaming_providers,
 )
 from plugins.TMDB.upsert import UpsertMixin
-from plugins.TMDB.url_handlers import TMDBURLHandler
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
     InvalidURLError,
     URLImportResult,
 )
-from plugins.utils.base_plugin.plugin import URLHandlerPlugin
-from plugins.utils.base_plugin.url import URLHandler
+from plugins.utils.base_plugin.files import BaseFile
+from plugins.utils.base_plugin.plugin import ReadURLPlugin
 from plugins.utils.manage_plugins import plugin_for_url
 
 # from plugins.WatchMode import WatchMode  # noqa: ERA001
 
 
 # TODO: Validate
+def _title_url_regex(media_type: MediaType) -> str:
+    return rf"\/{media_type}\/(?P<{media_type}_tmdb_id>\d+)"
+
+
+# TODO: Validate
 class ImportURLMixin(
     UpsertMixin,
     LookupMixin,
-    URLHandlerPlugin[TMDBURLHandler],
+    ReadURLPlugin,
     register=False,
 ):
+    _MOVIE_URL_REGEX = _title_url_regex(MediaType.movie)
+    _TV_URL_REGEX = _title_url_regex(MediaType.tv)
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_regexes(cls) -> tuple[str, ...]:
+        return (cls._MOVIE_URL_REGEX, cls._TV_URL_REGEX)
+
     # TODO: Validate
     @override
-    def _import_handler(
+    def _read_url(self, url: str) -> None:
+        domain_regex = self._domain_regex()
+        for media_type, url_regex in (
+            (MediaType.movie, self._MOVIE_URL_REGEX),
+            (MediaType.tv, self._TV_URL_REGEX),
+        ):
+            if match := re.match(domain_regex + url_regex, url):
+                tmdb_id = int(match.group(f"{media_type}_tmdb_id"))
+                self._show_key = tmdb_show_key(media_type, tmdb_id)
+                self.raise_if_invalid_file(
+                    self.title_page_file(media_type, tmdb_id),
+                    url,
+                )
+                detail_file: BaseFile[Any]
+                if media_type == MediaType.movie:
+                    detail_file = self.movie_detail_file(tmdb_id)
+                else:
+                    detail_file = self.show_detail_file(tmdb_id)
+                self.raise_if_invalid_file(detail_file, url)
+                return
+
+        msg = f"Invalid {self.plugin_key()} URL: {url}"
+        raise InvalidURLError(msg)
+
+    # TODO: Validate
+    @override
+    def _import_read_url(
         self,
-        handler: URLHandler[Any],
         canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> list[URLImportResult]:
-        show_key = handler.show_key
+        show_key = self._show_key
         show_preload = self._preload_show(show_key, preload_episodes=True)
         existing_show = show_preload.one_or_none()
         if not existing_show or force:
@@ -71,7 +110,7 @@ class ImportURLMixin(
             if canonical_show is None:
                 self._import_listed_sources(show_key, existing_show, force=force)
 
-        return handler.import_results(existing_show)
+        return self._import_results(existing_show)
 
     # TODO: Validate
     def _import_listed_sources(
@@ -227,7 +266,7 @@ class ImportURLMixin(
     ) -> bool:
         savepoint = self.session.begin_nested()
         try:
-            plugin_class(self.session).import_url(url, show, force=force)
+            plugin_class.init_with_url(self.session, url).import_url(show, force=force)
         except InvalidURLError:
             savepoint.rollback()
             logger.info("Nothing to import at {}", url)
@@ -301,11 +340,11 @@ class ImportURLMixin(
     # TODO: Validate
     def import_show(self, tmdb_id: int, *, force: bool = False) -> Show:
         """Import a TMDB tv entry using a tmdb_id."""
-        self.import_url(media_url(MediaType.tv, tmdb_id), force=force)
+        self.linked_to(url=media_url(MediaType.tv, tmdb_id)).import_url(force=force)
         return self._preload_show(tmdb_show_key(MediaType.tv, tmdb_id)).one()
 
     # TODO: Validate
     def import_movie(self, tmdb_id: int, *, force: bool = False) -> Show:
         """Import a TMDB movie entry using a tmdb_id."""
-        self.import_url(media_url(MediaType.movie, tmdb_id), force=force)
+        self.linked_to(url=media_url(MediaType.movie, tmdb_id)).import_url(force=force)
         return self._preload_show(tmdb_show_key(MediaType.movie, tmdb_id)).one()

@@ -167,11 +167,11 @@ class PluginValidatorAlt[PluginT: BasePlugin](DatabaseMixinAlt[PluginT]):
             case Source() as source:
                 owner.update_source(source=source)
             case Show() as show:
-                owner.update_show(show=show)
+                owner.linked_to(show=show).update_show()
             case Season() as season:
-                owner.update_season(season)
+                owner.linked_to(season=season).update_season()
             case Episode() as episode:
-                owner.update_episode(episode)
+                owner.linked_to(episode=episode).update_episode()
 
     # TODO: Validate
     def all_sources(self, session: Session) -> list[Source]:
@@ -554,9 +554,9 @@ class DeletedEpisodeTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
         # and a row left to be flushed by the comparison is a row stamped by the
         # clock the machine happened to be at.
         with log_stats(self), frozen_clock(self.update_time):
-            self.owning_plugin(session_with_files, season).update_season(
+            self.owning_plugin(session_with_files, season).linked_to(
                 season=season,
-            )
+            ).update_season()
             session_with_files.flush()
 
         self.assert_state(session_with_files, "deleted_episode")
@@ -578,7 +578,9 @@ class DeletedSeasonTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
             session_with_files.flush()
 
         with log_stats(self), frozen_clock(self.update_time):
-            self.owning_plugin(session_with_files, show).update_show(show=show)
+            self.owning_plugin(session_with_files, show).linked_to(
+                show=show,
+            ).update_show()
             session_with_files.flush()
 
         self.assert_state(session_with_files, "deleted_season")
@@ -603,7 +605,9 @@ class DeletedEpisodeUpdateShowTestsAlt[PluginT: BasePlugin](
             session_with_files.flush()
 
         with log_stats(self), frozen_clock(self.update_time):
-            self.owning_plugin(session_with_files, show).update_show(show=show)
+            self.owning_plugin(session_with_files, show).linked_to(
+                show=show,
+            ).update_show()
             session_with_files.flush()
 
         self.assert_state(session_with_files, "deleted_episode_update_show")
@@ -628,7 +632,9 @@ class DeletedSeasonWithEpisodeTestsAlt[PluginT: BasePlugin](
             session_with_files.flush()
 
         with log_stats(self), frozen_clock(self.update_time):
-            self.owning_plugin(session_with_files, show).update_show(show=show)
+            self.owning_plugin(session_with_files, show).linked_to(
+                show=show,
+            ).update_show()
             session_with_files.flush()
 
         self.assert_state(session_with_files, "deleted_season_with_episode")

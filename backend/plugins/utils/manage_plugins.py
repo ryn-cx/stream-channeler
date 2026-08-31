@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from loguru import logger
+from sqlmodel import Session
 
 if TYPE_CHECKING:
     from plugins.utils.abstract_plugin import AbstractPlugin
@@ -67,6 +68,38 @@ def sorted_plugins() -> list[type[AbstractPlugin]]:
     """Return the registered plugins sorted by their plugin_key."""
     import_plugins()
     return sorted(plugins, key=lambda plugin: plugin.plugin_key())
+
+
+_plugins_initialized = False
+
+
+# TODO: Validate
+def initialize_plugins() -> None:
+    global _plugins_initialized  # noqa: PLW0603
+    if _plugins_initialized:
+        return
+    _plugins_initialized = True
+
+    from app.database import engine  # noqa: PLC0415
+
+    for plugin_class in sorted_plugins():
+        with Session(engine) as session:
+            plugin_class.initialize(session)
+            session.commit()
+
+
+# TODO: Validate
+def assume_plugins_initialized() -> None:
+    global _plugins_initialized  # noqa: PLW0603
+    _plugins_initialized = True
+    for plugin_class in sorted_plugins():
+        plugin_class.assume_initialized()
+
+
+# TODO: Validate
+def disable_plugin_initialization() -> None:
+    global _plugins_initialized  # noqa: PLW0603
+    _plugins_initialized = True
 
 
 # TODO: Validate

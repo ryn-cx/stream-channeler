@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from functools import cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, Any, Generic, Self, TypeVar, cast, overload, override
 
 from pydantic import BaseModel, Field
 
@@ -23,6 +23,8 @@ from app.watches.schemas import WatchImportResults
 from plugins.utils.manage_plugins import register_plugins
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from sqlmodel import Session
 
     from app.shows.models import Show
@@ -30,8 +32,37 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class AbstractPlugin(ABC):
+class NoTarget: ...
+
+
+# TODO: Validate
+class URLTarget: ...
+
+
+# TODO: Validate
+class ShowTarget: ...
+
+
+# TODO: Validate
+class SeasonTarget: ...
+
+
+# TODO: Validate
+class EpisodeTarget: ...
+
+
+TargetT = TypeVar("TargetT", default=Any)
+
+
+# TODO: Validate
+class AbstractPlugin(ABC, Generic[TargetT]):
     """Base class every plugin must implement."""
+
+    session: Session
+    url: str
+    show: Show
+    season: Season
+    episode: Episode
 
     # The favicon shown next to this plugin's name in the UI; None when the plugin
     # has no icon of its own.
@@ -60,7 +91,14 @@ class AbstractPlugin(ABC):
 
     # TODO: Validate
     @abstractmethod
-    def __init__(self, session: Session) -> None:
+    def __init__(
+        self,
+        session: Session,
+        url: str | None = None,
+        show: Show | None = None,
+        season: Season | None = None,
+        episode: Episode | None = None,
+    ) -> None:
         """Initialize the plugin class.
 
         The `Plugin (class)` needs to be able to interact with the database so the
@@ -71,6 +109,95 @@ class AbstractPlugin(ABC):
             session: The database session.
 
         """
+
+    # TODO: Validate
+    @classmethod
+    def _construct(
+        cls,
+        session: Session,
+        url: str | None = None,
+        show: Show | None = None,
+        season: Season | None = None,
+        episode: Episode | None = None,
+    ) -> Self:
+        factory = cast("Callable[..., Self]", cls)
+        return factory(session, url, show, season, episode)
+
+    # TODO: Validate
+    @classmethod
+    def init_with_url(cls, session: Session, url: str) -> AbstractPlugin[URLTarget]:
+        return cast("AbstractPlugin[URLTarget]", cls._construct(session, url=url))
+
+    # TODO: Validate
+    @classmethod
+    def init_with_show(cls, session: Session, show: Show) -> AbstractPlugin[ShowTarget]:
+        return cast("AbstractPlugin[ShowTarget]", cls._construct(session, show=show))
+
+    # TODO: Validate
+    @classmethod
+    def init_with_season(
+        cls,
+        session: Session,
+        season: Season,
+    ) -> AbstractPlugin[SeasonTarget]:
+        return cast(
+            "AbstractPlugin[SeasonTarget]",
+            cls._construct(session, season=season),
+        )
+
+    # TODO: Validate
+    @classmethod
+    def init_with_episode(
+        cls,
+        session: Session,
+        episode: Episode,
+    ) -> AbstractPlugin[EpisodeTarget]:
+        return cast(
+            "AbstractPlugin[EpisodeTarget]",
+            cls._construct(session, episode=episode),
+        )
+
+    # TODO: Validate
+    @overload
+    def linked_to(self, *, url: str) -> AbstractPlugin[URLTarget]: ...
+
+    # TODO: Validate
+    @overload
+    def linked_to(self, *, show: Show) -> AbstractPlugin[ShowTarget]: ...
+
+    # TODO: Validate
+    @overload
+    def linked_to(self, *, season: Season) -> AbstractPlugin[SeasonTarget]: ...
+
+    # TODO: Validate
+    @overload
+    def linked_to(self, *, episode: Episode) -> AbstractPlugin[EpisodeTarget]: ...
+
+    # TODO: Validate
+    def linked_to(
+        self,
+        url: str | None = None,
+        show: Show | None = None,
+        season: Season | None = None,
+        episode: Episode | None = None,
+    ) -> AbstractPlugin[Any]:
+        return self._construct(
+            self.session,
+            url=url,
+            show=show,
+            season=season,
+            episode=episode,
+        )
+
+    # TODO: Validate
+    @classmethod
+    def initialize(cls, session: Session) -> None:
+        cls._construct(session)
+
+    # TODO: Validate
+    @classmethod
+    def assume_initialized(cls) -> None:
+        return
 
     # TODO: Validate
     @classmethod
@@ -91,8 +218,7 @@ class AbstractPlugin(ABC):
 
     # TODO: Validate
     def import_url(
-        self,
-        url: str,
+        self: AbstractPlugin[URLTarget],
         canonical_show: Show | None = None,
         *,
         force: bool = False,
@@ -102,7 +228,6 @@ class AbstractPlugin(ABC):
         Only called if `is_valid_url_format` returns `True` on the `url`.
 
         Args:
-            url: The URL to import.
             canonical_show: The title `url` is known to be linked to, when the
                 caller already knows it. A plugin otherwise has to find the title
                 by searching its name, which is a guess; being told is not.
@@ -131,7 +256,7 @@ class AbstractPlugin(ABC):
 
     # TODO: Validate
     def on_import_url_failure(
-        self,
+        self: AbstractPlugin[URLTarget],
         queue_item: ChannelQueue,  # noqa: ARG002 - `queue_item` is used by overrides.
         error: Exception,
     ) -> None:
@@ -204,7 +329,7 @@ class AbstractPlugin(ABC):
         source.update_at = None
 
     # TODO: Validate
-    def update_show(self, show: Show, *, force: bool = False) -> None:
+    def update_show(self: AbstractPlugin[ShowTarget], *, force: bool = False) -> None:
         """Update an existing show in the database.
 
         Called when `Show.update_at > datetime.now()`.
@@ -213,14 +338,13 @@ class AbstractPlugin(ABC):
         specific update logic.
 
         Args:
-            show: The `Show` to update.
             force: When True, re-upsert every record even if its data is unchanged.
 
         """
-        show.update_at = None
+        self.show.update_at = None
 
     # TODO: Validate
-    def update_season(self, season: Season) -> None:
+    def update_season(self: AbstractPlugin[SeasonTarget]) -> None:
         """Update an existing season in the database.
 
         Called when `Season.update_at > datetime.now()`.
@@ -228,14 +352,11 @@ class AbstractPlugin(ABC):
         By default this will clear `Season.update_at`, override to implement
         `Plugin` specific update logic.
 
-        Args:
-            season: The `Season` to update.
-
         """
-        season.update_at = None
+        self.season.update_at = None
 
     # TODO: Validate
-    def update_episode(self, episode: Episode) -> None:
+    def update_episode(self: AbstractPlugin[EpisodeTarget]) -> None:
         """Update an existing episode in the database.
 
         Called when `Episode.update_at > datetime.now()`.
@@ -243,11 +364,8 @@ class AbstractPlugin(ABC):
         By default this will clear `Episode.update_at`, override to implement
         `Plugin` specific update logic.
 
-        Args:
-            episode: The `Episode` to update.
-
         """
-        episode.update_at = None
+        self.episode.update_at = None
 
     # TODO: Validate
     def update_file(self, file: File) -> None:
@@ -282,7 +400,10 @@ class AbstractPlugin(ABC):
         raise error
 
     # TODO: Validate
-    def on_update_show_failure(self, show: Show, error: Exception) -> None:  # noqa: ARG002 - `show` is used by overrides.
+    def on_update_show_failure(
+        self: AbstractPlugin[ShowTarget],
+        error: Exception,
+    ) -> None:
         """Handle a failure while updating a `Show`.
 
         By default the error is re-raised so the caller applies its default
@@ -291,7 +412,10 @@ class AbstractPlugin(ABC):
         raise error
 
     # TODO: Validate
-    def on_update_season_failure(self, season: Season, error: Exception) -> None:  # noqa: ARG002 - `season` is used by overrides.
+    def on_update_season_failure(
+        self: AbstractPlugin[SeasonTarget],
+        error: Exception,
+    ) -> None:
         """Handle a failure while updating a `Season`.
 
         By default the error is re-raised so the caller applies its default
@@ -300,7 +424,10 @@ class AbstractPlugin(ABC):
         raise error
 
     # TODO: Validate
-    def on_update_episode_failure(self, episode: Episode, error: Exception) -> None:  # noqa: ARG002 - `episode` is used by overrides.
+    def on_update_episode_failure(
+        self: AbstractPlugin[EpisodeTarget],
+        error: Exception,
+    ) -> None:
         """Handle a failure while updating an `Episode`.
 
         By default the error is re-raised so the caller applies its default
@@ -486,13 +613,22 @@ class URLImportResult(BaseModel):
 
     # TODO: Validate
     @classmethod
-    def show_import_results(cls, show: Show, *, is_whitelist: bool = False) -> URLImportResult:
+    def show_import_results(
+        cls,
+        show: Show,
+        *,
+        is_whitelist: bool = False,
+    ) -> URLImportResult:
         """Return the result of importing the whole of `show`."""
         return cls(show_key=show.key, is_whitelist=is_whitelist)
 
     # TODO: Validate
     @classmethod
-    def season_import_results(cls, show: Show, seasons: Sequence[Season]) -> URLImportResult:
+    def season_import_results(
+        cls,
+        show: Show,
+        seasons: Sequence[Season],
+    ) -> URLImportResult:
         """Return the result of importing only `seasons` of `show`."""
         return cls(
             show_key=show.key,
@@ -502,7 +638,11 @@ class URLImportResult(BaseModel):
 
     # TODO: Validate
     @classmethod
-    def episode_import_results(cls, show: Show, episodes: Sequence[Episode]) -> URLImportResult:
+    def episode_import_results(
+        cls,
+        show: Show,
+        episodes: Sequence[Episode],
+    ) -> URLImportResult:
         """Return the result of importing only `episodes` of `show`."""
         return cls(
             show_key=show.key,

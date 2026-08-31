@@ -35,11 +35,16 @@ from app.users.constants import PLUGIN_USER_EMAIL
 from app.users.models import User
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin
-from plugins.utils.manage_plugins import import_plugins, plugins
+from plugins.utils.manage_plugins import (
+    assume_plugins_initialized,
+    import_plugins,
+    plugins,
+)
 
 logger = logger.bind(source="updater")
 
 import_plugins()
+assume_plugins_initialized()
 load_models()
 
 # Every media class updated by this script; typed as the shared `MediaMixin` base so
@@ -354,12 +359,27 @@ def _process_outdated_items(
     for group in _grouped_by_show(outdated_items):
         # One view of the plugin per show, so what it read for the show answers
         # every item of it and is let go when the show is done with.
-        plugin_instance = plugin_class(session)
+        group_view = plugin_class(session)
         for item in group:
+            item_arguments: tuple[MediaMixin[Any], ...]
+            plugin_instance: AbstractPlugin
+            match item:
+                case Show():
+                    item_arguments = ()
+                    plugin_instance = group_view.linked_to(show=item)
+                case Season():
+                    item_arguments = ()
+                    plugin_instance = group_view.linked_to(season=item)
+                case Episode():
+                    item_arguments = ()
+                    plugin_instance = group_view.linked_to(episode=item)
+                case _:
+                    item_arguments = (item,)
+                    plugin_instance = group_view
             log_msg = f"[{plugin_key}] Updating {media_type_name}: {item.key}"
             logger.info(log_msg)
             try:
-                getattr(plugin_instance, update_method_name)(item)
+                getattr(plugin_instance, update_method_name)(*item_arguments)
 
                 log_msg = (
                     f"[{plugin_key}] Successfully updated {media_type_name}: {item.key}"
@@ -379,7 +399,10 @@ def _process_outdated_items(
                 session.refresh(item)
                 failure_method_name = f"on_update_{media_type_name}_failure"
                 try:
-                    getattr(plugin_instance, failure_method_name)(item, error)
+                    getattr(plugin_instance, failure_method_name)(
+                        *item_arguments,
+                        error,
+                    )
                 except Exception:  # noqa: BLE001 - The plugin re-raised its default.
                     # Set update_at to the maximum possible value to avoid retrying
                     # the update until the issue is resolved.

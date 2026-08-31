@@ -9,27 +9,20 @@ from __future__ import annotations
 
 from typing import override
 
+from plugins.DisneyPlus.import_url import ImportURLMixin
 from plugins.DisneyPlus.source import SourceMixin
 from plugins.DisneyPlus.upsert import UpsertMixin
-from plugins.DisneyPlus.url_handlers import DisneyPlusURLHandler, EntityURLHandler
-from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
 
 # TODO: Validate
 class DisneyPlus(
     UpsertMixin,
     SourceMixin,
-    URLHandlerPlugin[DisneyPlusURLHandler],
+    ImportURLMixin,
     # Temporarily disabled until a solution is found to get episodes past episode 24
     register=True,
 ):
     """Disney+ plugin."""
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _url_handlers(cls) -> tuple[type[DisneyPlusURLHandler], ...]:
-        return (EntityURLHandler,)
 
     # TODO: Validate
     @classmethod

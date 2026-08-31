@@ -19,6 +19,7 @@ from app.auth.dependencies import get_db
 from app.config import settings
 from app.database import init_db, load_models
 from app.main import app
+from plugins.utils.manage_plugins import disable_plugin_initialization
 from tests.app.helpers.utils import get_superuser_token_headers
 from tests.app.users.utils import (
     authentication_token_from_email,
@@ -28,6 +29,8 @@ from tests.app.users.utils import (
 # logs.
 logger.remove()
 logger.add(sys.stdout, level="TRACE", colorize=True)
+
+disable_plugin_initialization()
 
 TEST_DB_NAME = f"{settings.POSTGRES_DB}_backend_test"
 TEST_DATABASE_URI = MultiHostUrl.build(

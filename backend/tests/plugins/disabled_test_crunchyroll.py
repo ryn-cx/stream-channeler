@@ -215,7 +215,7 @@ class TestEpisodeGroupNameMatching(
         session_with_files.flush()
 
         with frozen_clock(self.update_time), mock_update():
-            self.plugin_class(session_with_files).update_show(show, force=True)
+            self.plugin_class(session_with_files, show=show).update_show(force=True)
             session_with_files.flush()
 
         self.assert_every_episode_links_to_tmdb(session_with_files)

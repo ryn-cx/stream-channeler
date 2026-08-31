@@ -5,33 +5,19 @@ from __future__ import annotations
 
 from typing import override
 
+from plugins.Roku.import_url import ImportURLMixin
 from plugins.Roku.source import SourceMixin
 from plugins.Roku.upsert import UpsertMixin
-from plugins.Roku.url_handlers import (
-    DetailsURLHandler,
-    RokuURLHandler,
-    WatchURLHandler,
-)
-from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
 
 # TODO: Validate
 class Roku(
     UpsertMixin,
     SourceMixin,
-    URLHandlerPlugin[RokuURLHandler],
+    ImportURLMixin,
     register=True,
 ):
     """The Roku Channel plugin."""
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _url_handlers(cls) -> tuple[type[RokuURLHandler], ...]:
-        return (
-            DetailsURLHandler,
-            WatchURLHandler,
-        )
 
     # TODO: Validate
     @classmethod

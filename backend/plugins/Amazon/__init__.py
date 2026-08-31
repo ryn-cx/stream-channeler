@@ -6,18 +6,12 @@ from __future__ import annotations
 from typing import override
 
 from app.shows.models import Show
+from plugins.Amazon.import_url import ImportURLMixin
 from plugins.Amazon.search import SearchMixin
 from plugins.Amazon.source import SourceMixin
 from plugins.Amazon.upsert import UpsertMixin
-from plugins.Amazon.url_handlers import (
-    AmazonDetailURLHandler,
-    AmazonURLHandler,
-    PrimeVideoDetailURLHandler,
-    WatchAmazonDetailURLHandler,
-)
 from plugins.Amazon.utils import canonical_show_of
 from plugins.utils.abstract_plugin import URLImportResult
-from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
 
 # TODO: Validate
@@ -25,22 +19,10 @@ class Amazon(
     UpsertMixin,
     SearchMixin,
     SourceMixin,
-    URLHandlerPlugin[AmazonURLHandler],
+    ImportURLMixin,
     register=True,
 ):
     """Amazon Prime Video plugin."""
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _url_handlers(cls) -> tuple[type[AmazonURLHandler], ...]:
-        return (
-            # Must be listed first: a share link's path is also a detail path, and
-            # only this one carries the id in the query rather than the path.
-            WatchAmazonDetailURLHandler,
-            PrimeVideoDetailURLHandler,
-            AmazonDetailURLHandler,
-        )
 
     # TODO: Validate
     @classmethod
@@ -80,23 +62,22 @@ class Amazon(
 
     # TODO: Validate
     @override  # Writes the title into every source it can be watched through.
-    def _import_handler(
+    def _import_read_url(
         self,
-        handler: AmazonURLHandler,
         canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> list[URLImportResult]:
-        show_key = handler.show_key
+        show_key = self._show_key
         if not force and (shows := self._preload_show(show_key).all()):
-            return [result for show in shows for result in handler.import_results(show)]
+            return [result for show in shows for result in self._import_results(show)]
 
         _cache = self._download_show_files_and_children(show_key)
         if canonical_show is None:
             canonical_show = self._tmdb_show(show_key, force=force)
             if not force and (shows := self._preload_show(show_key).all()):
                 return [
-                    result for show in shows for result in handler.import_results(show)
+                    result for show in shows for result in self._import_results(show)
                 ]
 
         results: list[URLImportResult] = []
@@ -106,5 +87,5 @@ class Amazon(
             # the rest of them are linked to too, so it is handed to them rather
             # than searched for once for each way of watching the same title.
             canonical_show = canonical_show or canonical_show_of(show)
-            results += handler.import_results(show)
+            results += self._import_results(show)
         return results

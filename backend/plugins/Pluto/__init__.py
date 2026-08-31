@@ -5,31 +5,17 @@ from __future__ import annotations
 
 from typing import override
 
+from plugins.Pluto.import_url import ImportURLMixin
 from plugins.Pluto.upsert import UpsertMixin
-from plugins.Pluto.url_handlers import (
-    MovieURLHandler,
-    PlutoURLHandler,
-    SeriesURLHandler,
-)
-from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
 
 
 # TODO: Validate
 class Pluto(
     UpsertMixin,
-    MediaTypeImportMixin[PlutoURLHandler],
+    ImportURLMixin,
     register=True,
 ):
     """Pluto TV plugin."""
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _url_handlers(cls) -> tuple[type[PlutoURLHandler], ...]:
-        return (
-            MovieURLHandler,
-            SeriesURLHandler,
-        )
 
     # TODO: Validate
     @classmethod

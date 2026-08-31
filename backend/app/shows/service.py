@@ -119,7 +119,7 @@ def set_canonical_show_using_tmdb_url(
             detail=f"{url} is not the address of a TMDB film or series",
         )
 
-    imported = TMDB(session).import_url(address)
+    imported = TMDB.init_with_url(session, address).import_url()
     canonical_show = session.exec(
         select(Show).where(is_canonical(Show), Show.key == imported[0].show_key),
     ).one()
@@ -145,7 +145,9 @@ def import_non_canonical_show_from_url(
         raise HTTPException(status_code=400, detail=f"No plugin imports {address}")
 
     try:
-        results = plugin_class(session).import_url(address, canonical_show)
+        results = plugin_class.init_with_url(session, address).import_url(
+            canonical_show
+        )
     except InvalidURLError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
@@ -371,7 +373,7 @@ def force_update_show(session: Session, show: Show) -> Show:
         message = f"No plugin named {show.source.plugin.key!r} to read the show again."
         raise HTTPException(status_code=422, detail=message)
 
-    plugin_class(session).update_show(show, force=True)
+    plugin_class.init_with_show(session, show).update_show(force=True)
     session.commit()
     session.refresh(show)
     return show
@@ -383,7 +385,7 @@ def _reread_in_new_order(session: Session, show: Show) -> None:
     # Imported here for the same reason as above.
     from plugins.TMDB import TMDB  # noqa: PLC0415
 
-    TMDB(session).update_show(show, force=True)
+    TMDB(session, show=show).update_show(force=True)
 
 
 # TODO: Validate

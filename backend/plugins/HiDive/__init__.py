@@ -5,15 +5,9 @@ from __future__ import annotations
 
 from typing import override
 
+from plugins.HiDive.import_url import ImportURLMixin
 from plugins.HiDive.source import SourceMixin
 from plugins.HiDive.upsert import UpsertMixin
-from plugins.HiDive.url_handlers import (
-    HiDiveURLHandler,
-    MovieURLHandler,
-    SeasonURLHandler,
-    SeriesURLHandler,
-)
-from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
 from plugins.utils.base_plugin.search import CatalogueSearchMixin
 
 # TODO: Add support for individual episodes of a series.
@@ -24,16 +18,10 @@ class HiDive(
     UpsertMixin,
     SourceMixin,
     CatalogueSearchMixin,
-    MediaTypeImportMixin[HiDiveURLHandler],
+    ImportURLMixin,
     register=True,
 ):
     """HiDive plugin."""
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _url_handlers(cls) -> tuple[type[HiDiveURLHandler], ...]:
-        return (SeriesURLHandler, SeasonURLHandler, MovieURLHandler)
 
     # TODO: Validate
     @classmethod

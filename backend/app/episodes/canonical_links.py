@@ -30,7 +30,7 @@ _TMDB_MOVIE_URL = re.compile(r"themoviedb\.org/movie/(?P<tmdb_id>\d+)")
 def _import_tmdb_url(session: Session, url: str) -> Show:
     from plugins.TMDB import TMDB  # noqa: PLC0415
 
-    imported = TMDB(session).import_url(url)
+    imported = TMDB.init_with_url(session, url).import_url()
     statement = select(Show).where(
         is_canonical(Show),
         Show.key == imported[0].show_key,

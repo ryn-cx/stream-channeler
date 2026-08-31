@@ -8,9 +8,14 @@ from sqlmodel import Session
 
 from app.database import engine, load_models
 from app.shows.models import Show
-from plugins.utils.manage_plugins import import_plugins, plugins
+from plugins.utils.manage_plugins import (
+    assume_plugins_initialized,
+    import_plugins,
+    plugins,
+)
 
 import_plugins()
+assume_plugins_initialized()
 load_models()
 
 
@@ -22,8 +27,8 @@ def reimport_single_show(session: Session, show_id: uuid.UUID) -> None:
     plugin_class = plugin_classes_by_key[show.source.plugin.key]
 
     logger.info(f"Reimporting {show.name or show.key} from {show.source.plugin.key}")
-    plugin_instance = plugin_class(session)
-    plugin_instance.update_show(show, force=True)
+    plugin_instance = plugin_class.init_with_show(session, show)
+    plugin_instance.update_show(force=True)
     session.commit()
 
 

@@ -5,55 +5,33 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.Hulu.search import SearchMixin
+from plugins.Hulu.channels import ChannelMixin
+from plugins.Hulu.import_url import ImportURLMixin
 from plugins.Hulu.source import SourceMixin
 from plugins.Hulu.upsert import UpsertMixin
-from plugins.Hulu.url_handlers import (
-    HuluURLHandler,
-    MovieURLHandler,
-    SeriesURLHandler,
-    WatchURLHandler,
-)
-from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
+from plugins.utils.base_plugin.search import CatalogueSearchMixin
 
 
 # TODO: Validate
 class Hulu(
     UpsertMixin,
-    SearchMixin,
+    CatalogueSearchMixin,
     SourceMixin,
-    MediaTypeImportMixin[HuluURLHandler],
+    ChannelMixin,
+    ImportURLMixin,
     register=True,
 ):
-    """Hulu plugin."""
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _url_handlers(cls) -> tuple[type[HuluURLHandler], ...]:
-        return (SeriesURLHandler, MovieURLHandler, WatchURLHandler)
-
-    # TODO: Validate
-    @override
-    def get_url_handler(self, url: str) -> HuluURLHandler:
-        handler = super().get_url_handler(url)
-        if isinstance(handler, WatchURLHandler) and not handler.is_episode():
-            return MovieURLHandler(self, url, handler.key)
-        return handler
-
     # TODO: Validate
     @classmethod
     @override
     def tmdb_provider_names(cls) -> tuple[str, ...]:
         return ("Hulu",)
 
-    # TODO: Validate
     @classmethod
     @override
     def favicon_url(cls) -> str:
         return "https://www.hulu.com/favicon.ico"
 
-    # TODO: Validate
     @classmethod
     @override
     def _domain(cls) -> str:

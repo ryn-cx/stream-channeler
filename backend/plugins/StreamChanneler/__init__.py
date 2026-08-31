@@ -113,12 +113,11 @@ class StreamChanneler(WatchHistoryMixin, BasePlugin, register=False):
     @override
     def import_url(
         self,
-        url: str,
         canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> list[URLImportResult]:
-        return self.get_url_handler(url).import_results()
+        return self.get_url_handler(self.url).import_results()
 
     # TODO: Validate
     def get_url_handler(self, url: str) -> StreamChannelerURLHandler:

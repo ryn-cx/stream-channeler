@@ -2482,7 +2482,7 @@ wheels = [
 [[package]]
 name = "wholoo"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/wholoo#4133f96cee5af82df94838d7f889d7125b129771" }
+source = { git = "https://github.com/ryn-cx/wholoo#e5be4739fb72c5a389d45d7d999dc0c44970fb87" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },

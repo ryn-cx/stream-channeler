@@ -1,58 +1,7 @@
 # TODO: Validate
 import re
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar
-
-from app.shows.models import Show
-from plugins.utils.abstract_plugin import URLImportResult
-
-
-# TODO: Validate
-class URLHandler[PluginT](ABC):
-    """Abstract base class for URL handlers."""
-
-    _URL_REGEX: ClassVar[str]
-    """The URL regex pattern for the handler."""
-
-    # TODO: Validate
-    def __init__(self, plugin: PluginT, url: str) -> None:
-        """Initialize the URL handler."""
-        self.plugin = plugin
-        self.url = url
-
-    # TODO: Validate
-    @classmethod
-    def url_regex(cls, domain_regex: str) -> str:
-        """Return the full URL regex for the handler."""
-        return domain_regex + cls._URL_REGEX
-
-    # TODO: Validate
-    @property
-    @abstractmethod
-    def show_key(self) -> str:
-        """Return the show key extracted from the URL."""
-
-    # TODO: Validate
-    @abstractmethod
-    def raise_if_invalid(self) -> None:
-        """Raise an exception if the URL is invalid."""
-
-    # TODO: Validate
-    def import_results(self, show: Show) -> list[URLImportResult]:
-        """Return what importing the URL added: the listing and its titles.
-
-        A listing is one website's non-canonical row of a title, and what a channel is
-        being asked for is the title. Both are returned, since a URL naming a listing
-        names the title it is of just as much, and a listing that mixes titles is linked
-        to every one of them. A record that is the title itself has none to add and
-        stands alone.
-        """
-        results = [URLImportResult.show_import_results(show)]
-        results += [
-            URLImportResult.show_import_results(canonical_show)
-            for canonical_show in show.canonical_shows
-        ]
-        return results
+from typing import Any
 
 
 # TODO: Validate
@@ -68,7 +17,6 @@ class URLMixin(ABC):
     def url_regex(cls) -> str:
         """Return the regex string to check if a URL is supported by the plugin."""
 
-    # TODO: Replace with get_url_handler style
     # TODO: Validate
     def _parse_url(self, url: str) -> Any:  # noqa: ANN401 - TODO: Add a specific return type
         """Parse a URL and return its components.

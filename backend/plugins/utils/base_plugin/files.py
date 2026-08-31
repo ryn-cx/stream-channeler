@@ -17,10 +17,11 @@ from xml.etree.ElementTree import Element, fromstring
 
 from bs4 import BeautifulSoup
 from loguru import logger
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from app.files.models import File
 from app.plugins.models import Plugin
+from app.sources.models import Source
 from app.utils import tz_datetime
 from app.utils.sentinels import Sentinel
 from plugins.utils.get_around_client import get_around_client
@@ -211,40 +212,27 @@ class BaseFile[T](ABC):
         return None
 
     # TODO: Validate
+    def _only_files_are_pending(self) -> bool:
+        pending = [
+            *self.__session.new,
+            *self.__session.dirty,
+            *self.__session.deleted,
+        ]
+        return all(isinstance(record, File | Plugin | Source) for record in pending)
+
+    # TODO: Validate
     def write(self, content: str | None, extra: str | None = None) -> None:
-        """Write content to the file and commit it to the database.
-
-        The record is committed through a session of its own so a download is kept
-        even when the import that triggered it fails. Committing the plugin's
-        session here would also commit the records that import has upserted so far,
-        which is what used to leave a failed import half stored.
-        """
-        with Session(self.__session.get_bind()) as file_session:
-            plugin = file_session.exec(
-                select(Plugin).where(Plugin.id == self.__plugin.id),
-            ).one()
-            File(
-                key=self.file_key(),
-                content=content,
-                data_timestamp=tz_datetime.now(),
-                extra=extra,
-                plugin_id=plugin.id,
-                update_at=self._next_update_at(),
-            ).upsert_and_set_update_at(
-                plugin,
-                File.get(file_session, plugin, self.file_key()),
-            )
-            file_session.commit()
-
-        # The record the file session wrote belongs to that session, so the plugin's
-        # own copy is reloaded to pick the new values up.
-        self._existing_database_record = File.get(
-            self.__session,
-            self.__plugin,
-            self.file_key(),
-            populate_existing=True,
-        )
+        self._existing_database_record = File(
+            key=self.file_key(),
+            content=content,
+            data_timestamp=tz_datetime.now(),
+            extra=extra,
+            plugin_id=self.__plugin.id,
+            update_at=self._next_update_at(),
+        ).upsert_and_set_update_at(self.__plugin, self._existing_database_record)
         self._cached_parsed = None
+        if self._only_files_are_pending():
+            self.__session.commit()
 
     # TODO: Validate
     @abstractmethod

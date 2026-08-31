@@ -5,35 +5,19 @@ from __future__ import annotations
 
 from typing import override
 
+from plugins.Tubi.import_url import ImportURLMixin
 from plugins.Tubi.source import SourceMixin
 from plugins.Tubi.upsert import UpsertMixin
-from plugins.Tubi.url_handlers import (
-    EpisodeURLHandler,
-    MovieURLHandler,
-    SeriesURLHandler,
-    TubiURLHandler,
-)
-from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
 
 # TODO: Validate
 class Tubi(
     UpsertMixin,
     SourceMixin,
-    URLHandlerPlugin[TubiURLHandler],
+    ImportURLMixin,
     register=True,
 ):
     """Tubi plugin."""
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _url_handlers(cls) -> tuple[type[TubiURLHandler], ...]:
-        return (
-            MovieURLHandler,
-            SeriesURLHandler,
-            EpisodeURLHandler,
-        )
 
     # TODO: Validate
     @classmethod

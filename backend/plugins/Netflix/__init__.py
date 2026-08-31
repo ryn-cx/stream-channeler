@@ -5,15 +5,14 @@ from __future__ import annotations
 
 from typing import override
 
+from plugins.Netflix.import_url import ImportURLMixin
 from plugins.Netflix.upsert import UpsertMixin
-from plugins.Netflix.url_handlers import NetflixURLHandler, TitleURLHandler
-from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
 
 # TODO: Validate
 class Netflix(
     UpsertMixin,
-    URLHandlerPlugin[NetflixURLHandler],
+    ImportURLMixin,
     register=True,
 ):
     """Netflix plugin."""
@@ -29,12 +28,6 @@ class Netflix(
     @override
     def favicon_url(cls) -> str:
         return "https://www.netflix.com/favicon.ico"
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _url_handlers(cls) -> tuple[type[NetflixURLHandler], ...]:
-        return (TitleURLHandler,)
 
     # TODO: Validate
     @classmethod

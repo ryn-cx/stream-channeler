@@ -11,11 +11,16 @@ from typing import Any, override
 from sqlmodel import Session
 from wholoo import Wholoo
 from wholoo.exceptions import (
+    GenreNotFoundError,
     HTTPError,
     MovieNotFoundError,
     ResourceNotFoundError,
     SeriesNotFoundError,
 )
+from wholoo.genre import Genre as GenreEndpoint
+from wholoo.genre.models import GenreModel
+from wholoo.genres import Genres as GenresEndpoint
+from wholoo.genres.models import GenresModel
 from wholoo.movies import Movies as MoviesEndpoint
 from wholoo.movies.models import MoviesModel
 from wholoo.search import Search as SearchEndpoint
@@ -76,12 +81,11 @@ class EpisodeHubEndpoint:
 class Series(EndpointFile[TVModel]):
     """Series file."""
 
-    # TODO: Validate
     @override
     def _endpoint(self) -> TV:
         return wholoo().tv
 
-    # TODO: Validate
+    # User tries to import an invalid series URL.
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, SeriesNotFoundError)
@@ -171,8 +175,69 @@ class SearchFile(EndpointFile[SearchModel]):
 
 
 # TODO: Validate
+class GenresPage(EndpointFile[GenresModel]):
+    """Genre list file."""
+
+    # TODO: Validate
+    def __init__(self, session: Session, plugin: Plugin) -> None:
+        """Initialize the file."""
+        super().__init__(session, plugin, "genres")
+
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> GenresEndpoint:
+        return wholoo().genres
+
+    # TODO: Validate
+    @override
+    def _download_file(self) -> str:
+        return self._endpoint().download()
+
+    # TODO: Validate
+    @override
+    def _next_update_at(self) -> datetime:
+        return tz_datetime.now() + timedelta(days=7)
+
+
+# TODO: Validate
+class GenrePage(EndpointFile[GenreModel]):
+    """One genre's title list file."""
+
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> GenreEndpoint:
+        return wholoo().genre
+
+    # TODO: Validate
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, GenreNotFoundError)
+
+    # TODO: Validate
+    @override
+    def _next_update_at(self) -> datetime:
+        return tz_datetime.now() + timedelta(days=7)
+
+
+# TODO: Validate
 class FileMixin(MediaTypeMixin, BasePlugin, register=False):
     """The files a title is read out of."""
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def _plugin_wide_files(cls) -> tuple[type[BaseFile[Any]], ...]:
+        return (GenresPage, GenrePage)
+
+    # TODO: Validate
+    def genres_page_file(self) -> GenresPage:
+        """Return GenresPage file."""
+        return self._file(GenresPage)
+
+    # TODO: Validate
+    def genre_page_file(self, genre_id: str) -> GenrePage:
+        """Return GenrePage file."""
+        return self._file(GenrePage, genre_id)
 
     # TODO: Validate
     def search_file(self, query: str) -> SearchFile:

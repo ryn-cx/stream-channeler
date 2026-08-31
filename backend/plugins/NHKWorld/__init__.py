@@ -4,11 +4,10 @@ from __future__ import annotations
 from typing import override
 from urllib.parse import quote_plus
 
+from plugins.NHKWorld.import_url import ImportURLMixin
 from plugins.NHKWorld.search import SearchMixin
 from plugins.NHKWorld.source import SourceMixin
 from plugins.NHKWorld.upsert import UpsertMixin
-from plugins.NHKWorld.url_handlers import NHKWorldURLHandler, ShowURLHandler
-from plugins.utils.base_plugin.plugin import URLHandlerPlugin
 
 
 # TODO: Validate
@@ -16,16 +15,10 @@ class NHKWorld(
     SourceMixin,
     UpsertMixin,
     SearchMixin,
-    URLHandlerPlugin[NHKWorldURLHandler],
+    ImportURLMixin,
     register=True,
 ):
     # TODO: Add support for single episodes
-    # TODO: Validate
-    @classmethod
-    @override
-    def _url_handlers(cls) -> tuple[type[NHKWorldURLHandler], ...]:
-        return (ShowURLHandler,)
-
     # TODO: Don't hardcode the favicon URL
     # TODO: Validate
     @classmethod

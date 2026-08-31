@@ -36,9 +36,11 @@ from plugins.utils.abstract_plugin import (
     InvalidURLError,
     URLImportResult,
 )
-from plugins.utils.manage_plugins import sorted_plugins
+from plugins.utils.manage_plugins import assume_plugins_initialized, sorted_plugins
 
 logger = logger.bind(source="import_queue")
+
+assume_plugins_initialized()
 
 PLUGIN_LOCKS = {
     plugin_class.plugin_key(): threading.Lock() for plugin_class in sorted_plugins()
@@ -121,7 +123,9 @@ def _import_one(
     logger.info(f"[{plugin_key}] Importing URL: {queue_item.url}")
     try:
         queue_item.status = URLStatus.IMPORTING
-        import_results = plugin_class(session).import_url(queue_item.url)
+        import_results = plugin_class.init_with_url(
+            session, queue_item.url
+        ).import_url()
         add_results_to_channel(session, import_results, queue_item.channel)
     except InvalidURLError as error:
         logger.warning(f"[{plugin_key}] Invalid URL: {queue_item.url}")
@@ -137,7 +141,10 @@ def _import_one(
         session.rollback()
         session.refresh(queue_item)
         try:
-            plugin_class(session).on_import_url_failure(queue_item, error)
+            plugin_class.init_with_url(session, queue_item.url).on_import_url_failure(
+                queue_item,
+                error,
+            )
         except Exception:  # noqa: BLE001 - The plugin re-raised its default.
             queue_item.status = URLStatus.FAILED
             queue_item.note = "".join(

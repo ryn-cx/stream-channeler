@@ -19,13 +19,17 @@ from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.tools.update_outdated import _season_in_channel_exists
 from app.utils import tz_datetime
-from plugins.utils.manage_plugins import import_plugins
+from plugins.utils.manage_plugins import (
+    assume_plugins_initialized,
+    import_plugins,
+)
 from plugins.YouTube import YouTube
 from plugins.YouTube.files import is_an_album, is_show_key, is_video_key
 
 logger = logger.bind(source="updater")
 
 import_plugins()
+assume_plugins_initialized()
 load_models()
 
 UPDATE_INTERVAL_SECONDS = 60.0 * 60.0 * 24
@@ -91,7 +95,7 @@ def update_youtube() -> None:
             session.rollback()
             for season in seasons:
                 session.refresh(season)
-                plugin.on_update_season_failure(season, error)
+                plugin.linked_to(season=season).on_update_season_failure(error)
             session.commit()
             return
 
