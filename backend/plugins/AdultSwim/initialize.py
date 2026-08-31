@@ -16,3 +16,9 @@ class AdultSwimInitializer(PluginInitializer, AdultSwimBase):
         super().initialize_sources()
         if self.plugin.update_at is None:
             self.plugin.update_at = tz_datetime.now()
+
+    # TODO: Validate
+    @override
+    def initialize_channels(self) -> None:
+        self._channels()
+        self._process_new_shows()

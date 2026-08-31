@@ -12,7 +12,6 @@ from sqlmodel import col, select
 
 from app.channels.models import Channel, ChannelQueue, ChannelSourceFilter, URLStatus
 from app.channels.service import add_urls_to_channel_import_queue
-from app.models import Visibility
 from app.plugins.models import Plugin
 from app.shows.models import Show
 from app.users.service import get_or_create_plugin_user
@@ -141,23 +140,10 @@ class UpdateMixin(UpsertMixin):
     # TODO: Validate
     def _channel(self, name: str) -> Channel:
         plugin_user = get_or_create_plugin_user(session=self.session)
-        channel = self.session.exec(
-            select(Channel)
-            .where(Channel.user_id == plugin_user.id)
-            .where(Channel.name == name),
-        ).first()
-        if channel:
-            return channel
-
-        channel = Channel(
-            name=name,
-            description=(
-                Path(__file__).parent / CHANNEL_DESCRIPTION_FILES[name]
-            ).read_text(encoding="utf-8"),
-            visibility=Visibility.public,
-            anonymous=False,
-            user_id=plugin_user.id,
+        return self.get_or_create_channel(
+            plugin_user,
+            name,
+            (Path(__file__).parent / CHANNEL_DESCRIPTION_FILES[name]).read_text(
+                encoding="utf-8",
+            ),
         )
-        self.session.add(channel)
-        self.session.commit()
-        return channel

@@ -640,7 +640,7 @@ def list_unmatched_episodes(
             filtered,
             _expanded_sort_options(params.sort_options),
             _UNMATCHED_COLUMNS,
-            Episode.created_at,
+            [Episode.created_at],
             Episode.id,
         )
         .offset(params.offset)

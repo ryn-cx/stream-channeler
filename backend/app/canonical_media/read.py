@@ -37,7 +37,7 @@ def canonical_list_response[ResponseT: BaseModel](  # noqa: PLR0913
         session,
         base,
         schema=schema,
-        default_sort=model.created_at,
+        default_sorts=[model.created_at],
         tiebreaker=model.id,
         params=read_options,
         current_user=current_user,

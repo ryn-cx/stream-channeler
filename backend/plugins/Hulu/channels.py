@@ -6,11 +6,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from loguru import logger
-from sqlmodel import select
 
-from app.channels.models import Channel
 from app.channels.service import add_urls_to_channel_import_queue
-from app.models import Visibility
 from app.users.service import get_or_create_plugin_user
 from plugins.Hulu.base import HuluBase
 from plugins.Hulu.utils import HuluMediaType
@@ -18,26 +15,6 @@ from plugins.utils.base_plugin_v2.workers import PluginWorker
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Sequence
-
-    from wholoo.genre.models import GenreModel
-    from wholoo.genres.models import GenresModel
-
-
-# TODO: Validate
-def _listed_items(page: GenresModel | GenreModel) -> list[tuple[str, str]]:
-    """Return the name and address of everything a sitemap page lists.
-
-    A page carries its own navigation and footer beside the list it is for, and
-    only the list is a `list_card`, so that is what is read and the rest is left.
-    """
-    layout = page.props.page_props.layout
-    return [
-        (item.name, item.href)
-        for component in layout.components or []
-        if component.type == "list_card"
-        for item in component.items or []
-        if item.name and item.href
-    ]
 
 
 # TODO: Validate
@@ -62,13 +39,13 @@ class HuluChannels(PluginWorker, HuluBase):
         everything: list[str] = []
         movies: list[str] = []
         series: list[str] = []
-        for genre_name, genre_href in _listed_items(genres_page.parsed()):
+        for genre_name, genre_href in genres_page.listed_items():
             genre_id = genre_href.rsplit("/", 1)[-1]
             if genre_ids is not None and genre_id not in genre_ids:
                 continue
             genre_page = self.genre_page_file(genre_id)
             genre_page.download_if_outdated()
-            urls = self._title_urls(genre_page.parsed())
+            urls = genre_page.media_urls()
             if not urls:
                 logger.info("No titles listed under genre: {}", genre_id)
                 continue
@@ -84,42 +61,9 @@ class HuluChannels(PluginWorker, HuluBase):
         self._queue("Hulu TV Series", "All TV Series on Hulu.", series)
 
     # TODO: Validate
-    @classmethod
-    def _title_urls(cls, page: GenreModel) -> list[str]:
-        """Return the address of every title one genre lists, without repeats."""
-        paths = {
-            href: None
-            for _name, href in _listed_items(page)
-            if href.startswith((f"/{HuluMediaType.MOVIE}/", f"/{HuluMediaType.SERIES}/"))
-        }
-        return [cls.build_url(path) for path in paths]
-
-    # TODO: Validate
     def _queue(self, name: str, description: str, urls: Sequence[str]) -> None:
         if not urls:
             return
-        channel = self._channel(name, description)
-        add_urls_to_channel_import_queue(self.session, channel, urls)
-
-    # TODO: Validate
-    def _channel(self, name: str, description: str) -> Channel:
-        """Return the plugin owned channel `name`, creating it the first time."""
         plugin_user = get_or_create_plugin_user(session=self.session)
-        channel = self.session.exec(
-            select(Channel)
-            .where(Channel.user_id == plugin_user.id)
-            .where(Channel.name == name),
-        ).first()
-        if channel:
-            return channel
-
-        channel = Channel(
-            name=name,
-            description=description,
-            visibility=Visibility.public,
-            anonymous=False,
-            user_id=plugin_user.id,
-        )
-        self.session.add(channel)
-        self.session.commit()
-        return channel
+        channel = self.get_or_create_channel(plugin_user, name, description)
+        add_urls_to_channel_import_queue(self.session, channel, urls)

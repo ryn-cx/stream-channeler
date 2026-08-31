@@ -5,11 +5,9 @@ from pathlib import Path
 from typing import override
 
 from loguru import logger
-from sqlmodel import select
 
 from app.channels.models import Channel
 from app.channels.service import add_urls_to_channel_import_queue
-from app.models import Visibility
 from app.shows.models import Show
 from app.sources.models import Source
 from app.users.service import get_or_create_plugin_user
@@ -153,23 +151,8 @@ class UpdateMixin(UpsertMixin):
     # TODO: Validate
     def _plugin_channel(self, name: str, description_file: str) -> Channel:
         plugin_user = get_or_create_plugin_user(session=self.session)
-        channel = self.session.exec(
-            select(Channel)
-            .where(Channel.user_id == plugin_user.id)
-            .where(Channel.name == name),
-        ).first()
-        if channel:
-            return channel
-
-        channel = Channel(
-            name=name,
-            description=(Path(__file__).parent / description_file).read_text(
-                encoding="utf-8",
-            ),
-            visibility=Visibility.public,
-            anonymous=False,
-            user_id=plugin_user.id,
+        return self.get_or_create_channel(
+            plugin_user,
+            name,
+            (Path(__file__).parent / description_file).read_text(encoding="utf-8"),
         )
-        self.session.add(channel)
-        self.session.commit()
-        return channel

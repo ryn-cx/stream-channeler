@@ -125,6 +125,7 @@ export type ChannelAdminCreate = {
     default_order?: (string | null);
     description?: (string | null);
     anonymous: boolean;
+    score?: number;
     user_id: string;
 };
 
@@ -141,6 +142,7 @@ export type ChannelAdminUpdate = {
     default_order?: (string | null);
     description?: (string | null);
     anonymous?: (boolean | null);
+    score?: number;
     user_id?: (string | null);
 };
 
@@ -248,6 +250,7 @@ export type ChannelListOutput = {
     id: string;
     user_id: (string | null);
     username: (string | null);
+    score: number;
     favorite_count?: number;
     custom_name?: (string | null);
     custom_channel_number?: (number | null);
@@ -387,6 +390,7 @@ export type ChannelOutput = {
     id: string;
     user_id: (string | null);
     username?: (string | null);
+    score: number;
 };
 
 /**

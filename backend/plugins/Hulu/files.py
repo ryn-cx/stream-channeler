@@ -200,7 +200,21 @@ class SearchFile(EndpointFile[SearchModel]):
 
 
 # TODO: Validate
-class GenresPage(EndpointFile[GenresModel]):
+class SitemapPage[T: GenresModel | GenreModel](EndpointFile[T]):
+    # TODO: Validate
+    def listed_items(self) -> list[tuple[str, str]]:
+        layout = self.parsed().props.page_props.layout
+        return [
+            (item.name, item.href)
+            for component in layout.components or []
+            if component.type == "list_card"
+            for item in component.items or []
+            if item.name and item.href
+        ]
+
+
+# TODO: Validate
+class GenresPage(SitemapPage[GenresModel]):
     """Genre list file."""
 
     # TODO: Validate
@@ -225,8 +239,21 @@ class GenresPage(EndpointFile[GenresModel]):
 
 
 # TODO: Validate
-class GenrePage(EndpointFile[GenreModel]):
+class GenrePage(SitemapPage[GenreModel]):
     """One genre's title list file."""
+
+    # TODO: Validate
+    def media_urls(self) -> list[str]:
+        from plugins.Hulu.base import HuluBase  # noqa: PLC0415
+
+        paths = {
+            href: None
+            for _name, href in self.listed_items()
+            if href.startswith(
+                (f"/{HuluMediaType.MOVIE}/", f"/{HuluMediaType.SERIES}/"),
+            )
+        }
+        return [HuluBase.build_url(path) for path in paths]
 
     # TODO: Validate
     @override

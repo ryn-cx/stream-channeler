@@ -645,6 +645,11 @@ export const ChannelAdminCreateSchema = {
             type: 'boolean',
             title: 'Anonymous'
         },
+        score: {
+            type: 'integer',
+            title: 'Score',
+            default: 0
+        },
         user_id: {
             type: 'string',
             format: 'uuid',
@@ -724,6 +729,11 @@ export const ChannelAdminUpdateSchema = {
                 }
             ],
             title: 'Anonymous'
+        },
+        score: {
+            type: 'integer',
+            title: 'Score',
+            default: 0
         },
         user_id: {
             anyOf: [
@@ -1215,6 +1225,10 @@ export const ChannelListOutputSchema = {
             ],
             title: 'Username'
         },
+        score: {
+            type: 'integer',
+            title: 'Score'
+        },
         favorite_count: {
             type: 'integer',
             title: 'Favorite Count',
@@ -1244,7 +1258,7 @@ export const ChannelListOutputSchema = {
         }
     },
     type: 'object',
-    required: ['visibility', 'anonymous', 'id', 'user_id', 'username'],
+    required: ['visibility', 'anonymous', 'id', 'user_id', 'username', 'score'],
     title: 'ChannelListOutput',
     description: `Schema for returning a \`Channel\` alongside its owner.
 
@@ -1975,10 +1989,14 @@ export const ChannelOutputSchema = {
                 }
             ],
             title: 'Username'
+        },
+        score: {
+            type: 'integer',
+            title: 'Score'
         }
     },
     type: 'object',
-    required: ['visibility', 'anonymous', 'id', 'user_id'],
+    required: ['visibility', 'anonymous', 'id', 'user_id', 'score'],
     title: 'ChannelOutput',
     description: `Schema for returning a \`Channel\`.
 

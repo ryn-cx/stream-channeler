@@ -6,11 +6,9 @@ from pathlib import Path
 from typing import override
 
 from loguru import logger
-from sqlmodel import select
 
 from app.channels.models import Channel
 from app.channels.service import add_urls_to_channel_import_queue
-from app.models import Visibility
 from app.shows.models import Show
 from app.sources.models import Source
 from app.users.service import get_or_create_plugin_user
@@ -85,26 +83,13 @@ class SourceMixin(FileMixin):
         by hand.
         """
         plugin_user = get_or_create_plugin_user(session=self.session)
-        channel = self.session.exec(
-            select(Channel)
-            .where(Channel.user_id == plugin_user.id)
-            .where(Channel.name == self.plugin_name()),
-        ).first()
-        if channel:
-            return channel
-
-        channel = Channel(
-            name=self.plugin_name(),
-            description=(Path(__file__).parent / "channel_description.md").read_text(
+        return self.get_or_create_channel(
+            plugin_user,
+            self.plugin_name(),
+            (Path(__file__).parent / "channel_description.md").read_text(
                 encoding="utf-8",
             ),
-            visibility=Visibility.public,
-            anonymous=False,
-            user_id=plugin_user.id,
         )
-        self.session.add(channel)
-        self.session.commit()
-        return channel
 
     # TODO: Validate
     @override

@@ -150,7 +150,7 @@ def _apply_sort_options[T](  # noqa: PLR0913
     statement: SelectOfScalar[T],
     sort_options: list[SortOption],
     columns: dict[str, InstrumentedAttribute[Any]],
-    default_sort: Any,  # noqa: ANN401 - Any column or expression the list falls back to.
+    default_sorts: Sequence[Any],
     tiebreaker: uuid.UUID | None,
     *,
     random_tiebreaker: bool = False,
@@ -161,7 +161,7 @@ def _apply_sort_options[T](  # noqa: PLR0913
         if (column := _get_column(columns, option.column))
     ]
     if not order_by:
-        order_by.append(desc(default_sort))
+        order_by.extend(desc(default_sort) for default_sort in default_sorts)
 
     # Break ties randomly (e.g. to shuffle equally scored rows) rather than by the
     # stable `id`. Only sound when the whole list is read in one query, since a fresh
@@ -180,7 +180,7 @@ def get_read_results[T](  # noqa: PLR0913
     base: SelectOfScalar[T],
     *,
     schema: type[SQLModel],
-    default_sort: Any,  # noqa: ANN401 - Any column or expression the list falls back to.
+    default_sorts: Sequence[Any],
     tiebreaker: uuid.UUID | None,
     params: ReadOptions,
     current_user: User | None,
@@ -208,7 +208,7 @@ def get_read_results[T](  # noqa: PLR0913
             filtered,
             [],
             columns,
-            default_sort,
+            default_sorts,
             tiebreaker,
             random_tiebreaker=random_tiebreaker,
         )
@@ -223,7 +223,7 @@ def get_read_results[T](  # noqa: PLR0913
             filtered,
             params.sort_options,
             columns,
-            default_sort,
+            default_sorts,
             tiebreaker,
         )
         .offset(params.offset)
@@ -254,7 +254,7 @@ def list_response[ResponseT: BaseModel](  # noqa: PLR0913
         session,
         base,
         schema=schema,
-        default_sort=default_sort,
+        default_sorts=[default_sort],
         tiebreaker=tiebreaker,
         params=params,
         current_user=current_user,
@@ -317,11 +317,13 @@ def scoped_list_response[ResponseT: BaseModel](  # noqa: PLR0913
         base = base.outerjoin(counts, counts.c.record_id == model.id)
         favorite_count = func.coalesce(counts.c.favorite_count, 0)
         extra_columns["favorite_count"] = favorite_count
-    # `public` is ranked by `score`; the other scopes are newest first.
-    default_sort: Any = model.created_at
+    default_sorts: list[Any] = [model.created_at]
     if read_options.scope == RecordScope.public:
         base = base.where(model.visibility == Visibility.public)
-        default_sort = model.score if favorite_count is None else favorite_count
+        if favorite_count is None:
+            default_sorts = [model.score]
+        else:
+            default_sorts = [favorite_count, model.score]
     elif read_options.scope == RecordScope.owned:
         if viewer is None:
             raise HTTPException(
@@ -358,7 +360,7 @@ def scoped_list_response[ResponseT: BaseModel](  # noqa: PLR0913
         session,
         base,
         schema=schema,
-        default_sort=default_sort,
+        default_sorts=default_sorts,
         tiebreaker=model.id,
         params=read_options,
         current_user=viewer,

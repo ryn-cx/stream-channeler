@@ -176,7 +176,7 @@ def get_watched_episodes(
         session,
         _episode_watch_base_statement(user.id),
         schema=WatchOutput,
-        default_sort=Watch.watch_date,
+        default_sorts=[Watch.watch_date],
         tiebreaker=Watch.id,
         params=read_options,
         current_user=user,

@@ -451,6 +451,7 @@ def public_channel_output(
         description=channel.description,
         anonymous=anonymous,
         username=None if anonymous else username,
+        score=channel.score,
         favorite_count=favorite_count,
     )
 
@@ -2563,7 +2564,10 @@ def public_channels_of_user(
         for channel, username in rows
     ]
     shuffle(data)
-    data.sort(key=lambda channel: channel.favorite_count, reverse=True)
+    data.sort(
+        key=lambda channel: (channel.favorite_count, channel.score),
+        reverse=True,
+    )
     return ChannelPublicListOutput(data=data, count=len(data))
 
 

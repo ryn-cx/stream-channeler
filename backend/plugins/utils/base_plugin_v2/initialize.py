@@ -60,6 +60,7 @@ class PluginInitializer(PluginBase, ABC):
         for source_key in self._source_keys():
             if Source.get(self.session, self.plugin, source_key) is None:
                 self.upsert_source(source_key)
+        self._sources = {source.key: source for source in self.plugin.sources}
 
     def initialize_channels(self) -> None:
         """Create the channels in the database for the plugin."""

@@ -6,12 +6,13 @@ from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, ClassVar, Self, override
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
+from app.channels.models import Channel
 from app.episodes.models import Episode
 from app.episodes.preload import preload_episodes
 from app.media.media_type import MediaType
-from app.models import BaseMediaMixin
+from app.models import BaseMediaMixin, Visibility
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -27,6 +28,7 @@ from plugins.utils.base_plugin_v2.preload import PreloadMixin
 from plugins.utils.base_plugin_v2.url import URLMixin
 
 if TYPE_CHECKING:
+    from app.users.models import User
     from plugins.utils.base_plugin_v2.initialize import PluginInitializer
     from plugins.utils.base_plugin_v2.workers import (
         Updater,
@@ -206,6 +208,32 @@ class PluginBase(PreloadMixin, OutdatedCheckMixin, URLMixin, ABC):
         which is what an import handing a title from one plugin to another knows
         and nothing else does.
         """
+
+    # TODO: Validate
+    def get_or_create_channel(
+        self,
+        plugin_user: User,
+        name: str,
+        description: str,
+    ) -> Channel:
+        """Return the plugin owned channel `name`, creating it the first time."""
+        channel_query = (
+            select(Channel)
+            .where(Channel.user_id == plugin_user.id)
+            .where(Channel.name == name)
+        )
+        if not (channel := self.session.exec(channel_query).first()):
+            channel = Channel(
+                name=name,
+                description=description,
+                visibility=Visibility.public,
+                anonymous=False,
+                score=-1,
+                user_id=plugin_user.id,
+            )
+            self.session.add(channel)
+            self.session.commit()
+        return channel
 
     # TODO: Validate
     def upsert_source(self, source_key: str) -> Source:
