@@ -3,50 +3,17 @@
 
 from __future__ import annotations
 
-from typing import override
-
-from plugins.HiDive.import_url import ImportURLMixin
-from plugins.HiDive.source import SourceMixin
-from plugins.HiDive.upsert import UpsertMixin
-from plugins.utils.base_plugin.search import CatalogueSearchMixin
-
-# TODO: Add support for individual episodes of a series.
+from plugins.HiDive.base import HiDiveBase
+from plugins.HiDive.import_url import HiDiveImportURL
+from plugins.HiDive.initialize import HiDiveInitializer
+from plugins.HiDive.update import HiDiveUpdater
+from plugins.utils.abstract_plugin import AbstractPlugin
 
 
 # TODO: Validate
-class HiDive(
-    UpsertMixin,
-    SourceMixin,
-    CatalogueSearchMixin,
-    ImportURLMixin,
-    register=True,
-):
+class HiDive(HiDiveBase, AbstractPlugin, register=True):
     """HiDive plugin."""
 
-    # TODO: Validate
-    @classmethod
-    @override
-    def tmdb_provider_names(cls) -> tuple[str, ...]:
-        return ("HIDIVE",)
-
-    # TODO: Don't hardcode the favicon URL
-    # TODO: Validate
-    @classmethod
-    @override
-    def favicon_url(cls) -> str:
-        return (
-            "https://static.diceplatform.com/prod/original/dce.hidive/settings/"
-            "HIDIVE_Logo_iOS_1024x1024_281_29.Y3YMf.vMQ59.png?ts=1727963356"
-        )
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _domain(cls) -> str:
-        return "hidive.com"
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def plugin_name(cls) -> str:
-        return "HIDIVE"
+    initializer = HiDiveInitializer
+    url_importer = HiDiveImportURL
+    updater = HiDiveUpdater

@@ -4625,17 +4625,6 @@ export const PluginCreateSchema = {
             type: 'object',
             title: 'Extra'
         },
-        name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
-        },
         version: {
             anyOf: [
                 {
@@ -4749,17 +4738,6 @@ export const PluginListOutputSchema = {
             additionalProperties: true,
             type: 'object',
             title: 'Extra'
-        },
-        name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
         },
         version: {
             anyOf: [
@@ -5014,17 +4992,6 @@ export const PluginOutputSchema = {
             type: 'object',
             title: 'Extra'
         },
-        name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
-        },
         version: {
             anyOf: [
                 {
@@ -5263,17 +5230,6 @@ export const PluginUpdateSchema = {
             additionalProperties: true,
             type: 'object',
             title: 'Extra'
-        },
-        name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
         },
         version: {
             anyOf: [

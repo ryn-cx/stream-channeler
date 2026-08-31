@@ -41,7 +41,7 @@ from plugins.utils.manage_plugins import sorted_plugins
 logger = logger.bind(source="import_queue")
 
 PLUGIN_LOCKS = {
-    plugin_class.plugin_key(): threading.Lock() for plugin_class in sorted_plugins()
+    plugin_class.plugin_name(): threading.Lock() for plugin_class in sorted_plugins()
 }
 
 
@@ -60,7 +60,7 @@ def import_queue(session: Session) -> None:
     """Actually import the queue in separate threads for each plugin."""
     with serve_downloads_from_test_files():
         for plugin_class, items in _group_pending_urls_by_plugin(session).items():
-            with PLUGIN_LOCKS[plugin_class.plugin_key()]:
+            with PLUGIN_LOCKS[plugin_class.plugin_name()]:
                 for item in items:
                     _import_one(session, item, plugin_class)
 
@@ -117,7 +117,7 @@ def _import_one(
     plugin_class: type[AbstractPlugin],
 ) -> None:
     """Import a single queue item and commit its final status."""
-    plugin_key = plugin_class.plugin_key()
+    plugin_key = plugin_class.plugin_name()
     logger.info(f"[{plugin_key}] Importing URL: {queue_item.url}")
     try:
         queue_item.status = URLStatus.IMPORTING

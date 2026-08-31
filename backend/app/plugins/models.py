@@ -33,14 +33,13 @@ if TYPE_CHECKING:
     from app.files.models import File
     from app.sources.models import Source
 
-DIRECT_SORTABLE_FIELDS = ["id", "name"]
+DIRECT_SORTABLE_FIELDS = ["id", "key"]
 
 
 # TODO: Validate
 class BasePlugin(BaseMediaMixin):
     """Base model for a `Plugin`."""
 
-    name: str | None = Field(default=None)
     version: str | None = Field(default=None)
 
 
@@ -56,7 +55,7 @@ class Plugin(BasePlugin, MediaMixin["Source | File"], table=True):
     __table_args__ = (
         PrimaryKeyConstraint("key"),
         UniqueConstraint("id"),
-        *sortable_field_indexes("Plugin", DIRECT_SORTABLE_FIELDS),
+        *sortable_field_indexes("Plugin", DIRECT_SORTABLE_FIELDS, ["key"]),
         Index("Plugin-deleted_at-index", "deleted_at"),
     )
 

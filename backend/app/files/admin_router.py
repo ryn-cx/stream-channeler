@@ -42,7 +42,7 @@ plugin_files_router = APIRouter(
 
 
 FILE_PARENT_COLUMNS: dict[str, Any] = {
-    "plugin_name": Plugin.name,
+    "plugin_name": Plugin.key,
 }
 
 

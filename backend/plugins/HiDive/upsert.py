@@ -27,7 +27,7 @@ def _episode_number(title: str | None) -> int | None:
 
 
 # TODO: Validate
-class UpsertMixin(HelperMixin, register=False):
+class UpsertMixin(HelperMixin):
     """Mixin containing all upsert functions."""
 
     # TODO: Validate

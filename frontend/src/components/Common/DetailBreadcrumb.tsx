@@ -50,10 +50,10 @@ export function DetailBreadcrumb({
   if (plugin) {
     crumbs.push({
       key: "plugin",
-      label: plugin.name || plugin.key,
+      label: plugin.key,
       link: (
         <Link to="/sources" search={{ plugin_id: plugin.id }}>
-          {plugin.name || plugin.key}
+          {plugin.key}
         </Link>
       ),
       edit: <EditPlugin plugin={plugin} size="icon-sm" />,
@@ -82,7 +82,7 @@ export function DetailBreadcrumb({
       ),
       edit: (
         <EditShow
-          show={{ ...show, plugin_name: plugin?.name ?? null }}
+          show={{ ...show, plugin_name: plugin?.key ?? null }}
           size="icon-sm"
         />
       ),

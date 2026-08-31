@@ -5,14 +5,14 @@ import re
 from typing import override
 
 from app.shows.models import Show
+from plugins.Tubi.base import TubiBase
 from plugins.Tubi.constants import CONTENT_ID_REGEX, SLUG_REGEX
-from plugins.Tubi.utils import HelperMixin
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from plugins.utils.base_plugin.plugin import ReadURLPlugin
+from plugins.utils.base_plugin_v2.workers import URLImporter
 
 
 # TODO: Validate
-class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
+class TubiImportURL(URLImporter, TubiBase):
     # https://tubitv.com/movies/100029837/megamind
     _MOVIE_URL_REGEX = (
         rf"\/movies\/(?P<movie_id>{CONTENT_ID_REGEX}){SLUG_REGEX}(?:\/|$)"
@@ -59,13 +59,13 @@ class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
             self.raise_if_invalid_file(self.content_file(episode_key), url)
             series_id = self.content_file(episode_key).parsed().series_id
             if series_id is None:
-                msg = f"Invalid {self.plugin_key()} URL: {url}"
+                msg = f"Invalid {self.plugin_name()} URL: {url}"
                 raise InvalidURLError(msg)
             self._episode_key = episode_key
             self._show_key = series_id
             return
 
-        msg = f"Invalid {self.plugin_key()} URL: {url}"
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
     # TODO: Validate

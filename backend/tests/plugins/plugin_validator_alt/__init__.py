@@ -26,10 +26,10 @@ from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
+    AbstractPlugin,
     InvalidURLError,
     URLImportResult,
 )
-from plugins.utils.base_plugin.plugin import BasePlugin
 from tests.plugins.frozen_clock import frozen_clock
 from tests.plugins.plugin_validator_alt.database import DatabaseMixinAlt
 from tests.plugins.plugin_validator_alt.log_stats import log_stats
@@ -47,7 +47,7 @@ FAKE_EPISODE_KEY = "plugin-validator-alt-fake-episode"
 
 
 # TODO: Validate
-class PluginValidatorAlt[PluginT: BasePlugin](DatabaseMixinAlt[PluginT]):
+class PluginValidatorAlt[PluginT: AbstractPlugin](DatabaseMixinAlt[PluginT]):
     """A plugin test whose clock is fixed and whose check is one recorded dump."""
 
     parse_url_response: object | None = None
@@ -368,7 +368,7 @@ class PluginValidatorAlt[PluginT: BasePlugin](DatabaseMixinAlt[PluginT]):
 
 
 # TODO: Validate
-class ImportURLTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class ImportURLTestsAlt[PluginT: AbstractPlugin](PluginValidatorAlt[PluginT]):
     """Tests that importing a URL leaves the database as it was recorded."""
 
     # TODO: Validate
@@ -383,7 +383,7 @@ class ImportURLTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
 
 
 # TODO: Validate
-class ImportURLVariantTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class ImportURLVariantTestsAlt[PluginT: AbstractPlugin](PluginValidatorAlt[PluginT]):
     """Tests that every domain and path a URL can be written as imports the same.
 
     Checked against what the import itself said it produced rather than against
@@ -405,7 +405,7 @@ class ImportURLVariantTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT])
 
 
 # TODO: Validate
-class InvalidImportURLTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class InvalidImportURLTestsAlt[PluginT: AbstractPlugin](PluginValidatorAlt[PluginT]):
     """Tests that importing an invalid URL raises InvalidURLError."""
 
     # TODO: Validate
@@ -418,7 +418,7 @@ class InvalidImportURLTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT])
 
 
 # TODO: Validate
-class ImportExistingURLTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class ImportExistingURLTestsAlt[PluginT: AbstractPlugin](PluginValidatorAlt[PluginT]):
     """Tests that re-importing a URL leaves the database where the first import put it.
 
     Compared against the dump the import test recorded rather than against one
@@ -438,7 +438,7 @@ class ImportExistingURLTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]
 
 
 # TODO: Validate
-class UpdatePluginTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class UpdatePluginTestsAlt[PluginT: AbstractPlugin](PluginValidatorAlt[PluginT]):
     """Tests that updating the plugin refreshes what the plugin itself holds.
 
     Kept out of `UpdateTestsAlt` because most plugins hold their media under a
@@ -456,7 +456,7 @@ class UpdatePluginTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
 
 
 # TODO: Validate
-class UpdateSourceTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class UpdateSourceTestsAlt[PluginT: AbstractPlugin](PluginValidatorAlt[PluginT]):
     """Tests that updating a source propagates upstream changes."""
 
     # TODO: Validate
@@ -497,7 +497,7 @@ class UpdateSourceTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
 
 
 # TODO: Validate
-class UpdateShowTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class UpdateShowTestsAlt[PluginT: AbstractPlugin](PluginValidatorAlt[PluginT]):
     """Tests that updating a show leaves the database as it was recorded."""
 
     # TODO: Validate
@@ -509,7 +509,7 @@ class UpdateShowTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
 
 
 # TODO: Validate
-class UpdateSeasonTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class UpdateSeasonTestsAlt[PluginT: AbstractPlugin](PluginValidatorAlt[PluginT]):
     """Tests that updating a season leaves the database as it was recorded."""
 
     # TODO: Validate
@@ -521,7 +521,7 @@ class UpdateSeasonTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
 
 
 # TODO: Validate
-class UpdateEpisodeTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class UpdateEpisodeTestsAlt[PluginT: AbstractPlugin](PluginValidatorAlt[PluginT]):
     """Tests that updating an episode leaves the database as it was recorded."""
 
     # TODO: Validate
@@ -533,7 +533,7 @@ class UpdateEpisodeTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
 
 
 # TODO: Validate
-class DeletedEpisodeTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class DeletedEpisodeTestsAlt[PluginT: AbstractPlugin](PluginValidatorAlt[PluginT]):
     """Tests that a fake episode gets soft deleted during update_season."""
 
     # TODO: Validate
@@ -561,7 +561,7 @@ class DeletedEpisodeTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
 
 
 # TODO: Validate
-class DeletedSeasonTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class DeletedSeasonTestsAlt[PluginT: AbstractPlugin](PluginValidatorAlt[PluginT]):
     """Tests that a fake season gets soft deleted during update_show."""
 
     # TODO: Validate
@@ -583,7 +583,7 @@ class DeletedSeasonTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
 
 
 # TODO: Validate
-class DeletedEpisodeUpdateShowTestsAlt[PluginT: BasePlugin](
+class DeletedEpisodeUpdateShowTestsAlt[PluginT: AbstractPlugin](
     PluginValidatorAlt[PluginT],
 ):
     """Tests that a fake episode in an existing season is soft deleted by update_show."""
@@ -608,7 +608,7 @@ class DeletedEpisodeUpdateShowTestsAlt[PluginT: BasePlugin](
 
 
 # TODO: Validate
-class DeletedSeasonWithEpisodeTestsAlt[PluginT: BasePlugin](
+class DeletedSeasonWithEpisodeTestsAlt[PluginT: AbstractPlugin](
     PluginValidatorAlt[PluginT],
 ):
     """Tests that a fake season and its fake episode are soft deleted by update_show."""
@@ -633,7 +633,7 @@ class DeletedSeasonWithEpisodeTestsAlt[PluginT: BasePlugin](
 
 
 # TODO: Validate
-class AllUpdatesTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+class AllUpdatesTestsAlt[PluginT: AbstractPlugin](PluginValidatorAlt[PluginT]):
     """Exhaustive test that updates every entity on its own."""
 
     # TODO: Validate
@@ -653,7 +653,7 @@ class AllUpdatesTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
 
 
 # TODO: Validate
-class URLTestsAlt[PluginT: BasePlugin](
+class URLTestsAlt[PluginT: AbstractPlugin](
     ImportURLVariantTestsAlt[PluginT],
     ImportURLTestsAlt[PluginT],
     ImportExistingURLTestsAlt[PluginT],
@@ -662,7 +662,7 @@ class URLTestsAlt[PluginT: BasePlugin](
 
 
 # TODO: Validate
-class UpdateTestsAlt[PluginT: BasePlugin](
+class UpdateTestsAlt[PluginT: AbstractPlugin](
     UpdateShowTestsAlt[PluginT],
     UpdateSeasonTestsAlt[PluginT],
     UpdateEpisodeTestsAlt[PluginT],
@@ -671,7 +671,7 @@ class UpdateTestsAlt[PluginT: BasePlugin](
 
 
 # TODO: Validate
-class DeletionTestsAlt[PluginT: BasePlugin](
+class DeletionTestsAlt[PluginT: AbstractPlugin](
     DeletedEpisodeTestsAlt[PluginT],
     DeletedSeasonTestsAlt[PluginT],
     DeletedEpisodeUpdateShowTestsAlt[PluginT],
@@ -681,7 +681,7 @@ class DeletionTestsAlt[PluginT: BasePlugin](
 
 
 # TODO: Validate
-class StandardTestsAlt[PluginT: BasePlugin](
+class StandardTestsAlt[PluginT: AbstractPlugin](
     URLTestsAlt[PluginT],
     UpdateTestsAlt[PluginT],
     DeletionTestsAlt[PluginT],
@@ -691,7 +691,7 @@ class StandardTestsAlt[PluginT: BasePlugin](
 
 
 # TODO: Validate
-class InvalidURLValidatorAlt[PluginT: BasePlugin](
+class InvalidURLValidatorAlt[PluginT: AbstractPlugin](
     InvalidImportURLTestsAlt[PluginT],
     PluginValidatorAlt[PluginT],
 ):

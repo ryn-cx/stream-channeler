@@ -29,7 +29,7 @@ def _found_something(search_file: MovieSearch | TvSearch | MultiSearch) -> bool:
 
 
 # TODO: Validate
-class LookupMixin(FileMixin, register=False):
+class LookupMixin(FileMixin):
     # TODO: Validate
     @overload
     def search_media(

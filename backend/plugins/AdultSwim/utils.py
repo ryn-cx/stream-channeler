@@ -12,7 +12,7 @@ def source_requires_auth(source_key: str) -> bool:
 
 
 # TODO: Validate
-class HelperMixin(FileMixin, register=False):
+class HelperMixin(FileMixin):
     # TODO: Validate
     def _existing_shows(self, show_key: str) -> list[Show]:
         return list(self._preload_show(show_key))

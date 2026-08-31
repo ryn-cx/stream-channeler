@@ -65,7 +65,7 @@ export const columns: ColumnDef<EpisodeWithDetails>[] = [
   },
 
   {
-    accessorKey: "plugin.name",
+    accessorKey: "plugin.key",
     header: "Plugin",
     id: "plugin",
   },

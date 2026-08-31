@@ -1,9 +1,9 @@
 # TODO: Validate
-"""The plugin owned channels every Hulu title is queued into."""
+"""The records Hulu is given before anything is imported into it."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from loguru import logger
 from sqlmodel import select
@@ -12,12 +12,14 @@ from app.channels.models import Channel
 from app.channels.service import add_urls_to_channel_import_queue
 from app.models import Visibility
 from app.users.service import get_or_create_plugin_user
-from plugins.Hulu.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
-from plugins.Hulu.files import FileMixin
+from plugins.Hulu.base import HuluBase
+from plugins.Hulu.constants import HuluMediaType
+from plugins.utils.base_plugin_v2.initialize import PluginInitializer
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Sequence
+    from collections.abc import Sequence
 
+    from sqlmodel import Session
     from wholoo.genre.models import GenreModel
     from wholoo.genres.models import GenresModel
 
@@ -40,20 +42,24 @@ def _listed_items(page: GenresModel | GenreModel) -> list[tuple[str, str]]:
 
 
 # TODO: Validate
-class ChannelMixin(FileMixin, register=False):
+class HuluInitializer(PluginInitializer, HuluBase):
     """The channels Hulu's whole catalogue is read into."""
 
     # TODO: Validate
-    def initialize_channel(self, genre_ids: Collection[str] | None = None) -> None:
+    @classmethod
+    @override
+    def initialize_db(cls, session: Session) -> None:
+        super().initialize_db(session)
+        cls(session).initialize_channels()
+
+    # TODO: Validate
+    def initialize_channels(self) -> None:
         """Queue every title Hulu lists, genre by genre, into its channels.
 
         Hulu files its catalogue under a genre at a time and nowhere else, so
         the genre pages together are the catalogue and each one is a channel of
         its own. The three channels across all of them are filled from the same
         pass rather than from a second read of every page.
-
-        `genre_ids` narrows the run to the genres it names, which is what reads
-        one genre again without the other ninety behind it.
         """
         genres_page = self.genres_page_file()
         genres_page.download_if_outdated()
@@ -63,8 +69,6 @@ class ChannelMixin(FileMixin, register=False):
         series: list[str] = []
         for genre_name, genre_href in _listed_items(genres_page.parsed()):
             genre_id = genre_href.rsplit("/", 1)[-1]
-            if genre_ids is not None and genre_id not in genre_ids:
-                continue
             genre_page = self.genre_page_file(genre_id)
             genre_page.download_if_outdated()
             urls = self._title_urls(genre_page.parsed())
@@ -75,8 +79,8 @@ class ChannelMixin(FileMixin, register=False):
             logger.info("Queueing {} titles from genre: {}", len(urls), genre_id)
             self._queue(f"Hulu {genre_name}", f"All {genre_name} on Hulu.", urls)
             everything += urls
-            movies += [url for url in urls if f"/{MOVIE_MEDIA_TYPE}/" in url]
-            series += [url for url in urls if f"/{SERIES_MEDIA_TYPE}/" in url]
+            movies += [url for url in urls if f"/{HuluMediaType.MOVIE}/" in url]
+            series += [url for url in urls if f"/{HuluMediaType.SERIES}/" in url]
 
         self._queue("Hulu All Media", "All Media on Hulu.", everything)
         self._queue("Hulu Movies", "All Movies on Hulu.", movies)
@@ -89,7 +93,9 @@ class ChannelMixin(FileMixin, register=False):
         paths = {
             href: None
             for _name, href in _listed_items(page)
-            if href.startswith((f"/{MOVIE_MEDIA_TYPE}/", f"/{SERIES_MEDIA_TYPE}/"))
+            if href.startswith(
+                (f"/{HuluMediaType.MOVIE}/", f"/{HuluMediaType.SERIES}/"),
+            )
         }
         return [cls.build_url(path) for path in paths]
 

@@ -10,7 +10,7 @@ from plugins.Pluto.files import FileMixin
 
 
 # TODO: Validate
-class HelperMixin(FileMixin, register=False):
+class HelperMixin(FileMixin):
     """The URLs Pluto TV writes a title under."""
 
     # TODO: Validate

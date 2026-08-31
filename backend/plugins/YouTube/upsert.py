@@ -25,7 +25,7 @@ from plugins.YouTube.utils import HelperMixin
 
 
 # TODO: Validate
-class UpsertMixin(HelperMixin, register=False):
+class UpsertMixin(HelperMixin):
     # TODO: Validate
     @override
     def upsert_show(

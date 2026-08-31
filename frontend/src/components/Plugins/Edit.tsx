@@ -14,7 +14,6 @@ import { nullifyBlanks, optionalString, requiredKey } from "@/lib/formSchemas"
 
 const formSchema = z.object({
   key: requiredKey,
-  name: optionalString,
   version: optionalString,
   data_timestamp: optionalString,
   update_at: optionalString,
@@ -38,7 +37,6 @@ const EditPlugin = ({ plugin, size }: EditPluginProps) => {
     criteriaMode: "all",
     defaultValues: {
       key: plugin.key ?? "",
-      name: plugin.name ?? "",
       version: plugin.version ?? "",
       data_timestamp: plugin.data_timestamp?.slice(0, 16) ?? "",
       update_at: plugin.update_at?.slice(0, 16) ?? "",
@@ -78,12 +76,6 @@ const EditPlugin = ({ plugin, size }: EditPluginProps) => {
       isPending={mutation.isPending}
     >
       <FormTextField control={form.control} label="Key" type="text" />
-      <FormTextField
-        control={form.control}
-        label="Name"
-        placeholder="Plugin name"
-        type="text"
-      />
       <FormTextField
         control={form.control}
         label="Version"

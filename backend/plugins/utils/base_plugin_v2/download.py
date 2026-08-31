@@ -10,7 +10,7 @@ from app.episodes.models import Episode
 from app.files.models import File
 from app.seasons.models import Season
 from app.shows.models import Show
-from plugins.utils.base_plugin.files import BaseFile
+from plugins.utils.base_plugin_v2.files import BaseFile
 
 
 # TODO: Validate

@@ -41,8 +41,8 @@ from app.files.models import File
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
-from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import (
+from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.files import (
     BaseFile,
     EndpointFile,
     HTMLFile,
@@ -578,11 +578,11 @@ class PlaylistFeed(EndpointFile[ChannelFeedModel | PlaylistFeedModel]):
                 feed = self._download_file()
             except (ChannelFeedNotFoundError, PlaylistFeedNotFoundError) as error:
                 logger.warning(
-                    "PlaylistFeed fetch for {} returned HTTP {}; keeping the existing feed.",
+                    "PlaylistFeed fetch for {} returned HTTP {}.",
                     self.unique_identifier,
                     error.status_code,
                 )
-                return
+                raise
             self.write(feed)
 
     # TODO: Validate
@@ -648,7 +648,7 @@ class ShowPage(HTMLFile):
 
 
 # TODO: Validate
-class FileMixin(BasePlugin, register=False):
+class FileMixin(PluginBase):
     _importing_album_playlist_key: str | None = None
     _linking_playlist_key: str | None = None
 
@@ -1005,7 +1005,7 @@ class FileMixin(BasePlugin, register=False):
         ]
 
     # TODO: Validate
-    def _batch_download_videos(self, video_keys: list[str]) -> None:
+    def _batch_download_missing_videos(self, video_keys: list[str]) -> None:
         outdated_ids = [
             video_id
             for video_id in video_keys
@@ -1071,7 +1071,7 @@ class FileMixin(BasePlugin, register=False):
             all_files.extend(self._download_outdated_files(season_files))
 
         episode_cache = self._preload_all_episode_files(season_keys, show_key)
-        self._batch_download_videos(
+        self._batch_download_missing_videos(
             self._episode_keys_from_file(season_keys, show_key),
         )
         for season_key in season_keys:
@@ -1097,5 +1097,5 @@ class FileMixin(BasePlugin, register=False):
         show_key = self._get_show_key(season, show)
         video_keys = self._episode_keys_from_file(season_key, show_key)
         self._preload_episode_files(video_keys, season_key, show_key, preloaded_files)
-        self._batch_download_videos(video_keys)
+        self._batch_download_missing_videos(video_keys)
         return [self.videos_file(video_id).database_record for video_id in video_keys]

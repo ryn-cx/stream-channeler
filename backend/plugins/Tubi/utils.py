@@ -14,7 +14,7 @@ from plugins.utils.abstract_plugin import PluginShowIdentity
 
 
 # TODO: Validate
-class HelperMixin(FileMixin, register=False):
+class HelperMixin(FileMixin):
     """The URLs of a title and the values read straight off its content file."""
 
     # TODO: Validate

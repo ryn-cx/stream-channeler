@@ -6,9 +6,9 @@ from typing import override
 
 from app.shows.models import Show
 from app.sources.models import Source
-from plugins.Crunchyroll.utils import HelperMixin
+from plugins.Crunchyroll.base import CrunchyrollBase
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from plugins.utils.base_plugin.plugin import ReadURLPlugin
+from plugins.utils.base_plugin_v2.workers import URLImporter
 
 
 # TODO: Validate
@@ -29,7 +29,7 @@ def _build_crunchyroll_url_regex(*path: str, group: str) -> str:
 
 
 # TODO: Validate
-class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
+class CrunchyrollImportURL(URLImporter, CrunchyrollBase):
     # https://www.crunchyroll.com/watch/musicvideo/MV5CD8B009
     _MUSIC_VIDEO_URL_REGEX = _build_crunchyroll_url_regex(
         "watch",
@@ -99,7 +99,7 @@ class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
             self._read_episode_url(match.group("episode_key"), url)
             return
 
-        msg = f"Invalid {self.plugin_key()} URL: {url}"
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
     # TODO: Validate

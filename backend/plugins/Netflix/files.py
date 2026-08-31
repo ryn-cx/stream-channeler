@@ -36,8 +36,8 @@ from sqlmodel import Session
 
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
-from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import (
+from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.files import (
     BaseFile,
     EndpointFile,
     IntegerEndpointFile,
@@ -127,7 +127,7 @@ class Search(EndpointFile[SearchPageResultsModel]):
 
 
 # TODO: Validate
-class FileMixin(BasePlugin, register=False):
+class FileMixin(PluginBase):
     """The files a Netflix title is read out of."""
 
     # TODO: Validate

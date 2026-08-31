@@ -51,7 +51,7 @@ class FileListPublic(BaseMediaMixin):
     data_timestamp: datetime = DateTimeField()  # pyright: ignore[reportIncompatibleVariableOverride]
     plugin_id: uuid.UUID
     id: uuid.UUID
-    plugin_name: str | None = Field(validation_alias=AliasPath("plugin", "name"))
+    plugin_name: str | None = Field(validation_alias=AliasPath("plugin", "key"))
 
 
 # TODO: Validate

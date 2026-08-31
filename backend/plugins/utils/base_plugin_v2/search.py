@@ -7,11 +7,11 @@ from abc import ABC
 from typing import override
 
 from app.episodes.text_matching import TextMatcher
-from plugins.utils.base_plugin.plugin import BasePlugin
+from plugins.utils.base_plugin_v2.base import PluginBase
 
 
 # TODO: Validate
-class CatalogueSearchMixin(BasePlugin, ABC, register=False):
+class CatalogueSearchMixin(PluginBase, ABC):
     """What a plugin whose whole catalogue is already imported is searched by.
 
     A website that holds every title it offers needs no search endpoint of its

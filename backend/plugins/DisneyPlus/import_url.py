@@ -4,13 +4,13 @@ from __future__ import annotations
 import re
 from typing import override
 
-from plugins.DisneyPlus.utils import HelperMixin
+from plugins.DisneyPlus.base import DisneyPlusBase
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin.plugin import ReadURLPlugin
+from plugins.utils.base_plugin_v2.workers import URLImporter
 
 
 # TODO: Validate
-class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
+class DisneyPlusImportURL(URLImporter, DisneyPlusBase):
     # https://www.disneyplus.com/browse/entity-3135b0cb-a002-438d-a9fd-60d86284c93f
     # https://www.disneyplus.com/en-gb/browse/entity-3135b0cb-a002-438d-a9fd-60d86284c93f
     # The optional locale segment, e.g. /en-gb or /de.
@@ -35,5 +35,5 @@ class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
             self.raise_if_invalid_file(self.entity_file(self._show_key), url)
             return
 
-        msg = f"Invalid {self.plugin_key()} URL: {url}"
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)

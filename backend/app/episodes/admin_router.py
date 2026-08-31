@@ -103,7 +103,7 @@ EPISODE_EXTRA_COLUMNS: dict[str, Any] = {
     "source_id": Show.source_id,
     "source_name": Source.name,
     "plugin_id": Source.plugin_id,
-    "plugin_name": Plugin.name,
+    "plugin_name": Plugin.key,
 }
 
 

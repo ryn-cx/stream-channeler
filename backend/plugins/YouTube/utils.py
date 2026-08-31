@@ -60,7 +60,7 @@ def is_quota_error(error: BaseException) -> bool:
 
 
 # TODO: Validate
-class HelperMixin(FileMixin, register=False):
+class HelperMixin(FileMixin):
     # TODO: Validate
     def record_album_playlist_key(self, playlist_key: str) -> None:
         self._importing_album_playlist_key = playlist_key
@@ -132,7 +132,7 @@ class HelperMixin(FileMixin, register=False):
         if not channel_title:
             return None
 
-        source_key = f"{self.plugin_key()} {channel_title}"
+        source_key = f"{self.plugin_name()} {channel_title}"
         self.initialize_source(
             source_key,
             partial(self._upsert_source, source_key),

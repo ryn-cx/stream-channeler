@@ -3,48 +3,17 @@
 
 from __future__ import annotations
 
-from typing import override
-
-from plugins.ParamountPlus.import_url import ImportURLMixin
-from plugins.ParamountPlus.source import SourceMixin
-from plugins.ParamountPlus.upsert import UpsertMixin
+from plugins.ParamountPlus.base import ParamountPlusBase
+from plugins.ParamountPlus.import_url import ParamountPlusImportURL
+from plugins.ParamountPlus.initialize import ParamountPlusInitializer
+from plugins.ParamountPlus.update import ParamountPlusUpdater
+from plugins.utils.abstract_plugin import AbstractPlugin
 
 
 # TODO: Validate
-class ParamountPlus(
-    UpsertMixin,
-    SourceMixin,
-    ImportURLMixin,
-    register=True,
-):
+class ParamountPlus(ParamountPlusBase, AbstractPlugin, register=True):
     """Paramount+ plugin."""
 
-    # TODO: Validate
-    @classmethod
-    @override
-    def tmdb_provider_names(cls) -> tuple[str, ...]:
-        return (
-            "Paramount Plus",
-            "Paramount+",
-            "Paramount+ Amazon Channel",
-            "Paramount Plus Essential",
-            "Paramount Plus Premium",
-        )
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def favicon_url(cls) -> str:
-        return "https://www.paramountplus.com/favicon.ico"
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _domain(cls) -> str:
-        return "paramountplus.com"
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def plugin_name(cls) -> str:
-        return "Paramount+"
+    initializer = ParamountPlusInitializer
+    url_importer = ParamountPlusImportURL
+    updater = ParamountPlusUpdater

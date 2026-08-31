@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from datetime import datetime, timedelta
-from typing import Literal, override
+from typing import TYPE_CHECKING, Literal, override
 
 from chirashi.artist.models import PosterWideItem as ArtistPosterWideItem
 from chirashi.artist_concerts.models import Datum as ConcertListingDatum
@@ -21,22 +21,61 @@ from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.Crunchyroll.constants import (
+    MUSIC_SOURCE,
+    VIDEO_SOURCE,
     MusicCategory,
     show_is_a_series,
     show_is_an_artist,
 )
 from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries
 from plugins.Crunchyroll.utils import HelperMixin
-from plugins.utils.base_plugin.files import INITIAL_FILE_IDENTIFIER
+from plugins.utils.base_plugin_v2.files import INITIAL_FILE_IDENTIFIER
+
+if TYPE_CHECKING:
+    from sqlmodel import Session
+
+    from app.plugins.models import Plugin
 
 
 # TODO: Validate
-class UpsertMixin(HelperMixin, register=False):
+class UpsertMixin(HelperMixin):
     """Mixin containing all upsert functions."""
 
     # TODO: Validate
+    @classmethod
     @override
     def _upsert_source(
+        cls,
+        session: Session,
+        plugin: Plugin,
+        source_key: str,
+    ) -> Source:
+        view = cls(session)
+        if source_key == MUSIC_SOURCE:
+            return view.upsert_music_source()
+        return view.upsert_anime_source()
+
+    # TODO: Validate
+    def upsert_anime_source(self) -> Source:
+        return self.upsert_source(
+            VIDEO_SOURCE,
+            self.find_newest_browse_series_file(),
+            self.browse_series_file,
+            timedelta(days=1),
+        )
+
+    # TODO: Validate
+    def upsert_music_source(self) -> Source:
+        return self.upsert_source(
+            MUSIC_SOURCE,
+            self.find_newest_browse_music_file(),
+            self.browse_music_file,
+            # Check weekly for new music because updates do not need to be frequent.
+            timedelta(days=7),
+        )
+
+    # TODO: Validate
+    def upsert_source(
         self,
         source_key: str,
         latest_browse_file: BrowseSeries | BrowseMusic | None,

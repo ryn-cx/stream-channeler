@@ -88,7 +88,7 @@ class ShowPublic(BaseShow):
     tmdb_url: str | None = None
     plugin_name: str | None = Field(
         default=None,
-        validation_alias=AliasPath("source", "plugin", "name"),
+        validation_alias=AliasPath("source", "plugin", "key"),
     )
 
     # TODO: Validate
@@ -108,7 +108,7 @@ class ShowListPublic(ShowPublic):
     source_name: str | None = Field(validation_alias=AliasPath("source", "name"))
     plugin_id: uuid.UUID = Field(validation_alias=AliasPath("source", "plugin_id"))
     plugin_name: str | None = Field(
-        validation_alias=AliasPath("source", "plugin", "name"),
+        validation_alias=AliasPath("source", "plugin", "key"),
     )
 
 

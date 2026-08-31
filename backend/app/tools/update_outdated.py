@@ -426,7 +426,7 @@ def _installed_plugin_keys() -> list[str]:
 # TODO: Validate
 def _specialized_plugin_keys() -> set[str]:
     """Return the keys of the plugins that have an update run of their own."""
-    return {plugin.plugin_key() for plugin in plugins if plugin.specialized_updater()}
+    return {plugin.plugin_name() for plugin in plugins if plugin.specialized_updater()}
 
 
 # TODO: Validate
@@ -481,7 +481,7 @@ def _seconds_until_next_update() -> float:
 # TODO: Validate
 def update_outdated() -> None:
     """Update all outdated entries."""
-    plugin_classes_by_key = {plugin.plugin_key(): plugin for plugin in plugins}
+    plugin_classes_by_key = {plugin.plugin_name(): plugin for plugin in plugins}
     specialized_keys = _specialized_plugin_keys()
 
     for plugin_key in _installed_plugin_keys():

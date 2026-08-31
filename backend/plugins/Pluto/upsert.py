@@ -13,11 +13,11 @@ from app.shows.models import Show
 from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from plugins.Pluto.constants import MILLISECONDS_PER_SECOND
-from plugins.Pluto.source import SourceMixin
+from plugins.Pluto.utils import HelperMixin
 
 
 # TODO: Validate
-class UpsertMixin(SourceMixin, register=False):
+class UpsertMixin(HelperMixin):
     """Mixin containing all upsert functions."""
 
     # TODO: Validate

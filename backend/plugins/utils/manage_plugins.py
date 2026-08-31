@@ -67,7 +67,7 @@ def register_plugins(plugin: type[AbstractPlugin]) -> None:
 def sorted_plugins() -> list[type[AbstractPlugin]]:
     """Return the registered plugins sorted by their plugin_key."""
     import_plugins()
-    return sorted(plugins, key=lambda plugin: plugin.plugin_key())
+    return sorted(plugins, key=lambda plugin: plugin.plugin_name())
 
 
 _plugins_initialized = False

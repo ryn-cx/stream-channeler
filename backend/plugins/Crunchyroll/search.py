@@ -10,7 +10,7 @@ from plugins.Crunchyroll.utils import HelperMixin
 
 
 # TODO: Validate
-class SearchMixin(HelperMixin, register=False):
+class SearchMixin(HelperMixin):
     # TODO: Validate
     @override
     def search(self, query: str) -> str | None:

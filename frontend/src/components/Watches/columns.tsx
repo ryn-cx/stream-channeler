@@ -92,11 +92,11 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
   },
 
   {
-    accessorFn: (row) => row.plugin.name,
+    accessorFn: (row) => row.plugin.key,
     id: "plugin",
     header: "Plugin",
     cell: ({ row }) => (
-      <span className="font-medium">{row.original.plugin.name ?? ""}</span>
+      <span className="font-medium">{row.original.plugin.key}</span>
     ),
   },
 

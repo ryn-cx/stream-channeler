@@ -8,7 +8,7 @@ from plugins.ParamountPlus.files import FileMixin
 
 
 # TODO: Validate
-class HelperMixin(FileMixin, register=False):
+class HelperMixin(FileMixin):
     """The URLs of a title and whether it is a film or a series."""
 
     # TODO: Validate

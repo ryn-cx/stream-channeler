@@ -121,7 +121,7 @@ class SeasonSource(NamedTuple):
 
 
 # TODO: Validate
-class HelperMixin(FileMixin, register=False):
+class HelperMixin(FileMixin):
     """The files and keys the TMDB plugin imports its own media from.
 
     A season and an episode are keyed by their own TMDB ids, which is what names

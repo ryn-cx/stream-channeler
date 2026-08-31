@@ -4,13 +4,13 @@ from __future__ import annotations
 import re
 from typing import override
 
-from plugins.NHKWorld.files import FileMixin
+from plugins.NHKWorld.base import NHKWorldBase
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin.plugin import ReadURLPlugin
+from plugins.utils.base_plugin_v2.workers import URLImporter
 
 
 # TODO: Validate
-class ImportURLMixin(FileMixin, ReadURLPlugin, register=False):
+class NHKWorldImportURL(URLImporter, NHKWorldBase):
     # https://www3.nhk.or.jp/nhkworld/en/shows/100years-midosuji/
     # The lookahead requires a non-numeric character so this matches show slugs but
     # not numeric episode URLs like https://www3.nhk.or.jp/nhkworld/en/shows/5001461/
@@ -31,5 +31,5 @@ class ImportURLMixin(FileMixin, ReadURLPlugin, register=False):
             self.raise_if_invalid_file(self.video_program_file(self._show_key), url)
             return
 
-        msg = f"Invalid {self.plugin_key()} URL: {url}"
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)

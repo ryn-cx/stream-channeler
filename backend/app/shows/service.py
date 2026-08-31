@@ -365,7 +365,7 @@ def force_update_show(session: Session, show: Show) -> Show:
     from plugins.utils.manage_plugins import import_plugins, plugins  # noqa: PLC0415
 
     import_plugins()
-    plugin_classes = {plugin.plugin_key(): plugin for plugin in plugins}
+    plugin_classes = {plugin.plugin_name(): plugin for plugin in plugins}
     plugin_class = plugin_classes.get(show.source.plugin.key)
     if plugin_class is None:
         message = f"No plugin named {show.source.plugin.key!r} to read the show again."
@@ -572,7 +572,7 @@ def show_information(
         editable=current_user is not None and current_user.is_superuser,
         issue_reports=list_show_issue_reports(session, show.id),
         source=_information_side(
-            source.name or source.plugin.name or source.plugin.key,
+            source.name or source.plugin.key,
             show,
         ),
         tmdb=tmdb,

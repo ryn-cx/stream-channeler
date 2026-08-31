@@ -18,9 +18,9 @@ from trivial_minus.show import Show as ShowEndpoint
 from trivial_minus.show.models import ShowModel
 
 from app.plugins.models import Plugin
-from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import BaseFile, EndpointFile
-from plugins.utils.base_plugin.media_type import MediaTypeMixin
+from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
+from plugins.utils.base_plugin_v2.media_type import MediaTypeMixin
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -113,7 +113,7 @@ class MovieFile(EndpointFile[MovieModel]):
 
 
 # TODO: Validate
-class FileMixin(MediaTypeMixin, BasePlugin, register=False):
+class FileMixin(MediaTypeMixin, PluginBase):
     """The files a title is read out of."""
 
     # TODO: Validate

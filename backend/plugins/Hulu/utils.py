@@ -1,6 +1,7 @@
 # TODO: Validate
 """What every other part of the plugin reads a title by."""
 
+from datetime import timedelta
 from typing import override
 from urllib.parse import quote, quote_plus
 
@@ -8,17 +9,13 @@ from wholoo.movies.models import MoviesModel
 
 from app.shows.models import Show
 from app.utils import tz_datetime
-from plugins.Hulu.constants import (
-    DETAIL_MAX_AGE,
-    MOVIE_MEDIA_TYPE,
-    SERIES_MEDIA_TYPE,
-)
+from plugins.Hulu.constants import HuluMediaType
 from plugins.Hulu.files import FileMixin
 from plugins.utils.abstract_plugin import PluginShowIdentity
 
 
 # TODO: Validate
-class HelperMixin(FileMixin, register=False):
+class HelperMixin(FileMixin):
     """The URLs of a title and what a search result of it is asked for by."""
 
     # TODO: Validate
@@ -28,7 +25,7 @@ class HelperMixin(FileMixin, register=False):
             msg = "Show.media_type is not set."
             raise AttributeError(msg)
         self._media_type = (
-            MOVIE_MEDIA_TYPE if show.media_type == "Movie" else SERIES_MEDIA_TYPE
+            HuluMediaType.MOVIE if show.media_type == "Movie" else HuluMediaType.SERIES
         )
 
     # TODO: Validate
@@ -42,7 +39,7 @@ class HelperMixin(FileMixin, register=False):
 
     # TODO: Validate
     @classmethod
-    def _show_url(cls, show_key: str, media_type: str) -> str:
+    def _show_url(cls, show_key: str, media_type: HuluMediaType) -> str:
         return cls.build_url(f"{media_type}/{show_key}")
 
     # TODO: Validate
@@ -78,7 +75,7 @@ class HelperMixin(FileMixin, register=False):
     # TODO: Validate
     def _movie_identity(self, movie_id: str) -> PluginShowIdentity:
         movie_file = self.movie_file(movie_id)
-        movie_file.download_if_outdated(tz_datetime.now() - DETAIL_MAX_AGE)
+        movie_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         model = movie_file.parsed()
         return PluginShowIdentity(
             title=model.name,
@@ -89,7 +86,7 @@ class HelperMixin(FileMixin, register=False):
     # TODO: Validate
     def _series_identity(self, series_id: str) -> PluginShowIdentity:
         series_file = self.series_file(series_id)
-        series_file.download_if_outdated(tz_datetime.now() - DETAIL_MAX_AGE)
+        series_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         model = series_file.parsed()
         return PluginShowIdentity(
             title=model.name,

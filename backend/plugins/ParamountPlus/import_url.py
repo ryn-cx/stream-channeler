@@ -4,13 +4,13 @@ from __future__ import annotations
 import re
 from typing import override
 
-from plugins.ParamountPlus.utils import HelperMixin
+from plugins.ParamountPlus.base import ParamountPlusBase
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin.media_type import MediaTypeReadURLPlugin
+from plugins.utils.base_plugin_v2.workers import URLImporter
 
 
 # TODO: Validate
-class ImportURLMixin(HelperMixin, MediaTypeReadURLPlugin, register=False):
+class ParamountPlusImportURL(URLImporter, ParamountPlusBase):
     # https://www.paramountplus.com/movies/video/ALVE01KT235XQDEK58R7H2012VNZMK/
     _MOVIE_URL_REGEX = r"\/movies\/video\/(?P<movie_id>[A-Za-z0-9]+)(?:\/|$)"
     # https://www.paramountplus.com/shows/south-park/
@@ -38,5 +38,5 @@ class ImportURLMixin(HelperMixin, MediaTypeReadURLPlugin, register=False):
             self.raise_if_invalid_file(self.show_page_file(self._show_key), url)
             return
 
-        msg = f"Invalid {self.plugin_key()} URL: {url}"
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)

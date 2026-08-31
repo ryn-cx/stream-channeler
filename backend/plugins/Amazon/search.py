@@ -11,7 +11,7 @@ from plugins.Amazon.utils import HelperMixin
 
 
 # TODO: Validate
-class SearchMixin(HelperMixin, register=False):
+class SearchMixin(HelperMixin):
     """Searching Prime Video."""
 
     # TODO: Validate

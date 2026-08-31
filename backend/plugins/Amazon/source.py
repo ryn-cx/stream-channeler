@@ -3,24 +3,38 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, override
+
 from app.sources.models import Source
 from plugins.Amazon.constants import PURCHASE_SOURCE_SUFFIX
 from plugins.Amazon.utils import HelperMixin
 
+if TYPE_CHECKING:
+    from sqlmodel import Session
+
+    from app.plugins.models import Plugin
+
 
 # TODO: Validate
-class SourceMixin(HelperMixin, register=False):
+class SourceMixin(HelperMixin):
     """The plugin's own source and the one it keeps each channel's titles in."""
 
     # TODO: Validate
-    def _upsert_source(self) -> Source:
-        source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
+    @classmethod
+    @override
+    def _upsert_source(
+        cls,
+        session: Session,
+        plugin: Plugin,
+        source_key: str,
+    ) -> Source:
+        source = Source.get_from_memory(session, plugin, source_key)
         return Source(
-            key=self.plugin_key(),
-            name=self.plugin_name(),
-            favicon_url=self.favicon_url(),
-            plugin_id=self.plugin.id,
-        ).upsert_and_set_update_at(self.plugin, source)
+            key=source_key,
+            name=cls.plugin_name(),
+            favicon_url=cls.favicon_url(),
+            plugin_id=plugin.id,
+        ).upsert_and_set_update_at(plugin, source)
 
     # TODO: Validate
     def title_sources(self, show_key: str) -> list[Source]:
@@ -34,7 +48,7 @@ class SourceMixin(HelperMixin, register=False):
         detail_file = self.detail_file(show_key)
         sources = [
             self._extra_source(
-                f"{self.plugin_key()}:{channel.benefit_id}",
+                f"{self.plugin_name()}:{channel.benefit_id}",
                 f"{self.plugin_name()} ({channel.name})",
             )
             for channel in detail_file.channels()
@@ -44,7 +58,7 @@ class SourceMixin(HelperMixin, register=False):
         if detail_file.purchasable():
             sources.append(
                 self._extra_source(
-                    f"{self.plugin_key()}:{PURCHASE_SOURCE_SUFFIX}",
+                    f"{self.plugin_name()}:{PURCHASE_SOURCE_SUFFIX}",
                     f"{self.plugin_name()} ({PURCHASE_SOURCE_SUFFIX})",
                 ),
             )

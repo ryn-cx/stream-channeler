@@ -4,14 +4,14 @@ from __future__ import annotations
 import re
 from typing import override
 
+from plugins.Pluto.base import PlutoBase
 from plugins.Pluto.constants import DETAILS_REGEX, ITEM_ID_REGEX, LOCALE_REGEX
-from plugins.Pluto.utils import HelperMixin
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin.media_type import MediaTypeReadURLPlugin
+from plugins.utils.base_plugin_v2.workers import URLImporter
 
 
 # TODO: Validate
-class ImportURLMixin(HelperMixin, MediaTypeReadURLPlugin, register=False):
+class PlutoImportURL(URLImporter, PlutoBase):
     # https://pluto.tv/en/on-demand/movies/68a54f49df1220b53566f16e/details
     # https://pluto.tv/us/on-demand/movies/68a54f49df1220b53566f16e
     _MOVIE_URL_REGEX = (
@@ -51,5 +51,5 @@ class ImportURLMixin(HelperMixin, MediaTypeReadURLPlugin, register=False):
             self.raise_if_invalid_file(self.seasons_file(self._show_key), url)
             return
 
-        msg = f"Invalid {self.plugin_key()} URL: {url}"
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)

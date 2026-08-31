@@ -49,15 +49,15 @@ from plugins.TMDB.utils import (
 
 
 # TODO: Validate
-class UpsertMixin(HelperMixin, register=False):
+class UpsertMixin(HelperMixin):
     """Reads TMDB into records of TMDB's own."""
 
     # TODO: Validate
     @override
     def _upsert_source(self) -> Source:
-        source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
+        source = Source.get_from_memory(self.session, self.plugin, self.plugin_name())
         return Source(
-            key=self.plugin_key(),
+            key=self.plugin_name(),
             name=self.plugin_name(),
             favicon_url=self.favicon_url(),
             data_timestamp=self._existing_data_timestamp_or_now(source),

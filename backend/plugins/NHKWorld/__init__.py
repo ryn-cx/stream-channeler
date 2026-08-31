@@ -1,45 +1,19 @@
 # TODO: Validate
+"""NHK World plugin."""
+
 from __future__ import annotations
 
-from typing import override
-from urllib.parse import quote_plus
-
-from plugins.NHKWorld.import_url import ImportURLMixin
-from plugins.NHKWorld.search import SearchMixin
-from plugins.NHKWorld.source import SourceMixin
-from plugins.NHKWorld.upsert import UpsertMixin
+from plugins.NHKWorld.base import NHKWorldBase
+from plugins.NHKWorld.import_url import NHKWorldImportURL
+from plugins.NHKWorld.initialize import NHKWorldInitializer
+from plugins.NHKWorld.update import NHKWorldUpdater
+from plugins.utils.abstract_plugin import AbstractPlugin
 
 
 # TODO: Validate
-class NHKWorld(
-    SourceMixin,
-    UpsertMixin,
-    SearchMixin,
-    ImportURLMixin,
-    register=True,
-):
-    # TODO: Add support for single episodes
-    # TODO: Don't hardcode the favicon URL
-    # TODO: Validate
-    @classmethod
-    @override
-    def favicon_url(cls) -> str:
-        return "https://www3.nhk.or.jp/nhkworld/common/site_images/nw_webapp.ico"
+class NHKWorld(NHKWorldBase, AbstractPlugin, register=True):
+    """NHK World plugin."""
 
-    # TODO: Validate
-    @classmethod
-    @override
-    def _domain(cls) -> str:
-        return "www3.nhk.or.jp"
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def plugin_name(cls) -> str:
-        return "NHK World"
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def manual_search(cls, query: str) -> str:
-        return cls.build_url(f"nhkworld/en/shows/search/?q={quote_plus(query)}")
+    initializer = NHKWorldInitializer
+    url_importer = NHKWorldImportURL
+    updater = NHKWorldUpdater

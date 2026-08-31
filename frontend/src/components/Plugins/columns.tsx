@@ -14,10 +14,10 @@ export type PluginTableData = PluginListOutput & { pending?: boolean }
 export function pluginColumns(isAdmin = false): ColumnDef<PluginTableData>[] {
   return [
     {
-      accessorKey: "name",
-      header: "Name",
+      accessorKey: "key",
+      header: "Key",
       cell: ({ row }) => {
-        const label = row.original.name || `No Name (${row.original.key})`
+        const label = row.original.key
         if (row.original.pending) {
           return (
             <span className="font-medium text-muted-foreground">{label}</span>

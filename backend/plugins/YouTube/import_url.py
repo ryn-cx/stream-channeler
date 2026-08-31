@@ -8,7 +8,8 @@ from urllib.parse import parse_qs, urlparse
 from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from plugins.utils.base_plugin.plugin import ReadURLPlugin
+from plugins.utils.base_plugin_v2.workers import URLImporter
+from plugins.YouTube.base import YouTubeBase
 from plugins.YouTube.constants import LONG_DOMAIN_REGEX, SHORT_DOMAIN_REGEX
 from plugins.YouTube.files import (
     get_first_item,
@@ -19,7 +20,6 @@ from plugins.YouTube.files import (
     show_season_key,
 )
 from plugins.YouTube.utils import (
-    HelperMixin,
     channel_key_from_uploads_playlist_key,
     is_free_movies_channel,
 )
@@ -27,11 +27,11 @@ from plugins.YouTube.utils import (
 if TYPE_CHECKING:
     from not_yt_dlapi.channels.models import ChannelsModel
 
-    from plugins.utils.base_plugin.files import BaseFile
+    from plugins.utils.base_plugin_v2.files import BaseFile
 
 
 # TODO: Validate
-class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
+class YouTubeImportURL(URLImporter, YouTubeBase):
     # https://www.youtube.com/watch?v=lVI_J1cbFb4&list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh
     # https://youtu.be/lVI_J1cbFb4?list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh
     _PLAYLIST_VIDEO_URL_REGEX = (
@@ -111,21 +111,6 @@ class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
         return f"(?:{alternatives})"
 
     # TODO: Validate
-    @override
-    def import_url(
-        self,
-        url: str,
-        canonical_show: Show | None = None,
-        *,
-        force: bool = False,
-    ) -> list[URLImportResult]:
-        # Recorded before the URL is read, because whether a playlist links a title
-        # of its own is what says which show the address names.
-        if canonical_show is not None:
-            self._record_linking_playlist(url)
-        return super().import_url(url, canonical_show, force=force)
-
-    # TODO: Validate
     def _record_linking_playlist(self, url: str) -> None:
         for url_regex in (self._PLAYLIST_VIDEO_URL_REGEX, self._PLAYLIST_URL_REGEX):
             if match := re.match(url_regex, url):
@@ -186,7 +171,7 @@ class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
             self._read_channel(get_first_item(parsed.items).id, url)
             return
 
-        msg = f"Invalid {self.plugin_key()} URL: {url}"
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
     # TODO: Validate
@@ -197,7 +182,7 @@ class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
         # rather than by refusing, so a URL naming no channel is only known from
         # what came back holding none.
         if not channel.items:
-            msg = f"Invalid {self.plugin_key()} URL: {url}"
+            msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
         return channel
 
@@ -287,7 +272,7 @@ class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
         self.raise_if_invalid_file(show_listing_file, url)
         show_key = show_listing_file.show_key()
         if show_key is None:
-            msg = f"Invalid {self.plugin_key()} URL: {url}"
+            msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
         self._show_key = show_key
         self._playlist_key = show_key
@@ -302,7 +287,7 @@ class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
         self.raise_if_invalid_file(self.show_page_file(show_key), url)
         self.raise_if_invalid_file(self.show_listing_file_for_show(show_key), url)
         if not self.show_season_numbers(show_key):
-            msg = f"Invalid {self.plugin_key()} URL: {url}"
+            msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
 
         # A URL for one season only asks for that season, where a URL for the show
@@ -342,12 +327,17 @@ class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
     # A YouTube show is always imported for a specific playlist.
     # TODO: Validate
     @override
-    def _import_read_url(
+    def import_url(
         self,
         canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> list[URLImportResult]:
+        # Recorded before the URL is read, because whether a playlist links a title
+        # of its own is what says which show the address names.
+        if canonical_show is not None:
+            self._record_linking_playlist(self.url)
+
         show_key = self._show_key
         show_preload = self._preload_show(show_key, preload_episodes=True)
         existing_show = show_preload.one_or_none()

@@ -96,7 +96,6 @@ class BaseFile[T](ABC):
         """Return the timestamp of the data in the file."""
         return self.database_record.data_timestamp
 
-    # TODO: Cam tjos be simplified so it doesn't need to return the record?
     # TODO: Validate
     @staticmethod
     def raise_if_not_is_instance[InstanceT](
@@ -253,6 +252,11 @@ class BaseFile[T](ABC):
         if self._cached_parsed is None:
             self._cached_parsed = self._parse(self._stored_content())
         return self._cached_parsed
+
+    # TODO: Validate
+    def does_not_exist(self) -> bool:
+        """Report whether the file has never been stored."""
+        return self._existing_database_record is None
 
     # TODO: Validate
     def is_outdated(self, minimum_timestamp: datetime | None = None) -> bool:

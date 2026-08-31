@@ -4,10 +4,9 @@ from __future__ import annotations
 import re
 import uuid
 from collections.abc import Sequence
-from typing import Any, override
+from typing import TYPE_CHECKING, Any, override
 
-from app.shows.models import Show
-from app.sources.models import Source
+from plugins.StreamChanneler.base import StreamChannelerBase
 from plugins.StreamChanneler.handlers import (
     EpisodeURLHandler,
     PluginURLHandler,
@@ -16,38 +15,24 @@ from plugins.StreamChanneler.handlers import (
     SourceURLHandler,
     StreamChannelerURLHandler,
 )
-from plugins.StreamChanneler.watch_history import WatchHistoryMixin
-from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import BaseFile
+from plugins.StreamChanneler.initialize import StreamChannelerInitializer
+from plugins.utils.abstract_plugin import (
+    AbstractPlugin,
+    InvalidURLError,
+    URLImportResult,
+)
+
+if TYPE_CHECKING:
+    from app.shows.models import Show
+    from app.sources.models import Source
+    from plugins.utils.base_plugin_v2.files import BaseFile
 
 
 # TODO: Validate
-class StreamChanneler(WatchHistoryMixin, BasePlugin, register=False):
-    # TODO: Validate
-    @classmethod
-    @override
-    def plugin_name(cls) -> str:
-        return "Stream Channeler"
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def favicon_url(cls) -> str | None:
-        return None
+class StreamChanneler(StreamChannelerBase, AbstractPlugin):
+    initializer = StreamChannelerInitializer
 
     # StreamChanneler does not use files, so these abstract methods are no-ops.
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _source_keys(cls) -> tuple[str, ...]:
-        return ()
-
-    # TODO: Validate
-    @override
-    def initialize_sources(self) -> None:
-        return
 
     # TODO: Validate
     @override
@@ -130,7 +115,7 @@ class StreamChanneler(WatchHistoryMixin, BasePlugin, register=False):
     def get_url_handler(self, url: str) -> StreamChannelerURLHandler:
         match = re.match(self.url_regex(), url)
         if not match:
-            msg = f"Invalid {self.plugin_key()} URL: {url}"
+            msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
         handlers: dict[str, type[StreamChannelerURLHandler]] = {
             "plugin": PluginURLHandler,

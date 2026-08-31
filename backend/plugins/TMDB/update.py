@@ -18,12 +18,13 @@ from app.canonical_media.keys import (
 )
 from app.media.media_type import MediaType
 from app.utils import tz_datetime
+from plugins.TMDB.base import TMDBBase
 from plugins.TMDB.episode_groups import show_chosen_group_id
 from plugins.TMDB.files import ShowChanges
-from plugins.TMDB.import_url import ImportURLMixin
 from plugins.TMDB.keys import parse_show_key
 from plugins.TMDB.utils import change_datetime
-from plugins.utils.base_plugin.files import COMPLETED_STATUS, EXTRA_STATUS_FIELD
+from plugins.utils.base_plugin_v2.files import COMPLETED_STATUS, EXTRA_STATUS_FIELD
+from plugins.utils.base_plugin_v2.workers import Updater
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -32,15 +33,15 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class UpdateMixin(ImportURLMixin, register=False):
+class TMDBUpdater(Updater, TMDBBase):
     # TODO: Validate
     @override
-    def update_show(self, show: Show, *, force: bool = False) -> None:
+    def _update_show(self, show: Show, *, force: bool = False) -> None:
         media_type, _ = parse_show_key(show.key)
         if media_type == MediaType.movie:
             # Movie ignores changes because there is only a single file so i is more
             # efficient to directly update it instead of checking for changes.
-            super().update_show(show, force=force)
+            super()._update_show(show, force=force)
         else:
             self._download_and_import_changed_title_files(show.key, show.update_at)
             self._preload_show(show.id, preload_episodes=True).one()

@@ -88,7 +88,7 @@ class EpisodeListOutput(EpisodeOutput):
         validation_alias=AliasPath("season", "show", "source", "plugin_id"),
     )
     plugin_name: str | None = Field(
-        validation_alias=AliasPath("season", "show", "source", "plugin", "name"),
+        validation_alias=AliasPath("season", "show", "source", "plugin", "key"),
     )
 
 

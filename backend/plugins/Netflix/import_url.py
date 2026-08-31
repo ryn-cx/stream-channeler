@@ -4,13 +4,13 @@ from __future__ import annotations
 import re
 from typing import override
 
-from plugins.Netflix.utils import HelperMixin
+from plugins.Netflix.base import NetflixBase
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin.plugin import ReadURLPlugin
+from plugins.utils.base_plugin_v2.workers import URLImporter
 
 
 # TODO: Validate
-class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
+class NetflixImportURL(URLImporter, NetflixBase):
     # https://www.netflix.com/title/80240027
     _TITLE_URL_REGEX = r"\/title\/(?P<title_key>\d+)(?:\/|$)"
 
@@ -29,5 +29,5 @@ class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
             self.raise_if_invalid_file(self.title_file(self._show_key), url)
             return
 
-        msg = f"Invalid {self.plugin_key()} URL: {url}"
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)

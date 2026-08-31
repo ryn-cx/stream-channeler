@@ -42,7 +42,7 @@ plugin_sources_router = APIRouter(
 
 
 SOURCE_EXTRA_COLUMNS: dict[str, Any] = {
-    "plugin_name": Plugin.name,
+    "plugin_name": Plugin.key,
 }
 
 

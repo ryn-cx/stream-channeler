@@ -146,7 +146,7 @@ class TestEpisodeGroupNameMatching(
     def crunchyroll_show(self, session: Session) -> Show:
         """Return the listing Crunchyroll itself carries."""
         for show in self.all_shows(session):
-            if show.source.plugin.key == Crunchyroll.plugin_key():
+            if show.source.plugin.key == Crunchyroll.plugin_name():
                 return show
         message = "The import wrote no Crunchyroll listing to update"
         raise AssertionError(message)
@@ -162,7 +162,7 @@ class TestEpisodeGroupNameMatching(
         return [
             episode
             for episode in self.all_episodes(session)
-            if episode.season.show.source.plugin.key == Crunchyroll.plugin_key()
+            if episode.season.show.source.plugin.key == Crunchyroll.plugin_name()
         ]
 
     # TODO: Validate

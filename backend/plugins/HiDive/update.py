@@ -1,0 +1,21 @@
+# TODO: Validate
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from plugins.HiDive.base import HiDiveBase
+from plugins.utils.base_plugin_v2.workers import Updater
+
+if TYPE_CHECKING:
+    from app.episodes.models import Episode
+    from app.seasons.models import Season
+    from app.shows.models import Show
+    from plugins.utils.base_plugin_v2.base import PluginBase
+
+
+# TODO: Validate
+class HiDiveUpdater(Updater, HiDiveBase):
+    # TODO: Validate
+    def __init__(self, owner: PluginBase, record: Show | Season | Episode) -> None:
+        super().__init__(owner, record)
+        self._set_media_type_from_show(self.show)

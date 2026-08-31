@@ -20,7 +20,7 @@ def required_value[ValueT](value: ValueT | None, description: str) -> ValueT:
 
 
 # TODO: Validate
-class HelperMixin(FileMixin, register=False):
+class HelperMixin(FileMixin):
     """The URLs of a title and the numbers Disney+ only writes into names."""
 
     # TODO: Validate

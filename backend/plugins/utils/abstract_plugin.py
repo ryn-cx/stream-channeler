@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from functools import cache
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
@@ -20,6 +20,7 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.watches.schemas import WatchImportResults
+from plugins.utils.manage_plugins import register_plugins
 
 if TYPE_CHECKING:
     from sqlmodel import Session
@@ -33,6 +34,12 @@ class AbstractPlugin(ABC):
     """Base class every plugin must implement."""
 
     session: Session
+
+    # TODO: Validate
+    def __init_subclass__(cls, *, register: bool = False, **kwargs: Any) -> None:  # noqa: ANN401 - Handed straight to `super`.
+        super().__init_subclass__(**kwargs)
+        if register:
+            register_plugins(cls)
 
     # The favicon shown next to this plugin's name in the UI; None when the plugin
     # has no icon of its own.
@@ -49,7 +56,7 @@ class AbstractPlugin(ABC):
     # TODO: Validate
     @classmethod
     @abstractmethod
-    def plugin_key(cls) -> str:
+    def plugin_name(cls) -> str:
         """Return the unique identifier for the plugin.
 
         Used to match a `Plugin (db)` record with the actual `Plugin (class)`.
@@ -77,11 +84,6 @@ class AbstractPlugin(ABC):
     @classmethod
     def initialize_db(cls, session: Session) -> None:
         cls(session)
-
-    # TODO: Validate
-    @classmethod
-    def create_plugin_db_entry(cls, session: Session) -> None:  # noqa: ARG003
-        return
 
     # TODO: Validate
     @classmethod

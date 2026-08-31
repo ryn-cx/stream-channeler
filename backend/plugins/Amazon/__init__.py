@@ -3,89 +3,17 @@
 
 from __future__ import annotations
 
-from typing import override
-
-from app.shows.models import Show
-from plugins.Amazon.import_url import ImportURLMixin
-from plugins.Amazon.search import SearchMixin
-from plugins.Amazon.source import SourceMixin
-from plugins.Amazon.upsert import UpsertMixin
-from plugins.Amazon.utils import canonical_show_of
-from plugins.utils.abstract_plugin import URLImportResult
+from plugins.Amazon.base import AmazonBase
+from plugins.Amazon.import_url import AmazonImportURL
+from plugins.Amazon.initialize import AmazonInitializer
+from plugins.Amazon.update import AmazonUpdater
+from plugins.utils.abstract_plugin import AbstractPlugin
 
 
 # TODO: Validate
-class Amazon(
-    UpsertMixin,
-    SearchMixin,
-    SourceMixin,
-    ImportURLMixin,
-    register=True,
-):
+class Amazon(AmazonBase, AbstractPlugin, register=True):
     """Amazon Prime Video plugin."""
 
-    # TODO: Validate
-    @classmethod
-    @override
-    def tmdb_provider_names(cls) -> tuple[str, ...]:
-        return ("Amazon Prime Video", "Amazon Video", "Prime Video")
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def favicon_url(cls) -> str:
-        return "https://www.primevideo.com/favicon.ico"
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def domains(cls) -> list[str]:
-        # Prime Video is read out of its own website, and Amazon's is listed as
-        # well because a link to a title on it is a link to the same title.
-        # watch.amazon.com is the domain Amazon writes a share link under, and
-        # is its own entry because only an optional `www.` is read off a domain.
-        return ["primevideo.com", "amazon.com", "watch.amazon.com"]
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def matches_tmdb_provider(cls, provider_name: str) -> bool:
-        if super().matches_tmdb_provider(provider_name):
-            return True
-        return provider_name.casefold().endswith(" amazon channel")
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def plugin_name(cls) -> str:
-        return "Amazon Prime Video"
-
-    # TODO: Validate
-    @override  # Writes the title into every source it can be watched through.
-    def _import_read_url(
-        self,
-        canonical_show: Show | None = None,
-        *,
-        force: bool = False,
-    ) -> list[URLImportResult]:
-        show_key = self._show_key
-        if not force and (shows := self._preload_show(show_key).all()):
-            return [result for show in shows for result in self._import_results(show)]
-
-        _cache = self._download_show_files_and_children(show_key)
-        if canonical_show is None:
-            canonical_show = self._tmdb_show(show_key, force=force)
-            if not force and (shows := self._preload_show(show_key).all()):
-                return [
-                    result for show in shows for result in self._import_results(show)
-                ]
-
-        results: list[URLImportResult] = []
-        for source in self.title_sources(show_key):
-            show = self.upsert_show(source, show_key, canonical_show, force=force)
-            # The title the first listing was found to be linked to is the title
-            # the rest of them are linked to too, so it is handed to them rather
-            # than searched for once for each way of watching the same title.
-            canonical_show = canonical_show or canonical_show_of(show)
-            results += self._import_results(show)
-        return results
+    initializer = AmazonInitializer
+    url_importer = AmazonImportURL
+    updater = AmazonUpdater

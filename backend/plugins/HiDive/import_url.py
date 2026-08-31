@@ -4,14 +4,14 @@ from __future__ import annotations
 import re
 from typing import override
 
+from plugins.HiDive.base import HiDiveBase
 from plugins.HiDive.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
-from plugins.HiDive.utils import HelperMixin
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin.media_type import MediaTypeReadURLPlugin
+from plugins.utils.base_plugin_v2.workers import URLImporter
 
 
 # TODO: Validate
-class ImportURLMixin(HelperMixin, MediaTypeReadURLPlugin, register=False):
+class HiDiveImportURL(URLImporter, HiDiveBase):
     # https://www.hidive.com/series/1286
     _SERIES_URL_REGEX = r"\/series\/(?P<series_key>\d+)(?:\/|$)"
     # https://www.hidive.com/season/20022
@@ -56,5 +56,5 @@ class ImportURLMixin(HelperMixin, MediaTypeReadURLPlugin, register=False):
             self.raise_if_invalid_file(self.vod_file(self._show_key), url)
             return
 
-        msg = f"Invalid {self.plugin_key()} URL: {url}"
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)

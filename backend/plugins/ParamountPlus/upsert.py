@@ -12,11 +12,11 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
-from plugins.ParamountPlus.source import SourceMixin
+from plugins.ParamountPlus.utils import HelperMixin
 
 
 # TODO: Validate
-class UpsertMixin(SourceMixin, register=False):
+class UpsertMixin(HelperMixin):
     """Mixin containing all upsert functions."""
 
     # TODO: Validate

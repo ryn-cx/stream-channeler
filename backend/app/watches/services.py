@@ -181,7 +181,7 @@ def get_watched_episodes(
         params=read_options,
         current_user=user,
         extra_columns={
-            "plugin": col(Plugin.name),
+            "plugin": col(Plugin.key),
             "source": col(Source.name),
             "show": col(Show.name),
             "season": col(Season.name),
@@ -400,7 +400,7 @@ def get_plugins_with_import_watch_history(
         plugin_cls
         for plugin_cls in plugins
         if plugin_cls.implements("import_watch_history")
-        and Plugin.get(session, plugin_cls.plugin_key())
+        and Plugin.get(session, plugin_cls.plugin_name())
     ]
 
 
@@ -409,7 +409,7 @@ def get_installed_plugin(plugin_key: str) -> type[AbstractPlugin] | None:
     """Find an importable plugin class by its plugin_key."""
     import_plugins()
     for plugin_cls in plugins:
-        if plugin_cls.plugin_key() == plugin_key:
+        if plugin_cls.plugin_name() == plugin_key:
             return plugin_cls
     return None
 

@@ -8,7 +8,7 @@ from unittest.mock import patch
 from loguru import logger
 
 from app.config import settings
-from plugins.utils.base_plugin.files import BaseFile
+from plugins.utils.base_plugin_v2.files import BaseFile
 
 
 # TODO: Validate

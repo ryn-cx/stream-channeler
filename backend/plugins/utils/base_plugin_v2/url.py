@@ -1,11 +1,10 @@
 # TODO: Validate
 import re
-from abc import ABC, abstractmethod
 from typing import Any
 
 
 # TODO: Validate
-class URLMixin(ABC):
+class URLMixin:
     # TODO: Validate
     @classmethod
     def is_valid_url_format(cls, url: str) -> bool:
@@ -13,9 +12,9 @@ class URLMixin(ABC):
 
     # TODO: Validate
     @classmethod
-    @abstractmethod
     def url_regex(cls) -> str:
         """Return the regex string to check if a URL is supported by the plugin."""
+        raise NotImplementedError
 
     # TODO: Validate
     def _parse_url(self, url: str) -> Any:  # noqa: ANN401 - TODO: Add a specific return type

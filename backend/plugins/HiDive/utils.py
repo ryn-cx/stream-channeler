@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import override
 from urllib.parse import quote_plus
 
@@ -15,7 +15,6 @@ from diving_board.vod import models as vod_models
 from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.HiDive.constants import (
-    DETAIL_MAX_AGE,
     MOVIE_MEDIA_TYPE,
     RELEASE_DATE_PREFIX,
     SERIES_MEDIA_TYPE,
@@ -66,7 +65,7 @@ def schedule_group_list(
 
 
 # TODO: Validate
-class HelperMixin(FileMixin, register=False):
+class HelperMixin(FileMixin):
     """The URLs of a title and what its files say about it."""
 
     # TODO: Validate
@@ -170,7 +169,7 @@ class HelperMixin(FileMixin, register=False):
     # TODO: Validate
     def _series_identity(self, show_key: str) -> PluginShowIdentity:
         series_file = self.series_file(show_key)
-        series_file.download_if_outdated(tz_datetime.now() - DETAIL_MAX_AGE)
+        series_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         return PluginShowIdentity(
             title=series_file.parsed().metadata.series.title,
             media_type=SERIES_MEDIA_TYPE,
@@ -179,7 +178,7 @@ class HelperMixin(FileMixin, register=False):
     # TODO: Validate
     def _movie_identity(self, show_key: str) -> PluginShowIdentity:
         vod_file = self.vod_file(show_key)
-        vod_file.download_if_outdated(tz_datetime.now() - DETAIL_MAX_AGE)
+        vod_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         hero = vod_hero(vod_file.parsed())
         release_date = self._release_date(hero)
         return PluginShowIdentity(

@@ -953,7 +953,6 @@ export type PluginCreate = {
     extra?: {
         [key: string]: unknown;
     };
-    name?: (string | null);
     version?: (string | null);
 };
 
@@ -980,7 +979,6 @@ export type PluginListOutput = {
     extra?: {
         [key: string]: unknown;
     };
-    name?: (string | null);
     version?: (string | null);
     id: string;
 };
@@ -1022,7 +1020,6 @@ export type PluginOutput = {
     extra?: {
         [key: string]: unknown;
     };
-    name?: (string | null);
     version?: (string | null);
     id: string;
 };
@@ -1079,7 +1076,6 @@ export type PluginUpdate = {
     extra?: {
         [key: string]: unknown;
     };
-    name?: (string | null);
     version?: (string | null);
 };
 

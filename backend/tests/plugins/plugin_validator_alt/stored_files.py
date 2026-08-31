@@ -17,8 +17,9 @@ from app.files.models import File
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.utils import tz_datetime
-from plugins.utils.base_plugin.files import BaseFile
-from plugins.utils.base_plugin.plugin import BasePlugin
+from plugins.utils.abstract_plugin import AbstractPlugin
+from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.files import BaseFile
 from plugins.utils.manage_plugins import import_plugins
 
 IMPORT_TIME = datetime(2026, 1, 1, tzinfo=UTC)
@@ -315,15 +316,15 @@ _GROUPED_DOWNLOAD = "_download_all_episode_files"
 
 
 # TODO: Validate
-def _grouped_download_overrides() -> list[type[BasePlugin]]:
+def _grouped_download_overrides() -> list[type[AbstractPlugin]]:
     """Return every plugin that downloads a season's episodes as a group.
 
     A plugin that keeps the one-file-at-a-time download it inherits is left out,
     since it already reaches for each episode on its own.
     """
     import_plugins()
-    remaining: list[type[BasePlugin]] = [BasePlugin]
-    overrides: list[type[BasePlugin]] = []
+    remaining: list[type[AbstractPlugin]] = [AbstractPlugin]
+    overrides: list[type[AbstractPlugin]] = []
     while remaining:
         plugin_class = remaining.pop()
         remaining.extend(plugin_class.__subclasses__())
@@ -340,7 +341,7 @@ def _serve_before_grouping(
 
     # TODO: Validate
     def _download_all_episode_files(
-        self: BasePlugin,
+        self: PluginBase,
         season: str | Season,
         show: str | Show | None = None,
         preloaded_files: Sequence[File] | None = None,

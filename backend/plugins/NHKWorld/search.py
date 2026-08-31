@@ -9,7 +9,7 @@ from plugins.NHKWorld.files import FileMixin
 
 
 # TODO: Validate
-class SearchMixin(FileMixin, register=False):
+class SearchMixin(FileMixin):
     # TODO: Validate
     @override
     def search(self, query: str) -> str | None:

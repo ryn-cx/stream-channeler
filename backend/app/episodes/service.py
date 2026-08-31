@@ -407,7 +407,7 @@ _UNMATCHED_COLUMNS: dict[str, Any] = {
     "show_name": Show.name,
     "show_year": Show.year,
     "source_name": Source.name,
-    "plugin_name": Plugin.name,
+    "plugin_name": Plugin.key,
     "season_name": Season.name,
     "season_number": Season.season_number,
     "episode_name": Episode.name,
@@ -1414,7 +1414,7 @@ def episode_information(
         canonical_episode_note=episode.canonical_episode_note,
         issue_reports=list_episode_issue_reports(session, episode.id),
         source=_information_side(
-            source.name or source.plugin.name or source.plugin.key,
+            source.name or source.plugin.key,
             episode,
             season,
             show,

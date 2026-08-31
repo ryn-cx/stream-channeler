@@ -1,0 +1,33 @@
+# TODO: Validate
+from __future__ import annotations
+
+from typing import override
+
+from plugins.HiDive.source import SourceMixin
+from plugins.HiDive.upsert import UpsertMixin
+from plugins.utils.base_plugin_v2.search import CatalogueSearchMixin
+
+
+# TODO: Validate
+class HiDiveBase(UpsertMixin, SourceMixin, CatalogueSearchMixin):
+    # TODO: Validate
+    @classmethod
+    @override
+    def plugin_name(cls) -> str:
+        return "HIDIVE"
+
+    # TODO: Don't hardcode the favicon URL
+    # TODO: Validate
+    @classmethod
+    @override
+    def favicon_url(cls) -> str:
+        return (
+            "https://static.diceplatform.com/prod/original/dce.hidive/settings/"
+            "HIDIVE_Logo_iOS_1024x1024_281_29.Y3YMf.vMQ59.png?ts=1727963356"
+        )
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def _domain(cls) -> str:
+        return "hidive.com"

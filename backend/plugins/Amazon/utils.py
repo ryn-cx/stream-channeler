@@ -15,7 +15,7 @@ from plugins.utils.abstract_plugin import InvalidURLError, PluginShowIdentity
 
 
 # TODO: Validate
-class HelperMixin(FileMixin, register=False):
+class HelperMixin(FileMixin):
     """The URLs of a title and the key it is stored under."""
 
     # TODO: Validate

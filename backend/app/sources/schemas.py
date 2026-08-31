@@ -42,7 +42,7 @@ class SourceListPublic(SourcePublic):
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)  # type: ignore[assignment]
 
-    plugin_name: str | None = Field(validation_alias=AliasPath("plugin", "name"))
+    plugin_name: str | None = Field(validation_alias=AliasPath("plugin", "key"))
 
 
 # TODO: Validate

@@ -35,7 +35,7 @@ def _encode_cursor(page: int, offset: int) -> str:
 
 
 # TODO: Validate
-class SearchMixin(LookupMixin, register=False):
+class SearchMixin(LookupMixin):
     # A multi search also returns people, who cannot be added to a channel.
     _SEARCH_MEDIA_TYPES: ClassVar = {
         "movie": "Movie",

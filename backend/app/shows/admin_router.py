@@ -76,7 +76,7 @@ source_shows_router = APIRouter(
 SHOW_EXTRA_COLUMNS: dict[str, Any] = {
     "source_name": Source.name,
     "plugin_id": Source.plugin_id,
-    "plugin_name": Plugin.name,
+    "plugin_name": Plugin.key,
 }
 
 

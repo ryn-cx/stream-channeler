@@ -67,13 +67,13 @@ from plugins.TMDB.keys import (
     parse_season_key,
     parse_show_key,
 )
-from plugins.utils.base_plugin.files import (
+from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.files import (
     BaseFile,
     EndpointFile,
     HTMLFile,
     IntegerEndpointFile,
 )
-from plugins.utils.base_plugin.plugin import BasePlugin
 
 
 @cache
@@ -400,7 +400,7 @@ class TvSearch(EndpointFile[SearchTvModel]):
         return tz_datetime.now() + timedelta(days=30)
 
 
-class FileMixin(BasePlugin, register=False):
+class FileMixin(PluginBase):
     # TODO: Validate
     def multi_search_file(self, query: str, page: int = 1) -> MultiSearch:
         """Return MultiSearch file."""

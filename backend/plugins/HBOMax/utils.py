@@ -9,7 +9,7 @@ from plugins.HBOMax.files import FileMixin
 
 
 # TODO: Validate
-class HelperMixin(FileMixin, register=False):
+class HelperMixin(FileMixin):
     """The URLs of a title and which kind of title is being read."""
 
     # TODO: Validate

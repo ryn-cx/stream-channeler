@@ -18,7 +18,7 @@ def title_key(media_type: MediaType, tmdb_id: int) -> str:
 
 
 # TODO: Validate
-class SourcesMixin(FileMixin, register=False):
+class SourcesMixin(FileMixin):
     """Looking up the sources a title is available on."""
 
     # TODO: Validate

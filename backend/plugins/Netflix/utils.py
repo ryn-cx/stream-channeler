@@ -13,7 +13,7 @@ from plugins.utils.abstract_plugin import PluginShowIdentity
 
 
 # TODO: Validate
-class HelperMixin(FileMixin, register=False):
+class HelperMixin(FileMixin):
     """The URLs of a title and of the episodes under it."""
 
     # TODO: Validate

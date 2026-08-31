@@ -17,7 +17,7 @@ from plugins.HBOMax.utils import HelperMixin
 
 
 # TODO: Validate
-class UpsertMixin(HelperMixin, register=False):
+class UpsertMixin(HelperMixin):
     """Mixin containing all upsert functions."""
 
     # TODO: Validate

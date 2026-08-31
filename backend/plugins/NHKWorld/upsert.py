@@ -12,7 +12,7 @@ from plugins.NHKWorld.files import FileMixin
 
 
 # TODO: Validate
-class UpsertMixin(FileMixin, register=False):
+class UpsertMixin(FileMixin):
     # TODO: Validate
     @override
     def upsert_show(

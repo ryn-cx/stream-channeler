@@ -4,10 +4,10 @@ from typing import override
 
 from app.utils import tz_datetime
 from app.watches.schemas import WatchImportResult
-from plugins.utils.base_plugin.watch_history import (
+from plugins.utils.base_plugin_v2.watch_history import (
     ParsedWatchEntry,
 )
-from plugins.utils.base_plugin.watch_history import (
+from plugins.utils.base_plugin_v2.watch_history import (
     WatchHistoryMixin as BaseWatchHistoryMixin,
 )
 

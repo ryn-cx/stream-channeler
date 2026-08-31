@@ -13,7 +13,7 @@ from app.shows.models import Show
 from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from app.utils import tz_datetime
-from plugins.Amazon.source import SourceMixin
+from plugins.Amazon.utils import HelperMixin
 
 
 # TODO: Validate
@@ -26,7 +26,7 @@ def _parse_date(value: str | None) -> datetime | None:
 
 
 # TODO: Validate
-class UpsertMixin(SourceMixin, register=False):
+class UpsertMixin(HelperMixin):
     """Mixin containing all upsert functions."""
 
     # TODO: Validate

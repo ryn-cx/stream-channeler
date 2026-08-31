@@ -67,7 +67,7 @@ def source_keys(session: Session) -> list[str]:
 def get_or_create_custom_media_source(session: Session) -> Source:
     plugin = Plugin.get(session, CUSTOM_MEDIA_PLUGIN_KEY)
     if plugin is None:
-        plugin = Plugin(key=CUSTOM_MEDIA_PLUGIN_KEY, name=CUSTOM_MEDIA_NAME)
+        plugin = Plugin(key=CUSTOM_MEDIA_PLUGIN_KEY)
         session.add(plugin)
         session.commit()
         session.refresh(plugin)

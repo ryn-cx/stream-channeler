@@ -8,6 +8,7 @@ of them turned up are downloaded at once.
 """
 
 import time
+from datetime import timedelta
 
 from loguru import logger
 from sqlalchemy.orm import contains_eager
@@ -28,7 +29,6 @@ logger = logger.bind(source="updater")
 import_plugins()
 load_models()
 
-UPDATE_INTERVAL_SECONDS = 60.0 * 60.0 * 24
 
 
 # TODO: Validate
@@ -52,11 +52,11 @@ def _belongs_to_a_channel(season: Season) -> bool:
 
 
 # TODO: Validate
-def _outdated_channel_seasons(session: Session) -> list[Season]:
+def _outdated_show_seasons(session: Session) -> list[Season]:
     statement = (
         Season.select_with_plugin()
         .where(
-            col(Plugin.key) == YouTube.plugin_key(),
+            col(Plugin.key) == YouTube.plugin_name(),
             col(Season.update_at).is_not(None),
             col(Season.update_at) < tz_datetime.now(),
             col(Season.deleted_at).is_(None),
@@ -75,40 +75,38 @@ def _outdated_channel_seasons(session: Session) -> list[Season]:
 # TODO: Validate
 def update_youtube() -> None:
     with Session(engine) as session:
-        seasons = _outdated_channel_seasons(session)
+        seasons = _outdated_show_seasons(session)
         if not seasons:
-            logger.info("[YouTube] No outdated channel seasons")
+            logger.info("[YouTube] No outdated show seasons")
             return
 
-        log_msg = f"[YouTube] Found {len(seasons)} outdated channel seasons"
+        log_msg = f"[YouTube] Found {len(seasons)} outdated show seasons"
         logger.info(log_msg)
         plugin = YouTube(session)
         try:
-            plugin.update_channel_seasons(seasons)
+            plugin.update_seasons(seasons)
             session.commit()
-        except Exception as error:
+        except Exception:
             logger.exception("[YouTube] Update run failed")
             session.rollback()
             for season in seasons:
                 session.refresh(season)
-                plugin.on_update_season_failure(season, error)
+                season.update_at = tz_datetime.now() + timedelta(hours=1)
             session.commit()
             return
 
-        log_msg = f"[YouTube] Updated {len(seasons)} channel seasons"
+        log_msg = f"[YouTube] Updated {len(seasons)} show seasons"
         logger.info(log_msg)
 
 
 # TODO: Validate
+UPDATE_INTERVAL = 60.0 * 60.0 * 24
 def run_forever() -> None:
     while True:
-        try:
-            update_youtube()
-        except Exception:
-            logger.exception("[YouTube] Update run crashed")
-        log_msg = f"[YouTube] Next update run in {UPDATE_INTERVAL_SECONDS:.0f}s"
+        update_youtube()
+        log_msg = f"[YouTube] Next update run in {UPDATE_INTERVAL:.0f}s"
         logger.info(log_msg)
-        time.sleep(UPDATE_INTERVAL_SECONDS)
+        time.sleep(UPDATE_INTERVAL)
 
 
 if __name__ == "__main__":

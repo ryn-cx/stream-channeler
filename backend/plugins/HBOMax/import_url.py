@@ -4,14 +4,14 @@ from __future__ import annotations
 import re
 from typing import override
 
+from plugins.HBOMax.base import HBOMaxBase
 from plugins.HBOMax.constants import SLUG_REGEX, UUID_REGEX
-from plugins.HBOMax.utils import HelperMixin
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin.media_type import MediaTypeReadURLPlugin
+from plugins.utils.base_plugin_v2.workers import URLImporter
 
 
 # TODO: Validate
-class ImportURLMixin(HelperMixin, MediaTypeReadURLPlugin, register=False):
+class HBOMaxImportURL(URLImporter, HBOMaxBase):
     # The title slug HBO Max puts in front of the id is decorative, such as in
     # https://www.hbomax.com/movies/the-batman/4ee4f57e-19bd-493f-96f9-ad3e753af981
     _MOVIE_URL_REGEX = rf"\/movies?\/{SLUG_REGEX}(?P<movie_id>{UUID_REGEX})"
@@ -45,5 +45,5 @@ class ImportURLMixin(HelperMixin, MediaTypeReadURLPlugin, register=False):
             self.raise_if_invalid_file(self.show_file(self._show_key), url)
             return
 
-        msg = f"Invalid {self.plugin_key()} URL: {url}"
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)

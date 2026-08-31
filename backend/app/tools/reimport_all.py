@@ -16,7 +16,7 @@ load_models()
 
 # TODO: Validate
 def reimport_all_shows(session: Session) -> None:
-    plugin_classes_by_key = {plugin.plugin_key(): plugin for plugin in plugins}
+    plugin_classes_by_key = {plugin.plugin_name(): plugin for plugin in plugins}
     shows = session.exec(
         Show.select_with_plugin(),
     ).all()

@@ -30,16 +30,7 @@ class TestPrincessMononoke(StandardTestsAlt[Hulu], HuluValidatorAlt):
 
 # TODO: Validate
 class TestInitializeChannel(HuluValidatorAlt):
-    """Test the channels Hulu's catalogue is read into.
-
-    Two genres rather than the ninety-one Hulu lists, one of series and one of
-    films, because what the run can get wrong is which channel a title lands on
-    and both kinds of title reach every channel from two genres as readily as
-    from all of them. Every genre would store a page each and record a dump of
-    the whole catalogue, which is a recording nothing could be read out of.
-    """
-
-    genre_ids = ("anime-tv", "action-movies")
+    """Test the channels Hulu's catalogue is read into."""
 
     # TODO: Validate
     @pytest.mark.enable_socket
@@ -55,7 +46,7 @@ class TestInitializeChannel(HuluValidatorAlt):
         dated by a frozen clock would say it was downloaded on a day it was not.
         """
         try:
-            Hulu(session_with_files).initialize_channel(self.genre_ids)
+            Hulu.initialize_db(session_with_files)
         finally:
             self._export_files_manifest(session_with_files)
 
@@ -63,5 +54,5 @@ class TestInitializeChannel(HuluValidatorAlt):
     def test_initialize_channel(self, session_with_files: Session) -> None:
         """Building the channels leaves the database as it was recorded."""
         with log_stats(self), frozen_clock(self.import_time):
-            Hulu(session_with_files).initialize_channel(self.genre_ids)
+            Hulu.initialize_db(session_with_files)
         self.assert_state(session_with_files, "initialize_channel")

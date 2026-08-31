@@ -35,8 +35,8 @@ from plugins.Amazon.constants import (
     PRIME_BENEFIT_ID,
 )
 from plugins.Amazon.keys import title_key_from_location
-from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import (
+from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.files import (
     BaseFile,
     DownloadedFile,
     EndpointFile,
@@ -691,7 +691,7 @@ class Search(EndpointFile[SearchModel]):
 
 
 # TODO: Validate
-class FileMixin(BasePlugin, register=False):
+class FileMixin(PluginBase):
     """The files a title is read out of."""
 
     # TODO: Validate

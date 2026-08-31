@@ -2,16 +2,19 @@
 from __future__ import annotations
 
 import re
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from app.shows.models import Show
-from plugins.AdultSwim.utils import HelperMixin
+from plugins.AdultSwim.base import AdultSwimBase
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from plugins.utils.base_plugin.plugin import ReadURLPlugin
+from plugins.utils.base_plugin_v2.workers import URLImporter
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 # TODO: Validate
-class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
+class AdultSwimImportURL(URLImporter, AdultSwimBase):
     # https://www.adultswim.com/videos/toonami/the-return-episode-1
     _EPISODE_URL_REGEX = (
         r"\/videos\/(?P<episode_path>[a-z0-9-]+\/[a-z0-9-]+)(?:[\/?#]|$)"
@@ -41,7 +44,7 @@ class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
             self.raise_if_invalid_file(self.show_file(show_key), url)
             self._episode_key = self._episode_key_for_slug(episode_slug)
             if self._episode_key is None:
-                msg = f"Invalid {self.plugin_key()} URL: {url}"
+                msg = f"Invalid {self.plugin_name()} URL: {url}"
                 raise InvalidURLError(msg)
             return
 
@@ -50,7 +53,7 @@ class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
             self.raise_if_invalid_file(self.show_file(self._show_key), url)
             return
 
-        msg = f"Invalid {self.plugin_key()} URL: {url}"
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
     # TODO: Validate
@@ -72,3 +75,37 @@ class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
                 if episode.key == self._episode_key:
                     return [URLImportResult.episode_import_results(show, [episode])]
         return []
+
+    # TODO: Validate
+    @override
+    def import_url(
+        self,
+        canonical_show: Show | None = None,
+        *,
+        force: bool = False,
+    ) -> list[URLImportResult]:
+        show_key = self._show_key
+        shows = self._existing_shows(show_key)
+
+        # If the show already exists and an update is not required just return the
+        # import results.
+        if shows and not force:
+            return self._results_for_shows(shows)
+
+        _cache = self._download_show_files_and_children(show_key)
+        if canonical_show is None:
+            canonical_show = self._tmdb_show(show_key, force=force)
+            shows = self._existing_shows(show_key)
+            if shows and not force:
+                return self._results_for_shows(shows)
+
+        return self._results_for_shows(
+            [
+                self.upsert_show(source, show_key, canonical_show, force=force)
+                for source in self._sources.values()
+            ],
+        )
+
+    # TODO: Validate
+    def _results_for_shows(self, shows: Iterable[Show]) -> list[URLImportResult]:
+        return [result for show in shows for result in self._import_results(show)]

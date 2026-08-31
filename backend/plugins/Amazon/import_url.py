@@ -2,16 +2,21 @@
 from __future__ import annotations
 
 import re
-from typing import override
+from typing import TYPE_CHECKING, override
 
+from plugins.Amazon.base import AmazonBase
 from plugins.Amazon.constants import TITLE_KEY_REGEX
-from plugins.Amazon.utils import HelperMixin
+from plugins.Amazon.utils import canonical_show_of
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin.plugin import ReadURLPlugin
+from plugins.utils.base_plugin_v2.workers import URLImporter
+
+if TYPE_CHECKING:
+    from app.shows.models import Show
+    from plugins.utils.abstract_plugin import URLImportResult
 
 
 # TODO: Validate
-class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
+class AmazonImportURL(URLImporter, AmazonBase):
     # https://watch.amazon.com/detail?gti=amzn1.dv.gti.92ad2133-d35e-1cb1-5d8e-f7b122a68228
     # The id Amazon writes into a share link, which names the title in a
     # different id space to the one its own pages are keyed by.
@@ -58,7 +63,7 @@ class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
             title_key = None
 
         if title_key is None:
-            msg = f"Invalid {self.plugin_key()} URL: {url}"
+            msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
 
         detail_file = self.detail_file(title_key)
@@ -68,3 +73,33 @@ class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
             raise InvalidURLError(msg)
 
         self._show_key = self.show_key_from_title_key(title_key)
+
+    # TODO: Validate
+    @override  # Writes the title into every source it can be watched through.
+    def import_url(
+        self,
+        canonical_show: Show | None = None,
+        *,
+        force: bool = False,
+    ) -> list[URLImportResult]:
+        show_key = self._show_key
+        if not force and (shows := self._preload_show(show_key).all()):
+            return [result for show in shows for result in self._import_results(show)]
+
+        _cache = self._download_show_files_and_children(show_key)
+        if canonical_show is None:
+            canonical_show = self._tmdb_show(show_key, force=force)
+            if not force and (shows := self._preload_show(show_key).all()):
+                return [
+                    result for show in shows for result in self._import_results(show)
+                ]
+
+        results: list[URLImportResult] = []
+        for source in self.title_sources(show_key):
+            show = self.upsert_show(source, show_key, canonical_show, force=force)
+            # The title the first listing was found to be linked to is the title
+            # the rest of them are linked to too, so it is handed to them rather
+            # than searched for once for each way of watching the same title.
+            canonical_show = canonical_show or canonical_show_of(show)
+            results += self._import_results(show)
+        return results

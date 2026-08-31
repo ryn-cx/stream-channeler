@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from diving_board.schedule import models as schedule_models
 from loguru import logger
@@ -18,7 +18,12 @@ from app.sources.models import Source
 from app.users.service import get_or_create_plugin_user
 from plugins.HiDive.files import Schedule
 from plugins.HiDive.utils import HelperMixin, schedule_group_list
-from plugins.utils.base_plugin.files import COMPLETED_STATUS, EXTRA_STATUS_FIELD
+from plugins.utils.base_plugin_v2.files import COMPLETED_STATUS, EXTRA_STATUS_FIELD
+
+if TYPE_CHECKING:
+    from sqlmodel import Session
+
+    from app.plugins.models import Plugin
 
 # TODO: Add support for individual episodes of a series.
 
@@ -54,7 +59,7 @@ def _card_show_name(text: str) -> str:
 
 
 # TODO: Validate
-class SourceMixin(HelperMixin, register=False):
+class SourceMixin(HelperMixin):
     """Reading the schedule for what the source's titles are about to gain."""
 
     # TODO: Validate
@@ -66,7 +71,7 @@ class SourceMixin(HelperMixin, register=False):
         new_schedule_file = self.schedule_file(source.data_timestamp)
         new_schedule_file.download_if_outdated(source.update_at)
         self._process_new_schedule_files(source)
-        self._upsert_source()
+        self.upsert_source(source.key)
 
     # TODO: Validate
     def _process_new_schedule_files(self, source: Source) -> None:
@@ -158,15 +163,26 @@ class SourceMixin(HelperMixin, register=False):
         return channel
 
     # TODO: Validate
-    def _upsert_source(self) -> Source:
+    @classmethod
+    @override
+    def _upsert_source(
+        cls,
+        session: Session,
+        plugin: Plugin,
+        source_key: str,
+    ) -> Source:
+        return cls(session).upsert_source(source_key)
+
+    # TODO: Validate
+    def upsert_source(self, source_key: str) -> Source:
         if not (latest_schedule_file := self.get_latest_schedule_file()):
             latest_schedule_file = self._initial_file(Schedule)
             latest_schedule_file.download_if_outdated()
         data_timestamp = latest_schedule_file.data_timestamp
 
-        source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
+        source = Source.get_from_memory(self.session, self.plugin, source_key)
         return Source(
-            key=self.plugin_key(),
+            key=source_key,
             name=self.plugin_name(),
             favicon_url=self.favicon_url(),
             update_at=data_timestamp + timedelta(days=1),

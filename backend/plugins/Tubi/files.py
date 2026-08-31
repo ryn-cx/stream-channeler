@@ -12,8 +12,8 @@ from plugi.content.models import Child1 as EpisodeChild
 from plugi.content.models import ContentModel
 from plugi.exceptions import ContentNotFoundError
 
-from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import BaseFile, EndpointFile
+from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -45,7 +45,7 @@ class ContentFile(EndpointFile[ContentModel]):
 
 
 # TODO: Validate
-class FileMixin(BasePlugin, register=False):
+class FileMixin(PluginBase):
     """The files a title is read out of."""
 
     # TODO: Validate

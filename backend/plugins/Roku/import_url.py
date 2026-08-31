@@ -4,15 +4,15 @@ from __future__ import annotations
 import re
 from typing import override
 
+from plugins.Roku.base import RokuBase
 from plugins.Roku.constants import CONTENT_ID_REGEX
 from plugins.Roku.files import content_id
-from plugins.Roku.utils import HelperMixin
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin.plugin import ReadURLPlugin
+from plugins.utils.base_plugin_v2.workers import URLImporter
 
 
 # TODO: Validate
-class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
+class RokuImportURL(URLImporter, RokuBase):
     # https://therokuchannel.roku.com/details/db1607f1cff2522bb795382bb4b5bcae
     # The title slug after the content id is decorative, only the id matters.
     _DETAILS_URL_REGEX = (
@@ -43,5 +43,5 @@ class ImportURLMixin(HelperMixin, ReadURLPlugin, register=False):
                     self._show_key = key
                 return
 
-        msg = f"Invalid {self.plugin_key()} URL: {url}"
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)

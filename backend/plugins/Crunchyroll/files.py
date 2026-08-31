@@ -46,8 +46,8 @@ from plugins.Crunchyroll.constants import (
     season_is_music,
     show_is_an_artist,
 )
-from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import BaseFile, EndpointFile, PagedEndpointFile
+from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile, PagedEndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -170,7 +170,7 @@ class Search(EndpointFile[SearchModel]):
 
 
 # TODO: Validate
-class FileMixin(BasePlugin, register=False):
+class FileMixin(PluginBase):
     @classmethod
     @override
     def _plugin_wide_files(cls) -> tuple[type[BaseFile[Any]], ...]:

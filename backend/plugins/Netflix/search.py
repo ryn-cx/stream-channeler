@@ -11,7 +11,7 @@ from plugins.Netflix.utils import HelperMixin
 
 
 # TODO: Validate
-class SearchMixin(HelperMixin, register=False):
+class SearchMixin(HelperMixin):
     """Searching Netflix."""
 
     # Netflix tags each search result with the media type of its title.

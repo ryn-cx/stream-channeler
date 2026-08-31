@@ -17,14 +17,14 @@ from app.utils import tz_datetime
 from plugins.Crunchyroll.constants import MUSIC_SOURCE, VIDEO_SOURCE
 from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries, chirashi
 from plugins.Crunchyroll.upsert import UpsertMixin
-from plugins.utils.base_plugin.files import (
+from plugins.utils.base_plugin_v2.files import (
     COMPLETED_STATUS,
     EXTRA_STATUS_FIELD,
 )
 
 
 # TODO: Validate
-class UpdateMixin(UpsertMixin, register=False):
+class UpdateMixin(UpsertMixin):
     # TODO: Validate
     @override
     def update_source(self, source: Source) -> None:
@@ -42,7 +42,7 @@ class UpdateMixin(UpsertMixin, register=False):
             raise ValueError(msg)
         self.browse_series_file(source.data_timestamp).download_if_outdated()
         self._process_new_browse_files(source)
-        self._upsert_anime_source()
+        self.upsert_anime_source()
 
     # TODO: Validate
     def _update_music_source(self, source: Source) -> None:
@@ -50,7 +50,7 @@ class UpdateMixin(UpsertMixin, register=False):
         logger.info("Checking Crunchyroll music for new releases")
         self.browse_music_file(tz_datetime.now()).download_if_outdated()
         self._process_new_music_browse_files(source)
-        self._upsert_music_source()
+        self.upsert_music_source()
 
     # TODO: Validate
     def _process_new_browse_files(self, source: Source) -> None:

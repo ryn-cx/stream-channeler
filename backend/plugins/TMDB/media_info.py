@@ -35,7 +35,7 @@ from plugins.utils.abstract_plugin import (
     PluginMediaInfo,
     PluginWatchProviderItem,
 )
-from plugins.utils.base_plugin.plugin import BasePlugin
+from plugins.utils.base_plugin_v2.base import PluginBase
 from plugins.utils.manage_plugins import sorted_plugins
 
 type WatchProviders = MovieWatchProvidersModel | TvSeriesWatchProvidersModel
@@ -64,7 +64,7 @@ def parse_media_identifier(identifier: str) -> tuple[MediaType, int]:
 
 
 # TODO: Validate
-class MediaInfoMixin(LookupMixin, register=False):
+class MediaInfoMixin(LookupMixin):
     # TODO: Validate
     @override
     def media_info(self, media_identifier: str) -> PluginMediaInfo | None:
@@ -149,9 +149,9 @@ def streaming_providers(
 
 
 # TODO: Validate
-def plugin_for_tmdb_name(provider_name: str) -> type[BasePlugin] | None:
+def plugin_for_tmdb_name(provider_name: str) -> type[PluginBase] | None:
     for plugin_class in sorted_plugins():
-        if issubclass(plugin_class, BasePlugin) and plugin_class.matches_tmdb_provider(
+        if issubclass(plugin_class, PluginBase) and plugin_class.matches_tmdb_provider(
             provider_name,
         ):
             return plugin_class
@@ -175,7 +175,7 @@ def _watch_provider_items(
             PluginWatchProviderItem(
                 name=provider.provider_name,
                 icon_url=logo_image_url(provider.logo_path),
-                plugin_key=plugin_class.plugin_key() if plugin_class else None,
+                plugin_key=plugin_class.plugin_name() if plugin_class else None,
                 search_url=search_url,
             ),
         )

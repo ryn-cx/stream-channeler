@@ -30,7 +30,7 @@ SEASON_EXTRA_COLUMNS: dict[str, Any] = {
     "source_id": Show.source_id,
     "source_name": Source.name,
     "plugin_id": Source.plugin_id,
-    "plugin_name": Plugin.name,
+    "plugin_name": Plugin.key,
 }
 
 
@@ -68,7 +68,7 @@ def season_information(session: Session, season: Season) -> SeasonInformationOut
     return SeasonInformationOutput(
         issue_reports=list_season_issue_reports(session, season.id),
         source=_information_side(
-            source.name or source.plugin.name or source.plugin.key,
+            source.name or source.plugin.key,
             season,
             show,
         ),

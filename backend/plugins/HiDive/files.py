@@ -27,13 +27,13 @@ from diving_board.vod import models as vod_models
 
 from app.files.models import File
 from app.utils import tz_datetime
-from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import (
+from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.files import (
     BaseFile,
     EndpointFile,
     PagedEndpointFile,
 )
-from plugins.utils.base_plugin.media_type import MediaTypeMixin
+from plugins.utils.base_plugin_v2.media_type import MediaTypeMixin
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -155,7 +155,7 @@ class Search(EndpointFile[search_models.SearchModel]):
 
 
 # TODO: Validate
-class FileMixin(MediaTypeMixin, BasePlugin, register=False):
+class FileMixin(MediaTypeMixin, PluginBase):
     """The files a title is read out of."""
 
     # TODO: Validate

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import timedelta
 from pathlib import Path
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from loguru import logger
 from sqlmodel import select
@@ -15,14 +15,19 @@ from app.shows.models import Show
 from app.sources.models import Source
 from app.users.service import get_or_create_plugin_user
 from plugins.NHKWorld.files import FileMixin, NewVideoEpisodes
-from plugins.utils.base_plugin.files import (
+from plugins.utils.base_plugin_v2.files import (
     COMPLETED_STATUS,
     EXTRA_STATUS_FIELD,
 )
 
+if TYPE_CHECKING:
+    from sqlmodel import Session
+
+    from app.plugins.models import Plugin
+
 
 # TODO: Validate
-class SourceMixin(FileMixin, register=False):
+class SourceMixin(FileMixin):
     # TODO: Validate
     @override
     def update_source(self, source: Source) -> None:
@@ -32,7 +37,7 @@ class SourceMixin(FileMixin, register=False):
         new_feed_file = self.new_video_episodes_file(source.data_timestamp)
         new_feed_file.download_if_outdated(source.update_at)
         self._process_new_episodes_files(source)
-        self._upsert_source()
+        self.upsert_source(source.key)
 
     # TODO: Validate
     def _process_new_episodes_files(self, source: Source) -> None:
@@ -110,14 +115,25 @@ class SourceMixin(FileMixin, register=False):
         return channel
 
     # TODO: Validate
-    def _upsert_source(self) -> Source:
+    @classmethod
+    @override
+    def _upsert_source(
+        cls,
+        session: Session,
+        plugin: Plugin,
+        source_key: str,
+    ) -> Source:
+        return cls(session).upsert_source(source_key)
+
+    # TODO: Validate
+    def upsert_source(self, source_key: str) -> Source:
         if not (latest_feed_file := self.latest_new_video_episodes_file()):
             latest_feed_file = self._initial_file(NewVideoEpisodes)
             latest_feed_file.download_if_outdated()
         data_timestamp = latest_feed_file.data_timestamp
-        source = Source.get_from_memory(self.session, self.plugin, self.plugin_key())
+        source = Source.get_from_memory(self.session, self.plugin, source_key)
         return Source(
-            key=self.plugin_key(),
+            key=source_key,
             name=self.plugin_name(),
             favicon_url=self.favicon_url(),
             update_at=data_timestamp + timedelta(days=1),

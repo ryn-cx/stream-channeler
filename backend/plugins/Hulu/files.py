@@ -2,6 +2,7 @@
 """The files Hulu is read out of."""
 
 import json
+from abc import abstractmethod
 from collections.abc import Sequence
 from datetime import datetime, timedelta
 from functools import cache
@@ -32,11 +33,11 @@ from wholoo.tv import TV
 from wholoo.tv.models import TVModel
 
 from app.plugins.models import Plugin
+from app.shows.models import Show
 from app.utils import tz_datetime
-from plugins.Hulu.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
-from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import BaseFile, EndpointFile
-from plugins.utils.base_plugin.media_type import MediaTypeMixin
+from plugins.Hulu.constants import HuluMediaType
+from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -220,14 +221,14 @@ class GenrePage(EndpointFile[GenreModel]):
 
 
 # TODO: Validate
-class FileMixin(MediaTypeMixin, BasePlugin, register=False):
+class FileMixin(PluginBase):
     """The files a title is read out of."""
 
+    _media_type: HuluMediaType
+
     # TODO: Validate
-    @classmethod
-    @override
-    def _plugin_wide_files(cls) -> tuple[type[BaseFile[Any]], ...]:
-        return (GenresPage, GenrePage)
+    @abstractmethod
+    def _set_media_type_from_show(self, show: Show) -> None: ...
 
     # TODO: Validate
     def genres_page_file(self) -> GenresPage:
@@ -266,11 +267,7 @@ class FileMixin(MediaTypeMixin, BasePlugin, register=False):
 
     # TODO: Validate
     def _is_movie(self) -> bool:
-        if self._media_type not in (MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE):
-            msg = f"Invalid media type: {self._media_type}"
-            raise RuntimeError(msg)
-
-        return self._media_type == MOVIE_MEDIA_TYPE
+        return self._media_type == HuluMediaType.MOVIE
 
     # TODO: Validate
     @staticmethod

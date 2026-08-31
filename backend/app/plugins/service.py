@@ -25,7 +25,7 @@ def _plugin_supporting(
 ) -> AbstractPlugin:
     """Return the plugin `plugin_key` names, refusing one that cannot do `capability`."""
     for plugin_cls in sorted_plugins():
-        if plugin_cls.plugin_key() == plugin_key:
+        if plugin_cls.plugin_name() == plugin_key:
             if not plugin_cls.implements(capability):
                 raise HTTPException(status_code=422, detail=refusal)
             return plugin_cls
@@ -40,7 +40,7 @@ def import_watch_history_information() -> list[PluginImportWatchHistoryInformati
     """Return information about all plugins that support importing watch history."""
     return [
         PluginImportWatchHistoryInformation(
-            plugin_key=plugin_cls.plugin_key(),
+            plugin_key=plugin_cls.plugin_name(),
             file_extension=plugin_cls.import_watch_history_file_extension,
             instructions=plugin_cls.import_watch_history_instructions(),
         )
@@ -59,7 +59,7 @@ def import_url_information() -> list[PluginImportURLInformation]:
     """
     return [
         PluginImportURLInformation(
-            name=plugin_cls.plugin_key(),
+            name=plugin_cls.plugin_name(),
             instructions=plugin_cls.import_url_instructions(),
             favicon_url=plugin_cls.favicon_url(),
         )
@@ -73,7 +73,7 @@ def match_url(url: str) -> PluginURLMatch:
     """Return whether any plugin can import `url`."""
     for plugin_cls in sorted_plugins():
         if plugin_cls.implements("import_url") and plugin_cls.is_valid_url_format(url):
-            return PluginURLMatch(matched=True, plugin_key=plugin_cls.plugin_key())
+            return PluginURLMatch(matched=True, plugin_key=plugin_cls.plugin_name())
     return PluginURLMatch(matched=False)
 
 
@@ -82,16 +82,16 @@ def search_information() -> list[PluginSearchInformation]:
     """Return every plugin a `User` may search, in-app ones ahead of manual ones."""
     return [
         PluginSearchInformation(
-            plugin_key=plugin_cls.plugin_key(),
-            name=plugin_cls.plugin_key(),
+            plugin_key=plugin_cls.plugin_name(),
+            name=plugin_cls.plugin_name(),
             favicon_url=plugin_cls.favicon_url(),
         )
         for plugin_cls in sorted_plugins()
         if plugin_cls.implements("in_app_search")
     ] + [
         PluginSearchInformation(
-            plugin_key=plugin_cls.plugin_key(),
-            name=plugin_cls.plugin_key(),
+            plugin_key=plugin_cls.plugin_name(),
+            name=plugin_cls.plugin_name(),
             manual_search_only=True,
             favicon_url=plugin_cls.favicon_url(),
         )

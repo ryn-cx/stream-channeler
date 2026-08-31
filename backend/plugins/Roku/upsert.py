@@ -13,11 +13,11 @@ from app.shows.models import Show
 from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from plugins.Roku.files import content_id
-from plugins.Roku.source import SourceMixin
+from plugins.Roku.utils import HelperMixin
 
 
 # TODO: Validate
-class UpsertMixin(SourceMixin, register=False):
+class UpsertMixin(HelperMixin):
     """Mixin containing all upsert functions."""
 
     # TODO: Validate

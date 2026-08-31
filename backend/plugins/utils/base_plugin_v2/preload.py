@@ -1,6 +1,6 @@
 # TODO: Validate
 import uuid
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections.abc import Callable
 from datetime import datetime
 from typing import Any
@@ -15,7 +15,7 @@ from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from plugins.utils.base_plugin.files import (
+from plugins.utils.base_plugin_v2.files import (
     COMPLETED_STATUS,
     EXTRA_STATUS_FIELD,
     BaseFile,
@@ -25,11 +25,7 @@ from plugins.utils.base_plugin.files import (
 # TODO: Validate
 class PreloadMixin(ABC):
     session: Session
-
-    # TODO: Validate
-    @property
-    @abstractmethod
-    def plugin(self) -> Plugin: ...
+    plugin: Plugin
 
     # TODO: Validate
     def _preload_sources(

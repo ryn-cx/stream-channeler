@@ -10,29 +10,23 @@ imports the URLs it gives on whichever scraper accepts them.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, override
+from typing import TYPE_CHECKING, Any, override
 
-from app.shows.models import Show
-from app.sources.models import Source
-from plugins.utils.base_plugin.files import BaseFile
-from plugins.WatchMode.sources import SourcesMixin
+from plugins.utils.abstract_plugin import AbstractPlugin
+from plugins.WatchMode.base import WatchModeBase
+from plugins.WatchMode.initialize import WatchModeInitializer
+
+if TYPE_CHECKING:
+    from app.shows.models import Show
+    from app.sources.models import Source
+    from plugins.utils.base_plugin_v2.files import BaseFile
 
 
 # TODO: Validate
-class WatchMode(SourcesMixin, register=True):
+class WatchMode(WatchModeBase, AbstractPlugin, register=True):
     """Watchmode plugin."""
 
-    # TODO: Validate
-    @classmethod
-    @override
-    def favicon_url(cls) -> str:
-        return "https://www.watchmode.com/favicon.ico"
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def plugin_name(cls) -> str:
-        return "Watchmode"
+    initializer = WatchModeInitializer
 
     # Watchmode stores no media of its own, so these abstract methods are no-ops
     # or raise. Nothing is meant to reach the ones that raise; they are here to
@@ -43,11 +37,6 @@ class WatchMode(SourcesMixin, register=True):
     def url_regex(cls) -> str:
         msg = "No URL is imported from Watchmode."
         raise NotImplementedError(msg)
-
-    # TODO: Validate
-    @override
-    def initialize_sources(self) -> None:
-        return
 
     # TODO: Validate
     @override

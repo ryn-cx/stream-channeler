@@ -17,7 +17,7 @@ from plugins.Crunchyroll.files import FileMixin
 
 
 # TODO: Validate
-class HelperMixin(FileMixin, register=False):
+class HelperMixin(FileMixin):
     @property
     def video_source(self) -> Source:
         """Return the plugin's video `Source`.

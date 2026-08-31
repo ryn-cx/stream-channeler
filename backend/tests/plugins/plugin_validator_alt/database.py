@@ -23,9 +23,8 @@ from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from plugins.utils.abstract_plugin import URLImportResult
-from plugins.utils.base_plugin.files import BaseFile
-from plugins.utils.base_plugin.plugin import BasePlugin
+from plugins.utils.abstract_plugin import AbstractPlugin, URLImportResult
+from plugins.utils.base_plugin_v2.files import BaseFile
 from plugins.utils.manage_plugins import import_plugins, plugins
 from tests.conftest import init_db, savepoint_session, test_engine
 from tests.plugins.frozen_clock import frozen_clock
@@ -64,7 +63,7 @@ def date_downloads_at_import_time(import_time: datetime) -> Generator[None]:
 
 
 # TODO: Validate
-def plugin_class_for(plugin_key: str) -> type[BasePlugin]:
+def plugin_class_for(plugin_key: str) -> type[AbstractPlugin]:
     """Return the plugin class for a plugin key.
 
     Unregistered plugins are included because a registered plugin can create
@@ -72,21 +71,21 @@ def plugin_class_for(plugin_key: str) -> type[BasePlugin]:
     """
     import_plugins()
     for plugin_class in plugins:
-        if plugin_class.plugin_key() == plugin_key:
-            return plugin_class  # type: ignore[return-value]
+        if plugin_class.plugin_name() == plugin_key:
+            return plugin_class
 
-    remaining: list[type[BasePlugin]] = [BasePlugin]
+    remaining: list[type[AbstractPlugin]] = [AbstractPlugin]
     while remaining:
         plugin_class = remaining.pop()
         remaining.extend(plugin_class.__subclasses__())
-        if plugin_class.plugin_key() == plugin_key:
+        if plugin_class.plugin_name() == plugin_key:
             return plugin_class
     msg = f"No plugin found for key {plugin_key!r}"
     raise ValueError(msg)
 
 
 # TODO: Validate
-class DatabaseMixinAlt[PluginT: BasePlugin]:
+class DatabaseMixinAlt[PluginT: AbstractPlugin]:
     """Everything a test needs in place before it can dump anything."""
 
     plugin_class: type[PluginT]
@@ -112,7 +111,8 @@ class DatabaseMixinAlt[PluginT: BasePlugin]:
             formatted = url.format(**class_attrs)
             if formatted.startswith("/"):
                 variants += [
-                    domain + formatted for domain in self.plugin_class.domains()
+                    domain + formatted
+                    for domain in self.plugin_class.domains()  # type: ignore[attr-defined]
                 ]
             else:
                 variants.append(formatted)
@@ -135,7 +135,7 @@ class DatabaseMixinAlt[PluginT: BasePlugin]:
         file_name = test_class.__module__.rsplit(".", maxsplit=1)[-1]
         return (
             TEST_FILES_FOLDER
-            / self.plugin_class.plugin_key()
+            / self.plugin_class.plugin_name()
             / file_name
             / test_class.__name__
         )
@@ -240,7 +240,7 @@ class DatabaseMixinAlt[PluginT: BasePlugin]:
         self,
         session: Session,
         entity: Plugin | Source | Show | Season | Episode,
-    ) -> BasePlugin:
+    ) -> AbstractPlugin:
         """Return the plugin that reads and writes `entity`.
 
         An import can store a record under another plugin - TMDB keeps a title
@@ -253,9 +253,9 @@ class DatabaseMixinAlt[PluginT: BasePlugin]:
         through.
         """
         plugin_key = self._owning_plugin_key(entity)
-        if plugin_key == self.plugin_class.plugin_key():
+        if plugin_key == self.plugin_class.plugin_name():
             return self.imported_plugin
-        built: dict[str, BasePlugin] = session.info.setdefault("owning_plugins", {})
+        built: dict[str, AbstractPlugin] = session.info.setdefault("owning_plugins", {})
         if plugin_key not in built:
             built[plugin_key] = plugin_class_for(plugin_key)(session)
         return built[plugin_key]
@@ -264,7 +264,7 @@ class DatabaseMixinAlt[PluginT: BasePlugin]:
     def select_plugin_with_children(self, session: Session) -> Plugin:
         """Return the plugin under test with all children selectinloaded."""
         statement = self._plugin_with_children_statement().where(
-            Plugin.key == self.plugin_class.plugin_key(),
+            Plugin.key == self.plugin_class.plugin_name(),
         )
         return session.exec(statement).one()
 
@@ -344,12 +344,13 @@ class DatabaseMixinAlt[PluginT: BasePlugin]:
         # fallback files), so create a record for each owning plugin. Sources are
         # only initialized for the plugin under test, at the end.
         plugin_keys = {plugin_key for plugin_key, _key, _path in stored}
-        plugin_keys.add(self.plugin_class.plugin_key())
+        plugin_keys.add(self.plugin_class.plugin_name())
 
         plugin_records: dict[str, Plugin] = {}
         for plugin_key in plugin_keys:
-            plugin_class_for(plugin_key).create_plugin_db_entry(session)
-            plugin_records[plugin_key] = Plugin.get_one(session, plugin_key)
+            plugin_records[plugin_key] = Plugin(
+                key=plugin_key,
+            ).upsert_and_set_update_at(session, Plugin.get(session, plugin_key))
 
         existing_keys = {
             plugin_key: {file.key for file in record.files}

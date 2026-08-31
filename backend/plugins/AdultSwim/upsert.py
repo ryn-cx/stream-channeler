@@ -1,7 +1,7 @@
 # TODO: Validate
 from __future__ import annotations
 
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from pools_closed.show.models import Season as SeasonData
 from pools_closed.show.models import ShowModel
@@ -13,12 +13,27 @@ from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from plugins.AdultSwim.utils import HelperMixin, source_requires_auth
 
+if TYPE_CHECKING:
+    from sqlmodel import Session
+
+    from app.plugins.models import Plugin
+
 
 # TODO: Validate
-class UpsertMixin(HelperMixin, register=False):
+class UpsertMixin(HelperMixin):
     # TODO: Validate
+    @classmethod
     @override
-    def _upsert_source(self, source_key: str) -> Source:
+    def _upsert_source(
+        cls,
+        session: Session,
+        plugin: Plugin,
+        source_key: str,
+    ) -> Source:
+        return cls(session).upsert_source(source_key)
+
+    # TODO: Validate
+    def upsert_source(self, source_key: str) -> Source:
         shows_file = self.shows_file()
         shows_file.download_if_outdated()
 

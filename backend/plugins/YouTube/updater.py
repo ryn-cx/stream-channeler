@@ -1,114 +1,114 @@
 # TODO: Validate
-"""Updating every outdated channel season of a run together."""
+"""Updating every outdated show season of a run together."""
 
 from __future__ import annotations
 
+from contextlib import suppress
+from datetime import timedelta
 from typing import TYPE_CHECKING
 
 from loguru import logger
+from not_yt_dlapi.exceptions import (
+    ChannelFeedNotFoundError,
+    PlaylistFeedNotFoundError,
+)
+from sqlmodel import col
 
+from app.plugins.models import Plugin
+from app.seasons.models import Season
 from app.utils import tz_datetime
-from plugins.YouTube.constants import FEED_UPDATE_DELAY
+from plugins.utils.base_plugin_v2.files import EXTRA_STATUS_FIELD
 from plugins.YouTube.files import FileMixin
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from app.seasons.models import Season
-    from app.shows.models import Show
+    from plugins.YouTube.files import PlaylistFeed
+
+PENDING_UPDATE_STATUS = "Pending update"
 
 
 # TODO: Validate
-class UpdaterMixin(FileMixin, register=False):
-    """Updating channel seasons in one pass rather than one at a time."""
+class UpdaterMixin(FileMixin):
+    def update_seasons(self, seasons: Sequence[Season]) -> None:
+        """Update multiple seasons at once to reduce the number of API calls."""
+        for season in seasons:
+            self.check_feed_for_new_files(season)
+            self.session.commit()
+
+        self._update_marked_seasons()
 
     # TODO: Validate
-    def update_channel_seasons(self, seasons: Sequence[Season]) -> None:
-        """Bring every outdated channel season up to date together.
-
-        Each season's feed is read first, because a feed says whether anything
-        was added without spending quota on the playlist itself. Only the
-        seasons the feed named something new for are read again, and the videos
-        every one of them turned up are downloaded in a single batch, so a run
-        covering fifty playlists costs the same requests as the videos would
-        have cost had they all been in one.
-        """
-        seasons_by_show: dict[Show, list[Season]] = {}
-        for season in seasons:
-            seasons_by_show.setdefault(season.show, []).append(season)
+    def _update_marked_seasons(self) -> None:
+        seasons = self._season_with_new_episodes_available()
 
         video_keys: list[str] = []
-        views: dict[Show, UpdaterMixin] = {}
-        for show, show_seasons in seasons_by_show.items():
-            view = self._fresh()
-            changed_seasons = [
-                season
-                for season in show_seasons
-                if view._refresh_season_listing(season)  # noqa: SLF001 - Another view of this plugin.
-            ]
-            if not changed_seasons:
-                continue
-            views[show] = view
-            season_keys = [season.key for season in changed_seasons]
-            _cache = view._preload_all_episode_files(season_keys, show.key)  # noqa: SLF001 - Another view of this plugin.
-            for season_key in season_keys:
-                video_keys.extend(
-                    key
-                    for key in view._episode_keys_from_file(season_key, show.key)  # noqa: SLF001 - Another view of this plugin.
-                    if key not in video_keys
-                )
+        for season in seasons:
+            video_keys.extend(
+                key
+                for key in self._episode_keys_from_file(season.key, season.show.key)
+                if key not in video_keys
+            )
 
-        if not views:
-            return
+        self._batch_download_missing_videos(video_keys)
 
-        self._batch_download_videos(video_keys)
-
-        for show, view in views.items():
-            view._update_and_upsert_show(show)  # noqa: SLF001 - Another view of this plugin.
+        for season in seasons:
+            self._update_and_upsert_show(season.show)
+            season.extra = {
+                field: value
+                for field, value in season.extra.items()
+                if field != EXTRA_STATUS_FIELD
+            }
+            self.session.commit()
+            self.clear_file_cache()
 
     # TODO: Validate
-    def _refresh_season_listing(self, season: Season) -> bool:
-        """Read a season's feed, and its listing again when the feed named a video.
+    def _season_with_new_episodes_available(self) -> list[Season]:
+        statement = Season.select_with_plugin_eager().where(
+            col(Plugin.key) == self.plugin_name(),
+            col(Season.deleted_at).is_(None),
+            col(Season.extra)[EXTRA_STATUS_FIELD].astext == PENDING_UPDATE_STATUS,
+        )
+        return list(self.session.exec(statement).unique().all())
 
-        Returns whether the listing was read again, which is what decides
-        whether the season's videos are part of the run's batch.
-        """
+    # TODO: Validate
+    def check_feed_for_new_files(self, season: Season) -> None:
         playlist_feed = self.playlist_feed_file(season.key)
-        # Without a stored feed there is nothing to compare the download against, so
-        # this run only stores the feed and the next one checks it for new videos.
-        has_stored_feed = bool(
-            not playlist_feed.is_outdated() and playlist_feed.database_record.content,
-        )
-        old_video_ids: set[str] = (
-            set(playlist_feed.video_ids()) if has_stored_feed else set()
-        )
-        playlist_feed.download_if_outdated(season.update_at)
 
-        # A failed fetch leaves the stored feed untouched, so it is still outdated.
-        if playlist_feed.is_outdated(season.update_at):
-            logger.warning(
-                "PlaylistFeed for season {} is unavailable, skipping new video check.",
-                season.key,
-            )
-            season.update_at = tz_datetime.now() + FEED_UPDATE_DELAY
-            return False
+        # If the file does not exist just download the initial file. The first update
+        # will be delayed a bit but it's acceptable for code that is easier to work with.
+        if playlist_feed.does_not_exist():
+            with suppress(ChannelFeedNotFoundError, PlaylistFeedNotFoundError):
+                self._download_season_feed(season)
+            return
 
-        season.update_at = playlist_feed.data_timestamp + FEED_UPDATE_DELAY
-        if not has_stored_feed:
-            return False
+        old_feed_video_ids = set(playlist_feed.video_ids())
+        try:
+            self._download_season_feed(season)
+        except ChannelFeedNotFoundError, PlaylistFeedNotFoundError:
+            return
 
-        new_video_ids = set(playlist_feed.video_ids()) - old_video_ids
+        new_video_ids = set(playlist_feed.video_ids()) - old_feed_video_ids
         if not new_video_ids:
-            return False
+            return
 
         logger.info(
             "Found {} new videos in season {}: {}",
             len(new_video_ids),
-            season.key,
+            season.name or season.key,
             ", ".join(sorted(new_video_ids)),
         )
-        self._download_outdated_files(
-            self._season_files(season.key, season.show.key),
-            tz_datetime.now(),
-        )
-        return True
+        season.extra = {**season.extra, EXTRA_STATUS_FIELD: PENDING_UPDATE_STATUS}
+        self.playlist_items_file(season.key).download_if_outdated(tz_datetime.now())
+
+    # TODO: Validate
+    def _download_season_feed(self, season: Season) -> PlaylistFeed:
+        playlist_feed = self.playlist_feed_file(season.key)
+        try:
+            playlist_feed.download_if_outdated(season.update_at)
+        except ChannelFeedNotFoundError, PlaylistFeedNotFoundError:
+            season.update_at = tz_datetime.now() + timedelta(hours=1)
+            raise
+
+        season.update_at = playlist_feed.data_timestamp + timedelta(hours=6)
+        return playlist_feed
