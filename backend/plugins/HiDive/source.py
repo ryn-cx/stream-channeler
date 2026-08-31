@@ -18,7 +18,7 @@ from app.sources.models import Source
 from app.users.service import get_or_create_plugin_user
 from plugins.HiDive.files import Schedule
 from plugins.HiDive.utils import HelperMixin, schedule_group_list
-from plugins.utils.base_plugin_v2.files import COMPLETED_STATUS, EXTRA_STATUS_FIELD
+from plugins.utils.base_plugin.files import COMPLETED_STATUS, EXTRA_STATUS_FIELD
 
 # TODO: Add support for individual episodes of a series.
 

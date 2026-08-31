@@ -27,7 +27,7 @@ from plugins.YouTube.utils import (
 if TYPE_CHECKING:
     from not_yt_dlapi.channels.models import ChannelsModel
 
-    from plugins.utils.base_plugin_v2.files import BaseFile
+    from plugins.utils.base_plugin.files import BaseFile
 
 
 # TODO: Validate

@@ -14,7 +14,7 @@ from app.shows.models import Show
 from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from app.utils import tz_datetime
-from plugins.Hulu.constants import HuluMediaType
+from plugins.Hulu.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
 from plugins.Hulu.utils import HelperMixin
 
 
@@ -58,7 +58,7 @@ class UpsertMixin(HelperMixin, register=False):
                 name=model.name,
                 description=entity.description,
                 media_type="TV Show",
-                url=self._show_url(show_key, HuluMediaType.SERIES),
+                url=self._show_url(show_key, SERIES_MEDIA_TYPE),
                 image_url=self._image_url(model.artwork.program_tile.path),
                 thumbnail_url=self._thumbnail_url(model.artwork.program_tile.path),
                 data_timestamp=data_timestamp,
@@ -86,7 +86,7 @@ class UpsertMixin(HelperMixin, register=False):
                 key=show_key,
                 name=model.name,
                 description=model.details.entity.description,
-                url=self._show_url(show_key, HuluMediaType.MOVIE),
+                url=self._show_url(show_key, MOVIE_MEDIA_TYPE),
                 image_url=self._image_url(model.artwork.program_tile.path),
                 thumbnail_url=self._thumbnail_url(model.artwork.program_tile.path),
                 media_type="Movie",

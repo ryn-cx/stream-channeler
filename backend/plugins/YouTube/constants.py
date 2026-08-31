@@ -1,7 +1,7 @@
 # TODO: Validate
 from datetime import timedelta
 
-from plugins.utils.base_plugin_v2.url import URLMixin
+from plugins.utils.base_plugin.url import URLMixin
 
 LONG_DOMAIN = "youtube.com"
 SHORT_DOMAIN = "youtu.be"

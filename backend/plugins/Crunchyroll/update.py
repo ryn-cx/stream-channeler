@@ -17,7 +17,7 @@ from app.utils import tz_datetime
 from plugins.Crunchyroll.constants import MUSIC_SOURCE, VIDEO_SOURCE
 from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries, chirashi
 from plugins.Crunchyroll.upsert import UpsertMixin
-from plugins.utils.base_plugin_v2.files import (
+from plugins.utils.base_plugin.files import (
     COMPLETED_STATUS,
     EXTRA_STATUS_FIELD,
 )

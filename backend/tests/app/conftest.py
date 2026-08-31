@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from plugins.utils.base_plugin_v2.files import BaseFile
+from plugins.utils.base_plugin.files import BaseFile
 
 
 # TODO: Validate

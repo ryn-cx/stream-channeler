@@ -8,7 +8,7 @@ from plugins.AdultSwim.constants import FREE, SUBSCRIPTION
 from plugins.AdultSwim.import_url import ImportURLMixin
 from plugins.AdultSwim.update import UpdateMixin
 from plugins.utils.abstract_plugin import URLImportResult
-from plugins.utils.base_plugin_v2.search import CatalogueSearchMixin
+from plugins.utils.base_plugin.search import CatalogueSearchMixin
 
 if TYPE_CHECKING:
     from collections.abc import Iterable

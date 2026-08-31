@@ -11,7 +11,6 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
-from plugins.AdultSwim.files import ShowsPage
 from plugins.AdultSwim.utils import HelperMixin, source_requires_auth
 
 
@@ -20,23 +19,19 @@ class UpsertMixin(HelperMixin, register=False):
     # TODO: Validate
     @override
     def _upsert_source(self, source_key: str) -> Source:
-        latest_shows_file = self.find_newest_shows_file()
-        if not latest_shows_file:
-            latest_shows_file = self._initial_file(ShowsPage)
-            latest_shows_file.download_if_outdated()
+        shows_file = self.shows_file()
+        shows_file.download_if_outdated()
 
         existing_source = Source.get(self.session, self.plugin, source_key)
         return Source(
             key=source_key,
             name=source_key,
             favicon_url=self.favicon_url(),
-            data_timestamp=latest_shows_file.data_timestamp,
+            data_timestamp=shows_file.data_timestamp,
             plugin_id=self.plugin.id,
-        ).upsert_and_set_update_at(
-            self.plugin,
-            existing_source,
-            [latest_shows_file],
-        )
+            # update_at is not used because it Plugin.update_at is used instead because
+            # there are multiple sources that used the same file.
+        ).upsert_and_set_update_at(self.plugin, existing_source, [shows_file])
 
     # TODO: Validate
     @override

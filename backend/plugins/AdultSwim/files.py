@@ -2,9 +2,8 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import datetime
 from functools import cache
-from typing import Any, Literal, override
+from typing import Any, override
 
 from pools_closed import PoolsClosed
 from pools_closed.exceptions import ShowNotFoundError
@@ -12,11 +11,12 @@ from pools_closed.show import Show as ShowEndpoint
 from pools_closed.show.models import ShowModel
 from pools_closed.shows import Shows as ShowsEndpoint
 from pools_closed.shows.models import ShowsModel
+from sqlmodel import Session
 
-from app.files.models import File
+from app.plugins.models import Plugin
 from plugins.utils.abstract_plugin import PluginShowIdentity
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
+from plugins.utils.base_plugin.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -36,6 +36,10 @@ class ShowPage(EndpointFile[ShowModel]):
 
 
 class ShowsPage(EndpointFile[ShowsModel]):
+    # TODO: Validate
+    def __init__(self, session: Session, plugin: Plugin) -> None:
+        super().__init__(session, plugin, "Shows")
+
     @override
     def _endpoint(self) -> ShowsEndpoint:
         return pools_closed().shows
@@ -59,27 +63,8 @@ class FileMixin(BasePlugin, register=False):
         return self._file(ShowPage, show_key)
 
     # TODO: Validate
-    def shows_file(self, shows: datetime | File | Literal["Initial"]) -> ShowsPage:
-        identifier: str
-        if isinstance(shows, File):
-            identifier = ShowsPage.file_key_to_unique_identifier(shows.key)
-        else:
-            identifier = str(shows)
-        return self._file(ShowsPage, identifier)
-
-    # TODO: Validate
-    def find_newest_shows_file(self) -> ShowsPage | None:
-        if file := self.preload_latest_file(ShowsPage):
-            return self.shows_file(file)
-        return None
-
-    # TODO: Validate
-    def get_newest_shows_file(self) -> ShowsPage:
-        if file := self.find_newest_shows_file():
-            return file
-
-        msg = "No shows file found."
-        raise FileNotFoundError(msg)
+    def shows_file(self) -> ShowsPage:
+        return self._file(ShowsPage)
 
     # TODO: Validate
     @classmethod
@@ -94,7 +79,7 @@ class FileMixin(BasePlugin, register=False):
     # TODO: Validate
     @override
     def _source_files(self) -> Sequence[ShowsPage]:
-        return [self.get_newest_shows_file()]
+        return [self.shows_file()]
 
     # TODO: Validate
     @override

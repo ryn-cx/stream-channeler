@@ -24,8 +24,8 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from plugins.utils.abstract_plugin import URLImportResult
-from plugins.utils.base_plugin_v2.facade import FacadePlugin
-from plugins.utils.base_plugin_v2.files import BaseFile
+from plugins.utils.base_plugin.files import BaseFile
+from plugins.utils.base_plugin.plugin import BasePlugin
 from plugins.utils.manage_plugins import import_plugins, plugins
 from tests.conftest import init_db, savepoint_session, test_engine
 from tests.plugins.frozen_clock import frozen_clock
@@ -64,7 +64,7 @@ def date_downloads_at_import_time(import_time: datetime) -> Generator[None]:
 
 
 # TODO: Validate
-def plugin_class_for(plugin_key: str) -> type[FacadePlugin]:
+def plugin_class_for(plugin_key: str) -> type[BasePlugin]:
     """Return the plugin class for a plugin key.
 
     Unregistered plugins are included because a registered plugin can create
@@ -75,7 +75,7 @@ def plugin_class_for(plugin_key: str) -> type[FacadePlugin]:
         if plugin_class.plugin_key() == plugin_key:
             return plugin_class  # type: ignore[return-value]
 
-    remaining: list[type[FacadePlugin]] = [FacadePlugin]
+    remaining: list[type[BasePlugin]] = [BasePlugin]
     while remaining:
         plugin_class = remaining.pop()
         remaining.extend(plugin_class.__subclasses__())
@@ -86,7 +86,7 @@ def plugin_class_for(plugin_key: str) -> type[FacadePlugin]:
 
 
 # TODO: Validate
-class DatabaseMixinAlt[PluginT: FacadePlugin]:
+class DatabaseMixinAlt[PluginT: BasePlugin]:
     """Everything a test needs in place before it can dump anything."""
 
     plugin_class: type[PluginT]
@@ -240,7 +240,7 @@ class DatabaseMixinAlt[PluginT: FacadePlugin]:
         self,
         session: Session,
         entity: Plugin | Source | Show | Season | Episode,
-    ) -> FacadePlugin:
+    ) -> BasePlugin:
         """Return the plugin that reads and writes `entity`.
 
         An import can store a record under another plugin - TMDB keeps a title
@@ -255,7 +255,7 @@ class DatabaseMixinAlt[PluginT: FacadePlugin]:
         plugin_key = self._owning_plugin_key(entity)
         if plugin_key == self.plugin_class.plugin_key():
             return self.imported_plugin
-        built: dict[str, FacadePlugin] = session.info.setdefault("owning_plugins", {})
+        built: dict[str, BasePlugin] = session.info.setdefault("owning_plugins", {})
         if plugin_key not in built:
             built[plugin_key] = plugin_class_for(plugin_key)(session)
         return built[plugin_key]
@@ -343,7 +343,7 @@ class DatabaseMixinAlt[PluginT: FacadePlugin]:
         # Do not initialize the source until after the files are imported because
         # initializing the source often requires downloading files.
         # TODO: Validate
-        def no_operation(_plugin: FacadePlugin) -> None:
+        def no_operation(_plugin: BasePlugin) -> None:
             """No operation function."""
 
         # A file can belong to a different plugin than the one under test (e.g. TMDB
@@ -353,7 +353,7 @@ class DatabaseMixinAlt[PluginT: FacadePlugin]:
         plugin_keys.add(self.plugin_class.plugin_key())
 
         plugin_records: dict[str, Plugin] = {}
-        plugin_under_test: FacadePlugin | None = None
+        plugin_under_test: BasePlugin | None = None
         for plugin_key in plugin_keys:
             plugin_class = plugin_class_for(plugin_key)
             initialize_sources = plugin_class.initialize_sources

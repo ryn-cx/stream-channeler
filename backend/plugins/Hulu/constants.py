@@ -1,13 +1,11 @@
 # TODO: Validate
 from datetime import timedelta
-from enum import StrEnum
 
+MOVIE_MEDIA_TYPE = "movie"
+"""What Hulu calls a title that is a film rather than a series."""
 
-# TODO: Validate
-class HuluMediaType(StrEnum):
-    MOVIE = "movie"
-    SERIES = "series"
-
+SERIES_MEDIA_TYPE = "series"
+"""What Hulu calls a title that is a series rather than a film."""
 
 DETAIL_MAX_AGE = timedelta(days=7)
 

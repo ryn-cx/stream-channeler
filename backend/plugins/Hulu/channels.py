@@ -12,9 +12,8 @@ from app.channels.models import Channel
 from app.channels.service import add_urls_to_channel_import_queue
 from app.models import Visibility
 from app.users.service import get_or_create_plugin_user
-from plugins.Hulu.base import HuluBase
-from plugins.Hulu.constants import HuluMediaType
-from plugins.utils.base_plugin_v2.workers import PluginWorker
+from plugins.Hulu.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
+from plugins.Hulu.files import FileMixin
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Sequence
@@ -41,11 +40,11 @@ def _listed_items(page: GenresModel | GenreModel) -> list[tuple[str, str]]:
 
 
 # TODO: Validate
-class HuluChannels(PluginWorker, HuluBase, register=False):
+class ChannelMixin(FileMixin, register=False):
     """The channels Hulu's whole catalogue is read into."""
 
     # TODO: Validate
-    def run(self, genre_ids: Collection[str] | None = None) -> None:
+    def initialize_channel(self, genre_ids: Collection[str] | None = None) -> None:
         """Queue every title Hulu lists, genre by genre, into its channels.
 
         Hulu files its catalogue under a genre at a time and nowhere else, so
@@ -76,8 +75,8 @@ class HuluChannels(PluginWorker, HuluBase, register=False):
             logger.info("Queueing {} titles from genre: {}", len(urls), genre_id)
             self._queue(f"Hulu {genre_name}", f"All {genre_name} on Hulu.", urls)
             everything += urls
-            movies += [url for url in urls if f"/{HuluMediaType.MOVIE}/" in url]
-            series += [url for url in urls if f"/{HuluMediaType.SERIES}/" in url]
+            movies += [url for url in urls if f"/{MOVIE_MEDIA_TYPE}/" in url]
+            series += [url for url in urls if f"/{SERIES_MEDIA_TYPE}/" in url]
 
         self._queue("Hulu All Media", "All Media on Hulu.", everything)
         self._queue("Hulu Movies", "All Movies on Hulu.", movies)
@@ -90,7 +89,7 @@ class HuluChannels(PluginWorker, HuluBase, register=False):
         paths = {
             href: None
             for _name, href in _listed_items(page)
-            if href.startswith((f"/{HuluMediaType.MOVIE}/", f"/{HuluMediaType.SERIES}/"))
+            if href.startswith((f"/{MOVIE_MEDIA_TYPE}/", f"/{SERIES_MEDIA_TYPE}/"))
         }
         return [cls.build_url(path) for path in paths]
 

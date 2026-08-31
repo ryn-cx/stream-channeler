@@ -19,7 +19,7 @@ from plugins.StreamChanneler.handlers import (
 from plugins.StreamChanneler.watch_history import WatchHistoryMixin
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin_v2.files import BaseFile
+from plugins.utils.base_plugin.files import BaseFile
 
 
 # TODO: Validate

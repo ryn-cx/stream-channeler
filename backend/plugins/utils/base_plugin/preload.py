@@ -15,7 +15,7 @@ from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
-from plugins.utils.base_plugin_v2.files import (
+from plugins.utils.base_plugin.files import (
     COMPLETED_STATUS,
     EXTRA_STATUS_FIELD,
     BaseFile,

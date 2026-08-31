@@ -42,7 +42,7 @@ from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin_v2.files import (
+from plugins.utils.base_plugin.files import (
     BaseFile,
     EndpointFile,
     HTMLFile,

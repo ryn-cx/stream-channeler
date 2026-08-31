@@ -7,7 +7,7 @@ from app.canonical_media.episodes import canonical_id_of
 from app.users.models import User
 from app.watches.models import Watch
 from app.watches.schemas import WatchImportResult, WatchImportResults
-from plugins.utils.base_plugin_v2.watch import WatchMixin
+from plugins.utils.base_plugin.watch import WatchMixin
 
 
 # TODO: Validate

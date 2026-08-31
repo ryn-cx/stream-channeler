@@ -32,8 +32,8 @@ from plugins.utils.abstract_plugin import (
     InvalidURLError,
     URLImportResult,
 )
+from plugins.utils.base_plugin.files import BaseFile
 from plugins.utils.base_plugin.plugin import ReadURLPlugin
-from plugins.utils.base_plugin_v2.files import BaseFile
 from plugins.utils.manage_plugins import plugin_for_url
 
 # from plugins.WatchMode import WatchMode  # noqa: ERA001

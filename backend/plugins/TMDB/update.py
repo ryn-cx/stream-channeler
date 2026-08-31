@@ -23,7 +23,7 @@ from plugins.TMDB.files import ShowChanges
 from plugins.TMDB.import_url import ImportURLMixin
 from plugins.TMDB.keys import parse_show_key
 from plugins.TMDB.utils import change_datetime
-from plugins.utils.base_plugin_v2.files import COMPLETED_STATUS, EXTRA_STATUS_FIELD
+from plugins.utils.base_plugin.files import COMPLETED_STATUS, EXTRA_STATUS_FIELD
 
 if TYPE_CHECKING:
     from datetime import datetime

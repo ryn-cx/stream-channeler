@@ -6,7 +6,7 @@ from app.episodes.models import Episode
 from app.models import BaseMediaMixin
 from app.seasons.models import Season
 from app.shows.models import Show
-from plugins.utils.base_plugin_v2.download import DownloadMixin
+from plugins.utils.base_plugin.download import DownloadMixin
 
 
 # TODO: Validate

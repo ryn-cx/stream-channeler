@@ -67,13 +67,13 @@ from plugins.TMDB.keys import (
     parse_season_key,
     parse_show_key,
 )
-from plugins.utils.base_plugin.plugin import BasePlugin
-from plugins.utils.base_plugin_v2.files import (
+from plugins.utils.base_plugin.files import (
     BaseFile,
     EndpointFile,
     HTMLFile,
     IntegerEndpointFile,
 )
+from plugins.utils.base_plugin.plugin import BasePlugin
 
 
 @cache

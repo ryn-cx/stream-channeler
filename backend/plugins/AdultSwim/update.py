@@ -18,9 +18,8 @@ from app.shows.models import Show
 from app.users.service import get_or_create_plugin_user
 from app.utils import tz_datetime
 from plugins.AdultSwim.constants import FREE, SUBSCRIPTION
-from plugins.AdultSwim.files import ShowsPage
 from plugins.AdultSwim.upsert import UpsertMixin
-from plugins.utils.base_plugin_v2.files import (
+from plugins.utils.base_plugin.files import (
     COMPLETED_STATUS,
     EXTRA_STATUS_FIELD,
 )
@@ -47,8 +46,8 @@ class UpdateMixin(UpsertMixin, register=False):
     @override
     def update_plugin(self, plugin: Plugin) -> None:
         logger.info("Checking Adult Swim for new shows")
-        self.shows_file(tz_datetime.now()).download_if_outdated()
-        self._process_new_shows_files()
+        self.shows_file().download_if_outdated(tz_datetime.now())
+        self._process_new_shows()
         self._exclude_subscription_from_free_channel()
         plugin.update_at = tz_datetime.now() + self._next_update_interval()
 
@@ -79,37 +78,36 @@ class UpdateMixin(UpsertMixin, register=False):
         )
 
     # TODO: Validate
-    def _process_new_shows_files(self) -> None:
+    def _process_new_shows(self) -> None:
+        shows_page = self.shows_file()
+        record = shows_page.database_record
+        if record.extra.get(EXTRA_STATUS_FIELD) == COMPLETED_STATUS:
+            return
+
         queued_urls = self._queued_urls()
-        for shows_page in self.get_incomplete_files(ShowsPage, self.shows_file):
-            _cache = self._preload_sources(preload_shows=True).all()
-            logger.info("Processing shows file: {}", shows_page.database_record.key)
-            new_show_urls: list[str] = []
-            for listed_show in shows_page.parsed().shows:
-                show_key = listed_show.slug
-                if show_key is None:
-                    continue
-                if any(
-                    Show.get_from_memory(self.session, source, show_key)
-                    for source in self._sources.values()
-                ):
-                    continue
-                show_url = self.show_url(show_key)
-                if show_url in queued_urls:
-                    continue
-                logger.info("Queueing new show: {}", show_key)
-                queued_urls.add(show_url)
-                new_show_urls.append(show_url)
+        _cache = self._preload_sources(preload_shows=True).all()
+        new_show_urls: list[str] = []
+        for listed_show in shows_page.parsed().shows:
+            show_key = listed_show.slug
+            if show_key is None:
+                continue
+            if any(
+                Show.get_from_memory(self.session, source, show_key)
+                for source in self._sources.values()
+            ):
+                continue
+            show_url = self.show_url(show_key)
+            if show_url in queued_urls:
+                continue
+            logger.info("Queueing new show: {}", show_key)
+            queued_urls.add(show_url)
+            new_show_urls.append(show_url)
 
-            if new_show_urls:
-                for channel in self._channels():
-                    add_urls_to_channel_import_queue(
-                        self.session,
-                        channel,
-                        new_show_urls,
-                    )
+        if new_show_urls:
+            for channel in self._channels():
+                add_urls_to_channel_import_queue(self.session, channel, new_show_urls)
 
-            shows_page.database_record.extra = {EXTRA_STATUS_FIELD: COMPLETED_STATUS}
+        record.extra = {EXTRA_STATUS_FIELD: COMPLETED_STATUS}
 
     # TODO: Validate
     def _exclude_subscription_from_free_channel(self) -> None:

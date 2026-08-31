@@ -36,7 +36,7 @@ from plugins.Amazon.constants import (
 )
 from plugins.Amazon.keys import title_key_from_location
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin_v2.files import (
+from plugins.utils.base_plugin.files import (
     BaseFile,
     DownloadedFile,
     EndpointFile,

@@ -28,12 +28,12 @@ from diving_board.vod import models as vod_models
 from app.files.models import File
 from app.utils import tz_datetime
 from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin_v2.files import (
+from plugins.utils.base_plugin.files import (
     BaseFile,
     EndpointFile,
     PagedEndpointFile,
 )
-from plugins.utils.base_plugin_v2.media_type import MediaTypeMixin
+from plugins.utils.base_plugin.media_type import MediaTypeMixin
 from plugins.utils.get_around_client import get_around_client
 
 

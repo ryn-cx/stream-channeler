@@ -33,10 +33,10 @@ from wholoo.tv.models import TVModel
 
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
-from plugins.Hulu.constants import HuluMediaType
-from plugins.utils.base_plugin_v2.core import PluginCore
-from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
-from plugins.utils.base_plugin_v2.media_type import MediaTypeMixin
+from plugins.Hulu.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
+from plugins.utils.base_plugin import BasePlugin
+from plugins.utils.base_plugin.files import BaseFile, EndpointFile
+from plugins.utils.base_plugin.media_type import MediaTypeMixin
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -220,7 +220,7 @@ class GenrePage(EndpointFile[GenreModel]):
 
 
 # TODO: Validate
-class FileMixin(MediaTypeMixin, PluginCore, register=False):
+class FileMixin(MediaTypeMixin, BasePlugin, register=False):
     """The files a title is read out of."""
 
     # TODO: Validate
@@ -266,7 +266,11 @@ class FileMixin(MediaTypeMixin, PluginCore, register=False):
 
     # TODO: Validate
     def _is_movie(self) -> bool:
-        return self._media_type == HuluMediaType.MOVIE
+        if self._media_type not in (MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE):
+            msg = f"Invalid media type: {self._media_type}"
+            raise RuntimeError(msg)
+
+        return self._media_type == MOVIE_MEDIA_TYPE
 
     # TODO: Validate
     @staticmethod
