@@ -79,6 +79,7 @@ class FileExport(BaseModel):
     content: str | None = None
     update_at: datetime | None = None
     deleted_at: datetime | None = None
+    status: str | None = None
     extra: dict[str, Any] | None = None
 
 

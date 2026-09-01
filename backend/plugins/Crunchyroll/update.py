@@ -17,7 +17,6 @@ from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries, chirashi
 from plugins.Crunchyroll.upsert import UpsertMixin
 from plugins.utils.base_plugin_v2.files import (
     COMPLETED_STATUS,
-    EXTRA_STATUS_FIELD,
 )
 
 
@@ -86,7 +85,7 @@ class UpdateMixin(UpsertMixin):
                 channel = self._video_channel()
                 add_urls_to_channel_import_queue(self.session, channel, new_series_urls)
 
-            browse_json.database_record.extra = {EXTRA_STATUS_FIELD: COMPLETED_STATUS}
+            browse_json.database_record.status = COMPLETED_STATUS
 
     # TODO: Validate
     def _process_new_music_browse_files(self, source: Source) -> None:
@@ -126,7 +125,7 @@ class UpdateMixin(UpsertMixin):
                 channel = self._music_channel()
                 add_urls_to_channel_import_queue(self.session, channel, new_artist_urls)
 
-            browse_json.database_record.extra = {EXTRA_STATUS_FIELD: COMPLETED_STATUS}
+            browse_json.database_record.status = COMPLETED_STATUS
 
     # TODO: Validate
     def _music_channel(self) -> Channel:

@@ -7,7 +7,7 @@ from app.canonical_media.episodes import canonical_id_of
 from app.users.models import User
 from app.watches.models import Watch
 from app.watches.schemas import WatchImportResult, WatchImportResults
-from plugins.utils.base_plugin_v2.watch import WatchMixin
+from plugins.utils.base_plugin_v2.watch import BaseWatchMixin
 
 
 # TODO: Validate
@@ -27,7 +27,7 @@ class ParsedWatchEntry:
 
 
 # TODO: Validate
-class WatchHistoryMixin(WatchMixin):
+class BaseWatchHistoryMixin(BaseWatchMixin):
     """Base mixin providing the shared `import_watch_history` workflow.
 
     Subclasses only need to implement :meth:`_parse_watch_history`, which

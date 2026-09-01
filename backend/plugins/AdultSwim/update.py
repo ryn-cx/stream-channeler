@@ -19,7 +19,6 @@ from plugins.AdultSwim.constants import FREE, SUBSCRIPTION
 from plugins.AdultSwim.upsert import UpsertMixin
 from plugins.utils.base_plugin_v2.files import (
     COMPLETED_STATUS,
-    EXTRA_STATUS_FIELD,
 )
 
 if TYPE_CHECKING:
@@ -72,7 +71,7 @@ class UpdateMixin(UpsertMixin):
     def _process_new_shows(self) -> None:
         shows_page = self.shows_file()
         record = shows_page.database_record
-        if record.extra.get(EXTRA_STATUS_FIELD) == COMPLETED_STATUS:
+        if record.status == COMPLETED_STATUS:
             return
 
         queued_urls = self._queued_urls()
@@ -98,7 +97,7 @@ class UpdateMixin(UpsertMixin):
             for channel in self._channels():
                 add_urls_to_channel_import_queue(self.session, channel, new_show_urls)
 
-        record.extra = {EXTRA_STATUS_FIELD: COMPLETED_STATUS}
+        record.status = COMPLETED_STATUS
 
     # TODO: Validate
     def _exclude_subscription_from_free_channel(self) -> None:

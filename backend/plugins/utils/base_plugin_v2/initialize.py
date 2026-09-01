@@ -7,12 +7,11 @@ from sqlmodel import Session
 
 from app.plugins.models import Plugin
 from app.sources.models import Source
-from plugins.utils.base_plugin_v2.base import PluginBase
-from plugins.utils.base_plugin_v2.files import EXTRA_STATUS_FIELD
+from plugins.utils.base_plugin_v2.base import BasePlugin
 
 
 # TODO: Validate
-class PluginInitializer(PluginBase, ABC):
+class BasePluginInitializer(BasePlugin, ABC):
     # TODO: Validate
     @classmethod
     def initialize_db(cls, session: Session) -> None:
@@ -20,18 +19,14 @@ class PluginInitializer(PluginBase, ABC):
 
         Calls `initialize_plugin`, `initialize_sources` and `initialize_channels`."""
         plugin = Plugin.get(session, cls.plugin_name())
-        if plugin and plugin.extra.get(EXTRA_STATUS_FIELD) != "Incomplete":
+        if plugin and plugin.status != "Incomplete":
             return
 
         cls._initialize_plugin(session)
         plugin_initializator = cls(session)
         plugin_initializator._initialize_sources()
         plugin_initializator._initialize_channels()
-        plugin_initializator.plugin.extra = {
-            field: value
-            for field, value in plugin_initializator.plugin.extra.items()
-            if field != EXTRA_STATUS_FIELD
-        }
+        plugin_initializator.plugin.status = None
 
     # TODO: Validate
     @classmethod
@@ -43,10 +38,7 @@ class PluginInitializer(PluginBase, ABC):
         # after this and some plugins require files to be downloaded to initialize the
         # sources.
         with Session(session.get_bind()) as plugin_session:
-            plugin = Plugin(
-                key=cls.plugin_name(),
-                extra={EXTRA_STATUS_FIELD: "Incomplete"},
-            )
+            plugin = Plugin(key=cls.plugin_name(), status="Incomplete")
             plugin.upsert_and_set_update_at(plugin_session, None)
             plugin_session.commit()
 

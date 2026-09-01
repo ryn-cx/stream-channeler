@@ -24,7 +24,6 @@ from plugins.utils.abstract_plugin import (
 
 if TYPE_CHECKING:
     from app.shows.models import Show
-    from app.sources.models import Source
     from plugins.utils.base_plugin_v2.files import BaseFile
 
 
@@ -67,19 +66,6 @@ class StreamChanneler(StreamChannelerBase, AbstractPlugin):
         show_key: str,
     ) -> list[str]:
         return []
-
-    # TODO: Validate
-    @override
-    def upsert_show(
-        self,
-        source: Source,
-        show_key: str,
-        canonical_show: Show | None = None,
-        *,
-        force: bool = False,
-    ) -> Show:
-        msg = "StreamChanneler does not support upserting shows"
-        raise NotImplementedError(msg)
 
     # TODO: Validate
     @classmethod

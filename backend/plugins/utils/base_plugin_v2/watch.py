@@ -16,7 +16,7 @@ from app.watches.identifiers import watched_dates_by_canonical_id
 
 
 # TODO: Validate
-class WatchMixin(ABC):
+class BaseWatchMixin(ABC):
     session: Session
     plugin: Plugin
 

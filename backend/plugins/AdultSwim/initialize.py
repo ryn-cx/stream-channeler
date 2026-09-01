@@ -5,11 +5,11 @@ from typing import override
 
 from app.utils import tz_datetime
 from plugins.AdultSwim.base import AdultSwimBase
-from plugins.utils.base_plugin_v2.initialize import PluginInitializer
+from plugins.utils.base_plugin_v2.initialize import BasePluginInitializer
 
 
 # TODO: Validate
-class AdultSwimInitializer(PluginInitializer, AdultSwimBase):
+class AdultSwimInitializer(BasePluginInitializer, AdultSwimBase):
     # TODO: Validate
     @override
     def _initialize_sources(self) -> None:

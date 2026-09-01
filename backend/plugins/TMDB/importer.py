@@ -32,10 +32,9 @@ from plugins.utils.abstract_plugin import (
 )
 from plugins.utils.base_plugin_v2.files import (
     COMPLETED_STATUS,
-    EXTRA_STATUS_FIELD,
     BaseFile,
 )
-from plugins.utils.base_plugin_v2.importer import Importer
+from plugins.utils.base_plugin_v2.importer import BaseImporter
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -51,7 +50,7 @@ def _title_url_regex(media_type: MediaType) -> str:
 
 
 # TODO: Validate
-class TMDBImporter(Importer, TMDBBase):
+class TMDBImporter(BaseImporter, TMDBBase):
     _MOVIE_URL_REGEX = _title_url_regex(MediaType.movie)
     _TV_URL_REGEX = _title_url_regex(MediaType.tv)
 
@@ -144,7 +143,7 @@ class TMDBImporter(Importer, TMDBBase):
         _cache = self._preload_show_files(show.key)
         for changes_file in self.incomplete_show_changes_files(show.key):
             self._import_show_changes(show.key, changes_file)
-            changes_file.database_record.extra = {EXTRA_STATUS_FIELD: COMPLETED_STATUS}
+            changes_file.database_record.status = COMPLETED_STATUS
 
         for key in self._season_keys_from_show_files(show.key):
             self._download_outdated_files(self._season_files(key, show.key))

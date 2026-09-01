@@ -3,11 +3,11 @@
 
 from typing import override
 
-from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.base import BasePlugin
 
 
 # TODO: Validate
-class UtilsMixin(PluginBase):
+class UtilsMixin(BasePlugin):
     """The URLs of a title and whether it is a film or a series."""
 
     # TODO: Validate

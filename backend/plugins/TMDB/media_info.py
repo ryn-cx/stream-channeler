@@ -45,7 +45,7 @@ from plugins.utils.abstract_plugin import (
     PluginMediaInfo,
     PluginWatchProviderItem,
 )
-from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.manage_plugins import sorted_plugins
 
 type WatchProviders = (
@@ -167,7 +167,7 @@ def streaming_providers(
 # TODO: Validate
 def plugin_for_tmdb_name(provider_name: str) -> type[AbstractPlugin] | None:
     for plugin_class in sorted_plugins():
-        if issubclass(plugin_class, PluginBase) and plugin_class.matches_tmdb_provider(
+        if issubclass(plugin_class, BasePlugin) and plugin_class.matches_tmdb_provider(
             provider_name,
         ):
             return plugin_class

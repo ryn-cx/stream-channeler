@@ -80,6 +80,7 @@ def missing_file_dump(session: Session, upload: UploadFile) -> list[FileExport]:
                     content=file.content,
                     update_at=file.update_at,
                     deleted_at=file.deleted_at,
+                    status=file.status,
                     extra=file.extra,
                 )
                 for file in session.exec(statement).all()
@@ -118,7 +119,8 @@ def import_file_dump(session: Session, upload: UploadFile) -> FileImportResult:
                 content=entry.content,
                 update_at=entry.update_at,
                 deleted_at=entry.deleted_at,
-                extra=entry.extra,
+                status=entry.status,
+                extra=entry.extra or {},
             ),
         )
         existing.add((entry.plugin_key, entry.key))

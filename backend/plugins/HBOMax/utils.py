@@ -4,11 +4,11 @@
 from typing import override
 from urllib.parse import quote
 
-from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.base import BasePlugin
 
 
 # TODO: Validate
-class UtilsMixin(PluginBase):
+class UtilsMixin(BasePlugin):
     """The URLs of a title and which kind of title is being read."""
 
     # TODO: Validate

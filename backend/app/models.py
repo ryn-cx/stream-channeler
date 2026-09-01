@@ -154,17 +154,13 @@ class TimestampIdAndHashMixin(SQLModel):
 
 # TODO: Validate
 class BaseMediaMixin(SQLModel):
-    """Mixin for base media models.
-
-    Fields: `key`, `data_timestamp`, `update_at`, `deleted_at`, and `extra`.
-    """
-
     # key is a surrogate key so the name key makes it easier to differentiate between
     # the key field and the id field.
     key: str = Field(min_length=1)
     data_timestamp: datetime | None = DateTimeField(default=None)
     update_at: datetime | None = DateTimeField(default=None)
     deleted_at: datetime | None = DateTimeField(default=None)
+    status: str | None = Field(default=None)
 
     # Allows plugins to store custom information beyond the database's structure.
     # Always an object, so a plugin keeping two things here does not have to

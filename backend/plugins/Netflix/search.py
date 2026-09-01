@@ -4,8 +4,9 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import ClassVar, override
+from typing import ClassVar
 
+from app.media.media_type import MediaType
 from app.utils import tz_datetime
 from plugins.Netflix.files import FileMixin
 from plugins.Netflix.utils import UtilsMixin
@@ -22,8 +23,13 @@ class SearchMixin(UtilsMixin, FileMixin):
     }
 
     # TODO: Validate
-    @override
-    def search_for_url(self, query: str) -> str | None:
+    def search_for_url(
+        self,
+        names: list[str],
+        media_type: MediaType,  # noqa: ARG002 - `media_type` refines a search.
+        year: int | None = None,  # noqa: ARG002 - `year` refines a search.
+    ) -> str | None:
+        query = names[0]
         """Return the first movie or TV show Netflix matches `query` with.
 
         Netflix returns movies and shows intermixed. Suggestion entities

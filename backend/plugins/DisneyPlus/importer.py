@@ -6,11 +6,11 @@ from typing import override
 
 from plugins.DisneyPlus.base import DisneyPlusBase
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v2.importer import Importer
+from plugins.utils.base_plugin_v2.importer import BaseImporter
 
 
 # TODO: Validate
-class DisneyPlusImporter(Importer, DisneyPlusBase):
+class DisneyPlusImporter(BaseImporter, DisneyPlusBase):
     # https://www.disneyplus.com/browse/entity-3135b0cb-a002-438d-a9fd-60d86284c93f
     # https://www.disneyplus.com/en-gb/browse/entity-3135b0cb-a002-438d-a9fd-60d86284c93f
     # The optional locale segment, e.g. /en-gb or /de.

@@ -6,11 +6,11 @@ from __future__ import annotations
 from typing import override
 from urllib.parse import quote_plus
 
-from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.base import BasePlugin
 
 
 # TODO: Validate
-class UtilsMixin(PluginBase):
+class UtilsMixin(BasePlugin):
     """The URLs of a title and of the episodes under it."""
 
     # TODO: Validate

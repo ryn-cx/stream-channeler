@@ -2,8 +2,8 @@
 from __future__ import annotations
 
 from plugins.Netflix.base import NetflixBase
-from plugins.utils.base_plugin_v2.initialize import PluginInitializer
+from plugins.utils.base_plugin_v2.initialize import BasePluginInitializer
 
 
 # TODO: Validate
-class NetflixInitializer(PluginInitializer, NetflixBase): ...
+class NetflixInitializer(BasePluginInitializer, NetflixBase): ...

@@ -19,9 +19,9 @@ from trivial_minus.show.models import ShowModel
 
 from app.plugins.models import Plugin
 from app.shows.models import Show
-from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
-from plugins.utils.base_plugin_v2.media_type import MediaTypeMixin
+from plugins.utils.base_plugin_v2.media_type import BaseMediaTypeMixin
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -53,7 +53,7 @@ class ShowPage(EndpointFile[ShowModel]):
 
     # TODO: Validate
     @override
-    def acceptable_error_extra_value(self) -> str:
+    def acceptable_error_status(self) -> str:
         return f"Invalid show {self.unique_identifier}"
 
     # TODO: Validate
@@ -109,12 +109,12 @@ class MovieFile(EndpointFile[MovieModel]):
 
     # TODO: Validate
     @override
-    def acceptable_error_extra_value(self) -> str:
+    def acceptable_error_status(self) -> str:
         return f"Invalid movie_id {self.unique_identifier}"
 
 
 # TODO: Validate
-class FileMixin(MediaTypeMixin, PluginBase):
+class FileMixin(BaseMediaTypeMixin, BasePlugin):
     """The files a title is read out of."""
 
     # TODO: Validate

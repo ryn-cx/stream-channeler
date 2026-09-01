@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, override
 from plugins.Hulu.base import HuluBase
 from plugins.Hulu.utils import HuluMediaType
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v2.importer import Importer
+from plugins.utils.base_plugin_v2.importer import BaseImporter
 
 if TYPE_CHECKING:
     from app.episodes.models import Episode
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class HuluImporter(Importer, HuluBase):
+class HuluImporter(BaseImporter, HuluBase):
     UUID_REGEX = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
     SLUG_REGEX = r"(?:[a-z0-9-]+-)?"
     _SERIES_URL_REGEX = rf"\/series\/{SLUG_REGEX}(?P<series_id>{UUID_REGEX})"

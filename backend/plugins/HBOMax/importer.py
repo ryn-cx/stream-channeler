@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, override
 from plugins.HBOMax.base import HBOMaxBase
 from plugins.HBOMax.constants import SLUG_REGEX, UUID_REGEX
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v2.importer import Importer
+from plugins.utils.base_plugin_v2.importer import BaseImporter
 
 if TYPE_CHECKING:
     from app.episodes.models import Episode
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class HBOMaxImporter(Importer, HBOMaxBase):
+class HBOMaxImporter(BaseImporter, HBOMaxBase):
     # The title slug HBO Max puts in front of the id is decorative, such as in
     # https://www.hbomax.com/movies/the-batman/4ee4f57e-19bd-493f-96f9-ad3e753af981
     _MOVIE_URL_REGEX = rf"\/movies?\/{SLUG_REGEX}(?P<movie_id>{UUID_REGEX})"

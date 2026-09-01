@@ -170,6 +170,17 @@ export const CanonicalEpisodeListOutputSchema = {
             ],
             title: 'Deleted At'
         },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
+        },
         extra: {
             additionalProperties: true,
             type: 'object',
@@ -458,6 +469,17 @@ export const CanonicalShowOutputSchema = {
                 }
             ],
             title: 'Deleted At'
+        },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
         },
         extra: {
             additionalProperties: true,
@@ -2775,6 +2797,17 @@ export const EpisodeCreateSchema = {
             ],
             title: 'Deleted At'
         },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
+        },
         extra: {
             additionalProperties: true,
             type: 'object',
@@ -3073,6 +3106,17 @@ export const EpisodeListOutputSchema = {
                 }
             ],
             title: 'Deleted At'
+        },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
         },
         extra: {
             additionalProperties: true,
@@ -3380,6 +3424,17 @@ export const EpisodeOutputSchema = {
             ],
             title: 'Deleted At'
         },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
+        },
         extra: {
             additionalProperties: true,
             type: 'object',
@@ -3671,6 +3726,17 @@ export const EpisodeUpdateSchema = {
                 }
             ],
             title: 'Deleted At'
+        },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
         },
         extra: {
             additionalProperties: true,
@@ -4083,6 +4149,17 @@ export const FileCreateSchema = {
             ],
             title: 'Deleted At'
         },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
+        },
         extra: {
             additionalProperties: true,
             type: 'object',
@@ -4157,6 +4234,17 @@ export const FileExportSchema = {
             ],
             title: 'Deleted At'
         },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
+        },
         extra: {
             anyOf: [
                 {
@@ -4226,6 +4314,17 @@ export const FileListPublicSchema = {
                 }
             ],
             title: 'Deleted At'
+        },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
         },
         extra: {
             additionalProperties: true,
@@ -4314,6 +4413,17 @@ export const FilePublicSchema = {
             ],
             title: 'Deleted At'
         },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
+        },
         extra: {
             additionalProperties: true,
             type: 'object',
@@ -4396,6 +4506,17 @@ export const FileUpdateSchema = {
                 }
             ],
             title: 'Deleted At'
+        },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
         },
         extra: {
             additionalProperties: true,
@@ -4764,6 +4885,17 @@ export const PluginCreateSchema = {
             ],
             title: 'Deleted At'
         },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
+        },
         extra: {
             additionalProperties: true,
             type: 'object',
@@ -4877,6 +5009,17 @@ export const PluginListOutputSchema = {
                 }
             ],
             title: 'Deleted At'
+        },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
         },
         extra: {
             additionalProperties: true,
@@ -5131,6 +5274,17 @@ export const PluginOutputSchema = {
             ],
             title: 'Deleted At'
         },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
+        },
         extra: {
             additionalProperties: true,
             type: 'object',
@@ -5370,6 +5524,17 @@ export const PluginUpdateSchema = {
             ],
             title: 'Deleted At'
         },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
+        },
         extra: {
             additionalProperties: true,
             type: 'object',
@@ -5540,6 +5705,17 @@ export const SeasonCreateSchema = {
                 }
             ],
             title: 'Deleted At'
+        },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
         },
         extra: {
             additionalProperties: true,
@@ -5717,6 +5893,17 @@ export const SeasonListOutputSchema = {
                 }
             ],
             title: 'Deleted At'
+        },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
         },
         extra: {
             additionalProperties: true,
@@ -5903,6 +6090,17 @@ export const SeasonOutputSchema = {
             ],
             title: 'Deleted At'
         },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
+        },
         extra: {
             additionalProperties: true,
             type: 'object',
@@ -6052,6 +6250,17 @@ export const SeasonUpdateSchema = {
             ],
             title: 'Deleted At'
         },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
+        },
         extra: {
             additionalProperties: true,
             type: 'object',
@@ -6199,6 +6408,17 @@ export const ShowCreateSchema = {
                 }
             ],
             title: 'Deleted At'
+        },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
         },
         extra: {
             additionalProperties: true,
@@ -6412,6 +6632,17 @@ export const ShowListPublicSchema = {
                 }
             ],
             title: 'Deleted At'
+        },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
         },
         extra: {
             additionalProperties: true,
@@ -6635,6 +6866,17 @@ export const ShowPublicSchema = {
                 }
             ],
             title: 'Deleted At'
+        },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
         },
         extra: {
             additionalProperties: true,
@@ -6861,6 +7103,17 @@ export const ShowUpdateSchema = {
                 }
             ],
             title: 'Deleted At'
+        },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
         },
         extra: {
             additionalProperties: true,
@@ -7147,6 +7400,17 @@ export const SourceCreateSchema = {
             ],
             title: 'Deleted At'
         },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
+        },
         extra: {
             additionalProperties: true,
             type: 'object',
@@ -7235,6 +7499,17 @@ export const SourceListPublicSchema = {
                 }
             ],
             title: 'Deleted At'
+        },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
         },
         extra: {
             additionalProperties: true,
@@ -7405,6 +7680,17 @@ export const SourcePublicSchema = {
             ],
             title: 'Deleted At'
         },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
+        },
         extra: {
             additionalProperties: true,
             type: 'object',
@@ -7509,6 +7795,17 @@ export const SourceUpdateSchema = {
                 }
             ],
             title: 'Deleted At'
+        },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
         },
         extra: {
             additionalProperties: true,
@@ -8144,6 +8441,17 @@ export const UnvalidatedShowOutputSchema = {
                 }
             ],
             title: 'Deleted At'
+        },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
         },
         extra: {
             additionalProperties: true,
@@ -9091,6 +9399,17 @@ export const WhitelistEpisodeLinkOutputSchema = {
             ],
             title: 'Deleted At'
         },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
+        },
         extra: {
             additionalProperties: true,
             type: 'object',
@@ -9367,6 +9686,17 @@ export const WhitelistEpisodeOutputSchema = {
                 }
             ],
             title: 'Deleted At'
+        },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
         },
         extra: {
             additionalProperties: true,
@@ -9727,6 +10057,17 @@ export const WhitelistSeasonOutputSchema = {
             ],
             title: 'Deleted At'
         },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
+        },
         extra: {
             additionalProperties: true,
             type: 'object',
@@ -9926,6 +10267,17 @@ export const WhitelistShowOutputSchema = {
                 }
             ],
             title: 'Deleted At'
+        },
+        status: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Status'
         },
         extra: {
             additionalProperties: true,

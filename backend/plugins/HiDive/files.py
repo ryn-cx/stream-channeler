@@ -34,13 +34,13 @@ from plugins.HiDive.constants import (
     SERIES_MEDIA_TYPE,
 )
 from plugins.utils.abstract_plugin import TMDBLookupInfo
-from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import (
     BaseFile,
     EndpointFile,
     PagedEndpointFile,
 )
-from plugins.utils.base_plugin_v2.media_type import MediaTypeMixin
+from plugins.utils.base_plugin_v2.media_type import BaseMediaTypeMixin
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -203,7 +203,7 @@ class Search(EndpointFile[search_models.SearchModel]):
 
 
 # TODO: Validate
-class FileMixin(MediaTypeMixin, PluginBase):
+class FileMixin(BaseMediaTypeMixin, BasePlugin):
     """The files a title is read out of."""
 
     # TODO: Validate

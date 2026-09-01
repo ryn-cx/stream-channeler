@@ -41,7 +41,7 @@ from app.files.models import File
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
-from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import (
     BaseFile,
     EndpointFile,
@@ -656,7 +656,7 @@ class ShowPage(HTMLFile):
 
 
 # TODO: Validate
-class FileMixin(PluginBase):
+class FileMixin(BasePlugin):
     _importing_album_playlist_key: str | None = None
     _linking_playlist_key: str | None = None
 

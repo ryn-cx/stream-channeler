@@ -12,7 +12,7 @@ from wampi.title_sources import TitleSources as TitleSourcesEndpoint
 from wampi.title_sources.models import TitleSourcesModel
 
 from app.config import settings
-from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import EndpointFile
 from plugins.utils.get_around_client import get_around_client
 
@@ -58,12 +58,12 @@ class TitleSources(EndpointFile[TitleSourcesModel]):
 
     # TODO: Validate
     @override
-    def acceptable_error_extra_value(self) -> str:
+    def acceptable_error_status(self) -> str:
         return f"Invalid title {self.unique_identifier}"
 
 
 # TODO: Validate
-class FileMixin(PluginBase):
+class FileMixin(BasePlugin):
     """Reaching the Watchmode file for a title."""
 
     # TODO: Validate

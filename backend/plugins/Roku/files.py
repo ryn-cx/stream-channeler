@@ -22,7 +22,7 @@ from nana.exceptions import ContentNotFoundError
 from app.utils import tz_datetime
 from plugins.Roku.constants import MOVIE_TYPE
 from plugins.utils.abstract_plugin import TMDBLookupInfo
-from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
 
@@ -84,7 +84,7 @@ class SeasonEpisodesFile(BaseContentFile):
 
 
 # TODO: Validate
-class FileMixin(PluginBase):
+class FileMixin(BasePlugin):
     """The files a title is read out of."""
 
     # TODO: Validate

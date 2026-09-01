@@ -6,11 +6,11 @@ from typing import override
 
 from plugins.Netflix.base import NetflixBase
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v2.importer import Importer
+from plugins.utils.base_plugin_v2.importer import BaseImporter
 
 
 # TODO: Validate
-class NetflixImporter(Importer, NetflixBase):
+class NetflixImporter(BaseImporter, NetflixBase):
     # https://www.netflix.com/title/80240027
     _TITLE_URL_REGEX = r"\/title\/(?P<title_key>\d+)(?:\/|$)"
 

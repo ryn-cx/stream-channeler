@@ -13,9 +13,9 @@ from notaplanet.seasons import Seasons as SeasonsEndpoint
 from notaplanet.seasons.models import Episode, Season, SeasonsModel
 
 from app.shows.models import Show
-from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
-from plugins.utils.base_plugin_v2.media_type import MediaTypeMixin
+from plugins.utils.base_plugin_v2.media_type import BaseMediaTypeMixin
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -61,7 +61,7 @@ class ItemsFile(EndpointFile[ItemsModel]):
 
     # TODO: Validate
     @override
-    def acceptable_error_extra_value(self) -> str:
+    def acceptable_error_status(self) -> str:
         """Return what is written down in place of a title that does not exist."""
         return f"Invalid item_id {self.unique_identifier}"
 
@@ -82,13 +82,13 @@ class SeasonsFile(EndpointFile[SeasonsModel]):
 
     # TODO: Validate
     @override
-    def acceptable_error_extra_value(self) -> str:
+    def acceptable_error_status(self) -> str:
         """Return what is written down in place of a series that does not exist."""
         return f"Invalid series_id {self.unique_identifier}"
 
 
 # TODO: Validate
-class FileMixin(MediaTypeMixin, PluginBase):
+class FileMixin(BaseMediaTypeMixin, BasePlugin):
     """The files a title is read out of."""
 
     # TODO: Validate

@@ -5,11 +5,11 @@ from typing import override
 
 from plugins.AdultSwim.constants import FREE, SUBSCRIPTION
 from plugins.AdultSwim.update import UpdateMixin
-from plugins.utils.base_plugin_v2.search import CatalogueSearchMixin
+from plugins.utils.base_plugin_v2.search import BaseCatalogueSearchMixin
 
 
 # TODO: Validate
-class AdultSwimBase(UpdateMixin, CatalogueSearchMixin):
+class AdultSwimBase(UpdateMixin, BaseCatalogueSearchMixin):
     # TODO: Validate
     @classmethod
     @override

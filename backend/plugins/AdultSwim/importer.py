@@ -7,14 +7,14 @@ from typing import TYPE_CHECKING, override
 from app.shows.models import Show
 from plugins.AdultSwim.base import AdultSwimBase
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from plugins.utils.base_plugin_v2.importer import Importer
+from plugins.utils.base_plugin_v2.importer import BaseImporter
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
 
 # TODO: Validate
-class AdultSwimImporter(Importer, AdultSwimBase):
+class AdultSwimImporter(BaseImporter, AdultSwimBase):
     # https://www.adultswim.com/videos/toonami/the-return-episode-1
     _EPISODE_URL_REGEX = (
         r"\/videos\/(?P<episode_path>[a-z0-9-]+\/[a-z0-9-]+)(?:[\/?#]|$)"

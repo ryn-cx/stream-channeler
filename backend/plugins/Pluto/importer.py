@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, override
 from plugins.Pluto.base import PlutoBase
 from plugins.Pluto.constants import DETAILS_REGEX, ITEM_ID_REGEX, LOCALE_REGEX
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v2.importer import Importer
+from plugins.utils.base_plugin_v2.importer import BaseImporter
 
 if TYPE_CHECKING:
     from app.episodes.models import Episode
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class PlutoImporter(Importer, PlutoBase):
+class PlutoImporter(BaseImporter, PlutoBase):
     # https://pluto.tv/en/on-demand/movies/68a54f49df1220b53566f16e/details
     # https://pluto.tv/us/on-demand/movies/68a54f49df1220b53566f16e
     _MOVIE_URL_REGEX = (

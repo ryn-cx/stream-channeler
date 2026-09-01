@@ -7,11 +7,11 @@ import re
 from typing import override
 from urllib.parse import quote
 
-from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.base import BasePlugin
 
 
 # TODO: Validate
-class UtilsMixin(PluginBase):
+class UtilsMixin(BasePlugin):
     """The URLs of a title and the values read straight off its content file."""
 
     # TODO: Validate

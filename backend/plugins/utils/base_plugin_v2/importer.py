@@ -9,7 +9,7 @@ from loguru import logger
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.utils import tz_datetime
-from plugins.utils.base_plugin_v2.base import PluginBase, ReadURLBase
+from plugins.utils.base_plugin_v2.base import BasePlugin, BaseReadURL
 
 if TYPE_CHECKING:
     from app.shows.models import Show
@@ -18,15 +18,15 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class PluginWorker(PluginBase, ABC):
+class BasePluginWorker(BasePlugin, ABC):
     # TODO: Validate
-    def __init__(self, owner: PluginBase) -> None:
+    def __init__(self, owner: BasePlugin) -> None:
         super().__init__(owner.session)
         self._file_cache = owner._file_cache  # noqa: SLF001
 
 
 # TODO: Validate
-class Importer(PluginWorker, ReadURLBase, ABC):
+class BaseImporter(BasePluginWorker, BaseReadURL, ABC):
     record: Show | Season | Episode
 
     # TODO: Validate

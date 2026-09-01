@@ -5,11 +5,11 @@ from typing import override
 from urllib.parse import quote
 
 from plugins.Pluto.constants import LOCALE
-from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.base import BasePlugin
 
 
 # TODO: Validate
-class UtilsMixin(PluginBase):
+class UtilsMixin(BasePlugin):
     """The URLs Pluto TV writes a title under."""
 
     # TODO: Validate

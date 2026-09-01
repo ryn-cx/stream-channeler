@@ -10,11 +10,11 @@ from plugins.Crunchyroll.constants import (
     episode_is_music,
     music_episode_category,
 )
-from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.base import BasePlugin
 
 
 # TODO: Validate
-class UtilsMixin(PluginBase):
+class UtilsMixin(BasePlugin):
     @property
     def video_source(self) -> Source:
         """Return the plugin's video `Source`.

@@ -7,11 +7,11 @@ from typing import override
 from urllib.parse import quote_plus
 
 from app.shows.models import Show
-from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.base import BasePlugin
 
 
 # TODO: Validate
-class UtilsMixin(PluginBase):
+class UtilsMixin(BasePlugin):
     """The URLs of a title and the key it is stored under."""
 
     # TODO: Validate

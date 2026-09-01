@@ -5,11 +5,11 @@ from typing import override
 
 from plugins.HiDive.source import SourceMixin
 from plugins.HiDive.upsert import UpsertMixin
-from plugins.utils.base_plugin_v2.search import CatalogueSearchMixin
+from plugins.utils.base_plugin_v2.search import BaseCatalogueSearchMixin
 
 
 # TODO: Validate
-class HiDiveBase(UpsertMixin, SourceMixin, CatalogueSearchMixin):
+class HiDiveBase(UpsertMixin, SourceMixin, BaseCatalogueSearchMixin):
     # TODO: Validate
     @classmethod
     @override

@@ -1,9 +1,7 @@
 # TODO: Validate
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, override
-
-from loguru import logger
+from typing import TYPE_CHECKING
 
 from plugins.Hulu.upsert import UpsertMixin
 from plugins.Hulu.utils import HuluMediaType
@@ -16,6 +14,7 @@ if TYPE_CHECKING:
 
 # TODO: Validate
 class UpdateMixin(UpsertMixin):
+    # TODO: Validate
     def update_source(self, source: Source, update_at: datetime) -> None:
         self.add_media_to_plugin_channels(update_at)
         self.upsert_source(source.key)

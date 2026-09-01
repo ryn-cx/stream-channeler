@@ -24,10 +24,8 @@ from app.shows.models import Show
 from app.watches.models import Watch
 from app.watches.schemas import WatchExportEntry, WatchImportResult
 from plugins.utils.base_plugin_v2.watch_history import (
+    BaseWatchHistoryMixin,
     ParsedWatchEntry,
-)
-from plugins.utils.base_plugin_v2.watch_history import (
-    WatchHistoryMixin as BaseWatchHistoryMixin,
 )
 
 if TYPE_CHECKING:

@@ -5,11 +5,11 @@ from typing import override
 
 from plugins.Crunchyroll.base import CrunchyrollBase
 from plugins.Crunchyroll.constants import MUSIC_SOURCE, VIDEO_SOURCE
-from plugins.utils.base_plugin_v2.initialize import PluginInitializer
+from plugins.utils.base_plugin_v2.initialize import BasePluginInitializer
 
 
 # TODO: Validate
-class CrunchyrollInitializer(PluginInitializer, CrunchyrollBase):
+class CrunchyrollInitializer(BasePluginInitializer, CrunchyrollBase):
     # TODO: Validate
     @override
     def _initialize_channels(self) -> None:

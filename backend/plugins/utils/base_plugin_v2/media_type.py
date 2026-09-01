@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class MediaTypeMixin:
+class BaseMediaTypeMixin:
     _media_type: str | None = None
 
     # TODO: Validate

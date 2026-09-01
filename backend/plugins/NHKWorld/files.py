@@ -19,7 +19,7 @@ from app.files.models import File
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import TMDBLookupInfo
-from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
 
@@ -126,7 +126,7 @@ class ShowsSearch(EndpointFile[ShowsSearchModel]):
 
 
 # TODO: Validate
-class FileMixin(PluginBase):
+class FileMixin(BasePlugin):
     # The new episodes feed belongs to the source, so every show reads the same one.
     # TODO: Validate
     @classmethod

@@ -15,7 +15,7 @@ from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.TMDB import TMDB
 from plugins.TMDB.files import SeasonWatchProviders, TvWatchProviders
-from plugins.utils.base_plugin_v2.files import COMPLETED_STATUS, EXTRA_STATUS_FIELD
+from plugins.utils.base_plugin_v2.files import COMPLETED_STATUS
 from tests.app.plugins.utils import create_random_plugin
 from tests.app.seasons.utils import create_random_season
 from tests.app.shows.utils import create_random_show
@@ -529,9 +529,9 @@ class TestWatchProvidersFileStatus:
 
         TMDB(function_scoped_session).sync_show_watch_providers(canonical_show.key)
 
-        assert oldest.extra[EXTRA_STATUS_FIELD] == COMPLETED_STATUS
-        assert middle.extra[EXTRA_STATUS_FIELD] == COMPLETED_STATUS
-        assert newest.extra[EXTRA_STATUS_FIELD] == "Incomplete"
+        assert oldest.status == COMPLETED_STATUS
+        assert middle.status == COMPLETED_STATUS
+        assert newest.status == "Incomplete"
 
     # TODO: Validate
     def test_a_completed_file_is_not_compared_again(
@@ -555,7 +555,7 @@ class TestWatchProvidersFileStatus:
             ["Netflix"],
             stored_at,
         )
-        older.extra = {EXTRA_STATUS_FIELD: COMPLETED_STATUS}
+        older.status = COMPLETED_STATUS
         _store_show_providers(
             function_scoped_session,
             tmdb_plugin,
@@ -588,7 +588,7 @@ class TestWatchProvidersFileStatus:
 
         TMDB(function_scoped_session).sync_show_watch_providers(canonical_show.key)
 
-        assert only.extra[EXTRA_STATUS_FIELD] == "Incomplete"
+        assert only.status == "Incomplete"
 
 
 # TODO: Validate

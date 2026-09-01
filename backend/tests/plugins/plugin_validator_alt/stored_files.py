@@ -18,7 +18,7 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin
-from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import BaseFile
 from plugins.utils.manage_plugins import import_plugins
 
@@ -341,7 +341,7 @@ def _serve_before_grouping(
 
     # TODO: Validate
     def _download_all_episode_files(
-        self: PluginBase,
+        self: BasePlugin,
         season: str | Season,
         show: str | Show | None = None,
         preloaded_files: Sequence[File] | None = None,

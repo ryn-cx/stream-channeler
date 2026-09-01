@@ -8,10 +8,8 @@ from app.utils import tz_datetime
 from app.watches.schemas import WatchImportResult
 from plugins.Crunchyroll.utils import UtilsMixin
 from plugins.utils.base_plugin_v2.watch_history import (
+    BaseWatchHistoryMixin,
     ParsedWatchEntry,
-)
-from plugins.utils.base_plugin_v2.watch_history import (
-    WatchHistoryMixin as BaseWatchHistoryMixin,
 )
 
 

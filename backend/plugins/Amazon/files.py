@@ -36,7 +36,7 @@ from plugins.Amazon.constants import (
 )
 from plugins.Amazon.keys import title_key_from_location
 from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
-from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import (
     BaseFile,
     DownloadedFile,
@@ -307,7 +307,7 @@ class Detail(DownloadedFile[dict[str, Any]]):
 
     # TODO: Validate
     @override
-    def acceptable_error_extra_value(self) -> str:
+    def acceptable_error_status(self) -> str:
         return f"Invalid title {self.title_key}"
 
     # TODO: Validate
@@ -735,7 +735,7 @@ class Search(EndpointFile[SearchModel]):
 
 
 # TODO: Validate
-class FileMixin(PluginBase):
+class FileMixin(BasePlugin):
     """The files a title is read out of."""
 
     # TODO: Validate

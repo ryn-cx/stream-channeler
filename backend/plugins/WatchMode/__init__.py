@@ -17,8 +17,6 @@ from plugins.WatchMode.base import WatchModeBase
 from plugins.WatchMode.initialize import WatchModeInitializer
 
 if TYPE_CHECKING:
-    from app.shows.models import Show
-    from app.sources.models import Source
     from plugins.utils.base_plugin_v2.files import BaseFile
 
 
@@ -36,19 +34,6 @@ class WatchMode(WatchModeBase, AbstractPlugin, register=True):
     @override
     def url_regex(cls) -> str:
         msg = "No URL is imported from Watchmode."
-        raise NotImplementedError(msg)
-
-    # TODO: Validate
-    @override
-    def upsert_show(
-        self,
-        source: Source,
-        show_key: str,
-        canonical_show: Show | None = None,
-        *,
-        force: bool = False,
-    ) -> Show:
-        msg = "Watchmode stores no shows of its own."
         raise NotImplementedError(msg)
 
     # TODO: Validate

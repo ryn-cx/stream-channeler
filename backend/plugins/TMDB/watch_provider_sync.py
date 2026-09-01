@@ -11,7 +11,6 @@ from plugins.TMDB.media_info import plugin_for_tmdb_name, streaming_providers
 from plugins.TMDB.upsert import UpsertMixin
 from plugins.utils.base_plugin_v2.files import (
     COMPLETED_STATUS,
-    EXTRA_STATUS_FIELD,
 )
 
 if TYPE_CHECKING:
@@ -60,9 +59,9 @@ class WatchProviderSyncMixin(UpsertMixin):
     def _download_watch_providers_file(file: ProvidersFile) -> None:
         file.download_if_outdated()
         record = file.database_record
-        if record.content is None or EXTRA_STATUS_FIELD in record.extra:
+        if record.content is None or record.status is not None:
             return
-        record.extra = {**record.extra, EXTRA_STATUS_FIELD: "Incomplete"}
+        record.status = "Incomplete"
 
     # TODO: Validate
     def _compare_watch_providers_files(
@@ -73,7 +72,7 @@ class WatchProviderSyncMixin(UpsertMixin):
         for older, newer in pairwise(files):
             self._mark_changed_providers(show_key, older, newer)
             record = older.database_record
-            record.extra = {EXTRA_STATUS_FIELD: COMPLETED_STATUS}
+            record.status = COMPLETED_STATUS
             record.update_at = None
 
     # TODO: Validate

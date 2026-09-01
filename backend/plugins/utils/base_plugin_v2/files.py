@@ -26,10 +26,6 @@ from app.utils import tz_datetime
 from app.utils.sentinels import Sentinel
 from plugins.utils.get_around_client import get_around_client
 
-# What `File.extra` says about a file that has been read to the end. `extra` is an
-# object now, so the mark is a field of it rather than the whole of it, which
-# leaves room for a second thing to be said about a file later.
-EXTRA_STATUS_FIELD = "status"
 COMPLETED_STATUS = "Completed"
 
 
@@ -220,12 +216,12 @@ class BaseFile[T](ABC):
         return all(isinstance(record, File | Plugin | Source) for record in pending)
 
     # TODO: Validate
-    def write(self, content: str | None, extra: str | None = None) -> None:
+    def write(self, content: str | None, status: str | None = None) -> None:
         self._existing_database_record = File(
             key=self.file_key(),
             content=content,
             data_timestamp=tz_datetime.now(),
-            extra=extra,
+            status=status,
             plugin_id=self.__plugin.id,
             update_at=self._next_update_at(),
         ).upsert_and_set_update_at(self.__plugin, self._existing_database_record)
@@ -413,7 +409,7 @@ class DownloadedFile[T](BaseFile[T], ABC):
         return False
 
     # TODO: Validate
-    def acceptable_error_extra_value(self) -> str:
+    def acceptable_error_status(self) -> str:
         return f"Invalid unique_identifier {self.unique_identifier}"
 
     # TODO: Validate
@@ -425,7 +421,7 @@ class DownloadedFile[T](BaseFile[T], ABC):
             except Exception as error:
                 if not self._is_acceptable_error(error):
                     raise
-                self.write(None, self.acceptable_error_extra_value())
+                self.write(None, self.acceptable_error_status())
             else:
                 self.write(data)
 

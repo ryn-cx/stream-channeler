@@ -14,7 +14,7 @@ from plugins.utils.base_plugin_v2.files import BaseFile
 
 
 # TODO: Validate
-class DownloadMixin(ABC):
+class BaseDownloadMixin(ABC):
     session: Session
 
     # TODO: Validate

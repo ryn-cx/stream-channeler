@@ -8,7 +8,7 @@ from plugins.Amazon.base import AmazonBase
 from plugins.Amazon.constants import TITLE_KEY_REGEX
 from plugins.Amazon.utils import canonical_show_of
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v2.importer import Importer
+from plugins.utils.base_plugin_v2.importer import BaseImporter
 
 if TYPE_CHECKING:
     from app.shows.models import Show
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class AmazonImporter(Importer, AmazonBase):
+class AmazonImporter(BaseImporter, AmazonBase):
     # https://watch.amazon.com/detail?gti=amzn1.dv.gti.92ad2133-d35e-1cb1-5d8e-f7b122a68228
     # The id Amazon writes into a share link, which names the title in a
     # different id space to the one its own pages are keyed by.

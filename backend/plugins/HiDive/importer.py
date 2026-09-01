@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, override
 from plugins.HiDive.base import HiDiveBase
 from plugins.HiDive.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v2.importer import Importer
+from plugins.utils.base_plugin_v2.importer import BaseImporter
 
 if TYPE_CHECKING:
     from app.episodes.models import Episode
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class HiDiveImporter(Importer, HiDiveBase):
+class HiDiveImporter(BaseImporter, HiDiveBase):
     # https://www.hidive.com/series/1286
     _SERIES_URL_REGEX = r"\/series\/(?P<series_key>\d+)(?:\/|$)"
     # https://www.hidive.com/season/20022

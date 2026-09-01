@@ -362,12 +362,31 @@ class AbstractPlugin(ABC):
         raise NotImplementedError(msg)
 
     # TODO: Validate
-    def search_for_url(self, query: str) -> str | None:
-        """Return the address of the one title `query` names here, or None.
+    def search_for_url(
+        self,
+        names: list[str],
+        media_type: MediaType,
+        year: int | None = None,
+    ) -> str | None:
+        """Return the address of the one title `names` name here, or None.
 
         What TMDB cross references a title against, so the closest match is all
         that matters and its address is all that is read off it. A service a
         user searches for themselves offers `in_app_search` instead.
+
+        A title is written differently on every service that carries it, so
+        every name TMDB knows it by is handed over rather than one of them: a
+        service holding the title under a name TMDB does not lead with is still
+        matched. `media_type` and `year` are what tell two titles of one name
+        apart, which a name on its own cannot.
+
+        Args:
+            names: Every name TMDB knows the title by, the one it leads with
+                first.
+            media_type: Which of the two halves of TMDB's catalogue the title
+                belongs to.
+            year: The year TMDB gives the title, where it gives one.
+
         """
         msg = "search_for_url is not supported by this plugin."
         raise NotImplementedError(msg)
@@ -375,12 +394,12 @@ class AbstractPlugin(ABC):
     # TODO: Validate
     def import_by_name(
         self,
-        name: str,
+        names: list[str],
         canonical_show: Show,
-        media_type: MediaType,  # noqa: ARG002 - `media_type` is used by overrides.
-        year: int | None = None,  # noqa: ARG002 - `year` is used by overrides.
+        media_type: MediaType,
+        year: int | None = None,
     ) -> list[URLImportResult]:
-        """Import the title `name` names here, and link it to `canonical_show`.
+        """Import the title `names` name here, and link it to `canonical_show`.
 
         What TMDB hands a service it has listed a title on, since a service is
         reached by the name of the title rather than by an address when TMDB has
@@ -389,7 +408,8 @@ class AbstractPlugin(ABC):
         on its own cannot.
 
         Args:
-            name: The title's name, as TMDB writes it.
+            names: Every name TMDB knows the title by, the one it leads with
+                first.
             canonical_show: The title being searched for, which what is imported
                 is linked to.
             media_type: Which of a film and a series the title is.
@@ -402,9 +422,12 @@ class AbstractPlugin(ABC):
             `MediaNotFoundError` if the service carries no title of that name.
 
         """
-        url = self.search_for_url(name)
+        url = self.search_for_url(names, media_type, year)
         if url is None:
-            msg = f"{self.plugin_name()} carries no title named {name!r}"
+            msg = (
+                f"Could not find {media_type.value} named {names[0]} on "
+                f"{self.plugin_name()}."
+            )
             raise MediaNotFoundError(msg)
         return self.import_url(url, canonical_show)
 

@@ -14,7 +14,6 @@ from app.sources.models import Source
 from plugins.NHKWorld.files import FileMixin, NewVideoEpisodes
 from plugins.utils.base_plugin_v2.files import (
     COMPLETED_STATUS,
-    EXTRA_STATUS_FIELD,
 )
 
 
@@ -57,7 +56,7 @@ class SourceMixin(FileMixin):
                     new_show_ids.append(show_id)
 
             self._queue_new_shows(new_show_ids)
-            feed_file.database_record.extra = {EXTRA_STATUS_FIELD: COMPLETED_STATUS}
+            feed_file.database_record.status = COMPLETED_STATUS
 
     # TODO: Validate
     def _queue_new_shows(self, show_ids: list[str]) -> None:

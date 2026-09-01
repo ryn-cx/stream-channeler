@@ -120,7 +120,7 @@ class ListedSourcesMixin(WatchProviderSyncMixin, LookupMixin):
         savepoint = self.session.begin_nested()
         try:
             plugin_class(self.session).import_by_name(
-                show.name,
+                [show.name],
                 show,
                 media_type,
                 show.year,

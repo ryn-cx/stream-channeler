@@ -8,7 +8,7 @@ from urllib.parse import parse_qs, urlparse
 from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from plugins.utils.base_plugin_v2.importer import Importer
+from plugins.utils.base_plugin_v2.importer import BaseImporter
 from plugins.YouTube.base import YouTubeBase
 from plugins.YouTube.constants import LONG_DOMAIN_REGEX, SHORT_DOMAIN_REGEX
 from plugins.YouTube.files import (
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class YouTubeImporter(Importer, YouTubeBase):
+class YouTubeImporter(BaseImporter, YouTubeBase):
     _show_key: str
 
     # https://www.youtube.com/watch?v=lVI_J1cbFb4&list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh

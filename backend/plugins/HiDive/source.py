@@ -12,10 +12,11 @@ from loguru import logger
 
 from app.channels.models import Channel
 from app.channels.service import add_urls_to_channel_import_queue
+from app.media.media_type import MediaType
 from app.sources.models import Source
 from plugins.HiDive.files import FileMixin, Schedule, schedule_group_list
 from plugins.HiDive.utils import UtilsMixin
-from plugins.utils.base_plugin_v2.files import COMPLETED_STATUS, EXTRA_STATUS_FIELD
+from plugins.utils.base_plugin_v2.files import COMPLETED_STATUS
 
 # TODO: Add support for individual episodes of a series.
 
@@ -97,20 +98,18 @@ class SourceMixin(UtilsMixin, FileMixin):
                             unmatched_names.append(show_name)
 
             self._queue_new_shows(unmatched_names)
-            schedule_file.database_record.extra = {
-                EXTRA_STATUS_FIELD: COMPLETED_STATUS,
-            }
+            schedule_file.database_record.status = COMPLETED_STATUS
 
     # TODO: Validate
     def _queue_new_shows(self, show_names: list[str]) -> None:
         """Queue the titles a schedule file named that are not imported yet.
 
-        A card names the show it is for but never the id of it, so the name is
-        put back through HiDive's own search to be told which title it is.
+        A card gives the show's name but not its URL, so the name is matched
+        against the imported catalogue to find it.
         """
         new_show_urls: list[str] = []
         for show_name in dict.fromkeys(show_names):
-            if show_url := self.search_for_url(show_name):
+            if show_url := self.search_for_url([show_name], MediaType.tv):
                 logger.info("Queueing new title: {}", show_name)
                 new_show_urls.append(show_url)
             else:

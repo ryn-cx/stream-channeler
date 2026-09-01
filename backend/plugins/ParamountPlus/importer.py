@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, override
 
 from plugins.ParamountPlus.base import ParamountPlusBase
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v2.importer import Importer
+from plugins.utils.base_plugin_v2.importer import BaseImporter
 
 if TYPE_CHECKING:
     from app.episodes.models import Episode
@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class ParamountPlusImporter(Importer, ParamountPlusBase):
+class ParamountPlusImporter(BaseImporter, ParamountPlusBase):
     # https://www.paramountplus.com/movies/video/ALVE01KT235XQDEK58R7H2012VNZMK/
     _MOVIE_URL_REGEX = r"\/movies\/video\/(?P<movie_id>[A-Za-z0-9]+)(?:\/|$)"
     # https://www.paramountplus.com/shows/south-park/

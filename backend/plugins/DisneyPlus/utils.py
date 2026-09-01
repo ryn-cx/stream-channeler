@@ -4,7 +4,7 @@
 import re
 from typing import override
 
-from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.base import BasePlugin
 
 
 # TODO: Validate
@@ -17,7 +17,7 @@ def required_value[ValueT](value: ValueT | None, description: str) -> ValueT:
 
 
 # TODO: Validate
-class UtilsMixin(PluginBase):
+class UtilsMixin(BasePlugin):
     """The URLs of a title and the numbers Disney+ only writes into names."""
 
     # TODO: Validate

@@ -4,11 +4,11 @@ from __future__ import annotations
 from typing import override
 
 from plugins.HiDive.base import HiDiveBase
-from plugins.utils.base_plugin_v2.initialize import PluginInitializer
+from plugins.utils.base_plugin_v2.initialize import BasePluginInitializer
 
 
 # TODO: Validate
-class HiDiveInitializer(PluginInitializer, HiDiveBase):
+class HiDiveInitializer(BasePluginInitializer, HiDiveBase):
     # TODO: Validate
     @override
     def _initialize_channels(self) -> None:

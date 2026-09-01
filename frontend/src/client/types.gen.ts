@@ -35,6 +35,7 @@ export type CanonicalEpisodeListOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -96,6 +97,7 @@ export type CanonicalShowOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -606,6 +608,7 @@ export type EpisodeCreate = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -660,6 +663,7 @@ export type EpisodeListOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -699,6 +703,7 @@ export type EpisodeOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -762,6 +767,7 @@ export type EpisodeUpdate = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -809,6 +815,7 @@ export type FileCreate = {
     data_timestamp: string;
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -822,6 +829,7 @@ export type FileExport = {
     content?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: ({
     [key: string]: unknown;
 } | null);
@@ -842,6 +850,7 @@ export type FileListPublic = {
     data_timestamp: string;
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -863,6 +872,7 @@ export type FilePublic = {
     data_timestamp: string;
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -889,6 +899,7 @@ export type FileUpdate = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -984,6 +995,7 @@ export type PluginCreate = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -1010,6 +1022,7 @@ export type PluginListOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -1051,6 +1064,7 @@ export type PluginOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -1107,6 +1121,7 @@ export type PluginUpdate = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -1148,6 +1163,7 @@ export type SeasonCreate = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -1190,6 +1206,7 @@ export type SeasonListOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -1217,6 +1234,7 @@ export type SeasonOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -1249,6 +1267,7 @@ export type SeasonUpdate = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -1268,6 +1287,7 @@ export type ShowCreate = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -1316,6 +1336,7 @@ export type ShowListPublic = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -1346,6 +1367,7 @@ export type ShowPublic = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -1388,6 +1410,7 @@ export type ShowUpdate = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -1440,6 +1463,7 @@ export type SourceCreate = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -1456,6 +1480,7 @@ export type SourceListPublic = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -1488,6 +1513,7 @@ export type SourcePublic = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -1516,6 +1542,7 @@ export type SourceUpdate = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -1659,6 +1686,7 @@ export type UnvalidatedShowOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -1883,6 +1911,7 @@ export type WhitelistEpisodeLinkOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -1916,6 +1945,7 @@ export type WhitelistEpisodeOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -1970,6 +2000,7 @@ export type WhitelistSeasonOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };
@@ -2006,6 +2037,7 @@ export type WhitelistShowOutput = {
     data_timestamp?: (string | null);
     update_at?: (string | null);
     deleted_at?: (string | null);
+    status?: (string | null);
     extra?: {
         [key: string]: unknown;
     };

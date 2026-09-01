@@ -1,7 +1,6 @@
 # TODO: Validate
 """The files Hulu is read out of."""
 
-import json
 from collections.abc import Sequence
 from datetime import datetime, timedelta
 from functools import cache
@@ -10,11 +9,13 @@ from typing import Any, override
 
 from sqlmodel import Session
 from wholoo import Wholoo
+from wholoo.episode import Episode as EpisodeEndpoint
+from wholoo.episode.models import EpisodeModel
 from wholoo.exceptions import (
+    EpisodeNotFoundError,
     GenreNotFoundError,
     HTTPError,
     MovieNotFoundError,
-    ResourceNotFoundError,
     SeriesNotFoundError,
 )
 from wholoo.genre import Genre as GenreEndpoint
@@ -36,7 +37,7 @@ from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.Hulu.utils import HuluMediaType
 from plugins.utils.abstract_plugin import TMDBLookupInfo
-from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
 
@@ -46,36 +47,6 @@ from plugins.utils.get_around_client import get_around_client
 def wholoo() -> Wholoo:
     """Return a cached Wholoo client."""
     return Wholoo(get_around_client=get_around_client())
-
-
-# The details hub for a single episode, which is the only place the id of the series
-# an episode belongs to can be looked up.
-# TODO: Add this to Wholoo so it has full type support.
-# TODO: Validate
-class EpisodeHubEndpoint:
-    # TODO: Validate
-    def __init__(self, client: Wholoo) -> None:
-        self._client = client
-
-    # TODO: Validate
-    def download(self, episode_id: str, /) -> str:
-        return self._client.download(
-            endpoint=f"content/v5/hubs/episode/{episode_id}",
-            params={
-                "schema": "3",
-                "limit": "1999",
-                "device_info": "web:4.44.1",
-                "referralHost": "production",
-                "pageType": "DETAILS",
-            },
-            headers={"Referer": f"https://www.hulu.com/watch/{episode_id}"},
-            log_id=f"EpisodeHub ({episode_id!r})",
-        )
-
-    # TODO: Validate
-    def load(self, data: str, log_id: str = "") -> dict[str, Any]:  # noqa: ARG002
-        parsed: dict[str, Any] = json.loads(data)
-        return parsed
 
 
 # TODO: Validate
@@ -156,18 +127,18 @@ class SeasonFile(EndpointFile[SeasonModel]):
 
 
 # TODO: Validate
-class EpisodeHub(EndpointFile[dict[str, Any]]):
+class EpisodeHub(EndpointFile[EpisodeModel]):
     """Episode file."""
 
     # TODO: Validate
     @override
-    def _endpoint(self) -> EpisodeHubEndpoint:
-        return EpisodeHubEndpoint(wholoo())
+    def _endpoint(self) -> EpisodeEndpoint:
+        return wholoo().episode
 
     # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
-        if isinstance(error, ResourceNotFoundError):
+        if isinstance(error, EpisodeNotFoundError):
             return True
         return (
             isinstance(error, HTTPError) and error.status_code == HTTPStatus.BAD_REQUEST
@@ -176,8 +147,7 @@ class EpisodeHub(EndpointFile[dict[str, Any]]):
     # TODO: Validate
     def series_id(self) -> str:
         """Return the id of the series the episode belongs to."""
-        entity = self.parsed()["details"]["vod_items"]["focus"]["entity"]
-        return str(entity["series_id"])
+        return str(self.parsed().details.vod_items.focus.entity.series_id)
 
 
 # TODO: Validate
@@ -228,11 +198,6 @@ class GenresPage(SitemapPage[GenresModel]):
     def _download_file(self) -> str:
         return self._endpoint().download()
 
-    # TODO: Validate
-    @override
-    def _next_update_at(self) -> datetime:
-        return tz_datetime.now() + timedelta(days=7)
-
 
 # TODO: Validate
 class GenrePage(SitemapPage[GenreModel]):
@@ -261,14 +226,9 @@ class GenrePage(SitemapPage[GenreModel]):
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, GenreNotFoundError)
 
-    # TODO: Validate
-    @override
-    def _next_update_at(self) -> datetime:
-        return tz_datetime.now() + timedelta(days=7)
-
 
 # TODO: Validate
-class FileMixin(PluginBase):
+class FileMixin(BasePlugin):
     """The files a title is read out of."""
 
     _media_type: HuluMediaType

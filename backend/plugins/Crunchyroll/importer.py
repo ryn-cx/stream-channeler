@@ -8,7 +8,7 @@ from app.shows.models import Show
 from app.sources.models import Source
 from plugins.Crunchyroll.base import CrunchyrollBase
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from plugins.utils.base_plugin_v2.importer import Importer
+from plugins.utils.base_plugin_v2.importer import BaseImporter
 
 
 # TODO: Validate
@@ -29,7 +29,7 @@ def _build_crunchyroll_url_regex(*path: str, group: str) -> str:
 
 
 # TODO: Validate
-class CrunchyrollImporter(Importer, CrunchyrollBase):
+class CrunchyrollImporter(BaseImporter, CrunchyrollBase):
     # https://www.crunchyroll.com/watch/musicvideo/MV5CD8B009
     _MUSIC_VIDEO_URL_REGEX = _build_crunchyroll_url_regex(
         "watch",

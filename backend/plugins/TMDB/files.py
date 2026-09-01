@@ -73,7 +73,7 @@ from plugins.TMDB.keys import (
     get_media_type_and_tmdb_id,
 )
 from plugins.TMDB.urls import media_url
-from plugins.utils.base_plugin_v2.base import PluginBase
+from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import (
     BaseFile,
     EndpointFile,
@@ -491,7 +491,7 @@ class TvSearch(EndpointFile[SearchTvModel]):
 
 
 # TODO: Validate
-class FileMixin(PluginBase):
+class FileMixin(BasePlugin):
     # TODO: Validate
     @property
     def source(self) -> Source:

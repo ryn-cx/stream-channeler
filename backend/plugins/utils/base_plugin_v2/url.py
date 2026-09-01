@@ -4,7 +4,7 @@ from typing import Any
 
 
 # TODO: Validate
-class URLMixin:
+class BaseURLMixin:
     # TODO: Validate
     @classmethod
     def is_valid_url_format(cls, url: str) -> bool:

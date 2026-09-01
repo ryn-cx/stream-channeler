@@ -17,13 +17,12 @@ from app.shows.models import Show
 from app.sources.models import Source
 from plugins.utils.base_plugin_v2.files import (
     COMPLETED_STATUS,
-    EXTRA_STATUS_FIELD,
     BaseFile,
 )
 
 
 # TODO: Validate
-class PreloadMixin(ABC):
+class BasePreloadMixin(ABC):
     session: Session
     plugin: Plugin
 
@@ -198,19 +197,14 @@ class PreloadMixin(ABC):
         *,
         key_prefix: str = "",
     ) -> list[T]:
-        """Return files of `file_class` not yet marked "Completed" in `File.extra`."""
         statement = (
             select(File)
             .where(
                 File.plugin == self.plugin,
                 col(File.key).startswith(f"{file_class.__name__}/{key_prefix}"),
-                # The status is read out of the object rather than compared
-                # against it, since `extra` holds whatever else a plugin keeps
-                # beside the mark. is_distinct_from keeps the rows carrying no
-                # status at all, which are the ones never imported.
-                col(File.extra)[EXTRA_STATUS_FIELD].astext.is_distinct_from(
-                    COMPLETED_STATUS,
-                ),
+                # is_distinct_from keeps the rows carrying no status at all,
+                # which are the ones never imported.
+                col(File.status).is_distinct_from(COMPLETED_STATUS),
             )
             .order_by(col(File.data_timestamp).asc())
         )

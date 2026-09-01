@@ -17,7 +17,6 @@ from sqlmodel import col
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.utils import tz_datetime
-from plugins.utils.base_plugin_v2.files import EXTRA_STATUS_FIELD
 from plugins.YouTube.files import FileMixin
 
 if TYPE_CHECKING:
@@ -54,11 +53,7 @@ class UpdaterMixin(FileMixin):
 
         for season in seasons:
             self._update_and_upsert_show(season.show)
-            season.extra = {
-                field: value
-                for field, value in season.extra.items()
-                if field != EXTRA_STATUS_FIELD
-            }
+            season.status = None
             self.session.commit()
             self.clear_file_cache()
 
@@ -67,7 +62,7 @@ class UpdaterMixin(FileMixin):
         statement = Season.select_with_plugin_eager().where(
             col(Plugin.key) == self.plugin_name(),
             col(Season.deleted_at).is_(None),
-            col(Season.extra)[EXTRA_STATUS_FIELD].astext == PENDING_UPDATE_STATUS,
+            col(Season.status) == PENDING_UPDATE_STATUS,
         )
         return list(self.session.exec(statement).unique().all())
 
@@ -98,7 +93,7 @@ class UpdaterMixin(FileMixin):
             season.name or season.key,
             ", ".join(sorted(new_video_ids)),
         )
-        season.extra = {**season.extra, EXTRA_STATUS_FIELD: PENDING_UPDATE_STATUS}
+        season.status = PENDING_UPDATE_STATUS
         self.playlist_items_file(season.key).download_if_outdated(tz_datetime.now())
 
     # TODO: Validate
