@@ -14,7 +14,7 @@ from app.unmatched_sources.schemas import (
 )
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.manage_plugins import plugin_for_url
+from plugins.utils.manage_plugins import get_plugin_for_url
 
 
 # TODO: Validate
@@ -90,7 +90,7 @@ def import_unmatched_source(
     import_input: UnmatchedSourceImport,
 ) -> Message:
     url = import_input.url.strip()
-    plugin_class = plugin_for_url(url)
+    plugin_class = get_plugin_for_url(url)
     if plugin_class is None:
         raise HTTPException(
             status_code=400,

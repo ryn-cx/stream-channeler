@@ -8,7 +8,7 @@ from app.shows.models import Show
 from app.sources.models import Source
 from plugins.Crunchyroll.base import CrunchyrollBase
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from plugins.utils.base_plugin_v2.workers import Importer
+from plugins.utils.base_plugin_v2.importer import Importer
 
 
 # TODO: Validate
@@ -71,7 +71,7 @@ class CrunchyrollImporter(Importer, CrunchyrollBase):
 
     # TODO: Validate
     @override
-    def _parse_url(self, url: str) -> None:
+    def _parse_url(self, url: str) -> str:
         domain_regex = self._domain_regex()
         self._episode_key = None
 
@@ -80,38 +80,36 @@ class CrunchyrollImporter(Importer, CrunchyrollBase):
             (self._CONCERT_URL_REGEX, "concert_key"),
         ):
             if match := re.match(domain_regex + url_regex, url):
-                self._read_music_url(match.group(group), url)
-                return
+                return self._read_music_url(match.group(group), url)
 
         if match := re.match(domain_regex + self._ARTIST_URL_REGEX, url):
-            self._show_key = match.group("artist_key")
+            show_key = match.group("artist_key")
             self._url_source_value = self.music_source
-            self.raise_if_invalid_file(self.artist_file(self._show_key), url)
-            return
+            self.raise_if_invalid_file(self.artist_file(show_key), url)
+            return show_key
 
         if match := re.match(domain_regex + self._SERIES_URL_REGEX, url):
-            self._show_key = match.group("show_key")
+            show_key = match.group("show_key")
             self._url_source_value = self.video_source
-            self.raise_if_invalid_file(self.series_file(self._show_key), url)
-            return
+            self.raise_if_invalid_file(self.series_file(show_key), url)
+            return show_key
 
         if match := re.match(domain_regex + self._EPISODE_URL_REGEX, url):
-            self._read_episode_url(match.group("episode_key"), url)
-            return
+            return self._read_episode_url(match.group("episode_key"), url)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
     # TODO: Validate
-    def _read_music_url(self, episode_key: str, url: str) -> None:
+    def _read_music_url(self, episode_key: str, url: str) -> str:
         self._url_source_value = self.music_source
         music_file = self.concert_or_music_video_file(episode_key)
         self.raise_if_invalid_file(music_file, url)
         self._episode_key = episode_key
-        self._show_key = music_file.parsed().data[0].artist.id
+        return music_file.parsed().data[0].artist.id
 
     # TODO: Validate
-    def _read_episode_url(self, episode_key: str, url: str) -> None:
+    def _read_episode_url(self, episode_key: str, url: str) -> str:
         self._url_source_value = self.video_source
         objects_file = self.objects_file(episode_key)
         self.raise_if_invalid_file(objects_file, url)
@@ -128,7 +126,7 @@ class CrunchyrollImporter(Importer, CrunchyrollBase):
         original_file = self.objects_file(episode_key)
         self.raise_if_invalid_file(original_file, url)
         self._episode_key = episode_key
-        self._show_key = original_file.parsed().data[0].episode_metadata.series_id
+        return original_file.parsed().data[0].episode_metadata.series_id
 
     # TODO: Validate
     @override

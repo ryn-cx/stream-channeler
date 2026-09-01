@@ -5,7 +5,7 @@
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, UploadFile
 
 from app.auth.dependencies import (
     SessionDep,
@@ -16,11 +16,15 @@ from app.files.dependencies import ExistingFile
 from app.files.models import File
 from app.files.schemas import (
     FileCreate,
+    FileExport,
+    FileImportResult,
     FileListPublic,
+    FileManifestEntry,
     FilePublic,
     FilesPublic,
     FileUpdate,
 )
+from app.files.service import file_manifest, import_file_dump, missing_file_dump
 from app.media.service import delete_record
 from app.plugins.dependencies import ExistingPlugin
 from app.plugins.models import Plugin
@@ -72,6 +76,24 @@ def get_files(
         current_user=current_user,
         extra_columns=FILE_PARENT_COLUMNS,
     )
+
+
+# TODO: Validate
+@files_router.get("/manifest")
+def get_file_manifest(session: SessionDep) -> list[FileManifestEntry]:
+    return file_manifest(session)
+
+
+# TODO: Validate
+@files_router.post("/dump-missing-files")
+def dump_missing_files(session: SessionDep, file: UploadFile) -> list[FileExport]:
+    return missing_file_dump(session, file)
+
+
+# TODO: Validate
+@files_router.post("/import")
+def import_files(session: SessionDep, file: UploadFile) -> FileImportResult:
+    return import_file_dump(session, file)
 
 
 # TODO: Validate

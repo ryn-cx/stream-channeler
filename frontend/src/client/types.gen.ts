@@ -6,6 +6,14 @@ export type BlacklistEpisodeInput = {
     expires_at?: (string | null);
 };
 
+export type Body_files_dump_missing_files = {
+    file: (Blob | File);
+};
+
+export type Body_files_import_files = {
+    file: (Blob | File);
+};
+
 export type Body_login_login_access_token = {
     grant_type?: (string | null);
     username: string;
@@ -807,6 +815,23 @@ export type FileCreate = {
     content?: (string | null);
 };
 
+export type FileExport = {
+    plugin_key: string;
+    key: string;
+    data_timestamp: string;
+    content?: (string | null);
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    extra?: ({
+    [key: string]: unknown;
+} | null);
+};
+
+export type FileImportResult = {
+    imported: number;
+    skipped: number;
+};
+
 /**
  * Schema for returning a list of `File`s, excluding `content`.
  *
@@ -823,6 +848,11 @@ export type FileListPublic = {
     plugin_id: string;
     id: string;
     plugin_name: (string | null);
+};
+
+export type FileManifestEntry = {
+    plugin_key: string;
+    key: string;
 };
 
 /**
@@ -2576,6 +2606,20 @@ export type FilesGetFilesData = {
 
 export type FilesGetFilesResponse = (FilesPublic);
 
+export type FilesGetFileManifestResponse = (Array<FileManifestEntry>);
+
+export type FilesDumpMissingFilesData = {
+    formData: Body_files_dump_missing_files;
+};
+
+export type FilesDumpMissingFilesResponse = (Array<FileExport>);
+
+export type FilesImportFilesData = {
+    formData: Body_files_import_files;
+};
+
+export type FilesImportFilesResponse = (FileImportResult);
+
 export type FilesGetFileData = {
     fileId: string;
 };
@@ -2894,12 +2938,12 @@ export type ShowsAdminLinkShowByTmdbUrlData = {
 
 export type ShowsAdminLinkShowByTmdbUrlResponse = (ShowPublic);
 
-export type ShowsAdminImportNonCanonicalShowData = {
+export type ShowsAdminLinkNonCanonicalShowByUrlData = {
     requestBody: ShowImportUrlInput;
     showId: string;
 };
 
-export type ShowsAdminImportNonCanonicalShowResponse = (ShowPublic);
+export type ShowsAdminLinkNonCanonicalShowByUrlResponse = (ShowPublic);
 
 export type ShowsAdminCanonicalizeShowData = {
     showId: string;

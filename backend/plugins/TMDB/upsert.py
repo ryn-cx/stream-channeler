@@ -30,9 +30,9 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
-from plugins.TMDB.constants import media_url
 from plugins.TMDB.episode_groups import dump_episode_extra
-from plugins.TMDB.keys import parse_show_key
+from plugins.TMDB.keys import get_media_type_and_tmdb_id
+from plugins.TMDB.urls import media_url
 from plugins.TMDB.utils import (
     SeasonSource,
     UtilsMixin,
@@ -74,7 +74,7 @@ class UpsertMixin(UtilsMixin):
         *,
         force: bool = False,
     ) -> Show:
-        media_type, tmdb_id = parse_show_key(show_key)
+        media_type, tmdb_id = get_media_type_and_tmdb_id(show_key)
         if media_type == MediaType.movie:
             show = self._upsert_movie_show(source, show_key, tmdb_id, force=force)
         else:

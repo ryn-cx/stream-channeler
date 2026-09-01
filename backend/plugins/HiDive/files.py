@@ -33,7 +33,7 @@ from plugins.HiDive.constants import (
     RELEASE_DATE_PREFIX,
     SERIES_MEDIA_TYPE,
 )
-from plugins.utils.abstract_plugin import PluginShowIdentity
+from plugins.utils.abstract_plugin import TMDBLookupInfo
 from plugins.utils.base_plugin_v2.base import PluginBase
 from plugins.utils.base_plugin_v2.files import (
     BaseFile,
@@ -276,27 +276,27 @@ class FileMixin(MediaTypeMixin, PluginBase):
 
     # TODO: Validate
     @override
-    def show_identity(self, show_key: str) -> PluginShowIdentity:
+    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
         if self._is_movie():
-            return self._movie_identity(show_key)
-        return self._series_identity(show_key)
+            return self._get_movie_tmdb_lookup_info(show_key)
+        return self._get_series_tmdb_lookup_info(show_key)
 
     # TODO: Validate
-    def _series_identity(self, show_key: str) -> PluginShowIdentity:
+    def _get_series_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
         series_file = self.series_file(show_key)
         series_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        return PluginShowIdentity(
+        return TMDBLookupInfo(
             title=series_file.parsed().metadata.series.title,
             media_type=SERIES_MEDIA_TYPE,
         )
 
     # TODO: Validate
-    def _movie_identity(self, show_key: str) -> PluginShowIdentity:
+    def _get_movie_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
         vod_file = self.vod_file(show_key)
         vod_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         hero = vod_hero(vod_file.parsed())
         release_date = self._release_date(hero)
-        return PluginShowIdentity(
+        return TMDBLookupInfo(
             title=self._movie_title(hero),
             media_type=MOVIE_MEDIA_TYPE,
             year=release_date.year if release_date else None,

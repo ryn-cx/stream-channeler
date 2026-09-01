@@ -1,7 +1,7 @@
 # TODO: Validate
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import override
 
@@ -11,7 +11,6 @@ from app.channels.models import Channel
 from app.channels.service import add_urls_to_channel_import_queue
 from app.shows.models import Show
 from app.sources.models import Source
-from app.users.service import get_or_create_plugin_user
 from plugins.NHKWorld.files import FileMixin, NewVideoEpisodes
 from plugins.utils.base_plugin_v2.files import (
     COMPLETED_STATUS,
@@ -23,12 +22,12 @@ from plugins.utils.base_plugin_v2.files import (
 class SourceMixin(FileMixin):
     # TODO: Validate
     @override
-    def update_source(self, source: Source) -> None:
+    def update_source(self, source: Source, update_at: datetime) -> None:
         if source.data_timestamp is None:
             msg = "Cannot update source without a data timestamp."
             raise ValueError(msg)
         new_feed_file = self.new_video_episodes_file(source.data_timestamp)
-        new_feed_file.download_if_outdated(source.update_at)
+        new_feed_file.download_if_outdated(update_at)
         self._process_new_episodes_files(source)
         self.upsert_source(source.key)
 
@@ -82,9 +81,7 @@ class SourceMixin(FileMixin):
         whole library. It is created the first time a show is found rather than
         by hand.
         """
-        plugin_user = get_or_create_plugin_user(session=self.session)
         return self.get_or_create_channel(
-            plugin_user,
             self.plugin_name(),
             (Path(__file__).parent / "channel_description.md").read_text(
                 encoding="utf-8",

@@ -8,7 +8,7 @@ from plugins.Roku.base import RokuBase
 from plugins.Roku.constants import CONTENT_ID_REGEX
 from plugins.Roku.files import content_id
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v2.workers import Importer
+from plugins.utils.base_plugin_v2.importer import Importer
 
 
 # TODO: Validate
@@ -30,7 +30,7 @@ class RokuImporter(Importer, RokuBase):
 
     # TODO: Validate
     @override
-    def _parse_url(self, url: str) -> None:
+    def _parse_url(self, url: str) -> str:
         domain_regex = self._domain_regex()
         for url_regex in self._url_regexes():
             if match := re.match(domain_regex + url_regex, url):
@@ -38,10 +38,8 @@ class RokuImporter(Importer, RokuBase):
                 self.raise_if_invalid_file(self.content_file(key), url)
                 # A season or an episode URL is imported as the series it belongs to.
                 if series := self.content_file(key).parsed().series:
-                    self._show_key = content_id(series.meta.id)
-                else:
-                    self._show_key = key
-                return
+                    return content_id(series.meta.id)
+                return key
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)

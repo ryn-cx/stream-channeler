@@ -21,7 +21,7 @@ export function NonCanonicalShowField({ showId }: NonCanonicalShowFieldProps) {
 
   const mutation = useMutation({
     mutationFn: () =>
-      ShowsService.adminImportNonCanonicalShow({
+      ShowsService.adminLinkNonCanonicalShowByUrl({
         showId,
         requestBody: { url: urlDraft.trim() },
       }),

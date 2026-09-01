@@ -41,7 +41,7 @@ def _parse(key: str, level: str) -> RecordKey:
 
 
 # TODO: Validate
-def parse_show_key(key: str) -> RecordKey:
+def get_media_type_and_tmdb_id(key: str) -> RecordKey:
     """Return the half of the catalogue and the id a `Show` key names."""
     return _parse(key, SHOW_LEVEL)
 

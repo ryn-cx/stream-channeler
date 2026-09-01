@@ -8,11 +8,11 @@ from typing import override
 from minbo.movie.models import Idref14 as MovieContent
 
 from app.episodes.models import Episode
-from app.models import staggered_update_at
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
+from app.utils.update_at import staggered_monthly_update_at
 from plugins.HBOMax.files import FileMixin
 from plugins.HBOMax.utils import UtilsMixin
 
@@ -62,7 +62,7 @@ class UpsertMixin(UtilsMixin, FileMixin):
                 thumbnail_url=content.image_url_link,
                 data_timestamp=data_timestamp,
                 source_id=source.id,
-                update_at=staggered_update_at(show_key, data_timestamp),
+                update_at=staggered_monthly_update_at(show_key, data_timestamp),
             )
             show = self._upsert_show_object(new_show, source, show, show_key)
 
@@ -92,7 +92,7 @@ class UpsertMixin(UtilsMixin, FileMixin):
                 thumbnail_url=content.image_url_link,
                 data_timestamp=data_timestamp,
                 source_id=source.id,
-                update_at=staggered_update_at(show_key, data_timestamp),
+                update_at=staggered_monthly_update_at(show_key, data_timestamp),
             )
             show = self._upsert_show_object(new_show, source, show, show_key)
 

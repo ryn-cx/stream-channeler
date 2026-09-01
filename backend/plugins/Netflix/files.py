@@ -36,7 +36,7 @@ from sqlmodel import Session
 
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
-from plugins.utils.abstract_plugin import PluginShowIdentity
+from plugins.utils.abstract_plugin import TMDBLookupInfo
 from plugins.utils.base_plugin_v2.base import PluginBase
 from plugins.utils.base_plugin_v2.files import (
     BaseFile,
@@ -78,10 +78,10 @@ class Title(IntegerEndpointFile[LodpTitleAndPlansPageModel]):
         return self.video().field__typename == "Movie"
 
     # TODO: Validate
-    def identity(self) -> PluginShowIdentity:
+    def get_tmdb_lookup_info(self) -> TMDBLookupInfo:
         self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         video = self.video()
-        return PluginShowIdentity(
+        return TMDBLookupInfo(
             title=video.title,
             media_type="Movie" if self.is_movie() else "TV Show",
             year=video.latest_year,
@@ -199,8 +199,8 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     @override
-    def show_identity(self, show_key: str) -> PluginShowIdentity:
-        return self.title_file(show_key).identity()
+    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
+        return self.title_file(show_key).get_tmdb_lookup_info()
 
     # TODO: Validate
     def _ordered_seasons(self, show_key: str) -> list[SeasonNode]:

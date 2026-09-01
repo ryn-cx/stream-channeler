@@ -133,14 +133,14 @@ def import_non_canonical_show_from_url(
     url: str,
 ) -> Show:
     from plugins.utils.abstract_plugin import InvalidURLError  # noqa: PLC0415
-    from plugins.utils.manage_plugins import plugin_for_url  # noqa: PLC0415
+    from plugins.utils.manage_plugins import get_plugin_for_url  # noqa: PLC0415
 
     address = url.strip()
     if not canonical_show.is_canonical:
         message = "A show linked to a canonical show cannot hold rows of its own."
         raise HTTPException(status_code=409, detail=message)
 
-    plugin_class = plugin_for_url(address)
+    plugin_class = get_plugin_for_url(address)
     if plugin_class is None:
         raise HTTPException(status_code=400, detail=f"No plugin imports {address}")
 
@@ -291,9 +291,9 @@ def list_tmdb_episode_groups(
     # Imported here rather than at the top of the module because the plugin is
     # built on the base every plugin is, which reads this module in turn.
     from plugins.TMDB import TMDB  # noqa: PLC0415
-    from plugins.TMDB.keys import parse_show_key  # noqa: PLC0415
+    from plugins.TMDB.keys import get_media_type_and_tmdb_id  # noqa: PLC0415
 
-    media_type, tmdb_id = parse_show_key(show.key)
+    media_type, tmdb_id = get_media_type_and_tmdb_id(show.key)
     if media_type is not MediaType.tv:
         return []
 
@@ -447,13 +447,13 @@ def validate_extra(
     # built on the base every plugin is, which reads this module in turn.
     from plugins.TMDB import TMDB  # noqa: PLC0415
     from plugins.TMDB.episode_groups import chosen_group_id  # noqa: PLC0415
-    from plugins.TMDB.keys import parse_show_key  # noqa: PLC0415
+    from plugins.TMDB.keys import get_media_type_and_tmdb_id  # noqa: PLC0415
 
     group_id = chosen_group_id(extra)
     if group_id is None:
         return
 
-    media_type, tmdb_id = parse_show_key(show.key)
+    media_type, tmdb_id = get_media_type_and_tmdb_id(show.key)
     if media_type is not MediaType.tv:
         message = "A film has no episode orders to be read in."
         raise HTTPException(status_code=422, detail=message)

@@ -133,12 +133,10 @@ class PluginValidatorAlt[PluginT: AbstractPlugin](DatabaseMixinAlt[PluginT]):
         self,
         session: Session,
         url: str | None = None,
-        *,
-        force: bool = False,
     ) -> list[URLImportResult]:
         """Import the test's URL as of `IMPORT_TIME`."""
         with frozen_clock(self.import_time):
-            return self._import_url(session, url, force=force)
+            return self._import_url(session, url)
 
     # TODO: Validate
     def update(

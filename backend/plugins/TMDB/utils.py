@@ -15,8 +15,9 @@ from plugins.TMDB.files import FileMixin
 from plugins.TMDB.keys import (
     parse_episode_key,
     parse_season_key,
-    parse_show_key,
+    get_media_type_and_tmdb_id,
 )
+from plugins.TMDB.lookup import LookupMixin
 
 
 # TODO: Validate
@@ -89,6 +90,32 @@ def change_datetime(changed_at: str) -> datetime:
 
 
 # TODO: Validate
+def first_search_result(
+    plugin: LookupMixin,
+    name: str,
+    media_type: MediaType | None,
+    year: int | None,
+) -> tuple[MediaType, int] | None:
+    """Return which half the first title TMDB returns is from, and its id."""
+    if media_type is not None:
+        results = plugin.search_media(media_type, name, year).parsed().results
+        return (media_type, results[0].id) if results else None
+
+    # A search of both halves also returns people, who are no title and are
+    # passed over rather than taken as the first result.
+    for result in plugin.search_media(None, name, year).parsed().results:
+        # Which half of the catalogue a search of both says a result came
+        # from. A multi search also returns people, who are no title and
+        # cannot be imported.
+        half = {"movie": MediaType.movie, "tv": MediaType.tv}.get(
+            result.media_type,
+        )
+        if half is not None:
+            return half, result.id
+    return None
+
+
+# TODO: Validate
 class EpisodeSource(NamedTuple):
     """One episode of a season, and the number the order gives it."""
 
@@ -148,7 +175,7 @@ class UtilsMixin(FileMixin):
         way, so the same episode is the same row whichever order it is read in
         and a title changing order moves its episodes rather than replacing them.
         """
-        _, tmdb_id = parse_show_key(show_key)
+        _, tmdb_id = get_media_type_and_tmdb_id(show_key)
         group = self._chosen_group(show_key)
         if group is not None:
             return [
@@ -247,7 +274,7 @@ class UtilsMixin(FileMixin):
     # TODO: Validate
     @override
     def _season_keys_from_show_files(self, show_key: str) -> list[str]:
-        media_type, tmdb_id = parse_show_key(show_key)
+        media_type, tmdb_id = get_media_type_and_tmdb_id(show_key)
         if media_type == MediaType.movie:
             return [tmdb_season_key(media_type, tmdb_id)]
         return [season.key for season in self.series_seasons(show_key)]
@@ -262,7 +289,7 @@ class UtilsMixin(FileMixin):
         if isinstance(season_keys, str):
             season_keys = [season_keys]
 
-        media_type, tmdb_id = parse_show_key(show_key)
+        media_type, tmdb_id = get_media_type_and_tmdb_id(show_key)
         if media_type == MediaType.movie:
             return [tmdb_episode_key(media_type, tmdb_id)]
 

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, override
 from plugins.Hulu.base import HuluBase
 from plugins.Hulu.utils import HuluMediaType
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v2.workers import (
+from plugins.utils.base_plugin_v2.importer import (
     EpisodeUpdater,
     SeasonUpdater,
     ShowUpdater,

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, override
 from plugins.HiDive.base import HiDiveBase
 from plugins.HiDive.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v2.workers import Importer
+from plugins.utils.base_plugin_v2.importer import Importer
 
 if TYPE_CHECKING:
     from app.episodes.models import Episode
@@ -36,13 +36,13 @@ class HiDiveImporter(Importer, HiDiveBase):
 
     # TODO: Validate
     @override
-    def _parse_url(self, url: str) -> None:
+    def _parse_url(self, url: str) -> str:
         domain_regex = self._domain_regex()
         if match := re.match(domain_regex + self._SERIES_URL_REGEX, url):
-            self._show_key = match.group("series_key")
+            show_key = match.group("series_key")
             self._media_type = SERIES_MEDIA_TYPE
-            self.raise_if_invalid_file(self.series_file(self._show_key), url)
-            return
+            self.raise_if_invalid_file(self.series_file(show_key), url)
+            return show_key
 
         # HiDive's interface does not do a good job of seperating shows and seasons
         # and if a user uses a season URL it should be treated the same as a series
@@ -52,14 +52,13 @@ class HiDiveImporter(Importer, HiDiveBase):
             self._media_type = SERIES_MEDIA_TYPE
             self.raise_if_invalid_file(self.season_file(season_key), url)
             season_data = self.season_file(season_key).parsed()
-            self._show_key = str(season_data.metadata.series.series_id)
-            return
+            return str(season_data.metadata.series.series_id)
 
         if match := re.match(domain_regex + self._MOVIE_URL_REGEX, url):
-            self._show_key = match.group("movie_vod_key")
+            show_key = match.group("movie_vod_key")
             self._media_type = MOVIE_MEDIA_TYPE
-            self.raise_if_invalid_file(self.vod_file(self._show_key), url)
-            return
+            self.raise_if_invalid_file(self.vod_file(show_key), url)
+            return show_key
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)

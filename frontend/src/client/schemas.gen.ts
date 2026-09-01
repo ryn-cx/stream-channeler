@@ -31,6 +31,32 @@ export const BlacklistEpisodeInputSchema = {
     title: 'BlacklistEpisodeInput'
 } as const;
 
+export const Body_files_dump_missing_filesSchema = {
+    properties: {
+        file: {
+            type: 'string',
+            format: 'binary',
+            title: 'File'
+        }
+    },
+    type: 'object',
+    required: ['file'],
+    title: 'Body_files-dump_missing_files'
+} as const;
+
+export const Body_files_import_filesSchema = {
+    properties: {
+        file: {
+            type: 'string',
+            format: 'binary',
+            title: 'File'
+        }
+    },
+    type: 'object',
+    required: ['file'],
+    title: 'Body_files-import_files'
+} as const;
+
 export const Body_login_login_access_tokenSchema = {
     properties: {
         grant_type: {
@@ -4081,6 +4107,90 @@ export const FileCreateSchema = {
     description: 'Schema for creating a `File`.'
 } as const;
 
+export const FileExportSchema = {
+    properties: {
+        plugin_key: {
+            type: 'string',
+            title: 'Plugin Key'
+        },
+        key: {
+            type: 'string',
+            title: 'Key'
+        },
+        data_timestamp: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Data Timestamp'
+        },
+        content: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Content'
+        },
+        update_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Update At'
+        },
+        deleted_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Deleted At'
+        },
+        extra: {
+            anyOf: [
+                {
+                    additionalProperties: true,
+                    type: 'object'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Extra'
+        }
+    },
+    type: 'object',
+    required: ['plugin_key', 'key', 'data_timestamp'],
+    title: 'FileExport'
+} as const;
+
+export const FileImportResultSchema = {
+    properties: {
+        imported: {
+            type: 'integer',
+            title: 'Imported'
+        },
+        skipped: {
+            type: 'integer',
+            title: 'Skipped'
+        }
+    },
+    type: 'object',
+    required: ['imported', 'skipped'],
+    title: 'FileImportResult'
+} as const;
+
 export const FileListPublicSchema = {
     properties: {
         key: {
@@ -4150,6 +4260,22 @@ export const FileListPublicSchema = {
     description: `Schema for returning a list of \`File\`s, excluding \`content\`.
 
 \`content\` is excluded to reduce the response size.`
+} as const;
+
+export const FileManifestEntrySchema = {
+    properties: {
+        plugin_key: {
+            type: 'string',
+            title: 'Plugin Key'
+        },
+        key: {
+            type: 'string',
+            title: 'Key'
+        }
+    },
+    type: 'object',
+    required: ['plugin_key', 'key'],
+    title: 'FileManifestEntry'
 } as const;
 
 export const FilePublicSchema = {

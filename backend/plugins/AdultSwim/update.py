@@ -14,7 +14,6 @@ from app.channels.models import Channel, ChannelQueue, ChannelSourceFilter, URLS
 from app.channels.service import add_urls_to_channel_import_queue
 from app.plugins.models import Plugin
 from app.shows.models import Show
-from app.users.service import get_or_create_plugin_user
 from app.utils import tz_datetime
 from plugins.AdultSwim.constants import FREE, SUBSCRIPTION
 from plugins.AdultSwim.upsert import UpsertMixin
@@ -139,9 +138,7 @@ class UpdateMixin(UpsertMixin):
 
     # TODO: Validate
     def _channel(self, name: str) -> Channel:
-        plugin_user = get_or_create_plugin_user(session=self.session)
         return self.get_or_create_channel(
-            plugin_user,
             name,
             (Path(__file__).parent / CHANNEL_DESCRIPTION_FILES[name]).read_text(
                 encoding="utf-8",

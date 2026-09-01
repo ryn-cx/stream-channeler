@@ -23,7 +23,7 @@ class SearchMixin(UtilsMixin, FileMixin):
 
     # TODO: Validate
     @override
-    def search(self, query: str) -> str | None:
+    def search_for_url(self, query: str) -> str | None:
         """Return the first movie or TV show Netflix matches `query` with.
 
         Netflix returns movies and shows intermixed. Suggestion entities

@@ -190,7 +190,7 @@ def admin_link_show_by_tmdb_url(
 @shows_router.post(
     "/{show_id}/non-canonical-by-url",  # noqa: FAST003 - Used by the dependencies.
 )
-def admin_import_non_canonical_show(
+def admin_link_non_canonical_show_by_url(
     session: SessionDep,
     show: ExistingShow,
     url_input: ShowImportUrlInput,

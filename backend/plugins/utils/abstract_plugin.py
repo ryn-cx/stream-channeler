@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from app.channels.models import ChannelQueue
 from app.episodes.models import Episode
 from app.files.models import File
+from app.media.media_type import MediaType
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -23,6 +24,8 @@ from app.watches.schemas import WatchImportResults
 from plugins.utils.manage_plugins import register_plugins
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
     from sqlmodel import Session
 
     from app.shows.models import Show
@@ -107,8 +110,6 @@ class AbstractPlugin(ABC):
         self,
         url: str,
         canonical_show: Show | None = None,
-        *,
-        force: bool = False,
     ) -> list[URLImportResult]:
         """Import `url` into the database.
 
@@ -124,12 +125,6 @@ class AbstractPlugin(ABC):
                 added to what the listing is linked to whether or not the listing
                 is chiefly of it - a series listing that also carries the film of
                 it is linked to both.
-            force: Write every record again even where nothing about it has
-                changed, rather than leaving a title that is already stored
-                alone. Passed down to every import the import hands off to, since
-                a chain that stopped forcing partway through would leave the
-                records furthest from the URL - which are most of them - as they
-                were.
 
         Returns:
             A list of `URLImportResult`.
@@ -202,7 +197,7 @@ class AbstractPlugin(ABC):
         plugin.update_at = None
 
     # TODO: Validate
-    def update_source(self, source: Source) -> None:
+    def update_source(self, source: Source, update_at: datetime) -> None:  # noqa: ARG002
         """Update an existing source in the database.
 
         Called when `Source.update_at > datetime.now()`.
@@ -367,15 +362,51 @@ class AbstractPlugin(ABC):
         raise NotImplementedError(msg)
 
     # TODO: Validate
-    def search(self, query: str) -> str | None:
+    def search_for_url(self, query: str) -> str | None:
         """Return the address of the one title `query` names here, or None.
 
         What TMDB cross references a title against, so the closest match is all
         that matters and its address is all that is read off it. A service a
         user searches for themselves offers `in_app_search` instead.
         """
-        msg = "search is not supported by this plugin."
+        msg = "search_for_url is not supported by this plugin."
         raise NotImplementedError(msg)
+
+    # TODO: Validate
+    def import_by_name(
+        self,
+        name: str,
+        canonical_show: Show,
+        media_type: MediaType,  # noqa: ARG002 - `media_type` is used by overrides.
+        year: int | None = None,  # noqa: ARG002 - `year` is used by overrides.
+    ) -> list[URLImportResult]:
+        """Import the title `name` names here, and link it to `canonical_show`.
+
+        What TMDB hands a service it has listed a title on, since a service is
+        reached by the name of the title rather than by an address when TMDB has
+        no address for it. `media_type` and `year` are TMDB's own account of the
+        title and are there to tell two titles of one name apart, which a name
+        on its own cannot.
+
+        Args:
+            name: The title's name, as TMDB writes it.
+            canonical_show: The title being searched for, which what is imported
+                is linked to.
+            media_type: Which of a film and a series the title is.
+            year: The year TMDB gives the title, where it gives one.
+
+        Returns:
+            A list of `URLImportResult`.
+
+        Raises:
+            `MediaNotFoundError` if the service carries no title of that name.
+
+        """
+        url = self.search_for_url(name)
+        if url is None:
+            msg = f"{self.plugin_name()} carries no title named {name!r}"
+            raise MediaNotFoundError(msg)
+        return self.import_url(url, canonical_show)
 
     # TODO: Validate
     def in_app_search(
@@ -404,14 +435,14 @@ class AbstractPlugin(ABC):
         raise NotImplementedError(msg)
 
     # TODO: Validate
-    def show_identity(self, show_key: str) -> PluginShowIdentity:
+    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
         """Return the name, media type and year the plugin files a show under.
 
         Args:
             show_key: The plugin's own key for the show.
 
         """
-        msg = "show_identity is not supported by this plugin."
+        msg = "get_tmdb_lookup_info is not supported by this plugin."
         raise NotImplementedError(msg)
 
     # TODO: Validate
@@ -436,6 +467,11 @@ class AbstractPlugin(ABC):
 # TODO: Validate
 class InvalidURLError(Exception):
     """Raised during `import_url` when a URL with a correct format is invalid."""
+
+
+# TODO: Validate
+class MediaNotFoundError(Exception):
+    """Raised during `import_by_name` when the service carries no such title."""
 
 
 # TODO: Validate
@@ -558,7 +594,7 @@ class PluginWatchProviderItem(BaseModel):
 
 
 # TODO: Validate
-class PluginShowIdentity(BaseModel):
+class TMDBLookupInfo(BaseModel):
     """How a plugin names one show, for matching it against another service."""
 
     title: str

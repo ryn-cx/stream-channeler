@@ -3,11 +3,12 @@ from __future__ import annotations
 
 from typing import override
 
+from plugins.Netflix.search import SearchMixin
 from plugins.Netflix.upsert import UpsertMixin
 
 
 # TODO: Validate
-class NetflixBase(UpsertMixin):
+class NetflixBase(UpsertMixin, SearchMixin):
     # TODO: Validate
     @classmethod
     @override

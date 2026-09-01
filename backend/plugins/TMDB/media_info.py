@@ -11,6 +11,15 @@ from tminidb.movie.watch_providers.models import (
 )
 from tminidb.movie.watch_providers.models import MovieWatchProvidersModel
 from tminidb.movie.watch_providers.models import RentItem as MovieRentItem
+from tminidb.tv_season.watch_providers.models import BuyItem as TvSeasonBuyItem
+from tminidb.tv_season.watch_providers.models import (
+    FlatrateItem as TvSeasonFlatrateItem,
+)
+from tminidb.tv_season.watch_providers.models import FreeItem as TvSeasonFreeItem
+from tminidb.tv_season.watch_providers.models import RentItem as TvSeasonRentItem
+from tminidb.tv_season.watch_providers.models import (
+    TvSeasonWatchProvidersModel,
+)
 from tminidb.tv_series.details.models import TvSeriesDetailsModel
 from tminidb.tv_series.watch_providers.models import BuyItem as TvBuyItem
 from tminidb.tv_series.watch_providers.models import (
@@ -32,13 +41,16 @@ from plugins.TMDB.utils import (
     release_year,
 )
 from plugins.utils.abstract_plugin import (
+    AbstractPlugin,
     PluginMediaInfo,
     PluginWatchProviderItem,
 )
 from plugins.utils.base_plugin_v2.base import PluginBase
 from plugins.utils.manage_plugins import sorted_plugins
 
-type WatchProviders = MovieWatchProvidersModel | TvSeriesWatchProvidersModel
+type WatchProviders = (
+    MovieWatchProvidersModel | TvSeriesWatchProvidersModel | TvSeasonWatchProvidersModel
+)
 type Provider = (
     MovieFlatrateItem
     | MovieRentItem
@@ -47,6 +59,10 @@ type Provider = (
     | TvFreeItem
     | TvBuyItem
     | TvRentItem
+    | TvSeasonFlatrateItem
+    | TvSeasonFreeItem
+    | TvSeasonBuyItem
+    | TvSeasonRentItem
 )
 
 
@@ -149,7 +165,7 @@ def streaming_providers(
 
 
 # TODO: Validate
-def plugin_for_tmdb_name(provider_name: str) -> type[PluginBase] | None:
+def plugin_for_tmdb_name(provider_name: str) -> type[AbstractPlugin] | None:
     for plugin_class in sorted_plugins():
         if issubclass(plugin_class, PluginBase) and plugin_class.matches_tmdb_provider(
             provider_name,

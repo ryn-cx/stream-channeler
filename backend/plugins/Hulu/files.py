@@ -35,7 +35,7 @@ from app.plugins.models import Plugin
 from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.Hulu.utils import HuluMediaType
-from plugins.utils.abstract_plugin import PluginShowIdentity
+from plugins.utils.abstract_plugin import TMDBLookupInfo
 from plugins.utils.base_plugin_v2.base import PluginBase
 from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
@@ -80,21 +80,19 @@ class EpisodeHubEndpoint:
 
 # TODO: Validate
 class Series(EndpointFile[TVModel]):
-    """Series file."""
-
     @override
     def _endpoint(self) -> TV:
         return wholoo().tv
 
-    # User tries to import an invalid series URL.
+    # Occurs if the user tries to add an invalid URL.
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, SeriesNotFoundError)
 
     # TODO: Validate
-    def identity(self) -> PluginShowIdentity:
+    def get_tmdb_lookup_info(self) -> TMDBLookupInfo:
         model = self.parsed()
-        return PluginShowIdentity(
+        return TMDBLookupInfo(
             title=model.name,
             media_type="Series",
             year=model.details.entity.premiere_date.year,
@@ -116,9 +114,9 @@ class Movie(EndpointFile[MoviesModel]):
         return isinstance(error, MovieNotFoundError)
 
     # TODO: Validate
-    def identity(self) -> PluginShowIdentity:
+    def get_tmdb_lookup_info(self) -> TMDBLookupInfo:
         model = self.parsed()
-        return PluginShowIdentity(
+        return TMDBLookupInfo(
             title=model.name,
             media_type="Movie",
             year=model.details.entity.premiere_date.year,
@@ -286,10 +284,10 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     @override
-    def show_identity(self, show_key: str) -> PluginShowIdentity:
+    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
         if self._is_movie():
-            return self.movie_file(show_key).identity()
-        return self.series_file(show_key).identity()
+            return self.movie_file(show_key).get_tmdb_lookup_info()
+        return self.series_file(show_key).get_tmdb_lookup_info()
 
     # TODO: Validate
     def genres_page_file(self) -> GenresPage:
@@ -300,6 +298,18 @@ class FileMixin(PluginBase):
     def genre_page_file(self, genre_id: str) -> GenrePage:
         """Return GenrePage file."""
         return self._file(GenrePage, genre_id)
+
+    # TODO: Validate
+    @override
+    def _source_files(self) -> Sequence[BaseFile[Any]]:
+        genres_page = self.genres_page_file()
+        return [
+            genres_page,
+            *(
+                self.genre_page_file(href.rsplit("/", 1)[-1])
+                for _name, href in genres_page.listed_items()
+            ),
+        ]
 
     # TODO: Validate
     def search_file(self, query: str) -> SearchFile:

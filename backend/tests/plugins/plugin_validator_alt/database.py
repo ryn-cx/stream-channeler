@@ -325,14 +325,12 @@ class DatabaseMixinAlt[PluginT: AbstractPlugin]:
         self,
         session: Session,
         url: str | None = None,
-        *,
-        force: bool = False,
     ) -> list[URLImportResult]:
         """Import the URL using the plugin."""
         url = url or self.url
         assert url, "URL must be provided for URL import tests"
         self.imported_plugin = self.plugin_class(session)
-        output = self.imported_plugin.import_url(url, force=force)
+        output = self.imported_plugin.import_url(url)
 
         session.flush()
         session.expire_all()

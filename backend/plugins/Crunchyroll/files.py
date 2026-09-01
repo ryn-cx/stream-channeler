@@ -39,7 +39,6 @@ from chirashi.series.models import Datum as SeriesDatum
 from chirashi.series.models import SeriesModel
 
 from app.files.models import File
-from app.media.media_type import MediaType
 from app.utils import tz_datetime
 from plugins.Crunchyroll.constants import (
     MusicCategory,
@@ -195,10 +194,6 @@ class FileMixin(PluginBase):
     # TODO: Validate
     def _is_movie(self, show_key: str) -> bool:
         return self.series_file(show_key).is_movie()
-
-    # TODO: Validate
-    def tmdb_media_type(self, show_key: str) -> MediaType:
-        return MediaType.movie if self._is_movie(show_key) else MediaType.tv
 
     # TODO: Validate
     def series_file(self, show_key: str) -> Series:

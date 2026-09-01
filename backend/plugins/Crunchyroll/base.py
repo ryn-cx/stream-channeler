@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from typing import override
 
-from app.shows.models import Show
 from plugins.Crunchyroll.constants import (
     MUSIC_SOURCE,
     VIDEO_SOURCE,
@@ -12,7 +11,7 @@ from plugins.Crunchyroll.constants import (
 from plugins.Crunchyroll.search import SearchMixin
 from plugins.Crunchyroll.update import UpdateMixin
 from plugins.Crunchyroll.watch_history import WatchHistoryMixin
-from plugins.TMDB import TMDB
+from plugins.utils.abstract_plugin import TMDBLookupInfo
 
 
 # TODO: Validate
@@ -42,16 +41,15 @@ class CrunchyrollBase(WatchHistoryMixin, UpdateMixin, SearchMixin):
         return (VIDEO_SOURCE, MUSIC_SOURCE)
 
     # TODO: Validate
-    @override  # Crunchyroll's own music has no TMDB title to be searched for.
-    def _tmdb_show(self, show_key: str, *, force: bool = False) -> Show | None:
+    @override
+    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo | None:
         # Music is Crunchyroll's own, so there is no TMDB title to be of.
         if show_is_an_artist(show_key):
             return None
 
         series_data = self._series_datum(show_key)
-        return TMDB(self.session).import_search(
-            series_data.title,
-            self.tmdb_media_type(show_key),
-            series_data.series_launch_year,
-            force=force,
+        return TMDBLookupInfo(
+            title=series_data.title,
+            media_type="Movie" if self._is_movie(show_key) else "Series",
+            year=series_data.series_launch_year,
         )

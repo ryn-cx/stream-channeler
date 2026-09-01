@@ -27,7 +27,6 @@ class PluginWorker(PluginBase, ABC):
 
 # TODO: Validate
 class Importer(PluginWorker, ReadURLBase, ABC):
-    url: str
     record: Show | Season | Episode
 
     # TODO: Validate
@@ -39,35 +38,21 @@ class Importer(PluginWorker, ReadURLBase, ABC):
         self,
         url: str,
         canonical_show: Show | None = None,
-        *,
-        force: bool = False,
     ) -> list[URLImportResult]:
-        self.url = url
-        self._parse_url(url)
-        return self._import_url(canonical_show, force=force)
-
-    # TODO: Validate
-    def _import_url(
-        self,
-        canonical_show: Show | None = None,
-        *,
-        force: bool = False,
-    ) -> list[URLImportResult]:
-        show_key = self._show_key
-        if not force and (show := self._preload_show(show_key).one_or_none()):
+        show_key = self._parse_url(url)
+        if show := self._preload_show(show_key).one_or_none():
             return self._import_results(show)
 
         _cache = self._download_show_files_and_children(show_key)
         if canonical_show is None:
-            canonical_show = self._tmdb_show(show_key, force=force)
-            if not force and (show := self._preload_show(show_key).one_or_none()):
+            canonical_show = self.find_tmdb_show_record(show_key)
+            if show := self._preload_show(show_key).one_or_none():
                 return self._import_results(show)
 
         show = self.upsert_show(
             self._url_source(),
             show_key,
             canonical_show=canonical_show,
-            force=force,
         )
         return self._import_results(show)
 

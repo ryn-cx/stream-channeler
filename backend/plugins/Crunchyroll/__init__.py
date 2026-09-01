@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from plugins.Crunchyroll.base import CrunchyrollBase
 from plugins.Crunchyroll.initialize import CrunchyrollInitializer
-from plugins.Crunchyroll.workers import CrunchyrollImporter
+from plugins.Crunchyroll.importer import CrunchyrollImporter
 from plugins.utils.abstract_plugin import AbstractPlugin
 
 

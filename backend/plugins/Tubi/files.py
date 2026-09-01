@@ -14,7 +14,7 @@ from plugi.content.models import ContentModel
 from plugi.exceptions import ContentNotFoundError
 
 from app.utils import tz_datetime
-from plugins.utils.abstract_plugin import PluginShowIdentity
+from plugins.utils.abstract_plugin import TMDBLookupInfo
 from plugins.utils.base_plugin_v2.base import PluginBase
 from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
@@ -53,10 +53,10 @@ class ContentFile(EndpointFile[ContentModel]):
         return self.parsed().type != "s"
 
     # TODO: Validate
-    def identity(self) -> PluginShowIdentity:
+    def get_tmdb_lookup_info(self) -> TMDBLookupInfo:
         self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         content = self.parsed()
-        return PluginShowIdentity(
+        return TMDBLookupInfo(
             title=content.title,
             media_type="Movie" if self.is_movie() else "Series",
             year=content.year,
@@ -82,8 +82,8 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     @override
-    def show_identity(self, show_key: str) -> PluginShowIdentity:
-        return self.content_file(show_key).identity()
+    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
+        return self.content_file(show_key).get_tmdb_lookup_info()
 
     # TODO: Validate
     def _seasons(self, show_key: str) -> list[SeasonChild]:

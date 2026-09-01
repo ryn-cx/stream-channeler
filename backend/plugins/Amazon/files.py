@@ -35,7 +35,7 @@ from plugins.Amazon.constants import (
     PRIME_BENEFIT_ID,
 )
 from plugins.Amazon.keys import title_key_from_location
-from plugins.utils.abstract_plugin import InvalidURLError, PluginShowIdentity
+from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
 from plugins.utils.base_plugin_v2.base import PluginBase
 from plugins.utils.base_plugin_v2.files import (
     BaseFile,
@@ -622,9 +622,9 @@ class Detail(DownloadedFile[dict[str, Any]]):
         return min(seasons, key=lambda season: season.season_number).key
 
     # TODO: Validate
-    def identity(self) -> PluginShowIdentity:
+    def get_tmdb_lookup_info(self) -> TMDBLookupInfo:
         self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        return PluginShowIdentity(
+        return TMDBLookupInfo(
             title=self.series_title(),
             media_type=self.entity_type(),
             year=self.release_year(),
@@ -767,8 +767,8 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     @override
-    def show_identity(self, show_key: str) -> PluginShowIdentity:
-        return self.detail_file(show_key).identity()
+    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
+        return self.detail_file(show_key).get_tmdb_lookup_info()
 
     # TODO: Validate
     def _season_available(self, season_key: str) -> bool:

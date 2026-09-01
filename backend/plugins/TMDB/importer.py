@@ -24,7 +24,7 @@ from app.utils import tz_datetime
 from plugins.TMDB.base import TMDBBase
 from plugins.TMDB.episode_groups import show_chosen_group_id
 from plugins.TMDB.files import ShowChanges
-from plugins.TMDB.keys import parse_show_key
+from plugins.TMDB.keys import get_media_type_and_tmdb_id
 from plugins.TMDB.utils import change_datetime
 from plugins.utils.abstract_plugin import (
     InvalidURLError,
@@ -35,10 +35,12 @@ from plugins.utils.base_plugin_v2.files import (
     EXTRA_STATUS_FIELD,
     BaseFile,
 )
-from plugins.utils.base_plugin_v2.workers import Importer
+from plugins.utils.base_plugin_v2.importer import Importer
 
 if TYPE_CHECKING:
     from datetime import datetime
+
+    from app.seasons.models import Season
 
 # from plugins.WatchMode import WatchMode  # noqa: ERA001
 
@@ -61,7 +63,7 @@ class TMDBImporter(Importer, TMDBBase):
 
     # TODO: Validate
     @override
-    def _parse_url(self, url: str) -> None:
+    def _parse_url(self, url: str) -> str:
         domain_regex = self._domain_regex()
         for media_type, url_regex in (
             (MediaType.movie, self._MOVIE_URL_REGEX),
@@ -69,7 +71,6 @@ class TMDBImporter(Importer, TMDBBase):
         ):
             if match := re.match(domain_regex + url_regex, url):
                 tmdb_id = int(match.group(f"{media_type}_tmdb_id"))
-                self._show_key = tmdb_show_key(media_type, tmdb_id)
                 self.raise_if_invalid_file(
                     self.title_page_file(media_type, tmdb_id),
                     url,
@@ -80,75 +81,78 @@ class TMDBImporter(Importer, TMDBBase):
                 else:
                     detail_file = self.show_detail_file(tmdb_id)
                 self.raise_if_invalid_file(detail_file, url)
-                return
+                return tmdb_show_key(media_type, tmdb_id)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
-    # TODO: Validate
     @override
-    def _import_url(
+    def import_url(
         self,
+        url: str,
         canonical_show: Show | None = None,
-        *,
-        force: bool = False,
     ) -> list[URLImportResult]:
-        show_key = self._show_key
-        show_preload = self._preload_show(show_key, preload_episodes=True)
-        existing_show = show_preload.one_or_none()
-        if not existing_show or force:
-            _cache = self._download_show_files_and_children(show_key)
-            existing_show = self.upsert_show(self.source, show_key, force=force)
+        # TMDB should always be canonical so if it is imported with a caonical_show
+        # something has gone wrong.
+        if canonical_show is not None:
+            msg = "canonical_show should be None when importing TMDB URLs."
+            raise InvalidURLError(msg)
 
-            # This title's own rows are written before anything is handed on. A
-            # website's plugin resolves the title it carries by asking TMDB for
-            # it, so a hand-off made first would be asking for a title that is
-            # not stored yet and would send the import straight back round; made
-            # after, that ask is answered by the row written here and the chain
-            # ends.
-            if canonical_show is None:
-                self._import_listed_sources(show_key, existing_show, force=force)
+        show_key = self._parse_url(url)
+        existing_show = self._preload_show(
+            show_key,
+            preload_episodes=True,
+        ).one_or_none()
+
+        if not existing_show:
+            _cache = self._download_show_files_and_children(show_key)
+            existing_show = self.upsert_show(self.source, show_key)
+            self._import_media_from_other_websites(show_key, existing_show)
 
         return self._import_results(existing_show)
 
     # TODO: Validate
     @override
     def _update_show(self, show: Show, *, force: bool = False) -> None:
-        media_type, _ = parse_show_key(show.key)
+        media_type, _ = get_media_type_and_tmdb_id(show.key)
         if media_type == MediaType.movie:
-            # Movie ignores changes because there is only a single file so i is more
-            # efficient to directly update it instead of checking for changes.
+            # For movies it is more efficient to update it directly since it only has 2
+            # files that are listed on the changes endpoint (watch provider changes are
+            # not listed on the changes endpoint).
             super()._update_show(show, force=force)
         else:
-            self._download_and_import_changed_title_files(show.key, show.update_at)
+            self._download_and_import_changed_title_files(show)
             self._preload_show(show.id, preload_episodes=True).one()
             self.upsert_show(show.source, show.key, force=force)
-        self._import_listed_sources(show.key, show)
+        self.sync_show_watch_providers(show.key)
+        self._import_media_from_other_websites(show.key, show)
 
     # TODO: Validate
-    def _download_and_import_changed_title_files(
-        self,
-        show_key: str,
-        update_at: datetime | None,
-    ) -> None:
-        if update_at is not None:
+    @override
+    def _update_season(self, season: Season) -> None:
+        super()._update_season(season)
+        self.sync_season_key_watch_providers(season.key, season.show.key)
+
+    # TODO: Validate
+    def _download_and_import_changed_title_files(self, show: Show) -> None:
+        if show.update_at is not None:
             self.show_changes_file(
-                show_key,
+                show.key,
                 tz_datetime.now().date(),
             ).download_if_outdated()
 
-        _cache = self._preload_show_files(show_key)
-        for changes_file in self.incomplete_show_changes_files(show_key):
-            self._import_show_changes(show_key, changes_file)
+        _cache = self._preload_show_files(show.key)
+        for changes_file in self.incomplete_show_changes_files(show.key):
+            self._import_show_changes(show.key, changes_file)
             changes_file.database_record.extra = {EXTRA_STATUS_FIELD: COMPLETED_STATUS}
 
-        for key in self._season_keys_from_show_files(show_key):
-            self._download_outdated_files(self._season_files(key, show_key))
+        for key in self._season_keys_from_show_files(show.key):
+            self._download_outdated_files(self._season_files(key, show.key))
 
     # TODO: Validate
     def _import_show_changes(self, show_key: str, changes_file: ShowChanges) -> None:
         """Import show changes by updating files that are no longer up to date."""
-        _, tmdb_id = parse_show_key(show_key)
+        _, tmdb_id = get_media_type_and_tmdb_id(show_key)
         translations_files = self.stored_episode_translations_files(tmdb_id)
 
         for change in changes_file.parsed().changes:

@@ -8,12 +8,12 @@ from typing import override
 from wholoo.movies.models import MoviesModel
 
 from app.episodes.models import Episode
-from app.models import staggered_update_at
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from app.utils import tz_datetime
+from app.utils.update_at import staggered_monthly_update_at
 from plugins.Hulu.files import FileMixin
 from plugins.Hulu.utils import HuluMediaType, UtilsMixin
 
@@ -21,6 +21,23 @@ from plugins.Hulu.utils import HuluMediaType, UtilsMixin
 # TODO: Validate
 class UpsertMixin(UtilsMixin, FileMixin):
     """Mixin containing all upsert functions."""
+
+    # TODO: Validate
+    @override
+    def upsert_source(self, source_key: str) -> Source:
+        self.genres_page_file().download_if_outdated()
+        source_files = self._source_files()
+        self._download_outdated_files(source_files)
+        data_timestamp = self._file_timestamp(source_files)
+        source = Source.get_from_memory(self.session, self.plugin, source_key)
+        return Source(
+            key=source_key,
+            name=self.plugin_name(),
+            favicon_url=self.favicon_url(),
+            data_timestamp=data_timestamp,
+            update_at=staggered_monthly_update_at(source_key, tz_datetime.now()),
+            plugin_id=self.plugin.id,
+        ).upsert_and_set_update_at(self.plugin, source, source_files)
 
     # TODO: Validate
     @override
@@ -67,7 +84,6 @@ class UpsertMixin(UtilsMixin, FileMixin):
             show = self._upsert_show_object(new_show, source, show, show_key)
 
         self._upsert_tv_seasons(show, force=force)
-        show.set_update_at(staggered_update_at(show_key, data_timestamp))
 
         return show
 
@@ -156,7 +172,6 @@ class UpsertMixin(UtilsMixin, FileMixin):
         for sort_order, item in enumerate(self._season_items(show_key, season_number)):
             start_date = item.bundle.availability.start_date
             if start_date > tz_datetime.now():
-                season.set_update_at(start_date)
                 continue
 
             episode_key = str(item.id)

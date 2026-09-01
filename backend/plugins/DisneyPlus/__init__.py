@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from plugins.DisneyPlus.base import DisneyPlusBase
 from plugins.DisneyPlus.initialize import DisneyPlusInitializer
-from plugins.DisneyPlus.workers import DisneyPlusImporter
+from plugins.DisneyPlus.importer import DisneyPlusImporter
 from plugins.utils.abstract_plugin import AbstractPlugin
 
 

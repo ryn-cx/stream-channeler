@@ -17,7 +17,7 @@ class SearchMixin(UtilsMixin, FileMixin):
 
     # TODO: Validate
     @override
-    def search(self, query: str) -> str | None:
+    def search_for_url(self, query: str) -> str | None:
         search_file = self.search_file(query)
         search_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         results = search_file.results()

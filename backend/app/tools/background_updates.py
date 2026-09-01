@@ -5,14 +5,18 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from loguru import logger
 
 from app.log import configure_logging
-from app.tools import import_queue, update_outdated, update_youtube
+from app.tools import (
+    import_queue,
+    update_outdated,
+    update_youtube,
+)
 
 logger = logger.bind(source="updater")
 
 
 # TODO: Validate
 def run(stop_event: threading.Event) -> None:
-    with ThreadPoolExecutor(max_workers=3) as executor:
+    with ThreadPoolExecutor(max_workers=4) as executor:
         futures = [
             executor.submit(update_outdated._update_outdated_forever),
             executor.submit(update_youtube.run_forever),

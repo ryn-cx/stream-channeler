@@ -8,7 +8,7 @@ from plugins.Amazon.base import AmazonBase
 from plugins.Amazon.constants import TITLE_KEY_REGEX
 from plugins.Amazon.utils import canonical_show_of
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v2.workers import Importer
+from plugins.utils.base_plugin_v2.importer import Importer
 
 if TYPE_CHECKING:
     from app.shows.models import Show
@@ -46,7 +46,7 @@ class AmazonImporter(Importer, AmazonBase):
 
     # TODO: Validate
     @override
-    def _parse_url(self, url: str) -> None:
+    def _parse_url(self, url: str) -> str:
         domain_regex = self._domain_regex()
         title_key: str | None
         if match := re.match(domain_regex + self._SHARE_URL_REGEX, url):
@@ -72,31 +72,30 @@ class AmazonImporter(Importer, AmazonBase):
             msg = f"{message}: {url}"
             raise InvalidURLError(msg)
 
-        self._show_key = self.show_key_from_title_key(title_key)
+        return self.show_key_from_title_key(title_key)
 
     # TODO: Validate
     @override  # Writes the title into every source it can be watched through.
-    def _import_url(
+    def import_url(
         self,
+        url: str,
         canonical_show: Show | None = None,
-        *,
-        force: bool = False,
     ) -> list[URLImportResult]:
-        show_key = self._show_key
-        if not force and (shows := self._preload_show(show_key).all()):
+        show_key = self._parse_url(url)
+        if shows := self._preload_show(show_key).all():
             return [result for show in shows for result in self._import_results(show)]
 
         _cache = self._download_show_files_and_children(show_key)
         if canonical_show is None:
-            canonical_show = self._tmdb_show(show_key, force=force)
-            if not force and (shows := self._preload_show(show_key).all()):
+            canonical_show = self.find_tmdb_show_record(show_key)
+            if shows := self._preload_show(show_key).all():
                 return [
                     result for show in shows for result in self._import_results(show)
                 ]
 
         results: list[URLImportResult] = []
         for source in self.title_sources(show_key):
-            show = self.upsert_show(source, show_key, canonical_show, force=force)
+            show = self.upsert_show(source, show_key, canonical_show)
             # The title the first listing was found to be linked to is the title
             # the rest of them are linked to too, so it is handed to them rather
             # than searched for once for each way of watching the same title.

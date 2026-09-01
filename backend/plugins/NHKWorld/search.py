@@ -12,7 +12,7 @@ from plugins.NHKWorld.files import FileMixin
 class SearchMixin(FileMixin):
     # TODO: Validate
     @override
-    def search(self, query: str) -> str | None:
+    def search_for_url(self, query: str) -> str | None:
         search_file = self.shows_search_file(query, 0)
         search_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         hits = search_file.parsed().hits.hits

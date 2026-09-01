@@ -8,7 +8,7 @@ from app.shows.models import Show
 from plugins.Tubi.base import TubiBase
 from plugins.Tubi.constants import CONTENT_ID_REGEX, SLUG_REGEX
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from plugins.utils.base_plugin_v2.workers import Importer
+from plugins.utils.base_plugin_v2.importer import Importer
 
 
 # TODO: Validate
@@ -40,19 +40,19 @@ class TubiImporter(Importer, TubiBase):
 
     # TODO: Validate
     @override
-    def _parse_url(self, url: str) -> None:
+    def _parse_url(self, url: str) -> str:
         domain_regex = self._domain_regex()
         self._episode_key = None
 
         if match := re.match(domain_regex + self._MOVIE_URL_REGEX, url):
-            self._show_key = match.group("movie_id")
-            self.raise_if_invalid_file(self.content_file(self._show_key), url)
-            return
+            show_key = match.group("movie_id")
+            self.raise_if_invalid_file(self.content_file(show_key), url)
+            return show_key
 
         if match := re.match(domain_regex + self._SERIES_URL_REGEX, url):
-            self._show_key = match.group("series_id")
-            self.raise_if_invalid_file(self.content_file(self._show_key), url)
-            return
+            show_key = match.group("series_id")
+            self.raise_if_invalid_file(self.content_file(show_key), url)
+            return show_key
 
         if match := re.match(domain_regex + self._EPISODE_URL_REGEX, url):
             episode_key = match.group("episode_id")
@@ -62,8 +62,7 @@ class TubiImporter(Importer, TubiBase):
                 msg = f"Invalid {self.plugin_name()} URL: {url}"
                 raise InvalidURLError(msg)
             self._episode_key = episode_key
-            self._show_key = series_id
-            return
+            return series_id
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)

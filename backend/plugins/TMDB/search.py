@@ -7,9 +7,9 @@ from tminidb.search.multi.models import Result as MultiResult
 from tminidb.search.multi.models import SearchMultiModel
 
 from app.media.media_type import MediaType
-from plugins.TMDB.constants import media_url
 from plugins.TMDB.lookup import LookupMixin
 from plugins.TMDB.media_info import media_identifier
+from plugins.TMDB.urls import media_url
 from plugins.TMDB.utils import (
     backdrop_image_url,
     poster_image_url,

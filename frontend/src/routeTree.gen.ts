@@ -44,6 +44,7 @@ import { Route as LayoutAdminTmdbMatchesRouteImport } from './routes/_layout/adm
 import { Route as LayoutAdminShowReportsRouteImport } from './routes/_layout/admin.show-reports'
 import { Route as LayoutAdminSeasonReportsRouteImport } from './routes/_layout/admin.season-reports'
 import { Route as LayoutAdminReportsRouteImport } from './routes/_layout/admin.reports'
+import { Route as LayoutAdminManageFilesRouteImport } from './routes/_layout/admin.manage-files'
 import { Route as LayoutAdminEpisodeReportsRouteImport } from './routes/_layout/admin.episode-reports'
 import { Route as LayoutAdminDuplicatedCanonicalEpisodesRouteImport } from './routes/_layout/admin.duplicated-canonical-episodes'
 import { Route as LayoutAdminChannelsRouteImport } from './routes/_layout/admin.channels'
@@ -232,6 +233,11 @@ const LayoutAdminReportsRoute = LayoutAdminReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => LayoutAdminRoute,
 } as any)
+const LayoutAdminManageFilesRoute = LayoutAdminManageFilesRouteImport.update({
+  id: '/manage-files',
+  path: '/manage-files',
+  getParentRoute: () => LayoutAdminRoute,
+} as any)
 const LayoutAdminEpisodeReportsRoute =
   LayoutAdminEpisodeReportsRouteImport.update({
     id: '/episode-reports',
@@ -311,6 +317,7 @@ export interface FileRoutesByFullPath {
   '/admin/channels': typeof LayoutAdminChannelsRoute
   '/admin/duplicated-canonical-episodes': typeof LayoutAdminDuplicatedCanonicalEpisodesRoute
   '/admin/episode-reports': typeof LayoutAdminEpisodeReportsRoute
+  '/admin/manage-files': typeof LayoutAdminManageFilesRoute
   '/admin/reports': typeof LayoutAdminReportsRoute
   '/admin/season-reports': typeof LayoutAdminSeasonReportsRoute
   '/admin/show-reports': typeof LayoutAdminShowReportsRoute
@@ -354,6 +361,7 @@ export interface FileRoutesByTo {
   '/admin/channels': typeof LayoutAdminChannelsRoute
   '/admin/duplicated-canonical-episodes': typeof LayoutAdminDuplicatedCanonicalEpisodesRoute
   '/admin/episode-reports': typeof LayoutAdminEpisodeReportsRoute
+  '/admin/manage-files': typeof LayoutAdminManageFilesRoute
   '/admin/reports': typeof LayoutAdminReportsRoute
   '/admin/season-reports': typeof LayoutAdminSeasonReportsRoute
   '/admin/show-reports': typeof LayoutAdminShowReportsRoute
@@ -401,6 +409,7 @@ export interface FileRoutesById {
   '/_layout/admin/channels': typeof LayoutAdminChannelsRoute
   '/_layout/admin/duplicated-canonical-episodes': typeof LayoutAdminDuplicatedCanonicalEpisodesRoute
   '/_layout/admin/episode-reports': typeof LayoutAdminEpisodeReportsRoute
+  '/_layout/admin/manage-files': typeof LayoutAdminManageFilesRoute
   '/_layout/admin/reports': typeof LayoutAdminReportsRoute
   '/_layout/admin/season-reports': typeof LayoutAdminSeasonReportsRoute
   '/_layout/admin/show-reports': typeof LayoutAdminShowReportsRoute
@@ -448,6 +457,7 @@ export interface FileRouteTypes {
     | '/admin/channels'
     | '/admin/duplicated-canonical-episodes'
     | '/admin/episode-reports'
+    | '/admin/manage-files'
     | '/admin/reports'
     | '/admin/season-reports'
     | '/admin/show-reports'
@@ -491,6 +501,7 @@ export interface FileRouteTypes {
     | '/admin/channels'
     | '/admin/duplicated-canonical-episodes'
     | '/admin/episode-reports'
+    | '/admin/manage-files'
     | '/admin/reports'
     | '/admin/season-reports'
     | '/admin/show-reports'
@@ -537,6 +548,7 @@ export interface FileRouteTypes {
     | '/_layout/admin/channels'
     | '/_layout/admin/duplicated-canonical-episodes'
     | '/_layout/admin/episode-reports'
+    | '/_layout/admin/manage-files'
     | '/_layout/admin/reports'
     | '/_layout/admin/season-reports'
     | '/_layout/admin/show-reports'
@@ -813,6 +825,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminReportsRouteImport
       parentRoute: typeof LayoutAdminRoute
     }
+    '/_layout/admin/manage-files': {
+      id: '/_layout/admin/manage-files'
+      path: '/manage-files'
+      fullPath: '/admin/manage-files'
+      preLoaderRoute: typeof LayoutAdminManageFilesRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
     '/_layout/admin/episode-reports': {
       id: '/_layout/admin/episode-reports'
       path: '/episode-reports'
@@ -884,6 +903,7 @@ interface LayoutAdminRouteChildren {
   LayoutAdminChannelsRoute: typeof LayoutAdminChannelsRoute
   LayoutAdminDuplicatedCanonicalEpisodesRoute: typeof LayoutAdminDuplicatedCanonicalEpisodesRoute
   LayoutAdminEpisodeReportsRoute: typeof LayoutAdminEpisodeReportsRoute
+  LayoutAdminManageFilesRoute: typeof LayoutAdminManageFilesRoute
   LayoutAdminReportsRoute: typeof LayoutAdminReportsRoute
   LayoutAdminSeasonReportsRoute: typeof LayoutAdminSeasonReportsRoute
   LayoutAdminShowReportsRoute: typeof LayoutAdminShowReportsRoute
@@ -901,6 +921,7 @@ const LayoutAdminRouteChildren: LayoutAdminRouteChildren = {
   LayoutAdminDuplicatedCanonicalEpisodesRoute:
     LayoutAdminDuplicatedCanonicalEpisodesRoute,
   LayoutAdminEpisodeReportsRoute: LayoutAdminEpisodeReportsRoute,
+  LayoutAdminManageFilesRoute: LayoutAdminManageFilesRoute,
   LayoutAdminReportsRoute: LayoutAdminReportsRoute,
   LayoutAdminSeasonReportsRoute: LayoutAdminSeasonReportsRoute,
   LayoutAdminShowReportsRoute: LayoutAdminShowReportsRoute,

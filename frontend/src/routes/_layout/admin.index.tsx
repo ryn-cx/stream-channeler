@@ -4,6 +4,7 @@ import {
   Clapperboard,
   CopyX,
   Flag,
+  FolderSync,
   Layers,
   Link2,
   ListOrdered,
@@ -196,6 +197,20 @@ function AdminIndex() {
                 Every canonical episode that more than one episode of a single
                 source is linked to, which is a link made wrongly rather than a
                 title carried twice.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/manage-files" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FolderSync className="size-5" />
+                Manage Files
+              </CardTitle>
+              <CardDescription>
+                Export the list of files this database holds, dump the files
+                another database is missing, and import a dump back in.
               </CardDescription>
             </CardHeader>
           </Card>

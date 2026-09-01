@@ -13,7 +13,6 @@ from loguru import logger
 from app.channels.models import Channel
 from app.channels.service import add_urls_to_channel_import_queue
 from app.sources.models import Source
-from app.users.service import get_or_create_plugin_user
 from plugins.HiDive.files import FileMixin, Schedule, schedule_group_list
 from plugins.HiDive.utils import UtilsMixin
 from plugins.utils.base_plugin_v2.files import COMPLETED_STATUS, EXTRA_STATUS_FIELD
@@ -57,12 +56,12 @@ class SourceMixin(UtilsMixin, FileMixin):
 
     # TODO: Validate
     @override
-    def update_source(self, source: Source) -> None:
+    def update_source(self, source: Source, update_at: datetime) -> None:
         if source.data_timestamp is None:
             msg = "Cannot update source without a data timestamp."
             raise ValueError(msg)
         new_schedule_file = self.schedule_file(source.data_timestamp)
-        new_schedule_file.download_if_outdated(source.update_at)
+        new_schedule_file.download_if_outdated(update_at)
         self._process_new_schedule_files(source)
         self.upsert_source(source.key)
 
@@ -111,7 +110,7 @@ class SourceMixin(UtilsMixin, FileMixin):
         """
         new_show_urls: list[str] = []
         for show_name in dict.fromkeys(show_names):
-            if show_url := self.search(show_name):
+            if show_url := self.search_for_url(show_name):
                 logger.info("Queueing new title: {}", show_name)
                 new_show_urls.append(show_url)
             else:
@@ -130,9 +129,7 @@ class SourceMixin(UtilsMixin, FileMixin):
         has aired and the channel is what keeps hold of the whole run. It is
         created the first time a title is found rather than by hand.
         """
-        plugin_user = get_or_create_plugin_user(session=self.session)
         return self.get_or_create_channel(
-            plugin_user,
             self.plugin_name(),
             (Path(__file__).parent / "channel_description.md").read_text(
                 encoding="utf-8",

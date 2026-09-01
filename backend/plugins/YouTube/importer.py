@@ -8,7 +8,7 @@ from urllib.parse import parse_qs, urlparse
 from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from plugins.utils.base_plugin_v2.workers import Importer
+from plugins.utils.base_plugin_v2.importer import Importer
 from plugins.YouTube.base import YouTubeBase
 from plugins.YouTube.constants import LONG_DOMAIN_REGEX, SHORT_DOMAIN_REGEX
 from plugins.YouTube.files import (
@@ -32,6 +32,8 @@ if TYPE_CHECKING:
 
 # TODO: Validate
 class YouTubeImporter(Importer, YouTubeBase):
+    _show_key: str
+
     # https://www.youtube.com/watch?v=lVI_J1cbFb4&list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh
     # https://youtu.be/lVI_J1cbFb4?list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh
     _PLAYLIST_VIDEO_URL_REGEX = (
@@ -121,7 +123,7 @@ class YouTubeImporter(Importer, YouTubeBase):
 
     # TODO: Validate
     @override
-    def _parse_url(self, url: str) -> None:  # noqa: PLR0911 - One return per kind of address.
+    def _parse_url(self, url: str) -> str:  # noqa: PLR0911 - One return per kind of address.
         self._video_key = None
         self._whole_show = False
         self._musician_track = False
@@ -129,31 +131,31 @@ class YouTubeImporter(Importer, YouTubeBase):
         if match := re.match(self._PLAYLIST_VIDEO_URL_REGEX, url):
             self._video_key = match.group("video_key")
             self._read_playlist(match.group("playlist_key"), url)
-            return
+            return self._show_key
 
         if match := re.match(self._SHOW_PLAYLIST_URL_REGEX, url):
             self._read_show_playlist(match.group("show_playlist_key"), url)
-            return
+            return self._show_key
 
         if match := re.match(self._PLAYLIST_URL_REGEX, url):
             playlist_key = match.group("playlist_key")
             self._whole_show = self.is_linking_playlist(playlist_key)
             self._read_playlist(playlist_key, url)
-            return
+            return self._show_key
 
         if match := re.match(self._VIDEO_URL_REGEX, url):
             self._read_video(match.group("video_key"), url)
-            return
+            return self._show_key
 
         if match := re.match(self._CHANNEL_KEY_URL_REGEX, url):
             channel_key = match.group("channel_key")
             self._parsed_channel(self.channel_by_channel_id_file(channel_key), url)
             self._read_channel(channel_key, url)
-            return
+            return self._show_key
 
         if match := re.match(self._SHOW_URL_REGEX, url):
             self._read_show(match.group("show_key"), url)
-            return
+            return self._show_key
 
         if match := re.match(self._CHANNEL_USERNAME_URL_REGEX, url):
             parsed = self._parsed_channel(
@@ -161,7 +163,7 @@ class YouTubeImporter(Importer, YouTubeBase):
                 url,
             )
             self._read_channel(get_first_item(parsed.items).id, url)
-            return
+            return self._show_key
 
         if match := re.match(self._CHANNEL_HANDLE_URL_REGEX, url):
             parsed = self._parsed_channel(
@@ -169,7 +171,7 @@ class YouTubeImporter(Importer, YouTubeBase):
                 url,
             )
             self._read_channel(get_first_item(parsed.items).id, url)
-            return
+            return self._show_key
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
@@ -327,28 +329,26 @@ class YouTubeImporter(Importer, YouTubeBase):
     # A YouTube show is always imported for a specific playlist.
     # TODO: Validate
     @override
-    def _import_url(
+    def import_url(
         self,
+        url: str,
         canonical_show: Show | None = None,
-        *,
-        force: bool = False,
     ) -> list[URLImportResult]:
+        show_key = self._parse_url(url)
         # Recorded before the URL is read, because whether a playlist links a title
         # of its own is what says which show the address names.
         if canonical_show is not None:
-            self._record_linking_playlist(self.url)
+            self._record_linking_playlist(url)
 
-        show_key = self._show_key
         show_preload = self._preload_show(show_key, preload_episodes=True)
         existing_show = show_preload.one_or_none()
 
-        if not existing_show or force:
+        if not existing_show:
             _cache = self._download_show_files_and_children(show_key)
             existing_show = self.upsert_show(
                 self.source,
                 show_key,
                 canonical_show=canonical_show,
-                force=force,
             )
 
         # If a channel is imported but a new playlist is added and that playlist is the
@@ -363,7 +363,6 @@ class YouTubeImporter(Importer, YouTubeBase):
                 self.source,
                 show_key,
                 canonical_show=canonical_show,
-                force=force,
             )
 
         return self._import_results(existing_show)

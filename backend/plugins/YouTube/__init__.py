@@ -14,7 +14,7 @@ from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.YouTube.base import YouTubeBase
 from plugins.YouTube.initialize import YouTubeInitializer
 from plugins.YouTube.utils import is_quota_error
-from plugins.YouTube.workers import YouTubeImporter
+from plugins.YouTube.importer import YouTubeImporter
 
 
 # TODO: Validate

@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.Hulu.upsert import UpsertMixin
+from plugins.Hulu.update import UpdateMixin
 from plugins.utils.base_plugin_v2.search import CatalogueSearchMixin
 
 
-class HuluBase(UpsertMixin, CatalogueSearchMixin):
+class HuluBase(UpdateMixin, CatalogueSearchMixin):
     @classmethod
     @override
     def plugin_name(cls) -> str:

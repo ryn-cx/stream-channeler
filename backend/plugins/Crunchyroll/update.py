@@ -1,6 +1,7 @@
 # TODO: Validate
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 from typing import override
 
@@ -10,7 +11,6 @@ from app.channels.models import Channel
 from app.channels.service import add_urls_to_channel_import_queue
 from app.shows.models import Show
 from app.sources.models import Source
-from app.users.service import get_or_create_plugin_user
 from app.utils import tz_datetime
 from plugins.Crunchyroll.constants import MUSIC_SOURCE, VIDEO_SOURCE
 from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries, chirashi
@@ -25,7 +25,7 @@ from plugins.utils.base_plugin_v2.files import (
 class UpdateMixin(UpsertMixin):
     # TODO: Validate
     @override
-    def update_source(self, source: Source) -> None:
+    def update_source(self, source: Source, update_at: datetime) -> None:
         if source.key == MUSIC_SOURCE:
             self._update_music_source(source)
         elif source.key == VIDEO_SOURCE:
@@ -150,9 +150,7 @@ class UpdateMixin(UpsertMixin):
 
     # TODO: Validate
     def _plugin_channel(self, name: str, description_file: str) -> Channel:
-        plugin_user = get_or_create_plugin_user(session=self.session)
         return self.get_or_create_channel(
-            plugin_user,
             name,
             (Path(__file__).parent / description_file).read_text(encoding="utf-8"),
         )

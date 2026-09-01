@@ -100,7 +100,7 @@ def disable_plugin_initialization() -> None:
 
 
 # TODO: Validate
-def plugin_for_url(
+def get_plugin_for_url(
     url: str,
     exclude: type[AbstractPlugin] | None = None,
 ) -> type[AbstractPlugin] | None:

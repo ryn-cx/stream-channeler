@@ -362,7 +362,11 @@ def _process_outdated_items(
             log_msg = f"[{plugin_key}] Updating {media_type_name}: {item.key}"
             logger.info(log_msg)
             try:
-                getattr(plugin_instance, update_method_name)(item)
+                update = getattr(plugin_instance, update_method_name)
+                if media_class is Source:
+                    update(item, item.update_at)
+                else:
+                    update(item)
 
                 log_msg = (
                     f"[{plugin_key}] Successfully updated {media_type_name}: {item.key}"

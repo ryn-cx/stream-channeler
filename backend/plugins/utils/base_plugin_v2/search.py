@@ -23,7 +23,7 @@ class CatalogueSearchMixin(PluginBase, ABC):
 
     # TODO: Validate
     @override
-    def search(self, query: str) -> str | None:
+    def search_for_url(self, query: str) -> str | None:
         candidates = self._named_shows()
         if not candidates:
             return None

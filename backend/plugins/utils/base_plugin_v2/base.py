@@ -2,25 +2,26 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, ClassVar, Self, override
+from typing import TYPE_CHECKING, Any, ClassVar, override
 
 from sqlmodel import Session, select
 
 from app.channels.models import Channel
+from app.channels.service import add_urls_to_channel_import_queue
 from app.episodes.models import Episode
 from app.episodes.preload import preload_episodes
-from app.media.media_type import MediaType
 from app.models import BaseMediaMixin, Visibility
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
+from app.users.service import get_or_create_plugin_user
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
     InvalidURLError,
-    PluginShowIdentity,
+    TMDBLookupInfo,
     URLImportResult,
 )
 from plugins.utils.base_plugin_v2.files import INITIAL_FILE_IDENTIFIER, BaseFile
@@ -29,20 +30,8 @@ from plugins.utils.base_plugin_v2.preload import PreloadMixin
 from plugins.utils.base_plugin_v2.url import URLMixin
 
 if TYPE_CHECKING:
-    from app.users.models import User
+    from plugins.utils.base_plugin_v2.importer import Importer
     from plugins.utils.base_plugin_v2.initialize import PluginInitializer
-    from plugins.utils.base_plugin_v2.workers import Importer
-
-_TMDB_MEDIA_TYPES = {
-    "Movie": MediaType.movie,
-    "Series": MediaType.tv,
-    "TV Show": MediaType.tv,
-}
-"""Which TMDB media type each of a show's own media types is searched under.
-
-A media type TMDB has no half of - a channel, a video, a concert - is not
-searched for at all.
-"""
 
 
 # TODO: Validate
@@ -209,11 +198,12 @@ class PluginBase(PreloadMixin, OutdatedCheckMixin, URLMixin, ABC):
     # TODO: Validate
     def get_or_create_channel(
         self,
-        plugin_user: User,
         name: str,
         description: str,
+        urls: Sequence[str] = (),
     ) -> Channel:
         """Return the plugin owned channel `name`, creating it the first time."""
+        plugin_user = get_or_create_plugin_user(session=self.session)
         channel_query = (
             select(Channel)
             .where(Channel.user_id == plugin_user.id)
@@ -230,6 +220,7 @@ class PluginBase(PreloadMixin, OutdatedCheckMixin, URLMixin, ABC):
             )
             self.session.add(channel)
             self.session.commit()
+        add_urls_to_channel_import_queue(self.session, channel, urls)
         return channel
 
     # TODO: Validate
@@ -308,27 +299,18 @@ class PluginBase(PreloadMixin, OutdatedCheckMixin, URLMixin, ABC):
         return self._file(file_type, INITIAL_FILE_IDENTIFIER)
 
     # TODO: Validate
-    def show_identity(self, show_key: str) -> PluginShowIdentity | None:  # noqa: ARG002
+    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo | None:  # noqa: ARG002
         return None
 
     # TODO: Validate
-    def _tmdb_show(self, show_key: str, *, force: bool = False) -> Show | None:
-        identity = self.show_identity(show_key)
-        if identity is None:
-            return None
-
-        media_type = _TMDB_MEDIA_TYPES.get(identity.media_type)
-        if media_type is None:
+    def find_tmdb_show_record(self, show_key: str) -> Show | None:
+        tmdb_lookup_info = self.get_tmdb_lookup_info(show_key)
+        if tmdb_lookup_info is None:
             return None
 
         from plugins.TMDB import TMDB  # noqa: PLC0415
 
-        return TMDB(self.session).import_search(
-            identity.title,
-            media_type,
-            identity.year,
-            force=force,
-        )
+        return TMDB(self.session).import_search(tmdb_lookup_info)
 
     # TODO: Validate
     @classmethod
@@ -345,10 +327,8 @@ class PluginBase(PreloadMixin, OutdatedCheckMixin, URLMixin, ABC):
         self,
         url: str,
         canonical_show: Show | None = None,
-        *,
-        force: bool = False,
     ) -> list[URLImportResult]:
-        return self.importer(self).import_url(url, canonical_show, force=force)
+        return self.importer(self).import_url(url, canonical_show)
 
     # TODO: Validate
     def update_show(self, show: Show, *, force: bool = False) -> None:
@@ -384,8 +364,6 @@ class PluginBase(PreloadMixin, OutdatedCheckMixin, URLMixin, ABC):
 
 # TODO: Validate
 class ReadURLBase(PluginBase, ABC):
-    _show_key: str
-
     # TODO: Validate
     @classmethod
     @abstractmethod
@@ -403,7 +381,7 @@ class ReadURLBase(PluginBase, ABC):
 
     # TODO: Validate
     @abstractmethod
-    def _parse_url(self, url: str) -> None: ...
+    def _parse_url(self, url: str) -> str: ...
 
     # TODO: Validate
     def _import_results(self, show: Show) -> list[URLImportResult]:

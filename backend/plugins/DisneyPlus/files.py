@@ -21,7 +21,7 @@ from sqlmodel import Session
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
 from plugins.DisneyPlus.utils import required_value
-from plugins.utils.abstract_plugin import PluginShowIdentity
+from plugins.utils.abstract_plugin import TMDBLookupInfo
 from plugins.utils.base_plugin_v2.base import PluginBase
 from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
@@ -108,9 +108,9 @@ class Entity(EndpointFile[EntityModel]):
         return background_image.default_image.source
 
     # TODO: Validate
-    def identity(self) -> PluginShowIdentity:
+    def get_tmdb_lookup_info(self) -> TMDBLookupInfo:
         self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        return PluginShowIdentity(
+        return TMDBLookupInfo(
             title=required_value(self.media_details().title, "title"),
             media_type="Movie" if self.is_movie() else "Series",
             year=self.release_year(),
@@ -193,8 +193,8 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     @override
-    def show_identity(self, show_key: str) -> PluginShowIdentity:
-        return self.entity_file(show_key).identity()
+    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
+        return self.entity_file(show_key).get_tmdb_lookup_info()
 
     # TODO: Validate
     def _seasons(self, show_key: str) -> list[EntitySeason]:

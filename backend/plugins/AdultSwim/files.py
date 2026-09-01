@@ -14,7 +14,7 @@ from pools_closed.shows.models import ShowsModel
 from sqlmodel import Session
 
 from app.plugins.models import Plugin
-from plugins.utils.abstract_plugin import PluginShowIdentity
+from plugins.utils.abstract_plugin import TMDBLookupInfo
 from plugins.utils.base_plugin_v2.base import PluginBase
 from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
@@ -130,10 +130,10 @@ class FileMixin(PluginBase):
 
     # TODO: Validate
     @override
-    def show_identity(self, show_key: str) -> PluginShowIdentity:
+    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
         show_page = self.show_file(show_key)
         show_page.download_if_outdated()
-        return PluginShowIdentity(
+        return TMDBLookupInfo(
             title=show_page.parsed().title,
             media_type="TV Show",
         )

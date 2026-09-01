@@ -6,7 +6,7 @@ from typing import override
 
 from plugins.NHKWorld.base import NHKWorldBase
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v2.workers import Importer
+from plugins.utils.base_plugin_v2.importer import Importer
 
 
 # TODO: Validate
@@ -24,12 +24,12 @@ class NHKWorldImporter(Importer, NHKWorldBase):
 
     # TODO: Validate
     @override
-    def _parse_url(self, url: str) -> None:
+    def _parse_url(self, url: str) -> str:
         domain_regex = self._domain_regex()
         if match := re.match(domain_regex + self._SHOW_URL_REGEX, url):
-            self._show_key = match.group("show_key")
-            self.raise_if_invalid_file(self.video_program_file(self._show_key), url)
-            return
+            show_key = match.group("show_key")
+            self.raise_if_invalid_file(self.video_program_file(show_key), url)
+            return show_key
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)

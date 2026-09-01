@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from plugins.Roku.base import RokuBase
 from plugins.Roku.initialize import RokuInitializer
-from plugins.Roku.workers import RokuImporter
+from plugins.Roku.importer import RokuImporter
 from plugins.utils.abstract_plugin import AbstractPlugin
 
 

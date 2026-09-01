@@ -8,13 +8,25 @@ from typing import TYPE_CHECKING
 from app.canonical_media.keys import tmdb_show_key
 from app.media.media_type import MediaType
 from plugins.TMDB.base import TMDBBase
-from plugins.TMDB.constants import media_url
+from plugins.TMDB.importer import TMDBImporter
 from plugins.TMDB.initialize import TMDBInitializer
-from plugins.TMDB.workers import TMDBImporter
-from plugins.utils.abstract_plugin import AbstractPlugin
+from plugins.TMDB.urls import media_url
+from plugins.TMDB.utils import first_search_result
+from plugins.utils.abstract_plugin import AbstractPlugin, TMDBLookupInfo
 
 if TYPE_CHECKING:
     from app.shows.models import Show
+
+_TMDB_MEDIA_TYPES = {
+    "Movie": MediaType.movie,
+    "Series": MediaType.tv,
+    "TV Show": MediaType.tv,
+}
+"""Which TMDB media type each of a show's own media types is searched under.
+
+A media type TMDB has no half of - a channel, a video, a concert - is not
+searched for at all.
+"""
 
 
 # TODO: Validate
@@ -25,65 +37,40 @@ class TMDB(TMDBBase, AbstractPlugin, register=True):
     importer = TMDBImporter
 
     # TODO: Validate
-    def import_search(
-        self,
-        name: str,
-        media_type: MediaType | None = None,
-        year: int | None = None,
-        *,
-        force: bool = False,
-    ) -> Show | None:
-        """Import the first title TMDB returns for `name`.
-
-        `media_type` narrows the search to one half of the catalogue and `year`
-        to when the title came out. Neither is required: a search of both halves
-        takes whichever half the first result turned out to be from.
+    def import_search(self, lookup_info: TMDBLookupInfo) -> Show | None:
+        """Import the first title TMDB returns for a show another plugin names.
 
         Returns None when TMDB has nothing under that name, since a name is a
-        guess at a title in a way an id is not.
+        guess at a title in a way an id is not, and when the show is of a kind
+        TMDB has no half of - a channel, a video, a concert - which is not
+        searched for at all.
         """
-        found = self._first_search_result(name, media_type, year)
+        media_type = _TMDB_MEDIA_TYPES.get(lookup_info.media_type)
+        if media_type is None:
+            return None
+
+        found = first_search_result(
+            self,
+            lookup_info.title,
+            media_type,
+            lookup_info.year,
+        )
         if found is None:
             return None
 
         half, tmdb_id = found
         if half == MediaType.movie:
-            return self.import_movie(tmdb_id, force=force)
-        return self.import_show(tmdb_id, force=force)
+            return self.import_movie(tmdb_id)
+        return self.import_show(tmdb_id)
 
     # TODO: Validate
-    def _first_search_result(
-        self,
-        name: str,
-        media_type: MediaType | None,
-        year: int | None,
-    ) -> tuple[MediaType, int] | None:
-        """Return which half the first title TMDB returns is from, and its id."""
-        if media_type is not None:
-            results = self.search_media(media_type, name, year).parsed().results
-            return (media_type, results[0].id) if results else None
-
-        # A search of both halves also returns people, who are no title and are
-        # passed over rather than taken as the first result.
-        for result in self.search_media(None, name, year).parsed().results:
-            # Which half of the catalogue a search of both says a result came
-            # from. A multi search also returns people, who are no title and
-            # cannot be imported.
-            half = {"movie": MediaType.movie, "tv": MediaType.tv}.get(
-                result.media_type,
-            )
-            if half is not None:
-                return half, result.id
-        return None
-
-    # TODO: Validate
-    def import_show(self, tmdb_id: int, *, force: bool = False) -> Show:
+    def import_show(self, tmdb_id: int) -> Show:
         """Import a TMDB tv entry using a tmdb_id."""
-        self.import_url(media_url(MediaType.tv, tmdb_id), force=force)
+        self.import_url(media_url(MediaType.tv, tmdb_id))
         return self._preload_show(tmdb_show_key(MediaType.tv, tmdb_id)).one()
 
     # TODO: Validate
-    def import_movie(self, tmdb_id: int, *, force: bool = False) -> Show:
+    def import_movie(self, tmdb_id: int) -> Show:
         """Import a TMDB movie entry using a tmdb_id."""
-        self.import_url(media_url(MediaType.movie, tmdb_id), force=force)
+        self.import_url(media_url(MediaType.movie, tmdb_id))
         return self._preload_show(tmdb_show_key(MediaType.movie, tmdb_id)).one()
