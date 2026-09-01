@@ -37,8 +37,12 @@ class UpdateMixin(UpsertMixin):
                 genre_urls,
             )
             all_urls += genre_urls
-            movie_urls += [url for url in genre_urls if f"/{HuluMediaType.MOVIE}/" in url]
-            series_urls += [url for url in genre_urls if f"/{HuluMediaType.SERIES}/" in url]
+            movie_urls += [
+                url for url in genre_urls if f"/{HuluMediaType.MOVIE}/" in url
+            ]
+            series_urls += [
+                url for url in genre_urls if f"/{HuluMediaType.SERIES}/" in url
+            ]
 
         self.get_or_create_channel("Hulu All Media", "All Media on Hulu.", all_urls)
         self.get_or_create_channel("Hulu Movies", "All Movies on Hulu.", movie_urls)

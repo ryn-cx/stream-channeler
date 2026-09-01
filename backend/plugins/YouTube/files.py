@@ -936,7 +936,9 @@ class FileMixin(BasePlugin):
         # An album playlist is auto-generated and listed by no channel, so it is only
         # ever added by an importing URL naming it and then always kept.
         return season_keys + [
-            key for key in self._album_season_keys_from_database(show_key) if key not in season_keys
+            key
+            for key in self._album_season_keys_from_database(show_key)
+            if key not in season_keys
         ]
 
     # TODO: Validate

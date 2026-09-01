@@ -25,16 +25,13 @@ class UpsertMixin(UtilsMixin, FileMixin):
     # TODO: Validate
     @override
     def upsert_source(self, source_key: str) -> Source:
-        self.genres_page_file().download_if_outdated()
         source_files = self._source_files()
-        self._download_outdated_files(source_files)
-        data_timestamp = self._file_timestamp(source_files)
         source = Source.get_from_memory(self.session, self.plugin, source_key)
         return Source(
             key=source_key,
             name=self.plugin_name(),
             favicon_url=self.favicon_url(),
-            data_timestamp=data_timestamp,
+            data_timestamp=self._file_timestamp(source_files),
             update_at=staggered_monthly_update_at(source_key, tz_datetime.now()),
             plugin_id=self.plugin.id,
         ).upsert_and_set_update_at(self.plugin, source, source_files)

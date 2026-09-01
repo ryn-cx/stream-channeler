@@ -33,7 +33,9 @@ class BaseCatalogueSearchMixin(BasePlugin, ABC):
 
     # TODO: Validate
     @classmethod
-    def tmdb_media_type_to_plugin_media_type(cls, media_type: MediaType) -> tuple[str, ...]:
+    def tmdb_media_type_to_plugin_media_type(
+        cls, media_type: MediaType
+    ) -> tuple[str, ...]:
         """Return what this website files TMDB's `media_type` under.
 
         A website tells its catalogue apart more finely than TMDB does - TMDB

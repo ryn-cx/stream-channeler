@@ -1,11 +1,9 @@
 # TODO: Validate
 from __future__ import annotations
 
-from app.media.media_type import MediaType
-
-
 from chirashi.search.models import Item as SearchItem
 
+from app.media.media_type import MediaType
 from plugins.Crunchyroll.constants import episode_is_music, show_is_an_artist
 from plugins.Crunchyroll.files import FileMixin
 from plugins.Crunchyroll.utils import UtilsMixin

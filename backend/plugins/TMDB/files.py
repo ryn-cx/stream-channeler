@@ -69,8 +69,8 @@ from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.TMDB.episode_groups import show_chosen_group_id
 from plugins.TMDB.keys import (
-    parse_season_key,
     get_media_type_and_tmdb_id,
+    parse_season_key,
 )
 from plugins.TMDB.urls import media_url
 from plugins.utils.base_plugin_v2.base import BasePlugin

@@ -327,7 +327,9 @@ class BaseDownloadMixin(ABC):
             [
                 file.file_key()
                 for season_key in season_keys
-                for episode_key in self._episode_keys_from_season_files(season_key, show_key)
+                for episode_key in self._episode_keys_from_season_files(
+                    season_key, show_key
+                )
                 for file in self._episode_files(episode_key, season_key, show_key)
             ],
         )
