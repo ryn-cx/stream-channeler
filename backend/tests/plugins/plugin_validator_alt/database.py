@@ -71,7 +71,7 @@ def no_channel_initialization(
             stack.enter_context(
                 patch.object(
                     plugin_class.initializer,  # type: ignore[attr-defined]
-                    "_initialize_channels",
+                    "_create_channel_records",
                     lambda _self: None,
                 ),
             )
@@ -403,7 +403,7 @@ class DatabaseMixinAlt[PluginT: AbstractPlugin]:
         ]
         with no_channel_initialization(plugin_classes):
             for plugin_class in plugin_classes:
-                plugin_class.initialize_db(session)
+                plugin_class.initialize_plugin(session)  # type: ignore[attr-defined]
 
         session.expire_all()
         session.commit()  # Set the rollback point.

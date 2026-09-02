@@ -26,6 +26,8 @@ from plugins.utils.base_plugin_v2.url import BaseURLMixin
 
 # TODO: Validate
 class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
+    __plugin_channels: dict[str, Channel] | None = None
+
     # TODO: Validate
     def add_urls_to_plugin_channel(
         self,
@@ -34,25 +36,37 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         urls: Sequence[str] = (),
     ) -> Channel:
         """Return the plugin owned channel `name`, creating it the first time."""
-        plugin_user = get_or_create_plugin_user(session=self.session)
-        channel_query = (
-            select(Channel)
-            .where(Channel.user_id == plugin_user.id)
-            .where(Channel.name == channel_name)
-        )
-        if not (channel := self.session.exec(channel_query).first()):
+        channels = self._plugin_channels()
+        if not (channel := channels.get(channel_name)):
             channel = Channel(
                 name=channel_name,
                 description=channel_description,
                 visibility=Visibility.public,
                 anonymous=False,
                 score=-1,
-                user_id=plugin_user.id,
+                user_id=get_or_create_plugin_user(session=self.session).id,
             )
             self.session.add(channel)
-            self.session.commit()
+            channels[channel_name] = channel
         add_urls_to_channel_import_queue(self.session, channel, urls)
         return channel
+
+    # TODO: Validate
+    def _plugin_channels(self) -> dict[str, Channel]:
+        """Return every channel the plugin user owns, read once per plugin.
+
+        A plugin whose catalogue is split across a hundred genres asks for a
+        hundred channels, and reading each one on its own is a query each.
+        """
+        if self.__plugin_channels is None:
+            plugin_user = get_or_create_plugin_user(session=self.session)
+            self.__plugin_channels = {
+                channel.name: channel
+                for channel in self.session.exec(
+                    select(Channel).where(Channel.user_id == plugin_user.id),
+                ).all()
+            }
+        return self.__plugin_channels
 
     # TODO: Validate
     def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo | None:  # noqa: ARG002

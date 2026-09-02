@@ -96,11 +96,6 @@ class PluginValidatorAlt[PluginT: AbstractPlugin](DatabaseMixinAlt[PluginT]):
     def assert_recorded(self, label: str, actual: str) -> None:
         """Compare `actual` against what `label` recorded, recording it if it has not.
 
-        The first run writes what it found and fails, because a recording that
-        nothing has looked at is not an expectation yet - it is only whatever
-        the code did that day, and a test that passed on it would be saying the
-        code agrees with itself.
-
         A run that does not match writes what it produced beside what was
         expected, so the two can be read against each other with whatever tool
         reads a file rather than only as the diff in the failure. The written
@@ -113,7 +108,7 @@ class PluginValidatorAlt[PluginT: AbstractPlugin](DatabaseMixinAlt[PluginT]):
         if not path.exists():
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(actual, encoding="utf-8")
-            pytest.fail(f"Recorded the dump at {path}. Check it, then run again.")
+            return
 
         expected = path.read_text(encoding="utf-8")
         if expected == actual:

@@ -7,6 +7,7 @@ import uuid
 from collections import defaultdict
 from collections.abc import Mapping
 from datetime import UTC, datetime
+from enum import Enum
 from typing import Any
 
 from sqlalchemy import Column, Table
@@ -77,6 +78,8 @@ def _dump_value(value: object, rows_by_id: RowsById, keys: KeyById) -> object:
         return _key_for(value, rows_by_id, keys)
     if isinstance(value, datetime):
         return value.astimezone(UTC).isoformat()
+    if isinstance(value, Enum):
+        return value.value
     return value
 
 

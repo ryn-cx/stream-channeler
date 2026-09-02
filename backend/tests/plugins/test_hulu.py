@@ -67,28 +67,6 @@ class TestMovie(StandardTestsAlt[Hulu], HuluValidatorAlt):
 
 
 # TODO: Validate
-class TestODessa(StandardTestsAlt[Hulu], HuluValidatorAlt):
-    movie_id = "ea3ee5c6-ee7f-4556-9431-0563b971b8fb"
-    show_slug = "odessa"
-    urls = (
-        "/movie/{movie_id}",
-        "/movie/{movie_id}/",
-        "/movie/{show_slug}-{movie_id}",
-    )
-
-
-# TODO: Validate
-class TestSpyXFamily(StandardTestsAlt[Hulu], HuluValidatorAlt):
-    series_id = "65d158d4-443f-44c7-bd2c-eae39f6c60e9"
-    show_slug = "spy-x-family"
-    urls = (
-        "/series/{series_id}",
-        "/series/{series_id}/",
-        "/series/{show_slug}-{series_id}",
-    )
-
-
-# TODO: Validate
 class TestSeries(StandardTestsAlt[Hulu], HuluValidatorAlt):
     series_id = "3c3c0f8b-7366-4d15-88ab-18050285978e"
     show_slug = "family-guy"

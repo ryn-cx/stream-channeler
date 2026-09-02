@@ -10,7 +10,7 @@ from unittest.mock import patch
 from uuid import UUID
 
 from loguru import logger
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from app.constants import ALL_TEST_FILES_FOLDER, ALL_TEST_FILES_METADATA_FOLDER
 from app.files.models import File
@@ -143,7 +143,30 @@ class StoredFileMetadata(BaseModel):
     data_timestamp: datetime
     update_at: datetime | None = None
     deleted_at: datetime | None = None
-    extra: str | None = None
+    status: str | None = None
+    extra: dict[str, Any] = {}
+
+    # TODO: Validate
+    @model_validator(mode="before")
+    @classmethod
+    def _split_status_out_of_extra(cls, data: object) -> object:
+        if not isinstance(data, dict):
+            return data
+        extra = data.get("extra")
+        if isinstance(extra, str):
+            return {**data, "status": extra, "extra": {}}
+        if not isinstance(extra, dict):
+            return {**data, "extra": {}}
+        status = extra.get("status")
+        if status is None:
+            return data
+        return {
+            **data,
+            "status": status,
+            "extra": {
+                field: value for field, value in extra.items() if field != "status"
+            },
+        }
 
 
 # TODO: Validate
