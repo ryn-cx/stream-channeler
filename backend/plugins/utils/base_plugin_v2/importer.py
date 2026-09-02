@@ -18,6 +18,15 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
+def record_show(record: Show | Season | Episode) -> Show:
+    if isinstance(record, Season):
+        return record.show
+    if isinstance(record, Episode):
+        return record.season.show
+    return record
+
+
+# TODO: Validate
 class BasePluginWorker(BasePlugin, ABC):
     # TODO: Validate
     def __init__(self, owner: BasePlugin) -> None:
@@ -27,8 +36,6 @@ class BasePluginWorker(BasePlugin, ABC):
 
 # TODO: Validate
 class BaseImporter(BasePluginWorker, BaseReadURL, ABC):
-    record: Show | Season | Episode
-
     # TODO: Validate
     def _url_source(self) -> Source:
         return self._sources[self.plugin_name()]
@@ -57,31 +64,7 @@ class BaseImporter(BasePluginWorker, BaseReadURL, ABC):
         return self._import_results(show)
 
     # TODO: Validate
-    def _set_record(self, record: Show | Season | Episode) -> None:
-        self.record = record
-
-    # TODO: Validate
-    @property
-    def show(self) -> Show:
-        record = self.record
-        if isinstance(record, Season):
-            return record.show
-        if isinstance(record, Episode):
-            return record.season.show
-        return record
-
-    # TODO: Validate
-    def update(self, record: Show | Season | Episode, *, force: bool = False) -> None:
-        self._set_record(record)
-        if isinstance(record, Season):
-            self._update_season(record)
-        elif isinstance(record, Episode):
-            self._update_episode(record)
-        else:
-            self._update_show(record, force=force)
-
-    # TODO: Validate
-    def _update_show(self, show: Show, *, force: bool = False) -> None:
+    def update_show(self, show: Show, *, force: bool = False) -> None:
         source_name = show.source.name or show.source.key
         show_name = f"{show.name} ({show.key})" if show.name else show.key
         logger.info("Updating show: {} - {}", source_name, show_name)
@@ -89,7 +72,7 @@ class BaseImporter(BasePluginWorker, BaseReadURL, ABC):
         self._update_and_upsert_show(stored_show, stored_show.update_at, force=force)
 
     # TODO: Validate
-    def _update_season(self, season: Season) -> None:
+    def update_season(self, season: Season) -> None:
         logger.info("Updating season: {}", season.key)
         stored_season = self._preload_season(season.id, preload_show=True).one()
         self._download_season_files_and_children(
@@ -99,7 +82,7 @@ class BaseImporter(BasePluginWorker, BaseReadURL, ABC):
         self._update_and_upsert_show(stored_season.show)
 
     # TODO: Validate
-    def _update_episode(self, episode: Episode) -> None:
+    def update_episode(self, episode: Episode) -> None:
         logger.info("Updating episode: {}", episode.key)
         stored_episode = self._preload_episode(episode.id, preload_source=True).one()
         self._download_episode_files(
@@ -114,5 +97,4 @@ class BaseImporter(BasePluginWorker, BaseReadURL, ABC):
         record: Show | Season | Episode,
         error: Exception,  # noqa: ARG002 - `error` is used by overrides.
     ) -> None:
-        self._set_record(record)
         record.update_at = tz_datetime.max()

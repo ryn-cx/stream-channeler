@@ -144,7 +144,7 @@ class SitemapPage[T: GenresModel | GenreModel](EndpointFile[T]):
 
 
 # TODO: Validate
-class GenresPage(SitemapPage[GenresModel]):
+class Genres(SitemapPage[GenresModel]):
     """Genre list file."""
 
     # TODO: Validate
@@ -164,7 +164,7 @@ class GenresPage(SitemapPage[GenresModel]):
 
 
 # TODO: Validate
-class GenrePage(SitemapPage[GenreModel]):
+class Genre(SitemapPage[GenreModel]):
     """One genre's title list file."""
 
     # TODO: Validate
@@ -191,14 +191,11 @@ class GenrePage(SitemapPage[GenreModel]):
         return isinstance(error, GenreNotFoundError)
 
 
-# TODO: Validate
 class FileMixin(BasePlugin):
-    """The files a title is read out of."""
-
     _media_type: HuluMediaType
 
     # TODO: Validate
-    def _set_media_type_from_show(self, show: Show) -> None:
+    def _set_media_type(self, show: Show) -> None:
         if not show.media_type:
             msg = "Show.media_type is not set."
             raise AttributeError(msg)
@@ -214,14 +211,14 @@ class FileMixin(BasePlugin):
         return self.series_file(show_key).tmdb_lookup_info()
 
     # TODO: Validate
-    def genres_page_file(self) -> GenresPage:
+    def genres_page_file(self) -> Genres:
         """Return GenresPage file."""
-        return self._file(GenresPage)
+        return self._file(Genres)
 
     # TODO: Validate
-    def genre_page_file(self, genre_id: str) -> GenrePage:
+    def genre_page_file(self, genre_id: str) -> Genre:
         """Return GenrePage file."""
-        return self._file(GenrePage, genre_id)
+        return self._file(Genre, genre_id)
 
     # TODO: Validate
     @override

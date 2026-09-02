@@ -112,13 +112,13 @@ class TMDBImporter(BaseImporter, TMDBBase):
 
     # TODO: Validate
     @override
-    def _update_show(self, show: Show, *, force: bool = False) -> None:
+    def update_show(self, show: Show, *, force: bool = False) -> None:
         media_type, _ = get_media_type_and_tmdb_id(show.key)
         if media_type == MediaType.movie:
             # For movies it is more efficient to update it directly since it only has 2
             # files that are listed on the changes endpoint (watch provider changes are
             # not listed on the changes endpoint).
-            super()._update_show(show, force=force)
+            super().update_show(show, force=force)
         else:
             self._download_and_import_changed_title_files(show)
             self._preload_show(show.id, preload_episodes=True).one()
@@ -128,8 +128,8 @@ class TMDBImporter(BaseImporter, TMDBBase):
 
     # TODO: Validate
     @override
-    def _update_season(self, season: Season) -> None:
-        super()._update_season(season)
+    def update_season(self, season: Season) -> None:
+        super().update_season(season)
         self.sync_season_key_watch_providers(season.key, season.show.key)
 
     # TODO: Validate
