@@ -128,7 +128,7 @@ class SourceMixin(UtilsMixin, FileMixin):
         has aired and the channel is what keeps hold of the whole run. It is
         created the first time a title is found rather than by hand.
         """
-        return self.get_or_create_channel(
+        return self.add_urls_to_plugin_channel(
             self.plugin_name(),
             (Path(__file__).parent / "channel_description.md").read_text(
                 encoding="utf-8",

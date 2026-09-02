@@ -25,7 +25,7 @@ def reimport_single_show(session: Session, show_id: uuid.UUID) -> None:
     plugin_class = plugin_classes_by_key[show.source.plugin.key]
 
     logger.info(f"Reimporting {show.name or show.key} from {show.source.plugin.key}")
-    plugin_instance = plugin_class(session)
+    plugin_instance = plugin_class(session, show.source.plugin)
     plugin_instance.update_show(show, force=True)
     session.commit()
 

@@ -10,7 +10,7 @@ from plugins.utils.abstract_plugin import AbstractPlugin
 
 
 # TODO: Validate
-class Netflix(NetflixBase, AbstractPlugin, register=True):
+class Netflix(NetflixBase, AbstractPlugin, register=False):
     """Netflix plugin."""
 
     initializer = NetflixInitializer

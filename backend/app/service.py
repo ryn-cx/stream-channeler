@@ -327,13 +327,15 @@ def scoped_list_response[ResponseT: BaseModel](  # noqa: PLR0913
         base = base.outerjoin(counts, counts.c.record_id == model.id)
         favorite_count = func.coalesce(counts.c.favorite_count, 0)
         extra_columns["favorite_count"] = favorite_count
-    default_sorts: list[Any] = [model.created_at]
+    default_sorts: list[Any]
+    if favorite_count is None:
+        default_sorts = [model.created_at]
+    else:
+        default_sorts = [favorite_count, model.score, model.created_at]
     if read_options.scope == RecordScope.public:
         base = base.where(model.visibility == Visibility.public)
         if favorite_count is None:
-            default_sorts = [model.score]
-        else:
-            default_sorts = [favorite_count, model.score]
+            default_sorts = [model.score, model.created_at]
     elif read_options.scope == RecordScope.owned:
         if viewer is None:
             raise HTTPException(

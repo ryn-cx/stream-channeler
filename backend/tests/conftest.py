@@ -2,6 +2,7 @@
 # TODO: Compare this to the upstream implemenation
 import sys
 from collections.abc import Generator
+from unittest import mock
 
 import pytest
 from alembic import command
@@ -19,7 +20,6 @@ from app.auth.dependencies import get_db
 from app.config import settings
 from app.database import init_db, load_models
 from app.main import app
-from plugins.utils.manage_plugins import disable_plugin_initialization
 from tests.app.helpers.utils import get_superuser_token_headers
 from tests.app.users.utils import (
     authentication_token_from_email,
@@ -30,7 +30,7 @@ from tests.app.users.utils import (
 logger.remove()
 logger.add(sys.stdout, level="TRACE", colorize=True)
 
-disable_plugin_initialization()
+mock.patch("app.main.initialize_plugins").start()
 
 TEST_DB_NAME = f"{settings.POSTGRES_DB}_backend_test"
 TEST_DATABASE_URI = MultiHostUrl.build(

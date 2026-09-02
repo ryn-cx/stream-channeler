@@ -30,6 +30,8 @@ from app.log import configure_logging
 from app.seasons.models import Season
 from app.shows.models import Show, ShowCanonicalShow
 from app.tools.local_test_files import serve_downloads_from_test_files
+from app.users.constants import PLUGIN_USER_EMAIL
+from app.users.models import User
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
@@ -46,20 +48,28 @@ PLUGIN_LOCKS = {
 
 
 # TODO: Validate
-def run_forever(stop_event: threading.Event | None = None) -> None:
+def run_forever(
+    stop_event: threading.Event | None = None,
+    *,
+    skip_plugin_user_channels: bool = False,
+) -> None:
     stop_event = stop_event or threading.Event()
     while not stop_event.is_set():
         with Session(engine) as session:
-            import_queue(session)
+            import_queue(session, skip_plugin_user_channels=skip_plugin_user_channels)
         if stop_event.wait(timeout=60):
             break
 
 
 # TODO: Validate
-def import_queue(session: Session) -> None:
+def import_queue(session: Session, *, skip_plugin_user_channels: bool = False) -> None:
     """Actually import the queue in separate threads for each plugin."""
     with serve_downloads_from_test_files():
-        for plugin_class, items in _group_pending_urls_by_plugin(session).items():
+        grouped = _group_pending_urls_by_plugin(
+            session,
+            skip_plugin_user_channels=skip_plugin_user_channels,
+        )
+        for plugin_class, items in grouped.items():
             with PLUGIN_LOCKS[plugin_class.plugin_name()]:
                 for item in items:
                     _import_one(session, item, plugin_class)
@@ -83,20 +93,25 @@ def _get_plugin(url: str) -> type[AbstractPlugin] | None:
 # TODO: Validate
 def _group_pending_urls_by_plugin(
     session: Session,
+    *,
+    skip_plugin_user_channels: bool = False,
 ) -> dict[type[AbstractPlugin], list[ChannelQueue]]:
     by_plugin: dict[type[AbstractPlugin], list[ChannelQueue]] = {}
     unmatched: list[ChannelQueue] = []
-    pending = session.exec(
-        select(ChannelQueue)
-        .where(
-            col(ChannelQueue.status).in_([URLStatus.PENDING, URLStatus.IMPORTING]),
-            or_(
-                col(ChannelQueue.import_at).is_(None),
-                col(ChannelQueue.import_at) <= tz_datetime.now(),
-            ),
+    selector = select(ChannelQueue).where(
+        col(ChannelQueue.status).in_([URLStatus.PENDING, URLStatus.IMPORTING]),
+        or_(
+            col(ChannelQueue.import_at).is_(None),
+            col(ChannelQueue.import_at) <= tz_datetime.now(),
+        ),
+    )
+    if skip_plugin_user_channels:
+        selector = (
+            selector.join(Channel, col(ChannelQueue.channel_id) == col(Channel.id))
+            .join(User, col(Channel.user_id) == col(User.id))
+            .where(col(User.email) != PLUGIN_USER_EMAIL)
         )
-        .order_by(col(ChannelQueue.created_at).asc()),
-    ).all()
+    pending = session.exec(selector.order_by(col(ChannelQueue.created_at).asc())).all()
     for item in pending:
         if plugin_class := _get_plugin(item.url):
             by_plugin.setdefault(plugin_class, []).append(item)
@@ -186,8 +201,17 @@ def add_results_to_channel(
             episodes = canonical.episodes_under(result.episode_keys, canonical_show_id)
             if result.is_whitelist and not seasons and not episodes:
                 continue
-            if existing_channel_show := existing_channel_shows.get(canonical_show_id):
-                _update_channel_show(
+            existing_channel_show = existing_channel_shows.get(canonical_show_id)
+            if existing_channel_show is None:
+                existing_channel_shows[canonical_show_id] = _create_channel_show(
+                    channel,
+                    result,
+                    canonical_show_id,
+                    seasons,
+                    episodes,
+                )
+            elif existing_channel_show.is_blacklist_only:
+                _reset_channel_show(
                     session,
                     existing_channel_show,
                     result,
@@ -195,10 +219,10 @@ def add_results_to_channel(
                     episodes,
                 )
             else:
-                existing_channel_shows[canonical_show_id] = _create_channel_show(
-                    channel,
+                _grant_on_channel_show(
+                    session,
+                    existing_channel_show,
                     result,
-                    canonical_show_id,
                     seasons,
                     episodes,
                 )
@@ -375,52 +399,71 @@ def _create_channel_show(
 
 
 # TODO: Validate
-def _update_channel_show(
+def _reset_channel_show(
     session: Session,
-    existing_channel_show: ChannelShow,
+    channel_show: ChannelShow,
     result: URLImportResult,
-    result_seasons: set[UUID],
-    result_episodes: set[UUID],
+    season_ids: set[UUID],
+    canonical_episode_ids: set[UUID],
 ) -> None:
-    """Fold what the result asks for into the filters the title already carries."""
-    existing_channel_show.is_blacklist_only = False
+    channel_show.is_blacklist_only = False
+    channel_show.is_whitelist = result.is_whitelist
+    _drop_filters(session, channel_show, season_ids, canonical_episode_ids)
+    _merge_filters(channel_show, season_ids, canonical_episode_ids)
 
-    was_whitelist = existing_channel_show.is_whitelist
-    existing_seasons: set[UUID] = {
-        season_filter.season_id
-        for season_filter in existing_channel_show.season_filters
+
+# TODO: Validate
+def _grant_on_channel_show(
+    session: Session,
+    channel_show: ChannelShow,
+    result: URLImportResult,
+    season_ids: set[UUID],
+    canonical_episode_ids: set[UUID],
+) -> None:
+    channel_show.is_blacklist_only = False
+
+    if not result.season_keys and not result.episode_keys:
+        if channel_show.is_whitelist:
+            channel_show.is_whitelist = False
+            _drop_filters(session, channel_show, set(), set())
+        return
+
+    filtered_seasons = {
+        season_filter.season_id for season_filter in channel_show.season_filters
     }
-    existing_episodes: set[UUID] = {
+    filtered_episodes = {
         episode_filter.canonical_episode_id
-        for episode_filter in existing_channel_show.episode_filters
+        for episode_filter in channel_show.episode_filters
     }
-    blacklisted_episodes: set[UUID] = set() if was_whitelist else existing_episodes
+    season_by_episode = _seasons_for_episodes(
+        session,
+        filtered_episodes | canonical_episode_ids,
+    )
 
-    if result.is_whitelist:
-        seasons = (existing_seasons if was_whitelist else set[UUID]()) | result_seasons
-        whitelisted_episodes = (
-            (existing_episodes if was_whitelist else set[UUID]()) | result_episodes
-        ) - blacklisted_episodes
-        season_by_blacklisted_episode = _seasons_for_episodes(
-            session,
-            blacklisted_episodes,
-        )
-        exclusions = {
-            canonical_episode_id
-            for canonical_episode_id, season_id in (
-                season_by_blacklisted_episode.items()
-            )
-            if season_id in seasons
-        }
-        episodes = whitelisted_episodes | exclusions
+    if channel_show.is_whitelist:
+        filtered_seasons |= season_ids
     else:
-        seasons = set[UUID]()
-        episodes = blacklisted_episodes | result_episodes
+        filtered_seasons -= season_ids
+    filtered_episodes -= {
+        canonical_episode_id
+        for canonical_episode_id in filtered_episodes
+        if season_by_episode.get(canonical_episode_id) in season_ids
+    }
 
-    existing_channel_show.is_whitelist = result.is_whitelist
-    if was_whitelist != result.is_whitelist:
-        _drop_filters(session, existing_channel_show, seasons, episodes)
-    _merge_filters(existing_channel_show, seasons, episodes)
+    for canonical_episode_id in canonical_episode_ids:
+        season_is_filtered = (
+            season_by_episode.get(canonical_episode_id) in filtered_seasons
+        )
+        if season_is_filtered != channel_show.is_whitelist:
+            filtered_episodes.add(canonical_episode_id)
+        else:
+            filtered_episodes.discard(canonical_episode_id)
+
+    _drop_filters(session, channel_show, filtered_seasons, filtered_episodes)
+    _merge_filters(channel_show, filtered_seasons, filtered_episodes)
+    for episode_filter in channel_show.episode_filters:
+        if episode_filter.canonical_episode_id in filtered_episodes:
+            episode_filter.expires_at = None
 
 
 # TODO: Validate

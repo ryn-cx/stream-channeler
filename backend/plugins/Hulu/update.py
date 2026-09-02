@@ -31,7 +31,7 @@ class UpdateMixin(UpsertMixin):
             genre_id = genre_href.rsplit("/", 1)[-1]
             genre_urls = self.genre_page_file(genre_id).media_urls()
 
-            self.get_or_create_channel(
+            self.add_urls_to_plugin_channel(
                 f"Hulu {genre_name}",
                 f"All {genre_name} on Hulu.",
                 genre_urls,
@@ -44,9 +44,9 @@ class UpdateMixin(UpsertMixin):
                 url for url in genre_urls if f"/{HuluMediaType.SERIES}/" in url
             ]
 
-        self.get_or_create_channel("Hulu All Media", "All Media on Hulu.", all_urls)
-        self.get_or_create_channel("Hulu Movies", "All Movies on Hulu.", movie_urls)
-        self.get_or_create_channel(
+        self.add_urls_to_plugin_channel("Hulu All Media", "All Media on Hulu.", all_urls)
+        self.add_urls_to_plugin_channel("Hulu Movies", "All Movies on Hulu.", movie_urls)
+        self.add_urls_to_plugin_channel(
             "Hulu TV Series",
             "All TV Series on Hulu.",
             series_urls,

@@ -42,44 +42,37 @@ from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 
-# TODO: Validate
 @cache
 def wholoo() -> Wholoo:
     """Return a cached Wholoo client."""
     return Wholoo(get_around_client=get_around_client())
 
 
-# TODO: Validate
 class Series(EndpointFile[TVModel]):
     @override
     def _endpoint(self) -> TV:
         return wholoo().tv
 
-    # Occurs if the user tries to add an invalid URL.
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, SeriesNotFoundError)
 
     # TODO: Validate
     def get_tmdb_lookup_info(self) -> TMDBLookupInfo:
-        model = self.parsed()
+        parsed_series = self.parsed()
         return TMDBLookupInfo(
-            title=model.name,
+            title=parsed_series.name,
             media_type="Series",
-            year=model.details.entity.premiere_date.year,
+            year=parsed_series.details.entity.premiere_date.year,
         )
 
 
-# TODO: Validate
 class Movie(EndpointFile[MoviesModel]):
-    """Movie file."""
-
-    # TODO: Validate
     @override
     def _endpoint(self) -> MoviesEndpoint:
         return wholoo().movies
 
-    # TODO: Validate
+    # Occurs if the user tries to add an invalid URL.
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, MovieNotFoundError)
@@ -94,16 +87,12 @@ class Movie(EndpointFile[MoviesModel]):
         )
 
 
-# TODO: Validate
 class SeasonFile(EndpointFile[SeasonModel]):
-    """Season file."""
 
-    # TODO: Validate
     @override
     def _endpoint(self) -> SeasonEndpoint:
         return wholoo().season
 
-    # TODO: Validate
     def __init__(
         self,
         session: Session,
@@ -111,7 +100,6 @@ class SeasonFile(EndpointFile[SeasonModel]):
         series_id: str,
         season_number: int,
     ) -> None:
-        """Initialize the file."""
         self.series_id = series_id
         self.season_number = season_number
         super().__init__(session, plugin, f"{series_id}/{season_number}")

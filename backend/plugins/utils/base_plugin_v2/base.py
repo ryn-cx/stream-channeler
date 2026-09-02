@@ -27,10 +27,10 @@ from plugins.utils.base_plugin_v2.url import BaseURLMixin
 # TODO: Validate
 class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
     # TODO: Validate
-    def get_or_create_channel(
+    def add_urls_to_plugin_channel(
         self,
-        name: str,
-        description: str,
+        channel_name: str,
+        channel_description: str,
         urls: Sequence[str] = (),
     ) -> Channel:
         """Return the plugin owned channel `name`, creating it the first time."""
@@ -38,12 +38,12 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         channel_query = (
             select(Channel)
             .where(Channel.user_id == plugin_user.id)
-            .where(Channel.name == name)
+            .where(Channel.name == channel_name)
         )
         if not (channel := self.session.exec(channel_query).first()):
             channel = Channel(
-                name=name,
-                description=description,
+                name=channel_name,
+                description=channel_description,
                 visibility=Visibility.public,
                 anonymous=False,
                 score=-1,
@@ -70,8 +70,8 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
 
     # TODO: Validate
     @classmethod
-    def initialize_db(cls, session: Session) -> None:
-        cls.initializer.initialize_db(session)
+    def initialize_plugin(cls, session: Session) -> None:
+        cls.initializer.initialize_plugin(session)
 
     # TODO: Validate
     @classmethod

@@ -10,7 +10,7 @@ from plugins.utils.abstract_plugin import AbstractPlugin
 
 
 # TODO: Validate
-class HiDive(HiDiveBase, AbstractPlugin, register=True):
+class HiDive(HiDiveBase, AbstractPlugin, register=False):
     """HiDive plugin."""
 
     initializer = HiDiveInitializer

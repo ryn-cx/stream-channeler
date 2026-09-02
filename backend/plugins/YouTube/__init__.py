@@ -18,7 +18,7 @@ from plugins.YouTube.importer import YouTubeImporter
 
 
 # TODO: Validate
-class YouTube(YouTubeBase, AbstractPlugin, register=True):
+class YouTube(YouTubeBase, AbstractPlugin, register=False):
     """YouTube plugin."""
 
     initializer = YouTubeInitializer

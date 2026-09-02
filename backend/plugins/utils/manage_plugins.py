@@ -89,14 +89,8 @@ def initialize_plugins() -> None:
     )
     for plugin_class in plugin_classes:
         with Session(engine) as session:
-            plugin_class.initialize_db(session)
+            plugin_class.initialize_plugin(session)
             session.commit()
-
-
-# TODO: Validate
-def disable_plugin_initialization() -> None:
-    global _plugins_initialized  # noqa: PLW0603
-    _plugins_initialized = True
 
 
 # TODO: Validate

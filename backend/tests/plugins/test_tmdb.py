@@ -28,6 +28,7 @@ SEPARATOR = "/"
 # TODO: Validate
 class TMDBValidatorAlt(PluginValidatorAlt[TMDB]):
     plugin_class = TMDB
+    restrict_registered_plugins = False
     urls: tuple[str, ...] = (
         "/{media_type}/{parse_url_response}",
         "/{media_type}/{parse_url_response}/",

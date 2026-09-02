@@ -71,7 +71,12 @@ class AbstractPlugin(ABC):
 
     # TODO: Validate
     @abstractmethod
-    def __init__(self, session: Session) -> None:
+    def __init__(
+        self,
+        session: Session,
+        plugin: Plugin | None = None,
+        sources: Sequence[Source] | None = None,
+    ) -> None:
         """Initialize the plugin class.
 
         The `Plugin (class)` needs to be able to interact with the database so the

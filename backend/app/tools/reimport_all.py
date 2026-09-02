@@ -23,7 +23,7 @@ def reimport_all_shows(session: Session) -> None:
 
     for show in shows:
         plugin_class = plugin_classes_by_key[show.source.plugin.key]
-        plugin_instance = plugin_class(session)
+        plugin_instance = plugin_class(session, show.source.plugin)
         plugin_instance.update_show(show, force=True)
         session.commit()
 

@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class WatchMode(WatchModeBase, AbstractPlugin, register=True):
+class WatchMode(WatchModeBase, AbstractPlugin, register=False):
     """Watchmode plugin."""
 
     initializer = WatchModeInitializer

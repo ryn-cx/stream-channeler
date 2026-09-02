@@ -10,7 +10,7 @@ from plugins.utils.abstract_plugin import AbstractPlugin
 
 
 # TODO: Validate
-class Amazon(AmazonBase, AbstractPlugin, register=True):
+class Amazon(AmazonBase, AbstractPlugin, register=False):
     """Amazon Prime Video plugin."""
 
     initializer = AmazonInitializer

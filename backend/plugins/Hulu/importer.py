@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, override
 
 from plugins.Hulu.base import HuluBase
 from plugins.Hulu.utils import HuluMediaType
-from plugins.utils.abstract_plugin import InvalidURLError
+from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from plugins.utils.base_plugin_v2.importer import BaseImporter
 
 if TYPE_CHECKING:
@@ -21,17 +21,21 @@ class HuluImporter(BaseImporter, HuluBase):
     SLUG_REGEX = r"(?:[a-z0-9-]+-)?"
     _SERIES_URL_REGEX = rf"\/series\/{SLUG_REGEX}(?P<series_id>{UUID_REGEX})"
     _MOVIE_URL_REGEX = rf"\/movie\/{SLUG_REGEX}(?P<movie_id>{UUID_REGEX})"
-    _WATCH_URL_REGEX = rf"\/watch\/(?P<episode_id>{UUID_REGEX})"
+    _VIDEO_URL_REGEX = rf"\/watch\/(?P<episode_id>{UUID_REGEX})"
 
+    _episode_key: str | None
+
+    # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
-        return (cls._SERIES_URL_REGEX, cls._MOVIE_URL_REGEX, cls._WATCH_URL_REGEX)
+        return (cls._SERIES_URL_REGEX, cls._MOVIE_URL_REGEX, cls._VIDEO_URL_REGEX)
 
     # TODO: Validate
     @override
     def _parse_url(self, url: str) -> str:
         domain_regex = self._domain_regex()
+        self._episode_key = None
         if match := re.match(domain_regex + self._SERIES_URL_REGEX, url):
             show_key = match.group("series_id")
             self._media_type = HuluMediaType.SERIES
@@ -44,20 +48,37 @@ class HuluImporter(BaseImporter, HuluBase):
             self.raise_if_invalid_file(self.movie_file(show_key), url)
             return show_key
 
-        if match := re.match(domain_regex + self._WATCH_URL_REGEX, url):
+        if match := re.match(domain_regex + self._VIDEO_URL_REGEX, url):
             episode_key = match.group("episode_id")
             episode_hub = self.episode_hub_file(episode_key)
             episode_hub.download_if_outdated()
             if episode_hub.database_record.content:
                 self._media_type = HuluMediaType.SERIES
                 self.raise_if_invalid_file(episode_hub, url)
+                self._episode_key = episode_key
                 return episode_hub.series_id()
 
             self._media_type = HuluMediaType.MOVIE
             self.raise_if_invalid_file(self.movie_file(episode_key), url)
+            # The episode.key for a movie is the same as the show.key so this is
+            # actually returning a show.key.
             return episode_key
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)
+
+    # TODO: Validate
+    @override
+    def _import_results(self, show: Show) -> list[URLImportResult]:
+        if self._episode_key is None:
+            return super()._import_results(show)
+
+        for season in show.seasons:
+            for episode in season.episodes:
+                if episode.key == self._episode_key:
+                    return [URLImportResult.episode_import_results(show, [episode])]
+
+        msg = f"Episode {self._episode_key} not found in show {show.key}"
         raise InvalidURLError(msg)
 
     # TODO: Validate

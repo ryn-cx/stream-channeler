@@ -10,7 +10,7 @@ from plugins.utils.abstract_plugin import AbstractPlugin
 
 
 # TODO: Validate
-class DisneyPlus(DisneyPlusBase, AbstractPlugin, register=True):
+class DisneyPlus(DisneyPlusBase, AbstractPlugin, register=False):
     """Disney+ plugin."""
 
     initializer = DisneyPlusInitializer

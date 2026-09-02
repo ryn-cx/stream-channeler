@@ -149,7 +149,7 @@ class UpdateMixin(UpsertMixin):
 
     # TODO: Validate
     def _plugin_channel(self, name: str, description_file: str) -> Channel:
-        return self.get_or_create_channel(
+        return self.add_urls_to_plugin_channel(
             name,
             (Path(__file__).parent / description_file).read_text(encoding="utf-8"),
         )

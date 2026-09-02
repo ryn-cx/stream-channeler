@@ -79,6 +79,29 @@ def no_channel_initialization(
 
 
 # TODO: Validate
+@contextmanager
+def only_registered_plugins(
+    plugin_classes: Iterable[type[AbstractPlugin]],
+) -> Generator[None]:
+    """Leave only `plugin_classes` registered for as long as the block runs.
+
+    The registry every lookup reads is one set built at import time, so the set
+    itself is emptied and refilled rather than replaced: a replacement would be
+    seen by whatever reads the module attribute and missed by everything that
+    took the name into its own namespace.
+    """
+    import_plugins()
+    original = set(plugins)
+    plugins.clear()
+    plugins.update(plugin_classes)
+    try:
+        yield
+    finally:
+        plugins.clear()
+        plugins.update(original)
+
+
+# TODO: Validate
 def plugin_class_for(plugin_key: str) -> type[AbstractPlugin]:
     """Return the plugin class for a plugin key.
 
@@ -110,6 +133,7 @@ class DatabaseMixinAlt[PluginT: AbstractPlugin]:
     update_time: datetime = UPDATE_TIME
     invalid_url: bool = False
     initializes_channels: bool = False
+    restrict_registered_plugins: bool = True
     imported_plugin: PluginT
 
     # TODO: Validate
@@ -336,6 +360,30 @@ class DatabaseMixinAlt[PluginT: AbstractPlugin]:
         session.expire_all()
 
         return output
+
+    # TODO: Validate
+    def _registered_plugin_classes(self) -> list[type[AbstractPlugin]]:
+        """Return the plugins a run of this class is allowed to see.
+
+        Every other plugin is left unregistered, so what a URL is looked up
+        against is the plugin under test, the plugins whose stored files say
+        they take part, and TMDB, which every plugin reaches for.
+        """
+        plugin_keys = {
+            plugin_key for plugin_key, _key, _path in self._files_to_import()
+        }
+        plugin_keys.add("TMDB")
+        plugin_keys.add(self.plugin_class.plugin_name())
+        return [plugin_class_for(plugin_key) for plugin_key in sorted(plugin_keys)]
+
+    # TODO: Validate
+    @pytest.fixture(scope="class", autouse=True)
+    def _registered_plugins(self) -> Generator[None]:
+        if not self.restrict_registered_plugins:
+            yield
+            return
+        with only_registered_plugins(self._registered_plugin_classes()):
+            yield
 
     # TODO: Validate
     def _initialize_plugins(self, session: Session) -> None:

@@ -354,10 +354,11 @@ def _process_outdated_items(
     logger.info(log_msg)
 
     updated_count = 0
+    plugin_record = Plugin.get_one(session, plugin_key)
     for group in _grouped_by_show(outdated_items):
         # One view of the plugin per show, so what it read for the show answers
         # every item of it and is let go when the show is done with.
-        plugin_instance = plugin_class(session)
+        plugin_instance = plugin_class(session, plugin_record)
         for item in group:
             log_msg = f"[{plugin_key}] Updating {media_type_name}: {item.key}"
             logger.info(log_msg)

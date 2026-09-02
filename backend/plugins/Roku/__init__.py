@@ -10,7 +10,7 @@ from plugins.utils.abstract_plugin import AbstractPlugin
 
 
 # TODO: Validate
-class Roku(RokuBase, AbstractPlugin, register=True):
+class Roku(RokuBase, AbstractPlugin, register=False):
     """The Roku Channel plugin."""
 
     initializer = RokuInitializer

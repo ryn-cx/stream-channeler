@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, override
 
 from plugins.Pluto.base import PlutoBase
 from plugins.Pluto.constants import DETAILS_REGEX, ITEM_ID_REGEX, LOCALE_REGEX
-from plugins.utils.abstract_plugin import InvalidURLError
+from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from plugins.utils.base_plugin_v2.importer import BaseImporter
 
 if TYPE_CHECKING:
@@ -30,9 +30,11 @@ class PlutoImporter(BaseImporter, PlutoBase):
         rf"{LOCALE_REGEX}\/on-demand\/series\/(?P<series_id>{ITEM_ID_REGEX})"
         # The optional segments of a link that points at a season or an
         # episode of a series.
-        rf"(?:\/season\/\d+(?:\/episode\/{ITEM_ID_REGEX})?)?"
+        rf"(?:\/season\/\d+(?:\/episode\/(?P<episode_id>{ITEM_ID_REGEX}))?)?"
         rf"{DETAILS_REGEX}(?:\/|$)"
     )
+
+    _episode_key: str | None
 
     # TODO: Validate
     @classmethod
@@ -44,6 +46,7 @@ class PlutoImporter(BaseImporter, PlutoBase):
     @override
     def _parse_url(self, url: str) -> str:
         domain_regex = self._domain_regex()
+        self._episode_key = None
         if match := re.match(domain_regex + self._MOVIE_URL_REGEX, url):
             show_key = match.group("movie_id")
             self._media_type = "movie"
@@ -54,9 +57,24 @@ class PlutoImporter(BaseImporter, PlutoBase):
             show_key = match.group("series_id")
             self._media_type = "series"
             self.raise_if_invalid_file(self.seasons_file(show_key), url)
+            self._episode_key = match.group("episode_id")
             return show_key
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)
+
+    # TODO: Validate
+    @override
+    def _import_results(self, show: Show) -> list[URLImportResult]:
+        if self._episode_key is None:
+            return super()._import_results(show)
+
+        for season in show.seasons:
+            for episode in season.episodes:
+                if episode.key == self._episode_key:
+                    return [URLImportResult.episode_import_results(show, [episode])]
+
+        msg = f"Episode {self._episode_key} not found in show {show.key}"
         raise InvalidURLError(msg)
 
     # TODO: Validate

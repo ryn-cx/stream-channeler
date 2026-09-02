@@ -10,7 +10,7 @@ from plugins.utils.abstract_plugin import AbstractPlugin
 
 
 # TODO: Validate
-class AdultSwim(AdultSwimBase, AbstractPlugin, register=True):
+class AdultSwim(AdultSwimBase, AbstractPlugin, register=False):
     """Adult Swim plugin."""
 
     initializer = AdultSwimInitializer

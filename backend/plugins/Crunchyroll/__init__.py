@@ -13,7 +13,7 @@ from plugins.utils.abstract_plugin import AbstractPlugin
 
 
 # TODO: Validate
-class Crunchyroll(CrunchyrollBase, AbstractPlugin, register=True):
+class Crunchyroll(CrunchyrollBase, AbstractPlugin, register=False):
     """Crunchyroll plugin.
 
     Detects new media much faster than JustWatch and supports music.

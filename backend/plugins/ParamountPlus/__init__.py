@@ -10,7 +10,7 @@ from plugins.utils.abstract_plugin import AbstractPlugin
 
 
 # TODO: Validate
-class ParamountPlus(ParamountPlusBase, AbstractPlugin, register=True):
+class ParamountPlus(ParamountPlusBase, AbstractPlugin, register=False):
     """Paramount+ plugin."""
 
     initializer = ParamountPlusInitializer

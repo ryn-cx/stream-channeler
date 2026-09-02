@@ -10,7 +10,7 @@ from plugins.utils.abstract_plugin import AbstractPlugin
 
 
 # TODO: Validate
-class Pluto(PlutoBase, AbstractPlugin, register=True):
+class Pluto(PlutoBase, AbstractPlugin, register=False):
     """Pluto TV plugin."""
 
     initializer = PlutoInitializer

@@ -82,7 +82,7 @@ def update_youtube() -> None:
 
         log_msg = f"[YouTube] Found {len(seasons)} outdated show seasons"
         logger.info(log_msg)
-        plugin = YouTube(session)
+        plugin = YouTube(session, seasons[0].show.source.plugin)
         try:
             plugin.update_seasons(seasons)
             session.commit()

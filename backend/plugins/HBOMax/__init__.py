@@ -10,7 +10,7 @@ from plugins.utils.abstract_plugin import AbstractPlugin
 
 
 # TODO: Validate
-class HBOMax(HBOMaxBase, AbstractPlugin, register=True):
+class HBOMax(HBOMaxBase, AbstractPlugin, register=False):
     """HBO Max plugin."""
 
     initializer = HBOMaxInitializer

@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from sqlmodel import Session
@@ -30,11 +30,21 @@ class BasePluginCore(ABC):
     importer: ClassVar[type[BaseImporter]]
 
     # TODO: Validate
-    def __init__(self, session: Session) -> None:
+    def __init__(
+        self,
+        session: Session,
+        plugin: Plugin | None = None,
+        sources: Sequence[Source] | None = None,
+    ) -> None:
         self.session = session
         self._file_cache = {}
-        self.plugin = Plugin.get_one(session, self.plugin_name())
-        self._sources = {source.key: source for source in self.plugin.sources}
+        self.plugin = (
+            plugin
+            if plugin is not None
+            else Plugin.get_one(session, self.plugin_name())
+        )
+        source_list = sources if sources is not None else self.plugin.sources
+        self._sources = {source.key: source for source in source_list}
 
     # TODO: Validate
     @classmethod

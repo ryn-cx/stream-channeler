@@ -10,7 +10,7 @@ from plugins.utils.abstract_plugin import AbstractPlugin
 
 
 # TODO: Validate
-class NHKWorld(NHKWorldBase, AbstractPlugin, register=True):
+class NHKWorld(NHKWorldBase, AbstractPlugin, register=False):
     """NHK World plugin."""
 
     initializer = NHKWorldInitializer

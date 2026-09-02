@@ -371,7 +371,7 @@ def force_update_show(session: Session, show: Show) -> Show:
         message = f"No plugin named {show.source.plugin.key!r} to read the show again."
         raise HTTPException(status_code=422, detail=message)
 
-    plugin_class(session).update_show(show, force=True)
+    plugin_class(session, show.source.plugin).update_show(show, force=True)
     session.commit()
     session.refresh(show)
     return show

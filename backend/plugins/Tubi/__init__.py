@@ -10,7 +10,7 @@ from plugins.utils.abstract_plugin import AbstractPlugin
 
 
 # TODO: Validate
-class Tubi(TubiBase, AbstractPlugin, register=True):
+class Tubi(TubiBase, AbstractPlugin, register=False):
     """Tubi plugin."""
 
     initializer = TubiInitializer
