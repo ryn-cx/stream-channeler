@@ -6,8 +6,8 @@ from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import case, distinct
-from sqlalchemy.orm import Mapped, selectinload
+from sqlalchemy import case, distinct, text
+from sqlalchemy.orm import Mapped, joinedload
 from sqlalchemy.sql.expression import ColumnElement, Subquery, UnaryExpression
 from sqlmodel import Session, and_, col, func, or_, select
 from sqlmodel.sql.expression import Select
@@ -103,6 +103,7 @@ class EpisodeQueryBuilder:
         self._channel_ids = self._fetch_channel_ids()
 
         self.source_config = source_dedup_config(session, self._user)
+        self._sources = self._fetch_sources()
         self._holds_copied_titles = self._fetch_holds_copied_titles()
 
         self._canonical_columns = CanonicalColumns()
@@ -286,6 +287,7 @@ class EpisodeQueryBuilder:
         narrowed = self._sort_and_deduplicate(query)
         narrowed = self._apply_limit(narrowed, restricted=shows is not None)
 
+        self._tune_planner()
         rows = self._session.exec(narrowed).all()
         episodes_by_id = self._load_episodes({row[0] for row in rows})
 
@@ -302,19 +304,41 @@ class EpisodeQueryBuilder:
         return ordered_episodes, channels_by_media
 
     # TODO: Validate
+    def _tune_planner(self) -> None:
+        """Take the JIT off the read.
+
+        The ordering is a window per sort key and the filtering a long chain of
+        conditions, so the server compiles hundreds of functions for a read that
+        is over before they pay for themselves.
+
+        `SET LOCAL` rather than a session setting: the connection is pooled, and
+        the next reader of it is not this one.
+        """
+        self._session.exec(text("SET LOCAL jit = off"))  # type: ignore[call-overload]
+
+    # TODO: Validate
     def _load_episodes(self, episode_ids: set[UUID]) -> dict[UUID, Episode]:
         query = (
             select(Episode)
             .where(col(Episode.id).in_(episode_ids))
             .options(
-                selectinload(Episode.season)  # type: ignore[arg-type]
-                .selectinload(Season.show)  # type: ignore[arg-type]
-                .selectinload(Show.source)  # type: ignore[arg-type]
-                .selectinload(Source.plugin),  # type: ignore[arg-type]
-                selectinload(Episode.canonical_episode_links),  # type: ignore[arg-type]
+                # Every level of this is one row per episode, so it rides along on
+                # the read itself. A `selectinload` would be a round trip each, and
+                # two of them per level, since it splits the ids into batches.
+                joinedload(Episode.season)  # type: ignore[arg-type]
+                .joinedload(Season.show)  # type: ignore[arg-type]
+                .joinedload(Show.source)  # type: ignore[arg-type]
+                .joinedload(Source.plugin),  # type: ignore[arg-type]
+                # Joined for the same reason, even though it is a collection: an
+                # episode is keyed by the season and key it carries rather than by
+                # its id, so a second read would have to name both of them for
+                # every episode it wanted.
+                joinedload(Episode.canonical_episode_links),  # type: ignore[arg-type]
             )
         )
-        return {episode.id: episode for episode in self._session.exec(query).all()}
+        return {
+            episode.id: episode for episode in self._session.exec(query).unique().all()
+        }
 
     # TODO: Validate
     def _narrowed(
@@ -389,11 +413,18 @@ class EpisodeQueryBuilder:
             # `_filter_metadata_plugins` rather than here.
             .join(
                 ChannelShow,
-                col(ChannelShow.canonical_show_id)
-                == func.coalesce(
-                    col(CANONICAL_SEASON.show_id),
-                    col(ShowCanonicalShow.canonical_show_id),
-                    case((is_canonical(Show), col(Show.id))),
+                and_(
+                    col(ChannelShow.canonical_show_id)
+                    == func.coalesce(
+                        col(CANONICAL_SEASON.show_id),
+                        col(ShowCanonicalShow.canonical_show_id),
+                        case((is_canonical(Show), col(Show.id))),
+                    ),
+                    col(ChannelShow.channel_id).in_(self._channel_ids),
+                    # Only member shows contribute their episodes; filter-only shows
+                    # (is_blacklist_only=True) exist solely to hold blacklist and
+                    # whitelist entries.
+                    col(ChannelShow.is_blacklist_only).is_(False),
                 ),
             )
             .join(
@@ -519,22 +550,46 @@ class EpisodeQueryBuilder:
         return query.where(col(Episode.deleted_at).is_(None))
 
     # TODO: Validate
+    def _fetch_sources(self) -> list[tuple[UUID, str, str]]:
+        """Read every website once so the query can name them without joining them.
+
+        Both tables are small enough to hold, and joining them costs the planner the
+        row estimate it needs to keep the rest of the query on hash joins.
+        """
+        query = select(col(Source.id), col(Source.key), col(Plugin.key)).join(
+            Plugin,
+            col(Source.plugin_id) == col(Plugin.id),
+        )
+        return [tuple(row) for row in self._session.exec(query).all()]  # type: ignore[misc]
+
+    # TODO: Validate
+    def _source_ids_for_keys(self, keys: set[str]) -> list[UUID]:
+        return [source_id for source_id, key, _ in self._sources if key in keys]
+
+    # TODO: Validate
+    def _needs_source_columns(self) -> bool:
+        return any(
+            key.model in {"source", "plugin"} for key in self._channel_options.sort_by
+        )
+
+    # TODO: Validate
     def _join_plugin_and_filter_sources(
         self,
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[Episode, UUID]]:
-        query = query.join(Source, col(Show.source_id) == Source.id).join(
-            Plugin,
-            col(Source.plugin_id) == Plugin.id,
-        )
+        if self._needs_source_columns():
+            query = query.join(Source, col(Show.source_id) == Source.id).join(
+                Plugin,
+                col(Source.plugin_id) == Plugin.id,
+            )
         if self._channel_options.source_ids:
             if self._channel_options.source_ids_is_blacklist:
                 query = query.where(
-                    col(Source.id).not_in(self._channel_options.source_ids),
+                    col(Show.source_id).not_in(self._channel_options.source_ids),
                 )
             else:
                 query = query.where(
-                    col(Source.id).in_(self._channel_options.source_ids),
+                    col(Show.source_id).in_(self._channel_options.source_ids),
                 )
         return query
 
@@ -549,20 +604,22 @@ class EpisodeQueryBuilder:
         own non-canonical row of an episode is watched, so it is never one of the
         results.
         """
-        return query.where(Plugin.key != TMDB_PLUGIN_KEY)
+        return query.where(
+            col(Show.source_id).not_in(
+                [
+                    source_id
+                    for source_id, _, plugin_key in self._sources
+                    if plugin_key == TMDB_PLUGIN_KEY
+                ],
+            ),
+        )
 
     # TODO: Validate
     def _filter_episodes_by_channels(
         self,
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[Episode, UUID]]:
-        return (
-            query.where(col(ChannelShow.channel_id).in_(self._channel_ids))
-            # Only member shows contribute their episodes; filter-only shows
-            # (is_blacklist_only=True) exist solely to hold blacklist/whitelist entries.
-            .where(col(ChannelShow.is_blacklist_only).is_(False))
-            .where(channel_access_condition())
-        )
+        return query.where(channel_access_condition())
 
     # TODO: Validate
     def _apply_channel_specific_blacklist(
@@ -685,9 +742,17 @@ class EpisodeQueryBuilder:
         config = self.source_config
         if config.other_enabled:
             if config.disabled_keys:
-                query = query.where(col(Source.key).not_in(config.disabled_keys))
+                query = query.where(
+                    col(Show.source_id).not_in(
+                        self._source_ids_for_keys(config.disabled_keys),
+                    ),
+                )
         else:
-            query = query.where(col(Source.key).in_(config.enabled_keys))
+            query = query.where(
+                col(Show.source_id).in_(
+                    self._source_ids_for_keys(config.enabled_keys),
+                ),
+            )
         return query
 
     # TODO: Validate
@@ -706,8 +771,11 @@ class EpisodeQueryBuilder:
         from.
         """
         priority = case(
-            self.source_config.priority,
-            value=col(Source.key),
+            {
+                source_id: self.source_config.priority_for(key)
+                for source_id, key, _ in self._sources
+            },
+            value=col(Show.source_id),
             else_=self.source_config.other_priority,
         )
         return (

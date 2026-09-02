@@ -126,6 +126,7 @@ def _log_sql_statement_count(
     """Log the number of SQL statements executed within the context."""
     stats["sql_statements"] = 0
     stack_traces: list[str] = []
+    grouped_queries: dict[tuple[str, str], int] = {}
 
     # TODO: Validate
     def count_queries(*_args: object, **_kwargs: object) -> None:
@@ -134,7 +135,13 @@ def _log_sql_statement_count(
     ignored_path_fragments = (".venv", "AppData", ".vscode")
 
     # TODO: Validate
-    def log_queries(*_args: object, **_kwargs: object) -> None:
+    def log_queries(
+        _connection: object,
+        _cursor: object,
+        statement: str,
+        *_args: object,
+        **_kwargs: object,
+    ) -> None:
         stack: list[traceback.FrameSummary] = traceback.extract_stack()
         callers: list[str] = [
             f"{frame.filename}:{frame.lineno} in {frame.name}"
@@ -145,6 +152,8 @@ def _log_sql_statement_count(
         ]
         callers_str: str = "\n  ".join(callers)
         stack_traces.append(f"SQL #{stats['sql_statements']}\n  {callers_str}")
+        group_key = (" ".join(statement.split()), callers_str)
+        grouped_queries[group_key] = grouped_queries.get(group_key, 0) + 1
         logger.info(f"SQL #{stats['sql_statements']}")
         logger.trace(f"Stack trace:\n {callers_str}")
 
@@ -158,6 +167,18 @@ def _log_sql_statement_count(
         logger.info(f"SQL statements executed: {stats['sql_statements']} [{label}]")
         (stats_directory / "sql_statements.log").write_text(
             "\n\n".join(stack_traces),
+            encoding="utf-8",
+        )
+        grouped_entries = sorted(
+            grouped_queries.items(),
+            key=lambda entry: entry[1],
+            reverse=True,
+        )
+        (stats_directory / "sql_statements_grouped.log").write_text(
+            "\n\n".join(
+                f"{count}x {statement}\n  {callers_str}"
+                for (statement, callers_str), count in grouped_entries
+            ),
             encoding="utf-8",
         )
 

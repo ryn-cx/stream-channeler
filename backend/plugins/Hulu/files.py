@@ -57,8 +57,7 @@ class Series(EndpointFile[TVModel]):
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, SeriesNotFoundError)
 
-    # TODO: Validate
-    def get_tmdb_lookup_info(self) -> TMDBLookupInfo:
+    def tmdb_lookup_info(self) -> TMDBLookupInfo:
         parsed_series = self.parsed()
         return TMDBLookupInfo(
             title=parsed_series.name,
@@ -77,8 +76,7 @@ class Movie(EndpointFile[MoviesModel]):
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, MovieNotFoundError)
 
-    # TODO: Validate
-    def get_tmdb_lookup_info(self) -> TMDBLookupInfo:
+    def tmdb_lookup_info(self) -> TMDBLookupInfo:
         model = self.parsed()
         return TMDBLookupInfo(
             title=model.name,
@@ -87,8 +85,7 @@ class Movie(EndpointFile[MoviesModel]):
         )
 
 
-class SeasonFile(EndpointFile[SeasonModel]):
-
+class Season(EndpointFile[SeasonModel]):
     @override
     def _endpoint(self) -> SeasonEndpoint:
         return wholoo().season
@@ -104,21 +101,15 @@ class SeasonFile(EndpointFile[SeasonModel]):
         self.season_number = season_number
         super().__init__(session, plugin, f"{series_id}/{season_number}")
 
-    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(self.series_id, self.season_number)
 
-    # TODO: Validate
     def season_name(self) -> str:
         return self.parsed().series_grouping_metadata.grouping_name
 
 
-# TODO: Validate
-class EpisodeHub(EndpointFile[EpisodeModel]):
-    """Episode file."""
-
-    # TODO: Validate
+class Episode(EndpointFile[EpisodeModel]):
     @override
     def _endpoint(self) -> EpisodeEndpoint:
         return wholoo().episode
@@ -136,21 +127,6 @@ class EpisodeHub(EndpointFile[EpisodeModel]):
     def series_id(self) -> str:
         """Return the id of the series the episode belongs to."""
         return str(self.parsed().details.vod_items.focus.entity.series_id)
-
-
-# TODO: Validate
-class SearchFile(EndpointFile[SearchModel]):
-    """Search file."""
-
-    # TODO: Validate
-    @override
-    def _endpoint(self) -> SearchEndpoint:
-        return wholoo().search
-
-    # TODO: Validate
-    @override
-    def _next_update_at(self) -> datetime:
-        return tz_datetime.now() + timedelta(days=30)
 
 
 # TODO: Validate
@@ -234,8 +210,8 @@ class FileMixin(BasePlugin):
     @override
     def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
         if self._is_movie():
-            return self.movie_file(show_key).get_tmdb_lookup_info()
-        return self.series_file(show_key).get_tmdb_lookup_info()
+            return self.movie_file(show_key).tmdb_lookup_info()
+        return self.series_file(show_key).tmdb_lookup_info()
 
     # TODO: Validate
     def genres_page_file(self) -> GenresPage:
@@ -260,19 +236,14 @@ class FileMixin(BasePlugin):
         ]
 
     # TODO: Validate
-    def search_file(self, query: str) -> SearchFile:
-        """Return SearchFile file."""
-        return self._file(SearchFile, query)
-
-    # TODO: Validate
     def series_file(self, series_id: str) -> Series:
         """Return Series file."""
         return self._file(Series, series_id)
 
     # TODO: Validate
-    def episode_hub_file(self, episode_id: str) -> EpisodeHub:
+    def episode_hub_file(self, episode_id: str) -> Episode:
         """Return EpisodeHub file."""
-        return self._file(EpisodeHub, episode_id)
+        return self._file(Episode, episode_id)
 
     # TODO: Validate
     def movie_file(self, movie_id: str) -> Movie:
@@ -280,9 +251,9 @@ class FileMixin(BasePlugin):
         return self._file(Movie, movie_id)
 
     # TODO: Validate
-    def season_file(self, series_id: str, season_number: int) -> SeasonFile:
+    def season_file(self, series_id: str, season_number: int) -> Season:
         """Return SeasonFile file."""
-        return self._file(SeasonFile, series_id, season_number)
+        return self._file(Season, series_id, season_number)
 
     # TODO: Validate
     def _is_movie(self) -> bool:

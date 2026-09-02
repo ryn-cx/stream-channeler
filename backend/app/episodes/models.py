@@ -389,6 +389,24 @@ class EpisodeCanonicalEpisode(
 
 
 # TODO: Validate
+class BaseEpisodeCanonicalShow(SQLModel):
+    episode_id: uuid.UUID = Field(foreign_key="episode.id", ondelete="CASCADE")
+    canonical_show_id: uuid.UUID = Field(foreign_key="show.id", ondelete="CASCADE")
+
+
+# TODO: Validate
+class EpisodeCanonicalShow(BaseEpisodeCanonicalShow, table=True):
+    __table_args__ = (
+        PrimaryKeyConstraint("episode_id", "canonical_show_id"),
+        Index(
+            "EpisodeCanonicalShow-canonical_show_id-index",
+            "canonical_show_id",
+            "episode_id",
+        ),
+    )
+
+
+# TODO: Validate
 def stringify_episode(
     episode: Episode,
     parent: Season,

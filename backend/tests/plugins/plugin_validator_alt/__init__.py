@@ -339,21 +339,14 @@ class PluginValidatorAlt[PluginT: AbstractPlugin](DatabaseMixinAlt[PluginT]):
     def test__initialize_test_data(self, session_with_files: Session) -> None:
         """Download and store every file the test class needs.
 
-        Left on the real clock, unlike every other test here, because what this
-        run stores is shared with every test that reaches for the same file -
-        the existing validator's included - and a file dated by a frozen clock
-        would say it was downloaded on a day it was not. What the files already
-        in place are dated at is no matter here: this run compares nothing, and
-        a file it reads as out of date is one it reaches for again and is served
-        out of the store.
-
         Nothing is recorded here but the files. What the other tests compare
         against is written by those tests the first time they run.
         """
         try:
             if self.url:
-                self._initialize_import_data(session_with_files)
-                self._initialize_extra_files(session_with_files)
+                with frozen_clock(self.import_time):
+                    self._initialize_import_data(session_with_files)
+                    self._initialize_extra_files(session_with_files)
         finally:
             # Written even when the run failed, so the files it did reach are
             # recorded rather than downloaded again by the next run.

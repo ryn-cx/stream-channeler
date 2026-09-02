@@ -5,7 +5,7 @@ import time
 import uuid
 from collections import defaultdict
 from collections.abc import Collection, Iterable, Mapping, Sequence
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import cache
 from random import shuffle
 from typing import Any, NamedTuple
@@ -14,6 +14,7 @@ from uuid import UUID
 from fastapi import HTTPException
 from loguru import logger
 from sqlalchemy import and_, distinct, exists, or_
+from sqlalchemy.dialects.postgresql import insert as postgres_insert
 from sqlalchemy.orm import aliased, selectinload
 from sqlalchemy.orm.attributes import set_committed_value
 from sqlmodel import Session, col, delete, func, select
@@ -106,6 +107,7 @@ from app.sources.schemas import SourcePublic
 from app.sources.service import get_or_create_custom_media_source
 from app.users.models import User
 from app.users.service import get_or_create_plugin_user
+from app.utils import tz_datetime
 
 # How many of a season's episodes are read at once on the filter page.
 WHITELIST_EPISODE_PAGE = 100
@@ -457,43 +459,77 @@ def public_channel_output(
 
 
 # TODO: Validate
-def add_urls_to_channel_import_queue(
+def queue_channel_urls(
     session: Session,
     channel: Channel,
     urls: Sequence[str],
 ) -> list[ChannelQueue]:
-    """Add URLs to a channel's import queue."""
-    output: list[ChannelQueue] = []
     # Remove duplicates without changing the order allowing the output order to match
     # the input order.
     unique_urls = list(dict.fromkeys(url.strip() for url in urls))
-    # Every existing entry is read in one query because a browse file can queue
-    # thousands of URLs at once, which is a query each when they are read one by one.
-    existing_records = {
+    if not unique_urls:
+        return []
+
+    # The channel may still be pending, and its row has to exist before the queue
+    # rows referencing it are written.
+    session.flush()
+
+    timestamp = tz_datetime.current_time()
+    # A browse file can queue thousands of URLs at once, so every row is written by
+    # one statement instead of reading the existing rows and updating them one by one.
+    # An entry that already exists is reset to pending because the user may have
+    # removed it from the channel or it may have failed to import for some reason.
+    statement = (
+        postgres_insert(ChannelQueue)
+        .values(
+            [
+                {
+                    "id": uuid.uuid4(),
+                    "channel_id": channel.id,
+                    "url": url,
+                    "status": URLStatus.PENDING,
+                    # The queue is read newest first, so every row of a batch gets a
+                    # timestamp of its own to keep the input order readable.
+                    "created_at": timestamp + timedelta(microseconds=index),
+                    "modified_at": timestamp + timedelta(microseconds=index),
+                }
+                for index, url in enumerate(unique_urls)
+            ],
+        )
+        .on_conflict_do_update(
+            index_elements=["channel_id", "url"],
+            set_={"status": URLStatus.PENDING, "modified_at": timestamp},
+        )
+        .returning(ChannelQueue)
+    )
+    records = {
         record.url: record
-        for record in session.exec(
-            select(ChannelQueue).where(
-                ChannelQueue.channel_id == channel.id,
-                col(ChannelQueue.url).in_(unique_urls),
-            ),
-        ).all()
+        for record in session.scalars(
+            statement,
+            execution_options={"populate_existing": True},
+        )
     }
 
-    for url in unique_urls:
-        # If the entry already exists reset it to pending because the user may have
-        # removed it from the channel or it may have failed to import for some reaosn.
-        if queue_record := existing_records.get(url):
-            queue_record.status = URLStatus.PENDING
-        else:
-            queue_record = ChannelQueue(
-                channel_id=channel.id,
-                url=url,
-                status=URLStatus.PENDING,
-            )
-            session.add(queue_record)
+    return [records[url] for url in unique_urls]
 
-        output.append(queue_record)
 
+# TODO: Validate
+def add_urls_to_channel_import_queue(
+    session: Session,
+    channel: Channel | Sequence[tuple[Channel, Sequence[str]]],
+    urls: Sequence[str] = (),
+) -> list[ChannelQueue]:
+    """Add URLs to one channel's import queue, or to several channels' at once."""
+    entries: Sequence[tuple[Channel, Sequence[str]]] = (
+        [(channel, urls)] if isinstance(channel, Channel) else channel
+    )
+
+    output: list[ChannelQueue] = []
+    for entry_channel, entry_urls in entries:
+        output.extend(queue_channel_urls(session, entry_channel, entry_urls))
+
+    # Every channel is written in one transaction because a plugin splitting its
+    # catalogue across a hundred channels is otherwise a hundred commits.
     session.commit()
     return output
 
@@ -2245,19 +2281,18 @@ def bulk_import_queue_urls(
         ).all()
     }
     total_urls = 0
+    queue_entries: list[tuple[Channel, Sequence[str]]] = []
     for channel_id, urls in entries.items():
         if channel := channels_by_id.get(channel_id):
-            add_urls_to_channel_import_queue(
-                session=session,
-                urls=urls,
-                channel=channel,
-            )
+            queue_entries.append((channel, urls))
             total_urls += len(urls)
         else:
             raise HTTPException(
                 status_code=404,
                 detail=f"Channel {channel_id} not found",
             )
+
+    add_urls_to_channel_import_queue(session, queue_entries)
     return Message(message=f"{total_urls} URLs added across {len(entries)} channels")
 
 

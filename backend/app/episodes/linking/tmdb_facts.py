@@ -35,6 +35,11 @@ class TmdbEpisodeFacts:
         self.canonical_episodes = canonical_episodes
 
     # TODO: Validate
+    def preload(self) -> None:
+        _ = self.translated_names
+        _ = self.alternate_episode_numbers
+
+    # TODO: Validate
     def _cache(self, name: str) -> dict[Any, Any]:
         cache: dict[Any, Any] = self.session.info.setdefault(name, {})
         return cache
@@ -66,22 +71,29 @@ class TmdbEpisodeFacts:
             movie_ids = {
                 tmdb_episode.id: self._movie_id(tmdb_episode) for tmdb_episode in unread
             }
-            tmdb.preload_episode_translations(
-                [
-                    numbering
-                    for numbering in numberings.values()
-                    if numbering is not None
-                ],
-            )
-            tmdb.preload_movie_translations(
-                [movie_id for movie_id in movie_ids.values() if movie_id is not None],
-            )
+            preloaded = [
+                *tmdb.preload_episode_translations(
+                    [
+                        numbering
+                        for numbering in numberings.values()
+                        if numbering is not None
+                    ],
+                ),
+                *tmdb.preload_movie_translations(
+                    [
+                        movie_id
+                        for movie_id in movie_ids.values()
+                        if movie_id is not None
+                    ],
+                ),
+            ]
             for tmdb_episode in unread:
                 cache[tmdb_episode.id] = self._names(
                     tmdb,
                     numberings[tmdb_episode.id],
                     movie_ids[tmdb_episode.id],
                 )
+            preloaded.clear()
 
         return {
             tmdb_episode.id: cache[tmdb_episode.id]

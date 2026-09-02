@@ -59,6 +59,13 @@ class EpisodeLinker:
             for season in parent.active_children
             for episode in season.active_children
         }
+        self.facts = TmdbEpisodeFacts(
+            session,
+            show.canonical_shows,
+            self.canonical_episodes,
+        )
+        self.facts.preload()
+        preload_episodes(session, [show, *show.canonical_shows])
         self.absolute_numbers: dict[uuid.UUID, int] = {}
         for parent in (show, *show.canonical_shows):
             self.absolute_numbers |= absolute_numbers(
@@ -70,11 +77,6 @@ class EpisodeLinker:
             )
         self._load_existing_links(
             [*self.episodes, *self.unnamed_episodes, *self.canonical_episodes],
-        )
-        self.facts = TmdbEpisodeFacts(
-            session,
-            show.canonical_shows,
-            self.canonical_episodes,
         )
 
     # TODO: Validate
