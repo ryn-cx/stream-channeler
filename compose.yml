@@ -19,6 +19,46 @@ services:
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_DB=${POSTGRES_DB?Variable not set}
 
+  # Cloudflare Tunnel, an alternative to the Traefik proxy. It dials out to
+  # Cloudflare, so nothing needs to be published on the host and ports 80/443
+  # can stay closed on the server. Cloudflare's edge terminates TLS, and the
+  # public hostname -> service mapping lives in the Zero Trust dashboard, e.g.
+  #   dashboard.${DOMAIN} -> http://frontend:80
+  #   api.${DOMAIN}       -> http://backend:8000
+  #   adminer.${DOMAIN}   -> http://adminer:8080
+  # Those URLs resolve because cloudflared shares this stack's default network.
+  #
+  # It sits behind the `cloudflare` Compose profile, so it starts only where
+  # COMPOSE_PROFILES says so (see .env), and never in local development or CI.
+  cloudflared:
+    # Pinned: with `latest`, any re-pull of the image recreates the container,
+    # and every cloudflared process that starts registers as a new connector
+    # (a new "replica") on the tunnel.
+    image: cloudflare/cloudflared:2026.8.3
+    restart: always
+    profiles:
+      - cloudflare
+    command: tunnel --no-autoupdate run
+    networks:
+      - default
+    environment:
+      # Empty default on purpose: Compose interpolates every service in the
+      # file, even ones filtered out by a profile, so a required variable here
+      # would break `docker compose` for local development. cloudflared itself
+      # reports a clear error if the token is empty or invalid.
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
+      # Name the connector after the stack, so the tunnel's connector list in
+      # the dashboard is readable instead of a column of bare UUIDs.
+      - TUNNEL_LABEL=${STACK_NAME?Variable not set}
+    # On SIGTERM cloudflared drains in-flight requests and unregisters its
+    # connections; that takes up to TUNNEL_GRACE_PERIOD (30s by default).
+    # Docker's default stop timeout is 10s, which kills it partway through and
+    # leaves the old connector registered at the edge until it times out.
+    stop_grace_period: 45s
+    depends_on:
+      - backend
+      - frontend
+
   adminer:
     image: adminer
     restart: always
@@ -108,6 +148,11 @@ services:
       - POSTGRES_USER=${POSTGRES_USER?Variable not set}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD?Variable not set}
       - SENTRY_DSN=${SENTRY_DSN}
+      # Requests reach the backend through a proxy (Traefik) or through
+      # cloudflared, both on the Docker network, so Uvicorn has to trust their
+      # X-Forwarded-* headers to build https:// URLs. Safe because this service
+      # publishes no port: only those components can reach it.
+      - FORWARDED_ALLOW_IPS=*
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/utils/health-check/"]

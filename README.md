@@ -58,6 +58,7 @@
 - 📬 [Mailcatcher](https://mailcatcher.me) for local email testing during development.
 - ✅ Tests with [Pytest](https://pytest.org).
 - 📞 [Traefik](https://traefik.io) as a reverse proxy / load balancer.
+- ☁️ [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) as an alternative to Traefik, with no inbound ports open on the server.
 - 🚢 Deployment instructions using Docker Compose, including how to set up a frontend Traefik proxy to handle automatic HTTPS certificates.
 - 🏭 CI (continuous integration) and CD (continuous deployment) based on GitHub Actions.
 
