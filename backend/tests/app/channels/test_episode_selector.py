@@ -9,9 +9,9 @@ recorded but never verified; a finished one has been verified.
 import pytest
 from sqlmodel import Session
 
-from app.channels import service
 from app.channels.models import Channel
 from app.channels.schemas import ChannelOptions
+from app.channels.service import service
 from app.users.models import User
 from app.watches.models import Watch
 from tests.app.channels.utils import (

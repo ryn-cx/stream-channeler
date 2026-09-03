@@ -5,64 +5,45 @@ import re
 from typing import TYPE_CHECKING, override
 
 from plugins.Hulu.base import HuluBase
-from plugins.Hulu.utils import HuluMediaType
+from plugins.Hulu.constants import (
+    MOVIE_URL_REGEX,
+    SERIES_URL_REGEX,
+    VIDEO_URL_REGEX,
+)
+from plugins.Hulu.media import HuluMovie, HuluSeries
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from plugins.utils.base_plugin_v2.importer import BaseImporter, record_show
+from plugins.utils.base_plugin_v2.importer import BaseImporter
 
 if TYPE_CHECKING:
-    from app.episodes.models import Episode
-    from app.seasons.models import Season
     from app.shows.models import Show
 
 
 # TODO: Validate
-class HuluImporter(BaseImporter, HuluBase):
-    UUID_REGEX = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
-    SLUG_REGEX = r"(?:[a-z0-9-]+-)?"
-    _SERIES_URL_REGEX = rf"\/series\/{SLUG_REGEX}(?P<series_id>{UUID_REGEX})"
-    _MOVIE_URL_REGEX = rf"\/movie\/{SLUG_REGEX}(?P<movie_id>{UUID_REGEX})"
-    _VIDEO_URL_REGEX = rf"\/watch\/(?P<episode_id>{UUID_REGEX})"
-
+class HuluSeriesImporter(BaseImporter, HuluSeries):
     _episode_key: str | None
 
     # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
-        return (cls._SERIES_URL_REGEX, cls._MOVIE_URL_REGEX, cls._VIDEO_URL_REGEX)
+        return (SERIES_URL_REGEX, VIDEO_URL_REGEX)
 
     # TODO: Validate
     @override
     def _parse_url(self, url: str) -> str:
         domain_regex = self._domain_regex()
         self._episode_key = None
-        if match := re.match(domain_regex + self._SERIES_URL_REGEX, url):
+        if match := re.match(domain_regex + SERIES_URL_REGEX, url):
             show_key = match.group("series_id")
-            self._media_type = HuluMediaType.SERIES
             self.raise_if_invalid_file(self.series_file(show_key), url)
             return show_key
 
-        if match := re.match(domain_regex + self._MOVIE_URL_REGEX, url):
-            show_key = match.group("movie_id")
-            self._media_type = HuluMediaType.MOVIE
-            self.raise_if_invalid_file(self.movie_file(show_key), url)
-            return show_key
-
-        if match := re.match(domain_regex + self._VIDEO_URL_REGEX, url):
+        if match := re.match(domain_regex + VIDEO_URL_REGEX, url):
             episode_key = match.group("episode_id")
             episode_hub = self.episode_hub_file(episode_key)
-            episode_hub.download_if_outdated()
-            if episode_hub.database_record.content:
-                self._media_type = HuluMediaType.SERIES
-                self.raise_if_invalid_file(episode_hub, url)
-                self._episode_key = episode_key
-                return episode_hub.series_id()
-
-            self._media_type = HuluMediaType.MOVIE
-            self.raise_if_invalid_file(self.movie_file(episode_key), url)
-            # The episode.key for a movie is the same as the show.key so this is
-            # actually returning a show.key.
-            return episode_key
+            self.raise_if_invalid_file(episode_hub, url)
+            self._episode_key = episode_key
+            return episode_hub.series_id()
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
@@ -81,26 +62,72 @@ class HuluImporter(BaseImporter, HuluBase):
         msg = f"Episode {self._episode_key} not found in show {show.key}"
         raise InvalidURLError(msg)
 
+
+# TODO: Validate
+class HuluMovieImporter(BaseImporter, HuluMovie):
     # TODO: Validate
+    @classmethod
     @override
-    def update_show(self, show: Show, *, force: bool = False) -> None:
-        self._set_media_type(show)
-        super().update_show(show, force=force)
+    def _url_regexes(cls) -> tuple[str, ...]:
+        return (MOVIE_URL_REGEX, VIDEO_URL_REGEX)
 
     # TODO: Validate
     @override
-    def update_season(self, season: Season) -> None:
-        self._set_media_type(season.show)
-        super().update_season(season)
+    def _parse_url(self, url: str) -> str:
+        domain_regex = self._domain_regex()
+        if match := re.match(domain_regex + MOVIE_URL_REGEX, url):
+            show_key = match.group("movie_id")
+            self.raise_if_invalid_file(self.movie_file(show_key), url)
+            return show_key
+
+        if match := re.match(domain_regex + VIDEO_URL_REGEX, url):
+            # The episode.key for a movie is the same as the show.key so this is
+            # actually returning a show.key.
+            show_key = match.group("episode_id")
+            self.raise_if_invalid_file(self.movie_file(show_key), url)
+            return show_key
+
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)
+
+
+# TODO: Validate
+class HuluImporter(BaseImporter, HuluBase):
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_regexes(cls) -> tuple[str, ...]:
+        return (SERIES_URL_REGEX, MOVIE_URL_REGEX, VIDEO_URL_REGEX)
 
     # TODO: Validate
     @override
-    def update_episode(self, episode: Episode) -> None:
-        self._set_media_type(episode.season.show)
-        super().update_episode(episode)
+    def import_url(
+        self,
+        url: str,
+        canonical_show: Show | None = None,
+    ) -> list[URLImportResult]:
+        return self._media_importer(url).import_url(url, canonical_show)
+
+    # TODO: Validate
+    def _media_importer(self, url: str) -> BaseImporter:
+        domain_regex = self._domain_regex()
+        if re.match(domain_regex + SERIES_URL_REGEX, url):
+            return HuluSeriesImporter(self)
+
+        if re.match(domain_regex + MOVIE_URL_REGEX, url):
+            return HuluMovieImporter(self)
+
+        if match := re.match(domain_regex + VIDEO_URL_REGEX, url):
+            episode_hub = self.episode_hub_file(match.group("episode_id"))
+            episode_hub.download_if_outdated()
+            if episode_hub.database_record.content:
+                return HuluSeriesImporter(self)
+            return HuluMovieImporter(self)
+
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)
 
     # TODO: Validate
     @override
-    def on_failure(self, record: Show | Season | Episode, error: Exception) -> None:
-        self._set_media_type(record_show(record))
-        super().on_failure(record, error)
+    def _parse_url(self, url: str) -> str:
+        return self._media_importer(url)._parse_url(url)  # noqa: SLF001

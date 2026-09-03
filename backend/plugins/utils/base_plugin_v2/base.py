@@ -8,7 +8,7 @@ from typing import Any, override
 from sqlmodel import Session, select
 
 from app.channels.models import Channel
-from app.channels.service import add_urls_to_channel_import_queue
+from app.channels.service.import_queue import add_urls_to_channel_import_queue
 from app.episodes.models import Episode
 from app.models import Visibility
 from app.seasons.models import Season
@@ -99,18 +99,6 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         canonical_show: Show | None = None,
     ) -> list[URLImportResult]:
         return self.importer(self).import_url(url, canonical_show)
-
-    # TODO: Validate
-    def update_show(self, show: Show, *, force: bool = False) -> None:
-        self.importer(self).update_show(show, force=force)
-
-    # TODO: Validate
-    def update_season(self, season: Season) -> None:
-        self.importer(self).update_season(season)
-
-    # TODO: Validate
-    def update_episode(self, episode: Episode) -> None:
-        self.importer(self).update_episode(episode)
 
     # TODO: Validate
     def on_update_show_failure(self, show: Show, error: Exception) -> None:

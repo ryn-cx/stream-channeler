@@ -33,8 +33,8 @@ from wholoo.tv import TV
 from wholoo.tv.models import TVModel
 
 from app.plugins.models import Plugin
-from app.shows.models import Show
 from app.utils import tz_datetime
+from plugins.Hulu.identity import HuluIdentity
 from plugins.Hulu.utils import HuluMediaType
 from plugins.utils.abstract_plugin import TMDBLookupInfo
 from plugins.utils.base_plugin_v2.base import BasePlugin
@@ -169,8 +169,6 @@ class Genre(SitemapPage[GenreModel]):
 
     # TODO: Validate
     def media_urls(self) -> list[str]:
-        from plugins.Hulu.base import HuluBase  # noqa: PLC0415
-
         paths = {
             href: None
             for _name, href in self.listed_items()
@@ -178,7 +176,7 @@ class Genre(SitemapPage[GenreModel]):
                 (f"/{HuluMediaType.MOVIE}/", f"/{HuluMediaType.SERIES}/"),
             )
         }
-        return [HuluBase.build_url(path) for path in paths]
+        return [HuluIdentity.build_url(path) for path in paths]
 
     # TODO: Validate
     @override
@@ -191,25 +189,8 @@ class Genre(SitemapPage[GenreModel]):
         return isinstance(error, GenreNotFoundError)
 
 
+# TODO: Validate
 class FileMixin(BasePlugin):
-    _media_type: HuluMediaType
-
-    # TODO: Validate
-    def _set_media_type(self, show: Show) -> None:
-        if not show.media_type:
-            msg = "Show.media_type is not set."
-            raise AttributeError(msg)
-        self._media_type = (
-            HuluMediaType.MOVIE if show.media_type == "Movie" else HuluMediaType.SERIES
-        )
-
-    # TODO: Validate
-    @override
-    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
-        if self._is_movie():
-            return self.movie_file(show_key).tmdb_lookup_info()
-        return self.series_file(show_key).tmdb_lookup_info()
-
     # TODO: Validate
     def genres_page_file(self) -> Genres:
         """Return GenresPage file."""
@@ -253,10 +234,6 @@ class FileMixin(BasePlugin):
         return self._file(Season, series_id, season_number)
 
     # TODO: Validate
-    def _is_movie(self) -> bool:
-        return self._media_type == HuluMediaType.MOVIE
-
-    # TODO: Validate
     @staticmethod
     def _season_key(show_key: str, season_number: int) -> str:
         return f"{show_key}:{season_number}"
@@ -285,20 +262,24 @@ class FileMixin(BasePlugin):
     def _season_items(self, series_id: str, season_number: int) -> list[SeasonItem]:
         return self.season_file(series_id, season_number).parsed().items
 
+
+# TODO: Validate
+class SeriesFileMixin(FileMixin):
+    # TODO: Validate
+    @override
+    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
+        return self.series_file(show_key).tmdb_lookup_info()
+
     # TODO: Validate
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
         # Required to detect changes to the show and new seasons of it.
-        if self._is_movie():
-            return [self.movie_file(show_key)]
         return [self.series_file(show_key)]
 
     # TODO: Validate
     @override
     def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
         # Required to detect changes to the season and new episodes of it.
-        if self._is_movie():
-            return [self.movie_file(show_key)]
         _, season_number = self._split_season_key(season_key)
         return [self.season_file(show_key, season_number)]
 
@@ -312,16 +293,12 @@ class FileMixin(BasePlugin):
     ) -> Sequence[BaseFile[Any]]:
         # An episode is read out of its season's listing, so the listing is what
         # says whether the episode has changed.
-        if self._is_movie():
-            return [self.movie_file(show_key)]
         _, season_number = self._split_season_key(season_key)
         return [self.season_file(show_key, season_number)]
 
     # TODO: Validate
     @override
     def _season_keys_from_show_files(self, show_key: str) -> list[str]:
-        if self._is_movie():
-            return [self._season_key(show_key, 0)]
         return [
             self._season_key(show_key, season_number)
             for season_number in self._season_numbers(show_key)
@@ -339,10 +316,53 @@ class FileMixin(BasePlugin):
         episode_keys: list[str] = []
         for season_key in season_keys:
             show_key, season_number = self._split_season_key(season_key)
-            if self._is_movie():
-                episode_keys.append(show_key)
-            else:
-                episode_keys += [
-                    str(item.id) for item in self._season_items(show_key, season_number)
-                ]
+            episode_keys += [
+                str(item.id) for item in self._season_items(show_key, season_number)
+            ]
         return episode_keys
+
+
+# TODO: Validate
+class MovieFileMixin(FileMixin):
+    # TODO: Validate
+    @override
+    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
+        return self.movie_file(show_key).tmdb_lookup_info()
+
+    # TODO: Validate
+    @override
+    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
+        # Required to detect changes to the show and new seasons of it.
+        return [self.movie_file(show_key)]
+
+    # TODO: Validate
+    @override
+    def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
+        # Required to detect changes to the season and new episodes of it.
+        return [self.movie_file(show_key)]
+
+    # TODO: Validate
+    @override
+    def _episode_files(
+        self,
+        episode_key: str,
+        season_key: str,
+        show_key: str,
+    ) -> Sequence[BaseFile[Any]]:
+        return [self.movie_file(show_key)]
+
+    # TODO: Validate
+    @override
+    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
+        return [self._season_key(show_key, 0)]
+
+    # TODO: Validate
+    @override
+    def _episode_keys_from_season_files(
+        self,
+        season_keys: str | list[str],
+        show_key: str,
+    ) -> list[str]:
+        if isinstance(season_keys, str):
+            season_keys = [season_keys]
+        return [self._split_season_key(season_key)[0] for season_key in season_keys]

@@ -1,19 +1,37 @@
 # TODO: Validate
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
-from plugins.Hulu.upsert import UpsertMixin
+from plugins.Hulu.media import MediaMixin
 from plugins.Hulu.utils import HuluMediaType
 
 if TYPE_CHECKING:
     from datetime import datetime
 
+    from app.episodes.models import Episode
+    from app.seasons.models import Season
+    from app.shows.models import Show
     from app.sources.models import Source
 
 
 # TODO: Validate
-class UpdateMixin(UpsertMixin):
+class UpdateMixin(MediaMixin):
+    # TODO: Validate
+    @override
+    def update_show(self, show: Show, *, force: bool = False) -> None:
+        self._media_plugin(show).update_show(show, force=force)
+
+    # TODO: Validate
+    @override
+    def update_season(self, season: Season) -> None:
+        self._media_plugin(season.show).update_season(season)
+
+    # TODO: Validate
+    @override
+    def update_episode(self, episode: Episode) -> None:
+        self._media_plugin(episode.season.show).update_episode(episode)
+
     # TODO: Validate
     def update_source(self, source: Source, update_at: datetime) -> None:
         self.add_media_to_plugin_channels(update_at)

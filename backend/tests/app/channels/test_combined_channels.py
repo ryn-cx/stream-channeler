@@ -10,11 +10,11 @@ import uuid
 import pytest
 from sqlmodel import Session, col, delete
 
-from app.channels import service
 from app.channels.channel_scope import channel_attribution
 from app.channels.episode_selector import EpisodeQueryBuilder
 from app.channels.models import Channel, ChannelCombinedChannel
 from app.channels.schemas import ChannelOptions, CombinedChannelInput
+from app.channels.service import service
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.users.models import User

@@ -7,11 +7,9 @@ from typing import TYPE_CHECKING, override
 from plugins.Pluto.base import PlutoBase
 from plugins.Pluto.constants import DETAILS_REGEX, ITEM_ID_REGEX, LOCALE_REGEX
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
-from plugins.utils.base_plugin_v2.importer import BaseImporter, record_show
+from plugins.utils.base_plugin_v2.importer import BaseImporter
 
 if TYPE_CHECKING:
-    from app.episodes.models import Episode
-    from app.seasons.models import Season
     from app.shows.models import Show
 
 
@@ -76,27 +74,3 @@ class PlutoImporter(BaseImporter, PlutoBase):
 
         msg = f"Episode {self._episode_key} not found in show {show.key}"
         raise InvalidURLError(msg)
-
-    # TODO: Validate
-    @override
-    def update_show(self, show: Show, *, force: bool = False) -> None:
-        self._set_media_type_from_show(show)
-        super().update_show(show, force=force)
-
-    # TODO: Validate
-    @override
-    def update_season(self, season: Season) -> None:
-        self._set_media_type_from_show(season.show)
-        super().update_season(season)
-
-    # TODO: Validate
-    @override
-    def update_episode(self, episode: Episode) -> None:
-        self._set_media_type_from_show(episode.season.show)
-        super().update_episode(episode)
-
-    # TODO: Validate
-    @override
-    def on_failure(self, record: Show | Season | Episode, error: Exception) -> None:
-        self._set_media_type_from_show(record_show(record))
-        super().on_failure(record, error)

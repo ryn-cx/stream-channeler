@@ -11,8 +11,8 @@ from app.auth.dependencies import (
     SuperUser,
     get_current_active_superuser,
 )
-from app.channels import service as channel_service
 from app.channels.schemas import ChannelListOutput
+from app.channels.service import service as channel_service
 from app.schemas import Message
 from app.users import service as user_service
 from app.users.dependencies import ExistingUser

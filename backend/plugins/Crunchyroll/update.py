@@ -8,7 +8,7 @@ from typing import override
 from loguru import logger
 
 from app.channels.models import Channel
-from app.channels.service import add_urls_to_channel_import_queue
+from app.channels.service.import_queue import add_urls_to_channel_import_queue
 from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime

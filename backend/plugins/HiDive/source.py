@@ -11,7 +11,7 @@ from diving_board.schedule import models as schedule_models
 from loguru import logger
 
 from app.channels.models import Channel
-from app.channels.service import add_urls_to_channel_import_queue
+from app.channels.service.import_queue import add_urls_to_channel_import_queue
 from app.media.media_type import MediaType
 from app.sources.models import Source
 from plugins.HiDive.files import FileMixin, Schedule, schedule_group_list

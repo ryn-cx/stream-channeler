@@ -8,8 +8,8 @@ from fastapi import APIRouter
 from app.auth.dependencies import (
     SessionDep,
 )
-from app.channels import service as channel_service
 from app.channels.schemas import ChannelPublicListOutput
+from app.channels.service import service as channel_service
 from app.users import service as user_service
 from app.users.models import User
 from app.users.schemas import (

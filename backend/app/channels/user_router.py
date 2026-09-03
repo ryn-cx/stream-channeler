@@ -9,7 +9,6 @@ from app.auth.dependencies import (
     CurrentUser,
     SessionDep,
 )
-from app.channels import service
 from app.channels.dependencies import (
     EditableChannel,
     EditableChannelCanonicalShow,
@@ -31,6 +30,7 @@ from app.channels.schemas import (
     WhitelistShowInput,
     WhitelistShowOutput,
 )
+from app.channels.service import import_queue, service
 from app.media.service import delete_record
 from app.schemas import Message
 from app.shows.dependencies import ExistingShow
@@ -75,7 +75,7 @@ def bulk_import_queue_urls(
     entries: dict[uuid.UUID, list[str]],
 ) -> Message:
     """Add URLs to multiple channels' import queues at once."""
-    return service.bulk_import_queue_urls(session, current_user, entries)
+    return import_queue.bulk_import_queue_urls(session, current_user, entries)
 
 
 # TODO: Validate
@@ -252,7 +252,7 @@ def get_channel_queue(
     channel: EditableChannel,
 ) -> list[ChannelQueue]:
     """Read the URLs in a channel's import queue."""
-    return service.channel_queue(session, channel)
+    return import_queue.channel_queue(session, channel)
 
 
 # TODO: Validate
@@ -266,7 +266,7 @@ def create_channel_queue_urls(
     urls: list[str],
 ) -> list[ChannelQueue]:
     """Add URLs to a channel's import queue."""
-    return service.add_queue_urls(session, channel, urls)
+    return import_queue.add_queue_urls(session, channel, urls)
 
 
 # TODO: Validate
@@ -277,7 +277,7 @@ def delete_channel_queue_url(
     url_id: uuid.UUID,
 ) -> Message:
     """Delete url from a channel's import queue."""
-    return service.delete_queue_url(session, channel, url_id)
+    return import_queue.delete_queue_url(session, channel, url_id)
 
 
 # TODO: Validate
@@ -287,7 +287,7 @@ def clear_channel_completed_queue(
     channel: EditableChannel,
 ) -> Message:
     """Clear a channel's import queue."""
-    return service.clear_completed_queue(session, channel)
+    return import_queue.clear_completed_queue(session, channel)
 
 
 router = APIRouter()

@@ -9,9 +9,9 @@ has to ask after them one by one.
 
 from sqlmodel import Session
 
-from app.channels import service
 from app.channels.models import Channel
 from app.channels.schemas import ChannelOptions
+from app.channels.service import service
 from app.users.models import User
 from tests.app.channels.utils import (
     channel_show_show,

@@ -7,8 +7,8 @@ from typing import Literal
 import pytest
 from sqlmodel import Session
 
-from app.channels import service
 from app.channels.schemas import ChannelOptions
+from app.channels.service import service
 from tests.app.channels.utils import create_random_channel
 from tests.app.helpers.utils import build_random_model
 

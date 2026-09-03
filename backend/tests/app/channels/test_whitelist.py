@@ -8,8 +8,8 @@ back is the title's own seasons and episodes, with each site listed beside them.
 import pytest
 from sqlmodel import Session
 
-from app.channels import service
 from app.channels.schemas import WhitelistEntryInput, WhitelistShowInput
+from app.channels.service import service
 from tests.app.channels.utils import (
     channel_show_show,
     create_random_channel,

@@ -11,7 +11,7 @@ from loguru import logger
 from sqlmodel import col, select
 
 from app.channels.models import Channel, ChannelQueue, ChannelSourceFilter, URLStatus
-from app.channels.service import add_urls_to_channel_import_queue
+from app.channels.service.import_queue import add_urls_to_channel_import_queue
 from app.plugins.models import Plugin
 from app.shows.models import Show
 from app.utils import tz_datetime

@@ -80,7 +80,25 @@ class EpisodeLinker:
         )
 
     # TODO: Validate
+    def _load_canonical_flags(self, episodes: Sequence[Episode]) -> None:
+        expired = {
+            episode.id: episode
+            for episode in episodes
+            if "is_canonical" in instance_state(episode).unloaded
+        }
+        if not expired:
+            return
+        rows = self.session.exec(
+            select(Episode.id, Episode.is_canonical).where(
+                col(Episode.id).in_(list(expired)),
+            ),
+        ).all()
+        for episode_id, is_canonical in rows:
+            set_committed_value(expired[episode_id], "is_canonical", is_canonical)
+
+    # TODO: Validate
     def _load_existing_links(self, episodes: Sequence[Episode]) -> None:
+        self._load_canonical_flags(episodes)
         unread = [
             episode
             for episode in episodes

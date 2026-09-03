@@ -6,8 +6,8 @@ from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import case, distinct, text
-from sqlalchemy.orm import Mapped, joinedload
+from sqlalchemy import Uuid, case, cast, distinct, literal, null, text, union_all
+from sqlalchemy.orm import Mapped, aliased, joinedload
 from sqlalchemy.sql.expression import ColumnElement, Subquery, UnaryExpression
 from sqlmodel import Session, and_, col, func, or_, select
 from sqlmodel.sql.expression import Select
@@ -57,7 +57,7 @@ from app.channels.models import (
     ChannelSourceFilter,
 )
 from app.channels.schemas import ChannelOptions
-from app.episodes.models import Episode
+from app.episodes.models import Episode, EpisodeCanonicalEpisode
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -68,6 +68,7 @@ from app.utils import tz_datetime
 from app.watches.models import Watch
 
 MAX_EPISODES_RETURNED = 1000
+MAX_CHANNEL_DRIVEN_EPISODES = 200000
 
 
 # TODO: Validate
@@ -101,6 +102,7 @@ class EpisodeQueryBuilder:
         self._set_channel_options(channel_options)
 
         self._channel_ids = self._fetch_channel_ids()
+        self._drive_from_channel = self._drives_from_channel()
 
         self.source_config = source_dedup_config(session, self._user)
         self._sources = self._fetch_sources()
@@ -353,7 +355,160 @@ class EpisodeQueryBuilder:
         ).subquery()
 
     # TODO: Validate
+    def _reachable_rows(self) -> Subquery:
+        held = aliased(ChannelShow)
+        held_clauses = (
+            col(held.channel_id).in_(self._channel_ids),
+            col(held.is_blacklist_only).is_(False),
+        )
+        absent = cast(null(), Uuid)
+
+        canonical_season = aliased(Season)
+        canonical_episode = aliased(Episode)
+        link = aliased(EpisodeCanonicalEpisode)
+        through_links = (
+            select(
+                col(link.episode_id).label("episode_id"),
+                col(link.canonical_episode_id).label("canonical_episode_id"),
+                col(held.id).label("channel_show_id"),
+            )
+            .select_from(held)
+            .join(
+                canonical_season,
+                col(canonical_season.show_id) == col(held.canonical_show_id),
+            )
+            .join(
+                canonical_episode,
+                col(canonical_episode.season_id) == col(canonical_season.id),
+            )
+            .join(link, col(link.canonical_episode_id) == col(canonical_episode.id))
+            .where(*held_clauses)
+        )
+
+        show_link = aliased(ShowCanonicalShow)
+        linked_season = aliased(Season)
+        linked_episode = aliased(Episode)
+        through_show_links = (
+            select(
+                col(linked_episode.id).label("episode_id"),
+                absent.label("canonical_episode_id"),
+                col(held.id).label("channel_show_id"),
+            )
+            .select_from(held)
+            .join(
+                show_link,
+                col(show_link.canonical_show_id) == col(held.canonical_show_id),
+            )
+            .join(linked_season, col(linked_season.show_id) == col(show_link.show_id))
+            .join(
+                linked_episode,
+                col(linked_episode.season_id) == col(linked_season.id),
+            )
+            .where(*held_clauses, is_canonical(linked_episode))
+        )
+
+        own_season = aliased(Season)
+        own_episode = aliased(Episode)
+        through_own_show = (
+            select(
+                col(own_episode.id).label("episode_id"),
+                absent.label("canonical_episode_id"),
+                col(held.id).label("channel_show_id"),
+            )
+            .select_from(held)
+            .join(own_season, col(own_season.show_id) == col(held.canonical_show_id))
+            .join(own_episode, col(own_episode.season_id) == col(own_season.id))
+            .where(*held_clauses, is_canonical(own_episode))
+        )
+
+        return union_all(
+            through_links,
+            through_show_links,
+            through_own_show,
+        ).subquery()
+
+    # TODO: Validate
+    def _base_query_from_channel(self) -> Select[tuple[Episode, UUID]]:
+        reachable = self._reachable_rows()
+        query: Select[tuple[Episode, UUID]] = (
+            select(Episode, ChannelShow.channel_id)  # type: ignore[call-overload]
+            .select_from(reachable)
+            .join(Episode, col(Episode.id) == reachable.c.episode_id)
+            .join(Season, col(Episode.season_id) == col(Season.id))
+            .join(Show, col(Season.show_id) == col(Show.id))
+            .join(ChannelShow, col(ChannelShow.id) == reachable.c.channel_show_id)
+            .outerjoin(
+                CANONICAL_EPISODE_LINK,
+                and_(
+                    links_of(Episode, CANONICAL_EPISODE_LINK),
+                    col(CANONICAL_EPISODE_LINK.canonical_episode_id)
+                    == reachable.c.canonical_episode_id,
+                ),
+            )
+        )
+        query = self._join_last_watched(query)
+        return (
+            query.outerjoin(
+                CANONICAL_EPISODE,
+                and_(
+                    col(CANONICAL_EPISODE.id) == reachable.c.canonical_episode_id,
+                    is_canonical(CANONICAL_EPISODE),
+                ),
+            )
+            .outerjoin(
+                CANONICAL_SEASON,
+                col(CANONICAL_EPISODE.season_id) == col(CANONICAL_SEASON.id),
+            )
+            .join(
+                CANONICAL_SHOW,
+                and_(
+                    col(CANONICAL_SHOW.id) == col(ChannelShow.canonical_show_id),
+                    is_canonical(CANONICAL_SHOW),
+                ),
+            )
+            .where(
+                or_(
+                    col(CANONICAL_SEASON.key).is_(None),
+                    same_issuer_clause(
+                        col(CANONICAL_SHOW.key),
+                        col(CANONICAL_SEASON.key),
+                    ),
+                ),
+            )
+        )
+
+    # TODO: Validate
+    def _drives_from_channel(self) -> bool:
+        held = aliased(ChannelShow)
+        counted_season = aliased(Season)
+        counted_episode = aliased(Episode)
+        counted = (
+            select(literal(1))
+            .select_from(held)
+            .join(
+                counted_season,
+                col(counted_season.show_id) == col(held.canonical_show_id),
+            )
+            .join(
+                counted_episode,
+                col(counted_episode.season_id) == col(counted_season.id),
+            )
+            .where(col(held.channel_id).in_(self._channel_ids))
+            .where(col(held.is_blacklist_only).is_(False))
+            .limit(MAX_CHANNEL_DRIVEN_EPISODES + 1)
+            .subquery()
+        )
+        counted_rows = self._session.exec(select(func.count()).select_from(counted))
+        return counted_rows.one() <= MAX_CHANNEL_DRIVEN_EPISODES
+
+    # TODO: Validate
     def _base_query(self) -> Select[tuple[Episode, UUID]]:
+        if self._drive_from_channel:
+            return self._base_query_from_channel()
+        return self._base_query_from_episodes()
+
+    # TODO: Validate
+    def _base_query_from_episodes(self) -> Select[tuple[Episode, UUID]]:
         # A channel holds titles rather than one website's non-canonical row of them, so
         # every non-canonical row of a title the channel holds is joined to the same
         # `ChannelShow`.

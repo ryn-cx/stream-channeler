@@ -10,7 +10,6 @@ from app.auth.dependencies import (
     SuperUser,
     get_current_active_superuser,
 )
-from app.channels import service
 from app.channels.dependencies import (
     ExistingChannel,
 )
@@ -26,6 +25,7 @@ from app.channels.schemas import (
     ChannelQueueAdminUpdate,
     MediaOwner,
 )
+from app.channels.service import import_queue, service
 from app.schemas import Message
 
 admin_router = APIRouter(
@@ -66,7 +66,7 @@ def get_all_channel_queues(
     owner: MediaOwner | None = None,
 ) -> list[ChannelQueueAdminOutput]:
     """List every `Channel`'s import queue entries, scoped by owner."""
-    return service.all_channel_queues(session, current_user, owner)
+    return import_queue.all_channel_queues(session, current_user, owner)
 
 
 # TODO: Validate
@@ -77,7 +77,7 @@ def admin_update_channel_queue(
     queue_in: ChannelQueueAdminUpdate,
 ) -> ChannelQueueAdminOutput:
     """Update a `Channel`'s queue entry as an admin."""
-    return service.admin_update_channel_queue(session, queue_id, queue_in)
+    return import_queue.admin_update_channel_queue(session, queue_id, queue_in)
 
 
 # TODO: Validate
@@ -87,7 +87,7 @@ def admin_delete_channel_queue(
     queue_id: uuid.UUID,
 ) -> Message:
     """Delete a `Channel`'s queue entry as an admin."""
-    return service.admin_delete_channel_queue(session, queue_id)
+    return import_queue.admin_delete_channel_queue(session, queue_id)
 
 
 router = APIRouter()

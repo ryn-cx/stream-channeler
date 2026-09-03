@@ -1,8 +1,8 @@
 # TODO: Validate
 """What a channel can be sorted by."""
 
-from app.channels import service
 from app.channels.schemas import SortKeyInput
+from app.channels.service import service
 
 
 # TODO: Validate

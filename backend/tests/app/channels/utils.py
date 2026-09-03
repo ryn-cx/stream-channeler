@@ -5,7 +5,7 @@ from sqlmodel import Session
 
 from app.channels.models import Channel, ChannelQueue, ChannelShow
 from app.channels.schemas import ChannelOutput
-from app.channels.service import shows_for_channel_show
+from app.channels.service.service import shows_for_channel_show
 from app.models import Visibility
 from app.plugins.models import Plugin
 from app.shows.models import Show

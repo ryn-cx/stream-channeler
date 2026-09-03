@@ -5,7 +5,7 @@ from enum import StrEnum
 from typing import override
 from urllib.parse import quote, quote_plus
 
-from plugins.utils.base_plugin_v2.base import BasePlugin
+from plugins.Hulu.identity import HuluIdentity
 
 
 # TODO: Validate
@@ -15,7 +15,7 @@ class HuluMediaType(StrEnum):
 
 
 # TODO: Validate
-class UtilsMixin(BasePlugin):
+class UtilsMixin(HuluIdentity):
     """The URLs of a title and what a search result of it is asked for by."""
 
     # TODO: Validate

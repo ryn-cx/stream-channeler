@@ -9,7 +9,6 @@ from fastapi import APIRouter, Query
 from app.auth.dependencies import (
     SessionDep,
 )
-from app.channels import service
 from app.channels.dependencies import (
     ReadableChannel,
     ReadableChannelCanonicalShow,
@@ -27,7 +26,8 @@ from app.channels.schemas import (
     WhitelistEpisodesOutput,
     WhitelistShowOutput,
 )
-from app.channels.service import CHANNEL_SHOW_PAGE, WHITELIST_EPISODE_PAGE
+from app.channels.service import service
+from app.channels.service.service import CHANNEL_SHOW_PAGE, WHITELIST_EPISODE_PAGE
 from app.sources.schemas import SourcePublic
 from app.users.dependencies import OptionalUser
 

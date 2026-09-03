@@ -4,8 +4,6 @@ from __future__ import annotations
 from abc import ABC
 from typing import TYPE_CHECKING
 
-from loguru import logger
-
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.utils import tz_datetime
@@ -15,15 +13,6 @@ if TYPE_CHECKING:
     from app.shows.models import Show
     from app.sources.models import Source
     from plugins.utils.abstract_plugin import URLImportResult
-
-
-# TODO: Validate
-def record_show(record: Show | Season | Episode) -> Show:
-    if isinstance(record, Season):
-        return record.show
-    if isinstance(record, Episode):
-        return record.season.show
-    return record
 
 
 # TODO: Validate
@@ -62,34 +51,6 @@ class BaseImporter(BasePluginWorker, BaseReadURL, ABC):
             canonical_show=canonical_show,
         )
         return self._import_results(show)
-
-    # TODO: Validate
-    def update_show(self, show: Show, *, force: bool = False) -> None:
-        source_name = show.source.name or show.source.key
-        show_name = f"{show.name} ({show.key})" if show.name else show.key
-        logger.info("Updating show: {} - {}", source_name, show_name)
-        stored_show = self._preload_show(show.key, source_key=show.source.key).one()
-        self._update_and_upsert_show(stored_show, stored_show.update_at, force=force)
-
-    # TODO: Validate
-    def update_season(self, season: Season) -> None:
-        logger.info("Updating season: {}", season.key)
-        stored_season = self._preload_season(season.id, preload_show=True).one()
-        self._download_season_files_and_children(
-            stored_season,
-            update_at=stored_season.update_at,
-        )
-        self._update_and_upsert_show(stored_season.show)
-
-    # TODO: Validate
-    def update_episode(self, episode: Episode) -> None:
-        logger.info("Updating episode: {}", episode.key)
-        stored_episode = self._preload_episode(episode.id, preload_source=True).one()
-        self._download_episode_files(
-            stored_episode,
-            update_at=stored_episode.update_at,
-        )
-        self._update_and_upsert_show(stored_episode.season.show)
 
     # TODO: Validate
     def on_failure(

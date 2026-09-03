@@ -4,12 +4,12 @@ from __future__ import annotations
 from typing import override
 
 from plugins.HiDive.source import SourceMixin
-from plugins.HiDive.upsert import UpsertMixin
+from plugins.HiDive.update import UpdateMixin
 from plugins.utils.base_plugin_v2.search import BaseCatalogueSearchMixin
 
 
 # TODO: Validate
-class HiDiveBase(UpsertMixin, SourceMixin, BaseCatalogueSearchMixin):
+class HiDiveBase(UpdateMixin, SourceMixin, BaseCatalogueSearchMixin):
     # TODO: Validate
     @classmethod
     @override

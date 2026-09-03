@@ -2,16 +2,11 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, override
+from typing import override
 
 from plugins.ParamountPlus.base import ParamountPlusBase
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v2.importer import BaseImporter, record_show
-
-if TYPE_CHECKING:
-    from app.episodes.models import Episode
-    from app.seasons.models import Season
-    from app.shows.models import Show
+from plugins.utils.base_plugin_v2.importer import BaseImporter
 
 
 # TODO: Validate
@@ -45,27 +40,3 @@ class ParamountPlusImporter(BaseImporter, ParamountPlusBase):
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
-
-    # TODO: Validate
-    @override
-    def update_show(self, show: Show, *, force: bool = False) -> None:
-        self._set_media_type_from_show(show)
-        super().update_show(show, force=force)
-
-    # TODO: Validate
-    @override
-    def update_season(self, season: Season) -> None:
-        self._set_media_type_from_show(season.show)
-        super().update_season(season)
-
-    # TODO: Validate
-    @override
-    def update_episode(self, episode: Episode) -> None:
-        self._set_media_type_from_show(episode.season.show)
-        super().update_episode(episode)
-
-    # TODO: Validate
-    @override
-    def on_failure(self, record: Show | Season | Episode, error: Exception) -> None:
-        self._set_media_type_from_show(record_show(record))
-        super().on_failure(record, error)

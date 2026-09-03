@@ -7,8 +7,8 @@ import pytest
 from fastapi import HTTPException, status
 from sqlmodel import Session
 
-from app.channels import service
 from app.channels.models import Channel, URLStatus
+from app.channels.service import import_queue
 from tests.app.channels.utils import create_random_channel, create_random_channel_queue
 from tests.app.helpers.utils import random_lower_string
 from tests.app.users.utils import create_random_user
@@ -16,13 +16,13 @@ from tests.app.users.utils import create_random_user
 
 # TODO: Validate
 def queued_urls(session: Session, channel: Channel) -> list[str]:
-    return [entry.url for entry in service.channel_queue(session, channel)]
+    return [entry.url for entry in import_queue.channel_queue(session, channel)]
 
 
 # TODO: Validate
 def test_an_empty_queue_reads_as_nothing(session_scoped_session: Session) -> None:
     channel = create_random_channel(session_scoped_session)
-    assert service.channel_queue(session_scoped_session, channel) == []
+    assert import_queue.channel_queue(session_scoped_session, channel) == []
 
 
 # TODO: Validate
@@ -50,7 +50,7 @@ def test_adding_urls_keeps_the_ones_already_queued(
     ]
     new = [random_lower_string() for _ in range(new_count)]
 
-    service.add_queue_urls(session_scoped_session, channel, new)
+    import_queue.add_queue_urls(session_scoped_session, channel, new)
 
     assert queued_urls(session_scoped_session, channel) == new[::-1] + existing[::-1]
 
@@ -62,7 +62,7 @@ def test_a_url_already_queued_is_not_queued_twice(
     channel = create_random_channel(session_scoped_session)
     existing = create_random_channel_queue(session_scoped_session, channel)
 
-    service.add_queue_urls(session_scoped_session, channel, [existing.url])
+    import_queue.add_queue_urls(session_scoped_session, channel, [existing.url])
 
     assert queued_urls(session_scoped_session, channel) == [existing.url]
 
@@ -74,7 +74,7 @@ def test_the_same_url_given_twice_is_queued_once(
     channel = create_random_channel(session_scoped_session)
     url = random_lower_string()
 
-    service.add_queue_urls(session_scoped_session, channel, [url, url])
+    import_queue.add_queue_urls(session_scoped_session, channel, [url, url])
 
     assert queued_urls(session_scoped_session, channel) == [url]
 
@@ -85,7 +85,7 @@ def test_deleting_a_queued_url_removes_it(session_scoped_session: Session) -> No
     entry = create_random_channel_queue(session_scoped_session, channel)
     kept = create_random_channel_queue(session_scoped_session, channel)
 
-    service.delete_queue_url(session_scoped_session, channel, entry.id)
+    import_queue.delete_queue_url(session_scoped_session, channel, entry.id)
 
     assert queued_urls(session_scoped_session, channel) == [kept.url]
 
@@ -96,7 +96,7 @@ def test_deleting_a_url_that_is_not_queued_is_refused(
 ) -> None:
     channel = create_random_channel(session_scoped_session)
     with pytest.raises(HTTPException) as error:
-        service.delete_queue_url(session_scoped_session, channel, uuid.uuid4())
+        import_queue.delete_queue_url(session_scoped_session, channel, uuid.uuid4())
     assert error.value.status_code == status.HTTP_404_NOT_FOUND
 
 
@@ -109,7 +109,7 @@ def test_deleting_another_channels_queued_url_is_refused(
     entry = create_random_channel_queue(session_scoped_session, other)
 
     with pytest.raises(HTTPException) as error:
-        service.delete_queue_url(session_scoped_session, channel, entry.id)
+        import_queue.delete_queue_url(session_scoped_session, channel, entry.id)
 
     assert error.value.status_code == status.HTTP_404_NOT_FOUND
     assert queued_urls(session_scoped_session, other) == [entry.url]
@@ -131,7 +131,7 @@ def test_clearing_the_queue_drops_only_what_was_imported(
         status=URLStatus.PENDING,
     )
 
-    service.clear_completed_queue(session_scoped_session, channel)
+    import_queue.clear_completed_queue(session_scoped_session, channel)
 
     remaining = queued_urls(session_scoped_session, channel)
     assert imported.url not in remaining
@@ -148,7 +148,7 @@ def test_a_bulk_import_queues_urls_on_each_channel(
     first_url = random_lower_string()
     second_url = random_lower_string()
 
-    service.bulk_import_queue_urls(
+    import_queue.bulk_import_queue_urls(
         session_scoped_session,
         owner,
         {first.id: [first_url], second.id: [second_url]},
@@ -166,7 +166,7 @@ def test_a_bulk_import_refuses_a_channel_that_is_not_the_users(
     somebody_elses = create_random_channel(session_scoped_session)
 
     with pytest.raises(HTTPException) as error:
-        service.bulk_import_queue_urls(
+        import_queue.bulk_import_queue_urls(
             session_scoped_session,
             owner,
             {somebody_elses.id: [random_lower_string()]},
