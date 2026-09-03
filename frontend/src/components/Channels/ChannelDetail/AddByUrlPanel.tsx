@@ -71,6 +71,8 @@ export function AddByUrlPanel({ channelId }: { channelId: string }) {
       setUrlsInput("")
       return { previousQueue }
     },
+    onSuccess: (queue, _urls, _onMutateResult, context) =>
+      context.client.setQueryData(["channelQueue", channelId], queue),
     onError: (error, _urls, onMutateResult, context) => {
       context.client.setQueryData(
         ["channelQueue", channelId],
@@ -81,10 +83,6 @@ export function AddByUrlPanel({ channelId }: { channelId: string }) {
         error as Parameters<typeof handleError>[0],
       )
     },
-    onSettled: (_data, _error, _variables, _onMutateResult, context) =>
-      context.client.invalidateQueries({
-        queryKey: ["channelQueue", channelId],
-      }),
   })
 
   // TODO: Validate

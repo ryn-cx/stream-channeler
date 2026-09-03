@@ -26,29 +26,30 @@ from app.utils import tz_datetime
 
 
 # TODO: Validate
+def _unique_urls(urls: Sequence[str]) -> list[str]:
+    """Remove duplicate URLs without changing the order."""
+    return list(dict.fromkeys(url.strip() for url in urls))
+
+
+# TODO: Validate
 def _write_queue_rows(
     session: Session,
     channel: Channel,
     urls: Sequence[str],
-) -> list[str]:
-    # Remove duplicates without changing the order allowing the output order to match
-    # the input order.
-    unique_urls = list(dict.fromkeys(url.strip() for url in urls))
-
-    # The channel may still be pending, and its row has to exist before the queue
-    # rows referencing it are written.
-    session.flush()
+) -> None:
+    """Add URLs into a channel's import queue as fast as possible."""
+    unique_urls = _unique_urls(urls)
 
     timestamp = tz_datetime.current_time()
-    # A browse file can queue thousands of URLs at once, so every row is written by
-    # one statement instead of reading the existing rows and updating them one by one.
-    # An entry that already exists is reset to pending because the user may have
-    # removed it from the channel or it may have failed to import for some reason.
+
+    # When an existing URL is re-added to the queue, it is reset to pending because the
+    # user may have removed it from the channel or it may have failed to import for some
+    # reason.
     statement = postgres_insert(ChannelQueue).on_conflict_do_update(
         index_elements=["channel_id", "url"],
         set_={"status": URLStatus.PENDING, "modified_at": timestamp},
     )
-    session.execute(
+    session.connection().execute(
         statement,
         [
             {
@@ -64,7 +65,6 @@ def _write_queue_rows(
             for index, url in enumerate(unique_urls)
         ],
     )
-    return unique_urls
 
 
 # TODO: Validate
@@ -73,31 +73,8 @@ def add_urls_to_channel_import_queue(
     channel: Channel,
     urls: Sequence[str],
 ) -> None:
-    """Add URLs to a channel's import queue."""
     _write_queue_rows(session, channel, urls)
     session.commit()
-
-
-# TODO: Validate
-def add_queue_urls(
-    session: Session,
-    channel: Channel,
-    urls: list[str],
-) -> list[ChannelQueue]:
-    """Add URLs to a channel's import queue."""
-    unique_urls = _write_queue_rows(session, channel, urls)
-    session.commit()
-
-    records = {
-        record.url: record
-        for record in session.exec(
-            select(ChannelQueue).where(
-                ChannelQueue.channel_id == channel.id,
-                col(ChannelQueue.url).in_(unique_urls),
-            ),
-        ).all()
-    }
-    return [records[url] for url in unique_urls]
 
 
 # TODO: Validate
@@ -154,39 +131,8 @@ def channel_queue(
 
 
 # TODO: Validate
-def delete_queue_url(
-    session: Session,
-    channel: Channel,
-    url_id: uuid.UUID,
-) -> Message:
-    """Delete url from a channel's import queue."""
-    queue_entry = session.exec(
-        select(ChannelQueue)
-        .where(ChannelQueue.channel_id == channel.id)
-        .where(ChannelQueue.id == url_id),
-    ).first()
-    if not queue_entry:
-        raise HTTPException(status_code=404, detail="URL not found")
-    url = queue_entry.url
-    session.delete(queue_entry)
-    session.commit()
-    return Message(message=f"{url} removed from import queue successfully")
-
-
-# TODO: Validate
-def _queue_entry(session: Session, queue_id: uuid.UUID) -> ChannelQueue:
-    entry = session.exec(
-        select(ChannelQueue).where(ChannelQueue.id == queue_id),
-    ).first()
-    if not entry:
-        raise HTTPException(status_code=404, detail="Queue entry not found")
-    return entry
-
-
-# TODO: Validate
-def admin_delete_channel_queue(session: Session, queue_id: uuid.UUID) -> Message:
-    """Delete a `Channel`'s queue entry as an admin."""
-    queue_entry = _queue_entry(session, queue_id)
+def delete_queue_entry(session: Session, queue_entry: ChannelQueue) -> Message:
+    """Delete one entry from a channel's import queue."""
     url = queue_entry.url
     session.delete(queue_entry)
     session.commit()
@@ -256,11 +202,10 @@ def all_channel_queues(
 # TODO: Validate
 def admin_update_channel_queue(
     session: Session,
-    queue_id: uuid.UUID,
+    queue_entry: ChannelQueue,
     queue_in: ChannelQueueAdminUpdate,
 ) -> ChannelQueueAdminOutput:
     """Update a `Channel`'s queue entry as an admin."""
-    queue_entry = _queue_entry(session, queue_id)
     queue_entry.sqlmodel_update(queue_in.model_dump(exclude_unset=True))
     session.commit()
     session.refresh(queue_entry)

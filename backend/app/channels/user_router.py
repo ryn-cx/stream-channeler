@@ -12,6 +12,7 @@ from app.auth.dependencies import (
 from app.channels.dependencies import (
     EditableChannel,
     EditableChannelCanonicalShow,
+    EditableChannelQueueEntry,
     ReadableChannel,
 )
 from app.channels.models import Channel, ChannelQueue
@@ -146,7 +147,6 @@ def update_channel_combined_channels(
     )
 
 
-# FAST003 - Parameter is used by EditableChannelCanonicalShow.
 # TODO: Validate
 @channels_router.get(
     "/{channel_id}/whitelist/{canonical_show_id}/filtered-episodes",  # noqa: FAST003
@@ -159,7 +159,6 @@ def get_channel_whitelist_filtered_episodes(
     return service.filtered_whitelist_episodes(session, channel_show)
 
 
-# FAST003 - Parameter is used by EditableChannelCanonicalShow.
 # TODO: Validate
 @channels_router.patch("/{channel_id}/whitelist/{canonical_show_id}")  # noqa: FAST003
 def update_channel_whitelist(
@@ -171,7 +170,6 @@ def update_channel_whitelist(
     return service.update_whitelist_output(session, whitelist_config, channel_show)
 
 
-# FAST003 - Parameter is used by EditableChannel.
 # TODO: Validate
 @channels_router.post("/{channel_id}/blacklist-episode")  # noqa: FAST003
 def blacklist_channel_episode(
@@ -183,7 +181,6 @@ def blacklist_channel_episode(
     return service.blacklist_episode_by_show_id(session, channel, blacklist_in)
 
 
-# FAST003 - Parameter is used by EditableChannel.
 # TODO: Validate
 @channels_router.patch("/{channel_id}/default-order", response_model=ChannelOutput)  # noqa: FAST003
 def update_channel_default_order(
@@ -195,7 +192,6 @@ def update_channel_default_order(
     return service.set_default_order(session, channel, channel_options)
 
 
-# FAST003 - Parameter is used by EditableChannel.
 # TODO: Validate
 @channels_router.patch("/{channel_id}/order", response_model=ChannelOutput)  # noqa: FAST003
 def update_channel_order(
@@ -207,7 +203,6 @@ def update_channel_order(
     return service.set_custom_order(session, channel, order_input)
 
 
-# FAST003 - Parameter is used by ExistingShow.
 # TODO: Validate
 @channels_router.get("/for-show/{show_id}")  # noqa: FAST003
 def get_channels_for_show(
@@ -219,7 +214,6 @@ def get_channels_for_show(
     return service.channels_with_show_membership(session, current_user, show)
 
 
-# FAST003 - Parameters are used by EditableChannel and ExistingShow.
 # TODO: Validate
 @channels_router.post("/{channel_id}/add-show/{show_id}")  # noqa: FAST003
 def add_channel_show(
@@ -231,7 +225,6 @@ def add_channel_show(
     return service.add_show(session, channel, show)
 
 
-# FAST003 - Parameters are used by EditableChannelCanonicalShow.
 # TODO: Validate
 @channels_router.delete("/{channel_id}/remove-show/{canonical_show_id}")  # noqa: FAST003
 def delete_channel_show(
@@ -244,7 +237,7 @@ def delete_channel_show(
 
 # TODO: Validate
 @channels_router.get(
-    "/{channel_id}/import-queue",  # noqa: FAST003 - Used by EditableChannel
+    "/{channel_id}/import-queue",  # noqa: FAST003
     response_model=list[ChannelQueueOutput],
 )
 def get_channel_queue(
@@ -257,7 +250,7 @@ def get_channel_queue(
 
 # TODO: Validate
 @channels_router.post(
-    "/{channel_id}/import-queue",  # noqa: FAST003 - Used by EditableChannel
+    "/{channel_id}/import-queue",  # noqa: FAST003
     response_model=list[ChannelQueueOutput],
 )
 def create_channel_queue_urls(
@@ -265,23 +258,23 @@ def create_channel_queue_urls(
     channel: EditableChannel,
     urls: list[str],
 ) -> list[ChannelQueue]:
-    """Add URLs to a channel's import queue."""
-    return import_queue.add_queue_urls(session, channel, urls)
+    """Add URLs to a channel's import queue and read the whole queue back."""
+    import_queue.add_urls_to_channel_import_queue(session, channel, urls)
+    return import_queue.channel_queue(session, channel)
 
 
 # TODO: Validate
-@channels_router.delete("/{channel_id}/import-queue/{url_id}")  # noqa: FAST003 - Used by EditableChannel.
+@channels_router.delete("/{channel_id}/import-queue/{url_id}")  # noqa: FAST003
 def delete_channel_queue_url(
     session: SessionDep,
-    channel: EditableChannel,
-    url_id: uuid.UUID,
+    queue_entry: EditableChannelQueueEntry,
 ) -> Message:
     """Delete url from a channel's import queue."""
-    return import_queue.delete_queue_url(session, channel, url_id)
+    return import_queue.delete_queue_entry(session, queue_entry)
 
 
 # TODO: Validate
-@channels_router.delete("/{channel_id}/clear-completed-import-queue")  # noqa: FAST003 - Used by EditableChannel.
+@channels_router.delete("/{channel_id}/clear-completed-import-queue")  # noqa: FAST003
 def clear_channel_completed_queue(
     session: SessionDep,
     channel: EditableChannel,

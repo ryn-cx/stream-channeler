@@ -318,13 +318,11 @@ export function AISuggestions({
   const addUrlToChannel = async (url: string, label: string) => {
     setAddingTitle(label)
     try {
-      await ChannelsService.createChannelQueueUrls({
+      const queue = await ChannelsService.createChannelQueueUrls({
         channelId,
         requestBody: [url],
       })
-      await queryClient.invalidateQueries({
-        queryKey: ["channelQueue", channelId],
-      })
+      queryClient.setQueryData(["channelQueue", channelId], queue)
       showSuccessToast(`Added "${label}" to import queue`)
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)

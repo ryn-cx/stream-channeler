@@ -141,11 +141,11 @@ export function FeelingLuckyPanel({ channelId }: { channelId: string }) {
 
     setIsSaving(true)
     try {
-      await ChannelsService.createChannelQueueUrls({
+      const queue = await ChannelsService.createChannelQueueUrls({
         channelId,
         requestBody: urls,
       })
-      queryClient.invalidateQueries({ queryKey: ["channelQueue", channelId] })
+      queryClient.setQueryData(["channelQueue", channelId], queue)
       showSuccessToast(`Added ${urls.length} to the import queue`)
       setOutcomes([])
     } catch (error) {

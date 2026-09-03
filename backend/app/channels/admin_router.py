@@ -1,8 +1,6 @@
 # TODO: Validate
 
 
-import uuid
-
 from fastapi import APIRouter, Depends
 
 from app.auth.dependencies import (
@@ -12,6 +10,7 @@ from app.auth.dependencies import (
 )
 from app.channels.dependencies import (
     ExistingChannel,
+    ExistingChannelQueueEntry,
 )
 from app.channels.models import (
     Channel,
@@ -70,24 +69,24 @@ def get_all_channel_queues(
 
 
 # TODO: Validate
-@admin_router.patch("/queue/{queue_id}")
+@admin_router.patch("/queue/{queue_id}")  # noqa: FAST003 - Used by ExistingChannelQueueEntry.
 def admin_update_channel_queue(
     session: SessionDep,
-    queue_id: uuid.UUID,
+    queue_entry: ExistingChannelQueueEntry,
     queue_in: ChannelQueueAdminUpdate,
 ) -> ChannelQueueAdminOutput:
     """Update a `Channel`'s queue entry as an admin."""
-    return import_queue.admin_update_channel_queue(session, queue_id, queue_in)
+    return import_queue.admin_update_channel_queue(session, queue_entry, queue_in)
 
 
 # TODO: Validate
-@admin_router.delete("/queue/{queue_id}")
+@admin_router.delete("/queue/{queue_id}")  # noqa: FAST003 - Used by ExistingChannelQueueEntry.
 def admin_delete_channel_queue(
     session: SessionDep,
-    queue_id: uuid.UUID,
+    queue_entry: ExistingChannelQueueEntry,
 ) -> Message:
     """Delete a `Channel`'s queue entry as an admin."""
-    return import_queue.admin_delete_channel_queue(session, queue_id)
+    return import_queue.delete_queue_entry(session, queue_entry)
 
 
 router = APIRouter()

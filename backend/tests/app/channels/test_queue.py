@@ -7,6 +7,7 @@ import pytest
 from fastapi import HTTPException, status
 from sqlmodel import Session
 
+from app.channels.dependencies import _require_channel_queue_entry
 from app.channels.models import Channel, URLStatus
 from app.channels.service import import_queue
 from tests.app.channels.utils import create_random_channel, create_random_channel_queue
@@ -50,7 +51,7 @@ def test_adding_urls_keeps_the_ones_already_queued(
     ]
     new = [random_lower_string() for _ in range(new_count)]
 
-    import_queue.add_queue_urls(session_scoped_session, channel, new)
+    import_queue.add_urls_to_channel_import_queue(session_scoped_session, channel, new)
 
     assert queued_urls(session_scoped_session, channel) == new[::-1] + existing[::-1]
 
@@ -62,7 +63,7 @@ def test_a_url_already_queued_is_not_queued_twice(
     channel = create_random_channel(session_scoped_session)
     existing = create_random_channel_queue(session_scoped_session, channel)
 
-    import_queue.add_queue_urls(session_scoped_session, channel, [existing.url])
+    import_queue.add_urls_to_channel_import_queue(session_scoped_session, channel, [existing.url])
 
     assert queued_urls(session_scoped_session, channel) == [existing.url]
 
@@ -74,7 +75,7 @@ def test_the_same_url_given_twice_is_queued_once(
     channel = create_random_channel(session_scoped_session)
     url = random_lower_string()
 
-    import_queue.add_queue_urls(session_scoped_session, channel, [url, url])
+    import_queue.add_urls_to_channel_import_queue(session_scoped_session, channel, [url, url])
 
     assert queued_urls(session_scoped_session, channel) == [url]
 
@@ -85,7 +86,10 @@ def test_deleting_a_queued_url_removes_it(session_scoped_session: Session) -> No
     entry = create_random_channel_queue(session_scoped_session, channel)
     kept = create_random_channel_queue(session_scoped_session, channel)
 
-    import_queue.delete_queue_url(session_scoped_session, channel, entry.id)
+    import_queue.delete_queue_entry(
+        session_scoped_session,
+        _require_channel_queue_entry(session_scoped_session, channel, entry.id),
+    )
 
     assert queued_urls(session_scoped_session, channel) == [kept.url]
 
@@ -96,7 +100,7 @@ def test_deleting_a_url_that_is_not_queued_is_refused(
 ) -> None:
     channel = create_random_channel(session_scoped_session)
     with pytest.raises(HTTPException) as error:
-        import_queue.delete_queue_url(session_scoped_session, channel, uuid.uuid4())
+        _require_channel_queue_entry(session_scoped_session, channel, uuid.uuid4())
     assert error.value.status_code == status.HTTP_404_NOT_FOUND
 
 
@@ -109,7 +113,7 @@ def test_deleting_another_channels_queued_url_is_refused(
     entry = create_random_channel_queue(session_scoped_session, other)
 
     with pytest.raises(HTTPException) as error:
-        import_queue.delete_queue_url(session_scoped_session, channel, entry.id)
+        _require_channel_queue_entry(session_scoped_session, channel, entry.id)
 
     assert error.value.status_code == status.HTTP_404_NOT_FOUND
     assert queued_urls(session_scoped_session, other) == [entry.url]

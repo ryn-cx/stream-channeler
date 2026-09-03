@@ -47,6 +47,7 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
                 user_id=get_or_create_plugin_user(session=self.session).id,
             )
             self.session.add(channel)
+            self.session.flush()
             channels[channel_name] = channel
         add_urls_to_channel_import_queue(self.session, channel, urls)
         return channel

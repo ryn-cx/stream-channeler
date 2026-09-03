@@ -8,7 +8,7 @@ from fastapi import Depends, HTTPException
 from sqlmodel import select
 
 from app.auth.dependencies import SessionDep
-from app.channels.models import Channel, ChannelShow
+from app.channels.models import Channel, ChannelQueue, ChannelShow
 from app.media.service import editable_record, existing_record, readable_record
 
 
@@ -54,10 +54,46 @@ def _require_readable_channel_canonical_show(
     return channel_show
 
 
+# A queue entry is named by its own id, but it is reached through the channel it
+# is queued on, so it is only found where that channel is the one it belongs to.
+# TODO: Validate
+def _require_channel_queue_entry(
+    session: SessionDep,
+    channel: EditableChannel,
+    url_id: uuid.UUID,
+) -> ChannelQueue:
+    queue_entry = session.exec(
+        select(ChannelQueue).where(
+            ChannelQueue.channel_id == channel.id,
+            ChannelQueue.id == url_id,
+        ),
+    ).first()
+    if queue_entry is None:
+        raise HTTPException(status_code=404, detail="URL not found")
+    return queue_entry
+
+
+# The admin routes reach a queue entry by its id alone, since an admin is not
+# working through any one channel.
+# TODO: Validate
+def _require_queue_entry(session: SessionDep, queue_id: uuid.UUID) -> ChannelQueue:
+    queue_entry = session.exec(
+        select(ChannelQueue).where(ChannelQueue.id == queue_id),
+    ).first()
+    if queue_entry is None:
+        raise HTTPException(status_code=404, detail="Queue entry not found")
+    return queue_entry
+
+
 EditableChannelCanonicalShow = Annotated[
     ChannelShow,
     Depends(_require_owned_channel_canonical_show),
 ]
+EditableChannelQueueEntry = Annotated[
+    ChannelQueue,
+    Depends(_require_channel_queue_entry),
+]
+ExistingChannelQueueEntry = Annotated[ChannelQueue, Depends(_require_queue_entry)]
 ReadableChannelCanonicalShow = Annotated[
     ChannelShow,
     Depends(_require_readable_channel_canonical_show),
