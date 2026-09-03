@@ -8,7 +8,7 @@ from app.constants import MAX_PAGE_SIZE
 
 
 # Based on https://github.com/pydantic/pydantic/issues/12329#issuecomment-3382159312
-def make_model_with_all_fields_optional(cls: type[BaseModel]) -> type[BaseModel]:
+def make_model_with_all_fields_optional(cls: type[BaseModel]) -> Any:  # noqa: ANN401
     """Return a new Pydantic model based on `cls`, but with all fields optional."""
     # Note 1: I believe there isn't any need to look for conflicts with computed fields.
     fields = {

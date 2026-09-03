@@ -20,7 +20,7 @@ class UserRegister(SQLModel):
 
 
 # Properties to receive via API on update, all are optional
-class UserUpdate(make_model_with_all_fields_optional(UserBase)):  # type: ignore[misc]
+class UserUpdate(make_model_with_all_fields_optional(UserBase)):
     password: str | None = Field(default=None, min_length=8, max_length=128)
 
 
