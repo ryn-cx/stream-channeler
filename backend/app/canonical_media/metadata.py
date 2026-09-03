@@ -31,7 +31,7 @@ from app.canonical_media.episodes import canonical_episode_link, links_of
 from app.canonical_media.filters import is_canonical
 from app.canonical_media.keys import SHOW_LEVEL, parse_tmdb_key
 from app.episodes.models import Episode
-from app.media.media_type import MediaType
+from app.media.media_type import TMDBMediaType
 from app.models import MediaMixin
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -202,7 +202,7 @@ def tmdb_episode_url(
     if parsed is None:
         return None
     media_type, tmdb_id = parsed
-    if media_type is MediaType.movie:
+    if media_type is TMDBMediaType.movie:
         return f"{TMDB_PAGE_URL}/{media_type}/{tmdb_id}"
     if season_number is None or episode_number is None:
         return f"{TMDB_PAGE_URL}/{media_type}/{tmdb_id}"
@@ -223,7 +223,7 @@ def tmdb_season_url(show_key: str | None, season_number: int | None) -> str | No
     if parsed is None:
         return None
     media_type, tmdb_id = parsed
-    if media_type is MediaType.movie or season_number is None:
+    if media_type is TMDBMediaType.movie or season_number is None:
         return f"{TMDB_PAGE_URL}/{media_type}/{tmdb_id}"
     return f"{TMDB_PAGE_URL}/{media_type}/{tmdb_id}/season/{season_number}"
 

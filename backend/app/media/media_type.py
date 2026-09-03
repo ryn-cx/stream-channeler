@@ -12,7 +12,7 @@ from enum import StrEnum
 
 
 # TODO: Validate
-class MediaType(StrEnum):
+class TMDBMediaType(StrEnum):
     """One of the two halves of the TMDB catalogue."""
 
     movie = "movie"

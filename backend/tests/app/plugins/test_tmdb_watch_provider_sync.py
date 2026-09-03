@@ -7,14 +7,14 @@ from sqlmodel import Session
 
 from app.canonical_media.keys import tmdb_show_key
 from app.files.models import File
-from app.media.media_type import MediaType
+from app.media.media_type import TMDBMediaType
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show, ShowCanonicalShow
 from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.TMDB import TMDB
-from plugins.TMDB.files import SeasonWatchProviders, TvWatchProviders
+from plugins.TMDB.files import _SeasonWatchProviders, _TvWatchProviders
 from plugins.utils.base_plugin_v2.files import COMPLETED_STATUS
 from tests.app.plugins.utils import create_random_plugin
 from tests.app.seasons.utils import create_random_season
@@ -80,7 +80,7 @@ def _store_show_providers(  # noqa: PLR0913
     return _store_file(
         session,
         plugin,
-        TvWatchProviders(session, plugin, tmdb_id, downloaded_at).file_key(),
+        _TvWatchProviders(session, plugin, tmdb_id, downloaded_at).file_key(),
         _providers_body(tmdb_id, provider_names),
         data_timestamp,
         update_at,
@@ -101,7 +101,7 @@ def _store_season_providers(  # noqa: PLR0913
     return _store_file(
         session,
         plugin,
-        SeasonWatchProviders(
+        _SeasonWatchProviders(
             session,
             plugin,
             tmdb_id,
@@ -128,7 +128,7 @@ def canonical_show(function_scoped_session: Session, tmdb_plugin: Plugin) -> Sho
     return create_random_show(
         function_scoped_session,
         tmdb_plugin.sources[0],
-        key=tmdb_show_key(MediaType.tv, 1399),
+        key=tmdb_show_key(TMDBMediaType.tv, 1399),
     )
 
 
@@ -479,7 +479,7 @@ class TestSyncWatchProviders:
         movie = create_random_show(
             function_scoped_session,
             tmdb_plugin.sources[0],
-            key=tmdb_show_key(MediaType.movie, 27205),
+            key=tmdb_show_key(TMDBMediaType.movie, 27205),
         )
         listing, _season = _linked_listing(
             function_scoped_session,
@@ -599,7 +599,7 @@ class TestWatchProvidersFileKeys:
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
     ) -> None:
-        file = TvWatchProviders(
+        file = _TvWatchProviders(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -613,7 +613,7 @@ class TestWatchProvidersFileKeys:
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
     ) -> None:
-        file = SeasonWatchProviders(
+        file = _SeasonWatchProviders(
             function_scoped_session,
             tmdb_plugin,
             1399,

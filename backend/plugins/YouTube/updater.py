@@ -22,7 +22,7 @@ from plugins.YouTube.files import FileMixin
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from plugins.YouTube.files import PlaylistFeed
+    from plugins.YouTube.files import _PlaylistFeed
 
 PENDING_UPDATE_STATUS = "Pending update"
 
@@ -99,7 +99,7 @@ class UpdaterMixin(FileMixin):
         self.playlist_items_file(season.key).download_if_outdated(tz_datetime.now())
 
     # TODO: Validate
-    def _download_season_feed(self, season: Season) -> PlaylistFeed:
+    def _download_season_feed(self, season: Season) -> _PlaylistFeed:
         playlist_feed = self.playlist_feed_file(season.key)
         try:
             playlist_feed.download_if_outdated(season.update_at)

@@ -4,8 +4,8 @@
 from __future__ import annotations
 
 from plugins.AdultSwim.base import AdultSwimBase
-from plugins.AdultSwim.initialize import AdultSwimInitializer
 from plugins.AdultSwim.importer import AdultSwimImporter
+from plugins.AdultSwim.initialize import AdultSwimInitializer
 from plugins.utils.abstract_plugin import AbstractPlugin
 
 

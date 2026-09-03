@@ -13,6 +13,7 @@ from chirashi.music_video.models import ThumbnailItem as MusicVideoThumbnailItem
 from chirashi.season_episodes.models import Images as EpisodeImages
 from chirashi.series.models import Images as SeriesImages
 
+from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.files.models import File
 from app.seasons.models import Season
@@ -27,7 +28,7 @@ from plugins.Crunchyroll.constants import (
     show_is_a_series,
     show_is_an_artist,
 )
-from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries, FileMixin
+from plugins.Crunchyroll.files import FileMixin, _BrowseMusic, _BrowseSeries
 from plugins.Crunchyroll.utils import UtilsMixin
 from plugins.utils.base_plugin_v2.files import INITIAL_FILE_IDENTIFIER
 
@@ -66,10 +67,10 @@ class UpsertMixin(UtilsMixin, FileMixin):
     def _upsert_browse_source(
         self,
         source_key: str,
-        latest_browse_file: BrowseSeries | BrowseMusic | None,
+        latest_browse_file: _BrowseSeries | _BrowseMusic | None,
         browse_file: Callable[
             [datetime | File | Literal["Initial"]],
-            BrowseSeries | BrowseMusic,
+            _BrowseSeries | _BrowseMusic,
         ],
         update_interval: timedelta,
     ) -> Source:
@@ -267,6 +268,7 @@ class UpsertMixin(UtilsMixin, FileMixin):
                 continue
             new_episode = Episode(
                 key=episode_data.id,
+                watch_identifier=watch_identifier(self.plugin_name(), episode_data.id),
                 name=episode_data.title,
                 episode_number=episode_data.episode_number,
                 url=self._episode_url(episode_data.id),
@@ -330,6 +332,7 @@ class UpsertMixin(UtilsMixin, FileMixin):
             )
             Episode(
                 key=episode_key,
+                watch_identifier=watch_identifier(self.plugin_name(), episode_key),
                 name=details.title,
                 description=details.description,
                 url=self._episode_url(episode_key),

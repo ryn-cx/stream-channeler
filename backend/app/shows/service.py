@@ -19,7 +19,7 @@ from app.channels.models import ChannelShow
 from app.episodes.linking import EpisodeLinker
 from app.episodes.models import MANUAL_NOTE_PREFIX, Episode
 from app.issue_reports.service import list_show_issue_reports
-from app.media.media_type import MediaType
+from app.media.media_type import TMDBMediaType
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -294,7 +294,7 @@ def list_tmdb_episode_groups(
     from plugins.TMDB.keys import get_media_type_and_tmdb_id  # noqa: PLC0415
 
     media_type, tmdb_id = get_media_type_and_tmdb_id(show.key)
-    if media_type is not MediaType.tv:
+    if media_type is not TMDBMediaType.tv:
         return []
 
     groups_file = TMDB(session).episode_groups_file(tmdb_id)
@@ -454,7 +454,7 @@ def validate_extra(
         return
 
     media_type, tmdb_id = get_media_type_and_tmdb_id(show.key)
-    if media_type is not MediaType.tv:
+    if media_type is not TMDBMediaType.tv:
         message = "A film has no episode orders to be read in."
         raise HTTPException(status_code=422, detail=message)
 

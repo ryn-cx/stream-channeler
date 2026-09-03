@@ -16,6 +16,7 @@ from naphki.video_program.models import LandscapeItem, PortraitItem, VideoProgra
 from sqlmodel import Session
 
 from app.files.models import File
+from app.media.media_type import TMDBMediaType
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import TMDBLookupInfo
@@ -31,7 +32,7 @@ def naphki() -> Naphki:
 
 
 # TODO: Validate
-class VideoProgram(EndpointFile[VideoProgramModel]):
+class _VideoProgram(EndpointFile[VideoProgramModel]):
     """Video program file."""
 
     # TODO: Validate
@@ -47,7 +48,7 @@ class VideoProgram(EndpointFile[VideoProgramModel]):
 
 
 # TODO: Validate
-class VideoEpisodes(EndpointFile[VideoEpisodesModel]):
+class _VideoEpisodes(EndpointFile[VideoEpisodesModel]):
     """Video episodes file."""
 
     # TODO: Validate
@@ -66,7 +67,7 @@ class VideoEpisodes(EndpointFile[VideoEpisodesModel]):
 
 
 # TODO: Validate
-class NewVideoEpisodes(EndpointFile[VideoEpisodesModel]):
+class _NewVideoEpisodes(EndpointFile[VideoEpisodesModel]):
     """New video episodes file."""
 
     # TODO: Validate
@@ -92,7 +93,7 @@ class NewVideoEpisodes(EndpointFile[VideoEpisodesModel]):
 
 
 # TODO: Validate
-class ShowsSearch(EndpointFile[ShowsSearchModel]):
+class _ShowsSearch(EndpointFile[ShowsSearchModel]):
     """Shows search file."""
 
     # TODO: Validate
@@ -132,7 +133,7 @@ class FileMixin(BasePlugin):
     @classmethod
     @override
     def _plugin_wide_files(cls) -> tuple[type[BaseFile[Any]], ...]:
-        return (NewVideoEpisodes,)
+        return (_NewVideoEpisodes,)
 
     # TODO: Validate
     @classmethod
@@ -140,45 +141,45 @@ class FileMixin(BasePlugin):
         return cls.build_url(f"nhkworld/en/shows/{show_key}/")
 
     # TODO: Validate
-    def shows_search_file(self, query: str, offset: int) -> ShowsSearch:
+    def shows_search_file(self, query: str, offset: int) -> _ShowsSearch:
         """Contains one page of results for a search query."""
-        return self._file(ShowsSearch, query, offset)
+        return self._file(_ShowsSearch, query, offset)
 
     # TODO: Validate
-    def video_program_file(self, show_key: str) -> VideoProgram:
+    def video_program_file(self, show_key: str) -> _VideoProgram:
         """Contains a single show's information."""
-        return self._file(VideoProgram, show_key)
+        return self._file(_VideoProgram, show_key)
 
     # TODO: Validate
-    def video_episodes_file(self, program_id: str) -> VideoEpisodes:
+    def video_episodes_file(self, program_id: str) -> _VideoEpisodes:
         """Contains a show's episodes."""
-        return self._file(VideoEpisodes, program_id)
+        return self._file(_VideoEpisodes, program_id)
 
     # TODO: Consider making this a generic function
     # TODO: Validate
     def new_video_episodes_file(
         self,
         feed_datetime: datetime | File,
-    ) -> NewVideoEpisodes:
+    ) -> _NewVideoEpisodes:
         """Contains the newest videos on the website."""
         if isinstance(feed_datetime, File):
-            str_datetime = NewVideoEpisodes.file_key_to_unique_identifier(
+            str_datetime = _NewVideoEpisodes.file_key_to_unique_identifier(
                 feed_datetime.key,
             )
         else:
             str_datetime = str(feed_datetime)
-        return self._file(NewVideoEpisodes, str_datetime)
+        return self._file(_NewVideoEpisodes, str_datetime)
 
     # TODO: Validate
-    def latest_new_video_episodes_file(self) -> NewVideoEpisodes | None:
+    def latest_new_video_episodes_file(self) -> _NewVideoEpisodes | None:
         """Return the latest new video episodes file, or None if none exists."""
-        if file := self.preload_latest_file(NewVideoEpisodes):
+        if file := self.preload_latest_file(_NewVideoEpisodes):
             return self.new_video_episodes_file(file)
         return None
 
     # TODO: Validate
     @override
-    def _source_files(self) -> Sequence[NewVideoEpisodes]:
+    def _source_files(self) -> Sequence[_NewVideoEpisodes]:
         if file := self.latest_new_video_episodes_file():
             return [file]
         return []
@@ -259,10 +260,10 @@ class FileMixin(BasePlugin):
 
     # TODO: Validate
     @override
-    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
+    def tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
         program_file = self.video_program_file(show_key)
         program_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         return TMDBLookupInfo(
             title=program_file.parsed().title,
-            media_type="TV Show",
+            media_type=TMDBMediaType.tv,
         )

@@ -13,6 +13,7 @@ from pools_closed.shows import Shows as ShowsEndpoint
 from pools_closed.shows.models import ShowsModel
 from sqlmodel import Session
 
+from app.media.media_type import TMDBMediaType
 from app.plugins.models import Plugin
 from plugins.utils.abstract_plugin import TMDBLookupInfo
 from plugins.utils.base_plugin_v2.base import BasePlugin
@@ -25,7 +26,8 @@ def pools_closed() -> PoolsClosed:
     return PoolsClosed(get_around_client=get_around_client())
 
 
-class ShowPage(EndpointFile[ShowModel]):
+# TODO: Validate
+class _ShowPage(EndpointFile[ShowModel]):
     @override
     def _endpoint(self) -> ShowEndpoint:
         return pools_closed().show
@@ -35,7 +37,8 @@ class ShowPage(EndpointFile[ShowModel]):
         return isinstance(error, ShowNotFoundError)
 
 
-class ShowsPage(EndpointFile[ShowsModel]):
+# TODO: Validate
+class _ShowsPage(EndpointFile[ShowsModel]):
     # TODO: Validate
     def __init__(self, session: Session, plugin: Plugin) -> None:
         super().__init__(session, plugin, "Shows")
@@ -56,15 +59,15 @@ class FileMixin(BasePlugin):
     @classmethod
     @override
     def _plugin_wide_files(cls) -> tuple[type[BaseFile[Any]], ...]:
-        return (ShowsPage,)
+        return (_ShowsPage,)
 
     # TODO: Validate
-    def show_file(self, show_key: str) -> ShowPage:
-        return self._file(ShowPage, show_key)
+    def show_file(self, show_key: str) -> _ShowPage:
+        return self._file(_ShowPage, show_key)
 
     # TODO: Validate
-    def shows_file(self) -> ShowsPage:
-        return self._file(ShowsPage)
+    def shows_file(self) -> _ShowsPage:
+        return self._file(_ShowsPage)
 
     # TODO: Validate
     @classmethod
@@ -78,7 +81,7 @@ class FileMixin(BasePlugin):
 
     # TODO: Validate
     @override
-    def _source_files(self) -> Sequence[ShowsPage]:
+    def _source_files(self) -> Sequence[_ShowsPage]:
         return [self.shows_file()]
 
     # TODO: Validate
@@ -130,10 +133,10 @@ class FileMixin(BasePlugin):
 
     # TODO: Validate
     @override
-    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
+    def tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
         show_page = self.show_file(show_key)
         show_page.download_if_outdated()
         return TMDBLookupInfo(
             title=show_page.parsed().title,
-            media_type="TV Show",
+            media_type=TMDBMediaType.tv,
         )

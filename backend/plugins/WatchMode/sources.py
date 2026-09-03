@@ -5,14 +5,14 @@ from __future__ import annotations
 
 from wampi.extract_title_id import extract_title_id
 
-from app.media.media_type import MediaType
+from app.media.media_type import TMDBMediaType
 from plugins.WatchMode.files import FileMixin
 
 
 # TODO: Validate
-def title_key(media_type: MediaType, tmdb_id: int) -> str:
+def title_key(media_type: TMDBMediaType, tmdb_id: int) -> str:
     """Return the Watchmode title id for a TMDB id."""
-    if media_type == MediaType.movie:
+    if media_type == TMDBMediaType.movie:
         return extract_title_id(tmdb_movie_id=tmdb_id)
     return extract_title_id(tmdb_tv_id=tmdb_id)
 
@@ -22,7 +22,7 @@ class SourcesMixin(FileMixin):
     """Looking up the sources a title is available on."""
 
     # TODO: Validate
-    def source_urls(self, media_type: MediaType, tmdb_id: int) -> list[str]:
+    def source_urls(self, media_type: TMDBMediaType, tmdb_id: int) -> list[str]:
         """Return the web address of every source carrying the TMDB title.
 
         Ordered as Watchmode listed them and with repeats dropped, since a

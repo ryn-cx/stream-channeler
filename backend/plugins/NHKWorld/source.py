@@ -11,7 +11,7 @@ from app.channels.models import Channel
 from app.channels.service.import_queue import add_urls_to_channel_import_queue
 from app.shows.models import Show
 from app.sources.models import Source
-from plugins.NHKWorld.files import FileMixin, NewVideoEpisodes
+from plugins.NHKWorld.files import FileMixin, _NewVideoEpisodes
 from plugins.utils.base_plugin_v2.files import (
     COMPLETED_STATUS,
 )
@@ -33,7 +33,7 @@ class SourceMixin(FileMixin):
     # TODO: Validate
     def _process_new_episodes_files(self, source: Source) -> None:
         new_files = self.get_incomplete_files(
-            NewVideoEpisodes,
+            _NewVideoEpisodes,
             self.new_video_episodes_file,
         )
         for feed_file in new_files:
@@ -91,7 +91,7 @@ class SourceMixin(FileMixin):
     @override
     def upsert_source(self, source_key: str) -> Source:
         if not (latest_feed_file := self.latest_new_video_episodes_file()):
-            latest_feed_file = self._initial_file(NewVideoEpisodes)
+            latest_feed_file = self._initial_file(_NewVideoEpisodes)
             latest_feed_file.download_if_outdated()
         data_timestamp = latest_feed_file.data_timestamp
         source = Source.get_from_memory(self.session, self.plugin, source_key)

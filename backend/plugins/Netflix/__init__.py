@@ -4,8 +4,8 @@
 from __future__ import annotations
 
 from plugins.Netflix.base import NetflixBase
-from plugins.Netflix.initialize import NetflixInitializer
 from plugins.Netflix.importer import NetflixImporter
+from plugins.Netflix.initialize import NetflixInitializer
 from plugins.utils.abstract_plugin import AbstractPlugin
 
 

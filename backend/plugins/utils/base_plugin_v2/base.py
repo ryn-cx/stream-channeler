@@ -74,15 +74,13 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         return self.__plugin_channels
 
     # TODO: Validate
-    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo | None:  # noqa: ARG002
-        return None
+    def tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo
+        msg = f"{self.plugin_name()} does not support TMDB lookups."
+        raise NotImplementedError(msg)
 
     # TODO: Validate
     def find_tmdb_show_record(self, show_key: str) -> Show | None:
-        tmdb_lookup_info = self.get_tmdb_lookup_info(show_key)
-        if tmdb_lookup_info is None:
-            return None
-
+        tmdb_lookup_info = self.tmdb_lookup_info(show_key)
         from plugins.TMDB import TMDB  # noqa: PLC0415
 
         return TMDB(self.session).import_search(tmdb_lookup_info)

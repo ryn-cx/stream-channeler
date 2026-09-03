@@ -4,8 +4,8 @@
 from __future__ import annotations
 
 from plugins.Tubi.base import TubiBase
-from plugins.Tubi.initialize import TubiInitializer
 from plugins.Tubi.importer import TubiImporter
+from plugins.Tubi.initialize import TubiInitializer
 from plugins.utils.abstract_plugin import AbstractPlugin
 
 

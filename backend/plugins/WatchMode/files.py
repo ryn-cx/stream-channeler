@@ -28,7 +28,7 @@ def wampi() -> Wampi:
 
 
 # TODO: Validate
-class TitleSources(EndpointFile[TitleSourcesModel]):
+class _TitleSources(EndpointFile[TitleSourcesModel]):
     """Every source Watchmode says a title can be watched through.
 
     The title is named by the id Watchmode takes, which is TMDB's own id behind
@@ -67,6 +67,6 @@ class FileMixin(BasePlugin):
     """Reaching the Watchmode file for a title."""
 
     # TODO: Validate
-    def title_sources_file(self, title_key: str) -> TitleSources:
+    def title_sources_file(self, title_key: str) -> _TitleSources:
         """Return the listing file for the Watchmode title id `title_key`."""
-        return TitleSources(self.session, self.plugin, title_key)
+        return _TitleSources(self.session, self.plugin, title_key)

@@ -6,6 +6,7 @@ from typing import override
 from pools_closed.show.models import Season as SeasonData
 from pools_closed.show.models import ShowModel
 
+from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -137,6 +138,7 @@ class UpsertMixin(UtilsMixin, FileMixin):
 
             new_episode = Episode(
                 key=episode_data.id,
+                watch_identifier=watch_identifier(self.plugin_name(), episode_data.id),
                 name=episode_data.title,
                 description=episode_data.description,
                 url=self.episode_url(

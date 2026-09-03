@@ -7,7 +7,7 @@ from abc import ABC
 from typing import NamedTuple
 
 from app.episodes.text_matching import TextMatcher
-from app.media.media_type import MediaType
+from app.media.media_type import TMDBMediaType
 from plugins.utils.base_plugin_v2.base import BasePlugin
 
 
@@ -34,7 +34,7 @@ class BaseCatalogueSearchMixin(BasePlugin, ABC):
     # TODO: Validate
     @classmethod
     def tmdb_media_type_to_plugin_media_type(
-        cls, media_type: MediaType
+        cls, media_type: TMDBMediaType
     ) -> tuple[str, ...]:
         """Return what this website files TMDB's `media_type` under.
 
@@ -44,7 +44,7 @@ class BaseCatalogueSearchMixin(BasePlugin, ABC):
         more than one of a website's own kinds, and a half it carries nothing of
         answers to none.
         """
-        if media_type == MediaType.movie:
+        if media_type == TMDBMediaType.movie:
             return ("Movie",)
         return ("TV Show", "Series")
 
@@ -52,7 +52,7 @@ class BaseCatalogueSearchMixin(BasePlugin, ABC):
     def search_for_url(
         self,
         names: list[str],
-        media_type: MediaType,
+        media_type: TMDBMediaType,
         year: int | None = None,  # noqa: ARG002 - `year` refines a search.
     ) -> str | None:
         wanted = self.tmdb_media_type_to_plugin_media_type(media_type)

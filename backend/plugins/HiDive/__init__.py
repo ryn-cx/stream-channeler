@@ -4,8 +4,8 @@
 from __future__ import annotations
 
 from plugins.HiDive.base import HiDiveBase
-from plugins.HiDive.initialize import HiDiveInitializer
 from plugins.HiDive.importer import HiDiveImporter
+from plugins.HiDive.initialize import HiDiveInitializer
 from plugins.utils.abstract_plugin import AbstractPlugin
 
 

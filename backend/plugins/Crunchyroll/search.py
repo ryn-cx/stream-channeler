@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from chirashi.search.models import Item as SearchItem
 
-from app.media.media_type import MediaType
+from app.media.media_type import TMDBMediaType
 from plugins.Crunchyroll.constants import episode_is_music, show_is_an_artist
 from plugins.Crunchyroll.files import FileMixin
 from plugins.Crunchyroll.utils import UtilsMixin
@@ -15,7 +15,7 @@ class SearchMixin(UtilsMixin, FileMixin):
     def search_for_url(
         self,
         names: list[str],
-        media_type: MediaType,  # noqa: ARG002 - `media_type` refines a search.
+        media_type: TMDBMediaType,  # noqa: ARG002 - `media_type` refines a search.
         year: int | None = None,  # noqa: ARG002 - `year` refines a search.
     ) -> str | None:
         query = names[0]

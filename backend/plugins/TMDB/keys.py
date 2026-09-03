@@ -20,14 +20,14 @@ from app.canonical_media.keys import (
     SHOW_LEVEL,
     parse_tmdb_key,
 )
-from app.media.media_type import MediaType
+from app.media.media_type import TMDBMediaType
 
 
 # TODO: Validate
 class RecordKey(NamedTuple):
     """The parts of a TMDB record key: which half of the catalogue, and the id."""
 
-    media_type: MediaType
+    media_type: TMDBMediaType
     tmdb_id: int
 
 

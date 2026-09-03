@@ -18,6 +18,7 @@ from typing import override
 from app.canonical_media.keys import (
     tmdb_episode_key,
     tmdb_season_key,
+    watch_identifier,
 )
 from app.canonical_media.service import (
     canonical_episode_by_key,
@@ -25,7 +26,7 @@ from app.canonical_media.service import (
     canonical_show_by_key,
 )
 from app.episodes.models import Episode
-from app.media.media_type import MediaType
+from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
@@ -75,7 +76,7 @@ class UpsertMixin(UtilsMixin):
         force: bool = False,
     ) -> Show:
         media_type, tmdb_id = get_media_type_and_tmdb_id(show_key)
-        if media_type == MediaType.movie:
+        if media_type == TMDBMediaType.movie:
             show = self._upsert_movie_show(source, show_key, tmdb_id, force=force)
         else:
             show = self._upsert_series_show(source, show_key, tmdb_id, force=force)
@@ -126,7 +127,7 @@ class UpsertMixin(UtilsMixin):
                 key=show_key,
                 name=series.name,
                 description=series.overview,
-                url=media_url(MediaType.tv, tmdb_id),
+                url=media_url(TMDBMediaType.tv, tmdb_id),
                 image_url=backdrop_image_url(series.backdrop_path)
                 or poster_original_url(series.poster_path),
                 thumbnail_url=backdrop_thumbnail_url(series.backdrop_path)
@@ -197,7 +198,7 @@ class UpsertMixin(UtilsMixin):
     ) -> None:
         season_key = source.key
         for sort_order, episode_source in enumerate(source.episodes):
-            key = tmdb_episode_key(MediaType.tv, episode_source.id)
+            key = tmdb_episode_key(TMDBMediaType.tv, episode_source.id)
             episode = self._stored_episode(season, key)
             if not self._episode_is_outdated(
                 episode,
@@ -213,9 +214,10 @@ class UpsertMixin(UtilsMixin):
             )
             new_episode = Episode(
                 key=key,
+                watch_identifier=watch_identifier(self.plugin_name(), key),
                 name=episode_source.name,
                 description=episode_source.overview,
-                url=media_url(MediaType.tv, tmdb_id),
+                url=media_url(TMDBMediaType.tv, tmdb_id),
                 image_url=still_image_url(still_path),
                 thumbnail_url=still_thumbnail_url(still_path),
                 duration=duration_seconds(episode_source.runtime),
@@ -276,7 +278,7 @@ class UpsertMixin(UtilsMixin):
                 key=show_key,
                 name=movie.title,
                 description=movie.overview,
-                url=media_url(MediaType.movie, tmdb_id),
+                url=media_url(TMDBMediaType.movie, tmdb_id),
                 image_url=backdrop_image_url(movie.backdrop_path)
                 or poster_original_url(movie.poster_path),
                 thumbnail_url=backdrop_thumbnail_url(movie.backdrop_path)
@@ -304,7 +306,7 @@ class UpsertMixin(UtilsMixin):
         force: bool = False,
     ) -> None:
         movie = self.movie_detail_file(tmdb_id).parsed()
-        key = tmdb_season_key(MediaType.movie, tmdb_id)
+        key = tmdb_season_key(TMDBMediaType.movie, tmdb_id)
         season = self._stored_season(show, key)
         if self._season_is_outdated(season, show_key, force=force):
             data_timestamp = self.season_data_timestamp(key, show_key)
@@ -334,16 +336,17 @@ class UpsertMixin(UtilsMixin):
         force: bool = False,
     ) -> None:
         movie = self.movie_detail_file(tmdb_id).parsed()
-        key = tmdb_episode_key(MediaType.movie, tmdb_id)
+        key = tmdb_episode_key(TMDBMediaType.movie, tmdb_id)
         episode = self._stored_episode(season, key)
         if not self._episode_is_outdated(episode, season_key, show_key, force=force):
             return
         data_timestamp = self.episode_data_timestamp(key, season_key, show_key)
         new_episode = Episode(
             key=key,
+            watch_identifier=watch_identifier(self.plugin_name(), key),
             name=movie.title,
             description=movie.overview,
-            url=media_url(MediaType.movie, tmdb_id),
+            url=media_url(TMDBMediaType.movie, tmdb_id),
             image_url=backdrop_image_url(movie.backdrop_path),
             thumbnail_url=backdrop_thumbnail_url(movie.backdrop_path),
             duration=duration_seconds(movie.runtime),

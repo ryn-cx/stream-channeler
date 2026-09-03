@@ -4,8 +4,8 @@
 from __future__ import annotations
 
 from plugins.Amazon.base import AmazonBase
-from plugins.Amazon.initialize import AmazonInitializer
 from plugins.Amazon.importer import AmazonImporter
+from plugins.Amazon.initialize import AmazonInitializer
 from plugins.utils.abstract_plugin import AbstractPlugin
 
 

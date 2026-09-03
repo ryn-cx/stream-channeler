@@ -19,6 +19,7 @@ from nana.content.models import Episode as ContentEpisode
 from nana.content.models import Episode2 as SeasonEpisode
 from nana.exceptions import ContentNotFoundError
 
+from app.media.media_type import TMDBMediaType
 from app.utils import tz_datetime
 from plugins.Roku.constants import MOVIE_TYPE
 from plugins.utils.abstract_plugin import TMDBLookupInfo
@@ -41,7 +42,7 @@ def content_id(value: str | UUID) -> str:
 
 
 # TODO: Validate
-class BaseContentFile(EndpointFile[ContentModel], ABC):
+class _BaseContentFile(EndpointFile[ContentModel], ABC):
     """What every file read off the content endpoint has in common."""
 
     # TODO: Validate
@@ -51,7 +52,7 @@ class BaseContentFile(EndpointFile[ContentModel], ABC):
 
 
 # TODO: Validate
-class ContentFile(BaseContentFile):
+class _ContentFile(_BaseContentFile):
     """Content file."""
 
     # TODO: Validate
@@ -68,18 +69,18 @@ class ContentFile(BaseContentFile):
         return content_type == MOVIE_TYPE
 
     # TODO: Validate
-    def get_tmdb_lookup_info(self) -> TMDBLookupInfo:
+    def tmdb_lookup_info(self) -> TMDBLookupInfo:
         self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         content = self.parsed()
         return TMDBLookupInfo(
             title=content.title,
-            media_type="Movie" if content.type == MOVIE_TYPE else "TV Show",
+            media_type=TMDBMediaType.movie if content.type == MOVIE_TYPE else TMDBMediaType.tv,
             year=content.release_year,
         )
 
 
 # TODO: Validate
-class SeasonEpisodesFile(BaseContentFile):
+class _SeasonEpisodesFile(_BaseContentFile):
     """Season episodes file."""
 
 
@@ -88,14 +89,14 @@ class FileMixin(BasePlugin):
     """The files a title is read out of."""
 
     # TODO: Validate
-    def content_file(self, content_key: str) -> ContentFile:
+    def content_file(self, content_key: str) -> _ContentFile:
         """Return ContentFile file."""
-        return self._file(ContentFile, content_key)
+        return self._file(_ContentFile, content_key)
 
     # TODO: Validate
-    def season_episodes_file(self, episode_key: str) -> SeasonEpisodesFile:
+    def season_episodes_file(self, episode_key: str) -> _SeasonEpisodesFile:
         """Return SeasonEpisodesFile file."""
-        return self._file(SeasonEpisodesFile, episode_key)
+        return self._file(_SeasonEpisodesFile, episode_key)
 
     # TODO: Validate
     def _content(self, content_key: str) -> ContentModel:
@@ -107,8 +108,8 @@ class FileMixin(BasePlugin):
 
     # TODO: Validate
     @override
-    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
-        return self.content_file(show_key).get_tmdb_lookup_info()
+    def tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
+        return self.content_file(show_key).tmdb_lookup_info()
 
     # TODO: Validate
     def _show_episodes(self, show_key: str) -> list[ContentEpisode]:

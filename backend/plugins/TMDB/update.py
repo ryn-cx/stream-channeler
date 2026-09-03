@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from app.canonical_media.keys import tmdb_season_key
-from app.media.media_type import MediaType
+from app.media.media_type import TMDBMediaType
 from app.utils import tz_datetime
 from plugins.TMDB.episode_groups import show_chosen_group_id
 from plugins.TMDB.keys import get_media_type_and_tmdb_id
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
     from app.seasons.models import Season
     from app.shows.models import Show
-    from plugins.TMDB.files import ShowChanges
+    from plugins.TMDB.files import _ShowChanges
 
 
 # TODO: Validate
@@ -30,7 +30,7 @@ class UpdateMixin(ListedSourcesMixin):
     @override
     def update_show(self, show: Show, *, force: bool = False) -> None:
         media_type, _ = get_media_type_and_tmdb_id(show.key)
-        if media_type == MediaType.movie:
+        if media_type == TMDBMediaType.movie:
             # For movies it is more efficient to update it directly since it only has 2
             # files that are listed on the changes endpoint (watch provider changes are
             # not listed on the changes endpoint).
@@ -65,7 +65,7 @@ class UpdateMixin(ListedSourcesMixin):
             self._download_outdated_files(self._season_files(key, show.key))
 
     # TODO: Validate
-    def _import_show_changes(self, show_key: str, changes_file: ShowChanges) -> None:
+    def _import_show_changes(self, show_key: str, changes_file: _ShowChanges) -> None:
         """Import show changes by updating files that are no longer up to date."""
         _, tmdb_id = get_media_type_and_tmdb_id(show_key)
         translations_files = self.stored_episode_translations_files(tmdb_id)
@@ -101,7 +101,7 @@ class UpdateMixin(ListedSourcesMixin):
             if show_chosen_group_id(self.session, self.source, show_key) is not None
             else getattr(changed, "season_id", None)
         )
-        key = None if named is None else tmdb_season_key(MediaType.tv, named)
+        key = None if named is None else tmdb_season_key(TMDBMediaType.tv, named)
         changed_keys: list[str]
         if key is None:
             changed_keys = stored_keys

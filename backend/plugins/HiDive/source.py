@@ -12,9 +12,9 @@ from loguru import logger
 
 from app.channels.models import Channel
 from app.channels.service.import_queue import add_urls_to_channel_import_queue
-from app.media.media_type import MediaType
+from app.media.media_type import TMDBMediaType
 from app.sources.models import Source
-from plugins.HiDive.files import FileMixin, Schedule, schedule_group_list
+from plugins.HiDive.files import FileMixin, _Schedule, schedule_group_list
 from plugins.HiDive.utils import UtilsMixin
 from plugins.utils.base_plugin_v2.files import COMPLETED_STATUS
 
@@ -68,7 +68,7 @@ class SourceMixin(UtilsMixin, FileMixin):
 
     # TODO: Validate
     def _process_new_schedule_files(self, source: Source) -> None:
-        for schedule_file in self.get_incomplete_files(Schedule, self.schedule_file):
+        for schedule_file in self.get_incomplete_files(_Schedule, self.schedule_file):
             # Queueing the titles a file found commits, which lets go of every
             # show read for it, and a show nothing holds is not in memory to be
             # matched. Read back per file rather than once, so that a file after
@@ -109,7 +109,7 @@ class SourceMixin(UtilsMixin, FileMixin):
         """
         new_show_urls: list[str] = []
         for show_name in dict.fromkeys(show_names):
-            if show_url := self.search_for_url([show_name], MediaType.tv):
+            if show_url := self.search_for_url([show_name], TMDBMediaType.tv):
                 logger.info("Queueing new title: {}", show_name)
                 new_show_urls.append(show_url)
             else:
@@ -139,7 +139,7 @@ class SourceMixin(UtilsMixin, FileMixin):
     @override
     def upsert_source(self, source_key: str) -> Source:
         if not (latest_schedule_file := self.get_latest_schedule_file()):
-            latest_schedule_file = self._initial_file(Schedule)
+            latest_schedule_file = self._initial_file(_Schedule)
             latest_schedule_file.download_if_outdated()
         data_timestamp = latest_schedule_file.data_timestamp
 

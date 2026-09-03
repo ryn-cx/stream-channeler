@@ -4,8 +4,8 @@
 from __future__ import annotations
 
 from plugins.ParamountPlus.base import ParamountPlusBase
-from plugins.ParamountPlus.initialize import ParamountPlusInitializer
 from plugins.ParamountPlus.importer import ParamountPlusImporter
+from plugins.ParamountPlus.initialize import ParamountPlusInitializer
 from plugins.utils.abstract_plugin import AbstractPlugin
 
 

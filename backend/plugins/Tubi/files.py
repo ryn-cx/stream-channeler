@@ -13,6 +13,7 @@ from plugi.content.models import Child1 as EpisodeChild
 from plugi.content.models import ContentModel
 from plugi.exceptions import ContentNotFoundError
 
+from app.media.media_type import TMDBMediaType
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import TMDBLookupInfo
 from plugins.utils.base_plugin_v2.base import BasePlugin
@@ -28,7 +29,7 @@ def plugi() -> Plugi:
 
 
 # TODO: Validate
-class ContentFile(EndpointFile[ContentModel]):
+class _ContentFile(EndpointFile[ContentModel]):
     """Content file."""
 
     # TODO: Validate
@@ -53,12 +54,12 @@ class ContentFile(EndpointFile[ContentModel]):
         return self.parsed().type != "s"
 
     # TODO: Validate
-    def get_tmdb_lookup_info(self) -> TMDBLookupInfo:
+    def tmdb_lookup_info(self) -> TMDBLookupInfo:
         self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         content = self.parsed()
         return TMDBLookupInfo(
             title=content.title,
-            media_type="Movie" if self.is_movie() else "Series",
+            media_type=TMDBMediaType.movie if self.is_movie() else TMDBMediaType.tv,
             year=content.year,
         )
 
@@ -68,9 +69,9 @@ class FileMixin(BasePlugin):
     """The files a title is read out of."""
 
     # TODO: Validate
-    def content_file(self, content_id: str) -> ContentFile:
+    def content_file(self, content_id: str) -> _ContentFile:
         """Contains all of a Tubi title's data (title, seasons, episodes)."""
-        return self._file(ContentFile, content_id)
+        return self._file(_ContentFile, content_id)
 
     # TODO: Validate
     def _content(self, content_id: str) -> ContentModel:
@@ -82,8 +83,8 @@ class FileMixin(BasePlugin):
 
     # TODO: Validate
     @override
-    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
-        return self.content_file(show_key).get_tmdb_lookup_info()
+    def tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
+        return self.content_file(show_key).tmdb_lookup_info()
 
     # TODO: Validate
     def _seasons(self, show_key: str) -> list[SeasonChild]:

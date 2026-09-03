@@ -81,7 +81,7 @@ class BaseFile[T](ABC):
         record = self._existing_database_record
         if record is None:
             msg = (
-                f"{self.__class__.__name__}/{self.file_key()} has not been downloaded."
+                f"{self.class_key()}/{self.file_key()} has not been downloaded."
             )
             raise ValueError(msg)
         return record
@@ -124,10 +124,17 @@ class BaseFile[T](ABC):
         return hash(self.file_key())
 
     # TODO: Validate
+    @classmethod
+    def class_key(cls) -> str:
+        """Return the class name the file's key is built from."""
+        return cls.__name__.removeprefix("_")
+
+    # TODO: Validate
     def file_key(self) -> str:
         """Return the value for File.key."""
         return (
-            f"{type(self).__name__}/{self.unique_identifier}{self._identifier_suffix()}"
+            f"{type(self).class_key()}/{self.unique_identifier}"
+            f"{self._identifier_suffix()}"
         )
 
     # TODO: Validate
@@ -138,7 +145,7 @@ class BaseFile[T](ABC):
     @classmethod
     def file_key_to_unique_identifier(cls, file_key: str) -> str:
         """Convert File.key to the value that uniquely identifies this file."""
-        return file_key.removeprefix(f"{cls.__name__}/").removesuffix(
+        return file_key.removeprefix(f"{cls.class_key()}/").removesuffix(
             cls._identifier_suffix(),
         )
 
@@ -155,7 +162,7 @@ class BaseFile[T](ABC):
     @contextmanager
     def _log_download(self, identifier: str) -> Generator[None]:
         """Context manager that logs downloads."""
-        class_name = type(self).__name__
+        class_name = type(self).class_key()
         plugin_key = self.__plugin.key
         action = "new" if self._existing_database_record else "initial"
         # This log is useful when a download fails.

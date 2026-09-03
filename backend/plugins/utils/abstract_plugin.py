@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 from app.channels.models import ChannelQueue
 from app.episodes.models import Episode
 from app.files.models import File
-from app.media.media_type import MediaType
+from app.media.media_type import TMDBMediaType
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -370,7 +370,7 @@ class AbstractPlugin(ABC):
     def search_for_url(
         self,
         names: list[str],
-        media_type: MediaType,
+        media_type: TMDBMediaType,
         year: int | None = None,
     ) -> str | None:
         """Return the address of the one title `names` name here, or None.
@@ -401,7 +401,7 @@ class AbstractPlugin(ABC):
         self,
         names: list[str],
         canonical_show: Show,
-        media_type: MediaType,
+        media_type: TMDBMediaType,
         year: int | None = None,
     ) -> list[URLImportResult]:
         """Import the title `names` name here, and link it to `canonical_show`.
@@ -463,14 +463,14 @@ class AbstractPlugin(ABC):
         raise NotImplementedError(msg)
 
     # TODO: Validate
-    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
+    def tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
         """Return the name, media type and year the plugin files a show under.
 
         Args:
             show_key: The plugin's own key for the show.
 
         """
-        msg = "get_tmdb_lookup_info is not supported by this plugin."
+        msg = "tmdb_lookup_info is not supported by this plugin."
         raise NotImplementedError(msg)
 
     # TODO: Validate
@@ -626,7 +626,7 @@ class TMDBLookupInfo(BaseModel):
     """How a plugin names one show, for matching it against another service."""
 
     title: str
-    media_type: str
+    media_type: TMDBMediaType | None = None
     year: int | None = None
 
 

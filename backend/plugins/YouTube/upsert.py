@@ -5,6 +5,7 @@ from typing import override
 from not_yt_dlapi.channels.models import Item as ChannelItem
 from not_yt_dlapi.playlists.models import Item as PlaylistsItem
 
+from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -12,7 +13,7 @@ from app.shows.service import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.YouTube.files import (
-    MusicPlaylistFile,
+    _MusicPlaylistFile,
     get_first_item,
     is_an_album,
     is_show_key,
@@ -405,7 +406,7 @@ class UpsertMixin(UtilsMixin):
 
     # TODO: Validate
     @staticmethod
-    def _music_name(music_playlist: MusicPlaylistFile) -> str | None:
+    def _music_name(music_playlist: _MusicPlaylistFile) -> str | None:
         title = music_playlist.title()
         artists = music_playlist.artists()
         if not title or not artists:
@@ -589,6 +590,7 @@ class UpsertMixin(UtilsMixin):
 
         new_episode = Episode(
             key=video_item.id,
+            watch_identifier=watch_identifier(self.plugin_name(), video_item.id),
             name=video_snippet.title,
             url=self.build_url(f"watch?v={video_item.id}"),
             # A YouTube video with a null character in the description caused

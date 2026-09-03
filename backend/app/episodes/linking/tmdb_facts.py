@@ -14,7 +14,7 @@ from app.canonical_media.keys import (
     tmdb_media_type_of,
 )
 from app.episodes.models import Episode
-from app.media.media_type import MediaType
+from app.media.media_type import TMDBMediaType
 from app.shows.models import Show
 
 if TYPE_CHECKING:
@@ -117,7 +117,7 @@ class TmdbEpisodeFacts:
         for canonical_show in self.canonical_shows:
             tmdb_show_id = tmdb_id_of(canonical_show.key, SHOW_LEVEL)
             media_type = tmdb_media_type_of(canonical_show.key, SHOW_LEVEL)
-            if tmdb_show_id is None or media_type is not MediaType.tv:
+            if tmdb_show_id is None or media_type is not TMDBMediaType.tv:
                 continue
             if tmdb_show_id not in cache:
                 cache[tmdb_show_id] = tmdb.alternate_episode_numbers(tmdb_show_id)
@@ -152,7 +152,7 @@ class TmdbEpisodeFacts:
 
         native = parse_episode_extra(tmdb_episode.extra)
         season = tmdb_episode.season
-        if tmdb_media_type_of(season.show.key, SHOW_LEVEL) is not MediaType.tv:
+        if tmdb_media_type_of(season.show.key, SHOW_LEVEL) is not TMDBMediaType.tv:
             return None
         tmdb_show_id = tmdb_id_of(season.show.key, SHOW_LEVEL)
         season_number = (
@@ -173,7 +173,7 @@ class TmdbEpisodeFacts:
     @staticmethod
     def _movie_id(tmdb_episode: Episode) -> int | None:
         show = tmdb_episode.season.show
-        if tmdb_media_type_of(show.key, SHOW_LEVEL) is not MediaType.movie:
+        if tmdb_media_type_of(show.key, SHOW_LEVEL) is not TMDBMediaType.movie:
             return None
         return tmdb_id_of(show.key, SHOW_LEVEL)
 

@@ -12,9 +12,9 @@ from app.channels.models import ChannelQueue, URLStatus
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.YouTube.base import YouTubeBase
+from plugins.YouTube.importer import YouTubeImporter
 from plugins.YouTube.initialize import YouTubeInitializer
 from plugins.YouTube.utils import is_quota_error
-from plugins.YouTube.importer import YouTubeImporter
 
 
 # TODO: Validate

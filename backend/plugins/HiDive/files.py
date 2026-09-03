@@ -26,12 +26,11 @@ from diving_board.vod import Vod as VodEndpoint
 from diving_board.vod import models as vod_models
 
 from app.files.models import File
+from app.media.media_type import TMDBMediaType
 from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.HiDive.constants import (
-    MOVIE_MEDIA_TYPE,
     RELEASE_DATE_PREFIX,
-    SERIES_MEDIA_TYPE,
 )
 from plugins.utils.abstract_plugin import TMDBLookupInfo
 from plugins.utils.base_plugin_v2.base import BasePlugin
@@ -117,7 +116,7 @@ def season_bucket(season_data: season_models.SeasonModel) -> season_models.Eleme
 
 
 # TODO: Validate
-class Season(EndpointFile[season_models.SeasonModel]):
+class _Season(EndpointFile[season_models.SeasonModel]):
     """Season file."""
 
     # TODO: Validate
@@ -133,7 +132,7 @@ class Season(EndpointFile[season_models.SeasonModel]):
 
 
 # TODO: Validate
-class Vod(EndpointFile[vod_models.VodModel]):
+class _Vod(EndpointFile[vod_models.VodModel]):
     """Vod file."""
 
     # TODO: Validate
@@ -149,7 +148,7 @@ class Vod(EndpointFile[vod_models.VodModel]):
 
 
 # TODO: Validate
-class Series(EndpointFile[series_models.SeriesModel]):
+class _Series(EndpointFile[series_models.SeriesModel]):
     """Series file."""
 
     # TODO: Validate
@@ -165,7 +164,7 @@ class Series(EndpointFile[series_models.SeriesModel]):
 
 
 # TODO: Validate
-class Schedule(PagedEndpointFile[schedule_models.ScheduleModel]):
+class _Schedule(PagedEndpointFile[schedule_models.ScheduleModel]):
     """Schedule file."""
 
     # TODO: Validate
@@ -188,7 +187,7 @@ class Schedule(PagedEndpointFile[schedule_models.ScheduleModel]):
 
 
 # TODO: Validate
-class Search(EndpointFile[search_models.SearchModel]):
+class _Search(EndpointFile[search_models.SearchModel]):
     """Search file."""
 
     # TODO: Validate
@@ -276,7 +275,7 @@ class FileMixin(BaseMediaTypeMixin, BasePlugin):
 
     # TODO: Validate
     @override
-    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
+    def tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
         if self._is_movie():
             return self._get_movie_tmdb_lookup_info(show_key)
         return self._get_series_tmdb_lookup_info(show_key)
@@ -287,7 +286,7 @@ class FileMixin(BaseMediaTypeMixin, BasePlugin):
         series_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         return TMDBLookupInfo(
             title=series_file.parsed().metadata.series.title,
-            media_type=SERIES_MEDIA_TYPE,
+            media_type=TMDBMediaType.tv,
         )
 
     # TODO: Validate
@@ -298,7 +297,7 @@ class FileMixin(BaseMediaTypeMixin, BasePlugin):
         release_date = self._release_date(hero)
         return TMDBLookupInfo(
             title=self._movie_title(hero),
-            media_type=MOVIE_MEDIA_TYPE,
+            media_type=TMDBMediaType.movie,
             year=release_date.year if release_date else None,
         )
 
@@ -311,47 +310,47 @@ class FileMixin(BaseMediaTypeMixin, BasePlugin):
         return self._media_type == "Movie"
 
     # TODO: Validate
-    def season_file(self, season_key: str | int) -> Season:
+    def season_file(self, season_key: str | int) -> _Season:
         """Return a cached Season for the given season key."""
         key = str(season_key)
-        return self._file(Season, key)
+        return self._file(_Season, key)
 
     # TODO: Validate
-    def vod_file(self, vod_key: str | int) -> Vod:
+    def vod_file(self, vod_key: str | int) -> _Vod:
         """Return a cached Vod for the given vod key."""
         key = str(vod_key)
-        return self._file(Vod, key)
+        return self._file(_Vod, key)
 
     # TODO: Validate
-    def search_file(self, query: str) -> Search:
+    def search_file(self, query: str) -> _Search:
         """Return a cached Search for the given query."""
-        return self._file(Search, query)
+        return self._file(_Search, query)
 
     # TODO: Validate
-    def series_file(self, series_key: str | int) -> Series:
+    def series_file(self, series_key: str | int) -> _Series:
         """Return a cached Series for the given series key."""
         key = str(series_key)
-        return self._file(Series, key)
+        return self._file(_Series, key)
 
     # TODO: Validate
-    def schedule_file(self, input_date: datetime | File) -> Schedule:
+    def schedule_file(self, input_date: datetime | File) -> _Schedule:
         """Return a cached Schedule for the given datetime or existing File."""
         if isinstance(input_date, File):
-            identifier = Schedule.file_key_to_unique_identifier(input_date.key)
+            identifier = _Schedule.file_key_to_unique_identifier(input_date.key)
         else:
             identifier = input_date.isoformat()
-        return self._file(Schedule, identifier)
+        return self._file(_Schedule, identifier)
 
     # TODO: Validate
-    def get_latest_schedule_file(self) -> Schedule | None:
+    def get_latest_schedule_file(self) -> _Schedule | None:
         """Return the latest schedule file, or None if none exists."""
-        if file := self.preload_latest_file(Schedule):
+        if file := self.preload_latest_file(_Schedule):
             return self.schedule_file(file)
         return None
 
     # TODO: Validate
     @override
-    def _source_files(self) -> Sequence[Schedule]:
+    def _source_files(self) -> Sequence[_Schedule]:
         if file := self.get_latest_schedule_file():
             return [file]
         return []

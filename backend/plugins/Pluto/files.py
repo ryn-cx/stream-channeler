@@ -38,7 +38,7 @@ class ItemNotFoundError(NotAPlanetError):
 
 
 # TODO: Validate
-class ItemsFile(EndpointFile[ItemsModel]):
+class _ItemsFile(EndpointFile[ItemsModel]):
     """Items file."""
 
     # TODO: Validate
@@ -67,7 +67,7 @@ class ItemsFile(EndpointFile[ItemsModel]):
 
 
 # TODO: Validate
-class SeasonsFile(EndpointFile[SeasonsModel]):
+class _SeasonsFile(EndpointFile[SeasonsModel]):
     """Seasons file."""
 
     # TODO: Validate
@@ -100,14 +100,14 @@ class FileMixin(BaseMediaTypeMixin, BasePlugin):
         self._media_type = "movie" if show.media_type == "Movie" else "series"
 
     # TODO: Validate
-    def items_file(self, item_id: str) -> ItemsFile:
+    def items_file(self, item_id: str) -> _ItemsFile:
         """Contains the metadata of a single on-demand movie."""
-        return self._file(ItemsFile, item_id)
+        return self._file(_ItemsFile, item_id)
 
     # TODO: Validate
-    def seasons_file(self, series_id: str) -> SeasonsFile:
+    def seasons_file(self, series_id: str) -> _SeasonsFile:
         """Contains a series' metadata, its seasons, and all of their episodes."""
-        return self._file(SeasonsFile, series_id)
+        return self._file(_SeasonsFile, series_id)
 
     # TODO: Validate
     def _item(self, show_key: str) -> ItemsModelItem:

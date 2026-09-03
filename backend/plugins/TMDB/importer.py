@@ -15,7 +15,7 @@ from typing import Any, override
 from app.canonical_media.keys import (
     tmdb_show_key,
 )
-from app.media.media_type import MediaType
+from app.media.media_type import TMDBMediaType
 from app.shows.models import Show
 from plugins.TMDB.base import TMDBBase
 from plugins.utils.abstract_plugin import (
@@ -31,14 +31,14 @@ from plugins.utils.base_plugin_v2.importer import BaseImporter
 
 
 # TODO: Validate
-def _title_url_regex(media_type: MediaType) -> str:
+def _title_url_regex(media_type: TMDBMediaType) -> str:
     return rf"\/{media_type}\/(?P<{media_type}_tmdb_id>\d+)"
 
 
 # TODO: Validate
 class TMDBImporter(BaseImporter, TMDBBase):
-    _MOVIE_URL_REGEX = _title_url_regex(MediaType.movie)
-    _TV_URL_REGEX = _title_url_regex(MediaType.tv)
+    _MOVIE_URL_REGEX = _title_url_regex(TMDBMediaType.movie)
+    _TV_URL_REGEX = _title_url_regex(TMDBMediaType.tv)
 
     # TODO: Validate
     @classmethod
@@ -51,8 +51,8 @@ class TMDBImporter(BaseImporter, TMDBBase):
     def _parse_url(self, url: str) -> str:
         domain_regex = self._domain_regex()
         for media_type, url_regex in (
-            (MediaType.movie, self._MOVIE_URL_REGEX),
-            (MediaType.tv, self._TV_URL_REGEX),
+            (TMDBMediaType.movie, self._MOVIE_URL_REGEX),
+            (TMDBMediaType.tv, self._TV_URL_REGEX),
         ):
             if match := re.match(domain_regex + url_regex, url):
                 tmdb_id = int(match.group(f"{media_type}_tmdb_id"))
@@ -61,7 +61,7 @@ class TMDBImporter(BaseImporter, TMDBBase):
                     url,
                 )
                 detail_file: BaseFile[Any]
-                if media_type == MediaType.movie:
+                if media_type == TMDBMediaType.movie:
                     detail_file = self.movie_detail_file(tmdb_id)
                 else:
                     detail_file = self.show_detail_file(tmdb_id)

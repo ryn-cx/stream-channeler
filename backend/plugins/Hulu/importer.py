@@ -4,13 +4,13 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, override
 
-from plugins.Hulu.base import HuluBase
 from plugins.Hulu.constants import (
     MOVIE_URL_REGEX,
     SERIES_URL_REGEX,
     VIDEO_URL_REGEX,
 )
-from plugins.Hulu.media import HuluMovie, HuluSeries
+from plugins.Hulu.media import HuluMovie, HuluSeries, MediaMixin
+from plugins.Hulu.utils import series_id
 from plugins.utils.abstract_plugin import InvalidURLError, URLImportResult
 from plugins.utils.base_plugin_v2.importer import BaseImporter
 
@@ -40,10 +40,10 @@ class HuluSeriesImporter(BaseImporter, HuluSeries):
 
         if match := re.match(domain_regex + VIDEO_URL_REGEX, url):
             episode_key = match.group("episode_id")
-            episode_hub = self.episode_hub_file(episode_key)
+            episode_hub = self.episode_file(episode_key)
             self.raise_if_invalid_file(episode_hub, url)
             self._episode_key = episode_key
-            return episode_hub.series_id()
+            return series_id(episode_hub.parsed())
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
@@ -92,7 +92,7 @@ class HuluMovieImporter(BaseImporter, HuluMovie):
 
 
 # TODO: Validate
-class HuluImporter(BaseImporter, HuluBase):
+class HuluImporter(BaseImporter, MediaMixin):
     # TODO: Validate
     @classmethod
     @override
@@ -118,7 +118,7 @@ class HuluImporter(BaseImporter, HuluBase):
             return HuluMovieImporter(self)
 
         if match := re.match(domain_regex + VIDEO_URL_REGEX, url):
-            episode_hub = self.episode_hub_file(match.group("episode_id"))
+            episode_hub = self.episode_file(match.group("episode_id"))
             episode_hub.download_if_outdated()
             if episode_hub.database_record.content:
                 return HuluSeriesImporter(self)

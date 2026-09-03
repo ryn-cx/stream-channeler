@@ -6,7 +6,7 @@ from typing import ClassVar, override
 from tminidb.search.multi.models import Result as MultiResult
 from tminidb.search.multi.models import SearchMultiModel
 
-from app.media.media_type import MediaType
+from app.media.media_type import TMDBMediaType
 from plugins.TMDB.lookup import LookupMixin
 from plugins.TMDB.media_info import media_identifier
 from plugins.TMDB.urls import media_url
@@ -97,13 +97,13 @@ class SearchMixin(LookupMixin):
         # A movie carries its title and release date, a show its name and first
         # air date, and a multi search returns the two mixed together.
         title: str | None
-        media_type: MediaType
+        media_type: TMDBMediaType
         if result.media_type == "movie":
-            media_type = MediaType.movie
+            media_type = TMDBMediaType.movie
             title = result.title or result.original_title
             year = release_year(result.release_date)
         else:
-            media_type = MediaType.tv
+            media_type = TMDBMediaType.tv
             title = result.name or result.original_name
             year = release_year(result.first_air_date)
 

@@ -162,7 +162,7 @@ class BasePreloadMixin(ABC):
             select(File)
             .where(
                 File.plugin == self.plugin,
-                col(File.key).startswith(f"{file_class.__name__}/"),
+                col(File.key).startswith(f"{file_class.class_key()}/"),
                 col(File.data_timestamp) > data_timestamp,
             )
             .order_by(col(File.data_timestamp).asc())
@@ -181,7 +181,7 @@ class BasePreloadMixin(ABC):
             select(File)
             .where(
                 File.plugin == self.plugin,
-                col(File.key).startswith(f"{file_class.__name__}/"),
+                col(File.key).startswith(f"{file_class.class_key()}/"),
             )
             .order_by(col(File.data_timestamp).desc())
         )
@@ -201,7 +201,7 @@ class BasePreloadMixin(ABC):
             select(File)
             .where(
                 File.plugin == self.plugin,
-                col(File.key).startswith(f"{file_class.__name__}/{key_prefix}"),
+                col(File.key).startswith(f"{file_class.class_key()}/{key_prefix}"),
                 # is_distinct_from keeps the rows carrying no status at all,
                 # which are the ones never imported.
                 col(File.status).is_distinct_from(COMPLETED_STATUS),

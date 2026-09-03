@@ -4,8 +4,8 @@
 from __future__ import annotations
 
 from plugins.Pluto.base import PlutoBase
-from plugins.Pluto.initialize import PlutoInitializer
 from plugins.Pluto.importer import PlutoImporter
+from plugins.Pluto.initialize import PlutoInitializer
 from plugins.utils.abstract_plugin import AbstractPlugin
 
 

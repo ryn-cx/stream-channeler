@@ -6,6 +6,7 @@ from __future__ import annotations
 import re
 from typing import override
 
+from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.seasons.models import Season as SeasonModel
 from app.shows.models import Show
@@ -198,6 +199,7 @@ class UpsertMixin(UtilsMixin, FileMixin):
             hero = vod_hero(self.vod_file(episode_key).parsed())
             new_episode = Episode(
                 key=episode_key,
+                watch_identifier=watch_identifier(self.plugin_name(), episode_key),
                 name=item.title,
                 episode_number=_episode_number(item.title),
                 url=self._episode_url(episode_key),
@@ -237,6 +239,7 @@ class UpsertMixin(UtilsMixin, FileMixin):
         hero = vod_hero(self.vod_file(episode_key).parsed())
         new_episode = Episode(
             key=episode_key,
+            watch_identifier=watch_identifier(self.plugin_name(), episode_key),
             name=self._movie_title(hero),
             description=self._movie_description(hero),
             url=self._episode_url(episode_key),

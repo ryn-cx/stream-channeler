@@ -27,6 +27,7 @@ from deforestation.search.models import SearchModel
 from pydantic import BaseModel
 from sqlmodel import Session
 
+from app.media.media_type import TMDBMediaType
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
 from plugins.Amazon.constants import (
@@ -192,7 +193,7 @@ def _episode_from_widget(episode: WidgetEpisode) -> AmazonEpisode:
 
 
 # TODO: Validate
-class ShareLinkRedirect(TextFile):
+class _ShareLinkRedirect(TextFile):
     """Where a share link points.
 
     Amazon writes a share link with an id of its own that none of Prime Video's
@@ -261,7 +262,7 @@ class ShareLinkRedirect(TextFile):
 
 
 # TODO: Validate
-class Detail(DownloadedFile[dict[str, Any]]):
+class _Detail(DownloadedFile[dict[str, Any]]):
     """A title's own page.
 
     A series has no page of its own on Prime Video: every page is one season of
@@ -459,7 +460,7 @@ class Detail(DownloadedFile[dict[str, Any]]):
         return str(self._episode_page_entries()[page_index]["token"])
 
     # TODO: Validate
-    def episode_pages(self) -> list[EpisodeList]:
+    def episode_pages(self) -> list[_EpisodeList]:
         """Return every page of the episode list that is not on this page already.
 
         A season's page carries the page of its episode list that it opens on,
@@ -468,7 +469,7 @@ class Detail(DownloadedFile[dict[str, Any]]):
         if not self.database_record.content:
             return []
         return [
-            EpisodeList(self.session, self.plugin, self.title_key, index)
+            _EpisodeList(self.session, self.plugin, self.title_key, index)
             for index, page in enumerate(self._episode_page_entries())
             if not page["isSelected"]
         ]
@@ -505,7 +506,7 @@ class Detail(DownloadedFile[dict[str, Any]]):
             if entry["isSelected"]:
                 episodes += self._page_episodes()
             else:
-                page = EpisodeList(self.session, self.plugin, self.title_key, index)
+                page = _EpisodeList(self.session, self.plugin, self.title_key, index)
                 episodes += page.episodes()
         return episodes
 
@@ -622,11 +623,13 @@ class Detail(DownloadedFile[dict[str, Any]]):
         return min(seasons, key=lambda season: season.season_number).key
 
     # TODO: Validate
-    def get_tmdb_lookup_info(self) -> TMDBLookupInfo:
+    def tmdb_lookup_info(self) -> TMDBLookupInfo:
         self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         return TMDBLookupInfo(
             title=self.series_title(),
-            media_type=self.entity_type(),
+            media_type={"Movie": TMDBMediaType.movie, "TV Show": TMDBMediaType.tv}.get(
+                self.entity_type(),
+            ),
             year=self.release_year(),
         )
 
@@ -645,7 +648,7 @@ class Detail(DownloadedFile[dict[str, Any]]):
 
 
 # TODO: Validate
-class EpisodeList(EndpointFile[DetailWidgetsModel]):
+class _EpisodeList(EndpointFile[DetailWidgetsModel]):
     """One page of a season's episode list.
 
     The page a season opens on only carries the episodes it shows, so every page
@@ -675,7 +678,7 @@ class EpisodeList(EndpointFile[DetailWidgetsModel]):
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        detail = Detail(self.session, self.plugin, self.season_key)
+        detail = _Detail(self.session, self.plugin, self.season_key)
         token = detail.episode_page_token(self.page_index)
         return self._endpoint().download(self.season_key, token)
 
@@ -691,7 +694,7 @@ class EpisodeList(EndpointFile[DetailWidgetsModel]):
 
 
 # TODO: Validate
-class Search(EndpointFile[SearchModel]):
+class _Search(EndpointFile[SearchModel]):
     """Everything one search query matched.
 
     Prime Video answers a search with every match at once, so there is a single
@@ -739,19 +742,19 @@ class FileMixin(BasePlugin):
     """The files a title is read out of."""
 
     # TODO: Validate
-    def search_file(self, query: str) -> Search:
+    def search_file(self, query: str) -> _Search:
         """Return data for search results."""
-        return self._file(Search, query)
+        return self._file(_Search, query)
 
     # TODO: Validate
-    def detail_file(self, title_key: str) -> Detail:
+    def detail_file(self, title_key: str) -> _Detail:
         """Return data for a title."""
-        return self._file(Detail, title_key)
+        return self._file(_Detail, title_key)
 
     # TODO: Validate
-    def share_link_file(self, share_key: str) -> ShareLinkRedirect:
+    def share_link_file(self, share_key: str) -> _ShareLinkRedirect:
         """Return where the share link written with `share_key` points."""
-        return self._file(ShareLinkRedirect, share_key)
+        return self._file(_ShareLinkRedirect, share_key)
 
     # TODO: Validate
     def _is_movie(self, title_key: str) -> bool:
@@ -767,8 +770,8 @@ class FileMixin(BasePlugin):
 
     # TODO: Validate
     @override
-    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
-        return self.detail_file(show_key).get_tmdb_lookup_info()
+    def tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
+        return self.detail_file(show_key).tmdb_lookup_info()
 
     # TODO: Validate
     def _season_available(self, season_key: str) -> bool:

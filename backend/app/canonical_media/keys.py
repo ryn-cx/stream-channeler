@@ -23,7 +23,7 @@ the key is the single thing a row's identity is stored in.
 
 from sqlalchemy import ColumnElement, func
 
-from app.media.media_type import MediaType
+from app.media.media_type import TMDBMediaType
 
 TMDB_KEY_PREFIX = "TMDB"
 TMDB_KEY_LIKE = f"{TMDB_KEY_PREFIX} %"
@@ -36,12 +36,12 @@ EPISODE_LEVEL = "episode"
 # half of the catalogue. A film's number is a film's at every level, since a film
 # is one record however many rows stand for it.
 _MOVIE_WORD = "movie"
-_KEY_WORDS: dict[str, dict[MediaType, str]] = {
-    SHOW_LEVEL: {MediaType.movie: _MOVIE_WORD, MediaType.tv: "tv"},
-    SEASON_LEVEL: {MediaType.movie: _MOVIE_WORD, MediaType.tv: SEASON_LEVEL},
-    EPISODE_LEVEL: {MediaType.movie: _MOVIE_WORD, MediaType.tv: EPISODE_LEVEL},
+_KEY_WORDS: dict[str, dict[TMDBMediaType, str]] = {
+    SHOW_LEVEL: {TMDBMediaType.movie: _MOVIE_WORD, TMDBMediaType.tv: "tv"},
+    SEASON_LEVEL: {TMDBMediaType.movie: _MOVIE_WORD, TMDBMediaType.tv: SEASON_LEVEL},
+    EPISODE_LEVEL: {TMDBMediaType.movie: _MOVIE_WORD, TMDBMediaType.tv: EPISODE_LEVEL},
 }
-_MEDIA_TYPES: dict[str, dict[str, MediaType]] = {
+_MEDIA_TYPES: dict[str, dict[str, TMDBMediaType]] = {
     level: {word: media_type for media_type, word in words.items()}
     for level, words in _KEY_WORDS.items()
 }
@@ -52,24 +52,24 @@ _TMDB_KEY_PARTS = 3
 
 
 # TODO: Validate
-def _tmdb_key(media_type: MediaType, level: str, tmdb_id: int) -> str:
+def _tmdb_key(media_type: TMDBMediaType, level: str, tmdb_id: int) -> str:
     return f"{TMDB_KEY_PREFIX} {_KEY_WORDS[level][media_type]} {tmdb_id}"
 
 
 # TODO: Validate
-def tmdb_show_key(media_type: MediaType, tmdb_id: int) -> str:
+def tmdb_show_key(media_type: TMDBMediaType, tmdb_id: int) -> str:
     """Return the key naming the canonical show TMDB holds under `tmdb_id`."""
     return _tmdb_key(media_type, SHOW_LEVEL, tmdb_id)
 
 
 # TODO: Validate
-def tmdb_season_key(media_type: MediaType, tmdb_id: int) -> str:
+def tmdb_season_key(media_type: TMDBMediaType, tmdb_id: int) -> str:
     """Return the key naming the season TMDB holds under `tmdb_id`."""
     return _tmdb_key(media_type, SEASON_LEVEL, tmdb_id)
 
 
 # TODO: Validate
-def tmdb_episode_key(media_type: MediaType, tmdb_id: int) -> str:
+def tmdb_episode_key(media_type: TMDBMediaType, tmdb_id: int) -> str:
     """Return the key naming the episode TMDB holds under `tmdb_id`."""
     return _tmdb_key(media_type, EPISODE_LEVEL, tmdb_id)
 
@@ -87,7 +87,7 @@ def watch_identifier(plugin_key: str, key: str) -> str:
 
 
 # TODO: Validate
-def parse_tmdb_key(key: str | None, level: str) -> tuple[MediaType, int] | None:
+def parse_tmdb_key(key: str | None, level: str) -> tuple[TMDBMediaType, int] | None:
     """Return the half of the catalogue and the id `key` names, at `level`.
 
     The word says which run of numbers the id came from, and at a given level
@@ -121,7 +121,7 @@ def tmdb_id_of(key: str | None, level: str) -> int | None:
 
 
 # TODO: Validate
-def tmdb_media_type_of(key: str | None, level: str) -> MediaType | None:
+def tmdb_media_type_of(key: str | None, level: str) -> TMDBMediaType | None:
     """Return the half of the TMDB catalogue `key` names at `level`."""
     parsed = parse_tmdb_key(key, level)
     return parsed[0] if parsed else None

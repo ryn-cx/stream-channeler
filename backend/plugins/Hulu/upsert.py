@@ -3,9 +3,9 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, override
 
+from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -14,15 +14,14 @@ from app.sources.models import Source
 from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.Hulu.files import FileMixin, MovieFileMixin, SeriesFileMixin
-from plugins.Hulu.utils import HuluMediaType, UtilsMixin
+from plugins.Hulu.utils import HuluMediaType, season_name
 
 if TYPE_CHECKING:
     from wholoo.movies.models import MoviesModel
 
 
 # TODO: Validate
-class MediaUpsertMixin(UtilsMixin, FileMixin, ABC):
-    # TODO: Validate
+class SeriesUpsertMixin(SeriesFileMixin):
     @override
     def upsert_show(
         self,
@@ -32,54 +31,39 @@ class MediaUpsertMixin(UtilsMixin, FileMixin, ABC):
         *,
         force: bool = False,
     ) -> Show:
-        show = self._upsert_show_record(source, show_key, force=force)
-        self._soft_delete_missing(show_key)
-        add_canonical_show_and_link_episodes(self.session, show, canonical_show)
-        return show
-
-    # TODO: Validate
-    @abstractmethod
-    def _upsert_show_record(
-        self,
-        source: Source,
-        show_key: str,
-        *,
-        force: bool = False,
-    ) -> Show: ...
-
-
-# TODO: Validate
-class SeriesUpsertMixin(MediaUpsertMixin, SeriesFileMixin):
-    # TODO: Validate
-    @override
-    def _upsert_show_record(
-        self,
-        source: Source,
-        show_key: str,
-        *,
-        force: bool = False,
-    ) -> Show:
-        data_timestamp = self.show_data_timestamp(show_key)
-        show = Show.get_from_memory(self.session, source, show_key)
-        if self._show_is_outdated(show, force=force):
-            model = self._series_model(show_key)
-            entity = model.details.entity
+        existing_show = Show.get_from_memory(self.session, source, show_key)
+        if self._show_is_outdated(existing_show, force=force):
+            parsed_series = self.series_file(show_key).parsed()
+            entity = parsed_series.details.entity
             new_show = Show(
                 key=show_key,
-                name=model.name,
+                name=parsed_series.name,
                 description=entity.description,
                 media_type="TV Show",
                 url=self._show_url(show_key, HuluMediaType.SERIES),
-                image_url=self._image_url(model.artwork.program_tile.path),
-                thumbnail_url=self._thumbnail_url(model.artwork.program_tile.path),
-                data_timestamp=data_timestamp,
+                image_url=self._image_url(parsed_series.artwork.program_tile.path),
+                thumbnail_url=self._thumbnail_url(
+                    parsed_series.artwork.program_tile.path
+                ),
+                data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
             )
-            show = self._upsert_show_object(new_show, source, show, show_key)
+            existing_show = self._upsert_show_object(
+                new_show,
+                source,
+                existing_show,
+                show_key,
+            )
 
-        self._upsert_seasons(show, force=force)
+        self._upsert_seasons(existing_show, force=force)
+        self._soft_delete_missing(show_key)
+        add_canonical_show_and_link_episodes(
+            self.session,
+            existing_show,
+            canonical_show,
+        )
 
-        return show
+        return existing_show
 
     # TODO: Validate
     def _upsert_seasons(
@@ -94,7 +78,9 @@ class SeriesUpsertMixin(MediaUpsertMixin, SeriesFileMixin):
             if self._season_is_outdated(season, show.key, force=force):
                 new_season = Season(
                     key=season_key,
-                    name=self.season_file(show.key, season_number).season_name(),
+                    name=season_name(
+                        self.season_file(show.key, season_number).parsed(),
+                    ),
                     season_number=season_number,
                     sort_order=sort_order,
                     data_timestamp=self.season_data_timestamp(season_key, show.key),
@@ -113,7 +99,8 @@ class SeriesUpsertMixin(MediaUpsertMixin, SeriesFileMixin):
         *,
         force: bool = False,
     ) -> None:
-        for sort_order, item in enumerate(self._season_items(show_key, season_number)):
+        season_items = self.season_file(show_key, season_number).parsed().items
+        for sort_order, item in enumerate(season_items):
             start_date = item.bundle.availability.start_date
             if start_date > tz_datetime.now():
                 continue
@@ -131,6 +118,7 @@ class SeriesUpsertMixin(MediaUpsertMixin, SeriesFileMixin):
             hero_artwork = item.artwork.video_horizontal_hero
             new_episode = Episode(
                 key=episode_key,
+                watch_identifier=watch_identifier(self.plugin_name(), episode_key),
                 name=item.name,
                 episode_number=int(item.number),
                 url=self._episode_url(episode_key),
@@ -153,13 +141,14 @@ class SeriesUpsertMixin(MediaUpsertMixin, SeriesFileMixin):
 
 
 # TODO: Validate
-class MovieUpsertMixin(MediaUpsertMixin, MovieFileMixin):
+class MovieUpsertMixin(MovieFileMixin):
     # TODO: Validate
     @override
-    def _upsert_show_record(
+    def upsert_show(
         self,
         source: Source,
         show_key: str,
+        canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> Show:
@@ -180,6 +169,8 @@ class MovieUpsertMixin(MediaUpsertMixin, MovieFileMixin):
             show = self._upsert_show_object(new_show, source, show, show_key)
 
         self._upsert_season(show, force=force)
+        self._soft_delete_missing(show_key)
+        add_canonical_show_and_link_episodes(self.session, show, canonical_show)
 
         return show
 
@@ -218,6 +209,7 @@ class MovieUpsertMixin(MediaUpsertMixin, MovieFileMixin):
         if self._episode_is_outdated(episode, season.key, show_key, force=force):
             new_episode = Episode(
                 key=show_key,
+                watch_identifier=watch_identifier(self.plugin_name(), show_key),
                 name=model.name,
                 description=model.details.entity.description,
                 url=self._episode_url(show_key),
@@ -237,7 +229,7 @@ class MovieUpsertMixin(MediaUpsertMixin, MovieFileMixin):
 
 
 # TODO: Validate
-class UpsertMixin(UtilsMixin, FileMixin):
+class UpsertMixin(FileMixin):
     """Mixin containing all upsert functions."""
 
     # TODO: Validate

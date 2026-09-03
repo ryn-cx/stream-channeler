@@ -8,14 +8,14 @@ from app.canonical_media.keys import (
     tmdb_episode_key,
     tmdb_season_key,
 )
-from app.media.media_type import MediaType
+from app.media.media_type import TMDBMediaType
 from app.utils import tz_datetime
 from plugins.TMDB.episode_groups import show_chosen_group_id
 from plugins.TMDB.files import FileMixin
 from plugins.TMDB.keys import (
+    get_media_type_and_tmdb_id,
     parse_episode_key,
     parse_season_key,
-    get_media_type_and_tmdb_id,
 )
 from plugins.TMDB.lookup import LookupMixin
 
@@ -93,9 +93,9 @@ def change_datetime(changed_at: str) -> datetime:
 def first_search_result(
     plugin: LookupMixin,
     name: str,
-    media_type: MediaType | None,
+    media_type: TMDBMediaType | None,
     year: int | None,
-) -> tuple[MediaType, int] | None:
+) -> tuple[TMDBMediaType, int] | None:
     """Return which half the first title TMDB returns is from, and its id."""
     if media_type is not None:
         results = plugin.search_media(media_type, name, year).parsed().results
@@ -107,7 +107,7 @@ def first_search_result(
         # Which half of the catalogue a search of both says a result came
         # from. A multi search also returns people, who are no title and
         # cannot be imported.
-        half = {"movie": MediaType.movie, "tv": MediaType.tv}.get(
+        half = {"movie": TMDBMediaType.movie, "tv": TMDBMediaType.tv}.get(
             result.media_type,
         )
         if half is not None:
@@ -180,7 +180,7 @@ class UtilsMixin(FileMixin):
         if group is not None:
             return [
                 SeasonSource(
-                    key=tmdb_season_key(MediaType.tv, order),
+                    key=tmdb_season_key(TMDBMediaType.tv, order),
                     name=entry.name,
                     season_number=order + 1,
                     poster_path=None,
@@ -218,7 +218,7 @@ class UtilsMixin(FileMixin):
             detail = season_file.parsed()
             seasons.append(
                 SeasonSource(
-                    key=tmdb_season_key(MediaType.tv, season.id),
+                    key=tmdb_season_key(TMDBMediaType.tv, season.id),
                     name=detail.name,
                     season_number=season.season_number,
                     poster_path=detail.poster_path,
@@ -275,7 +275,7 @@ class UtilsMixin(FileMixin):
     @override
     def _season_keys_from_show_files(self, show_key: str) -> list[str]:
         media_type, tmdb_id = get_media_type_and_tmdb_id(show_key)
-        if media_type == MediaType.movie:
+        if media_type == TMDBMediaType.movie:
             return [tmdb_season_key(media_type, tmdb_id)]
         return [season.key for season in self.series_seasons(show_key)]
 
@@ -290,7 +290,7 @@ class UtilsMixin(FileMixin):
             season_keys = [season_keys]
 
         media_type, tmdb_id = get_media_type_and_tmdb_id(show_key)
-        if media_type == MediaType.movie:
+        if media_type == TMDBMediaType.movie:
             return [tmdb_episode_key(media_type, tmdb_id)]
 
         wanted = set(season_keys)

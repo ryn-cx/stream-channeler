@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from plugins.Hulu.media import MediaMixin
-from plugins.Hulu.utils import HuluMediaType
+from plugins.Hulu.utils import HuluMediaType, listed_items, media_urls
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -39,16 +39,18 @@ class UpdateMixin(MediaMixin):
 
     # TODO: Validate
     def add_media_to_plugin_channels(self, update_at: datetime | None = None) -> None:
-        self.genres_page_file().download_if_outdated(update_at)
+        self.genres_file().download_if_outdated(update_at)
         _cache = self._preload_source_files()
         self._download_outdated_files(self._source_files(), update_at)
 
         all_urls: list[str] = []
         movie_urls: list[str] = []
         series_urls: list[str] = []
-        for genre_name, genre_href in self.genres_page_file().listed_items():
+        for genre_name, genre_href in listed_items(
+            self.genres_file().parsed(),
+        ):
             genre_id = genre_href.rsplit("/", 1)[-1]
-            genre_urls = self.genre_page_file(genre_id).media_urls()
+            genre_urls = media_urls(self.genre_page_file(genre_id).parsed())
 
             self.add_urls_to_plugin_channel(
                 f"Hulu {genre_name}",
@@ -63,8 +65,12 @@ class UpdateMixin(MediaMixin):
                 url for url in genre_urls if f"/{HuluMediaType.SERIES}/" in url
             ]
 
-        self.add_urls_to_plugin_channel("Hulu All Media", "All Media on Hulu.", all_urls)
-        self.add_urls_to_plugin_channel("Hulu Movies", "All Movies on Hulu.", movie_urls)
+        self.add_urls_to_plugin_channel(
+            "Hulu All Media", "All Media on Hulu.", all_urls
+        )
+        self.add_urls_to_plugin_channel(
+            "Hulu Movies", "All Movies on Hulu.", movie_urls
+        )
         self.add_urls_to_plugin_channel(
             "Hulu TV Series",
             "All TV Series on Hulu.",

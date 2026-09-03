@@ -7,17 +7,17 @@ from tminidb.tv_season.details.models import Episode
 from tminidb.tv_series.details.models import Season
 
 from app.files.models import File
-from app.media.media_type import MediaType
+from app.media.media_type import TMDBMediaType
 from plugins.TMDB.files import (
     FileMixin,
-    MovieSearch,
-    MultiSearch,
-    TvSearch,
+    _MovieSearch,
+    _MultiSearch,
+    _TvSearch,
 )
 
 
 # TODO: Validate
-def _found_something(search_file: MovieSearch | TvSearch | MultiSearch) -> bool:
+def _found_something(search_file: _MovieSearch | _TvSearch | _MultiSearch) -> bool:
     """Report whether a search came back with anything at all.
 
     A search TMDB has no answer for is stored empty, and an empty file has no
@@ -37,22 +37,22 @@ class LookupMixin(FileMixin):
         media_type: None,
         query: str,
         year: int | None = None,
-    ) -> MultiSearch: ...
+    ) -> _MultiSearch: ...
     # TODO: Validate
     @overload
     def search_media(
         self,
-        media_type: MediaType,
+        media_type: TMDBMediaType,
         query: str,
         year: int | None = None,
-    ) -> MovieSearch | TvSearch: ...
+    ) -> _MovieSearch | _TvSearch: ...
     # TODO: Validate
     def search_media(
         self,
-        media_type: MediaType | None,
+        media_type: TMDBMediaType | None,
         query: str,
         year: int | None = None,
-    ) -> MovieSearch | TvSearch | MultiSearch:
+    ) -> _MovieSearch | _TvSearch | _MultiSearch:
         """Return what TMDB answers a name with.
 
         A search narrowed to a year that comes back with nothing is asked again
@@ -70,15 +70,15 @@ class LookupMixin(FileMixin):
     # TODO: Validate
     def _searched(
         self,
-        media_type: MediaType | None,
+        media_type: TMDBMediaType | None,
         query: str,
         year: int | None,
-    ) -> MovieSearch | TvSearch | MultiSearch:
+    ) -> _MovieSearch | _TvSearch | _MultiSearch:
         """Return the search file for one name."""
-        search_file: MovieSearch | TvSearch | MultiSearch
-        if media_type == MediaType.movie:
+        search_file: _MovieSearch | _TvSearch | _MultiSearch
+        if media_type == TMDBMediaType.movie:
             search_file = self.movie_search_file(query, year)
-        elif media_type == MediaType.tv:
+        elif media_type == TMDBMediaType.tv:
             search_file = self.tv_search_file(query, year)
         else:
             search_file = self.multi_search_file(query)
@@ -93,7 +93,7 @@ class LookupMixin(FileMixin):
         plugin's own media, and nothing else fetches the file on its behalf, so
         it cannot be assumed to be stored already.
         """
-        detail_file = self.media_detail_file(MediaType.movie, tmdb_id)
+        detail_file = self.media_detail_file(TMDBMediaType.movie, tmdb_id)
         detail_file.download_if_outdated()
         if not detail_file.database_record.content:
             return None
@@ -280,7 +280,7 @@ class LookupMixin(FileMixin):
     # TODO: Validate
     def has_season_id(
         self,
-        media_type: MediaType,
+        media_type: TMDBMediaType,
         tmdb_id: int,
         season_tmdb_id: int,
     ) -> bool:
@@ -290,14 +290,14 @@ class LookupMixin(FileMixin):
         an identifier carries the id rather than the number. A film has no
         seasons, so the single season it is stored as is the film itself.
         """
-        if media_type == MediaType.movie:
+        if media_type == TMDBMediaType.movie:
             return season_tmdb_id == tmdb_id
         return any(season.id == season_tmdb_id for season in self.show_seasons(tmdb_id))
 
     # TODO: Validate
     def has_episode_id(
         self,
-        media_type: MediaType,
+        media_type: TMDBMediaType,
         tmdb_id: int,
         episode_tmdb_id: int,
     ) -> bool:
@@ -307,7 +307,7 @@ class LookupMixin(FileMixin):
         season TMDB files it under. A film has no episodes, so the single episode
         it is stored as is the film itself.
         """
-        if media_type == MediaType.movie:
+        if media_type == TMDBMediaType.movie:
             return episode_tmdb_id == tmdb_id
         return any(
             episode.id == episode_tmdb_id

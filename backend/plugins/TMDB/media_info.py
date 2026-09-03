@@ -31,8 +31,8 @@ from tminidb.tv_series.watch_providers.models import (
     TvSeriesWatchProvidersModel,
 )
 
-from app.media.media_type import MediaType
-from plugins.TMDB.files import MovieDetails
+from app.media.media_type import TMDBMediaType
+from plugins.TMDB.files import _MovieDetails
 from plugins.TMDB.lookup import LookupMixin
 from plugins.TMDB.utils import (
     backdrop_image_url,
@@ -67,16 +67,16 @@ type Provider = (
 
 
 # TODO: Validate
-def media_identifier(media_type: MediaType, tmdb_id: int) -> str:
+def media_identifier(media_type: TMDBMediaType, tmdb_id: int) -> str:
     """Return what a search result names a title by, e.g. `tv 1399`."""
     return f"{media_type} {tmdb_id}"
 
 
 # TODO: Validate
-def parse_media_identifier(identifier: str) -> tuple[MediaType, int]:
+def parse_media_identifier(identifier: str) -> tuple[TMDBMediaType, int]:
     """Return the half of the catalogue and the id an identifier names."""
     media_type, _, tmdb_id = identifier.partition(" ")
-    return MediaType(media_type), int(tmdb_id)
+    return TMDBMediaType(media_type), int(tmdb_id)
 
 
 # TODO: Validate
@@ -97,7 +97,7 @@ class MediaInfoMixin(LookupMixin):
         # A title with no poster of its own can still be shown by a poster one of
         # its seasons carries.
         season_poster_path: str | None
-        if isinstance(detail_file, MovieDetails):
+        if isinstance(detail_file, _MovieDetails):
             detail = detail_file.parsed()
             title = detail.title
             year = release_year(detail.release_date)
@@ -125,7 +125,7 @@ class MediaInfoMixin(LookupMixin):
         backdrop_path = detail.backdrop_path
         return PluginMediaInfo(
             title=title,
-            media_type={MediaType.movie: "Movie", MediaType.tv: "TV Show"}[media_type],
+            media_type={TMDBMediaType.movie: "Movie", TMDBMediaType.tv: "TV Show"}[media_type],
             tagline=detail.tagline or None,
             overview=detail.overview or None,
             poster_url=poster_image_url(poster_path or backdrop_path),

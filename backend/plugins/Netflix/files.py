@@ -34,6 +34,7 @@ from meshfilm.search_page_results import SearchPageResults
 from meshfilm.search_page_results.models import SearchPageResultsModel
 from sqlmodel import Session
 
+from app.media.media_type import TMDBMediaType
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import TMDBLookupInfo
@@ -54,7 +55,7 @@ def meshfilm() -> Meshfilm:
 
 
 # TODO: Validate
-class Title(IntegerEndpointFile[LodpTitleAndPlansPageModel]):
+class _Title(IntegerEndpointFile[LodpTitleAndPlansPageModel]):
     """Title file."""
 
     # TODO: Validate
@@ -78,12 +79,12 @@ class Title(IntegerEndpointFile[LodpTitleAndPlansPageModel]):
         return self.video().field__typename == "Movie"
 
     # TODO: Validate
-    def get_tmdb_lookup_info(self) -> TMDBLookupInfo:
+    def tmdb_lookup_info(self) -> TMDBLookupInfo:
         self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         video = self.video()
         return TMDBLookupInfo(
             title=video.title,
-            media_type="Movie" if self.is_movie() else "TV Show",
+            media_type=TMDBMediaType.movie if self.is_movie() else TMDBMediaType.tv,
             year=video.latest_year,
         )
 
@@ -94,7 +95,7 @@ class Title(IntegerEndpointFile[LodpTitleAndPlansPageModel]):
 
 
 # TODO: Validate
-class Seasons(IntegerEndpointFile[PreviewModalEpisodeSelectorModel]):
+class _Seasons(IntegerEndpointFile[PreviewModalEpisodeSelectorModel]):
     """Seasons file."""
 
     # TODO: Validate
@@ -109,7 +110,7 @@ class Seasons(IntegerEndpointFile[PreviewModalEpisodeSelectorModel]):
 
 
 # TODO: Validate
-class SeasonEpisodes(
+class _SeasonEpisodes(
     IntegerEndpointFile[PreviewModalEpisodeSelectorSeasonEpisodesModel],
 ):
     """Season episodes file."""
@@ -126,7 +127,7 @@ class SeasonEpisodes(
 
 
 # TODO: Validate
-class Search(EndpointFile[SearchPageResultsModel]):
+class _Search(EndpointFile[SearchPageResultsModel]):
     """Search file."""
 
     # TODO: Validate
@@ -162,32 +163,32 @@ class FileMixin(BasePlugin):
     """The files a Netflix title is read out of."""
 
     # TODO: Validate
-    def search_file(self, query: str, cursor: str | None) -> Search:
+    def search_file(self, query: str, cursor: str | None) -> _Search:
         """Contains one page of Netflix's movie and TV search results."""
-        return self._file(Search, query, cursor or "")
+        return self._file(_Search, query, cursor or "")
 
     # TODO: Validate
-    def title_file(self, title_key: str) -> Title:
+    def title_file(self, title_key: str) -> _Title:
         """Contains all of a Netflix title's data (show, seasons, episodes)."""
-        return self._file(Title, title_key)
+        return self._file(_Title, title_key)
 
     # TODO: Validate
-    def seasons_file(self, show_key: str) -> Seasons:
+    def seasons_file(self, show_key: str) -> _Seasons:
         """Contains every season of a title.
 
         The title file holds only the first ten seasons, so the seasons a title
         has are read from here instead.
         """
-        return self._file(Seasons, show_key)
+        return self._file(_Seasons, show_key)
 
     # TODO: Validate
-    def season_episodes_file(self, season_id: str | int) -> SeasonEpisodes:
+    def season_episodes_file(self, season_id: str | int) -> _SeasonEpisodes:
         """Contains every episode of one season.
 
         The title file holds only the first ten episodes of a season, so the
         episodes a season has are read from here instead.
         """
-        return self._file(SeasonEpisodes, str(season_id))
+        return self._file(_SeasonEpisodes, str(season_id))
 
     # TODO: Validate
     def _title_video(self, show_key: str) -> TitleVideo:
@@ -199,8 +200,8 @@ class FileMixin(BasePlugin):
 
     # TODO: Validate
     @override
-    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
-        return self.title_file(show_key).get_tmdb_lookup_info()
+    def tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
+        return self.title_file(show_key).tmdb_lookup_info()
 
     # TODO: Validate
     def _ordered_seasons(self, show_key: str) -> list[SeasonNode]:

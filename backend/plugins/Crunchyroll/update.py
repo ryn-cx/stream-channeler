@@ -13,7 +13,7 @@ from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.Crunchyroll.constants import MUSIC_SOURCE, VIDEO_SOURCE
-from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries, chirashi
+from plugins.Crunchyroll.files import _BrowseMusic, _BrowseSeries, chirashi
 from plugins.Crunchyroll.upsert import UpsertMixin
 from plugins.utils.base_plugin_v2.files import (
     COMPLETED_STATUS,
@@ -52,7 +52,7 @@ class UpdateMixin(UpsertMixin):
     # TODO: Validate
     def _process_new_browse_files(self, source: Source) -> None:
         for browse_json in self.get_incomplete_files(
-            BrowseSeries,
+            _BrowseSeries,
             self.browse_series_file,
         ):
             # Queueing the series a file found commits, which lets go of every
@@ -90,7 +90,7 @@ class UpdateMixin(UpsertMixin):
     # TODO: Validate
     def _process_new_music_browse_files(self, source: Source) -> None:
         for browse_json in self.get_incomplete_files(
-            BrowseMusic,
+            _BrowseMusic,
             self.browse_music_file,
         ):
             # Queueing the artists a file found commits, which lets go of every

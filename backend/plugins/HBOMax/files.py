@@ -37,7 +37,7 @@ def minbo() -> MinBO:
 
 
 # TODO: Validate
-class ShowFile(EndpointFile[ShowModel]):
+class _ShowFile(EndpointFile[ShowModel]):
     """Show file."""
 
     # TODO: Validate
@@ -52,7 +52,7 @@ class ShowFile(EndpointFile[ShowModel]):
 
 
 # TODO: Validate
-class SeasonFile(EndpointFile[ShowModel]):
+class _SeasonFile(EndpointFile[ShowModel]):
     """Season file."""
 
     # TODO: Validate
@@ -85,7 +85,7 @@ class SeasonFile(EndpointFile[ShowModel]):
 
 
 # TODO: Validate
-class MovieFile(EndpointFile[MovieModel]):
+class _MovieFile(EndpointFile[MovieModel]):
     """Movie file."""
 
     # TODO: Validate
@@ -112,19 +112,19 @@ class FileMixin(BaseMediaTypeMixin, BasePlugin):
         self._media_type = "movie" if show.media_type == "Movie" else "series"
 
     # TODO: Validate
-    def show_file(self, show_id: str) -> ShowFile:
+    def show_file(self, show_id: str) -> _ShowFile:
         """Return ShowFile file."""
-        return self._file(ShowFile, show_id)
+        return self._file(_ShowFile, show_id)
 
     # TODO: Validate
-    def season_file(self, show_id: str, season_number: int) -> SeasonFile:
+    def season_file(self, show_id: str, season_number: int) -> _SeasonFile:
         """Return SeasonFile file."""
-        return self._file(SeasonFile, show_id, season_number)
+        return self._file(_SeasonFile, show_id, season_number)
 
     # TODO: Validate
-    def movie_file(self, movie_id: str) -> MovieFile:
+    def movie_file(self, movie_id: str) -> _MovieFile:
         """Return MovieFile file."""
-        return self._file(MovieFile, movie_id)
+        return self._file(_MovieFile, movie_id)
 
     # TODO: Validate
     def _is_movie(self) -> bool:

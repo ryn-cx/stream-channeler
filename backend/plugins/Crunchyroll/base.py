@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import override
 
+from app.media.media_type import TMDBMediaType
 from plugins.Crunchyroll.constants import (
     MUSIC_SOURCE,
     VIDEO_SOURCE,
@@ -42,7 +43,7 @@ class CrunchyrollBase(WatchHistoryMixin, UpdateMixin, SearchMixin):
 
     # TODO: Validate
     @override
-    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo | None:
+    def tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo | None:
         # Music is Crunchyroll's own, so there is no TMDB title to be of.
         if show_is_an_artist(show_key):
             return None
@@ -50,6 +51,6 @@ class CrunchyrollBase(WatchHistoryMixin, UpdateMixin, SearchMixin):
         series_data = self._series_datum(show_key)
         return TMDBLookupInfo(
             title=series_data.title,
-            media_type="Movie" if self._is_movie(show_key) else "Series",
+            media_type=TMDBMediaType.movie if self._is_movie(show_key) else TMDBMediaType.tv,
             year=series_data.series_launch_year,
         )

@@ -6,6 +6,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, ClassVar, override
 
+from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -136,6 +137,7 @@ class UpsertMixin(UtilsMixin, FileMixin):
 
             new_episode = Episode(
                 key=episode_key,
+                watch_identifier=watch_identifier(self.plugin_name(), episode_key),
                 name=episode_data.title,
                 episode_number=episode_data.number,
                 url=self._episode_url(episode_key),
@@ -207,6 +209,7 @@ class UpsertMixin(UtilsMixin, FileMixin):
         if self._episode_is_outdated(episode, season.key, show.key, force=force):
             new_episode = Episode(
                 key=episode_key,
+                watch_identifier=watch_identifier(self.plugin_name(), episode_key),
                 name=movie_data.title,
                 url=self._episode_url(episode_key),
                 image_url=movie_data.billboard_or_story_art960.url,

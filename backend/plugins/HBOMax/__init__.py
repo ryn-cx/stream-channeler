@@ -4,8 +4,8 @@
 from __future__ import annotations
 
 from plugins.HBOMax.base import HBOMaxBase
-from plugins.HBOMax.initialize import HBOMaxInitializer
 from plugins.HBOMax.importer import HBOMaxImporter
+from plugins.HBOMax.initialize import HBOMaxInitializer
 from plugins.utils.abstract_plugin import AbstractPlugin
 
 

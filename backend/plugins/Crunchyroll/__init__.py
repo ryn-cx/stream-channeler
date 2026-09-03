@@ -7,8 +7,8 @@ Detects new media much faster than JustWatch and supports music.
 from __future__ import annotations
 
 from plugins.Crunchyroll.base import CrunchyrollBase
-from plugins.Crunchyroll.initialize import CrunchyrollInitializer
 from plugins.Crunchyroll.importer import CrunchyrollImporter
+from plugins.Crunchyroll.initialize import CrunchyrollInitializer
 from plugins.utils.abstract_plugin import AbstractPlugin
 
 

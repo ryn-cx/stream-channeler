@@ -18,6 +18,7 @@ from kneeminus.entity.models import Season as EntitySeason
 from kneeminus.exceptions import EntityNotFoundError
 from sqlmodel import Session
 
+from app.media.media_type import TMDBMediaType
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
 from plugins.DisneyPlus.utils import required_value
@@ -57,7 +58,7 @@ def required_main_content_item(
 
 
 # TODO: Validate
-class Entity(EndpointFile[EntityModel]):
+class _Entity(EndpointFile[EntityModel]):
     """Entity file."""
 
     # TODO: Validate
@@ -108,17 +109,17 @@ class Entity(EndpointFile[EntityModel]):
         return background_image.default_image.source
 
     # TODO: Validate
-    def get_tmdb_lookup_info(self) -> TMDBLookupInfo:
+    def tmdb_lookup_info(self) -> TMDBLookupInfo:
         self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         return TMDBLookupInfo(
             title=required_value(self.media_details().title, "title"),
-            media_type="Movie" if self.is_movie() else "Series",
+            media_type=TMDBMediaType.movie if self.is_movie() else TMDBMediaType.tv,
             year=self.release_year(),
         )
 
 
 # TODO: Validate
-class SeasonEntityFile(EndpointFile[EntityModel]):
+class _SeasonEntityFile(EndpointFile[EntityModel]):
     """Season entity file."""
 
     # TODO: Validate
@@ -159,13 +160,13 @@ class FileMixin(BasePlugin):
     """The files a title is read out of."""
 
     # TODO: Validate
-    def entity_file(self, entity_id: str) -> Entity:
-        return self._file(Entity, entity_id)
+    def entity_file(self, entity_id: str) -> _Entity:
+        return self._file(_Entity, entity_id)
 
     # TODO: Validate
-    def season_file(self, entity_id: str, season_id: str) -> SeasonEntityFile:
+    def season_file(self, entity_id: str, season_id: str) -> _SeasonEntityFile:
         """Return SeasonEntityFile file."""
-        return self._file(SeasonEntityFile, entity_id, season_id)
+        return self._file(_SeasonEntityFile, entity_id, season_id)
 
     # TODO: Validate
     def _entity(self, entity_id: str) -> EntityModel:
@@ -193,8 +194,8 @@ class FileMixin(BasePlugin):
 
     # TODO: Validate
     @override
-    def get_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
-        return self.entity_file(show_key).get_tmdb_lookup_info()
+    def tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
+        return self.entity_file(show_key).tmdb_lookup_info()
 
     # TODO: Validate
     def _seasons(self, show_key: str) -> list[EntitySeason]:

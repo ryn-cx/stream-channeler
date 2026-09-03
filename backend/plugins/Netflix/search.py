@@ -6,7 +6,7 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import ClassVar
 
-from app.media.media_type import MediaType
+from app.media.media_type import TMDBMediaType
 from app.utils import tz_datetime
 from plugins.Netflix.files import FileMixin
 from plugins.Netflix.utils import UtilsMixin
@@ -26,7 +26,7 @@ class SearchMixin(UtilsMixin, FileMixin):
     def search_for_url(
         self,
         names: list[str],
-        media_type: MediaType,  # noqa: ARG002 - `media_type` refines a search.
+        media_type: TMDBMediaType,  # noqa: ARG002 - `media_type` refines a search.
         year: int | None = None,  # noqa: ARG002 - `year` refines a search.
     ) -> str | None:
         query = names[0]

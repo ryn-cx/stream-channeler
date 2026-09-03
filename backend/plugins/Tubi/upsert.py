@@ -6,6 +6,7 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import override
 
+from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -121,6 +122,7 @@ class UpsertMixin(UtilsMixin, FileMixin):
 
             new_episode = Episode(
                 key=episode_key,
+                watch_identifier=watch_identifier(self.plugin_name(), episode_key),
                 name=self._episode_name(episode_content.title),
                 description=episode_content.description,
                 episode_number=int(episode_content.episode_number),
@@ -209,6 +211,7 @@ class UpsertMixin(UtilsMixin, FileMixin):
         content = self._content(show_key)
         new_episode = Episode(
             key=show_key,
+            watch_identifier=watch_identifier(self.plugin_name(), show_key),
             name=content.title,
             description=content.description,
             episode_number=0,

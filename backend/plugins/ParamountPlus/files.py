@@ -32,7 +32,7 @@ def trivial_minus() -> TrivialMinus:
 
 
 # TODO: Validate
-class ShowPage(EndpointFile[ShowModel]):
+class _ShowPage(EndpointFile[ShowModel]):
     """Show page file."""
 
     # TODO: Validate
@@ -63,7 +63,7 @@ class ShowPage(EndpointFile[ShowModel]):
 
 
 # TODO: Validate
-class EpisodesFile(EndpointFile[EpisodesModel]):
+class _EpisodesFile(EndpointFile[EpisodesModel]):
     """Episodes file."""
 
     # TODO: Validate
@@ -94,7 +94,7 @@ class EpisodesFile(EndpointFile[EpisodesModel]):
 
 
 # TODO: Validate
-class MovieFile(EndpointFile[MovieModel]):
+class _MovieFile(EndpointFile[MovieModel]):
     """Movie file."""
 
     # TODO: Validate
@@ -126,19 +126,19 @@ class FileMixin(BaseMediaTypeMixin, BasePlugin):
         self._media_type = "movie" if show.media_type == "Movie" else "series"
 
     # TODO: Validate
-    def show_page_file(self, show_id: str) -> ShowPage:
+    def show_page_file(self, show_id: str) -> _ShowPage:
         """Return ShowPage file."""
-        return self._file(ShowPage, show_id)
+        return self._file(_ShowPage, show_id)
 
     # TODO: Validate
-    def episodes_file(self, show_id: str, season_number: int) -> EpisodesFile:
+    def episodes_file(self, show_id: str, season_number: int) -> _EpisodesFile:
         """Return EpisodesFile file."""
-        return self._file(EpisodesFile, show_id, season_number)
+        return self._file(_EpisodesFile, show_id, season_number)
 
     # TODO: Validate
-    def movie_file(self, movie_id: str) -> MovieFile:
+    def movie_file(self, movie_id: str) -> _MovieFile:
         """Return MovieFile file."""
-        return self._file(MovieFile, movie_id)
+        return self._file(_MovieFile, movie_id)
 
     # TODO: Validate
     def _is_movie(self) -> bool:

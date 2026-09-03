@@ -4,7 +4,7 @@ from __future__ import annotations
 from itertools import pairwise
 from typing import TYPE_CHECKING
 
-from app.media.media_type import MediaType
+from app.media.media_type import TMDBMediaType
 from app.shows.models import Show
 from plugins.TMDB.keys import get_media_type_and_tmdb_id
 from plugins.TMDB.media_info import plugin_for_tmdb_name, streaming_providers
@@ -26,7 +26,7 @@ class WatchProviderSyncMixin(UpsertMixin):
     def sync_show_watch_providers(self, show_key: str) -> None:
         media_type, tmdb_id = get_media_type_and_tmdb_id(show_key)
         files: Sequence[ProvidersFile]
-        if media_type == MediaType.movie:
+        if media_type == TMDBMediaType.movie:
             self._download_watch_providers_file(
                 self.movie_watch_providers_file(tmdb_id),
             )
@@ -39,7 +39,7 @@ class WatchProviderSyncMixin(UpsertMixin):
     # TODO: Validate
     def sync_season_watch_providers(self, show_key: str, season_number: int) -> None:
         media_type, tmdb_id = get_media_type_and_tmdb_id(show_key)
-        if media_type != MediaType.tv:
+        if media_type != TMDBMediaType.tv:
             return
         self._download_watch_providers_file(
             self.season_watch_providers_file(tmdb_id, season_number),

@@ -131,7 +131,7 @@ def get_first_item[T](items: Sequence[T] | None) -> T:
 
 
 # TODO: Validate
-class ChannelByChannelId(EndpointFile[ChannelsModel]):
+class _ChannelByChannelId(EndpointFile[ChannelsModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> ChannelsEndpoint:
@@ -150,7 +150,7 @@ class ChannelByChannelId(EndpointFile[ChannelsModel]):
 
 
 # TODO: Validate
-class ChannelByHandle(EndpointFile[ChannelsModel]):
+class _ChannelByHandle(EndpointFile[ChannelsModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> ChannelsEndpoint:
@@ -169,7 +169,7 @@ class ChannelByHandle(EndpointFile[ChannelsModel]):
 
 
 # TODO: Validate
-class ChannelByUsername(EndpointFile[ChannelsModel]):
+class _ChannelByUsername(EndpointFile[ChannelsModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> ChannelsEndpoint:
@@ -188,7 +188,7 @@ class ChannelByUsername(EndpointFile[ChannelsModel]):
 
 
 # TODO: Validate
-class ChannelPlaylists(EndpointFile[PlaylistsModel]):
+class _ChannelPlaylists(EndpointFile[PlaylistsModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> PlaylistsEndpoint:
@@ -209,7 +209,7 @@ class ChannelPlaylists(EndpointFile[PlaylistsModel]):
 
 
 # TODO: Validate
-class PlaylistInfo(EndpointFile[PlaylistsModel]):
+class _PlaylistInfo(EndpointFile[PlaylistsModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> PlaylistsEndpoint:
@@ -222,7 +222,7 @@ class PlaylistInfo(EndpointFile[PlaylistsModel]):
 
 
 # TODO: Validate
-class PlaylistItems(EndpointFile[PlaylistItemsModel]):
+class _PlaylistItems(EndpointFile[PlaylistItemsModel]):
     """Playlist items file."""
 
     # TODO: Validate
@@ -316,7 +316,7 @@ class PlaylistItems(EndpointFile[PlaylistItemsModel]):
 
 
 # TODO: Validate
-class Videos(EndpointFile[VideosModel]):
+class _Videos(EndpointFile[VideosModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> VideosEndpoint:
@@ -324,7 +324,7 @@ class Videos(EndpointFile[VideosModel]):
 
 
 # TODO: Validate
-class MusicPlaylistFile(EndpointFile[MusicModel]):
+class _MusicPlaylistFile(EndpointFile[MusicModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> MusicEndpoint:
@@ -393,7 +393,7 @@ class MusicPlaylistFile(EndpointFile[MusicModel]):
 
 
 # TODO: Validate
-class TopicReleasesFile(PagedEndpointFile[TopicModel]):
+class _TopicReleasesFile(PagedEndpointFile[TopicModel]):
     """The albums and singles a musician's Topic channel lists.
 
     The channel lists a dozen releases on a shelf and the rest behind it, and a
@@ -453,7 +453,7 @@ class TopicReleasesFile(PagedEndpointFile[TopicModel]):
 
 
 # TODO: Validate
-class ShowListing(PagedEndpointFile[ShowsModel]):
+class _ShowListing(PagedEndpointFile[ShowsModel]):
     """Every season of a show and every stretch of each of them.
 
     A season is its own thing to ask browse for and a long one is answered a
@@ -549,7 +549,7 @@ class ShowListing(PagedEndpointFile[ShowsModel]):
 
 
 # TODO: Validate
-class PlaylistFeed(EndpointFile[ChannelFeedModel | PlaylistFeedModel]):
+class _PlaylistFeed(EndpointFile[ChannelFeedModel | PlaylistFeedModel]):
     """Playlist feed file."""
 
     # TODO: Validate
@@ -599,7 +599,7 @@ class PlaylistFeed(EndpointFile[ChannelFeedModel | PlaylistFeedModel]):
 
 
 # TODO: Validate
-class ShowPage(HTMLFile):
+class _ShowPage(HTMLFile):
     """Show page file.
 
     The API has no concept of a show, so a show and its seasons are read from the
@@ -661,44 +661,44 @@ class FileMixin(BasePlugin):
     _linking_playlist_key: str | None = None
 
     # TODO: Validate
-    def channel_by_channel_id_file(self, show_key: str) -> ChannelByChannelId:
-        return self._file(ChannelByChannelId, show_key)
+    def channel_by_channel_id_file(self, show_key: str) -> _ChannelByChannelId:
+        return self._file(_ChannelByChannelId, show_key)
 
     # TODO: Validate
-    def channel_by_handle_file(self, channel_handle: str) -> ChannelByHandle:
-        return self._file(ChannelByHandle, channel_handle)
+    def channel_by_handle_file(self, channel_handle: str) -> _ChannelByHandle:
+        return self._file(_ChannelByHandle, channel_handle)
 
     # TODO: Validate
-    def channel_by_username_file(self, channel_username: str) -> ChannelByUsername:
-        return self._file(ChannelByUsername, channel_username)
+    def channel_by_username_file(self, channel_username: str) -> _ChannelByUsername:
+        return self._file(_ChannelByUsername, channel_username)
 
     # TODO: Validate
-    def channel_playlists_file(self, show_key: str) -> ChannelPlaylists:
-        return self._file(ChannelPlaylists, show_key)
+    def channel_playlists_file(self, show_key: str) -> _ChannelPlaylists:
+        return self._file(_ChannelPlaylists, show_key)
 
     # TODO: Validate
-    def playlist_info_file(self, playlist_key: str) -> PlaylistInfo:
-        return self._file(PlaylistInfo, playlist_key)
+    def playlist_info_file(self, playlist_key: str) -> _PlaylistInfo:
+        return self._file(_PlaylistInfo, playlist_key)
 
     # TODO: Validate
-    def playlist_items_file(self, season_key: str) -> PlaylistItems:
-        return self._file(PlaylistItems, season_key)
+    def playlist_items_file(self, season_key: str) -> _PlaylistItems:
+        return self._file(_PlaylistItems, season_key)
 
     # TODO: Validate
-    def videos_file(self, episode_key: str) -> Videos:
-        return self._file(Videos, episode_key)
+    def videos_file(self, episode_key: str) -> _Videos:
+        return self._file(_Videos, episode_key)
 
     # TODO: Validate
-    def playlist_feed_file(self, season_key: str) -> PlaylistFeed:
-        return self._file(PlaylistFeed, season_key)
+    def playlist_feed_file(self, season_key: str) -> _PlaylistFeed:
+        return self._file(_PlaylistFeed, season_key)
 
     # TODO: Validate
-    def show_page_file(self, show_key: str) -> ShowPage:
-        return self._file(ShowPage, show_key)
+    def show_page_file(self, show_key: str) -> _ShowPage:
+        return self._file(_ShowPage, show_key)
 
     # TODO: Validate
-    def show_listing_file(self, show_playlist_key: str) -> ShowListing:
-        return self._file(ShowListing, show_playlist_key)
+    def show_listing_file(self, show_playlist_key: str) -> _ShowListing:
+        return self._file(_ShowListing, show_playlist_key)
 
     # TODO: Validate
     def show_playlist_key(self, show_key: str) -> str:
@@ -712,16 +712,16 @@ class FileMixin(BasePlugin):
         return playlist_key
 
     # TODO: Validate
-    def show_listing_file_for_show(self, show_key: str) -> ShowListing:
+    def show_listing_file_for_show(self, show_key: str) -> _ShowListing:
         return self.show_listing_file(self.show_playlist_key(show_key))
 
     # TODO: Validate
-    def music_playlist_file(self, playlist_key: str) -> MusicPlaylistFile:
-        return self._file(MusicPlaylistFile, playlist_key)
+    def music_playlist_file(self, playlist_key: str) -> _MusicPlaylistFile:
+        return self._file(_MusicPlaylistFile, playlist_key)
 
     # TODO: Validate
-    def topic_releases_file(self, channel_key: str) -> TopicReleasesFile:
-        return self._file(TopicReleasesFile, channel_key)
+    def topic_releases_file(self, channel_key: str) -> _TopicReleasesFile:
+        return self._file(_TopicReleasesFile, channel_key)
 
     # TODO: Validate
     def is_topic_channel(self, show_key: str) -> bool:

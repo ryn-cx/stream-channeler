@@ -353,6 +353,17 @@ class BaseDownloadMixin(ABC):
         )
 
     # TODO: Validate
+    def _preload_source_files(
+        self,
+        preloaded_files: Sequence[File] | None = None,
+    ) -> Sequence[File]:
+        if preloaded_files:
+            return preloaded_files
+        return self._get_files_by_keys(
+            [file.file_key() for file in self._source_files()],
+        )
+
+    # TODO: Validate
     def _season_keys_from_show_files(self, show_key: str) -> list[str]:
         msg = "This plugin does not have season keys from file."
         raise NotImplementedError(msg)

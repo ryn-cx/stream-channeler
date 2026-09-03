@@ -20,7 +20,7 @@ from sqlmodel import (
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.canonical_media.keys import EPISODE_LEVEL, tmdb_id_of, watch_identifier
+from app.canonical_media.keys import EPISODE_LEVEL, tmdb_id_of
 from app.models import (
     BaseMediaMixin,
     ChildMediaMixin,
@@ -307,15 +307,7 @@ class Episode(BaseEpisode, ChildMediaMixin[Season, Never], table=True):
         `is_canonical` is protected for the same reason a link is: a row that has been
         made a non-canonical row of something stays one, and an import writing the row
         again says nothing about that either way.
-
-        `watch_identifier` is set here rather than by each plugin that builds an
-        `Episode`, since the season being upserted onto is what says which plugin
-        the row belongs to and every import arrives through this.
         """
-        self.watch_identifier = watch_identifier(
-            parent.show.source.plugin.key,
-            self.key,
-        )
         protected_keys = set(protected_keys or ()) | {
             "canonical_episode_validated_at",
             "is_canonical",

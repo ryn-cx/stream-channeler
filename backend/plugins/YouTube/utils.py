@@ -4,7 +4,7 @@ from urllib.parse import quote
 
 from not_yt_dlapi.exceptions import APIError
 
-from app.media.media_type import MediaType
+from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
@@ -143,8 +143,8 @@ class UtilsMixin(FileMixin):
         return self.paid_source
 
     # TODO: Validate
-    def tmdb_media_type(self, show_key: str) -> MediaType:
-        return MediaType.movie if is_video_key(show_key) else MediaType.tv
+    def tmdb_media_type(self, show_key: str) -> TMDBMediaType:
+        return TMDBMediaType.movie if is_video_key(show_key) else TMDBMediaType.tv
 
     # TODO: Validate
     def _get_episode_number(

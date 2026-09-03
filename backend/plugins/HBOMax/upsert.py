@@ -7,6 +7,7 @@ from typing import override
 
 from minbo.movie.models import Idref14 as MovieContent
 
+from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -174,6 +175,7 @@ class UpsertMixin(UtilsMixin, FileMixin):
 
             new_episode = Episode(
                 key=episode_key,
+                watch_identifier=watch_identifier(self.plugin_name(), episode_key),
                 name=str(item.title.full),
                 episode_number=item.episode_number,
                 url=item.episode_url,
@@ -204,6 +206,7 @@ class UpsertMixin(UtilsMixin, FileMixin):
         if self._episode_is_outdated(episode, season.key, show_key, force=force):
             new_episode = Episode(
                 key=show_key,
+                watch_identifier=watch_identifier(self.plugin_name(), show_key),
                 name=content.title.full,
                 description=content.summary.full,
                 url=self._movie_url(show_key),

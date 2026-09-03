@@ -7,7 +7,7 @@ import uuid
 
 from loguru import logger
 
-from app.media.media_type import MediaType
+from app.media.media_type import TMDBMediaType
 from app.shows.models import Show
 from app.unmatched_sources.service import (
     clear_unmatched_source,
@@ -112,7 +112,7 @@ class ListedSourcesMixin(WatchProviderSyncMixin, LookupMixin):
         self,
         plugin_class: type[AbstractPlugin],
         show: Show,
-        media_type: MediaType,
+        media_type: TMDBMediaType,
     ) -> bool:
         if not plugin_class.implements("search_for_url") or not show.name:
             return False
