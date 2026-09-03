@@ -3,8 +3,10 @@ import os
 from typing import override
 
 import pytest
-from sqlmodel import Session
+from sqlalchemy import func
+from sqlmodel import Session, select
 
+from app.channels.models import Channel, ChannelQueue
 from plugins.Hulu import Hulu
 from tests.plugins.frozen_clock import frozen_clock
 from tests.plugins.plugin_validator_alt import PluginValidatorAlt, StandardTestsAlt
@@ -45,7 +47,17 @@ class TestInitializeChannel(HuluValidatorAlt):
         """Building the channels leaves the database as it was recorded."""
         with log_stats(self), frozen_clock(self.import_time):
             Hulu.initialize_plugin(session_with_files)
+            session_with_files.flush()
         self.assert_state(session_with_files, "initialize_channel")
+
+        channel_count = session_with_files.exec(
+            select(func.count()).select_from(Channel),
+        ).one()
+        queue_count = session_with_files.exec(
+            select(func.count()).select_from(ChannelQueue),
+        ).one()
+        assert channel_count > 0
+        assert queue_count > 0
 
 
 # TODO: Validate

@@ -15,7 +15,11 @@ import {
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import type { TmdbMatchRow } from "./tmdbMatchColumns"
-import { useSettleTmdbMatch } from "./tmdbMatchesQuery"
+import {
+  SETTLE_TMDB_MATCH_MUTATION_KEY,
+  type SettleTmdbMatchVariables,
+  useRereadTmdbMatches,
+} from "./tmdbMatchesQuery"
 import {
   MATCH_KINDS,
   type MatchField,
@@ -33,11 +37,18 @@ function firstMatch(row: TmdbMatchRow, field: MatchField) {
 export function TmdbLinkMultipleButton() {
   const selection = useTmdbMatchSelection()
   const { showSuccessToast, showErrorToast } = useCustomToast()
-  const { reread } = useSettleTmdbMatch()
+  const reread = useRereadTmdbMatches()
 
   const linkMutation = useMutation({
-    mutationFn: async (field: MatchField) => {
-      const linkable = (selection?.selectedRows ?? []).flatMap((row) => {
+    mutationKey: SETTLE_TMDB_MATCH_MUTATION_KEY,
+    mutationFn: async ({
+      rows,
+      field,
+    }: SettleTmdbMatchVariables & {
+      rows: TmdbMatchRow[]
+      field: MatchField
+    }) => {
+      const linkable = rows.flatMap((row) => {
         const match = firstMatch(row, field)
         return match
           ? [
@@ -51,7 +62,7 @@ export function TmdbLinkMultipleButton() {
       await EpisodesService.adminLinkEpisodesToTmdb({ requestBody: linkable })
       return {
         linked: linkable.length,
-        skipped: (selection?.selectedRows.length ?? 0) - linkable.length,
+        skipped: rows.length - linkable.length,
       }
     },
     onSuccess: ({ linked, skipped }) => {
@@ -71,12 +82,12 @@ export function TmdbLinkMultipleButton() {
   })
 
   const absentMutation = useMutation({
-    mutationFn: async () => {
-      const rows = selection?.selectedRows ?? []
+    mutationKey: SETTLE_TMDB_MATCH_MUTATION_KEY,
+    mutationFn: async ({ episodeIds }: SettleTmdbMatchVariables) => {
       await EpisodesService.adminMarkEpisodesAbsentFromTmdb({
-        requestBody: rows.map((row) => row.episode.id),
+        requestBody: episodeIds,
       })
-      return rows.length
+      return episodeIds.length
     },
     onSuccess: (marked) => {
       selection?.clear()
@@ -117,7 +128,13 @@ export function TmdbLinkMultipleButton() {
             <DropdownMenuItem
               key={kind}
               disabled={offered === 0}
-              onSelect={() => linkMutation.mutate(field)}
+              onSelect={() =>
+                linkMutation.mutate({
+                  episodeIds: selection.selectedIds,
+                  rows: selection.selectedRows,
+                  field,
+                })
+              }
             >
               {label}
               <span className="ml-auto pl-4 text-xs tabular-nums text-muted-foreground">
@@ -127,7 +144,11 @@ export function TmdbLinkMultipleButton() {
           )
         })}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => absentMutation.mutate()}>
+        <DropdownMenuItem
+          onSelect={() =>
+            absentMutation.mutate({ episodeIds: selection.selectedIds })
+          }
+        >
           <CircleSlash className="h-4 w-4" />
           Not on TMDB
         </DropdownMenuItem>

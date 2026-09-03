@@ -32,6 +32,7 @@ from wholoo.season.models import SeasonModel
 from wholoo.tv import TV
 from wholoo.tv.models import TVModel
 
+from app.files.models import File
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
 from plugins.Hulu.identity import HuluIdentity
@@ -212,6 +213,17 @@ class FileMixin(BasePlugin):
                 for _name, href in genres_page.listed_items()
             ),
         ]
+
+    # TODO: Validate
+    def _preload_source_files(
+        self,
+        preloaded_files: Sequence[File] | None = None,
+    ) -> Sequence[File]:
+        if preloaded_files:
+            return preloaded_files
+        return self._get_files_by_keys(
+            [file.file_key() for file in self._source_files()],
+        )
 
     # TODO: Validate
     def series_file(self, series_id: str) -> Series:

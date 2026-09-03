@@ -13,6 +13,7 @@ from app.episodes.models import Episode
 from app.models import Visibility
 from app.seasons.models import Season
 from app.shows.models import Show
+from app.users.models import User
 from app.users.service import get_or_create_plugin_user
 from plugins.utils.abstract_plugin import (
     InvalidURLError,
@@ -26,7 +27,7 @@ from plugins.utils.base_plugin_v2.url import BaseURLMixin
 
 # TODO: Validate
 class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
-    __plugin_channels: dict[str, Channel] | None = None
+    __plugin_channels: tuple[User, dict[str, Channel]] | None = None
 
     # TODO: Validate
     def add_urls_to_plugin_channel(
@@ -36,7 +37,7 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         urls: Sequence[str] = (),
     ) -> Channel:
         """Return the plugin owned channel `name`, creating it the first time."""
-        channels = self._plugin_channels()
+        plugin_user, channels = self._plugin_channels()
         if not (channel := channels.get(channel_name)):
             channel = Channel(
                 name=channel_name,
@@ -44,7 +45,7 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
                 visibility=Visibility.public,
                 anonymous=False,
                 score=-1,
-                user_id=get_or_create_plugin_user(session=self.session).id,
+                user_id=plugin_user.id,
             )
             self.session.add(channel)
             self.session.flush()
@@ -53,7 +54,7 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         return channel
 
     # TODO: Validate
-    def _plugin_channels(self) -> dict[str, Channel]:
+    def _plugin_channels(self) -> tuple[User, dict[str, Channel]]:
         """Return every channel the plugin user owns, read once per plugin.
 
         A plugin whose catalogue is split across a hundred genres asks for a
@@ -61,12 +62,15 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         """
         if self.__plugin_channels is None:
             plugin_user = get_or_create_plugin_user(session=self.session)
-            self.__plugin_channels = {
-                channel.name: channel
-                for channel in self.session.exec(
-                    select(Channel).where(Channel.user_id == plugin_user.id),
-                ).all()
-            }
+            self.__plugin_channels = (
+                plugin_user,
+                {
+                    channel.name: channel
+                    for channel in self.session.exec(
+                        select(Channel).where(Channel.user_id == plugin_user.id),
+                    ).all()
+                },
+            )
         return self.__plugin_channels
 
     # TODO: Validate

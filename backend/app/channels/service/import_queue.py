@@ -39,6 +39,8 @@ def _write_queue_rows(
 ) -> None:
     """Add URLs into a channel's import queue as fast as possible."""
     unique_urls = _unique_urls(urls)
+    if not unique_urls:
+        return
 
     timestamp = tz_datetime.current_time()
 

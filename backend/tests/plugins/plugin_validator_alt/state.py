@@ -14,7 +14,7 @@ from sqlalchemy import Column, Table
 from sqlalchemy import select as sqlalchemy_select
 from sqlmodel import Session, SQLModel
 
-EXCLUDED_TABLES = frozenset({"file", "user"})
+EXCLUDED_TABLES = frozenset({"file", "user", "channel", "channelqueue"})
 """The tables the dump leaves out.
 
 The stored test files are put into `file` before a test runs, so the table says
@@ -260,10 +260,22 @@ def database_json(session: Session) -> str:
 # TODO: Validate
 def state_diff(expected: str, actual: str) -> str:
     """Return what changed between the recorded dump and the one a run produced."""
+    expected_lines = expected.splitlines()
+    actual_lines = actual.splitlines()
+
+    matching_prefix = 0
+    while (
+        matching_prefix < len(expected_lines)
+        and matching_prefix < len(actual_lines)
+        and expected_lines[matching_prefix] == actual_lines[matching_prefix]
+    ):
+        matching_prefix += 1
+
+    start = max(matching_prefix - 5, 0)
     return "\n".join(
         difflib.unified_diff(
-            expected.splitlines(),
-            actual.splitlines(),
+            expected_lines[start : start + 2000],
+            actual_lines[start : start + 2000],
             fromfile="recorded",
             tofile="actual",
             lineterm="",

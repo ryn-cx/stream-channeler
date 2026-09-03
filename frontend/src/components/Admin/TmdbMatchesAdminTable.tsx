@@ -26,7 +26,10 @@ import {
   tmdbMatchColumns,
 } from "./tmdbMatchColumns"
 import { OpenEpisodeEditorProvider } from "./tmdbMatchEditing"
-import { TMDB_MATCHES_QUERY_KEY } from "./tmdbMatchesQuery"
+import {
+  TMDB_MATCHES_QUERY_KEY,
+  useSettlingTmdbMatchIds,
+} from "./tmdbMatchesQuery"
 import { TmdbMatchSelectionProvider } from "./tmdbMatchSelection"
 
 const STORAGE_KEY = "admin-tmdb-matches"
@@ -76,7 +79,13 @@ export function TmdbMatchesAdminTable() {
     refetchOnWindowFocus: false,
   })
 
-  const episodes = query.data ? asTmdbMatchRows(query.data.data) : undefined
+  const settlingIds = useSettlingTmdbMatchIds()
+  const episodes = query.data
+    ? asTmdbMatchRows(query.data.data).filter(
+        (row) => !settlingIds.has(row.episode.id),
+      )
+    : undefined
+  const settledHere = (query.data?.data.length ?? 0) - (episodes?.length ?? 0)
 
   const table = useReactTable({
     data: episodes ?? [],
@@ -128,8 +137,8 @@ export function TmdbMatchesAdminTable() {
                   onPaginationChange: setPagination,
                   onSortOptionsChange: setSortOptions,
                   onFilterOptionsChange: setFilterOptions,
-                  rowCount: query.data?.filtered_count ?? 0,
-                  totalRowCount: query.data?.total_count ?? 0,
+                  rowCount: (query.data?.filtered_count ?? 0) - settledHere,
+                  totalRowCount: (query.data?.total_count ?? 0) - settledHere,
                 }}
               />
             )}

@@ -40,6 +40,7 @@ class UpdateMixin(MediaMixin):
     # TODO: Validate
     def add_media_to_plugin_channels(self, update_at: datetime | None = None) -> None:
         self.genres_page_file().download_if_outdated(update_at)
+        _cache = self._preload_source_files()
         self._download_outdated_files(self._source_files(), update_at)
 
         all_urls: list[str] = []

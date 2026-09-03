@@ -24,7 +24,11 @@ import {
   numbering,
   TmdbPageLink,
 } from "./CanonicalEpisodeRow"
-import { useSettleTmdbMatch } from "./tmdbMatchesQuery"
+import {
+  SETTLE_TMDB_MATCH_MUTATION_KEY,
+  type SettleTmdbMatchVariables,
+  useRereadTmdbMatches,
+} from "./tmdbMatchesQuery"
 import { type Numbered, numberingAgreement, numberingOf } from "./tmdbNumbering"
 
 type ChoiceOrder = "sequential" | "similarity" | "other"
@@ -147,7 +151,7 @@ export function TmdbLinkPicker({
 }: EpisodeTmdbLinkMenuProps) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
-  const { settle, restore, reread } = useSettleTmdbMatch()
+  const reread = useRereadTmdbMatches()
   const [order, setOrder] = useState<ChoiceOrder>("sequential")
   // The episodes still going spare are what a title is usually missing, so they
   // are what is offered until the whole title is asked for.
@@ -187,40 +191,38 @@ export function TmdbLinkPicker({
   }
 
   const linkMutation = useMutation({
-    mutationFn: (canonicalEpisodeId: string) =>
+    mutationKey: SETTLE_TMDB_MATCH_MUTATION_KEY,
+    mutationFn: ({
+      canonicalEpisodeId,
+    }: SettleTmdbMatchVariables & { canonicalEpisodeId: string }) =>
       EpisodesService.adminLinkEpisodeToTmdb({ episodeId, canonicalEpisodeId }),
-    onMutate: async (canonicalEpisodeId: string) => ({
-      matches: await settle(episodeId),
-      choices: await dropChoice(canonicalEpisodeId),
-    }),
+    onMutate: ({ canonicalEpisodeId }) => dropChoice(canonicalEpisodeId),
     onSuccess: (linked) => {
       showSuccessToast("Episode linked to TMDB")
       queryClient.invalidateQueries({ queryKey: informationQueryKey })
       onLinksChanged?.(linked)
     },
     onError: (error: unknown, _variables, previous) => {
-      restore(previous?.matches)
-      restoreChoices(previous?.choices)
+      restoreChoices(previous)
       handleError.call(showErrorToast, error as any)
     },
     onSettled: reread,
   })
 
   const urlMutation = useMutation({
-    mutationFn: () =>
+    mutationKey: SETTLE_TMDB_MATCH_MUTATION_KEY,
+    mutationFn: ({ episodeIds }: SettleTmdbMatchVariables) =>
       EpisodesService.adminLinkEpisodeByTmdbUrl({
-        episodeId,
+        episodeId: episodeIds[0],
         requestBody: { url: urlDraft },
       }),
-    onMutate: () => settle(episodeId),
     onSuccess: (linked) => {
       showSuccessToast("Episode linked to TMDB")
       setUrlDraft("")
       queryClient.invalidateQueries({ queryKey: informationQueryKey })
       onLinksChanged?.(linked)
     },
-    onError: (error: unknown, _variables, previous) => {
-      restore(previous)
+    onError: (error: unknown) => {
       handleError.call(showErrorToast, error as any)
     },
     onSettled: reread,
@@ -366,7 +368,12 @@ export function TmdbLinkPicker({
                     size="sm"
                     className="shrink-0"
                     disabled={linkMutation.isPending}
-                    onClick={() => linkMutation.mutate(choice.episode.id)}
+                    onClick={() =>
+                      linkMutation.mutate({
+                        episodeIds: [episodeId],
+                        canonicalEpisodeId: choice.episode.id,
+                      })
+                    }
                   >
                     Link
                   </Button>
@@ -385,7 +392,7 @@ export function TmdbLinkPicker({
             if (event.key !== "Enter") return
             event.preventDefault()
             if (urlDraft.trim().length === 0 || urlMutation.isPending) return
-            urlMutation.mutate()
+            urlMutation.mutate({ episodeIds: [episodeId] })
           }}
           placeholder="themoviedb.org address of a film or of one episode"
           aria-label="TMDB address"
@@ -395,7 +402,7 @@ export function TmdbLinkPicker({
           type="button"
           variant="outline"
           disabled={urlDraft.trim().length === 0 || urlMutation.isPending}
-          onClick={() => urlMutation.mutate()}
+          onClick={() => urlMutation.mutate({ episodeIds: [episodeId] })}
         >
           Link by address
         </Button>
