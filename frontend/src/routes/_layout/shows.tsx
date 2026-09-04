@@ -8,7 +8,6 @@ import {
   serializeTableQuery,
   validateMediaSearch,
 } from "@/components/Common/DataTable"
-import AddShow from "@/components/Shows/Add"
 import {
   type CanonicalShowTableData,
   canonicalShowColumns,
@@ -27,8 +26,6 @@ export const Route = createFileRoute("/_layout/shows")({
 
 // TODO: Validate
 function ShowsPage() {
-  const { source_id } = Route.useSearch()
-
   return (
     <MediaListPage<ShowTableData, CanonicalShowTableData>
       title="Shows"
@@ -37,7 +34,6 @@ function ShowsPage() {
       columnVisibilityKey="shows-column-visibility"
       defaultHidden={{ key: false, id: false }}
       emptyIcon={Clapperboard}
-      headerActions={source_id ? <AddShow sourceKey={source_id} /> : undefined}
       fetchTable={async (params) => {
         const result = await ShowsService.getShows({
           offset: params.offset,

@@ -10,17 +10,14 @@ from app.auth.dependencies import (
     SessionDep,
     get_current_active_superuser,
 )
-from app.media.service.deletion import delete_record
 from app.plugins.dependencies import ExistingPlugin
 from app.plugins.models import Plugin
 from app.plugins.schemas import (
-    PluginCreate,
     PluginListOutput,
     PluginOutput,
     PluginsPublic,
-    PluginUpdate,
 )
-from app.schemas import Message, ReadOptions
+from app.schemas import ReadOptions
 from app.service.responses import list_response
 
 plugins_router = APIRouter(
@@ -28,19 +25,6 @@ plugins_router = APIRouter(
     tags=["plugins"],
     dependencies=[Depends(get_current_active_superuser)],
 )
-
-
-# TODO: Validate
-@plugins_router.post(
-    "",
-    response_model=PluginOutput,
-)
-def create_plugin(
-    session: SessionDep,
-    plugin_input: PluginCreate,
-) -> Plugin:
-    """Create a `Plugin`."""
-    return plugin_input.create(session)
 
 
 # TODO: Validate
@@ -59,27 +43,6 @@ def get_plugins(
         params=read_options,
         current_user=current_user,
     )
-
-
-# TODO: Validate
-@plugins_router.patch(
-    "/{plugin_id}",
-    response_model=PluginOutput,
-)
-def update_plugin(
-    session: SessionDep,
-    plugin: ExistingPlugin,
-    plugin_input: PluginUpdate,
-) -> Plugin:
-    return plugin_input.update(session, plugin)
-
-
-# TODO: Validate
-@plugins_router.delete(
-    "/{plugin_id}",
-)
-def delete_plugin(session: SessionDep, plugin: ExistingPlugin) -> Message:
-    return delete_record(session, plugin)
 
 
 # TODO: Validate

@@ -33,7 +33,6 @@ from app.episodes.schemas import (
     CanonicalEpisodesPublic,
     DuplicatedCanonicalEpisodeOutput,
     EpisodeCanonicalLinkInput,
-    EpisodeCreate,
     EpisodeListOutput,
     EpisodeOutput,
     EpisodesPublic,
@@ -49,10 +48,8 @@ from app.episodes.service.information import _select_with_canonical_season_and_s
 from app.episodes.service.tmdb_choices import list_tmdb_episode_choices
 from app.episodes.service.unlocked import list_unlocked_episodes
 from app.episodes.service.unmatched import list_unmatched_episodes
-from app.media.service.deletion import delete_record
 from app.plugins.models import Plugin
-from app.schemas import Message, ReadOptions
-from app.seasons.dependencies import ExistingSeason
+from app.schemas import ReadOptions
 from app.seasons.models import Season
 from app.service.responses import list_response
 from app.shows.models import Show
@@ -69,13 +66,6 @@ canonical_episodes_router = APIRouter(
 
 episodes_router = APIRouter(
     prefix="/episodes",
-    tags=["episodes"],
-    dependencies=[Depends(get_current_active_superuser)],
-)
-
-
-season_episodes_router = APIRouter(
-    prefix="/seasons/{season_id}",
     tags=["episodes"],
     dependencies=[Depends(get_current_active_superuser)],
 )
@@ -103,16 +93,6 @@ EPISODE_EXTRA_COLUMNS: dict[str, Any] = {
     "plugin_id": Source.plugin_id,
     "plugin_name": Plugin.key,
 }
-
-
-# TODO: Validate
-@season_episodes_router.post("/episodes")
-def create_episode(
-    session: SessionDep,
-    season: ExistingSeason,
-    episode_input: EpisodeCreate,
-) -> EpisodeOutput:
-    return EpisodeOutput.model_validate(episode_input.create(session, Episode, season))
 
 
 # TODO: Validate
@@ -342,14 +322,6 @@ def update_episode(
 
 
 # TODO: Validate
-@episodes_router.delete(
-    "/{episode_id}",
-)
-def delete_episode(session: SessionDep, episode: ExistingEpisode) -> Message:
-    return delete_record(session, episode)
-
-
-# TODO: Validate
 @canonical_episodes_router.get("")
 def get_canonical_episodes(
     session: SessionDep,
@@ -375,6 +347,3 @@ router.include_router(canonical_episodes_router)
 
 
 router.include_router(episodes_router)
-
-
-router.include_router(season_episodes_router)

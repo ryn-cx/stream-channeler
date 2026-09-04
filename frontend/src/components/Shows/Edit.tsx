@@ -8,23 +8,11 @@ import { z } from "zod"
 import { type ShowPublic, ShowsService, type ShowUpdate } from "@/client"
 import { ShowInformationSummary } from "@/components/ChannelCommon/ShowInformationDialog"
 import { FormModal } from "@/components/Common/FormModal"
-import { FormTextField } from "@/components/Common/FormTextField"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { useEditTableRow } from "@/components/Common/useEditTableRow"
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
 import useAuth from "@/hooks/useAuth"
 import { extraText, parseExtraText } from "@/lib/extra"
-import {
-  nullifyBlanks,
-  optionalInt,
-  optionalString,
-  requiredKey,
-} from "@/lib/formSchemas"
+import { optionalString } from "@/lib/formSchemas"
 import { CanonicalizeShowButton } from "./CanonicalizeShowButton"
 import { CanonicalShowField } from "./CanonicalShowField"
 import { ForceUpdateShowButton } from "./ForceUpdateShowButton"
@@ -38,18 +26,7 @@ import {
 } from "./TmdbEpisodeOrderField"
 
 const formSchema = z.object({
-  year: optionalInt,
-  canonical_show_validated_at: optionalString,
-  deleted_at: optionalString,
   extra: optionalString,
-  key: requiredKey,
-  name: optionalString,
-  media_type: optionalString,
-  description: optionalString,
-  url: optionalString,
-  image_url: optionalString,
-  data_timestamp: optionalString,
-  update_at: optionalString,
 })
 
 type FormInput = z.input<typeof formSchema>
@@ -80,19 +57,7 @@ const EditShow = ({ show, size, open, onOpenChange }: EditShowProps) => {
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
-      year: show.year == null ? "" : String(show.year),
-      canonical_show_validated_at:
-        show.canonical_show_validated_at?.slice(0, 16) ?? "",
-      deleted_at: show.deleted_at?.slice(0, 16) ?? "",
       extra: extraText(show.extra),
-      key: show.key ?? "",
-      name: show.name ?? "",
-      media_type: show.media_type ?? "",
-      description: show.description ?? "",
-      url: show.url ?? "",
-      image_url: show.image_url ?? "",
-      data_timestamp: show.data_timestamp?.slice(0, 16) ?? "",
-      update_at: show.update_at?.slice(0, 16) ?? "",
     },
   })
 
@@ -117,10 +82,7 @@ const EditShow = ({ show, size, open, onOpenChange }: EditShowProps) => {
   // TODO: Validate
   const onSubmit = (data: FormOutput) => {
     setIsOpen(false)
-    mutation.mutate({
-      ...nullifyBlanks(data),
-      extra: parseExtraText(data.extra ?? ""),
-    })
+    mutation.mutate({ extra: parseExtraText(data.extra ?? "") })
   }
 
   return (
@@ -174,68 +136,6 @@ const EditShow = ({ show, size, open, onOpenChange }: EditShowProps) => {
           enabled={isOpen}
         />
       )}
-      <Accordion type="single" collapsible className="rounded-xl border px-4">
-        <AccordionItem value="fields">
-          <AccordionTrigger>Manually Edit Fields</AccordionTrigger>
-          <AccordionContent className="grid gap-4">
-            <FormTextField
-              control={form.control}
-              label="Name"
-              placeholder="Show name"
-              type="text"
-            />
-            <FormTextField
-              control={form.control}
-              label="Media Type"
-              placeholder="e.g. anime, series"
-              type="text"
-            />
-            <FormTextField
-              control={form.control}
-              label="Description"
-              placeholder="Description"
-              type="text"
-            />
-            <FormTextField
-              control={form.control}
-              label="URL"
-              placeholder="https://..."
-              type="url"
-            />
-            <FormTextField
-              control={form.control}
-              label="Image URL"
-              placeholder="https://..."
-              type="url"
-            />
-            <FormTextField
-              control={form.control}
-              label="Data Timestamp"
-              type="datetime-local"
-            />
-            <FormTextField
-              control={form.control}
-              label="Update At"
-              type="datetime-local"
-              showNowButton
-            />
-            <FormTextField control={form.control} label="Key" type="text" />
-            <FormTextField control={form.control} label="Year" type="number" />
-            <FormTextField
-              control={form.control}
-              label="Canonical Show Validated At"
-              type="datetime-local"
-              showNowButton
-            />
-            <FormTextField
-              control={form.control}
-              label="Deleted At"
-              type="datetime-local"
-            />
-            <FormTextField control={form.control} label="Extra" type="text" />
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
     </FormModal>
   )
 }

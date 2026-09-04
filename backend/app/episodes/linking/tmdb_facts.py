@@ -3,7 +3,7 @@
 import uuid
 from collections.abc import Collection, Sequence
 from functools import cached_property
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 from sqlmodel import Session
 
@@ -19,6 +19,13 @@ from app.shows.models import Show
 
 if TYPE_CHECKING:
     from plugins.TMDB import TMDB
+
+
+# TODO: Validate
+class EpisodeNumbering(NamedTuple):
+    tmdb_show_id: int
+    season_number: int
+    episode_number: int
 
 
 # TODO: Validate
@@ -147,7 +154,7 @@ class TmdbEpisodeFacts:
 
     # TODO: Validate
     @staticmethod
-    def _episode_numbering(tmdb_episode: Episode) -> tuple[int, int, int] | None:
+    def _episode_numbering(tmdb_episode: Episode) -> EpisodeNumbering | None:
         from plugins.TMDB.episode_groups import parse_episode_extra  # noqa: PLC0415
 
         native = parse_episode_extra(tmdb_episode.extra)
@@ -167,7 +174,7 @@ class TmdbEpisodeFacts:
         )
         if tmdb_show_id is None or season_number is None or episode_number is None:
             return None
-        return (tmdb_show_id, season_number, episode_number)
+        return EpisodeNumbering(tmdb_show_id, season_number, episode_number)
 
     # TODO: Validate
     @staticmethod
@@ -181,7 +188,7 @@ class TmdbEpisodeFacts:
     @staticmethod
     def _names(
         tmdb: TMDB,
-        numbering: tuple[int, int, int] | None,
+        numbering: EpisodeNumbering | None,
         movie_id: int | None,
     ) -> tuple[str, ...]:
         if numbering is not None:

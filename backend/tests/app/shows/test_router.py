@@ -11,7 +11,6 @@ from tests.app.shows.utils import create_random_show
 from tests.app.users.utils import auth_headers, create_random_user
 
 ADMIN_ROUTES: list[tuple[Method, str]] = [
-    ("post", f"/sources/{MISSING}/shows"),
     ("get", "/shows"),
     ("get", "/shows/unvalidated"),
     ("get", "/shows/canonical"),
@@ -28,7 +27,6 @@ ADMIN_ROUTES: list[tuple[Method, str]] = [
     ("post", f"/shows/{MISSING}/validate"),
     ("post", f"/shows/{MISSING}/relink"),
     ("post", f"/shows/{MISSING}/force-update"),
-    ("delete", f"/shows/{MISSING}"),
 ]
 
 

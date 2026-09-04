@@ -10,11 +10,8 @@ from tests.app.helpers.permissions import Method, assert_allowed
 from tests.app.seasons.utils import create_random_season
 
 ADMIN_ROUTES: list[tuple[Method, str]] = [
-    ("post", f"/shows/{MISSING}/seasons"),
     ("get", "/seasons"),
     ("get", f"/seasons/{MISSING}"),
-    ("patch", f"/seasons/{MISSING}"),
-    ("delete", f"/seasons/{MISSING}"),
 ]
 
 

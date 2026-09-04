@@ -6,13 +6,16 @@ from __future__ import annotations
 import weakref
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
+from datetime import date
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from sqlalchemy import event
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
+from app.files.models import File
 from app.plugins.models import Plugin
 from app.sources.models import Source
+from app.utils import tz_datetime
 from plugins.utils.base_plugin_v3.files import INITIAL_FILE_IDENTIFIER, BaseFile
 
 if TYPE_CHECKING:
@@ -129,6 +132,51 @@ class BasePluginCore(ABC):
         file = file_type(self.file_session, self.file_plugin, *identifiers)
         self._file_cache[cache_key] = file
         return file
+
+    # TODO: Validate
+    @staticmethod
+    def _get_date_from_file_name(file_class: type[BaseFile[Any]], stored: File) -> date:
+        identifier = file_class.file_to_unique_identifier(stored)
+        return date.fromisoformat(identifier.split("/")[-1])
+
+    # TODO: Validate
+    def latest_file_record(
+        self,
+        file_class: type[BaseFile[Any]],
+        file_prefix: str,
+    ) -> File | None:
+        statement = (
+            select(File)
+            .where(
+                File.plugin == self.plugin,
+                col(File.key).startswith(f"{file_class.class_key()}/{file_prefix}"),
+            )
+            .order_by(col(File.data_timestamp).desc())
+        )
+        return self.session.exec(statement).first()
+
+    # TODO: Validate
+    def files_with_prefix(
+        self,
+        file_class: type[BaseFile[Any]],
+        key_prefix: str,
+    ) -> Sequence[File]:
+        statement = select(File).where(
+            File.plugin == self.plugin,
+            col(File.key).startswith(f"{file_class.class_key()}/{key_prefix}"),
+        )
+        return self.session.exec(statement).all()
+
+    # TODO: Validate
+    def latest_file_date(
+        self,
+        file_class: type[BaseFile[Any]],
+        file_prefix: str,
+    ) -> date:
+        stored = self.latest_file_record(file_class, file_prefix)
+        if stored is None:
+            return tz_datetime.now().date()
+        return self._get_date_from_file_name(file_class, stored)
 
     # TODO: Validate
     def _initial_file[FileT: BaseFile[Any]](

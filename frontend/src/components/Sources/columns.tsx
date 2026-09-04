@@ -10,10 +10,10 @@ import {
 } from "@/components/Common/TableCells"
 import { TooltipIconLink } from "@/components/Common/TooltipIconLink"
 import { extraText } from "@/lib/extra"
-import { SourceActionsMenu } from "./ActionsMenu"
 
 export type SourceTableData = SourceListPublic & { pending?: boolean }
 
+// TODO: Validate
 export const sourceColumns: ColumnDef<SourceTableData>[] = [
   {
     accessorKey: "plugin_name",
@@ -108,18 +108,5 @@ export const sourceColumns: ColumnDef<SourceTableData>[] = [
     accessorKey: "id",
     header: "ID",
     cell: ({ row }) => <TruncatedCell value={row.original.id} />,
-  },
-  {
-    id: "actions",
-    enableSorting: false,
-    enableColumnFilter: false,
-    header: () => <span className="sr-only">Actions</span>,
-    cell: ({ row }) => (
-      <div className="flex justify-end">
-        {row.original.pending ? null : (
-          <SourceActionsMenu source={row.original} />
-        )}
-      </div>
-    ),
   },
 ]

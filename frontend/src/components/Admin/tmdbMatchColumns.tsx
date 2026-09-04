@@ -2,17 +2,15 @@
 import { Link } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Pencil, SquareArrowOutUpRight } from "lucide-react"
-import { type ReactNode, useState } from "react"
+import type { ReactNode } from "react"
 
 import type { UnlockedEpisodeOutput, UnmatchedEpisodeOutput } from "@/client"
 import { ClampedContent } from "@/components/ChannelCommon/ClampedContent"
 import { TmdbLink } from "@/components/ChannelCommon/TmdbLink"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { EditEpisodeById } from "@/components/Episodes/EditEpisodeById"
-import EditSeason from "@/components/Seasons/Edit"
 import { EditShowById } from "@/components/Shows/EditShowById"
 import { buttonVariants } from "@/components/ui/button"
-import { useSeason } from "@/hooks/useEntities"
 import { cn } from "@/lib/utils"
 import { TmdbMatchActions, TmdbMatchConfirmButton } from "./TmdbMatchActions"
 import { useOpenEpisodeEditor } from "./tmdbMatchEditing"
@@ -119,25 +117,6 @@ function ExternalLinkButton({
     >
       <SquareArrowOutUpRight />
     </a>
-  )
-}
-
-// TODO: Validate
-function SeasonEditButton({ seasonId }: { seasonId: string }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const { data: season } = useSeason(isOpen ? seasonId : undefined)
-  return (
-    <>
-      <TooltipIconButton
-        label="Edit this season"
-        icon={<Pencil />}
-        size="icon-sm"
-        onClick={() => setIsOpen(true)}
-      />
-      {isOpen && season ? (
-        <EditSeason season={season} open onOpenChange={setIsOpen} />
-      ) : null}
-    </>
   )
 }
 
@@ -278,7 +257,6 @@ function MatchSummary({
         >
           Season {record.season_number ?? "?"}
         </Link>
-        <SeasonEditButton seasonId={record.season_id} />
         <ExternalLinkButton
           url={record.season_url}
           label="Open this season on the site it came from"

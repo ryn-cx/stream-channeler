@@ -8,10 +8,10 @@ import {
   TruncatedCell,
 } from "@/components/Common/TableCells"
 import { extraText } from "@/lib/extra"
-import { SeasonActionsMenu } from "./ActionsMenu"
 
 export type SeasonTableData = SeasonListOutput & { pending?: boolean }
 
+// TODO: Validate
 export const seasonColumns: ColumnDef<SeasonTableData>[] = [
   {
     accessorKey: "plugin_name",
@@ -126,18 +126,5 @@ export const seasonColumns: ColumnDef<SeasonTableData>[] = [
     accessorKey: "id",
     header: "ID",
     cell: ({ row }) => <TruncatedCell value={row.original.id} />,
-  },
-  {
-    id: "actions",
-    enableSorting: false,
-    enableColumnFilter: false,
-    header: () => <span className="sr-only">Actions</span>,
-    cell: ({ row }) => (
-      <div className="flex justify-end">
-        {row.original.pending ? null : (
-          <SeasonActionsMenu season={row.original} />
-        )}
-      </div>
-    ),
   },
 ]

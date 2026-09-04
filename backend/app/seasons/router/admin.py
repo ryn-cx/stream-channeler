@@ -12,40 +12,19 @@ from app.auth.dependencies import (
     SessionDep,
     get_current_active_superuser,
 )
-from app.media.service.deletion import delete_record
-from app.schemas import Message, ReadOptions
+from app.schemas import ReadOptions
 from app.seasons.dependencies import ExistingSeason
-from app.seasons.models import Season
 from app.seasons.schemas import (
-    SeasonCreate,
     SeasonOutput,
     SeasonsPublic,
-    SeasonUpdate,
 )
 from app.seasons.service.listing import season_list_output
-from app.shows.dependencies import ExistingShow
 
 seasons_router = APIRouter(
     prefix="/seasons",
     tags=["seasons"],
     dependencies=[Depends(get_current_active_superuser)],
 )
-
-
-show_seasons_router = APIRouter(
-    prefix="/shows/{show_id}",
-    tags=["seasons"],
-    dependencies=[Depends(get_current_active_superuser)],
-)
-
-
-@show_seasons_router.post("/seasons", response_model=SeasonOutput)
-def create_season(
-    session: SessionDep,
-    show: ExistingShow,
-    season_input: SeasonCreate,
-) -> Season:
-    return season_input.create(session, Season, show)
 
 
 # TODO: Validate
@@ -67,26 +46,5 @@ def get_season(season: ExistingSeason) -> SeasonOutput:
     return SeasonOutput.model_validate(season)
 
 
-# TODO: Validate
-@seasons_router.patch(
-    "/{season_id}",
-)
-def update_season(
-    session: SessionDep,
-    season: ExistingSeason,
-    season_input: SeasonUpdate,
-) -> SeasonOutput:
-    return SeasonOutput.model_validate(season_input.update(session, season))
-
-
-# TODO: Validate
-@seasons_router.delete(
-    "/{season_id}",
-)
-def delete_season(session: SessionDep, season: ExistingSeason) -> Message:
-    return delete_record(session, season)
-
-
 router = APIRouter()
 router.include_router(seasons_router)
-router.include_router(show_seasons_router)

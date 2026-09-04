@@ -1,11 +1,7 @@
 // TODO: Validate
-import { zodResolver } from "@hookform/resolvers/zod"
 import { Pencil } from "lucide-react"
 import { useState } from "react"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
 
-import { EpisodesService, type EpisodeUpdate } from "@/client"
 import {
   EpisodeInformationHero,
   episodeInformationQueryKey,
@@ -14,19 +10,10 @@ import {
 import { EpisodeUserUrlSection } from "@/components/ChannelCommon/EpisodeUserUrlSection"
 import { IssueReportsSection } from "@/components/ChannelCommon/IssueReportsSection"
 import { AdminZone } from "@/components/Common/AdminZone"
-import { FormTextField } from "@/components/Common/FormTextField"
 import { ModalContent } from "@/components/Common/ModalContent"
-import { ModalFooter } from "@/components/Common/ModalFooter"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
-import { useEditTableRow } from "@/components/Common/useEditTableRow"
 import EditShow from "@/components/Shows/Edit"
 import { TMDB_EPISODE_ORDER_PLUGIN } from "@/components/Shows/TmdbEpisodeOrderField"
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
 import {
   Dialog,
   DialogBody,
@@ -34,18 +21,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Form } from "@/components/ui/form"
-import { LoadingButton } from "@/components/ui/loading-button"
 import useAuth from "@/hooks/useAuth"
 import { useShow } from "@/hooks/useEntities"
-import { extraText, parseExtraText } from "@/lib/extra"
-import {
-  nullifyBlanks,
-  optionalInt,
-  optionalNonNegativeInt,
-  optionalString,
-  requiredKey,
-} from "@/lib/formSchemas"
 
 import {
   CanonicalEpisodeControls,
@@ -54,50 +31,16 @@ import {
 import type { EpisodeTableData } from "./columns"
 import { NonCanonicalEpisodeLinks } from "./NonCanonicalEpisodeLinks"
 
-/** What the form reads, so any row carrying these can be edited. */
 export type EditableEpisodeFields = Pick<
   EpisodeTableData,
   | "id"
   | "canonical_episode_ids"
-  | "key"
-  | "name"
-  | "url"
-  | "description"
-  | "image_url"
-  | "air_date"
   | "episode_number"
-  | "duration"
-  | "sort_order"
   | "canonical_episode_validated_at"
   | "canonical_episode_note"
-  | "data_timestamp"
-  | "update_at"
-  | "deleted_at"
-  | "extra"
 >
 
-const formSchema = z.object({
-  canonical_episode_validated_at: optionalString,
-  canonical_episode_note: optionalString,
-  deleted_at: optionalString,
-  extra: optionalString,
-  name: optionalString,
-  episode_number: optionalInt,
-  url: optionalString,
-  description: optionalString,
-  image_url: optionalString,
-  air_date: optionalString,
-  duration: optionalNonNegativeInt,
-  sort_order: optionalInt,
-  data_timestamp: optionalString,
-  update_at: optionalString,
-  key: requiredKey,
-})
-
 const VERIFIED_NOTE = "Manual: Verified"
-
-type FormInput = z.input<typeof formSchema>
-type FormOutput = z.output<typeof formSchema>
 
 // TODO: Validate
 const EditShowOfEpisode = ({ showId }: { showId: string }) => {
@@ -115,10 +58,6 @@ interface EpisodeInformationContentProps {
   episode: Pick<EditableEpisodeFields, "id"> & Partial<EditableEpisodeFields>
   /** Whether the episode is wanted yet, so a collapsed reading fetches nothing. */
   enabled: boolean
-  /** Called once the row's own columns have been written. */
-  onSaved?: () => void
-  /** Whether there is a window around this for a Cancel to close. */
-  withCancel?: boolean
 }
 
 // TODO: Validate
@@ -133,8 +72,6 @@ interface EpisodeInformationContentProps {
 export function EpisodeInformationContent({
   episode,
   enabled,
-  onSaved,
-  withCancel = false,
 }: EpisodeInformationContentProps) {
   const { user } = useAuth()
   const isAdmin = Boolean(user?.is_superuser)
@@ -149,48 +86,11 @@ export function EpisodeInformationContent({
     episode.canonical_episode_ids ?? [],
   )
 
-  const form = useForm<FormInput, unknown, FormOutput>({
-    resolver: zodResolver(formSchema),
-    mode: "onBlur",
-    criteriaMode: "all",
-    defaultValues: {
-      canonical_episode_validated_at:
-        episode.canonical_episode_validated_at?.slice(0, 16) ?? "",
-      canonical_episode_note: episode.canonical_episode_note ?? "",
-      deleted_at: episode.deleted_at?.slice(0, 16) ?? "",
-      extra: extraText(episode.extra),
-      name: episode.name ?? "",
-      episode_number: episode.episode_number ?? "",
-      url: episode.url ?? "",
-      description: episode.description ?? "",
-      image_url: episode.image_url ?? "",
-      air_date: episode.air_date ?? "",
-      duration: episode.duration ?? "",
-      sort_order: episode.sort_order ?? "",
-      data_timestamp: episode.data_timestamp?.slice(0, 16) ?? "",
-      update_at: episode.update_at?.slice(0, 16) ?? "",
-      key: episode.key ?? "",
-    },
-  })
-
-  const mutation = useEditTableRow<EpisodeUpdate>({
-    mutationFn: (data) =>
-      EpisodesService.updateEpisode({
-        episodeId: episode.id,
-        requestBody: data,
-      }),
-    rowId: episode.id,
-    successMessage: "Episode updated successfully",
-  })
-
-  // TODO: Validate
-  const onSubmit = (data: FormOutput) => {
-    onSaved?.()
-    mutation.mutate({
-      ...nullifyBlanks(data),
-      extra: parseExtraText(data.extra ?? ""),
-    })
-  }
+  const [canonicalEpisodeValidatedAt, setCanonicalEpisodeValidatedAt] =
+    useState(episode.canonical_episode_validated_at?.slice(0, 16) ?? "")
+  const [canonicalEpisodeNote, setCanonicalEpisodeNote] = useState(
+    episode.canonical_episode_note ?? "",
+  )
 
   return (
     <div className="flex flex-col gap-6">
@@ -237,29 +137,22 @@ export function EpisodeInformationContent({
             episodeId={episode.id}
             seasonNumber={null}
             episodeNumber={episode.episode_number ?? null}
-            canonicalEpisodeValidatedAt={form.watch(
-              "canonical_episode_validated_at",
-            )}
-            canonicalEpisodeNote={form.watch("canonical_episode_note")}
+            canonicalEpisodeValidatedAt={canonicalEpisodeValidatedAt}
+            canonicalEpisodeNote={canonicalEpisodeNote}
             hasLinks={canonicalEpisodeIds.length > 0}
             enabled={enabled}
             onVerified={() => {
-              form.setValue(
-                "canonical_episode_validated_at",
+              setCanonicalEpisodeValidatedAt(
                 new Date().toISOString().slice(0, 16),
               )
-              form.setValue("canonical_episode_note", VERIFIED_NOTE)
+              setCanonicalEpisodeNote(VERIFIED_NOTE)
             }}
             onLinksChanged={(linked) => {
               setCanonicalEpisodeIds(linked.canonical_episode_ids ?? [])
-              form.setValue(
-                "canonical_episode_validated_at",
+              setCanonicalEpisodeValidatedAt(
                 linked.canonical_episode_validated_at?.slice(0, 16) ?? "",
               )
-              form.setValue(
-                "canonical_episode_note",
-                linked.canonical_episode_note ?? "",
-              )
+              setCanonicalEpisodeNote(linked.canonical_episode_note ?? "")
             }}
           />
         </AdminZone>
@@ -272,138 +165,6 @@ export function EpisodeInformationContent({
           reports={information.data.issue_reports}
           informationQueryKey={informationQueryKey}
         />
-      ) : null}
-
-      {/*
-              The row's own columns are put away behind a heading: they are the
-              website's account of the episode, which is written by the import
-              and only ever corrected by hand.
-            */}
-      {isAdmin ? (
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            <Accordion
-              type="single"
-              collapsible
-              className="rounded-xl border px-4"
-            >
-              <AccordionItem value="fields">
-                <AccordionTrigger>Manually Edit Fields</AccordionTrigger>
-                <AccordionContent>
-                  <div className="grid gap-4 px-1 py-2 sm:grid-cols-2">
-                    <div className="sm:col-span-2">
-                      <FormTextField
-                        control={form.control}
-                        label="Name"
-                        placeholder="Episode name"
-                        type="text"
-                      />
-                    </div>
-                    <FormTextField
-                      control={form.control}
-                      label="Episode Number"
-                      placeholder="1"
-                      type="number"
-                    />
-                    <FormTextField
-                      control={form.control}
-                      label="Sort Order"
-                      type="number"
-                    />
-                    <FormTextField
-                      control={form.control}
-                      label="Air Date"
-                      type="date"
-                    />
-                    <FormTextField
-                      control={form.control}
-                      name="duration"
-                      label="Duration (seconds)"
-                      placeholder="0"
-                      type="number"
-                    />
-                    <div className="sm:col-span-2">
-                      <FormTextField
-                        control={form.control}
-                        label="URL"
-                        placeholder="https://..."
-                        type="url"
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <FormTextField
-                        control={form.control}
-                        label="Image URL"
-                        placeholder="https://..."
-                        type="url"
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <FormTextField
-                        control={form.control}
-                        label="Description"
-                        placeholder="Description"
-                        type="text"
-                      />
-                    </div>
-                    <FormTextField
-                      control={form.control}
-                      label="Data Timestamp"
-                      type="datetime-local"
-                    />
-                    <FormTextField
-                      control={form.control}
-                      label="Update At"
-                      type="datetime-local"
-                      showNowButton
-                    />
-                    <FormTextField
-                      control={form.control}
-                      label="Key"
-                      type="text"
-                    />
-                    <FormTextField
-                      control={form.control}
-                      label="Deleted At"
-                      type="datetime-local"
-                    />
-                    <div className="sm:col-span-2">
-                      <FormTextField
-                        control={form.control}
-                        label="Canonical Episode Note"
-                        type="text"
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <FormTextField
-                        control={form.control}
-                        label="Canonical Episode Validated At"
-                        type="datetime-local"
-                        showNowButton
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <FormTextField
-                        control={form.control}
-                        label="Extra"
-                        type="text"
-                      />
-                    </div>
-                  </div>
-                  {withCancel ? (
-                    <ModalFooter isPending={mutation.isPending} />
-                  ) : (
-                    <div className="flex justify-end pt-2">
-                      <LoadingButton type="submit" loading={mutation.isPending}>
-                        Save
-                      </LoadingButton>
-                    </div>
-                  )}
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </form>
-        </Form>
       ) : null}
     </div>
   )
@@ -445,12 +206,7 @@ const EditEpisode = ({ episode, open, onOpenChange }: EditEpisodeProps) => {
 
         <DialogBody className="max-h-none min-h-0 flex-1">
           <div className="py-4">
-            <EpisodeInformationContent
-              episode={episode}
-              enabled={isOpen}
-              onSaved={() => setIsOpen(false)}
-              withCancel
-            />
+            <EpisodeInformationContent episode={episode} enabled={isOpen} />
           </div>
         </DialogBody>
       </ModalContent>

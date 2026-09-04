@@ -20,9 +20,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from datetime import date, datetime
 from itertools import pairwise
-from typing import Any, ClassVar, overload, override
+from typing import ClassVar, overload, override
 
-from sqlmodel import col, select
 from tminidb.movie.details.models import MovieDetailsModel
 from tminidb.search.multi.models import Result as MultiResult
 from tminidb.search.multi.models import SearchMultiModel
@@ -63,8 +62,6 @@ from plugins.TMDB.utils import (
     backdrop_image_url,
     decode_cursor,
     encode_cursor,
-    found_something,
-    media_identifier,
     parse_media_identifier,
     get_media_plugin,
     poster_image_url,
@@ -79,10 +76,7 @@ from plugins.utils.abstract_plugin import (
     PluginSearchResults,
 )
 from plugins.utils.base_plugin_v3.base import BasePlugin
-from plugins.utils.base_plugin_v3.files import (
-    COMPLETED_STATUS,
-    BaseFile,
-)
+from plugins.utils.base_plugin_v3.files import COMPLETED_STATUS
 
 
 # TODO: Validate
@@ -116,55 +110,6 @@ class TMDBShared(BasePlugin):
         if record.update_at is None:
             return False
         return record.update_at <= tz_datetime.now()
-
-    @staticmethod
-    def _get_date_from_file_name(file_class: type[BaseFile[Any]], stored: File) -> date:
-        """Return the date embedded in the `File.name`."""
-        identifier = file_class.file_to_unique_identifier(stored)
-        return date.fromisoformat(identifier.split("/")[-1])
-
-    # TODO: Validate
-    def latest_file_record(
-        self,
-        file_class: type[BaseFile[Any]],
-        file_prefix: str,
-    ) -> File | None:
-        """Return the newest `File` for a specific file class and prefix."""
-        statement = (
-            select(File)
-            .where(
-                File.plugin == self.plugin,
-                col(File.key).startswith(f"{file_class.class_key()}/{file_prefix}"),
-            )
-            .order_by(col(File.data_timestamp).desc())
-        )
-        return self.session.exec(statement).first()
-
-    # TODO: Validate
-    def latest_file_date(
-        self,
-        file_class: type[BaseFile[Any]],
-        file_prefix: str,
-    ) -> date:
-        """Return the date from the newest `File` for a specific file class and prefix."""
-        stored = self.latest_file_record(file_class, file_prefix)
-        if stored is None:
-            return tz_datetime.now().date()
-        return self._get_date_from_file_name(file_class, stored)
-
-    # region Files
-
-    # TODO: Validate
-    def files_with_prefix(
-        self,
-        file_class: type[BaseFile[Any]],
-        key_prefix: str,
-    ) -> Sequence[File]:
-        statement = select(File).where(
-            File.plugin == self.plugin,
-            col(File.key).startswith(f"{file_class.class_key()}/{key_prefix}"),
-        )
-        return self.session.exec(statement).all()
 
     def search_multi_file(self, query: str, page: int = 1) -> SearchMulti:
         return self._file(SearchMulti, query, page)
@@ -469,21 +414,40 @@ class TMDBShared(BasePlugin):
             key_prefix=f"{tmdb_id}/{season_number}/",
         )
 
+    def first_search_result(
+        self,
+        name: str,
+        media_type: TMDBMediaType | None,
+        year: int | None,
+    ) -> tuple[TMDBMediaType, int] | None:
+        """Return the media_type and the id of the first search result."""
+        if media_type:
+            results = self._search_for_title(media_type, name, year).parsed().results
+            return (media_type, results[0].id) if results else None
+
+        for result in self._search_for_title(None, name, year).parsed().results:
+            # SearchMulti returns movies, tv shows, people, collections etc. The results
+            # need to be filtered to only movies and tv shows.
+            if result.media_type in set(TMDBMediaType):
+                return TMDBMediaType(result.media_type), result.id
+        return None
+
     @overload
-    def search_for_title(
+    def _search_for_title(
         self,
         media_type: None,
         query: str,
         year: int | None = None,
     ) -> SearchMulti: ...
     @overload
-    def search_for_title(
+    def _search_for_title(
         self,
         media_type: TMDBMediaType,
         query: str,
         year: int | None = None,
     ) -> SearchMovie | SearchTV: ...
-    def search_for_title(
+    # TODO: Validate
+    def _search_for_title(
         self,
         media_type: TMDBMediaType | None,
         query: str,
@@ -493,12 +457,12 @@ class TMDBShared(BasePlugin):
 
         If no initial match is found, the search is repeated without the year because
         the year is not always reliable."""
-        search_file = self.fetch_search_file(media_type, query, year)
-        if year is None or found_something(search_file):
+        search_file = self._fetch_search_file(media_type, query, year)
+        if search_file.parsed().results or not year:
             return search_file
-        return self.fetch_search_file(media_type, query, None)
+        return self._fetch_search_file(media_type, query, None)
 
-    def fetch_search_file(
+    def _fetch_search_file(
         self,
         media_type: TMDBMediaType | None,
         query: str,
@@ -516,46 +480,10 @@ class TMDBShared(BasePlugin):
         return search_file
 
     # TODO: Validate
-    def first_search_result(
-        self,
-        name: str,
-        media_type: TMDBMediaType | None,
-        year: int | None,
-    ) -> tuple[TMDBMediaType, int] | None:
-        """Return which half the first title TMDB returns is from, and its id."""
-        if media_type is not None:
-            results = self.search_for_title(media_type, name, year).parsed().results
-            return (media_type, results[0].id) if results else None
-
-        # A search of both halves also returns people, who are no title and are
-        # passed over rather than taken as the first result.
-        for result in self.search_for_title(None, name, year).parsed().results:
-            # Which half of the catalogue a search of both says a result came
-            # from. A multi search also returns people, who are no title and
-            # cannot be imported.
-            half = {"movie": TMDBMediaType.movie, "tv": TMDBMediaType.tv}.get(
-                result.media_type,
-            )
-            if half is not None:
-                return half, result.id
-        return None
-
-    # TODO: Validate
     def preload_episode_translations(
         self,
         numberings: Sequence[tuple[int, int, int]],
     ) -> Sequence[File]:
-        """Read the rows holding every named episode's translations, in one query.
-
-        Whatever matches episodes by name reads the translations of every episode
-        of a title in turn, and a file reached for on its own is a row read on its
-        own. Reading them together leaves each of those reaches finding its row
-        already in the session.
-
-        The rows are returned so that whatever asked for them can hold on to them
-        for as long as it is reading: the session keeps its records weakly, and a
-        row nothing holds is dropped and read again.
-        """
         return self._get_files_by_keys(
             file_keys=[
                 self.tv_episodes_translations_file(
@@ -578,8 +506,6 @@ class TMDBShared(BasePlugin):
         return self._get_files_by_keys(
             [self.movies_translations_file(tmdb_id).file_key() for tmdb_id in tmdb_ids],
         )
-
-    # endregion
 
     # TODO: Validate
     def translated_episode_names(
@@ -625,21 +551,6 @@ class TMDBShared(BasePlugin):
         self,
         tmdb_id: int,
     ) -> dict[int, dict[int, frozenset[str]]]:
-        """Return every number each episode of a title carries in some other order.
-
-        TMDB keeps the other ways of ordering a title - the DVD order, the story
-        order, an absolute count of the whole run - beside the title's own, and
-        the same episode is numbered differently in each of them. A website that
-        follows one of those numbers an episode by where that order puts it, so
-        the number it wrote down matches none of the title's own and the episode
-        is only ever recognised by reading the orders as well.
-
-        Every order is read rather than the chosen one, since the order a
-        website follows is not the order the title is stored in and nothing says
-        which of them it is. The numbers are keyed by TMDB's own episode id,
-        which is what the episode is the same episode by whichever order it is
-        read in.
-        """
         groups = self.tv_series_episode_groups_file(tmdb_id).parsed()
 
         numbers: dict[int, dict[int, set[str]]] = {}
@@ -805,7 +716,7 @@ class TMDBShared(BasePlugin):
             image_url=poster_image_url(result.poster_path)
             or backdrop_image_url(result.backdrop_path),
             media_type=self._SEARCH_MEDIA_TYPES[media_type],
-            media_identifier=media_identifier(media_type, result.id),
+            media_identifier=f"{media_type} {result.id}",
         )
 
     # TODO: Validate

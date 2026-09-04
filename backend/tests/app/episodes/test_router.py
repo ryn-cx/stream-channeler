@@ -15,7 +15,6 @@ from tests.app.helpers.permissions import (
 from tests.app.users.utils import auth_headers, create_random_user
 
 ADMIN_ROUTES: list[tuple[Method, str]] = [
-    ("post", f"/seasons/{MISSING}/episodes"),
     ("get", "/episodes"),
     ("get", "/episodes/tmdb-matches"),
     ("get", "/episodes/unlocked"),
@@ -31,7 +30,6 @@ ADMIN_ROUTES: list[tuple[Method, str]] = [
     ("put", f"/episodes/{MISSING}/tmdb-absent"),
     ("put", f"/episodes/{MISSING}/verify-canonical-link"),
     ("patch", f"/episodes/{MISSING}"),
-    ("delete", f"/episodes/{MISSING}"),
 ]
 
 

@@ -13,18 +13,13 @@ import {
   ShowInformationSummary,
   ShowIssueReports,
 } from "@/components/ChannelCommon/ShowInformationDialog"
-import EditSeason from "@/components/Seasons/Edit"
 import { Button } from "@/components/ui/button"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import { EpisodeExpiryDialog } from "./EpisodeExpiryDialog"
 import { isExpired, isoToLocalInput, localInputToIso } from "./expiry"
-import {
-  AdminOnly,
-  ExternalMediaLink,
-  MediaPageButton,
-} from "./MediaPageButton"
+import { ExternalMediaLink, MediaPageButton } from "./MediaPageButton"
 import { episodeLabel, SeasonEpisodes } from "./SeasonEpisodes"
 import { SourceFavicons } from "./SourceFavicons"
 import { groupBySource, SourceGroupRow } from "./SourceGroupRow"
@@ -539,9 +534,6 @@ export function WhitelistManager({
                                 url={season.url}
                                 label="Open this season on its site"
                               />
-                              <AdminOnly>
-                                <EditSeason season={season} />
-                              </AdminOnly>
                               <MediaPageButton
                                 to="/episodes"
                                 search={{ season_id: season.id }}

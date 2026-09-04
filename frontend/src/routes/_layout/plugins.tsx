@@ -8,7 +8,6 @@ import {
   serializeTableQuery,
   validateMediaSearch,
 } from "@/components/Common/DataTable"
-import AddPlugin from "@/components/Plugins/Add"
 import {
   type PluginTableData,
   pluginColumns,
@@ -37,7 +36,6 @@ function PluginPage() {
       columnVisibilityKey="plugins-column-visibility"
       defaultHidden={{ key: false, id: false }}
       emptyIcon={Puzzle}
-      headerActions={<AddPlugin />}
       fetchTable={async (params) => {
         const result = await PluginsService.getPlugins({
           offset: params.offset,

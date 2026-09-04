@@ -8,7 +8,6 @@ import {
   serializeTableQuery,
   validateMediaSearch,
 } from "@/components/Common/DataTable"
-import AddEpisode from "@/components/Episodes/Add"
 import {
   type CanonicalEpisodeTableData,
   canonicalEpisodeColumns,
@@ -30,8 +29,6 @@ export const Route = createFileRoute("/_layout/episodes")({
 
 // TODO: Validate
 function EpisodesPage() {
-  const { season_id } = Route.useSearch()
-
   return (
     <MediaListPage<EpisodeTableData, CanonicalEpisodeTableData>
       title="Episodes"
@@ -40,9 +37,6 @@ function EpisodesPage() {
       columnVisibilityKey="episodes-column-visibility"
       defaultHidden={{ key: false, id: false }}
       emptyIcon={Film}
-      headerActions={
-        season_id ? <AddEpisode seasonKey={season_id} /> : undefined
-      }
       fetchTable={async (params) => {
         const result = await EpisodesService.getEpisodes({
           offset: params.offset,

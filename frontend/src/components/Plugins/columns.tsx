@@ -6,7 +6,6 @@ import type { PluginListOutput } from "@/client"
 import { DateCell, TruncatedCell } from "@/components/Common/TableCells"
 import { TooltipIconLink } from "@/components/Common/TooltipIconLink"
 import { extraText } from "@/lib/extra"
-import { PluginActionsMenu } from "./ActionsMenu"
 
 export type PluginTableData = PluginListOutput & { pending?: boolean }
 
@@ -112,19 +111,6 @@ export function pluginColumns(isAdmin = false): ColumnDef<PluginTableData>[] {
       accessorKey: "id",
       header: "ID",
       cell: ({ row }) => <TruncatedCell value={row.original.id} />,
-    },
-    {
-      id: "actions",
-      enableSorting: false,
-      enableColumnFilter: false,
-      header: () => <span className="sr-only">Actions</span>,
-      cell: ({ row }) => (
-        <div className="flex justify-end">
-          {row.original.pending ? null : (
-            <PluginActionsMenu plugin={row.original} />
-          )}
-        </div>
-      ),
     },
   ]
 }

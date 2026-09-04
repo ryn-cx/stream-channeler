@@ -37,7 +37,7 @@ from plugins.utils.manage_plugins import sorted_plugins
 from collections.abc import Sequence
 
 if TYPE_CHECKING:
-    from plugins.TMDB.files import ProvidersFile, SearchMovie, SearchMulti, SearchTV
+    from plugins.TMDB.files import ProvidersFile
 
 
 type WatchProviders = (
@@ -63,12 +63,6 @@ type Provider = (
 # TODO: Validate
 def title_url_regex(media_type: TMDBMediaType) -> str:
     return rf"\/{media_type}\/(?P<{media_type}_tmdb_id>\d+)"
-
-
-# TODO: Validate
-def media_identifier(media_type: TMDBMediaType, tmdb_id: int) -> str:
-    """Return what a search result names a title by, e.g. `tv 1399`."""
-    return f"{media_type} {tmdb_id}"
 
 
 # TODO: Validate
@@ -123,18 +117,15 @@ def watch_provider_items(
         items.append(
             PluginWatchProviderItem(
                 name=provider.provider_name,
-                icon_url=logo_image_url(provider.logo_path),
+                icon_url=_image_url(
+                    "https://image.tmdb.org/t/p/original",
+                    provider.logo_path,
+                ),
                 plugin_key=plugin_class.plugin_name() if plugin_class else None,
                 search_url=search_url,
             ),
         )
     return items
-
-
-# TODO: Validate
-def found_something(search_file: SearchMovie | SearchTV | SearchMulti) -> bool:
-    """Report whether a search came back with anything at all."""
-    return bool(search_file.parsed().results)
 
 
 # TODO: Validate
@@ -195,11 +186,6 @@ def backdrop_thumbnail_url(path: str | None) -> str | None:
 # TODO: Validate
 def still_thumbnail_url(path: str | None) -> str | None:
     return _image_url("https://image.tmdb.org/t/p/w300", path)
-
-
-# TODO: Validate
-def logo_image_url(path: str | None) -> str | None:
-    return _image_url("https://image.tmdb.org/t/p/original", path)
 
 
 # TODO: Validate

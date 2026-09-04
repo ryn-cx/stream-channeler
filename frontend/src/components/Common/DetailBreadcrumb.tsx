@@ -8,10 +8,7 @@ import type {
   ShowPublic,
   SourcePublic,
 } from "@/client"
-import EditPlugin from "@/components/Plugins/Edit"
-import EditSeason from "@/components/Seasons/Edit"
 import EditShow from "@/components/Shows/Edit"
-import EditSource from "@/components/Sources/Edit"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -45,7 +42,7 @@ export function DetailBreadcrumb({
     key: EntityKey
     label: string
     link: ReactNode
-    edit: ReactNode
+    edit?: ReactNode
   }[] = []
   if (plugin) {
     crumbs.push({
@@ -56,7 +53,6 @@ export function DetailBreadcrumb({
           {plugin.key}
         </Link>
       ),
-      edit: <EditPlugin plugin={plugin} size="icon-sm" />,
     })
   }
   if (source) {
@@ -68,7 +64,6 @@ export function DetailBreadcrumb({
           {source.name || source.key}
         </Link>
       ),
-      edit: <EditSource source={source} size="icon-sm" />,
     })
   }
   if (show) {
@@ -97,7 +92,6 @@ export function DetailBreadcrumb({
           {season.name || season.key}
         </Link>
       ),
-      edit: <EditSeason season={season} size="icon-sm" />,
     })
   }
   return (

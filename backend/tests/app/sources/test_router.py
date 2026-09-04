@@ -9,11 +9,8 @@ from tests.app.helpers.admin_routes import MISSING, assert_admin_only
 from tests.app.helpers.permissions import Method
 
 ADMIN_ROUTES: list[tuple[Method, str]] = [
-    ("post", f"/plugins/{MISSING}/sources"),
     ("get", "/sources"),
     ("get", f"/sources/{MISSING}"),
-    ("patch", f"/sources/{MISSING}"),
-    ("delete", f"/sources/{MISSING}"),
 ]
 
 UNMATCHED_ADMIN_ROUTES: list[tuple[Method, str]] = [

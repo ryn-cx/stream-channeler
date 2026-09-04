@@ -12,19 +12,15 @@ from app.auth.dependencies import (
     SessionDep,
     get_current_active_superuser,
 )
-from app.media.service.deletion import delete_record
-from app.plugins.dependencies import ExistingPlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
 from app.service.responses import list_response
 from app.sources.dependencies import ExistingSource, ExistingUnmatchedSource
 from app.sources.models import Source
 from app.sources.schemas import (
-    SourceCreate,
     SourceListPublic,
     SourcePublic,
     SourcesPublic,
-    SourceUpdate,
     UnmatchedSourceImport,
     UnmatchedSourceOutput,
 )
@@ -42,13 +38,6 @@ sources_router = APIRouter(
 )
 
 
-plugin_sources_router = APIRouter(
-    prefix="/plugins/{plugin_id}",
-    tags=["sources"],
-    dependencies=[Depends(get_current_active_superuser)],
-)
-
-
 unmatched_sources_router = APIRouter(
     prefix="/unmatched-sources",
     tags=["unmatched sources"],
@@ -59,16 +48,6 @@ unmatched_sources_router = APIRouter(
 SOURCE_EXTRA_COLUMNS: dict[str, Any] = {
     "plugin_name": Plugin.key,
 }
-
-
-# TODO: Validate
-@plugin_sources_router.post("/sources", response_model=SourcePublic)
-def create_source(
-    session: SessionDep,
-    plugin: ExistingPlugin,
-    source_input: SourceCreate,
-) -> Source:
-    return source_input.create(session, Source, plugin)
 
 
 # TODO: Validate
@@ -94,22 +73,6 @@ def get_sources(
 @sources_router.get("/{source_id}", response_model=SourcePublic)  # noqa: FAST003 - Used by ExistingSource.
 def get_source(source: ExistingSource) -> Source:
     return source
-
-
-# TODO: Validate
-@sources_router.patch("/{source_id}", response_model=SourcePublic)  # noqa: FAST003 - Used by ExistingSource.
-def update_source(
-    session: SessionDep,
-    source: ExistingSource,
-    source_input: SourceUpdate,
-) -> Source:
-    return source_input.update(session, source)
-
-
-# TODO: Validate
-@sources_router.delete("/{source_id}")  # noqa: FAST003 - Used by ExistingSource.
-def delete_source(session: SessionDep, source: ExistingSource) -> Message:
-    return delete_record(session, source)
 
 
 # TODO: Validate
@@ -150,5 +113,4 @@ def admin_delete_unmatched_source(
 
 router = APIRouter()
 router.include_router(sources_router)
-router.include_router(plugin_sources_router)
 router.include_router(unmatched_sources_router)

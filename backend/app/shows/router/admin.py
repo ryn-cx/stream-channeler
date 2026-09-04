@@ -14,16 +14,14 @@ from app.auth.dependencies import (
 )
 from app.canonical_media.filters import is_canonical
 from app.canonical_media.read import canonical_list_response
-from app.media.service.deletion import delete_record
 from app.plugins.models import Plugin
-from app.schemas import Message, ReadOptions
+from app.schemas import ReadOptions
 from app.service.responses import list_response
 from app.shows.dependencies import AdminCanonicalShow, ExistingShow
 from app.shows.models import Show
 from app.shows.schemas import (
     CanonicalShowOutput,
     CanonicalShowsPublic,
-    ShowCreate,
     ShowImportUrlInput,
     ShowListPublic,
     ShowPublic,
@@ -44,7 +42,6 @@ from app.shows.service.extra import force_update_show, list_tmdb_episode_groups
 from app.shows.service.information import _show_output, update_show_record
 from app.shows.service.relinking import relink_show
 from app.shows.service.validation import list_unvalidated_shows, validate_show
-from app.sources.dependencies import ExistingSource
 from app.sources.models import Source
 
 """Show router."""
@@ -63,28 +60,11 @@ shows_router = APIRouter(
 )
 
 
-source_shows_router = APIRouter(
-    prefix="/sources/{source_id}",
-    tags=["shows"],
-    dependencies=[Depends(get_current_active_superuser)],
-)
-
-
 SHOW_EXTRA_COLUMNS: dict[str, Any] = {
     "source_name": Source.name,
     "plugin_id": Source.plugin_id,
     "plugin_name": Plugin.key,
 }
-
-
-# TODO: Validate
-@source_shows_router.post("/shows")
-def create_show(
-    session: SessionDep,
-    source: ExistingSource,
-    show_input: ShowCreate,
-) -> ShowPublic:
-    return _show_output(show_input.create(session, Show, source))
 
 
 # TODO: Validate
@@ -260,14 +240,6 @@ def get_show_tmdb_episode_groups(
     return list_tmdb_episode_groups(session, show)
 
 
-# TODO: Validate
-@shows_router.delete(
-    "/{show_id}",
-)
-def delete_show(session: SessionDep, show: ExistingShow) -> Message:
-    return delete_record(session, show)
-
-
 # The admin-only mirror of the show endpoints. A non-canonical `Show` is one website's
 # row and is served to whoever may see that website's media; a canonical `Show` is the
 # show itself, which every row standing for it resolves to, and is served to admins
@@ -297,6 +269,3 @@ router.include_router(canonical_shows_router)
 
 
 router.include_router(shows_router)
-
-
-router.include_router(source_shows_router)
