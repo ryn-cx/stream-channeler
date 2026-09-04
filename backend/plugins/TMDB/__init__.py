@@ -1,6 +1,3 @@
-# TODO: Validate
-"""The Movie Database plugin."""
-
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -12,48 +9,40 @@ from plugins.TMDB.importer import TMDBImporter
 from plugins.TMDB.initialize import TMDBInitializer
 from plugins.TMDB.urls import media_url
 from plugins.TMDB.utils import first_search_result
-from plugins.utils.abstract_plugin import AbstractPlugin, TMDBLookupInfo
+from plugins.utils.abstract_plugin import AbstractPlugin
 
 if TYPE_CHECKING:
     from app.shows.models import Show
 
 
-# TODO: Validate
 class TMDB(TMDBBase, AbstractPlugin, register=True):
-    """The Movie Database plugin."""
-
     initializer = TMDBInitializer
     importer = TMDBImporter
 
-    # TODO: Validate
-    def import_search(self, lookup_info: TMDBLookupInfo) -> Show | None:
-        """Import the first title TMDB returns for a show another plugin names.
-
-        Returns None when TMDB has nothing under that name, since a name is a
-        guess at a title in a way an id is not.
-        """
-        found = first_search_result(
-            self,
-            lookup_info.title,
-            lookup_info.media_type,
-            lookup_info.year,
-        )
-        if found is None:
+    def import_search(
+        self,
+        title: str,
+        media_type: TMDBMediaType | None = None,
+        year: int | None = None,
+    ) -> Show | None:
+        """Import the first matching title found via search."""
+        search_result = first_search_result(self, title, media_type, year)
+        if not search_result:
             return None
 
-        half, tmdb_id = found
-        if half == TMDBMediaType.movie:
-            return self.import_movie(tmdb_id)
-        return self.import_show(tmdb_id)
+        media_type, tmdb_key = search_result
+        if media_type == TMDBMediaType.movie:
+            return self.import_movie(tmdb_key)
+        return self.import_show(tmdb_key)
 
-    # TODO: Validate
     def import_show(self, tmdb_id: int) -> Show:
-        """Import a TMDB tv entry using a tmdb_id."""
+        """Import a TMDB tv entry by its tmdb_id."""
         self.import_url(media_url(TMDBMediaType.tv, tmdb_id))
+        # TODO: This isn't ideal as it requires an extra query.
         return self._preload_show(tmdb_show_key(TMDBMediaType.tv, tmdb_id)).one()
 
-    # TODO: Validate
     def import_movie(self, tmdb_id: int) -> Show:
-        """Import a TMDB movie entry using a tmdb_id."""
+        """Import a TMDB movie entry by its tmdb_id."""
         self.import_url(media_url(TMDBMediaType.movie, tmdb_id))
+        # TODO: This isn't ideal as it requires an extra query.
         return self._preload_show(tmdb_show_key(TMDBMediaType.movie, tmdb_id)).one()

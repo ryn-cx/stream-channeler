@@ -15,7 +15,7 @@ from app.issue_reports.schemas import (
     IssueReportOutput,
     IssueReportUpdate,
 )
-from app.issue_reports.service import (
+from app.issue_reports.service.reports import (
     delete_issue_report_record,
     update_issue_report_record,
 )

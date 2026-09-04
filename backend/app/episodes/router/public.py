@@ -13,7 +13,7 @@ from app.episodes.schemas import (
     EpisodeInformationOutput,
     EpisodeListOutput,
 )
-from app.episodes.service import episode_information, non_canonical_episodes
+from app.episodes.service.information import episode_information, non_canonical_episodes
 from app.users.dependencies import OptionalUser
 
 """Episodes router."""

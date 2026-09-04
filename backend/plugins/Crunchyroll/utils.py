@@ -52,5 +52,5 @@ class UtilsMixin(BasePlugin):
     # TODO: Validate
     @classmethod
     @override
-    def manual_search(cls, query: str) -> str:
+    def manual_search_url(cls, query: str) -> str:
         return cls.build_url(f"search?q={quote_plus(query)}")

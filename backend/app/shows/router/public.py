@@ -10,7 +10,7 @@ from app.shows.dependencies import ExistingShow
 from app.shows.schemas import (
     ShowInformationOutput,
 )
-from app.shows.service import show_information
+from app.shows.service.information import show_information
 from app.users.dependencies import OptionalUser
 
 """Show router."""

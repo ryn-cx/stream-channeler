@@ -22,7 +22,6 @@ from app.media.media_type import TMDBMediaType
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
 from plugins.DisneyPlus.utils import required_value
-from plugins.utils.abstract_plugin import TMDBLookupInfo
 from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
@@ -109,12 +108,12 @@ class _Entity(EndpointFile[EntityModel]):
         return background_image.default_image.source
 
     # TODO: Validate
-    def tmdb_lookup_info(self) -> TMDBLookupInfo:
+    def tmdb_lookup_info(self) -> tuple[str, TMDBMediaType | None, int | None]:
         self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        return TMDBLookupInfo(
-            title=required_value(self.media_details().title, "title"),
-            media_type=TMDBMediaType.movie if self.is_movie() else TMDBMediaType.tv,
-            year=self.release_year(),
+        return (
+            required_value(self.media_details().title, "title"),
+            TMDBMediaType.movie if self.is_movie() else TMDBMediaType.tv,
+            self.release_year(),
         )
 
 
@@ -191,11 +190,6 @@ class FileMixin(BasePlugin):
     # TODO: Validate
     def _background_image_url(self, show_key: str) -> str:
         return self.entity_file(show_key).background_image_url()
-
-    # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
-        return self.entity_file(show_key).tmdb_lookup_info()
 
     # TODO: Validate
     def _seasons(self, show_key: str) -> list[EntitySeason]:

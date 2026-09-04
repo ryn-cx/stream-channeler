@@ -16,10 +16,8 @@ from naphki.video_program.models import LandscapeItem, PortraitItem, VideoProgra
 from sqlmodel import Session
 
 from app.files.models import File
-from app.media.media_type import TMDBMediaType
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
-from plugins.utils.abstract_plugin import TMDBLookupInfo
 from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
@@ -163,9 +161,7 @@ class FileMixin(BasePlugin):
     ) -> _NewVideoEpisodes:
         """Contains the newest videos on the website."""
         if isinstance(feed_datetime, File):
-            str_datetime = _NewVideoEpisodes.file_key_to_unique_identifier(
-                feed_datetime.key,
-            )
+            str_datetime = _NewVideoEpisodes.file_to_unique_identifier(feed_datetime)
         else:
             str_datetime = str(feed_datetime)
         return self._file(_NewVideoEpisodes, str_datetime)
@@ -257,13 +253,3 @@ class FileMixin(BasePlugin):
             else max(images, key=lambda image: image.width)
         )
         return self.build_url(chosen.url)
-
-    # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
-        program_file = self.video_program_file(show_key)
-        program_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        return TMDBLookupInfo(
-            title=program_file.parsed().title,
-            media_type=TMDBMediaType.tv,
-        )

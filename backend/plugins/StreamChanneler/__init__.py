@@ -3,10 +3,10 @@ from __future__ import annotations
 
 import re
 import uuid
-from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, override
 
 from plugins.StreamChanneler.base import StreamChannelerBase
+from plugins.StreamChanneler.files import FileMixin
 from plugins.StreamChanneler.handlers import (
     EpisodeURLHandler,
     PluginURLHandler,
@@ -24,48 +24,11 @@ from plugins.utils.abstract_plugin import (
 
 if TYPE_CHECKING:
     from app.shows.models import Show
-    from plugins.utils.base_plugin_v2.files import BaseFile
 
 
 # TODO: Validate
-class StreamChanneler(StreamChannelerBase, AbstractPlugin):
+class StreamChanneler(StreamChannelerBase, FileMixin, AbstractPlugin):
     initializer = StreamChannelerInitializer
-
-    # StreamChanneler does not use files, so these abstract methods are no-ops.
-
-    # TODO: Validate
-    @override
-    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
-        return []
-
-    # TODO: Validate
-    @override
-    def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
-        return []
-
-    # TODO: Validate
-    @override
-    def _episode_files(
-        self,
-        episode_key: str,
-        season_key: str,
-        show_key: str,
-    ) -> Sequence[BaseFile[Any]]:
-        return []
-
-    # TODO: Validate
-    @override
-    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
-        return []
-
-    # TODO: Validate
-    @override
-    def _episode_keys_from_season_files(
-        self,
-        season_keys: str | list[str],
-        show_key: str,
-    ) -> list[str]:
-        return []
 
     # TODO: Validate
     @classmethod

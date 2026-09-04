@@ -1,9 +1,9 @@
 # TODO: Validate
 from fastapi import APIRouter
 
-from app.channel_orders.admin_router import router as admin_router
-from app.channel_orders.public_router import router as public_router
-from app.channel_orders.user_router import router as user_router
+from app.channel_orders.router.admin import router as admin_router
+from app.channel_orders.router.public import router as public_router
+from app.channel_orders.router.user import router as user_router
 
 router = APIRouter()
 router.include_router(user_router)

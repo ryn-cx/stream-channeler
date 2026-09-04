@@ -16,8 +16,8 @@ from app.episodes.schemas import (
     UserEpisodeUrlInput,
     UserEpisodeUrlOutput,
 )
-from app.episodes.service import (
-    canonical_episode_record,
+from app.episodes.service.information import canonical_episode_record
+from app.episodes.service.urls import (
     clear_episode_url_for_user,
     set_episode_url_for_user,
 )

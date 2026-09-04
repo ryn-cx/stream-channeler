@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from typing import override
 
+from plugins.TMDB.media import MediaMixin
 from plugins.TMDB.media_info import MediaInfoMixin
 from plugins.TMDB.search import SearchMixin
-from plugins.TMDB.update import UpdateMixin
 from plugins.TMDB.urls import TMDB_DOMAIN
 
 
-class TMDBBase(UpdateMixin, SearchMixin, MediaInfoMixin):
+# TODO: Validate
+class TMDBBase(MediaMixin, SearchMixin, MediaInfoMixin):
     @classmethod
     @override
     def plugin_name(cls) -> str:

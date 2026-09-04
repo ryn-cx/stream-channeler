@@ -102,4 +102,4 @@ class SourceMixin(FileMixin):
             update_at=data_timestamp + timedelta(days=1),
             data_timestamp=data_timestamp,
             plugin_id=self.plugin.id,
-        ).upsert_and_set_update_at(self.plugin, source, self._source_files())
+        ).upsert_and_set_update_at(self.plugin, source)

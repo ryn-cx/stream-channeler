@@ -5,11 +5,11 @@ from app.canonical_media.keys import is_tmdb_key
 from app.config import settings
 from app.episodes.models import Episode
 from app.shows.models import Show
-from app.shows.service import update_show_episode_group, update_show_extra
+from app.shows.service.extra import update_show_episode_group, update_show_extra
 from app.users.models import User
 from app.watches.identifiers import watched_canonical_ids
 from app.watches.schemas import WatchCreate
-from app.watches.services import create_watch
+from app.watches.service.management import create_watch
 from plugins.Crunchyroll import Crunchyroll
 from plugins.TMDB.episode_groups import dump_extra
 from tests.plugins.frozen_clock import frozen_clock

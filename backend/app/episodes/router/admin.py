@@ -44,19 +44,17 @@ from app.episodes.schemas import (
     UnmatchedEpisodesPublic,
     UnmatchedReadOptions,
 )
-from app.episodes.service import (
-    _select_with_canonical_season_and_show,
-    get_duplicated_canonical_episodes,
-    list_tmdb_episode_choices,
-    list_unlocked_episodes,
-    list_unmatched_episodes,
-)
-from app.media.service import delete_record
+from app.episodes.service.duplicates import get_duplicated_canonical_episodes
+from app.episodes.service.information import _select_with_canonical_season_and_show
+from app.episodes.service.tmdb_choices import list_tmdb_episode_choices
+from app.episodes.service.unlocked import list_unlocked_episodes
+from app.episodes.service.unmatched import list_unmatched_episodes
+from app.media.service.deletion import delete_record
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
 from app.seasons.dependencies import ExistingSeason
 from app.seasons.models import Season
-from app.service import list_response
+from app.service.responses import list_response
 from app.shows.models import Show
 from app.sources.models import Source
 

@@ -10,7 +10,7 @@ from app.auth.dependencies import (
     SessionDep,
     get_current_active_superuser,
 )
-from app.media.service import delete_record
+from app.media.service.deletion import delete_record
 from app.plugins.dependencies import ExistingPlugin
 from app.plugins.models import Plugin
 from app.plugins.schemas import (
@@ -21,7 +21,7 @@ from app.plugins.schemas import (
     PluginUpdate,
 )
 from app.schemas import Message, ReadOptions
-from app.service import list_response
+from app.service.responses import list_response
 
 plugins_router = APIRouter(
     prefix="/plugins",

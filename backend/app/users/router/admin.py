@@ -12,9 +12,8 @@ from app.auth.dependencies import (
     get_current_active_superuser,
 )
 from app.channels.schemas import ChannelListOutput
-from app.channels.service import service as channel_service
+from app.channels.service import channels
 from app.schemas import Message
-from app.users import service as user_service
 from app.users.dependencies import ExistingUser
 from app.users.models import User
 from app.users.schemas import (
@@ -23,6 +22,7 @@ from app.users.schemas import (
     UsersPublic,
     UserUpdate,
 )
+from app.users.service import administration
 
 admin_router = APIRouter(
     prefix="/admin/users",
@@ -39,14 +39,14 @@ def read_users(
     limit: Annotated[int, Query(ge=1)] = 100_000,
 ) -> UsersPublic:
     """Retrieve users."""
-    return user_service.list_users(session, skip, limit)
+    return administration.list_users(session, skip, limit)
 
 
 # TODO: Validate
 @admin_router.post("", response_model=UserPublic)
 def create_user(*, session: SessionDep, user_in: UserCreate) -> User:
     """Create new user."""
-    return user_service.create_user_as_admin(session, user_in)
+    return administration.create_user_as_admin(session, user_in)
 
 
 # TODO: Validate
@@ -56,7 +56,7 @@ def admin_list_user_channels(
     user_id: uuid.UUID,
 ) -> list[ChannelListOutput]:
     """List every `Channel` editable by a single `User`."""
-    return channel_service.channels_of_user(session, user_id)
+    return channels.channels_of_user(session, user_id)
 
 
 # TODO: Validate
@@ -71,7 +71,7 @@ def update_user(
     user_in: UserUpdate,
 ) -> User | None:
     """Update a user."""
-    return user_service.update_user_as_admin(session, db_user, user_in)
+    return administration.update_user_as_admin(session, db_user, user_in)
 
 
 # TODO: Validate
@@ -82,7 +82,7 @@ def delete_user(
     user: ExistingUser,
 ) -> Message:
     """Delete a user."""
-    return user_service.delete_user_as_admin(session, current_user, user)
+    return administration.delete_user_as_admin(session, current_user, user)
 
 
 router = APIRouter()

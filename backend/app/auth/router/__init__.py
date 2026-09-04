@@ -1,9 +1,9 @@
 # TODO: Validate
 from fastapi import APIRouter
 
-from app.auth.admin_router import router as admin_router
-from app.auth.public_router import router as public_router
-from app.auth.user_router import router as user_router
+from app.auth.router.admin import router as admin_router
+from app.auth.router.public import router as public_router
+from app.auth.router.user import router as user_router
 
 router = APIRouter()
 router.include_router(user_router)

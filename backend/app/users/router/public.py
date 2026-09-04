@@ -9,13 +9,13 @@ from app.auth.dependencies import (
     SessionDep,
 )
 from app.channels.schemas import ChannelPublicListOutput
-from app.channels.service import service as channel_service
-from app.users import service as user_service
+from app.channels.service import channels
 from app.users.models import User
 from app.users.schemas import (
     UserPublic,
     UserRegister,
 )
+from app.users.service import accounts
 
 users_router = APIRouter(prefix="/users", tags=["users"])
 
@@ -24,7 +24,7 @@ users_router = APIRouter(prefix="/users", tags=["users"])
 @users_router.post("/signup", response_model=UserPublic)
 def register_user(session: SessionDep, user_in: UserRegister) -> User:
     """Create new user without the need to be logged in."""
-    return user_service.register_user(session, user_in)
+    return accounts.register_user(session, user_in)
 
 
 # TODO: Validate
@@ -34,7 +34,7 @@ def get_user_public_channels(
     user_id: uuid.UUID,
 ) -> ChannelPublicListOutput:
     """List a `User`'s public, non-anonymous `Channel`s, highest score first."""
-    return channel_service.public_channels_of_user(session, user_id)
+    return channels.public_channels_of_user(session, user_id)
 
 
 router = APIRouter()

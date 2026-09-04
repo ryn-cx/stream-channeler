@@ -10,20 +10,18 @@ records named.
 from __future__ import annotations
 
 import re
-from typing import Any, override
+from abc import ABC
+from typing import override
 
 from app.canonical_media.keys import (
     tmdb_show_key,
 )
 from app.media.media_type import TMDBMediaType
 from app.shows.models import Show
-from plugins.TMDB.base import TMDBBase
+from plugins.TMDB.media import MediaMixin, TMDBMedia, TMDBMovie, TMDBSeries
 from plugins.utils.abstract_plugin import (
     InvalidURLError,
     URLImportResult,
-)
-from plugins.utils.base_plugin_v2.files import (
-    BaseFile,
 )
 from plugins.utils.base_plugin_v2.importer import BaseImporter
 
@@ -35,42 +33,13 @@ def _title_url_regex(media_type: TMDBMediaType) -> str:
     return rf"\/{media_type}\/(?P<{media_type}_tmdb_id>\d+)"
 
 
+MOVIE_URL_REGEX = _title_url_regex(TMDBMediaType.movie)
+TV_URL_REGEX = _title_url_regex(TMDBMediaType.tv)
+
+
 # TODO: Validate
-class TMDBImporter(BaseImporter, TMDBBase):
-    _MOVIE_URL_REGEX = _title_url_regex(TMDBMediaType.movie)
-    _TV_URL_REGEX = _title_url_regex(TMDBMediaType.tv)
-
+class TMDBTitleImporter(BaseImporter, TMDBMedia, ABC):
     # TODO: Validate
-    @classmethod
-    @override
-    def _url_regexes(cls) -> tuple[str, ...]:
-        return (cls._MOVIE_URL_REGEX, cls._TV_URL_REGEX)
-
-    # TODO: Validate
-    @override
-    def _parse_url(self, url: str) -> str:
-        domain_regex = self._domain_regex()
-        for media_type, url_regex in (
-            (TMDBMediaType.movie, self._MOVIE_URL_REGEX),
-            (TMDBMediaType.tv, self._TV_URL_REGEX),
-        ):
-            if match := re.match(domain_regex + url_regex, url):
-                tmdb_id = int(match.group(f"{media_type}_tmdb_id"))
-                self.raise_if_invalid_file(
-                    self.title_page_file(media_type, tmdb_id),
-                    url,
-                )
-                detail_file: BaseFile[Any]
-                if media_type == TMDBMediaType.movie:
-                    detail_file = self.movie_detail_file(tmdb_id)
-                else:
-                    detail_file = self.show_detail_file(tmdb_id)
-                self.raise_if_invalid_file(detail_file, url)
-                return tmdb_show_key(media_type, tmdb_id)
-
-        msg = f"Invalid {self.plugin_name()} URL: {url}"
-        raise InvalidURLError(msg)
-
     @override
     def import_url(
         self,
@@ -83,7 +52,7 @@ class TMDBImporter(BaseImporter, TMDBBase):
             msg = "canonical_show should be None when importing TMDB URLs."
             raise InvalidURLError(msg)
 
-        show_key = self._parse_url(url)
+        show_key = self._url_to_show_key(url)
         existing_show = self._preload_show(
             show_key,
             preload_episodes=True,
@@ -95,3 +64,71 @@ class TMDBImporter(BaseImporter, TMDBBase):
             self._import_media_from_other_websites(show_key, existing_show)
 
         return self._import_results(existing_show)
+
+
+# TODO: Validate
+class TMDBSeriesImporter(TMDBTitleImporter, TMDBSeries):
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_regexes(cls) -> tuple[str, ...]:
+        return (TV_URL_REGEX,)
+
+    # TODO: Validate
+    @override
+    def _url_to_show_key(self, url: str) -> str:
+        match = re.match(self._domain_regex() + TV_URL_REGEX, url)
+        if match is None:
+            msg = f"Invalid {self.plugin_name()} URL: {url}"
+            raise InvalidURLError(msg)
+
+        tmdb_id = int(match.group(f"{TMDBMediaType.tv}_tmdb_id"))
+        self.raise_if_invalid_file(self.tv_series_details_file(tmdb_id), url)
+        return tmdb_show_key(TMDBMediaType.tv, tmdb_id)
+
+
+# TODO: Validate
+class TMDBMovieImporter(TMDBTitleImporter, TMDBMovie):
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_regexes(cls) -> tuple[str, ...]:
+        return (MOVIE_URL_REGEX,)
+
+    # TODO: Validate
+    @override
+    def _url_to_show_key(self, url: str) -> str:
+        match = re.match(self._domain_regex() + MOVIE_URL_REGEX, url)
+        if match is None:
+            msg = f"Invalid {self.plugin_name()} URL: {url}"
+            raise InvalidURLError(msg)
+
+        tmdb_id = int(match.group(f"{TMDBMediaType.movie}_tmdb_id"))
+        self.raise_if_invalid_file(self.movies_details_file(tmdb_id), url)
+        return tmdb_show_key(TMDBMediaType.movie, tmdb_id)
+
+
+# TODO: Validate
+class TMDBImporter(BaseImporter, MediaMixin):
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_regexes(cls) -> tuple[str, ...]:
+        return (MOVIE_URL_REGEX, TV_URL_REGEX)
+
+    # TODO: Validate
+    @override
+    def import_url(
+        self,
+        url: str,
+        canonical_show: Show | None = None,
+    ) -> list[URLImportResult]:
+        domain_regex = self._domain_regex()
+        if re.match(domain_regex + MOVIE_URL_REGEX, url):
+            return TMDBMovieImporter(self).import_url(url, canonical_show)
+
+        if re.match(domain_regex + TV_URL_REGEX, url):
+            return TMDBSeriesImporter(self).import_url(url, canonical_show)
+
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)

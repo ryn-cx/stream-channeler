@@ -71,7 +71,7 @@ class CrunchyrollImporter(BaseImporter, CrunchyrollBase):
 
     # TODO: Validate
     @override
-    def _parse_url(self, url: str) -> str:
+    def _url_to_show_key(self, url: str) -> str:
         domain_regex = self._domain_regex()
         self._episode_key = None
 

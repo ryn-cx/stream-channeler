@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import override
 
+from app.media.media_type import TMDBMediaType
 from plugins.Amazon.search import SearchMixin
 from plugins.Amazon.source import SourceMixin
 from plugins.Amazon.upsert import UpsertMixin
@@ -45,3 +46,11 @@ class AmazonBase(UpsertMixin, SearchMixin, SourceMixin):
         if super().matches_tmdb_provider(provider_name):
             return True
         return provider_name.endswith("Amazon Channel")
+
+    # TODO: Validate
+    @override
+    def tmdb_lookup_info(
+        self,
+        show_key: str,
+    ) -> tuple[str, TMDBMediaType | None, int | None]:
+        return self.detail_file(show_key).tmdb_lookup_info()

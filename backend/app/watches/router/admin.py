@@ -10,9 +10,7 @@ from app.auth.dependencies import (
 from app.watches.schemas import (
     WatchRelinkResults,
 )
-from app.watches.services import (
-    relink_detached_watches,
-)
+from app.watches.service.management import relink_detached_watches
 
 watches_router = APIRouter(
     prefix="/watches",

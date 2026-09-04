@@ -28,12 +28,14 @@ class WatchProviderSyncMixin(UpsertMixin):
         files: Sequence[ProvidersFile]
         if media_type == TMDBMediaType.movie:
             self._download_watch_providers_file(
-                self.movie_watch_providers_file(tmdb_id),
+                self.latest_movies_watch_providers_file(tmdb_id),
             )
-            files = self.incomplete_movie_watch_providers_files(tmdb_id)
+            files = self.incomplete_movies_watch_providers_files(tmdb_id)
         else:
-            self._download_watch_providers_file(self.tv_watch_providers_file(tmdb_id))
-            files = self.incomplete_tv_watch_providers_files(tmdb_id)
+            self._download_watch_providers_file(
+                self.latest_tv_series_watch_providers_file(tmdb_id),
+            )
+            files = self.incomplete_tv_series_watch_providers_files(tmdb_id)
         self._compare_watch_providers_files(show_key, files)
 
     # TODO: Validate
@@ -42,11 +44,11 @@ class WatchProviderSyncMixin(UpsertMixin):
         if media_type != TMDBMediaType.tv:
             return
         self._download_watch_providers_file(
-            self.season_watch_providers_file(tmdb_id, season_number),
+            self.latest_tv_seasons_watch_providers_file(tmdb_id, season_number),
         )
         self._compare_watch_providers_files(
             show_key,
-            self.incomplete_season_watch_providers_files(tmdb_id, season_number),
+            self.incomplete_tv_seasons_watch_providers_files(tmdb_id, season_number),
         )
 
     # TODO: Validate

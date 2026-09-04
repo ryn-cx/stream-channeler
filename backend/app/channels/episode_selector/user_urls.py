@@ -10,7 +10,7 @@ from app.channels.schemas import ChannelOptions
 from app.episodes.user_urls import user_episode_urls
 from app.plugins.identifiers import CUSTOM_MEDIA_SOURCE_KEY
 from app.sources.models import Source
-from app.sources.service import get_or_create_custom_media_source
+from app.sources.service.lookup import get_or_create_custom_media_source
 from app.users.models import User
 
 

@@ -21,7 +21,7 @@ from app.channels.schemas import (
 )
 from app.schemas import Message
 from app.users.models import User
-from app.users.service import get_or_create_plugin_user
+from app.users.service.accounts import get_or_create_plugin_user
 from app.utils import tz_datetime
 
 

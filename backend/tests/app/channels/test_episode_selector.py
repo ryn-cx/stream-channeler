@@ -11,7 +11,7 @@ from sqlmodel import Session
 
 from app.channels.models import Channel
 from app.channels.schemas import ChannelOptions
-from app.channels.service import service
+from app.channels.service.episodes import channel_episodes_output
 from app.users.models import User
 from app.watches.models import Watch
 from tests.app.channels.utils import (
@@ -55,7 +55,7 @@ def episodes(
     owner: User,
     **options: bool,
 ) -> list[object]:
-    output = service.channel_episodes_output(
+    output = channel_episodes_output(
         channel,
         ChannelOptions(random_seed=1, **options),
         owner,

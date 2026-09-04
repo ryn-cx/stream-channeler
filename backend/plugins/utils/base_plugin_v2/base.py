@@ -10,14 +10,14 @@ from sqlmodel import Session, select
 from app.channels.models import Channel
 from app.channels.service.import_queue import add_urls_to_channel_import_queue
 from app.episodes.models import Episode
+from app.media.media_type import TMDBMediaType
 from app.models import Visibility
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.users.models import User
-from app.users.service import get_or_create_plugin_user
+from app.users.service.accounts import get_or_create_plugin_user
 from plugins.utils.abstract_plugin import (
     InvalidURLError,
-    TMDBLookupInfo,
     URLImportResult,
 )
 from plugins.utils.base_plugin_v2.files import BaseFile
@@ -74,16 +74,19 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         return self.__plugin_channels
 
     # TODO: Validate
-    def tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo
+    def tmdb_lookup_info(
+        self,
+        show_key: str,
+    ) -> tuple[str, TMDBMediaType | None, int | None]:
         msg = f"{self.plugin_name()} does not support TMDB lookups."
         raise NotImplementedError(msg)
 
     # TODO: Validate
     def find_tmdb_show_record(self, show_key: str) -> Show | None:
-        tmdb_lookup_info = self.tmdb_lookup_info(show_key)
+        title, media_type, year = self.tmdb_lookup_info(show_key)
         from plugins.TMDB import TMDB  # noqa: PLC0415
 
-        return TMDB(self.session).import_search(tmdb_lookup_info)
+        return TMDB(self.session).import_search(title, media_type, year)
 
     # TODO: Validate
     @classmethod
@@ -141,11 +144,18 @@ class BaseReadURL(BasePlugin, ABC):
         return f"(?:{alternatives})"
 
     # TODO: Validate
-    @abstractmethod
-    def _parse_url(self, url: str) -> str: ...
+    @override
+    def _url_to_show_key(self, url: str) -> str:
+        msg = f"{self.plugin_name()} does not implement _url_to_show_key"
+        raise NotImplementedError(msg)
 
     # TODO: Validate
-    def _import_results(self, show: Show) -> list[URLImportResult]:
+    def _import_results(
+        self,
+        show: Show,
+        *_args: Any,  # noqa: ANN401
+        **_kwargs: Any,  # noqa: ANN401
+    ) -> list[URLImportResult]:
         results = [URLImportResult.show_import_results(show)]
         results += [
             URLImportResult.show_import_results(canonical_show)

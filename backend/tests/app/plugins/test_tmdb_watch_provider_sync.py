@@ -14,7 +14,7 @@ from app.shows.models import Show, ShowCanonicalShow
 from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.TMDB import TMDB
-from plugins.TMDB.files import _SeasonWatchProviders, _TvWatchProviders
+from plugins.TMDB.files import _TVSeasonsWatchProviders, _TVSeriesWatchProviders
 from plugins.utils.base_plugin_v2.files import COMPLETED_STATUS
 from tests.app.plugins.utils import create_random_plugin
 from tests.app.seasons.utils import create_random_season
@@ -80,7 +80,7 @@ def _store_show_providers(  # noqa: PLR0913
     return _store_file(
         session,
         plugin,
-        _TvWatchProviders(session, plugin, tmdb_id, downloaded_at).file_key(),
+        _TVSeriesWatchProviders(session, plugin, tmdb_id, downloaded_at).file_key(),
         _providers_body(tmdb_id, provider_names),
         data_timestamp,
         update_at,
@@ -101,7 +101,7 @@ def _store_season_providers(  # noqa: PLR0913
     return _store_file(
         session,
         plugin,
-        _SeasonWatchProviders(
+        _TVSeasonsWatchProviders(
             session,
             plugin,
             tmdb_id,
@@ -599,13 +599,13 @@ class TestWatchProvidersFileKeys:
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
     ) -> None:
-        file = _TvWatchProviders(
+        file = _TVSeriesWatchProviders(
             function_scoped_session,
             tmdb_plugin,
             1399,
             date(2026, 8, 1),
         )
-        assert file.file_key() == "TvWatchProviders/1399/2026-08-01.json"
+        assert file.file_key() == "TV Series/Watch Providers/1399/2026-08-01.json"
 
     # TODO: Validate
     def test_a_season_file_is_keyed_by_its_season_and_that_day(
@@ -613,14 +613,14 @@ class TestWatchProvidersFileKeys:
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
     ) -> None:
-        file = _SeasonWatchProviders(
+        file = _TVSeasonsWatchProviders(
             function_scoped_session,
             tmdb_plugin,
             1399,
             2,
             date(2026, 8, 1),
         )
-        assert file.file_key() == "SeasonWatchProviders/1399/2/2026-08-01.json"
+        assert file.file_key() == "TV Seasons/Watch Providers/1399/2/2026-08-01.json"
 
     # TODO: Validate
     def test_asking_for_no_day_answers_with_the_newest_stored_file(
@@ -645,7 +645,7 @@ class TestWatchProvidersFileKeys:
             tz_datetime.now(),
         )
 
-        file = TMDB(function_scoped_session).tv_watch_providers_file(1399)
+        file = TMDB(function_scoped_session).tv_series_watch_providers_file(1399)
 
         assert file.file_key() == newest.key
 
@@ -655,10 +655,10 @@ class TestWatchProvidersFileKeys:
         function_scoped_session: Session,
         tmdb_plugin: Plugin,  # noqa: ARG002
     ) -> None:
-        file = TMDB(function_scoped_session).tv_watch_providers_file(1399)
+        file = TMDB(function_scoped_session).tv_series_watch_providers_file(1399)
 
         today = tz_datetime.now().date().isoformat()
-        assert file.file_key() == f"TvWatchProviders/1399/{today}.json"
+        assert file.file_key() == f"TV Series/Watch Providers/1399/{today}.json"
 
     # TODO: Validate
     def test_a_season_file_of_one_season_is_not_read_as_anothers(
@@ -677,11 +677,11 @@ class TestWatchProvidersFileKeys:
         )
         plugin = TMDB(function_scoped_session)
 
-        assert plugin.season_watch_providers_file(1399, 1).file_key() == stored.key
+        assert plugin.tv_seasons_watch_providers_file(1399, 1).file_key() == stored.key
         today = tz_datetime.now().date().isoformat()
         assert (
-            plugin.season_watch_providers_file(1399, 2).file_key()
-            == f"SeasonWatchProviders/1399/2/{today}.json"
+            plugin.tv_seasons_watch_providers_file(1399, 2).file_key()
+            == f"TV Seasons/Watch Providers/1399/2/{today}.json"
         )
 
 
@@ -730,13 +730,13 @@ class TestWatchProvidersFileSchedule:
         canonical_show.update_at = tz_datetime.now() - timedelta(days=1)
         plugin = TMDB(function_scoped_session)
 
-        file = plugin.tv_watch_providers_file(
+        file = plugin.tv_series_watch_providers_file(
             1399,
             plugin._due_watch_providers_date(canonical_show),  # noqa: SLF001
         )
 
         today = tz_datetime.now().date().isoformat()
-        assert file.file_key() == f"TvWatchProviders/1399/{today}.json"
+        assert file.file_key() == f"TV Series/Watch Providers/1399/{today}.json"
 
     # TODO: Validate
     def test_a_title_that_has_not_come_due_is_answered_with_the_file_as_it_stands(
@@ -756,7 +756,7 @@ class TestWatchProvidersFileSchedule:
         canonical_show.update_at = tz_datetime.now() + timedelta(days=1)
         plugin = TMDB(function_scoped_session)
 
-        file = plugin.tv_watch_providers_file(
+        file = plugin.tv_series_watch_providers_file(
             1399,
             plugin._due_watch_providers_date(canonical_show),  # noqa: SLF001
         )
@@ -781,7 +781,7 @@ class TestWatchProvidersFileSchedule:
         canonical_show.update_at = None
         plugin = TMDB(function_scoped_session)
 
-        file = plugin.tv_watch_providers_file(
+        file = plugin.tv_series_watch_providers_file(
             1399,
             plugin._due_watch_providers_date(canonical_show),  # noqa: SLF001
         )

@@ -24,12 +24,13 @@ from app.files.schemas import (
     FilesPublic,
     FileUpdate,
 )
-from app.files.service import file_manifest, import_file_dump, missing_file_dump
-from app.media.service import delete_record
+from app.files.service.dump import import_file_dump, missing_file_dump
+from app.files.service.manifest import file_manifest
+from app.media.service.deletion import delete_record
 from app.plugins.dependencies import ExistingPlugin
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
-from app.service import list_response
+from app.service.responses import list_response
 
 files_router = APIRouter(
     prefix="/admin/files",

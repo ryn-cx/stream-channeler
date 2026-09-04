@@ -9,7 +9,7 @@ from loguru import logger
 
 from app.media.media_type import TMDBMediaType
 from app.shows.models import Show
-from app.unmatched_sources.service import (
+from app.sources.service.unmatched import (
     clear_unmatched_source,
     record_unmatched_source,
 )

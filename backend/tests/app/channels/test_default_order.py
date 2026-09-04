@@ -8,7 +8,7 @@ import pytest
 from sqlmodel import Session
 
 from app.channels.schemas import ChannelOptions
-from app.channels.service import service
+from app.channels.service import ordering
 from tests.app.channels.utils import create_random_channel
 from tests.app.helpers.utils import build_random_model
 
@@ -23,7 +23,7 @@ def test_setting_a_default_order_stores_what_was_chosen(
     channel = create_random_channel(session_scoped_session)
     options = build_random_model(ChannelOptions, mode)
 
-    updated = service.set_default_order(session_scoped_session, channel, options)
+    updated = ordering.set_default_order(session_scoped_session, channel, options)
 
     stored = json.loads(updated.default_order or "")
     assert isinstance(stored, dict)
@@ -35,12 +35,12 @@ def test_setting_a_default_order_replaces_the_one_before_it(
     session_scoped_session: Session,
 ) -> None:
     channel = create_random_channel(session_scoped_session)
-    service.set_default_order(
+    ordering.set_default_order(
         session_scoped_session,
         channel,
         ChannelOptions(hide_watched=True),
     )
-    updated = service.set_default_order(
+    updated = ordering.set_default_order(
         session_scoped_session,
         channel,
         ChannelOptions(hide_unwatched=True),
@@ -57,7 +57,7 @@ def test_a_seed_that_was_never_given_is_not_stored(
 ) -> None:
     """A random seed nobody chose would freeze the shuffle it is meant to vary."""
     channel = create_random_channel(session_scoped_session)
-    updated = service.set_default_order(
+    updated = ordering.set_default_order(
         session_scoped_session,
         channel,
         ChannelOptions(hide_watched=True),
@@ -68,7 +68,7 @@ def test_a_seed_that_was_never_given_is_not_stored(
 # TODO: Validate
 def test_a_seed_that_was_given_is_stored(session_scoped_session: Session) -> None:
     channel = create_random_channel(session_scoped_session)
-    updated = service.set_default_order(
+    updated = ordering.set_default_order(
         session_scoped_session,
         channel,
         ChannelOptions(random_seed=1234),

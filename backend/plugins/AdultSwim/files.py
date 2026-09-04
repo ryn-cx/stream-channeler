@@ -13,9 +13,7 @@ from pools_closed.shows import Shows as ShowsEndpoint
 from pools_closed.shows.models import ShowsModel
 from sqlmodel import Session
 
-from app.media.media_type import TMDBMediaType
 from app.plugins.models import Plugin
-from plugins.utils.abstract_plugin import TMDBLookupInfo
 from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
@@ -130,13 +128,3 @@ class FileMixin(BasePlugin):
             if str(season.number) in season_keys
             for episode in season.episodes
         ]
-
-    # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
-        show_page = self.show_file(show_key)
-        show_page.download_if_outdated()
-        return TMDBLookupInfo(
-            title=show_page.parsed().title,
-            media_type=TMDBMediaType.tv,
-        )

@@ -9,6 +9,7 @@ from wholoo.episode.models import EpisodeModel
 from wholoo.genre.models import GenreModel
 from wholoo.genres.models import GenresModel
 from wholoo.season.models import SeasonModel
+from wholoo.tv.models import TVModel
 
 from plugins.utils.base_plugin_v2.base import BasePlugin
 
@@ -36,19 +37,16 @@ class UtilsMixin(BasePlugin):
     def _domain(cls) -> str:
         return "hulu.com"
 
-    # TODO: Validate
     @classmethod
     def _show_url(cls, show_key: str, media_type: HuluMediaType) -> str:
         return cls.build_url(f"{media_type}/{show_key}")
 
-    # TODO: Validate
     @classmethod
     def _episode_url(cls, episode_key: str) -> str:
         return cls.build_url(f"watch/{episode_key}")
 
-    # TODO: Validate
     @classmethod
-    def manual_search(cls, query: str) -> str | None:
+    def manual_search_url(cls, query: str) -> str | None:
         return cls.build_url(f"search?q={quote_plus(query)}")
 
     # TODO: Validate
@@ -78,6 +76,17 @@ class UtilsMixin(BasePlugin):
 # TODO: Validate
 def season_name(season: SeasonModel) -> str:
     return season.series_grouping_metadata.grouping_name
+
+
+# TODO: Validate
+def season_numbers(series: TVModel) -> list[int]:
+    numbers: dict[int, None] = {}
+    for component in series.components:
+        for item in component.items:
+            grouping = item.series_grouping_metadata
+            if grouping is not None:
+                numbers[grouping.season_number] = None
+    return list(numbers)
 
 
 # TODO: Validate

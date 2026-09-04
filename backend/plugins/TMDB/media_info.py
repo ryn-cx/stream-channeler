@@ -32,7 +32,7 @@ from tminidb.tv_series.watch_providers.models import (
 )
 
 from app.media.media_type import TMDBMediaType
-from plugins.TMDB.files import _MovieDetails
+from plugins.TMDB.files import _MoviesDetails
 from plugins.TMDB.lookup import LookupMixin
 from plugins.TMDB.utils import (
     backdrop_image_url,
@@ -82,7 +82,6 @@ def parse_media_identifier(identifier: str) -> tuple[TMDBMediaType, int]:
 # TODO: Validate
 class MediaInfoMixin(LookupMixin):
     # TODO: Validate
-    @override
     def media_info(self, media_identifier: str) -> PluginMediaInfo | None:
         media_type, tmdb_id = parse_media_identifier(media_identifier)
         detail_file = self.media_detail_file(media_type, tmdb_id)
@@ -97,7 +96,7 @@ class MediaInfoMixin(LookupMixin):
         # A title with no poster of its own can still be shown by a poster one of
         # its seasons carries.
         season_poster_path: str | None
-        if isinstance(detail_file, _MovieDetails):
+        if isinstance(detail_file, _MoviesDetails):
             detail = detail_file.parsed()
             title = detail.title
             year = release_year(detail.release_date)
@@ -125,7 +124,9 @@ class MediaInfoMixin(LookupMixin):
         backdrop_path = detail.backdrop_path
         return PluginMediaInfo(
             title=title,
-            media_type={TMDBMediaType.movie: "Movie", TMDBMediaType.tv: "TV Show"}[media_type],
+            media_type={TMDBMediaType.movie: "Movie", TMDBMediaType.tv: "TV Show"}[
+                media_type
+            ],
             tagline=detail.tagline or None,
             overview=detail.overview or None,
             poster_url=poster_image_url(poster_path or backdrop_path),
@@ -183,7 +184,7 @@ def _watch_provider_items(
     for provider in streaming_providers(watch_providers):
         plugin_class = plugin_for_tmdb_name(provider.provider_name)
         search_url = (
-            plugin_class.manual_search(title)
+            plugin_class.manual_search_url(title)
             if plugin_class is not None and title
             else None
         )

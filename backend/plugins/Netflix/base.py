@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import override
 
+from app.media.media_type import TMDBMediaType
 from plugins.Netflix.search import SearchMixin
 from plugins.Netflix.upsert import UpsertMixin
 
@@ -32,3 +33,11 @@ class NetflixBase(UpsertMixin, SearchMixin):
     @override
     def _domain(cls) -> str:
         return "netflix.com"
+
+    # TODO: Validate
+    @override
+    def tmdb_lookup_info(
+        self,
+        show_key: str,
+    ) -> tuple[str, TMDBMediaType | None, int | None]:
+        return self.title_file(show_key).tmdb_lookup_info()

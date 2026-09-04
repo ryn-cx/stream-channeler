@@ -10,9 +10,7 @@ from app.issue_reports.schemas import (
     IssueReportListOutput,
     IssueReportMediaType,
 )
-from app.issue_reports.service import (
-    list_all_issue_reports,
-)
+from app.issue_reports.service.listing import list_all_issue_reports
 
 issue_reports_router = APIRouter(
     prefix="/issue-reports",

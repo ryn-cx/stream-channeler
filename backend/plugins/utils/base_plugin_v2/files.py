@@ -123,11 +123,12 @@ class BaseFile[T](ABC):
     def __hash__(self) -> int:
         return hash(self.file_key())
 
+    custom_class_key: str | None = None
+
     # TODO: Validate
     @classmethod
     def class_key(cls) -> str:
-        """Return the class name the file's key is built from."""
-        return cls.__name__.removeprefix("_")
+        return cls.custom_class_key or cls.__name__.removeprefix("_")
 
     # TODO: Validate
     def file_key(self) -> str:
@@ -143,9 +144,9 @@ class BaseFile[T](ABC):
 
     # TODO: Validate
     @classmethod
-    def file_key_to_unique_identifier(cls, file_key: str) -> str:
+    def file_to_unique_identifier(cls, file: File) -> str:
         """Convert File.key to the value that uniquely identifies this file."""
-        return file_key.removeprefix(f"{cls.class_key()}/").removesuffix(
+        return file.key.removeprefix(f"{cls.class_key()}/").removesuffix(
             cls._identifier_suffix(),
         )
 

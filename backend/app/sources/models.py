@@ -1,5 +1,6 @@
 # TODO: Validate
 import uuid
+from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar, Self, override
 
 from sqlalchemy.orm import contains_eager
@@ -8,12 +9,19 @@ from sqlmodel import (
     Index,
     PrimaryKeyConstraint,
     Relationship,
+    SQLModel,
     UniqueConstraint,
     select,
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.models import BaseMediaMixin, ChildMediaMixin, sortable_field_indexes
+from app.models import (
+    BaseMediaMixin,
+    ChildMediaMixin,
+    DateTimeField,
+    TimestampIdAndHashMixin,
+    sortable_field_indexes,
+)
 from app.plugins.models import Plugin
 
 if TYPE_CHECKING:
@@ -85,3 +93,26 @@ class Source(BaseSource, ChildMediaMixin[Plugin, "Show"], table=True):
         if self.id:
             base_source += f" ({self.id})"
         return f"{self.plugin}\n{base_source}"
+
+
+# TODO: Validate
+class BaseUnmatchedSource(SQLModel):
+    provider_name: str = Field(min_length=1)
+    plugin_key: str | None = Field(default=None)
+    ignored_at: datetime | None = DateTimeField(default=None)
+
+
+# TODO: Validate
+class UnmatchedSource(BaseUnmatchedSource, TimestampIdAndHashMixin, table=True):
+    __table_args__ = (
+        PrimaryKeyConstraint("id"),
+        UniqueConstraint(
+            "show_id",
+            "provider_name",
+            name="UnmatchedSource-show_id-provider_name-unique",
+        ),
+        Index("UnmatchedSource-show_id-index", "show_id"),
+    )
+
+    show_id: uuid.UUID = Field(foreign_key="show.id", ondelete="CASCADE")
+    show: Show = Relationship()

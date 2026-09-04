@@ -4,8 +4,8 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import HTMLResponse
 
-from app.auth import service as auth_service
 from app.auth.dependencies import SessionDep, get_current_active_superuser
+from app.auth.service import password_reset
 
 router = APIRouter(
     tags=["login"],
@@ -20,4 +20,4 @@ router = APIRouter(
 )
 def recover_password_html_content(email: str, session: SessionDep) -> HTMLResponse:
     """HTML Content for Password Recovery."""
-    return auth_service.password_reset_email_response(session, email)
+    return password_reset.password_reset_email_response(session, email)

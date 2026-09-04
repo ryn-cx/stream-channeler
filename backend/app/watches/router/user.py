@@ -11,7 +11,6 @@ from app.auth.dependencies import (
 )
 from app.episodes.dependencies import ExistingEpisode
 from app.schemas import Message, ReadOptions
-from app.watches import services
 from app.watches.dependencies import EditableWatch
 from app.watches.models import Watch
 from app.watches.schemas import (
@@ -23,12 +22,13 @@ from app.watches.schemas import (
     WatchOutput,
     WatchUpdate,
 )
-from app.watches.services import (
-    delete_watches,
+from app.watches.service import management
+from app.watches.service.history import (
     export_watch_history_entries,
-    get_watched_episodes,
     import_watch_history_file,
 )
+from app.watches.service.management import delete_watches
+from app.watches.service.queries import get_watched_episodes
 
 watches_router = APIRouter(prefix="/watches", tags=["watches"])
 
@@ -44,7 +44,7 @@ def create_watch(
     episode: ExistingEpisode,
     watch_input: WatchCreate,
 ) -> Watch:
-    return services.create_watch(session, current_user.id, episode, watch_input)
+    return management.create_watch(session, current_user.id, episode, watch_input)
 
 
 # TODO: Validate
@@ -69,7 +69,7 @@ def update_watch(
     watch_input: WatchUpdate,
 ) -> Watch:
     """Update a watch."""
-    return services.update_watch(session, watch, watch_input)
+    return management.update_watch(session, watch, watch_input)
 
 
 # TODO: Validate

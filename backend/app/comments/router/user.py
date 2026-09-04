@@ -18,14 +18,15 @@ from app.comments.schemas import (
     CommentScope,
     CommentUpdate,
 )
-from app.comments.service import (
-    COMMENTS_PAGE_SIZE,
+from app.comments.service.listing import COMMENTS_PAGE_SIZE, get_channel_comments
+from app.comments.service.management import (
     create_comment,
     delete_comment,
-    get_channel_comments,
+    update_comment,
+)
+from app.comments.service.notifications import (
     mark_notifications_read,
     unread_notification_count,
-    update_comment,
 )
 from app.schemas import Message
 

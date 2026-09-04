@@ -36,7 +36,7 @@ from plugins.Amazon.constants import (
     PRIME_BENEFIT_ID,
 )
 from plugins.Amazon.keys import title_key_from_location
-from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
+from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import (
     BaseFile,
@@ -623,14 +623,14 @@ class _Detail(DownloadedFile[dict[str, Any]]):
         return min(seasons, key=lambda season: season.season_number).key
 
     # TODO: Validate
-    def tmdb_lookup_info(self) -> TMDBLookupInfo:
+    def tmdb_lookup_info(self) -> tuple[str, TMDBMediaType | None, int | None]:
         self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        return TMDBLookupInfo(
-            title=self.series_title(),
-            media_type={"Movie": TMDBMediaType.movie, "TV Show": TMDBMediaType.tv}.get(
+        return (
+            self.series_title(),
+            {"Movie": TMDBMediaType.movie, "TV Show": TMDBMediaType.tv}.get(
                 self.entity_type(),
             ),
-            year=self.release_year(),
+            self.release_year(),
         )
 
     # TODO: Validate
@@ -767,11 +767,6 @@ class FileMixin(BasePlugin):
     # TODO: Validate
     def show_key_from_title_key(self, title_key: str) -> str:
         return self.detail_file(title_key).show_key()
-
-    # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
-        return self.detail_file(show_key).tmdb_lookup_info()
 
     # TODO: Validate
     def _season_available(self, season_key: str) -> bool:

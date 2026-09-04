@@ -16,10 +16,28 @@ ADMIN_ROUTES: list[tuple[Method, str]] = [
     ("delete", f"/sources/{MISSING}"),
 ]
 
+UNMATCHED_ADMIN_ROUTES: list[tuple[Method, str]] = [
+    ("get", "/unmatched-sources"),
+    ("post", f"/unmatched-sources/{MISSING}/import"),
+    ("post", f"/unmatched-sources/{MISSING}/ignore"),
+    ("delete", f"/unmatched-sources/{MISSING}"),
+]
+
 
 # TODO: Validate
 @pytest.mark.parametrize(("method", "path"), ADMIN_ROUTES)
 def test_source_routes_are_admin_only(
+    session_scoped_client: TestClient,
+    session_scoped_session: Session,
+    method: Method,
+    path: str,
+) -> None:
+    assert_admin_only(session_scoped_client, session_scoped_session, method, path)
+
+
+# TODO: Validate
+@pytest.mark.parametrize(("method", "path"), UNMATCHED_ADMIN_ROUTES)
+def test_unmatched_source_routes_are_admin_only(
     session_scoped_client: TestClient,
     session_scoped_session: Session,
     method: Method,

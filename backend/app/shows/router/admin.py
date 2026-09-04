@@ -14,10 +14,10 @@ from app.auth.dependencies import (
 )
 from app.canonical_media.filters import is_canonical
 from app.canonical_media.read import canonical_list_response
-from app.media.service import delete_record
+from app.media.service.deletion import delete_record
 from app.plugins.models import Plugin
 from app.schemas import Message, ReadOptions
-from app.service import list_response
+from app.service.responses import list_response
 from app.shows.dependencies import AdminCanonicalShow, ExistingShow
 from app.shows.models import Show
 from app.shows.schemas import (
@@ -33,20 +33,17 @@ from app.shows.schemas import (
     TmdbEpisodeGroupOption,
     UnvalidatedShowOutput,
 )
-from app.shows.service import (
-    _show_output,
+from app.shows.service.canonical import (
     canonicalize_show,
-    force_update_show,
     import_non_canonical_show_from_url,
-    list_tmdb_episode_groups,
-    list_unvalidated_shows,
-    relink_show,
     set_canonical_show,
     set_canonical_show_using_tmdb_url,
     unset_canonical_show,
-    update_show_record,
-    validate_show,
 )
+from app.shows.service.extra import force_update_show, list_tmdb_episode_groups
+from app.shows.service.information import _show_output, update_show_record
+from app.shows.service.relinking import relink_show
+from app.shows.service.validation import list_unvalidated_shows, validate_show
 from app.sources.dependencies import ExistingSource
 from app.sources.models import Source
 

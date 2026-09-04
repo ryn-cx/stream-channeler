@@ -15,7 +15,6 @@ from plugi.exceptions import ContentNotFoundError
 
 from app.media.media_type import TMDBMediaType
 from app.utils import tz_datetime
-from plugins.utils.abstract_plugin import TMDBLookupInfo
 from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
@@ -54,13 +53,13 @@ class _ContentFile(EndpointFile[ContentModel]):
         return self.parsed().type != "s"
 
     # TODO: Validate
-    def tmdb_lookup_info(self) -> TMDBLookupInfo:
+    def tmdb_lookup_info(self) -> tuple[str, TMDBMediaType | None, int | None]:
         self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         content = self.parsed()
-        return TMDBLookupInfo(
-            title=content.title,
-            media_type=TMDBMediaType.movie if self.is_movie() else TMDBMediaType.tv,
-            year=content.year,
+        return (
+            content.title,
+            TMDBMediaType.movie if self.is_movie() else TMDBMediaType.tv,
+            content.year,
         )
 
 
@@ -80,11 +79,6 @@ class FileMixin(BasePlugin):
     # TODO: Validate
     def _is_movie(self, show_key: str) -> bool:
         return self.content_file(show_key).is_movie()
-
-    # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
-        return self.content_file(show_key).tmdb_lookup_info()
 
     # TODO: Validate
     def _seasons(self, show_key: str) -> list[SeasonChild]:

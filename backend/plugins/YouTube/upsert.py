@@ -9,7 +9,7 @@ from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
-from app.shows.service import add_canonical_show_and_link_episodes
+from app.shows.service.canonical import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.YouTube.files import (
@@ -469,7 +469,7 @@ class UpsertMixin(UtilsMixin):
                 data_timestamp=data_timestamp,
                 update_at=data_timestamp + timedelta(hours=6),
                 show_id=show.id,
-            ).upsert_and_set_update_at(show, season, season_files)
+            ).upsert_and_set_update_at(show, season)
         self._upsert_episodes(season, show_key, force=force)
 
     # TODO: Validate

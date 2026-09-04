@@ -24,7 +24,7 @@ from app.channels.schemas import (
     ChannelQueueAdminUpdate,
     MediaOwner,
 )
-from app.channels.service import import_queue, service
+from app.channels.service import channels, import_queue
 from app.schemas import Message
 
 admin_router = APIRouter(
@@ -41,7 +41,7 @@ def admin_create_channel(
     channel_in: ChannelAdminCreate,
 ) -> Channel:
     """Create a `Channel` owned by any `User`, with its `score`, as an admin."""
-    return service.admin_create_channel(session, channel_in)
+    return channels.admin_create_channel(session, channel_in)
 
 
 # TODO: Validate
@@ -54,7 +54,7 @@ def admin_update_channel(
     channel_in: ChannelAdminUpdate,
 ) -> ChannelListOutput:
     """Update any field on any `Channel` as an admin, including `score`."""
-    return service.admin_update_channel_output(session, channel, channel_in)
+    return channels.admin_update_channel_output(session, channel, channel_in)
 
 
 # TODO: Validate

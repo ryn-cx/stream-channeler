@@ -252,7 +252,7 @@ class FileMixin(BasePlugin):
     ) -> _BrowseSeries:
         """Return data for recently aired shows."""
         if isinstance(browse, File):
-            browse = _BrowseSeries.file_key_to_unique_identifier(browse.key)
+            browse = _BrowseSeries.file_to_unique_identifier(browse)
         return self._file(_BrowseSeries, str(browse))
 
     # TODO: Validate
@@ -290,7 +290,7 @@ class FileMixin(BasePlugin):
     ) -> _BrowseMusic:
         """Return data for all of the music."""
         if isinstance(browse, File):
-            browse = _BrowseMusic.file_key_to_unique_identifier(browse.key)
+            browse = _BrowseMusic.file_to_unique_identifier(browse)
         return self._file(_BrowseMusic, str(browse))
 
     # TODO: Validate

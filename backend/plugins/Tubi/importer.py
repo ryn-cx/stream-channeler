@@ -15,15 +15,15 @@ from plugins.utils.base_plugin_v2.importer import BaseImporter
 class TubiImporter(BaseImporter, TubiBase):
     # https://tubitv.com/movies/100029837/megamind
     _MOVIE_URL_REGEX = (
-        rf"\/movies\/(?P<movie_id>{CONTENT_ID_REGEX}){SLUG_REGEX}(?:\/|$)"
+        rf"\/movies\/(?P<movie_key>{CONTENT_ID_REGEX}){SLUG_REGEX}(?:\/|$)"
     )
     # https://tubitv.com/series/300006854/scooby-doo-where-are-you
     _SERIES_URL_REGEX = (
-        rf"\/series\/(?P<series_id>{CONTENT_ID_REGEX}){SLUG_REGEX}(?:\/|$)"
+        rf"\/series\/(?P<series_key>{CONTENT_ID_REGEX}){SLUG_REGEX}(?:\/|$)"
     )
     # https://tubitv.com/tv-shows/595036/s01-e01-what-a-night-for-a-knight
     _EPISODE_URL_REGEX = (
-        rf"\/tv-shows\/(?P<episode_id>{CONTENT_ID_REGEX}){SLUG_REGEX}(?:\/|$)"
+        rf"\/tv-shows\/(?P<episode_key>{CONTENT_ID_REGEX}){SLUG_REGEX}(?:\/|$)"
     )
 
     _episode_key: str | None
@@ -40,22 +40,22 @@ class TubiImporter(BaseImporter, TubiBase):
 
     # TODO: Validate
     @override
-    def _parse_url(self, url: str) -> str:
+    def _url_to_show_key(self, url: str) -> str:
         domain_regex = self._domain_regex()
         self._episode_key = None
 
         if match := re.match(domain_regex + self._MOVIE_URL_REGEX, url):
-            show_key = match.group("movie_id")
+            show_key = match.group("movie_key")
             self.raise_if_invalid_file(self.content_file(show_key), url)
             return show_key
 
         if match := re.match(domain_regex + self._SERIES_URL_REGEX, url):
-            show_key = match.group("series_id")
+            show_key = match.group("series_key")
             self.raise_if_invalid_file(self.content_file(show_key), url)
             return show_key
 
         if match := re.match(domain_regex + self._EPISODE_URL_REGEX, url):
-            episode_key = match.group("episode_id")
+            episode_key = match.group("episode_key")
             self.raise_if_invalid_file(self.content_file(episode_key), url)
             series_id = self.content_file(episode_key).parsed().series_id
             if series_id is None:

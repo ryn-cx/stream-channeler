@@ -13,11 +13,7 @@ from app.comments.dependencies import ReadableComment
 from app.comments.schemas import (
     CommentsListOutput,
 )
-from app.comments.service import (
-    COMMENTS_PAGE_SIZE,
-    get_comments,
-    get_replies,
-)
+from app.comments.service.listing import COMMENTS_PAGE_SIZE, get_comments, get_replies
 
 comments_router = APIRouter(prefix="/comments", tags=["comments"])
 

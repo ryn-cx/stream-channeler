@@ -9,7 +9,7 @@ from sqlmodel import select
 
 from app.auth.dependencies import SessionDep
 from app.channels.models import Channel, ChannelQueue, ChannelShow
-from app.media.service import editable_record, existing_record, readable_record
+from app.media.service.records import editable_record, existing_record, readable_record
 
 
 # A channel holds a canonical show rather than any one website's row for it, so

@@ -1,9 +1,12 @@
 # TODO: Validate
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import override
 from urllib.parse import quote_plus
 
+from app.media.media_type import TMDBMediaType
+from app.utils import tz_datetime
 from plugins.NHKWorld.search import SearchMixin
 from plugins.NHKWorld.source import SourceMixin
 from plugins.NHKWorld.upsert import UpsertMixin
@@ -34,5 +37,15 @@ class NHKWorldBase(SourceMixin, UpsertMixin, SearchMixin):
     # TODO: Validate
     @classmethod
     @override
-    def manual_search(cls, query: str) -> str:
+    def manual_search_url(cls, query: str) -> str:
         return cls.build_url(f"nhkworld/en/shows/search/?q={quote_plus(query)}")
+
+    # TODO: Validate
+    @override
+    def tmdb_lookup_info(
+        self,
+        show_key: str,
+    ) -> tuple[str, TMDBMediaType | None, int | None]:
+        program_file = self.video_program_file(show_key)
+        program_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
+        return program_file.parsed().title, TMDBMediaType.tv, None

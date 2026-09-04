@@ -4,12 +4,11 @@ from datetime import date, datetime, timedelta
 from functools import cache
 from typing import (
     Any,
-    Literal,
     overload,
     override,
 )
 
-from sqlmodel import Session, col, select
+from sqlmodel import Session
 from tminidb import TMiniDB
 from tminidb.exceptions import ResourceNotFoundError
 from tminidb.movie.details import MovieDetails as MovieEndpoint
@@ -59,25 +58,20 @@ from tminidb.tv_series.watch_providers import (
 )
 from tminidb.tv_series.watch_providers.models import TvSeriesWatchProvidersModel
 
+from app.canonical_media.keys import tmdb_episode_key, tmdb_season_key
 from app.config import settings
 from app.files.models import File
 from app.media.media_type import TMDBMediaType
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
-from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.TMDB.episode_groups import show_chosen_group_id
-from plugins.TMDB.keys import (
-    get_media_type_and_tmdb_id,
-    parse_season_key,
-)
-from plugins.TMDB.urls import media_url
-from plugins.utils.base_plugin_v2.base import BasePlugin
+from plugins.TMDB.keys import get_media_type_and_tmdb_id
+from plugins.TMDB.utils import SeasonSource, UtilsMixin
 from plugins.utils.base_plugin_v2.files import (
     BaseFile,
     EndpointFile,
-    HTMLFile,
     IntegerEndpointFile,
 )
 
@@ -87,46 +81,34 @@ def tminidb() -> TMiniDB:
     return TMiniDB(settings.TMDB_API_READ_TOKEN)
 
 
-# TODO: Validate
-class _MovieDetails(IntegerEndpointFile[MovieDetailsModel]):
+class _MoviesDetails(IntegerEndpointFile[MovieDetailsModel]):
+    custom_class_key = "Movies/Details"
+
     @override
     def _endpoint(self) -> MovieEndpoint:
         return tminidb().movie.details
 
+    # Occurs if the user tries to add an invalid URL.
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ResourceNotFoundError)
 
 
-# TODO: Validate
-class _MovieTranslations(IntegerEndpointFile[MovieTranslationsModel]):
+class _MoviesTranslations(IntegerEndpointFile[MovieTranslationsModel]):
+    custom_class_key = "Movies/Translations"
+
     @override
     def _endpoint(self) -> MovieTranslationsEndpoint:
         return tminidb().movie.translations
 
-    @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ResourceNotFoundError)
 
+class _MoviesWatchProviders(EndpointFile[MovieWatchProvidersModel]):
+    custom_class_key = "Movies/Watch Providers"
 
-# TODO: Validate
-class _TvSeriesDetails(IntegerEndpointFile[TvSeriesDetailsModel]):
-    @override
-    def _endpoint(self) -> TvSeriesEndpoint:
-        return tminidb().tv_series.details
-
-    @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ResourceNotFoundError)
-
-
-# TODO: Validate
-class _MovieWatchProviders(EndpointFile[MovieWatchProvidersModel]):
     @override
     def _endpoint(self) -> MovieWatchProvidersEndpoint:
         return tminidb().movie.watch_providers
 
-    # TODO: Validate
     def __init__(
         self,
         session: Session,
@@ -141,24 +123,18 @@ class _MovieWatchProviders(EndpointFile[MovieWatchProvidersModel]):
             f"{tmdb_movie_id}/{downloaded_at.isoformat()}",
         )
 
-    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(self.tmdb_movie_id)
 
-    # TODO: Validate
-    @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ResourceNotFoundError)
 
+class _TVSeriesWatchProviders(EndpointFile[TvSeriesWatchProvidersModel]):
+    custom_class_key = "TV Series/Watch Providers"
 
-# TODO: Validate
-class _TvWatchProviders(EndpointFile[TvSeriesWatchProvidersModel]):
     @override
     def _endpoint(self) -> TvSeriesWatchProvidersEndpoint:
         return tminidb().tv_series.watch_providers
 
-    # TODO: Validate
     def __init__(
         self,
         session: Session,
@@ -173,20 +149,18 @@ class _TvWatchProviders(EndpointFile[TvSeriesWatchProvidersModel]):
             f"{tmdb_show_id}/{downloaded_at.isoformat()}",
         )
 
-    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(self.tmdb_show_id)
 
 
-# TODO: Validate
-class _SeasonWatchProviders(EndpointFile[TvSeasonWatchProvidersModel]):
-    # TODO: Validate
+class _TVSeasonsWatchProviders(EndpointFile[TvSeasonWatchProvidersModel]):
+    custom_class_key = "TV Seasons/Watch Providers"
+
     @override
     def _endpoint(self) -> TvSeasonWatchProvidersEndpoint:
         return tminidb().tv_season.watch_providers
 
-    # TODO: Validate
     def __init__(
         self,
         session: Session,
@@ -203,39 +177,36 @@ class _SeasonWatchProviders(EndpointFile[TvSeasonWatchProvidersModel]):
             f"{tmdb_show_id}/{season_number}/{downloaded_at.isoformat()}",
         )
 
-    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(self.tmdb_show_id, self.season_number)
 
-    # TODO: Validate
-    @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ResourceNotFoundError)
+
+type ProvidersFile = (
+    _MoviesWatchProviders | _TVSeriesWatchProviders | _TVSeasonsWatchProviders
+)
 
 
-type ProvidersFile = _MovieWatchProviders | _TvWatchProviders | _SeasonWatchProviders
+class _TVSeriesDetails(IntegerEndpointFile[TvSeriesDetailsModel]):
+    custom_class_key = "TV Series/Details"
 
-
-# TODO: Validate
-class _ShowDetail(IntegerEndpointFile[TvSeriesDetailsModel]):
     @override
     def _endpoint(self) -> TvSeriesEndpoint:
         return tminidb().tv_series.details
 
+    # Occurs if the user tries to add an invalid URL.
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ResourceNotFoundError)
 
 
-# TODO: Validate
-class _ShowImages(IntegerEndpointFile[TvSeriesImagesModel]):
-    # TODO: Validate
+class _TVSeriesImages(IntegerEndpointFile[TvSeriesImagesModel]):
+    custom_class_key = "TV Series/Images"
+
     @override
     def _endpoint(self) -> TvSeriesImagesEndpoint:
         return tminidb().tv_series.images
 
-    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(
@@ -243,38 +214,26 @@ class _ShowImages(IntegerEndpointFile[TvSeriesImagesModel]):
             include_image_language="en,null",
         )
 
-    # TODO: Validate
-    @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ResourceNotFoundError)
 
+class _TVSeriesEpisodeGroups(IntegerEndpointFile[TvSeriesEpisodeGroupsModel]):
+    custom_class_key = "TV Series/Episode Groups"
 
-# TODO: Validate
-class _EpisodeGroups(IntegerEndpointFile[TvSeriesEpisodeGroupsModel]):
     @override
     def _endpoint(self) -> TvSeriesEpisodeGroupsEndpoint:
         return tminidb().tv_series.episode_groups
 
-    # TODO: Validate
-    @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ResourceNotFoundError)
 
+class _TVEpisodeGroupsDetails(EndpointFile[TvEpisodeGroupDetailsModel]):
+    custom_class_key = "TV Episode Groups/Details"
 
-# TODO: Validate
-class _EpisodeGroupDetail(EndpointFile[TvEpisodeGroupDetailsModel]):
     @override
     def _endpoint(self) -> TvEpisodeGroupEndpoint:
         return tminidb().tv_episode_group.details
 
-    # TODO: Validate
-    @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ResourceNotFoundError)
 
+class _TVSeasonsDetails(EndpointFile[TvSeasonDetailsModel]):
+    custom_class_key = "TV Seasons/Details"
 
-# TODO: Validate
-class _SeasonDetail(EndpointFile[TvSeasonDetailsModel]):
     @override
     def _endpoint(self) -> TvSeasonEndpoint:
         return tminidb().tv_season.details
@@ -290,18 +249,19 @@ class _SeasonDetail(EndpointFile[TvSeasonDetailsModel]):
         self.season_number = season_number
         super().__init__(session, plugin, f"{tmdb_show_id}/{season_number}")
 
+    # Occurs if the user tries to add an invalid URL.
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(self.tmdb_show_id, self.season_number)
 
-    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ResourceNotFoundError)
 
 
-# TODO: Validate
-class _EpisodeDetail(EndpointFile[TvEpisodeDetailsModel]):
+class _TVEpisodesDetails(EndpointFile[TvEpisodeDetailsModel]):
+    custom_class_key = "TV Episodes/Details"
+
     @override
     def _endpoint(self) -> TvEpisodeEndpoint:
         return tminidb().tv_episode.details
@@ -332,8 +292,9 @@ class _EpisodeDetail(EndpointFile[TvEpisodeDetailsModel]):
         )
 
 
-# TODO: Validate
-class _EpisodeTranslations(EndpointFile[TvEpisodeTranslationsModel]):
+class _TVEpisodesTranslations(EndpointFile[TvEpisodeTranslationsModel]):
+    custom_class_key = "TV Episodes/Translations"
+
     @override
     def _endpoint(self) -> TvEpisodeTranslationsEndpoint:
         return tminidb().tv_episode.translations
@@ -363,14 +324,10 @@ class _EpisodeTranslations(EndpointFile[TvEpisodeTranslationsModel]):
             self.episode_number,
         )
 
-    # TODO: Validate
-    @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ResourceNotFoundError)
 
+class _TVSeriesChanges(EndpointFile[TvSeriesChangesModel]):
+    custom_class_key = "TV Series/Changes"
 
-# TODO: Validate
-class _ShowChanges(EndpointFile[TvSeriesChangesModel]):
     @override
     def _endpoint(self) -> TvSeriesChangesEndpoint:
         return tminidb().tv_series.changes
@@ -400,8 +357,9 @@ class _ShowChanges(EndpointFile[TvSeriesChangesModel]):
         )
 
 
-# TODO: Validate
-class _MultiSearch(EndpointFile[SearchMultiModel]):
+class _SearchMulti(EndpointFile[SearchMultiModel]):
+    custom_class_key = "Search/Multi"
+
     @override
     def _endpoint(self) -> SearchMultiEndpoint:
         return tminidb().search.multi
@@ -421,32 +379,14 @@ class _MultiSearch(EndpointFile[SearchMultiModel]):
     def _download_file(self) -> str:
         return self._endpoint().download(self.query, page=self.page)
 
-    # TODO: Validate
     @override
     def _next_update_at(self) -> datetime:
         return tz_datetime.now() + timedelta(days=30)
 
 
-# TODO: Validate
-class _TitlePage(HTMLFile):
-    def __init__(
-        self,
-        session: Session,
-        plugin: Plugin,
-        media_type: str,
-        tmdb_id: int,
-    ) -> None:
-        self.media_type = media_type
-        self.tmdb_id = tmdb_id
-        super().__init__(session, plugin, f"{media_type}/{tmdb_id}")
+class _SearchMovie(EndpointFile[SearchMovieModel]):
+    custom_class_key = "Search/Movie"
 
-    @override
-    def _url(self) -> str:
-        return media_url(self.media_type, self.tmdb_id)
-
-
-# TODO: Validate
-class _MovieSearch(EndpointFile[SearchMovieModel]):
     @override
     def _endpoint(self) -> SearchMovieEndpoint:
         return tminidb().search.movie
@@ -466,14 +406,14 @@ class _MovieSearch(EndpointFile[SearchMovieModel]):
     def _download_file(self) -> str:
         return self._endpoint().download(self.query, year=self.year)
 
-    # TODO: Validate
     @override
     def _next_update_at(self) -> datetime:
         return tz_datetime.now() + timedelta(days=30)
 
 
-# TODO: Validate
-class _TvSearch(EndpointFile[SearchTvModel]):
+class _SearchTV(EndpointFile[SearchTvModel]):
+    custom_class_key = "Search/TV"
+
     @override
     def _endpoint(self) -> SearchTvEndpoint:
         return tminidb().search.tv
@@ -493,152 +433,90 @@ class _TvSearch(EndpointFile[SearchTvModel]):
     def _download_file(self) -> str:
         return self._endpoint().download(self.query, year=self.year)
 
-    # TODO: Validate
-
-    # TODO: Validate
     @override
     def _next_update_at(self) -> datetime:
         return tz_datetime.now() + timedelta(days=30)
 
 
 # TODO: Validate
-class FileMixin(BasePlugin):
-    # TODO: Validate
-    @property
-    def source(self) -> Source:
-        return self._sources[self.plugin_name()]
+class FileMixin(UtilsMixin):
+    def search_multi_file(self, query: str, page: int = 1) -> _SearchMulti:
+        return self._file(_SearchMulti, query, page)
 
-    # TODO: Validate
-    def multi_search_file(self, query: str, page: int = 1) -> _MultiSearch:
-        """Return MultiSearch file."""
-        return self._file(_MultiSearch, query, page)
+    def search_movie_file(self, query: str, year: int | None = None) -> _SearchMovie:
+        return self._file(_SearchMovie, query, year)
 
-    # TODO: Validate
-    def title_page_file(self, media_type: str, tmdb_id: int) -> _TitlePage:
-        """Return TitlePage file."""
-        return self._file(_TitlePage, media_type, tmdb_id)
+    def search_tv_file(self, query: str, year: int | None = None) -> _SearchTV:
+        return self._file(_SearchTV, query, year)
 
-    # TODO: Validate
-    def movie_search_file(self, query: str, year: int | None = None) -> _MovieSearch:
-        """Return MovieSearch file."""
-        return self._file(_MovieSearch, query, year)
+    def movies_details_file(self, tmdb_id: int) -> _MoviesDetails:
+        return self._file(_MoviesDetails, str(tmdb_id))
 
-    # TODO: Validate
-    def tv_search_file(self, query: str, year: int | None = None) -> _TvSearch:
-        """Return TvSearch file."""
-        return self._file(_TvSearch, query, year)
+    def movies_translations_file(self, tmdb_id: int) -> _MoviesTranslations:
+        return self._file(_MoviesTranslations, str(tmdb_id))
 
-    # TODO: Validate
-    def movie_detail_file(self, tmdb_id: int) -> _MovieDetails:
-        """Return MovieDetails file."""
-        return self._file(_MovieDetails, str(tmdb_id))
+    def tv_series_details_file(self, tmdb_id: int) -> _TVSeriesDetails:
+        return self._file(_TVSeriesDetails, tmdb_id)
 
-    # TODO: Validate
-    def movie_translations_file(self, tmdb_id: int) -> _MovieTranslations:
-        """Return MovieTranslations file."""
-        return self._file(_MovieTranslations, str(tmdb_id))
+    def latest_tv_series_changes_file(self, show_key: str) -> _TVSeriesChanges:
+        """Return the latest TV Series Changes file for a show.
 
-    # TODO: Validate
-    def show_detail_file(self, tmdb_id: int) -> _ShowDetail:
-        """Return ShowDetail file."""
-        return self._file(_ShowDetail, tmdb_id)
+        If the file does not exist an initial one will be created."""
+        _, tmdb_id = get_media_type_and_tmdb_id(show_key)
+        latest = self.latest_dated_file_date(_TVSeriesChanges, f"{tmdb_id}/")
+        # If the file does not exist an initial file will be downloaded that covers a
+        # single day. If the file does exist only the second parameter is used to get it
+        # from the database.
+        return self._file(_TVSeriesChanges, tmdb_id, latest, latest)
 
-    # TODO: Validate
-    def changes_since(self, show_key: str) -> date:
-        show = Show.get(self.session, self.source, show_key)
-        reference = show.update_at if show and show.update_at else tz_datetime.now()
-        return (reference - timedelta(days=2)).date()
-
-    # TODO: Validate
-    def _latest_show_changes_dates(self) -> dict[int, date | None]:
-        cached: dict[int, date | None] = self.session.info.setdefault(
-            "tmdb_latest_show_changes_dates",
-            {},
-        )
-        return cached
-
-    # TODO: Validate
-    def _latest_show_changes_date(self, tmdb_show_id: int) -> date | None:
-        cached = self._latest_show_changes_dates()
-        if tmdb_show_id in cached:
-            return cached[tmdb_show_id]
-
-        statement = (
-            select(File)
-            .where(
-                File.plugin == self.plugin,
-                col(File.key).startswith(f"{_ShowChanges.class_key()}/{tmdb_show_id}/"),
-            )
-            .order_by(col(File.data_timestamp).desc())
-        )
-        stored = self.session.exec(statement).first()
-        if stored is None:
-            cached[tmdb_show_id] = None
-            return None
-        identifier = _ShowChanges.file_key_to_unique_identifier(stored.key)
-        latest = date.fromisoformat(identifier.split("/")[-1])
-        cached[tmdb_show_id] = latest
-        return latest
-
-    # TODO: Validate
-    def show_changes_file(
+    @overload
+    def tv_series_changes_file(
         self,
         show_key: str,
+        downloaded_to: date,
+    ) -> _TVSeriesChanges: ...
+    @overload
+    def tv_series_changes_file(self, show_key: File) -> _TVSeriesChanges: ...
+    def tv_series_changes_file(
+        self,
+        show_key: str | File,
         downloaded_to: date | None = None,
-    ) -> _ShowChanges:
-        """Return ShowChanges file."""
-        _, tmdb_id = get_media_type_and_tmdb_id(show_key)
-        if downloaded_to is None:
-            downloaded_to = (
-                self._latest_show_changes_date(tmdb_id) or tz_datetime.now().date()
-            )
+    ) -> _TVSeriesChanges:
+        if isinstance(show_key, File):
+            identifier = _TVSeriesChanges.file_to_unique_identifier(show_key)
+            tmdb_id_str, downloaded_to_str = identifier.split("/")
+            tmdb_id = int(tmdb_id_str)
+            downloaded_to = date.fromisoformat(downloaded_to_str)
         else:
-            self._latest_show_changes_dates().pop(tmdb_id, None)
+            _, tmdb_id = get_media_type_and_tmdb_id(show_key)
         return self._file(
-            _ShowChanges,
+            _TVSeriesChanges,
             tmdb_id,
-            self.changes_since(show_key),
+            self.latest_dated_file_date(_TVSeriesChanges, f"{tmdb_id}/"),
             downloaded_to,
         )
 
-    # TODO: Validate
-    def incomplete_show_changes_files(self, show_key: str) -> list[_ShowChanges]:
-        """Return every ShowChanges file for a title not yet read to the end."""
+    def incomplete_tv_series_changes_files(
+        self,
+        show_key: str,
+    ) -> list[_TVSeriesChanges]:
         _, tmdb_id = get_media_type_and_tmdb_id(show_key)
-        since = self.changes_since(show_key)
         return self.get_incomplete_files(
-            _ShowChanges,
-            lambda stored: self._file(
-                _ShowChanges,
-                tmdb_id,
-                since,
-                date.fromisoformat(
-                    _ShowChanges.file_key_to_unique_identifier(stored.key).split("/")[
-                        -1
-                    ],
-                ),
-            ),
+            _TVSeriesChanges,
+            self.tv_series_changes_file,
             key_prefix=f"{tmdb_id}/",
         )
 
-    # TODO: Validate
-    def stored_episode_translations_files(
+    def tv_episodes_translations_files(
         self,
         tmdb_show_id: int,
-    ) -> list[_EpisodeTranslations]:
-        """Return every EpisodeTranslations file already held for a title."""
-        statement = select(File).where(
-            File.plugin == self.plugin,
-            col(File.key).startswith(
-                f"{_EpisodeTranslations.class_key()}/{tmdb_show_id}/",
-            ),
-        )
-        files: list[_EpisodeTranslations] = []
-        for stored in self.session.exec(statement).all():
-            identifier = _EpisodeTranslations.file_key_to_unique_identifier(stored.key)
+    ) -> list[_TVEpisodesTranslations]:
+        files: list[_TVEpisodesTranslations] = []
+        for file in self.files_with_prefix(_TVEpisodesTranslations, f"{tmdb_show_id}/"):
+            identifier = _TVEpisodesTranslations.file_to_unique_identifier(file)
             _, season_number, episode_number = identifier.split("/")
             files.append(
-                self.episode_translations_file(
+                self.tv_episodes_translations_file(
                     tmdb_show_id,
                     int(season_number),
                     int(episode_number),
@@ -646,370 +524,269 @@ class FileMixin(BasePlugin):
             )
         return files
 
-    # TODO: Validate
-    def show_images_file(self, tmdb_id: int) -> _ShowImages:
-        return self._file(_ShowImages, tmdb_id)
+    def tv_series_images_file(self, tmdb_id: int) -> _TVSeriesImages:
+        return self._file(_TVSeriesImages, tmdb_id)
 
-    # TODO: Validate
-    def episode_groups_file(self, tmdb_id: int) -> _EpisodeGroups:
-        """Return the EpisodeGroups file for a title."""
-        return self._file(_EpisodeGroups, tmdb_id)
+    def tv_series_episode_groups_file(self, tmdb_id: int) -> _TVSeriesEpisodeGroups:
+        return self._file(_TVSeriesEpisodeGroups, tmdb_id)
 
-    # TODO: Validate
-    def episode_group_detail_file(self, group_id: str) -> _EpisodeGroupDetail:
-        """Return the EpisodeGroupDetail file for one episode order."""
-        return self._file(_EpisodeGroupDetail, group_id)
+    def tv_episode_groups_details_file(self, group_id: str) -> _TVEpisodeGroupsDetails:
+        return self._file(_TVEpisodeGroupsDetails, group_id)
 
-    # TODO: Validate
-    def season_detail_file(
+    def tv_seasons_details_file(
         self,
         tmdb_show_id: int,
         season_number: int,
-    ) -> _SeasonDetail:
-        """Return SeasonDetail file."""
-        return self._file(_SeasonDetail, tmdb_show_id, season_number)
+    ) -> _TVSeasonsDetails:
+        return self._file(_TVSeasonsDetails, tmdb_show_id, season_number)
 
-    # TODO: Validate
-    def episode_detail_file(
+    def tv_episodes_details_file(
         self,
         tmdb_show_id: int,
         season_number: int,
         episode_number: int,
-    ) -> _EpisodeDetail:
-        """Return EpisodeDetail file."""
+    ) -> _TVEpisodesDetails:
         return self._file(
-            _EpisodeDetail,
+            _TVEpisodesDetails,
             tmdb_show_id,
             season_number,
             episode_number,
         )
 
-    # TODO: Validate
-    def episode_translations_file(
+    def tv_episodes_translations_file(
         self,
         tmdb_show_id: int,
         season_number: int,
         episode_number: int,
-    ) -> _EpisodeTranslations:
-        """Return EpisodeTranslations file."""
+    ) -> _TVEpisodesTranslations:
         return self._file(
-            _EpisodeTranslations,
+            _TVEpisodesTranslations,
             tmdb_show_id,
             season_number,
             episode_number,
         )
 
-    # TODO: Validate
-    def tv_detail_file(self, tmdb_id: int) -> _TvSeriesDetails:
-        """Return TvSeriesDetails file."""
-        return self._file(_TvSeriesDetails, str(tmdb_id))
-
-    # TODO: Validate
-    def movie_watch_providers_file(
+    def latest_movies_watch_providers_file(
         self,
         tmdb_id: int,
-        downloaded_at: date | None = None,
-    ) -> _MovieWatchProviders:
-        """Return MovieWatchProviders file."""
+    ) -> _MoviesWatchProviders:
+        """Return the latest Movies Watch Providers file for a movie.
+
+        If the file does not exist an initial one will be created."""
         return self._file(
-            _MovieWatchProviders,
+            _MoviesWatchProviders,
             tmdb_id,
-            self._watch_providers_date(
-                _MovieWatchProviders,
-                f"{tmdb_id}/",
-                downloaded_at,
-            ),
+            self.latest_dated_file_date(_MoviesWatchProviders, f"{tmdb_id}/"),
         )
 
-    # TODO: Validate
-    def _latest_watch_providers_dates(self) -> dict[str, date | None]:
-        cached: dict[str, date | None] = self.session.info.setdefault(
-            "tmdb_latest_watch_providers_dates",
-            {},
-        )
-        return cached
-
-    # TODO: Validate
-    def _latest_watch_providers_date(
-        self,
-        file_class: type[ProvidersFile],
-        key_prefix: str,
-    ) -> date | None:
-        cached = self._latest_watch_providers_dates()
-        cache_key = f"{file_class.class_key()}/{key_prefix}"
-        if cache_key in cached:
-            return cached[cache_key]
-
-        statement = (
-            select(File)
-            .where(
-                File.plugin == self.plugin,
-                col(File.key).startswith(cache_key),
-            )
-            .order_by(col(File.data_timestamp).desc())
-        )
-        stored = self.session.exec(statement).first()
-        if stored is None:
-            cached[cache_key] = None
-            return None
-        identifier = file_class.file_key_to_unique_identifier(stored.key)
-        latest = date.fromisoformat(identifier.split("/")[-1])
-        cached[cache_key] = latest
-        return latest
-
-    # TODO: Validate
-    def _watch_providers_date(
-        self,
-        file_class: type[ProvidersFile],
-        key_prefix: str,
-        downloaded_at: date | None,
-    ) -> date:
-        if downloaded_at is None:
-            return (
-                self._latest_watch_providers_date(file_class, key_prefix)
-                or tz_datetime.now().date()
-            )
-        self._latest_watch_providers_dates().pop(
-            f"{file_class.class_key()}/{key_prefix}",
-            None,
-        )
-        return downloaded_at
-
-    # TODO: Validate
-    def tv_watch_providers_file(
+    def movies_watch_providers_file(
         self,
         tmdb_id: int,
-        downloaded_at: date | None = None,
-    ) -> _TvWatchProviders:
-        """Return TvWatchProviders file."""
+        downloaded_at: date,
+    ) -> _MoviesWatchProviders:
+        return self._file(_MoviesWatchProviders, tmdb_id, downloaded_at)
+
+    def latest_tv_series_watch_providers_file(
+        self,
+        tmdb_id: int,
+    ) -> _TVSeriesWatchProviders:
+        """Return the latest TV Series Watch Providers file for a show.
+
+        If the file does not exist an initial one will be created."""
+        # If no file exists yet the date falls back to today, so the file returned is a
+        # new one for today. If one does exist the stored file is returned as it is.
         return self._file(
-            _TvWatchProviders,
+            _TVSeriesWatchProviders,
             tmdb_id,
-            self._watch_providers_date(
-                _TvWatchProviders,
-                f"{tmdb_id}/",
-                downloaded_at,
-            ),
+            self.latest_dated_file_date(_TVSeriesWatchProviders, f"{tmdb_id}/"),
         )
 
-    # TODO: Validate
-    def season_watch_providers_file(
+    def tv_series_watch_providers_file(
+        self,
+        tmdb_id: int,
+        downloaded_at: date,
+    ) -> _TVSeriesWatchProviders:
+        return self._file(_TVSeriesWatchProviders, tmdb_id, downloaded_at)
+
+    def latest_tv_seasons_watch_providers_file(
         self,
         tmdb_id: int,
         season_number: int,
-        downloaded_at: date | None = None,
-    ) -> _SeasonWatchProviders:
+    ) -> _TVSeasonsWatchProviders:
+        """Return the latest TV Seasons Watch Providers file for a season.
+
+        If the file does not exist an initial one will be created."""
+        # If no file exists yet the date falls back to today, so the file returned is a
+        # new one for today. If one does exist the stored file is returned as it is.
         return self._file(
-            _SeasonWatchProviders,
+            _TVSeasonsWatchProviders,
             tmdb_id,
             season_number,
-            self._watch_providers_date(
-                _SeasonWatchProviders,
+            self.latest_dated_file_date(
+                _TVSeasonsWatchProviders,
                 f"{tmdb_id}/{season_number}/",
-                downloaded_at,
             ),
         )
 
-    # TODO: Validate
-    def incomplete_tv_watch_providers_files(
-        self,
-        tmdb_id: int,
-    ) -> list[_TvWatchProviders]:
-        return self.get_incomplete_files(
-            _TvWatchProviders,
-            lambda stored: self._file(
-                _TvWatchProviders,
-                tmdb_id,
-                date.fromisoformat(
-                    _TvWatchProviders.file_key_to_unique_identifier(stored.key).split(
-                        "/",
-                    )[-1],
-                ),
-            ),
-            key_prefix=f"{tmdb_id}/",
-        )
-
-    # TODO: Validate
-    def incomplete_movie_watch_providers_files(
-        self,
-        tmdb_id: int,
-    ) -> list[_MovieWatchProviders]:
-        return self.get_incomplete_files(
-            _MovieWatchProviders,
-            lambda stored: self._file(
-                _MovieWatchProviders,
-                tmdb_id,
-                date.fromisoformat(
-                    _MovieWatchProviders.file_key_to_unique_identifier(stored.key).split(
-                        "/",
-                    )[-1],
-                ),
-            ),
-            key_prefix=f"{tmdb_id}/",
-        )
-
-    # TODO: Validate
-    def incomplete_season_watch_providers_files(
+    def tv_seasons_watch_providers_file(
         self,
         tmdb_id: int,
         season_number: int,
-    ) -> list[_SeasonWatchProviders]:
+        downloaded_at: date,
+    ) -> _TVSeasonsWatchProviders:
+        return self._file(
+            _TVSeasonsWatchProviders,
+            tmdb_id,
+            season_number,
+            downloaded_at,
+        )
+
+    def incomplete_tv_series_watch_providers_files(
+        self,
+        tmdb_id: int,
+    ) -> list[_TVSeriesWatchProviders]:
         return self.get_incomplete_files(
-            _SeasonWatchProviders,
+            _TVSeriesWatchProviders,
             lambda stored: self._file(
-                _SeasonWatchProviders,
+                _TVSeriesWatchProviders,
+                tmdb_id,
+                self._get_file_date_from_name(_TVSeriesWatchProviders, stored),
+            ),
+            key_prefix=f"{tmdb_id}/",
+        )
+
+    def incomplete_movies_watch_providers_files(
+        self,
+        tmdb_id: int,
+    ) -> list[_MoviesWatchProviders]:
+        return self.get_incomplete_files(
+            _MoviesWatchProviders,
+            lambda stored: self._file(
+                _MoviesWatchProviders,
+                tmdb_id,
+                self._get_file_date_from_name(_MoviesWatchProviders, stored),
+            ),
+            key_prefix=f"{tmdb_id}/",
+        )
+
+    def incomplete_tv_seasons_watch_providers_files(
+        self,
+        tmdb_id: int,
+        season_number: int,
+    ) -> list[_TVSeasonsWatchProviders]:
+        return self.get_incomplete_files(
+            _TVSeasonsWatchProviders,
+            lambda stored: self._file(
+                _TVSeasonsWatchProviders,
                 tmdb_id,
                 season_number,
-                date.fromisoformat(
-                    _SeasonWatchProviders.file_key_to_unique_identifier(
-                        stored.key,
-                    ).split("/")[-1],
-                ),
+                self._get_file_date_from_name(_TVSeasonsWatchProviders, stored),
             ),
             key_prefix=f"{tmdb_id}/{season_number}/",
         )
 
     # TODO: Validate
-    @overload
-    def media_detail_file(
-        self,
-        media_type: Literal[TMDBMediaType.movie],
-        tmdb_id: int,
-    ) -> _MovieDetails: ...
-    # TODO: Validate
-    @overload
-    def media_detail_file(
-        self,
-        media_type: Literal[TMDBMediaType.tv],
-        tmdb_id: int,
-    ) -> _TvSeriesDetails: ...
-    # TODO: Validate
-    @overload
     def media_detail_file(
         self,
         media_type: TMDBMediaType,
         tmdb_id: int,
-    ) -> _MovieDetails | _TvSeriesDetails: ...
-    # TODO: Validate
-    def media_detail_file(
-        self,
-        media_type: TMDBMediaType,
-        tmdb_id: int,
-    ) -> _MovieDetails | _TvSeriesDetails:
-        """Return MovieDetails or TvSeriesDetails file."""
+    ) -> _MoviesDetails | _TVSeriesDetails:
         if media_type == TMDBMediaType.movie:
-            return self.movie_detail_file(tmdb_id)
-        return self.tv_detail_file(tmdb_id)
+            return self.movies_details_file(tmdb_id)
+        return self.tv_series_details_file(tmdb_id)
 
     # TODO: Validate
-    @overload
-    def watch_providers_file(
-        self,
-        media_type: Literal[TMDBMediaType.movie],
-        tmdb_id: int,
-    ) -> _MovieWatchProviders: ...
-    # TODO: Validate
-    @overload
-    def watch_providers_file(
-        self,
-        media_type: Literal[TMDBMediaType.tv],
-        tmdb_id: int,
-    ) -> _TvWatchProviders: ...
-    # TODO: Validate
-    @overload
     def watch_providers_file(
         self,
         media_type: TMDBMediaType,
         tmdb_id: int,
-    ) -> _MovieWatchProviders | _TvWatchProviders: ...
-    # TODO: Validate
-    def watch_providers_file(
-        self,
-        media_type: TMDBMediaType,
-        tmdb_id: int,
-    ) -> _MovieWatchProviders | _TvWatchProviders:
-        """Return MovieWatchProviders or TvWatchProviders file."""
+    ) -> _MoviesWatchProviders | _TVSeriesWatchProviders:
         if media_type == TMDBMediaType.movie:
-            return self.movie_watch_providers_file(tmdb_id)
-        return self.tv_watch_providers_file(tmdb_id)
+            return self.latest_movies_watch_providers_file(tmdb_id)
+        return self.latest_tv_series_watch_providers_file(tmdb_id)
+
+    # TODO: Validate
+    def series_seasons(self, show_key: str) -> list[SeasonSource]:
+        msg = "This plugin does not have series seasons."
+        raise NotImplementedError(msg)
+
+    # TODO: Validate
+    def native_season_numbers(self, season_key: str, show_key: str) -> list[int]:
+        msg = "This plugin does not have native season numbers."
+        raise NotImplementedError(msg)
+
+    # TODO: Validate
+    def _native_season_number(self, season_key: str, show_key: str) -> int:
+        msg = "This plugin does not have a native season number."
+        raise NotImplementedError(msg)
+
+
+# TODO: Validate
+class SeriesFileMixin(FileMixin):
+    # TODO: Validate
+    @override
+    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
+        return [season.key for season in self.series_seasons(show_key)]
+
+    # TODO: Validate
+    @override
+    def _episode_keys_from_season_files(
+        self,
+        season_keys: str | list[str],
+        show_key: str,
+    ) -> list[str]:
+        if isinstance(season_keys, str):
+            season_keys = [season_keys]
+
+        wanted = set(season_keys)
+        return [
+            tmdb_episode_key(TMDBMediaType.tv, episode.id)
+            for season in self.series_seasons(show_key)
+            if season.key in wanted
+            for episode in season.episodes
+        ]
 
     # TODO: Validate
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
-        media_type, tmdb_id = get_media_type_and_tmdb_id(show_key)
+        _, tmdb_id = get_media_type_and_tmdb_id(show_key)
         show = Show.get(self.session, self.source, show_key)
-        if media_type == TMDBMediaType.movie:
-            return [
-                self.movie_detail_file(tmdb_id),
-                self.movie_watch_providers_file(
-                    tmdb_id,
-                    self._due_watch_providers_date(show),
-                ),
-            ]
-        groups_file = self.episode_groups_file(tmdb_id)
+        groups_file = self.tv_series_episode_groups_file(tmdb_id)
         groups_file.download_if_outdated()
         options = (
             groups_file.parsed().results if groups_file.database_record.content else []
         )
         return [
-            self.show_changes_file(show_key),
-            self.show_detail_file(tmdb_id),
+            self.latest_tv_series_changes_file(show_key),
+            self.tv_series_details_file(tmdb_id),
             groups_file,
-            *(self.episode_group_detail_file(option.id) for option in options),
-            self.tv_watch_providers_file(
-                tmdb_id,
-                self._due_watch_providers_date(show),
-            ),
+            *(self.tv_episode_groups_details_file(option.id) for option in options),
+            self.tv_series_watch_providers_file(tmdb_id, tz_datetime.now().date())
+            if self._watch_providers_due(show)
+            else self.latest_tv_series_watch_providers_file(tmdb_id),
         ]
 
     # TODO: Validate
     @override
     def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
-        media_type, tmdb_id = get_media_type_and_tmdb_id(show_key)
-        if media_type == TMDBMediaType.movie:
-            return self._season_detail_files(season_key, show_key)
+        _, tmdb_id = get_media_type_and_tmdb_id(show_key)
         show = Show.get(self.session, self.source, show_key)
         season = Season.get(self.session, show, season_key) if show else None
-        downloaded_at = self._due_watch_providers_date(season)
+        due = self._watch_providers_due(season)
         return [
             *self._season_detail_files(season_key, show_key),
             *(
-                self.season_watch_providers_file(
+                self.tv_seasons_watch_providers_file(
                     tmdb_id,
                     season_number,
-                    downloaded_at,
+                    tz_datetime.now().date(),
+                )
+                if due
+                else self.latest_tv_seasons_watch_providers_file(
+                    tmdb_id,
+                    season_number,
                 )
                 for season_number in self.native_season_numbers(season_key, show_key)
-            ),
-        ]
-
-    # TODO: Validate
-    @staticmethod
-    def _due_watch_providers_date(record: Show | Season | None) -> date | None:
-        if record is None or record.update_at is None:
-            return None
-        if record.update_at > tz_datetime.now():
-            return None
-        return tz_datetime.now().date()
-
-    # TODO: Validate
-    def _season_detail_files(
-        self,
-        season_key: str,
-        show_key: str,
-    ) -> Sequence[BaseFile[Any]]:
-        media_type, tmdb_id = get_media_type_and_tmdb_id(show_key)
-        if media_type == TMDBMediaType.movie:
-            return [self.movie_detail_file(tmdb_id)]
-        changes_file = self.show_changes_file(show_key)
-        group_id = show_chosen_group_id(self.session, self.source, show_key)
-        if group_id is not None:
-            return [changes_file, self.episode_group_detail_file(group_id)]
-        return [
-            changes_file,
-            self.season_detail_file(
-                tmdb_id,
-                self._native_season_number(season_key, show_key),
             ),
         ]
 
@@ -1021,38 +798,71 @@ class FileMixin(BasePlugin):
         season_key: str,
         show_key: str,
     ) -> Sequence[BaseFile[Any]]:
-        """Return the file an episode was read out of, which is its season's.
-
-        A season carries every episode of it, so that one file is where an
-        episode's own record comes from and what says how current it is. TMDB
-        does hold a file per episode, but nothing here is read from it: what
-        wants one - matching a website's episode to TMDB's by name - downloads
-        it as it gets there, and naming it here would have every import fetch
-        two files an episode for nothing.
-        """
         return self._season_detail_files(season_key, show_key)
 
     # TODO: Validate
-    def native_season_numbers(self, season_key: str, show_key: str) -> list[int]:
-        media_type, _ = get_media_type_and_tmdb_id(show_key)
-        if media_type == TMDBMediaType.movie:
-            return []
+    def _season_detail_files(
+        self,
+        season_key: str,
+        show_key: str,
+    ) -> Sequence[BaseFile[Any]]:
+        _, tmdb_id = get_media_type_and_tmdb_id(show_key)
+        changes_file = self.latest_tv_series_changes_file(show_key)
         group_id = show_chosen_group_id(self.session, self.source, show_key)
-        if group_id is None:
-            return [self._native_season_number(season_key, show_key)]
-        _, order = parse_season_key(season_key)
-        groups = self.episode_group_detail_file(group_id).parsed().groups
-        if order >= len(groups):
-            return []
-        return sorted({episode.season_number for episode in groups[order].episodes})
+        if group_id is not None:
+            return [changes_file, self.tv_episode_groups_details_file(group_id)]
+        return [
+            changes_file,
+            self.tv_seasons_details_file(
+                tmdb_id,
+                self._native_season_number(season_key, show_key),
+            ),
+        ]
+
+
+# TODO: Validate
+class MovieFileMixin(FileMixin):
+    # TODO: Validate
+    @override
+    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
+        media_type, tmdb_id = get_media_type_and_tmdb_id(show_key)
+        return [tmdb_season_key(media_type, tmdb_id)]
 
     # TODO: Validate
-    def _native_season_number(self, season_key: str, show_key: str) -> int:
-        """Return the number TMDB's own seasons give the season `season_key` names."""
-        _, season_tmdb_id = parse_season_key(season_key)
+    @override
+    def _episode_keys_from_season_files(
+        self,
+        season_keys: str | list[str],
+        show_key: str,
+    ) -> list[str]:
+        media_type, tmdb_id = get_media_type_and_tmdb_id(show_key)
+        return [tmdb_episode_key(media_type, tmdb_id)]
+
+    # TODO: Validate
+    @override
+    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
         _, tmdb_id = get_media_type_and_tmdb_id(show_key)
-        for season in self.show_detail_file(tmdb_id).parsed().seasons:
-            if season.id == season_tmdb_id:
-                return season.season_number
-        message = f"{show_key} has no season {season_key}"
-        raise ValueError(message)
+        show = Show.get(self.session, self.source, show_key)
+        return [
+            self.movies_details_file(tmdb_id),
+            self.movies_watch_providers_file(tmdb_id, tz_datetime.now().date())
+            if self._watch_providers_due(show)
+            else self.latest_movies_watch_providers_file(tmdb_id),
+        ]
+
+    # TODO: Validate
+    @override
+    def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
+        _, tmdb_id = get_media_type_and_tmdb_id(show_key)
+        return [self.movies_details_file(tmdb_id)]
+
+    # TODO: Validate
+    @override
+    def _episode_files(
+        self,
+        episode_key: str,
+        season_key: str,
+        show_key: str,
+    ) -> Sequence[BaseFile[Any]]:
+        _, tmdb_id = get_media_type_and_tmdb_id(show_key)
+        return [self.movies_details_file(tmdb_id)]

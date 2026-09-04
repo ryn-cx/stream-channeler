@@ -42,8 +42,7 @@ class BaseUpsertMixin(BasePluginCore, BaseOutdatedCheckMixin, ABC):
         carry over: which canonical show it is linked to is settled once its
         episodes are written, which is where `upsert_show` ends.
         """
-        show_files = self._show_files(show_key)
-        return show.upsert_and_set_update_at(source, existing_show, show_files)
+        return show.upsert_and_set_update_at(source, existing_show)
 
     # TODO: Validate
     def _upsert_season_object(
@@ -54,8 +53,7 @@ class BaseUpsertMixin(BasePluginCore, BaseOutdatedCheckMixin, ABC):
         show_key: str,
     ) -> Season:
         """Store the website's own `Season` against the files it was read out of."""
-        season_files = self._season_files(season.key, show_key)
-        return season.upsert_and_set_update_at(show, existing_season, season_files)
+        return season.upsert_and_set_update_at(show, existing_season)
 
     # TODO: Validate
     def _upsert_episode_object(
@@ -75,8 +73,7 @@ class BaseUpsertMixin(BasePluginCore, BaseOutdatedCheckMixin, ABC):
         """
         if existing_episode:
             episode.canonical_episode_note = existing_episode.canonical_episode_note
-        episode_files = self._episode_files(episode.key, season.key, show_key)
-        return episode.upsert_and_set_update_at(season, existing_episode, episode_files)
+        return episode.upsert_and_set_update_at(season, existing_episode)
 
     # TODO: Validate
     @abstractmethod

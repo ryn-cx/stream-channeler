@@ -1,8 +1,8 @@
 # TODO: Validate
 from fastapi import APIRouter
 
-from app.watches.admin_router import router as admin_router
-from app.watches.user_router import router as user_router
+from app.watches.router.admin import router as admin_router
+from app.watches.router.user import router as user_router
 
 router = APIRouter()
 router.include_router(user_router)

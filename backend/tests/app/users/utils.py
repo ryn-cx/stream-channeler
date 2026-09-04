@@ -9,9 +9,9 @@ from sqlmodel import Session
 
 from app.auth.security import create_access_token, get_password_hash
 from app.config import settings
-from app.users import service as user_service
 from app.users.models import User
 from app.users.schemas import UserCreate, UserUpdate
+from app.users.service import accounts, lookup
 from tests.app.helpers.utils import random_email, random_lower_string
 
 # Every test user answers to this password. Hashing is the single most expensive
@@ -84,20 +84,20 @@ def authentication_token_from_email(
     session: Session,
 ) -> dict[str, str]:
     password = random_lower_string()
-    user = user_service.get_user_by_email(session=session, email=email)
+    user = lookup.get_user_by_email(session=session, email=email)
     if not user:
         user_in_create = UserCreate(
             email=email,
             username=random_lower_string(),
             password=password,
         )
-        user = user_service.create_user(session=session, user_create=user_in_create)
+        user = accounts.create_user(session=session, user_create=user_in_create)
     else:
         user_in_update = UserUpdate(password=password)
         if not user.id:
             msg = "User id not set"
             raise ValueError(msg)
-        user = user_service.update_user(
+        user = accounts.update_user(
             session=session,
             db_user=user,
             user_in=user_in_update,

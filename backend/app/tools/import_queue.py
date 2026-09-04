@@ -12,7 +12,7 @@ from sqlmodel import Session, col, or_, select
 
 from app.canonical_media.filters import is_canonical
 from app.canonical_media.seasons import season_ids_by_key
-from app.canonical_media.service import (
+from app.canonical_media.service.identifiers import (
     canonical_ids_by_key,
     canonical_show_ids_by_key,
 )

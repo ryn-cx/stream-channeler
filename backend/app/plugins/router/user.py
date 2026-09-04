@@ -7,7 +7,6 @@ from app.auth.dependencies import (
     CurrentUser,
     SessionDep,
 )
-from app.plugins import service
 from app.plugins.schemas import (
     PluginImportURLInformation,
     PluginImportWatchHistoryInformation,
@@ -15,6 +14,7 @@ from app.plugins.schemas import (
     PluginSearchUrl,
     PluginURLMatch,
 )
+from app.plugins.service import imports, search
 from plugins.utils.abstract_plugin import PluginMediaInfo, PluginSearchResults
 
 plugins_router = APIRouter(prefix="/plugins", tags=["plugins"])
@@ -26,7 +26,7 @@ def import_watch_history_information(
     _current_user: CurrentUser,
 ) -> list[PluginImportWatchHistoryInformation]:
     """Return information about all plugins that support importing watch history."""
-    return service.import_watch_history_information()
+    return imports.import_watch_history_information()
 
 
 # TODO: Validate
@@ -35,32 +35,32 @@ def import_url_information(
     _current_user: CurrentUser,
 ) -> list[PluginImportURLInformation]:
     """Return information about the plugins offered as ways to add by URL."""
-    return service.import_url_information()
+    return imports.import_url_information()
 
 
 # TODO: Validate
 @plugins_router.get("/match-url")
 def match_url(url: str, _current_user: CurrentUser) -> PluginURLMatch:
     """Return whether any plugin can import `url`."""
-    return service.match_url(url)
+    return imports.match_url(url)
 
 
 # TODO: Validate
 @plugins_router.get("/search-information")
 def search_information(_current_user: CurrentUser) -> list[PluginSearchInformation]:
     """Return every plugin a `User` may search."""
-    return service.search_information()
+    return search.search_information()
 
 
 # TODO: Validate
 @plugins_router.get("/manual-search")
-def manual_search(
+def manual_search_url(
     plugin_key: str,
     query: str,
     _current_user: CurrentUser,
 ) -> PluginSearchUrl:
     """Return a plugin website's own search-page URL for `query`."""
-    return service.manual_search(plugin_key, query)
+    return search.manual_search_url(plugin_key, query)
 
 
 # TODO: Validate
@@ -76,7 +76,7 @@ def in_app_search(
 
     `cursor` is the `next_cursor` of an earlier page; omit it for the first one.
     """
-    return service.in_app_search(session, plugin_key, query, cursor)
+    return search.in_app_search(session, plugin_key, query, cursor)
 
 
 # TODO: Validate
@@ -88,7 +88,7 @@ def media_info(
     _current_user: CurrentUser,
 ) -> PluginMediaInfo | None:
     """Return everything a plugin knows about one of its own search results."""
-    return service.media_info(session, plugin_key, media_identifier)
+    return search.media_info(session, plugin_key, media_identifier)
 
 
 router = APIRouter()

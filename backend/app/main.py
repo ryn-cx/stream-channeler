@@ -89,10 +89,9 @@ app.add_middleware(GZipMiddleware)
 # TODO: Implement this improved function upstream.
 # TODO: Validate
 def automatically_import_routers() -> APIRouter:
-    """Automatically import `router` from app/*/router.py."""
     api_router = APIRouter()
-    for router_file in sorted(APP_PATH.glob("*/router.py")):
-        module_name = router_file.parent.name
+    for router_file in sorted(APP_PATH.glob("*/router/__init__.py")):
+        module_name = router_file.parent.parent.name
 
         if module_name == "private" and settings.ENVIRONMENT != "local":
             continue

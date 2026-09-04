@@ -2,12 +2,12 @@
 """What a channel can be sorted by."""
 
 from app.channels.schemas import SortKeyInput
-from app.channels.service import service
+from app.channels.service import ordering
 
 
 # TODO: Validate
 def test_every_sortable_field_is_offered() -> None:
-    options = service.get_sort_options()
+    options = ordering.get_sort_options()
 
     offered = {(option.model, option.field) for option in options}
     expected = {
@@ -20,4 +20,4 @@ def test_every_sortable_field_is_offered() -> None:
 
 # TODO: Validate
 def test_every_option_is_labelled() -> None:
-    assert all(option.label for option in service.get_sort_options())
+    assert all(option.label for option in ordering.get_sort_options())

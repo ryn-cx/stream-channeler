@@ -43,5 +43,5 @@ class UtilsMixin(BasePlugin):
     # TODO: Validate
     @override
     @classmethod
-    def manual_search(cls, query: str) -> str | None:
+    def manual_search_url(cls, query: str) -> str | None:
         return cls.build_url("browse/search")

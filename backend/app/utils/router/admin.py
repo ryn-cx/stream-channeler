@@ -6,7 +6,7 @@ from pydantic.networks import EmailStr
 
 from app.auth.dependencies import get_current_active_superuser
 from app.schemas import Message
-from app.utils.service import send_test_email
+from app.utils.service.email_delivery import send_test_email
 
 admin_router = APIRouter(
     prefix="/admin/utils",

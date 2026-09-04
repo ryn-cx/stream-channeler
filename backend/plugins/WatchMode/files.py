@@ -3,8 +3,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from functools import cache
-from typing import override
+from typing import Any, override
 
 from wampi import Wampi
 from wampi.exceptions import TitleNotFoundError
@@ -13,7 +14,7 @@ from wampi.title_sources.models import TitleSourcesModel
 
 from app.config import settings
 from plugins.utils.base_plugin_v2.base import BasePlugin
-from plugins.utils.base_plugin_v2.files import EndpointFile
+from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -70,3 +71,38 @@ class FileMixin(BasePlugin):
     def title_sources_file(self, title_key: str) -> _TitleSources:
         """Return the listing file for the Watchmode title id `title_key`."""
         return _TitleSources(self.session, self.plugin, title_key)
+
+    # Watchmode stores no media of its own, so these abstract methods are no-ops.
+    # TODO: Validate
+    @override
+    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
+        return []
+
+    # TODO: Validate
+    @override
+    def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
+        return []
+
+    # TODO: Validate
+    @override
+    def _episode_files(
+        self,
+        episode_key: str,
+        season_key: str,
+        show_key: str,
+    ) -> Sequence[BaseFile[Any]]:
+        return []
+
+    # TODO: Validate
+    @override
+    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
+        return []
+
+    # TODO: Validate
+    @override
+    def _episode_keys_from_season_files(
+        self,
+        season_keys: str | list[str],
+        show_key: str,
+    ) -> list[str]:
+        return []

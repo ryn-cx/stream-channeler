@@ -7,7 +7,6 @@ from app.auth.dependencies import (
     SessionDep,
     get_current_active_superuser,
 )
-from app.channel_orders import service
 from app.channel_orders.dependencies import (
     ExistingChannelOrder,
 )
@@ -15,6 +14,7 @@ from app.channel_orders.schemas import (
     ChannelOrderAdminUpdate,
     ChannelOrderListOutput,
 )
+from app.channel_orders.service import management
 
 admin_channel_orders_router = APIRouter(
     prefix="/admin/channel-orders",
@@ -31,7 +31,7 @@ def admin_update_channel_order(
     order_in: ChannelOrderAdminUpdate,
 ) -> ChannelOrderListOutput:
     """Update any field on any `ChannelOrder` as an admin, including `score`."""
-    return service.admin_update_channel_order(session, order, order_in)
+    return management.admin_update_channel_order(session, order, order_in)
 
 
 router = APIRouter()

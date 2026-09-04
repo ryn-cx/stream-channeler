@@ -123,7 +123,7 @@ class YouTubeImporter(BaseImporter, YouTubeBase):
 
     # TODO: Validate
     @override
-    def _parse_url(self, url: str) -> str:  # noqa: PLR0911 - One return per kind of address.
+    def _url_to_show_key(self, url: str) -> str:  # noqa: PLR0911 - One return per kind of address.
         self._video_key = None
         self._whole_show = False
         self._musician_track = False
@@ -334,7 +334,7 @@ class YouTubeImporter(BaseImporter, YouTubeBase):
         url: str,
         canonical_show: Show | None = None,
     ) -> list[URLImportResult]:
-        show_key = self._parse_url(url)
+        show_key = self._url_to_show_key(url)
         # Recorded before the URL is read, because whether a playlist links a title
         # of its own is what says which show the address names.
         if canonical_show is not None:

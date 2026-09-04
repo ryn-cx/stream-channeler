@@ -9,7 +9,7 @@ import pytest
 from sqlmodel import Session
 
 from app.channels.schemas import WhitelistEntryInput, WhitelistShowInput
-from app.channels.service import service
+from app.channels.service import whitelist
 from tests.app.channels.utils import (
     channel_show_show,
     create_random_channel,
@@ -27,7 +27,7 @@ def test_a_titles_sites_are_listed(session_scoped_session: Session) -> None:
     channel_show = create_random_channel_show(session_scoped_session, channel)
     show = channel_show_show(session_scoped_session, channel_show)
 
-    output = service.channel_whitelist_output(session_scoped_session, channel_show)
+    output = whitelist.channel_whitelist_output(session_scoped_session, channel_show)
 
     assert {source.show_id for source in output.sources} == {show.id}
 
@@ -47,7 +47,7 @@ def test_every_season_of_the_title_is_listed(
         for _ in range(season_count)
     }
 
-    output = service.channel_whitelist_output(session_scoped_session, channel_show)
+    output = whitelist.channel_whitelist_output(session_scoped_session, channel_show)
 
     assert {season.id for season in output.seasons} == season_ids
 
@@ -62,7 +62,7 @@ def test_nothing_is_filtered_before_anything_is_chosen(
     show = channel_show_show(session_scoped_session, channel_show)
     create_random_season(session_scoped_session, show)
 
-    output = service.channel_whitelist_output(session_scoped_session, channel_show)
+    output = whitelist.channel_whitelist_output(session_scoped_session, channel_show)
 
     assert [season for season in output.seasons if season.filtered] == []
     assert [source for source in output.sources if source.filtered] == []
@@ -80,7 +80,7 @@ def test_marking_a_season_records_it(session_scoped_session: Session) -> None:
     show = channel_show_show(session_scoped_session, channel_show)
     season = create_random_season(session_scoped_session, show)
 
-    output = service.update_whitelist_output(
+    output = whitelist.update_whitelist_output(
         session_scoped_session,
         WhitelistShowInput(
             is_whitelist=True,
@@ -104,7 +104,7 @@ def test_unmarking_a_season_forgets_it(session_scoped_session: Session) -> None:
     show = channel_show_show(session_scoped_session, channel_show)
     season = create_random_season(session_scoped_session, show)
 
-    service.update_whitelist_output(
+    whitelist.update_whitelist_output(
         session_scoped_session,
         WhitelistShowInput(
             is_whitelist=True,
@@ -112,7 +112,7 @@ def test_unmarking_a_season_forgets_it(session_scoped_session: Session) -> None:
         ),
         channel_show,
     )
-    output = service.update_whitelist_output(
+    output = whitelist.update_whitelist_output(
         session_scoped_session,
         WhitelistShowInput(
             is_whitelist=True,
@@ -136,7 +136,7 @@ def test_switching_between_whitelist_and_blacklist_is_recorded(
         is_whitelist=True,
     )
 
-    output = service.update_whitelist_output(
+    output = whitelist.update_whitelist_output(
         session_scoped_session,
         WhitelistShowInput(is_whitelist=False),
         channel_show,
@@ -157,7 +157,7 @@ def test_a_seasons_episodes_are_read_a_page_at_a_time(
     for _ in range(3):
         create_random_episode(session_scoped_session, season)
 
-    page = service.channel_whitelist_episodes_output(
+    page = whitelist.channel_whitelist_episodes_output(
         session_scoped_session,
         channel_show,
         season.id,
@@ -186,7 +186,7 @@ def test_the_filtered_episodes_are_the_ones_marked(
     marked = create_random_episode(session_scoped_session, season)
     create_random_episode(session_scoped_session, season)
 
-    service.update_whitelist_output(
+    whitelist.update_whitelist_output(
         session_scoped_session,
         WhitelistShowInput(
             is_whitelist=False,
@@ -194,7 +194,7 @@ def test_the_filtered_episodes_are_the_ones_marked(
         ),
         channel_show,
     )
-    filtered = service.filtered_whitelist_episodes(session_scoped_session, channel_show)
+    filtered = whitelist.filtered_whitelist_episodes(session_scoped_session, channel_show)
 
     assert {episode.canonical_episode_id for episode in filtered} == {marked.id}
 
@@ -208,7 +208,7 @@ def test_nothing_is_filtered_when_nothing_was_marked(
     channel_show = create_random_channel_show(session_scoped_session, channel)
 
     assert (
-        service.filtered_whitelist_episodes(
+        whitelist.filtered_whitelist_episodes(
             session_scoped_session,
             channel_show,
         )

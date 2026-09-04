@@ -9,7 +9,6 @@ from app.auth.dependencies import (
     CurrentUser,
     SessionDep,
 )
-from app.channel_orders import service
 from app.channel_orders.dependencies import (
     EditableChannelOrder,
     ReadableChannelOrder,
@@ -21,7 +20,8 @@ from app.channel_orders.schemas import (
     ChannelOrderOutput,
     ChannelOrderUpdate,
 )
-from app.media.service import delete_record
+from app.channel_orders.service import favorites, management
+from app.media.service.deletion import delete_record
 from app.schemas import Message
 
 channel_orders_router = APIRouter(
@@ -38,7 +38,7 @@ def create_channel_order(
     order_input: ChannelOrderCreate,
 ) -> ChannelOrder:
     """Create a `ChannelOrder` owned by the `User`."""
-    return service.create_channel_order(session, current_user, order_input)
+    return management.create_channel_order(session, current_user, order_input)
 
 
 # TODO: Validate
@@ -48,7 +48,7 @@ def get_favorite_channel_order_ids(
     current_user: CurrentUser,
 ) -> list[uuid.UUID]:
     """List the ids of the `ChannelOrder`s the current `User` has favorited."""
-    return service.favorite_channel_order_ids(session, current_user)
+    return favorites.favorite_channel_order_ids(session, current_user)
 
 
 # TODO: Validate
@@ -59,7 +59,7 @@ def favorite_channel_order(
     order: ReadableChannelOrder,
 ) -> Message:
     """Favorite a `ChannelOrder` if it's readable by the `User`."""
-    return service.favorite_channel_order(session, current_user, order)
+    return favorites.favorite_channel_order(session, current_user, order)
 
 
 # TODO: Validate
@@ -70,7 +70,7 @@ def unfavorite_channel_order(
     order: ReadableChannelOrder,
 ) -> Message:
     """Remove a `ChannelOrder` from the `User`'s favorites."""
-    return service.unfavorite_channel_order(session, current_user, order)
+    return favorites.unfavorite_channel_order(session, current_user, order)
 
 
 # TODO: Validate
@@ -85,7 +85,7 @@ def copy_channel_order(
     copy_in: ChannelOrderCopyInput,
 ) -> ChannelOrder:
     """Copy a readable `ChannelOrder` into the current `User`'s account."""
-    return service.copy_channel_order(session, current_user, order, copy_in)
+    return management.copy_channel_order(session, current_user, order, copy_in)
 
 
 # TODO: Validate

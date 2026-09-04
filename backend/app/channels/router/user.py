@@ -31,8 +31,16 @@ from app.channels.schemas import (
     WhitelistShowInput,
     WhitelistShowOutput,
 )
-from app.channels.service import import_queue, service
-from app.media.service import delete_record
+from app.channels.service import (
+    channels,
+    combined,
+    favorites,
+    import_queue,
+    ordering,
+    shows,
+    whitelist,
+)
+from app.media.service.deletion import delete_record
 from app.schemas import Message
 from app.shows.dependencies import ExistingShow
 
@@ -47,7 +55,7 @@ def create_channel(
     channel_in: ChannelCreate,
 ) -> Channel:
     """Create a `Channel` owned by the `User`."""
-    return service.create_channel(session, current_user, channel_in)
+    return channels.create_channel(session, current_user, channel_in)
 
 
 # TODO: Validate
@@ -86,7 +94,7 @@ def get_favorite_channel_ids(
     current_user: CurrentUser,
 ) -> list[uuid.UUID]:
     """List the ids of the `Channel`s the current `User` has favorited."""
-    return service.favorite_channel_ids(session, current_user)
+    return favorites.favorite_channel_ids(session, current_user)
 
 
 # TODO: Validate
@@ -97,7 +105,7 @@ def favorite_channel(
     channel: ReadableChannel,
 ) -> Message:
     """Favorite a `Channel` if it's readable by the `User`."""
-    return service.favorite_channel(session, current_user, channel)
+    return favorites.favorite_channel(session, current_user, channel)
 
 
 # TODO: Validate
@@ -109,7 +117,7 @@ def update_favorite_channel(
     favorite_in: ChannelFavoriteUpdate,
 ) -> Message:
     """Set the `User`'s private name/number for a favorited `Channel`."""
-    return service.update_channel_favorite(
+    return favorites.update_channel_favorite(
         session,
         current_user,
         channel,
@@ -125,7 +133,7 @@ def unfavorite_channel(
     channel: ReadableChannel,
 ) -> Message:
     """Remove a `Channel` from the `User`'s favorites."""
-    return service.unfavorite_channel(session, current_user, channel)
+    return favorites.unfavorite_channel(session, current_user, channel)
 
 
 # TODO: Validate
@@ -139,7 +147,7 @@ def update_channel_combined_channels(
     combined_channels: list[CombinedChannelInput],
 ) -> Message:
     """Replace a `Channel`'s `CombinedChannel`s."""
-    return service.replace_combined_channels(
+    return combined.replace_combined_channels(
         session,
         current_user,
         channel,
@@ -156,7 +164,7 @@ def get_channel_whitelist_filtered_episodes(
     channel_show: EditableChannelCanonicalShow,
 ) -> list[WhitelistEpisodeOutput]:
     """Read the episodes of a title that an entry names, whatever season they are in."""
-    return service.filtered_whitelist_episodes(session, channel_show)
+    return whitelist.filtered_whitelist_episodes(session, channel_show)
 
 
 # TODO: Validate
@@ -167,7 +175,7 @@ def update_channel_whitelist(
     channel_show: EditableChannelCanonicalShow,
 ) -> WhitelistShowOutput:
     """Update the whitelist/blacklist for a show in a channel."""
-    return service.update_whitelist_output(session, whitelist_config, channel_show)
+    return whitelist.update_whitelist_output(session, whitelist_config, channel_show)
 
 
 # TODO: Validate
@@ -178,7 +186,7 @@ def blacklist_channel_episode(
     blacklist_in: BlacklistEpisodeInput,
 ) -> Message:
     """Blacklist a single episode for a `Channel`."""
-    return service.blacklist_episode_by_show_id(session, channel, blacklist_in)
+    return whitelist.blacklist_episode_by_show_id(session, channel, blacklist_in)
 
 
 # TODO: Validate
@@ -189,7 +197,7 @@ def update_channel_default_order(
     channel_options: ChannelOptions,
 ) -> Channel:
     """Update the default sort order for a `Channel`."""
-    return service.set_default_order(session, channel, channel_options)
+    return ordering.set_default_order(session, channel, channel_options)
 
 
 # TODO: Validate
@@ -200,7 +208,7 @@ def update_channel_order(
     order_input: ChannelOrderInput,
 ) -> Channel:
     """Set the custom episode order for a `Channel`."""
-    return service.set_custom_order(session, channel, order_input)
+    return ordering.set_custom_order(session, channel, order_input)
 
 
 # TODO: Validate
@@ -211,7 +219,7 @@ def get_channels_for_show(
     show: ExistingShow,
 ) -> list[ChannelShowMembership]:
     """List the `User`'s `Channel`s, saying which already hold a title."""
-    return service.channels_with_show_membership(session, current_user, show)
+    return shows.channels_with_show_membership(session, current_user, show)
 
 
 # TODO: Validate
@@ -222,7 +230,7 @@ def add_channel_show(
     show: ExistingShow,
 ) -> Message:
     """Put a title, on every website it is on, onto a `Channel`."""
-    return service.add_show(session, channel, show)
+    return shows.add_show(session, channel, show)
 
 
 # TODO: Validate
@@ -232,7 +240,7 @@ def delete_channel_show(
     channel_show: EditableChannelCanonicalShow,
 ) -> Message:
     """Remove a title, on every website it is on, from a `Channel`."""
-    return service.remove_show(session, channel_show)
+    return shows.remove_show(session, channel_show)
 
 
 # TODO: Validate

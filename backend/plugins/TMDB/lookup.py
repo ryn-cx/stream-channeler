@@ -10,14 +10,14 @@ from app.files.models import File
 from app.media.media_type import TMDBMediaType
 from plugins.TMDB.files import (
     FileMixin,
-    _MovieSearch,
-    _MultiSearch,
-    _TvSearch,
+    _SearchMovie,
+    _SearchMulti,
+    _SearchTV,
 )
 
 
 # TODO: Validate
-def _found_something(search_file: _MovieSearch | _TvSearch | _MultiSearch) -> bool:
+def _found_something(search_file: _SearchMovie | _SearchTV | _SearchMulti) -> bool:
     """Report whether a search came back with anything at all.
 
     A search TMDB has no answer for is stored empty, and an empty file has no
@@ -37,7 +37,7 @@ class LookupMixin(FileMixin):
         media_type: None,
         query: str,
         year: int | None = None,
-    ) -> _MultiSearch: ...
+    ) -> _SearchMulti: ...
     # TODO: Validate
     @overload
     def search_media(
@@ -45,14 +45,14 @@ class LookupMixin(FileMixin):
         media_type: TMDBMediaType,
         query: str,
         year: int | None = None,
-    ) -> _MovieSearch | _TvSearch: ...
+    ) -> _SearchMovie | _SearchTV: ...
     # TODO: Validate
     def search_media(
         self,
         media_type: TMDBMediaType | None,
         query: str,
         year: int | None = None,
-    ) -> _MovieSearch | _TvSearch | _MultiSearch:
+    ) -> _SearchMovie | _SearchTV | _SearchMulti:
         """Return what TMDB answers a name with.
 
         A search narrowed to a year that comes back with nothing is asked again
@@ -73,15 +73,15 @@ class LookupMixin(FileMixin):
         media_type: TMDBMediaType | None,
         query: str,
         year: int | None,
-    ) -> _MovieSearch | _TvSearch | _MultiSearch:
+    ) -> _SearchMovie | _SearchTV | _SearchMulti:
         """Return the search file for one name."""
-        search_file: _MovieSearch | _TvSearch | _MultiSearch
+        search_file: _SearchMovie | _SearchTV | _SearchMulti
         if media_type == TMDBMediaType.movie:
-            search_file = self.movie_search_file(query, year)
+            search_file = self.search_movie_file(query, year)
         elif media_type == TMDBMediaType.tv:
-            search_file = self.tv_search_file(query, year)
+            search_file = self.search_tv_file(query, year)
         else:
-            search_file = self.multi_search_file(query)
+            search_file = self.search_multi_file(query)
         search_file.download_if_outdated()
         return search_file
 
@@ -93,7 +93,7 @@ class LookupMixin(FileMixin):
         plugin's own media, and nothing else fetches the file on its behalf, so
         it cannot be assumed to be stored already.
         """
-        detail_file = self.media_detail_file(TMDBMediaType.movie, tmdb_id)
+        detail_file = self.movies_details_file(tmdb_id)
         detail_file.download_if_outdated()
         if not detail_file.database_record.content:
             return None
@@ -117,7 +117,7 @@ class LookupMixin(FileMixin):
         """
         return self._get_files_by_keys(
             [
-                self.episode_translations_file(
+                self.tv_episodes_translations_file(
                     tmdb_id,
                     season_number,
                     episode_number,
@@ -140,7 +140,7 @@ class LookupMixin(FileMixin):
         them through here. An episode TMDB has no translations for is stored
         empty and has no names to give.
         """
-        translations_file = self.episode_translations_file(
+        translations_file = self.tv_episodes_translations_file(
             tmdb_id,
             season_number,
             episode_number,
@@ -163,7 +163,7 @@ class LookupMixin(FileMixin):
         name reads them one after another.
         """
         return self._get_files_by_keys(
-            [self.movie_translations_file(tmdb_id).file_key() for tmdb_id in tmdb_ids],
+            [self.movies_translations_file(tmdb_id).file_key() for tmdb_id in tmdb_ids],
         )
 
     # TODO: Validate
@@ -175,7 +175,7 @@ class LookupMixin(FileMixin):
         here. A film TMDB has no translations for is stored empty and has no
         names to give.
         """
-        translations_file = self.movie_translations_file(tmdb_id)
+        translations_file = self.movies_translations_file(tmdb_id)
         translations_file.download_if_outdated()
         if not translations_file.database_record.content:
             return []
@@ -209,14 +209,14 @@ class LookupMixin(FileMixin):
         nothing rather than raising: an order is something a title may simply not
         have.
         """
-        groups_file = self.episode_groups_file(tmdb_id)
+        groups_file = self.tv_series_episode_groups_file(tmdb_id)
         groups_file.download_if_outdated()
         if not groups_file.database_record.content:
             return {}
 
         numbers: dict[int, dict[int, set[str]]] = {}
         for option in groups_file.parsed().results:
-            detail_file = self.episode_group_detail_file(option.id)
+            detail_file = self.tv_episode_groups_details_file(option.id)
             detail_file.download_if_outdated()
             if not detail_file.database_record.content:
                 continue
@@ -244,7 +244,7 @@ class LookupMixin(FileMixin):
         own media, and the two do not have to have been imported, so the file the
         seasons are read from cannot be assumed to be stored already.
         """
-        show_file = self.show_detail_file(tmdb_id)
+        show_file = self.tv_series_details_file(tmdb_id)
         show_file.download_if_outdated()
         if not show_file.database_record.content:
             return []
@@ -264,7 +264,7 @@ class LookupMixin(FileMixin):
         stored already. A season TMDB does not have is stored empty and has no
         episodes to give.
         """
-        season_file = self.season_detail_file(tmdb_id, season_number)
+        season_file = self.tv_seasons_details_file(tmdb_id, season_number)
         season_file.download_if_outdated()
         if not season_file.database_record.content:
             return []

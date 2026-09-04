@@ -20,7 +20,7 @@ from app.canonical_media.keys import (
     tmdb_season_key,
     watch_identifier,
 )
-from app.canonical_media.service import (
+from app.canonical_media.service.lookup import (
     canonical_episode_by_key,
     canonical_season_by_key,
     canonical_show_by_key,
@@ -33,10 +33,14 @@ from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.TMDB.episode_groups import dump_episode_extra
 from plugins.TMDB.keys import get_media_type_and_tmdb_id
+from plugins.TMDB.seasons import (
+    MovieSeasonsMixin,
+    SeasonsMixin,
+    SeriesSeasonsMixin,
+)
 from plugins.TMDB.urls import media_url
 from plugins.TMDB.utils import (
     SeasonSource,
-    UtilsMixin,
     air_datetime,
     backdrop_image_url,
     backdrop_thumbnail_url,
@@ -50,7 +54,7 @@ from plugins.TMDB.utils import (
 
 
 # TODO: Validate
-class UpsertMixin(UtilsMixin):
+class UpsertMixin(SeasonsMixin):
     """Reads TMDB into records of TMDB's own."""
 
     # TODO: Validate
@@ -64,24 +68,6 @@ class UpsertMixin(UtilsMixin):
             data_timestamp=self._existing_data_timestamp_or_now(source),
             plugin_id=self.plugin.id,
         ).upsert_and_set_update_at(self.plugin, source)
-
-    # TODO: Validate
-    @override
-    def upsert_show(
-        self,
-        source: Source,
-        show_key: str,
-        canonical_show: Show | None = None,
-        *,
-        force: bool = False,
-    ) -> Show:
-        media_type, tmdb_id = get_media_type_and_tmdb_id(show_key)
-        if media_type == TMDBMediaType.movie:
-            show = self._upsert_movie_show(source, show_key, tmdb_id, force=force)
-        else:
-            show = self._upsert_series_show(source, show_key, tmdb_id, force=force)
-
-        return show
 
     # TODO: Validate
     def _stored_title(self, source: Source, show_key: str) -> Show:
@@ -110,18 +96,25 @@ class UpsertMixin(UtilsMixin):
             self.plugin.key,
         )
 
+
+# TODO: Validate
+class SeriesUpsertMixin(SeriesSeasonsMixin, UpsertMixin):
+    """Reads a TMDB series into records of TMDB's own."""
+
     # TODO: Validate
-    def _upsert_series_show(
+    @override
+    def upsert_show(
         self,
         source: Source,
         show_key: str,
-        tmdb_id: int,
+        canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> Show:
+        _, tmdb_id = get_media_type_and_tmdb_id(show_key)
         show = self._stored_title(source, show_key)
         if self._show_is_outdated(show, force=force):
-            series = self.show_detail_file(tmdb_id).parsed()
+            series = self.tv_series_details_file(tmdb_id).parsed()
             data_timestamp = self.show_data_timestamp(show_key)
             new_show = Show(
                 key=show_key,
@@ -142,12 +135,12 @@ class UpsertMixin(UtilsMixin):
             )
             show = self._upsert_show_object(new_show, source, show, show_key)
 
-        self._upsert_series_seasons(show, show_key, tmdb_id, force=force)
+        self._upsert_seasons(show, show_key, tmdb_id, force=force)
         self._soft_delete_missing(show_key)
         return show
 
     # TODO: Validate
-    def _upsert_series_seasons(
+    def _upsert_seasons(
         self,
         show: Show,
         show_key: str,
@@ -178,7 +171,7 @@ class UpsertMixin(UtilsMixin):
                     season,
                     show_key,
                 )
-            self._upsert_series_episodes(
+            self._upsert_episodes(
                 season,
                 source,
                 show_key,
@@ -187,7 +180,7 @@ class UpsertMixin(UtilsMixin):
             )
 
     # TODO: Validate
-    def _upsert_series_episodes(
+    def _upsert_episodes(
         self,
         season: Season,
         source: SeasonSource,
@@ -241,7 +234,7 @@ class UpsertMixin(UtilsMixin):
             {},
         )
         if tmdb_id not in cached:
-            images_file = self.show_images_file(tmdb_id)
+            images_file = self.tv_series_images_file(tmdb_id)
             images_file.download_if_outdated()
             cached[tmdb_id] = (
                 [backdrop.file_path for backdrop in images_file.parsed().backdrops]
@@ -261,16 +254,23 @@ class UpsertMixin(UtilsMixin):
             return None
         return Random(episode_tmdb_id).choice(backdrop_paths)  # noqa: S311
 
+
+# TODO: Validate
+class MovieUpsertMixin(MovieSeasonsMixin, UpsertMixin):
+    """Reads a TMDB movie into records of TMDB's own."""
+
     # TODO: Validate
-    def _upsert_movie_show(
+    @override
+    def upsert_show(
         self,
         source: Source,
         show_key: str,
-        tmdb_id: int,
+        canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> Show:
-        movie = self.movie_detail_file(tmdb_id).parsed()
+        _, tmdb_id = get_media_type_and_tmdb_id(show_key)
+        movie = self.movies_details_file(tmdb_id).parsed()
         show = self._stored_title(source, show_key)
         if self._show_is_outdated(show, force=force):
             data_timestamp = self.show_data_timestamp(show_key)
@@ -293,11 +293,11 @@ class UpsertMixin(UtilsMixin):
             )
             show = self._upsert_show_object(new_show, source, show, show_key)
 
-        self._upsert_movie_season(show, show_key, tmdb_id, force=force)
+        self._upsert_season(show, show_key, tmdb_id, force=force)
         return show
 
     # TODO: Validate
-    def _upsert_movie_season(
+    def _upsert_season(
         self,
         show: Show,
         show_key: str,
@@ -305,7 +305,7 @@ class UpsertMixin(UtilsMixin):
         *,
         force: bool = False,
     ) -> None:
-        movie = self.movie_detail_file(tmdb_id).parsed()
+        movie = self.movies_details_file(tmdb_id).parsed()
         key = tmdb_season_key(TMDBMediaType.movie, tmdb_id)
         season = self._stored_season(show, key)
         if self._season_is_outdated(season, show_key, force=force):
@@ -323,10 +323,10 @@ class UpsertMixin(UtilsMixin):
             )
             season = self._upsert_season_object(new_season, show, season, show_key)
 
-        self._upsert_movie_episode(season, key, show_key, tmdb_id, force=force)
+        self._upsert_episode(season, key, show_key, tmdb_id, force=force)
 
     # TODO: Validate
-    def _upsert_movie_episode(
+    def _upsert_episode(
         self,
         season: Season,
         season_key: str,
@@ -335,7 +335,7 @@ class UpsertMixin(UtilsMixin):
         *,
         force: bool = False,
     ) -> None:
-        movie = self.movie_detail_file(tmdb_id).parsed()
+        movie = self.movies_details_file(tmdb_id).parsed()
         key = tmdb_episode_key(TMDBMediaType.movie, tmdb_id)
         episode = self._stored_episode(season, key)
         if not self._episode_is_outdated(episode, season_key, show_key, force=force):

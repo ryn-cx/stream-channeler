@@ -16,7 +16,7 @@ from sqlmodel import Session, SQLModel
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.schemas import ReadOptions
-from app.service import get_read_results
+from app.service.responses import get_read_results
 from app.users.models import User
 
 

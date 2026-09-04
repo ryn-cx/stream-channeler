@@ -11,13 +11,17 @@ from app.auth.dependencies import (
 )
 from app.auth.schemas import UpdatePassword
 from app.schemas import Message
-from app.users import service as user_service
 from app.users.models import User
 from app.users.schemas import (
     SourcePreference,
     SourcePreferenceOutput,
     UserPublic,
     UserUpdateMe,
+)
+from app.users.service import accounts
+from app.users.service.preferences import (
+    replace_source_preferences,
+    source_preferences_output,
 )
 
 users_router = APIRouter(prefix="/users", tags=["users"])
@@ -32,7 +36,7 @@ def update_user_me(
     current_user: CurrentUser,
 ) -> User:
     """Update own user."""
-    return user_service.update_own_user(session, current_user, user_in)
+    return accounts.update_own_user(session, current_user, user_in)
 
 
 # TODO: Validate
@@ -44,7 +48,7 @@ def update_password_me(
     current_user: CurrentUser,
 ) -> Message:
     """Update own password."""
-    return user_service.change_own_password(session, current_user, body)
+    return accounts.change_own_password(session, current_user, body)
 
 
 # TODO: Validate
@@ -57,7 +61,7 @@ def read_source_preferences(
 
     Always returns every stored source plus `Other`, in priority order.
     """
-    return user_service.source_preferences_output(session, current_user)
+    return source_preferences_output(session, current_user)
 
 
 # TODO: Validate
@@ -69,7 +73,7 @@ def update_source_preferences(
     preferences: list[SourcePreference],
 ) -> list[SourcePreferenceOutput]:
     """Replace the current user's source preferences (priority order + enabled)."""
-    return user_service.replace_source_preferences(session, current_user, preferences)
+    return replace_source_preferences(session, current_user, preferences)
 
 
 # TODO: Validate
@@ -83,7 +87,7 @@ def read_user_me(current_user: CurrentUser) -> CurrentUser:
 @users_router.delete("/me")
 def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Message:
     """Delete own user."""
-    return user_service.delete_own_user(session, current_user)
+    return accounts.delete_own_user(session, current_user)
 
 
 # TODO: Validate
@@ -94,7 +98,7 @@ def read_user_by_id(
     current_user: CurrentUser,
 ) -> User | None:
     """Get a specific user by id."""
-    return user_service.readable_user(session, current_user, user_id)
+    return accounts.readable_user(session, current_user, user_id)
 
 
 router = APIRouter()

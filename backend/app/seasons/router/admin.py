@@ -12,7 +12,7 @@ from app.auth.dependencies import (
     SessionDep,
     get_current_active_superuser,
 )
-from app.media.service import delete_record
+from app.media.service.deletion import delete_record
 from app.schemas import Message, ReadOptions
 from app.seasons.dependencies import ExistingSeason
 from app.seasons.models import Season
@@ -22,7 +22,7 @@ from app.seasons.schemas import (
     SeasonsPublic,
     SeasonUpdate,
 )
-from app.seasons.service import season_list_output
+from app.seasons.service.listing import season_list_output
 from app.shows.dependencies import ExistingShow
 
 seasons_router = APIRouter(
@@ -39,14 +39,13 @@ show_seasons_router = APIRouter(
 )
 
 
-# TODO: Validate
-@show_seasons_router.post("/seasons")
+@show_seasons_router.post("/seasons", response_model=SeasonOutput)
 def create_season(
     session: SessionDep,
     show: ExistingShow,
     season_input: SeasonCreate,
-) -> SeasonOutput:
-    return SeasonOutput.model_validate(season_input.create(session, Season, show))
+) -> Season:
+    return season_input.create(session, Season, show)
 
 
 # TODO: Validate

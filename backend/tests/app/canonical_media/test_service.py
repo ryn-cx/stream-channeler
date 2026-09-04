@@ -2,7 +2,7 @@
 import pytest
 from sqlmodel import Session
 
-from app.canonical_media.service import add_canonical_show
+from app.canonical_media.service.creation import add_canonical_show
 from app.episodes.canonical_links import link_episode
 from app.episodes.models import Episode
 from app.plugins.models import Plugin

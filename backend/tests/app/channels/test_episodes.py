@@ -11,7 +11,7 @@ from sqlmodel import Session
 
 from app.channels.models import Channel
 from app.channels.schemas import ChannelOptions
-from app.channels.service import service
+from app.channels.service import episodes
 from app.users.models import User
 from tests.app.channels.utils import (
     channel_show_show,
@@ -51,7 +51,7 @@ def test_a_channel_with_no_shows_reads_as_empty(
     owner = create_random_user(session_scoped_session)
     channel = create_random_channel(session_scoped_session, user=owner.id)
 
-    output = service.channel_episodes_output(
+    output = episodes.channel_episodes_output(
         channel,
         ChannelOptions(random_seed=1),
         owner,
@@ -71,7 +71,7 @@ def test_every_episode_on_the_channel_is_read(
     owner = create_random_user(session_scoped_session)
     channel = channel_with_episodes(session_scoped_session, owner)
 
-    output = service.channel_episodes_output(
+    output = episodes.channel_episodes_output(
         channel,
         ChannelOptions(random_seed=1),
         owner,
@@ -89,7 +89,7 @@ def test_an_episode_is_served_with_what_it_hangs_off(
     owner = create_random_user(session_scoped_session)
     channel = channel_with_episodes(session_scoped_session, owner, show_count=1)
 
-    output = service.channel_episodes_output(
+    output = episodes.channel_episodes_output(
         channel,
         ChannelOptions(random_seed=1),
         owner,
@@ -110,7 +110,7 @@ def test_an_episode_says_which_channel_it_came_from(
     owner = create_random_user(session_scoped_session)
     channel = channel_with_episodes(session_scoped_session, owner, show_count=1)
 
-    output = service.channel_episodes_output(
+    output = episodes.channel_episodes_output(
         channel,
         ChannelOptions(random_seed=1),
         owner,
@@ -130,13 +130,13 @@ def test_a_channel_reads_the_same_for_a_visitor(
     owner = create_random_user(session_scoped_session)
     channel = channel_with_episodes(session_scoped_session, owner)
 
-    as_owner = service.channel_episodes_output(
+    as_owner = episodes.channel_episodes_output(
         channel,
         ChannelOptions(random_seed=1),
         owner,
         session_scoped_session,
     )
-    as_visitor = service.channel_episodes_output(
+    as_visitor = episodes.channel_episodes_output(
         channel,
         ChannelOptions(random_seed=1),
         None,

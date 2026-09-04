@@ -10,7 +10,7 @@ from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
-from app.shows.service import add_canonical_show_and_link_episodes
+from app.shows.service.canonical import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from plugins.AdultSwim.files import FileMixin
 from plugins.AdultSwim.utils import UtilsMixin, source_requires_auth
@@ -33,7 +33,7 @@ class UpsertMixin(UtilsMixin, FileMixin):
             plugin_id=self.plugin.id,
             # update_at is not used because it Plugin.update_at is used instead because
             # there are multiple sources that used the same file.
-        ).upsert_and_set_update_at(self.plugin, existing_source, [shows_file])
+        ).upsert_and_set_update_at(self.plugin, existing_source)
 
     # TODO: Validate
     @override

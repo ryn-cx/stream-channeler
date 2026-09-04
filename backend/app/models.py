@@ -7,7 +7,7 @@ from collections.abc import Iterable, Sequence
 from datetime import datetime
 from enum import StrEnum
 from functools import partial
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, Self, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Self, TypeVar
 
 from sqlalchemy import util
 from sqlalchemy.dialects.postgresql import JSONB
@@ -38,13 +38,6 @@ if TYPE_CHECKING:
 # because the official example for implementing a DateTime field also ignore the error:
 # https://github.com/fastapi/full-stack-fastapi-template/blob/master/backend/app/models.py
 DateTimeField = partial(Field, sa_type=DateTime(timezone=True))  # type: ignore[call-overload]
-
-
-# TODO: Validate
-class SupportsDataTimestamp(Protocol):
-    # TODO: Validate
-    @property
-    def data_timestamp(self) -> datetime: ...
 
 
 # A sortable field ending in this is the same sort with the number 0 pushed past
@@ -219,13 +212,8 @@ class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):
         """Return a select joined to `Plugin`."""
 
     # TODO: Validate
-    def set_update_at(
-        self,
-        new_update_at_value: datetime | None,
-        files: Sequence[SupportsDataTimestamp] | None = None,
-    ) -> None:
+    def set_update_at(self, new_update_at_value: datetime | None) -> None:
         """Set `update_at` based its current value and `new_update_at_value`."""
-        files = files or []
         # If the existing update_at is older than data_timestamp the update has
         # been completed and update_at can be cleared.
         if (
@@ -235,26 +223,12 @@ class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):
         ):
             self.update_at = None
 
-        # If every file is newer than the existing update_at the update has been
-        # completed and update_at can be cleared.
-        if (
-            self.update_at
-            and files
-            and all(file.data_timestamp > self.update_at for file in files)
-        ):
-            self.update_at = None
-
         if not new_update_at_value:
             return
 
         # If the existing data_timestamp is newer than the new update_at value update_at
         # can be ignored because the data is already up to date.
         if self.data_timestamp and self.data_timestamp >= new_update_at_value:
-            return
-
-        # If every file is newer than the new update_at value the data is already up to
-        # date and the new value can be ignored.
-        if files and all(file.data_timestamp > new_update_at_value for file in files):
             return
 
         # If the new update_at is before the existing update_at the existing update_at
@@ -499,7 +473,6 @@ class ChildMediaMixin(MediaMixin[ChildT], ABC, Generic[ParentT, ChildT]):  # noq
         self,
         parent: ParentT,
         existing_record: Self | None,
-        files: Sequence[SupportsDataTimestamp] | None = None,
         protected_keys: set[str] | None = None,
     ) -> Self:
         """Upsert and automatically set the `update_at` timestamp."""
@@ -510,5 +483,5 @@ class ChildMediaMixin(MediaMixin[ChildT], ABC, Generic[ParentT, ChildT]):  # noq
 
         record = self.upsert(parent, existing_record, protected_keys)
         if existing_record:
-            record.set_update_at(self.update_at, files)
+            record.set_update_at(self.update_at)
         return record

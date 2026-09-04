@@ -11,9 +11,12 @@ from dataclasses import dataclass
 
 from sqlmodel import Session
 
-from app.sources.service import OTHER_SOURCE_KEY
+from app.sources.service.lookup import OTHER_SOURCE_KEY
 from app.users.models import User
-from app.users.service import effective_source_preferences, stored_preferences
+from app.users.service.preferences import (
+    effective_source_preferences,
+    stored_preferences,
+)
 
 
 # TODO: Validate

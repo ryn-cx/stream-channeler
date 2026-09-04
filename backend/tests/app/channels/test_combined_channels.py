@@ -14,7 +14,7 @@ from app.channels.channel_scope import channel_attribution
 from app.channels.episode_selector import EpisodeQueryBuilder
 from app.channels.models import Channel, ChannelCombinedChannel
 from app.channels.schemas import ChannelOptions, CombinedChannelInput
-from app.channels.service import service
+from app.channels.service import combined, ordering
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.users.models import User
@@ -103,14 +103,14 @@ def test_saving_and_reading_back_a_channels_combined_channels(
     first = create_random_channel(session, user=owner.id, is_public=True)
     second = create_random_channel(session, user=owner.id, is_public=True)
 
-    service.replace_combined_channels(
+    combined.replace_combined_channels(
         session,
         owner,
         channel,
         [CombinedChannelInput(id=first.id), CombinedChannelInput(id=second.id)],
     )
 
-    read_back = service.combined_channels_output(channel, session)
+    read_back = combined.combined_channels_output(channel, session)
     assert {entry.id for entry in read_back} == {first.id, second.id}
 
 
@@ -125,7 +125,7 @@ def test_a_channel_the_user_cannot_read_is_left_out(
     readable = create_random_channel(session, user=owner.id, is_public=True)
     unreadable = create_random_channel(session, is_public=False)
 
-    service.replace_combined_channels(
+    combined.replace_combined_channels(
         session,
         owner,
         channel,
@@ -135,7 +135,7 @@ def test_a_channel_the_user_cannot_read_is_left_out(
         ],
     )
 
-    read_back = service.combined_channels_output(channel, session)
+    read_back = combined.combined_channels_output(channel, session)
     assert {entry.id for entry in read_back} == {readable.id}
 
 
@@ -273,7 +273,7 @@ def test_episodes_group_by_the_channel_they_were_added_through(
 def test_sorting_by_channel_is_offered() -> None:
     labels = {
         option.label
-        for option in service.get_sort_options()
+        for option in ordering.get_sort_options()
         if option.model == "channel"
     }
     assert labels == {"Channel - Id"}

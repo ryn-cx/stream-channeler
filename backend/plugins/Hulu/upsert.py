@@ -9,12 +9,12 @@ from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
-from app.shows.service import add_canonical_show_and_link_episodes
+from app.shows.service.canonical import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.Hulu.files import FileMixin, MovieFileMixin, SeriesFileMixin
-from plugins.Hulu.utils import HuluMediaType, season_name
+from plugins.Hulu.utils import HuluMediaType, season_name, season_numbers
 
 if TYPE_CHECKING:
     from wholoo.movies.models import MoviesModel
@@ -72,7 +72,9 @@ class SeriesUpsertMixin(SeriesFileMixin):
         *,
         force: bool = False,
     ) -> None:
-        for sort_order, season_number in enumerate(self._season_numbers(show.key)):
+        for sort_order, season_number in enumerate(
+            season_numbers(self.series_file(show.key).parsed()),
+        ):
             season_key = self._season_key(show.key, season_number)
             season = Season.get_from_memory(self.session, show, season_key)
             if self._season_is_outdated(season, show.key, force=force):
@@ -244,4 +246,4 @@ class UpsertMixin(FileMixin):
             data_timestamp=self._file_timestamp(source_files),
             update_at=staggered_monthly_update_at(source_key, tz_datetime.now()),
             plugin_id=self.plugin.id,
-        ).upsert_and_set_update_at(self.plugin, source, source_files)
+        ).upsert_and_set_update_at(self.plugin, source)

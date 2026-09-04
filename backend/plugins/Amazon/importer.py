@@ -46,7 +46,7 @@ class AmazonImporter(BaseImporter, AmazonBase):
 
     # TODO: Validate
     @override
-    def _parse_url(self, url: str) -> str:
+    def _url_to_show_key(self, url: str) -> str:
         domain_regex = self._domain_regex()
         title_key: str | None
         if match := re.match(domain_regex + self._SHARE_URL_REGEX, url):
@@ -81,7 +81,7 @@ class AmazonImporter(BaseImporter, AmazonBase):
         url: str,
         canonical_show: Show | None = None,
     ) -> list[URLImportResult]:
-        show_key = self._parse_url(url)
+        show_key = self._url_to_show_key(url)
         if shows := self._preload_show(show_key).all():
             return [result for show in shows for result in self._import_results(show)]
 

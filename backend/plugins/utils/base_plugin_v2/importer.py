@@ -35,7 +35,7 @@ class BaseImporter(BasePluginWorker, BaseReadURL, ABC):
         url: str,
         canonical_show: Show | None = None,
     ) -> list[URLImportResult]:
-        show_key = self._parse_url(url)
+        show_key = self._url_to_show_key(url)
         if show := self._preload_show(show_key).one_or_none():
             return self._import_results(show)
 

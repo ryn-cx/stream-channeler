@@ -26,8 +26,17 @@ from app.channels.schemas import (
     WhitelistEpisodesOutput,
     WhitelistShowOutput,
 )
-from app.channels.service import service
-from app.channels.service.service import CHANNEL_SHOW_PAGE, WHITELIST_EPISODE_PAGE
+from app.channels.service import (
+    channels,
+    combined,
+    episodes,
+    ordering,
+    shows,
+    sources,
+    whitelist,
+)
+from app.channels.service.shows import CHANNEL_SHOW_PAGE
+from app.channels.service.whitelist import WHITELIST_EPISODE_PAGE
 from app.sources.schemas import SourcePublic
 from app.users.dependencies import OptionalUser
 
@@ -42,14 +51,14 @@ def get_channels(
     read_options: Annotated[ChannelReadOptions, Query()],
 ) -> ChannelsPublic:
     """Get `Channel`s."""
-    return service.scoped_channel_list_output(session, current_user, read_options)
+    return channels.scoped_channel_list_output(session, current_user, read_options)
 
 
 # TODO: Validate
 @channels_router.get("/sort-options")
 def get_sort_options() -> list[SortOptionOutput]:
     """Return every sort option a `Channel` can be ordered by."""
-    return service.get_sort_options()
+    return ordering.get_sort_options()
 
 
 # TODO: Validate
@@ -61,7 +70,7 @@ def get_channel_combined_channels(
     session: SessionDep,
 ) -> list[CombinedChannelOutput]:
     """Return a `Channel`'s `CombinedChannel`s."""
-    return service.combined_channels_output(channel, session)
+    return combined.combined_channels_output(channel, session)
 
 
 # TODO: Validate
@@ -73,7 +82,7 @@ def get_channel_episodes(
     session: SessionDep,
 ) -> ChannelEpisodesOutput:
     """Read the episodes for a channel."""
-    return service.channel_episodes_output(channel, channel_options, user, session)
+    return episodes.channel_episodes_output(channel, channel_options, user, session)
 
 
 # FAST003 - Parameter is used by ReadableChannel.
@@ -87,7 +96,7 @@ def get_channel_shows(
     limit: Annotated[int, Query(ge=1, le=CHANNEL_SHOW_PAGE)] = CHANNEL_SHOW_PAGE,
 ) -> ChannelShowsOutput:
     """Read all shows for a channel, including those from its child channels."""
-    return service.channel_shows_output(channel, user, session, offset, limit)
+    return shows.channel_shows_output(channel, user, session, offset, limit)
 
 
 # TODO: Validate
@@ -97,7 +106,7 @@ def get_channel_show_stats(
     session: SessionDep,
     canonical_show_ids: Annotated[list[uuid.UUID], Query()],
 ) -> dict[uuid.UUID, ChannelShowStats]:
-    return service.channel_show_stats_output(session, canonical_show_ids)
+    return shows.channel_show_stats_output(session, canonical_show_ids)
 
 
 # FAST003 - Parameter is used by ReadableChannel.
@@ -108,7 +117,7 @@ def get_channel_sources(
     session: SessionDep,
 ) -> list[SourcePublic]:
     """Read all unique sources for a channel."""
-    return service.channel_sources_output(channel, session)
+    return sources.channel_sources_output(channel, session)
 
 
 # FAST003 - Parameter is used by ReadableChannelCanonicalShow.
@@ -119,7 +128,7 @@ def get_channel_whitelist(
     channel_show: ReadableChannelCanonicalShow,
 ) -> WhitelistShowOutput:
     """Read the sites and seasons of a title's filters in a channel."""
-    return service.channel_whitelist_output(session, channel_show)
+    return whitelist.channel_whitelist_output(session, channel_show)
 
 
 # FAST003 - Parameters are used by ReadableChannelCanonicalShow.
@@ -137,7 +146,7 @@ def get_channel_whitelist_episodes(
     ),
 ) -> WhitelistEpisodesOutput:
     """Read one page of a season's episodes, as the filter page expands it."""
-    return service.channel_whitelist_episodes_output(
+    return whitelist.channel_whitelist_episodes_output(
         session,
         channel_show,
         season_id,
@@ -150,7 +159,7 @@ def get_channel_whitelist_episodes(
 @channels_router.get("/{channel_id}")  # noqa: FAST003 - Used by ReadableChannel
 def get_channel(channel: ReadableChannel, user: OptionalUser) -> ChannelOutput:
     """Get a `Channel` if it's readable by the `User`."""
-    return service.channel_output(channel, user)
+    return channels.channel_output(channel, user)
 
 
 router = APIRouter()

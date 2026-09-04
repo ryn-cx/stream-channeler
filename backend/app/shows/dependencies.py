@@ -9,7 +9,7 @@ from sqlmodel import col, select
 
 from app.auth.dependencies import SessionDep, SuperUser
 from app.canonical_media.filters import is_canonical
-from app.media.service import existing_record
+from app.media.service.records import existing_record
 from app.shows.models import Show
 
 ExistingShow = Annotated[Show, Depends(existing_record(Show, "show_id"))]

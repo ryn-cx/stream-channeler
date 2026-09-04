@@ -34,7 +34,7 @@ class AdultSwimImporter(BaseImporter, AdultSwimBase):
 
     # TODO: Validate
     @override
-    def _parse_url(self, url: str) -> str:
+    def _url_to_show_key(self, url: str) -> str:
         domain_regex = self._domain_regex()
         self._episode_key = None
 
@@ -82,7 +82,7 @@ class AdultSwimImporter(BaseImporter, AdultSwimBase):
         url: str,
         canonical_show: Show | None = None,
     ) -> list[URLImportResult]:
-        show_key = self._parse_url(url)
+        show_key = self._url_to_show_key(url)
         shows = self._existing_shows(show_key)
 
         # If the show already exists and an update is not required just return the

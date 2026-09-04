@@ -12,8 +12,6 @@ their own ids rather than by their numbering, which is what the canonical rows
 are keyed by; the numbering the API is asked in is read back off the files.
 """
 
-from typing import NamedTuple
-
 from app.canonical_media.keys import (
     EPISODE_LEVEL,
     SEASON_LEVEL,
@@ -24,35 +22,27 @@ from app.media.media_type import TMDBMediaType
 
 
 # TODO: Validate
-class RecordKey(NamedTuple):
-    """The parts of a TMDB record key: which half of the catalogue, and the id."""
-
-    media_type: TMDBMediaType
-    tmdb_id: int
-
-
-# TODO: Validate
-def _parse(key: str, level: str) -> RecordKey:
+def _parse(key: str, level: str) -> tuple[TMDBMediaType, int]:
     parsed = parse_tmdb_key(key, level)
     if parsed is None:
         message = f"{key!r} does not name a TMDB {level}"
         raise ValueError(message)
-    return RecordKey(*parsed)
+    return parsed
 
 
 # TODO: Validate
-def get_media_type_and_tmdb_id(key: str) -> RecordKey:
+def get_media_type_and_tmdb_id(show_key: str) -> tuple[TMDBMediaType, int]:
     """Return the half of the catalogue and the id a `Show` key names."""
-    return _parse(key, SHOW_LEVEL)
+    return _parse(show_key, SHOW_LEVEL)
 
 
 # TODO: Validate
-def parse_season_key(key: str) -> RecordKey:
+def parse_season_key(key: str) -> tuple[TMDBMediaType, int]:
     """Return the half of the catalogue and the id a `Season` key names."""
     return _parse(key, SEASON_LEVEL)
 
 
 # TODO: Validate
-def parse_episode_key(key: str) -> RecordKey:
+def parse_episode_key(key: str) -> tuple[TMDBMediaType, int]:
     """Return the half of the catalogue and the id an `Episode` key names."""
     return _parse(key, EPISODE_LEVEL)

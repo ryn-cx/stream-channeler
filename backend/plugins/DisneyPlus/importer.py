@@ -16,7 +16,7 @@ class DisneyPlusImporter(BaseImporter, DisneyPlusBase):
     # The optional locale segment, e.g. /en-gb or /de.
     _ENTITY_URL_REGEX = (
         r"(?:\/[a-z]{2}(?:-[a-z]{2})?)?\/browse\/entity-"
-        r"(?P<entity_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"
+        r"(?P<entity_key>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"
         r"(?:\/|$)"
     )
 
@@ -28,10 +28,10 @@ class DisneyPlusImporter(BaseImporter, DisneyPlusBase):
 
     # TODO: Validate
     @override
-    def _parse_url(self, url: str) -> str:
+    def _url_to_show_key(self, url: str) -> str:
         domain_regex = self._domain_regex()
         if match := re.match(domain_regex + self._ENTITY_URL_REGEX, url):
-            show_key = match.group("entity_id")
+            show_key = match.group("entity_key")
             self.raise_if_invalid_file(self.entity_file(show_key), url)
             return show_key
 

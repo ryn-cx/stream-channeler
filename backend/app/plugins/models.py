@@ -19,7 +19,6 @@ from sqlmodel.sql.expression import SelectOfScalar
 from app.models import (
     BaseMediaMixin,
     MediaMixin,
-    SupportsDataTimestamp,
     sortable_field_indexes,
 )
 
@@ -162,7 +161,6 @@ class Plugin(BasePlugin, MediaMixin["Source | File"], table=True):
         self,
         session: Session,
         existing_record: Self | None,
-        files: Sequence[SupportsDataTimestamp] | None = None,
         protected_keys: set[str] | None = None,
     ) -> Self:
         """Upsert and automatically set the `update_at` timestamp."""
@@ -173,7 +171,7 @@ class Plugin(BasePlugin, MediaMixin["Source | File"], table=True):
 
         record = self.upsert(session, existing_record, protected_keys)
         if existing_record:
-            record.set_update_at(self.update_at, files)
+            record.set_update_at(self.update_at)
         return record
 
     # TODO: Validate

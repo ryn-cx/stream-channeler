@@ -463,7 +463,10 @@ class AbstractPlugin(ABC):
         raise NotImplementedError(msg)
 
     # TODO: Validate
-    def tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
+    def tmdb_lookup_info(
+        self,
+        show_key: str,
+    ) -> tuple[str, TMDBMediaType | None, int | None]:
         """Return the name, media type and year the plugin files a show under.
 
         Args:
@@ -475,7 +478,7 @@ class AbstractPlugin(ABC):
 
     # TODO: Validate
     @classmethod
-    def manual_search(cls, query: str) -> str | None:  # noqa: ARG003 - `query` is used by overrides.
+    def manual_search_url(cls, query: str) -> str | None:  # noqa: ARG003 - `query` is used by overrides.
         """Return the plugin website's own search-page URL for `query`.
 
         Lets a user open the source site's search directly to find and non-canonical row
@@ -619,15 +622,6 @@ class PluginWatchProviderItem(BaseModel):
     icon_url: str | None = None
     plugin_key: str | None = None
     search_url: str | None = None
-
-
-# TODO: Validate
-class TMDBLookupInfo(BaseModel):
-    """How a plugin names one show, for matching it against another service."""
-
-    title: str
-    media_type: TMDBMediaType | None = None
-    year: int | None = None
 
 
 # TODO: Validate

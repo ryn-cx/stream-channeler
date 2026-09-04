@@ -8,7 +8,6 @@ from fastapi import APIRouter, Query
 from app.auth.dependencies import (
     SessionDep,
 )
-from app.channel_orders import service
 from app.channel_orders.dependencies import (
     ReadableChannelOrder,
 )
@@ -18,6 +17,7 @@ from app.channel_orders.schemas import (
     ChannelOrderReadOptions,
     ChannelOrdersPublic,
 )
+from app.channel_orders.service import outputs
 from app.users.dependencies import OptionalUser
 
 channel_orders_router = APIRouter(
@@ -34,7 +34,7 @@ def get_channel_orders(
     read_options: Annotated[ChannelOrderReadOptions, Query()],
 ) -> ChannelOrdersPublic:
     """Get `ChannelOrder`s."""
-    return service.scoped_channel_order_list_output(session, current_user, read_options)
+    return outputs.scoped_channel_order_list_output(session, current_user, read_options)
 
 
 # TODO: Validate
@@ -43,7 +43,7 @@ def get_featured_channel_orders(
     session: SessionDep,
 ) -> list[ChannelOrderListOutput]:
     """List public `ChannelOrder`s with a positive score for onboarding."""
-    return service.featured_channel_orders(session)
+    return outputs.featured_channel_orders(session)
 
 
 # TODO: Validate
@@ -53,7 +53,7 @@ def get_channel_order(
     optional_user: OptionalUser,
 ) -> ChannelOrderOutput:
     """Return a `ChannelOrder` if it's readable by the `User`."""
-    return service.channel_order_output(order, optional_user)
+    return outputs.channel_order_output(order, optional_user)
 
 
 router = APIRouter()

@@ -9,8 +9,7 @@ from sqlmodel import Session
 
 from app.auth.schemas import UpdatePassword
 from app.auth.security import verify_password
-from app.sources.service import OTHER_SOURCE_KEY
-from app.users import service
+from app.sources.service.lookup import OTHER_SOURCE_KEY
 from app.users.schemas import (
     SourcePreference,
     UserCreate,
@@ -18,6 +17,7 @@ from app.users.schemas import (
     UserUpdate,
     UserUpdateMe,
 )
+from app.users.service import accounts, administration, preferences
 from tests.app.helpers.utils import random_email, random_lower_string
 from tests.app.users.utils import (
     TEST_PASSWORD,
@@ -29,7 +29,7 @@ from tests.app.users.utils import (
 # TODO: Validate
 def test_register_user_stores_the_account(session_scoped_session: Session) -> None:
     email = random_email()
-    user = service.register_user(
+    user = accounts.register_user(
         session_scoped_session,
         UserRegister(
             email=email,
@@ -47,7 +47,7 @@ def test_register_user_refuses_an_email_already_taken(
 ) -> None:
     existing = create_random_user(session_scoped_session)
     with pytest.raises(HTTPException) as error:
-        service.register_user(
+        accounts.register_user(
             session_scoped_session,
             UserRegister(
                 email=existing.email,
@@ -64,7 +64,7 @@ def test_register_user_refuses_a_username_already_taken(
 ) -> None:
     existing = create_random_user(session_scoped_session)
     with pytest.raises(HTTPException) as error:
-        service.register_user(
+        accounts.register_user(
             session_scoped_session,
             UserRegister(
                 email=random_email(),
@@ -79,7 +79,7 @@ def test_register_user_refuses_a_username_already_taken(
 def test_update_own_user_writes_the_new_name(session_scoped_session: Session) -> None:
     user = create_random_user(session_scoped_session)
     username = random_lower_string()
-    updated = service.update_own_user(
+    updated = accounts.update_own_user(
         session_scoped_session,
         user,
         UserUpdateMe(username=username),
@@ -94,7 +94,7 @@ def test_update_own_user_refuses_an_email_another_user_has(
     user = create_random_user(session_scoped_session)
     other = create_random_user(session_scoped_session)
     with pytest.raises(HTTPException) as error:
-        service.update_own_user(
+        accounts.update_own_user(
             session_scoped_session,
             user,
             UserUpdateMe(email=other.email),
@@ -106,7 +106,7 @@ def test_update_own_user_refuses_an_email_another_user_has(
 def test_change_own_password_replaces_the_hash(session_scoped_session: Session) -> None:
     user = create_random_user(session_scoped_session)
     new_password = random_lower_string()
-    service.change_own_password(
+    accounts.change_own_password(
         session_scoped_session,
         user,
         UpdatePassword(current_password=TEST_PASSWORD, new_password=new_password),
@@ -121,7 +121,7 @@ def test_change_own_password_refuses_the_wrong_current_password(
 ) -> None:
     user = create_random_user(session_scoped_session)
     with pytest.raises(HTTPException) as error:
-        service.change_own_password(
+        accounts.change_own_password(
             session_scoped_session,
             user,
             UpdatePassword(
@@ -138,7 +138,7 @@ def test_change_own_password_refuses_the_same_password(
 ) -> None:
     user = create_random_user(session_scoped_session)
     with pytest.raises(HTTPException) as error:
-        service.change_own_password(
+        accounts.change_own_password(
             session_scoped_session,
             user,
             UpdatePassword(
@@ -153,8 +153,8 @@ def test_change_own_password_refuses_the_same_password(
 def test_delete_own_user_removes_the_account(session_scoped_session: Session) -> None:
     user = create_random_user(session_scoped_session)
     user_id = user.id
-    service.delete_own_user(session_scoped_session, user)
-    assert service.readable_user is not None
+    accounts.delete_own_user(session_scoped_session, user)
+    assert accounts.readable_user is not None
     assert session_scoped_session.get(type(user), user_id) is None
 
 
@@ -162,14 +162,14 @@ def test_delete_own_user_removes_the_account(session_scoped_session: Session) ->
 def test_delete_own_user_refuses_a_superuser(session_scoped_session: Session) -> None:
     admin = create_random_superuser(session_scoped_session)
     with pytest.raises(HTTPException) as error:
-        service.delete_own_user(session_scoped_session, admin)
+        accounts.delete_own_user(session_scoped_session, admin)
     assert error.value.status_code == status.HTTP_403_FORBIDDEN
 
 
 # TODO: Validate
 def test_readable_user_gives_a_user_themselves(session_scoped_session: Session) -> None:
     user = create_random_user(session_scoped_session)
-    assert service.readable_user(session_scoped_session, user, user.id) is user
+    assert accounts.readable_user(session_scoped_session, user, user.id) is user
 
 
 # TODO: Validate
@@ -177,7 +177,7 @@ def test_readable_user_refuses_a_stranger(session_scoped_session: Session) -> No
     subject = create_random_user(session_scoped_session)
     stranger = create_random_user(session_scoped_session)
     with pytest.raises(HTTPException) as error:
-        service.readable_user(session_scoped_session, stranger, subject.id)
+        accounts.readable_user(session_scoped_session, stranger, subject.id)
     assert error.value.status_code == status.HTTP_403_FORBIDDEN
 
 
@@ -187,7 +187,7 @@ def test_readable_user_tells_an_admin_when_nobody_is_there(
 ) -> None:
     admin = create_random_superuser(session_scoped_session)
     with pytest.raises(HTTPException) as error:
-        service.readable_user(session_scoped_session, admin, uuid.uuid4())
+        accounts.readable_user(session_scoped_session, admin, uuid.uuid4())
     assert error.value.status_code == status.HTTP_404_NOT_FOUND
 
 
@@ -196,8 +196,8 @@ def test_source_preferences_always_end_with_other(
     session_scoped_session: Session,
 ) -> None:
     user = create_random_user(session_scoped_session)
-    preferences = service.source_preferences_output(session_scoped_session, user)
-    assert preferences[-1].source_key == OTHER_SOURCE_KEY
+    outputs = preferences.source_preferences_output(session_scoped_session, user)
+    assert outputs[-1].source_key == OTHER_SOURCE_KEY
 
 
 # TODO: Validate
@@ -205,7 +205,7 @@ def test_replace_source_preferences_keeps_the_order_given(
     session_scoped_session: Session,
 ) -> None:
     user = create_random_user(session_scoped_session)
-    stored = service.replace_source_preferences(
+    stored = preferences.replace_source_preferences(
         session_scoped_session,
         user,
         [SourcePreference(source_key=OTHER_SOURCE_KEY, enabled=False)],
@@ -220,7 +220,7 @@ def test_replace_source_preferences_refuses_an_unknown_source(
 ) -> None:
     user = create_random_user(session_scoped_session)
     with pytest.raises(HTTPException) as error:
-        service.replace_source_preferences(
+        preferences.replace_source_preferences(
             session_scoped_session,
             user,
             [SourcePreference(source_key=random_lower_string(), enabled=True)],
@@ -234,7 +234,7 @@ def test_replace_source_preferences_refuses_a_duplicate(
 ) -> None:
     user = create_random_user(session_scoped_session)
     with pytest.raises(HTTPException) as error:
-        service.replace_source_preferences(
+        preferences.replace_source_preferences(
             session_scoped_session,
             user,
             [
@@ -251,7 +251,7 @@ def test_create_user_as_admin_refuses_an_email_already_taken(
 ) -> None:
     existing = create_random_user(session_scoped_session)
     with pytest.raises(HTTPException) as error:
-        service.create_user_as_admin(
+        administration.create_user_as_admin(
             session_scoped_session,
             UserCreate(
                 email=existing.email,
@@ -268,7 +268,7 @@ def test_update_user_as_admin_writes_the_change(
 ) -> None:
     user = create_random_user(session_scoped_session)
     email = random_email()
-    updated = service.update_user_as_admin(
+    updated = administration.update_user_as_admin(
         session_scoped_session,
         user,
         UserUpdate(email=email),
@@ -282,7 +282,7 @@ def test_delete_user_as_admin_refuses_the_admin_themselves(
 ) -> None:
     admin = create_random_superuser(session_scoped_session)
     with pytest.raises(HTTPException) as error:
-        service.delete_user_as_admin(session_scoped_session, admin, admin)
+        administration.delete_user_as_admin(session_scoped_session, admin, admin)
     assert error.value.status_code == status.HTTP_403_FORBIDDEN
 
 
@@ -293,13 +293,13 @@ def test_delete_user_as_admin_removes_another_user(
     admin = create_random_superuser(session_scoped_session)
     subject = create_random_user(session_scoped_session)
     subject_id = subject.id
-    service.delete_user_as_admin(session_scoped_session, admin, subject)
+    administration.delete_user_as_admin(session_scoped_session, admin, subject)
     assert session_scoped_session.get(type(subject), subject_id) is None
 
 
 # TODO: Validate
 def test_list_users_counts_every_account(session_scoped_session: Session) -> None:
-    before = service.list_users(session_scoped_session, 0, 100_000).count
+    before = administration.list_users(session_scoped_session, 0, 100_000).count
     create_random_user(session_scoped_session)
-    after = service.list_users(session_scoped_session, 0, 100_000).count
+    after = administration.list_users(session_scoped_session, 0, 100_000).count
     assert after == before + 1

@@ -23,7 +23,7 @@ from app.episodes.name_matching import (
     plaintext,
 )
 from app.episodes.preload import preload_episodes
-from app.episodes.service import absolute_numbers
+from app.episodes.service.numbering import absolute_numbers
 from app.episodes.text_matching import TextMatcher
 from app.shows.models import Show
 

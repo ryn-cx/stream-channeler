@@ -26,13 +26,11 @@ from diving_board.vod import Vod as VodEndpoint
 from diving_board.vod import models as vod_models
 
 from app.files.models import File
-from app.media.media_type import TMDBMediaType
 from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.HiDive.constants import (
     RELEASE_DATE_PREFIX,
 )
-from plugins.utils.abstract_plugin import TMDBLookupInfo
 from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import (
     BaseFile,
@@ -274,34 +272,6 @@ class FileMixin(BaseMediaTypeMixin, BasePlugin):
         return None
 
     # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
-        if self._is_movie():
-            return self._get_movie_tmdb_lookup_info(show_key)
-        return self._get_series_tmdb_lookup_info(show_key)
-
-    # TODO: Validate
-    def _get_series_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
-        series_file = self.series_file(show_key)
-        series_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        return TMDBLookupInfo(
-            title=series_file.parsed().metadata.series.title,
-            media_type=TMDBMediaType.tv,
-        )
-
-    # TODO: Validate
-    def _get_movie_tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo:
-        vod_file = self.vod_file(show_key)
-        vod_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        hero = vod_hero(vod_file.parsed())
-        release_date = self._release_date(hero)
-        return TMDBLookupInfo(
-            title=self._movie_title(hero),
-            media_type=TMDBMediaType.movie,
-            year=release_date.year if release_date else None,
-        )
-
-    # TODO: Validate
     def _is_movie(self) -> bool:
         if self._media_type not in ("Movie", "Series"):
             msg = f"Invalid media type: {self._media_type}"
@@ -336,7 +306,7 @@ class FileMixin(BaseMediaTypeMixin, BasePlugin):
     def schedule_file(self, input_date: datetime | File) -> _Schedule:
         """Return a cached Schedule for the given datetime or existing File."""
         if isinstance(input_date, File):
-            identifier = _Schedule.file_key_to_unique_identifier(input_date.key)
+            identifier = _Schedule.file_to_unique_identifier(input_date)
         else:
             identifier = input_date.isoformat()
         return self._file(_Schedule, identifier)

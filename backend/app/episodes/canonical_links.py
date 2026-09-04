@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from sqlmodel import Session, col, select
 
 from app.canonical_media.filters import is_canonical
-from app.canonical_media.service import add_canonical_show
+from app.canonical_media.service.creation import add_canonical_show
 from app.episodes.models import (
     MANUAL_NOTE_PREFIX,
     Episode,

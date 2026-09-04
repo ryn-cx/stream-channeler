@@ -4,6 +4,7 @@ from __future__ import annotations
 from abc import ABC
 from typing import TYPE_CHECKING, override
 
+from app.media.media_type import TMDBMediaType
 from plugins.Hulu.upsert import MovieUpsertMixin, SeriesUpsertMixin, UpsertMixin
 from plugins.utils.base_plugin_v2.importer import BasePluginWorker
 
@@ -19,12 +20,34 @@ class HuluMedia(BasePluginWorker, ABC):
 
 # TODO: Validate
 class HuluSeries(SeriesUpsertMixin, HuluMedia):
-    pass
+    # TODO: Validate
+    @override
+    def tmdb_lookup_info(
+        self,
+        show_key: str,
+    ) -> tuple[str, TMDBMediaType | None, int | None]:
+        parsed_series = self.series_file(show_key).parsed()
+        return (
+            parsed_series.name,
+            TMDBMediaType.tv,
+            parsed_series.details.entity.premiere_date.year,
+        )
 
 
 # TODO: Validate
 class HuluMovie(MovieUpsertMixin, HuluMedia):
-    pass
+    # TODO: Validate
+    @override
+    def tmdb_lookup_info(
+        self,
+        show_key: str,
+    ) -> tuple[str, TMDBMediaType | None, int | None]:
+        parsed_movie = self.movie_file(show_key).parsed()
+        return (
+            parsed_movie.name,
+            TMDBMediaType.movie,
+            parsed_movie.details.entity.premiere_date.year,
+        )
 
 
 # TODO: Validate

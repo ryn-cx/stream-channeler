@@ -10,7 +10,7 @@ from app.seasons.dependencies import ExistingSeason
 from app.seasons.schemas import (
     SeasonInformationOutput,
 )
-from app.seasons.service import season_information
+from app.seasons.service.information import season_information
 
 """Season router."""
 
@@ -24,7 +24,7 @@ def get_season_information(
     session: SessionDep,
     season: ExistingSeason,
 ) -> SeasonInformationOutput:
-    """Return what the website and TMDB each say about a `Season`."""
+    """Return canonical and non-canonical season informtion."""
     return season_information(session, season)
 
 

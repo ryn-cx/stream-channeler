@@ -17,7 +17,7 @@ class BaseURLMixin:
         raise NotImplementedError
 
     # TODO: Validate
-    def _parse_url(self, url: str) -> Any:  # noqa: ANN401 - TODO: Add a specific return type
+    def _url_to_show_key(self, url: str) -> Any:  # noqa: ANN401 - TODO: Add a specific return type
         """Parse a URL and return its components.
 
         Args:

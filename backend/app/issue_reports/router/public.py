@@ -11,12 +11,14 @@ from app.issue_reports.schemas import (
     IssueReportCreate,
     IssueReportOutput,
 )
-from app.issue_reports.service import (
-    create_issue_report,
-    episode_issue_report,
+from app.issue_reports.service.listing import (
     list_episode_issue_reports,
     list_season_issue_reports,
     list_show_issue_reports,
+)
+from app.issue_reports.service.reports import (
+    create_issue_report,
+    episode_issue_report,
     season_issue_report,
     show_issue_report,
 )

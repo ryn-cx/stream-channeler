@@ -12,7 +12,6 @@ from plugins.Crunchyroll.constants import (
 from plugins.Crunchyroll.search import SearchMixin
 from plugins.Crunchyroll.update import UpdateMixin
 from plugins.Crunchyroll.watch_history import WatchHistoryMixin
-from plugins.utils.abstract_plugin import TMDBLookupInfo
 
 
 # TODO: Validate
@@ -43,14 +42,17 @@ class CrunchyrollBase(WatchHistoryMixin, UpdateMixin, SearchMixin):
 
     # TODO: Validate
     @override
-    def tmdb_lookup_info(self, show_key: str) -> TMDBLookupInfo | None:
+    def tmdb_lookup_info(
+        self,
+        show_key: str,
+    ) -> tuple[str, TMDBMediaType | None, int | None] | None:
         # Music is Crunchyroll's own, so there is no TMDB title to be of.
         if show_is_an_artist(show_key):
             return None
 
         series_data = self._series_datum(show_key)
-        return TMDBLookupInfo(
-            title=series_data.title,
-            media_type=TMDBMediaType.movie if self._is_movie(show_key) else TMDBMediaType.tv,
-            year=series_data.series_launch_year,
+        return (
+            series_data.title,
+            TMDBMediaType.movie if self._is_movie(show_key) else TMDBMediaType.tv,
+            series_data.series_launch_year,
         )

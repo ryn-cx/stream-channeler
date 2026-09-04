@@ -10,7 +10,7 @@ from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.seasons.models import Season as SeasonModel
 from app.shows.models import Show
-from app.shows.service import add_canonical_show_and_link_episodes
+from app.shows.service.canonical import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from plugins.HiDive.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
 from plugins.HiDive.files import FileMixin, season_bucket, season_hero, vod_hero

@@ -31,7 +31,7 @@ class HiDiveImporter(BaseImporter, HiDiveBase):
 
     # TODO: Validate
     @override
-    def _parse_url(self, url: str) -> str:
+    def _url_to_show_key(self, url: str) -> str:
         domain_regex = self._domain_regex()
         if match := re.match(domain_regex + self._SERIES_URL_REGEX, url):
             show_key = match.group("series_key")
