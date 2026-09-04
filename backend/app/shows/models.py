@@ -119,7 +119,7 @@ class Show(BaseShow, ChildMediaMixin[Source, "Season"], table=True):
     # of them a caller with room for one means, so nothing here puts one ahead of
     # another.
     canonical_show_links: list[ShowCanonicalShow] = Relationship(
-        back_populates="show",
+        back_populates="non_canonical_show",
         cascade_delete=True,
         sa_relationship_kwargs={"foreign_keys": "ShowCanonicalShow.show_id"},
     )
@@ -127,7 +127,7 @@ class Show(BaseShow, ChildMediaMixin[Source, "Season"], table=True):
     # The other end of the same table: every non-canonical row standing for this one,
     # which only a canonical show ever has. A row with both stands for something and is
     # stood for by something, which is the one shape the levels never take.
-    non_canonical_shows: list[ShowCanonicalShow] = Relationship(
+    non_canonical_show_links: list[ShowCanonicalShow] = Relationship(
         back_populates="canonical_show",
         cascade_delete=True,
         sa_relationship_kwargs={
@@ -337,7 +337,7 @@ class ShowCanonicalShow(BaseShowCanonicalShow, TimestampIdAndHashMixin, table=Tr
 
     # Both ends are a `Show`, so which foreign key each relationship follows has
     # to be named; nothing about the columns says which of them is which.
-    show: Show = Relationship(
+    non_canonical_show: Show = Relationship(
         back_populates="canonical_show_links",
         sa_relationship_kwargs={"foreign_keys": "ShowCanonicalShow.show_id"},
     )

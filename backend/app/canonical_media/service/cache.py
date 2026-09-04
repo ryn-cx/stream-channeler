@@ -1,8 +1,6 @@
 # TODO: Validate
 """The canonical rows TMDB writes, and what each website's rows stand for."""
 
-import uuid
-
 from sqlmodel import Session
 
 from app.episodes.models import Episode
@@ -20,12 +18,6 @@ def _cache[CanonicalT: Show | Season | Episode](
         {},
     )
     return cache
-
-
-# TODO: Validate
-def _loaded_parents(session: Session) -> set[uuid.UUID]:
-    loaded: set[uuid.UUID] = session.info.setdefault("canonical_loaded_parents", set())
-    return loaded
 
 
 # TODO: Validate
@@ -47,23 +39,3 @@ def _remember(
     cache_key: tuple[str, ...],
 ) -> None:
     _cache(session, type(canonical))[cache_key] = canonical
-
-
-# TODO: Validate
-def _remember_title(session: Session, canonical_show: Show) -> None:
-    _remember(session, canonical_show, (canonical_show.key,))
-    loaded = _loaded_parents(session)
-    loaded.add(canonical_show.id)
-    for canonical_season in canonical_show.seasons:
-        _remember(
-            session,
-            canonical_season,
-            (str(canonical_show.id), canonical_season.key),
-        )
-        loaded.add(canonical_season.id)
-        for canonical_episode in canonical_season.episodes:
-            _remember(
-                session,
-                canonical_episode,
-                (str(canonical_season.id), canonical_episode.key),
-            )

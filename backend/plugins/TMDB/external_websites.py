@@ -29,6 +29,7 @@ class TMDBExternalWebsites(TMDBShared, ABC):
         show_key: str,
     ) -> MoviesWatchProviders | TVSeriesWatchProviders: ...
 
+    # TODO: Validate
     def _import_title_from_external_websites(self, show_key: str, show: Show) -> None:
         """Import the title from all external websites."""
         # TODO: TMDB should have a special Show object that makes empty names
@@ -49,11 +50,11 @@ class TMDBExternalWebsites(TMDBShared, ABC):
                 continue
 
             if self.external_link_exists(
-                media_plugin,
-                show,
-                show.name,
-                media_type,
-                plugins_with_non_canonical_shows,
+                media_plugin=media_plugin,
+                show=show,
+                name=show.name,
+                media_type=media_type,
+                plugins_with_non_canonical_shows=plugins_with_non_canonical_shows,
             ):
                 plugins_with_non_canonical_shows.add(media_plugin.plugin_name())
                 # This will clear out records for new/updated plugins and entries for
@@ -61,9 +62,9 @@ class TMDBExternalWebsites(TMDBShared, ABC):
                 remove_unmatched_source(self.session, show.id, provider.provider_name)
             else:
                 self._upsert_unmatched_source(
-                    show.id,
-                    provider.provider_name,
-                    media_plugin.plugin_name(),
+                    show_id=show.id,
+                    provider_name=provider.provider_name,
+                    plugin_key=media_plugin.plugin_name(),
                 )
 
     def _upsert_unmatched_source(
@@ -88,6 +89,7 @@ class TMDBExternalWebsites(TMDBShared, ABC):
         )
         self.session.commit()
 
+    # TODO: Validate
     def external_link_exists(
         self,
         media_plugin: type[AbstractPlugin],
@@ -99,11 +101,11 @@ class TMDBExternalWebsites(TMDBShared, ABC):
         return (
             media_plugin.plugin_name() in plugins_with_non_canonical_shows
             or self._import_external_plugin(
-                media_plugin,
-                show,
-                name,
-                media_type,
-                show.year,
+                plugin_class=media_plugin,
+                show=show,
+                name=name,
+                media_type=media_type,
+                year=show.year,
             )
         )
 
@@ -111,7 +113,10 @@ class TMDBExternalWebsites(TMDBShared, ABC):
     def plugins_with_non_canonical_shows(self, show: Show) -> set[str]:
         self.session.flush()
         self.session.expire(show, ["non_canonical_shows"])
-        return {link.show.source.plugin.key for link in show.non_canonical_shows}
+        return {
+            link.non_canonical_show.source.plugin.key
+            for link in show.non_canonical_show_links
+        }
 
     # TODO: Validate
     def _import_external_plugin(

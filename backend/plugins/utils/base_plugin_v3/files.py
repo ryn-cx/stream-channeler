@@ -442,6 +442,10 @@ class DownloadedFile[T](BaseFile[T], ABC):
         return f"Invalid unique_identifier {self.unique_identifier}"
 
     # TODO: Validate
+    def _downloaded_status(self) -> str | None:
+        return None
+
+    # TODO: Validate
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
@@ -452,7 +456,7 @@ class DownloadedFile[T](BaseFile[T], ABC):
                     raise
                 self.write(None, self.acceptable_error_status())
             else:
-                self.write(data)
+                self.write(data, self._downloaded_status())
 
     # TODO: Validate
     @classmethod

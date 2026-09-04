@@ -23,7 +23,7 @@ def _validate_shows(show: Show, tmdb_show: Show) -> None:
     if show.source.plugin.key == TMDB_PLUGIN_KEY:
         message = f"{show} is a TMDB show."
         raise ValueError(message)
-    if show.non_canonical_shows:
+    if show.non_canonical_show_links:
         message = f"{show} has other shows linked to it."
         raise ValueError(message)
 

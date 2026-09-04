@@ -92,7 +92,7 @@ def set_canonical_show(
     can hold several shows. Removing one is `unset_canonical_show`. The choice is
     locked so the next import cannot overrule it.
     """
-    if show.non_canonical_shows:
+    if show.non_canonical_show_links:
         message = "A show other shows are linked to cannot be linked to one itself."
         raise HTTPException(status_code=409, detail=message)
 
@@ -177,12 +177,12 @@ def import_non_canonical_show_from_url(
     session.flush()
     session.expire(canonical_show, ["non_canonical_shows"])
     imported_keys = {result.show_key for result in results}
-    for link in canonical_show.non_canonical_shows:
-        if link.show.key not in imported_keys:
+    for link in canonical_show.non_canonical_show_links:
+        if link.non_canonical_show.key not in imported_keys:
             continue
-        link.show.canonical_show_validated_at = tz_datetime.now()
+        link.non_canonical_show.canonical_show_validated_at = tz_datetime.now()
         link.note = f"{MANUAL_NOTE_PREFIX}Selection"
-        session.add(link.show)
+        session.add(link.non_canonical_show)
         session.add(link)
 
     session.commit()

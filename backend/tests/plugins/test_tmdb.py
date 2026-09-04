@@ -125,6 +125,22 @@ class TestSpaceGhostAndDinoBoy(
 
 
 # TODO: Validate
+class TestHuluTVShow(
+    URLTestsAlt[TMDB],
+    UpdatePluginTestsAlt[TMDB],
+    UpdateTestsAlt[TMDB],
+    TMDBValidatorAlt,
+):
+    media_type = "tv"
+    parse_url_response = "296756"
+    show_slug = "president-curtis"
+    urls = (
+        *TMDBValidatorAlt.urls,
+        "/{media_type}/{parse_url_response}/seasons?language=en-US",
+    )
+
+
+# TODO: Validate
 class TestSuperman(
     URLTestsAlt[TMDB],
     UpdatePluginTestsAlt[TMDB],

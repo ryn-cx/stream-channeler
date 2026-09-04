@@ -132,7 +132,8 @@ def get_show(show: ExistingShow) -> ShowPublic:
 )
 def get_non_canonical_shows(show: ExistingShow) -> list[ShowListPublic]:
     return [
-        ShowListPublic.model_validate(link.show) for link in show.non_canonical_shows
+        ShowListPublic.model_validate(link.non_canonical_show)
+        for link in show.non_canonical_show_links
     ]
 
 

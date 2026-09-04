@@ -32,17 +32,26 @@ def _parse(key: str, level: str) -> tuple[TMDBMediaType, int]:
 
 # TODO: Validate
 def get_media_type_and_tmdb_id(show_key: str) -> tuple[TMDBMediaType, int]:
-    """Return the half of the catalogue and the id a `Show` key names."""
+    """Return the half of the catalogue and the id a `Show` key names.
+
+    `TMDB tv 1399` for a series, `TMDB movie 27205` for a film.
+    """
     return _parse(show_key, SHOW_LEVEL)
 
 
 # TODO: Validate
 def parse_season_key(key: str) -> tuple[TMDBMediaType, int]:
-    """Return the half of the catalogue and the id a `Season` key names."""
+    """Return the half of the catalogue and the id a `Season` key names.
+
+    `TMDB season 3624` for a season of a series, `TMDB movie 27205` for a film.
+    """
     return _parse(key, SEASON_LEVEL)
 
 
 # TODO: Validate
 def parse_episode_key(key: str) -> tuple[TMDBMediaType, int]:
-    """Return the half of the catalogue and the id an `Episode` key names."""
+    """Return the half of the catalogue and the id an `Episode` key names.
+
+    `TMDB episode 63056` for an episode of a series, `TMDB movie 27205` for a film.
+    """
     return _parse(key, EPISODE_LEVEL)

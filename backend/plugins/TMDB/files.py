@@ -1,4 +1,5 @@
 # TODO: Validate
+from abc import ABC
 from datetime import date, datetime, timedelta
 from functools import cache
 from typing import (
@@ -92,13 +93,22 @@ class MoviesTranslations(IntegerEndpointFile[MovieTranslationsModel]):
         return tminidb().movie.translations
 
 
-class MoviesWatchProviders(EndpointFile[MovieWatchProvidersModel]):
+# TODO: Validate
+class WatchProvidersFile[T](EndpointFile[T], ABC):
+    # TODO: Validate
+    @override
+    def _downloaded_status(self) -> str:
+        return "Incomplete"
+
+
+class MoviesWatchProviders(WatchProvidersFile[MovieWatchProvidersModel]):
     custom_class_key = "Movies/Watch Providers"
 
     @override
     def _endpoint(self) -> MovieWatchProvidersEndpoint:
         return tminidb().movie.watch_providers
 
+    # TODO: Validate
     def __init__(
         self,
         session: Session,
@@ -108,9 +118,9 @@ class MoviesWatchProviders(EndpointFile[MovieWatchProvidersModel]):
     ) -> None:
         self.tmdb_movie_id = tmdb_movie_id
         super().__init__(
-            session,
-            plugin,
-            f"{tmdb_movie_id}/{downloaded_at.isoformat()}",
+            session=session,
+            plugin=plugin,
+            unique_identifier=f"{tmdb_movie_id}/{downloaded_at.isoformat()}",
         )
 
     @override
@@ -118,13 +128,14 @@ class MoviesWatchProviders(EndpointFile[MovieWatchProvidersModel]):
         return self._endpoint().download(self.tmdb_movie_id)
 
 
-class TVSeriesWatchProviders(EndpointFile[TvSeriesWatchProvidersModel]):
+class TVSeriesWatchProviders(WatchProvidersFile[TvSeriesWatchProvidersModel]):
     custom_class_key = "TV Series/Watch Providers"
 
     @override
     def _endpoint(self) -> TvSeriesWatchProvidersEndpoint:
         return tminidb().tv_series.watch_providers
 
+    # TODO: Validate
     def __init__(
         self,
         session: Session,
@@ -134,9 +145,9 @@ class TVSeriesWatchProviders(EndpointFile[TvSeriesWatchProvidersModel]):
     ) -> None:
         self.tmdb_show_id = tmdb_show_id
         super().__init__(
-            session,
-            plugin,
-            f"{tmdb_show_id}/{downloaded_at.isoformat()}",
+            session=session,
+            plugin=plugin,
+            unique_identifier=f"{tmdb_show_id}/{downloaded_at.isoformat()}",
         )
 
     @override
@@ -144,7 +155,7 @@ class TVSeriesWatchProviders(EndpointFile[TvSeriesWatchProvidersModel]):
         return self._endpoint().download(self.tmdb_show_id)
 
 
-class TVSeasonsWatchProviders(EndpointFile[TvSeasonWatchProvidersModel]):
+class TVSeasonsWatchProviders(WatchProvidersFile[TvSeasonWatchProvidersModel]):
     custom_class_key = "TV Seasons/Watch Providers"
 
     @override
@@ -197,10 +208,11 @@ class TVSeriesImages(IntegerEndpointFile[TvSeriesImagesModel]):
     def _endpoint(self) -> TvSeriesImagesEndpoint:
         return tminidb().tv_series.images
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(
-            int(self.unique_identifier),
+            series_id=int(self.unique_identifier),
             include_image_language="en,null",
         )
 
@@ -256,6 +268,7 @@ class TVEpisodesDetails(EndpointFile[TvEpisodeDetailsModel]):
     def _endpoint(self) -> TvEpisodeEndpoint:
         return tminidb().tv_episode.details
 
+    # TODO: Validate
     def __init__(
         self,
         session: Session,
@@ -268,17 +281,18 @@ class TVEpisodesDetails(EndpointFile[TvEpisodeDetailsModel]):
         self.season_number = season_number
         self.episode_number = episode_number
         super().__init__(
-            session,
-            plugin,
-            f"{tmdb_show_id}/{season_number}/{episode_number}",
+            session=session,
+            plugin=plugin,
+            unique_identifier=f"{tmdb_show_id}/{season_number}/{episode_number}",
         )
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(
-            self.tmdb_show_id,
-            self.season_number,
-            self.episode_number,
+            series_id=self.tmdb_show_id,
+            season_number=self.season_number,
+            episode_number=self.episode_number,
         )
 
 
@@ -289,6 +303,7 @@ class TVEpisodesTranslations(EndpointFile[TvEpisodeTranslationsModel]):
     def _endpoint(self) -> TvEpisodeTranslationsEndpoint:
         return tminidb().tv_episode.translations
 
+    # TODO: Validate
     def __init__(
         self,
         session: Session,
@@ -301,17 +316,18 @@ class TVEpisodesTranslations(EndpointFile[TvEpisodeTranslationsModel]):
         self.season_number = season_number
         self.episode_number = episode_number
         super().__init__(
-            session,
-            plugin,
-            f"{tmdb_show_id}/{season_number}/{episode_number}",
+            session=session,
+            plugin=plugin,
+            unique_identifier=f"{tmdb_show_id}/{season_number}/{episode_number}",
         )
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(
-            self.tmdb_show_id,
-            self.season_number,
-            self.episode_number,
+            series_id=self.tmdb_show_id,
+            season_number=self.season_number,
+            episode_number=self.episode_number,
         )
 
 
@@ -322,6 +338,7 @@ class TVSeriesChanges(EndpointFile[TvSeriesChangesModel]):
     def _endpoint(self) -> TvSeriesChangesEndpoint:
         return tminidb().tv_series.changes
 
+    # TODO: Validate
     def __init__(
         self,
         session: Session,
@@ -333,17 +350,18 @@ class TVSeriesChanges(EndpointFile[TvSeriesChangesModel]):
         self.tmdb_show_id = tmdb_show_id
         self.since = since
         super().__init__(
-            session,
-            plugin,
-            f"{tmdb_show_id}/{downloaded_to.isoformat()}",
+            session=session,
+            plugin=plugin,
+            unique_identifier=f"{tmdb_show_id}/{downloaded_to.isoformat()}",
         )
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download_merged(
-            self.tmdb_show_id,
-            self.since,
-            tz_datetime.now().date(),
+            series_id=self.tmdb_show_id,
+            start_date=self.since,
+            end_date=tz_datetime.now().date(),
         )
 
 
@@ -354,6 +372,7 @@ class TVSeasonsChanges(EndpointFile[TvSeasonChangesModel]):
     def _endpoint(self) -> TvSeasonChangesEndpoint:
         return tminidb().tv_season.changes
 
+    # TODO: Validate
     def __init__(
         self,
         session: Session,
@@ -364,15 +383,16 @@ class TVSeasonsChanges(EndpointFile[TvSeasonChangesModel]):
         self.season_tmdb_id = season_tmdb_id
         self.changed_on = changed_on
         super().__init__(
-            session,
-            plugin,
-            f"{season_tmdb_id}/{changed_on.isoformat()}",
+            session=session,
+            plugin=plugin,
+            unique_identifier=f"{season_tmdb_id}/{changed_on.isoformat()}",
         )
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(
-            self.season_tmdb_id,
+            season_id=self.season_tmdb_id,
             start_date=self.changed_on,
             end_date=self.changed_on,
         )

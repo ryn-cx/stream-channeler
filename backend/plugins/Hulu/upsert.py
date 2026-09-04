@@ -5,6 +5,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
+from sqlmodel import col, select
+
 from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.seasons.models import Season
@@ -102,6 +104,16 @@ class SeriesUpsertMixin(SeriesFileMixin):
 
             episode_key = str(item.id)
             episode = Episode.get_from_memory(self.session, season, episode_key)
+            # Special support for when an episode changes what season it belongs to.
+            if episode is None:
+                episode = self.session.exec(
+                    select(Episode)
+                    .join(Season, onclause=col(Episode.season_id) == col(Season.id))
+                    .where(
+                        Season.show_id == season.show_id,
+                        Episode.key == episode_key,
+                    ),
+                ).first()
             if not self._episode_is_outdated(
                 episode,
                 season.key,

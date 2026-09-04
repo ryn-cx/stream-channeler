@@ -21,8 +21,8 @@ def _reread_in_new_order(session: Session, show: Show) -> None:
 # TODO: Validate
 def _relink_non_canonical_shows(session: Session, canonical_show: Show) -> None:
     """Match every non-canonical row of `canonical_show` against it again."""
-    for link in list(canonical_show.non_canonical_shows):
-        _relink_non_canonical_show(session, link.show)
+    for link in list(canonical_show.non_canonical_show_links):
+        _relink_non_canonical_show(session, link.non_canonical_show)
 
 
 # TODO: Validate
