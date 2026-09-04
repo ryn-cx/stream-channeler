@@ -458,7 +458,6 @@ class UpsertMixin(UtilsMixin):
     ) -> None:
         season = Season.get_from_memory(self.session, show, season_key)
         if self._season_is_outdated(season, show_key, force=force):
-            season_files = self._season_files(season_key, show_key)
             data_timestamp = self.season_data_timestamp(season_key, show_key)
             season = Season(
                 key=season_key,

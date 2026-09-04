@@ -34,9 +34,7 @@ class BaseUpsertMixin(BasePluginCore, BaseOutdatedCheckMixin, ABC):
         existing_show: Show | None,
         show_key: str,
     ) -> Show:
-        """Store the source's own `Show` against the files it was read out of.
-
-        A show built fresh off the source's files knows nothing of the canonical
+        """A show built fresh off the source's files knows nothing of the canonical
         shows the stored one is linked to. Those are rows of `ShowCanonicalShow`
         rather than columns here, so there is nothing to write away and nothing to
         carry over: which canonical show it is linked to is settled once its
@@ -52,7 +50,6 @@ class BaseUpsertMixin(BasePluginCore, BaseOutdatedCheckMixin, ABC):
         existing_season: Season | None,
         show_key: str,
     ) -> Season:
-        """Store the website's own `Season` against the files it was read out of."""
         return season.upsert_and_set_update_at(show, existing_season)
 
     # TODO: Validate
@@ -63,9 +60,7 @@ class BaseUpsertMixin(BasePluginCore, BaseOutdatedCheckMixin, ABC):
         existing_episode: Episode | None,
         show_key: str,
     ) -> Episode:
-        """Store the website's own `Episode` against the files it was read out of.
-
-        The links the stored record carries are rows of their own and stay where
+        """The links the stored record carries are rows of their own and stay where
         they are, so nothing here has to carry them over. The note travels with
         them: how a link came to be made is most of what says whether it should
         be kept, so an episode that keeps its links keeps the reason for them
