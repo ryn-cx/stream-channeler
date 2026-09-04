@@ -1,22 +1,4 @@
 # TODO: Validate
-"""Which of TMDB's episode orders a title is read in.
-
-TMDB numbers a series the way the network first aired it, and keeps the other
-ways of ordering it - the DVD order, the story order, the order a streaming
-service uses - as episode groups beside it. A title whose website follows one of
-those is a title nothing lines up against until the same order is read here, so
-one can be chosen and stored against the `Show`.
-
-The choice lives in the `Show`'s `extra`, which is where a plugin keeps what the
-columns have no room for. It is written as an object rather than the bare id so
-that a second thing TMDB needs saying about a title has somewhere to go without
-the meaning of what is already stored changing.
-
-An order that is chosen replaces the title's own: the groups become its seasons
-and their episodes are numbered as the order numbers them. That is why the id is
-checked against the orders TMDB actually holds for the title before it is
-stored - an id naming nothing would leave a title with no seasons at all.
-"""
 
 from typing import Any
 
@@ -87,4 +69,3 @@ def dump_extra(group_id: str | None) -> dict[str, Any]:
     if not group_id:
         return {}
     return TmdbShowExtra(tmdb_episode_group_id=group_id).model_dump()
-

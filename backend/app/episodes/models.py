@@ -70,6 +70,7 @@ class BaseCanonicalEpisode(BaseMediaMixin):
     description: str | None = Field(default=None)
     image_url: str | None = Field(default=None)
     thumbnail_url: str | None = Field(default=None)
+    # TODO: Rename to release_date?
     air_date: datetime | None = DateTimeField(default=None)
     episode_number: int | None = Field(default=None)
     duration: int | None = Field(ge=0, default=None)

@@ -434,7 +434,7 @@ class DownloadedFile[T](BaseFile[T], ABC):
         return f"Invalid unique_identifier {self.unique_identifier}"
 
     # TODO: Validate
-    def _downloaded_status(self) -> str | None:
+    def _initial_status_after_downloading(self) -> str | None:
         return None
 
     # TODO: Validate
@@ -448,7 +448,7 @@ class DownloadedFile[T](BaseFile[T], ABC):
                     raise
                 self.write(None, self.acceptable_error_status())
             else:
-                self.write(data, self._downloaded_status())
+                self.write(data, self._initial_status_after_downloading())
 
     # TODO: Validate
     @classmethod

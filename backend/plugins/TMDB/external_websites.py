@@ -23,6 +23,7 @@ from plugins.utils.abstract_plugin import AbstractPlugin, MediaNotFoundError
 class TMDBExternalWebsites(TMDBShared, ABC):
     """Functions for importing TMDB titles on external websites."""
 
+    # TODO: Validate
     @abstractmethod
     def _provider_file(
         self,
@@ -67,6 +68,7 @@ class TMDBExternalWebsites(TMDBShared, ABC):
                     plugin_key=media_plugin.plugin_name(),
                 )
 
+    # TODO: Validate
     def _upsert_unmatched_source(
         self,
         show_id: uuid.UUID,

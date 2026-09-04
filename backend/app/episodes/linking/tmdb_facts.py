@@ -18,7 +18,7 @@ from app.media.media_type import TMDBMediaType
 from app.shows.models import Show
 
 if TYPE_CHECKING:
-    from plugins.TMDB import TMDB
+    from plugins.TMDB.linking import TMDBLinking
 
 
 # TODO: Validate
@@ -53,10 +53,10 @@ class TmdbEpisodeFacts:
 
     # TODO: Validate
     @staticmethod
-    def _tmdb(session: Session) -> TMDB:
-        from plugins.TMDB import TMDB  # noqa: PLC0415
+    def _tmdb(session: Session) -> TMDBLinking:
+        from plugins.TMDB.linking import TMDBLinking  # noqa: PLC0415
 
-        return TMDB(session)
+        return TMDBLinking(session)
 
     # TODO: Validate
     @cached_property
@@ -187,7 +187,7 @@ class TmdbEpisodeFacts:
     # TODO: Validate
     @staticmethod
     def _names(
-        tmdb: TMDB,
+        tmdb: TMDBLinking,
         numbering: EpisodeNumbering | None,
         movie_id: int | None,
     ) -> tuple[str, ...]:

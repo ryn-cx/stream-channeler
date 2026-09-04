@@ -37,6 +37,9 @@ from plugins.utils.manage_plugins import sorted_plugins
 from collections.abc import Sequence
 
 if TYPE_CHECKING:
+    from tminidb.movie.details.models import MovieDetailsModel
+    from tminidb.tv_series.details.models import TvSeriesDetailsModel
+
     from plugins.TMDB.files import ProvidersFile
 
 
@@ -68,8 +71,8 @@ def title_url_regex(media_type: TMDBMediaType) -> str:
 # TODO: Validate
 def parse_media_identifier(identifier: str) -> tuple[TMDBMediaType, int]:
     """Return the half of the catalogue and the id an identifier names."""
-    media_type, _, tmdb_id = identifier.partition(" ")
-    return TMDBMediaType(media_type), int(tmdb_id)
+    media_type, _, tmdb_media_key = identifier.partition(" ")
+    return TMDBMediaType(media_type), int(tmdb_media_key)
 
 
 # TODO: Validate
@@ -189,6 +192,21 @@ def still_thumbnail_url(path: str | None) -> str | None:
 
 
 # TODO: Validate
+def get_first_image(
+    details: MovieDetailsModel | TvSeriesDetailsModel,
+    *,
+    thumbnail: bool,
+) -> str | None:
+    if details.backdrop_path:
+        if thumbnail:
+            return backdrop_thumbnail_url(details.backdrop_path)
+        return backdrop_image_url(details.backdrop_path)
+    if thumbnail:
+        return poster_image_url(details.poster_path)
+    return poster_original_url(details.poster_path)
+
+
+# TODO: Validate
 def duration_seconds(runtime: int | None) -> int | None:
     return runtime * 60 if runtime else None
 
@@ -205,6 +223,7 @@ def air_datetime(air_date: str | date | None) -> datetime | None:
     return tz_datetime.combine(air_date, datetime.min.time())
 
 
+# TODO: Validate
 class SeasonInfo(NamedTuple):
     """Holds Season information from the season details or episode group.
 
@@ -219,6 +238,7 @@ class SeasonInfo(NamedTuple):
     episodes: Sequence[TvSeasonEpisode | TvEpisodeGroupEpisode]
     uses_episode_group: bool
 
+    # TODO: Validate
     @classmethod
     def from_episode_group(cls, order: int, group: TvEpisodeGroup) -> SeasonInfo:
         return cls(
@@ -233,6 +253,7 @@ class SeasonInfo(NamedTuple):
             uses_episode_group=True,
         )
 
+    # TODO: Validate
     @classmethod
     def from_season_details(cls, details: TvSeasonDetailsModel) -> SeasonInfo:
         return cls(
