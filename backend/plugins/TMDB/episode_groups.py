@@ -21,10 +21,6 @@ stored - an id naming nothing would leave a title with no seasons at all.
 from typing import Any
 
 from pydantic import BaseModel, ValidationError
-from sqlmodel import Session
-
-from app.shows.models import Show
-from app.sources.models import Source
 
 
 # TODO: Validate
@@ -92,13 +88,3 @@ def dump_extra(group_id: str | None) -> dict[str, Any]:
         return {}
     return TmdbShowExtra(tmdb_episode_group_id=group_id).model_dump()
 
-
-# TODO: Validate
-def show_chosen_group_id(
-    session: Session,
-    source: Source,
-    show_key: str,
-) -> str | None:
-    """Return the episode order the stored title is read in, where there is one."""
-    show = Show.get(session, source, show_key)
-    return chosen_group_id(show.extra) if show else None

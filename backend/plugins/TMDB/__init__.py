@@ -7,8 +7,12 @@ from app.canonical_media.keys import tmdb_show_key
 from app.media.media_type import TMDBMediaType
 from plugins.TMDB.keys import get_media_type_and_tmdb_id
 from plugins.TMDB.media import TMDBMedia, TMDBMovie, TMDBSeries
-from plugins.TMDB.shared import MOVIE_URL_REGEX, TV_URL_REGEX, TMDBShared
-from plugins.TMDB.urls import media_url
+from plugins.TMDB.shared import (
+    MOVIE_URL_REGEX,
+    TV_URL_REGEX,
+    TMDBShared,
+    media_url,
+)
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
     InvalidURLError,

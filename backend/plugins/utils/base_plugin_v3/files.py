@@ -242,14 +242,6 @@ class BaseFile[T](ABC):
     # TODO: Validate
     @final
     def parsed(self, update_at: datetime | None = None) -> T:
-        """Return what the file holds, downloading it first where it is outdated.
-
-        Every read of a file goes through here, so a file is fetched at the moment
-        something asks what is in it rather than by a pass over everything a title
-        could possibly need beforehand. `update_at` is how old the answer is
-        allowed to be: a file stored before it is downloaded again, and a file
-        that is not stored at all is downloaded whatever is passed.
-        """
         self.download_if_outdated(update_at)
         if self._cached_parsed is None:
             self._cached_parsed = self._parse(self._stored_content())

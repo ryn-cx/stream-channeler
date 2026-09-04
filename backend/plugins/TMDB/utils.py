@@ -9,6 +9,10 @@ from tminidb.movie.watch_providers.models import BuyItem as MovieBuyItem
 from tminidb.movie.watch_providers.models import FlatrateItem as MovieFlatrateItem
 from tminidb.movie.watch_providers.models import MovieWatchProvidersModel
 from tminidb.movie.watch_providers.models import RentItem as MovieRentItem
+from tminidb.tv_episode_group.details.models import Episode as TvEpisodeGroupEpisode
+from tminidb.tv_episode_group.details.models import Group as TvEpisodeGroup
+from tminidb.tv_season.details.models import Episode as TvSeasonEpisode
+from tminidb.tv_season.details.models import TvSeasonDetailsModel
 from tminidb.tv_season.watch_providers.models import BuyItem as TvSeasonBuyItem
 from tminidb.tv_season.watch_providers.models import (
     FlatrateItem as TvSeasonFlatrateItem,
@@ -22,6 +26,7 @@ from tminidb.tv_series.watch_providers.models import FreeItem as TvFreeItem
 from tminidb.tv_series.watch_providers.models import RentItem as TvRentItem
 from tminidb.tv_series.watch_providers.models import TvSeriesWatchProvidersModel
 
+from app.canonical_media.keys import tmdb_season_key
 from app.media.media_type import TMDBMediaType
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
@@ -29,6 +34,7 @@ from plugins.utils.abstract_plugin import (
     PluginWatchProviderItem,
 )
 from plugins.utils.manage_plugins import sorted_plugins
+from collections.abc import Sequence
 
 if TYPE_CHECKING:
     from plugins.TMDB.files import ProvidersFile, SearchMovie, SearchMulti, SearchTV
@@ -74,9 +80,9 @@ def parse_media_identifier(identifier: str) -> tuple[TMDBMediaType, int]:
 
 # TODO: Validate
 def streaming_providers(
-    watch_providers: WatchProviders | None,
+    watch_providers: WatchProviders,
 ) -> list[Provider]:
-    if watch_providers is None or not (united_states := watch_providers.results.us):
+    if not (united_states := watch_providers.results.us):
         return []
 
     providers_by_id: dict[int, Provider] = {}
@@ -103,7 +109,7 @@ def get_media_plugin(provider_name: str) -> type[AbstractPlugin] | None:
 
 # TODO: Validate
 def watch_provider_items(
-    watch_providers: WatchProviders | None,
+    watch_providers: WatchProviders,
     title: str | None,
 ) -> list[PluginWatchProviderItem]:
     items: list[PluginWatchProviderItem] = []
@@ -127,13 +133,8 @@ def watch_provider_items(
 
 # TODO: Validate
 def found_something(search_file: SearchMovie | SearchTV | SearchMulti) -> bool:
-    """Report whether a search came back with anything at all.
-
-    A search TMDB has no answer for is stored empty, and an empty file has no
-    results to read out of it.
-    """
-    parsed = search_file.parsed_or_none()
-    return parsed is not None and bool(parsed.results)
+    """Report whether a search came back with anything at all."""
+    return bool(search_file.parsed().results)
 
 
 # TODO: Validate
@@ -151,10 +152,7 @@ def encode_cursor(page: int, offset: int) -> str:
 
 # TODO: Validate
 def provider_names(file: ProvidersFile) -> set[str]:
-    return {
-        provider.provider_name
-        for provider in streaming_providers(file.parsed_or_none())
-    }
+    return {provider.provider_name for provider in streaming_providers(file.parsed())}
 
 
 # TODO: Validate
@@ -221,33 +219,42 @@ def air_datetime(air_date: str | date | None) -> datetime | None:
     return tz_datetime.combine(air_date, datetime.min.time())
 
 
-# TODO: Validate
-class EpisodeSource(NamedTuple):
-    """One episode of a season, and the number the order gives it."""
+class SeasonInfo(NamedTuple):
+    """Holds Season information from the season details or episode group.
 
-    id: int
-    number: int
-    name: str
-    overview: str
-    still_path: str | None
-    runtime: int | None
-    air_date: date | None
-    native_season_number: int
-    native_episode_number: int
-
-
-# TODO: Validate
-class SeasonSource(NamedTuple):
-    """One season of a title, however the title is being read.
-
-    The two ways of reading a series - TMDB's own seasons and a chosen episode
-    order - answer with different files holding different shapes, and everything
-    that writes a season wants the same handful of things out of either. So both
-    are read into this and nothing downstream asks which it was.
-    """
+    Normally the data structure of the season details and episode group are different,
+    this class consolidates them into a single interface."""
 
     key: str
     name: str | None
-    season_number: int
+    season_number: int | None
+    sort_order: int
     poster_path: str | None
-    episodes: list[EpisodeSource]
+    episodes: Sequence[TvSeasonEpisode | TvEpisodeGroupEpisode]
+    uses_episode_group: bool
+
+    @classmethod
+    def from_episode_group(cls, order: int, group: TvEpisodeGroup) -> SeasonInfo:
+        return cls(
+            key=tmdb_season_key(TMDBMediaType.tv, order),
+            name=group.name,
+            # Technically incorrect because there is no real season number, but it makes
+            # sorting easier so it's allowed.
+            season_number=order,
+            sort_order=order,
+            poster_path=None,
+            episodes=group.episodes,
+            uses_episode_group=True,
+        )
+
+    @classmethod
+    def from_season_details(cls, details: TvSeasonDetailsModel) -> SeasonInfo:
+        return cls(
+            key=tmdb_season_key(TMDBMediaType.tv, details.id),
+            name=details.name,
+            season_number=details.season_number,
+            sort_order=details.season_number,
+            poster_path=details.poster_path,
+            episodes=details.episodes,
+            uses_episode_group=False,
+        )

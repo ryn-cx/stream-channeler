@@ -8,7 +8,7 @@ from typing import (
 
 from sqlmodel import Session
 from tminidb import TMiniDB
-from tminidb.exceptions import ResourceNotFoundError, SeasonChangesNotFoundError
+from tminidb.exceptions import ResourceNotFoundError
 from tminidb.movie.details import MovieDetails as MovieEndpoint
 from tminidb.movie.details.models import MovieDetailsModel
 from tminidb.movie.translations import (
@@ -251,14 +251,9 @@ class TVSeasonsDetails(EndpointFile[TvSeasonDetailsModel]):
         self.season_number = season_number
         super().__init__(session, plugin, f"{tmdb_show_id}/{season_number}")
 
-    # Occurs if the user tries to add an invalid URL.
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(self.tmdb_show_id, self.season_number)
-
-    @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ResourceNotFoundError)
 
 
 class TVEpisodesDetails(EndpointFile[TvEpisodeDetailsModel]):
@@ -407,11 +402,6 @@ class TVSeasonsChanges(EndpointFile[TvSeasonChangesModel]):
             self.changed_on + timedelta(days=1),
             datetime.min.time(),
         )
-
-    # Occurs when TMDB keeps no change log for the season.
-    @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, SeasonChangesNotFoundError)
 
 
 class SearchMulti(EndpointFile[SearchMultiModel]):

@@ -27,18 +27,13 @@ from tminidb.movie.details.models import MovieDetailsModel
 from tminidb.search.multi.models import Result as MultiResult
 from tminidb.search.multi.models import SearchMultiModel
 from tminidb.tv_episode_group.details.models import TvEpisodeGroupDetailsModel
-from tminidb.tv_season.details.models import Episode as TvSeasonEpisode
-from tminidb.tv_series.details.models import Season as TvSeriesSeason
 from tminidb.tv_series.details.models import TvSeriesDetailsModel
 
-from app.canonical_media.keys import (
-    tmdb_season_key,
-)
 from app.files.models import File
 from app.media.media_type import TMDBMediaType
 from app.shows.models import Show
 from app.utils import tz_datetime
-from plugins.TMDB.episode_groups import show_chosen_group_id
+from plugins.TMDB.episode_groups import chosen_group_id
 from plugins.TMDB.files import (
     MoviesDetails,
     MoviesTranslations,
@@ -63,10 +58,8 @@ from plugins.TMDB.keys import (
     get_media_type_and_tmdb_id,
     parse_season_key,
 )
-from plugins.TMDB.urls import TMDB_DOMAIN, media_url
 from plugins.TMDB.utils import (
-    EpisodeSource,
-    SeasonSource,
+    SeasonInfo,
     backdrop_image_url,
     decode_cursor,
     encode_cursor,
@@ -91,10 +84,19 @@ from plugins.utils.base_plugin_v3.files import (
     BaseFile,
 )
 
+
+# TODO: Validate
+def media_url(media_type: str, tmdb_id: int) -> str:
+    """Return the TMDb URL for the movie or tv series."""
+    return f"https://www.themoviedb.org/{media_type}/{tmdb_id}"
+
+
 MOVIE_URL_REGEX = title_url_regex(TMDBMediaType.movie)
 
 
-TV_URL_REGEX = title_url_regex(TMDBMediaType.tv)
+TV_URL_REGEX = title_url_regex(TMDBMediaType.tv) + (
+    r"(?:\/season\/(?P<season_number>\d+)(?:\/episode\/(?P<episode_number>\d+))?)?"
+)
 
 
 # TODO: Validate
@@ -580,16 +582,6 @@ class TMDBShared(BasePlugin):
     # endregion
 
     # TODO: Validate
-    def movie_detail(self, tmdb_id: int) -> MovieDetailsModel | None:
-        """Return a film's details, downloading them if needed.
-
-        A film is reached by whatever is linked to it as much as by this
-        plugin's own media, and nothing else fetches the file on its behalf, so
-        it cannot be assumed to be stored already.
-        """
-        return self.movies_details_file(tmdb_id).parsed_or_none()
-
-    # TODO: Validate
     def translated_episode_names(
         self,
         tmdb_id: int,
@@ -600,16 +592,13 @@ class TMDBShared(BasePlugin):
 
         An episode's translations are the one thing about a TMDB episode that is
         not stored alongside it, so whatever matches an episode by name reads
-        them through here. An episode TMDB has no translations for is stored
-        empty and has no names to give.
+        them through here.
         """
         translations = self.tv_episodes_translations_file(
             tmdb_show_id=tmdb_id,
             season_number=season_number,
             episode_number=episode_number,
-        ).parsed_or_none()
-        if translations is None:
-            return []
+        ).parsed()
         return [
             translation.data.name
             for translation in translations.translations
@@ -622,12 +611,9 @@ class TMDBShared(BasePlugin):
 
         A film's translations are not stored alongside it, the same way an
         episode's are not, so whatever matches a film by name reads them through
-        here. A film TMDB has no translations for is stored empty and has no
-        names to give.
+        here.
         """
-        translations = self.movies_translations_file(tmdb_id).parsed_or_none()
-        if translations is None:
-            return []
+        translations = self.movies_translations_file(tmdb_id).parsed()
         return [
             translation.data.title
             for translation in translations.translations
@@ -653,20 +639,12 @@ class TMDBShared(BasePlugin):
         which of them it is. The numbers are keyed by TMDB's own episode id,
         which is what the episode is the same episode by whichever order it is
         read in.
-
-        A title TMDB holds no orders for, and an order stored empty, both read as
-        nothing rather than raising: an order is something a title may simply not
-        have.
         """
-        groups = self.tv_series_episode_groups_file(tmdb_id).parsed_or_none()
-        if groups is None:
-            return {}
+        groups = self.tv_series_episode_groups_file(tmdb_id).parsed()
 
         numbers: dict[int, dict[int, set[str]]] = {}
         for option in groups.results:
-            detail = self.tv_episode_groups_details_file(option.id).parsed_or_none()
-            if detail is None:
-                continue
+            detail = self.tv_episode_groups_details_file(option.id).parsed()
             for group in detail.groups:
                 for number, episode in enumerate(group.episodes, start=1):
                     order_names = numbers.setdefault(episode.id, {}).setdefault(
@@ -681,93 +659,6 @@ class TMDBShared(BasePlugin):
             }
             for episode_id, episode_numbers in numbers.items()
         }
-
-    # TODO: Validate
-    def show_seasons(self, tmdb_id: int) -> Sequence[TvSeriesSeason]:
-        """Return the seasons of a title, downloading the title if needed.
-
-        A title is read by whatever is linked to it as well as by this plugin's
-        own media, and the two do not have to have been imported, so the file the
-        seasons are read from cannot be assumed to be stored already.
-        """
-        details = self.tv_series_details_file(tmdb_id).parsed_or_none()
-        return details.seasons if details else []
-
-    # TODO: Validate
-    def season_episodes(
-        self,
-        tmdb_id: int,
-        season_number: int,
-    ) -> Sequence[TvSeasonEpisode]:
-        """Return the episodes of one season of a title, downloading it if needed.
-
-        A title's seasons are downloaded along with it when this plugin imports
-        the title as its own media, but linking and lookups reach for the seasons
-        of titles it never imported, so a season file cannot be assumed to be
-        stored already. A season TMDB does not have is stored empty and has no
-        episodes to give.
-        """
-        detail = self.tv_seasons_details_file(tmdb_id, season_number).parsed_or_none()
-        return detail.episodes if detail else []
-
-    # TODO: Validate
-    def has_season(self, tmdb_id: int, season_number: int) -> bool:
-        return any(
-            season.season_number == season_number
-            for season in self.show_seasons(tmdb_id)
-        )
-
-    # TODO: Validate
-    def has_season_id(
-        self,
-        media_type: TMDBMediaType,
-        tmdb_id: int,
-        season_tmdb_id: int,
-    ) -> bool:
-        """Report whether a title has a season TMDB issued `season_tmdb_id` for.
-
-        TMDB numbers a season within its title but gives it an id of its own, and
-        an identifier carries the id rather than the number. A film has no
-        seasons, so the single season it is stored as is the film itself.
-        """
-        if media_type == TMDBMediaType.movie:
-            return season_tmdb_id == tmdb_id
-        return any(season.id == season_tmdb_id for season in self.show_seasons(tmdb_id))
-
-    # TODO: Validate
-    def has_episode_id(
-        self,
-        media_type: TMDBMediaType,
-        tmdb_id: int,
-        episode_tmdb_id: int,
-    ) -> bool:
-        """Report whether a title has an episode TMDB issued `episode_tmdb_id` for.
-
-        Every season of the title is read, since an id says nothing about which
-        season TMDB files it under. A film has no episodes, so the single episode
-        it is stored as is the film itself.
-        """
-        if media_type == TMDBMediaType.movie:
-            return episode_tmdb_id == tmdb_id
-        return any(
-            episode.id == episode_tmdb_id
-            for season in self.show_seasons(tmdb_id)
-            for episode in self.season_episodes(tmdb_id, season.season_number)
-        )
-
-    # TODO: Validate
-    def has_episode(
-        self,
-        tmdb_id: int,
-        season_number: int,
-        episode_number: int,
-    ) -> bool:
-        if not self.has_season(tmdb_id, season_number):
-            return False
-        return any(
-            episode.episode_number == episode_number
-            for episode in self.season_episodes(tmdb_id, season_number)
-        )
 
     # TODO: Validate
     def media_info(self, media_identifier: str) -> PluginMediaInfo | None:
@@ -918,91 +809,47 @@ class TMDBShared(BasePlugin):
         )
 
     # TODO: Validate
-    def _chosen_group(
+    def _chosen_episode_group(
         self,
         show_key: str,
         update_at: datetime | None = None,
     ) -> TvEpisodeGroupDetailsModel | None:
-        group_id = show_chosen_group_id(self.session, self.source, show_key)
-        if group_id is None:
-            return None
-        return self.tv_episode_groups_details_file(group_id).parsed(update_at)
+        show = Show.get(self.session, self.source, show_key)
+        if show and (group_id := chosen_group_id(show.extra)):
+            return self.tv_episode_groups_details_file(group_id).parsed(update_at)
+        return None
 
-    # TODO: Validate
-    def series_seasons(
+    def chosen_seasons(
         self,
         show_key: str,
         update_at: datetime | None = None,
-    ) -> list[SeasonSource]:
-        """Return the seasons of a series, in whichever order it is read in.
+    ) -> list[SeasonInfo]:
+        """Return the seasons for the show.
 
-        A chosen order replaces the title's own outright: its groups are the
-        seasons and its episodes are numbered by where the order puts them, not
-        by where TMDB's own seasons did. The episodes keep their own ids either
-        way, so the same episode is the same row whichever order it is read in
-        and a title changing order moves its episodes rather than replacing them.
+        If the show uses an episode_group the the seasons will be based on the contents
+        of TVEpisodeGroupsDetails.
+
+        If the show does not use an episode_group the seasons will be based on the
+        contents of TVSeriesDetails.
         """
+
         _, tmdb_id = get_media_type_and_tmdb_id(show_key)
-        group = self._chosen_group(show_key, update_at)
-        if group is not None:
+
+        if group := self._chosen_episode_group(show_key, update_at):
             return [
-                SeasonSource(
-                    key=tmdb_season_key(TMDBMediaType.tv, order),
-                    name=entry.name,
-                    season_number=order + 1,
-                    poster_path=None,
-                    episodes=[
-                        EpisodeSource(
-                            id=episode.id,
-                            number=number,
-                            name=episode.name,
-                            overview=episode.overview,
-                            still_path=episode.still_path,
-                            runtime=episode.runtime,
-                            air_date=episode.air_date,
-                            native_season_number=episode.season_number,
-                            native_episode_number=episode.episode_number,
-                        )
-                        for number, episode in enumerate(entry.episodes, start=1)
-                    ],
-                )
+                SeasonInfo.from_episode_group(order, entry)
                 for order, entry in enumerate(group.groups)
             ]
 
-        seasons: list[SeasonSource] = []
-        details = self.tv_series_details_file(tmdb_id).parsed(update_at)
-        for season in details.seasons:
-            # A season the title lists but TMDB has no detail for is stored
-            # empty, and an empty file has nothing to read a season out of.
-            detail = self.tv_seasons_details_file(
-                tmdb_show_id=tmdb_id,
-                season_number=season.season_number,
-            ).parsed_or_none(update_at)
-            if detail is None:
-                continue
-            seasons.append(
-                SeasonSource(
-                    key=tmdb_season_key(TMDBMediaType.tv, season.id),
-                    name=detail.name,
+        return [
+            SeasonInfo.from_season_details(
+                self.tv_seasons_details_file(
+                    tmdb_show_id=tmdb_id,
                     season_number=season.season_number,
-                    poster_path=detail.poster_path,
-                    episodes=[
-                        EpisodeSource(
-                            id=episode.id,
-                            number=episode.episode_number,
-                            name=episode.name,
-                            overview=episode.overview,
-                            still_path=episode.still_path,
-                            runtime=episode.runtime,
-                            air_date=episode.air_date,
-                            native_season_number=season.season_number,
-                            native_episode_number=episode.episode_number,
-                        )
-                        for episode in detail.episodes
-                    ],
-                ),
+                ).parsed(update_at),
             )
-        return seasons
+            for season in self.tv_series_details_file(tmdb_id).parsed(update_at).seasons
+        ]
 
     def _native_season_number(self, season_key: str, show_key: str) -> int:
         """Return the number TMDB's own seasons give the season `season_key` names."""
@@ -1072,4 +919,4 @@ class TMDBShared(BasePlugin):
     @classmethod
     @override
     def _domain(cls) -> str:
-        return TMDB_DOMAIN
+        return "themoviedb.org"
