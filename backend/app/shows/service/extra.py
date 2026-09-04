@@ -14,6 +14,7 @@ from app.shows.models import Show
 from app.shows.schemas import (
     TmdbEpisodeGroupOption,
 )
+from app.shows.service.canonical import match_show_to_tmdb
 from app.shows.service.relinking import (
     _relink_non_canonical_shows,
     _reread_in_new_order,
@@ -118,7 +119,9 @@ def force_update_show(session: Session, show: Show) -> Show:
         message = f"No plugin named {show.source.plugin.key!r} to read the show again."
         raise HTTPException(status_code=422, detail=message)
 
-    plugin_class(session, show.source.plugin).update_show(show, force=True)
+    plugin_instance = plugin_class(session, show.source.plugin)
+    plugin_instance.update_show(show, force=True)
+    match_show_to_tmdb(session, show)
     session.commit()
     session.refresh(show)
     return show

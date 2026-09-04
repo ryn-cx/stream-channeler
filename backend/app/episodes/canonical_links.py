@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from sqlmodel import Session, col, select
 
 from app.canonical_media.filters import is_canonical
-from app.canonical_media.service.creation import add_canonical_show
+from app.canonical_media.service.creation import link_show_to_tmdb
 from app.episodes.models import (
     MANUAL_NOTE_PREFIX,
     Episode,
@@ -125,7 +125,7 @@ def _link_one_episode(
     episode: Episode,
     canonical_episode: Episode,
 ) -> None:
-    add_canonical_show(
+    link_show_to_tmdb(
         session,
         episode.season.show,
         canonical_episode.season.show,

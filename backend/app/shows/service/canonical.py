@@ -5,46 +5,79 @@
 
 import re
 import uuid
+from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
 from sqlmodel import Session, col, select
 
 from app.canonical_media.filters import is_canonical
-from app.canonical_media.service.creation import add_canonical_show
+from app.canonical_media.service.creation import link_show_to_tmdb
 from app.channels.models import ChannelShow
 from app.episodes.models import MANUAL_NOTE_PREFIX
+from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.shows.models import Show
 from app.shows.service.relinking import _relink_non_canonical_show
 from app.utils import tz_datetime
+
+if TYPE_CHECKING:
+    from plugins.utils.abstract_plugin import AbstractPlugin
 
 _TMDB_TITLE_URL = re.compile(r"themoviedb\.org/(?:movie|tv)/(?P<tmdb_id>\d+)")
 
 
 # TODO: Validate
-def add_canonical_show_and_link_episodes(
+def match_show_to_tmdb(
     session: Session,
     show: Show,
-    canonical_show: Show | None = None,
+    tmdb_show: Show | None = None,
+    note: str = "Automatic: Import match",
 ) -> None:
-    """Link `show` to the canonical show it is linked to, and read its episodes.
+    """Link `show` to `tmdb_show` when one was found, then match its episodes.
 
-    A show TMDB has no match for is the canonical show, which is what it already is when
-    it is written, so there is nothing to do for it here. One TMDB does have a match for
-    is linked to that match, and `add_canonical_show` is what makes it non-canonical.
-
-    A show already linked to a canonical show is left alone, since that may have
-    been settled by hand and writing the show again is no reason to overrule it.
-    A show linked to nothing is searched for afresh every time it is written,
-    since a match that was not there to be found when it was first written can be
-    there now.
-
-    The episodes are read against the canonical show whether or not one was found
-    here, because the episodes just written include ones the canonical show it is
-    already linked to has never been read against.
+    The episodes are matched either way, since an import writes episodes that the
+    already-linked TMDB show has never been matched against.
     """
-    if canonical_show:
-        add_canonical_show(session, show, canonical_show)
-    _relink_non_canonical_show(session, show)
+    if show.source.plugin.key == TMDB_PLUGIN_KEY:
+        return
+    if tmdb_show:
+        link_show_to_tmdb(session, show, tmdb_show, note)
+    else:
+        _relink_non_canonical_show(session, show)
+
+
+# TODO: Validate
+def match_imported_shows_to_tmdb(
+    session: Session,
+    plugin_instance: AbstractPlugin,
+    shows: Sequence[Show],
+) -> None:
+    """Search TMDB for every show `plugin_instance` imported and link what is found.
+
+    A show already linked to a title is left as it is, since the link it carries
+    may have been settled by hand.
+    """
+    for show in shows:
+        if not show.is_canonical:
+            continue
+        tmdb_show = _find_tmdb_show(session, plugin_instance, show)
+        match_show_to_tmdb(session, show, tmdb_show)
+
+
+# TODO: Validate
+def _find_tmdb_show(
+    session: Session,
+    plugin_instance: AbstractPlugin,
+    show: Show,
+) -> Show | None:
+    """Return the TMDB show `show` is a listing of, importing it where it is new."""
+    from plugins.TMDB import TMDB  # noqa: PLC0415
+
+    if not plugin_instance.implements("tmdb_lookup_info"):
+        return None
+
+    title, media_type, year = plugin_instance.tmdb_lookup_info(show.key)
+    return TMDB(session).import_search(title, media_type, year)
 
 
 # TODO: Validate
@@ -53,32 +86,30 @@ def set_canonical_show(
     show: Show,
     canonical_show: Show,
 ) -> Show:
-    """Add the canonical show a `User` chose to what `show` already stands for.
+    """Add an admin's chosen `canonical_show` to what `show` stands for.
 
-    A website files two shows under one page often enough - a YouTube channel
-    whose uploads are two series, a service selling a sequel as another season -
-    that a title chosen by hand goes on beside whatever is already there rather
-    than over it. Taking one off is `unset_canonical_show`, which is a thing to
-    ask for rather than something choosing does quietly.
-
-    The choice is locked, which is what stops the next import searching for a
-    title of its own and overruling it. The episodes are read again afterwards,
-    since the title just added holds episodes none of them has been read against.
+    Added alongside any existing links rather than replacing them, since one page
+    can hold several shows. Removing one is `unset_canonical_show`. The choice is
+    locked so the next import cannot overrule it.
     """
     if show.non_canonical_shows:
         message = "A show other shows are linked to cannot be linked to one itself."
         raise HTTPException(status_code=409, detail=message)
 
-    add_canonical_show(
+    from app.sources.service.unmatched import (  # noqa: PLC0415
+        remove_plugin_unmatched_sources,
+    )
+
+    link_show_to_tmdb(
         session,
         show,
         canonical_show,
         note=f"{MANUAL_NOTE_PREFIX}Selection",
     )
+    remove_plugin_unmatched_sources(session, canonical_show.id, show.source.plugin.key)
     show.canonical_show_validated_at = tz_datetime.now()
     session.add(show)
 
-    _relink_non_canonical_show(session, show)
     session.commit()
     session.refresh(show)
     return show
@@ -90,6 +121,7 @@ def set_canonical_show_using_tmdb_url(
     show: Show,
     url: str,
 ) -> Show:
+    """Import the TMDB title at `url` and link `show` to it."""
     from plugins.TMDB import TMDB  # noqa: PLC0415
 
     address = url.strip()
@@ -112,6 +144,10 @@ def import_non_canonical_show_from_url(
     canonical_show: Show,
     url: str,
 ) -> Show:
+    """Import the show at `url` and link it to `canonical_show`."""
+    from app.sources.service.unmatched import (  # noqa: PLC0415
+        remove_plugin_unmatched_sources,
+    )
     from plugins.utils.abstract_plugin import InvalidURLError  # noqa: PLC0415
     from plugins.utils.manage_plugins import get_plugin_for_url  # noqa: PLC0415
 
@@ -124,11 +160,20 @@ def import_non_canonical_show_from_url(
     if plugin_class is None:
         raise HTTPException(status_code=400, detail=f"No plugin imports {address}")
 
+    plugin_instance = plugin_class(session)
     try:
-        results = plugin_class(session).import_url(address, canonical_show)
+        results = plugin_instance.import_url(address, known_title=True)
     except InvalidURLError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
+    for imported_show in plugin_instance.imported_shows(results):
+        match_show_to_tmdb(session, imported_show, canonical_show)
+
+    remove_plugin_unmatched_sources(
+        session,
+        canonical_show.id,
+        plugin_class.plugin_name(),
+    )
     session.flush()
     session.expire(canonical_show, ["non_canonical_shows"])
     imported_keys = {result.show_key for result in results}
@@ -139,7 +184,6 @@ def import_non_canonical_show_from_url(
         link.note = f"{MANUAL_NOTE_PREFIX}Selection"
         session.add(link.show)
         session.add(link)
-        _relink_non_canonical_show(session, link.show)
 
     session.commit()
     session.refresh(canonical_show)
@@ -154,14 +198,8 @@ def unset_canonical_show(
 ) -> Show:
     """Take `canonical_show` off what `show` stands for.
 
-    Every episode that stood for an episode of the title being taken off is left
-    standing for nothing, hand-settled or not: it was settled against a title
-    this row has now been said not to be of. What the rest of the episodes are of
-    is worked out afresh against the titles that are left.
-
-    The lock stays as it was. An admin saying this row is not that title has
-    settled something whether or not another title is named in its place, and an
-    import searching for one afresh would only put the same guess back.
+    Episodes matched against it are unmatched, hand-settled or not, and the rest
+    are matched again against the links that are left. The lock is left as it is.
     """
     for link in list(show.canonical_show_links):
         if link.canonical_show_id == canonical_show.id:
@@ -181,6 +219,7 @@ def unset_canonical_show(
 
 # TODO: Validate
 def canonicalize_show(session: Session, show: Show) -> Show:
+    """Make `show` canonical again, dropping every TMDB link it has."""
     if not show.canonical_show_links:
         message = "This show is already a canonical show."
         raise HTTPException(status_code=409, detail=message)
@@ -206,6 +245,7 @@ def _add_channel_shows(
     show: Show,
     previous_canonical_show_ids: list[uuid.UUID],
 ) -> None:
+    """Move channel membership from the previous canonical shows onto `show`."""
     channel_ids = set(
         session.exec(
             select(ChannelShow.channel_id).where(

@@ -22,16 +22,18 @@ from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.TMDB.episode_groups import dump_episode_extra, show_chosen_group_id
+from plugins.TMDB.external_websites import TMDBExternalWebsites
 from plugins.TMDB.files import (
+    MoviesWatchProviders,
     TVSeasonsChanges,
     TVSeriesChanges,
+    TVSeriesWatchProviders,
 )
 from plugins.TMDB.keys import (
     get_media_type_and_tmdb_id,
     parse_episode_key,
     parse_season_key,
 )
-from plugins.TMDB.external_websites import TMDBExternalWebsites
 from plugins.TMDB.shared import (
     MOVIE_URL_REGEX,
     TV_URL_REGEX,
@@ -63,17 +65,7 @@ from plugins.utils.base_plugin_v3.importer import BaseImporter
 # TODO: Validate
 class TMDBMedia(TMDBExternalWebsites, BaseImporter):
     # TODO: Validate
-    def _import_title_url(
-        self,
-        url: str,
-        canonical_show: Show | None = None,
-    ) -> list[URLImportResult]:
-        # TMDB should always be canonical so if it is imported with a caonical_show
-        # something has gone wrong.
-        if canonical_show is not None:
-            msg = "canonical_show should be None when importing TMDB URLs."
-            raise InvalidURLError(msg)
-
+    def _import_title_url(self, url: str) -> list[URLImportResult]:
         show_key = self._url_to_show_key(url)
         existing_show = self._preload_show(
             show_key,
@@ -90,6 +82,12 @@ class TMDBMedia(TMDBExternalWebsites, BaseImporter):
 # TODO: Validate
 class TMDBSeries(TMDBMedia):
     """Reads a TMDB series into records of TMDB's own."""
+
+    # TODO: Validate
+    @override
+    def _provider_file(self, show_key: str) -> TVSeriesWatchProviders:
+        _, tmdb_id = get_media_type_and_tmdb_id(show_key)
+        return self.latest_tv_series_watch_providers_file(tmdb_id)
 
     # TODO: Validate
     @override
@@ -218,7 +216,6 @@ class TMDBSeries(TMDBMedia):
         self,
         source: Source,
         show_key: str,
-        canonical_show: Show | None = None,
         update_at: datetime | None = None,
         *,
         force: bool = False,
@@ -401,7 +398,8 @@ class TMDBSeries(TMDBMedia):
     def _download_changes_file(self, show: Show) -> None:
         if show.update_at and show.update_at <= tz_datetime.now():
             self.tv_series_changes_file(
-                show.key, tz_datetime.now().date(),
+                show.key,
+                tz_datetime.now().date(),
             ).download_if_outdated()
 
     # TODO: Validate
@@ -519,14 +517,21 @@ class TMDBSeries(TMDBMedia):
     def import_url(
         self,
         url: str,
-        canonical_show: Show | None = None,
+        *,
+        known_title: bool = False,
     ) -> list[URLImportResult]:
-        return self._import_title_url(url, canonical_show)
+        return self._import_title_url(url)
 
 
 # TODO: Validate
 class TMDBMovie(TMDBMedia):
     """Reads a TMDB film into records of TMDB's own."""
+
+    # TODO: Validate
+    @override
+    def _provider_file(self, show_key: str) -> MoviesWatchProviders:
+        _, tmdb_id = get_media_type_and_tmdb_id(show_key)
+        return self.latest_movies_watch_providers_file(tmdb_id)
 
     # TODO: Validate
     @override
@@ -584,7 +589,6 @@ class TMDBMovie(TMDBMedia):
         self,
         source: Source,
         show_key: str,
-        canonical_show: Show | None = None,
         update_at: datetime | None = None,
         *,
         force: bool = False,
@@ -722,6 +726,7 @@ class TMDBMovie(TMDBMedia):
     def import_url(
         self,
         url: str,
-        canonical_show: Show | None = None,
+        *,
+        known_title: bool = False,
     ) -> list[URLImportResult]:
-        return self._import_title_url(url, canonical_show)
+        return self._import_title_url(url)

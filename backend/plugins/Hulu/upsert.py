@@ -9,7 +9,6 @@ from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
-from app.shows.service.canonical import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
@@ -27,7 +26,6 @@ class SeriesUpsertMixin(SeriesFileMixin):
         self,
         source: Source,
         show_key: str,
-        canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> Show:
@@ -43,7 +41,7 @@ class SeriesUpsertMixin(SeriesFileMixin):
                 url=self._show_url(show_key, HuluMediaType.SERIES),
                 image_url=self._image_url(parsed_series.artwork.program_tile.path),
                 thumbnail_url=self._thumbnail_url(
-                    parsed_series.artwork.program_tile.path
+                    parsed_series.artwork.program_tile.path,
                 ),
                 data_timestamp=self.show_data_timestamp(show_key),
                 source_id=source.id,
@@ -57,11 +55,6 @@ class SeriesUpsertMixin(SeriesFileMixin):
 
         self._upsert_seasons(existing_show, force=force)
         self._soft_delete_missing(show_key)
-        add_canonical_show_and_link_episodes(
-            self.session,
-            existing_show,
-            canonical_show,
-        )
 
         return existing_show
 
@@ -150,7 +143,6 @@ class MovieUpsertMixin(MovieFileMixin):
         self,
         source: Source,
         show_key: str,
-        canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> Show:
@@ -172,7 +164,6 @@ class MovieUpsertMixin(MovieFileMixin):
 
         self._upsert_season(show, force=force)
         self._soft_delete_missing(show_key)
-        add_canonical_show_and_link_episodes(self.session, show, canonical_show)
 
         return show
 

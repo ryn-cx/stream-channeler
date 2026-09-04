@@ -5,6 +5,7 @@ from sqlmodel import Session
 
 from app.database import engine, load_models
 from app.shows.models import Show
+from app.shows.service.canonical import match_show_to_tmdb
 from plugins.utils.manage_plugins import (
     import_plugins,
     plugins,
@@ -25,6 +26,7 @@ def reimport_all_shows(session: Session) -> None:
         plugin_class = plugin_classes_by_key[show.source.plugin.key]
         plugin_instance = plugin_class(session, show.source.plugin)
         plugin_instance.update_show(show, force=True)
+        match_show_to_tmdb(session, show)
         session.commit()
 
 

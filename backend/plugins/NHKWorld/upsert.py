@@ -7,7 +7,6 @@ from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
-from app.shows.service.canonical import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from plugins.NHKWorld.files import FileMixin
 
@@ -20,7 +19,6 @@ class UpsertMixin(FileMixin):
         self,
         source: Source,
         show_key: str,
-        canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> Show:
@@ -43,7 +41,6 @@ class UpsertMixin(FileMixin):
         self._upsert_season(show, show_key, force=force)
         self._soft_delete_missing(show_key)
 
-        add_canonical_show_and_link_episodes(self.session, show, canonical_show)
         return show
 
     # TODO: Validate

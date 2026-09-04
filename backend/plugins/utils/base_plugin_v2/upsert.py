@@ -76,22 +76,10 @@ class BaseUpsertMixin(BasePluginCore, BaseOutdatedCheckMixin, ABC):
         self,
         source: Source,
         show_key: str,
-        canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> Show:
-        """Store the listing `show_key` names, and settle what it stands for.
-
-        Every plugin ends this by handing what it wrote to `settle_show`, which is
-        what settles the title the listing is linked to. Done there rather than
-        by whatever called, because it is part of writing a listing, and done at
-        the end rather than as the row is written, since the episodes read
-        against the title are the ones the write has just put there.
-
-        `canonical_show` is the title a caller already knows the listing to be,
-        which is what an import handing a title from one plugin to another knows
-        and nothing else does.
-        """
+        """Store the listing `show_key` names."""
 
     # TODO: Validate
     def upsert_source(self, source_key: str) -> Source:

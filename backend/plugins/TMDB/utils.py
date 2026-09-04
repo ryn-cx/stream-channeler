@@ -32,7 +32,6 @@ from plugins.utils.manage_plugins import sorted_plugins
 
 if TYPE_CHECKING:
     from plugins.TMDB.files import ProvidersFile, SearchMovie, SearchMulti, SearchTV
-    from plugins.TMDB.shared import TMDBShared
 
 
 type WatchProviders = (
@@ -88,19 +87,16 @@ def streaming_providers(
     for category in ("buy", "rent"):
         sold: Sequence[Provider] = getattr(united_states, category, None) or []
         for provider in sold:
-            if get_external_plugin(provider.provider_name) is None:
+            if get_media_plugin(provider.provider_name) is None:
                 continue
             providers_by_id.setdefault(provider.provider_id, provider)
     return list(providers_by_id.values())
 
 
 # TODO: Validate
-def get_external_plugin(provider_name: str) -> type[AbstractPlugin] | None:
-    # Asked of the class itself rather than of a base it inherits, because the
-    # plugins sit across two base versions and a name is answered by either.
+def get_media_plugin(provider_name: str) -> type[AbstractPlugin] | None:
     for plugin_class in sorted_plugins():
-        matches = getattr(plugin_class, "matches_tmdb_provider", None)
-        if matches is not None and matches(provider_name):
+        if plugin_class.matches_tmdb_provider(provider_name):
             return plugin_class
     return None
 
@@ -112,7 +108,7 @@ def watch_provider_items(
 ) -> list[PluginWatchProviderItem]:
     items: list[PluginWatchProviderItem] = []
     for provider in streaming_providers(watch_providers):
-        plugin_class = get_external_plugin(provider.provider_name)
+        plugin_class = get_media_plugin(provider.provider_name)
         search_url = (
             plugin_class.manual_search_url(title)
             if plugin_class is not None and title
@@ -223,32 +219,6 @@ def air_datetime(air_date: str | date | None) -> datetime | None:
     if isinstance(air_date, str):
         air_date = date.fromisoformat(air_date)
     return tz_datetime.combine(air_date, datetime.min.time())
-
-
-# TODO: Validate
-def first_search_result(
-    plugin: TMDBShared,
-    name: str,
-    media_type: TMDBMediaType | None,
-    year: int | None,
-) -> tuple[TMDBMediaType, int] | None:
-    """Return which half the first title TMDB returns is from, and its id."""
-    if media_type is not None:
-        results = plugin.search_media(media_type, name, year).parsed().results
-        return (media_type, results[0].id) if results else None
-
-    # A search of both halves also returns people, who are no title and are
-    # passed over rather than taken as the first result.
-    for result in plugin.search_media(None, name, year).parsed().results:
-        # Which half of the catalogue a search of both says a result came
-        # from. A multi search also returns people, who are no title and
-        # cannot be imported.
-        half = {"movie": TMDBMediaType.movie, "tv": TMDBMediaType.tv}.get(
-            result.media_type,
-        )
-        if half is not None:
-            return half, result.id
-    return None
 
 
 # TODO: Validate

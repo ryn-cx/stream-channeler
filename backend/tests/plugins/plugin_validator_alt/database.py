@@ -22,6 +22,7 @@ from app.files.models import File
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show
+from app.shows.service.canonical import match_imported_shows_to_tmdb
 from app.sources.models import Source
 from plugins.utils.abstract_plugin import AbstractPlugin, URLImportResult
 from plugins.utils.base_plugin_v2.files import BaseFile
@@ -359,6 +360,11 @@ class DatabaseMixinAlt[PluginT: AbstractPlugin]:
         assert url, "URL must be provided for URL import tests"
         self.imported_plugin = self.plugin_class(session)
         output = self.imported_plugin.import_url(url)
+        match_imported_shows_to_tmdb(
+            session,
+            self.imported_plugin,
+            self.imported_plugin.imported_shows(output),
+        )
 
         session.flush()
         session.expire_all()

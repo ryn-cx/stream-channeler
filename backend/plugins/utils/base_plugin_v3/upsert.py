@@ -75,27 +75,17 @@ class BaseUpsertMixin(BasePluginCore, BaseOutdatedCheckMixin, ABC):
         self,
         source: Source,
         show_key: str,
-        canonical_show: Show | None = None,
         update_at: datetime | None = None,
         *,
         force: bool = False,
     ) -> Show:
-        """Store the listing `show_key` names, and settle what it stands for.
+        """Store the listing `show_key` names.
 
         `update_at` is the moment the stored listing asked to be read again. It
         travels down to every file the write reads, and a file stored before it
         is downloaded again on the way past, so a read fetches what has gone
         stale rather than everything the title has.
 
-        Every plugin ends this by handing what it wrote to `settle_show`, which is
-        what settles the title the listing is linked to. Done there rather than
-        by whatever called, because it is part of writing a listing, and done at
-        the end rather than as the row is written, since the episodes read
-        against the title are the ones the write has just put there.
-
-        `canonical_show` is the title a caller already knows the listing to be,
-        which is what an import handing a title from one plugin to another knows
-        and nothing else does.
         """
         # Not an abstractmethod, because a plugin that reads a title as one of
         # several kinds writes each kind on its own and has nothing to write for
@@ -113,5 +103,6 @@ class BaseUpsertMixin(BasePluginCore, BaseOutdatedCheckMixin, ABC):
             key=source_key,
             name=self.plugin_name(),
             favicon_url=self.favicon_url(),
+            data_timestamp=self._existing_data_timestamp_or_now(source),
             plugin_id=self.plugin.id,
         ).upsert_and_set_update_at(self.plugin, source)

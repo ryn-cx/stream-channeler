@@ -30,6 +30,7 @@ from app.models import MediaMixin
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.shows.models import Show, ShowCanonicalShow
+from app.shows.service.canonical import match_show_to_tmdb
 from app.sources.models import Source
 from app.users.constants import PLUGIN_USER_EMAIL
 from app.users.models import User
@@ -265,6 +266,17 @@ MEDIA_CLASSES_IN_ORDER: tuple[MediaClass, ...] = (
 
 
 # TODO: Validate
+def _show_of(item: MediaMixin[Any]) -> Show | None:
+    if isinstance(item, Show):
+        return item
+    if isinstance(item, Season):
+        return item.show
+    if isinstance(item, Episode):
+        return item.season.show
+    return None
+
+
+# TODO: Validate
 def _restrict_to_media_in_channel[ResultT](
     statement: SelectOfScalar[ResultT],
     media_class: MediaClass,
@@ -368,6 +380,8 @@ def _process_outdated_items(
                     update(item, item.update_at)
                 else:
                     update(item)
+                    if (updated_show := _show_of(item)) is not None:
+                        match_show_to_tmdb(session, updated_show)
 
                 log_msg = (
                     f"[{plugin_key}] Successfully updated {media_type_name}: {item.key}"

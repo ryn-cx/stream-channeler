@@ -9,7 +9,6 @@ from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
-from app.shows.service.canonical import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.YouTube.files import (
@@ -33,24 +32,17 @@ class UpsertMixin(UtilsMixin):
         self,
         source: Source,
         show_key: str,
-        canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> Show:
-        # YouTube says nothing about when a title came out, so the name is all
-        # TMDB is searched on.
         if is_video_key(show_key):
             show = self._upsert_show_movie(show_key, force=force)
-            if self.is_free_movie(show_key):
-                add_canonical_show_and_link_episodes(self.session, show, canonical_show)
         elif is_show_key(show_key):
             show = self._upsert_show_series(show_key, force=force)
-            add_canonical_show_and_link_episodes(self.session, show, canonical_show)
         elif is_an_album(show_key):
             show = self._upsert_show_music(show_key, force=force)
         elif is_user_playlist(show_key):
             show = self._upsert_show_playlist(show_key, force=force)
-            add_canonical_show_and_link_episodes(self.session, show, canonical_show)
         elif self.is_topic_channel(show_key):
             show = self._upsert_show_topic(show_key, force=force)
         elif self.is_movies_channel(show_key):
@@ -59,7 +51,6 @@ class UpsertMixin(UtilsMixin):
                 show_key,
                 force=force,
             )
-            add_canonical_show_and_link_episodes(self.session, show, canonical_show)
         else:
             show = self._upsert_show_channel(source, show_key, force=force)
 

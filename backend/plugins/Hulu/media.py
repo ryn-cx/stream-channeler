@@ -67,7 +67,6 @@ class MediaMixin(UpsertMixin):
         self,
         source: Source,
         show_key: str,
-        canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> Show:
@@ -75,6 +74,5 @@ class MediaMixin(UpsertMixin):
         return self._media_plugin(stored_show).upsert_show(
             source,
             show_key,
-            canonical_show,
             force=force,
         )

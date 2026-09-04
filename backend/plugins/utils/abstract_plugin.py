@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import inspect
+import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from functools import cache
@@ -11,6 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+from sqlmodel import col, select
 
 from app.channels.models import ChannelQueue
 from app.episodes.models import Episode
@@ -28,7 +30,6 @@ if TYPE_CHECKING:
 
     from sqlmodel import Session
 
-    from app.shows.models import Show
     from app.users.models import User
 
 
@@ -37,6 +38,7 @@ class AbstractPlugin(ABC):
     """Base class every plugin must implement."""
 
     session: Session
+    plugin: Plugin
 
     # TODO: Validate
     def __init_subclass__(cls, *, register: bool = False, **kwargs: Any) -> None:  # noqa: ANN401 - Handed straight to `super`.
@@ -68,6 +70,11 @@ class AbstractPlugin(ABC):
             The unique identifier for the plugin.
 
         """
+
+    # TODO: Validate
+    @classmethod
+    @abstractmethod
+    def matches_tmdb_provider(cls, provider_name: str) -> bool: ...
 
     # TODO: Validate
     @abstractmethod
@@ -114,7 +121,8 @@ class AbstractPlugin(ABC):
     def import_url(
         self,
         url: str,
-        canonical_show: Show | None = None,
+        *,
+        known_title: bool = False,
     ) -> list[URLImportResult]:
         """Import `url` into the database.
 
@@ -122,14 +130,6 @@ class AbstractPlugin(ABC):
 
         Args:
             url: The URL to import.
-            canonical_show: The title `url` is known to be linked to, when the
-                caller already knows it. A plugin otherwise has to find the title
-                by searching its name, which is a guess; being told is not.
-                Passed down whenever one import hands off to another, so the
-                whole chain works from the one title the import started at, and
-                added to what the listing is linked to whether or not the listing
-                is chiefly of it - a series listing that also carries the film of
-                it is linked to both.
 
         Returns:
             A list of `URLImportResult`.
@@ -400,11 +400,10 @@ class AbstractPlugin(ABC):
     def import_by_name(
         self,
         names: list[str],
-        canonical_show: Show,
         media_type: TMDBMediaType,
         year: int | None = None,
     ) -> list[URLImportResult]:
-        """Import the title `names` name here, and link it to `canonical_show`.
+        """Import the title `names` name here.
 
         What TMDB hands a service it has listed a title on, since a service is
         reached by the name of the title rather than by an address when TMDB has
@@ -415,8 +414,6 @@ class AbstractPlugin(ABC):
         Args:
             names: Every name TMDB knows the title by, the one it leads with
                 first.
-            canonical_show: The title being searched for, which what is imported
-                is linked to.
             media_type: Which of a film and a series the title is.
             year: The year TMDB gives the title, where it gives one.
 
@@ -427,14 +424,8 @@ class AbstractPlugin(ABC):
             `MediaNotFoundError` if the service carries no title of that name.
 
         """
-        url = self.search_for_url(names, media_type, year)
-        if url is None:
-            msg = (
-                f"Could not find {media_type.value} named {names[0]} on "
-                f"{self.plugin_name()}."
-            )
-            raise MediaNotFoundError(msg)
-        return self.import_url(url, canonical_show)
+        msg = "import_by_name is not supported by this plugin."
+        raise NotImplementedError(msg)
 
     # TODO: Validate
     def in_app_search(
@@ -475,6 +466,15 @@ class AbstractPlugin(ABC):
         """
         msg = "tmdb_lookup_info is not supported by this plugin."
         raise NotImplementedError(msg)
+
+    # TODO: Validate
+    def imported_shows(self, results: Sequence[URLImportResult]) -> Sequence[Show]:
+        show_ids = {result.show_id for result in results}
+        return self.session.exec(
+            select(Show)
+            .join(Source, col(Show.source_id) == col(Source.id))
+            .where(col(Show.id).in_(show_ids), Source.plugin_id == self.plugin.id),
+        ).all()
 
     # TODO: Validate
     @classmethod
@@ -536,6 +536,8 @@ class URLImportResult(BaseModel):
     show_key: str
     """The title that was imported from the URL."""
 
+    show_id: uuid.UUID
+
     season_keys: list[str] = Field(default=[])
     """Seasons to prepopulate in the user's whitelist/blacklist."""
 
@@ -560,7 +562,11 @@ class URLImportResult(BaseModel):
         is_whitelist: bool = False,
     ) -> URLImportResult:
         """Return the result of importing the whole of `show`."""
-        return cls(show_key=show.key, is_whitelist=is_whitelist)
+        return cls(
+            show_key=show.key,
+            show_id=show.id,
+            is_whitelist=is_whitelist,
+        )
 
     # TODO: Validate
     @classmethod
@@ -572,6 +578,7 @@ class URLImportResult(BaseModel):
         """Return the result of importing only `seasons` of `show`."""
         return cls(
             show_key=show.key,
+            show_id=show.id,
             season_keys=[season.key for season in seasons],
             is_whitelist=True,
         )
@@ -586,6 +593,7 @@ class URLImportResult(BaseModel):
         """Return the result of importing only `episodes` of `show`."""
         return cls(
             show_key=show.key,
+            show_id=show.id,
             episode_keys=[episode.key for episode in episodes],
             is_whitelist=True,
         )

@@ -29,6 +29,7 @@ from app.episodes.models import Episode
 from app.log import configure_logging
 from app.seasons.models import Season
 from app.shows.models import Show, ShowCanonicalShow
+from app.shows.service.canonical import match_imported_shows_to_tmdb
 from app.tools.local_test_files import serve_downloads_from_test_files
 from app.users.constants import PLUGIN_USER_EMAIL
 from app.users.models import User
@@ -136,7 +137,13 @@ def _import_one(
     logger.info(f"[{plugin_key}] Importing URL: {queue_item.url}")
     try:
         queue_item.status = URLStatus.IMPORTING
-        import_results = plugin_class(session).import_url(queue_item.url)
+        plugin_instance = plugin_class(session)
+        import_results = plugin_instance.import_url(queue_item.url)
+        match_imported_shows_to_tmdb(
+            session,
+            plugin_instance,
+            plugin_instance.imported_shows(import_results),
+        )
         add_results_to_channel(session, import_results, queue_item.channel)
     except InvalidURLError as error:
         logger.warning(f"[{plugin_key}] Invalid URL: {queue_item.url}")

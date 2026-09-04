@@ -332,12 +332,13 @@ class YouTubeImporter(BaseImporter, YouTubeBase):
     def import_url(
         self,
         url: str,
-        canonical_show: Show | None = None,
+        *,
+        known_title: bool = False,
     ) -> list[URLImportResult]:
         show_key = self._url_to_show_key(url)
         # Recorded before the URL is read, because whether a playlist links a title
         # of its own is what says which show the address names.
-        if canonical_show is not None:
+        if known_title:
             self._record_linking_playlist(url)
 
         show_preload = self._preload_show(show_key, preload_episodes=True)
@@ -345,11 +346,7 @@ class YouTubeImporter(BaseImporter, YouTubeBase):
 
         if not existing_show:
             _cache = self._download_show_files_and_children(show_key)
-            existing_show = self.upsert_show(
-                self.source,
-                show_key,
-                canonical_show=canonical_show,
-            )
+            existing_show = self.upsert_show(self.source, show_key)
 
         # If a channel is imported but a new playlist is added and that playlist is the
         # URL being imported this will update the channel information to include that
@@ -359,11 +356,7 @@ class YouTubeImporter(BaseImporter, YouTubeBase):
                 self._show_files(show_key),
                 tz_datetime.now(),
             )
-            existing_show = self.upsert_show(
-                self.source,
-                show_key,
-                canonical_show=canonical_show,
-            )
+            existing_show = self.upsert_show(self.source, show_key)
 
         return self._import_results(existing_show)
 

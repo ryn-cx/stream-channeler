@@ -10,7 +10,6 @@ from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
-from app.shows.service.canonical import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
@@ -43,7 +42,6 @@ class UpsertMixin(UtilsMixin, FileMixin):
         self,
         source: Source,
         show_key: str,
-        canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> Show:
@@ -53,7 +51,6 @@ class UpsertMixin(UtilsMixin, FileMixin):
             show = self._upsert_tv_show(source, show_key, force=force)
 
         self._soft_delete_missing(show_key)
-        add_canonical_show_and_link_episodes(self.session, show, canonical_show)
         return show
 
     # TODO: Validate

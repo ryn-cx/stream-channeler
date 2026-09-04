@@ -6,13 +6,11 @@ from typing import TYPE_CHECKING, override
 
 from plugins.Amazon.base import AmazonBase
 from plugins.Amazon.constants import TITLE_KEY_REGEX
-from plugins.Amazon.utils import canonical_show_of
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin_v2.importer import BaseImporter
 
 if TYPE_CHECKING:
-    from app.shows.models import Show
-    from plugins.utils.abstract_plugin import URLImportResult
+        from plugins.utils.abstract_plugin import URLImportResult
 
 
 # TODO: Validate
@@ -79,26 +77,16 @@ class AmazonImporter(BaseImporter, AmazonBase):
     def import_url(
         self,
         url: str,
-        canonical_show: Show | None = None,
+        *,
+        known_title: bool = False,
     ) -> list[URLImportResult]:
         show_key = self._url_to_show_key(url)
         if shows := self._preload_show(show_key).all():
             return [result for show in shows for result in self._import_results(show)]
 
         _cache = self._download_show_files_and_children(show_key)
-        if canonical_show is None:
-            canonical_show = self.find_tmdb_show_record(show_key)
-            if shows := self._preload_show(show_key).all():
-                return [
-                    result for show in shows for result in self._import_results(show)
-                ]
-
         results: list[URLImportResult] = []
         for source in self.title_sources(show_key):
-            show = self.upsert_show(source, show_key, canonical_show)
-            # The title the first listing was found to be linked to is the title
-            # the rest of them are linked to too, so it is handed to them rather
-            # than searched for once for each way of watching the same title.
-            canonical_show = canonical_show or canonical_show_of(show)
+            show = self.upsert_show(source, show_key)
             results += self._import_results(show)
         return results

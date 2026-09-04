@@ -40,7 +40,6 @@ class StreamChannelerBase(WatchHistoryMixin, BasePlugin):
         self,
         source: Source,
         show_key: str,
-        canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> Show:

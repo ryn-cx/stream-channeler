@@ -51,23 +51,15 @@ class HuluSeriesImporter(BaseImporter, HuluSeries):
     def import_url(
         self,
         url: str,
-        canonical_show: Show | None = None,
+        *,
+        known_title: bool = False,
     ) -> list[URLImportResult]:
         show_key, episode_key = self._url_to_show_and_episode_keys(url)
         if show := self._preload_show(show_key).one_or_none():
             return self._import_results(show, episode_key)
 
         _cache = self._download_show_files_and_children(show_key)
-        if canonical_show is None:
-            canonical_show = self.find_tmdb_show_record(show_key)
-            if show := self._preload_show(show_key).one_or_none():
-                return self._import_results(show, episode_key)
-
-        show = self.upsert_show(
-            self._url_source(),
-            show_key,
-            canonical_show=canonical_show,
-        )
+        show = self.upsert_show(self._url_source(), show_key)
         return self._import_results(show, episode_key)
 
     # TODO: Validate
@@ -123,23 +115,24 @@ class HuluImporter(BaseImporter, MediaMixin):
     def import_url(
         self,
         url: str,
-        canonical_show: Show | None = None,
+        *,
+        known_title: bool = False,
     ) -> list[URLImportResult]:
         domain_regex = self._domain_regex()
         if re.match(domain_regex + SERIES_URL_REGEX, url):
-            return HuluSeriesImporter(self).import_url(url, canonical_show)
+            return HuluSeriesImporter(self).import_url(url)
 
         if re.match(domain_regex + MOVIE_URL_REGEX, url):
-            return HuluMovieImporter(self).import_url(url, canonical_show)
+            return HuluMovieImporter(self).import_url(url)
 
         if match := re.match(domain_regex + VIDEO_URL_REGEX, url):
             watch_redirect = self.watch_redirect_file(match.group("episode_key"))
             watch_redirect.download_if_outdated()
             location = watch_redirect.location()
             if location and re.search(SERIES_URL_REGEX, location):
-                return HuluSeriesImporter(self).import_url(url, canonical_show)
+                return HuluSeriesImporter(self).import_url(url)
             if location and re.search(MOVIE_URL_REGEX, location):
-                return HuluMovieImporter(self).import_url(url, canonical_show)
+                return HuluMovieImporter(self).import_url(url)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)

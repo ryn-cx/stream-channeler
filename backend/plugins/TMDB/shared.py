@@ -82,7 +82,7 @@ from plugins.TMDB.utils import (
     found_something,
     media_identifier,
     parse_media_identifier,
-    get_external_plugin,
+    get_media_plugin,
     poster_image_url,
     provider_names,
     release_year,
@@ -525,6 +525,31 @@ class TMDBShared(BasePlugin):
             search_file = self.search_multi_file(query)
         search_file.download_if_outdated()
         return search_file
+
+    # TODO: Validate
+    def first_search_result(
+        self,
+        name: str,
+        media_type: TMDBMediaType | None,
+        year: int | None,
+    ) -> tuple[TMDBMediaType, int] | None:
+        """Return which half the first title TMDB returns is from, and its id."""
+        if media_type is not None:
+            results = self.search_media(media_type, name, year).parsed().results
+            return (media_type, results[0].id) if results else None
+
+        # A search of both halves also returns people, who are no title and are
+        # passed over rather than taken as the first result.
+        for result in self.search_media(None, name, year).parsed().results:
+            # Which half of the catalogue a search of both says a result came
+            # from. A multi search also returns people, who are no title and
+            # cannot be imported.
+            half = {"movie": TMDBMediaType.movie, "tv": TMDBMediaType.tv}.get(
+                result.media_type,
+            )
+            if half is not None:
+                return half, result.id
+        return None
 
     # TODO: Validate
     def preload_episode_translations(
@@ -1035,18 +1060,6 @@ class TMDBShared(BasePlugin):
         raise ValueError(message)
 
     # TODO: Validate
-    @override
-    def upsert_source(self, source_key: str) -> Source:
-        source = Source.get_from_memory(self.session, self.plugin, source_key)
-        return Source(
-            key=source_key,
-            name=self.plugin_name(),
-            favicon_url=self.favicon_url(),
-            data_timestamp=self._existing_data_timestamp_or_now(source),
-            plugin_id=self.plugin.id,
-        ).upsert_and_set_update_at(self.plugin, source)
-
-    # TODO: Validate
     def _stored_title(self, source: Source, show_key: str) -> Show:
         """Return the row standing for this title, whatever wrote it.
 
@@ -1143,40 +1156,34 @@ class TMDBShared(BasePlugin):
     def _mark_changed_providers(
         self,
         show_key: str,
-        older: ProvidersFile,
-        newer: ProvidersFile,
+        old_providers_files: ProvidersFile,
+        new_providers_file: ProvidersFile,
     ) -> None:
-        changed = provider_names(older) ^ provider_names(newer)
-        if not changed:
-            return
-        self._mark_provider_records(show_key, changed, newer.data_timestamp())
+        changed_providers = provider_names(old_providers_files) ^ provider_names(
+            new_providers_file,
+        )
+        if changed_providers:
+            canonical_show = Show.get_one(self.session, self.source, show_key)
+            update_at = new_providers_file.data_timestamp()
+            for provider_name in changed_providers:
+                self._mark_changed_provider(canonical_show, provider_name, update_at)
 
     # TODO: Validate
-    def _mark_provider_records(
+    def _mark_changed_provider(
         self,
-        show_key: str,
-        provider_names: set[str],
+        canonical_show: Show,
+        provider_name: str,
         update_at: datetime,
     ) -> None:
-        plugin_keys = {
-            plugin_class.plugin_name()
-            for provider_name in provider_names
-            if (plugin_class := get_external_plugin(provider_name)) is not None
-        }
-        if not plugin_keys:
-            return
 
-        canonical_show = Show.get(self.session, self.source, show_key)
-        if canonical_show is None:
-            return
-
-        for link in canonical_show.non_canonical_shows:
-            listing = link.show
-            if listing.source.plugin.key not in plugin_keys:
-                continue
-            listing.set_update_at(update_at)
-            for season in listing.active_children:
-                season.set_update_at(update_at)
+        if plugin_class := get_media_plugin(provider_name):
+            for link in canonical_show.non_canonical_shows:
+                non_canonical_show = link.show
+                if non_canonical_show.source.plugin.key != plugin_class.plugin_name():
+                    continue
+                non_canonical_show.set_update_at(update_at)
+                for season in non_canonical_show.active_children:
+                    season.set_update_at(update_at)
 
     @classmethod
     @override

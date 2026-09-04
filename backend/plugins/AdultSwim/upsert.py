@@ -10,7 +10,6 @@ from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
-from app.shows.service.canonical import add_canonical_show_and_link_episodes
 from app.sources.models import Source
 from plugins.AdultSwim.files import FileMixin
 from plugins.AdultSwim.utils import UtilsMixin, source_requires_auth
@@ -41,7 +40,6 @@ class UpsertMixin(UtilsMixin, FileMixin):
         self,
         source: Source,
         show_key: str,
-        canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> Show:
@@ -72,7 +70,6 @@ class UpsertMixin(UtilsMixin, FileMixin):
         self._soft_delete_missing(show_key)
         self._set_weekly_updates_from_episodes(show)
 
-        add_canonical_show_and_link_episodes(self.session, show, canonical_show)
         return show
 
     # TODO: Validate

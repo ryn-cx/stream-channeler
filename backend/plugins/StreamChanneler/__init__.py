@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 import uuid
-from typing import TYPE_CHECKING, override
+from typing import override
 
 from plugins.StreamChanneler.base import StreamChannelerBase
 from plugins.StreamChanneler.files import FileMixin
@@ -22,12 +22,9 @@ from plugins.utils.abstract_plugin import (
     URLImportResult,
 )
 
-if TYPE_CHECKING:
-    from app.shows.models import Show
-
 
 # TODO: Validate
-class StreamChanneler(StreamChannelerBase, FileMixin, AbstractPlugin):
+class StreamChanneler(StreamChannelerBase, FileMixin, AbstractPlugin, enabled=False):
     initializer = StreamChannelerInitializer
 
     # TODO: Validate
@@ -54,8 +51,8 @@ class StreamChanneler(StreamChannelerBase, FileMixin, AbstractPlugin):
     def import_url(
         self,
         url: str,
-        canonical_show: Show | None = None,
         *,
+        known_title: bool = False,
         force: bool = False,
     ) -> list[URLImportResult]:
         return self.get_url_handler(url).import_results()

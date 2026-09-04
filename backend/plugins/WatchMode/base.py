@@ -32,7 +32,6 @@ class WatchModeBase(SourcesMixin):
         self,
         source: Source,
         show_key: str,
-        canonical_show: Show | None = None,
         *,
         force: bool = False,
     ) -> Show:

@@ -80,7 +80,8 @@ class AdultSwimImporter(BaseImporter, AdultSwimBase):
     def import_url(
         self,
         url: str,
-        canonical_show: Show | None = None,
+        *,
+        known_title: bool = False,
     ) -> list[URLImportResult]:
         show_key = self._url_to_show_key(url)
         shows = self._existing_shows(show_key)
@@ -91,15 +92,9 @@ class AdultSwimImporter(BaseImporter, AdultSwimBase):
             return self._results_for_shows(shows)
 
         _cache = self._download_show_files_and_children(show_key)
-        if canonical_show is None:
-            canonical_show = self.find_tmdb_show_record(show_key)
-            shows = self._existing_shows(show_key)
-            if shows:
-                return self._results_for_shows(shows)
-
         return self._results_for_shows(
             [
-                self.upsert_show(source, show_key, canonical_show)
+                self.upsert_show(source, show_key)
                 for source in self._sources.values()
             ],
         )

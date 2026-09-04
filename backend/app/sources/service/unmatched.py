@@ -5,15 +5,48 @@ import uuid
 
 from fastapi import HTTPException
 from sqlalchemy.orm import selectinload
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, delete, select
 
 from app.schemas import Message
 from app.shows.models import Show
+from app.shows.service.canonical import match_show_to_tmdb
 from app.sources.models import UnmatchedSource
 from app.sources.schemas import UnmatchedSourceImport, UnmatchedSourceOutput
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.manage_plugins import get_plugin_for_url
+
+
+# TODO: Validate
+def remove_unmatched_source(
+    session: Session,
+    show_id: uuid.UUID,
+    provider_name: str,
+) -> None:
+    result = session.exec(
+        delete(UnmatchedSource).where(
+            col(UnmatchedSource.show_id) == show_id,
+            col(UnmatchedSource.provider_name) == provider_name,
+        ),
+    )
+    if result.rowcount:
+        session.commit()
+
+
+# TODO: Validate
+def remove_plugin_unmatched_sources(
+    session: Session,
+    show_id: uuid.UUID,
+    plugin_key: str,
+) -> None:
+    result = session.exec(
+        delete(UnmatchedSource).where(
+            col(UnmatchedSource.show_id) == show_id,
+            col(UnmatchedSource.plugin_key) == plugin_key,
+        ),
+    )
+    if result.rowcount:
+        session.commit()
 
 
 # TODO: Validate
@@ -29,48 +62,6 @@ def _unmatched_source_output(
         show_id=unmatched_source.show_id,
         show_name=unmatched_source.show.name,
     )
-
-
-# TODO: Validate
-def upsert_unmatched_source(
-    session: Session,
-    show_id: uuid.UUID,
-    provider_name: str,
-    plugin_key: str | None,
-) -> None:
-    statement = select(UnmatchedSource).where(
-        UnmatchedSource.show_id == show_id,
-        UnmatchedSource.provider_name == provider_name,
-    )
-    if session.exec(statement).one_or_none() is not None:
-        return
-
-    session.add(
-        UnmatchedSource(
-            show_id=show_id,
-            provider_name=provider_name,
-            plugin_key=plugin_key,
-        ),
-    )
-    session.commit()
-
-
-# TODO: Validate
-def clear_unmatched_source(
-    session: Session,
-    show_id: uuid.UUID,
-    provider_name: str,
-) -> None:
-    statement = select(UnmatchedSource).where(
-        UnmatchedSource.show_id == show_id,
-        UnmatchedSource.provider_name == provider_name,
-    )
-    unmatched_source = session.exec(statement).one_or_none()
-    if unmatched_source is None:
-        return
-
-    session.delete(unmatched_source)
-    session.commit()
 
 
 # TODO: Validate
@@ -106,10 +97,14 @@ def import_unmatched_source(
     if show is None:
         raise HTTPException(status_code=404, detail="Show not found")
 
+    plugin_instance = plugin_class(session)
     try:
-        plugin_class(session).import_url(url, show)
+        results = plugin_instance.import_url(url, known_title=True)
     except InvalidURLError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
+
+    for imported_show in plugin_instance.imported_shows(results):
+        match_show_to_tmdb(session, imported_show, show)
 
     session.delete(unmatched_source)
     session.commit()

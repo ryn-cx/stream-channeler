@@ -7,6 +7,10 @@ from typing import override
 from sqlmodel import Session
 
 from app.shows.models import Show
+from app.shows.service.canonical import (
+    match_imported_shows_to_tmdb,
+    match_show_to_tmdb,
+)
 from plugins.TMDB import TMDB
 from plugins.Tubi import Tubi
 from tests.plugins.frozen_clock import frozen_clock
@@ -145,7 +149,9 @@ class TestSupermanRelinkedTubi(TMDBValidatorAlt):
     # TODO: Validate
     @override
     def _initialize_extra_files(self, session: Session) -> None:
-        Tubi(session).import_url(self.relinked_url)
+        tubi = Tubi(session)
+        results = tubi.import_url(self.relinked_url)
+        match_imported_shows_to_tmdb(session, tubi, tubi.imported_shows(results))
 
     # TODO: Validate
     def shows_of(self, session: Session, plugin_key: str) -> list[Show]:
@@ -171,7 +177,10 @@ class TestSupermanRelinkedTubi(TMDBValidatorAlt):
         session_with_files.expire_all()
 
         with frozen_clock(self.import_time):
-            Tubi(session_with_files).import_url(self.relinked_url, tmdb_show)
+            tubi = Tubi(session_with_files)
+            results = tubi.import_url(self.relinked_url, known_title=True)
+            for imported_show in tubi.imported_shows(results):
+                match_show_to_tmdb(session_with_files, imported_show, tmdb_show)
         session_with_files.flush()
         session_with_files.expire_all()
 

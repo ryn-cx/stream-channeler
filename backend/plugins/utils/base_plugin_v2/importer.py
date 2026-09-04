@@ -33,23 +33,15 @@ class BaseImporter(BasePluginWorker, BaseReadURL, ABC):
     def import_url(
         self,
         url: str,
-        canonical_show: Show | None = None,
+        *,
+        known_title: bool = False,  # noqa: ARG002
     ) -> list[URLImportResult]:
         show_key = self._url_to_show_key(url)
         if show := self._preload_show(show_key).one_or_none():
             return self._import_results(show)
 
         _cache = self._download_show_files_and_children(show_key)
-        if canonical_show is None:
-            canonical_show = self.find_tmdb_show_record(show_key)
-            if show := self._preload_show(show_key).one_or_none():
-                return self._import_results(show)
-
-        show = self.upsert_show(
-            self._url_source(),
-            show_key,
-            canonical_show=canonical_show,
-        )
+        show = self.upsert_show(self._url_source(), show_key)
         return self._import_results(show)
 
     # TODO: Validate

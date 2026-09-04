@@ -19,6 +19,7 @@ from app.users.models import User
 from app.users.service.accounts import get_or_create_plugin_user
 from plugins.utils.abstract_plugin import (
     InvalidURLError,
+    MediaNotFoundError,
     URLImportResult,
 )
 from plugins.utils.base_plugin_v3.files import BaseFile
@@ -88,13 +89,6 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         raise NotImplementedError(msg)
 
     # TODO: Validate
-    def find_tmdb_show_record(self, show_key: str) -> Show | None:
-        title, media_type, year = self.tmdb_lookup_info(show_key)
-        from plugins.TMDB import TMDB  # noqa: PLC0415
-
-        return TMDB(self.session).import_search(title, media_type, year)
-
-    # TODO: Validate
     @classmethod
     def initialize_plugin(cls, session: Session) -> None:
         cls.initializer.initialize_plugin(session)
@@ -108,9 +102,38 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
     def import_url(
         self,
         url: str,
-        canonical_show: Show | None = None,
+        *,
+        known_title: bool = False,
     ) -> list[URLImportResult]:
-        return self.importer(self).import_url(url, canonical_show)
+        return self.importer(self).import_url(url, known_title=known_title)
+
+    # TODO: Validate
+    def import_by_name(
+        self,
+        names: list[str],
+        media_type: TMDBMediaType,
+        year: int | None = None,
+    ) -> list[URLImportResult]:
+        url = self.search_for_url(names, media_type, year)
+        if url is None:
+            msg = (
+                f"Could not find {media_type.value} named {names[0]} on "
+                f"{self.plugin_name()}."
+            )
+            raise MediaNotFoundError(msg)
+        return self.import_url(url)
+
+    # TODO: Validate
+    def update_show(self, show: Show, *, force: bool = False) -> None:
+        self.importer(self).update_show(show, force=force)
+
+    # TODO: Validate
+    def update_season(self, season: Season) -> None:
+        self.importer(self).update_season(season)
+
+    # TODO: Validate
+    def update_episode(self, episode: Episode) -> None:
+        self.importer(self).update_episode(episode)
 
     # TODO: Validate
     def on_update_show_failure(self, show: Show, error: Exception) -> None:
