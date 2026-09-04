@@ -20,6 +20,7 @@ from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import BaseFile
+from plugins.utils.base_plugin_v3.files import BaseFile as BaseFileV3
 from plugins.utils.manage_plugins import import_plugins
 
 IMPORT_TIME = datetime(2026, 1, 1, tzinfo=UTC)
@@ -326,7 +327,10 @@ def serve_downloads_from_disk() -> Generator[list[str]]:
         # so a run that fails part way through still says what it downloaded.
         logger.info(f"Stored {self.file_key()}")
 
-    with patch.object(BaseFile, "download_if_outdated", _download_if_outdated):
+    with (
+        patch.object(BaseFile, "download_if_outdated", _download_if_outdated),
+        patch.object(BaseFileV3, "download_if_outdated", _download_if_outdated),
+    ):
         yield downloaded
 
     if unstorable:
@@ -428,5 +432,8 @@ def mock_update() -> Generator[None]:
         logger.debug(f"Mock Updating {record.key}")
         record.data_timestamp += timedelta(minutes=1)
 
-    with patch.object(BaseFile, "download_if_outdated", _mock):
+    with (
+        patch.object(BaseFile, "download_if_outdated", _mock),
+        patch.object(BaseFileV3, "download_if_outdated", _mock),
+    ):
         yield

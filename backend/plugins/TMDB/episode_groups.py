@@ -29,8 +29,6 @@ from app.sources.models import Source
 
 # TODO: Validate
 class TmdbShowExtra(BaseModel):
-    """What TMDB keeps about a title beyond the columns of the row."""
-
     tmdb_episode_group_id: str | None = None
 
 

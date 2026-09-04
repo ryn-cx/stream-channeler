@@ -1,4 +1,5 @@
 # TODO: Validate
+from datetime import datetime
 from typing import override
 
 from tminidb.tv_episode_group.details.models import TvEpisodeGroupDetailsModel
@@ -27,15 +28,23 @@ class SeasonsMixin(FileMixin):
     """
 
     # TODO: Validate
-    def _chosen_group(self, show_key: str) -> TvEpisodeGroupDetailsModel | None:
+    def _chosen_group(
+        self,
+        show_key: str,
+        update_at: datetime | None = None,
+    ) -> TvEpisodeGroupDetailsModel | None:
         group_id = show_chosen_group_id(self.session, self.source, show_key)
         if group_id is None:
             return None
-        return self.tv_episode_groups_details_file(group_id).parsed()
+        return self.tv_episode_groups_details_file(group_id).parsed(update_at)
 
     # TODO: Validate
     @override
-    def series_seasons(self, show_key: str) -> list[SeasonSource]:
+    def series_seasons(
+        self,
+        show_key: str,
+        update_at: datetime | None = None,
+    ) -> list[SeasonSource]:
         """Return the seasons of a series, in whichever order it is read in.
 
         A chosen order replaces the title's own outright: its groups are the
@@ -45,7 +54,7 @@ class SeasonsMixin(FileMixin):
         and a title changing order moves its episodes rather than replacing them.
         """
         _, tmdb_id = get_media_type_and_tmdb_id(show_key)
-        group = self._chosen_group(show_key)
+        group = self._chosen_group(show_key, update_at)
         if group is not None:
             return [
                 SeasonSource(
@@ -72,19 +81,16 @@ class SeasonsMixin(FileMixin):
             ]
 
         seasons: list[SeasonSource] = []
-        for season in self.tv_series_details_file(tmdb_id).parsed().seasons:
-            season_file = self.tv_seasons_details_file(tmdb_id, season.season_number)
-            # Downloaded here rather than left to the caller for the same reason
-            # the orders are: what says which seasons a title has is the title's
-            # own file, so nothing can name a season file before that has been
-            # read, and a title being imported for the first time has none of
-            # them stored to be read out of.
-            season_file.download_if_outdated()
+        details = self.tv_series_details_file(tmdb_id).parsed(update_at)
+        for season in details.seasons:
             # A season the title lists but TMDB has no detail for is stored
             # empty, and an empty file has nothing to read a season out of.
-            if not season_file.database_record.content:
+            detail = self.tv_seasons_details_file(
+                tmdb_id,
+                season.season_number,
+            ).parsed_or_none(update_at)
+            if detail is None:
                 continue
-            detail = season_file.parsed()
             seasons.append(
                 SeasonSource(
                     key=tmdb_season_key(TMDBMediaType.tv, season.id),

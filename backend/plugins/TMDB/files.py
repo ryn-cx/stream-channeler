@@ -10,7 +10,7 @@ from typing import (
 
 from sqlmodel import Session
 from tminidb import TMiniDB
-from tminidb.exceptions import ResourceNotFoundError
+from tminidb.exceptions import ResourceNotFoundError, SeasonChangesNotFoundError
 from tminidb.movie.details import MovieDetails as MovieEndpoint
 from tminidb.movie.details.models import MovieDetailsModel
 from tminidb.movie.translations import (
@@ -37,6 +37,8 @@ from tminidb.tv_episode_group.details import (
     TvEpisodeGroupDetails as TvEpisodeGroupEndpoint,
 )
 from tminidb.tv_episode_group.details.models import TvEpisodeGroupDetailsModel
+from tminidb.tv_season.changes import TvSeasonChanges as TvSeasonChangesEndpoint
+from tminidb.tv_season.changes.models import TvSeasonChangesModel
 from tminidb.tv_season.details import TvSeasonDetails as TvSeasonEndpoint
 from tminidb.tv_season.details.models import TvSeasonDetailsModel
 from tminidb.tv_season.watch_providers import (
@@ -67,9 +69,13 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.TMDB.episode_groups import show_chosen_group_id
-from plugins.TMDB.keys import get_media_type_and_tmdb_id
+from plugins.TMDB.keys import (
+    get_media_type_and_tmdb_id,
+    parse_episode_key,
+    parse_season_key,
+)
 from plugins.TMDB.utils import SeasonSource, UtilsMixin
-from plugins.utils.base_plugin_v2.files import (
+from plugins.utils.base_plugin_v3.files import (
     BaseFile,
     EndpointFile,
     IntegerEndpointFile,
@@ -357,6 +363,53 @@ class _TVSeriesChanges(EndpointFile[TvSeriesChangesModel]):
         )
 
 
+class _TVSeasonsChanges(EndpointFile[TvSeasonChangesModel]):
+    custom_class_key = "TV Seasons/Changes"
+
+    @override
+    def _endpoint(self) -> TvSeasonChangesEndpoint:
+        return tminidb().tv_season.changes
+
+    def __init__(
+        self,
+        session: Session,
+        plugin: Plugin,
+        season_tmdb_id: int,
+        changed_on: date,
+    ) -> None:
+        self.season_tmdb_id = season_tmdb_id
+        self.changed_on = changed_on
+        super().__init__(
+            session,
+            plugin,
+            f"{season_tmdb_id}/{changed_on.isoformat()}",
+        )
+
+    @override
+    def _download_file(self) -> str:
+        return self._endpoint().download(
+            self.season_tmdb_id,
+            start_date=self.changed_on,
+            end_date=self.changed_on,
+        )
+
+    @override
+    def _next_update_at(self) -> datetime | None:
+        # A day that is not over can still take more changes, so the file asks to
+        # be read again once it is. A day already over takes no more.
+        if self.changed_on < tz_datetime.now().date():
+            return None
+        return tz_datetime.combine(
+            self.changed_on + timedelta(days=1),
+            datetime.min.time(),
+        )
+
+    # Occurs when TMDB keeps no change log for the season.
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, SeasonChangesNotFoundError)
+
+
 class _SearchMulti(EndpointFile[SearchMultiModel]):
     custom_class_key = "Search/Multi"
 
@@ -496,6 +549,39 @@ class FileMixin(UtilsMixin):
             downloaded_to,
         )
 
+    @overload
+    def tv_seasons_changes_file(
+        self,
+        season_key: str,
+        changed_on: date,
+    ) -> _TVSeasonsChanges: ...
+    @overload
+    def tv_seasons_changes_file(self, season_key: File) -> _TVSeasonsChanges: ...
+    def tv_seasons_changes_file(
+        self,
+        season_key: str | File,
+        changed_on: date | None = None,
+    ) -> _TVSeasonsChanges:
+        if isinstance(season_key, File):
+            identifier = _TVSeasonsChanges.file_to_unique_identifier(season_key)
+            season_tmdb_id_str, changed_on_str = identifier.split("/")
+            season_tmdb_id = int(season_tmdb_id_str)
+            changed_on = date.fromisoformat(changed_on_str)
+        else:
+            _, season_tmdb_id = parse_season_key(season_key)
+        return self._file(_TVSeasonsChanges, season_tmdb_id, changed_on)
+
+    def incomplete_tv_seasons_changes_files(
+        self,
+        season_key: str,
+    ) -> list[_TVSeasonsChanges]:
+        _, season_tmdb_id = parse_season_key(season_key)
+        return self.get_incomplete_files(
+            _TVSeasonsChanges,
+            self.tv_seasons_changes_file,
+            key_prefix=f"{season_tmdb_id}/",
+        )
+
     def incomplete_tv_series_changes_files(
         self,
         show_key: str,
@@ -506,23 +592,6 @@ class FileMixin(UtilsMixin):
             self.tv_series_changes_file,
             key_prefix=f"{tmdb_id}/",
         )
-
-    def tv_episodes_translations_files(
-        self,
-        tmdb_show_id: int,
-    ) -> list[_TVEpisodesTranslations]:
-        files: list[_TVEpisodesTranslations] = []
-        for file in self.files_with_prefix(_TVEpisodesTranslations, f"{tmdb_show_id}/"):
-            identifier = _TVEpisodesTranslations.file_to_unique_identifier(file)
-            _, season_number, episode_number = identifier.split("/")
-            files.append(
-                self.tv_episodes_translations_file(
-                    tmdb_show_id,
-                    int(season_number),
-                    int(episode_number),
-                ),
-            )
-        return files
 
     def tv_series_images_file(self, tmdb_id: int) -> _TVSeriesImages:
         return self._file(_TVSeriesImages, tmdb_id)
@@ -706,7 +775,11 @@ class FileMixin(UtilsMixin):
         return self.latest_tv_series_watch_providers_file(tmdb_id)
 
     # TODO: Validate
-    def series_seasons(self, show_key: str) -> list[SeasonSource]:
+    def series_seasons(
+        self,
+        show_key: str,
+        update_at: datetime | None = None,
+    ) -> list[SeasonSource]:
         msg = "This plugin does not have series seasons."
         raise NotImplementedError(msg)
 
@@ -752,10 +825,8 @@ class SeriesFileMixin(FileMixin):
         _, tmdb_id = get_media_type_and_tmdb_id(show_key)
         show = Show.get(self.session, self.source, show_key)
         groups_file = self.tv_series_episode_groups_file(tmdb_id)
-        groups_file.download_if_outdated()
-        options = (
-            groups_file.parsed().results if groups_file.database_record.content else []
-        )
+        groups = groups_file.parsed_or_none()
+        options = groups.results if groups else []
         return [
             self.latest_tv_series_changes_file(show_key),
             self.tv_series_details_file(tmdb_id),
@@ -798,7 +869,26 @@ class SeriesFileMixin(FileMixin):
         season_key: str,
         show_key: str,
     ) -> Sequence[BaseFile[Any]]:
-        return self._season_detail_files(season_key, show_key)
+        _, tmdb_id = get_media_type_and_tmdb_id(show_key)
+        _, episode_tmdb_id = parse_episode_key(episode_key)
+        files: list[BaseFile[Any]] = [
+            # Contains all of the episode information except for translations.
+            *self._season_detail_files(season_key, show_key),
+        ]
+        for season in self.series_seasons(show_key):
+            if season.key != season_key:
+                continue
+            for episode in season.episodes:
+                if episode.id != episode_tmdb_id:
+                    continue
+                files.append(
+                    self.tv_episodes_translations_file(
+                        tmdb_id,
+                        episode.native_season_number,
+                        episode.native_episode_number,
+                    ),
+                )
+        return files
 
     # TODO: Validate
     def _season_detail_files(

@@ -9,7 +9,7 @@ from app.shows.models import Show
 from plugins.TMDB.keys import get_media_type_and_tmdb_id
 from plugins.TMDB.media_info import plugin_for_tmdb_name, streaming_providers
 from plugins.TMDB.upsert import UpsertMixin
-from plugins.utils.base_plugin_v2.files import (
+from plugins.utils.base_plugin_v3.files import (
     COMPLETED_STATUS,
 )
 
@@ -87,7 +87,7 @@ class WatchProviderSyncMixin(UpsertMixin):
         changed = _provider_names(older) ^ _provider_names(newer)
         if not changed:
             return
-        self._mark_provider_records(show_key, changed, newer.data_timestamp)
+        self._mark_provider_records(show_key, changed, newer.data_timestamp())
 
     # TODO: Validate
     def _mark_provider_records(
@@ -119,6 +119,7 @@ class WatchProviderSyncMixin(UpsertMixin):
 
 # TODO: Validate
 def _provider_names(file: ProvidersFile) -> set[str]:
-    if not file.database_record.content:
-        return set()
-    return {provider.provider_name for provider in streaming_providers(file.parsed())}
+    return {
+        provider.provider_name
+        for provider in streaming_providers(file.parsed_or_none())
+    }

@@ -23,7 +23,7 @@ from plugins.utils.abstract_plugin import (
     InvalidURLError,
     URLImportResult,
 )
-from plugins.utils.base_plugin_v2.importer import BaseImporter
+from plugins.utils.base_plugin_v3.importer import BaseImporter
 
 # from plugins.WatchMode import WatchMode  # noqa: ERA001
 
@@ -59,7 +59,6 @@ class TMDBTitleImporter(BaseImporter, TMDBMedia, ABC):
         ).one_or_none()
 
         if not existing_show:
-            _cache = self._download_show_files_and_children(show_key)
             existing_show = self.upsert_show(self.source, show_key)
             self._import_media_from_other_websites(show_key, existing_show)
 

@@ -23,6 +23,27 @@ from tests.app.sources.utils import create_random_source
 
 
 # TODO: Validate
+def _sync_show_providers(
+    session: Session,
+    show_key: str,
+    *stored: File,
+) -> None:
+    """Sync the show's providers, then read the `stored` rows back.
+
+    A plugin reads and writes its files through a session of its own, so the row
+    a test put in place and the row the sync wrote to are two objects standing
+    for the same record. The sync's writes are pushed out and the test's objects
+    are dropped, so reading one asks the database rather than answering with what
+    the test set.
+    """
+    plugin = TMDB(session)
+    plugin.sync_show_watch_providers(show_key)
+    plugin.file_session.flush()
+    for record in stored:
+        session.expire(record)
+
+
+# TODO: Validate
 def _providers_body(tmdb_id: int, provider_names: list[str]) -> str:
     return json.dumps(
         {
@@ -527,7 +548,13 @@ class TestWatchProvidersFileStatus:
             tz_datetime.now(),
         )
 
-        TMDB(function_scoped_session).sync_show_watch_providers(canonical_show.key)
+        _sync_show_providers(
+            function_scoped_session,
+            canonical_show.key,
+            oldest,
+            middle,
+            newest,
+        )
 
         assert oldest.status == COMPLETED_STATUS
         assert middle.status == COMPLETED_STATUS
@@ -586,7 +613,7 @@ class TestWatchProvidersFileStatus:
             tz_datetime.now(),
         )
 
-        TMDB(function_scoped_session).sync_show_watch_providers(canonical_show.key)
+        _sync_show_providers(function_scoped_session, canonical_show.key, only)
 
         assert only.status == "Incomplete"
 
@@ -814,7 +841,12 @@ class TestWatchProvidersFileSchedule:
             tz_datetime.now() + timedelta(days=20),
         )
 
-        TMDB(function_scoped_session).sync_show_watch_providers(canonical_show.key)
+        _sync_show_providers(
+            function_scoped_session,
+            canonical_show.key,
+            older,
+            newer,
+        )
 
         assert older.update_at is None
         assert newer.update_at is not None

@@ -45,7 +45,6 @@ from plugins.utils.abstract_plugin import (
     PluginMediaInfo,
     PluginWatchProviderItem,
 )
-from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.manage_plugins import sorted_plugins
 
 type WatchProviders = (
@@ -85,10 +84,7 @@ class MediaInfoMixin(LookupMixin):
     def media_info(self, media_identifier: str) -> PluginMediaInfo | None:
         media_type, tmdb_id = parse_media_identifier(media_identifier)
         detail_file = self.media_detail_file(media_type, tmdb_id)
-        detail_file.download_if_outdated()
-        providers_file = self.watch_providers_file(media_type, tmdb_id)
-        providers_file.download_if_outdated()
-        providers = providers_file.parsed()
+        providers = self.watch_providers_file(media_type, tmdb_id).parsed()
         # Which of the two shapes the detail is has to be read off the file rather
         # than the parsed model, because a model whose module was reloaded after a
         # schema change is no longer an instance of the class imported here.
@@ -167,10 +163,11 @@ def streaming_providers(
 
 # TODO: Validate
 def plugin_for_tmdb_name(provider_name: str) -> type[AbstractPlugin] | None:
+    # Asked of the class itself rather than of a base it inherits, because the
+    # plugins sit across two base versions and a name is answered by either.
     for plugin_class in sorted_plugins():
-        if issubclass(plugin_class, BasePlugin) and plugin_class.matches_tmdb_provider(
-            provider_name,
-        ):
+        matches = getattr(plugin_class, "matches_tmdb_provider", None)
+        if matches is not None and matches(provider_name):
             return plugin_class
     return None
 

@@ -9,6 +9,7 @@ from loguru import logger
 
 from app.config import settings
 from plugins.utils.base_plugin_v2.files import BaseFile
+from plugins.utils.base_plugin_v3.files import BaseFile as BaseFileV3
 
 
 # TODO: Validate
@@ -44,5 +45,8 @@ def serve_downloads_from_test_files() -> Generator[None]:
         self.write(path.read_text(encoding="utf-8") or None)
         restore_stored_metadata(self.database_record, _owner_key(self), path)
 
-    with patch.object(BaseFile, "download_if_outdated", _download_if_outdated):
+    with (
+        patch.object(BaseFile, "download_if_outdated", _download_if_outdated),
+        patch.object(BaseFileV3, "download_if_outdated", _download_if_outdated),
+    ):
         yield

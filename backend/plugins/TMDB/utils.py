@@ -13,8 +13,8 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
-from plugins.utils.base_plugin_v2.base import BasePlugin
-from plugins.utils.base_plugin_v2.files import BaseFile
+from plugins.utils.base_plugin_v3.base import BasePlugin
+from plugins.utils.base_plugin_v3.files import BaseFile
 
 if TYPE_CHECKING:
     from plugins.TMDB.lookup import LookupMixin
@@ -82,11 +82,6 @@ def air_datetime(air_date: str | date | None) -> datetime | None:
     if isinstance(air_date, str):
         air_date = date.fromisoformat(air_date)
     return tz_datetime.combine(air_date, datetime.min.time())
-
-
-# TODO: Validate
-def change_datetime(changed_at: str) -> datetime:
-    return tz_datetime.fromisoformat(changed_at.replace(" UTC", "+00:00"))
 
 
 # TODO: Validate

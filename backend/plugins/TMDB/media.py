@@ -9,9 +9,11 @@ from plugins.TMDB.keys import get_media_type_and_tmdb_id
 from plugins.TMDB.listed_sources import ListedSourcesMixin
 from plugins.TMDB.update import SeriesUpdateMixin
 from plugins.TMDB.upsert import MovieUpsertMixin
-from plugins.utils.base_plugin_v2.importer import BasePluginWorker
+from plugins.utils.base_plugin_v3.importer import BasePluginWorker
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
     from app.episodes.models import Episode
     from app.seasons.models import Season
     from app.shows.models import Show
@@ -49,6 +51,7 @@ class MediaMixin(ListedSourcesMixin):
         source: Source,
         show_key: str,
         canonical_show: Show | None = None,
+        update_at: datetime | None = None,
         *,
         force: bool = False,
     ) -> Show:
@@ -56,6 +59,7 @@ class MediaMixin(ListedSourcesMixin):
             source,
             show_key,
             canonical_show,
+            update_at,
             force=force,
         )
 

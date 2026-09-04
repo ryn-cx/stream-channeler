@@ -88,9 +88,7 @@ class SearchMixin(LookupMixin):
 
     # TODO: Validate
     def _multi_search_page(self, query: str, page: int) -> SearchMultiModel:
-        search_file = self.search_multi_file(query, page)
-        search_file.download_if_outdated()
-        return search_file.parsed()
+        return self.search_multi_file(query, page).parsed()
 
     # TODO: Validate
     def _search_result(self, result: MultiResult) -> PluginSearchResult:
