@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from datetime import datetime
 
 from app.episodes.models import Episode
@@ -71,7 +71,6 @@ class BaseUpsertMixin(BasePluginCore, BaseOutdatedCheckMixin, ABC):
         return episode.upsert_and_set_update_at(season, existing_episode)
 
     # TODO: Validate
-    @abstractmethod
     def upsert_show(
         self,
         source: Source,
@@ -98,6 +97,13 @@ class BaseUpsertMixin(BasePluginCore, BaseOutdatedCheckMixin, ABC):
         which is what an import handing a title from one plugin to another knows
         and nothing else does.
         """
+        # Not an abstractmethod, because a plugin that reads a title as one of
+        # several kinds writes each kind on its own and has nothing to write for
+        # a title it has not been told the kind of. Such a plugin is still a
+        # plugin, so what it cannot answer is raised when asked rather than kept
+        # from being built at all.
+        msg = f"{self.plugin_name()} does not upsert shows."
+        raise NotImplementedError(msg)
 
     # TODO: Validate
     def upsert_source(self, source_key: str) -> Source:

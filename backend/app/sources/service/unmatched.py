@@ -32,7 +32,7 @@ def _unmatched_source_output(
 
 
 # TODO: Validate
-def record_unmatched_source(
+def upsert_unmatched_source(
     session: Session,
     show_id: uuid.UUID,
     provider_name: str,

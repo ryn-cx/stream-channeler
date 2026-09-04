@@ -14,6 +14,7 @@ from app.media.media_type import TMDBMediaType
 from app.models import Visibility
 from app.seasons.models import Season
 from app.shows.models import Show
+from app.sources.models import Source
 from app.users.models import User
 from app.users.service.accounts import get_or_create_plugin_user
 from plugins.utils.abstract_plugin import (
@@ -28,6 +29,11 @@ from plugins.utils.base_plugin_v3.url import BaseURLMixin
 # TODO: Validate
 class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
     __plugin_channels: tuple[User, dict[str, Channel]] | None = None
+
+    # TODO: Validate
+    @property
+    def source(self) -> Source:
+        return self._sources[self.plugin_name()]
 
     # TODO: Validate
     def add_urls_to_plugin_channel(

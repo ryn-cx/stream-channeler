@@ -14,7 +14,7 @@ from app.shows.models import Show, ShowCanonicalShow
 from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.TMDB import TMDB
-from plugins.TMDB.files import _TVSeasonsWatchProviders, _TVSeriesWatchProviders
+from plugins.TMDB.files import TVSeasonsWatchProviders, TVSeriesWatchProviders
 from plugins.utils.base_plugin_v2.files import COMPLETED_STATUS
 from tests.app.plugins.utils import create_random_plugin
 from tests.app.seasons.utils import create_random_season
@@ -101,7 +101,7 @@ def _store_show_providers(  # noqa: PLR0913
     return _store_file(
         session,
         plugin,
-        _TVSeriesWatchProviders(session, plugin, tmdb_id, downloaded_at).file_key(),
+        TVSeriesWatchProviders(session, plugin, tmdb_id, downloaded_at).file_key(),
         _providers_body(tmdb_id, provider_names),
         data_timestamp,
         update_at,
@@ -122,7 +122,7 @@ def _store_season_providers(  # noqa: PLR0913
     return _store_file(
         session,
         plugin,
-        _TVSeasonsWatchProviders(
+        TVSeasonsWatchProviders(
             session,
             plugin,
             tmdb_id,
@@ -626,7 +626,7 @@ class TestWatchProvidersFileKeys:
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
     ) -> None:
-        file = _TVSeriesWatchProviders(
+        file = TVSeriesWatchProviders(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -640,7 +640,7 @@ class TestWatchProvidersFileKeys:
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
     ) -> None:
-        file = _TVSeasonsWatchProviders(
+        file = TVSeasonsWatchProviders(
             function_scoped_session,
             tmdb_plugin,
             1399,

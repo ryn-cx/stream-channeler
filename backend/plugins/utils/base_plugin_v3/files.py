@@ -79,9 +79,7 @@ class BaseFile[T](ABC):
         """
         record = self._existing_database_record
         if record is None:
-            msg = (
-                f"{self.class_key()}/{self.file_key()} has not been downloaded."
-            )
+            msg = f"{self.class_key()}/{self.file_key()} has not been downloaded."
             raise ValueError(msg)
         return record
 
@@ -144,7 +142,10 @@ class BaseFile[T](ABC):
     # TODO: Validate
     @classmethod
     def file_to_unique_identifier(cls, file: File) -> str:
-        """Convert File.key to the value that uniquely identifies this file."""
+        """Return the unique identifier for a file.
+
+        The unique identifier is the `File.key` without the class prefix and without the
+        file type extension."""
         return file.key.removeprefix(f"{cls.class_key()}/").removesuffix(
             cls._identifier_suffix(),
         )
