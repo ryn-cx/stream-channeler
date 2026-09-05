@@ -10,7 +10,7 @@ from plugins.YouTube.files import (
     is_show_season_key,
     is_video_key,
 )
-from tests.plugins.plugin_validator_alt import PluginValidatorAlt, StandardTestsAlt
+from tests.plugins.plugin_validator import PluginValidator, StandardTests
 
 
 # TODO: Validate
@@ -28,7 +28,7 @@ def _reads_a_feed(season_key: str) -> bool:
 
 
 # TODO: Validate
-class YouTubeValidatorAlt(PluginValidatorAlt[YouTube]):
+class YouTubeValidator(PluginValidator[YouTube]):
     """Validate all YouTube content."""
 
     channel_key: str
@@ -56,7 +56,7 @@ class YouTubeValidatorAlt(PluginValidatorAlt[YouTube]):
 
 
 # TODO: Validate
-class ChannelValidatorAlt(YouTubeValidatorAlt):
+class ChannelValidator(YouTubeValidator):
     urls = (
         "youtube.com/@{channel_name}",
         "youtube.com/channel/{channel_key}",
@@ -73,15 +73,15 @@ class ChannelValidatorAlt(YouTubeValidatorAlt):
 # zoo", so the one video is an episode of two seasons.
 # TODO: Validate
 class TestChannelWithVideoInMultiplePlaylists(
-    StandardTestsAlt[YouTube],
-    ChannelValidatorAlt,
+    StandardTests[YouTube],
+    ChannelValidator,
 ):
     channel_key = "UC4QobU6STFB0P71PMvOGN5A"
     channel_name = "jawed"
 
 
 # TODO: Validate
-class SystemHubChannelValidatorAlt(YouTubeValidatorAlt):
+class SystemHubChannelValidator(YouTubeValidator):
     urls = (
         "youtube.com/channel/{channel_key}",
         "youtube.com/channel/{channel_key}/videos",
@@ -89,20 +89,20 @@ class SystemHubChannelValidatorAlt(YouTubeValidatorAlt):
 
 
 # TODO: Validate
-class TestSystemHubChannel(StandardTestsAlt[YouTube], SystemHubChannelValidatorAlt):
+class TestSystemHubChannel(StandardTests[YouTube], SystemHubChannelValidator):
     channel_key = "UClgRkhTL3_hImCAmdLfDE4g"
 
 
 # TODO: Validate
 class TestMusicSystemHubChannel(
-    StandardTestsAlt[YouTube],
-    SystemHubChannelValidatorAlt,
+    StandardTests[YouTube],
+    SystemHubChannelValidator,
 ):
     channel_key = "UC-9-kyTW8ZkZNDHQJ6FgpwQ"
 
 
 # TODO: Validate
-class PlaylistValidatorAlt(YouTubeValidatorAlt):
+class PlaylistValidator(YouTubeValidator):
     urls = ("youtube.com/playlist?list={playlist_key}",)
 
 
@@ -110,7 +110,7 @@ class PlaylistValidatorAlt(YouTubeValidatorAlt):
 # listing of its own. This is the same playlist the channel test reaches through
 # the channel, asked for the other way around.
 # TODO: Validate
-class TestChannelPlaylist(StandardTestsAlt[YouTube], PlaylistValidatorAlt):
+class TestChannelPlaylist(StandardTests[YouTube], PlaylistValidator):
     playlist_key = "PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh"
 
 
@@ -119,7 +119,7 @@ class TestChannelPlaylist(StandardTestsAlt[YouTube], PlaylistValidatorAlt):
 # channel that is not a Topic lists far more than music, so the release is a
 # show of its own instead of a season of the channel that published it.
 # TODO: Validate
-class TestMusicAlbumPlaylist(StandardTestsAlt[YouTube], PlaylistValidatorAlt):
+class TestMusicAlbumPlaylist(StandardTests[YouTube], PlaylistValidator):
     playlist_key = "OLAK5uy_mKcftf5tOvVhq-CsutohYLKrB1l8PqCG8"
 
 
@@ -127,7 +127,7 @@ class TestMusicAlbumPlaylist(StandardTestsAlt[YouTube], PlaylistValidatorAlt):
 # and is not the key the show's page is served at, so the URL names the show only
 # by way of the listing it asks for.
 # TODO: Validate
-class TestShowPlaylistURL(StandardTestsAlt[YouTube], PlaylistValidatorAlt):
+class TestShowPlaylistURL(StandardTests[YouTube], PlaylistValidator):
     playlist_key = "TVSHX2-tv9KBHSAWLsDbH3h9vNzwxEAyyqXMw"
 
 
@@ -135,14 +135,14 @@ class TestShowPlaylistURL(StandardTestsAlt[YouTube], PlaylistValidatorAlt):
 # listing of its own, so the URL is the channel's asked for the long way around.
 # TODO: Validate
 class TestChannelUploadsPlaylistURL(
-    StandardTestsAlt[YouTube],
-    PlaylistValidatorAlt,
+    StandardTests[YouTube],
+    PlaylistValidator,
 ):
     playlist_key = "UU4QobU6STFB0P71PMvOGN5A"
 
 
 # TODO: Validate
-class VideoValidatorAlt(YouTubeValidatorAlt):
+class VideoValidator(YouTubeValidator):
     urls = ("youtube.com/watch?v={video_key}",)
 
 
@@ -151,7 +151,7 @@ class VideoValidatorAlt(YouTubeValidatorAlt):
 # the catalogue rather than after the title, holding the title once per language
 # it was published in and nothing else.
 # TODO: Validate
-class TestPaidMovie(StandardTestsAlt[YouTube], VideoValidatorAlt):
+class TestPaidMovie(StandardTests[YouTube], VideoValidator):
     video_key = "koInAsdH8WA"
 
 
@@ -159,17 +159,17 @@ class TestPaidMovie(StandardTestsAlt[YouTube], VideoValidatorAlt):
 # is owned by the one channel the whole free catalogue is published on, which
 # lists almost none of what it owns, so the title is a show of its own.
 # TODO: Validate
-class TestFreeMovie(StandardTestsAlt[YouTube], VideoValidatorAlt):
+class TestFreeMovie(StandardTests[YouTube], VideoValidator):
     video_key = "zKQGAv8gtBA"
 
 
 # TODO: Validate
-class TestAnotherPaidMovie(StandardTestsAlt[YouTube], VideoValidatorAlt):
+class TestAnotherPaidMovie(StandardTests[YouTube], VideoValidator):
     video_key = "NdYRsrRptco"
 
 
 # TODO: Validate
-class ShowVideoValidatorAlt(YouTubeValidatorAlt):
+class ShowVideoValidator(YouTubeValidator):
     urls = (
         "youtube.com/watch?v={video_key}",
         "youtube.com/watch?v={video_key}&list={show_playlist_key}&index=2",
@@ -177,36 +177,36 @@ class ShowVideoValidatorAlt(YouTubeValidatorAlt):
 
 
 # TODO: Validate
-class TestPaidShowVideo(StandardTestsAlt[YouTube], ShowVideoValidatorAlt):
+class TestPaidShowVideo(StandardTests[YouTube], ShowVideoValidator):
     video_key = "8zWeHypLPRk"
     show_playlist_key = "TVSHfA9WsdDU4jgSZuc4pG3gHBd3nWnvtjK8A"
 
 
 # TODO: Validate
-class ShowValidatorAlt(YouTubeValidatorAlt):
+class ShowValidator(YouTubeValidator):
     urls = ("youtube.com/show/{show_key}",)
 
 
 # TODO: Validate
-class TestSubscriptionShow(StandardTestsAlt[YouTube], ShowValidatorAlt):
+class TestSubscriptionShow(StandardTests[YouTube], ShowValidator):
     show_key = "SC9aXZwJfzfg0g7pZ6ird15g"
 
 
 # TODO: Validate
-class TestTopicAlbumPlaylist(StandardTestsAlt[YouTube], PlaylistValidatorAlt):
+class TestTopicAlbumPlaylist(StandardTests[YouTube], PlaylistValidator):
     playlist_key = "OLAK5uy_kiAyq0iiYYIPvqybBkpxFvNai3lAw3fyU"
 
 
 # TODO: Validate
-class TestVariousArtistsAlbum(StandardTestsAlt[YouTube], PlaylistValidatorAlt):
+class TestVariousArtistsAlbum(StandardTests[YouTube], PlaylistValidator):
     playlist_key = "OLAK5uy_keBDQuR704nX77z1CcmcLhIhYlDJkt35s"
 
 
 # TODO: Validate
-class TopicChannelValidatorAlt(YouTubeValidatorAlt):
+class TopicChannelValidator(YouTubeValidator):
     urls = ("youtube.com/channel/{channel_key}",)
 
 
 # TODO: Validate
-class TestTopicChannel(StandardTestsAlt[YouTube], TopicChannelValidatorAlt):
+class TestTopicChannel(StandardTests[YouTube], TopicChannelValidator):
     channel_key = "UCvYD4mt2SEikFlX0iJmTKvw"

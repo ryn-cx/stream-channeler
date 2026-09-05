@@ -16,7 +16,7 @@ from loguru import logger
 from sqlalchemy import Engine, event
 
 if TYPE_CHECKING:
-    from tests.plugins.plugin_validator_alt.database import DatabaseMixinAlt
+    from tests.plugins.plugin_validator.database import DatabaseMixin
 
 
 # How much worse than the best a metric may get before it is reported. Every extra
@@ -221,7 +221,7 @@ def _log_flamegraph(stats_directory: Path) -> Generator[None]:
 
 # TODO: Validate
 @contextmanager
-def log_stats(plugin_validator: DatabaseMixinAlt[Any]) -> Generator[None]:
+def log_stats(plugin_validator: DatabaseMixin[Any]) -> Generator[None]:
     """Combine all of the stats logging into one context manager.
 
     Held outside whatever the test freezes the clock for, because a frozen clock

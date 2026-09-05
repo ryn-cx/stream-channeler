@@ -6,6 +6,7 @@ from typing import override
 from app.media.media_type import TMDBMediaType
 from plugins.AdultSwim.constants import FREE, SUBSCRIPTION
 from plugins.AdultSwim.update import UpdateMixin
+from plugins.utils.abstract_plugin import TMDBLookupInfo
 from plugins.utils.base_plugin_v2.search import BaseCatalogueSearchMixin
 
 
@@ -40,7 +41,7 @@ class AdultSwimBase(UpdateMixin, BaseCatalogueSearchMixin):
     def tmdb_lookup_info(
         self,
         show_key: str,
-    ) -> tuple[str, TMDBMediaType | None, int | None]:
+    ) -> list[TMDBLookupInfo]:
         show_page = self.show_file(show_key)
         show_page.download_if_outdated()
-        return show_page.parsed().title, TMDBMediaType.tv, None
+        return [TMDBLookupInfo(show_page.parsed().title, TMDBMediaType.tv, None)]

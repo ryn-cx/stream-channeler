@@ -19,6 +19,7 @@ from app.users.service.accounts import get_or_create_plugin_user
 from plugins.utils.abstract_plugin import (
     InvalidURLError,
     MediaNotFoundError,
+    TMDBLookupInfo,
     URLImportResult,
 )
 from plugins.utils.base_plugin_v2.files import BaseFile
@@ -77,10 +78,9 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
     # TODO: Validate
     def tmdb_lookup_info(
         self,
-        show_key: str,
-    ) -> tuple[str, TMDBMediaType | None, int | None]:
-        msg = f"{self.plugin_name()} does not support TMDB lookups."
-        raise NotImplementedError(msg)
+        show_key: str,  # noqa: ARG002 - `show_key` is used by overrides.
+    ) -> list[TMDBLookupInfo]:
+        return []
 
     # TODO: Validate
     @classmethod

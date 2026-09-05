@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from typing import override
 
-from app.media.media_type import TMDBMediaType
 from plugins.Tubi.upsert import UpsertMixin
+from plugins.utils.abstract_plugin import TMDBLookupInfo
 
 
 # TODO: Validate
@@ -38,5 +38,5 @@ class TubiBase(UpsertMixin):
     def tmdb_lookup_info(
         self,
         show_key: str,
-    ) -> tuple[str, TMDBMediaType | None, int | None]:
+    ) -> list[TMDBLookupInfo]:
         return self.content_file(show_key).tmdb_lookup_info()

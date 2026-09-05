@@ -19,6 +19,7 @@ from app.users.models import User
 from app.users.service.accounts import get_or_create_plugin_user
 from plugins.utils.abstract_plugin import (
     InvalidURLError,
+    TMDBLookupInfo,
     URLImportResult,
 )
 from plugins.utils.base_plugin_v3.files import BaseFile
@@ -94,10 +95,22 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
     # TODO: Validate
     def tmdb_lookup_info(
         self,
-        show_key: str,
-    ) -> tuple[str, TMDBMediaType | None, int | None]:
-        msg = f"{self.plugin_name()} does not support TMDB lookups."
-        raise NotImplementedError(msg)
+        show_key: str,  # noqa: ARG002 - `show_key` is used by overrides.
+    ) -> list[TMDBLookupInfo]:
+        return []
+
+    # TODO: Validate
+    def link_show_to_tmdb(self, show: Show) -> None:
+        from app.shows.service.canonical import (  # noqa: PLC0415
+            link_show_to_tmdb_lookups,
+        )
+
+        # self.session.commit()
+        link_show_to_tmdb_lookups(
+            self.session,
+            show,
+            self.tmdb_lookup_info(show.key),
+        )
 
     # TODO: Validate
     @classmethod
@@ -177,28 +190,26 @@ class BaseReadURL(BasePlugin, ABC):
         show: Show,
         media_info: MediaInfo | None = None,
     ) -> list[URLImportResult]:
+        result_shows = [show, *show.canonical_shows]
+
         if media_info and media_info.episode_key is not None:
+            episodes = [self._imported_episode(show, media_info.episode_key)]
             return [
-                URLImportResult.episode_import_results(
-                    show,
-                    [self._imported_episode(show, media_info.episode_key)],
-                ),
+                URLImportResult.episode_import_results(result_show, episodes)
+                for result_show in result_shows
             ]
 
         if media_info and media_info.season_key is not None:
+            seasons = [self._imported_season(show, media_info.season_key)]
             return [
-                URLImportResult.season_import_results(
-                    show,
-                    [self._imported_season(show, media_info.season_key)],
-                ),
+                URLImportResult.season_import_results(result_show, seasons)
+                for result_show in result_shows
             ]
 
-        results = [URLImportResult.show_import_results(show)]
-        results += [
-            URLImportResult.show_import_results(canonical_show)
-            for canonical_show in show.canonical_shows
+        return [
+            URLImportResult.show_import_results(result_show)
+            for result_show in result_shows
         ]
-        return results
 
     # TODO: Validate
     def _imported_season(self, show: Show, season_key: str) -> Season:

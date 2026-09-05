@@ -312,7 +312,7 @@ class TMDBSeries(TMDBMedia):
         for source in self.chosen_seasons(show_key):
             season = Season.get_from_memory(self.session, show, source.key)
             if self._season_is_outdated(season, show_key, force=force):
-                data_timestamps = self.season_data_timestamps()
+                data_timestamps = self.season_data_timestamps(source.key, show_key)
                 data_timestamp = data_timestamps[0]
                 new_season = Season(
                     key=source.key,
@@ -358,7 +358,7 @@ class TMDBSeries(TMDBMedia):
                 force=force,
             ):
                 continue
-            data_timestamps = self.episode_data_timestamps()
+            data_timestamps = self.episode_data_timestamps(key, season_key, show_key)
             data_timestamp = data_timestamps[0]
             still_path = episode_source.still_path or self._fallback_backdrop_path(
                 tmdb_tv_show_id=tmdb_tv_show_id,
@@ -756,7 +756,11 @@ class TMDBMovie(TMDBMedia):
             force=force,
         ):
             return
-        data_timestamps = self.episode_data_timestamps()
+        data_timestamps = self.episode_data_timestamps(
+            episode_key,
+            season_key,
+            show_key,
+        )
         data_timestamp = data_timestamps[0]
         new_episode = Episode(
             key=episode_key,

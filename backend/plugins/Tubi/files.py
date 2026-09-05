@@ -15,6 +15,7 @@ from plugi.exceptions import ContentNotFoundError
 
 from app.media.media_type import TMDBMediaType
 from app.utils import tz_datetime
+from plugins.utils.abstract_plugin import TMDBLookupInfo
 from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
@@ -53,14 +54,16 @@ class _ContentFile(EndpointFile[ContentModel]):
         return self.parsed().type != "s"
 
     # TODO: Validate
-    def tmdb_lookup_info(self) -> tuple[str, TMDBMediaType | None, int | None]:
+    def tmdb_lookup_info(self) -> list[TMDBLookupInfo]:
         self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         content = self.parsed()
-        return (
-            content.title,
-            TMDBMediaType.movie if self.is_movie() else TMDBMediaType.tv,
-            content.year,
-        )
+        return [
+            TMDBLookupInfo(
+                content.title,
+                TMDBMediaType.movie if self.is_movie() else TMDBMediaType.tv,
+                content.year,
+            ),
+        ]
 
 
 # TODO: Validate

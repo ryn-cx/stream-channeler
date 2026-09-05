@@ -36,7 +36,7 @@ from plugins.Amazon.constants import (
     PRIME_BENEFIT_ID,
 )
 from plugins.Amazon.keys import title_key_from_location
-from plugins.utils.abstract_plugin import InvalidURLError
+from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
 from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import (
     BaseFile,
@@ -616,15 +616,17 @@ class _Detail(DownloadedFile[dict[str, Any]]):
         return min(seasons, key=lambda season: season.season_number).key
 
     # TODO: Validate
-    def tmdb_lookup_info(self) -> tuple[str, TMDBMediaType | None, int | None]:
+    def tmdb_lookup_info(self) -> list[TMDBLookupInfo]:
         self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        return (
-            self.series_title(),
-            {"Movie": TMDBMediaType.movie, "TV Show": TMDBMediaType.tv}.get(
-                self.entity_type(),
+        return [
+            TMDBLookupInfo(
+                self.series_title(),
+                {"Movie": TMDBMediaType.movie, "TV Show": TMDBMediaType.tv}.get(
+                    self.entity_type(),
+                ),
+                self.release_year(),
             ),
-            self.release_year(),
-        )
+        ]
 
     # TODO: Validate
     def unavailable_message(self) -> str | None:

@@ -42,8 +42,9 @@ class TMDB(TMDBShared, BaseReadURL, AbstractPlugin, register=True):
         return (MOVIE_URL_REGEX, TV_URL_REGEX)
 
     @override
+    # TODO: Validate
     def get_media_importer(self, input: Show | str | TMDBMediaType) -> TMDBMedia:
-        if isinstance(input, TMDBMedia):
+        if isinstance(input, TMDBMediaType):
             if input == TMDBMediaType.movie:
                 return TMDBMovie(self)
             return TMDBSeries(self)

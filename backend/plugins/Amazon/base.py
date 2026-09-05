@@ -3,10 +3,10 @@ from __future__ import annotations
 
 from typing import override
 
-from app.media.media_type import TMDBMediaType
 from plugins.Amazon.search import SearchMixin
 from plugins.Amazon.source import SourceMixin
 from plugins.Amazon.upsert import UpsertMixin
+from plugins.utils.abstract_plugin import TMDBLookupInfo
 
 
 # TODO: Validate
@@ -52,5 +52,5 @@ class AmazonBase(UpsertMixin, SearchMixin, SourceMixin):
     def tmdb_lookup_info(
         self,
         show_key: str,
-    ) -> tuple[str, TMDBMediaType | None, int | None]:
+    ) -> list[TMDBLookupInfo]:
         return self.detail_file(show_key).tmdb_lookup_info()

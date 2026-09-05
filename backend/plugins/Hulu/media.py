@@ -29,7 +29,7 @@ from plugins.Hulu.utils import (
     split_season_key,
     thumbnail_url,
 )
-from plugins.utils.abstract_plugin import InvalidURLError
+from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
 from plugins.utils.base_plugin_v3.importer import BaseImporter
 from plugins.utils.base_plugin_v3.url import MediaInfo
 
@@ -40,6 +40,7 @@ if TYPE_CHECKING:
     from plugins.utils.base_plugin_v3.files import BaseFile
 
 
+# TODO: Validate
 class HuluMedia(HuluShared, BaseImporter, ABC):
     pass
 
@@ -72,16 +73,19 @@ class HuluSeries(HuluMedia):
         raise InvalidURLError(msg)
 
     @override
+    # TODO: Validate
     def tmdb_lookup_info(
         self,
         show_key: str,
-    ) -> tuple[str, TMDBMediaType | None, int | None]:
+    ) -> list[TMDBLookupInfo]:
         parsed_series = self.series_file(show_key).parsed()
-        return (
-            parsed_series.name,
-            TMDBMediaType.tv,
-            parsed_series.details.entity.premiere_date.year,
-        )
+        return [
+            TMDBLookupInfo(
+                parsed_series.name,
+                TMDBMediaType.tv,
+                parsed_series.details.entity.premiere_date.year,
+            ),
+        ]
 
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
@@ -130,6 +134,7 @@ class HuluSeries(HuluMedia):
         return episode_keys
 
     @override
+    # TODO: Validate
     def upsert_show(
         self,
         source: Source,
@@ -160,6 +165,7 @@ class HuluSeries(HuluMedia):
 
         self._upsert_seasons(existing_show, force=force)
         self._soft_delete_missing(show_key)
+        self.link_show_to_tmdb(existing_show)
 
         return existing_show
 
@@ -279,16 +285,19 @@ class HuluMovie(HuluMedia):
         return MediaInfo(show_key)
 
     @override
+    # TODO: Validate
     def tmdb_lookup_info(
         self,
         show_key: str,
-    ) -> tuple[str, TMDBMediaType | None, int | None]:
+    ) -> list[TMDBLookupInfo]:
         parsed_movie = self.movie_file(show_key).parsed()
-        return (
-            parsed_movie.name,
-            TMDBMediaType.movie,
-            parsed_movie.details.entity.premiere_date.year,
-        )
+        return [
+            TMDBLookupInfo(
+                parsed_movie.name,
+                TMDBMediaType.movie,
+                parsed_movie.details.entity.premiere_date.year,
+            ),
+        ]
 
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
@@ -322,6 +331,7 @@ class HuluMovie(HuluMedia):
         return [split_season_key(key)[0] for key in season_keys]
 
     @override
+    # TODO: Validate
     def upsert_show(
         self,
         source: Source,
@@ -349,6 +359,7 @@ class HuluMovie(HuluMedia):
 
         self._upsert_season(show, force=force)
         self._soft_delete_missing(show_key)
+        self.link_show_to_tmdb(show)
 
         return show
 

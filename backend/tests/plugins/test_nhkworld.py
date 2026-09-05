@@ -1,10 +1,10 @@
 # TODO: Validate
 from plugins.NHKWorld import NHKWorld
-from tests.plugins.plugin_validator_alt import InvalidURLValidatorAlt
+from tests.plugins.plugin_validator import InvalidURLValidator
 
 
 # TODO: Validate
-class TestJapanRailwayJournalEpisode(InvalidURLValidatorAlt[NHKWorld]):
+class TestJapanRailwayJournalEpisode(InvalidURLValidator[NHKWorld]):
     """Test a single episode URL, which the plugin does not support yet."""
 
     plugin_class = NHKWorld

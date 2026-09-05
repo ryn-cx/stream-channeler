@@ -9,17 +9,21 @@ from sqlmodel import Session, select
 from app.channels.models import Channel, ChannelQueue
 from plugins.Hulu import Hulu
 from tests.plugins.frozen_clock import frozen_clock
-from tests.plugins.plugin_validator_alt import PluginValidatorAlt, StandardTestsAlt
-from tests.plugins.plugin_validator_alt.log_stats import log_stats
+from tests.plugins.plugin_validator import (
+    PluginValidator,
+    StandardTests,
+    TMDBLookupTests,
+)
+from tests.plugins.plugin_validator.log_stats import log_stats
 
 
 # TODO: Validate
-class HuluValidatorAlt(PluginValidatorAlt[Hulu]):
+class HuluValidator(PluginValidator[Hulu]):
     plugin_class = Hulu
 
 
 # TODO: Validate
-class TestInitializeChannel(HuluValidatorAlt):
+class TestInitializeChannel(HuluValidator):
     """Test the channels Hulu's catalogue is read into."""
 
     initializes_channels = True
@@ -61,9 +65,9 @@ class TestInitializeChannel(HuluValidatorAlt):
 
 
 # TODO: Validate
-class TestMovie(StandardTestsAlt[Hulu], HuluValidatorAlt):
-    movie_id = "f15f9043-8d98-4f6f-b993-7bee1d8320ce"
-    show_slug = "princess-mononoke"
+class TestMovie(StandardTests[Hulu], TMDBLookupTests[Hulu], HuluValidator):
+    movie_id = "34bc6b99-813f-4d5d-bbe7-f3099b45879b"
+    show_slug = "the-devil-wears-prada-2"
     urls = (
         "/movie/{movie_id}",
         "/movie/{movie_id}/",
@@ -79,9 +83,9 @@ class TestMovie(StandardTestsAlt[Hulu], HuluValidatorAlt):
 
 
 # TODO: Validate
-class TestSeries(StandardTestsAlt[Hulu], HuluValidatorAlt):
-    series_id = "3c3c0f8b-7366-4d15-88ab-18050285978e"
-    show_slug = "family-guy"
+class TestSeries(StandardTests[Hulu], TMDBLookupTests[Hulu], HuluValidator):
+    series_id = "7117a15d-128c-4c2b-a5b9-98adfa0f4505"
+    show_slug = "chad-powers"
     urls = (
         "/series/{series_id}",
         "/series/{series_id}/",
@@ -90,8 +94,8 @@ class TestSeries(StandardTestsAlt[Hulu], HuluValidatorAlt):
 
 
 # TODO: Validate
-class TestSeriesEpisode(StandardTestsAlt[Hulu], HuluValidatorAlt):
-    episode_id = "ac156a83-a17a-445b-a522-1544373fbbf1"
+class TestSeriesEpisode(StandardTests[Hulu], TMDBLookupTests[Hulu], HuluValidator):
+    episode_id = "c282fbd1-d649-4a69-8733-ad9e52222858"
     urls = (
         "/watch/{episode_id}",
         "/watch/{episode_id}/",

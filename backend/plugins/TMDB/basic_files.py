@@ -142,6 +142,7 @@ class BasicFiles(BasePlugin):
             key_prefix=f"{tmdb_tv_show_id}/",
         )
 
+    # TODO: Validate
     def latest_tv_series_changes_file(self, tmdb_tv_show_id: int) -> TVSeriesChanges:
         """Return the latest TV Series Changes file for a show.
 
@@ -150,12 +151,12 @@ class BasicFiles(BasePlugin):
         # If the file does not exist an initial file will be downloaded that covers a
         # single day. If the file does exist only the second parameter is used to get it
         # from the database.
-        return self._file(
-            TVSeriesChanges,
-            tmdb_tv_show_id,
-            existing_file,
-            existing_file,
-        )
+        if not existing_file:
+            return self.tv_series_changes_file(
+                tmdb_tv_show_id,
+                tz_datetime.now().date(),
+            )
+        return self.tv_series_changes_file(existing_file)
 
     @overload
     def movies_watch_providers_file(

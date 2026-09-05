@@ -22,7 +22,7 @@ from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import MediaNotFoundError
 
 if TYPE_CHECKING:
-    from plugins.utils.abstract_plugin import AbstractPlugin
+    from plugins.utils.abstract_plugin import AbstractPlugin, TMDBLookupInfo
 
 _TMDB_TITLE_URL = re.compile(r"themoviedb\.org/(?:movie|tv)/(?P<tmdb_id>\d+)")
 
@@ -61,29 +61,44 @@ def match_imported_shows_to_tmdb(
     for show in shows:
         if not show.is_canonical:
             continue
-        tmdb_show = _find_tmdb_show(session, plugin_instance, show)
-        match_show_to_tmdb(session, show, tmdb_show)
+        link_show_to_tmdb_lookups(
+            session,
+            show,
+            plugin_instance.tmdb_lookup_info(show.key),
+        )
+
+
+# TODO: Validate
+def link_show_to_tmdb_lookups(
+    session: Session,
+    show: Show,
+    lookup_infos: Sequence[TMDBLookupInfo],
+) -> None:
+    if not show.is_canonical:
+        return
+    match_show_to_tmdb(session, show, _find_tmdb_show(session, lookup_infos))
 
 
 # TODO: Validate
 def _find_tmdb_show(
     session: Session,
-    plugin_instance: AbstractPlugin,
-    show: Show,
+    lookup_infos: Sequence[TMDBLookupInfo],
 ) -> Show | None:
-    """Return the TMDB show `show` is a listing of, importing it where it is new."""
     from plugins.TMDB import TMDB  # noqa: PLC0415
 
-    if not plugin_instance.implements("tmdb_lookup_info"):
-        return None
-
-    title, media_type, year = plugin_instance.tmdb_lookup_info(show.key)
     tmdb_plugin = TMDB(session)
-    try:
-        results = tmdb_plugin.import_search([title], media_type, year)
-    except MediaNotFoundError:
-        return None
-    return next((result.show for result in results), None)
+    for lookup_info in lookup_infos:
+        try:
+            results = tmdb_plugin.import_search(
+                [lookup_info.name],
+                lookup_info.media_type,
+                lookup_info.year,
+            )
+        except MediaNotFoundError:
+            continue
+        if tmdb_show := next((result.show for result in results), None):
+            return tmdb_show
+    return None
 
 
 # TODO: Validate

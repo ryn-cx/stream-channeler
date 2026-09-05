@@ -1,15 +1,15 @@
 # TODO: Validate
 from plugins.AdultSwim import AdultSwim
-from tests.plugins.plugin_validator_alt import PluginValidatorAlt, StandardTestsAlt
+from tests.plugins.plugin_validator import PluginValidator, StandardTests
 
 
 # TODO: Validate
-class AdultSwimValidatorAlt(PluginValidatorAlt[AdultSwim]):
+class AdultSwimValidator(PluginValidator[AdultSwim]):
     plugin_class = AdultSwim
 
 
 # TODO: Validate
-class TestRickAndMorty(StandardTestsAlt[AdultSwim], AdultSwimValidatorAlt):
+class TestRickAndMorty(StandardTests[AdultSwim], AdultSwimValidator):
     show_id = "rick-and-morty"
     urls = (
         "https://www.adultswim.com/{show_id}",

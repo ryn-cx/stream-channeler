@@ -14,14 +14,14 @@ from app.shows.service.canonical import (
 from plugins.TMDB import TMDB
 from plugins.Tubi import Tubi
 from tests.plugins.frozen_clock import frozen_clock
-from tests.plugins.plugin_validator_alt import (
-    PluginValidatorAlt,
-    UpdatePluginTestsAlt,
-    UpdateTestsAlt,
-    URLTestsAlt,
+from tests.plugins.plugin_validator import (
+    PluginValidator,
+    UpdatePluginTests,
+    UpdateTests,
+    URLTests,
 )
-from tests.plugins.plugin_validator_alt.log_stats import log_stats
-from tests.plugins.plugin_validator_alt.stored_files import (
+from tests.plugins.plugin_validator.log_stats import log_stats
+from tests.plugins.plugin_validator.stored_files import (
     mock_update,
 )
 
@@ -30,7 +30,7 @@ SEPARATOR = "/"
 
 
 # TODO: Validate
-class TMDBValidatorAlt(PluginValidatorAlt[TMDB]):
+class TMDBValidator(PluginValidator[TMDB]):
     plugin_class = TMDB
     restrict_registered_plugins = False
     urls: tuple[str, ...] = (
@@ -48,104 +48,104 @@ class TMDBValidatorAlt(PluginValidatorAlt[TMDB]):
 
 # TODO: Validate
 class TestTVShow(
-    URLTestsAlt[TMDB],
-    UpdatePluginTestsAlt[TMDB],
-    UpdateTestsAlt[TMDB],
-    TMDBValidatorAlt,
+    URLTests[TMDB],
+    UpdatePluginTests[TMDB],
+    UpdateTests[TMDB],
+    TMDBValidator,
 ):
     media_type = "tv"
     parse_url_response = "107113"
     show_slug = "only-murders-in-the-building"
     urls = (
-        *TMDBValidatorAlt.urls,
+        *TMDBValidator.urls,
         "/{media_type}/{parse_url_response}/seasons?language=en-US",
     )
 
 
 # TODO: Validate
 class TestArcher(
-    URLTestsAlt[TMDB],
-    UpdatePluginTestsAlt[TMDB],
-    UpdateTestsAlt[TMDB],
-    TMDBValidatorAlt,
+    URLTests[TMDB],
+    UpdatePluginTests[TMDB],
+    UpdateTests[TMDB],
+    TMDBValidator,
 ):
     media_type = "tv"
     parse_url_response = "10283"
     show_slug = "archer"
     urls = (
-        *TMDBValidatorAlt.urls,
+        *TMDBValidator.urls,
         "/{media_type}/{parse_url_response}/seasons?language=en-US",
     )
 
 
 # TODO: Validate
 class TestWelcomeToTheJapariPark(
-    URLTestsAlt[TMDB],
-    UpdatePluginTestsAlt[TMDB],
-    UpdateTestsAlt[TMDB],
-    TMDBValidatorAlt,
+    URLTests[TMDB],
+    UpdatePluginTests[TMDB],
+    UpdateTests[TMDB],
+    TMDBValidator,
 ):
     media_type = "tv"
     parse_url_response = "88459"
     show_slug = "welcome-to-the-japari-park"
     urls = (
-        *TMDBValidatorAlt.urls,
+        *TMDBValidator.urls,
         "/{media_type}/{parse_url_response}/seasons?language=en-US",
     )
 
 
 # TODO: Validate
 class TestLaidBackCamp(
-    URLTestsAlt[TMDB],
-    UpdateTestsAlt[TMDB],
-    TMDBValidatorAlt,
+    URLTests[TMDB],
+    UpdateTests[TMDB],
+    TMDBValidator,
 ):
     media_type = "tv"
     parse_url_response = "76075"
     show_slug = "laid-back-camp"
     urls = (
-        *TMDBValidatorAlt.urls,
+        *TMDBValidator.urls,
         "/{media_type}/{parse_url_response}/seasons?language=en-US",
     )
 
 
 # TODO: Validate
 class TestSpaceGhostAndDinoBoy(
-    URLTestsAlt[TMDB],
-    UpdateTestsAlt[TMDB],
-    TMDBValidatorAlt,
+    URLTests[TMDB],
+    UpdateTests[TMDB],
+    TMDBValidator,
 ):
     media_type = "tv"
     parse_url_response = "3303"
     show_slug = "space-ghost-and-dino-boy"
     urls = (
-        *TMDBValidatorAlt.urls,
+        *TMDBValidator.urls,
         "/{media_type}/{parse_url_response}/seasons?language=en-US",
     )
 
 
 # TODO: Validate
 class TestHuluTVShow(
-    URLTestsAlt[TMDB],
-    UpdatePluginTestsAlt[TMDB],
-    UpdateTestsAlt[TMDB],
-    TMDBValidatorAlt,
+    URLTests[TMDB],
+    UpdatePluginTests[TMDB],
+    UpdateTests[TMDB],
+    TMDBValidator,
 ):
     media_type = "tv"
     parse_url_response = "296756"
     show_slug = "president-curtis"
     urls = (
-        *TMDBValidatorAlt.urls,
+        *TMDBValidator.urls,
         "/{media_type}/{parse_url_response}/seasons?language=en-US",
     )
 
 
 # TODO: Validate
 class TestSuperman(
-    URLTestsAlt[TMDB],
-    UpdatePluginTestsAlt[TMDB],
-    UpdateTestsAlt[TMDB],
-    TMDBValidatorAlt,
+    URLTests[TMDB],
+    UpdatePluginTests[TMDB],
+    UpdateTests[TMDB],
+    TMDBValidator,
 ):
     media_type = "movie"
     parse_url_response = "95414"
@@ -153,7 +153,7 @@ class TestSuperman(
 
 
 # TODO: Validate
-class TestSupermanRelinkedTubi(TMDBValidatorAlt):
+class TestSupermanRelinkedTubi(TMDBValidator):
     media_type = "movie"
     parse_url_response = "95414"
     show_slug = "superman"
@@ -218,10 +218,10 @@ class TestSupermanRelinkedTubi(TMDBValidatorAlt):
 
 # # TODO: Validate
 # class TestTV1(
-#     URLTestsAlt[TMDB],
-#     UpdatePluginTestsAlt[TMDB],
-#     UpdateTestsAlt[TMDB],
-#     TMDBValidatorAlt,
+#     URLTests[TMDB],
+#     UpdatePluginTests[TMDB],
+#     UpdateTests[TMDB],
+#     TMDBValidator,
 # ):
 #     """Tests a TV series.
 
@@ -234,7 +234,7 @@ class TestSupermanRelinkedTubi(TMDBValidatorAlt):
 #     parse_url_response = "30991"
 #     show_slug = "cowboy-bebop"
 #     urls = (
-#         *TMDBValidatorAlt.urls,
+#         *TMDBValidator.urls,
 #         # Only a show has seasons, so the page listing them is a sub-page a
 #         # movie's URLs cannot carry.
 #         "/{media_type}/{parse_url_response}/seasons?language=en-US",
@@ -243,10 +243,10 @@ class TestSupermanRelinkedTubi(TMDBValidatorAlt):
 
 # # TODO: Validate
 # class TestTV2(
-#     URLTestsAlt[TMDB],
-#     UpdatePluginTestsAlt[TMDB],
-#     UpdateTestsAlt[TMDB],
-#     TMDBValidatorAlt,
+#     URLTests[TMDB],
+#     UpdatePluginTests[TMDB],
+#     UpdateTests[TMDB],
+#     TMDBValidator,
 # ):
 #     """Tests a TV series.
 
@@ -258,29 +258,29 @@ class TestSupermanRelinkedTubi(TMDBValidatorAlt):
 #     parse_url_response = "57041"
 #     show_slug = "gintama"
 #     urls = (
-#         *TMDBValidatorAlt.urls,
+#         *TMDBValidator.urls,
 #         "/{media_type}/{parse_url_response}/seasons?language=en-US",
 #     )
 
 
 # # TODO: Validate
 # class TestTV3(
-#     URLTestsAlt[TMDB],
-#     UpdatePluginTestsAlt[TMDB],
-#     UpdateTestsAlt[TMDB],
-#     TMDBValidatorAlt,
+#     URLTests[TMDB],
+#     UpdatePluginTests[TMDB],
+#     UpdateTests[TMDB],
+#     TMDBValidator,
 # ):
 #     media_type = "tv"
 #     parse_url_response = "107113"
 #     show_slug = "only-murders-in-the-building"
 #     urls = (
-#         *TMDBValidatorAlt.urls,
+#         *TMDBValidator.urls,
 #         "/{media_type}/{parse_url_response}/seasons?language=en-US",
 #     )
 
 
 # # TODO: Validate
-# class ForcedReimportTestsAlt[PluginT: BasePlugin](PluginValidatorAlt[PluginT]):
+# class ForcedReimportTests[PluginT: BasePlugin](PluginValidator[PluginT]):
 #     """Tests that a forced re-import makes the links an import made a second time.
 
 #     Which episode of a website's listing is which TMDB episode is worked out by
@@ -357,11 +357,11 @@ class TestSupermanRelinkedTubi(TMDBValidatorAlt):
 
 # # TODO: Validate
 # class TestMovieWithMixedCrunchyroll(
-#     URLTestsAlt[TMDB],
-#     UpdatePluginTestsAlt[TMDB],
-#     UpdateTestsAlt[TMDB],
-#     ForcedReimportTestsAlt[TMDB],
-#     TMDBValidatorAlt,
+#     URLTests[TMDB],
+#     UpdatePluginTests[TMDB],
+#     UpdateTests[TMDB],
+#     ForcedReimportTests[TMDB],
+#     TMDBValidator,
 # ):
 #     media_type = "movie"
 #     parse_url_response = "566466"
@@ -370,16 +370,16 @@ class TestSupermanRelinkedTubi(TMDBValidatorAlt):
 
 # # TODO: Validate
 # class TestTVWithMixedCrunchyroll(
-#     URLTestsAlt[TMDB],
-#     UpdatePluginTestsAlt[TMDB],
-#     UpdateTestsAlt[TMDB],
-#     TMDBValidatorAlt,
+#     URLTests[TMDB],
+#     UpdatePluginTests[TMDB],
+#     UpdateTests[TMDB],
+#     TMDBValidator,
 # ):
 #     media_type = "tv"
 #     parse_url_response = "76075"
 #     show_slug = "laid-back-camp"
 #     urls = (
-#         *TMDBValidatorAlt.urls,
+#         *TMDBValidator.urls,
 #         # Only a show has seasons, so the page listing them is a sub-page a
 #         # movie's URLs cannot carry.
 #         "/{media_type}/{parse_url_response}/seasons?language=en-US",
@@ -387,10 +387,10 @@ class TestSupermanRelinkedTubi(TMDBValidatorAlt):
 
 
 # # TODO: Validate
-# class SeededSiblingTestsAlt(
-#     URLTestsAlt[TMDB],
-#     UpdatePluginTestsAlt[TMDB],
-#     UpdateTestsAlt[TMDB],
+# class SeededSiblingTests(
+#     URLTests[TMDB],
+#     UpdatePluginTests[TMDB],
+#     UpdateTests[TMDB],
 # ):
 #     seed_url: str
 
@@ -415,7 +415,7 @@ class TestSupermanRelinkedTubi(TMDBValidatorAlt):
 
 # # TODO: Validate
 # class TestSeededMovieWithMixedCrunchyroll(
-#     SeededSiblingTestsAlt,
+#     SeededSiblingTests,
 #     TestMovieWithMixedCrunchyroll,
 # ):
 #     seed_url = "themoviedb.org/tv/76075"
@@ -423,7 +423,7 @@ class TestSupermanRelinkedTubi(TMDBValidatorAlt):
 
 # # TODO: Validate
 # class TestSeededTVWithMixedCrunchyroll(
-#     SeededSiblingTestsAlt,
+#     SeededSiblingTests,
 #     TestTVWithMixedCrunchyroll,
 # ):
 #     seed_url = "themoviedb.org/movie/566466"

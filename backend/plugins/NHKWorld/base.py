@@ -10,6 +10,7 @@ from app.utils import tz_datetime
 from plugins.NHKWorld.search import SearchMixin
 from plugins.NHKWorld.source import SourceMixin
 from plugins.NHKWorld.upsert import UpsertMixin
+from plugins.utils.abstract_plugin import TMDBLookupInfo
 
 
 # TODO: Validate
@@ -45,7 +46,7 @@ class NHKWorldBase(SourceMixin, UpsertMixin, SearchMixin):
     def tmdb_lookup_info(
         self,
         show_key: str,
-    ) -> tuple[str, TMDBMediaType | None, int | None]:
+    ) -> list[TMDBLookupInfo]:
         program_file = self.video_program_file(show_key)
         program_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        return program_file.parsed().title, TMDBMediaType.tv, None
+        return [TMDBLookupInfo(program_file.parsed().title, TMDBMediaType.tv, None)]

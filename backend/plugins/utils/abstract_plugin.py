@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from functools import cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 from pydantic import BaseModel, Field
 
@@ -30,6 +30,13 @@ if TYPE_CHECKING:
     from sqlmodel import Session
 
     from app.users.models import User
+
+
+# TODO: Validate
+class TMDBLookupInfo(NamedTuple):
+    name: str
+    media_type: TMDBMediaType | None
+    year: int | None
 
 
 # TODO: Validate
@@ -450,16 +457,9 @@ class AbstractPlugin(ABC):
     # TODO: Validate
     def tmdb_lookup_info(
         self,
-        show_key: str,
-    ) -> tuple[str, TMDBMediaType | None, int | None]:
-        """Return the name, media type and year the plugin files a show under.
-
-        Args:
-            show_key: The plugin's own key for the show.
-
-        """
-        msg = "tmdb_lookup_info is not supported by this plugin."
-        raise NotImplementedError(msg)
+        show_key: str,  # noqa: ARG002 - `show_key` is used by overrides.
+    ) -> list[TMDBLookupInfo]:
+        return []
 
     # TODO: Validate
     @classmethod

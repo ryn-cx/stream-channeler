@@ -2,6 +2,7 @@ from functools import cache
 from http import HTTPStatus
 from typing import override
 
+from bs4 import BeautifulSoup
 from sqlmodel import Session
 from wholoo import Wholoo
 from wholoo.episode import Episode as EpisodeEndpoint
@@ -99,20 +100,20 @@ class Genre(EndpointFile[GenreModel]):
         return wholoo().genre
 
 
+# TODO: Validate
 class WatchRedirect(TextFile):
-    """Watch URLs can be for either a movie or an episode.
-
-    Following the redirect when not logged in is the easiest way to determine if it is a
-    movie or an episode.
-    """
-
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
             response = get_around_client().get(
                 episode_url(self.unique_identifier),
-                # Follow redirects is false because the redirect is not actually
-                # followed, instead the redirect is logged directly from the headers.
-                follow_redirects=False,
+                follow_redirects=True,
             )
-            self.write(response.headers["location"])
+            response.raise_for_status()
+            canonical = BeautifulSoup(response.text, "html.parser").select_one(
+                'link[rel="canonical"]',
+            )
+            if canonical is None:
+                msg = f"No canonical URL for {episode_url(self.unique_identifier)}"
+                raise ValueError(msg)
+            self.write(str(canonical["href"]))

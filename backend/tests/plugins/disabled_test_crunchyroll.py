@@ -15,14 +15,14 @@ from app.watches.schemas import WatchCreate
 from app.watches.service.management import create_watch
 from plugins.Crunchyroll import Crunchyroll
 from tests.plugins.frozen_clock import frozen_clock
-from tests.plugins.plugin_validator_alt import PluginValidatorAlt, StandardTestsAlt
-from tests.plugins.plugin_validator_alt.stored_files import (
+from tests.plugins.plugin_validator import PluginValidator, StandardTests
+from tests.plugins.plugin_validator.stored_files import (
     mock_update,
 )
 
 
 # TODO: Validate
-class CrunchyrollValidatorAlt(PluginValidatorAlt[Crunchyroll]):
+class CrunchyrollValidator(PluginValidator[Crunchyroll]):
     plugin_class = Crunchyroll
     urls = (
         "/series/{parse_url_response}",
@@ -40,7 +40,7 @@ class CrunchyrollValidatorAlt(PluginValidatorAlt[Crunchyroll]):
 # one title: the three seasons are a series, the movie is a film of its own, and
 # the spinoff is a third. Each of them is a title the listing is a copy of.
 # TODO: Validate
-class TestMixedTMDB(StandardTestsAlt[Crunchyroll], CrunchyrollValidatorAlt):
+class TestMixedTMDB(StandardTests[Crunchyroll], CrunchyrollValidator):
     """Crunchyroll combines the Laid Back camp tv show and movie into a single series."""
 
     parse_url_response = "GRWEW95KR"
@@ -51,7 +51,7 @@ class TestMixedTMDB(StandardTestsAlt[Crunchyroll], CrunchyrollValidatorAlt):
 # only for itself. What the linker does when it finds a title is covered by the
 # tests above; this is what it does when it finds none.
 # TODO: Validate
-class TestNoTMDBMatchFound(StandardTestsAlt[Crunchyroll], CrunchyrollValidatorAlt):
+class TestNoTMDBMatchFound(StandardTests[Crunchyroll], CrunchyrollValidator):
     """Crunchyroll has a series that TMDB is not holding a title for."""
 
     parse_url_response = "G6DQNPE1R"
@@ -63,7 +63,7 @@ class TestNoTMDBMatchFound(StandardTestsAlt[Crunchyroll], CrunchyrollValidatorAl
 # ordinary case: the seasons line up, so every episode has a TMDB episode to be
 # matched to and the numbering is read straight through.
 # TODO: Validate
-class TestSeries1(StandardTestsAlt[Crunchyroll], CrunchyrollValidatorAlt):
+class TestSeries1(StandardTests[Crunchyroll], CrunchyrollValidator):
     """Crunchyroll has a multi-season series TMDB holds as one title."""
 
     parse_url_response = "GYQWNXPZY"
@@ -78,7 +78,7 @@ CRUNCHYROLL_EPISODE_GROUP = "69106aac2465062343ce84c4"
 # A series long enough that TMDB and the websites carrying it disagree about how
 # it is divided up, which is what an episode group is for.
 # TODO: Validate
-class TestSwappingEpisodeGroup(StandardTestsAlt[Crunchyroll], CrunchyrollValidatorAlt):
+class TestSwappingEpisodeGroup(StandardTests[Crunchyroll], CrunchyrollValidator):
     """Crunchyroll numbers this series by an order of TMDB's rather than its own."""
 
     parse_url_response = "G6JQVM3ER"
@@ -128,8 +128,8 @@ class TestSwappingEpisodeGroup(StandardTestsAlt[Crunchyroll], CrunchyrollValidat
 # are read, so this is what says the linker reads them.
 # TODO: Validate
 class TestEpisodeGroupNameMatching(
-    StandardTestsAlt[Crunchyroll],
-    CrunchyrollValidatorAlt,
+    StandardTests[Crunchyroll],
+    CrunchyrollValidator,
 ):
     """Crunchyroll numbers this series as one of TMDB's other orders numbers it."""
 

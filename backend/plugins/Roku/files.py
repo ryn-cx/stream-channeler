@@ -22,6 +22,7 @@ from nana.exceptions import ContentNotFoundError
 from app.media.media_type import TMDBMediaType
 from app.utils import tz_datetime
 from plugins.Roku.constants import MOVIE_TYPE
+from plugins.utils.abstract_plugin import TMDBLookupInfo
 from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
 from plugins.utils.get_around_client import get_around_client
@@ -68,14 +69,16 @@ class _ContentFile(_BaseContentFile):
         return content_type == MOVIE_TYPE
 
     # TODO: Validate
-    def tmdb_lookup_info(self) -> tuple[str, TMDBMediaType | None, int | None]:
+    def tmdb_lookup_info(self) -> list[TMDBLookupInfo]:
         self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         content = self.parsed()
-        return (
-            content.title,
-            TMDBMediaType.movie if content.type == MOVIE_TYPE else TMDBMediaType.tv,
-            content.release_year,
-        )
+        return [
+            TMDBLookupInfo(
+                content.title,
+                TMDBMediaType.movie if content.type == MOVIE_TYPE else TMDBMediaType.tv,
+                content.release_year,
+            ),
+        ]
 
 
 # TODO: Validate

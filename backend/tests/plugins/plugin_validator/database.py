@@ -30,7 +30,7 @@ from plugins.utils.base_plugin_v3.files import BaseFile as BaseFileV3
 from plugins.utils.manage_plugins import import_plugins, plugins
 from tests.conftest import init_db, savepoint_session, test_engine
 from tests.plugins.frozen_clock import frozen_clock
-from tests.plugins.plugin_validator_alt.stored_files import (
+from tests.plugins.plugin_validator.stored_files import (
     IMPORT_TIME,
     UPDATE_TIME,
     date_at_import_time,
@@ -129,7 +129,7 @@ def plugin_class_for(plugin_key: str) -> type[AbstractPlugin]:
 
 
 # TODO: Validate
-class DatabaseMixinAlt[PluginT: AbstractPlugin]:
+class DatabaseMixin[PluginT: AbstractPlugin]:
     """Everything a test needs in place before it can dump anything."""
 
     plugin_class: type[PluginT]

@@ -216,15 +216,17 @@ class UpsertMixin(UtilsMixin, FileMixin):
         for category in MusicCategory:
             season = Season.get_from_memory(self.session, show, category)
             if self._season_is_outdated(season, show.key, force=force):
+                data_timestamps = self.season_data_timestamps(category, show.key)
                 season = Season(
                     key=category,
                     name={
                         MusicCategory.CONCERT: "Concerts",
                         MusicCategory.MUSIC_VIDEO: "Music Videos",
                     }[category],
-                    data_timestamp=self.season_data_timestamp(category, show.key),
+                    data_timestamp=data_timestamps[0],
                     show_id=show.id,
-                ).upsert_and_set_update_at(show, season)
+                ).upsert(show, season)
+                season.set_update_at(None, data_timestamps)
 
             self._upsert_music_episodes(
                 season,
@@ -317,7 +319,12 @@ class UpsertMixin(UtilsMixin, FileMixin):
                 .parsed()
                 .data[0]
             )
-            Episode(
+            data_timestamps = self.episode_data_timestamps(
+                episode_key,
+                season.key,
+                show_key,
+            )
+            episode = Episode(
                 key=episode_key,
                 watch_identifier=watch_identifier(self.plugin_name(), episode_key),
                 name=details.title,
@@ -328,13 +335,10 @@ class UpsertMixin(UtilsMixin, FileMixin):
                 duration=details.duration_ms // 1000,
                 sort_order=sort_order,
                 air_date=details.original_release,
-                data_timestamp=self.episode_data_timestamp(
-                    episode_key,
-                    season.key,
-                    show_key,
-                ),
+                data_timestamp=data_timestamps[0],
                 season_id=season.id,
-            ).upsert_and_set_update_at(season, episode)
+            ).upsert(season, episode)
+            episode.set_update_at(None, data_timestamps)
 
     # TODO: Validate
     @staticmethod

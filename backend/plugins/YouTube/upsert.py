@@ -448,17 +448,17 @@ class UpsertMixin(UtilsMixin):
     ) -> None:
         season = Season.get_from_memory(self.session, show, season_key)
         if self._season_is_outdated(season, show_key, force=force):
-            data_timestamp = self.season_data_timestamp(season_key, show_key)
+            data_timestamps = self.season_data_timestamps(season_key, show_key)
             season = Season(
                 key=season_key,
                 name=name,
                 url=self.build_url(f"playlist?list={season_key}"),
                 image_url=self._best_thumbnail_url(playlist.snippet.thumbnails),
                 thumbnail_url=self._thumbnail_url(playlist.snippet.thumbnails),
-                data_timestamp=data_timestamp,
-                update_at=data_timestamp + timedelta(hours=6),
+                data_timestamp=data_timestamps[0],
                 show_id=show.id,
-            ).upsert_and_set_update_at(show, season)
+            ).upsert(show, season)
+            season.set_update_at(data_timestamps[0] + timedelta(hours=6), data_timestamps)
         self._upsert_episodes(season, show_key, force=force)
 
     # TODO: Validate

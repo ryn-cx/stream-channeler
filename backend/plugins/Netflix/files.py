@@ -37,6 +37,7 @@ from sqlmodel import Session
 from app.media.media_type import TMDBMediaType
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
+from plugins.utils.abstract_plugin import TMDBLookupInfo
 from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import (
     BaseFile,
@@ -78,14 +79,16 @@ class _Title(IntegerEndpointFile[LodpTitleAndPlansPageModel]):
         return self.video().field__typename == "Movie"
 
     # TODO: Validate
-    def tmdb_lookup_info(self) -> tuple[str, TMDBMediaType | None, int | None]:
+    def tmdb_lookup_info(self) -> list[TMDBLookupInfo]:
         self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         video = self.video()
-        return (
-            video.title,
-            TMDBMediaType.movie if self.is_movie() else TMDBMediaType.tv,
-            video.latest_year,
-        )
+        return [
+            TMDBLookupInfo(
+                video.title,
+                TMDBMediaType.movie if self.is_movie() else TMDBMediaType.tv,
+                video.latest_year,
+            ),
+        ]
 
     # TODO: Validate
     @override
