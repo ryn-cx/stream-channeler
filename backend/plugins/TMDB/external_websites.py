@@ -7,12 +7,12 @@ from abc import ABC, abstractmethod
 from loguru import logger
 from sqlmodel import select
 
+from app.canonical_media.service.creation import link_show_to_tmdb
 from app.canonical_media.tmdb import (
     get_media_type_and_tmdb_id,
 )
 from app.media.media_type import TMDBMediaType
 from app.shows.models import Show
-from app.shows.service.canonical import match_show_to_tmdb
 from app.sources.models import UnmatchedSource
 from app.sources.service.unmatched import remove_unmatched_source
 from plugins.TMDB.files import MoviesWatchProviders, TVSeriesWatchProviders
@@ -34,6 +34,8 @@ class TMDBExternalWebsites(TMDBShared, ABC):
         self,
         show_key: str,
     ) -> MoviesWatchProviders | TVSeriesWatchProviders: ...
+
+    """Return the provider file for the given show key."""
 
     # TODO: Validate
     def _import_title_from_external_websites(self, show_key: str, show: Show) -> None:
@@ -116,8 +118,8 @@ class TMDBExternalWebsites(TMDBShared, ABC):
             )
         )
 
-    # TODO: Validate
     def plugins_with_non_canonical_shows(self, show: Show) -> set[str]:
+        # TODO: Is flush/expire still needed?
         self.session.flush()
         self.session.expire(show, ["non_canonical_show_links"])
         return {
@@ -125,7 +127,6 @@ class TMDBExternalWebsites(TMDBShared, ABC):
             for link in show.non_canonical_show_links
         }
 
-    # TODO: Validate
     def _import_external_plugin(
         self,
         plugin_class: type[AbstractPlugin],
@@ -141,10 +142,10 @@ class TMDBExternalWebsites(TMDBShared, ABC):
         savepoint = self.session.begin_nested()
         try:
             results = plugin.import_search([name], media_type, year)
-            for imported_show in plugin.imported_shows(results):
-                match_show_to_tmdb(
+            for result in results:
+                link_show_to_tmdb(
                     self.session,
-                    imported_show,
+                    result.show,
                     show,
                     f"Automatic: {show.media_type} {show.name} ({show.year}) was found "
                     f"on {plugin_class.plugin_name()}.",

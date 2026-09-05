@@ -6,6 +6,10 @@ import uuid
 from fastapi import HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session
+from tminidb.movie.details.models import MovieDetailsModel
+from tminidb.movie.watch_providers.models import Us as MovieUsWatchProviders
+from tminidb.tv_series.details.models import TvSeriesDetailsModel
+from tminidb.tv_series.watch_providers.models import Us as TvSeriesUsWatchProviders
 
 from app.plugins.models import BasePlugin, Plugin
 from app.schemas import (
@@ -109,3 +113,9 @@ class PluginURLMatch(BaseModel):
 # TODO: Validate
 class PluginSearchUrl(BaseModel):
     url: str | None = None
+
+
+# TODO: Validate
+class TMDBMediaInfo(BaseModel):
+    detail: MovieDetailsModel | TvSeriesDetailsModel
+    watch_providers: MovieUsWatchProviders | TvSeriesUsWatchProviders | None = None

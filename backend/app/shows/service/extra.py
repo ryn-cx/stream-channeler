@@ -24,6 +24,7 @@ from app.shows.service.relinking import (
     _relink_non_canonical_shows,
     _reread_in_new_order,
 )
+from plugins.TMDB import TMDB
 
 
 # TODO: Validate
@@ -40,10 +41,6 @@ def list_tmdb_episode_groups(
     """
     if show.source.plugin.key != TMDB_PLUGIN_KEY:
         return []
-
-    # Imported here rather than at the top of the module because the plugin is
-    # built on the base every plugin is, which reads this module in turn.
-    from plugins.TMDB import TMDB  # noqa: PLC0415
 
     media_type, tmdb_id = get_media_type_and_tmdb_id(show.key)
     if media_type is not TMDBMediaType.tv:
@@ -143,10 +140,6 @@ def validate_extra(
     """
     if show.source.plugin.key != TMDB_PLUGIN_KEY:
         return
-
-    # Imported here rather than at the top of the module because the plugin is
-    # built on the base every plugin is, which reads this module in turn.
-    from plugins.TMDB import TMDB  # noqa: PLC0415
 
     group_id = chosen_group_id(extra)
     if group_id is None:

@@ -13,8 +13,8 @@ from plugins.TMDB.shared import (
     MOVIE_URL_REGEX,
     TV_URL_REGEX,
     TMDBShared,
-    media_url,
 )
+from plugins.TMDB.utils import tiel_url
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
     InvalidURLError,
@@ -77,4 +77,4 @@ class TMDB(TMDBShared, BaseReadURL, AbstractPlugin, register=True):
 
         found_media_type, tmdb_media_id = search_result
         medai_importer = self.get_media_importer(found_media_type)
-        return medai_importer.import_url(media_url(found_media_type, tmdb_media_id))
+        return medai_importer.import_url(tiel_url(found_media_type, tmdb_media_id))

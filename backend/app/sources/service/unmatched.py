@@ -103,8 +103,8 @@ def import_unmatched_source(
     except InvalidURLError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
-    for imported_show in plugin_instance.imported_shows(results):
-        match_show_to_tmdb(session, imported_show, show)
+    for result in results:
+        match_show_to_tmdb(session, result.show, show)
 
     session.delete(unmatched_source)
     session.commit()

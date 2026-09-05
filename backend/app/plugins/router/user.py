@@ -13,9 +13,10 @@ from app.plugins.schemas import (
     PluginSearchInformation,
     PluginSearchUrl,
     PluginURLMatch,
+    TMDBMediaInfo,
 )
 from app.plugins.service import imports, search
-from plugins.utils.abstract_plugin import PluginMediaInfo, PluginSearchResults
+from plugins.utils.abstract_plugin import PluginSearchResults
 
 plugins_router = APIRouter(prefix="/plugins", tags=["plugins"])
 
@@ -66,29 +67,24 @@ def manual_search_url(
 # TODO: Validate
 @plugins_router.get("/in-app-search")
 def in_app_search(
-    plugin_key: str,
     query: str,
     session: SessionDep,
     _current_user: CurrentUser,
     cursor: str | None = None,
 ) -> PluginSearchResults:
-    """Search for shows/movies on a plugin's platform.
-
-    `cursor` is the `next_cursor` of an earlier page; omit it for the first one.
-    """
-    return search.in_app_search(session, plugin_key, query, cursor)
+    """`cursor` is the `next_cursor` of an earlier page; omit it for the first one."""
+    return search.in_app_search(session, query, cursor)
 
 
 # TODO: Validate
 @plugins_router.get("/media-info")
 def media_info(
-    plugin_key: str,
     media_identifier: str,
     session: SessionDep,
     _current_user: CurrentUser,
-) -> PluginMediaInfo | None:
+) -> TMDBMediaInfo:
     """Return everything a plugin knows about one of its own search results."""
-    return search.media_info(session, plugin_key, media_identifier)
+    return search.media_info(session, media_identifier)
 
 
 router = APIRouter()

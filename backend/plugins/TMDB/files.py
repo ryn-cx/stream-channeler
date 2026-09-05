@@ -90,13 +90,13 @@ class MoviesTranslations(IntegerEndpointFile[MovieTranslationsModel]):
         return tminidb().movie.translations
 
 
-class WatchProvidersFile[T](EndpointFile[T], ABC):
+class WatchProviders[T](EndpointFile[T], ABC):
     @override
     def _initial_status_after_downloading(self) -> str:
         return "Incomplete"
 
 
-class MoviesWatchProviders(WatchProvidersFile[MovieWatchProvidersModel]):
+class MoviesWatchProviders(WatchProviders[MovieWatchProvidersModel]):
     custom_class_key = "Movies/Watch Providers"
 
     @override
@@ -122,7 +122,7 @@ class MoviesWatchProviders(WatchProvidersFile[MovieWatchProvidersModel]):
         return self._endpoint().download(self.tmdb_movie_id)
 
 
-class TVSeriesWatchProviders(WatchProvidersFile[TvSeriesWatchProvidersModel]):
+class TVSeriesWatchProviders(WatchProviders[TvSeriesWatchProvidersModel]):
     custom_class_key = "TV Series/Watch Providers"
 
     @override
@@ -148,7 +148,7 @@ class TVSeriesWatchProviders(WatchProvidersFile[TvSeriesWatchProvidersModel]):
         return self._endpoint().download(self.tmdb_tv_show_id)
 
 
-class TVSeasonsWatchProviders(WatchProvidersFile[TvSeasonWatchProvidersModel]):
+class TVSeasonsWatchProviders(WatchProviders[TvSeasonWatchProvidersModel]):
     custom_class_key = "TV Seasons/Watch Providers"
 
     @override
@@ -176,7 +176,7 @@ class TVSeasonsWatchProviders(WatchProvidersFile[TvSeasonWatchProvidersModel]):
         return self._endpoint().download(self.tmdb_tv_show_id, self.season_number)
 
 
-type ProvidersFile = (
+type WatchProvidersFile = (
     MoviesWatchProviders | TVSeriesWatchProviders | TVSeasonsWatchProviders
 )
 

@@ -6,7 +6,7 @@ from __future__ import annotations
 import re
 from abc import abstractmethod
 from collections.abc import Sequence
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from random import Random
 from typing import Any, override
 
@@ -39,14 +39,12 @@ from plugins.TMDB.files import (
 from plugins.TMDB.shared import (
     MOVIE_URL_REGEX,
     TV_URL_REGEX,
-    media_url,
 )
 from plugins.TMDB.utils import (
     SeasonInfo,
     image_url,
-    parse_air_datetime,
-    release_year,
-    runtime_in_seconds,
+    tiel_url,
+    parse_release_year,
     thumbnail_url,
 )
 from plugins.utils.abstract_plugin import (
@@ -58,6 +56,22 @@ from plugins.utils.base_plugin_v3.files import (
     BaseFile,
 )
 from plugins.utils.base_plugin_v3.importer import BaseImporter
+
+
+def clean_air_datetime(air_date: str | date) -> datetime | None:
+    """Return a datetime for the air date and replaces empty strings with None.
+
+    The TMDB API returns an empty string if the date is not known. Converting it to None
+    makes it easier to work with."""
+    if isinstance(air_date, str):
+        return None
+    return tz_datetime.combine(air_date, datetime.min.time())
+
+
+def runtime_in_seconds(runtime: int | None) -> int | None:
+    # If the runtime is not known the API returns None. In all other cases it returns
+    # the runtime in minutes.
+    return runtime * 60 if runtime else None
 
 
 # TODO: Validate
@@ -262,10 +276,10 @@ class TMDBSeries(TMDBMedia):
                 key=show_key,
                 name=series.name,
                 description=series.overview,
-                url=media_url(TMDBMediaType.tv, tmdb_tv_show_id),
+                url=tiel_url(TMDBMediaType.tv, tmdb_tv_show_id),
                 image_url=image_url(series.backdrop_path or series.poster_path),
                 thumbnail_url=thumbnail_url(series.backdrop_path or series.poster_path),
-                year=release_year(series.first_air_date),
+                year=parse_release_year(series.first_air_date),
                 media_type="TV Show",
                 extra=show.extra if show else None,
                 data_timestamp=data_timestamp,
@@ -363,11 +377,11 @@ class TMDBSeries(TMDBMedia):
                 watch_identifier=watch_identifier(self.plugin_name(), key),
                 name=episode_source.name,
                 description=episode_source.overview,
-                url=media_url(TMDBMediaType.tv, tmdb_tv_show_id),
+                url=tiel_url(TMDBMediaType.tv, tmdb_tv_show_id),
                 image_url=image_url(still_path),
                 thumbnail_url=thumbnail_url(still_path),
                 duration=runtime_in_seconds(episode_source.runtime),
-                air_date=parse_air_datetime(episode_source.air_date),
+                air_date=clean_air_datetime(episode_source.air_date),
                 # Episode groups still have the original episode number listed so the
                 # episode number for them is based on the index.
                 episode_number=(
@@ -663,16 +677,16 @@ class TMDBMovie(TMDBMedia):
                 key=show_key,
                 name=parsed_movie_details.title,
                 description=parsed_movie_details.overview,
-                url=media_url(TMDBMediaType.movie, tmdb_movie_id),
+                url=tiel_url(TMDBMediaType.movie, tmdb_movie_id),
                 image_url=image_url(
                     parsed_movie_details.backdrop_path
-                    or parsed_movie_details.poster_path
+                    or parsed_movie_details.poster_path,
                 ),
                 thumbnail_url=thumbnail_url(
                     parsed_movie_details.backdrop_path
-                    or parsed_movie_details.poster_path
+                    or parsed_movie_details.poster_path,
                 ),
-                year=release_year(parsed_movie_details.release_date),
+                year=parse_release_year(parsed_movie_details.release_date),
                 media_type="Movie",
                 # TODO: This is probably needed, but an explanation should be written
                 # why.
@@ -711,11 +725,11 @@ class TMDBMovie(TMDBMedia):
                 sort_order=0,
                 image_url=image_url(
                     parsed_movie_details.backdrop_path
-                    or parsed_movie_details.poster_path
+                    or parsed_movie_details.poster_path,
                 ),
                 thumbnail_url=thumbnail_url(
                     parsed_movie_details.backdrop_path
-                    or parsed_movie_details.poster_path
+                    or parsed_movie_details.poster_path,
                 ),
                 data_timestamp=data_timestamp,
                 update_at=None,
@@ -767,15 +781,15 @@ class TMDBMovie(TMDBMedia):
             watch_identifier=watch_identifier(self.plugin_name(), episode_key),
             name=parsed_movie_details.title,
             description=parsed_movie_details.overview,
-            url=media_url(TMDBMediaType.movie, tmdb_movie_id),
+            url=tiel_url(TMDBMediaType.movie, tmdb_movie_id),
             image_url=image_url(
-                parsed_movie_details.backdrop_path or parsed_movie_details.poster_path
+                parsed_movie_details.backdrop_path or parsed_movie_details.poster_path,
             ),
             thumbnail_url=thumbnail_url(
-                parsed_movie_details.backdrop_path or parsed_movie_details.poster_path
+                parsed_movie_details.backdrop_path or parsed_movie_details.poster_path,
             ),
             duration=runtime_in_seconds(parsed_movie_details.runtime),
-            air_date=parse_air_datetime(parsed_movie_details.release_date),
+            air_date=clean_air_datetime(parsed_movie_details.release_date),
             episode_number=0,
             sort_order=0,
             data_timestamp=data_timestamp,

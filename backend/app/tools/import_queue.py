@@ -142,7 +142,7 @@ def _import_one(
         match_imported_shows_to_tmdb(
             session,
             plugin_instance,
-            plugin_instance.imported_shows(import_results),
+            [result.show for result in import_results],
         )
         add_results_to_channel(session, import_results, queue_item.channel)
     except InvalidURLError as error:
@@ -196,11 +196,11 @@ def add_results_to_channel(
     canonical = _canonical_ids_for_results(session, results)
     existing_channel_shows = {show.canonical_show_id: show for show in channel.shows}
     for result in results:
-        canonical_show_ids = canonical.shows.get(result.show_key, set())
+        canonical_show_ids = canonical.shows.get(result.show.key, set())
         if not canonical_show_ids:
             logger.warning(
                 "No canonical title for {}, leaving it off the channel",
-                result.show_key,
+                result.show.key,
             )
             continue
         for canonical_show_id in canonical_show_ids:
@@ -298,7 +298,7 @@ def _canonical_ids_for_results(
     return _CanonicalIds(
         shows=canonical_show_ids_by_key(
             session,
-            {result.show_key for result in results},
+            {result.show.key for result in results},
         ),
         seasons=seasons,
         episodes=episodes,

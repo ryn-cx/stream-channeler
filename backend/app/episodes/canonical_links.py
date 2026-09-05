@@ -18,6 +18,7 @@ from app.episodes.schemas import EpisodeCanonicalLinkInput
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.utils import tz_datetime
+from plugins.TMDB import TMDB
 
 _TMDB_EPISODE_URL = re.compile(
     r"themoviedb\.org/tv/(?P<tmdb_id>\d+)[^/]*"
@@ -28,14 +29,8 @@ _TMDB_MOVIE_URL = re.compile(r"themoviedb\.org/movie/(?P<tmdb_id>\d+)")
 
 # TODO: Validate
 def _import_tmdb_url(session: Session, url: str) -> Show:
-    from plugins.TMDB import TMDB  # noqa: PLC0415
-
     imported = TMDB(session).import_url(url)
-    statement = select(Show).where(
-        is_canonical(Show),
-        Show.key == imported[0].show_key,
-    )
-    return session.exec(statement).one()
+    return imported[0].show
 
 
 # TODO: Validate

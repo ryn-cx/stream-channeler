@@ -19,7 +19,6 @@ from app.users.models import User
 from app.users.service.accounts import get_or_create_plugin_user
 from plugins.utils.abstract_plugin import (
     InvalidURLError,
-    MediaNotFoundError,
     URLImportResult,
 )
 from plugins.utils.base_plugin_v3.files import BaseFile
@@ -33,6 +32,15 @@ if TYPE_CHECKING:
 # TODO: Validate
 class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
     __plugin_channels: tuple[User, dict[str, Channel]] | None = None
+
+    if TYPE_CHECKING:
+        # TODO: Validate
+        def best_matching_title_url(
+            self,
+            names: list[str],
+            media_type: TMDBMediaType,
+            year: int | None = None,
+        ) -> str | None: ...
 
     # TODO: Validate
     @property
@@ -111,14 +119,10 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         media_type: TMDBMediaType,
         year: int | None = None,
     ) -> list[URLImportResult]:
-        url = self.search_for_url(names, media_type, year)
-        if url is None:
-            msg = (
-                f"Could not find {media_type.value} named {names[0]} on "
-                f"{self.plugin_name()}."
-            )
-            raise MediaNotFoundError(msg)
-        return self.import_url(url)
+        url = self.best_matching_title_url(names, media_type, year)
+        if url:
+            return self.import_url(url)
+        return []
 
     def update_show(self, show: Show, *, force: bool = False) -> None:
         self.get_media_importer(show).update_show(show, force=force)

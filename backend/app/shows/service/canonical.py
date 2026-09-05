@@ -83,7 +83,7 @@ def _find_tmdb_show(
         results = tmdb_plugin.import_search([title], media_type, year)
     except MediaNotFoundError:
         return None
-    return next(iter(tmdb_plugin.imported_shows(results)), None)
+    return next((result.show for result in results), None)
 
 
 # TODO: Validate
@@ -139,7 +139,7 @@ def set_canonical_show_using_tmdb_url(
 
     imported = TMDB(session).import_url(address)
     canonical_show = session.exec(
-        select(Show).where(is_canonical(Show), Show.key == imported[0].show_key),
+        select(Show).where(is_canonical(Show), Show.key == imported[0].show.key),
     ).one()
     return set_canonical_show(session, show, canonical_show)
 
@@ -172,8 +172,8 @@ def import_non_canonical_show_from_url(
     except InvalidURLError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
-    for imported_show in plugin_instance.imported_shows(results):
-        match_show_to_tmdb(session, imported_show, canonical_show)
+    for result in results:
+        match_show_to_tmdb(session, result.show, canonical_show)
 
     remove_plugin_unmatched_sources(
         session,
@@ -182,7 +182,7 @@ def import_non_canonical_show_from_url(
     )
     session.flush()
     session.expire(canonical_show, ["non_canonical_show_links"])
-    imported_keys = {result.show_key for result in results}
+    imported_keys = {result.show.key for result in results}
     for link in canonical_show.non_canonical_show_links:
         if link.non_canonical_show.key not in imported_keys:
             continue

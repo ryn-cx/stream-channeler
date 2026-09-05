@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import inspect
-import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from functools import cache
@@ -12,13 +11,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
-from sqlmodel import col, select
 
 from app.channels.models import ChannelQueue
 from app.episodes.models import Episode
 from app.files.models import File
 from app.media.media_type import TMDBMediaType
 from app.plugins.models import Plugin
+from app.plugins.schemas import TMDBMediaInfo
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
@@ -437,7 +436,7 @@ class AbstractPlugin(ABC):
         raise NotImplementedError(msg)
 
     # TODO: Validate
-    def media_info(self, media_identifier: str) -> PluginMediaInfo | None:
+    def media_info(self, media_identifier: str) -> TMDBMediaInfo | None:
         """Return the catalogue detail shown for one of the plugin's own results.
 
         Args:
@@ -461,15 +460,6 @@ class AbstractPlugin(ABC):
         """
         msg = "tmdb_lookup_info is not supported by this plugin."
         raise NotImplementedError(msg)
-
-    # TODO: Validate
-    def imported_shows(self, results: Sequence[URLImportResult]) -> Sequence[Show]:
-        show_ids = {result.show_id for result in results}
-        return self.session.exec(
-            select(Show)
-            .join(Source, col(Show.source_id) == col(Source.id))
-            .where(col(Show.id).in_(show_ids), Source.plugin_id == self.plugin.id),
-        ).all()
 
     # TODO: Validate
     @classmethod
@@ -528,10 +518,8 @@ class URLImportResult(BaseModel):
 
     """
 
-    show_key: str
+    show: Show
     """The title that was imported from the URL."""
-
-    show_id: uuid.UUID
 
     season_keys: list[str] = Field(default=[])
     """Seasons to prepopulate in the user's whitelist/blacklist."""
@@ -558,8 +546,7 @@ class URLImportResult(BaseModel):
     ) -> URLImportResult:
         """Return the result of importing the whole of `show`."""
         return cls(
-            show_key=show.key,
-            show_id=show.id,
+            show=show,
             is_whitelist=is_whitelist,
         )
 
@@ -572,8 +559,7 @@ class URLImportResult(BaseModel):
     ) -> URLImportResult:
         """Return the result of importing only `seasons` of `show`."""
         return cls(
-            show_key=show.key,
-            show_id=show.id,
+            show=show,
             season_keys=[season.key for season in seasons],
             is_whitelist=True,
         )
@@ -587,8 +573,7 @@ class URLImportResult(BaseModel):
     ) -> URLImportResult:
         """Return the result of importing only `episodes` of `show`."""
         return cls(
-            show_key=show.key,
-            show_id=show.id,
+            show=show,
             episode_keys=[episode.key for episode in episodes],
             is_whitelist=True,
         )
@@ -615,43 +600,6 @@ class PluginSearchResult(BaseModel):
     format is the plugin's own — TMDB writes `tv 1399` and `movie 27205`. None
     when the plugin has no details to offer beyond the result itself.
     """
-
-
-# TODO: Validate
-class PluginWatchProviderItem(BaseModel):
-    """A place to watch a title, marked with the plugin that supports it."""
-
-    name: str
-    icon_url: str | None = None
-    plugin_key: str | None = None
-    search_url: str | None = None
-
-
-# TODO: Validate
-class PluginMediaInfo(BaseModel):
-    """The catalogue detail a searchable plugin shows for one of its results.
-
-    Modelled on what TMDB returns, since it is the richest source, and left
-    optional throughout so a service that only knows a title and a description
-    fills in what it has.
-    """
-
-    title: str | None = None
-    media_type: str | None = None
-    tagline: str | None = None
-    overview: str | None = None
-    poster_url: str | None = None
-    backdrop_url: str | None = None
-    year: int | None = None
-    end_year: int | None = None
-    status: str | None = None
-    rating: float | None = None
-    vote_count: int | None = None
-    number_of_seasons: int | None = None
-    number_of_episodes: int | None = None
-    runtime: int | None = None
-    genres: list[str] = []
-    providers: list[PluginWatchProviderItem] = []
 
 
 # TODO: Validate

@@ -339,7 +339,7 @@ class DatabaseMixinAlt[PluginT: AbstractPlugin]:
         return sorted(
             (
                 {
-                    "show_key": result.show_key,
+                    "show_key": result.show.key,
                     "is_whitelist": result.is_whitelist,
                     "whitelist_season_keys": sorted(result.season_keys),
                     "whitelist_episode_keys": sorted(result.episode_keys),
