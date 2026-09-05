@@ -1,12 +1,15 @@
 # TODO: Validate
 from __future__ import annotations
 
-from plugins.StreamChanneler.base import StreamChannelerBase
-from plugins.StreamChanneler.files import FileMixin
-from plugins.StreamChanneler.initialize import StreamChannelerInitializer
+from plugins.StreamChanneler.shared import StreamChannelerShared
 from plugins.utils.abstract_plugin import AbstractPlugin
+from plugins.utils.base_plugin_v3.initialize import BasePluginInitializer
 
 
 # TODO: Validate
-class StreamChanneler(StreamChannelerBase, FileMixin, AbstractPlugin, register=False):
+class StreamChannelerInitializer(BasePluginInitializer, StreamChannelerShared): ...
+
+
+# TODO: Validate
+class StreamChanneler(StreamChannelerShared, AbstractPlugin, register=False):
     initializer = StreamChannelerInitializer

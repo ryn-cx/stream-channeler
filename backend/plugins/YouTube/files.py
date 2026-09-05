@@ -1,10 +1,7 @@
 # TODO: Validate
 import json
 import re
-import time
 from collections import Counter
-from collections.abc import Sequence
-from datetime import datetime
 from functools import cache
 from typing import Any, override
 from urllib.parse import parse_qs, urlsplit
@@ -37,13 +34,8 @@ from not_yt_dlapi.videos.models import VideosModel
 from sqlmodel import Session
 
 from app.config import settings
-from app.files.models import File
 from app.plugins.models import Plugin
-from app.seasons.models import Season
-from app.shows.models import Show
-from plugins.utils.base_plugin_v2.base import BasePlugin
-from plugins.utils.base_plugin_v2.files import (
-    BaseFile,
+from plugins.utils.base_plugin_v3.files import (
     EndpointFile,
     HTMLFile,
     LoadEndpoint,
@@ -62,76 +54,7 @@ def not_yt_dlapi() -> NotYTDLAPI:
 
 
 # TODO: Validate
-def is_an_album(key: str) -> bool:
-    return key.startswith("OLAK5uy_")
-
-
-# TODO: Validate
-def is_channel_key(key: str) -> bool:
-    """Report whether a key belongs to a channel rather than to what one holds."""
-    return not (
-        is_video_key(key)
-        or is_show_key(key)
-        or is_an_album(key)
-        or is_user_playlist(key)
-    )
-
-
-# TODO: Validate
-def is_user_playlist(key: str) -> bool:
-    return key.startswith("PL")
-
-
-# TODO: Validate
-def is_video_key(key: str) -> bool:
-    """Return whether a  is for a video.
-
-    Show.key and Season.key is a video key if it is a free movie."""
-    # Videos are always 11 characters long and channels/playlists are never 11
-    # characters long.
-    return len(key) == 11  # noqa: PLR2004
-
-
-# TODO: Validate
-def is_show_key(key: str) -> bool:
-    """Report whether a key belongs to a show page."""
-    return key.startswith("SC")
-
-
-# TODO: Validate
-def is_channel_uploads_playlist_key(key: str) -> bool:
-    return key.startswith("UU")
-
-
-# TODO: Validate
-def show_season_key(show_key: str, season_number: str) -> str:
-    """Return the season key for one season of a show."""
-    return f"{show_key}/{season_number}"
-
-
-# TODO: Validate
-def is_show_season_key(key: str) -> bool:
-    """Report whether a key belongs to one season of a show."""
-    return is_show_key(key) and "/" in key
-
-
-# TODO: Validate
-def split_show_season_key(season_key: str) -> tuple[str, str]:
-    """Split a season key back into its show key and season number."""
-    show_key, _, season_number = season_key.partition("/")
-    return show_key, season_number
-
-
-# TODO: Validate
-def get_first_item[T](items: Sequence[T] | None) -> T:
-    if not items:
-        msg = "Expected at least one item, got none"
-        raise ValueError(msg)
-    return items[0]
-
-
-# TODO: Validate
-class _ChannelByChannelId(EndpointFile[ChannelsModel]):
+class ChannelByChannelId(EndpointFile[ChannelsModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> ChannelsEndpoint:
@@ -150,7 +73,7 @@ class _ChannelByChannelId(EndpointFile[ChannelsModel]):
 
 
 # TODO: Validate
-class _ChannelByHandle(EndpointFile[ChannelsModel]):
+class ChannelByHandle(EndpointFile[ChannelsModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> ChannelsEndpoint:
@@ -169,7 +92,7 @@ class _ChannelByHandle(EndpointFile[ChannelsModel]):
 
 
 # TODO: Validate
-class _ChannelByUsername(EndpointFile[ChannelsModel]):
+class ChannelByUsername(EndpointFile[ChannelsModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> ChannelsEndpoint:
@@ -188,7 +111,7 @@ class _ChannelByUsername(EndpointFile[ChannelsModel]):
 
 
 # TODO: Validate
-class _ChannelPlaylists(EndpointFile[PlaylistsModel]):
+class ChannelPlaylists(EndpointFile[PlaylistsModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> PlaylistsEndpoint:
@@ -209,7 +132,7 @@ class _ChannelPlaylists(EndpointFile[PlaylistsModel]):
 
 
 # TODO: Validate
-class _PlaylistInfo(EndpointFile[PlaylistsModel]):
+class PlaylistInfo(EndpointFile[PlaylistsModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> PlaylistsEndpoint:
@@ -222,7 +145,7 @@ class _PlaylistInfo(EndpointFile[PlaylistsModel]):
 
 
 # TODO: Validate
-class _PlaylistItems(EndpointFile[PlaylistItemsModel]):
+class PlaylistItems(EndpointFile[PlaylistItemsModel]):
     """Playlist items file."""
 
     # TODO: Validate
@@ -260,7 +183,7 @@ class _PlaylistItems(EndpointFile[PlaylistItemsModel]):
             downloaded_all_pages = page_token is None
 
             reached_existing_video = any(
-                item.snippet.published_at < self.data_timestamp
+                item.snippet.published_at < self.database_record.data_timestamp
                 for item in loaded_page.items
             )
 
@@ -316,7 +239,7 @@ class _PlaylistItems(EndpointFile[PlaylistItemsModel]):
 
 
 # TODO: Validate
-class _Videos(EndpointFile[VideosModel]):
+class Videos(EndpointFile[VideosModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> VideosEndpoint:
@@ -324,7 +247,7 @@ class _Videos(EndpointFile[VideosModel]):
 
 
 # TODO: Validate
-class _MusicPlaylistFile(EndpointFile[MusicModel]):
+class MusicPlaylist(EndpointFile[MusicModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> MusicEndpoint:
@@ -393,7 +316,7 @@ class _MusicPlaylistFile(EndpointFile[MusicModel]):
 
 
 # TODO: Validate
-class _TopicReleasesFile(PagedEndpointFile[TopicModel]):
+class TopicReleases(PagedEndpointFile[TopicModel]):
     """The albums and singles a musician's Topic channel lists.
 
     The channel lists a dozen releases on a shelf and the rest behind it, and a
@@ -453,7 +376,7 @@ class _TopicReleasesFile(PagedEndpointFile[TopicModel]):
 
 
 # TODO: Validate
-class _ShowListing(PagedEndpointFile[ShowsModel]):
+class ShowListing(PagedEndpointFile[ShowsModel]):
     """Every season of a show and every stretch of each of them.
 
     A season is its own thing to ask browse for and a long one is answered a
@@ -549,7 +472,7 @@ class _ShowListing(PagedEndpointFile[ShowsModel]):
 
 
 # TODO: Validate
-class _PlaylistFeed(EndpointFile[ChannelFeedModel | PlaylistFeedModel]):
+class PlaylistFeed(EndpointFile[ChannelFeedModel | PlaylistFeedModel]):
     """Playlist feed file."""
 
     # TODO: Validate
@@ -599,7 +522,7 @@ class _PlaylistFeed(EndpointFile[ChannelFeedModel | PlaylistFeedModel]):
 
 
 # TODO: Validate
-class _ShowPage(HTMLFile):
+class ShowPage(HTMLFile):
     """Show page file.
 
     The API has no concept of a show, so a show and its seasons are read from the
@@ -653,458 +576,3 @@ class _ShowPage(HTMLFile):
     def playlist_key(self) -> str | None:
         match = re.search(r"TVSH[A-Za-z0-9_-]{20,}", self._content())
         return match.group(0) if match else None
-
-
-# TODO: Validate
-class FileMixin(BasePlugin):
-    _importing_album_playlist_key: str | None = None
-
-    # TODO: Validate
-    def channel_by_channel_id_file(self, show_key: str) -> _ChannelByChannelId:
-        return self._file(_ChannelByChannelId, show_key)
-
-    # TODO: Validate
-    def channel_by_handle_file(self, channel_handle: str) -> _ChannelByHandle:
-        return self._file(_ChannelByHandle, channel_handle)
-
-    # TODO: Validate
-    def channel_by_username_file(self, channel_username: str) -> _ChannelByUsername:
-        return self._file(_ChannelByUsername, channel_username)
-
-    # TODO: Validate
-    def channel_playlists_file(self, show_key: str) -> _ChannelPlaylists:
-        return self._file(_ChannelPlaylists, show_key)
-
-    # TODO: Validate
-    def playlist_info_file(self, playlist_key: str) -> _PlaylistInfo:
-        return self._file(_PlaylistInfo, playlist_key)
-
-    # TODO: Validate
-    def playlist_items_file(self, season_key: str) -> _PlaylistItems:
-        return self._file(_PlaylistItems, season_key)
-
-    # TODO: Validate
-    def videos_file(self, episode_key: str) -> _Videos:
-        return self._file(_Videos, episode_key)
-
-    # TODO: Validate
-    def playlist_feed_file(self, season_key: str) -> _PlaylistFeed:
-        return self._file(_PlaylistFeed, season_key)
-
-    # TODO: Validate
-    def show_page_file(self, show_key: str) -> _ShowPage:
-        return self._file(_ShowPage, show_key)
-
-    # TODO: Validate
-    def show_listing_file(self, show_playlist_key: str) -> _ShowListing:
-        return self._file(_ShowListing, show_playlist_key)
-
-    # TODO: Validate
-    def show_playlist_key(self, show_key: str) -> str:
-        # Browse lists a show under the playlist it is published as rather than
-        # under the key its page is served at, and only the page says which that
-        # is.
-        playlist_key = self.show_page_file(show_key).playlist_key()
-        if playlist_key is None:
-            msg = f"The page for show {show_key!r} names no playlist to list it by."
-            raise ValueError(msg)
-        return playlist_key
-
-    # TODO: Validate
-    def show_listing_file_for_show(self, show_key: str) -> _ShowListing:
-        return self.show_listing_file(self.show_playlist_key(show_key))
-
-    # TODO: Validate
-    def music_playlist_file(self, playlist_key: str) -> _MusicPlaylistFile:
-        return self._file(_MusicPlaylistFile, playlist_key)
-
-    # TODO: Validate
-    def topic_releases_file(self, channel_key: str) -> _TopicReleasesFile:
-        return self._file(_TopicReleasesFile, channel_key)
-
-    # TODO: Validate
-    def is_topic_channel(self, show_key: str) -> bool:
-        """Report whether a channel key belongs to a musician's Topic channel.
-
-        Only the channel says so, and this reads what has been downloaded rather
-        than downloading it, so a channel that has not been read yet is answered
-        for as the plain channel it is taken for until it has been.
-        """
-        if not is_channel_key(show_key):
-            return False
-
-        channel_file = self.channel_by_channel_id_file(show_key)
-        if channel_file.is_outdated() or not channel_file.database_record.content:
-            return False
-        items = channel_file.parsed().items
-        return bool(items) and items[0].snippet.title.endswith(" - Topic")
-
-    # TODO: Validate
-    def is_movies_channel(self, show_key: str) -> bool:
-        if not is_channel_key(show_key):
-            return False
-
-        channel_file = self.channel_by_channel_id_file(show_key)
-        if channel_file.is_outdated() or not channel_file.database_record.content:
-            return False
-        items = channel_file.parsed().items
-        return bool(items) and items[0].snippet.title == "YouTube Movies"
-
-    # TODO: Validate
-    def is_usa_video(self, video_key: str) -> bool:
-        # A video that has not been read yet is taken to be one, since what says
-        # otherwise is the video itself and reading it is what this decides.
-        videos_file = self.videos_file(video_key)
-        if videos_file.is_outdated() or not videos_file.database_record.content:
-            return True
-
-        items = videos_file.parsed().items
-        if not items:
-            return False
-        restriction = items[0].content_details.region_restriction
-        if restriction is None or restriction.allowed is None:
-            return False
-        return "US" in restriction.allowed
-
-    # TODO: Validate
-    def topic_release_keys_from_file(self, channel_key: str) -> list[str]:
-        """Return the playlist key of every release a Topic channel lists."""
-        return [
-            release_key
-            for release_key in self.topic_releases_file(channel_key).release_keys()
-            if is_an_album(release_key)
-        ]
-
-    # TODO: Validate
-    def show_season_numbers_from_file(self, show_key: str) -> list[str]:
-        return [
-            str(number)
-            for number in self.show_listing_file_for_show(show_key).season_numbers()
-        ]
-
-    # TODO: Validate
-    def show_episode_keys_from_files(self, show_key: str) -> list[str]:
-        """Return the episode keys of every season of a show, in season order."""
-        return self._episode_keys_from_season_files(
-            self._season_keys_from_show_files(show_key),
-            show_key,
-        )
-
-    # TODO: Validate
-    @override
-    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:  # noqa: PLR0911
-        if is_video_key(show_key):
-            return [self.videos_file(show_key)]
-        if is_an_album(show_key):
-            return [self.music_playlist_file(show_key)]
-        if is_user_playlist(show_key):
-            return [self.playlist_info_file(show_key)]
-        # A show has no API of its own, so its page lists its seasons.
-        if is_show_key(show_key):
-            # The page comes first because it is what names the playlist the
-            # listing is asked for by.
-            return [
-                self.show_page_file(show_key),
-                self.show_listing_file_for_show(show_key),
-            ]
-        # A Topic channel's releases are the only thing it lists, and the API says
-        # nothing about them, so they are read off the channel's page instead of
-        # out of the playlists it owns.
-        if self.is_topic_channel(show_key):
-            return [
-                self.topic_releases_file(show_key),
-                self.channel_by_channel_id_file(show_key),
-            ]
-        # A channel generated for one title has no seasons but its uploads, so what
-        # it lists is never read.
-        if self.is_movies_channel(show_key):
-            return [self.channel_by_channel_id_file(show_key)]
-        return [
-            # Required to detect new seasons (playlists).
-            self.channel_playlists_file(show_key),
-            # ChannelByHandle is only used to get ChannelByChannelId so it is not used.
-            # Required to detect changes to the show (channel).
-            self.channel_by_channel_id_file(show_key),
-        ]
-
-    # TODO: Validate
-    @override
-    def _season_files(
-        self,
-        season_key: str,
-        show_key: str,
-    ) -> Sequence[BaseFile[Any]]:
-        # A season that is a single video is described by the video itself.
-        if is_video_key(season_key):
-            return [self.videos_file(season_key)]
-        # A season of a show is described by the page for that season.
-        if is_show_season_key(season_key):
-            show_key, _ = split_show_season_key(season_key)
-            return [self.show_listing_file_for_show(show_key)]
-        if is_an_album(season_key):
-            return [self.music_playlist_file(season_key)]
-        if is_user_playlist(show_key):
-            return [
-                self.playlist_items_file(season_key),
-                self.playlist_info_file(show_key),
-            ]
-        return [
-            # Required to detect new episodes (videos). Must stay first because
-            # season_data_timestamp reads files[0].
-            self.playlist_items_file(season_key),
-            # Required to detect changes to the season (playlist).
-            self.channel_playlists_file(show_key),
-        ]
-
-    # TODO: Validate
-    @override
-    def _episode_files(
-        self,
-        episode_key: str,
-        season_key: str,
-        show_key: str,
-    ) -> Sequence[BaseFile[Any]]:
-        # Required to detect changes to the episode (video).
-        return [self.videos_file(episode_key)]
-
-    # TODO: Validate
-    def _video_is_valid(self, video_title: str) -> bool:
-        """Check if a video is valid for importing."""
-        return video_title not in ("Deleted video", "Private video")
-
-    # TODO: Validate
-    def channel_uploads_playlist_key(self, show_key: str) -> str:
-        """Return the playlist ID for the channel's uploads."""
-        return show_key[:1] + "U" + show_key[2:]
-
-    # TODO: Validate
-    @override
-    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
-        # A show that is a single video has that video as its only season.
-        if is_video_key(show_key):
-            return [show_key]
-
-        if is_an_album(show_key) or is_user_playlist(show_key):
-            return [show_key]
-
-        # A show has one season for every season its page lists.
-        if is_show_key(show_key):
-            return [
-                show_season_key(show_key, season_number)
-                for season_number in self.show_season_numbers_from_file(show_key)
-            ]
-
-        # A Topic channel has one season for every release it lists.
-        if self.is_topic_channel(show_key):
-            return self._with_album_seasons(
-                self.topic_release_keys_from_file(show_key),
-                show_key,
-            )
-
-        channel_item = get_first_item(
-            self.channel_by_channel_id_file(show_key).parsed().items,
-        )
-        season_keys: list[str] = []
-
-        # If the channel has uploads also include that as a season. Generally, most
-        # playlists consist of uploads from the channel so the channel should be the
-        # first season_key listed so when the episodes are downloaded the channel
-        # uploads are downloaded first because that will maximize the batch sizes and
-        # minimize the number of API calls.
-        if int(channel_item.statistics.video_count) > 0:
-            season_keys.append(self.channel_uploads_playlist_key(show_key))
-
-        # A channel generated for one title of YouTube's catalogue is that title and
-        # nothing else, so what it uploaded is all of it and what it lists besides is
-        # not the title.
-        if self.is_movies_channel(show_key):
-            return season_keys
-
-        channel_playlists_file = self.channel_playlists_file(show_key)
-        if channel_playlists_file.database_record.content:
-            season_keys.extend(
-                item.id
-                for item in channel_playlists_file.parsed().items
-                if item.content_details.item_count > 0
-            )
-
-        return self._with_album_seasons(season_keys, show_key)
-
-    # TODO: Validate
-    def _with_album_seasons(self, season_keys: list[str], show_key: str) -> list[str]:
-        # An album playlist is auto-generated and listed by no channel, so it is only
-        # ever added by an importing URL naming it and then always kept.
-        return season_keys + [
-            key
-            for key in self._album_season_keys_from_database(show_key)
-            if key not in season_keys
-        ]
-
-    # TODO: Validate
-    def _album_season_keys_from_database(self, show_key: str) -> list[str]:
-        season_keys: list[str] = []
-        if self._importing_album_playlist_key:
-            season_keys.append(self._importing_album_playlist_key)
-
-        existing_show = self._preload_show(show_key, preload_seasons=True).one_or_none()
-        if existing_show:
-            season_keys.extend(
-                season.key
-                for season in existing_show.seasons
-                if is_an_album(season.key) and season.key not in season_keys
-            )
-        return season_keys
-
-    # TODO: Validate
-    @override
-    def _episode_keys_from_season_files(
-        self,
-        season_keys: str | list[str],
-        show_key: str,
-    ) -> list[str]:
-        if isinstance(season_keys, str):
-            season_keys = [season_keys]
-        # A channel generated for one title uploads that title once per language it
-        # was published in, and every one of them is the same film, so the one
-        # published here is the only one worth holding.
-        usa_only = self.is_movies_channel(show_key)
-        seen: set[str] = set()
-        video_keys: list[str] = []
-        for season_key in season_keys:
-            for video_key in self._season_episode_keys_from_file(season_key):
-                if video_key in seen:
-                    continue
-                if usa_only and not self.is_usa_video(video_key):
-                    continue
-                seen.add(video_key)
-                video_keys.append(video_key)
-        return video_keys
-
-    # TODO: Validate
-    def _season_episode_keys_from_file(self, season_key: str) -> list[str]:
-        """Return the episode keys held by a single season."""
-        # A season that is a single video holds only that video.
-        if is_video_key(season_key):
-            return [season_key]
-
-        # A season of a show holds the episodes listed on its page.
-        if is_show_season_key(season_key):
-            show_key, season_number = split_show_season_key(season_key)
-            episode_keys = self.show_listing_file_for_show(
-                show_key,
-            ).episode_keys_by_season()
-            return episode_keys.get(int(season_number), [])
-
-        if is_an_album(season_key):
-            return self.music_playlist_file(season_key).track_keys()
-
-        playlist_items_file = self.playlist_items_file(season_key)
-        if not playlist_items_file.database_record.content:
-            msg = (
-                f"PlaylistItems file for season {season_key!r} has empty content "
-                f"(file key {playlist_items_file.file_key()!r}, extra "
-                f"{playlist_items_file.database_record.extra!r}). The playlist was "
-                f"likely not found when downloaded."
-            )
-            raise ValueError(msg)
-        return [
-            item.content_details.video_id
-            for item in playlist_items_file.parsed().items
-            if self._video_is_valid(item.snippet.title)
-        ]
-
-    # TODO: Validate
-    def _batch_download_missing_videos(self, video_keys: list[str]) -> None:
-        outdated_ids = [
-            video_id
-            for video_id in video_keys
-            if self.videos_file(video_id).is_outdated()
-        ]
-        if not outdated_ids:
-            return
-
-        logger.info(f"Batch downloading {len(outdated_ids)} YouTube videos")
-        start = time.monotonic()
-        responses = not_yt_dlapi().videos.download_all(outdated_ids)
-        elapsed_time = time.monotonic() - start
-        logger.info(
-            f"Batch downloaded {len(outdated_ids)} YouTube videos "
-            f"in {elapsed_time:.2f}s",
-        )
-
-        # A batch answers for fifty videos at once and every video is stored in a
-        # file of its own, so each item is written out as the response it would
-        # have arrived in had it been asked for on its own.
-        responses_by_id: dict[str, str] = {}
-        for response in responses:
-            page: dict[str, Any] = json.loads(response)
-            for item in page["items"]:
-                responses_by_id[item["id"]] = json.dumps({**page, "items": [item]})
-        for video_id in outdated_ids:
-            video_file = self.videos_file(video_id)
-            # write is called directly because of the way the files are batch downloaded.
-            video_file.write(responses_by_id[video_id])
-
-    # TODO: Validate
-    @override
-    def _download_show_files_and_children(
-        self,
-        show: str | Show,
-        update_at: datetime | None = None,
-    ) -> list[File]:
-        """Read the channel before the files that depend on what it is.
-
-        Which files describe a channel is not the same for a Topic channel as for
-        any other, and only the channel says which it is, so it is read before
-        anything asks.
-        """
-        show_key = self._get_key(show)
-        if is_channel_key(show_key):
-            self.channel_by_channel_id_file(show_key).download_if_outdated(update_at)
-        # The page names the playlist the show's listing is asked for by, so the
-        # files a show has cannot be named until it has been read.
-        if is_show_key(show_key):
-            self.show_page_file(show_key).download_if_outdated(update_at)
-        return super()._download_show_files_and_children(show, update_at)
-
-    # TODO: Validate
-    @override
-    def _download_all_season_files(self, show: str | Show) -> list[File]:
-        """Batch download the videos of every playlist in a single API call."""
-        show_key = self._get_key(show)
-        season_keys = self._season_keys_from_show_files(show_key)
-        _cache = self._preload_season_files(season_keys, show_key)
-        all_files: list[File] = []
-        for season_key in season_keys:
-            season_files = self._season_files(season_key, show_key)
-            all_files.extend(self._download_outdated_files(season_files))
-
-        episode_cache = self._preload_all_episode_files(season_keys, show_key)
-        self._batch_download_missing_videos(
-            self._episode_keys_from_season_files(season_keys, show_key),
-        )
-        for season_key in season_keys:
-            all_files.extend(
-                self._download_all_episode_files(
-                    season_key,
-                    show_key,
-                    preloaded_files=episode_cache,
-                ),
-            )
-        return all_files
-
-    # TODO: Validate
-    @override
-    def _download_all_episode_files(
-        self,
-        season: str | Season,
-        show: str | Show | None = None,
-        preloaded_files: Sequence[File] | None = None,
-    ) -> list[File]:
-        """Batch download all videos for a season in a single API call."""
-        season_key = self._get_key(season)
-        show_key = self._get_show_key(season, show)
-        video_keys = self._episode_keys_from_season_files(season_key, show_key)
-        self._preload_episode_files(video_keys, season_key, show_key, preloaded_files)
-        self._batch_download_missing_videos(video_keys)
-        return [self.videos_file(video_id).database_record for video_id in video_keys]

@@ -1,30 +1,144 @@
 # TODO: Validate
-"""The URLs a Netflix title and its episodes are watched at."""
+"""What every other part of the plugin reads a Netflix title by."""
 
 from __future__ import annotations
 
-from typing import override
+from typing import TYPE_CHECKING
 from urllib.parse import quote_plus
 
-from plugins.utils.base_plugin_v2.base import BasePlugin
+if TYPE_CHECKING:
+    from meshfilm.lodp_title_and_plans_page.models import (
+        LodpTitleAndPlansPageModel,
+    )
+    from meshfilm.lodp_title_and_plans_page.models import (
+        Video1 as TitleVideo,
+    )
+    from meshfilm.preview_modal_episode_selector.models import (
+        Node as SeasonNode,
+    )
+    from meshfilm.preview_modal_episode_selector.models import (
+        PreviewModalEpisodeSelectorModel,
+    )
+    from meshfilm.preview_modal_episode_selector_season_episodes.models import (
+        Node as EpisodeNode,
+    )
+    from meshfilm.preview_modal_episode_selector_season_episodes.models import (
+        PreviewModalEpisodeSelectorSeasonEpisodesModel,
+    )
+    from meshfilm.search_page_results.models import SearchPageResultsModel
+
+WEEKDAYS = {
+    "Monday": 0,
+    "Tuesday": 1,
+    "Wednesday": 2,
+    "Thursday": 3,
+    "Friday": 4,
+    "Saturday": 5,
+    "Sunday": 6,
+}
+
+SEARCH_MEDIA_TYPES = {
+    "Show": "Series",
+    "Movie": "Movie",
+}
 
 
 # TODO: Validate
-class UtilsMixin(BasePlugin):
-    """The URLs of a title and of the episodes under it."""
+def build_url(path: str) -> str:
+    return f"https://netflix.com/{path.lstrip('/')}"
 
-    # TODO: Validate
-    @classmethod
-    def _show_url(cls, show_key: str) -> str:
-        return cls.build_url(f"title/{show_key}")
 
-    # TODO: Validate
-    @classmethod
-    def _episode_url(cls, episode_key: str) -> str:
-        return cls.build_url(f"watch/{episode_key}")
+# TODO: Validate
+def show_url(show_key: str) -> str:
+    return build_url(f"title/{show_key}")
 
-    # TODO: Validate
-    @classmethod
-    @override
-    def manual_search_url(cls, query: str) -> str:
-        return cls.build_url(f"search?q={quote_plus(query)}")
+
+# TODO: Validate
+def episode_url(episode_key: str) -> str:
+    return build_url(f"watch/{episode_key}")
+
+
+# TODO: Validate
+def search_url(query: str) -> str:
+    return build_url(f"search?q={quote_plus(query)}")
+
+
+# TODO: Validate
+def build_season_key(show_key: str, season_id: str | int) -> str:
+    return f"{show_key}:{season_id}"
+
+
+# TODO: Validate
+def split_season_key(season_key: str) -> tuple[str, str]:
+    show_key, _, season_id = season_key.partition(":")
+    return show_key, season_id
+
+
+# TODO: Validate
+def title_video(
+    title: LodpTitleAndPlansPageModel,
+    show_key: str,
+) -> TitleVideo:
+    video = next(
+        (video for video in title.data.videos if video.video_id == int(show_key)),
+        None,
+    )
+    if video is None:
+        msg = f"No title found for {show_key}"
+        raise ValueError(msg)
+    return video
+
+
+# TODO: Validate
+def is_movie(title: LodpTitleAndPlansPageModel, show_key: str) -> bool:
+    return title_video(title, show_key).field__typename == "Movie"
+
+
+# TODO: Validate
+def ordered_seasons(seasons: PreviewModalEpisodeSelectorModel) -> list[SeasonNode]:
+    video = seasons.data.videos[0]
+    if video.seasons is None:
+        return []
+    return [edge.node for edge in video.seasons.edges]
+
+
+# TODO: Validate
+def season_episodes(
+    episodes: PreviewModalEpisodeSelectorSeasonEpisodesModel,
+) -> list[EpisodeNode]:
+    video = episodes.data.videos[0]
+    if video.episodes is None:
+        return []
+    return [edge.node for edge in video.episodes.edges]
+
+
+# TODO: Validate
+def first_search_result_key(results: SearchPageResultsModel) -> str | None:
+    """Return the first movie or TV show in a page of search results.
+
+    Netflix returns movies and shows intermixed. Suggestion entities
+    (collections, autocomplete) carry no title and are skipped.
+    """
+    for section in results.data.page.sections.edges:
+        for entity in section.node.entities.edges:
+            unified_entity = entity.node.unified_entity
+            if unified_entity is None:
+                continue
+            if unified_entity.field__typename not in SEARCH_MEDIA_TYPES:
+                continue
+            return str(unified_entity.video_id)
+    return None
+
+
+# TODO: Validate
+def upcoming_weekday(video: TitleVideo) -> int | None:
+    """Return the weekday an upcoming episode is scheduled for, or None if none.
+
+    Netflix surfaces this as a tagline message (e.g. "New Episode Coming
+    Thursday"); a title with nothing upcoming has an empty tagline.
+    """
+    for tagline in video.tagline_messages:
+        for name, weekday in WEEKDAYS.items():
+            if name in tagline.tagline:
+                return weekday
+    return None

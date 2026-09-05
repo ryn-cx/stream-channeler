@@ -11,6 +11,7 @@ from uuid import UUID
 
 from loguru import logger
 from pydantic import BaseModel, model_validator
+from sqlmodel import Session
 
 from app.constants import ALL_TEST_FILES_FOLDER, ALL_TEST_FILES_METADATA_FOLDER
 from app.files.models import File
@@ -20,6 +21,7 @@ from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.base_plugin_v2.base import BasePlugin
 from plugins.utils.base_plugin_v2.files import BaseFile
+from plugins.utils.base_plugin_v3 import core
 from plugins.utils.base_plugin_v3.files import BaseFile as BaseFileV3
 from plugins.utils.manage_plugins import import_plugins
 
@@ -263,6 +265,29 @@ def restore_stored_metadata(record: File, owner_key: str, path: Path) -> None:
     for field, value in stored.items():
         setattr(record, field, value)
     date_at_import_time(record)
+
+
+# TODO: Validate
+@contextmanager
+def file_sessions_that_flush() -> Generator[None]:
+    # TODO: Validate
+    def patched(session: Session) -> Session:
+        existing: Session | None = session.info.get(core.FILE_SESSION_KEY)
+        if existing is not None:
+            return existing
+
+        file_session = Session(
+            session.get_bind(),
+            join_transaction_mode="rollback_only",
+        )
+        file_session.commit = file_session.flush  # type: ignore[method-assign]
+        file_session.rollback = file_session.expunge_all  # type: ignore[method-assign]
+        file_session.close = file_session.expunge_all  # type: ignore[method-assign]
+        session.info[core.FILE_SESSION_KEY] = file_session
+        return file_session
+
+    with patch.object(core, "file_session_for", patched):
+        yield
 
 
 # TODO: Validate

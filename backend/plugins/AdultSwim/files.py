@@ -1,9 +1,10 @@
 # TODO: Validate
+"""The files an Adult Swim title is read out of."""
+
 from __future__ import annotations
 
-from collections.abc import Sequence
 from functools import cache
-from typing import Any, override
+from typing import override
 
 from pools_closed import PoolsClosed
 from pools_closed.exceptions import ShowNotFoundError
@@ -14,18 +15,18 @@ from pools_closed.shows.models import ShowsModel
 from sqlmodel import Session
 
 from app.plugins.models import Plugin
-from plugins.utils.base_plugin_v2.base import BasePlugin
-from plugins.utils.base_plugin_v2.files import BaseFile, EndpointFile
+from plugins.utils.base_plugin_v3.files import EndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 
+# TODO: Validate
 @cache
 def pools_closed() -> PoolsClosed:
     return PoolsClosed(get_around_client=get_around_client())
 
 
 # TODO: Validate
-class _ShowPage(EndpointFile[ShowModel]):
+class ShowPage(EndpointFile[ShowModel]):
     @override
     def _endpoint(self) -> ShowEndpoint:
         return pools_closed().show
@@ -36,7 +37,7 @@ class _ShowPage(EndpointFile[ShowModel]):
 
 
 # TODO: Validate
-class _ShowsPage(EndpointFile[ShowsModel]):
+class ShowsPage(EndpointFile[ShowsModel]):
     # TODO: Validate
     def __init__(self, session: Session, plugin: Plugin) -> None:
         super().__init__(session, plugin, "Shows")
@@ -49,82 +50,3 @@ class _ShowsPage(EndpointFile[ShowsModel]):
     @override
     def _download_file(self) -> str:
         return self._endpoint().download()
-
-
-# TODO: Validate
-class FileMixin(BasePlugin):
-    # TODO: Validate
-    @classmethod
-    @override
-    def _plugin_wide_files(cls) -> tuple[type[BaseFile[Any]], ...]:
-        return (_ShowsPage,)
-
-    # TODO: Validate
-    def show_file(self, show_key: str) -> _ShowPage:
-        return self._file(_ShowPage, show_key)
-
-    # TODO: Validate
-    def shows_file(self) -> _ShowsPage:
-        return self._file(_ShowsPage)
-
-    # TODO: Validate
-    @classmethod
-    def show_url(cls, show_key: str) -> str:
-        return cls.build_url(f"videos/{show_key}")
-
-    # TODO: Validate
-    @classmethod
-    def episode_url(cls, show_key: str, episode_slug: str) -> str:
-        return cls.build_url(f"videos/{show_key}/{episode_slug}")
-
-    # TODO: Validate
-    @override
-    def _source_files(self) -> Sequence[_ShowsPage]:
-        return [self.shows_file()]
-
-    # TODO: Validate
-    @override
-    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
-        return [self.show_file(show_key)]
-
-    # TODO: Validate
-    @override
-    def _season_files(
-        self,
-        season_key: str,
-        show_key: str,
-    ) -> Sequence[BaseFile[Any]]:
-        return [self.show_file(show_key)]
-
-    # TODO: Validate
-    @override
-    def _episode_files(
-        self,
-        episode_key: str,
-        season_key: str,
-        show_key: str,
-    ) -> Sequence[BaseFile[Any]]:
-        return [self.show_file(show_key)]
-
-    # TODO: Validate
-    @override
-    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
-        return [
-            str(season.number) for season in self.show_file(show_key).parsed().seasons
-        ]
-
-    # TODO: Validate
-    @override
-    def _episode_keys_from_season_files(
-        self,
-        season_keys: str | list[str],
-        show_key: str,
-    ) -> list[str]:
-        if isinstance(season_keys, str):
-            season_keys = [season_keys]
-        return [
-            episode.id
-            for season in self.show_file(show_key).parsed().seasons
-            if str(season.number) in season_keys
-            for episode in season.episodes
-        ]

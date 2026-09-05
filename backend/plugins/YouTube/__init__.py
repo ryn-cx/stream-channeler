@@ -4,25 +4,61 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from loguru import logger
 
-from app.channels.models import ChannelQueue, URLStatus
+from app.channels.models import URLStatus
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin
-from plugins.YouTube.base import YouTubeBase
-from plugins.YouTube.importer import YouTubeImporter
-from plugins.YouTube.initialize import YouTubeInitializer
+from plugins.utils.base_plugin_v3.base import BaseReadURL
+from plugins.utils.base_plugin_v3.initialize import BasePluginInitializer
+from plugins.YouTube.media import YouTubeMedia
+from plugins.YouTube.shared import YouTubeShared
 from plugins.YouTube.utils import is_quota_error
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from app.channels.models import ChannelQueue
+    from app.seasons.models import Season
+    from app.shows.models import Show
 
 
 # TODO: Validate
-class YouTube(YouTubeBase, AbstractPlugin, register=False):
-    """YouTube plugin."""
+class YouTubeInitializer(BasePluginInitializer, YouTubeShared): ...
 
+
+# TODO: Validate
+class YouTube(YouTubeShared, BaseReadURL, AbstractPlugin, register=False):
     initializer = YouTubeInitializer
-    importer = YouTubeImporter
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def specialized_updater(cls) -> bool:
+        return True
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_regexes(cls) -> tuple[str, ...]:
+        return YouTubeMedia._url_regexes()  # noqa: SLF001 - The importer owns the addresses.
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def url_regex(cls) -> str:
+        return YouTubeMedia.url_regex()
+
+    # TODO: Validate
+    @override
+    def get_media_importer(self, input: Show | str) -> YouTubeMedia:
+        return YouTubeMedia(self)
+
+    # TODO: Validate
+    def update_seasons(self, seasons: Sequence[Season]) -> None:
+        YouTubeMedia(self).update_seasons(seasons)
 
     # TODO: Validate
     @override

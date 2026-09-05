@@ -1,5 +1,5 @@
 # TODO: Validate
-from plugins.utils.base_plugin_v2.url import BaseURLMixin
+from plugins.utils.base_plugin_v3.url import BaseURLMixin
 
 LONG_DOMAIN = "youtube.com"
 SHORT_DOMAIN = "youtu.be"

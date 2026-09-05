@@ -1,5 +1,6 @@
 # TODO: Validate
 import os
+from datetime import UTC, datetime
 from typing import override
 
 import pytest
@@ -66,6 +67,8 @@ class TestInitializeChannel(HuluValidator):
 
 # TODO: Validate
 class TestMovie(StandardTests[Hulu], TMDBLookupTests[Hulu], HuluValidator):
+    import_time = datetime(2026, 9, 2, tzinfo=UTC)
+    update_time = datetime(2026, 9, 3, tzinfo=UTC)
     movie_id = "34bc6b99-813f-4d5d-bbe7-f3099b45879b"
     show_slug = "the-devil-wears-prada-2"
     urls = (
@@ -95,6 +98,8 @@ class TestSeries(StandardTests[Hulu], TMDBLookupTests[Hulu], HuluValidator):
 
 # TODO: Validate
 class TestSeriesEpisode(StandardTests[Hulu], TMDBLookupTests[Hulu], HuluValidator):
+    import_time = datetime(2026, 9, 2, tzinfo=UTC)
+    update_time = datetime(2026, 9, 3, tzinfo=UTC)
     episode_id = "c282fbd1-d649-4a69-8733-ad9e52222858"
     urls = (
         "/watch/{episode_id}",

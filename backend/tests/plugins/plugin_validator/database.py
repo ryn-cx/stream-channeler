@@ -363,7 +363,7 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
         match_imported_shows_to_tmdb(
             session,
             self.imported_plugin,
-            self.imported_plugin.imported_shows(output),
+            [result.show for result in output],
         )
 
         session.flush()

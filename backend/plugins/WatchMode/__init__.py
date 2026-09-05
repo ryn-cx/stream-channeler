@@ -12,14 +12,21 @@ from __future__ import annotations
 from typing import override
 
 from plugins.utils.abstract_plugin import AbstractPlugin
-from plugins.WatchMode.base import WatchModeBase
-from plugins.WatchMode.initialize import WatchModeInitializer
+from plugins.utils.base_plugin_v3.initialize import BasePluginInitializer
+from plugins.WatchMode.shared import WatchModeShared
 
 
 # TODO: Validate
-class WatchMode(WatchModeBase, AbstractPlugin, register=False):
-    """Watchmode plugin."""
+class WatchModeInitializer(BasePluginInitializer, WatchModeShared):
+    # Watchmode holds no listing of its own, so it has no `Source` to create.
+    # TODO: Validate
+    @override
+    def _create_source_records(self) -> None:
+        return
 
+
+# TODO: Validate
+class WatchMode(WatchModeShared, AbstractPlugin, register=False):
     initializer = WatchModeInitializer
 
     # TODO: Validate

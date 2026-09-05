@@ -1,48 +1,98 @@
 # TODO: Validate
-"""What every other part of the plugin reads a title by."""
+"""What every other part of the plugin reads a Tubi title by."""
 
 from __future__ import annotations
 
 import re
-from typing import override
+from typing import TYPE_CHECKING
 from urllib.parse import quote
 
-from plugins.utils.base_plugin_v2.base import BasePlugin
+if TYPE_CHECKING:
+    from plugi.content.models import Child as SeasonChild
+    from plugi.content.models import Child1 as EpisodeChild
+    from plugi.content.models import ContentModel
 
 
 # TODO: Validate
-class UtilsMixin(BasePlugin):
-    """The URLs of a title and the values read straight off its content file."""
+def build_url(path: str) -> str:
+    return f"https://tubitv.com/{path.lstrip('/')}"
 
-    # TODO: Validate
-    @staticmethod
-    def _episode_name(title: str) -> str:
-        # Episode titles are prefixed with their season and episode number,
-        # e.g. "S01:E01 - What a Night for a Knight".
-        return re.sub(r"^S\d+:E\d+ - ", "", title)
 
-    # TODO: Validate
-    @staticmethod
-    def _first_image(images: list[str]) -> str | None:
-        return images[0] if images else None
+# TODO: Validate
+def series_url(show_key: str) -> str:
+    return build_url(f"series/{show_key}")
 
-    # TODO: Validate
-    @classmethod
-    def _series_url(cls, show_key: str) -> str:
-        return cls.build_url(f"series/{show_key}")
 
-    # TODO: Validate
-    @classmethod
-    def _movie_url(cls, show_key: str) -> str:
-        return cls.build_url(f"movies/{show_key}")
+# TODO: Validate
+def movie_url(show_key: str) -> str:
+    return build_url(f"movies/{show_key}")
 
-    # TODO: Validate
-    @classmethod
-    def _episode_url(cls, episode_key: str) -> str:
-        return cls.build_url(f"tv-shows/{episode_key}")
 
-    # TODO: Validate
-    @override
-    @classmethod
-    def manual_search_url(cls, query: str) -> str | None:
-        return cls.build_url(f"search/{quote(query)}")
+# TODO: Validate
+def episode_url(episode_key: str) -> str:
+    return build_url(f"tv-shows/{episode_key}")
+
+
+# TODO: Validate
+def search_url(query: str) -> str:
+    return build_url(f"search/{quote(query)}")
+
+
+# TODO: Validate
+def episode_name(title: str) -> str:
+    # Episode titles are prefixed with their season and episode number,
+    # e.g. "S01:E01 - What a Night for a Knight".
+    return re.sub(r"^S\d+:E\d+ - ", "", title)
+
+
+# TODO: Validate
+def first_image(images: list[str]) -> str | None:
+    return images[0] if images else None
+
+
+# TODO: Validate
+def is_movie(content: ContentModel) -> bool:
+    # The `type` field of a Tubi content response marks a series; a movie
+    # and a single episode both use "v".
+    return content.type != "s"
+
+
+# TODO: Validate
+def build_season_key(show_key: str, season_id: str) -> str:
+    """Encode the show key into the season key.
+
+    Every entity's data comes from the single content file keyed by the show,
+    but the base plugin resolves episode files from a season key alone, so the
+    show key is carried inside it.
+    """
+    return f"{show_key}:{season_id}"
+
+
+# TODO: Validate
+def movie_season_key(show_key: str) -> str:
+    # A movie has no seasons of its own so its single season is given a
+    # fixed id.
+    return build_season_key(show_key, "0")
+
+
+# TODO: Validate
+def split_season_key(season_key: str) -> tuple[str, str]:
+    show_key, _, season_id = season_key.partition(":")
+    return show_key, season_id
+
+
+# TODO: Validate
+def seasons(content: ContentModel) -> list[SeasonChild]:
+    children = content.children
+    if children is None:
+        return []
+    # Tubi returns the seasons in an arbitrary order.
+    return sorted(children, key=lambda season: int(season.id))
+
+
+# TODO: Validate
+def season_episodes(content: ContentModel, season_id: str) -> list[EpisodeChild]:
+    for season in seasons(content):
+        if season.id == season_id:
+            return season.children
+    return []

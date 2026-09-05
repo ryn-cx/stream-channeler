@@ -71,6 +71,7 @@ class TMDBExternalWebsites(TMDBShared, ABC):
                     plugin_key=media_plugin.plugin_name(),
                 )
 
+    # TODO: Validate
     def _upsert_unmatched_source(
         self,
         show_id: uuid.UUID,
@@ -92,7 +93,7 @@ class TMDBExternalWebsites(TMDBShared, ABC):
                 plugin_key=plugin_key,
             ),
         )
-        self.session.commit()
+        self.session.flush()
 
     def external_link_exists(
         self,
@@ -124,6 +125,7 @@ class TMDBExternalWebsites(TMDBShared, ABC):
             for link in show.non_canonical_show_links
         }
 
+    # TODO: Validate
     def _import_external_plugin(
         self,
         plugin_class: type[AbstractPlugin],
@@ -136,6 +138,7 @@ class TMDBExternalWebsites(TMDBShared, ABC):
             return False
 
         plugin = plugin_class(self.session)
+        self.file_session.commit()
         savepoint = self.session.begin_nested()
         try:
             results = plugin.import_search([name], media_type, year)

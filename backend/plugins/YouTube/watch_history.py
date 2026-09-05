@@ -4,7 +4,7 @@ from typing import override
 
 from app.utils import tz_datetime
 from app.watches.schemas import WatchImportResult
-from plugins.utils.base_plugin_v2.watch_history import (
+from plugins.utils.base_plugin_v3.watch_history import (
     BaseWatchHistoryMixin,
     ParsedWatchEntry,
 )

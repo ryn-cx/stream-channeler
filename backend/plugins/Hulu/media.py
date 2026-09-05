@@ -317,10 +317,12 @@ class HuluMovie(HuluMedia):
         return [self.movie_file(show_key)]
 
     @override
+    # TODO: Validate
     def _season_keys_from_show_files(self, show_key: str) -> list[str]:
-        return [build_season_key(show_key, 0)]
+        return [show_key]
 
     @override
+    # TODO: Validate
     def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
@@ -328,7 +330,7 @@ class HuluMovie(HuluMedia):
     ) -> list[str]:
         if isinstance(season_keys, str):
             season_keys = [season_keys]
-        return [split_season_key(key)[0] for key in season_keys]
+        return list(season_keys)
 
     @override
     # TODO: Validate

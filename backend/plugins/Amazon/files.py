@@ -9,42 +9,46 @@ what asks for them and what turns them into models.
 from __future__ import annotations
 
 import json
-from collections.abc import Sequence
-from dataclasses import dataclass
 from datetime import datetime, timedelta
 from functools import cache
-from typing import Any, override
+from typing import TYPE_CHECKING, Any, override
 
 import httpx
 from deforestation import Deforestation
 from deforestation.detail import Detail as DetailEndpoint
 from deforestation.detail_widgets import DetailWidgets as DetailWidgetsEndpoint
 from deforestation.detail_widgets.models import DetailWidgetsModel
-from deforestation.detail_widgets.models import Episode as WidgetEpisode
 from deforestation.exceptions import RedirectedError, TitleNotFoundError
 from deforestation.search import Search as SearchEndpoint
 from deforestation.search.models import SearchModel
-from pydantic import BaseModel
-from sqlmodel import Session
 
-from app.media.media_type import TMDBMediaType
-from app.plugins.models import Plugin
 from app.utils import tz_datetime
-from plugins.Amazon.constants import (
-    IMAGE_PREFERENCE,
-    MOVIE_ENTITY_TYPE,
-    PRIME_BENEFIT_ID,
-)
+from plugins.Amazon.constants import PRIME_BENEFIT_ID
 from plugins.Amazon.keys import title_key_from_location
-from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
-from plugins.utils.base_plugin_v2.base import BasePlugin
-from plugins.utils.base_plugin_v2.files import (
-    BaseFile,
+from plugins.Amazon.utils import (
+    AmazonChannel,
+    AmazonEpisode,
+    AmazonSeason,
+    card_channel_name,
+    channel_name,
+    compact_key_from_link,
+    episode_from_detail,
+    episode_from_widget,
+    pick_raw_image,
+    widget_episode_available,
+)
+from plugins.utils.abstract_plugin import InvalidURLError
+from plugins.utils.base_plugin_v3.files import (
     DownloadedFile,
     EndpointFile,
     TextFile,
 )
 from plugins.utils.get_around_client import get_around_client
+
+if TYPE_CHECKING:
+    from sqlmodel import Session
+
+    from app.plugins.models import Plugin
 
 
 # TODO: Validate
@@ -54,146 +58,7 @@ def deforestation() -> Deforestation:
 
 
 # TODO: Validate
-@dataclass
-class AmazonChannel:
-    """A subscription other than Prime that a title can be watched with."""
-
-    benefit_id: str
-    name: str
-
-
-# TODO: Validate
-@dataclass
-class AmazonSeason:
-    """One season of a series, as its series' page lists it."""
-
-    key: str
-    name: str
-    season_number: int
-
-
-# TODO: Validate
-@dataclass
-class AmazonEpisode:
-    """One episode of a season, as the season's episode list gives it."""
-
-    key: str
-    compact_key: str
-    title: str
-    episode_number: int | None
-    synopsis: str | None
-    duration: int | None
-    release_date: str | None
-    image_url: str | None
-
-
-# TODO: Validate
-def _pick_image(images: BaseModel) -> str | None:
-    for name in IMAGE_PREFERENCE:
-        if url := getattr(images, name, None):
-            return str(url)
-    return None
-
-
-# TODO: Validate
-def _compact_key_from_link(link: str) -> str:
-    """Return the id a link to a title carries, which is how its URL names it."""
-    return link.split("?", 1)[0].rsplit("/", 1)[-1]
-
-
-# TODO: Validate
-def _card_texts(card: dict[str, Any]) -> list[dict[str, Any]]:
-    texts: list[dict[str, Any]] = []
-    for component in (card.get("components") or {}).values():
-        payload = component["componentPayload"]
-        if collection := payload.get("textComponentCollection"):
-            texts += collection["textList"]
-        if text := payload.get("textComponent"):
-            texts.append(text)
-    return texts
-
-
-# TODO: Validate
-def _card_channel_name(card: dict[str, Any]) -> str | None:
-    """Return the channel's own name as the card it is offered on heads it.
-
-    The button on the card is labelled with what pressing it does rather than
-    with the channel, so more than one channel is offered under the same label.
-    """
-    for text in _card_texts(card):
-        # What a card writes the name of what it offers as.
-        if text["textType"] == "HEADING":
-            return text["text"].strip()
-    return None
-
-
-# TODO: Validate
-def _channel_name(label: str) -> str:
-    # What splits the two lines of an offer's label.
-    name = label.split("{lineBreak}", 1)[0].strip()
-    # What a channel's own name is written after in the label it is offered
-    # under.
-    for prefix in ("Watch with ", "Start your free trial to ", "Subscribe to "):
-        name = name.removeprefix(prefix)
-    if not name:
-        msg = f"No channel name in {label!r}"
-        raise ValueError(msg)
-    return name
-
-
-# TODO: Validate
-def _pick_raw_image(images: dict[str, Any]) -> str | None:
-    for name in IMAGE_PREFERENCE:
-        if url := images.get(name):
-            return str(url)
-    return None
-
-
-# TODO: Validate
-def _episode_from_detail(
-    title_id: str,
-    item: dict[str, Any],
-    compact_key: str,
-) -> AmazonEpisode:
-    """Return an episode read off the page of the season it belongs to."""
-    return AmazonEpisode(
-        key=title_id,
-        compact_key=compact_key,
-        title=item["title"],
-        episode_number=item.get("episodeNumber"),
-        synopsis=item["synopsis"],
-        duration=item.get("duration"),
-        release_date=item["releaseDate"],
-        image_url=_pick_raw_image(item["images"]),
-    )
-
-
-# TODO: Validate
-def _widget_episode_available(episode: WidgetEpisode) -> bool:
-    return any(
-        primary_action.payload.expanding_card or primary_action.payload.card_options
-        for primary_action in episode.action.primary_actions
-    )
-
-
-# TODO: Validate
-def _episode_from_widget(episode: WidgetEpisode) -> AmazonEpisode:
-    """Return an episode read off a page of the season's episode list."""
-    detail = episode.detail
-    return AmazonEpisode(
-        key=episode.title_id,
-        compact_key=episode.self.compact_gti,  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
-        title=detail.title,
-        episode_number=detail.episode_number,
-        synopsis=detail.synopsis,
-        duration=detail.duration,
-        release_date=detail.release_date,
-        image_url=_pick_image(detail.images),
-    )
-
-
-# TODO: Validate
-class _ShareLinkRedirect(TextFile):
+class ShareLinkRedirect(TextFile):
     """Where a share link points.
 
     Amazon writes a share link with an id of its own that none of Prime Video's
@@ -202,7 +67,6 @@ class _ShareLinkRedirect(TextFile):
     again is not another round trip.
     """
 
-    # TODO: Validate
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
@@ -249,13 +113,16 @@ class _ShareLinkRedirect(TextFile):
         location = self.location() or ""
         landing_key = title_key_from_location(location)
         if landing_key is None:
-            msg = f"Amazon share link {self.unique_identifier} points at no title: {location!r}"
+            msg = (
+                f"Amazon share link {self.unique_identifier} points at no title: "
+                f"{location!r}"
+            )
             raise InvalidURLError(msg)
         return landing_key
 
 
 # TODO: Validate
-class _Detail(DownloadedFile[dict[str, Any]]):
+class Detail(DownloadedFile[dict[str, Any]]):
     """A title's own page.
 
     A series has no page of its own on Prime Video: every page is one season of
@@ -274,19 +141,16 @@ class _Detail(DownloadedFile[dict[str, Any]]):
     """
 
     # TODO: Validate
-    @override
-    def _endpoint(self) -> DetailEndpoint:
-        return deforestation().detail
-
-    # TODO: Validate
     def __init__(self, session: Session, plugin: Plugin, title_key: str) -> None:
-        """Initialize the file."""
         self.title_key = title_key
         self.session = session
         self.plugin = plugin
         super().__init__(session, plugin, title_key)
 
-    # TODO: Validate
+    @override
+    def _endpoint(self) -> DetailEndpoint:
+        return deforestation().detail
+
     @override
     def _parse(self, content: str) -> dict[str, Any]:
         """Return the page as Amazon wrote it."""
@@ -294,17 +158,14 @@ class _Detail(DownloadedFile[dict[str, Any]]):
         return page
 
     # Occurs when a user puts in an invalid URL.
-    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, TitleNotFoundError)
 
-    # TODO: Validate
     @override
     def acceptable_error_status(self) -> str:
         return f"Invalid title {self.title_key}"
 
-    # TODO: Validate
     @override
     def _download_file(self) -> str:
         try:
@@ -315,7 +176,6 @@ class _Detail(DownloadedFile[dict[str, Any]]):
                 raise
             return self._endpoint().download(landing_key)
 
-    # TODO: Validate
     @override
     def _download(self) -> None:
         super()._download()
@@ -326,7 +186,6 @@ class _Detail(DownloadedFile[dict[str, Any]]):
         for page in self.episode_pages():
             page.download_if_outdated()
 
-    # TODO: Validate
     @override
     def is_outdated(self, minimum_timestamp: datetime | None = None) -> bool:
         if super().is_outdated(minimum_timestamp):
@@ -391,7 +250,7 @@ class _Detail(DownloadedFile[dict[str, Any]]):
     # TODO: Validate
     def image_url(self) -> str | None:
         """Return the image the title is pictured by."""
-        return _pick_raw_image(self._header()["images"])
+        return pick_raw_image(self._header()["images"])
 
     # TODO: Validate
     def release_date(self) -> str | None:
@@ -428,7 +287,7 @@ class _Detail(DownloadedFile[dict[str, Any]]):
                 # Keyed by the id its own page is addressed by rather than by
                 # the id the listing names it with, so that a season is the same
                 # season whichever way in it was found.
-                key=_compact_key_from_link(entry["seasonLink"]),
+                key=compact_key_from_link(entry["seasonLink"]),
                 name=entry["displayName"],
                 season_number=entry["sequenceNumber"],
             )
@@ -449,11 +308,11 @@ class _Detail(DownloadedFile[dict[str, Any]]):
 
     # TODO: Validate
     def episode_page_token(self, page_index: int) -> str:
-        """Return the token the page of the episode list at `page_index` is asked for by."""
+        """Return the token the page of the episode list at `page_index` is asked by."""
         return str(self._episode_page_entries()[page_index]["token"])
 
     # TODO: Validate
-    def episode_pages(self) -> list[_EpisodeList]:
+    def episode_pages(self) -> list[EpisodeList]:
         """Return every page of the episode list that is not on this page already.
 
         A season's page carries the page of its episode list that it opens on,
@@ -462,7 +321,7 @@ class _Detail(DownloadedFile[dict[str, Any]]):
         if not self.database_record.content:
             return []
         return [
-            _EpisodeList(self.session, self.plugin, self.title_key, index)
+            EpisodeList(self.session, self.plugin, self.title_key, index)
             for index, page in enumerate(self._episode_page_entries())
             if not page["isSelected"]
         ]
@@ -478,7 +337,7 @@ class _Detail(DownloadedFile[dict[str, Any]]):
         details = state["detail"]["detail"]
         compact_keys = state["self"]
         return [
-            _episode_from_detail(
+            episode_from_detail(
                 title_id,
                 details[title_id],
                 compact_keys[title_id]["compactGTI"],
@@ -499,7 +358,7 @@ class _Detail(DownloadedFile[dict[str, Any]]):
             if entry["isSelected"]:
                 episodes += self._page_episodes()
             else:
-                page = _EpisodeList(self.session, self.plugin, self.title_key, index)
+                page = EpisodeList(self.session, self.plugin, self.title_key, index)
                 episodes += page.episodes()
         return episodes
 
@@ -576,7 +435,7 @@ class _Detail(DownloadedFile[dict[str, Any]]):
                 if benefit_id == PRIME_BENEFIT_ID or benefit_id in seen:
                     continue
                 seen.add(benefit_id)
-                name = _card_channel_name(card) or _channel_name(subscription["label"])
+                name = card_channel_name(card) or channel_name(subscription["label"])
                 channels.append(AmazonChannel(benefit_id, name))
         return channels
 
@@ -616,19 +475,6 @@ class _Detail(DownloadedFile[dict[str, Any]]):
         return min(seasons, key=lambda season: season.season_number).key
 
     # TODO: Validate
-    def tmdb_lookup_info(self) -> list[TMDBLookupInfo]:
-        self.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        return [
-            TMDBLookupInfo(
-                self.series_title(),
-                {"Movie": TMDBMediaType.movie, "TV Show": TMDBMediaType.tv}.get(
-                    self.entity_type(),
-                ),
-                self.release_year(),
-            ),
-        ]
-
-    # TODO: Validate
     def unavailable_message(self) -> str | None:
         if self._offer_payloads():
             return None
@@ -643,17 +489,12 @@ class _Detail(DownloadedFile[dict[str, Any]]):
 
 
 # TODO: Validate
-class _EpisodeList(EndpointFile[DetailWidgetsModel]):
+class EpisodeList(EndpointFile[DetailWidgetsModel]):
     """One page of a season's episode list.
 
     The page a season opens on only carries the episodes it shows, so every page
     of them is asked for by the token the season's page carries for it.
     """
-
-    # TODO: Validate
-    @override
-    def _endpoint(self) -> DetailWidgetsEndpoint:
-        return deforestation().detail_widgets
 
     # TODO: Validate
     def __init__(
@@ -663,17 +504,19 @@ class _EpisodeList(EndpointFile[DetailWidgetsModel]):
         season_key: str,
         page_index: int,
     ) -> None:
-        """Initialize the file."""
         self.season_key = season_key
         self.page_index = page_index
         self.session = session
         self.plugin = plugin
         super().__init__(session, plugin, f"{season_key}/{page_index}")
 
-    # TODO: Validate
+    @override
+    def _endpoint(self) -> DetailWidgetsEndpoint:
+        return deforestation().detail_widgets
+
     @override
     def _download_file(self) -> str:
-        detail = _Detail(self.session, self.plugin, self.season_key)
+        detail = Detail(self.session, self.plugin, self.season_key)
         token = detail.episode_page_token(self.page_index)
         return self._endpoint().download(self.season_key, token)
 
@@ -682,26 +525,24 @@ class _EpisodeList(EndpointFile[DetailWidgetsModel]):
         """Return the episodes this page holds."""
         episode_list = self.parsed().widgets.episode_list
         return [
-            _episode_from_widget(episode)
+            episode_from_widget(episode)
             for episode in episode_list.episodes
-            if _widget_episode_available(episode)
+            if widget_episode_available(episode)
         ]
 
 
 # TODO: Validate
-class _Search(EndpointFile[SearchModel]):
+class Search(EndpointFile[SearchModel]):
     """Everything one search query matched.
 
     Prime Video answers a search with every match at once, so there is a single
     file for a query rather than one for each page of it.
     """
 
-    # TODO: Validate
     @override
     def _endpoint(self) -> SearchEndpoint:
         return deforestation().search
 
-    # TODO: Validate
     @override
     def _next_update_at(self) -> datetime:
         return tz_datetime.now() + timedelta(days=30)
@@ -724,112 +565,9 @@ class _Search(EndpointFile[SearchModel]):
             if container.container_type != "Grid":
                 continue
             for entity in container.entities:
-                key = _compact_key_from_link(entity.link.url)
+                key = compact_key_from_link(entity.link.url)
                 if key in seen:
                     continue
                 seen.add(key)
                 keys.append(key)
         return keys
-
-
-# TODO: Validate
-class FileMixin(BasePlugin):
-    """The files a title is read out of."""
-
-    # TODO: Validate
-    def search_file(self, query: str) -> _Search:
-        """Return data for search results."""
-        return self._file(_Search, query)
-
-    # TODO: Validate
-    def detail_file(self, title_key: str) -> _Detail:
-        """Return data for a title."""
-        return self._file(_Detail, title_key)
-
-    # TODO: Validate
-    def share_link_file(self, share_key: str) -> _ShareLinkRedirect:
-        """Return where the share link written with `share_key` points."""
-        return self._file(_ShareLinkRedirect, share_key)
-
-    # TODO: Validate
-    def _is_movie(self, title_key: str) -> bool:
-        return self.detail_file(title_key).entity_type() == MOVIE_ENTITY_TYPE
-
-    # TODO: Validate
-    def title_key_from_share_key(self, share_key: str) -> str:
-        return self.share_link_file(share_key).title_key()
-
-    # TODO: Validate
-    def show_key_from_title_key(self, title_key: str) -> str:
-        return self.detail_file(title_key).show_key()
-
-    # TODO: Validate
-    def _season_available(self, season_key: str) -> bool:
-        detail = self.detail_file(season_key)
-        detail.download_if_outdated()
-        return detail.unavailable_message() is None
-
-    # TODO: Validate
-    def _season_entries(self, show_key: str) -> list[AmazonSeason]:
-        page = self.detail_file(show_key)
-        seasons = page.seasons() or [
-            AmazonSeason(
-                key=page.compact_key(),
-                name=page.title(),
-                season_number=page.season_number() or 1,
-            ),
-        ]
-        return [season for season in seasons if self._season_available(season.key)]
-
-    # TODO: Validate
-    @override
-    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
-        # Required to detect changes to the show and new seasons of it.
-        return [self.detail_file(show_key)]
-
-    # TODO: Validate
-    @override
-    def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
-        return [
-            # Required to detect changes to the season and new episodes of it.
-            self.detail_file(season_key),
-            # Required to detect a season being taken off the show.
-            self.detail_file(show_key),
-        ]
-
-    # TODO: Validate
-    @override
-    def _episode_files(
-        self,
-        episode_key: str,
-        season_key: str,
-        show_key: str,
-    ) -> Sequence[BaseFile[Any]]:
-        # The episode list comes down with the season's page, so the page is what
-        # says whether an episode read out of it has changed.
-        return [self.detail_file(season_key)]
-
-    # TODO: Validate
-    @override
-    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
-        return [season.key for season in self._season_entries(show_key)]
-
-    # TODO: Validate
-    @override
-    def _episode_keys_from_season_files(
-        self,
-        season_keys: str | list[str],
-        show_key: str,
-    ) -> list[str]:
-        if isinstance(season_keys, str):
-            season_keys = [season_keys]
-        episode_keys: list[str] = []
-        for season_key in season_keys:
-            if self._is_movie(season_key):
-                # A film is the only episode of the only season of itself.
-                episode_keys.append(season_key)
-            else:
-                episode_keys += [
-                    episode.key for episode in self.detail_file(season_key).episodes()
-                ]
-        return episode_keys

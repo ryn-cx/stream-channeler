@@ -1,27 +1,35 @@
 # TODO: Validate
-"""What every other part of the plugin reads a title by."""
+"""What every other part of the plugin reads a Paramount+ title by."""
 
-from typing import override
-
-from plugins.utils.base_plugin_v2.base import BasePlugin
+from __future__ import annotations
 
 
 # TODO: Validate
-class UtilsMixin(BasePlugin):
-    """The URLs of a title and whether it is a film or a series."""
+def build_url(path: str) -> str:
+    return f"https://paramountplus.com/{path.lstrip('/')}"
 
-    # TODO: Validate
-    @classmethod
-    def _show_url(cls, show_key: str) -> str:
-        return cls.build_url(f"shows/{show_key}/")
 
-    # TODO: Validate
-    @classmethod
-    def _movie_url(cls, movie_key: str) -> str:
-        return cls.build_url(f"movies/video/{movie_key}/")
+# TODO: Validate
+def show_url(show_key: str) -> str:
+    return build_url(f"shows/{show_key}/")
 
-    # TODO: Validate
-    @override
-    @classmethod
-    def manual_search_url(cls, query: str) -> str | None:
-        return cls.build_url("search/")
+
+# TODO: Validate
+def movie_url(movie_key: str) -> str:
+    return build_url(f"movies/video/{movie_key}/")
+
+
+# TODO: Validate
+def search_url() -> str:
+    return build_url("search/")
+
+
+# TODO: Validate
+def build_season_key(show_key: str, season_number: int) -> str:
+    return f"{show_key}:{season_number}"
+
+
+# TODO: Validate
+def split_season_key(season_key: str) -> tuple[str, int]:
+    show_key, _, season_number = season_key.rpartition(":")
+    return show_key, int(season_number)

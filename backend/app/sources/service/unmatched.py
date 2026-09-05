@@ -23,14 +23,12 @@ def remove_unmatched_source(
     show_id: uuid.UUID,
     provider_name: str,
 ) -> None:
-    result = session.exec(
+    session.exec(
         delete(UnmatchedSource).where(
             col(UnmatchedSource.show_id) == show_id,
             col(UnmatchedSource.provider_name) == provider_name,
         ),
     )
-    if result.rowcount:
-        session.commit()
 
 
 # TODO: Validate

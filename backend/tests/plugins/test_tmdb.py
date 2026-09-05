@@ -167,7 +167,11 @@ class TestSupermanRelinkedTubi(TMDBValidator):
     def _initialize_extra_files(self, session: Session) -> None:
         tubi = Tubi(session)
         results = tubi.import_url(self.relinked_url)
-        match_imported_shows_to_tmdb(session, tubi, tubi.imported_shows(results))
+        match_imported_shows_to_tmdb(
+            session,
+            tubi,
+            [result.show for result in results],
+        )
 
     # TODO: Validate
     def shows_of(self, session: Session, plugin_key: str) -> list[Show]:
@@ -195,8 +199,8 @@ class TestSupermanRelinkedTubi(TMDBValidator):
         with frozen_clock(self.import_time):
             tubi = Tubi(session_with_files)
             results = tubi.import_url(self.relinked_url)
-            for imported_show in tubi.imported_shows(results):
-                match_show_to_tmdb(session_with_files, imported_show, tmdb_show)
+            for result in results:
+                match_show_to_tmdb(session_with_files, result.show, tmdb_show)
         session_with_files.flush()
         session_with_files.expire_all()
 

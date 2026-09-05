@@ -1,28 +1,133 @@
 # TODO: Validate
-from typing import Any, override
+"""What every other part of the plugin reads a YouTube title by."""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+from typing import Any
 from urllib.parse import quote
 
 from not_yt_dlapi.exceptions import APIError
 
-from app.media.media_type import TMDBMediaType
-from app.seasons.models import Season
-from app.shows.models import Show
-from app.sources.models import Source
-from plugins.YouTube.constants import (
-    FREE_SOURCE_KEY,
-    LINKS_SOURCE_KEY,
-    PAID_SOURCE_KEY,
-)
-from plugins.YouTube.files import (
-    FileMixin,
-    get_first_item,
-    is_an_album,
-    is_channel_key,
-    is_channel_uploads_playlist_key,
-    is_show_key,
-    is_show_season_key,
-    is_video_key,
-)
+
+# TODO: Validate
+def build_url(path: str) -> str:
+    return f"https://youtube.com/{path.lstrip('/')}"
+
+
+# TODO: Validate
+def channel_url(channel_key: str) -> str:
+    return build_url(f"channel/{channel_key}")
+
+
+# TODO: Validate
+def video_url(video_key: str) -> str:
+    return build_url(f"watch?v={video_key}")
+
+
+# TODO: Validate
+def playlist_url(playlist_key: str) -> str:
+    return build_url(f"playlist?list={playlist_key}")
+
+
+# TODO: Validate
+def show_url(show_key: str) -> str:
+    return build_url(f"show/{show_key}")
+
+
+# TODO: Validate
+def show_season_url(show_key: str, season_number: str) -> str:
+    return build_url(f"show/{show_key}?season={season_number}")
+
+
+# TODO: Validate
+def search_url(query: str) -> str:
+    return build_url(f"results?search_query={quote(query)}")
+
+
+# TODO: Validate
+def is_an_album(key: str) -> bool:
+    return key.startswith("OLAK5uy_")
+
+
+# TODO: Validate
+def is_user_playlist(key: str) -> bool:
+    return key.startswith("PL")
+
+
+# TODO: Validate
+def is_video_key(key: str) -> bool:
+    """Return whether a  is for a video.
+
+    Show.key and Season.key is a video key if it is a free movie."""
+    # Videos are always 11 characters long and channels/playlists are never 11
+    # characters long.
+    return len(key) == 11  # noqa: PLR2004
+
+
+# TODO: Validate
+def is_show_key(key: str) -> bool:
+    """Report whether a key belongs to a show page."""
+    return key.startswith("SC")
+
+
+# TODO: Validate
+def is_channel_key(key: str) -> bool:
+    """Report whether a key belongs to a channel rather than to what one holds."""
+    return not (
+        is_video_key(key)
+        or is_show_key(key)
+        or is_an_album(key)
+        or is_user_playlist(key)
+    )
+
+
+# TODO: Validate
+def is_channel_uploads_playlist_key(key: str) -> bool:
+    return key.startswith("UU")
+
+
+# TODO: Validate
+def is_regular_playlist(key: str) -> bool:
+    return key.startswith("PL") or is_channel_uploads_playlist_key(key)
+
+
+# TODO: Validate
+def channel_key_from_uploads_playlist_key(key: str) -> str:
+    return key[:1] + "C" + key[2:]
+
+
+# TODO: Validate
+def channel_uploads_playlist_key(show_key: str) -> str:
+    """Return the playlist ID for the channel's uploads."""
+    return show_key[:1] + "U" + show_key[2:]
+
+
+# TODO: Validate
+def show_season_key(show_key: str, season_number: str) -> str:
+    """Return the season key for one season of a show."""
+    return f"{show_key}/{season_number}"
+
+
+# TODO: Validate
+def is_show_season_key(key: str) -> bool:
+    """Report whether a key belongs to one season of a show."""
+    return is_show_key(key) and "/" in key
+
+
+# TODO: Validate
+def split_show_season_key(season_key: str) -> tuple[str, str]:
+    """Split a season key back into its show key and season number."""
+    show_key, _, season_number = season_key.partition("/")
+    return show_key, season_number
+
+
+# TODO: Validate
+def get_first_item[T](items: Sequence[T] | None) -> T:
+    if not items:
+        msg = "Expected at least one item, got none"
+        raise ValueError(msg)
+    return items[0]
 
 
 # TODO: Validate
@@ -34,16 +139,6 @@ def is_free_movies_channel(channel_key: str) -> bool:
     that title alone, so who owns a video is what says which of the two it is.
     """
     return channel_key == "UCuVPpxrm2VAgpH3Ktln4HXg"
-
-
-# TODO: Validate
-def is_regular_playlist(key: str) -> bool:
-    return key.startswith("PL") or is_channel_uploads_playlist_key(key)
-
-
-# TODO: Validate
-def channel_key_from_uploads_playlist_key(key: str) -> str:
-    return key[:1] + "C" + key[2:]
 
 
 # TODO: Validate
@@ -59,144 +154,25 @@ def is_quota_error(error: BaseException) -> bool:
 
 
 # TODO: Validate
-class UtilsMixin(FileMixin):
-    # TODO: Validate
-    def record_album_playlist_key(self, playlist_key: str) -> None:
-        self._importing_album_playlist_key = playlist_key
+def video_is_valid(video_title: str) -> bool:
+    """Check if a video is valid for importing."""
+    return video_title not in ("Deleted video", "Private video")
 
-    # TODO: Validate
-    @override
-    def soft_delete_missing_seasons(self, show_key: str) -> None:
-        return
 
-    # TODO: Validate
-    @property
-    def free_source(self) -> Source:
-        return self._source_db_entry(FREE_SOURCE_KEY)
+# TODO: Validate
+def best_thumbnail_url(thumbnails: Any) -> str | None:  # noqa: ANN401 - TODO: Add a specific type for thumbnails
+    # It sounds wrong but standard is a higher resolution than high.
+    for quality in ("maxres", "standard", "high", "medium", "default"):
+        if thumb := getattr(thumbnails, quality, None):
+            url: str = thumb.url
+            return url
+    return None
 
-    # TODO: Validate
-    @property
-    def paid_source(self) -> Source:
-        return self._source_db_entry(PAID_SOURCE_KEY)
 
-    # TODO: Validate
-    @property
-    def links_source(self) -> Source:
-        return self._source_db_entry(LINKS_SOURCE_KEY)
-
-    # TODO: Validate
-    def show_channel_key(self, show_key: str) -> str | None:
-        # A show says nothing about who owns it, so what owns it is read off one of
-        # its videos, every one of which is owned by whoever the show is.
-        if is_channel_key(show_key):
-            return show_key
-        if is_video_key(show_key):
-            episode_key = show_key
-        else:
-            episode_keys = self.show_episode_keys_from_files(show_key)
-            if not episode_keys:
-                return None
-            episode_key = episode_keys[0]
-        items = self.videos_file(episode_key).parsed().items
-        return items[0].snippet.channel_id if items else None
-
-    # TODO: Validate
-    def is_free_movie(self, show_key: str) -> bool:
-        channel_key = self.show_channel_key(show_key)
-        return channel_key is not None and is_free_movies_channel(channel_key)
-
-    # TODO: Validate
-    def show_channel_title(self, show_key: str) -> str | None:
-        episode_keys = self.show_episode_keys_from_files(show_key)
-        if not episode_keys:
-            return None
-        items = self.videos_file(episode_keys[0]).parsed().items
-        return items[0].snippet.channel_title if items else None
-
-    # TODO: Validate
-    def subscription_source(self, show_key: str) -> Source | None:
-        if not is_show_key(show_key):
-            return None
-        if "Try now" not in self.show_listing_file_for_show(show_key).offer_labels():
-            return None
-        channel_title = self.show_channel_title(show_key)
-        if not channel_title:
-            return None
-
-        source_key = f"{self.plugin_name()} {channel_title}"
-        return self.upsert_source(source_key)
-
-    # TODO: Validate
-    def paid_or_free_source(self, show_key: str) -> Source:
-        if subscription := self.subscription_source(show_key):
-            return subscription
-        if self.is_free_movie(show_key):
-            return self.free_source
-        return self.paid_source
-
-    # TODO: Validate
-    def tmdb_media_type(self, show_key: str) -> TMDBMediaType:
-        return TMDBMediaType.movie if is_video_key(show_key) else TMDBMediaType.tv
-
-    # TODO: Validate
-    def _get_episode_number(
-        self,
-        episode_key: str,
-        season_key: str,
-        show_key: str,
-    ) -> int | None:
-        if not (is_show_season_key(season_key) or is_an_album(season_key)):
-            return None
-        episode_keys = self._season_episode_keys_from_file(season_key)
-        if episode_key not in episode_keys:
-            return None
-        return episode_keys.index(episode_key) + 1
-
-    # TODO: Validate
-    def _channel_has_only_uploads(self, show_key: str) -> bool:
-        return self.channel_playlists_file(show_key).has_only_uploads()
-
-    # TODO: Validate
-    @override
-    @classmethod
-    def manual_search_url(cls, query: str) -> str | None:
-        return cls.build_url(f"results?search_query={quote(query)}")
-
-    # TODO: Validate
-    @staticmethod
-    def _best_thumbnail_url(thumbnails: Any) -> str | None:  # noqa: ANN401 - TODO: Add a specific type for thumbnails
-        # It sounds wrong but standard is a higher resolution than high.
-        for quality in ("maxres", "standard", "high", "medium", "default"):
-            if thumb := getattr(thumbnails, quality, None):
-                return thumb.url
-        return None
-
-    # TODO: Validate
-    @staticmethod
-    def _thumbnail_url(thumbnails: Any) -> str | None:  # noqa: ANN401 - TODO: Add a specific type for thumbnails
-        for quality in ("standard", "high", "medium", "default", "maxres"):
-            if thumb := getattr(thumbnails, quality, None):
-                return thumb.url
-        return None
-
-    # TODO: Validate
-    def _playlist_is_missing(self, show: Show, playlist_key: str) -> bool:
-        # A URL for a whole show asks for every season it has, so nothing is missing
-        # as long as it has been imported with seasons.
-        if is_show_key(playlist_key) and not is_show_season_key(playlist_key):
-            return not show.active_children
-
-        # A URL for a Topic channel asks for every release the musician has, which
-        # is the whole show, so nothing is missing once it has been imported with
-        # seasons.
-        if playlist_key == show.key and self.is_topic_channel(show.key):
-            return not show.active_children
-
-        # If the playlist being checked is the channel uploads playlist it should only
-        # be considered missing if the channel has at least one upload.
-        if playlist_key == self.channel_uploads_playlist_key(show.key):
-            channel_by_channel_id = self.channel_by_channel_id_file(show.key)
-            channel_item = get_first_item(channel_by_channel_id.parsed().items)
-            if int(channel_item.statistics.video_count) == 0:
-                return False
-        return not Season.get_from_memory(self.session, show, playlist_key)
+# TODO: Validate
+def thumbnail_url(thumbnails: Any) -> str | None:  # noqa: ANN401 - TODO: Add a specific type for thumbnails
+    for quality in ("standard", "high", "medium", "default", "maxres"):
+        if thumb := getattr(thumbnails, quality, None):
+            url: str = thumb.url
+            return url
+    return None

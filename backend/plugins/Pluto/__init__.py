@@ -1,17 +1,49 @@
 # TODO: Validate
-"""Pluto TV plugin."""
-
 from __future__ import annotations
 
-from plugins.Pluto.base import PlutoBase
-from plugins.Pluto.importer import PlutoImporter
-from plugins.Pluto.initialize import PlutoInitializer
-from plugins.utils.abstract_plugin import AbstractPlugin
+import re
+from typing import TYPE_CHECKING, override
+
+from plugins.Pluto.media import PlutoMedia, PlutoMovie, PlutoSeries
+from plugins.Pluto.shared import MOVIE_URL_REGEX, SERIES_URL_REGEX, PlutoShared
+from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
+from plugins.utils.base_plugin_v3.base import BaseReadURL
+from plugins.utils.base_plugin_v3.initialize import BasePluginInitializer
+
+if TYPE_CHECKING:
+    from app.shows.models import Show
 
 
 # TODO: Validate
-class Pluto(PlutoBase, AbstractPlugin, register=False):
-    """Pluto TV plugin."""
+class PlutoInitializer(BasePluginInitializer, PlutoShared): ...
 
+
+# TODO: Validate
+class Pluto(PlutoShared, BaseReadURL, AbstractPlugin, register=False):
     initializer = PlutoInitializer
-    importer = PlutoImporter
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_regexes(cls) -> tuple[str, ...]:
+        return (MOVIE_URL_REGEX, SERIES_URL_REGEX)
+
+    # TODO: Validate
+    @override
+    def get_media_importer(self, input: Show | str) -> PlutoMedia:
+        if isinstance(input, str):
+            domain_regex = self._domain_regex()
+            if re.match(domain_regex + MOVIE_URL_REGEX, input):
+                return PlutoMovie(self)
+            if re.match(domain_regex + SERIES_URL_REGEX, input):
+                return PlutoSeries(self)
+
+            msg = f"Invalid {self.plugin_name()} URL: {input}"
+            raise InvalidURLError(msg)
+
+        if not input.media_type:
+            msg = "Show.media_type is not set."
+            raise AttributeError(msg)
+        if input.media_type == "Movie":
+            return PlutoMovie(self)
+        return PlutoSeries(self)

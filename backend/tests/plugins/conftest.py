@@ -8,6 +8,7 @@ import pytest
 
 from tests.plugins.plugin_validator.stored_files import (
     check_episodes_before_grouped_download,
+    file_sessions_that_flush,
     serve_downloads_from_disk,
 )
 
@@ -38,6 +39,7 @@ def _stored_downloads() -> Generator[list[str]]:
     """
     with (
         check_episodes_before_grouped_download(),
+        file_sessions_that_flush(),
         serve_downloads_from_disk() as downloaded,
     ):
         yield downloaded

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from itertools import combinations
 from typing import TYPE_CHECKING, override
 
 from app.canonical_media.service.identifiers import canonical_show_ids_by_key
@@ -66,19 +67,20 @@ class HuluShared(BasicFiles):
         )
         return source
 
+    # TODO: Validate
     def add_media_to_plugin_channels(self) -> None:
         all_urls: list[str] = []
         movie_urls: list[str] = []
         series_urls: list[str] = []
+        genre_names_by_url: dict[str, list[str]] = {}
         for genre_name, genre_href in listed_items(self.genres_file().parsed()):
             genre_id = genre_href.rsplit("/", 1)[-1]
             genre_urls = media_urls(self.genre_file(genre_id).parsed())
 
-            self._replace_plugin_channel_media(
-                f"Hulu {genre_name}",
-                f"All {genre_name} on Hulu.",
-                genre_urls,
-            )
+            for url in genre_urls:
+                url_genre_names = genre_names_by_url.setdefault(url, [])
+                if genre_name not in url_genre_names:
+                    url_genre_names.append(genre_name)
             all_urls += genre_urls
             movie_urls += [
                 url for url in genre_urls if f"/{HuluMediaType.MOVIE}/" in url
@@ -87,18 +89,35 @@ class HuluShared(BasicFiles):
                 url for url in genre_urls if f"/{HuluMediaType.SERIES}/" in url
             ]
 
+        urls_by_genre_combination: dict[tuple[str, ...], list[str]] = {}
+        for url, genre_names in genre_names_by_url.items():
+            for size in range(1, len(genre_names) + 1):
+                for genre_combination in combinations(genre_names, size):
+                    urls_by_genre_combination.setdefault(
+                        genre_combination,
+                        [],
+                    ).append(url)
+
+        for genre_combination, combination_urls in urls_by_genre_combination.items():
+            combination_name = " ".join(genre_combination)
+            self._replace_plugin_channel_media(
+                f"Hulu - {combination_name}",
+                f"All {combination_name} on Hulu.",
+                combination_urls,
+            )
+
         self._replace_plugin_channel_media(
-            "Hulu All Media",
+            "Hulu - All Media",
             "All Media on Hulu.",
             all_urls,
         )
         self._replace_plugin_channel_media(
-            "Hulu Movies",
+            "Hulu - Movies",
             "All Movies on Hulu.",
             movie_urls,
         )
         self._replace_plugin_channel_media(
-            "Hulu TV Series",
+            "Hulu - TV Series",
             "All TV Series on Hulu.",
             series_urls,
         )

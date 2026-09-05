@@ -6,15 +6,16 @@ from typing import override
 
 from app.utils import tz_datetime
 from app.watches.schemas import WatchImportResult
-from plugins.Crunchyroll.utils import UtilsMixin
-from plugins.utils.base_plugin_v2.watch_history import (
+from plugins.Crunchyroll.shared import CrunchyrollShared
+from plugins.Crunchyroll.utils import episode_url, series_url
+from plugins.utils.base_plugin_v3.watch_history import (
     BaseWatchHistoryMixin,
     ParsedWatchEntry,
 )
 
 
 # TODO: Validate
-class WatchHistoryMixin(BaseWatchHistoryMixin, UtilsMixin):
+class WatchHistoryMixin(BaseWatchHistoryMixin, CrunchyrollShared):
     import_watch_history_file_extension = ".json"
 
     # TODO: Validate
@@ -26,11 +27,11 @@ class WatchHistoryMixin(BaseWatchHistoryMixin, UtilsMixin):
                 watch_date=tz_datetime.fromisoformat(entry["date_played"]),
                 import_result=WatchImportResult(
                     show=entry["panel"]["episode_metadata"]["series_title"],
-                    show_url=self._series_url(
+                    show_url=series_url(
                         entry["panel"]["episode_metadata"]["series_id"],
                     ),
                     episode=entry["panel"]["title"],
-                    episode_url=self._episode_url(entry["id"]),
+                    episode_url=episode_url(entry["id"]),
                 ),
             )
             for entry in json.loads(content)

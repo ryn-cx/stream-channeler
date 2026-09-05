@@ -1,0 +1,23 @@
+# TODO: Validate
+from __future__ import annotations
+
+from plugins.Amazon.files import Detail, Search, ShareLinkRedirect
+from plugins.utils.base_plugin_v3.base import BasePlugin
+
+
+# TODO: Validate
+class BasicFiles(BasePlugin):
+    # TODO: Validate
+    def search_file(self, query: str) -> Search:
+        """Return data for search results."""
+        return self._file(Search, query)
+
+    # TODO: Validate
+    def detail_file(self, title_key: str) -> Detail:
+        """Return data for a title."""
+        return self._file(Detail, title_key)
+
+    # TODO: Validate
+    def share_link_file(self, share_key: str) -> ShareLinkRedirect:
+        """Return where the share link written with `share_key` points."""
+        return self._file(ShareLinkRedirect, share_key)
