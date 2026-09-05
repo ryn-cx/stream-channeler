@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-from itertools import combinations
 from typing import TYPE_CHECKING, override
 
 from app.canonical_media.service.identifiers import canonical_show_ids_by_key
@@ -68,59 +67,51 @@ class HuluShared(BasicFiles):
         return source
 
     # TODO: Validate
-    def add_media_to_plugin_channels(self) -> None:
+    def add_utls_to_hulu_channel(self) -> None:
+        urls_by_genre_name: dict[str, list[str]] = {}
         all_urls: list[str] = []
-        movie_urls: list[str] = []
-        series_urls: list[str] = []
-        genre_names_by_url: dict[str, list[str]] = {}
         for genre_name, genre_href in listed_items(self.genres_file().parsed()):
             genre_id = genre_href.rsplit("/", 1)[-1]
             genre_urls = media_urls(self.genre_file(genre_id).parsed())
-
-            for url in genre_urls:
-                url_genre_names = genre_names_by_url.setdefault(url, [])
-                if genre_name not in url_genre_names:
-                    url_genre_names.append(genre_name)
+            urls_by_genre_name[genre_name] = genre_urls
             all_urls += genre_urls
-            movie_urls += [
-                url for url in genre_urls if f"/{HuluMediaType.MOVIE}/" in url
-            ]
-            series_urls += [
-                url for url in genre_urls if f"/{HuluMediaType.SERIES}/" in url
-            ]
 
-        urls_by_genre_combination: dict[tuple[str, ...], list[str]] = {}
-        for url, genre_names in genre_names_by_url.items():
-            for size in range(1, len(genre_names) + 1):
-                for genre_combination in combinations(genre_names, size):
-                    urls_by_genre_combination.setdefault(
-                        genre_combination,
-                        [],
-                    ).append(url)
+        self._add_urls_to_all_media_channel(all_urls)
+        self._add_urls_to_media_type_channels(all_urls)
+        self._add_urls_to_genre_channels(urls_by_genre_name)
 
-        for genre_combination, combination_urls in urls_by_genre_combination.items():
-            combination_name = " ".join(genre_combination)
-            self._replace_plugin_channel_media(
-                f"Hulu - {combination_name}",
-                f"All {combination_name} on Hulu.",
-                combination_urls,
-            )
-
+    # TODO: Validate
+    def _add_urls_to_all_media_channel(self, urls: Sequence[str]) -> None:
         self._replace_plugin_channel_media(
             "Hulu - All Media",
             "All Media on Hulu.",
-            all_urls,
+            urls,
         )
+
+    # TODO: Validate
+    def _add_urls_to_media_type_channels(self, urls: Sequence[str]) -> None:
         self._replace_plugin_channel_media(
             "Hulu - Movies",
             "All Movies on Hulu.",
-            movie_urls,
+            [url for url in urls if f"/{HuluMediaType.MOVIE}/" in url],
         )
         self._replace_plugin_channel_media(
             "Hulu - TV Series",
             "All TV Series on Hulu.",
-            series_urls,
+            [url for url in urls if f"/{HuluMediaType.SERIES}/" in url],
         )
+
+    # TODO: Validate
+    def _add_urls_to_genre_channels(
+        self,
+        urls_by_genre_name: dict[str, list[str]],
+    ) -> None:
+        for genre_name, urls in urls_by_genre_name.items():
+            self._replace_plugin_channel_media(
+                f"Hulu - {genre_name}",
+                f"All {genre_name} on Hulu.",
+                urls,
+            )
 
     # TODO: Validate
     def _canonical_show_ids(self, urls: Sequence[str]) -> set[UUID]:

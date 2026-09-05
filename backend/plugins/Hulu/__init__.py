@@ -27,7 +27,7 @@ class HuluInitializer(BasePluginInitializer, HuluShared):
     def _create_channel_records(self) -> None:
         # This function shouldn't be inlined because it is the same function used for
         # source updates.
-        self.add_media_to_plugin_channels()
+        self.add_utls_to_hulu_channel()
 
 
 class Hulu(
@@ -76,5 +76,5 @@ class Hulu(
 
     def update_source(self, source: Source, update_at: datetime) -> None:
         self._download_if_outdated(self._source_files(), update_at)
-        self.add_media_to_plugin_channels()
+        self.add_utls_to_hulu_channel()
         self.upsert_source(source.key)

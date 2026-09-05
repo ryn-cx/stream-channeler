@@ -30,7 +30,6 @@ from app.log import configure_logging
 from app.seasons.models import Season
 from app.shows.models import Show, ShowCanonicalShow
 from app.shows.service.canonical import match_imported_shows_to_tmdb
-from app.tools.local_test_files import serve_downloads_from_test_files
 from app.users.constants import PLUGIN_USER_EMAIL
 from app.users.models import User
 from app.utils import tz_datetime
@@ -65,15 +64,14 @@ def run_forever(
 # TODO: Validate
 def import_queue(session: Session, *, skip_plugin_user_channels: bool = False) -> None:
     """Actually import the queue in separate threads for each plugin."""
-    with serve_downloads_from_test_files():
-        grouped = _group_pending_urls_by_plugin(
-            session,
-            skip_plugin_user_channels=skip_plugin_user_channels,
-        )
-        for plugin_class, items in grouped.items():
-            with PLUGIN_LOCKS[plugin_class.plugin_name()]:
-                for item in items:
-                    _import_one(session, item, plugin_class)
+    grouped = _group_pending_urls_by_plugin(
+        session,
+        skip_plugin_user_channels=skip_plugin_user_channels,
+    )
+    for plugin_class, items in grouped.items():
+        with PLUGIN_LOCKS[plugin_class.plugin_name()]:
+            for item in items:
+                _import_one(session, item, plugin_class)
 
 
 # TODO: Validate
