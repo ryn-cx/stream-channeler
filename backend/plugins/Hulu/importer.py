@@ -48,12 +48,7 @@ class HuluSeriesImporter(BaseImporter, HuluSeries):
 
     # TODO: Validate
     @override
-    def import_url(
-        self,
-        url: str,
-        *,
-        known_title: bool = False,
-    ) -> list[URLImportResult]:
+    def import_url(self, url: str) -> list[URLImportResult]:
         show_key, episode_key = self._url_to_show_and_episode_keys(url)
         if show := self._preload_show(show_key).one_or_none():
             return self._import_results(show, episode_key)
@@ -112,12 +107,7 @@ class HuluImporter(BaseImporter, MediaMixin):
         return (SERIES_URL_REGEX, MOVIE_URL_REGEX, VIDEO_URL_REGEX)
 
     @override
-    def import_url(
-        self,
-        url: str,
-        *,
-        known_title: bool = False,
-    ) -> list[URLImportResult]:
+    def import_url(self, url: str) -> list[URLImportResult]:
         domain_regex = self._domain_regex()
         if re.match(domain_regex + SERIES_URL_REGEX, url):
             return HuluSeriesImporter(self).import_url(url)

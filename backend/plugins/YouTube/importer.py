@@ -15,7 +15,6 @@ from plugins.YouTube.files import (
     get_first_item,
     is_an_album,
     is_channel_uploads_playlist_key,
-    is_user_playlist,
     is_video_key,
     show_season_key,
 )
@@ -113,15 +112,6 @@ class YouTubeImporter(BaseImporter, YouTubeBase):
         return f"(?:{alternatives})"
 
     # TODO: Validate
-    def _record_linking_playlist(self, url: str) -> None:
-        for url_regex in (self._PLAYLIST_VIDEO_URL_REGEX, self._PLAYLIST_URL_REGEX):
-            if match := re.match(url_regex, url):
-                playlist_key = match.group("playlist_key")
-                if is_user_playlist(playlist_key):
-                    self.record_linking_playlist_key(playlist_key)
-                return
-
-    # TODO: Validate
     @override
     def _url_to_show_key(self, url: str) -> str:  # noqa: PLR0911 - One return per kind of address.
         self._video_key = None
@@ -138,9 +128,7 @@ class YouTubeImporter(BaseImporter, YouTubeBase):
             return self._show_key
 
         if match := re.match(self._PLAYLIST_URL_REGEX, url):
-            playlist_key = match.group("playlist_key")
-            self._whole_show = self.is_linking_playlist(playlist_key)
-            self._read_playlist(playlist_key, url)
+            self._read_playlist(match.group("playlist_key"), url)
             return self._show_key
 
         if match := re.match(self._VIDEO_URL_REGEX, url):
@@ -195,11 +183,6 @@ class YouTubeImporter(BaseImporter, YouTubeBase):
     # TODO: Validate
     def _read_playlist(self, playlist_key: str, url: str) -> None:
         self._playlist_key = playlist_key
-
-        if self.is_linking_playlist(playlist_key):
-            self.raise_if_invalid_file(self.playlist_items_file(playlist_key), url)
-            self._show_key = playlist_key
-            return
 
         # A channel's uploads are a season of that channel rather than a listing of
         # their own, and the playlist they are listed as is named after the channel,
@@ -329,18 +312,8 @@ class YouTubeImporter(BaseImporter, YouTubeBase):
     # A YouTube show is always imported for a specific playlist.
     # TODO: Validate
     @override
-    def import_url(
-        self,
-        url: str,
-        *,
-        known_title: bool = False,
-    ) -> list[URLImportResult]:
+    def import_url(self, url: str) -> list[URLImportResult]:
         show_key = self._url_to_show_key(url)
-        # Recorded before the URL is read, because whether a playlist links a title
-        # of its own is what says which show the address names.
-        if known_title:
-            self._record_linking_playlist(url)
-
         show_preload = self._preload_show(show_key, preload_episodes=True)
         existing_show = show_preload.one_or_none()
 

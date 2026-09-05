@@ -14,8 +14,12 @@ from pydantic import (
     model_validator,
 )
 
-from app.canonical_media.keys import EPISODE_LEVEL, tmdb_id_of
-from app.canonical_media.metadata import tmdb_episode_url, tmdb_season_url
+from app.canonical_media.tmdb import (
+    get_tmdb_id,
+    is_tmdb_key,
+    tmdb_episode_url,
+    tmdb_season_url,
+)
 from app.episodes.models import BaseCanonicalEpisode, BaseEpisode, Episode
 from app.issue_reports.schemas import IssueReportOutput
 from app.schemas import (
@@ -109,9 +113,8 @@ class EpisodeRecord(BaseModel):
     # TODO: Validate
     @model_validator(mode="after")
     def _read_key(self) -> Self:
-        own_tmdb_id = tmdb_id_of(self.episode.key, EPISODE_LEVEL)
-        if own_tmdb_id is not None:
-            self.episode.tmdb_id = own_tmdb_id
+        if is_tmdb_key(self.episode.key):
+            self.episode.tmdb_id = get_tmdb_id(self.episode.key)
         self.episode.tmdb_url = tmdb_episode_url(
             self.show.key,
             self.season.season_number,
@@ -309,7 +312,8 @@ class CanonicalEpisodeOutput(BaseCanonicalEpisode):
     # TODO: Validate
     @model_validator(mode="after")
     def _read_key(self) -> Self:
-        self.tmdb_id = tmdb_id_of(self.key, EPISODE_LEVEL)
+        if is_tmdb_key(self.key):
+            self.tmdb_id = get_tmdb_id(self.key)
         return self
 
 

@@ -194,7 +194,7 @@ class TestSupermanRelinkedTubi(TMDBValidatorAlt):
 
         with frozen_clock(self.import_time):
             tubi = Tubi(session_with_files)
-            results = tubi.import_url(self.relinked_url, known_title=True)
+            results = tubi.import_url(self.relinked_url)
             for imported_show in tubi.imported_shows(results):
                 match_show_to_tmdb(session_with_files, imported_show, tmdb_show)
         session_with_files.flush()

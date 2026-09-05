@@ -1,7 +1,10 @@
 # TODO: Validate
 from sqlmodel import Session, select
 
-from app.canonical_media.keys import is_tmdb_key
+from app.canonical_media.tmdb import (
+    dump_extra,
+    is_tmdb_key,
+)
 from app.config import settings
 from app.episodes.models import Episode
 from app.shows.models import Show
@@ -11,7 +14,6 @@ from app.watches.identifiers import watched_canonical_ids
 from app.watches.schemas import WatchCreate
 from app.watches.service.management import create_watch
 from plugins.Crunchyroll import Crunchyroll
-from plugins.TMDB.episode_groups import dump_extra
 from tests.plugins.frozen_clock import frozen_clock
 from tests.plugins.plugin_validator_alt import PluginValidatorAlt, StandardTestsAlt
 from tests.plugins.plugin_validator_alt.stored_files import (

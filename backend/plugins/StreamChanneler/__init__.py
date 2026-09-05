@@ -24,7 +24,7 @@ from plugins.utils.abstract_plugin import (
 
 
 # TODO: Validate
-class StreamChanneler(StreamChannelerBase, FileMixin, AbstractPlugin, enabled=False):
+class StreamChanneler(StreamChannelerBase, FileMixin, AbstractPlugin, register=False):
     initializer = StreamChannelerInitializer
 
     # TODO: Validate
@@ -48,13 +48,7 @@ class StreamChanneler(StreamChannelerBase, FileMixin, AbstractPlugin, enabled=Fa
 
     # TODO: Validate
     @override
-    def import_url(
-        self,
-        url: str,
-        *,
-        known_title: bool = False,
-        force: bool = False,
-    ) -> list[URLImportResult]:
+    def import_url(self, url: str) -> list[URLImportResult]:
         return self.get_url_handler(url).import_results()
 
     # TODO: Validate

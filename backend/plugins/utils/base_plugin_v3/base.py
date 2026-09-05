@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import Any, override
+from typing import TYPE_CHECKING, Any, override
 
 from sqlmodel import Session, select
 
@@ -25,6 +25,9 @@ from plugins.utils.abstract_plugin import (
 from plugins.utils.base_plugin_v3.files import BaseFile
 from plugins.utils.base_plugin_v3.update import BaseUpdateMixin
 from plugins.utils.base_plugin_v3.url import BaseURLMixin
+
+if TYPE_CHECKING:
+    from plugins.utils.base_plugin_v3.importer import BaseImporter
 
 
 # TODO: Validate
@@ -94,21 +97,15 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         cls.initializer.initialize_plugin(session)
 
     # TODO: Validate
-    @classmethod
-    def url_regex(cls) -> str:
-        return cls.importer.url_regex()
+    def get_media_importer(self, media: Show | str) -> BaseImporter:
+        msg = f"{self.plugin_name()} does not dispatch media to an importer."
+        raise NotImplementedError(msg)
+
+    def import_url(self, url: str) -> list[URLImportResult]:
+        return self.get_media_importer(url).import_url(url)
 
     # TODO: Validate
-    def import_url(
-        self,
-        url: str,
-        *,
-        known_title: bool = False,
-    ) -> list[URLImportResult]:
-        return self.importer(self).import_url(url, known_title=known_title)
-
-    # TODO: Validate
-    def import_by_name(
+    def import_search(
         self,
         names: list[str],
         media_type: TMDBMediaType,
@@ -123,29 +120,23 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
             raise MediaNotFoundError(msg)
         return self.import_url(url)
 
-    # TODO: Validate
     def update_show(self, show: Show, *, force: bool = False) -> None:
-        self.importer(self).update_show(show, force=force)
+        self.get_media_importer(show).update_show(show, force=force)
 
-    # TODO: Validate
     def update_season(self, season: Season) -> None:
-        self.importer(self).update_season(season)
+        self.get_media_importer(season.show).update_season(season)
 
-    # TODO: Validate
     def update_episode(self, episode: Episode) -> None:
-        self.importer(self).update_episode(episode)
+        self.get_media_importer(episode.season.show).update_episode(episode)
 
-    # TODO: Validate
     def on_update_show_failure(self, show: Show, error: Exception) -> None:
-        self.importer(self).on_failure(show, error)
+        self.get_media_importer(show).on_failure(show, error)
 
-    # TODO: Validate
     def on_update_season_failure(self, season: Season, error: Exception) -> None:
-        self.importer(self).on_failure(season, error)
+        self.get_media_importer(season.show).on_failure(season, error)
 
-    # TODO: Validate
     def on_update_episode_failure(self, episode: Episode, error: Exception) -> None:
-        self.importer(self).on_failure(episode, error)
+        self.get_media_importer(episode.season.show).on_failure(episode, error)
 
     # TODO: Validate
     def raise_if_invalid_file(self, file: BaseFile[Any], url: str) -> None:

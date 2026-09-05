@@ -19,7 +19,9 @@ from app.canonical_media.filters import (
     is_canonical,
     is_non_canonical,
 )
-from app.canonical_media.keys import tmdb_key_clause
+from app.canonical_media.tmdb import (
+    tmdb_key_clause,
+)
 from app.channels.channel_scope import (
     child_channel_ids,
     resolve_channel_ids,

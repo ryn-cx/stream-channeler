@@ -6,7 +6,9 @@
 from sqlalchemy import func
 from sqlmodel import Session, col, select
 
-from app.canonical_media.keys import SHOW_LEVEL, tmdb_id_of
+from app.canonical_media.tmdb import (
+    get_tmdb_id,
+)
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.shows.models import Show
@@ -73,7 +75,7 @@ def list_unvalidated_shows(session: Session, limit: int) -> list[UnvalidatedShow
                     year=link.canonical_show.year,
                     url=link.canonical_show.url,
                     image_url=link.canonical_show.image_url,
-                    tmdb_id=tmdb_id_of(link.canonical_show.key, SHOW_LEVEL),
+                    tmdb_id=get_tmdb_id(link.canonical_show.key),
                     note=link.note,
                 )
                 for link in show.canonical_show_links

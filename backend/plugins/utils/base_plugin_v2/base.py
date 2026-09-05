@@ -93,16 +93,11 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         return cls.importer.url_regex()
 
     # TODO: Validate
-    def import_url(
-        self,
-        url: str,
-        *,
-        known_title: bool = False,
-    ) -> list[URLImportResult]:
-        return self.importer(self).import_url(url, known_title=known_title)
+    def import_url(self, url: str) -> list[URLImportResult]:
+        return self.importer(self).import_url(url)
 
     # TODO: Validate
-    def import_by_name(
+    def import_search(
         self,
         names: list[str],
         media_type: TMDBMediaType,

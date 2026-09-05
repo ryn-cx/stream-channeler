@@ -5,7 +5,9 @@ from datetime import date, datetime, timedelta
 import pytest
 from sqlmodel import Session
 
-from app.canonical_media.keys import tmdb_show_key
+from app.canonical_media.tmdb import (
+    tmdb_show_key,
+)
 from app.files.models import File
 from app.media.media_type import TMDBMediaType
 from app.plugins.models import Plugin

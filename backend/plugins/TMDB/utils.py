@@ -26,7 +26,9 @@ from tminidb.tv_series.watch_providers.models import FreeItem as TvFreeItem
 from tminidb.tv_series.watch_providers.models import RentItem as TvRentItem
 from tminidb.tv_series.watch_providers.models import TvSeriesWatchProvidersModel
 
-from app.canonical_media.keys import tmdb_season_key
+from app.canonical_media.tmdb import (
+    tmdb_season_key,
+)
 from app.media.media_type import TMDBMediaType
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
@@ -34,12 +36,8 @@ from plugins.utils.abstract_plugin import (
     PluginWatchProviderItem,
 )
 from plugins.utils.manage_plugins import sorted_plugins
-from collections.abc import Sequence
 
 if TYPE_CHECKING:
-    from tminidb.movie.details.models import MovieDetailsModel
-    from tminidb.tv_series.details.models import TvSeriesDetailsModel
-
     from plugins.TMDB.files import ProvidersFile
 
 
@@ -71,8 +69,8 @@ def title_url_regex(media_type: TMDBMediaType) -> str:
 # TODO: Validate
 def parse_media_identifier(identifier: str) -> tuple[TMDBMediaType, int]:
     """Return the half of the catalogue and the id an identifier names."""
-    media_type, _, tmdb_media_key = identifier.partition(" ")
-    return TMDBMediaType(media_type), int(tmdb_media_key)
+    media_type, _, tmdb_media_id = identifier.partition(" ")
+    return TMDBMediaType(media_type), int(tmdb_media_id)
 
 
 # TODO: Validate
@@ -162,73 +160,35 @@ def release_year(value: str | date | None) -> int | None:
 
 
 # TODO: Validate
-def poster_image_url(path: str | None) -> str | None:
+def image_url(path: str | None) -> str | None:
+    return _image_url("https://image.tmdb.org/t/p/original", path)
+
+
+# TODO: Validate
+def thumbnail_url(path: str | None) -> str | None:
     return _image_url("https://image.tmdb.org/t/p/w500", path)
 
 
-# TODO: Validate
-def backdrop_image_url(path: str | None) -> str | None:
-    return _image_url("https://image.tmdb.org/t/p/original", path)
-
-
-# TODO: Validate
-def still_image_url(path: str | None) -> str | None:
-    return _image_url("https://image.tmdb.org/t/p/original", path)
-
-
-# TODO: Validate
-def poster_original_url(path: str | None) -> str | None:
-    return _image_url("https://image.tmdb.org/t/p/original", path)
-
-
-# TODO: Validate
-def backdrop_thumbnail_url(path: str | None) -> str | None:
-    return _image_url("https://image.tmdb.org/t/p/w300", path)
-
-
-# TODO: Validate
-def still_thumbnail_url(path: str | None) -> str | None:
-    return _image_url("https://image.tmdb.org/t/p/w300", path)
-
-
-# TODO: Validate
-def get_first_image(
-    details: MovieDetailsModel | TvSeriesDetailsModel,
-    *,
-    thumbnail: bool,
-) -> str | None:
-    if details.backdrop_path:
-        if thumbnail:
-            return backdrop_thumbnail_url(details.backdrop_path)
-        return backdrop_image_url(details.backdrop_path)
-    if thumbnail:
-        return poster_image_url(details.poster_path)
-    return poster_original_url(details.poster_path)
-
-
-# TODO: Validate
-def duration_seconds(runtime: int | None) -> int | None:
+def runtime_in_seconds(runtime: int | None) -> int | None:
+    # If the runtime is not known the API returns None. In all other cases it returns
+    # the runtime in minutes.
     return runtime * 60 if runtime else None
 
 
-# TODO: Validate
-def air_datetime(air_date: str | date | None) -> datetime | None:
-    # A date TMDB does not have yet comes back as an empty string rather than
-    # being left out, and every date the API answers with arrives as the text
-    # TMDB wrote rather than as a date.
-    if not air_date:
-        return None
+def parse_air_datetime(air_date: str | date) -> datetime | None:
+    # If the date is not known the API returns an empty string. In all other cases it
+    # returns the date as a datetime.
     if isinstance(air_date, str):
-        air_date = date.fromisoformat(air_date)
+        return None
     return tz_datetime.combine(air_date, datetime.min.time())
 
 
-# TODO: Validate
 class SeasonInfo(NamedTuple):
-    """Holds Season information from the season details or episode group.
+    """Season information from the season details or episode group.
 
-    Normally the data structure of the season details and episode group are different,
-    this class consolidates them into a single interface."""
+    Normally the data structure of the season details and episode groups are different,
+    this class creates a unified representation for both episode groups and season
+    details."""
 
     key: str
     name: str | None
@@ -238,14 +198,13 @@ class SeasonInfo(NamedTuple):
     episodes: Sequence[TvSeasonEpisode | TvEpisodeGroupEpisode]
     uses_episode_group: bool
 
-    # TODO: Validate
     @classmethod
     def from_episode_group(cls, order: int, group: TvEpisodeGroup) -> SeasonInfo:
         return cls(
             key=tmdb_season_key(TMDBMediaType.tv, order),
             name=group.name,
-            # Technically incorrect because there is no real season number, but it makes
-            # sorting easier so it's allowed.
+            # Technically there are no season numbers, but it makes sorting easier if a
+            # fake season number is created.
             season_number=order,
             sort_order=order,
             poster_path=None,
@@ -253,7 +212,6 @@ class SeasonInfo(NamedTuple):
             uses_episode_group=True,
         )
 
-    # TODO: Validate
     @classmethod
     def from_season_details(cls, details: TvSeasonDetailsModel) -> SeasonInfo:
         return cls(

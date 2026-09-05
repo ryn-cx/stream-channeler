@@ -30,12 +30,7 @@ class BaseImporter(BasePluginWorker, BaseReadURL, ABC):
         return self._sources[self.plugin_name()]
 
     # TODO: Validate
-    def import_url(
-        self,
-        url: str,
-        *,
-        known_title: bool = False,  # noqa: ARG002
-    ) -> list[URLImportResult]:
+    def import_url(self, url: str) -> list[URLImportResult]:
         show_key = self._url_to_show_key(url)
         if show := self._preload_show(show_key).one_or_none():
             return self._import_results(show)

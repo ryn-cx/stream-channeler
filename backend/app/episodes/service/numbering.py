@@ -20,9 +20,7 @@ from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, and_, col, func, select
 
 from app.canonical_media.filters import is_canonical
-from app.canonical_media.keys import (
-    EPISODE_LEVEL,
-    tmdb_id_of,
+from app.canonical_media.tmdb import (
     tmdb_key_clause,
 )
 from app.episodes.models import (
@@ -122,9 +120,6 @@ def _choice(
     similarity: float,
 ) -> TmdbEpisodeChoice | None:
     episode, season, show = candidate
-    if tmdb_id_of(episode.key, EPISODE_LEVEL) is None:
-        return None
-
     return TmdbEpisodeChoice(
         **_record_fields(episode, season, show),
         absolute_number=absolute_numbers.get(episode.id),

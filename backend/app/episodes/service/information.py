@@ -16,7 +16,12 @@ from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.canonical_media.filters import is_canonical
-from app.canonical_media.metadata import canonical_episode_of, tmdb_episode_url
+from app.canonical_media.metadata import (
+    canonical_episode_of,
+)
+from app.canonical_media.tmdb import (
+    tmdb_episode_url,
+)
 from app.episodes.models import (
     Episode,
 )

@@ -74,12 +74,7 @@ class AmazonImporter(BaseImporter, AmazonBase):
 
     # TODO: Validate
     @override  # Writes the title into every source it can be watched through.
-    def import_url(
-        self,
-        url: str,
-        *,
-        known_title: bool = False,
-    ) -> list[URLImportResult]:
+    def import_url(self, url: str) -> list[URLImportResult]:
         show_key = self._url_to_show_key(url)
         if shows := self._preload_show(show_key).all():
             return [result for show in shows for result in self._import_results(show)]

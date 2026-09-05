@@ -65,14 +65,6 @@ class UtilsMixin(FileMixin):
         self._importing_album_playlist_key = playlist_key
 
     # TODO: Validate
-    def record_linking_playlist_key(self, playlist_key: str) -> None:
-        self._linking_playlist_key = playlist_key
-
-    # TODO: Validate
-    def is_linking_playlist(self, playlist_key: str) -> bool:
-        return self._linking_playlist_key == playlist_key
-
-    # TODO: Validate
     @override
     def soft_delete_missing_seasons(self, show_key: str) -> None:
         return

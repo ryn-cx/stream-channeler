@@ -11,10 +11,17 @@ from random import Random
 from typing import Any, override
 
 from app.canonical_media.keys import (
+    watch_identifier,
+)
+from app.canonical_media.tmdb import (
+    chosen_group_id,
+    dump_episode_extra,
+    get_media_type_and_episode_id,
+    get_media_type_and_season_id,
+    get_media_type_and_tmdb_id,
     tmdb_episode_key,
     tmdb_season_key,
     tmdb_show_key,
-    watch_identifier,
 )
 from app.episodes.models import Episode
 from app.media.media_type import TMDBMediaType
@@ -22,18 +29,12 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
-from plugins.TMDB.episode_groups import chosen_group_id, dump_episode_extra
 from plugins.TMDB.external_websites import TMDBExternalWebsites
 from plugins.TMDB.files import (
     MoviesWatchProviders,
     TVSeasonsChanges,
     TVSeriesChanges,
     TVSeriesWatchProviders,
-)
-from plugins.TMDB.keys import (
-    get_media_type_and_tmdb_id,
-    parse_episode_key,
-    parse_season_key,
 )
 from plugins.TMDB.shared import (
     MOVIE_URL_REGEX,
@@ -42,14 +43,11 @@ from plugins.TMDB.shared import (
 )
 from plugins.TMDB.utils import (
     SeasonInfo,
-    air_datetime,
-    duration_seconds,
-    get_first_image,
-    poster_image_url,
-    poster_original_url,
+    image_url,
+    parse_air_datetime,
     release_year,
-    still_image_url,
-    still_thumbnail_url,
+    runtime_in_seconds,
+    thumbnail_url,
 )
 from plugins.utils.abstract_plugin import (
     InvalidURLError,
@@ -74,12 +72,7 @@ class TMDBMedia(TMDBExternalWebsites, BaseImporter):
 
     # TODO: Validate
     @override
-    def import_url(
-        self,
-        url: str,
-        *,
-        known_title: bool = False,
-    ) -> list[URLImportResult]:
+    def import_url(self, url: str) -> list[URLImportResult]:
         show_key = self._url_to_show_key(url)
         existing_show = self._preload_show(
             show=show_key,
@@ -102,35 +95,35 @@ class TMDBSeries(TMDBMedia):
     def download_new_watch_providers_file(self, show: Show) -> None:
         if not self._watch_providers_due(show):
             return
-        _, tmdb_tv_show_key = get_media_type_and_tmdb_id(show.key)
+        _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show.key)
         self.tv_series_watch_providers_file(
-            tmdb_tv_show_key=tmdb_tv_show_key,
+            tmdb_tv_show_id=tmdb_tv_show_id,
             downloaded_at=tz_datetime.now().date(),
         ).download_if_outdated()
 
     # TODO: Validate
     @override
     def sync_show_watch_providers(self, show_key: str) -> None:
-        _, tmdb_tv_show_key = get_media_type_and_tmdb_id(show_key)
+        _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show_key)
         self.latest_tv_series_watch_providers_file(
-            tmdb_tv_show_key,
+            tmdb_tv_show_id,
         ).download_if_outdated()
         self._process_watch_providers(
             show_key=show_key,
-            files=self.incomplete_tv_series_watch_providers_files(tmdb_tv_show_key),
+            files=self.incomplete_tv_series_watch_providers_files(tmdb_tv_show_id),
         )
 
     # TODO: Validate
     def sync_season_watch_providers(self, show_key: str, season_number: int) -> None:
-        _, tmdb_tv_show_key = get_media_type_and_tmdb_id(show_key)
+        _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show_key)
         self.latest_tv_seasons_watch_providers_file(
-            tmdb_tv_show_key=tmdb_tv_show_key,
+            tmdb_tv_show_id=tmdb_tv_show_id,
             season_number=season_number,
         ).download_if_outdated()
         self._process_watch_providers(
             show_key,
             self.incomplete_tv_seasons_watch_providers_files(
-                tmdb_tv_show_key,
+                tmdb_tv_show_id,
                 season_number,
             ),
         )
@@ -138,8 +131,8 @@ class TMDBSeries(TMDBMedia):
     # TODO: Validate
     @override
     def _provider_file(self, show_key: str) -> TVSeriesWatchProviders:
-        _, tmdb_tv_show_key = get_media_type_and_tmdb_id(show_key)
-        return self.latest_tv_series_watch_providers_file(tmdb_tv_show_key)
+        _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show_key)
+        return self.latest_tv_series_watch_providers_file(tmdb_tv_show_id)
 
     # TODO: Validate
     @override
@@ -167,36 +160,36 @@ class TMDBSeries(TMDBMedia):
     # TODO: Validate
     @override
     def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
-        _, tmdb_tv_show_key = get_media_type_and_tmdb_id(show_key)
-        groups_file = self.tv_series_episode_groups_file(tmdb_tv_show_key)
+        _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show_key)
+        groups_file = self.tv_series_episode_groups_file(tmdb_tv_show_id)
         return [
-            self.latest_tv_series_changes_file(tmdb_tv_show_key),
-            self.tv_series_details_file(tmdb_tv_show_key),
+            self.latest_tv_series_changes_file(tmdb_tv_show_id),
+            self.tv_series_details_file(tmdb_tv_show_id),
             groups_file,
             *(
                 self.tv_episode_groups_details_file(option.id)
                 for option in groups_file.parsed().results
             ),
-            self.latest_tv_series_watch_providers_file(tmdb_tv_show_key),
+            self.latest_tv_series_watch_providers_file(tmdb_tv_show_id),
         ]
 
     # TODO: Validate
     @override
     def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
-        _, tmdb_tv_show_key = get_media_type_and_tmdb_id(show_key)
+        _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show_key)
         season_numbers = self.native_season_numbers(season_key, show_key)
         return [
-            self.latest_tv_series_changes_file(tmdb_tv_show_key),
+            self.latest_tv_series_changes_file(tmdb_tv_show_id),
             *(
                 self.tv_seasons_details_file(
-                    tmdb_tv_show_key=tmdb_tv_show_key,
+                    tmdb_tv_show_id=tmdb_tv_show_id,
                     season_number=season_number,
                 )
                 for season_number in season_numbers
             ),
             *(
                 self.latest_tv_seasons_watch_providers_file(
-                    tmdb_tv_show_key=tmdb_tv_show_key,
+                    tmdb_tv_show_id=tmdb_tv_show_id,
                     season_number=season_number,
                 )
                 for season_number in season_numbers
@@ -211,27 +204,27 @@ class TMDBSeries(TMDBMedia):
         season_key: str,
         show_key: str,
     ) -> Sequence[BaseFile[Any]]:
-        _, tmdb_tv_show_key = get_media_type_and_tmdb_id(show_key)
-        _, tmdb_tv_episode_key = parse_episode_key(episode_key)
+        _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show_key)
+        _, tmdb_tv_episode_id = get_media_type_and_episode_id(episode_key)
         files: list[BaseFile[Any]] = [
-            self.latest_tv_series_changes_file(tmdb_tv_show_key),
+            self.latest_tv_series_changes_file(tmdb_tv_show_id),
         ]
         for season in self.chosen_seasons(show_key):
             if season.key != season_key:
                 continue
             for episode in season.episodes:
-                if episode.id != tmdb_tv_episode_key:
+                if episode.id != tmdb_tv_episode_id:
                     continue
                 files.extend(
                     (
                         # Contains all of the episode information except for
                         # translations.
                         self.tv_seasons_details_file(
-                            tmdb_tv_show_key=tmdb_tv_show_key,
+                            tmdb_tv_show_id=tmdb_tv_show_id,
                             season_number=episode.season_number,
                         ),
                         self.tv_episodes_translations_file(
-                            tmdb_tv_show_key=tmdb_tv_show_key,
+                            tmdb_tv_show_id=tmdb_tv_show_id,
                             season_number=episode.season_number,
                             episode_number=episode.episode_number,
                         ),
@@ -244,7 +237,7 @@ class TMDBSeries(TMDBMedia):
         group = self._chosen_episode_group(show_key)
         if group is None:
             return [self._native_season_number(season_key, show_key)]
-        _, order = parse_season_key(season_key)
+        _, order = get_media_type_and_season_id(season_key)
         groups = group.groups
         if order >= len(groups):
             return []
@@ -260,18 +253,18 @@ class TMDBSeries(TMDBMedia):
         *,
         force: bool = False,
     ) -> Show:
-        _, tmdb_tv_show_key = get_media_type_and_tmdb_id(show_key)
+        _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show_key)
         show = Show.get_from_memory(self.session, source, show_key)
         if self._show_is_outdated(show, update_at, force=force):
-            series = self.tv_series_details_file(tmdb_tv_show_key).parsed(update_at)
+            series = self.tv_series_details_file(tmdb_tv_show_id).parsed(update_at)
             data_timestamp = self.show_data_timestamp(show_key, update_at)
             new_show = Show(
                 key=show_key,
                 name=series.name,
                 description=series.overview,
-                url=media_url(TMDBMediaType.tv, tmdb_tv_show_key),
-                image_url=get_first_image(series, thumbnail=False),
-                thumbnail_url=get_first_image(series, thumbnail=True),
+                url=media_url(TMDBMediaType.tv, tmdb_tv_show_id),
+                image_url=image_url(series.backdrop_path or series.poster_path),
+                thumbnail_url=thumbnail_url(series.backdrop_path or series.poster_path),
                 year=release_year(series.first_air_date),
                 media_type="TV Show",
                 extra=show.extra if show else None,
@@ -282,7 +275,7 @@ class TMDBSeries(TMDBMedia):
             )
             show = self._upsert_show_object(new_show, source, show, show_key)
 
-        self._upsert_seasons(show, show_key, tmdb_tv_show_key, update_at, force=force)
+        self._upsert_seasons(show, show_key, tmdb_tv_show_id, update_at, force=force)
         self._soft_delete_missing(show_key)
         return show
 
@@ -291,7 +284,7 @@ class TMDBSeries(TMDBMedia):
         self,
         show: Show,
         show_key: str,
-        tmdb_tv_show_key: int,
+        tmdb_tv_show_id: int,
         update_at: datetime | None = None,
         *,
         force: bool = False,
@@ -311,8 +304,8 @@ class TMDBSeries(TMDBMedia):
                     name=source.name,
                     season_number=source.season_number,
                     sort_order=source.sort_order,
-                    image_url=poster_original_url(source.poster_path),
-                    thumbnail_url=poster_image_url(source.poster_path),
+                    image_url=image_url(source.poster_path),
+                    thumbnail_url=thumbnail_url(source.poster_path),
                     data_timestamp=data_timestamp,
                     update_at=None,
                     show_id=show.id,
@@ -327,7 +320,7 @@ class TMDBSeries(TMDBMedia):
                 season=season,
                 source=source,
                 show_key=show_key,
-                tmdb_tv_show_key=tmdb_tv_show_key,
+                tmdb_tv_show_id=tmdb_tv_show_id,
                 update_at=update_at,
                 force=force,
             )
@@ -338,7 +331,7 @@ class TMDBSeries(TMDBMedia):
         season: Season,
         source: SeasonInfo,
         show_key: str,
-        tmdb_tv_show_key: int,
+        tmdb_tv_show_id: int,
         update_at: datetime | None = None,
         *,
         force: bool = False,
@@ -362,19 +355,19 @@ class TMDBSeries(TMDBMedia):
                 update_at=update_at,
             )
             still_path = episode_source.still_path or self._fallback_backdrop_path(
-                tmdb_tv_show_key=tmdb_tv_show_key,
-                tmdb_tv_episode_key=episode_source.id,
+                tmdb_tv_show_id=tmdb_tv_show_id,
+                tmdb_tv_episode_id=episode_source.id,
             )
             new_episode = Episode(
                 key=key,
                 watch_identifier=watch_identifier(self.plugin_name(), key),
                 name=episode_source.name,
                 description=episode_source.overview,
-                url=media_url(TMDBMediaType.tv, tmdb_tv_show_key),
-                image_url=still_image_url(still_path),
-                thumbnail_url=still_thumbnail_url(still_path),
-                duration=duration_seconds(episode_source.runtime),
-                air_date=air_datetime(episode_source.air_date),
+                url=media_url(TMDBMediaType.tv, tmdb_tv_show_id),
+                image_url=image_url(still_path),
+                thumbnail_url=thumbnail_url(still_path),
+                duration=runtime_in_seconds(episode_source.runtime),
+                air_date=parse_air_datetime(episode_source.air_date),
                 # Episode groups still have the original episode number listed so the
                 # episode number for them is based on the index.
                 episode_number=(
@@ -394,28 +387,28 @@ class TMDBSeries(TMDBMedia):
             self._upsert_episode_object(new_episode, season, episode, show_key)
 
     # TODO: Validate
-    def _show_backdrop_paths(self, tmdb_tv_show_key: int) -> list[str]:
+    def _show_backdrop_paths(self, tmdb_tv_show_id: int) -> list[str]:
         cached: dict[int, list[str]] = self.session.info.setdefault(
             "tmdb_show_backdrop_paths",
             {},
         )
-        if tmdb_tv_show_key not in cached:
-            images = self.tv_series_images_file(tmdb_tv_show_key).parsed()
-            cached[tmdb_tv_show_key] = [
+        if tmdb_tv_show_id not in cached:
+            images = self.tv_series_images_file(tmdb_tv_show_id).parsed()
+            cached[tmdb_tv_show_id] = [
                 backdrop.file_path for backdrop in images.backdrops
             ]
-        return cached[tmdb_tv_show_key]
+        return cached[tmdb_tv_show_id]
 
     # TODO: Validate
     def _fallback_backdrop_path(
         self,
-        tmdb_tv_show_key: int,
-        tmdb_tv_episode_key: int,
+        tmdb_tv_show_id: int,
+        tmdb_tv_episode_id: int,
     ) -> str | None:
-        backdrop_paths = self._show_backdrop_paths(tmdb_tv_show_key)
+        backdrop_paths = self._show_backdrop_paths(tmdb_tv_show_id)
         if not backdrop_paths:
             return None
-        return Random(tmdb_tv_episode_key).choice(backdrop_paths)  # noqa: S311
+        return Random(tmdb_tv_episode_id).choice(backdrop_paths)  # noqa: S311
 
     # TODO: Validate
     @override
@@ -441,16 +434,16 @@ class TMDBSeries(TMDBMedia):
     # TODO: Validate
     def _download_changes_file(self, show: Show) -> None:
         if show.update_at and show.update_at <= tz_datetime.now():
-            _, tmdb_tv_show_key = get_media_type_and_tmdb_id(show.key)
+            _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show.key)
             self.tv_series_changes_file(
-                tmdb_tv_show_key=tmdb_tv_show_key,
+                tmdb_tv_show_id=tmdb_tv_show_id,
                 downloaded_to=tz_datetime.now().date(),
             ).download_if_outdated()
 
     # TODO: Validate
     def _import_all_show_changes(self, show: Show) -> None:
-        _, tmdb_tv_show_key = get_media_type_and_tmdb_id(show.key)
-        for changes_file in self.incomplete_tv_series_changes_files(tmdb_tv_show_key):
+        _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show.key)
+        for changes_file in self.incomplete_tv_series_changes_files(tmdb_tv_show_id):
             self._import_single_show_changes(show.key, changes_file)
 
     # TODO: Validate
@@ -459,7 +452,7 @@ class TMDBSeries(TMDBMedia):
         show_key: str,
         changes_file: TVSeriesChanges,
     ) -> None:
-        _, tmdb_tv_show_key = get_media_type_and_tmdb_id(show_key)
+        _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show_key)
 
         for change in changes_file.parsed().changes:
             for item in change.items:
@@ -469,7 +462,7 @@ class TMDBSeries(TMDBMedia):
                 # The details file lists the seasons, so it is read again before the
                 # seasons are, otherwise a season added since the last read is named
                 # by a change and found in nothing.
-                self.tv_series_details_file(tmdb_tv_show_key).download_if_outdated(
+                self.tv_series_details_file(tmdb_tv_show_id).download_if_outdated(
                     changed_at,
                 )
                 # There are no episode specific files so they are grouped with the
@@ -494,9 +487,9 @@ class TMDBSeries(TMDBMedia):
                             files=self._season_files(season_key, show_key),
                             update_at=changed_at,
                         )
-                        _, tmdb_tv_season_key = parse_season_key(season_key)
+                        _, tmdb_tv_season_id = get_media_type_and_season_id(season_key)
                         self.tv_seasons_changes_file(
-                            tmdb_tv_season_key=tmdb_tv_season_key,
+                            tmdb_tv_season_id=tmdb_tv_season_id,
                             changed_on=changed_at.date(),
                         ).download_if_outdated()
 
@@ -505,9 +498,9 @@ class TMDBSeries(TMDBMedia):
     # TODO: Validate
     def _import_all_season_changes(self, show: Show) -> None:
         for season_key in self._season_keys_from_show_files(show.key):
-            _, tmdb_tv_season_key = parse_season_key(season_key)
+            _, tmdb_tv_season_id = get_media_type_and_season_id(season_key)
             for changes_file in self.incomplete_tv_seasons_changes_files(
-                tmdb_tv_season_key,
+                tmdb_tv_season_id,
             ):
                 self._import_single_season_changes(
                     season_key=season_key,
@@ -563,9 +556,9 @@ class TMDBSeries(TMDBMedia):
             msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
 
-        tmdb_tv_show_key = int(regex_match.group(f"{TMDBMediaType.tv}_tmdb_id"))
-        self.raise_if_invalid_file(self.tv_series_details_file(tmdb_tv_show_key), url)
-        return tmdb_show_key(TMDBMediaType.tv, tmdb_tv_show_key)
+        tmdb_tv_show_id = int(regex_match.group(f"{TMDBMediaType.tv}_tmdb_id"))
+        self.raise_if_invalid_file(self.tv_series_details_file(tmdb_tv_show_id), url)
+        return tmdb_show_key(TMDBMediaType.tv, tmdb_tv_show_id)
 
 
 # TODO: Validate
@@ -577,27 +570,27 @@ class TMDBMovie(TMDBMedia):
     def download_new_watch_providers_file(self, show: Show) -> None:
         if not self._watch_providers_due(show):
             return
-        _, tmdb_movie_key = get_media_type_and_tmdb_id(show.key)
+        _, tmdb_movie_id = get_media_type_and_tmdb_id(show.key)
         self.movies_watch_providers_file(
-            tmdb_movie_key=tmdb_movie_key,
+            tmdb_movie_id=tmdb_movie_id,
             downloaded_at=tz_datetime.now().date(),
         ).download_if_outdated()
 
     # TODO: Validate
     @override
     def sync_show_watch_providers(self, show_key: str) -> None:
-        _, tmdb_movie_key = get_media_type_and_tmdb_id(show_key)
-        self.latest_movies_watch_providers_file(tmdb_movie_key).download_if_outdated()
+        _, tmdb_movie_id = get_media_type_and_tmdb_id(show_key)
+        self.latest_movies_watch_providers_file(tmdb_movie_id).download_if_outdated()
         self._process_watch_providers(
             show_key=show_key,
-            files=self.incomplete_movies_watch_providers_files(tmdb_movie_key),
+            files=self.incomplete_movies_watch_providers_files(tmdb_movie_id),
         )
 
     # TODO: Validate
     @override
     def _provider_file(self, show_key: str) -> MoviesWatchProviders:
-        _, tmdb_movie_key = get_media_type_and_tmdb_id(show_key)
-        return self.latest_movies_watch_providers_file(tmdb_movie_key)
+        _, tmdb_movie_id = get_media_type_and_tmdb_id(show_key)
+        return self.latest_movies_watch_providers_file(tmdb_movie_id)
 
     # TODO: Validate
     @override
@@ -610,8 +603,8 @@ class TMDBMovie(TMDBMedia):
     # TODO: Validate
     @override
     def _season_keys_from_show_files(self, show_key: str) -> list[str]:
-        media_type, tmdb_movie_key = get_media_type_and_tmdb_id(show_key)
-        return [tmdb_season_key(media_type, tmdb_movie_key)]
+        media_type, tmdb_movie_id = get_media_type_and_tmdb_id(show_key)
+        return [tmdb_season_key(media_type, tmdb_movie_id)]
 
     # TODO: Validate
     @override
@@ -620,8 +613,8 @@ class TMDBMovie(TMDBMedia):
         season_keys: str | list[str],
         show_key: str,
     ) -> list[str]:
-        media_type, tmdb_movie_key = get_media_type_and_tmdb_id(show_key)
-        return [tmdb_episode_key(media_type, tmdb_movie_key)]
+        media_type, tmdb_movie_id = get_media_type_and_tmdb_id(show_key)
+        return [tmdb_episode_key(media_type, tmdb_movie_id)]
 
     # TODO: Validate
     @override
@@ -635,8 +628,8 @@ class TMDBMovie(TMDBMedia):
     # TODO: Validate
     @override
     def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
-        _, tmdb_movie_key = get_media_type_and_tmdb_id(show_key)
-        return [self.movies_details_file(tmdb_movie_key)]
+        _, tmdb_movie_id = get_media_type_and_tmdb_id(show_key)
+        return [self.movies_details_file(tmdb_movie_id)]
 
     # TODO: Validate
     @override
@@ -646,8 +639,8 @@ class TMDBMovie(TMDBMedia):
         season_key: str,
         show_key: str,
     ) -> Sequence[BaseFile[Any]]:
-        _, tmdb_movie_key = get_media_type_and_tmdb_id(show_key)
-        return [self.movies_details_file(tmdb_movie_key)]
+        _, tmdb_movie_id = get_media_type_and_tmdb_id(show_key)
+        return [self.movies_details_file(tmdb_movie_id)]
 
     # TODO: Validate
     @override
@@ -659,8 +652,8 @@ class TMDBMovie(TMDBMedia):
         *,
         force: bool = False,
     ) -> Show:
-        _, tmdb_movie_key = get_media_type_and_tmdb_id(show_key)
-        parsed_movie_details = self.movies_details_file(tmdb_movie_key).parsed(
+        _, tmdb_movie_id = get_media_type_and_tmdb_id(show_key)
+        parsed_movie_details = self.movies_details_file(tmdb_movie_id).parsed(
             update_at,
         )
         show = Show.get_from_memory(self.session, source, show_key)
@@ -670,9 +663,15 @@ class TMDBMovie(TMDBMedia):
                 key=show_key,
                 name=parsed_movie_details.title,
                 description=parsed_movie_details.overview,
-                url=media_url(TMDBMediaType.movie, tmdb_movie_key),
-                image_url=get_first_image(parsed_movie_details, thumbnail=False),
-                thumbnail_url=get_first_image(parsed_movie_details, thumbnail=True),
+                url=media_url(TMDBMediaType.movie, tmdb_movie_id),
+                image_url=image_url(
+                    parsed_movie_details.backdrop_path
+                    or parsed_movie_details.poster_path
+                ),
+                thumbnail_url=thumbnail_url(
+                    parsed_movie_details.backdrop_path
+                    or parsed_movie_details.poster_path
+                ),
                 year=release_year(parsed_movie_details.release_date),
                 media_type="Movie",
                 # TODO: This is probably needed, but an explanation should be written
@@ -685,7 +684,7 @@ class TMDBMovie(TMDBMedia):
             )
             show = self._upsert_show_object(new_show, source, show, show_key)
 
-        self._upsert_season(show, show_key, tmdb_movie_key, update_at, force=force)
+        self._upsert_season(show, show_key, tmdb_movie_id, update_at, force=force)
         return show
 
     # TODO: Validate
@@ -693,15 +692,15 @@ class TMDBMovie(TMDBMedia):
         self,
         show: Show,
         show_key: str,
-        tmdb_movie_key: int,
+        tmdb_movie_id: int,
         update_at: datetime | None = None,
         *,
         force: bool = False,
     ) -> None:
-        parsed_movie_details = self.movies_details_file(tmdb_movie_key).parsed(
+        parsed_movie_details = self.movies_details_file(tmdb_movie_id).parsed(
             update_at,
         )
-        season_key = tmdb_season_key(TMDBMediaType.movie, tmdb_movie_key)
+        season_key = tmdb_season_key(TMDBMediaType.movie, tmdb_movie_id)
         season = Season.get_from_memory(self.session, show, season_key)
         if self._season_is_outdated(season, show_key, update_at, force=force):
             data_timestamp = self.season_data_timestamp(season_key, show_key, update_at)
@@ -710,8 +709,14 @@ class TMDBMovie(TMDBMedia):
                 name=parsed_movie_details.title,
                 season_number=0,
                 sort_order=0,
-                image_url=get_first_image(parsed_movie_details, thumbnail=False),
-                thumbnail_url=get_first_image(parsed_movie_details, thumbnail=True),
+                image_url=image_url(
+                    parsed_movie_details.backdrop_path
+                    or parsed_movie_details.poster_path
+                ),
+                thumbnail_url=thumbnail_url(
+                    parsed_movie_details.backdrop_path
+                    or parsed_movie_details.poster_path
+                ),
                 data_timestamp=data_timestamp,
                 update_at=None,
                 show_id=show.id,
@@ -722,7 +727,7 @@ class TMDBMovie(TMDBMedia):
             season=season,
             season_key=season_key,
             show_key=show_key,
-            tmdb_movie_key=tmdb_movie_key,
+            tmdb_movie_id=tmdb_movie_id,
             update_at=update_at,
             force=force,
         )
@@ -733,15 +738,15 @@ class TMDBMovie(TMDBMedia):
         season: Season,
         season_key: str,
         show_key: str,
-        tmdb_movie_key: int,
+        tmdb_movie_id: int,
         update_at: datetime | None = None,
         *,
         force: bool = False,
     ) -> None:
-        parsed_movie_details = self.movies_details_file(tmdb_movie_key).parsed(
+        parsed_movie_details = self.movies_details_file(tmdb_movie_id).parsed(
             update_at,
         )
-        episode_key = tmdb_episode_key(TMDBMediaType.movie, tmdb_movie_key)
+        episode_key = tmdb_episode_key(TMDBMediaType.movie, tmdb_movie_id)
         episode = Episode.get_from_memory(self.session, season, episode_key)
         if not self._episode_is_outdated(
             episode=episode,
@@ -762,11 +767,15 @@ class TMDBMovie(TMDBMedia):
             watch_identifier=watch_identifier(self.plugin_name(), episode_key),
             name=parsed_movie_details.title,
             description=parsed_movie_details.overview,
-            url=media_url(TMDBMediaType.movie, tmdb_movie_key),
-            image_url=get_first_image(parsed_movie_details, thumbnail=False),
-            thumbnail_url=get_first_image(parsed_movie_details, thumbnail=True),
-            duration=duration_seconds(parsed_movie_details.runtime),
-            air_date=air_datetime(parsed_movie_details.release_date),
+            url=media_url(TMDBMediaType.movie, tmdb_movie_id),
+            image_url=image_url(
+                parsed_movie_details.backdrop_path or parsed_movie_details.poster_path
+            ),
+            thumbnail_url=thumbnail_url(
+                parsed_movie_details.backdrop_path or parsed_movie_details.poster_path
+            ),
+            duration=runtime_in_seconds(parsed_movie_details.runtime),
+            air_date=parse_air_datetime(parsed_movie_details.release_date),
             episode_number=0,
             sort_order=0,
             data_timestamp=data_timestamp,
@@ -789,6 +798,6 @@ class TMDBMovie(TMDBMedia):
             msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
 
-        tmdb_movie_key = int(regex_match.group(f"{TMDBMediaType.movie}_tmdb_id"))
-        self.raise_if_invalid_file(self.movies_details_file(tmdb_movie_key), url)
-        return tmdb_show_key(TMDBMediaType.movie, tmdb_movie_key)
+        tmdb_movie_id = int(regex_match.group(f"{TMDBMediaType.movie}_tmdb_id"))
+        self.raise_if_invalid_file(self.movies_details_file(tmdb_movie_id), url)
+        return tmdb_show_key(TMDBMediaType.movie, tmdb_movie_id)

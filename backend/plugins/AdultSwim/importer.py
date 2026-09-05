@@ -77,12 +77,7 @@ class AdultSwimImporter(BaseImporter, AdultSwimBase):
 
     # TODO: Validate
     @override
-    def import_url(
-        self,
-        url: str,
-        *,
-        known_title: bool = False,
-    ) -> list[URLImportResult]:
+    def import_url(self, url: str) -> list[URLImportResult]:
         show_key = self._url_to_show_key(url)
         shows = self._existing_shows(show_key)
 

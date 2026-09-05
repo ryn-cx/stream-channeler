@@ -14,7 +14,12 @@ from sqlmodel.sql.expression import Select
 
 from app.canonical_media.episodes import canonical_id_of, links_of
 from app.canonical_media.filters import is_canonical, is_non_canonical
-from app.canonical_media.keys import not_tmdb_key_clause, same_issuer_clause
+from app.canonical_media.keys import (
+    same_issuer_clause,
+)
+from app.canonical_media.tmdb import (
+    not_tmdb_key_clause,
+)
 from app.channel_orders.models import ChannelOrder
 from app.channels.channel_scope import (
     channel_attribution,

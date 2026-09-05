@@ -19,6 +19,7 @@ from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.shows.models import Show
 from app.shows.service.relinking import _relink_non_canonical_show
 from app.utils import tz_datetime
+from plugins.utils.abstract_plugin import MediaNotFoundError
 
 if TYPE_CHECKING:
     from plugins.utils.abstract_plugin import AbstractPlugin
@@ -77,7 +78,12 @@ def _find_tmdb_show(
         return None
 
     title, media_type, year = plugin_instance.tmdb_lookup_info(show.key)
-    return TMDB(session).import_search(title, media_type, year)
+    tmdb_plugin = TMDB(session)
+    try:
+        results = tmdb_plugin.import_search([title], media_type, year)
+    except MediaNotFoundError:
+        return None
+    return next(iter(tmdb_plugin.imported_shows(results)), None)
 
 
 # TODO: Validate
@@ -162,7 +168,7 @@ def import_non_canonical_show_from_url(
 
     plugin_instance = plugin_class(session)
     try:
-        results = plugin_instance.import_url(address, known_title=True)
+        results = plugin_instance.import_url(address)
     except InvalidURLError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
@@ -175,7 +181,7 @@ def import_non_canonical_show_from_url(
         plugin_class.plugin_name(),
     )
     session.flush()
-    session.expire(canonical_show, ["non_canonical_shows"])
+    session.expire(canonical_show, ["non_canonical_show_links"])
     imported_keys = {result.show_key for result in results}
     for link in canonical_show.non_canonical_show_links:
         if link.non_canonical_show.key not in imported_keys:

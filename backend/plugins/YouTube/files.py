@@ -658,7 +658,6 @@ class _ShowPage(HTMLFile):
 # TODO: Validate
 class FileMixin(BasePlugin):
     _importing_album_playlist_key: str | None = None
-    _linking_playlist_key: str | None = None
 
     # TODO: Validate
     def channel_by_channel_id_file(self, show_key: str) -> _ChannelByChannelId:

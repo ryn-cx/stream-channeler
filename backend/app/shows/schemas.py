@@ -14,8 +14,11 @@ from pydantic import (
     model_validator,
 )
 
-from app.canonical_media.keys import SHOW_LEVEL, tmdb_id_of
-from app.canonical_media.metadata import tmdb_show_url
+from app.canonical_media.tmdb import (
+    get_tmdb_id,
+    is_tmdb_key,
+    tmdb_show_url,
+)
 from app.issue_reports.schemas import IssueReportOutput
 from app.schemas import (
     BaseCreateWithParentAndKey,
@@ -182,7 +185,8 @@ class CanonicalShowOutput(BaseCanonicalShow):
     # TODO: Validate
     @model_validator(mode="after")
     def _read_key(self) -> Self:
-        self.tmdb_id = tmdb_id_of(self.key, SHOW_LEVEL)
+        if is_tmdb_key(self.key):
+            self.tmdb_id = get_tmdb_id(self.key)
         self.tmdb_url = tmdb_show_url(self.key)
         return self
 

@@ -9,14 +9,18 @@ from typing import ClassVar, overload, override
 
 from tminidb.movie.details.models import MovieDetailsModel
 from tminidb.search.multi.models import Result as MultiResult
-from tminidb.search.multi.models import SearchMultiModel
 from tminidb.tv_episode_group.details.models import TvEpisodeGroupDetailsModel
 from tminidb.tv_series.details.models import TvSeriesDetailsModel
 
+from app.canonical_media.tmdb import (
+    chosen_group_id,
+    get_media_type_and_season_id,
+    get_media_type_and_tmdb_id,
+)
 from app.media.media_type import TMDBMediaType
 from app.shows.models import Show
 from app.utils import tz_datetime
-from plugins.TMDB.episode_groups import chosen_group_id
+from plugins.TMDB.basic_files import BasicFiles
 from plugins.TMDB.files import (
     MoviesDetails,
     MoviesWatchProviders,
@@ -27,20 +31,16 @@ from plugins.TMDB.files import (
     TVSeriesDetails,
     TVSeriesWatchProviders,
 )
-from plugins.TMDB.keys import (
-    get_media_type_and_tmdb_id,
-    parse_season_key,
-)
 from plugins.TMDB.utils import (
     SeasonInfo,
-    backdrop_image_url,
     decode_cursor,
     encode_cursor,
-    parse_media_identifier,
+    image_url,
     get_media_plugin,
-    poster_image_url,
+    parse_media_identifier,
     provider_names,
     release_year,
+    thumbnail_url,
     title_url_regex,
     watch_provider_items,
 )
@@ -49,14 +49,13 @@ from plugins.utils.abstract_plugin import (
     PluginSearchResult,
     PluginSearchResults,
 )
-from plugins.TMDB.basic_files import BasicFiles
 from plugins.utils.base_plugin_v3.files import COMPLETED_STATUS
 
 
 # TODO: Validate
-def media_url(media_type: str, tmdb_media_key: int) -> str:
+def media_url(media_type: str, tmdb_media_id: int) -> str:
     """Return the TMDb URL for the movie or tv series."""
-    return f"https://www.themoviedb.org/{media_type}/{tmdb_media_key}"
+    return f"https://www.themoviedb.org/{media_type}/{tmdb_media_id}"
 
 
 MOVIE_URL_REGEX = title_url_regex(TMDBMediaType.movie)
@@ -156,15 +155,15 @@ class TMDBShared(BasicFiles):
 
     # TODO: Validate
     def media_info(self, media_identifier: str) -> PluginMediaInfo | None:
-        media_type, tmdb_media_key = parse_media_identifier(media_identifier)
+        media_type, tmdb_media_id = parse_media_identifier(media_identifier)
         detail_file: MoviesDetails | TVSeriesDetails
         providers_file: MoviesWatchProviders | TVSeriesWatchProviders
         if media_type == TMDBMediaType.movie:
-            detail_file = self.movies_details_file(tmdb_media_key)
-            providers_file = self.latest_movies_watch_providers_file(tmdb_media_key)
+            detail_file = self.movies_details_file(tmdb_media_id)
+            providers_file = self.latest_movies_watch_providers_file(tmdb_media_id)
         else:
-            detail_file = self.tv_series_details_file(tmdb_media_key)
-            providers_file = self.latest_tv_series_watch_providers_file(tmdb_media_key)
+            detail_file = self.tv_series_details_file(tmdb_media_id)
+            providers_file = self.latest_tv_series_watch_providers_file(tmdb_media_id)
         providers = providers_file.parsed()
         # Which of the two shapes the detail is has to be read off the file rather
         # than the parsed model, because a model whose module was reloaded after a
@@ -206,8 +205,8 @@ class TMDBShared(BasicFiles):
             ],
             tagline=detail.tagline or None,
             overview=detail.overview or None,
-            poster_url=poster_image_url(poster_path or backdrop_path),
-            backdrop_url=backdrop_image_url(backdrop_path or poster_path),
+            poster_url=thumbnail_url(poster_path or backdrop_path),
+            backdrop_url=image_url(backdrop_path or poster_path),
             year=year,
             end_year=end_year,
             status=detail.status,
@@ -247,7 +246,7 @@ class TMDBShared(BasicFiles):
         next_cursor: str | None = None
 
         while len(results) < self.search_page_size():
-            parsed = self._multi_search_page(query, page)
+            parsed = self.search_multi_file(query, page).parsed()
             matches = [
                 self._search_result(result)
                 for result in parsed.results
@@ -270,11 +269,9 @@ class TMDBShared(BasicFiles):
         return PluginSearchResults(results=results, next_cursor=next_cursor)
 
     # TODO: Validate
-    def _multi_search_page(self, query: str, page: int) -> SearchMultiModel:
-        return self.search_multi_file(query, page).parsed()
-
-    # TODO: Validate
     def _search_result(self, result: MultiResult) -> PluginSearchResult:
+        """Return a PluginSearchResult from a TMDB search result."""
+
         title: str | None
         media_type: TMDBMediaType
         if result.media_type == "movie":
@@ -294,8 +291,8 @@ class TMDBShared(BasicFiles):
             title=title,
             url=media_url(media_type, result.id),
             year=year,
-            image_url=poster_image_url(result.poster_path)
-            or backdrop_image_url(result.backdrop_path),
+            image_url=thumbnail_url(result.poster_path)
+            or image_url(result.backdrop_path),
             media_type=self._SEARCH_MEDIA_TYPES[media_type],
             media_identifier=f"{media_type} {result.id}",
         )
@@ -324,7 +321,7 @@ class TMDBShared(BasicFiles):
         contents of TVSeriesDetails.
         """
 
-        _, tmdb_tv_show_key = get_media_type_and_tmdb_id(show_key)
+        _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show_key)
 
         if group := self._chosen_episode_group(show_key, update_at):
             return [
@@ -335,21 +332,21 @@ class TMDBShared(BasicFiles):
         return [
             SeasonInfo.from_season_details(
                 self.tv_seasons_details_file(
-                    tmdb_tv_show_key=tmdb_tv_show_key,
+                    tmdb_tv_show_id=tmdb_tv_show_id,
                     season_number=season.season_number,
                 ).parsed(update_at),
             )
-            for season in self.tv_series_details_file(tmdb_tv_show_key)
+            for season in self.tv_series_details_file(tmdb_tv_show_id)
             .parsed(update_at)
             .seasons
         ]
 
     def _native_season_number(self, season_key: str, show_key: str) -> int:
         """Return the number TMDB's own seasons give the season `season_key` names."""
-        _, tmdb_tv_season_key = parse_season_key(season_key)
-        _, tmdb_tv_show_key = get_media_type_and_tmdb_id(show_key)
-        for season in self.tv_series_details_file(tmdb_tv_show_key).parsed().seasons:
-            if season.id == tmdb_tv_season_key:
+        _, tmdb_tv_season_id = get_media_type_and_season_id(season_key)
+        _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show_key)
+        for season in self.tv_series_details_file(tmdb_tv_show_id).parsed().seasons:
+            if season.id == tmdb_tv_season_id:
                 return season.season_number
         message = f"{show_key} has no season {season_key}"
         raise ValueError(message)

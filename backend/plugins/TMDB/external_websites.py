@@ -7,15 +7,20 @@ from abc import ABC, abstractmethod
 from loguru import logger
 from sqlmodel import select
 
+from app.canonical_media.tmdb import (
+    get_media_type_and_tmdb_id,
+)
 from app.media.media_type import TMDBMediaType
 from app.shows.models import Show
 from app.shows.service.canonical import match_show_to_tmdb
 from app.sources.models import UnmatchedSource
 from app.sources.service.unmatched import remove_unmatched_source
 from plugins.TMDB.files import MoviesWatchProviders, TVSeriesWatchProviders
-from plugins.TMDB.keys import get_media_type_and_tmdb_id
 from plugins.TMDB.shared import TMDBShared
-from plugins.TMDB.utils import get_media_plugin, streaming_providers
+from plugins.TMDB.utils import (
+    get_media_plugin,
+    streaming_providers,
+)
 from plugins.utils.abstract_plugin import AbstractPlugin, MediaNotFoundError
 
 
@@ -114,7 +119,7 @@ class TMDBExternalWebsites(TMDBShared, ABC):
     # TODO: Validate
     def plugins_with_non_canonical_shows(self, show: Show) -> set[str]:
         self.session.flush()
-        self.session.expire(show, ["non_canonical_shows"])
+        self.session.expire(show, ["non_canonical_show_links"])
         return {
             link.non_canonical_show.source.plugin.key
             for link in show.non_canonical_show_links
@@ -135,7 +140,7 @@ class TMDBExternalWebsites(TMDBShared, ABC):
         plugin = plugin_class(self.session)
         savepoint = self.session.begin_nested()
         try:
-            results = plugin.import_by_name([name], media_type, year)
+            results = plugin.import_search([name], media_type, year)
             for imported_show in plugin.imported_shows(results):
                 match_show_to_tmdb(
                     self.session,

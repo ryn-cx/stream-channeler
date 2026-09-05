@@ -7,7 +7,9 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import instance_state, set_committed_value
 from sqlmodel import Session, col, select
 
-from app.canonical_media.keys import is_tmdb_key
+from app.canonical_media.tmdb import (
+    is_tmdb_key,
+)
 from app.episodes.linking.rules import (
     season_and_episode_number_key,
     single,

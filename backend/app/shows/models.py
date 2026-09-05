@@ -18,7 +18,9 @@ from sqlmodel import (
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.canonical_media.keys import SHOW_LEVEL, tmdb_id_of
+from app.canonical_media.tmdb import (
+    get_tmdb_id,
+)
 from app.models import (
     BaseMediaMixin,
     ChildMediaMixin,
@@ -176,11 +178,8 @@ class Show(BaseShow, ChildMediaMixin[Source, "Season"], table=True):
     # TODO: Validate
     @property
     def tmdb_ids(self) -> list[int]:
-        """The TMDB id behind each canonical show this stands for, where it has one."""
         return [
-            tmdb_id
-            for canonical_show in self.canonical_shows
-            if (tmdb_id := tmdb_id_of(canonical_show.key, SHOW_LEVEL)) is not None
+            get_tmdb_id(canonical_show.key) for canonical_show in self.canonical_shows
         ]
 
     # TODO: Validate
@@ -195,7 +194,7 @@ class Show(BaseShow, ChildMediaMixin[Source, "Season"], table=True):
         canonical_show = self.sole_canonical_show
         if canonical_show is None:
             return None
-        return tmdb_id_of(canonical_show.key, SHOW_LEVEL)
+        return get_tmdb_id(canonical_show.key)
 
     # What wrote this row. A non-canonical row has the website it was read off, and a
     # canonical show has the plugin that minted it, which is TMDB wherever TMDB has a
@@ -342,7 +341,7 @@ class ShowCanonicalShow(BaseShowCanonicalShow, TimestampIdAndHashMixin, table=Tr
         sa_relationship_kwargs={"foreign_keys": "ShowCanonicalShow.show_id"},
     )
     canonical_show: Show = Relationship(
-        back_populates="non_canonical_shows",
+        back_populates="non_canonical_show_links",
         sa_relationship_kwargs={
             "foreign_keys": "ShowCanonicalShow.canonical_show_id",
         },

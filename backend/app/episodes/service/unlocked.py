@@ -16,7 +16,7 @@ from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, col, select
 
 from app.canonical_media.filters import is_canonical
-from app.canonical_media.keys import (
+from app.canonical_media.tmdb import (
     tmdb_key_clause,
 )
 from app.episodes.models import (

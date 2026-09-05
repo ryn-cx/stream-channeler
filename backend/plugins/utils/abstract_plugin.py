@@ -118,12 +118,7 @@ class AbstractPlugin(ABC):
         return False
 
     # TODO: Validate
-    def import_url(
-        self,
-        url: str,
-        *,
-        known_title: bool = False,
-    ) -> list[URLImportResult]:
+    def import_url(self, url: str) -> list[URLImportResult]:
         """Import `url` into the database.
 
         Only called if `is_valid_url_format` returns `True` on the `url`.
@@ -397,7 +392,7 @@ class AbstractPlugin(ABC):
         raise NotImplementedError(msg)
 
     # TODO: Validate
-    def import_by_name(
+    def import_search(
         self,
         names: list[str],
         media_type: TMDBMediaType,
@@ -424,7 +419,7 @@ class AbstractPlugin(ABC):
             `MediaNotFoundError` if the service carries no title of that name.
 
         """
-        msg = "import_by_name is not supported by this plugin."
+        msg = "import_search is not supported by this plugin."
         raise NotImplementedError(msg)
 
     # TODO: Validate
@@ -502,7 +497,7 @@ class InvalidURLError(Exception):
 
 # TODO: Validate
 class MediaNotFoundError(Exception):
-    """Raised during `import_by_name` when the service carries no such title."""
+    pass
 
 
 # TODO: Validate

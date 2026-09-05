@@ -18,18 +18,18 @@ class TMDBLinking(TMDBShared):
         return self._get_files_by_keys(
             file_keys=[
                 self.tv_episodes_translations_file(
-                    tmdb_tv_show_key=tmdb_tv_show_key,
+                    tmdb_tv_show_id=tmdb_tv_show_id,
                     season_number=season_number,
                     episode_number=episode_number,
                 ).file_key()
-                for tmdb_tv_show_key, season_number, episode_number in numberings
+                for tmdb_tv_show_id, season_number, episode_number in numberings
             ],
         )
 
     # TODO: Validate
     def preload_movie_translations(
         self,
-        tmdb_movie_keys: Sequence[int],
+        tmdb_movie_ids: Sequence[int],
     ) -> Sequence[File]:
         """Read the rows holding every named film's translations, in one query.
 
@@ -39,15 +39,15 @@ class TMDBLinking(TMDBShared):
         """
         return self._get_files_by_keys(
             [
-                self.movies_translations_file(tmdb_movie_key).file_key()
-                for tmdb_movie_key in tmdb_movie_keys
+                self.movies_translations_file(tmdb_movie_id).file_key()
+                for tmdb_movie_id in tmdb_movie_ids
             ],
         )
 
     # TODO: Validate
     def translated_episode_names(
         self,
-        tmdb_tv_show_key: int,
+        tmdb_tv_show_id: int,
         season_number: int,
         episode_number: int,
     ) -> Sequence[str]:
@@ -58,7 +58,7 @@ class TMDBLinking(TMDBShared):
         them through here.
         """
         translations = self.tv_episodes_translations_file(
-            tmdb_tv_show_key=tmdb_tv_show_key,
+            tmdb_tv_show_id=tmdb_tv_show_id,
             season_number=season_number,
             episode_number=episode_number,
         ).parsed()
@@ -69,14 +69,14 @@ class TMDBLinking(TMDBShared):
         ]
 
     # TODO: Validate
-    def translated_movie_names(self, tmdb_movie_key: int) -> Sequence[str]:
+    def translated_movie_names(self, tmdb_movie_id: int) -> Sequence[str]:
         """Return every language's title for one film.
 
         A film's translations are not stored alongside it, the same way an
         episode's are not, so whatever matches a film by name reads them through
         here.
         """
-        translations = self.movies_translations_file(tmdb_movie_key).parsed()
+        translations = self.movies_translations_file(tmdb_movie_id).parsed()
         return [
             translation.data.title
             for translation in translations.translations
@@ -86,9 +86,9 @@ class TMDBLinking(TMDBShared):
     # TODO: Validate
     def alternate_episode_numbers(
         self,
-        tmdb_tv_show_key: int,
+        tmdb_tv_show_id: int,
     ) -> dict[int, dict[int, frozenset[str]]]:
-        groups = self.tv_series_episode_groups_file(tmdb_tv_show_key).parsed()
+        groups = self.tv_series_episode_groups_file(tmdb_tv_show_id).parsed()
 
         numbers: dict[int, dict[int, set[str]]] = {}
         for option in groups.results:

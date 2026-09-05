@@ -19,9 +19,8 @@ from sqlmodel import Session, col, select
 
 from app.canonical_media.episodes import canonical_episode_link, links_of
 from app.canonical_media.filters import is_canonical
-from app.canonical_media.keys import (
-    EPISODE_LEVEL,
-    tmdb_id_of,
+from app.canonical_media.tmdb import (
+    get_tmdb_id,
     tmdb_key_clause,
 )
 from app.episodes.models import (
@@ -68,22 +67,22 @@ def _tmdb_ids_used_by_shows(
     if not show_ids:
         return {}
 
-    canonical_episode = aliased(Episode)
-    canonical_link = canonical_episode_link()
+    tmdb_episode = aliased(Episode)
+    tmdb_link = canonical_episode_link()
     statement = (
-        select(Season.show_id, canonical_episode.key, Episode, Season, Show)  # type: ignore[call-overload]
+        select(Season.show_id, tmdb_episode.key, Episode, Season, Show)  # type: ignore[call-overload]
         .select_from(Episode)
-        .join(canonical_link, links_of(Episode, canonical_link))
+        .join(tmdb_link, links_of(Episode, tmdb_link))
         .join(
-            canonical_episode,
-            onclause=col(canonical_link.canonical_episode_id) == canonical_episode.id,
+            tmdb_episode,
+            onclause=col(tmdb_link.canonical_episode_id) == tmdb_episode.id,
         )
         .join(Season, onclause=col(Episode.season_id) == Season.id)
         .join(Show, onclause=col(Season.show_id) == Show.id)
         .where(
-            is_canonical(canonical_episode),
+            is_canonical(tmdb_episode),
             col(Season.show_id).in_(show_ids),
-            tmdb_key_clause(col(canonical_episode.key)),
+            tmdb_key_clause(col(tmdb_episode.key)),
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
         )
@@ -92,9 +91,7 @@ def _tmdb_ids_used_by_shows(
         lambda: defaultdict(list),
     )
     for show_id, key, used_by, season, show in session.exec(statement).all():
-        tmdb_id = tmdb_id_of(key, EPISODE_LEVEL)
-        if tmdb_id is None:
-            continue
+        tmdb_id = get_tmdb_id(key)
         using[show_id][tmdb_id].append(
             EpisodeRecord(**_record_fields(used_by, season, show)),
         )
@@ -121,19 +118,10 @@ def _tmdb_ids_used_by_show(
 
 
 # TODO: Validate
-def _imported_title(session: Session, tmdb_show_id: int) -> uuid.UUID:
-    """Read a TMDB series in and return the title its episodes are under."""
-    from plugins.TMDB import TMDB  # noqa: PLC0415
-
-    return TMDB(session).import_show(tmdb_show_id).id
-
-
-# TODO: Validate
 def list_tmdb_episode_choices(
     session: Session,
-    episode: Episode,
-    tmdb_show_id: int | None = None,
-    name: str | None = None,
+    episode_to_link: Episode,
+    search_string: str | None = None,
     limit: int = 100,
 ) -> list[TmdbEpisodeChoice]:
     """Return every TMDB episode of a title, in the order the title runs.
@@ -142,36 +130,32 @@ def list_tmdb_episode_choices(
     one an episode is meant to be is found by counting through the title the same
     way the website that holds it does. Each carries how much of its name it
     shares with `episode`, which is the other order they are worth reading in.
-
-    The titles are the ones the episode's show is linked to, unless another is
-    named outright. TMDB files some episodes under a title of their own, so an
-    episode is not always among the episodes of the titles its show is, and naming
-    the title it is under is the only way to reach it.
     """
-    if name and name.strip():
-        return _named_tmdb_episode_choices(session, episode, name.strip(), limit)
+    # If a search string is included the user is searching for an episode that can
+    # belong to anny title.
+    if search_string and search_string.strip():
+        return _named_tmdb_episode_choices(
+            session,
+            episode_to_link,
+            search_string.strip(),
+            limit,
+        )
 
-    canonical_show_ids = (
-        episode.season.show.canonical_show_ids
-        if tmdb_show_id is None
-        else [_imported_title(session, tmdb_show_id)]
-    )
-    if not canonical_show_ids:
+    tmdb_show_ids = episode_to_link.season.show.canonical_show_ids
+    if not tmdb_show_ids:
         return []
-    by_title = _candidates_by_show(session, set(canonical_show_ids))
-    titles = [
-        by_title.get(canonical_show_id, []) for canonical_show_id in canonical_show_ids
-    ]
-    show_ids = set(canonical_show_ids)
-    choices = _title_choices(session, episode, titles, show_ids)
+    unique_tmdb_show_ids = set(tmdb_show_ids)
+    by_title = _candidates_by_show(session, unique_tmdb_show_ids)
+    titles = [by_title.get(tmdb_show_id, []) for tmdb_show_id in tmdb_show_ids]
+    choices = _title_choices(session, episode_to_link, titles, unique_tmdb_show_ids)
     named = {choice.episode.id for choice in choices}
     choices += [
         choice
         for choice in _matched_choices(
             session,
-            episode,
-            _similar_canonical_episodes(session, episode.name, 25),
-            show_ids,
+            episode_to_link,
+            _similar_tmdb_episodes(session, episode_to_link.name, 25),
+            unique_tmdb_show_ids,
         )
         if choice.episode.id not in named
     ]
@@ -185,9 +169,9 @@ def list_tmdb_episode_choices(
 
 
 # TODO: Validate
-def _named_canonical_episodes(
+def _named_tmdb_episodes(
     session: Session,
-    wanted: str,
+    search_string: str,
     limit: int,
 ) -> list[tuple[uuid.UUID, uuid.UUID]]:
     statement = (
@@ -201,18 +185,19 @@ def _named_canonical_episodes(
             col(Season.deleted_at).is_(None),
             col(Show.deleted_at).is_(None),
             tmdb_key_clause(col(Episode.key)),
-            col(Episode.name).icontains(wanted, autoescape=True),
+            col(Episode.name).icontains(search_string, autoescape=True),
         )
         .order_by(col(Episode.name), col(Episode.id))
         .limit(limit)
     )
     return [
-        (episode_id, show_id) for episode_id, show_id in session.exec(statement).all()
+        (tmdb_episode_id, tmdb_show_id)
+        for tmdb_episode_id, tmdb_show_id in session.exec(statement).all()
     ]
 
 
 # TODO: Validate
-def _similar_canonical_episodes(
+def _similar_tmdb_episodes(
     session: Session,
     name: str | None,
     limit: int,
@@ -238,7 +223,8 @@ def _similar_canonical_episodes(
         .limit(limit)
     )
     return [
-        (episode_id, show_id) for episode_id, show_id in session.exec(statement).all()
+        (tmdb_episode_id, tmdb_show_id)
+        for tmdb_episode_id, tmdb_show_id in session.exec(statement).all()
     ]
 
 
@@ -247,15 +233,18 @@ def _title_choices(
     session: Session,
     episode: Episode,
     titles: list[list[_Candidate]],
-    show_ids: set[uuid.UUID],
-    keep: set[uuid.UUID] | None = None,
+    tmdb_show_ids: set[uuid.UUID],
+    keep_tmdb_episode_ids: set[uuid.UUID] | None = None,
 ) -> list[TmdbEpisodeChoice]:
     used_tmdb_ids = _tmdb_ids_used_by_show(session, episode)
     choices: list[TmdbEpisodeChoice] = []
     for title in titles:
         numbers = _candidate_absolute_numbers(title)
         for candidate in title:
-            if keep is not None and candidate[0].id not in keep:
+            if (
+                keep_tmdb_episode_ids is not None
+                and candidate[0].id not in keep_tmdb_episode_ids
+            ):
                 continue
             choice = _choice(
                 candidate,
@@ -264,7 +253,7 @@ def _title_choices(
             )
             if choice is None:
                 continue
-            choice.from_show = choice.show.id in show_ids
+            choice.from_show = choice.show.id in tmdb_show_ids
             choice.used_by = used_tmdb_ids.get(choice.episode.tmdb_id or 0, [])
             choice.already_used = bool(choice.used_by)
             choices.append(choice)
@@ -275,28 +264,31 @@ def _title_choices(
 def _matched_choices(
     session: Session,
     episode: Episode,
-    matches: list[tuple[uuid.UUID, uuid.UUID]],
-    show_ids: set[uuid.UUID],
+    tmdb_matches: list[tuple[uuid.UUID, uuid.UUID]],
+    tmdb_show_ids: set[uuid.UUID],
 ) -> list[TmdbEpisodeChoice]:
-    if not matches:
+    if not tmdb_matches:
         return []
 
-    by_title = _candidates_by_show(session, {show_id for _id, show_id in matches})
+    by_title = _candidates_by_show(
+        session,
+        {tmdb_show_id for _episode_id, tmdb_show_id in tmdb_matches},
+    )
     return _title_choices(
         session,
         episode,
         list(by_title.values()),
-        show_ids,
-        {episode_id for episode_id, _show_id in matches},
+        tmdb_show_ids,
+        {tmdb_episode_id for tmdb_episode_id, _show_id in tmdb_matches},
     )
 
 
 # TODO: Validate
 def _blended_name_scored(
-    episode: Episode,
+    episode_to_link: Episode,
     choices: list[TmdbEpisodeChoice],
 ) -> list[TmdbEpisodeChoice]:
-    own_name = _episode_text(episode, titles=True)
+    own_name = _episode_text(episode_to_link, titles=True)
     named = [choice for choice in choices if (choice.episode.name or "").strip()]
     if not own_name or not named:
         return choices
@@ -310,17 +302,17 @@ def _blended_name_scored(
 # TODO: Validate
 def _named_tmdb_episode_choices(
     session: Session,
-    episode: Episode,
-    wanted: str,
+    episode_to_link: Episode,
+    search_string: str,
     limit: int,
 ) -> list[TmdbEpisodeChoice]:
     choices = _blended_name_scored(
-        episode,
-        _matched_choices(
-            session,
-            episode,
-            _named_canonical_episodes(session, wanted, limit),
-            set(episode.season.show.canonical_show_ids),
+        episode_to_link=episode_to_link,
+        choices=_matched_choices(
+            session=session,
+            episode=episode_to_link,
+            tmdb_matches=_named_tmdb_episodes(session, search_string, limit),
+            tmdb_show_ids=set(episode_to_link.season.show.canonical_show_ids),
         ),
     )
     return sorted(choices, key=lambda choice: -choice.similarity)

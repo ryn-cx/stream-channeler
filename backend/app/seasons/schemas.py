@@ -6,7 +6,9 @@ from typing import Self
 
 from pydantic import AliasPath, BaseModel, ConfigDict, Field, model_validator
 
-from app.canonical_media.metadata import tmdb_season_url
+from app.canonical_media.tmdb import (
+    tmdb_season_url,
+)
 from app.issue_reports.schemas import IssueReportOutput
 from app.schemas import (
     BaseCreateWithParentAndKey,

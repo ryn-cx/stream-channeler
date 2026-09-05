@@ -107,19 +107,19 @@ class MoviesWatchProviders(WatchProvidersFile[MovieWatchProvidersModel]):
         self,
         session: Session,
         plugin: Plugin,
-        tmdb_movie_key: int,
+        tmdb_movie_id: int,
         downloaded_at: date,
     ) -> None:
-        self.tmdb_movie_key = tmdb_movie_key
+        self.tmdb_movie_id = tmdb_movie_id
         super().__init__(
             session=session,
             plugin=plugin,
-            unique_identifier=f"{tmdb_movie_key}/{downloaded_at.isoformat()}",
+            unique_identifier=f"{tmdb_movie_id}/{downloaded_at.isoformat()}",
         )
 
     @override
     def _download_file(self) -> str:
-        return self._endpoint().download(self.tmdb_movie_key)
+        return self._endpoint().download(self.tmdb_movie_id)
 
 
 class TVSeriesWatchProviders(WatchProvidersFile[TvSeriesWatchProvidersModel]):
@@ -133,19 +133,19 @@ class TVSeriesWatchProviders(WatchProvidersFile[TvSeriesWatchProvidersModel]):
         self,
         session: Session,
         plugin: Plugin,
-        tmdb_tv_show_key: int,
+        tmdb_tv_show_id: int,
         downloaded_at: date,
     ) -> None:
-        self.tmdb_tv_show_key = tmdb_tv_show_key
+        self.tmdb_tv_show_id = tmdb_tv_show_id
         super().__init__(
             session=session,
             plugin=plugin,
-            unique_identifier=f"{tmdb_tv_show_key}/{downloaded_at.isoformat()}",
+            unique_identifier=f"{tmdb_tv_show_id}/{downloaded_at.isoformat()}",
         )
 
     @override
     def _download_file(self) -> str:
-        return self._endpoint().download(self.tmdb_tv_show_key)
+        return self._endpoint().download(self.tmdb_tv_show_id)
 
 
 class TVSeasonsWatchProviders(WatchProvidersFile[TvSeasonWatchProvidersModel]):
@@ -159,21 +159,21 @@ class TVSeasonsWatchProviders(WatchProvidersFile[TvSeasonWatchProvidersModel]):
         self,
         session: Session,
         plugin: Plugin,
-        tmdb_tv_show_key: int,
+        tmdb_tv_show_id: int,
         season_number: int,
         downloaded_at: date,
     ) -> None:
-        self.tmdb_tv_show_key = tmdb_tv_show_key
+        self.tmdb_tv_show_id = tmdb_tv_show_id
         self.season_number = season_number
         super().__init__(
             session,
             plugin,
-            f"{tmdb_tv_show_key}/{season_number}/{downloaded_at.isoformat()}",
+            f"{tmdb_tv_show_id}/{season_number}/{downloaded_at.isoformat()}",
         )
 
     @override
     def _download_file(self) -> str:
-        return self._endpoint().download(self.tmdb_tv_show_key, self.season_number)
+        return self._endpoint().download(self.tmdb_tv_show_id, self.season_number)
 
 
 type ProvidersFile = (
@@ -236,16 +236,16 @@ class TVSeasonsDetails(EndpointFile[TvSeasonDetailsModel]):
         self,
         session: Session,
         plugin: Plugin,
-        tmdb_tv_show_key: int,
+        tmdb_tv_show_id: int,
         season_number: int,
     ) -> None:
-        self.tmdb_tv_show_key = tmdb_tv_show_key
+        self.tmdb_tv_show_id = tmdb_tv_show_id
         self.season_number = season_number
-        super().__init__(session, plugin, f"{tmdb_tv_show_key}/{season_number}")
+        super().__init__(session, plugin, f"{tmdb_tv_show_id}/{season_number}")
 
     @override
     def _download_file(self) -> str:
-        return self._endpoint().download(self.tmdb_tv_show_key, self.season_number)
+        return self._endpoint().download(self.tmdb_tv_show_id, self.season_number)
 
 
 class TVEpisodesTranslations(EndpointFile[TvEpisodeTranslationsModel]):
@@ -259,23 +259,23 @@ class TVEpisodesTranslations(EndpointFile[TvEpisodeTranslationsModel]):
         self,
         session: Session,
         plugin: Plugin,
-        tmdb_tv_show_key: int,
+        tmdb_tv_show_id: int,
         season_number: int,
         episode_number: int,
     ) -> None:
-        self.tmdb_tv_show_key = tmdb_tv_show_key
+        self.tmdb_tv_show_id = tmdb_tv_show_id
         self.season_number = season_number
         self.episode_number = episode_number
         super().__init__(
             session=session,
             plugin=plugin,
-            unique_identifier=f"{tmdb_tv_show_key}/{season_number}/{episode_number}",
+            unique_identifier=f"{tmdb_tv_show_id}/{season_number}/{episode_number}",
         )
 
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(
-            series_id=self.tmdb_tv_show_key,
+            series_id=self.tmdb_tv_show_id,
             season_number=self.season_number,
             episode_number=self.episode_number,
         )
@@ -292,22 +292,22 @@ class TVSeriesChanges(EndpointFile[TvSeriesChangesModel]):
         self,
         session: Session,
         plugin: Plugin,
-        tmdb_tv_show_key: int,
+        tmdb_tv_show_id: int,
         since: date,
         downloaded_to: date,
     ) -> None:
-        self.tmdb_tv_show_key = tmdb_tv_show_key
+        self.tmdb_tv_show_id = tmdb_tv_show_id
         self.since = since
         super().__init__(
             session=session,
             plugin=plugin,
-            unique_identifier=f"{tmdb_tv_show_key}/{downloaded_to.isoformat()}",
+            unique_identifier=f"{tmdb_tv_show_id}/{downloaded_to.isoformat()}",
         )
 
     @override
     def _download_file(self) -> str:
         return self._endpoint().download_merged(
-            series_id=self.tmdb_tv_show_key,
+            series_id=self.tmdb_tv_show_id,
             start_date=self.since,
             end_date=tz_datetime.now().date(),
         )
@@ -324,15 +324,15 @@ class TVSeasonsChanges(EndpointFile[TvSeasonChangesModel]):
         self,
         session: Session,
         plugin: Plugin,
-        tmdb_tv_season_key: int,
+        tmdb_tv_season_id: int,
         changed_on: date,
     ) -> None:
-        self.tmdb_tv_season_key = tmdb_tv_season_key
+        self.tmdb_tv_season_id = tmdb_tv_season_id
         self.changed_on = changed_on
         super().__init__(
             session=session,
             plugin=plugin,
-            unique_identifier=f"{tmdb_tv_season_key}/{changed_on.isoformat()}",
+            unique_identifier=f"{tmdb_tv_season_id}/{changed_on.isoformat()}",
         )
 
     @override
@@ -341,7 +341,7 @@ class TVSeasonsChanges(EndpointFile[TvSeasonChangesModel]):
         # specific date. The specific date that includes the change is downloaded and
         # all other dates are ignored because they have no changes.
         return self._endpoint().download(
-            season_id=self.tmdb_tv_season_key,
+            season_id=self.tmdb_tv_season_id,
             start_date=self.changed_on,
             end_date=self.changed_on,
         )

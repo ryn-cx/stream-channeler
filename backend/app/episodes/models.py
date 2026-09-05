@@ -20,7 +20,9 @@ from sqlmodel import (
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.canonical_media.keys import EPISODE_LEVEL, tmdb_id_of
+from app.canonical_media.tmdb import (
+    get_tmdb_id,
+)
 from app.models import (
     BaseMediaMixin,
     ChildMediaMixin,
@@ -230,7 +232,7 @@ class Episode(BaseEpisode, ChildMediaMixin[Season, Never], table=True):
         canonical_episode = self.sole_canonical_episode
         if canonical_episode is None:
             return None
-        return tmdb_id_of(canonical_episode.key, EPISODE_LEVEL)
+        return get_tmdb_id(canonical_episode.key)
 
     # What a `Watch` is of. A plugin's own key names the media rather than one
     # row for it - a YouTube video is the same video under every playlist

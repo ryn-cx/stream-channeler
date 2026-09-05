@@ -8,6 +8,11 @@ from typing import Any
 from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.canonical_media.tmdb import (
+    chosen_group_id,
+    dump_extra,
+    get_media_type_and_tmdb_id,
+)
 from app.media.media_type import TMDBMediaType
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.shows.models import Show
@@ -39,7 +44,6 @@ def list_tmdb_episode_groups(
     # Imported here rather than at the top of the module because the plugin is
     # built on the base every plugin is, which reads this module in turn.
     from plugins.TMDB import TMDB  # noqa: PLC0415
-    from plugins.TMDB.keys import get_media_type_and_tmdb_id  # noqa: PLC0415
 
     media_type, tmdb_id = get_media_type_and_tmdb_id(show.key)
     if media_type is not TMDBMediaType.tv:
@@ -80,10 +84,6 @@ def update_show_extra(
     """
     validate_extra(session, show, extra)
 
-    # Imported here rather than at the top of the module because the plugin is
-    # built on the base every plugin is, which reads this module in turn.
-    from plugins.TMDB.episode_groups import chosen_group_id  # noqa: PLC0415
-
     reordered = chosen_group_id(show.extra) != chosen_group_id(extra)
     show.extra = extra or {}
     session.add(show)
@@ -101,10 +101,6 @@ def update_show_episode_group(
     group_id: str | None,
 ) -> None:
     """Read `show` in the episode order `group_id` names, or in its own for none."""
-    # Imported here rather than at the top of the module because the plugin is
-    # built on the base every plugin is, which reads this module in turn.
-    from plugins.TMDB.episode_groups import dump_extra  # noqa: PLC0415
-
     update_show_extra(session, show, dump_extra(group_id))
 
 
@@ -151,8 +147,6 @@ def validate_extra(
     # Imported here rather than at the top of the module because the plugin is
     # built on the base every plugin is, which reads this module in turn.
     from plugins.TMDB import TMDB  # noqa: PLC0415
-    from plugins.TMDB.episode_groups import chosen_group_id  # noqa: PLC0415
-    from plugins.TMDB.keys import get_media_type_and_tmdb_id  # noqa: PLC0415
 
     group_id = chosen_group_id(extra)
     if group_id is None:

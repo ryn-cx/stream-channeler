@@ -19,7 +19,6 @@ from app.utils import tz_datetime
 from plugins.utils.base_plugin_v3.files import INITIAL_FILE_IDENTIFIER, BaseFile
 
 if TYPE_CHECKING:
-    from plugins.utils.base_plugin_v3.importer import BaseImporter
     from plugins.utils.base_plugin_v3.initialize import BasePluginInitializer
 
 FILE_SESSION_KEY = "plugin_file_session"
@@ -70,7 +69,6 @@ class BasePluginCore(ABC):
     _sources: dict[str, Source]
     _file_cache: dict[object, Any]
     initializer: ClassVar[type[BasePluginInitializer]]
-    importer: ClassVar[type[BaseImporter]]
 
     # TODO: Validate
     def __init__(
@@ -83,18 +81,18 @@ class BasePluginCore(ABC):
         self.file_session = file_session_for(session)
         self._file_cache = {}
         self.plugin = (
-            plugin if plugin is not None else Plugin.get_one(session, self.plugin_name())
+            plugin
+            if plugin is not None
+            else Plugin.get_one(session, self.plugin_name())
         )
         self.file_plugin = Plugin.get_one(self.file_session, self.plugin_name())
         source_list = sources if sources is not None else self.plugin.sources
         self._sources = {source.key: source for source in source_list}
 
-    # TODO: Validate
     @classmethod
     @abstractmethod
     def plugin_name(cls) -> str: ...
 
-    # TODO: Validate
     @classmethod
     @abstractmethod
     def favicon_url(cls) -> str | None: ...
