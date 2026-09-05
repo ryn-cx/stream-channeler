@@ -78,14 +78,14 @@ class TmdbEpisodeFacts:
                 tmdb_episode.id: self._movie_id(tmdb_episode) for tmdb_episode in unread
             }
             preloaded = [
-                *tmdb.preload_episode_translations(
+                *tmdb.preload_episode_translations_files(
                     [
                         numbering
                         for numbering in numberings.values()
                         if numbering is not None
                     ],
                 ),
-                *tmdb.preload_movie_translations(
+                *tmdb.preload_movie_translations_files(
                     [
                         movie_id
                         for movie_id in movie_ids.values()

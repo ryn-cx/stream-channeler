@@ -84,9 +84,9 @@ class BaseFile[T](ABC):
         return record
 
     # TODO: Validate
-    def data_timestamp(self, update_at: datetime | None = None) -> datetime:
+    def data_timestamp(self) -> datetime:
         """Return the timestamp of the data in the file."""
-        self.download_if_outdated(update_at)
+        self.download_if_outdated()
         return self.database_record.data_timestamp
 
     # TODO: Validate
@@ -216,14 +216,15 @@ class BaseFile[T](ABC):
 
     # TODO: Validate
     def write(self, content: str | None, status: str | None = None) -> None:
-        self._existing_database_record = File(
+        record = File(
             key=self.file_key(),
             content=content,
             data_timestamp=tz_datetime.now(),
             status=status,
             plugin_id=self.__plugin.id,
-            update_at=self._next_update_at(),
-        ).upsert_and_set_update_at(self.__plugin, self._existing_database_record)
+        ).upsert(self.__plugin, self._existing_database_record)
+        record.set_update_at(self._next_update_at())
+        self._existing_database_record = record
         self._cached_parsed = None
         self.__session.commit()
 
@@ -241,31 +242,31 @@ class BaseFile[T](ABC):
 
     # TODO: Validate
     @final
-    def parsed(self, update_at: datetime | None = None) -> T:
-        self.download_if_outdated(update_at)
+    def parsed(self) -> T:
+        self.download_if_outdated()
         if self._cached_parsed is None:
             self._cached_parsed = self._parse(self._stored_content())
         return self._cached_parsed
 
     # TODO: Validate
     @final
-    def parsed_or_none(self, update_at: datetime | None = None) -> T | None:
+    def parsed_or_none(self) -> T | None:
         """Return what the file holds, or None where it was stored empty.
 
         What TMDB has no answer for is stored as a row with no content, which is
         what says the question was asked and came back with nothing. That is not
         a failure to read, so it is answered with nothing rather than raised.
         """
-        self.download_if_outdated(update_at)
+        self.download_if_outdated()
         if not self.database_record.content:
             return None
         return self.parsed()
 
     # TODO: Validate
     @final
-    async def async_parsed(self, update_at: datetime | None = None) -> T:
+    async def async_parsed(self) -> T:
         """Return what the file holds, downloading it asynchronously if outdated."""
-        await self.async_download_if_outdated(update_at)
+        await self.async_download_if_outdated()
         if self._cached_parsed is None:
             self._cached_parsed = self._parse(self._stored_content())
         return self._cached_parsed
@@ -305,6 +306,16 @@ class BaseFile[T](ABC):
 
 # TODO: Validate
 class TextFile(BaseFile[str], ABC):
+    # TODO: Validate
+    def __init__(
+        self,
+        session: Session,
+        plugin: Plugin,
+        unique_identifier: str,
+    ) -> None:
+        self.unique_identifier = unique_identifier
+        super().__init__(session, plugin)
+
     # TODO: Validate
     @override
     def _parse(self, content: str) -> str:

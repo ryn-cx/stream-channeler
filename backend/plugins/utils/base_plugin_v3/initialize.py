@@ -40,7 +40,7 @@ class BasePluginInitializer(BasePlugin, ABC):
         # download completion.
         with Session(session.get_bind()) as plugin_session:
             plugin = Plugin(key=cls.plugin_name(), status="Incomplete")
-            plugin.upsert_and_set_update_at(plugin_session, None)
+            plugin.upsert(plugin_session, None)
             plugin_session.commit()
 
         # The plugin returned needs to be for the original session because the other

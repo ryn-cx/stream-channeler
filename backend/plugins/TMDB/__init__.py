@@ -42,22 +42,22 @@ class TMDB(TMDBShared, BaseReadURL, AbstractPlugin, register=True):
         return (MOVIE_URL_REGEX, TV_URL_REGEX)
 
     @override
-    def get_media_importer(self, media: Show | str | TMDBMediaType) -> TMDBMedia:
-        if isinstance(media, TMDBMedia):
-            if media == TMDBMediaType.movie:
+    def get_media_importer(self, input: Show | str | TMDBMediaType) -> TMDBMedia:
+        if isinstance(input, TMDBMedia):
+            if input == TMDBMediaType.movie:
                 return TMDBMovie(self)
             return TMDBSeries(self)
-        if isinstance(media, str):
+        if isinstance(input, str):
             domain_regex = self._domain_regex()
-            if re.match(domain_regex + MOVIE_URL_REGEX, media):
+            if re.match(domain_regex + MOVIE_URL_REGEX, input):
                 return TMDBMovie(self)
-            if re.match(domain_regex + TV_URL_REGEX, media):
+            if re.match(domain_regex + TV_URL_REGEX, input):
                 return TMDBSeries(self)
 
-            msg = f"Invalid {self.plugin_name()} URL: {media}"
+            msg = f"Invalid {self.plugin_name()} URL: {input}"
             raise InvalidURLError(msg)
 
-        media_type, _ = get_media_type_and_tmdb_id(media.key)
+        media_type, _ = get_media_type_and_tmdb_id(input.key)
         if media_type == TMDBMediaType.movie:
             return TMDBMovie(self)
         return TMDBSeries(self)

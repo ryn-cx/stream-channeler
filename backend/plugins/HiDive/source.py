@@ -143,12 +143,13 @@ class SourceMixin(UtilsMixin, FileMixin):
             latest_schedule_file.download_if_outdated()
         data_timestamp = latest_schedule_file.data_timestamp
 
-        source = Source.get_from_memory(self.session, self.plugin, source_key)
-        return Source(
+        existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
+        source = Source(
             key=source_key,
             name=self.plugin_name(),
             favicon_url=self.favicon_url(),
-            update_at=data_timestamp + timedelta(days=1),
             data_timestamp=data_timestamp,
             plugin_id=self.plugin.id,
-        ).upsert_and_set_update_at(self.plugin, source)
+        ).upsert(self.plugin, existing_source)
+        source.set_update_at(data_timestamp + timedelta(days=1))
+        return source

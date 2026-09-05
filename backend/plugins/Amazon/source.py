@@ -49,9 +49,11 @@ class SourceMixin(UtilsMixin, FileMixin):
         # source other than the default is made the first time a title needs it
         # and nothing loads it back into a later session before this reads it.
         existing_source = Source.get(self.session, self.plugin, source_key)
-        return Source(
+        source = Source(
             key=source_key,
             name=name,
             favicon_url=self.favicon_url(),
             plugin_id=self.plugin.id,
-        ).upsert_and_set_update_at(self.plugin, existing_source)
+        ).upsert(self.plugin, existing_source)
+        source.set_update_at(None)
+        return source

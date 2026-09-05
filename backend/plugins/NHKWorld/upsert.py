@@ -25,6 +25,7 @@ class UpsertMixin(FileMixin):
         show = Show.get_from_memory(self.session, source, show_key)
         if self._show_is_outdated(show, force=force):
             program = self.video_program_file(show_key).parsed()
+            data_timestamps = self.show_data_timestamps(show_key)
             new_show = Show(
                 key=program.id,
                 name=program.title,
@@ -32,11 +33,12 @@ class UpsertMixin(FileMixin):
                 url=self.build_url(program.url),
                 image_url=self._get_image_url(program.images.portrait),
                 thumbnail_url=self._get_thumbnail_url(program.images.portrait),
-                media_type="TV Show",
-                data_timestamp=self.show_data_timestamp(show_key),
+                media_type="Series",
+                data_timestamp=data_timestamps[0],
                 source_id=source.id,
             )
-            show = self._upsert_show_object(new_show, source, show, show_key)
+            show = new_show.upsert(source, show)
+            show.set_update_at(None, data_timestamps)
 
         self._upsert_season(show, show_key, force=force)
         self._soft_delete_missing(show_key)
@@ -53,19 +55,16 @@ class UpsertMixin(FileMixin):
     ) -> None:
         season = Season.get_from_memory(self.session, show, show_key)
         if self._season_is_outdated(season, show_key, force=force):
+            data_timestamps = self.season_data_timestamps(show_key, show_key)
             new_season = Season(
                 key=show_key,
                 season_number=1,
                 sort_order=0,
-                data_timestamp=self.season_data_timestamp(show_key, show_key),
+                data_timestamp=data_timestamps[0],
                 show_id=show.id,
             )
-            season = self._upsert_season_object(
-                new_season,
-                show,
-                season,
-                show_key,
-            )
+            season = new_season.upsert(show, season)
+            season.set_update_at(None, data_timestamps)
 
         self._upsert_episodes(season, show_key, force=force)
 
@@ -91,6 +90,11 @@ class UpsertMixin(FileMixin):
             ):
                 continue
 
+            data_timestamps = self.episode_data_timestamps(
+                item.id,
+                season.key,
+                show_key,
+            )
             new_episode = Episode(
                 key=item.id,
                 watch_identifier=watch_identifier(self.plugin_name(), item.id),
@@ -103,16 +107,8 @@ class UpsertMixin(FileMixin):
                 duration=item.video.duration,
                 sort_order=sort_order,
                 episode_number=sort_order + 1,
-                data_timestamp=self.episode_data_timestamp(
-                    item.id,
-                    season.key,
-                    show_key,
-                ),
+                data_timestamp=data_timestamps[0],
                 season_id=season.id,
             )
-            self._upsert_episode_object(
-                new_episode,
-                season,
-                episode,
-                show_key,
-            )
+            episode = new_episode.upsert(season, episode)
+            episode.set_update_at(None, data_timestamps)

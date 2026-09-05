@@ -15,14 +15,6 @@ from plugins.utils.base_plugin_v3.files import BaseFile
 
 # TODO: Validate
 class BaseDownloadMixin(ABC):
-    """The files a record stands on, named rather than fetched.
-
-    Nothing here walks a title downloading everything under it. A file arrives
-    when something reads it, through `parsed`, so what is left is saying which
-    files a record is built out of - which is what dates the record - and
-    refreshing a named handful where something has said outright that they moved.
-    """
-
     file_session: Session
     file_plugin: Plugin
 
@@ -81,23 +73,14 @@ class BaseDownloadMixin(ABC):
             file.download_if_outdated(update_at)
 
     # TODO: Validate
-    def show_data_timestamp(
-        self,
-        show_key: str,
-        update_at: datetime | None = None,
-    ) -> datetime:
+    def show_data_timestamp(self, show_key: str) -> datetime:
         """Return the data timestamp for the show's files."""
-        return self._show_files(show_key)[0].data_timestamp(update_at)
+        return self._show_files(show_key)[0].data_timestamp()
 
     # TODO: Validate
-    def season_data_timestamp(
-        self,
-        season_key: str,
-        show_key: str,
-        update_at: datetime | None = None,
-    ) -> datetime:
+    def season_data_timestamp(self, season_key: str, show_key: str) -> datetime:
         """Return the data timestamp for the season's files."""
-        return self._season_files(season_key, show_key)[0].data_timestamp(update_at)
+        return self._season_files(season_key, show_key)[0].data_timestamp()
 
     # TODO: Validate
     def episode_data_timestamp(
@@ -105,14 +88,40 @@ class BaseDownloadMixin(ABC):
         episode_key: str,
         season_key: str,
         show_key: str,
-        update_at: datetime | None = None,
     ) -> datetime:
         """Return the data timestamp for the episode's files."""
         return self._episode_files(
             episode_key,
             season_key,
             show_key,
-        )[0].data_timestamp(update_at)
+        )[0].data_timestamp()
+
+    # TODO: Validate
+    @staticmethod
+    def _file_timestamps(files: Sequence[BaseFile[Any]]) -> list[datetime]:
+        return [file.data_timestamp() for file in files]
+
+    # TODO: Validate
+    def show_data_timestamps(self, show_key: str) -> list[datetime]:
+        """Return the data timestamp of each of the show's files."""
+        return self._file_timestamps(self._show_files(show_key))
+
+    # TODO: Validate
+    def season_data_timestamps(self, season_key: str, show_key: str) -> list[datetime]:
+        """Return the data timestamp of each of the season's files."""
+        return self._file_timestamps(self._season_files(season_key, show_key))
+
+    # TODO: Validate
+    def episode_data_timestamps(
+        self,
+        episode_key: str,
+        season_key: str,
+        show_key: str,
+    ) -> list[datetime]:
+        """Return the data timestamp of each of the episode's files."""
+        return self._file_timestamps(
+            self._episode_files(episode_key, season_key, show_key),
+        )
 
     # TODO: Validate
     def _get_files_by_keys(self, file_keys: list[str]) -> Sequence[File]:
@@ -123,6 +132,23 @@ class BaseDownloadMixin(ABC):
             col(File.key).in_(file_keys),
         )
         return self.file_session.exec(statement).all()
+
+    # TODO: Validate
+    def _download_show_files_and_children(
+        self,
+        show_key: str,
+        update_at: datetime | None = None,
+    ) -> None:
+        self._download_if_outdated(self._show_files(show_key), update_at)
+        for season_key in self._season_keys_from_show_files(show_key):
+            self._download_if_outdated(self._season_files(season_key, show_key))
+            for episode_key in self._episode_keys_from_season_files(
+                season_key,
+                show_key,
+            ):
+                self._download_if_outdated(
+                    self._episode_files(episode_key, season_key, show_key),
+                )
 
     # TODO: Validate
     def _season_keys_from_show_files(self, show_key: str) -> list[str]:

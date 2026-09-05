@@ -203,16 +203,9 @@ class _ShareLinkRedirect(TextFile):
     """
 
     # TODO: Validate
-    def __init__(self, session: Session, plugin: Plugin, share_key: str) -> None:
-        """Initialize the file."""
-        self.share_key = share_key
-        self.unique_identifier = share_key
-        super().__init__(session, plugin)
-
-    # TODO: Validate
     @override
     def _download(self) -> None:
-        with self._log_download(self.share_key):
+        with self._log_download(self.unique_identifier):
             # Asked for directly rather than through Deforestation, because that
             # one fetches a page and hands back what it settled on, and what is
             # wanted here is the address it was pointed at.
@@ -224,7 +217,7 @@ class _ShareLinkRedirect(TextFile):
                 # Where a share link is written, which is its own domain rather
                 # than a path on Prime Video's.
                 "https://watch.amazon.com/detail",
-                params={"gti": self.share_key},
+                params={"gti": self.unique_identifier},
                 headers={
                     "User-Agent": (
                         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -256,7 +249,7 @@ class _ShareLinkRedirect(TextFile):
         location = self.location() or ""
         landing_key = title_key_from_location(location)
         if landing_key is None:
-            msg = f"Amazon share link {self.share_key} points at no title: {location!r}"
+            msg = f"Amazon share link {self.unique_identifier} points at no title: {location!r}"
             raise InvalidURLError(msg)
         return landing_key
 

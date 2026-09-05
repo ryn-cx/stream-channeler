@@ -86,6 +86,33 @@ class BaseDownloadMixin(ABC):
 
     # TODO: Validate
     @staticmethod
+    def _file_timestamps(files: Sequence[BaseFile[Any]]) -> list[datetime]:
+        return [file.data_timestamp for file in files]
+
+    # TODO: Validate
+    def show_data_timestamps(self, show_key: str) -> list[datetime]:
+        """Return the data timestamp of each of the show's files."""
+        return self._file_timestamps(self._show_files(show_key))
+
+    # TODO: Validate
+    def season_data_timestamps(self, season_key: str, show_key: str) -> list[datetime]:
+        """Return the data timestamp of each of the season's files."""
+        return self._file_timestamps(self._season_files(season_key, show_key))
+
+    # TODO: Validate
+    def episode_data_timestamps(
+        self,
+        episode_key: str,
+        season_key: str,
+        show_key: str,
+    ) -> list[datetime]:
+        """Return the data timestamp of each of the episode's files."""
+        return self._file_timestamps(
+            self._episode_files(episode_key, season_key, show_key),
+        )
+
+    # TODO: Validate
+    @staticmethod
     def _download_outdated_files(
         files: Sequence[BaseFile[Any]],
         update_at: datetime | None = None,

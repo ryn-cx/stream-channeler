@@ -15,23 +15,18 @@ class BaseOutdatedCheckMixin(BaseDownloadMixin):
     def _show_is_outdated(
         self,
         show: Show | None,
-        update_at: datetime | None = None,
         *,
         force: bool = False,
     ) -> TypeIs[None]:
         if show is None or force:
             return True
-        return self._record_is_outdated(
-            show,
-            self.show_data_timestamp(show.key, update_at),
-        )
+        return self._record_is_outdated(show, self.show_data_timestamp(show.key))
 
     # TODO: Validate
     def _season_is_outdated(
         self,
         season: Season | None,
         show_key: str,
-        update_at: datetime | None = None,
         *,
         force: bool = False,
     ) -> TypeIs[None]:
@@ -39,7 +34,7 @@ class BaseOutdatedCheckMixin(BaseDownloadMixin):
             return True
         return self._record_is_outdated(
             season,
-            self.season_data_timestamp(season.key, show_key, update_at),
+            self.season_data_timestamp(season.key, show_key),
         )
 
     # TODO: Validate
@@ -48,7 +43,6 @@ class BaseOutdatedCheckMixin(BaseDownloadMixin):
         episode: Episode | None,
         season_key: str,
         show_key: str,
-        update_at: datetime | None = None,
         *,
         force: bool = False,
     ) -> TypeIs[None]:
@@ -56,7 +50,7 @@ class BaseOutdatedCheckMixin(BaseDownloadMixin):
             return True
         return self._record_is_outdated(
             episode,
-            self.episode_data_timestamp(episode.key, season_key, show_key, update_at),
+            self.episode_data_timestamp(episode.key, season_key, show_key),
         )
 
     # TODO: Validate

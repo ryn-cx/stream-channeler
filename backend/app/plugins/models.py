@@ -157,24 +157,6 @@ class Plugin(BasePlugin, MediaMixin["Source | File"], table=True):
         return self
 
     # TODO: Validate
-    def upsert_and_set_update_at(
-        self,
-        session: Session,
-        existing_record: Self | None,
-        protected_keys: set[str] | None = None,
-    ) -> Self:
-        """Upsert and automatically set the `update_at` timestamp."""
-        if protected_keys is None:
-            protected_keys = {"update_at"}
-        else:
-            protected_keys.add("update_at")
-
-        record = self.upsert(session, existing_record, protected_keys)
-        if existing_record:
-            record.set_update_at(self.update_at)
-        return record
-
-    # TODO: Validate
     def __str__(self) -> str:
         """Return a string representation of the `Plugin`."""
         base_plugin = "Plugin:"

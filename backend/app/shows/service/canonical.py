@@ -294,6 +294,5 @@ def _unlink_unlisted_episodes(session: Session, show: Show) -> None:
 
             if not episode.canonical_episode_links:
                 episode.canonical_episode_validated_at = None
-                episode.canonical_episode_note = None
                 session.add(episode)
     session.flush()

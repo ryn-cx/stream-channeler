@@ -6,10 +6,20 @@ import uuid
 from fastapi import HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session
-from tminidb.movie.details.models import MovieDetailsModel
-from tminidb.movie.watch_providers.models import Us as MovieUsWatchProviders
-from tminidb.tv_series.details.models import TvSeriesDetailsModel
-from tminidb.tv_series.watch_providers.models import Us as TvSeriesUsWatchProviders
+from tminidb.movie.details.optional_models import (
+    MovieDetailsModel as OptionalMovieDetails,
+)
+from tminidb.movie.details.strict_models import MovieDetailsModel as StrictMovieDetails
+from tminidb.movie.watch_providers.optional_models import Us as OptionalMovieUs
+from tminidb.movie.watch_providers.strict_models import Us as StrictMovieUs
+from tminidb.tv_series.details.optional_models import (
+    TvSeriesDetailsModel as OptionalTvSeriesDetails,
+)
+from tminidb.tv_series.details.strict_models import (
+    TvSeriesDetailsModel as StrictTvSeriesDetails,
+)
+from tminidb.tv_series.watch_providers.optional_models import Us as OptionalTvSeriesUs
+from tminidb.tv_series.watch_providers.strict_models import Us as StrictTvSeriesUs
 
 from app.plugins.models import BasePlugin, Plugin
 from app.schemas import (
@@ -117,5 +127,12 @@ class PluginSearchUrl(BaseModel):
 
 # TODO: Validate
 class TMDBMediaInfo(BaseModel):
-    detail: MovieDetailsModel | TvSeriesDetailsModel
-    watch_providers: MovieUsWatchProviders | TvSeriesUsWatchProviders | None = None
+    detail: (
+        StrictMovieDetails
+        | OptionalMovieDetails
+        | StrictTvSeriesDetails
+        | OptionalTvSeriesDetails
+    )
+    watch_providers: (
+        StrictMovieUs | OptionalMovieUs | StrictTvSeriesUs | OptionalTvSeriesUs | None
+    ) = None

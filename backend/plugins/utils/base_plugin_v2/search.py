@@ -46,7 +46,7 @@ class BaseCatalogueSearchMixin(BasePlugin, ABC):
         """
         if media_type == TMDBMediaType.movie:
             return ("Movie",)
-        return ("TV Show", "Series")
+        return ("Series",)
 
     # TODO: Validate
     def search_for_url(

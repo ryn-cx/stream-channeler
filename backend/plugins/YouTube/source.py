@@ -23,11 +23,13 @@ class SourceMixin(UtilsMixin):
     # TODO: Validate
     @override
     def upsert_source(self, source_key: str) -> Source:
-        source = Source.get(self.session, self.plugin, source_key)
-        return Source(
+        existing_source = Source.get(self.session, self.plugin, source_key)
+        source = Source(
             key=source_key,
             name=source_key,
             favicon_url=self.favicon_url(),
-            data_timestamp=self._existing_data_timestamp_or_now(source),
+            data_timestamp=self._existing_data_timestamp_or_now(existing_source),
             plugin_id=self.plugin.id,
-        ).upsert_and_set_update_at(self.plugin, source)
+        ).upsert(self.plugin, existing_source)
+        source.set_update_at(None)
+        return source

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from app.episodes.linking.tmdb_facts import EpisodeNumbering
 from app.files.models import File
 from plugins.TMDB.shared import TMDBShared
 
@@ -11,32 +12,25 @@ from plugins.TMDB.shared import TMDBShared
 # TODO: Validate
 class TMDBLinking(TMDBShared):
     # TODO: Validate
-    def preload_episode_translations(
+    def preload_episode_translations_files(
         self,
-        numberings: Sequence[tuple[int, int, int]],
+        numberings: Sequence[EpisodeNumbering],
     ) -> Sequence[File]:
         return self._get_files_by_keys(
             file_keys=[
                 self.tv_episodes_translations_file(
-                    tmdb_tv_show_id=tmdb_tv_show_id,
-                    season_number=season_number,
-                    episode_number=episode_number,
+                    tmdb_tv_show_id=numbering.tmdb_show_id,
+                    season_number=numbering.season_number,
+                    episode_number=numbering.episode_number,
                 ).file_key()
-                for tmdb_tv_show_id, season_number, episode_number in numberings
+                for numbering in numberings
             ],
         )
 
-    # TODO: Validate
-    def preload_movie_translations(
+    def preload_movie_translations_files(
         self,
         tmdb_movie_ids: Sequence[int],
     ) -> Sequence[File]:
-        """Read the rows holding every named film's translations, in one query.
-
-        The same reason the episodes of a title are read together: a film reached
-        for on its own is a row read on its own, and whatever matches films by
-        name reads them one after another.
-        """
         return self._get_files_by_keys(
             [
                 self.movies_translations_file(tmdb_movie_id).file_key()
@@ -62,11 +56,7 @@ class TMDBLinking(TMDBShared):
             season_number=season_number,
             episode_number=episode_number,
         ).parsed()
-        return [
-            translation.data.name
-            for translation in translations.translations
-            if translation.data.name
-        ]
+        return [translation.data.name for translation in translations.translations]
 
     # TODO: Validate
     def translated_movie_names(self, tmdb_movie_id: int) -> Sequence[str]:

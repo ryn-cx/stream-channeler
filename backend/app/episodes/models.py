@@ -84,7 +84,6 @@ class BaseEpisode(BaseCanonicalEpisode):
     """Base model for an `Episode`."""
 
     canonical_episode_validated_at: datetime | None = DateTimeField(default=None)
-    canonical_episode_note: str | None = Field(default=None)
 
 
 # TODO: Validate
@@ -181,6 +180,20 @@ class Episode(BaseEpisode, ChildMediaMixin[Season, Never], table=True):
 
     # TODO: Validate
     @property
+    def canonical_episode_note(self) -> str | None:
+        notes = [link.note for link in self.canonical_episode_links if link.note]
+        if not notes:
+            return None
+        return ", ".join(dict.fromkeys(notes))
+
+    # TODO: Validate
+    @canonical_episode_note.setter
+    def canonical_episode_note(self, note: str | None) -> None:
+        for link in self.canonical_episode_links:
+            link.note = note
+
+    # TODO: Validate
+    @property
     def sole_canonical_episode(self) -> Episode | None:
         """The episode this stands for, where it stands for exactly one.
 
@@ -209,21 +222,6 @@ class Episode(BaseEpisode, ChildMediaMixin[Season, Never], table=True):
             msg = f"Episode {self.id} has no episode number."
             raise ValueError(msg)
         return (self.episode_number,)
-
-    # TODO: Validate
-    @property
-    def linked_sort_order(self) -> int | None:
-        """Where this sits, as the link that was made for it says.
-
-        A non-canonical row's place is the link's rather than the row's: the same row
-        stands in a different place under each episode it was linked to, and only the
-        link knows which of them is being read. A row with no link, and the episode
-        itself, are ordered by the column they carry.
-        """
-        links = self.canonical_episode_links
-        if len(links) != 1 or links[0].sort_order is None:
-            return self.sort_order
-        return links[0].sort_order
 
     # TODO: Validate
     @property
@@ -332,12 +330,7 @@ class BaseEpisodeCanonicalEpisode(SQLModel):
         foreign_key="episode.id",
         ondelete="CASCADE",
     )
-    # Where the non-canonical row sits under the episode this link names. The
-    # non-canonical row's own column says where the website filed the row, which is one
-    # answer for a row that stands in a different place under each episode it was linked
-    # to, so the place is the link's and the column is only what a row with no link
-    # falls back on.
-    sort_order: int | None = Field(default=None)
+    note: str | None = Field(default=None)
 
 
 # TODO: Validate

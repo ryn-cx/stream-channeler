@@ -7,7 +7,10 @@ from abc import ABC
 from datetime import datetime, timedelta
 
 from app.episodes.preload import preload_episodes
+from app.seasons.models import Season
 from app.shows.models import Show
+from app.utils import tz_datetime
+from app.utils.update_at import staggered_monthly_update_at
 from plugins.utils.base_plugin_v3.soft_delete import BaseSoftDeleteMixin
 
 
@@ -37,6 +40,37 @@ class BaseUpdateMixin(BaseSoftDeleteMixin, ABC):
                         show.set_update_at(update_at)
 
     # TODO: Validate
+    def _set_dynamic_update_at(self, show: Show) -> None:
+        preload_episodes(self.session, [show])
+        show_air_dates: list[datetime] = []
+        for season in show.active_children:
+            season_air_dates = [
+                episode.air_date
+                for episode in season.active_children
+                if episode.air_date
+            ]
+            self._try_update_at_values(season, season_air_dates)
+            show_air_dates += season_air_dates
+        self._try_update_at_values(show, show_air_dates)
+
+    # TODO: Validate
+    @staticmethod
+    def _try_update_at_values(
+        record: Show | Season,
+        air_dates: list[datetime],
+    ) -> None:
+        now = tz_datetime.now()
+        for air_date in air_dates:
+            if air_date > now:
+                record.set_update_at(air_date)
+        if air_dates:
+            record.set_update_at(max(air_dates) + timedelta(days=7))
+        if record.data_timestamp:
+            record.set_update_at(
+                staggered_monthly_update_at(record.key, record.data_timestamp),
+            )
+
+    # TODO: Validate
     def _update_and_upsert_show(
         self,
         show: Show,
@@ -52,5 +86,6 @@ class BaseUpdateMixin(BaseSoftDeleteMixin, ABC):
         read off a website's own account of itself, which an update is not
         reading, and a canonical row has no title to point at at all.
         """
+        self._download_show_files_and_children(show.key, update_at)
         self._preload_show(show.id, preload_episodes=True).one()
-        self.upsert_show(show.source, show.key, update_at=update_at, force=force)
+        self.upsert_show(show.source, show.key, force=force)

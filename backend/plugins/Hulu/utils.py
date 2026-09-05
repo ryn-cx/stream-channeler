@@ -2,16 +2,11 @@
 """What every other part of the plugin reads a title by."""
 
 from enum import StrEnum
-from typing import override
 from urllib.parse import quote, quote_plus
 
-from wholoo.episode.models import EpisodeModel
 from wholoo.genre.models import GenreModel
 from wholoo.genres.models import GenresModel
-from wholoo.season.models import SeasonModel
 from wholoo.tv.models import TVModel
-
-from plugins.utils.base_plugin_v2.base import BasePlugin
 
 
 # TODO: Validate
@@ -21,61 +16,50 @@ class HuluMediaType(StrEnum):
 
 
 # TODO: Validate
-class UtilsMixin(BasePlugin):
-    @classmethod
-    @override
-    def plugin_name(cls) -> str:
-        return "Hulu"
-
-    @classmethod
-    @override
-    def favicon_url(cls) -> str:
-        return "https://www.hulu.com/favicon.ico"
-
-    @classmethod
-    @override
-    def _domain(cls) -> str:
-        return "hulu.com"
-
-    @classmethod
-    def _show_url(cls, show_key: str, media_type: HuluMediaType) -> str:
-        return cls.build_url(f"{media_type}/{show_key}")
-
-    @classmethod
-    def _episode_url(cls, episode_key: str) -> str:
-        return cls.build_url(f"watch/{episode_key}")
-
-    @classmethod
-    def manual_search_url(cls, query: str) -> str | None:
-        return cls.build_url(f"search?q={quote_plus(query)}")
-
-    # TODO: Validate
-    @staticmethod
-    def _image_url(path: str) -> str:
-        operations = quote('[{"resize":"1920x1920|max"},{"format":"webp"}]', safe=":,")
-        return f"{path}&operations={operations}"
-
-    # TODO: Validate
-    @staticmethod
-    def _thumbnail_url(path: str) -> str:
-        operations = quote('[{"resize":"480x480|max"},{"format":"webp"}]', safe=":,")
-        return f"{path}&operations={operations}"
-
-    # TODO: Validate
-    @staticmethod
-    def _season_key(show_key: str, season_number: int) -> str:
-        return f"{show_key}:{season_number}"
-
-    # TODO: Validate
-    @staticmethod
-    def _split_season_key(season_key: str) -> tuple[str, int]:
-        show_key, _, season_number = season_key.rpartition(":")
-        return show_key, int(season_number)
+def build_url(path: str) -> str:
+    return f"https://hulu.com/{path.lstrip('/')}"
 
 
 # TODO: Validate
-def season_name(season: SeasonModel) -> str:
-    return season.series_grouping_metadata.grouping_name
+def show_url(show_key: str, media_type: HuluMediaType) -> str:
+    return build_url(f"{media_type}/{show_key}")
+
+
+# TODO: Validate
+def episode_url(episode_key: str) -> str:
+    return build_url(f"watch/{episode_key}")
+
+
+# TODO: Validate
+def search_url(query: str) -> str:
+    return build_url(f"search?q={quote_plus(query)}")
+
+
+# TODO: Validate
+def image_url(path: str | None) -> str | None:
+    if path is None:
+        return None
+    operations = quote('[{"resize":"1920x1920|max"},{"format":"webp"}]', safe=":,")
+    return f"{path}&operations={operations}"
+
+
+# TODO: Validate
+def thumbnail_url(path: str | None) -> str | None:
+    if path is None:
+        return None
+    operations = quote('[{"resize":"480x480|max"},{"format":"webp"}]', safe=":,")
+    return f"{path}&operations={operations}"
+
+
+# TODO: Validate
+def build_season_key(show_key: str, season_number: int) -> str:
+    return f"{show_key}:{season_number}"
+
+
+# TODO: Validate
+def split_season_key(key: str) -> tuple[str, int]:
+    show_key, _, season_number = key.rpartition(":")
+    return show_key, int(season_number)
 
 
 # TODO: Validate
@@ -87,12 +71,6 @@ def season_numbers(series: TVModel) -> list[int]:
             if grouping is not None:
                 numbers[grouping.season_number] = None
     return list(numbers)
-
-
-# TODO: Validate
-def series_id(episode: EpisodeModel) -> str:
-    """Return the id of the series the episode belongs to."""
-    return str(episode.details.vod_items.focus.entity.series_id)
 
 
 # TODO: Validate
@@ -114,4 +92,4 @@ def media_urls(genre: GenreModel) -> list[str]:
         for _name, href in listed_items(genre)
         if href.startswith((f"/{HuluMediaType.MOVIE}/", f"/{HuluMediaType.SERIES}/"))
     }
-    return [UtilsMixin.build_url(path) for path in paths]
+    return [build_url(path) for path in paths]

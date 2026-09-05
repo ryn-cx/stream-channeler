@@ -164,7 +164,7 @@ class TMDBSearch(BasicFiles):
     # A multi search also returns people, who cannot be added to a channel.
     _SEARCH_MEDIA_TYPES: ClassVar = {
         "movie": "Movie",
-        "tv": "TV Show",
+        "tv": "Series",
     }
 
     # TODO: Validate

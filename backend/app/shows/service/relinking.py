@@ -36,7 +36,6 @@ def _relink_non_canonical_show(
                 continue
             for episode_link in list(episode.canonical_episode_links):
                 session.delete(episode_link)
-            episode.canonical_episode_note = None
         session.flush()
         for episode in season.active_children:
             session.expire(episode, ["canonical_episode_links", "is_canonical"])

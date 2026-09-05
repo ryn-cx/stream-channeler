@@ -225,14 +225,15 @@ class BaseFile[T](ABC):
 
     # TODO: Validate
     def write(self, content: str | None, status: str | None = None) -> None:
-        self._existing_database_record = File(
+        record = File(
             key=self.file_key(),
             content=content,
             data_timestamp=tz_datetime.now(),
             status=status,
             plugin_id=self.__plugin.id,
-            update_at=self._next_update_at(),
-        ).upsert_and_set_update_at(self.__plugin, self._existing_database_record)
+        ).upsert(self.__plugin, self._existing_database_record)
+        record.set_update_at(self._next_update_at())
+        self._existing_database_record = record
         self._cached_parsed = None
         if self._only_files_are_pending():
             self.__session.commit()

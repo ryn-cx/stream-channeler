@@ -48,20 +48,21 @@ class UpsertMixin(UtilsMixin, FileMixin):
         show = Show.get_from_memory(self.session, source, show_key)
         if self._show_is_outdated(show, force=force):
             content = self._content(show_key)
-            data_timestamp = self.show_data_timestamp(show_key)
+            data_timestamps = self.show_data_timestamps(show_key)
+            data_timestamp = data_timestamps[0]
             new_show = Show(
                 key=show_key,
                 name=content.title,
                 description=content.description,
-                media_type="TV Show",
+                media_type="Series",
                 url=self._series_url(show_key),
                 image_url=self._first_image(content.backgrounds),
                 thumbnail_url=self._first_image(content.backgrounds),
                 data_timestamp=data_timestamp,
-                update_at=data_timestamp + timedelta(days=7),
                 source_id=source.id,
             )
-            show = self._upsert_show_object(new_show, source, show, show_key)
+            show = new_show.upsert(source, show)
+            show.set_update_at(data_timestamp + timedelta(days=7), data_timestamps)
 
         self._upsert_series_seasons(show, force=force)
 
@@ -78,15 +79,17 @@ class UpsertMixin(UtilsMixin, FileMixin):
             season_key = self._season_key(show.key, season_content.id)
             season = Season.get_from_memory(self.session, show, season_key)
             if self._season_is_outdated(season, show.key, force=force):
+                data_timestamps = self.season_data_timestamps(season_key, show.key)
                 new_season = Season(
                     key=season_key,
                     name=season_content.title,
                     season_number=int(season_content.id),
                     sort_order=sort_order,
-                    data_timestamp=self.season_data_timestamp(season_key, show.key),
+                    data_timestamp=data_timestamps[0],
                     show_id=show.id,
                 )
-                season = self._upsert_season_object(new_season, show, season, show.key)
+                season = new_season.upsert(show, season)
+                season.set_update_at(None, data_timestamps)
 
             self._upsert_series_episodes(
                 season,
@@ -117,6 +120,11 @@ class UpsertMixin(UtilsMixin, FileMixin):
             ):
                 continue
 
+            data_timestamps = self.episode_data_timestamps(
+                episode_key,
+                season.key,
+                show_key,
+            )
             new_episode = Episode(
                 key=episode_key,
                 watch_identifier=watch_identifier(self.plugin_name(), episode_key),
@@ -128,14 +136,11 @@ class UpsertMixin(UtilsMixin, FileMixin):
                 thumbnail_url=self._first_image(episode_content.thumbnails),
                 duration=episode_content.duration,
                 sort_order=sort_order,
-                data_timestamp=self.episode_data_timestamp(
-                    episode_key,
-                    season.key,
-                    show_key,
-                ),
+                data_timestamp=data_timestamps[0],
                 season_id=season.id,
             )
-            self._upsert_episode_object(new_episode, season, episode, show_key)
+            episode = new_episode.upsert(season, episode)
+            episode.set_update_at(None, data_timestamps)
 
     # TODO: Validate
     def _upsert_movie(
@@ -148,7 +153,8 @@ class UpsertMixin(UtilsMixin, FileMixin):
         content = self._content(show_key)
         show = Show.get_from_memory(self.session, source, show_key)
         if self._show_is_outdated(show, force=force):
-            data_timestamp = self.show_data_timestamp(show_key)
+            data_timestamps = self.show_data_timestamps(show_key)
+            data_timestamp = data_timestamps[0]
             new_show = Show(
                 key=show_key,
                 name=content.title,
@@ -158,10 +164,10 @@ class UpsertMixin(UtilsMixin, FileMixin):
                 image_url=self._first_image(content.backgrounds),
                 thumbnail_url=self._first_image(content.backgrounds),
                 data_timestamp=data_timestamp,
-                update_at=staggered_monthly_update_at(show_key, data_timestamp),
                 source_id=source.id,
             )
-            show = self._upsert_show_object(new_show, source, show, show_key)
+            show = new_show.upsert(source, show)
+            show.set_update_at(staggered_monthly_update_at(show_key, data_timestamp), data_timestamps)
 
         self._upsert_movie_season(show, force=force)
 
@@ -177,14 +183,16 @@ class UpsertMixin(UtilsMixin, FileMixin):
         season_key = self._movie_season_key(show.key)
         season = Season.get_from_memory(self.session, show, season_key)
         if self._season_is_outdated(season, show.key, force=force):
+            data_timestamps = self.season_data_timestamps(season_key, show.key)
             new_season = Season(
                 key=season_key,
                 season_number=0,
                 sort_order=0,
-                data_timestamp=self.season_data_timestamp(season_key, show.key),
+                data_timestamp=data_timestamps[0],
                 show_id=show.id,
             )
-            season = self._upsert_season_object(new_season, show, season, show.key)
+            season = new_season.upsert(show, season)
+            season.set_update_at(None, data_timestamps)
 
         self._upsert_movie_episode(season, show.key, force=force)
 
@@ -206,6 +214,7 @@ class UpsertMixin(UtilsMixin, FileMixin):
             return
 
         content = self._content(show_key)
+        data_timestamps = self.episode_data_timestamps(show_key, season.key, show_key)
         new_episode = Episode(
             key=show_key,
             watch_identifier=watch_identifier(self.plugin_name(), show_key),
@@ -217,11 +226,8 @@ class UpsertMixin(UtilsMixin, FileMixin):
             thumbnail_url=self._first_image(content.backgrounds),
             duration=content.duration,
             sort_order=0,
-            data_timestamp=self.episode_data_timestamp(
-                show_key,
-                season.key,
-                show_key,
-            ),
+            data_timestamp=data_timestamps[0],
             season_id=season.id,
         )
-        self._upsert_episode_object(new_episode, season, episode, show_key)
+        episode = new_episode.upsert(season, episode)
+        episode.set_update_at(None, data_timestamps)

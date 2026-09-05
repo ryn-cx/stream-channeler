@@ -23,6 +23,7 @@ from app.canonical_media.filters import is_canonical, is_non_canonical
 from app.channels.models import Channel, ChannelShow
 from app.episodes.models import (
     Episode,
+    EpisodeCanonicalEpisode,
 )
 from app.episodes.schemas import (
     EpisodeRecord,
@@ -99,7 +100,15 @@ _UNMATCHED_COLUMNS: dict[str, Any] = {
     "season_number": Season.season_number,
     "episode_name": Episode.name,
     "episode_number": Episode.episode_number,
-    "identifier_note": Episode.canonical_episode_note,
+    # A note is written against the link rather than against the episode, so the
+    # one column a row can be sorted or filtered by is read off the links the
+    # row carries.
+    "identifier_note": (
+        select(func.min(col(EpisodeCanonicalEpisode.note)))
+        .where(col(EpisodeCanonicalEpisode.episode_id) == col(Episode.id))
+        .correlate(Episode)
+        .scalar_subquery()
+    ),
 }
 
 

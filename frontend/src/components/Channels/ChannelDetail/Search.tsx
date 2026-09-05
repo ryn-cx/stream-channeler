@@ -2,13 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Check, ChevronLeft, ChevronRight, Plus, Search } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
-import type {
-  MovieDetailsModel,
-  tminidb__movie__watch_providers__optional_models__Us as MovieUsWatchProviders,
-  PluginSearchResult,
-  TvSeriesDetailsModel,
-  tminidb__tv_series__watch_providers__optional_models__Us as TvSeriesUsWatchProviders,
-} from "@/client"
+import type { PluginSearchResult, TMDBMediaInfo } from "@/client"
 import { ChannelsService, PluginsService } from "@/client"
 import { useAllChannelShows } from "@/components/Channels/useChannelShows"
 import { SourceOptionLabel } from "@/components/Common/SourceOptionLabel"
@@ -332,7 +326,7 @@ function SearchPager({
 // TODO: Validate
 function metaLine(
   result: SelectedTitle,
-  detail: MovieDetailsModel | TvSeriesDetailsModel,
+  detail: TMDBMediaInfo["detail"],
 ): string[] {
   const parts: string[] = []
   const movie = "title" in detail ? detail : null
@@ -365,7 +359,7 @@ function metaLine(
 function WatchProviders({
   watchProviders,
 }: {
-  watchProviders: MovieUsWatchProviders | TvSeriesUsWatchProviders | null
+  watchProviders: TMDBMediaInfo["watch_providers"]
 }) {
   const streaming = [
     ...(watchProviders?.flatrate ?? []),

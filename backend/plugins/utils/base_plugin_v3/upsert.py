@@ -6,9 +6,7 @@ from __future__ import annotations
 from abc import ABC
 from datetime import datetime
 
-from app.episodes.models import Episode
 from app.models import BaseMediaMixin
-from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
 from app.utils import tz_datetime
@@ -27,66 +25,14 @@ class BaseUpsertMixin(BasePluginCore, BaseOutdatedCheckMixin, ABC):
         return tz_datetime.now()
 
     # TODO: Validate
-    def _upsert_show_object(
-        self,
-        show: Show,
-        source: Source,
-        existing_show: Show | None,
-        show_key: str,
-    ) -> Show:
-        """A show built fresh off the source's files knows nothing of the canonical
-        shows the stored one is linked to. Those are rows of `ShowCanonicalShow`
-        rather than columns here, so there is nothing to write away and nothing to
-        carry over: which canonical show it is linked to is settled once its
-        episodes are written, which is where `upsert_show` ends.
-        """
-        return show.upsert_and_set_update_at(source, existing_show)
-
-    # TODO: Validate
-    def _upsert_season_object(
-        self,
-        season: Season,
-        show: Show,
-        existing_season: Season | None,
-        show_key: str,
-    ) -> Season:
-        return season.upsert_and_set_update_at(show, existing_season)
-
-    # TODO: Validate
-    def _upsert_episode_object(
-        self,
-        episode: Episode,
-        season: Season,
-        existing_episode: Episode | None,
-        show_key: str,
-    ) -> Episode:
-        """The links the stored record carries are rows of their own and stay where
-        they are, so nothing here has to carry them over. The note travels with
-        them: how a link came to be made is most of what says whether it should
-        be kept, so an episode that keeps its links keeps the reason for them
-        too.
-        """
-        if existing_episode:
-            episode.canonical_episode_note = existing_episode.canonical_episode_note
-        return episode.upsert_and_set_update_at(season, existing_episode)
-
-    # TODO: Validate
     def upsert_show(
         self,
         source: Source,
         show_key: str,
-        update_at: datetime | None = None,
         *,
         force: bool = False,
     ) -> Show:
-        """Store the listing `show_key` names.
-
-        `update_at` is the moment the stored listing asked to be read again. It
-        travels down to every file the write reads, and a file stored before it
-        is downloaded again on the way past, so a read fetches what has gone
-        stale rather than everything the title has.
-
-        """
+        """Store the listing `show_key` names."""
         # Not an abstractmethod, because a plugin that reads a title as one of
         # several kinds writes each kind on its own and has nothing to write for
         # a title it has not been told the kind of. Such a plugin is still a
@@ -98,11 +44,13 @@ class BaseUpsertMixin(BasePluginCore, BaseOutdatedCheckMixin, ABC):
     # TODO: Validate
     def upsert_source(self, source_key: str) -> Source:
         """Create or update the plugin's `Source` record(s)."""
-        source = Source.get_from_memory(self.session, self.plugin, source_key)
-        return Source(
+        existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
+        source = Source(
             key=source_key,
             name=self.plugin_name(),
             favicon_url=self.favicon_url(),
-            data_timestamp=self._existing_data_timestamp_or_now(source),
+            data_timestamp=self._existing_data_timestamp_or_now(existing_source),
             plugin_id=self.plugin.id,
-        ).upsert_and_set_update_at(self.plugin, source)
+        ).upsert(self.plugin, existing_source)
+        source.set_update_at(None)
+        return source

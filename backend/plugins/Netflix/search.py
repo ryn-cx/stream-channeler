@@ -18,7 +18,7 @@ class SearchMixin(UtilsMixin, FileMixin):
 
     # Netflix tags each search result with the media type of its title.
     _SEARCH_MEDIA_TYPES: ClassVar = {
-        "Show": "TV Show",
+        "Show": "Series",
         "Movie": "Movie",
     }
 

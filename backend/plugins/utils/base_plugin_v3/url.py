@@ -1,6 +1,13 @@
 # TODO: Validate
 import re
-from typing import Any
+from typing import NamedTuple
+
+
+# TODO: Validate
+class MediaInfo(NamedTuple):
+    show_key: str
+    season_key: str | None = None
+    episode_key: str | None = None
 
 
 # TODO: Validate
@@ -17,16 +24,7 @@ class BaseURLMixin:
         raise NotImplementedError
 
     # TODO: Validate
-    def _url_to_show_key(self, url: str) -> Any:  # noqa: ANN401 - TODO: Add a specific return type
-        """Parse a URL and return its components.
-
-        Args:
-            url: The URL to parse.
-
-        Returns:
-            The parsed URL components. The exact type depends on the plugin implementation.
-
-        """
+    def extract_media_info(self, url: str) -> MediaInfo:
         raise NotImplementedError
 
     # TODO: Validate

@@ -3,7 +3,7 @@
 
 import uuid
 from datetime import datetime
-from typing import Self
+from typing import Self, override
 
 from pydantic import (
     AliasChoices,
@@ -13,6 +13,7 @@ from pydantic import (
     Field,
     model_validator,
 )
+from sqlmodel import Session
 
 from app.canonical_media.tmdb import (
     get_tmdb_id,
@@ -47,6 +48,18 @@ class EpisodeUpdate(
 ):
     """Schema for updating an `Episode`."""
 
+    canonical_episode_note: str | None = None
+
+    # TODO: Validate
+    @override
+    def update(self, session: Session, existing_record: Episode) -> Episode:
+        # The note is a column of the links rather than of the episode, so the
+        # generic update - which writes the episode's own columns and nothing
+        # else - passes over it and it is written here instead.
+        if "canonical_episode_note" in self.model_fields_set:
+            existing_record.canonical_episode_note = self.canonical_episode_note
+        return super().update(session, existing_record)
+
 
 # TODO: Validate
 class EpisodeOutput(BaseEpisode):
@@ -57,6 +70,7 @@ class EpisodeOutput(BaseEpisode):
     id: uuid.UUID
     season_id: uuid.UUID
     modified_at: datetime
+    canonical_episode_note: str | None = None
     canonical_episode_id: uuid.UUID | None = Field(
         default=None,
         validation_alias=AliasChoices(
@@ -65,7 +79,6 @@ class EpisodeOutput(BaseEpisode):
         ),
     )
     canonical_episode_ids: list[uuid.UUID] = Field(default_factory=list)
-    linked_sort_order: int | None = None
     tmdb_id: int | None = None
     tmdb_url: str | None = None
 

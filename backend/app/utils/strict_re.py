@@ -40,3 +40,22 @@ def strict_group(match: re.Match[str], group: int | str) -> str:
         )
         raise ValueError(msg)
     return result
+
+
+# TODO: Validate
+@copy_func_params(re.search)
+def strict_search(
+    pattern: str | re.Pattern[str],
+    string: str,
+    *args: Any,  # noqa: ANN401
+    **kwargs: Any,  # noqa: ANN401
+) -> re.Match[str]:
+    match = re.search(pattern, string, *args, **kwargs)
+    if not match:
+        msg = (
+            "Expected a match, but no match was found",
+            f"\n\tPattern: {pattern}",
+            f"\n\tString: {string}",
+        )
+        raise ValueError(msg)
+    return match

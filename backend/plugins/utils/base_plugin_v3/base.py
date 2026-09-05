@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, override
+from typing import TYPE_CHECKING, Any, cast, override
 
 from sqlmodel import Session, select
 
@@ -23,7 +23,7 @@ from plugins.utils.abstract_plugin import (
 )
 from plugins.utils.base_plugin_v3.files import BaseFile
 from plugins.utils.base_plugin_v3.update import BaseUpdateMixin
-from plugins.utils.base_plugin_v3.url import BaseURLMixin
+from plugins.utils.base_plugin_v3.url import BaseURLMixin, MediaInfo
 
 if TYPE_CHECKING:
     from plugins.utils.base_plugin_v3.importer import BaseImporter
@@ -35,7 +35,7 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
 
     if TYPE_CHECKING:
         # TODO: Validate
-        def best_matching_title_url(
+        def search_for_url(
             self,
             names: list[str],
             media_type: TMDBMediaType,
@@ -105,9 +105,8 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         cls.initializer.initialize_plugin(session)
 
     # TODO: Validate
-    def get_media_importer(self, media: Show | str) -> BaseImporter:
-        msg = f"{self.plugin_name()} does not dispatch media to an importer."
-        raise NotImplementedError(msg)
+    def get_media_importer(self, input: Show | str) -> BaseImporter:  # noqa: ARG002
+        return cast("BaseImporter", self)
 
     def import_url(self, url: str) -> list[URLImportResult]:
         return self.get_media_importer(url).import_url(url)
@@ -119,7 +118,7 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         media_type: TMDBMediaType,
         year: int | None = None,
     ) -> list[URLImportResult]:
-        url = self.best_matching_title_url(names, media_type, year)
+        url = self.search_for_url(names, media_type, year)
         if url:
             return self.import_url(url)
         return []
@@ -168,20 +167,54 @@ class BaseReadURL(BasePlugin, ABC):
 
     # TODO: Validate
     @override
-    def _url_to_show_key(self, url: str) -> str:
-        msg = f"{self.plugin_name()} does not implement _url_to_show_key"
+    def extract_media_info(self, url: str) -> MediaInfo:
+        msg = f"{self.plugin_name()} does not implement extract_media_info"
         raise NotImplementedError(msg)
 
     # TODO: Validate
     def _import_results(
         self,
         show: Show,
-        *_args: Any,  # noqa: ANN401
-        **_kwargs: Any,  # noqa: ANN401
+        media_info: MediaInfo | None = None,
     ) -> list[URLImportResult]:
+        if media_info and media_info.episode_key is not None:
+            return [
+                URLImportResult.episode_import_results(
+                    show,
+                    [self._imported_episode(show, media_info.episode_key)],
+                ),
+            ]
+
+        if media_info and media_info.season_key is not None:
+            return [
+                URLImportResult.season_import_results(
+                    show,
+                    [self._imported_season(show, media_info.season_key)],
+                ),
+            ]
+
         results = [URLImportResult.show_import_results(show)]
         results += [
             URLImportResult.show_import_results(canonical_show)
             for canonical_show in show.canonical_shows
         ]
         return results
+
+    # TODO: Validate
+    def _imported_season(self, show: Show, season_key: str) -> Season:
+        for season in show.seasons:
+            if season.key == season_key:
+                return season
+
+        msg = f"Season {season_key} not found in show {show.key}"
+        raise InvalidURLError(msg)
+
+    # TODO: Validate
+    def _imported_episode(self, show: Show, episode_key: str) -> Episode:
+        for season in show.seasons:
+            for episode in season.episodes:
+                if episode.key == episode_key:
+                    return episode
+
+        msg = f"Episode {episode_key} not found in show {show.key}"
+        raise InvalidURLError(msg)

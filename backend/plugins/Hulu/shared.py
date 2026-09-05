@@ -1,55 +1,76 @@
 # TODO: Validate
+"""What the plugin, its importers and its initializer all read Hulu by."""
+
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING, override
 
 from app.canonical_media.service.identifiers import canonical_show_ids_by_key
-from plugins.Hulu.constants import MOVIE_URL_REGEX, SERIES_URL_REGEX
-from plugins.Hulu.media import MediaMixin
-from plugins.Hulu.utils import HuluMediaType, listed_items, media_urls
+from app.sources.models import Source
+from app.utils import tz_datetime
+from app.utils.strict_re import strict_search
+from app.utils.update_at import staggered_monthly_update_at
+from plugins.Hulu.basic_files import BasicFiles
+from plugins.Hulu.utils import (
+    HuluMediaType,
+    listed_items,
+    media_urls,
+    search_url,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from datetime import datetime
     from uuid import UUID
 
-    from app.episodes.models import Episode
-    from app.seasons.models import Season
-    from app.shows.models import Show
-    from app.sources.models import Source
+UUID_REGEX = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+SLUG_REGEX = r"(?:[a-z0-9-]+-)?"
+SERIES_URL_REGEX = rf"\/series\/{SLUG_REGEX}(?P<series_key>{UUID_REGEX})"
+MOVIE_URL_REGEX = rf"\/movie\/{SLUG_REGEX}(?P<movie_key>{UUID_REGEX})"
+VIDEO_URL_REGEX = rf"\/watch\/(?P<episode_key>{UUID_REGEX})"
 
 
-# TODO: Validate
-class UpdateMixin(MediaMixin):
+class HuluShared(BasicFiles):
+    @classmethod
     @override
-    def update_show(self, show: Show, *, force: bool = False) -> None:
-        self._media_plugin(show).update_show(show, force=force)
+    def plugin_name(cls) -> str:
+        return "Hulu"
 
+    @classmethod
     @override
-    def update_season(self, season: Season) -> None:
-        self._media_plugin(season.show).update_season(season)
+    def favicon_url(cls) -> str:
+        return "https://www.hulu.com/favicon.ico"
 
+    @classmethod
     @override
-    def update_episode(self, episode: Episode) -> None:
-        self._media_plugin(episode.season.show).update_episode(episode)
+    def _domain(cls) -> str:
+        return "hulu.com"
 
-    def update_source(self, source: Source, update_at: datetime) -> None:
-        self.add_media_to_plugin_channels(update_at)
-        self.upsert_source(source.key)
+    @classmethod
+    def manual_search_url(cls, query: str) -> str | None:
+        return search_url(query)
 
     # TODO: Validate
-    def add_media_to_plugin_channels(self, update_at: datetime | None = None) -> None:
-        self.genres_file().download_if_outdated(update_at)
-        _cache = self._preload_source_files()
-        self._download_outdated_files(self._source_files(), update_at)
+    @override
+    def upsert_source(self, source_key: str) -> Source:
+        existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
+        source = Source(
+            key=source_key,
+            name=self.plugin_name(),
+            favicon_url=self.favicon_url(),
+            data_timestamp=self.genres_file().data_timestamp(),
+            plugin_id=self.plugin.id,
+        ).upsert(self.plugin, existing_source)
+        source.set_update_at(
+            staggered_monthly_update_at(source_key, tz_datetime.now()),
+            self._file_timestamps(self._source_files()),
+        )
+        return source
 
+    def add_media_to_plugin_channels(self) -> None:
         all_urls: list[str] = []
         movie_urls: list[str] = []
         series_urls: list[str] = []
-        for genre_name, genre_href in listed_items(
-            self.genres_file().parsed(),
-        ):
+        for genre_name, genre_href in listed_items(self.genres_file().parsed()):
             genre_id = genre_href.rsplit("/", 1)[-1]
             genre_urls = media_urls(self.genre_file(genre_id).parsed())
 
@@ -84,17 +105,17 @@ class UpdateMixin(MediaMixin):
 
     # TODO: Validate
     def _canonical_show_ids(self, urls: Sequence[str]) -> set[UUID]:
+        """Converts a list of Hulu URLs to a set of canonical show IDs."""
         show_keys: set[str] = set()
         for url in urls:
-            if match := re.search(f"{SERIES_URL_REGEX}|{MOVIE_URL_REGEX}", url):
-                show_keys.add(match.group("series_key") or match.group("movie_key"))
+            match = strict_search(f"{SERIES_URL_REGEX}|{MOVIE_URL_REGEX}", url)
+            show_keys.add(match.group("series_key") or match.group("movie_key"))
         return {
             show_id
             for show_ids in canonical_show_ids_by_key(self.session, show_keys).values()
             for show_id in show_ids
         }
 
-    # TODO: Validate
     def _replace_plugin_channel_media(
         self,
         channel_name: str,

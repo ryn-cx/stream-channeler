@@ -374,12 +374,11 @@ class EpisodeLinker:
         link = EpisodeCanonicalEpisode(
             episode_id=episode.id,
             canonical_episode_id=tmdb_episode.id,
-            sort_order=episode.sort_order,
+            note=note,
         )
         link.episode = episode
         link.canonical_episode = tmdb_episode
         episode.canonical_episode_links.append(link)
-        episode.canonical_episode_note = note
         self.session.add(link)
 
     # TODO: Validate

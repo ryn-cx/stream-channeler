@@ -212,14 +212,29 @@ class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):
         """Return a select joined to `Plugin`."""
 
     # TODO: Validate
-    def set_update_at(self, new_update_at_value: datetime | None) -> None:
-        """Set `update_at` based its current value and `new_update_at_value`."""
+    def set_update_at(
+        self,
+        new_update_at_value: datetime | None,
+        data_timestamps: Sequence[datetime] = (),
+    ) -> None:
+        """Set `update_at` based its current value and `new_update_at_value`.
+
+        `data_timestamps` are the timestamps of every file the record is read out
+        of. The record is only as current as the oldest of them, so an update is
+        only finished once all of them are newer than it. Without them the
+        record's own `data_timestamp` stands in, for a record read out of no
+        files of its own.
+        """
+        oldest_data_timestamp = (
+            min(data_timestamps) if data_timestamps else self.data_timestamp
+        )
+
         # If the existing update_at is older than data_timestamp the update has
         # been completed and update_at can be cleared.
         if (
             self.update_at
-            and self.data_timestamp
-            and self.update_at < self.data_timestamp
+            and oldest_data_timestamp
+            and self.update_at < oldest_data_timestamp
         ):
             self.update_at = None
 
@@ -228,7 +243,7 @@ class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):
 
         # If the existing data_timestamp is newer than the new update_at value update_at
         # can be ignored because the data is already up to date.
-        if self.data_timestamp and self.data_timestamp >= new_update_at_value:
+        if oldest_data_timestamp and oldest_data_timestamp >= new_update_at_value:
             return
 
         # If the new update_at is before the existing update_at the existing update_at
@@ -248,7 +263,15 @@ class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):
         # preserved.
         # created_at: set by the database.
         # modified_at: set by the database.
-        protected_keys = protected_keys | {"id", "created_at", "modified_at"}
+        # Fields the caller never passed: a record built to say three things about
+        # a title says nothing about the rest, and the defaults SQLModel filled in
+        # are not an account of them to write over what is stored.
+        unset_keys = set(type(self).model_fields) - self.model_fields_set
+        protected_keys = protected_keys | unset_keys | {
+            "id",
+            "created_at",
+            "modified_at",
+        }
         dumped = self.model_dump(exclude=protected_keys)
         existing_record.sqlmodel_update(dumped)
         return existing_record
@@ -467,21 +490,3 @@ class ChildMediaMixin(MediaMixin[ChildT], ABC, Generic[ParentT, ChildT]):  # noq
         # self will always be a child of parent
         parent.add_child(self)  # type: ignore[arg-type]
         return self
-
-    # TODO: Validate
-    def upsert_and_set_update_at(
-        self,
-        parent: ParentT,
-        existing_record: Self | None,
-        protected_keys: set[str] | None = None,
-    ) -> Self:
-        """Upsert and automatically set the `update_at` timestamp."""
-        if protected_keys is None:
-            protected_keys = {"update_at"}
-        else:
-            protected_keys.add("update_at")
-
-        record = self.upsert(parent, existing_record, protected_keys)
-        if existing_record:
-            record.set_update_at(self.update_at)
-        return record

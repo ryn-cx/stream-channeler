@@ -127,17 +127,28 @@ def _link_one_episode(
         note=f"{MANUAL_NOTE_PREFIX}Episode selection",
     )
 
-    if canonical_episode.id not in episode.canonical_episode_ids:
+    note = f"{MANUAL_NOTE_PREFIX}Selection"
+    existing_link = next(
+        (
+            link
+            for link in episode.canonical_episode_links
+            if link.canonical_episode_id == canonical_episode.id
+        ),
+        None,
+    )
+    if existing_link is None:
         session.add(
             EpisodeCanonicalEpisode(
                 episode_id=episode.id,
                 canonical_episode_id=canonical_episode.id,
-                sort_order=episode.sort_order,
+                note=note,
             ),
         )
+    else:
+        existing_link.note = note
+        session.add(existing_link)
 
     episode.canonical_episode_validated_at = tz_datetime.now()
-    episode.canonical_episode_note = f"{MANUAL_NOTE_PREFIX}Selection"
     session.add(episode)
 
 
@@ -167,7 +178,6 @@ def unlink_episode(
 
     if not episode.canonical_episode_links:
         episode.canonical_episode_validated_at = None
-        episode.canonical_episode_note = None
         session.add(episode)
     session.commit()
     session.refresh(episode)
@@ -179,7 +189,6 @@ def quick_unlink_episode(session: Session, episode: Episode) -> Episode:
     _drop_links(session, episode)
 
     episode.canonical_episode_validated_at = None
-    episode.canonical_episode_note = None
     session.add(episode)
     session.commit()
     session.refresh(episode)
@@ -200,7 +209,9 @@ def verify_canonical_link(session: Session, episode: Episode) -> Episode:
         )
 
     episode.canonical_episode_validated_at = tz_datetime.now()
-    episode.canonical_episode_note = f"{MANUAL_NOTE_PREFIX}Verified"
+    for link in episode.canonical_episode_links:
+        link.note = f"{MANUAL_NOTE_PREFIX}Verified"
+        session.add(link)
     session.add(episode)
     session.commit()
     session.refresh(episode)
@@ -212,7 +223,6 @@ def mark_episode_absent_from_tmdb(session: Session, episode: Episode) -> Episode
     _drop_links(session, episode)
 
     episode.canonical_episode_validated_at = tz_datetime.now()
-    episode.canonical_episode_note = f"{MANUAL_NOTE_PREFIX}Not on TMDB"
     session.add(episode)
     session.commit()
     session.refresh(episode)

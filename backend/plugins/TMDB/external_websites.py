@@ -1,4 +1,3 @@
-# TODO: Validate
 from __future__ import annotations
 
 import uuid
@@ -24,11 +23,9 @@ from plugins.TMDB.utils import (
 from plugins.utils.abstract_plugin import AbstractPlugin, MediaNotFoundError
 
 
-# TODO: Validate
 class TMDBExternalWebsites(TMDBShared, ABC):
     """Functions for importing TMDB titles on external websites."""
 
-    # TODO: Validate
     @abstractmethod
     def _provider_file(
         self,
@@ -37,7 +34,6 @@ class TMDBExternalWebsites(TMDBShared, ABC):
 
     """Return the provider file for the given show key."""
 
-    # TODO: Validate
     def _import_title_from_external_websites(self, show_key: str, show: Show) -> None:
         """Import the title from all external websites."""
         # TODO: TMDB should have a special Show object that makes empty names
@@ -75,13 +71,13 @@ class TMDBExternalWebsites(TMDBShared, ABC):
                     plugin_key=media_plugin.plugin_name(),
                 )
 
-    # TODO: Validate
     def _upsert_unmatched_source(
         self,
         show_id: uuid.UUID,
         provider_name: str,
         plugin_key: str | None,
     ) -> None:
+        """Upsert a source that is listed on TMDB but could not be imported."""
         statement = select(UnmatchedSource).where(
             UnmatchedSource.show_id == show_id,
             UnmatchedSource.provider_name == provider_name,
@@ -98,7 +94,6 @@ class TMDBExternalWebsites(TMDBShared, ABC):
         )
         self.session.commit()
 
-    # TODO: Validate
     def external_link_exists(
         self,
         media_plugin: type[AbstractPlugin],
@@ -108,7 +103,9 @@ class TMDBExternalWebsites(TMDBShared, ABC):
         plugins_with_non_canonical_shows: set[str],
     ) -> bool:
         return (
+            # The external link can already exist.
             media_plugin.plugin_name() in plugins_with_non_canonical_shows
+            # Or the external link can be made right now.
             or self._import_external_plugin(
                 plugin_class=media_plugin,
                 show=show,

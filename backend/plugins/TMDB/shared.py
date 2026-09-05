@@ -89,17 +89,15 @@ class TMDBShared(TMDBSearch):
     def _chosen_episode_group(
         self,
         show_key: str,
-        update_at: datetime | None = None,
     ) -> TvEpisodeGroupDetailsModel | None:
         show = Show.get(self.session, self.source, show_key)
         if show and (group_id := chosen_group_id(show.extra)):
-            return self.tv_episode_groups_details_file(group_id).parsed(update_at)
+            return self.tv_episode_groups_details_file(group_id).parsed()
         return None
 
     def chosen_seasons(
         self,
         show_key: str,
-        update_at: datetime | None = None,
     ) -> list[SeasonInfo]:
         """Return the seasons for the show.
 
@@ -112,7 +110,7 @@ class TMDBShared(TMDBSearch):
 
         _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show_key)
 
-        if group := self._chosen_episode_group(show_key, update_at):
+        if group := self._chosen_episode_group(show_key):
             return [
                 SeasonInfo.from_episode_group(order, entry)
                 for order, entry in enumerate(group.groups)
@@ -123,11 +121,9 @@ class TMDBShared(TMDBSearch):
                 self.tv_seasons_details_file(
                     tmdb_tv_show_id=tmdb_tv_show_id,
                     season_number=season.season_number,
-                ).parsed(update_at),
+                ).parsed(),
             )
-            for season in self.tv_series_details_file(tmdb_tv_show_id)
-            .parsed(update_at)
-            .seasons
+            for season in self.tv_series_details_file(tmdb_tv_show_id).parsed().seasons
         ]
 
     def _native_season_number(self, season_key: str, show_key: str) -> int:
