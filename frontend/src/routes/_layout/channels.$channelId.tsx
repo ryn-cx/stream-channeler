@@ -22,7 +22,7 @@ import { HeroBillboard } from "@/components/ChannelCommon/HeroBillboard"
 import { LastWatchedBadge } from "@/components/ChannelCommon/LastWatchedBadge"
 import { useEpisodeActions } from "@/components/ChannelCommon/useEpisodeActions"
 import { ChannelCreatedBy } from "@/components/Channels/ChannelCreatedBy"
-import { ManageShowsButton } from "@/components/Channels/ChannelDetail/AddUrlsToQueueButton"
+import { ManageTitlesButton } from "@/components/Channels/ChannelDetail/AddUrlsToQueueButton"
 import { ChannelDescription } from "@/components/Channels/ChannelDetail/ChannelDescription"
 import { CommentsDialog } from "@/components/Channels/ChannelDetail/CommentsDialog"
 import {
@@ -83,9 +83,9 @@ type ChannelSearchParams = {
   sortBy?: Array<SortKeyInput>
   orderPresetId?: string
   maximumWatchDate?: string
-  totalShowsCount?: number
-  startedShowsCount?: number
-  newShowsCount?: number
+  totalTitlesCount?: number
+  startedTitlesCount?: number
+  newTitlesCount?: number
   minimumAirDate?: string
   maximumAirDate?: string
   minimumDuration?: number
@@ -121,9 +121,9 @@ export const Route = createFileRoute("/_layout/channels/$channelId")({
       sortBy: search.sortBy as ChannelSearchParams["sortBy"],
       orderPresetId: search.orderPresetId as string | undefined,
       maximumWatchDate: search.maximumWatchDate as string | undefined,
-      totalShowsCount: search.totalShowsCount as number | undefined,
-      startedShowsCount: search.startedShowsCount as number | undefined,
-      newShowsCount: search.newShowsCount as number | undefined,
+      totalTitlesCount: search.totalTitlesCount as number | undefined,
+      startedTitlesCount: search.startedTitlesCount as number | undefined,
+      newTitlesCount: search.newTitlesCount as number | undefined,
       minimumAirDate: search.minimumAirDate as string | undefined,
       maximumAirDate: search.maximumAirDate as string | undefined,
       minimumDuration: search.minimumDuration as number | undefined,
@@ -287,12 +287,12 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
     episodesData?.episodes ?? []
   ).map((episode) => {
     const season = episodesData!.seasons[episode.season_id]
-    const show = episodesData!.shows[season.show_id]
+    const title = episodesData!.titles[season.title_id]
     const source =
-      episodesData!.sources[episode.source_id ?? show.source_id] ??
-      episodesData!.sources[show.source_id]
+      episodesData!.sources[episode.source_id ?? title.source_id] ??
+      episodesData!.sources[title.source_id]
     const plugin = episodesData!.plugins[source.plugin_id]
-    return { ...episode, season, show, source, plugin }
+    return { ...episode, season, title, source, plugin }
   })
 
   // From: https://tanstack.com/table/v8/docs/framework/react/examples/column-visibility
@@ -380,7 +380,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
 
               <DropdownMenuSeparator />
               {canEdit ? (
-                <ManageShowsButton
+                <ManageTitlesButton
                   channelId={channelId}
                   channelName={channel?.name}
                   variant="menu"
@@ -427,7 +427,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
           </DropdownMenu>
         </div>
 
-        {/* Larger screens: Show all buttons */}
+        {/* Larger screens: Title all buttons */}
         <div className="hidden xl:flex flex-wrap gap-2">
           {viewMode === "cards" ? (
             <Button
@@ -449,7 +449,7 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
             </Button>
           )}
           {canEdit ? (
-            <ManageShowsButton
+            <ManageTitlesButton
               channelId={channelId}
               channelName={channel?.name}
               combinedChannels={{ isLoggedIn: !!user }}

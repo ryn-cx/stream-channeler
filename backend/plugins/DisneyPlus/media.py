@@ -12,7 +12,7 @@ from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.titles.models import Title
 from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.DisneyPlus.shared import ENTITY_URL_REGEX, DisneyPlusShared
@@ -25,8 +25,8 @@ from plugins.DisneyPlus.utils import (
     season_episodes,
     season_number_from_name,
     seasons,
-    show_url,
     split_season_key,
+    title_url,
     video_url,
 )
 from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
@@ -56,45 +56,45 @@ class DisneyPlusMedia(DisneyPlusShared, BaseImporter, ABC):
     @override
     def extract_media_info(self, url: str) -> MediaInfo:
         if match := re.match(self._domain_regex() + ENTITY_URL_REGEX, url):
-            show_key = match.group("entity_key")
-            self.raise_if_invalid_file(self.entity_file(show_key), url)
-            return MediaInfo(show_key)
+            title_key = match.group("entity_key")
+            self.raise_if_invalid_file(self.entity_file(title_key), url)
+            return MediaInfo(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
     # TODO: Validate
-    def _entity(self, show_key: str) -> EntityModel:
-        return self.entity_file(show_key).parsed()
+    def _entity(self, title_key: str) -> EntityModel:
+        return self.entity_file(title_key).parsed()
 
     # TODO: Validate
-    def _media_details(self, show_key: str) -> MainContentItem:
-        return media_details(self._entity(show_key))
+    def _media_details(self, title_key: str) -> MainContentItem:
+        return media_details(self._entity(title_key))
 
     # TODO: Validate
-    def _background_image_url(self, show_key: str) -> str:
-        return background_image_url(self._entity(show_key))
+    def _background_image_url(self, title_key: str) -> str:
+        return background_image_url(self._entity(title_key))
 
     # TODO: Validate
     @override
-    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
-        # Required to detect changes to the show and new seasons of it.
-        return [self.entity_file(show_key)]
+    def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
+        # Required to detect changes to the title and new seasons of it.
+        return [self.entity_file(title_key)]
 
     # TODO: Validate
     def _tmdb_lookup_info(
         self,
-        show_key: str,
+        title_key: str,
         media_type: TMDBMediaType,
     ) -> list[TMDBLookupInfo]:
-        self.entity_file(show_key).download_if_outdated(
+        self.entity_file(title_key).download_if_outdated(
             tz_datetime.now() - timedelta(days=7),
         )
         return [
             TMDBLookupInfo(
-                required_value(self._media_details(show_key).title, "title"),
+                required_value(self._media_details(title_key).title, "title"),
                 media_type,
-                release_year(self._entity(show_key)),
+                release_year(self._entity(title_key)),
             ),
         ]
 
@@ -103,22 +103,22 @@ class DisneyPlusMedia(DisneyPlusShared, BaseImporter, ABC):
 class DisneyPlusSeries(DisneyPlusMedia):
     # TODO: Validate
     @override
-    def tmdb_lookup_info(self, show_key: str) -> list[TMDBLookupInfo]:
-        return self._tmdb_lookup_info(show_key, TMDBMediaType.tv)
+    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
+        return self._tmdb_lookup_info(title_key, TMDBMediaType.tv)
 
     # TODO: Validate
-    def _seasons(self, show_key: str) -> list[EntitySeason]:
-        return seasons(self._entity(show_key))
+    def _seasons(self, title_key: str) -> list[EntitySeason]:
+        return seasons(self._entity(title_key))
 
     # TODO: Validate
-    def _season_episodes(self, show_key: str, season_id: str) -> list[EntityEpisode]:
-        return season_episodes(self.season_file(show_key, season_id).parsed())
+    def _season_episodes(self, title_key: str, season_id: str) -> list[EntityEpisode]:
+        return season_episodes(self.season_file(title_key, season_id).parsed())
 
     # TODO: Validate
     @override
-    def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
-        _show_key, season_id = split_season_key(season_key)
-        return [self.season_file(show_key, season_id)]
+    def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
+        _title_key, season_id = split_season_key(season_key)
+        return [self.season_file(title_key, season_id)]
 
     # TODO: Validate
     @override
@@ -126,18 +126,18 @@ class DisneyPlusSeries(DisneyPlusMedia):
         self,
         episode_key: str,
         season_key: str,
-        show_key: str,
+        title_key: str,
     ) -> Sequence[BaseFile[Any]]:
         # The episode list comes down with the season's page, so the page is what
         # says whether an episode read out of it has changed.
-        return self._season_files(season_key, show_key)
+        return self._season_files(season_key, title_key)
 
     # TODO: Validate
     @override
-    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
+    def _season_keys_from_title_files(self, title_key: str) -> list[str]:
         return [
-            build_season_key(show_key, str(season.id))
-            for season in self._seasons(show_key)
+            build_season_key(title_key, str(season.id))
+            for season in self._seasons(title_key)
         ]
 
     # TODO: Validate
@@ -145,66 +145,66 @@ class DisneyPlusSeries(DisneyPlusMedia):
     def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
-        show_key: str,
+        title_key: str,
     ) -> list[str]:
         if isinstance(season_keys, str):
             season_keys = [season_keys]
         episode_keys: list[str] = []
         for season_key in season_keys:
-            _show_key, season_id = split_season_key(season_key)
+            _title_key, season_id = split_season_key(season_key)
             episode_keys += [
                 str(episode.field_id)
-                for episode in self._season_episodes(show_key, season_id)
+                for episode in self._season_episodes(title_key, season_id)
             ]
         return episode_keys
 
     # TODO: Validate
     @override
-    def upsert_show(
+    def upsert_title(
         self,
         source: Source,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
-    ) -> Show:
-        show = Show.get_from_memory(self.session, source, show_key)
-        if self._show_is_outdated(show, force=force):
-            details = self._media_details(show_key)
-            data_timestamps = self.show_data_timestamps(show_key)
+    ) -> Title:
+        title = Title.get_from_memory(self.session, source, title_key)
+        if self._title_is_outdated(title, force=force):
+            details = self._media_details(title_key)
+            data_timestamps = self.title_data_timestamps(title_key)
             data_timestamp = data_timestamps[0]
-            new_show = Show(
-                key=show_key,
+            new_title = Title(
+                key=title_key,
                 name=required_value(details.title, "title"),
                 description=details.summary,
                 media_type="Series",
-                url=show_url(show_key),
-                image_url=self._background_image_url(show_key),
-                thumbnail_url=self._background_image_url(show_key),
-                year=release_year(self._entity(show_key)),
+                url=title_url(title_key),
+                image_url=self._background_image_url(title_key),
+                thumbnail_url=self._background_image_url(title_key),
+                year=release_year(self._entity(title_key)),
                 data_timestamp=data_timestamp,
                 source_id=source.id,
             )
-            show = new_show.upsert(source, show)
-            show.set_update_at(
-                staggered_monthly_update_at(show_key, data_timestamp),
+            title = new_title.upsert(source, title)
+            title.set_update_at(
+                staggered_monthly_update_at(title_key, data_timestamp),
                 data_timestamps,
             )
 
-        self._upsert_seasons(show, force=force)
-        self._soft_delete_missing(show_key)
-        self._set_weekly_updates_from_episodes(show, update_show=False)
-        self.link_show_to_tmdb(show)
+        self._upsert_seasons(title, force=force)
+        self._soft_delete_missing(title_key)
+        self._set_weekly_updates_from_episodes(title, update_title=False)
+        self.link_title_to_tmdb(title)
 
-        return show
+        return title
 
     # TODO: Validate
-    def _upsert_seasons(self, show: Show, *, force: bool = False) -> None:
-        for sort_order, season_entry in enumerate(self._seasons(show.key)):
+    def _upsert_seasons(self, title: Title, *, force: bool = False) -> None:
+        for sort_order, season_entry in enumerate(self._seasons(title.key)):
             season_id = str(season_entry.id)
-            season_key = build_season_key(show.key, season_id)
-            season = Season.get_from_memory(self.session, show, season_key)
-            if self._season_is_outdated(season, show.key, force=force):
-                data_timestamps = self.season_data_timestamps(season_key, show.key)
+            season_key = build_season_key(title.key, season_id)
+            season = Season.get_from_memory(self.session, title, season_key)
+            if self._season_is_outdated(season, title.key, force=force):
+                data_timestamps = self.season_data_timestamps(season_key, title.key)
                 new_season = Season(
                     key=season_key,
                     name=season_entry.name,
@@ -214,29 +214,29 @@ class DisneyPlusSeries(DisneyPlusMedia):
                     ),
                     sort_order=sort_order,
                     data_timestamp=data_timestamps[0],
-                    show_id=show.id,
+                    title_id=title.id,
                 )
-                season = new_season.upsert(show, season)
+                season = new_season.upsert(title, season)
                 season.set_update_at(None, data_timestamps)
 
-            self._upsert_episodes(season, show.key, season_id, force=force)
+            self._upsert_episodes(season, title.key, season_id, force=force)
 
     # TODO: Validate
     def _upsert_episodes(
         self,
         season: Season,
-        show_key: str,
+        title_key: str,
         season_id: str,
         *,
         force: bool = False,
     ) -> None:
-        for sort_order, item in enumerate(self._season_episodes(show_key, season_id)):
+        for sort_order, item in enumerate(self._season_episodes(title_key, season_id)):
             episode_key = str(item.field_id)
             episode = Episode.get_from_memory(self.session, season, episode_key)
             if not self._episode_is_outdated(
                 episode,
                 season.key,
-                show_key,
+                title_key,
                 force=force,
             ):
                 continue
@@ -244,7 +244,7 @@ class DisneyPlusSeries(DisneyPlusMedia):
             data_timestamps = self.episode_data_timestamps(
                 episode_key,
                 season.key,
-                show_key,
+                title_key,
             )
             new_episode = Episode(
                 key=episode_key,
@@ -267,14 +267,14 @@ class DisneyPlusSeries(DisneyPlusMedia):
 class DisneyPlusMovie(DisneyPlusMedia):
     # TODO: Validate
     @override
-    def tmdb_lookup_info(self, show_key: str) -> list[TMDBLookupInfo]:
-        return self._tmdb_lookup_info(show_key, TMDBMediaType.movie)
+    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
+        return self._tmdb_lookup_info(title_key, TMDBMediaType.movie)
 
     # TODO: Validate
     @override
-    def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
+    def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
         # A movie is a season of itself, so its own page is what it is read out of.
-        return [self.entity_file(show_key)]
+        return [self.entity_file(title_key)]
 
     # TODO: Validate
     @override
@@ -282,21 +282,21 @@ class DisneyPlusMovie(DisneyPlusMedia):
         self,
         episode_key: str,
         season_key: str,
-        show_key: str,
+        title_key: str,
     ) -> Sequence[BaseFile[Any]]:
-        return [self.entity_file(show_key)]
+        return [self.entity_file(title_key)]
 
     # TODO: Validate
     @override
-    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
-        return [build_season_key(show_key, show_key)]
+    def _season_keys_from_title_files(self, title_key: str) -> list[str]:
+        return [build_season_key(title_key, title_key)]
 
     # TODO: Validate
     @override
     def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
-        show_key: str,
+        title_key: str,
     ) -> list[str]:
         if isinstance(season_keys, str):
             season_keys = [season_keys]
@@ -304,85 +304,85 @@ class DisneyPlusMovie(DisneyPlusMedia):
 
     # TODO: Validate
     @override
-    def upsert_show(
+    def upsert_title(
         self,
         source: Source,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
-    ) -> Show:
-        details = self._media_details(show_key)
-        show = Show.get_from_memory(self.session, source, show_key)
-        if self._show_is_outdated(show, force=force):
-            data_timestamps = self.show_data_timestamps(show_key)
+    ) -> Title:
+        details = self._media_details(title_key)
+        title = Title.get_from_memory(self.session, source, title_key)
+        if self._title_is_outdated(title, force=force):
+            data_timestamps = self.title_data_timestamps(title_key)
             data_timestamp = data_timestamps[0]
-            new_show = Show(
-                key=show_key,
+            new_title = Title(
+                key=title_key,
                 name=required_value(details.title, "title"),
                 description=details.summary,
                 media_type="Movie",
-                url=show_url(show_key),
-                image_url=self._background_image_url(show_key),
-                thumbnail_url=self._background_image_url(show_key),
-                year=release_year(self._entity(show_key)),
+                url=title_url(title_key),
+                image_url=self._background_image_url(title_key),
+                thumbnail_url=self._background_image_url(title_key),
+                year=release_year(self._entity(title_key)),
                 data_timestamp=data_timestamp,
                 source_id=source.id,
             )
-            show = new_show.upsert(source, show)
-            show.set_update_at(
-                staggered_monthly_update_at(show_key, data_timestamp),
+            title = new_title.upsert(source, title)
+            title.set_update_at(
+                staggered_monthly_update_at(title_key, data_timestamp),
                 data_timestamps,
             )
 
-        self._upsert_season(show, force=force)
-        self._soft_delete_missing(show_key)
-        self._set_weekly_updates_from_episodes(show, update_show=False)
-        self.link_show_to_tmdb(show)
+        self._upsert_season(title, force=force)
+        self._soft_delete_missing(title_key)
+        self._set_weekly_updates_from_episodes(title, update_title=False)
+        self.link_title_to_tmdb(title)
 
-        return show
+        return title
 
     # TODO: Validate
-    def _upsert_season(self, show: Show, *, force: bool = False) -> None:
-        season_key = build_season_key(show.key, show.key)
-        season = Season.get_from_memory(self.session, show, season_key)
-        if self._season_is_outdated(season, show.key, force=force):
-            data_timestamps = self.season_data_timestamps(season_key, show.key)
+    def _upsert_season(self, title: Title, *, force: bool = False) -> None:
+        season_key = build_season_key(title.key, title.key)
+        season = Season.get_from_memory(self.session, title, season_key)
+        if self._season_is_outdated(season, title.key, force=force):
+            data_timestamps = self.season_data_timestamps(season_key, title.key)
             new_season = Season(
                 key=season_key,
                 season_number=0,
                 sort_order=0,
                 data_timestamp=data_timestamps[0],
-                show_id=show.id,
+                title_id=title.id,
             )
-            season = new_season.upsert(show, season)
+            season = new_season.upsert(title, season)
             season.set_update_at(None, data_timestamps)
 
-        self._upsert_episode(season, show.key, force=force)
+        self._upsert_episode(season, title.key, force=force)
 
     # TODO: Validate
     def _upsert_episode(
         self,
         season: Season,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
     ) -> None:
-        episode = Episode.get_from_memory(self.session, season, show_key)
-        if self._episode_is_outdated(episode, season.key, show_key, force=force):
-            details = self._media_details(show_key)
+        episode = Episode.get_from_memory(self.session, season, title_key)
+        if self._episode_is_outdated(episode, season.key, title_key, force=force):
+            details = self._media_details(title_key)
             data_timestamps = self.episode_data_timestamps(
-                show_key,
+                title_key,
                 season.key,
-                show_key,
+                title_key,
             )
             new_episode = Episode(
-                key=show_key,
-                watch_identifier=watch_identifier(self.plugin_name(), show_key),
+                key=title_key,
+                watch_identifier=watch_identifier(self.plugin_name(), title_key),
                 name=required_value(details.title, "title"),
                 description=details.summary,
-                url=video_url(show_key),
-                image_url=self._background_image_url(show_key),
-                thumbnail_url=self._background_image_url(show_key),
+                url=video_url(title_key),
+                image_url=self._background_image_url(title_key),
+                thumbnail_url=self._background_image_url(title_key),
                 episode_number=0,
                 sort_order=0,
                 data_timestamp=data_timestamps[0],

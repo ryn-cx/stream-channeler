@@ -25,9 +25,10 @@ from plugins.utils.base_plugin.base import BaseReadURL
 from plugins.utils.base_plugin.initialize import BasePluginInitializer
 
 if TYPE_CHECKING:
-    from app.shows.models import Show
+    from app.titles.models import Title
 
 
+# TODO: Validate
 class TMDBInitializer(BasePluginInitializer, TMDBShared):
     """Class for initializing TMDB's database entries."""
 
@@ -36,14 +37,16 @@ class TMDBInitializer(BasePluginInitializer, TMDBShared):
 class TMDB(TMDBShared, BaseReadURL, AbstractPlugin, register=True):
     initializer = TMDBInitializer
 
+    # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
         return (MOVIE_URL_REGEX, TV_URL_REGEX)
 
+    # TODO: Validate
     @override
     # TODO: Validate
-    def get_media_importer(self, input: Show | str | TMDBMediaType) -> TMDBMedia:
+    def get_media_importer(self, input: Title | str | TMDBMediaType) -> TMDBMedia:
         if isinstance(input, TMDBMediaType):
             if input == TMDBMediaType.movie:
                 return TMDBMovie(self)

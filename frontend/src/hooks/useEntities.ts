@@ -5,8 +5,8 @@ import {
   EpisodesService,
   PluginsService,
   SeasonsService,
-  ShowsService,
   SourcesService,
+  TitlesService,
 } from "@/client"
 
 // TODO: Validate
@@ -28,11 +28,11 @@ export function useSource(sourceId: string | undefined) {
 }
 
 // TODO: Validate
-export function useShow(showId: string | undefined) {
+export function useTitle(titleId: string | undefined) {
   return useQuery({
-    queryKey: ["shows", showId],
-    queryFn: () => ShowsService.getShow({ showId: showId! }),
-    enabled: !!showId,
+    queryKey: ["titles", titleId],
+    queryFn: () => TitlesService.getTitle({ titleId: titleId! }),
+    enabled: !!titleId,
   })
 }
 

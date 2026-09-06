@@ -33,10 +33,12 @@ from plugins.utils.base_plugin.initialize import BasePluginInitializer
 
 if TYPE_CHECKING:
     from app.media.media_type import TMDBMediaType
-    from app.shows.models import Show
+    from app.titles.models import Title
 
 
+# TODO: Validate
 class CrunchyrollInitializer(BasePluginInitializer, CrunchyrollShared):
+    # TODO: Validate
     @override
     def _create_source_records(self) -> None:
         if Source.get(self.session, self.plugin, VIDEO_SOURCE) is None:
@@ -45,6 +47,7 @@ class CrunchyrollInitializer(BasePluginInitializer, CrunchyrollShared):
             CrunchyrollArtist(self).upsert_source(MUSIC_SOURCE)
         self._sources = {source.key: source for source in self.plugin.sources}
 
+    # TODO: Validate
     @override
     def _create_channel_records(self) -> None:
         CrunchyrollSeries(self).create_channel_records()
@@ -61,6 +64,7 @@ class Crunchyroll(
 ):
     initializer = CrunchyrollInitializer
 
+    # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
@@ -72,8 +76,9 @@ class Crunchyroll(
             EPISODE_URL_REGEX,
         )
 
+    # TODO: Validate
     @override
-    def get_media_importer(self, input: Show | str) -> CrunchyrollMedia:
+    def get_media_importer(self, input: Title | str) -> CrunchyrollMedia:
         if isinstance(input, str):
             domain_regex = self._domain_regex()
             for url_regex in (
@@ -101,6 +106,7 @@ class Crunchyroll(
             return CrunchyrollArtist(self)
         return CrunchyrollSeries(self)
 
+    # TODO: Validate
     @override
     def search_for_url(
         self,

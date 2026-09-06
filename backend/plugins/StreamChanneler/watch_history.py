@@ -20,7 +20,7 @@ from app.canonical_media.filters import (
 )
 from app.episodes.models import Episode
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.titles.models import Title
 from app.watches.models import Watch
 from app.watches.schemas import WatchExportEntry, WatchImportResult
 from plugins.utils.base_plugin.watch_history import (
@@ -40,8 +40,8 @@ def _unknown_import_result(watch_identifier: str) -> WatchImportResult:
     shown.
     """
     return WatchImportResult(
-        show=watch_identifier,
-        show_url="",
+        title=watch_identifier,
+        title_url="",
         episode=watch_identifier,
         episode_url="",
     )
@@ -190,10 +190,10 @@ class WatchHistoryMixin(BaseWatchHistoryMixin):
                     select(Episode)
                     .select_from(Episode)
                     .join(Season, col(Episode.season_id) == col(Season.id))
-                    .join(Show, col(Season.show_id) == col(Show.id))
+                    .join(Title, col(Season.title_id) == col(Title.id))
                     .where(
                         is_canonical(Episode),
-                        is_canonical(Show),
+                        is_canonical(Title),
                         self._names_clause(Episode, wanted),
                         col(Episode.deleted_at).is_(None),
                     ),
@@ -254,31 +254,31 @@ class WatchHistoryMixin(BaseWatchHistoryMixin):
         if not watch_identifiers:
             return {}
         statement = (
-            select(Episode, Show)
+            select(Episode, Title)
             .select_from(Episode)
             .join(
                 Season,
                 col(Episode.season_id) == col(Season.id),
             )
             .join(
-                Show,
-                col(Season.show_id) == col(Show.id),
+                Title,
+                col(Season.title_id) == col(Title.id),
             )
             .where(
                 is_canonical(Episode),
-                is_canonical(Show),
+                is_canonical(Title),
                 self._names_clause(Episode, set(watch_identifiers)),
             )
         )
         wanted = set(watch_identifiers)
         return {
             name: WatchImportResult(
-                show=canonical_show.name or canonical_episode.key,
-                show_url=canonical_show.url or "",
+                title=canonical_title.name or canonical_episode.key,
+                title_url=canonical_title.url or "",
                 episode=canonical_episode.name or canonical_episode.key,
                 episode_url=canonical_episode.url or "",
             )
-            for canonical_episode, canonical_show in self.session.exec(statement)
+            for canonical_episode, canonical_title in self.session.exec(statement)
             for name in (canonical_episode.watch_identifier, canonical_episode.key)
             if name in wanted
         }

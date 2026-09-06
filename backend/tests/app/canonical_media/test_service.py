@@ -2,13 +2,13 @@
 import pytest
 from sqlmodel import Session
 
-from app.canonical_media.service.creation import link_show_to_tmdb
+from app.canonical_media.service.creation import link_title_to_tmdb
 from app.episodes.canonical_links import link_episode
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show
 from app.sources.models import Source
+from app.titles.models import Title
 
 
 # TODO: Validate
@@ -26,16 +26,16 @@ def _source(session: Session) -> Source:
 
 
 # TODO: Validate
-def _canonical_show(session: Session, key: str) -> Show:
-    show = Show(key=key, source_id=_source(session).id)
-    session.add(show)
+def _canonical_title(session: Session, key: str) -> Title:
+    title = Title(key=key, source_id=_source(session).id)
+    session.add(title)
     session.flush()
-    return show
+    return title
 
 
 # TODO: Validate
 def _canonical_episode(session: Session, key: str) -> Episode:
-    season = Season(key=key, show=_canonical_show(session, key))
+    season = Season(key=key, title=_canonical_title(session, key))
     session.add(season)
     session.flush()
     episode = Episode(
@@ -49,62 +49,62 @@ def _canonical_episode(session: Session, key: str) -> Episode:
 
 
 # TODO: Validate
-def test_link_canonical_show_makes_the_show_non_canonical(
+def test_link_canonical_title_makes_the_title_non_canonical(
     function_scoped_session: Session,
 ) -> None:
-    show = _canonical_show(function_scoped_session, "tmdb-show-1")
-    canonical_show = _canonical_show(function_scoped_session, "tmdb-show-2")
+    title = _canonical_title(function_scoped_session, "tmdb-title-1")
+    canonical_title = _canonical_title(function_scoped_session, "tmdb-title-2")
 
-    link_show_to_tmdb(function_scoped_session, show, canonical_show, "Test")
+    link_title_to_tmdb(function_scoped_session, title, canonical_title, "Test")
 
-    assert not show.is_canonical
-    assert show.canonical_show_ids == [canonical_show.id]
+    assert not title.is_canonical
+    assert title.canonical_title_ids == [canonical_title.id]
 
 
 # TODO: Validate
-def test_link_canonical_show_treats_every_title_alike(
+def test_link_canonical_title_treats_every_title_alike(
     function_scoped_session: Session,
 ) -> None:
-    show = _canonical_show(function_scoped_session, "tmdb-show-1")
-    first = _canonical_show(function_scoped_session, "tmdb-show-2")
-    second = _canonical_show(function_scoped_session, "tmdb-show-3")
+    title = _canonical_title(function_scoped_session, "tmdb-title-1")
+    first = _canonical_title(function_scoped_session, "tmdb-title-2")
+    second = _canonical_title(function_scoped_session, "tmdb-title-3")
 
-    link_show_to_tmdb(function_scoped_session, show, first, "Test")
-    link_show_to_tmdb(function_scoped_session, show, second, "Test")
+    link_title_to_tmdb(function_scoped_session, title, first, "Test")
+    link_title_to_tmdb(function_scoped_session, title, second, "Test")
 
-    assert set(show.canonical_show_ids) == {first.id, second.id}
-    assert show.sole_canonical_show_id is None
+    assert set(title.canonical_title_ids) == {first.id, second.id}
+    assert title.sole_canonical_title_id is None
 
 
 # TODO: Validate
-def test_link_canonical_show_rejects_a_copy_as_the_title(
+def test_link_canonical_title_rejects_a_copy_as_the_title(
     function_scoped_session: Session,
 ) -> None:
-    show = _canonical_show(function_scoped_session, "tmdb-show-1")
-    copy = _canonical_show(function_scoped_session, "tmdb-show-2")
-    canonical_show = _canonical_show(function_scoped_session, "tmdb-show-3")
-    link_show_to_tmdb(function_scoped_session, copy, canonical_show, "Test")
+    title = _canonical_title(function_scoped_session, "tmdb-title-1")
+    copy = _canonical_title(function_scoped_session, "tmdb-title-2")
+    canonical_title = _canonical_title(function_scoped_session, "tmdb-title-3")
+    link_title_to_tmdb(function_scoped_session, copy, canonical_title, "Test")
 
-    with pytest.raises(ValueError, match="is not a canonical show"):
-        link_show_to_tmdb(function_scoped_session, show, copy, "Test")
+    with pytest.raises(ValueError, match="is not a canonical title"):
+        link_title_to_tmdb(function_scoped_session, title, copy, "Test")
 
 
 # TODO: Validate
-def test_link_canonical_show_rejects_a_title_copies_hang_off(
+def test_link_canonical_title_rejects_a_title_copies_hang_off(
     function_scoped_session: Session,
 ) -> None:
-    show = _canonical_show(function_scoped_session, "tmdb-show-1")
-    copy = _canonical_show(function_scoped_session, "tmdb-show-2")
-    canonical_show = _canonical_show(function_scoped_session, "tmdb-show-3")
-    link_show_to_tmdb(function_scoped_session, copy, show, "Test")
+    title = _canonical_title(function_scoped_session, "tmdb-title-1")
+    copy = _canonical_title(function_scoped_session, "tmdb-title-2")
+    canonical_title = _canonical_title(function_scoped_session, "tmdb-title-3")
+    link_title_to_tmdb(function_scoped_session, copy, title, "Test")
     function_scoped_session.flush()
 
-    with pytest.raises(ValueError, match="has other shows linked to it"):
-        link_show_to_tmdb(function_scoped_session, show, canonical_show, "Test")
+    with pytest.raises(ValueError, match="has other titles linked to it"):
+        link_title_to_tmdb(function_scoped_session, title, canonical_title, "Test")
 
 
 # TODO: Validate
-def test_link_episode_links_the_show_to_the_title(
+def test_link_episode_links_the_title_to_the_title(
     function_scoped_session: Session,
 ) -> None:
     episode = _canonical_episode(function_scoped_session, "tmdb-episode-1")
@@ -112,6 +112,6 @@ def test_link_episode_links_the_show_to_the_title(
 
     link_episode(function_scoped_session, episode, canonical_episode)
 
-    assert episode.season.show.canonical_show_ids == [
-        canonical_episode.season.show.id,
+    assert episode.season.title.canonical_title_ids == [
+        canonical_episode.season.title.id,
     ]

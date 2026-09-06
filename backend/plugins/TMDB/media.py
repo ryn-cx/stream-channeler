@@ -21,13 +21,13 @@ from app.canonical_media.tmdb import (
     get_media_type_and_tmdb_id,
     tmdb_episode_key,
     tmdb_season_key,
-    tmdb_show_key,
+    tmdb_title_key,
 )
 from app.episodes.models import Episode
 from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
-from app.shows.models import Show
 from app.sources.models import Source
+from app.titles.models import Title
 from app.utils import tz_datetime
 from plugins.TMDB.external_websites import TMDBExternalWebsites
 from plugins.TMDB.files import (
@@ -70,6 +70,7 @@ def clean_air_datetime(air_date: str | date | None) -> datetime | None:
     return tz_datetime.combine(air_date, datetime.min.time())
 
 
+# TODO: Validate
 def runtime_in_seconds(runtime: int | None) -> int | None:
     # If the runtime is not known the API returns None. In all other cases it returns
     # the runtime in minutes.
@@ -80,29 +81,29 @@ def runtime_in_seconds(runtime: int | None) -> int | None:
 class TMDBMedia(TMDBExternalWebsites, BaseImporter):
     # TODO: Validate
     @abstractmethod
-    def download_new_watch_providers_file(self, show: Show) -> None: ...
+    def download_new_watch_providers_file(self, title: Title) -> None: ...
 
     # TODO: Validate
     @abstractmethod
-    def sync_show_watch_providers(self, show_key: str) -> None: ...
+    def sync_title_watch_providers(self, title_key: str) -> None: ...
 
     # TODO: Validate
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
         media_info = self.extract_media_info(url)
-        existing_show = self._preload_show(
-            show=media_info.show_key,
+        existing_title = self._preload_title(
+            title=media_info.title_key,
             preload_episodes=True,
         ).one_or_none()
 
-        if not existing_show:
-            existing_show = self.upsert_show(self.source, media_info.show_key)
+        if not existing_title:
+            existing_title = self.upsert_title(self.source, media_info.title_key)
             self._import_title_from_external_websites(
-                media_info.show_key,
-                existing_show,
+                media_info.title_key,
+                existing_title,
             )
 
-        return self._import_results(existing_show, media_info)
+        return self._import_results(existing_title, media_info)
 
 
 # TODO: Validate
@@ -111,59 +112,59 @@ class TMDBSeries(TMDBMedia):
 
     # TODO: Validate
     @override
-    def download_new_watch_providers_file(self, show: Show) -> None:
-        if not self._watch_providers_due(show):
+    def download_new_watch_providers_file(self, title: Title) -> None:
+        if not self._watch_providers_due(title):
             return
-        _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show.key)
+        _, tmdb_tv_title_id = get_media_type_and_tmdb_id(title.key)
         self.tv_series_watch_providers_file(
-            tmdb_tv_show_id=tmdb_tv_show_id,
+            tmdb_tv_title_id=tmdb_tv_title_id,
             downloaded_at=tz_datetime.now().date(),
         ).download_if_outdated()
 
     # TODO: Validate
     @override
-    def sync_show_watch_providers(self, show_key: str) -> None:
-        _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show_key)
+    def sync_title_watch_providers(self, title_key: str) -> None:
+        _, tmdb_tv_title_id = get_media_type_and_tmdb_id(title_key)
         self.latest_tv_series_watch_providers_file(
-            tmdb_tv_show_id,
+            tmdb_tv_title_id,
         ).download_if_outdated()
         self._process_watch_providers(
-            show_key=show_key,
-            files=self.incomplete_tv_series_watch_providers_files(tmdb_tv_show_id),
+            title_key=title_key,
+            files=self.incomplete_tv_series_watch_providers_files(tmdb_tv_title_id),
         )
 
     # TODO: Validate
-    def sync_season_watch_providers(self, show_key: str, season_number: int) -> None:
-        _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show_key)
+    def sync_season_watch_providers(self, title_key: str, season_number: int) -> None:
+        _, tmdb_tv_title_id = get_media_type_and_tmdb_id(title_key)
         self.latest_tv_seasons_watch_providers_file(
-            tmdb_tv_show_id=tmdb_tv_show_id,
+            tmdb_tv_title_id=tmdb_tv_title_id,
             season_number=season_number,
         ).download_if_outdated()
         self._process_watch_providers(
-            show_key,
+            title_key,
             self.incomplete_tv_seasons_watch_providers_files(
-                tmdb_tv_show_id,
+                tmdb_tv_title_id,
                 season_number,
             ),
         )
 
     # TODO: Validate
     @override
-    def _provider_file(self, show_key: str) -> TVSeriesWatchProviders:
-        _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show_key)
-        return self.latest_tv_series_watch_providers_file(tmdb_tv_show_id)
+    def _provider_file(self, title_key: str) -> TVSeriesWatchProviders:
+        _, tmdb_tv_title_id = get_media_type_and_tmdb_id(title_key)
+        return self.latest_tv_series_watch_providers_file(tmdb_tv_title_id)
 
     # TODO: Validate
     @override
-    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
-        return [season.key for season in self.chosen_seasons(show_key)]
+    def _season_keys_from_title_files(self, title_key: str) -> list[str]:
+        return [season.key for season in self.chosen_seasons(title_key)]
 
     # TODO: Validate
     @override
     def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
-        show_key: str,
+        title_key: str,
     ) -> list[str]:
         if isinstance(season_keys, str):
             season_keys = [season_keys]
@@ -171,44 +172,44 @@ class TMDBSeries(TMDBMedia):
         wanted = set(season_keys)
         return [
             tmdb_episode_key(TMDBMediaType.tv, episode.id)
-            for season in self.chosen_seasons(show_key)
+            for season in self.chosen_seasons(title_key)
             if season.key in wanted
             for episode in season.episodes
         ]
 
     # TODO: Validate
     @override
-    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
-        _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show_key)
-        groups_file = self.tv_series_episode_groups_file(tmdb_tv_show_id)
+    def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
+        _, tmdb_tv_title_id = get_media_type_and_tmdb_id(title_key)
+        groups_file = self.tv_series_episode_groups_file(tmdb_tv_title_id)
         return [
-            self.latest_tv_series_changes_file(tmdb_tv_show_id),
-            self.tv_series_details_file(tmdb_tv_show_id),
+            self.latest_tv_series_changes_file(tmdb_tv_title_id),
+            self.tv_series_details_file(tmdb_tv_title_id),
             groups_file,
             *(
                 self.tv_episode_groups_details_file(option.id)
                 for option in groups_file.parsed().results
             ),
-            self.latest_tv_series_watch_providers_file(tmdb_tv_show_id),
+            self.latest_tv_series_watch_providers_file(tmdb_tv_title_id),
         ]
 
     # TODO: Validate
     @override
-    def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
-        _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show_key)
-        season_numbers = self.native_season_numbers(season_key, show_key)
+    def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
+        _, tmdb_tv_title_id = get_media_type_and_tmdb_id(title_key)
+        season_numbers = self.native_season_numbers(season_key, title_key)
         return [
-            self.latest_tv_series_changes_file(tmdb_tv_show_id),
+            self.latest_tv_series_changes_file(tmdb_tv_title_id),
             *(
                 self.tv_seasons_details_file(
-                    tmdb_tv_show_id=tmdb_tv_show_id,
+                    tmdb_tv_title_id=tmdb_tv_title_id,
                     season_number=season_number,
                 )
                 for season_number in season_numbers
             ),
             *(
                 self.latest_tv_seasons_watch_providers_file(
-                    tmdb_tv_show_id=tmdb_tv_show_id,
+                    tmdb_tv_title_id=tmdb_tv_title_id,
                     season_number=season_number,
                 )
                 for season_number in season_numbers
@@ -221,14 +222,14 @@ class TMDBSeries(TMDBMedia):
         self,
         episode_key: str,
         season_key: str,
-        show_key: str,
+        title_key: str,
     ) -> Sequence[BaseFile[Any]]:
-        _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show_key)
+        _, tmdb_tv_title_id = get_media_type_and_tmdb_id(title_key)
         _, tmdb_tv_episode_id = get_media_type_and_episode_id(episode_key)
         files: list[BaseFile[Any]] = [
-            self.latest_tv_series_changes_file(tmdb_tv_show_id),
+            self.latest_tv_series_changes_file(tmdb_tv_title_id),
         ]
-        for season in self.chosen_seasons(show_key):
+        for season in self.chosen_seasons(title_key):
             if season.key != season_key:
                 continue
             for episode in season.episodes:
@@ -236,17 +237,17 @@ class TMDBSeries(TMDBMedia):
                     continue
                 files.append(
                     self.tv_seasons_details_file(
-                        tmdb_tv_show_id=tmdb_tv_show_id,
+                        tmdb_tv_title_id=tmdb_tv_title_id,
                         season_number=episode.season_number,
                     ),
                 )
         return files
 
     # TODO: Validate
-    def native_season_numbers(self, season_key: str, show_key: str) -> list[int]:
-        group = self._chosen_episode_group(show_key)
+    def native_season_numbers(self, season_key: str, title_key: str) -> list[int]:
+        group = self._chosen_episode_group(title_key)
         if group is None:
-            return [self._native_season_number(season_key, show_key)]
+            return [self._native_season_number(season_key, title_key)]
         _, order = get_media_type_and_season_id(season_key)
         groups = group.groups
         if order >= len(groups):
@@ -255,56 +256,56 @@ class TMDBSeries(TMDBMedia):
 
     # TODO: Validate
     @override
-    def upsert_show(
+    def upsert_title(
         self,
         source: Source,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
-    ) -> Show:
-        _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show_key)
-        show = Show.get_from_memory(self.session, source, show_key)
-        if self._show_is_outdated(show, force=force):
-            series = self.tv_series_details_file(tmdb_tv_show_id).parsed()
-            data_timestamps = self.show_data_timestamps(show_key)
+    ) -> Title:
+        _, tmdb_tv_title_id = get_media_type_and_tmdb_id(title_key)
+        title = Title.get_from_memory(self.session, source, title_key)
+        if self._title_is_outdated(title, force=force):
+            series = self.tv_series_details_file(tmdb_tv_title_id).parsed()
+            data_timestamps = self.title_data_timestamps(title_key)
             data_timestamp = data_timestamps[0]
-            new_show = Show(
-                key=show_key,
+            new_title = Title(
+                key=title_key,
                 name=series.name,
                 description=series.overview,
-                url=tiel_url(TMDBMediaType.tv, tmdb_tv_show_id),
+                url=tiel_url(TMDBMediaType.tv, tmdb_tv_title_id),
                 image_url=image_url(series.backdrop_path or series.poster_path),
                 thumbnail_url=thumbnail_url(series.backdrop_path or series.poster_path),
                 year=parse_release_year(series.first_air_date),
                 media_type="Series",
-                extra=show.extra if show else {},
+                extra=title.extra if title else {},
                 data_timestamp=data_timestamp,
-                canonical_show_validated_at=tz_datetime.now(),
+                canonical_title_validated_at=tz_datetime.now(),
                 source_id=source.id,
             )
-            show = new_show.upsert(source, show)
-            show.set_update_at(None, data_timestamps)
+            title = new_title.upsert(source, title)
+            title.set_update_at(None, data_timestamps)
 
-        self._upsert_seasons(show, show_key, tmdb_tv_show_id, force=force)
-        self._soft_delete_missing(show_key)
-        self._set_dynamic_update_at(show)
-        return show
+        self._upsert_seasons(title, title_key, tmdb_tv_title_id, force=force)
+        self._soft_delete_missing(title_key)
+        self._set_dynamic_update_at(title)
+        return title
 
     # TODO: Validate
     def _upsert_seasons(
         self,
-        show: Show,
-        show_key: str,
-        tmdb_tv_show_id: int,
+        title: Title,
+        title_key: str,
+        tmdb_tv_title_id: int,
         *,
         force: bool = False,
     ) -> None:
         # Whichever order the title is read in, seasons and episodes come back
         # the same shape, so nothing below asks which it was.
-        for source in self.chosen_seasons(show_key):
-            season = Season.get_from_memory(self.session, show, source.key)
-            if self._season_is_outdated(season, show_key, force=force):
-                data_timestamps = self.season_data_timestamps(source.key, show_key)
+        for source in self.chosen_seasons(title_key):
+            season = Season.get_from_memory(self.session, title, source.key)
+            if self._season_is_outdated(season, title_key, force=force):
+                data_timestamps = self.season_data_timestamps(source.key, title_key)
                 data_timestamp = data_timestamps[0]
                 new_season = Season(
                     key=source.key,
@@ -314,9 +315,9 @@ class TMDBSeries(TMDBMedia):
                     image_url=image_url(source.poster_path),
                     thumbnail_url=thumbnail_url(source.poster_path),
                     data_timestamp=data_timestamp,
-                    show_id=show.id,
+                    title_id=title.id,
                 )
-                season = new_season.upsert(show, season)
+                season = new_season.upsert(title, season)
                 season.set_update_at(
                     None,
                     data_timestamps,
@@ -324,8 +325,8 @@ class TMDBSeries(TMDBMedia):
             self._upsert_episodes(
                 season=season,
                 source=source,
-                show_key=show_key,
-                tmdb_tv_show_id=tmdb_tv_show_id,
+                title_key=title_key,
+                tmdb_tv_title_id=tmdb_tv_title_id,
                 force=force,
             )
 
@@ -334,8 +335,8 @@ class TMDBSeries(TMDBMedia):
         self,
         season: Season,
         source: SeasonInfo,
-        show_key: str,
-        tmdb_tv_show_id: int,
+        title_key: str,
+        tmdb_tv_title_id: int,
         *,
         force: bool = False,
     ) -> None:
@@ -346,14 +347,14 @@ class TMDBSeries(TMDBMedia):
             if not self._episode_is_outdated(
                 episode=episode,
                 season_key=season_key,
-                show_key=show_key,
+                title_key=title_key,
                 force=force,
             ):
                 continue
-            data_timestamps = self.episode_data_timestamps(key, season_key, show_key)
+            data_timestamps = self.episode_data_timestamps(key, season_key, title_key)
             data_timestamp = data_timestamps[0]
             still_path = episode_source.still_path or self._fallback_backdrop_path(
-                tmdb_tv_show_id=tmdb_tv_show_id,
+                tmdb_tv_title_id=tmdb_tv_title_id,
                 tmdb_tv_episode_id=episode_source.id,
             )
             new_episode = Episode(
@@ -361,7 +362,7 @@ class TMDBSeries(TMDBMedia):
                 watch_identifier=watch_identifier(self.plugin_name(), key),
                 name=episode_source.name,
                 description=episode_source.overview,
-                url=tiel_url(TMDBMediaType.tv, tmdb_tv_show_id),
+                url=tiel_url(TMDBMediaType.tv, tmdb_tv_title_id),
                 image_url=image_url(still_path),
                 thumbnail_url=thumbnail_url(still_path),
                 duration=runtime_in_seconds(episode_source.runtime),
@@ -388,72 +389,72 @@ class TMDBSeries(TMDBMedia):
             )
 
     # TODO: Validate
-    def _show_backdrop_paths(self, tmdb_tv_show_id: int) -> list[str]:
+    def _title_backdrop_paths(self, tmdb_tv_title_id: int) -> list[str]:
         cached: dict[int, list[str]] = self.session.info.setdefault(
-            "tmdb_show_backdrop_paths",
+            "tmdb_title_backdrop_paths",
             {},
         )
-        if tmdb_tv_show_id not in cached:
-            images = self.tv_series_images_file(tmdb_tv_show_id).parsed()
-            cached[tmdb_tv_show_id] = [
+        if tmdb_tv_title_id not in cached:
+            images = self.tv_series_images_file(tmdb_tv_title_id).parsed()
+            cached[tmdb_tv_title_id] = [
                 backdrop.file_path for backdrop in images.backdrops
             ]
-        return cached[tmdb_tv_show_id]
+        return cached[tmdb_tv_title_id]
 
     # TODO: Validate
     def _fallback_backdrop_path(
         self,
-        tmdb_tv_show_id: int,
+        tmdb_tv_title_id: int,
         tmdb_tv_episode_id: int,
     ) -> str | None:
-        backdrop_paths = self._show_backdrop_paths(tmdb_tv_show_id)
+        backdrop_paths = self._title_backdrop_paths(tmdb_tv_title_id)
         if not backdrop_paths:
             return None
         return Random(tmdb_tv_episode_id).choice(backdrop_paths)  # noqa: S311
 
     # TODO: Validate
     @override
-    def update_show(self, show: Show, *, force: bool = False) -> None:
+    def update_title(self, title: Title, *, force: bool = False) -> None:
         # Individual files are updated based on what data has changed instead of
         # updating all of the files like most plugins.
-        self._download_changes_file(show)
-        self._import_all_show_changes(show)
-        self._import_all_season_changes(show)
-        self._preload_show(show.id, preload_episodes=True).one()
-        self.upsert_show(show.source, show.key, force=force)
-        self.download_new_watch_providers_file(show)
-        self.sync_show_watch_providers(show.key)
-        self._import_title_from_external_websites(show.key, show)
+        self._download_changes_file(title)
+        self._import_all_title_changes(title)
+        self._import_all_season_changes(title)
+        self._preload_title(title.id, preload_episodes=True).one()
+        self.upsert_title(title.source, title.key, force=force)
+        self.download_new_watch_providers_file(title)
+        self.sync_title_watch_providers(title.key)
+        self._import_title_from_external_websites(title.key, title)
 
     # TODO: Validate
     @override
     def update_season(self, season: Season) -> None:
         super().update_season(season)
-        for season_number in self.native_season_numbers(season.key, season.show.key):
-            self.sync_season_watch_providers(season.show.key, season_number)
+        for season_number in self.native_season_numbers(season.key, season.title.key):
+            self.sync_season_watch_providers(season.title.key, season_number)
 
     # TODO: Validate
-    def _download_changes_file(self, show: Show) -> None:
-        if show.update_at and show.update_at <= tz_datetime.now():
-            _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show.key)
+    def _download_changes_file(self, title: Title) -> None:
+        if title.update_at and title.update_at <= tz_datetime.now():
+            _, tmdb_tv_title_id = get_media_type_and_tmdb_id(title.key)
             self.tv_series_changes_file(
-                tmdb_tv_show_id=tmdb_tv_show_id,
+                tmdb_tv_title_id=tmdb_tv_title_id,
                 downloaded_to=tz_datetime.now().date(),
             ).download_if_outdated()
 
     # TODO: Validate
-    def _import_all_show_changes(self, show: Show) -> None:
-        _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show.key)
-        for changes_file in self.incomplete_tv_series_changes_files(tmdb_tv_show_id):
-            self._import_single_show_changes(show.key, changes_file)
+    def _import_all_title_changes(self, title: Title) -> None:
+        _, tmdb_tv_title_id = get_media_type_and_tmdb_id(title.key)
+        for changes_file in self.incomplete_tv_series_changes_files(tmdb_tv_title_id):
+            self._import_single_title_changes(title.key, changes_file)
 
     # TODO: Validate
-    def _import_single_show_changes(
+    def _import_single_title_changes(
         self,
-        show_key: str,
+        title_key: str,
         changes_file: TVSeriesChanges,
     ) -> None:
-        _, tmdb_tv_show_id = get_media_type_and_tmdb_id(show_key)
+        _, tmdb_tv_title_id = get_media_type_and_tmdb_id(title_key)
 
         for change in changes_file.parsed().changes:
             for item in change.items:
@@ -463,18 +464,18 @@ class TMDBSeries(TMDBMedia):
                 # The details file lists the seasons, so it is read again before the
                 # seasons are, otherwise a season added since the last read is named
                 # by a change and found in nothing.
-                self.tv_series_details_file(tmdb_tv_show_id).download_if_outdated(
+                self.tv_series_details_file(tmdb_tv_title_id).download_if_outdated(
                     changed_at,
                 )
                 # There are no episode specific files so they are grouped with the
                 # seasons as they can be used to detect new episodes.
                 if change.key in {"season", "episode"}:
                     season_keys: list[str]
-                    # If the show uses altrernative episode ordering the only way to
+                    # If the title uses altrernative episode ordering the only way to
                     # properly update it is to update all of the seasons.
-                    show = Show.get(self.session, self.source, show_key)
-                    if show and chosen_group_id(show.extra):
-                        season_keys = self._season_keys_from_show_files(show_key)
+                    title = Title.get(self.session, self.source, title_key)
+                    if title and chosen_group_id(title.extra):
+                        season_keys = self._season_keys_from_title_files(title_key)
                     else:
                         # Ignore the errors because these should always have a value.
                         # The type error occurs because different keys have different
@@ -485,7 +486,7 @@ class TMDBSeries(TMDBMedia):
                         ]
                     for season_key in season_keys:
                         self._download_if_outdated(
-                            files=self._season_files(season_key, show_key),
+                            files=self._season_files(season_key, title_key),
                             update_at=changed_at,
                         )
                         _, tmdb_tv_season_id = get_media_type_and_season_id(season_key)
@@ -497,15 +498,15 @@ class TMDBSeries(TMDBMedia):
         changes_file.database_record.status = COMPLETED_STATUS
 
     # TODO: Validate
-    def _import_all_season_changes(self, show: Show) -> None:
-        for season_key in self._season_keys_from_show_files(show.key):
+    def _import_all_season_changes(self, title: Title) -> None:
+        for season_key in self._season_keys_from_title_files(title.key):
             _, tmdb_tv_season_id = get_media_type_and_season_id(season_key)
             for changes_file in self.incomplete_tv_seasons_changes_files(
                 tmdb_tv_season_id,
             ):
                 self._import_single_season_changes(
                     season_key=season_key,
-                    show_key=show.key,
+                    title_key=title.key,
                     changes_file=changes_file,
                 )
 
@@ -513,7 +514,7 @@ class TMDBSeries(TMDBMedia):
     def _import_single_season_changes(
         self,
         season_key: str,
-        show_key: str,
+        title_key: str,
         changes_file: TVSeasonsChanges,
     ) -> None:
         for change in changes_file.parsed().changes:
@@ -528,7 +529,7 @@ class TMDBSeries(TMDBMedia):
                 # named, otherwise an episode added since the last read is named by
                 # a change and numbered off nothing.
                 self._download_if_outdated(
-                    files=self._season_files(season_key, show_key),
+                    files=self._season_files(season_key, title_key),
                     update_at=changed_at,
                 )
                 # Ignore the errors because these should always have a value. The
@@ -537,7 +538,7 @@ class TMDBSeries(TMDBMedia):
                 # keys are just a string.
                 episode_key = tmdb_episode_key(TMDBMediaType.tv, item.value.episode_id)  # type: ignore[union-attr, arg-type]
                 self._download_if_outdated(
-                    files=self._episode_files(episode_key, season_key, show_key),
+                    files=self._episode_files(episode_key, season_key, title_key),
                     update_at=changed_at,
                 )
 
@@ -557,9 +558,9 @@ class TMDBSeries(TMDBMedia):
             msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
 
-        tmdb_tv_show_id = int(regex_match.group(f"{TMDBMediaType.tv}_tmdb_id"))
-        self.raise_if_invalid_file(self.tv_series_details_file(tmdb_tv_show_id), url)
-        return MediaInfo(tmdb_show_key(TMDBMediaType.tv, tmdb_tv_show_id))
+        tmdb_tv_title_id = int(regex_match.group(f"{TMDBMediaType.tv}_tmdb_id"))
+        self.raise_if_invalid_file(self.tv_series_details_file(tmdb_tv_title_id), url)
+        return MediaInfo(tmdb_title_key(TMDBMediaType.tv, tmdb_tv_title_id))
 
 
 # TODO: Validate
@@ -568,10 +569,10 @@ class TMDBMovie(TMDBMedia):
 
     # TODO: Validate
     @override
-    def download_new_watch_providers_file(self, show: Show) -> None:
-        if not self._watch_providers_due(show):
+    def download_new_watch_providers_file(self, title: Title) -> None:
+        if not self._watch_providers_due(title):
             return
-        _, tmdb_movie_id = get_media_type_and_tmdb_id(show.key)
+        _, tmdb_movie_id = get_media_type_and_tmdb_id(title.key)
         self.movies_watch_providers_file(
             tmdb_movie_id=tmdb_movie_id,
             downloaded_at=tz_datetime.now().date(),
@@ -579,32 +580,32 @@ class TMDBMovie(TMDBMedia):
 
     # TODO: Validate
     @override
-    def sync_show_watch_providers(self, show_key: str) -> None:
-        _, tmdb_movie_id = get_media_type_and_tmdb_id(show_key)
+    def sync_title_watch_providers(self, title_key: str) -> None:
+        _, tmdb_movie_id = get_media_type_and_tmdb_id(title_key)
         self.latest_movies_watch_providers_file(tmdb_movie_id).download_if_outdated()
         self._process_watch_providers(
-            show_key=show_key,
+            title_key=title_key,
             files=self.incomplete_movies_watch_providers_files(tmdb_movie_id),
         )
 
     # TODO: Validate
     @override
-    def _provider_file(self, show_key: str) -> MoviesWatchProviders:
-        _, tmdb_movie_id = get_media_type_and_tmdb_id(show_key)
+    def _provider_file(self, title_key: str) -> MoviesWatchProviders:
+        _, tmdb_movie_id = get_media_type_and_tmdb_id(title_key)
         return self.latest_movies_watch_providers_file(tmdb_movie_id)
 
     # TODO: Validate
     @override
-    def update_show(self, show: Show, *, force: bool = False) -> None:
-        super().update_show(show, force=force)
-        self.download_new_watch_providers_file(show)
-        self.sync_show_watch_providers(show.key)
-        self._import_title_from_external_websites(show.key, show)
+    def update_title(self, title: Title, *, force: bool = False) -> None:
+        super().update_title(title, force=force)
+        self.download_new_watch_providers_file(title)
+        self.sync_title_watch_providers(title.key)
+        self._import_title_from_external_websites(title.key, title)
 
     # TODO: Validate
     @override
-    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
-        media_type, tmdb_movie_id = get_media_type_and_tmdb_id(show_key)
+    def _season_keys_from_title_files(self, title_key: str) -> list[str]:
+        media_type, tmdb_movie_id = get_media_type_and_tmdb_id(title_key)
         return [tmdb_season_key(media_type, tmdb_movie_id)]
 
     # TODO: Validate
@@ -612,15 +613,15 @@ class TMDBMovie(TMDBMedia):
     def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
-        show_key: str,
+        title_key: str,
     ) -> list[str]:
-        media_type, tmdb_movie_id = get_media_type_and_tmdb_id(show_key)
+        media_type, tmdb_movie_id = get_media_type_and_tmdb_id(title_key)
         return [tmdb_episode_key(media_type, tmdb_movie_id)]
 
     # TODO: Validate
     @override
-    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
-        _, tmdb_movie_id = get_media_type_and_tmdb_id(show_key)
+    def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
+        _, tmdb_movie_id = get_media_type_and_tmdb_id(title_key)
         return [
             self.movies_details_file(tmdb_movie_id),
             self.latest_movies_watch_providers_file(tmdb_movie_id),
@@ -628,8 +629,8 @@ class TMDBMovie(TMDBMedia):
 
     # TODO: Validate
     @override
-    def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
-        _, tmdb_movie_id = get_media_type_and_tmdb_id(show_key)
+    def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
+        _, tmdb_movie_id = get_media_type_and_tmdb_id(title_key)
         return [self.movies_details_file(tmdb_movie_id)]
 
     # TODO: Validate
@@ -638,28 +639,28 @@ class TMDBMovie(TMDBMedia):
         self,
         episode_key: str,
         season_key: str,
-        show_key: str,
+        title_key: str,
     ) -> Sequence[BaseFile[Any]]:
-        _, tmdb_movie_id = get_media_type_and_tmdb_id(show_key)
+        _, tmdb_movie_id = get_media_type_and_tmdb_id(title_key)
         return [self.movies_details_file(tmdb_movie_id)]
 
     # TODO: Validate
     @override
-    def upsert_show(
+    def upsert_title(
         self,
         source: Source,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
-    ) -> Show:
-        _, tmdb_movie_id = get_media_type_and_tmdb_id(show_key)
+    ) -> Title:
+        _, tmdb_movie_id = get_media_type_and_tmdb_id(title_key)
         parsed_movie_details = self.movies_details_file(tmdb_movie_id).parsed()
-        show = Show.get_from_memory(self.session, source, show_key)
-        if self._show_is_outdated(show, force=force):
-            data_timestamps = self.show_data_timestamps(show_key)
+        title = Title.get_from_memory(self.session, source, title_key)
+        if self._title_is_outdated(title, force=force):
+            data_timestamps = self.title_data_timestamps(title_key)
             data_timestamp = data_timestamps[0]
-            new_show = Show(
-                key=show_key,
+            new_title = Title(
+                key=title_key,
                 name=parsed_movie_details.title,
                 description=parsed_movie_details.overview,
                 url=tiel_url(TMDBMediaType.movie, tmdb_movie_id),
@@ -674,30 +675,30 @@ class TMDBMovie(TMDBMedia):
                 year=parse_release_year(parsed_movie_details.release_date),
                 media_type="Movie",
                 data_timestamp=data_timestamp,
-                canonical_show_validated_at=tz_datetime.now(),
+                canonical_title_validated_at=tz_datetime.now(),
                 source_id=source.id,
             )
-            show = new_show.upsert(source, show)
-            show.set_update_at(None, data_timestamps)
+            title = new_title.upsert(source, title)
+            title.set_update_at(None, data_timestamps)
 
-        self._upsert_season(show, show_key, tmdb_movie_id, force=force)
-        self._set_dynamic_update_at(show)
-        return show
+        self._upsert_season(title, title_key, tmdb_movie_id, force=force)
+        self._set_dynamic_update_at(title)
+        return title
 
     # TODO: Validate
     def _upsert_season(
         self,
-        show: Show,
-        show_key: str,
+        title: Title,
+        title_key: str,
         tmdb_movie_id: int,
         *,
         force: bool = False,
     ) -> None:
         parsed_movie_details = self.movies_details_file(tmdb_movie_id).parsed()
         season_key = tmdb_season_key(TMDBMediaType.movie, tmdb_movie_id)
-        season = Season.get_from_memory(self.session, show, season_key)
-        if self._season_is_outdated(season, show_key, force=force):
-            data_timestamps = self.season_data_timestamps(season_key, show_key)
+        season = Season.get_from_memory(self.session, title, season_key)
+        if self._season_is_outdated(season, title_key, force=force):
+            data_timestamps = self.season_data_timestamps(season_key, title_key)
             data_timestamp = data_timestamps[0]
             new_season = Season(
                 key=season_key,
@@ -713,9 +714,9 @@ class TMDBMovie(TMDBMedia):
                     or parsed_movie_details.poster_path,
                 ),
                 data_timestamp=data_timestamp,
-                show_id=show.id,
+                title_id=title.id,
             )
-            season = new_season.upsert(show, season)
+            season = new_season.upsert(title, season)
             season.set_update_at(
                 None,
                 data_timestamps,
@@ -724,7 +725,7 @@ class TMDBMovie(TMDBMedia):
         self._upsert_episode(
             season=season,
             season_key=season_key,
-            show_key=show_key,
+            title_key=title_key,
             tmdb_movie_id=tmdb_movie_id,
             force=force,
         )
@@ -734,7 +735,7 @@ class TMDBMovie(TMDBMedia):
         self,
         season: Season,
         season_key: str,
-        show_key: str,
+        title_key: str,
         tmdb_movie_id: int,
         *,
         force: bool = False,
@@ -745,14 +746,14 @@ class TMDBMovie(TMDBMedia):
         if not self._episode_is_outdated(
             episode=episode,
             season_key=season_key,
-            show_key=show_key,
+            title_key=title_key,
             force=force,
         ):
             return
         data_timestamps = self.episode_data_timestamps(
             episode_key,
             season_key,
-            show_key,
+            title_key,
         )
         data_timestamp = data_timestamps[0]
         new_episode = Episode(
@@ -796,4 +797,4 @@ class TMDBMovie(TMDBMedia):
 
         tmdb_movie_id = int(regex_match.group(f"{TMDBMediaType.movie}_tmdb_id"))
         self.raise_if_invalid_file(self.movies_details_file(tmdb_movie_id), url)
-        return MediaInfo(tmdb_show_key(TMDBMediaType.movie, tmdb_movie_id))
+        return MediaInfo(tmdb_title_key(TMDBMediaType.movie, tmdb_movie_id))

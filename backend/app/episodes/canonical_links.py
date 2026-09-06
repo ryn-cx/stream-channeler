@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from sqlmodel import Session, col, select
 
 from app.canonical_media.filters import is_canonical
-from app.canonical_media.service.creation import link_show_to_tmdb
+from app.canonical_media.service.creation import link_title_to_tmdb
 from app.episodes.models import (
     MANUAL_NOTE_PREFIX,
     Episode,
@@ -16,7 +16,7 @@ from app.episodes.models import (
 )
 from app.episodes.schemas import EpisodeCanonicalLinkInput
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.titles.models import Title
 from app.utils import tz_datetime
 from plugins.TMDB import TMDB
 
@@ -28,9 +28,9 @@ _TMDB_MOVIE_URL = re.compile(r"themoviedb\.org/movie/(?P<tmdb_id>\d+)")
 
 
 # TODO: Validate
-def _import_tmdb_url(session: Session, url: str) -> Show:
+def _import_tmdb_url(session: Session, url: str) -> Title:
     imported = TMDB(session).import_url(url)
-    return imported[0].show
+    return imported[0].title
 
 
 # TODO: Validate
@@ -58,13 +58,13 @@ def _link_episode_using_tmdb_episode(
     url: str,
     found: re.Match[str],
 ) -> Episode:
-    canonical_show = _import_tmdb_url(session, url)
+    canonical_title = _import_tmdb_url(session, url)
     canonical_episode = session.exec(
         select(Episode)
         .join(Season, onclause=col(Episode.season_id) == Season.id)
         .where(
             is_canonical(Episode),
-            Season.show_id == canonical_show.id,
+            Season.title_id == canonical_title.id,
             Season.season_number == int(found["season_number"]),
             Episode.episode_number == int(found["episode_number"]),
         ),
@@ -78,12 +78,12 @@ def _link_episode_using_tmdb_movie(
     episode: Episode,
     url: str,
 ) -> Episode:
-    canonical_show = _import_tmdb_url(session, url)
+    canonical_title = _import_tmdb_url(session, url)
 
     canonical_episode = session.exec(
         select(Episode)
         .join(Season, onclause=col(Episode.season_id) == Season.id)
-        .where(is_canonical(Episode), Season.show_id == canonical_show.id),
+        .where(is_canonical(Episode), Season.title_id == canonical_title.id),
     ).one()
     return link_episode(session, episode, canonical_episode)
 
@@ -120,10 +120,10 @@ def _link_one_episode(
     episode: Episode,
     canonical_episode: Episode,
 ) -> None:
-    link_show_to_tmdb(
+    link_title_to_tmdb(
         session,
-        episode.season.show,
-        canonical_episode.season.show,
+        episode.season.title,
+        canonical_episode.season.title,
         note=f"{MANUAL_NOTE_PREFIX}Episode selection",
     )
 

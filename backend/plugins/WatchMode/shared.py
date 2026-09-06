@@ -12,8 +12,8 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from app.media.media_type import TMDBMediaType
-    from app.shows.models import Show
     from app.sources.models import Source
+    from app.titles.models import Title
     from plugins.utils.base_plugin.files import BaseFile
 
 
@@ -31,18 +31,18 @@ class WatchModeShared(BasicFiles):
     def favicon_url(cls) -> str:
         return "https://www.watchmode.com/favicon.ico"
 
-    # Watchmode stores no shows of its own. Defined here rather than on the
+    # Watchmode stores no titles of its own. Defined here rather than on the
     # plugin class so the initializer, which shares this base, is concrete too.
     # TODO: Validate
     @override
-    def upsert_show(
+    def upsert_title(
         self,
         source: Source,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
-    ) -> Show:
-        msg = "Watchmode stores no shows of its own."
+    ) -> Title:
+        msg = "Watchmode stores no titles of its own."
         raise NotImplementedError(msg)
 
     # TODO: Validate
@@ -69,12 +69,12 @@ class WatchModeShared(BasicFiles):
     # Watchmode stores no media of its own, so these abstract methods are no-ops.
     # TODO: Validate
     @override
-    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
+    def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
         return []
 
     # TODO: Validate
     @override
-    def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
+    def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
         return []
 
     # TODO: Validate
@@ -83,13 +83,13 @@ class WatchModeShared(BasicFiles):
         self,
         episode_key: str,
         season_key: str,
-        show_key: str,
+        title_key: str,
     ) -> Sequence[BaseFile[Any]]:
         return []
 
     # TODO: Validate
     @override
-    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
+    def _season_keys_from_title_files(self, title_key: str) -> list[str]:
         return []
 
     # TODO: Validate
@@ -97,6 +97,6 @@ class WatchModeShared(BasicFiles):
     def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
-        show_key: str,
+        title_key: str,
     ) -> list[str]:
         return []

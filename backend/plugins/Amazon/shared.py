@@ -98,8 +98,8 @@ class AmazonShared(BasicFiles):
         return self.share_link_file(share_key).title_key()
 
     # TODO: Validate
-    def show_key_from_title_key(self, title_key: str) -> str:
-        return self.detail_file(title_key).show_key()
+    def title_key_from_title_key(self, title_key: str) -> str:
+        return self.detail_file(title_key).title_key()
 
     # TODO: Validate
     def _is_movie(self, title_key: str) -> bool:
@@ -110,8 +110,8 @@ class AmazonShared(BasicFiles):
         return self.detail_file(season_key).unavailable_message() is None
 
     # TODO: Validate
-    def _season_entries(self, show_key: str) -> list[AmazonSeason]:
-        page = self.detail_file(show_key)
+    def _season_entries(self, title_key: str) -> list[AmazonSeason]:
+        page = self.detail_file(title_key)
         seasons = page.seasons() or [
             AmazonSeason(
                 key=page.compact_key(),
@@ -122,7 +122,7 @@ class AmazonShared(BasicFiles):
         return [season for season in seasons if self._season_available(season.key)]
 
     # TODO: Validate
-    def title_sources(self, show_key: str) -> list[Source]:
+    def title_sources(self, title_key: str) -> list[Source]:
         """Return every `Source` a title belongs to, by how it can be watched.
 
         A title is often offered more than one way, such as with a channel
@@ -130,7 +130,7 @@ class AmazonShared(BasicFiles):
         the title is found however the user can watch it. Only a title included
         with Prime belongs to Prime Video itself.
         """
-        detail_file = self.detail_file(show_key)
+        detail_file = self.detail_file(title_key)
         sources = [
             self._extra_source(
                 f"{self.plugin_name()}:{channel.benefit_id}",

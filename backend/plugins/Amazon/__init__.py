@@ -16,7 +16,7 @@ from plugins.utils.base_plugin.base import BaseReadURL
 from plugins.utils.base_plugin.initialize import BasePluginInitializer
 
 if TYPE_CHECKING:
-    from app.shows.models import Show
+    from app.titles.models import Title
 
 
 # TODO: Validate
@@ -41,7 +41,7 @@ class Amazon(AmazonShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def get_media_importer(self, input: Show | str) -> AmazonMedia:
+    def get_media_importer(self, input: Title | str) -> AmazonMedia:
         if isinstance(input, str):
             # A film and a season of a series are answered at the same address,
             # so the page has to be read before it is known which of the two it
@@ -53,7 +53,7 @@ class Amazon(AmazonShared, BaseReadURL, AbstractPlugin, register=False):
             return AmazonSeries(self)
 
         if not input.media_type:
-            msg = "Show.media_type is not set."
+            msg = "Title.media_type is not set."
             raise AttributeError(msg)
         if input.media_type == "Movie":
             return AmazonMovie(self)

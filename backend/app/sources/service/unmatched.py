@@ -8,10 +8,10 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, delete, select
 
 from app.schemas import Message
-from app.shows.models import Show
-from app.shows.service.canonical import match_show_to_tmdb
 from app.sources.models import UnmatchedSource
 from app.sources.schemas import UnmatchedSourceImport, UnmatchedSourceOutput
+from app.titles.models import Title
+from app.titles.service.canonical import match_title_to_tmdb
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.manage_plugins import get_plugin_for_url
@@ -20,12 +20,12 @@ from plugins.utils.manage_plugins import get_plugin_for_url
 # TODO: Validate
 def remove_unmatched_source(
     session: Session,
-    show_id: uuid.UUID,
+    title_id: uuid.UUID,
     provider_name: str,
 ) -> None:
     session.exec(
         delete(UnmatchedSource).where(
-            col(UnmatchedSource.show_id) == show_id,
+            col(UnmatchedSource.title_id) == title_id,
             col(UnmatchedSource.provider_name) == provider_name,
         ),
     )
@@ -34,12 +34,12 @@ def remove_unmatched_source(
 # TODO: Validate
 def remove_plugin_unmatched_sources(
     session: Session,
-    show_id: uuid.UUID,
+    title_id: uuid.UUID,
     plugin_key: str,
 ) -> None:
     result = session.exec(
         delete(UnmatchedSource).where(
-            col(UnmatchedSource.show_id) == show_id,
+            col(UnmatchedSource.title_id) == title_id,
             col(UnmatchedSource.plugin_key) == plugin_key,
         ),
     )
@@ -57,8 +57,8 @@ def _unmatched_source_output(
         plugin_key=unmatched_source.plugin_key,
         created_at=unmatched_source.created_at,
         modified_at=unmatched_source.modified_at,
-        show_id=unmatched_source.show_id,
-        show_name=unmatched_source.show.name,
+        title_id=unmatched_source.title_id,
+        title_name=unmatched_source.title.name,
     )
 
 
@@ -67,7 +67,7 @@ def list_unmatched_sources(session: Session) -> list[UnmatchedSourceOutput]:
     statement = (
         select(UnmatchedSource)
         .where(col(UnmatchedSource.ignored_at).is_(None))
-        .options(selectinload(UnmatchedSource.show))  # type: ignore[arg-type]
+        .options(selectinload(UnmatchedSource.title))  # type: ignore[arg-type]
         .order_by(col(UnmatchedSource.created_at).desc())
     )
     return [
@@ -89,11 +89,11 @@ def import_unmatched_source(
             detail=f"No plugin imports {url}",
         )
 
-    show = session.exec(
-        select(Show).where(Show.id == unmatched_source.show_id),
+    title = session.exec(
+        select(Title).where(Title.id == unmatched_source.title_id),
     ).one_or_none()
-    if show is None:
-        raise HTTPException(status_code=404, detail="Show not found")
+    if title is None:
+        raise HTTPException(status_code=404, detail="Title not found")
 
     plugin_instance = plugin_class(session)
     try:
@@ -102,7 +102,7 @@ def import_unmatched_source(
         raise HTTPException(status_code=400, detail=str(error)) from error
 
     for result in results:
-        match_show_to_tmdb(session, result.show, show)
+        match_title_to_tmdb(session, result.title, title)
 
     session.delete(unmatched_source)
     session.commit()

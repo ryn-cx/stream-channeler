@@ -19,13 +19,13 @@ def build_url(path: str) -> str:
 
 
 # TODO: Validate
-def series_url(show_key: str) -> str:
-    return build_url(f"series/{show_key}")
+def series_url(title_key: str) -> str:
+    return build_url(f"series/{title_key}")
 
 
 # TODO: Validate
-def movie_url(show_key: str) -> str:
-    return build_url(f"movies/{show_key}")
+def movie_url(title_key: str) -> str:
+    return build_url(f"movies/{title_key}")
 
 
 # TODO: Validate
@@ -58,27 +58,27 @@ def is_movie(content: ContentModel) -> bool:
 
 
 # TODO: Validate
-def build_season_key(show_key: str, season_id: str) -> str:
-    """Encode the show key into the season key.
+def build_season_key(title_key: str, season_id: str) -> str:
+    """Encode the title key into the season key.
 
-    Every entity's data comes from the single content file keyed by the show,
+    Every entity's data comes from the single content file keyed by the title,
     but the base plugin resolves episode files from a season key alone, so the
-    show key is carried inside it.
+    title key is carried inside it.
     """
-    return f"{show_key}:{season_id}"
+    return f"{title_key}:{season_id}"
 
 
 # TODO: Validate
-def movie_season_key(show_key: str) -> str:
+def movie_season_key(title_key: str) -> str:
     # A movie has no seasons of its own so its single season is given a
     # fixed id.
-    return build_season_key(show_key, "0")
+    return build_season_key(title_key, "0")
 
 
 # TODO: Validate
 def split_season_key(season_key: str) -> tuple[str, str]:
-    show_key, _, season_id = season_key.partition(":")
-    return show_key, season_id
+    title_key, _, season_id = season_key.partition(":")
+    return title_key, season_id
 
 
 # TODO: Validate

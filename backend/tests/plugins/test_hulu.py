@@ -70,11 +70,11 @@ class TestMovie(StandardTests[Hulu], TMDBLookupTests[Hulu], HuluValidator):
     import_time = datetime(2026, 9, 2, tzinfo=UTC)
     update_time = datetime(2026, 9, 3, tzinfo=UTC)
     movie_id = "34bc6b99-813f-4d5d-bbe7-f3099b45879b"
-    show_slug = "the-devil-wears-prada-2"
+    title_slug = "the-devil-wears-prada-2"
     urls = (
         "/movie/{movie_id}",
         "/movie/{movie_id}/",
-        "/movie/{show_slug}-{movie_id}",
+        "/movie/{title_slug}-{movie_id}",
         "/watch/{movie_id}",
     )
 
@@ -88,11 +88,11 @@ class TestMovie(StandardTests[Hulu], TMDBLookupTests[Hulu], HuluValidator):
 # TODO: Validate
 class TestSeries(StandardTests[Hulu], TMDBLookupTests[Hulu], HuluValidator):
     series_id = "7117a15d-128c-4c2b-a5b9-98adfa0f4505"
-    show_slug = "chad-powers"
+    title_slug = "chad-powers"
     urls = (
         "/series/{series_id}",
         "/series/{series_id}/",
-        "/series/{show_slug}-{series_id}",
+        "/series/{title_slug}-{series_id}",
     )
 
 

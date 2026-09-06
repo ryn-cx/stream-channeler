@@ -10,8 +10,8 @@ def build_url(path: str) -> str:
 
 
 # TODO: Validate
-def show_url(show_key: str) -> str:
-    return build_url(f"shows/{show_key}/")
+def title_url(title_key: str) -> str:
+    return build_url(f"shows/{title_key}/")
 
 
 # TODO: Validate
@@ -25,11 +25,11 @@ def search_url() -> str:
 
 
 # TODO: Validate
-def build_season_key(show_key: str, season_number: int) -> str:
-    return f"{show_key}:{season_number}"
+def build_season_key(title_key: str, season_number: int) -> str:
+    return f"{title_key}:{season_number}"
 
 
 # TODO: Validate
 def split_season_key(season_key: str) -> tuple[str, int]:
-    show_key, _, season_number = season_key.rpartition(":")
-    return show_key, int(season_number)
+    title_key, _, season_number = season_key.rpartition(":")
+    return title_key, int(season_number)

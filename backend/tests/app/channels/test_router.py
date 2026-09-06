@@ -39,7 +39,7 @@ READ_PATHS = [
     "",
     "/combined-channels",
     "/episodes",
-    "/shows",
+    "/titles",
     "/sources",
 ]
 

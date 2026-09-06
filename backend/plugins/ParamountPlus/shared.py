@@ -11,7 +11,7 @@ from plugins.ParamountPlus.utils import search_url
 # https://www.paramountplus.com/movies/video/ALVE01KT235XQDEK58R7H2012VNZMK/
 MOVIE_URL_REGEX = r"\/movies\/video\/(?P<movie_key>[A-Za-z0-9]+)(?:\/|$)"
 # https://www.paramountplus.com/shows/south-park/
-SHOW_URL_REGEX = r"\/shows\/(?P<show_key>[a-z0-9-]+)(?:\/|$)"
+TITLE_URL_REGEX = r"\/shows\/(?P<title_key>[a-z0-9-]+)(?:\/|$)"
 
 
 # TODO: Validate

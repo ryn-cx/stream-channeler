@@ -19,8 +19,8 @@ from plugins.utils.base_plugin.search import BaseCatalogueSearchMixin
 if TYPE_CHECKING:
     from datetime import datetime
 
-    from app.shows.models import Show
     from app.sources.models import Source
+    from app.titles.models import Title
 
 
 # TODO: Validate
@@ -50,7 +50,7 @@ class HiDive(
 
     # TODO: Validate
     @override
-    def get_media_importer(self, input: Show | str) -> HiDiveMedia:
+    def get_media_importer(self, input: Title | str) -> HiDiveMedia:
         if isinstance(input, str):
             domain_regex = self._domain_regex()
             if re.match(domain_regex + SERIES_URL_REGEX, input):
@@ -64,7 +64,7 @@ class HiDive(
             raise InvalidURLError(msg)
 
         if not input.media_type:
-            msg = "Show.media_type is not set."
+            msg = "Title.media_type is not set."
             raise AttributeError(msg)
         if input.media_type == "Movie":
             return HiDiveMovie(self)

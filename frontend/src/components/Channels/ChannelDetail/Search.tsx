@@ -4,7 +4,7 @@ import { Check, ChevronLeft, ChevronRight, Plus, Search } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import type { PluginSearchResult, TMDBMediaInfo } from "@/client"
 import { ChannelsService, PluginsService } from "@/client"
-import { useAllChannelShows } from "@/components/Channels/useChannelShows"
+import { useAllChannelTitles } from "@/components/Channels/useChannelTitles"
 import { SourceOptionLabel } from "@/components/Common/SourceOptionLabel"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
@@ -63,7 +63,7 @@ function useAddToQueue(channelId: string) {
         requestBody: [url],
       }),
     onSuccess: (queue) => {
-      showSuccessToast("Show added to import queue")
+      showSuccessToast("Title added to import queue")
       queryClient.setQueryData(["channelQueue", channelId], queue)
     },
     onError: handleError.bind(showErrorToast),
@@ -71,7 +71,7 @@ function useAddToQueue(channelId: string) {
 }
 
 // A TMDB result's URL is the title's own TMDB page, so it names the same title
-// as a channel show's `TMDB tv 123` identifier even when the channel holds that
+// as a channel title's `TMDB tv 123` identifier even when the channel holds that
 // title from some other service.
 const TMDB_TITLE_URL_PATTERN = /themoviedb\.org\/(tv|movie)\/(\d+)/
 
@@ -79,12 +79,12 @@ const TMDB_TITLE_URL_PATTERN = /themoviedb\.org\/(tv|movie)\/(\d+)/
 // a service is matched on its own URL, and a TMDB result on the title it names.
 // TODO: Validate
 function useIsInChannel(channelId: string) {
-  const { data: showsData } = useAllChannelShows(channelId)
+  const { data: titlesData } = useAllChannelTitles(channelId)
 
-  const shows = showsData?.shows ?? []
-  const urls = new Set(shows.map((show) => show.url))
+  const titles = titlesData?.titles ?? []
+  const urls = new Set(titles.map((title) => title.url))
   const tmdbIds = new Set(
-    shows.map((show) => show.tmdb_id).filter((id) => id != null),
+    titles.map((title) => title.tmdb_id).filter((id) => id != null),
   )
 
   return (url: string) => {
@@ -481,7 +481,7 @@ export function MediaInfoModal({
           ) : info && detail ? (
             <>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-                <span>{movie ? "Movie" : "TV Show"}</span>
+                <span>{movie ? "Movie" : "TV Title"}</span>
                 {metaLine(result!, detail).map((part) => (
                   <span key={part} className="flex items-center gap-2">
                     <span className="text-muted-foreground/50">•</span>
@@ -538,13 +538,13 @@ export function MediaInfoModal({
   )
 }
 
-interface ShowSearchProps {
+interface TitleSearchProps {
   channelId: string
   initialQuery?: string
 }
 
 // TODO: Validate
-export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
+export function TitleSearch({ channelId, initialQuery }: TitleSearchProps) {
   const [searchQuery, setSearchQuery] = useState(initialQuery ?? "")
 
   useEffect(() => {
@@ -690,7 +690,7 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
         <Input
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Search for a show or movie..."
+          placeholder="Search for a title or movie..."
           onKeyDown={(event) => {
             if (event.key === "Enter") handleSearch()
           }}

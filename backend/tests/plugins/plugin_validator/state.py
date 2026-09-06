@@ -38,21 +38,21 @@ _PLUGIN_TABLE = "plugin"
 _SOURCE_TABLE = "source"
 _PLUGIN_ID_COLUMN = "plugin_id"
 _SOURCES_FIELD = "sources"
-_SHOWS_FIELD = "shows"
+_TITLES_FIELD = "titles"
 
 _MEDIA_TREE = (
     ("season", "episode", "season_id", "episodes"),
-    ("show", "season", "show_id", "seasons"),
-    ("source", "show", "source_id", _SHOWS_FIELD),
+    ("title", "season", "title_id", "seasons"),
+    ("source", "title", "source_id", _TITLES_FIELD),
 )
 """What holds what, from the bottom up, and the column that says which one.
 
 Read in this order so that a row is written inside its parent with its own
 children already inside it. The sources are left until after the empty ones have
-been dropped, which cannot be told until the shows are in place.
+been dropped, which cannot be told until the titles are in place.
 """
 
-_NESTED_TABLES = frozenset({"source", "show", "season", "episode"})
+_NESTED_TABLES = frozenset({"source", "title", "season", "episode"})
 """The tables written inside their parent rather than as a list of their own."""
 
 _KEY_COLUMNS = ("key", "email", "name")
@@ -187,7 +187,7 @@ def _nest(
 ) -> None:
     """Write each row of `child_table` inside the row it hangs off.
 
-    Read from the bottom up, so a season is written inside its show with its
+    Read from the bottom up, so a season is written inside its title with its
     episodes already inside it.
     """
     by_parent: dict[uuid.UUID, list[RowValues]] = defaultdict(list)
@@ -201,7 +201,7 @@ def _nest(
 
 
 # TODO: Validate
-def _has_shows(dumped_source: RowValues) -> bool:
+def _has_titles(dumped_source: RowValues) -> bool:
     """Report whether anything was imported into the source.
 
     A plugin gives every provider it tracks a source whether or not anything was
@@ -210,7 +210,7 @@ def _has_shows(dumped_source: RowValues) -> bool:
     is nothing, and what it does to the dump is bury the rows that do say
     something.
     """
-    return bool(dumped_source[_SHOWS_FIELD])
+    return bool(dumped_source[_TITLES_FIELD])
 
 
 # TODO: Validate
@@ -218,7 +218,7 @@ def database_json(session: Session) -> str:
     """Return the whole database, bar the excluded tables, as its stored text.
 
     The media is written as the tree it is - a plugin holding its sources, each
-    holding its shows, and so on down to the episodes - rather than as one list
+    holding its titles, and so on down to the episodes - rather than as one list
     per table, so what a run produced is read where it belongs rather than looked
     up by the key it points at.
     """
@@ -245,7 +245,7 @@ def database_json(session: Session) -> str:
     dumped[_SOURCE_TABLE] = [
         (row, dumped_row)
         for row, dumped_row in dumped[_SOURCE_TABLE]
-        if _has_shows(dumped_row)
+        if _has_titles(dumped_row)
     ]
     _nest(dumped, _PLUGIN_TABLE, _SOURCE_TABLE, _PLUGIN_ID_COLUMN, _SOURCES_FIELD)
 

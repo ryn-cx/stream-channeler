@@ -13,7 +13,7 @@ from app.canonical_media.tmdb import (
 )
 from app.episodes.models import Episode
 from app.media.media_type import TMDBMediaType
-from app.shows.models import Show
+from app.titles.models import Title
 
 if TYPE_CHECKING:
     from plugins.TMDB.linking import TMDBLinking
@@ -25,11 +25,11 @@ class TmdbEpisodeFacts:
     def __init__(
         self,
         session: Session,
-        canonical_shows: Sequence[Show],
+        canonical_titles: Sequence[Title],
         canonical_episodes: Sequence[Episode],
     ) -> None:
         self.session = session
-        self.canonical_shows = canonical_shows
+        self.canonical_titles = canonical_titles
         self.canonical_episodes = canonical_episodes
 
     # TODO: Validate
@@ -61,13 +61,13 @@ class TmdbEpisodeFacts:
         )
         tmdb = self._tmdb(self.session)
         by_tmdb_id: dict[int, dict[int, frozenset[str]]] = {}
-        for canonical_show in self.canonical_shows:
-            media_type, tmdb_show_id = parse_tmdb_key(canonical_show.key)
+        for canonical_title in self.canonical_titles:
+            media_type, tmdb_title_id = parse_tmdb_key(canonical_title.key)
             if media_type is not TMDBMediaType.tv:
                 continue
-            if tmdb_show_id not in cache:
-                cache[tmdb_show_id] = tmdb.alternate_episode_numbers(tmdb_show_id)
-            by_tmdb_id |= cache[tmdb_show_id]
+            if tmdb_title_id not in cache:
+                cache[tmdb_title_id] = tmdb.alternate_episode_numbers(tmdb_title_id)
+            by_tmdb_id |= cache[tmdb_title_id]
 
         alternate_numbers: dict[uuid.UUID, dict[int, frozenset[str]]] = {}
         for tmdb_episode in self.canonical_episodes:

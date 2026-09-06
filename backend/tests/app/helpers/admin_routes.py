@@ -1,7 +1,7 @@
 # TODO: Validate
 """The one permission test every admin route answers to.
 
-Media - plugins, sources, shows, seasons, episodes, files - belongs to nobody and
+Media - plugins, sources, titles, seasons, episodes, files - belongs to nobody and
 is the same for everybody, so its routes have one rule between them: an admin may
 use them and nobody else may. The record an id names does not matter to that
 rule, which is why these pass an id that names nothing: a superuser reaching a

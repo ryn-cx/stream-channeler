@@ -37,11 +37,13 @@ def diving_board() -> DivingBoard:
 
 # TODO: Validate
 class Season(EndpointFile[season_models.SeasonModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> SeasonEndpoint:
         return diving_board().season
 
-    # Occurs when the user imports an invalid TV show url.
+    # Occurs when the user imports an invalid TV title url.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, SeasonNotFoundError)
@@ -49,11 +51,13 @@ class Season(EndpointFile[season_models.SeasonModel]):
 
 # TODO: Validate
 class Vod(EndpointFile[vod_models.VodModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> VodEndpoint:
         return diving_board().vod
 
     # Occurs when the user imports an invalid movie url.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, VodNotFoundError)
@@ -61,11 +65,13 @@ class Vod(EndpointFile[vod_models.VodModel]):
 
 # TODO: Validate
 class Series(EndpointFile[series_models.SeriesModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> SeriesEndpoint:
         return diving_board().series
 
     # Occurs when the user imports an invalid series url.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, SeriesNotFoundError)
@@ -73,10 +79,12 @@ class Series(EndpointFile[series_models.SeriesModel]):
 
 # TODO: Validate
 class Schedule(PagedEndpointFile[schedule_models.ScheduleModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> ScheduleEndpoint:
         return diving_board().schedule
 
+    # TODO: Validate
     @override
     def _download_pages(self) -> list[str]:
         # Start at the first of the month because it matches the normal API calls.
@@ -92,10 +100,12 @@ class Schedule(PagedEndpointFile[schedule_models.ScheduleModel]):
 
 # TODO: Validate
 class Search(EndpointFile[search_models.SearchModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> SearchEndpoint:
         return diving_board().search
 
+    # TODO: Validate
     @override
     def _next_update_at(self) -> datetime:
         return tz_datetime.now() + timedelta(days=30)

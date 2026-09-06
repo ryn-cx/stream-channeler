@@ -35,12 +35,12 @@ def same_issuer_clause(
 ) -> ColumnElement[bool]:
     """Return the filter matching two keys that were issued by the same source.
 
-    A canonical show's own catalogue is the run of records whoever issued the
-    show issued, so a row a website minted under a show TMDB issued is a record
-    of the website's rather than one of the show's own. A website carries an
-    episode the show has no record of - an extra it filed under the season, a
+    A canonical title's own catalogue is the run of records whoever issued the
+    title issued, so a row a website minted under a title TMDB issued is a record
+    of the website's rather than one of the title's own. A website carries an
+    episode the title has no record of - an extra it filed under the season, a
     film it sells as part of the series - and a canonical row is minted for it
-    so the row has something to hang off, but the show it was filed under
+    so the row has something to hang off, but the title it was filed under
     still does not hold it.
     """
     return key_issuer(first) == key_issuer(second)

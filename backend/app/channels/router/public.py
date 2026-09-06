@@ -11,31 +11,31 @@ from app.auth.dependencies import (
 )
 from app.channels.dependencies import (
     ReadableChannel,
-    ReadableChannelCanonicalShow,
+    ReadableChannelCanonicalTitle,
 )
 from app.channels.schemas import (
     ChannelEpisodesOutput,
     ChannelOptions,
     ChannelOutput,
     ChannelReadOptions,
-    ChannelShowsOutput,
-    ChannelShowStats,
     ChannelsPublic,
+    ChannelTitlesOutput,
+    ChannelTitleStats,
     CombinedChannelOutput,
     SortOptionOutput,
     WhitelistEpisodesOutput,
-    WhitelistShowOutput,
+    WhitelistTitleOutput,
 )
 from app.channels.service import (
     channels,
     combined,
     episodes,
     ordering,
-    shows,
     sources,
+    titles,
     whitelist,
 )
-from app.channels.service.shows import CHANNEL_SHOW_PAGE
+from app.channels.service.titles import CHANNEL_TITLE_PAGE
 from app.channels.service.whitelist import WHITELIST_EPISODE_PAGE
 from app.sources.schemas import SourcePublic
 from app.users.dependencies import OptionalUser
@@ -87,26 +87,26 @@ def get_channel_episodes(
 
 # FAST003 - Parameter is used by ReadableChannel.
 # TODO: Validate
-@channels_router.get("/{channel_id}/shows")  # noqa: FAST003
-def get_channel_shows(
+@channels_router.get("/{channel_id}/titles")  # noqa: FAST003
+def get_channel_titles(
     channel: ReadableChannel,
     user: OptionalUser,
     session: SessionDep,
     offset: Annotated[int, Query(ge=0)] = 0,
-    limit: Annotated[int, Query(ge=1, le=CHANNEL_SHOW_PAGE)] = CHANNEL_SHOW_PAGE,
-) -> ChannelShowsOutput:
-    """Read all shows for a channel, including those from its child channels."""
-    return shows.channel_shows_output(channel, user, session, offset, limit)
+    limit: Annotated[int, Query(ge=1, le=CHANNEL_TITLE_PAGE)] = CHANNEL_TITLE_PAGE,
+) -> ChannelTitlesOutput:
+    """Read all titles for a channel, including those from its child channels."""
+    return titles.channel_titles_output(channel, user, session, offset, limit)
 
 
 # TODO: Validate
-@channels_router.get("/{channel_id}/shows/stats")  # noqa: FAST003
-def get_channel_show_stats(
+@channels_router.get("/{channel_id}/titles/stats")  # noqa: FAST003
+def get_channel_title_stats(
     channel: ReadableChannel,  # noqa: ARG001
     session: SessionDep,
-    canonical_show_ids: Annotated[list[uuid.UUID], Query()],
-) -> dict[uuid.UUID, ChannelShowStats]:
-    return shows.channel_show_stats_output(session, canonical_show_ids)
+    canonical_title_ids: Annotated[list[uuid.UUID], Query()],
+) -> dict[uuid.UUID, ChannelTitleStats]:
+    return titles.channel_title_stats_output(session, canonical_title_ids)
 
 
 # FAST003 - Parameter is used by ReadableChannel.
@@ -120,25 +120,25 @@ def get_channel_sources(
     return sources.channel_sources_output(channel, session)
 
 
-# FAST003 - Parameter is used by ReadableChannelCanonicalShow.
+# FAST003 - Parameter is used by ReadableChannelCanonicalTitle.
 # TODO: Validate
-@channels_router.get("/{channel_id}/whitelist/{canonical_show_id}")  # noqa: FAST003
+@channels_router.get("/{channel_id}/whitelist/{canonical_title_id}")  # noqa: FAST003
 def get_channel_whitelist(
     session: SessionDep,
-    channel_show: ReadableChannelCanonicalShow,
-) -> WhitelistShowOutput:
+    channel_title: ReadableChannelCanonicalTitle,
+) -> WhitelistTitleOutput:
     """Read the sites and seasons of a title's filters in a channel."""
-    return whitelist.channel_whitelist_output(session, channel_show)
+    return whitelist.channel_whitelist_output(session, channel_title)
 
 
-# FAST003 - Parameters are used by ReadableChannelCanonicalShow.
+# FAST003 - Parameters are used by ReadableChannelCanonicalTitle.
 # TODO: Validate
 @channels_router.get(
-    "/{channel_id}/whitelist/{canonical_show_id}/seasons/{season_id}/episodes",  # noqa: FAST003
+    "/{channel_id}/whitelist/{canonical_title_id}/seasons/{season_id}/episodes",  # noqa: FAST003
 )
 def get_channel_whitelist_episodes(
     session: SessionDep,
-    channel_show: ReadableChannelCanonicalShow,
+    channel_title: ReadableChannelCanonicalTitle,
     season_id: uuid.UUID,
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=WHITELIST_EPISODE_PAGE)] = (
@@ -148,7 +148,7 @@ def get_channel_whitelist_episodes(
     """Read one page of a season's episodes, as the filter page expands it."""
     return whitelist.channel_whitelist_episodes_output(
         session,
-        channel_show,
+        channel_title,
         season_id,
         offset,
         limit,

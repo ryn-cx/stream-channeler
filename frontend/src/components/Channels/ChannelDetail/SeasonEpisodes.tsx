@@ -39,12 +39,12 @@ export function episodeLabel(episode: WhitelistEpisodeOutput) {
 
 interface SeasonEpisodesProps {
   channelId: string
-  canonicalShowId: string
+  canonicalTitleId: string
   seasonId: string
   /** Whether the season itself carries an entry, which the labels read against. */
   seasonEnabled: boolean
-  sourcesByShowId: Map<string, WhitelistSourceOutput>
-  tmdbShowIds: Set<string>
+  sourcesByTitleId: Map<string, WhitelistSourceOutput>
+  tmdbTitleIds: Set<string>
   isEpisodeMarked: (episode: WhitelistEpisodeOutput) => boolean
   episodeExpiry: (episode: WhitelistEpisodeOutput) => string
   onEpisodeClick: (episode: WhitelistEpisodeOutput) => void
@@ -60,17 +60,17 @@ interface SeasonEpisodesProps {
 /**
  * The episodes of one season, read a page at a time as the season is expanded.
  *
- * A title's whole catalogue is far more than the filter page ever shows at
+ * A title's whole catalogue is far more than the filter page ever titles at
  * once, so a season's episodes are asked for only when somebody opens it.
  */
 // TODO: Validate
 export function SeasonEpisodes({
   channelId,
-  canonicalShowId,
+  canonicalTitleId,
   seasonId,
   seasonEnabled,
-  sourcesByShowId,
-  tmdbShowIds,
+  sourcesByTitleId,
+  tmdbTitleIds,
   isEpisodeMarked,
   episodeExpiry,
   onEpisodeClick,
@@ -88,16 +88,16 @@ export function SeasonEpisodes({
 
   const { data, isLoading } = useQuery({
     queryKey: [
-      "channelShowSeasonEpisodes",
+      "channelTitleSeasonEpisodes",
       channelId,
-      canonicalShowId,
+      canonicalTitleId,
       seasonId,
       offset,
     ],
     queryFn: () =>
       ChannelsService.getChannelWhitelistEpisodes({
         channelId,
-        canonicalShowId,
+        canonicalTitleId,
         seasonId,
         offset,
         limit: PAGE_SIZE,
@@ -120,12 +120,12 @@ export function SeasonEpisodes({
   }
 
   // TODO: Validate
-  const catalogueShowIds = (showIds: string[]) =>
-    showIds.filter((showId) => tmdbShowIds.has(showId))
+  const catalogueTitleIds = (titleIds: string[]) =>
+    titleIds.filter((titleId) => tmdbTitleIds.has(titleId))
 
   // TODO: Validate
-  const watchableShowIds = (showIds: string[]) =>
-    showIds.filter((showId) => !tmdbShowIds.has(showId))
+  const watchableTitleIds = (titleIds: string[]) =>
+    titleIds.filter((titleId) => !tmdbTitleIds.has(titleId))
 
   if (isLoading && !data) {
     return (
@@ -155,7 +155,7 @@ export function SeasonEpisodes({
       {episodes.map((episode) => {
         const episodeEnabled = isEpisodeMarked(episode)
         const expiry = episodeExpiry(episode)
-        const episodeTmdbShowIds = catalogueShowIds(episode.show_ids)
+        const episodeTmdbTitleIds = catalogueTitleIds(episode.title_ids)
         return (
           <div key={episode.canonical_episode_id}>
             <div className="flex items-center gap-2 p-2 hover:bg-accent/30 rounded">
@@ -174,10 +174,10 @@ export function SeasonEpisodes({
                 )}
               </Button>
               <span className="flex items-center">
-                {episodeTmdbShowIds.length > 0 && (
+                {episodeTmdbTitleIds.length > 0 && (
                   <SourceFavicons
-                    showIds={episodeTmdbShowIds}
-                    sourcesByShowId={sourcesByShowId}
+                    titleIds={episodeTmdbTitleIds}
+                    sourcesByTitleId={sourcesByTitleId}
                   />
                 )}
               </span>
@@ -196,8 +196,8 @@ export function SeasonEpisodes({
                 )}
               </button>
               <SourceFavicons
-                showIds={watchableShowIds(episode.show_ids)}
-                sourcesByShowId={sourcesByShowId}
+                titleIds={watchableTitleIds(episode.title_ids)}
+                sourcesByTitleId={sourcesByTitleId}
               />
               {!readOnly && (
                 <Button
@@ -226,7 +226,7 @@ export function SeasonEpisodes({
             {informationEpisodeId === episode.canonical_episode_id && (
               <div className="ml-16 space-y-1">
                 {episode.links.map((link) => {
-                  const linkSource = sourcesByShowId.get(link.show_id)
+                  const linkSource = sourcesByTitleId.get(link.title_id)
                   return (
                     <div key={link.episode_id}>
                       <div className="flex items-center gap-2 p-2 hover:bg-accent/30 rounded">

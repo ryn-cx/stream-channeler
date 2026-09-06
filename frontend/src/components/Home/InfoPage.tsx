@@ -96,7 +96,7 @@ export function InfoPage() {
             </div>
             <p className="text-muted-foreground">
               Channels only air when you want them to. No more missing your
-              favorite shows or waiting for specific air times.
+              favorite titles or waiting for specific air times.
             </p>
           </Card>
 
@@ -206,7 +206,7 @@ export function InfoPage() {
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-primary shrink-0" />
-                  <span>Up to 20 shows per channel</span>
+                  <span>Up to 20 titles per channel</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-primary shrink-0" />
@@ -251,7 +251,7 @@ export function InfoPage() {
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-primary shrink-0" />
-                  <span>Unlimited shows per channel</span>
+                  <span>Unlimited titles per channel</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-primary shrink-0" />

@@ -7,8 +7,8 @@ from abc import ABC
 from datetime import datetime
 
 from app.models import BaseMediaMixin
-from app.shows.models import Show
 from app.sources.models import Source
+from app.titles.models import Title
 from app.utils import tz_datetime
 from plugins.utils.base_plugin.core import BasePluginCore
 from plugins.utils.base_plugin.outdated_check import BaseOutdatedCheckMixin
@@ -25,20 +25,20 @@ class BaseUpsertMixin(BasePluginCore, BaseOutdatedCheckMixin, ABC):
         return tz_datetime.now()
 
     # TODO: Validate
-    def upsert_show(
+    def upsert_title(
         self,
         source: Source,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
-    ) -> Show:
-        """Store the listing `show_key` names."""
+    ) -> Title:
+        """Store the listing `title_key` names."""
         # Not an abstractmethod, because a plugin that reads a title as one of
         # several kinds writes each kind on its own and has nothing to write for
         # a title it has not been told the kind of. Such a plugin is still a
         # plugin, so what it cannot answer is raised when asked rather than kept
         # from being built at all.
-        msg = f"{self.plugin_name()} does not upsert shows."
+        msg = f"{self.plugin_name()} does not upsert titles."
         raise NotImplementedError(msg)
 
     # TODO: Validate

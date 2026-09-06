@@ -27,7 +27,7 @@ def build_url(path: str) -> str:
 
 
 # TODO: Validate
-def show_url(entity_id: str) -> str:
+def title_url(entity_id: str) -> str:
     return build_url(f"browse/entity-{entity_id}")
 
 
@@ -42,20 +42,20 @@ def search_url() -> str:
 
 
 # TODO: Validate
-def build_season_key(show_key: str, season_id: str) -> str:
-    return f"{show_key}:{season_id}"
+def build_season_key(title_key: str, season_id: str) -> str:
+    return f"{title_key}:{season_id}"
 
 
 # TODO: Validate
 def split_season_key(season_key: str) -> tuple[str, str]:
-    show_key, _, season_id = season_key.partition(":")
-    return show_key, season_id
+    title_key, _, season_id = season_key.partition(":")
+    return title_key, season_id
 
 
 # TODO: Validate
 def season_number_from_name(name: str, fallback: int) -> int:
     # Season names are the only place the real season number appears, the
-    # position of a season in the list is not reliable because shows can
+    # position of a season in the list is not reliable because titles can
     # start at a season other than 1.
     if number := re.search(r"\d+", name):
         return int(number.group())

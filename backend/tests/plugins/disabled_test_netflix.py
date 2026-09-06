@@ -10,10 +10,10 @@ class NetflixValidator(PluginValidator[Netflix]):
 
 # TODO: Validate
 class TestDrStone(StandardTests[Netflix], NetflixValidator):
-    """Test a show with more than 10 episodes in a season."""
+    """Test a title with more than 10 episodes in a season."""
 
-    show_id = "81046193"
+    title_id = "81046193"
     urls = (
-        "/title/{show_id}",
-        "/title/{show_id}/",
+        "/title/{title_id}",
+        "/title/{title_id}/",
     )

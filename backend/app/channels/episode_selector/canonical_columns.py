@@ -9,7 +9,7 @@ each level is joined through the pointer the non-canonical row already carries
 and read straight off, with no stand-in to fall back to.
 
 Every level is already joined by `EpisodeQueryBuilder`, which reaches all three
-to work out which canonical show an episode belongs to and whether that show
+to work out which canonical title an episode belongs to and whether that title
 holds it, so they are read from there rather than joined again.
 """
 
@@ -22,7 +22,7 @@ from sqlmodel import col
 from app.channels.episode_selector.canonical_entities import (
     CANONICAL_EPISODE,
     CANONICAL_SEASON,
-    CANONICAL_SHOW,
+    CANONICAL_TITLE,
     season_id,
 )
 from app.episodes.models import Episode
@@ -36,7 +36,7 @@ class CanonicalColumns:
     _MODELS: ClassVar[dict[str, Any]] = {
         "episode": CANONICAL_EPISODE,
         "season": CANONICAL_SEASON,
-        "show": CANONICAL_SHOW,
+        "title": CANONICAL_TITLE,
     }
 
     # What the canonical row of each level holds. Anything else belongs to the
@@ -57,7 +57,7 @@ class CanonicalColumns:
         "season": frozenset(
             {"name", "season_number", "image_url", "thumbnail_url", "sort_order"},
         ),
-        "show": frozenset(
+        "title": frozenset(
             {"name", "media_type", "description", "image_url", "thumbnail_url"},
         ),
     }
@@ -68,7 +68,7 @@ class CanonicalColumns:
     }
 
     # The non-canonical row standing in for a level whose canonical row is
-    # absent. A canonical show is always reached, so only the two levels below it
+    # absent. A canonical title is always reached, so only the two levels below it
     # have one.
     _NON_CANONICAL: ClassVar[dict[str, Any]] = {
         "episode": Episode,
@@ -141,6 +141,6 @@ class CanonicalColumns:
         return season_id()
 
     # TODO: Validate
-    def show_id(self) -> ColumnElement[Any]:
-        """Return the canonical show the episode belongs to."""
-        return cast("ColumnElement[Any]", col(CANONICAL_SHOW.id))
+    def title_id(self) -> ColumnElement[Any]:
+        """Return the canonical title the episode belongs to."""
+        return cast("ColumnElement[Any]", col(CANONICAL_TITLE.id))

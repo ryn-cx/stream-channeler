@@ -10,10 +10,10 @@ class AdultSwimValidator(PluginValidator[AdultSwim]):
 
 # TODO: Validate
 class TestRickAndMorty(StandardTests[AdultSwim], AdultSwimValidator):
-    show_id = "rick-and-morty"
+    title_id = "rick-and-morty"
     urls = (
-        "https://www.adultswim.com/{show_id}",
-        "/{show_id}",
-        "/videos/{show_id}",
-        "/videos/{show_id}/",
+        "https://www.adultswim.com/{title_id}",
+        "/{title_id}",
+        "/videos/{title_id}",
+        "/videos/{title_id}/",
     )

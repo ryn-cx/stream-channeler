@@ -5,8 +5,8 @@ import type { ColumnDef } from "@tanstack/react-table"
 import type {
   ChannelEpisodePlugin,
   ChannelEpisodeSeason,
-  ChannelEpisodeShow,
   ChannelEpisodeSource,
+  ChannelEpisodeTitle,
   EpisodeWithDetails as EpisodeWithDetailsOutput,
 } from "@/client"
 import { CopyId } from "@/components/Common/CopyId"
@@ -16,7 +16,7 @@ import type { WatchFilters } from "@/lib/watchFilters"
 
 export type EpisodeWithDetails = EpisodeWithDetailsOutput & {
   season: ChannelEpisodeSeason
-  show: ChannelEpisodeShow
+  title: ChannelEpisodeTitle
   source: ChannelEpisodeSource
   plugin: ChannelEpisodePlugin
 }
@@ -95,8 +95,8 @@ export const columns: ColumnDef<EpisodeWithDetails>[] = [
   },
 
   {
-    accessorKey: "show.name",
-    header: "Show",
+    accessorKey: "title.name",
+    header: "Title",
   },
 
   {

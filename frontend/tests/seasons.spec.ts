@@ -1,20 +1,20 @@
 // TODO: Validate
 import { expect, test } from "@playwright/test"
 import { showAllResults } from "./utils/dataTable"
-import { openShowSeasons } from "./utils/media"
+import { openTitleSeasons } from "./utils/media"
 import { createUser } from "./utils/privateApi"
 import { randomEmail, randomPassword, randomUsername } from "./utils/random"
 import { logInUser } from "./utils/user"
 
 test("Seasons page is accessible and shows correct title", async ({ page }) => {
-  await openShowSeasons(page)
+  await openTitleSeasons(page)
   await expect(
     page.getByRole("heading", { name: "Seasons", exact: true }),
   ).toBeVisible()
 })
 
 test("Add Season button is visible", async ({ page }) => {
-  await openShowSeasons(page)
+  await openTitleSeasons(page)
   await expect(page.getByRole("button", { name: "Add Season" })).toBeVisible()
 })
 
@@ -30,7 +30,7 @@ test.describe("Seasons management", () => {
 
   test.beforeEach(async ({ page }) => {
     await logInUser(page, email, password)
-    await openShowSeasons(page)
+    await openTitleSeasons(page)
   })
 
   test("Create a new season successfully", async ({ page }) => {
@@ -113,15 +113,15 @@ test.describe("Seasons management", () => {
 test.describe("Seasons empty state", () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
-  test("Shows empty state message when no seasons exist", async ({ page }) => {
+  test("Titles empty state message when no seasons exist", async ({ page }) => {
     const email = randomEmail()
     const password = randomPassword()
     await createUser({ email, password })
     await logInUser(page, email, password)
 
-    await openShowSeasons(page)
+    await openTitleSeasons(page)
 
-    await expect(page.getByText("This show has no seasons yet")).toBeVisible()
+    await expect(page.getByText("This title has no seasons yet")).toBeVisible()
     await expect(page.getByText("Add a season to get started")).toBeVisible()
   })
 })

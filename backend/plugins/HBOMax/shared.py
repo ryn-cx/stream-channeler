@@ -18,7 +18,7 @@ MOVIE_URL_REGEX = rf"\/movies?\/{SLUG_REGEX}(?P<movie_key>{UUID_REGEX})"
 # https://www.hbomax.com/shows/rick-and-morty/s2/ab553cdc-e15d-4597-b65f-bec9201fd2dd
 # The media-type path segment is any of them, e.g. show, shows, mini-series,
 # limited-series.
-SHOW_URL_REGEX = rf"\/[a-z-]+\/{SLUG_REGEX}(?:s\d+\/)?(?P<show_key>{UUID_REGEX})"
+TITLE_URL_REGEX = rf"\/[a-z-]+\/{SLUG_REGEX}(?:s\d+\/)?(?P<title_key>{UUID_REGEX})"
 
 
 # TODO: Validate

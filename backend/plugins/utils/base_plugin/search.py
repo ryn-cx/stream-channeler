@@ -12,7 +12,7 @@ from plugins.utils.base_plugin.base import BasePlugin
 
 
 # TODO: Validate
-class NamedShow(NamedTuple):
+class NamedTitle(NamedTuple):
     """A stored title as the address, name and kind it is known by."""
 
     url: str
@@ -61,11 +61,13 @@ class BaseCatalogueSearchMixin(BasePlugin, ABC):
         The default implementation assumes that the database has every title on the
         website already imported."""
         wanted = self.tmdb_media_type_to_plugin_media_type(media_type)
-        candidates = [show for show in self._named_shows() if show.media_type in wanted]
+        candidates = [
+            title for title in self._named_titles() if title.media_type in wanted
+        ]
         if not candidates:
             return None
 
-        matcher = TextMatcher([show.name for show in candidates])
+        matcher = TextMatcher([title.name for title in candidates])
         best_url: str | None = None
         best_score = 0.0
         for name in names:
@@ -76,15 +78,19 @@ class BaseCatalogueSearchMixin(BasePlugin, ABC):
         return best_url if best_score >= self.MINIMUM_SCORE else None
 
     # TODO: Validate
-    def _named_shows(self) -> list[NamedShow]:
+    def _named_titles(self) -> list[NamedTitle]:
         """Return every stored title as the address and name it is known by.
 
         Keyed by address so a title a website files under more than one source -
         a free listing and a subscription one, say - is offered once.
         """
-        named: dict[str, NamedShow] = {}
-        for source in self._preload_sources(preload_shows=True):
-            for show in source.shows:
-                if show.deleted_at is None and show.name and show.url:
-                    named[show.url] = NamedShow(show.url, show.name, show.media_type)
+        named: dict[str, NamedTitle] = {}
+        for source in self._preload_sources(preload_titles=True):
+            for title in source.titles:
+                if title.deleted_at is None and title.name and title.url:
+                    named[title.url] = NamedTitle(
+                        title.url,
+                        title.name,
+                        title.media_type,
+                    )
         return [named[url] for url in sorted(named)]

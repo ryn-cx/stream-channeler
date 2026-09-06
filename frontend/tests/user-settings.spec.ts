@@ -52,7 +52,7 @@ test.describe("Edit user profile", () => {
     ).toBeVisible()
   })
 
-  test("Edit user email with an invalid email shows error", async ({
+  test("Edit user email with an invalid email titles error", async ({
     page,
   }) => {
     await page.getByRole("button", { name: "Edit" }).click()

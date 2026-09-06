@@ -26,8 +26,8 @@ class WatchHistoryMixin(BaseWatchHistoryMixin, CrunchyrollShared):
                 episode_key=entry["id"],
                 watch_date=tz_datetime.fromisoformat(entry["date_played"]),
                 import_result=WatchImportResult(
-                    show=entry["panel"]["episode_metadata"]["series_title"],
-                    show_url=series_url(
+                    title=entry["panel"]["episode_metadata"]["series_title"],
+                    title_url=series_url(
                         entry["panel"]["episode_metadata"]["series_id"],
                     ),
                     episode=entry["panel"]["title"],

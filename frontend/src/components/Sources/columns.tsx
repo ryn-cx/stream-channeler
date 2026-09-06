@@ -37,7 +37,7 @@ export const sourceColumns: ColumnDef<SourceTableData>[] = [
       ) : (
         <div className="flex items-center gap-2">
           <Link
-            to="/shows"
+            to="/titles"
             search={{ source_id: row.original.id }}
             className="font-medium text-primary hover:underline block max-w-48 whitespace-normal wrap-break-word"
           >

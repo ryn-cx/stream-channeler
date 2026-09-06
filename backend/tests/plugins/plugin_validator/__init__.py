@@ -23,8 +23,8 @@ from app.episodes.models import Episode
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show
 from app.sources.models import Source
+from app.titles.models import Title
 from app.utils import tz_datetime
 from plugins.TMDB import TMDB
 from plugins.utils.abstract_plugin import (
@@ -57,11 +57,11 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
     # Which record of each kind the tests that need one take, counted from the
     # first in the order the keys put them in. The first is what a test wants
     # unless that one says nothing worth reading - a season with a single
-    # episode, a show whose episodes are all alike - and naming another here is
+    # episode, a title whose episodes are all alike - and naming another here is
     # what points a test at one that does. Picking by key order rather than at
     # random is what lets the run be compared against a recording at all.
     source_index: int = 0
-    show_index: int = 0
+    title_index: int = 0
     season_index: int = 0
     episode_index: int = 0
 
@@ -139,7 +139,7 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
     def update(
         self,
         session: Session,
-        entity: Plugin | Source | Show | Season | Episode,
+        entity: Plugin | Source | Title | Season | Episode,
     ) -> None:
         """Update `entity` as of `UPDATE_TIME`."""
         with frozen_clock(self.update_time), mock_update():
@@ -150,7 +150,7 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
     def _update(
         self,
         session: Session,
-        entity: Plugin | Source | Show | Season | Episode,
+        entity: Plugin | Source | Title | Season | Episode,
     ) -> None:
         """Run the update the plugin that owns `entity` has for it."""
         assert entity.data_timestamp
@@ -161,8 +161,8 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
                 owner.update_plugin(plugin=plugin)
             case Source() as source:
                 owner.update_source(source=source)
-            case Show() as show:
-                owner.update_show(show)
+            case Title() as title:
+                owner.update_title(title)
             case Season() as season:
                 owner.update_season(season)
             case Episode() as episode:
@@ -179,13 +179,13 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
         ]
 
     # TODO: Validate
-    def all_shows(self, session: Session) -> list[Show]:
-        """Every live show of every plugin, in the order their keys put them in."""
+    def all_titles(self, session: Session) -> list[Title]:
+        """Every live title of every plugin, in the order their keys put them in."""
         return [
-            show
+            title
             for source in self.all_sources(session)
-            for show in sorted(source.shows, key=lambda show: show.key)
-            if show.deleted_at is None
+            for title in sorted(source.titles, key=lambda title: title.key)
+            if title.deleted_at is None
         ]
 
     # TODO: Validate
@@ -193,8 +193,8 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
         """Every live season of every plugin, in the order their keys put them in."""
         return [
             season
-            for show in self.all_shows(session)
-            for season in sorted(show.seasons, key=lambda season: season.key)
+            for title in self.all_titles(session)
+            for season in sorted(title.seasons, key=lambda season: season.key)
             if season.deleted_at is None
         ]
 
@@ -220,20 +220,20 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
         ]
 
     # TODO: Validate
-    def plugin_shows(self, session: Session) -> list[Show]:
+    def plugin_titles(self, session: Session) -> list[Title]:
         return [
-            show
+            title
             for source in self.plugin_sources(session)
-            for show in sorted(source.shows, key=lambda show: show.key)
-            if show.deleted_at is None
+            for title in sorted(source.titles, key=lambda title: title.key)
+            if title.deleted_at is None
         ]
 
     # TODO: Validate
     def plugin_seasons(self, session: Session) -> list[Season]:
         return [
             season
-            for show in self.plugin_shows(session)
-            for season in sorted(show.seasons, key=lambda season: season.key)
+            for title in self.plugin_titles(session)
+            for season in sorted(title.seasons, key=lambda season: season.key)
             if season.deleted_at is None
         ]
 
@@ -257,9 +257,9 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
         return self.plugin_sources(session)[self.source_index]
 
     # TODO: Validate
-    def selected_show(self, session: Session) -> Show:
-        """Return the show a test that works on one takes."""
-        return self.plugin_shows(session)[self.show_index]
+    def selected_title(self, session: Session) -> Title:
+        """Return the title a test that works on one takes."""
+        return self.plugin_titles(session)[self.title_index]
 
     # TODO: Validate
     def selected_season(self, session: Session) -> Season:
@@ -272,8 +272,8 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
         return self.plugin_episodes(session)[self.episode_index]
 
     # TODO: Validate
-    def fake_season(self, show: Show) -> Season:
-        """Build a season `show` does not have, for an update to soft delete.
+    def fake_season(self, title: Title) -> Season:
+        """Build a season `title` does not have, for an update to soft delete.
 
         Written out in full rather than generated, because a randomly built
         record is a different record on every run and so a different dump.
@@ -284,7 +284,7 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
             url="https://example.com/fake-season",
             season_number=9999,
             sort_order=9999,
-            show_id=show.id,
+            title_id=title.id,
             data_timestamp=tz_datetime.now(),
             deleted_at=tz_datetime.now(),
         )
@@ -304,9 +304,9 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
             sort_order=9999,
             duration=1,
             season_id=season.id,
-            plugin_key=season.show.source.plugin.key,
+            plugin_key=season.title.source.plugin.key,
             watch_identifier=watch_identifier(
-                season.show.source.plugin.key,
+                season.title.source.plugin.key,
                 FAKE_EPISODE_KEY,
             ),
             data_timestamp=tz_datetime.now(),
@@ -442,16 +442,16 @@ class TMDBLookupTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
             pytest.skip()
 
         self.import_url(session_with_files)
-        tmdb_shows = [
-            show
-            for show in self.all_shows(session_with_files)
-            if show.source.plugin.key == TMDB_PLUGIN_KEY
+        tmdb_titles = [
+            title
+            for title in self.all_titles(session_with_files)
+            if title.source.plugin.key == TMDB_PLUGIN_KEY
         ]
-        assert tmdb_shows, "The import looked nothing up on TMDB."
+        assert tmdb_titles, "The import looked nothing up on TMDB."
 
-        tmdb_urls = [show.url for show in tmdb_shows]
-        for show in tmdb_shows:
-            session_with_files.delete(show)
+        tmdb_urls = [title.url for title in tmdb_titles]
+        for title in tmdb_titles:
+            session_with_files.delete(title)
         session_with_files.flush()
         session_with_files.expire_all()
 
@@ -513,9 +513,9 @@ class UpdateSourceTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
             self._create_source_update_entry(self.imported_plugin, source, timestamp)
             # Seed update_at later than the pending air_date so set_update_at
             # overwrites it with the earlier value.
-            for show in source.shows:
-                show.update_at = timestamp + timedelta(minutes=1)
-                for season in show.seasons:
+            for title in source.titles:
+                title.update_at = timestamp + timedelta(minutes=1)
+                for season in title.seasons:
                     if season.update_at:
                         season.update_at = timestamp + timedelta(minutes=1)
 
@@ -525,15 +525,15 @@ class UpdateSourceTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
 
 
 # TODO: Validate
-class UpdateShowTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
-    """Tests that updating a show leaves the database as it was recorded."""
+class UpdateTitleTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
+    """Tests that updating a title leaves the database as it was recorded."""
 
     # TODO: Validate
-    def test_update_show(self, session_with_files: Session) -> None:
+    def test_update_title(self, session_with_files: Session) -> None:
         self.import_url(session_with_files)
         with log_stats(self):
-            self.update(session_with_files, self.selected_show(session_with_files))
-        self.assert_state(session_with_files, "update_show")
+            self.update(session_with_files, self.selected_title(session_with_files))
+        self.assert_state(session_with_files, "update_title")
 
 
 # TODO: Validate
@@ -590,37 +590,37 @@ class DeletedEpisodeTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
 
 # TODO: Validate
 class DeletedSeasonTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
-    """Tests that a fake season gets soft deleted during update_show."""
+    """Tests that a fake season gets soft deleted during update_title."""
 
     # TODO: Validate
     def test_deleted_season(self, session_with_files: Session) -> None:
         self.import_url(session_with_files)
-        show = self.selected_show(session_with_files)
+        title = self.selected_title(session_with_files)
 
         with frozen_clock(self.update_time):
-            fake_season = self.fake_season(show)
-            show.seasons.append(fake_season)
+            fake_season = self.fake_season(title)
+            title.seasons.append(fake_season)
             fake_season.soft_undelete()
             session_with_files.flush()
 
         with log_stats(self), frozen_clock(self.update_time):
-            self.owning_plugin(session_with_files, show).update_show(show)
+            self.owning_plugin(session_with_files, title).update_title(title)
             session_with_files.flush()
 
         self.assert_state(session_with_files, "deleted_season")
 
 
 # TODO: Validate
-class DeletedEpisodeUpdateShowTests[PluginT: AbstractPlugin](
+class DeletedEpisodeUpdateTitleTests[PluginT: AbstractPlugin](
     PluginValidator[PluginT],
 ):
-    """Tests that a fake episode in an existing season is soft deleted by update_show."""
+    """Tests that a fake episode in an existing season is soft deleted by update_title."""
 
     # TODO: Validate
-    def test_deleted_episode_update_show(self, session_with_files: Session) -> None:
+    def test_deleted_episode_update_title(self, session_with_files: Session) -> None:
         self.import_url(session_with_files)
         season = self.selected_season(session_with_files)
-        show = season.show
+        title = season.title
 
         with frozen_clock(self.update_time):
             fake_episode = self.fake_episode(season)
@@ -629,32 +629,32 @@ class DeletedEpisodeUpdateShowTests[PluginT: AbstractPlugin](
             session_with_files.flush()
 
         with log_stats(self), frozen_clock(self.update_time):
-            self.owning_plugin(session_with_files, show).update_show(show)
+            self.owning_plugin(session_with_files, title).update_title(title)
             session_with_files.flush()
 
-        self.assert_state(session_with_files, "deleted_episode_update_show")
+        self.assert_state(session_with_files, "deleted_episode_update_title")
 
 
 # TODO: Validate
 class DeletedSeasonWithEpisodeTests[PluginT: AbstractPlugin](
     PluginValidator[PluginT],
 ):
-    """Tests that a fake season and its fake episode are soft deleted by update_show."""
+    """Tests that a fake season and its fake episode are soft deleted by update_title."""
 
     # TODO: Validate
     def test_deleted_season_with_episode(self, session_with_files: Session) -> None:
         self.import_url(session_with_files)
-        show = self.selected_show(session_with_files)
+        title = self.selected_title(session_with_files)
 
         with frozen_clock(self.update_time):
-            fake_season = self.fake_season(show)
-            show.seasons.append(fake_season)
+            fake_season = self.fake_season(title)
+            title.seasons.append(fake_season)
             fake_season.episodes.append(self.fake_episode(fake_season))
             fake_season.soft_undelete()
             session_with_files.flush()
 
         with log_stats(self), frozen_clock(self.update_time):
-            self.owning_plugin(session_with_files, show).update_show(show)
+            self.owning_plugin(session_with_files, title).update_title(title)
             session_with_files.flush()
 
         self.assert_state(session_with_files, "deleted_season_with_episode")
@@ -668,8 +668,8 @@ class AllUpdatesTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
     @pytest.mark.skip(reason="Exhaustive test - run manually")
     def test_all_updates(self, session_with_files: Session) -> None:
         self.import_url(session_with_files)
-        entities: list[Show | Season | Episode] = [
-            *self.all_shows(session_with_files),
+        entities: list[Title | Season | Episode] = [
+            *self.all_titles(session_with_files),
             *self.all_seasons(session_with_files),
             *self.all_episodes(session_with_files),
         ]
@@ -691,7 +691,7 @@ class URLTests[PluginT: AbstractPlugin](
 
 # TODO: Validate
 class UpdateTests[PluginT: AbstractPlugin](
-    UpdateShowTests[PluginT],
+    UpdateTitleTests[PluginT],
     UpdateSeasonTests[PluginT],
     UpdateEpisodeTests[PluginT],
 ):
@@ -702,7 +702,7 @@ class UpdateTests[PluginT: AbstractPlugin](
 class DeletionTests[PluginT: AbstractPlugin](
     DeletedEpisodeTests[PluginT],
     DeletedSeasonTests[PluginT],
-    DeletedEpisodeUpdateShowTests[PluginT],
+    DeletedEpisodeUpdateTitleTests[PluginT],
     DeletedSeasonWithEpisodeTests[PluginT],
 ):
     """All soft-deletion tests."""

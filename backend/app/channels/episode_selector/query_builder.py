@@ -31,14 +31,14 @@ from app.channels.episode_selector.canonical_entities import (
     CANONICAL_EPISODE,
     CANONICAL_EPISODE_LINK,
     CANONICAL_SEASON,
-    CANONICAL_SHOW,
+    CANONICAL_TITLE,
     episode_id,
     season_id,
 )
 from app.channels.episode_selector.order_composition import OrderByComposer
-from app.channels.episode_selector.show_counts import selected_show_ids
 from app.channels.episode_selector.sorting import SortExpressionBuilder
 from app.channels.episode_selector.source_dedup import source_dedup_config
+from app.channels.episode_selector.title_counts import selected_title_ids
 from app.channels.episode_selector.visibility import (
     blacklisted_on_channels_condition,
     channel_access_condition,
@@ -50,7 +50,7 @@ from app.channels.episode_selector.watch_filters import (
     hide_watched_condition,
     join_last_watched,
     latest_watch_by_identifier,
-    started_show_ids,
+    started_title_ids,
 )
 from app.channels.models import (
     Channel,
@@ -58,16 +58,16 @@ from app.channels.models import (
     ChannelEpisodeSourceFilter,
     ChannelSavedEpisodeOrder,
     ChannelSeasonFilter,
-    ChannelShow,
     ChannelSourceFilter,
+    ChannelTitle,
 )
 from app.channels.schemas import ChannelOptions
 from app.episodes.models import Episode, EpisodeCanonicalEpisode
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show, ShowCanonicalShow
 from app.sources.models import Source
+from app.titles.models import Title, TitleCanonicalTitle
 from app.users.models import User
 from app.utils import tz_datetime
 from app.watches.models import Watch
@@ -127,18 +127,18 @@ class EpisodeQueryBuilder:
             ),
             # Read once rather than per candidate row: the titles a user has
             # started are the same set however many episodes are being ordered.
-            started_shows=self._fetch_started_shows(),
+            started_titles=self._fetch_started_titles(),
         )
 
     # TODO: Validate
-    def _fetch_started_shows(self) -> set[UUID]:
+    def _fetch_started_titles(self) -> set[UUID]:
         needs_started = any(
-            key.field == "started" and key.model == "show"
+            key.field == "started" and key.model == "title"
             for key in self._channel_options.sort_by
         )
         if not needs_started or not self._user:
             return set()
-        return set(self._session.exec(started_show_ids(self._user)).all())
+        return set(self._session.exec(started_title_ids(self._user)).all())
 
     # TODO: Validate
     def _set_channel_options(self, channel_options: ChannelOptions) -> None:
@@ -174,9 +174,9 @@ class EpisodeQueryBuilder:
             self._channel_options.hide_partially_watched = False
             self._channel_options.maximum_watch_date_absolute = None
             self._channel_options.maximum_watch_date_relative = None
-            self._channel_options.total_shows_count = None
-            self._channel_options.started_shows_count = None
-            self._channel_options.new_shows_count = None
+            self._channel_options.total_titles_count = None
+            self._channel_options.started_titles_count = None
+            self._channel_options.new_titles_count = None
 
     # TODO: Validate
     def _fetch_holds_copied_titles(self) -> bool:
@@ -198,38 +198,38 @@ class EpisodeQueryBuilder:
         # row they are.
         totals = (
             select(
-                func.count(distinct(col(Show.source_id))),
-                func.count(distinct(col(Show.id))),
-                func.count(distinct(col(ChannelShow.canonical_show_id))),
+                func.count(distinct(col(Title.source_id))),
+                func.count(distinct(col(Title.id))),
+                func.count(distinct(col(ChannelTitle.canonical_title_id))),
             )
-            .select_from(ChannelShow)
+            .select_from(ChannelTitle)
             .outerjoin(
-                ShowCanonicalShow,
-                col(ShowCanonicalShow.canonical_show_id)
-                == col(ChannelShow.canonical_show_id),
+                TitleCanonicalTitle,
+                col(TitleCanonicalTitle.canonical_title_id)
+                == col(ChannelTitle.canonical_title_id),
             )
             .join(
-                Show,
-                col(Show.id)
+                Title,
+                col(Title.id)
                 == func.coalesce(
-                    col(ShowCanonicalShow.show_id),
-                    col(ChannelShow.canonical_show_id),
+                    col(TitleCanonicalTitle.title_id),
+                    col(ChannelTitle.canonical_title_id),
                 ),
             )
-            .where(col(ChannelShow.channel_id).in_(self._channel_ids))
-            .where(col(ChannelShow.is_blacklist_only).is_(False))
+            .where(col(ChannelTitle.channel_id).in_(self._channel_ids))
+            .where(col(ChannelTitle.is_blacklist_only).is_(False))
             # A title TMDB wrote and no website carries is watched nowhere, so it is no
             # non-canonical row of anything and nothing has to be ranked against it.
             .where(
                 or_(
-                    is_non_canonical(Show),
-                    not_tmdb_key_clause(col(Show.key)),
+                    is_non_canonical(Title),
+                    not_tmdb_key_clause(col(Title.key)),
                 ),
             )
-            .where(col(Show.deleted_at).is_(None))
+            .where(col(Title.deleted_at).is_(None))
         )
-        sources, shows, titles = self._session.exec(totals).one()  # type: ignore[misc]
-        return sources > 1 or shows > titles
+        sources, title_rows, canonical_titles = self._session.exec(totals).one()  # type: ignore[misc]
+        return sources > 1 or title_rows > canonical_titles
 
     # TODO: Validate
     def _fetch_channel_ids(self) -> set[UUID]:
@@ -244,14 +244,14 @@ class EpisodeQueryBuilder:
     def get_episodes(self) -> list[EpisodeResult]:
         """Get filtered, sorted episodes with channel IDs and latest watch data."""
         ordered_episodes, channels_by_media = self._read_ordered_episodes()
-        shows = selected_show_ids(
+        titles = selected_title_ids(
             self._session,
             self._user,
             ordered_episodes,
             self._channel_options,
         )
-        if shows is not None:
-            ordered_episodes, channels_by_media = self._read_ordered_episodes(shows)
+        if titles is not None:
+            ordered_episodes, channels_by_media = self._read_ordered_episodes(titles)
         ordered_episodes = ordered_episodes[: self._result_limit()]
 
         watches = (
@@ -276,7 +276,7 @@ class EpisodeQueryBuilder:
     # TODO: Validate
     def _read_ordered_episodes(
         self,
-        shows: set[UUID] | None = None,
+        titles: set[UUID] | None = None,
     ) -> tuple[list[Episode], dict[UUID, list[UUID]]]:
         query = self._base_query()
         query = self._join_whitelist(query)
@@ -289,10 +289,10 @@ class EpisodeQueryBuilder:
         query = self._filter_disabled_sources(query)
         query = self._filter_by_watch_state(query)
         query = self._filter_by_ranges(query)
-        if shows is not None:
-            query = query.where(self._canonical_columns.show_id().in_(shows))
+        if titles is not None:
+            query = query.where(self._canonical_columns.title_id().in_(titles))
         narrowed = self._sort_and_deduplicate(query)
-        narrowed = self._apply_limit(narrowed, restricted=shows is not None)
+        narrowed = self._apply_limit(narrowed, restricted=titles is not None)
 
         self._tune_planner()
         rows = self._session.exec(narrowed).all()
@@ -333,8 +333,8 @@ class EpisodeQueryBuilder:
                 # the read itself. A `selectinload` would be a round trip each, and
                 # two of them per level, since it splits the ids into batches.
                 joinedload(Episode.season)  # type: ignore[arg-type]
-                .joinedload(Season.show)  # type: ignore[arg-type]
-                .joinedload(Show.source)  # type: ignore[arg-type]
+                .joinedload(Season.title)  # type: ignore[arg-type]
+                .joinedload(Title.source)  # type: ignore[arg-type]
                 .joinedload(Source.plugin),  # type: ignore[arg-type]
                 # Joined for the same reason, even though it is a collection: an
                 # episode is keyed by the season and key it carries rather than by
@@ -355,13 +355,13 @@ class EpisodeQueryBuilder:
     ) -> Subquery:
         return query.with_only_columns(
             col(Episode.id).label("id"),
-            col(ChannelShow.channel_id).label("channel_id"),
+            col(ChannelTitle.channel_id).label("channel_id"),
             *extra_columns,
         ).subquery()
 
     # TODO: Validate
     def _reachable_rows(self) -> Subquery:
-        held = aliased(ChannelShow)
+        held = aliased(ChannelTitle)
         held_clauses = (
             col(held.channel_id).in_(self._channel_ids),
             col(held.is_blacklist_only).is_(False),
@@ -375,12 +375,12 @@ class EpisodeQueryBuilder:
             select(
                 col(link.episode_id).label("episode_id"),
                 col(link.canonical_episode_id).label("canonical_episode_id"),
-                col(held.id).label("channel_show_id"),
+                col(held.id).label("channel_title_id"),
             )
             .select_from(held)
             .join(
                 canonical_season,
-                col(canonical_season.show_id) == col(held.canonical_show_id),
+                col(canonical_season.title_id) == col(held.canonical_title_id),
             )
             .join(
                 canonical_episode,
@@ -390,21 +390,24 @@ class EpisodeQueryBuilder:
             .where(*held_clauses)
         )
 
-        show_link = aliased(ShowCanonicalShow)
+        title_link = aliased(TitleCanonicalTitle)
         linked_season = aliased(Season)
         linked_episode = aliased(Episode)
-        through_show_links = (
+        through_title_links = (
             select(
                 col(linked_episode.id).label("episode_id"),
                 absent.label("canonical_episode_id"),
-                col(held.id).label("channel_show_id"),
+                col(held.id).label("channel_title_id"),
             )
             .select_from(held)
             .join(
-                show_link,
-                col(show_link.canonical_show_id) == col(held.canonical_show_id),
+                title_link,
+                col(title_link.canonical_title_id) == col(held.canonical_title_id),
             )
-            .join(linked_season, col(linked_season.show_id) == col(show_link.show_id))
+            .join(
+                linked_season,
+                col(linked_season.title_id) == col(title_link.title_id),
+            )
             .join(
                 linked_episode,
                 col(linked_episode.season_id) == col(linked_season.id),
@@ -414,34 +417,34 @@ class EpisodeQueryBuilder:
 
         own_season = aliased(Season)
         own_episode = aliased(Episode)
-        through_own_show = (
+        through_own_title = (
             select(
                 col(own_episode.id).label("episode_id"),
                 absent.label("canonical_episode_id"),
-                col(held.id).label("channel_show_id"),
+                col(held.id).label("channel_title_id"),
             )
             .select_from(held)
-            .join(own_season, col(own_season.show_id) == col(held.canonical_show_id))
+            .join(own_season, col(own_season.title_id) == col(held.canonical_title_id))
             .join(own_episode, col(own_episode.season_id) == col(own_season.id))
             .where(*held_clauses, is_canonical(own_episode))
         )
 
         return union_all(
             through_links,
-            through_show_links,
-            through_own_show,
+            through_title_links,
+            through_own_title,
         ).subquery()
 
     # TODO: Validate
     def _base_query_from_channel(self) -> Select[tuple[Episode, UUID]]:
         reachable = self._reachable_rows()
         query: Select[tuple[Episode, UUID]] = (
-            select(Episode, ChannelShow.channel_id)  # type: ignore[call-overload]
+            select(Episode, ChannelTitle.channel_id)  # type: ignore[call-overload]
             .select_from(reachable)
             .join(Episode, col(Episode.id) == reachable.c.episode_id)
             .join(Season, col(Episode.season_id) == col(Season.id))
-            .join(Show, col(Season.show_id) == col(Show.id))
-            .join(ChannelShow, col(ChannelShow.id) == reachable.c.channel_show_id)
+            .join(Title, col(Season.title_id) == col(Title.id))
+            .join(ChannelTitle, col(ChannelTitle.id) == reachable.c.channel_title_id)
             .outerjoin(
                 CANONICAL_EPISODE_LINK,
                 and_(
@@ -465,17 +468,17 @@ class EpisodeQueryBuilder:
                 col(CANONICAL_EPISODE.season_id) == col(CANONICAL_SEASON.id),
             )
             .join(
-                CANONICAL_SHOW,
+                CANONICAL_TITLE,
                 and_(
-                    col(CANONICAL_SHOW.id) == col(ChannelShow.canonical_show_id),
-                    is_canonical(CANONICAL_SHOW),
+                    col(CANONICAL_TITLE.id) == col(ChannelTitle.canonical_title_id),
+                    is_canonical(CANONICAL_TITLE),
                 ),
             )
             .where(
                 or_(
                     col(CANONICAL_SEASON.key).is_(None),
                     same_issuer_clause(
-                        col(CANONICAL_SHOW.key),
+                        col(CANONICAL_TITLE.key),
                         col(CANONICAL_SEASON.key),
                     ),
                 ),
@@ -484,7 +487,7 @@ class EpisodeQueryBuilder:
 
     # TODO: Validate
     def _drives_from_channel(self) -> bool:
-        held = aliased(ChannelShow)
+        held = aliased(ChannelTitle)
         counted_season = aliased(Season)
         counted_episode = aliased(Episode)
         counted = (
@@ -492,7 +495,7 @@ class EpisodeQueryBuilder:
             .select_from(held)
             .join(
                 counted_season,
-                col(counted_season.show_id) == col(held.canonical_show_id),
+                col(counted_season.title_id) == col(held.canonical_title_id),
             )
             .join(
                 counted_episode,
@@ -516,7 +519,7 @@ class EpisodeQueryBuilder:
     def _base_query_from_episodes(self) -> Select[tuple[Episode, UUID]]:
         # A channel holds titles rather than one website's non-canonical row of them, so
         # every non-canonical row of a title the channel holds is joined to the same
-        # `ChannelShow`.
+        # `ChannelTitle`.
         #
         # Which title an episode belongs to is read off the episode rather than
         # off the listing holding it, because a listing can hold more than one:
@@ -527,10 +530,10 @@ class EpisodeQueryBuilder:
         # which of the two it means. What the query returns is the listings, and
         # what it walks up through is the media they are listings of.
         query: Select[tuple[Episode, UUID]] = (
-            select(Episode, ChannelShow.channel_id)  # type: ignore[call-overload]
+            select(Episode, ChannelTitle.channel_id)  # type: ignore[call-overload]
             .select_from(Episode)
             .join(Season, col(Episode.season_id) == col(Season.id))
-            .join(Show, col(Season.show_id) == col(Show.id))
+            .join(Title, col(Season.title_id) == col(Title.id))
             # A listing stands for every episode it was linked to, so one that
             # runs two episodes together is read once under each of them: the
             # channel holds episodes rather than listings, and a listing standing
@@ -560,9 +563,9 @@ class EpisodeQueryBuilder:
             # only for those episodes, since a listing linked to more than one
             # title would otherwise put every episode of it under each of them.
             .outerjoin(
-                ShowCanonicalShow,
+                TitleCanonicalTitle,
                 and_(
-                    col(ShowCanonicalShow.show_id) == col(Show.id),
+                    col(TitleCanonicalTitle.title_id) == col(Title.id),
                     is_canonical(Episode),
                 ),
             )
@@ -572,26 +575,26 @@ class EpisodeQueryBuilder:
             # rows are titles that are watched nowhere and are left out by
             # `_filter_metadata_plugins` rather than here.
             .join(
-                ChannelShow,
+                ChannelTitle,
                 and_(
-                    col(ChannelShow.canonical_show_id)
+                    col(ChannelTitle.canonical_title_id)
                     == func.coalesce(
-                        col(CANONICAL_SEASON.show_id),
-                        col(ShowCanonicalShow.canonical_show_id),
-                        case((is_canonical(Show), col(Show.id))),
+                        col(CANONICAL_SEASON.title_id),
+                        col(TitleCanonicalTitle.canonical_title_id),
+                        case((is_canonical(Title), col(Title.id))),
                     ),
-                    col(ChannelShow.channel_id).in_(self._channel_ids),
-                    # Only member shows contribute their episodes; filter-only shows
+                    col(ChannelTitle.channel_id).in_(self._channel_ids),
+                    # Only member titles contribute their episodes; filter-only titles
                     # (is_blacklist_only=True) exist solely to hold blacklist and
                     # whitelist entries.
-                    col(ChannelShow.is_blacklist_only).is_(False),
+                    col(ChannelTitle.is_blacklist_only).is_(False),
                 ),
             )
             .join(
-                CANONICAL_SHOW,
+                CANONICAL_TITLE,
                 and_(
-                    col(CANONICAL_SHOW.id) == col(ChannelShow.canonical_show_id),
-                    is_canonical(CANONICAL_SHOW),
+                    col(CANONICAL_TITLE.id) == col(ChannelTitle.canonical_title_id),
+                    is_canonical(CANONICAL_TITLE),
                 ),
             )
             # A website files under a title seasons the title has no record of -
@@ -607,7 +610,7 @@ class EpisodeQueryBuilder:
                 or_(
                     col(CANONICAL_SEASON.key).is_(None),
                     same_issuer_clause(
-                        col(CANONICAL_SHOW.key),
+                        col(CANONICAL_TITLE.key),
                         col(CANONICAL_SEASON.key),
                     ),
                 ),
@@ -623,21 +626,21 @@ class EpisodeQueryBuilder:
             query.outerjoin(
                 ChannelSourceFilter,
                 and_(
-                    ChannelSourceFilter.channel_show_id == ChannelShow.id,
-                    ChannelSourceFilter.show_id == Show.id,
+                    ChannelSourceFilter.channel_title_id == ChannelTitle.id,
+                    ChannelSourceFilter.title_id == Title.id,
                 ),
             )
             .outerjoin(
                 ChannelSeasonFilter,
                 and_(
-                    ChannelSeasonFilter.channel_show_id == ChannelShow.id,
+                    ChannelSeasonFilter.channel_title_id == ChannelTitle.id,
                     col(ChannelSeasonFilter.season_id) == season_id(),
                 ),
             )
             .outerjoin(
                 ChannelEpisodeFilter,
                 and_(
-                    ChannelEpisodeFilter.channel_show_id == ChannelShow.id,
+                    ChannelEpisodeFilter.channel_title_id == ChannelTitle.id,
                     col(ChannelEpisodeFilter.canonical_episode_id) == episode_id(),
                     or_(
                         col(ChannelEpisodeFilter.expires_at).is_(None),
@@ -646,14 +649,14 @@ class EpisodeQueryBuilder:
                 ),
             )
             # A row of this one is about the linked episode being read rather than
-            # the episode itself, so the website's linked show has to match too.
+            # the episode itself, so the website's linked title has to match too.
             .outerjoin(
                 ChannelEpisodeSourceFilter,
                 and_(
-                    ChannelEpisodeSourceFilter.channel_show_id == ChannelShow.id,
+                    ChannelEpisodeSourceFilter.channel_title_id == ChannelTitle.id,
                     col(ChannelEpisodeSourceFilter.canonical_episode_id)
                     == episode_id(),
-                    ChannelEpisodeSourceFilter.show_id == Show.id,
+                    ChannelEpisodeSourceFilter.title_id == Title.id,
                     or_(
                         col(ChannelEpisodeSourceFilter.expires_at).is_(None),
                         col(ChannelEpisodeSourceFilter.expires_at) > tz_datetime.now(),
@@ -738,18 +741,18 @@ class EpisodeQueryBuilder:
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[Episode, UUID]]:
         if self._needs_source_columns():
-            query = query.join(Source, col(Show.source_id) == Source.id).join(
+            query = query.join(Source, col(Title.source_id) == Source.id).join(
                 Plugin,
                 col(Source.plugin_id) == Plugin.id,
             )
         if self._channel_options.source_ids:
             if self._channel_options.source_ids_is_blacklist:
                 query = query.where(
-                    col(Show.source_id).not_in(self._channel_options.source_ids),
+                    col(Title.source_id).not_in(self._channel_options.source_ids),
                 )
             else:
                 query = query.where(
-                    col(Show.source_id).in_(self._channel_options.source_ids),
+                    col(Title.source_id).in_(self._channel_options.source_ids),
                 )
         return query
 
@@ -765,7 +768,7 @@ class EpisodeQueryBuilder:
         results.
         """
         return query.where(
-            col(Show.source_id).not_in(
+            col(Title.source_id).not_in(
                 [
                     source_id
                     for source_id, _, plugin_key in self._sources
@@ -873,16 +876,16 @@ class EpisodeQueryBuilder:
         restricted: bool = False,
     ) -> Select[tuple[UUID, UUID]]:
         # Fetch up to the hard cap regardless of the requested limit so that the
-        # show counts, which drop episodes after the read, can still fill it.
+        # title counts, which drop episodes after the read, can still fill it.
         return query.limit(self._sql_limit(restricted=restricted))
 
     # TODO: Validate
     def _sql_limit(self, *, restricted: bool = False) -> int:
         options = self._channel_options
         if not restricted and (
-            options.total_shows_count is not None
-            or options.started_shows_count is not None
-            or options.new_shows_count is not None
+            options.total_titles_count is not None
+            or options.started_titles_count is not None
+            or options.new_titles_count is not None
         ):
             return MAX_EPISODES_RETURNED
         rows_per_episode = max(len(self._channel_ids), 1)
@@ -903,13 +906,13 @@ class EpisodeQueryBuilder:
         if config.other_enabled:
             if config.disabled_keys:
                 query = query.where(
-                    col(Show.source_id).not_in(
+                    col(Title.source_id).not_in(
                         self._source_ids_for_keys(config.disabled_keys),
                     ),
                 )
         else:
             query = query.where(
-                col(Show.source_id).in_(
+                col(Title.source_id).in_(
                     self._source_ids_for_keys(config.enabled_keys),
                 ),
             )
@@ -935,7 +938,7 @@ class EpisodeQueryBuilder:
                 source_id: self.source_config.priority_for(key)
                 for source_id, key, _ in self._sources
             },
-            value=col(Show.source_id),
+            value=col(Title.source_id),
             else_=self.source_config.other_priority,
         )
         return (
@@ -956,7 +959,7 @@ class EpisodeQueryBuilder:
         if not self._holds_copied_titles:
             return query.with_only_columns(  # type: ignore[return-value]
                 col(Episode.id).label("id"),
-                col(ChannelShow.channel_id).label("channel_id"),
+                col(ChannelTitle.channel_id).label("channel_id"),
             )
         subquery = self._narrowed(query, [self._source_rank_column()])
         return select(
@@ -980,7 +983,7 @@ class EpisodeQueryBuilder:
         return (
             select(subquery.c.id, subquery.c.channel_id)
             .add_columns(
-                subquery.c.show_id,
+                subquery.c.title_id,
                 *carried_rank,
                 *(
                     getattr(subquery.c, f"sort_value_{index}")
@@ -1006,7 +1009,7 @@ class EpisodeQueryBuilder:
         # The title rather than the website's listing of it, so the last tie-break
         # keeps a title together however many websites and listings carry it.
         labeled_values.append(
-            self._canonical_columns.show_id().label("show_id"),
+            self._canonical_columns.title_id().label("title_id"),
         )
         labeled_values.extend(self._source_rank_columns())
         subquery = self._narrowed(query, labeled_values)
@@ -1038,7 +1041,7 @@ class EpisodeQueryBuilder:
             self._channel_options.sort_by,
             fuzzy_labels,
         ).compose(subquery)
-        order_by.extend([subquery.c.show_id, subquery.c.id])
+        order_by.extend([subquery.c.title_id, subquery.c.id])
 
         outer: Select[tuple[UUID, UUID]] = select(
             subquery.c.id,

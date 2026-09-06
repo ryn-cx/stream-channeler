@@ -21,8 +21,8 @@ from app.channels.models import (
     ChannelEpisodeFilter,
     ChannelEpisodeSourceFilter,
     ChannelSeasonFilter,
-    ChannelShow,
     ChannelSourceFilter,
+    ChannelTitle,
 )
 from app.channels.schemas import (
     BlacklistEpisodeInput,
@@ -30,17 +30,17 @@ from app.channels.schemas import (
     WhitelistEpisodeOutput,
     WhitelistEpisodesOutput,
     WhitelistSeasonOutput,
-    WhitelistShowInput,
-    WhitelistShowOutput,
     WhitelistSourceOutput,
+    WhitelistTitleInput,
+    WhitelistTitleOutput,
 )
 from app.channels.service.episodes import (
     _canonical_episode_id,
-    _canonical_show_ids_of_episode,
+    _canonical_title_ids_of_episode,
     _episode_links_by_canonical_id,
     _episode_source_filters,
     _episodes_by_id,
-    _listed_season_show_ids,
+    _listed_season_title_ids,
     _preload_episode_links,
     _season_episode_rows,
     _SeasonEpisodeRow,
@@ -52,15 +52,15 @@ from app.channels.service.ordering import (
     _episode_sort_key,
     _season_sort_key,
 )
-from app.channels.service.shows import (
-    shows_for_channel_show,
-    tmdb_shows_for_channel_show,
+from app.channels.service.titles import (
+    titles_for_channel_title,
+    tmdb_titles_for_channel_title,
 )
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.schemas import Message
 from app.seasons.models import Season
-from app.shows.models import Show
-from app.shows.schemas import ShowPublic
+from app.titles.models import Title
+from app.titles.schemas import TitlePublic
 
 # How many of a season's episodes are read at once on the filter page.
 WHITELIST_EPISODE_PAGE = 100
@@ -69,27 +69,27 @@ WHITELIST_EPISODE_PAGE = 100
 # TODO: Validate
 def update_whitelist(
     session: Session,
-    channel_show: ChannelShow,
-    config: WhitelistShowInput,
+    channel_title: ChannelTitle,
+    config: WhitelistTitleInput,
 ) -> None:
-    """Update whitelist records for a channel show."""
+    """Update whitelist records for a channel title."""
     if config.is_whitelist is not None:
-        channel_show.is_whitelist = config.is_whitelist
+        channel_title.is_whitelist = config.is_whitelist
 
-    existing_sources = {source.show_id for source in channel_show.source_filters}
-    existing_seasons = {season.season_id for season in channel_show.season_filters}
+    existing_sources = {source.title_id for source in channel_title.source_filters}
+    existing_seasons = {season.season_id for season in channel_title.season_filters}
     existing_episodes = {
-        episode.canonical_episode_id for episode in channel_show.episode_filters
+        episode.canonical_episode_id for episode in channel_title.episode_filters
     }
     existing_episode_sources = {
-        (episode_source.canonical_episode_id, episode_source.show_id)
-        for episode_source in channel_show.episode_source_filters
+        (episode_source.canonical_episode_id, episode_source.title_id)
+        for episode_source in channel_title.episode_source_filters
     }
 
     for source in config.sources:
         toggle_source_whitelist(
             session,
-            channel_show,
+            channel_title,
             source.id,
             existing_sources,
             marked=source.marked,
@@ -97,7 +97,7 @@ def update_whitelist(
     for season in config.seasons:
         toggle_season_whitelist(
             session,
-            channel_show,
+            channel_title,
             season.id,
             existing_seasons,
             marked=season.marked,
@@ -105,7 +105,7 @@ def update_whitelist(
     for episode in config.episodes:
         toggle_episode_whitelist(
             session,
-            channel_show,
+            channel_title,
             _canonical_episode_id(session, episode.id),
             existing_episodes,
             marked=episode.marked,
@@ -114,9 +114,9 @@ def update_whitelist(
     for episode_source in config.episode_sources:
         toggle_episode_source_whitelist(
             session,
-            channel_show,
+            channel_title,
             _canonical_episode_id(session, episode_source.episode_id),
-            episode_source.show_id,
+            episode_source.title_id,
             existing_episode_sources,
             marked=episode_source.marked,
             expires_at=episode_source.expires_at,
@@ -128,22 +128,22 @@ def update_whitelist(
 # TODO: Validate
 def toggle_source_whitelist(
     session: Session,
-    channel_show: ChannelShow,
-    show_id: UUID,
+    channel_title: ChannelTitle,
+    title_id: UUID,
     existing: set[UUID],
     *,
     marked: bool,
 ) -> None:
-    """Mark or unmark one website's row for the show `channel_show` is about."""
-    if marked and show_id not in existing:
-        channel_show.source_filters.append(
+    """Mark or unmark one website's row for the title `channel_title` is about."""
+    if marked and title_id not in existing:
+        channel_title.source_filters.append(
             ChannelSourceFilter(
-                channel_show_id=channel_show.id,
-                show_id=show_id,
+                channel_title_id=channel_title.id,
+                title_id=title_id,
             ),
         )
-    elif not marked and show_id in existing:
-        existing_source = ChannelSourceFilter.get(session, channel_show, show_id)
+    elif not marked and title_id in existing:
+        existing_source = ChannelSourceFilter.get(session, channel_title, title_id)
         if existing_source:
             session.delete(existing_source)
 
@@ -151,7 +151,7 @@ def toggle_source_whitelist(
 # TODO: Validate
 def toggle_season_whitelist(
     session: Session,
-    channel_show: ChannelShow,
+    channel_title: ChannelTitle,
     season_id: UUID,
     existing: set[UUID],
     *,
@@ -159,14 +159,14 @@ def toggle_season_whitelist(
 ) -> None:
     """Add or drop the filter naming the season `season_id`."""
     if marked and season_id not in existing:
-        channel_show.season_filters.append(
+        channel_title.season_filters.append(
             ChannelSeasonFilter(
-                channel_show_id=channel_show.id,
+                channel_title_id=channel_title.id,
                 season_id=season_id,
             ),
         )
     elif not marked and season_id in existing:
-        existing_season = ChannelSeasonFilter.get(session, channel_show, season_id)
+        existing_season = ChannelSeasonFilter.get(session, channel_title, season_id)
         if existing_season:
             session.delete(existing_season)
 
@@ -174,7 +174,7 @@ def toggle_season_whitelist(
 # TODO: Validate
 def toggle_episode_whitelist(  # noqa: PLR0913 - mirrors toggle_season_whitelist plus expiry
     session: Session,
-    channel_show: ChannelShow,
+    channel_title: ChannelTitle,
     canonical_episode_id: UUID | None,
     existing: set[UUID],
     *,
@@ -185,9 +185,9 @@ def toggle_episode_whitelist(  # noqa: PLR0913 - mirrors toggle_season_whitelist
     if canonical_episode_id is None:
         return
     if marked and canonical_episode_id not in existing:
-        channel_show.episode_filters.append(
+        channel_title.episode_filters.append(
             ChannelEpisodeFilter(
-                channel_show_id=channel_show.id,
+                channel_title_id=channel_title.id,
                 canonical_episode_id=canonical_episode_id,
                 expires_at=expires_at,
             ),
@@ -196,7 +196,7 @@ def toggle_episode_whitelist(  # noqa: PLR0913 - mirrors toggle_season_whitelist
         # Re-marking an existing entry updates its expiry.
         existing_episode = ChannelEpisodeFilter.get(
             session,
-            channel_show,
+            channel_title,
             canonical_episode_id,
         )
         if existing_episode:
@@ -204,7 +204,7 @@ def toggle_episode_whitelist(  # noqa: PLR0913 - mirrors toggle_season_whitelist
     elif not marked and canonical_episode_id in existing:
         existing_episode = ChannelEpisodeFilter.get(
             session,
-            channel_show,
+            channel_title,
             canonical_episode_id,
         )
         if existing_episode:
@@ -214,24 +214,24 @@ def toggle_episode_whitelist(  # noqa: PLR0913 - mirrors toggle_season_whitelist
 # TODO: Validate
 def toggle_episode_source_whitelist(  # noqa: PLR0913 - mirrors toggle_episode_whitelist plus the website
     session: Session,
-    channel_show: ChannelShow,
+    channel_title: ChannelTitle,
     canonical_episode_id: UUID | None,
-    show_id: UUID,
+    title_id: UUID,
     existing: set[tuple[UUID, UUID]],
     *,
     marked: bool,
     expires_at: datetime | None = None,
 ) -> None:
-    """Add, re-expire or drop the entry naming `canonical_episode_id` on `show_id`."""
+    """Add, re-expire or drop the entry naming `canonical_episode_id` on `title_id`."""
     if canonical_episode_id is None:
         return
-    key = (canonical_episode_id, show_id)
+    key = (canonical_episode_id, title_id)
     if marked and key not in existing:
-        channel_show.episode_source_filters.append(
+        channel_title.episode_source_filters.append(
             ChannelEpisodeSourceFilter(
-                channel_show_id=channel_show.id,
+                channel_title_id=channel_title.id,
                 canonical_episode_id=canonical_episode_id,
-                show_id=show_id,
+                title_id=title_id,
                 expires_at=expires_at,
             ),
         )
@@ -240,9 +240,9 @@ def toggle_episode_source_whitelist(  # noqa: PLR0913 - mirrors toggle_episode_w
         return
     existing_entry = ChannelEpisodeSourceFilter.get(
         session,
-        channel_show,
+        channel_title,
         canonical_episode_id,
-        show_id,
+        title_id,
     )
     if not existing_entry:
         return
@@ -257,71 +257,71 @@ def toggle_episode_source_whitelist(  # noqa: PLR0913 - mirrors toggle_episode_w
 def blacklist_episode_on_channel(
     session: Session,
     channel: Channel,
-    show: Show,
+    title: Title,
     episode_id: UUID,
     expires_at: datetime | None = None,
-) -> list[ChannelShow]:
+) -> list[ChannelTitle]:
     """Blacklist a single episode for `channel`.
 
-    Gets or creates the `ChannelShow` for the canonical show the episode belongs
+    Gets or creates the `ChannelTitle` for the canonical title the episode belongs
     to, which is the episode's own answer rather than its row's: a row that mixes
-    shows holds episodes of each of them, and hiding one of its episodes is about
-    the canonical show that episode belongs to. An episode nothing was minted for
-    it to stand for has no canonical show of its own to answer with, and its row
-    stands for each of its canonical shows alike, so the episode is hidden under
-    every one of them. A newly created `ChannelShow` is a filter-only show
-    (`is_blacklist_only=True`) in blacklist mode, so the canonical show's other
+    titles holds episodes of each of them, and hiding one of its episodes is about
+    the canonical title that episode belongs to. An episode nothing was minted for
+    it to stand for has no canonical title of its own to answer with, and its row
+    stands for each of its canonical titles alike, so the episode is hidden under
+    every one of them. A newly created `ChannelTitle` is a filter-only title
+    (`is_blacklist_only=True`) in blacklist mode, so the canonical title's other
     episodes are not pulled into the channel. Adds (or updates the expiry of) a
     `ChannelEpisodeFilter` for the episode, which covers that episode on every
-    website the canonical show is on.
+    website the canonical title is on.
     """
     canonical_episode_id = _canonical_episode_id(session, episode_id)
-    canonical_show_ids = _canonical_show_ids_of_episode(
+    canonical_title_ids = _canonical_title_ids_of_episode(
         session,
         canonical_episode_id,
-    ) or set(show.canonical_show_ids)
+    ) or set(title.canonical_title_ids)
 
-    channel_shows: list[ChannelShow] = []
-    for canonical_show_id in canonical_show_ids:
-        channel_show = ChannelShow.get(session, channel, canonical_show_id)
-        if channel_show is None:
-            channel_show = ChannelShow(
+    channel_titles: list[ChannelTitle] = []
+    for canonical_title_id in canonical_title_ids:
+        channel_title = ChannelTitle.get(session, channel, canonical_title_id)
+        if channel_title is None:
+            channel_title = ChannelTitle(
                 channel_id=channel.id,
-                canonical_show_id=canonical_show_id,
+                canonical_title_id=canonical_title_id,
                 is_whitelist=False,
                 is_blacklist_only=True,
             )
-            session.add(channel_show)
+            session.add(channel_title)
 
         existing_filter = ChannelEpisodeFilter.get(
             session,
-            channel_show,
+            channel_title,
             canonical_episode_id,
         )
         if existing_filter is None:
-            channel_show.episode_filters.append(
+            channel_title.episode_filters.append(
                 ChannelEpisodeFilter(
-                    channel_show_id=channel_show.id,
+                    channel_title_id=channel_title.id,
                     canonical_episode_id=canonical_episode_id,
                     expires_at=expires_at,
                 ),
             )
         else:
             existing_filter.expires_at = expires_at
-        channel_shows.append(channel_show)
+        channel_titles.append(channel_title)
 
     session.commit()
-    for channel_show in channel_shows:
-        session.refresh(channel_show)
-    return channel_shows
+    for channel_title in channel_titles:
+        session.refresh(channel_title)
+    return channel_titles
 
 
 # TODO: Validate
 class _WhitelistMedia(NamedTuple):
     """The rows a title's filters are read against, gathered once per request."""
 
-    shows: list[Show]
-    tmdb_shows: list[Show]
+    titles: list[Title]
+    tmdb_titles: list[Title]
     site_seasons: list[Season]
     tmdb_seasons: list[Season]
     # Which season each episode belongs to, keyed by the website's own row.
@@ -334,29 +334,29 @@ class _WhitelistMedia(NamedTuple):
 # TODO: Validate
 def _whitelist_media(
     session: Session,
-    channel_show: ChannelShow,
+    channel_title: ChannelTitle,
 ) -> _WhitelistMedia:
-    """Gather the websites' rows for the title `channel_show` is about."""
-    shows = shows_for_channel_show(session, channel_show)
+    """Gather the websites' rows for the title `channel_title` is about."""
+    titles = titles_for_channel_title(session, channel_title)
     # TMDB is not a website the title can be watched on, so it is not one of the
     # non-canonical rows the rows are built from, and only stands for the seasons it has
     # a record of, which is all an announced season no site has filled yet can be named
     # by. A title no website carries at all has nothing else to be listed from, so there
     # its record is the whole of what there is rather than the remainder.
-    tmdb_shows = tmdb_shows_for_channel_show(session, channel_show)
-    if not shows and not tmdb_shows:
-        raise HTTPException(status_code=404, detail="Show was not found on channel")
+    tmdb_titles = tmdb_titles_for_channel_title(session, channel_title)
+    if not titles and not tmdb_titles:
+        raise HTTPException(status_code=404, detail="Title was not found on channel")
 
     # Every season and episode under those rows is walked below, which is a query
     # a season unless they are asked for together up front.
     session.exec(
-        select(Show)
-        .where(col(Show.id).in_([show.id for show in [*shows, *tmdb_shows]]))
-        .options(selectinload(Show.seasons).selectinload(Season.episodes)),
+        select(Title)
+        .where(col(Title.id).in_([title.id for title in [*titles, *tmdb_titles]]))
+        .options(selectinload(Title.seasons).selectinload(Season.episodes)),
     ).all()
 
-    site_seasons = [season for show in shows for season in show.active_children]
-    tmdb_seasons = [season for show in tmdb_shows for season in show.active_children]
+    site_seasons = [season for title in titles for season in title.active_children]
+    tmdb_seasons = [season for title in tmdb_titles for season in title.active_children]
     all_episodes = [
         episode
         for season in [*site_seasons, *tmdb_seasons]
@@ -373,7 +373,7 @@ def _whitelist_media(
     # one of them. An episode that is linked to nothing is one the title had no record
     # of to match it against, and the link its listing carries is the only word there is
     # on what title it belongs to, so it is listed too.
-    title_episode_ids = _title_episode_ids(session, channel_show.canonical_show_id)
+    title_episode_ids = _title_episode_ids(session, channel_title.canonical_title_id)
     site_season_ids = {season.id for season in site_seasons}
     listed_episode_ids = {
         episode.id
@@ -384,8 +384,8 @@ def _whitelist_media(
         )
     }
     return _WhitelistMedia(
-        shows=shows,
-        tmdb_shows=tmdb_shows,
+        titles=titles,
+        tmdb_titles=tmdb_titles,
         site_seasons=site_seasons,
         tmdb_seasons=tmdb_seasons,
         episode_seasons=episode_seasons,
@@ -396,8 +396,8 @@ def _whitelist_media(
 # TODO: Validate
 def channel_whitelist_output(
     session: Session,
-    channel_show: ChannelShow,
-) -> WhitelistShowOutput:
+    channel_title: ChannelTitle,
+) -> WhitelistTitleOutput:
     """Read the sites and seasons of a title's filters in a channel.
 
     A filter is about the media rather than one website's non-canonical row of it, so
@@ -406,29 +406,34 @@ def channel_whitelist_output(
     separately, a season at a time, since a title's whole catalogue is far more than the
     page opens on.
     """
-    enabled_sources = {x.show_id for x in channel_show.source_filters}
-    enabled_seasons = {x.season_id for x in channel_show.season_filters}
+    enabled_sources = {x.title_id for x in channel_title.source_filters}
+    enabled_seasons = {x.season_id for x in channel_title.season_filters}
 
-    shows = shows_for_channel_show(session, channel_show)
-    tmdb_shows = tmdb_shows_for_channel_show(session, channel_show)
-    if not shows and not tmdb_shows:
-        raise HTTPException(status_code=404, detail="Show was not found on channel")
+    titles = titles_for_channel_title(session, channel_title)
+    tmdb_titles = tmdb_titles_for_channel_title(session, channel_title)
+    if not titles and not tmdb_titles:
+        raise HTTPException(status_code=404, detail="Title was not found on channel")
 
     # The websites' rows carrying each season, so a row can name the sites it
     # came from.
-    season_show_ids = _listed_season_show_ids(session, channel_show, shows, tmdb_shows)
+    season_title_ids = _listed_season_title_ids(
+        session,
+        channel_title,
+        titles,
+        tmdb_titles,
+    )
 
     sources = [
         WhitelistSourceOutput(
-            show_id=show.id,
-            source_id=show.source.id,
-            source_name=show.source.name,
-            favicon_url=show.source.favicon_url,
-            show=ShowPublic.model_validate(show),
-            filtered=show.id in enabled_sources,
-            is_tmdb=show.source.plugin.key == TMDB_PLUGIN_KEY,
+            title_id=title.id,
+            source_id=title.source.id,
+            source_name=title.source.name,
+            favicon_url=title.source.favicon_url,
+            title=TitlePublic.model_validate(title),
+            filtered=title.id in enabled_sources,
+            is_tmdb=title.source.plugin.key == TMDB_PLUGIN_KEY,
         )
-        for show in [*shows, *tmdb_shows]
+        for title in [*titles, *tmdb_titles]
     ]
 
     # The rows are the title's own seasons rather than the websites' non-canonical rows
@@ -438,11 +443,11 @@ def channel_whitelist_output(
     # under them yet.
     title_seasons = session.exec(
         select(Season).where(
-            Season.show_id == channel_show.canonical_show_id,
+            Season.title_id == channel_title.canonical_title_id,
             col(Season.deleted_at).is_(None),
         ),
     ).all()
-    season_rows = _seasons_by_id(session, title_seasons, season_show_ids)
+    season_rows = _seasons_by_id(session, title_seasons, season_title_ids)
 
     seasons: list[WhitelistSeasonOutput] = []
     listed_seasons: set[uuid.UUID] = set()
@@ -457,7 +462,7 @@ def channel_whitelist_output(
                 season_rows[season_id],
                 update={
                     "filtered": season_id in enabled_seasons,
-                    "show_ids": season_show_ids[season_id],
+                    "title_ids": season_title_ids[season_id],
                 },
             ),
         )
@@ -469,15 +474,15 @@ def channel_whitelist_output(
     # order the seasons themselves read in, so a page boundary and a listing
     # both fall the same way on every request.
     for season_id in sorted(
-        season_show_ids,
+        season_title_ids,
         key=lambda key: _season_sort_key(season_rows[key]),
     ):
         list_season(season_id)
 
-    return WhitelistShowOutput.model_validate(
-        (shows or tmdb_shows)[0],
+    return WhitelistTitleOutput.model_validate(
+        (titles or tmdb_titles)[0],
         update={
-            "is_whitelist": channel_show.is_whitelist,
+            "is_whitelist": channel_title.is_whitelist,
             "sources": sources,
             "seasons": seasons,
         },
@@ -487,7 +492,7 @@ def channel_whitelist_output(
 # TODO: Validate
 def channel_whitelist_episodes_output(
     session: Session,
-    channel_show: ChannelShow,
+    channel_title: ChannelTitle,
     season_id: uuid.UUID,
     offset: int = 0,
     limit: int = WHITELIST_EPISODE_PAGE,
@@ -498,16 +503,16 @@ def channel_whitelist_episodes_output(
     the non-canonical rows of an episode are collapsed into the one row the filter
     applies to, and each non-canonical row is carried alongside as a link of its own.
     """
-    enabled_episodes = {x.canonical_episode_id for x in channel_show.episode_filters}
+    enabled_episodes = {x.canonical_episode_id for x in channel_title.episode_filters}
     episode_expiries = {
         episode_filter.canonical_episode_id: episode_filter.expires_at
-        for episode_filter in channel_show.episode_filters
+        for episode_filter in channel_title.episode_filters
     }
 
     # An episode is listed once under every season row carrying it, since two seasons
     # sharing an episode each have it to filter on. Only the non-canonical rows of it
     # under the same row are folded together.
-    rows = _season_episode_rows(session, channel_show, season_id)
+    rows = _season_episode_rows(session, channel_title, season_id)
     representatives: dict[uuid.UUID, _SeasonEpisodeRow] = {}
     for row in rows:
         representatives.setdefault(row.canonical_episode_id, row)
@@ -530,20 +535,20 @@ def channel_whitelist_episodes_output(
     link_rows = [row for row in rows if row.canonical_episode_id in page_canonical_ids]
     episodes = _episodes_by_id(session, [row.id for row in link_rows])
 
-    episode_source_filters = _episode_source_filters(channel_show)
-    episode_show_ids: dict[uuid.UUID, list[uuid.UUID]] = defaultdict(list)
+    episode_source_filters = _episode_source_filters(channel_title)
+    episode_title_ids: dict[uuid.UUID, list[uuid.UUID]] = defaultdict(list)
     episode_links: dict[uuid.UUID, list[WhitelistEpisodeLinkOutput]] = defaultdict(list)
     for row in link_rows:
-        if row.show_id not in episode_show_ids[row.canonical_episode_id]:
-            episode_show_ids[row.canonical_episode_id].append(row.show_id)
+        if row.title_id not in episode_title_ids[row.canonical_episode_id]:
+            episode_title_ids[row.canonical_episode_id].append(row.title_id)
         episode_source_filter = episode_source_filters.get(
-            (row.canonical_episode_id, row.show_id),
+            (row.canonical_episode_id, row.title_id),
         )
         episode_links[row.canonical_episode_id].append(
             WhitelistEpisodeLinkOutput.model_validate(
                 episodes[row.id],
                 update={
-                    "show_id": row.show_id,
+                    "title_id": row.title_id,
                     "episode_id": row.id,
                     "filtered": episode_source_filter is not None,
                     "expires_at": (
@@ -564,7 +569,7 @@ def channel_whitelist_episodes_output(
                 "canonical_episode_id": row.canonical_episode_id,
                 "filtered": row.canonical_episode_id in enabled_episodes,
                 "expires_at": episode_expiries.get(row.canonical_episode_id),
-                "show_ids": episode_show_ids[row.canonical_episode_id],
+                "title_ids": episode_title_ids[row.canonical_episode_id],
                 "links": episode_links[row.canonical_episode_id],
             },
         )
@@ -579,7 +584,7 @@ def channel_whitelist_episodes_output(
 # TODO: Validate
 def filtered_whitelist_episodes(
     session: Session,
-    channel_show: ChannelShow,
+    channel_title: ChannelTitle,
 ) -> list[WhitelistEpisodeOutput]:
     """Read the episodes of a title that an entry names, whatever season they are in.
 
@@ -587,16 +592,16 @@ def filtered_whitelist_episodes(
     this stays small however many episodes the title has, which is what lets the
     blacklist be read without paging through everything it does not name.
     """
-    enabled_episodes = {x.canonical_episode_id for x in channel_show.episode_filters}
+    enabled_episodes = {x.canonical_episode_id for x in channel_title.episode_filters}
     if not enabled_episodes:
         return []
 
     episode_expiries = {
         episode_filter.canonical_episode_id: episode_filter.expires_at
-        for episode_filter in channel_show.episode_filters
+        for episode_filter in channel_title.episode_filters
     }
 
-    media = _whitelist_media(session, channel_show)
+    media = _whitelist_media(session, channel_title)
 
     episodes: list[WhitelistEpisodeOutput] = []
     seen_episodes: set[tuple[uuid.UUID, uuid.UUID]] = set()
@@ -619,7 +624,7 @@ def filtered_whitelist_episodes(
                         "canonical_episode_id": canonical_episode_id,
                         "filtered": True,
                         "expires_at": episode_expiries.get(canonical_episode_id),
-                        "show_ids": [],
+                        "title_ids": [],
                         "links": [],
                     },
                 ),
@@ -632,14 +637,16 @@ def filtered_whitelist_episodes(
             canonical_orders.get(episode.canonical_episode_id),
         ),
     )
-    episode_show_ids, episode_links = _episode_links_by_canonical_id(
-        [*media.shows, *media.tmdb_shows],
+    episode_title_ids, episode_links = _episode_links_by_canonical_id(
+        [*media.titles, *media.tmdb_titles],
         media.listed_episode_ids,
-        _episode_source_filters(channel_show),
+        _episode_source_filters(channel_title),
         enabled_episodes,
     )
     for episode_output in episodes:
-        episode_output.show_ids = episode_show_ids[episode_output.canonical_episode_id]
+        episode_output.title_ids = episode_title_ids[
+            episode_output.canonical_episode_id
+        ]
         episode_output.links = episode_links[episode_output.canonical_episode_id]
 
     serve_as_canonical_episodes(session, episodes)
@@ -649,50 +656,50 @@ def filtered_whitelist_episodes(
 # TODO: Validate
 def update_whitelist_output(
     session: Session,
-    whitelist_config: WhitelistShowInput,
-    channel_show: ChannelShow,
-) -> WhitelistShowOutput:
-    """Update the whitelist/blacklist for a show in a channel."""
-    update_whitelist(session, channel_show, whitelist_config)
+    whitelist_config: WhitelistTitleInput,
+    channel_title: ChannelTitle,
+) -> WhitelistTitleOutput:
+    """Update the whitelist/blacklist for a title in a channel."""
+    update_whitelist(session, channel_title, whitelist_config)
     # Build the response before any cleanup so it stays valid even if the
-    # channel-show is removed below.
-    output = channel_whitelist_output(session, channel_show)
-    # A filter-only show that no longer hides anything serves no purpose, so drop it
-    # to keep the channel's show list clean.
+    # channel-title is removed below.
+    output = channel_whitelist_output(session, channel_title)
+    # A filter-only title that no longer hides anything serves no purpose, so drop it
+    # to keep the channel's title list clean.
     if (
-        channel_show.is_blacklist_only
-        and not channel_show.source_filters
-        and not channel_show.season_filters
-        and not channel_show.episode_filters
+        channel_title.is_blacklist_only
+        and not channel_title.source_filters
+        and not channel_title.season_filters
+        and not channel_title.episode_filters
     ):
-        session.delete(channel_show)
+        session.delete(channel_title)
         session.commit()
     return output
 
 
 # TODO: Validate
-def blacklist_episode_by_show_id(
+def blacklist_episode_by_title_id(
     session: Session,
     channel: Channel,
     blacklist_in: BlacklistEpisodeInput,
 ) -> Message:
     """Blacklist a single episode for a `Channel`.
 
-    When the show is not already on the channel a filter-only `ChannelShow` is
-    created so the episode can be hidden without making the whole show a member of the
+    When the title is not already on the channel a filter-only `ChannelTitle` is
+    created so the episode can be hidden without making the whole title a member of the
     channel. An optional `expires_at` makes the blacklist temporary.
     """
-    # Show's primary key is (source_id, key), so look it up by its id column.
-    show = session.exec(
-        select(Show).where(Show.id == blacklist_in.show_id),
+    # Title's primary key is (source_id, key), so look it up by its id column.
+    title = session.exec(
+        select(Title).where(Title.id == blacklist_in.title_id),
     ).first()
-    if show is None:
-        raise HTTPException(status_code=404, detail="Show not found")
+    if title is None:
+        raise HTTPException(status_code=404, detail="Title not found")
 
     blacklist_episode_on_channel(
         session=session,
         channel=channel,
-        show=show,
+        title=title,
         episode_id=blacklist_in.episode_id,
         expires_at=blacklist_in.expires_at,
     )

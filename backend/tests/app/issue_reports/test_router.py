@@ -13,7 +13,7 @@ from sqlmodel import Session
 from app.issue_reports.models import (
     EpisodeIssueReport,
     SeasonIssueReport,
-    ShowIssueReport,
+    TitleIssueReport,
 )
 from app.users.models import User
 from tests.app.episodes.utils import create_random_episode
@@ -26,7 +26,7 @@ from tests.app.helpers.permissions import (
 )
 from tests.app.helpers.utils import random_lower_string
 from tests.app.seasons.utils import create_random_season
-from tests.app.shows.utils import create_random_show
+from tests.app.titles.utils import create_random_title
 from tests.app.users.utils import auth_headers, create_random_user
 
 EDIT_METHODS: list[Method] = ["patch", "delete"]
@@ -68,12 +68,12 @@ def test_reading_a_seasons_issue_reports_is_open_to_anybody(
 
 
 # TODO: Validate
-def test_reading_a_shows_issue_reports_is_open_to_anybody(
+def test_reading_a_titles_issue_reports_is_open_to_anybody(
     session_scoped_client: TestClient,
     session_scoped_session: Session,
 ) -> None:
-    show = create_random_show(session_scoped_session)
-    assert_allowed(session_scoped_client, "get", f"/shows/{show.id}/issue-reports")
+    title = create_random_title(session_scoped_session)
+    assert_allowed(session_scoped_client, "get", f"/titles/{title.id}/issue-reports")
 
 
 # TODO: Validate
@@ -115,9 +115,9 @@ def season_report(session: Session, author: User) -> SeasonIssueReport:
 
 
 # TODO: Validate
-def show_report(session: Session, author: User) -> ShowIssueReport:
-    report = ShowIssueReport(
-        show_id=create_random_show(session).id,
+def title_report(session: Session, author: User) -> TitleIssueReport:
+    report = TitleIssueReport(
+        title_id=create_random_title(session).id,
         user_id=author.id,
         report=random_lower_string(),
     )
@@ -129,7 +129,7 @@ def show_report(session: Session, author: User) -> ShowIssueReport:
 REPORTS = [
     ("episode-issue-reports", episode_report),
     ("season-issue-reports", season_report),
-    ("show-issue-reports", show_report),
+    ("title-issue-reports", title_report),
 ]
 
 

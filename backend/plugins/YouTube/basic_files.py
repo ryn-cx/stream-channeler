@@ -17,8 +17,8 @@ from plugins.YouTube.files import (
     PlaylistFeed,
     PlaylistInfo,
     PlaylistItems,
-    ShowListing,
-    ShowPage,
+    TitleListing,
+    TitlePage,
     TopicReleases,
     Videos,
     not_yt_dlapi,
@@ -31,8 +31,8 @@ class BasicFiles(BasePlugin):
     _importing_album_playlist_key: str | None = None
 
     # TODO: Validate
-    def channel_by_channel_id_file(self, show_key: str) -> ChannelByChannelId:
-        return self._file(ChannelByChannelId, show_key)
+    def channel_by_channel_id_file(self, title_key: str) -> ChannelByChannelId:
+        return self._file(ChannelByChannelId, title_key)
 
     # TODO: Validate
     def channel_by_handle_file(self, channel_handle: str) -> ChannelByHandle:
@@ -43,8 +43,8 @@ class BasicFiles(BasePlugin):
         return self._file(ChannelByUsername, channel_username)
 
     # TODO: Validate
-    def channel_playlists_file(self, show_key: str) -> ChannelPlaylists:
-        return self._file(ChannelPlaylists, show_key)
+    def channel_playlists_file(self, title_key: str) -> ChannelPlaylists:
+        return self._file(ChannelPlaylists, title_key)
 
     # TODO: Validate
     def playlist_info_file(self, playlist_key: str) -> PlaylistInfo:
@@ -63,12 +63,12 @@ class BasicFiles(BasePlugin):
         return self._file(PlaylistFeed, season_key)
 
     # TODO: Validate
-    def show_page_file(self, show_key: str) -> ShowPage:
-        return self._file(ShowPage, show_key)
+    def title_page_file(self, title_key: str) -> TitlePage:
+        return self._file(TitlePage, title_key)
 
     # TODO: Validate
-    def show_listing_file(self, show_playlist_key: str) -> ShowListing:
-        return self._file(ShowListing, show_playlist_key)
+    def title_listing_file(self, title_playlist_key: str) -> TitleListing:
+        return self._file(TitleListing, title_playlist_key)
 
     # TODO: Validate
     def music_playlist_file(self, playlist_key: str) -> MusicPlaylist:
@@ -79,32 +79,32 @@ class BasicFiles(BasePlugin):
         return self._file(TopicReleases, channel_key)
 
     # TODO: Validate
-    def show_playlist_key(self, show_key: str) -> str:
-        # Browse lists a show under the playlist it is published as rather than
+    def title_playlist_key(self, title_key: str) -> str:
+        # Browse lists a title under the playlist it is published as rather than
         # under the key its page is served at, and only the page says which that
         # is.
-        playlist_key = self.show_page_file(show_key).playlist_key()
+        playlist_key = self.title_page_file(title_key).playlist_key()
         if playlist_key is None:
-            msg = f"The page for show {show_key!r} names no playlist to list it by."
+            msg = f"The page for title {title_key!r} names no playlist to list it by."
             raise ValueError(msg)
         return playlist_key
 
     # TODO: Validate
-    def show_listing_file_for_show(self, show_key: str) -> ShowListing:
-        return self.show_listing_file(self.show_playlist_key(show_key))
+    def title_listing_file_for_title(self, title_key: str) -> TitleListing:
+        return self.title_listing_file(self.title_playlist_key(title_key))
 
     # TODO: Validate
-    def is_topic_channel(self, show_key: str) -> bool:
+    def is_topic_channel(self, title_key: str) -> bool:
         """Report whether a channel key belongs to a musician's Topic channel.
 
         Only the channel says so, and this reads what has been downloaded rather
         than downloading it, so a channel that has not been read yet is answered
         for as the plain channel it is taken for until it has been.
         """
-        if not is_channel_key(show_key):
+        if not is_channel_key(title_key):
             return False
 
-        channel_file = self.channel_by_channel_id_file(show_key)
+        channel_file = self.channel_by_channel_id_file(title_key)
         if channel_file.is_outdated() or not channel_file.database_record.content:
             return False
         items = channel_file.parsed().items
@@ -113,11 +113,11 @@ class BasicFiles(BasePlugin):
         return items[0].snippet.title.endswith(" - Topic")
 
     # TODO: Validate
-    def is_movies_channel(self, show_key: str) -> bool:
-        if not is_channel_key(show_key):
+    def is_movies_channel(self, title_key: str) -> bool:
+        if not is_channel_key(title_key):
             return False
 
-        channel_file = self.channel_by_channel_id_file(show_key)
+        channel_file = self.channel_by_channel_id_file(title_key)
         if channel_file.is_outdated() or not channel_file.database_record.content:
             return False
         items = channel_file.parsed().items
@@ -151,10 +151,10 @@ class BasicFiles(BasePlugin):
         ]
 
     # TODO: Validate
-    def show_season_numbers_from_file(self, show_key: str) -> list[str]:
+    def title_season_numbers_from_file(self, title_key: str) -> list[str]:
         return [
             str(number)
-            for number in self.show_listing_file_for_show(show_key).season_numbers()
+            for number in self.title_listing_file_for_title(title_key).season_numbers()
         ]
 
     # TODO: Validate

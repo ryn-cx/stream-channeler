@@ -5,28 +5,28 @@ from typing import TypeIs
 from app.episodes.models import Episode
 from app.models import BaseMediaMixin
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.titles.models import Title
 from plugins.utils.base_plugin.download import BaseDownloadMixin
 
 
 # TODO: Validate
 class BaseOutdatedCheckMixin(BaseDownloadMixin):
     # TODO: Validate
-    def _show_is_outdated(
+    def _title_is_outdated(
         self,
-        show: Show | None,
+        title: Title | None,
         *,
         force: bool = False,
     ) -> TypeIs[None]:
-        if show is None or force:
+        if title is None or force:
             return True
-        return self._record_is_outdated(show, self.show_data_timestamp(show.key))
+        return self._record_is_outdated(title, self.title_data_timestamp(title.key))
 
     # TODO: Validate
     def _season_is_outdated(
         self,
         season: Season | None,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
     ) -> TypeIs[None]:
@@ -34,7 +34,7 @@ class BaseOutdatedCheckMixin(BaseDownloadMixin):
             return True
         return self._record_is_outdated(
             season,
-            self.season_data_timestamp(season.key, show_key),
+            self.season_data_timestamp(season.key, title_key),
         )
 
     # TODO: Validate
@@ -42,7 +42,7 @@ class BaseOutdatedCheckMixin(BaseDownloadMixin):
         self,
         episode: Episode | None,
         season_key: str,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
     ) -> TypeIs[None]:
@@ -50,7 +50,7 @@ class BaseOutdatedCheckMixin(BaseDownloadMixin):
             return True
         return self._record_is_outdated(
             episode,
-            self.episode_data_timestamp(episode.key, season_key, show_key),
+            self.episode_data_timestamp(episode.key, season_key, title_key),
         )
 
     # TODO: Validate

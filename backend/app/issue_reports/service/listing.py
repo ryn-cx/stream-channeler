@@ -10,7 +10,7 @@ from app.episodes.models import Episode
 from app.issue_reports.models import (
     EpisodeIssueReport,
     SeasonIssueReport,
-    ShowIssueReport,
+    TitleIssueReport,
 )
 from app.issue_reports.schemas import (
     IssueReportListOutput,
@@ -19,8 +19,8 @@ from app.issue_reports.schemas import (
 )
 from app.issue_reports.service.reports import _output
 from app.seasons.models import Season
-from app.shows.models import Show
 from app.sources.models import Source
+from app.titles.models import Title
 
 
 # TODO: Validate
@@ -54,16 +54,16 @@ def list_season_issue_reports(
 
 
 # TODO: Validate
-def list_show_issue_reports(
+def list_title_issue_reports(
     session: Session,
-    show_id: uuid.UUID,
+    title_id: uuid.UUID,
 ) -> list[IssueReportOutput]:
-    """Return the reports left on one `Show`, oldest first."""
+    """Return the reports left on one `Title`, oldest first."""
     statement = (
-        select(ShowIssueReport)
-        .where(ShowIssueReport.show_id == show_id)
-        .options(selectinload(ShowIssueReport.user))  # type: ignore[arg-type]
-        .order_by(col(ShowIssueReport.created_at))
+        select(TitleIssueReport)
+        .where(TitleIssueReport.title_id == title_id)
+        .options(selectinload(TitleIssueReport.user))  # type: ignore[arg-type]
+        .order_by(col(TitleIssueReport.created_at))
     )
     return [_output(report) for report in session.exec(statement).all()]
 
@@ -71,11 +71,11 @@ def list_show_issue_reports(
 # TODO: Validate
 def _episode_reports(session: Session) -> list[IssueReportListOutput]:
     statement = (
-        select(EpisodeIssueReport, Episode, Season, Show, Source)
+        select(EpisodeIssueReport, Episode, Season, Title, Source)
         .join(Episode, onclause=col(EpisodeIssueReport.episode_id) == Episode.id)
         .join(Season, onclause=col(Episode.season_id) == Season.id)
-        .join(Show, onclause=col(Season.show_id) == Show.id)
-        .join(Source, onclause=col(Show.source_id) == Source.id)
+        .join(Title, onclause=col(Season.title_id) == Title.id)
+        .join(Source, onclause=col(Title.source_id) == Source.id)
         .options(selectinload(EpisodeIssueReport.user))  # type: ignore[arg-type]
     )
     return [
@@ -87,21 +87,21 @@ def _episode_reports(session: Session) -> list[IssueReportListOutput]:
                 "media_id": episode.id,
                 "media_name": episode.name,
                 "season_name": season.name,
-                "show_name": show.name,
+                "title_name": title.name,
                 "source_name": source.name,
             },
         )
-        for report, episode, season, show, source in session.exec(statement).all()
+        for report, episode, season, title, source in session.exec(statement).all()
     ]
 
 
 # TODO: Validate
 def _season_reports(session: Session) -> list[IssueReportListOutput]:
     statement = (
-        select(SeasonIssueReport, Season, Show, Source)
+        select(SeasonIssueReport, Season, Title, Source)
         .join(Season, onclause=col(SeasonIssueReport.season_id) == Season.id)
-        .join(Show, onclause=col(Season.show_id) == Show.id)
-        .join(Source, onclause=col(Show.source_id) == Source.id)
+        .join(Title, onclause=col(Season.title_id) == Title.id)
+        .join(Source, onclause=col(Title.source_id) == Source.id)
         .options(selectinload(SeasonIssueReport.user))  # type: ignore[arg-type]
     )
     return [
@@ -113,36 +113,36 @@ def _season_reports(session: Session) -> list[IssueReportListOutput]:
                 "media_id": season.id,
                 "media_name": season.name,
                 "season_name": season.name,
-                "show_name": show.name,
+                "title_name": title.name,
                 "source_name": source.name,
             },
         )
-        for report, season, show, source in session.exec(statement).all()
+        for report, season, title, source in session.exec(statement).all()
     ]
 
 
 # TODO: Validate
-def _show_reports(session: Session) -> list[IssueReportListOutput]:
+def _title_reports(session: Session) -> list[IssueReportListOutput]:
     statement = (
-        select(ShowIssueReport, Show, Source)
-        .join(Show, onclause=col(ShowIssueReport.show_id) == Show.id)
-        .join(Source, onclause=col(Show.source_id) == Source.id)
-        .options(selectinload(ShowIssueReport.user))  # type: ignore[arg-type]
+        select(TitleIssueReport, Title, Source)
+        .join(Title, onclause=col(TitleIssueReport.title_id) == Title.id)
+        .join(Source, onclause=col(Title.source_id) == Source.id)
+        .options(selectinload(TitleIssueReport.user))  # type: ignore[arg-type]
     )
     return [
         IssueReportListOutput.model_validate(
             report,
             from_attributes=True,
             update={
-                "media_type": IssueReportMediaType.show,
-                "media_id": show.id,
-                "media_name": show.name,
+                "media_type": IssueReportMediaType.title,
+                "media_id": title.id,
+                "media_name": title.name,
                 "season_name": None,
-                "show_name": show.name,
+                "title_name": title.name,
                 "source_name": source.name,
             },
         )
-        for report, show, source in session.exec(statement).all()
+        for report, title, source in session.exec(statement).all()
     ]
 
 
@@ -157,7 +157,7 @@ def list_all_issue_reports(
         reports.extend(_episode_reports(session))
     if media_type in (None, IssueReportMediaType.season):
         reports.extend(_season_reports(session))
-    if media_type in (None, IssueReportMediaType.show):
-        reports.extend(_show_reports(session))
+    if media_type in (None, IssueReportMediaType.title):
+        reports.extend(_title_reports(session))
     reports.sort(key=lambda report: report.created_at, reverse=True)
     return reports

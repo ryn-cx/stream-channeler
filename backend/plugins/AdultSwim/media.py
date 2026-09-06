@@ -10,10 +10,10 @@ from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.titles.models import Title
 from plugins.AdultSwim.shared import (
     EPISODE_URL_REGEX,
-    SHOW_URL_REGEX,
+    TITLE_URL_REGEX,
     AdultSwimShared,
 )
 from plugins.AdultSwim.utils import (
@@ -21,8 +21,8 @@ from plugins.AdultSwim.utils import (
     episode_keys,
     episode_url,
     season_keys,
-    show_url,
     source_requires_auth,
+    title_url,
 )
 from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
 from plugins.utils.base_plugin.importer import BaseImporter
@@ -45,7 +45,7 @@ class AdultSwimMedia(AdultSwimShared, BaseImporter):
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
-        return (EPISODE_URL_REGEX, SHOW_URL_REGEX)
+        return (EPISODE_URL_REGEX, TITLE_URL_REGEX)
 
     # TODO: Validate
     @override
@@ -53,19 +53,19 @@ class AdultSwimMedia(AdultSwimShared, BaseImporter):
         domain_regex = self._domain_regex()
 
         if match := re.match(domain_regex + EPISODE_URL_REGEX, url):
-            show_key, episode_slug = match.group("episode_path").split("/")
-            show_file = self.show_file(show_key)
-            self.raise_if_invalid_file(show_file, url)
-            episode_key = episode_key_for_slug(show_file.parsed(), episode_slug)
+            title_key, episode_slug = match.group("episode_path").split("/")
+            title_file = self.title_file(title_key)
+            self.raise_if_invalid_file(title_file, url)
+            episode_key = episode_key_for_slug(title_file.parsed(), episode_slug)
             if episode_key is None:
                 msg = f"Invalid {self.plugin_name()} URL: {url}"
                 raise InvalidURLError(msg)
-            return MediaInfo(show_key, episode_key=episode_key)
+            return MediaInfo(title_key, episode_key=episode_key)
 
-        if match := re.match(domain_regex + SHOW_URL_REGEX, url):
-            show_key = match.group("show_key")
-            self.raise_if_invalid_file(self.show_file(show_key), url)
-            return MediaInfo(show_key)
+        if match := re.match(domain_regex + TITLE_URL_REGEX, url):
+            title_key = match.group("title_key")
+            self.raise_if_invalid_file(self.title_file(title_key), url)
+            return MediaInfo(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
@@ -80,33 +80,33 @@ class AdultSwimMedia(AdultSwimShared, BaseImporter):
         written.
         """
         media_info = self.extract_media_info(url)
-        shows = list(self._preload_show(media_info.show_key))
-        if not shows:
-            shows = [
-                self.upsert_show(source, media_info.show_key)
+        titles = list(self._preload_title(media_info.title_key))
+        if not titles:
+            titles = [
+                self.upsert_title(source, media_info.title_key)
                 for source in self._sources.values()
             ]
         return [
             result
-            for show in shows
-            for result in self._import_results(show, media_info)
+            for title in titles
+            for result in self._import_results(title, media_info)
         ]
 
     # TODO: Validate
     @override
-    def tmdb_lookup_info(self, show_key: str) -> list[TMDBLookupInfo]:
-        show_page = self.show_file(show_key)
-        return [TMDBLookupInfo(show_page.parsed().title, TMDBMediaType.tv, None)]
+    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
+        title_page = self.title_file(title_key)
+        return [TMDBLookupInfo(title_page.parsed().title, TMDBMediaType.tv, None)]
 
     # TODO: Validate
     @override
-    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
-        return [self.show_file(show_key)]
+    def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
+        return [self.title_file(title_key)]
 
     # TODO: Validate
     @override
-    def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
-        return [self.show_file(show_key)]
+    def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
+        return [self.title_file(title_key)]
 
     # TODO: Validate
     @override
@@ -114,95 +114,95 @@ class AdultSwimMedia(AdultSwimShared, BaseImporter):
         self,
         episode_key: str,
         season_key: str,
-        show_key: str,
+        title_key: str,
     ) -> Sequence[BaseFile[Any]]:
-        return [self.show_file(show_key)]
+        return [self.title_file(title_key)]
 
     # TODO: Validate
     @override
-    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
-        return season_keys(self.show_file(show_key).parsed())
+    def _season_keys_from_title_files(self, title_key: str) -> list[str]:
+        return season_keys(self.title_file(title_key).parsed())
 
     # TODO: Validate
     @override
     def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
-        show_key: str,
+        title_key: str,
     ) -> list[str]:
         if isinstance(season_keys, str):
             season_keys = [season_keys]
-        return episode_keys(self.show_file(show_key).parsed(), season_keys)
+        return episode_keys(self.title_file(title_key).parsed(), season_keys)
 
     # TODO: Validate
     @override
-    def upsert_show(
+    def upsert_title(
         self,
         source: Source,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
-    ) -> Show:
-        show_data = self.show_file(show_key).parsed()
-        metadata = show_data.metadata
-        hero = show_data.hero
-        show = Show.get_from_memory(self.session, source, show_key)
-        if self._show_is_outdated(show, force=force):
-            data_timestamps = self.show_data_timestamps(show_key)
-            new_show = Show(
-                key=show_key,
-                name=show_data.title,
+    ) -> Title:
+        title_data = self.title_file(title_key).parsed()
+        metadata = title_data.metadata
+        hero = title_data.hero
+        title = Title.get_from_memory(self.session, source, title_key)
+        if self._title_is_outdated(title, force=force):
+            data_timestamps = self.title_data_timestamps(title_key)
+            new_title = Title(
+                key=title_key,
+                name=title_data.title,
                 description=metadata.description if metadata else None,
                 media_type="Series",
-                url=show_url(show_key),
+                url=title_url(title_key),
                 image_url=hero.image_url if hero else None,
                 thumbnail_url=metadata.thumbnail if metadata else None,
                 data_timestamp=data_timestamps[0],
                 source_id=source.id,
             )
-            show = new_show.upsert(source, show)
-            show.set_update_at(None, data_timestamps)
+            title = new_title.upsert(source, title)
+            title.set_update_at(None, data_timestamps)
 
         self._upsert_seasons(
-            show,
-            show_data,
+            title,
+            title_data,
             requires_auth=source_requires_auth(source.key),
             force=force,
         )
-        self._soft_delete_missing(show_key)
-        self._set_weekly_updates_from_episodes(show)
-        self.link_show_to_tmdb(show)
+        self._soft_delete_missing(title_key)
+        self._set_weekly_updates_from_episodes(title)
+        self.link_title_to_tmdb(title)
 
-        return show
+        return title
 
     # TODO: Validate
     def _upsert_seasons(
         self,
-        show: Show,
-        show_data: ShowModel,
+        title: Title,
+        title_data: ShowModel,
         *,
         requires_auth: bool,
         force: bool = False,
     ) -> None:
-        for sort_order, season_data in enumerate(show_data.seasons):
+        for sort_order, season_data in enumerate(title_data.seasons):
             season_key = str(season_data.number)
-            season = Season.get_from_memory(self.session, show, season_key)
-            if self._season_is_outdated(season, show.key, force=force):
-                data_timestamps = self.season_data_timestamps(season_key, show.key)
+            season = Season.get_from_memory(self.session, title, season_key)
+            if self._season_is_outdated(season, title.key, force=force):
+                data_timestamps = self.season_data_timestamps(season_key, title.key)
                 new_season = Season(
                     key=season_key,
                     name=season_data.name,
                     season_number=season_data.number,
                     sort_order=sort_order,
                     data_timestamp=data_timestamps[0],
-                    show_id=show.id,
+                    title_id=title.id,
                 )
-                season = new_season.upsert(show, season)
+                season = new_season.upsert(title, season)
                 season.set_update_at(None, data_timestamps)
 
             self._upsert_episodes(
                 season,
-                show.key,
+                title.key,
                 season_data,
                 requires_auth=requires_auth,
                 force=force,
@@ -212,7 +212,7 @@ class AdultSwimMedia(AdultSwimShared, BaseImporter):
     def _upsert_episodes(
         self,
         season: Season,
-        show_key: str,
+        title_key: str,
         season_data: SeasonData,
         *,
         requires_auth: bool,
@@ -228,7 +228,7 @@ class AdultSwimMedia(AdultSwimShared, BaseImporter):
             if not self._episode_is_outdated(
                 episode,
                 season.key,
-                show_key,
+                title_key,
                 force=force,
             ):
                 continue
@@ -236,7 +236,7 @@ class AdultSwimMedia(AdultSwimShared, BaseImporter):
             data_timestamps = self.episode_data_timestamps(
                 episode_data.id,
                 season.key,
-                show_key,
+                title_key,
             )
             new_episode = Episode(
                 key=episode_data.id,

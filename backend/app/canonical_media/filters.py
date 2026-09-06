@@ -2,7 +2,7 @@
 """Telling a canonical row apart from a non-canonical one.
 
 Canonical and non-canonical rows share a table, and `is_canonical` is the whole
-of what says which of the two a row is. Neither a `Show` nor an `Episode` names
+of what says which of the two a row is. Neither a `Title` nor an `Episode` names
 in a column the records it stands for - a website mixes two titles into one page
 and runs two episodes together in one listing, and each row stands for every one
 of them equally - so a row says outright which kind it is rather than leaving it

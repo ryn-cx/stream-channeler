@@ -14,7 +14,7 @@ from sqlmodel import (
 from app.episodes.models import Episode
 from app.models import TimestampIdAndHashMixin
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.titles.models import Title
 from app.users.models import User
 
 
@@ -82,18 +82,18 @@ class SeasonIssueReport(IssueReportMixin, table=True):
 
 
 # TODO: Validate
-class ShowIssueReport(IssueReportMixin, table=True):
-    """Model representing what a `User` says is wrong with a `Show`."""
+class TitleIssueReport(IssueReportMixin, table=True):
+    """Model representing what a `User` says is wrong with a `Title`."""
 
     __table_args__ = (
         PrimaryKeyConstraint("id"),
         # Used to list the reports left on one title.
-        Index("ShowIssueReport-show_id-index", "show_id"),
+        Index("TitleIssueReport-title_id-index", "title_id"),
         # Used to list the reports written by a user.
-        Index("ShowIssueReport-user_id-index", "user_id"),
+        Index("TitleIssueReport-user_id-index", "user_id"),
     )
 
-    show_id: uuid.UUID = Field(foreign_key="show.id", ondelete="CASCADE")
-    show: Show = Relationship(back_populates="issue_reports")
+    title_id: uuid.UUID = Field(foreign_key="title.id", ondelete="CASCADE")
+    title: Title = Relationship(back_populates="issue_reports")
 
     user: User | None = Relationship()

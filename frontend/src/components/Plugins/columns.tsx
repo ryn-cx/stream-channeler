@@ -43,12 +43,12 @@ export function pluginColumns(isAdmin = false): ColumnDef<PluginTableData>[] {
                 </Link>
               </TooltipIconLink>
             )}
-            <TooltipIconLink label="Shows">
+            <TooltipIconLink label="Titles">
               <Link
-                to="/shows"
+                to="/titles"
                 search={{ plugin_id: row.original.id }}
                 className="text-muted-foreground hover:text-foreground"
-                aria-label="Shows"
+                aria-label="Titles"
               >
                 <Clapperboard className="size-4" />
               </Link>

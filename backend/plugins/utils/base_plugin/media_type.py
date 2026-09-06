@@ -5,7 +5,7 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from app.shows.models import Show
+    from app.titles.models import Title
 
 
 # TODO: Validate
@@ -14,4 +14,4 @@ class BaseMediaTypeMixin:
 
     # TODO: Validate
     @abstractmethod
-    def _set_media_type_from_show(self, show: Show) -> None: ...
+    def _set_media_type_from_title(self, title: Title) -> None: ...

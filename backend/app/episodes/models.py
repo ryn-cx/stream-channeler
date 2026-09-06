@@ -32,8 +32,8 @@ from app.models import (
 )
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show
 from app.sources.models import Source
+from app.titles.models import Title
 from app.users.models import User
 
 if TYPE_CHECKING:
@@ -263,7 +263,7 @@ class Episode(BaseEpisode, ChildMediaMixin[Season, Never], table=True):
         return (
             select(cls)
             .join(Season, col(cls.season_id) == col(Season.id))
-            .join(Show, col(Season.show_id) == col(Show.id))
+            .join(Title, col(Season.title_id) == col(Title.id))
             .join(Source)
             .join(Plugin)
         )
@@ -273,8 +273,8 @@ class Episode(BaseEpisode, ChildMediaMixin[Season, Never], table=True):
     def select_with_plugin_eager(cls) -> SelectOfScalar[Self]:
         return cls.select_with_plugin().options(
             contains_eager(cls.season)  # type: ignore[arg-type]
-            .contains_eager(Season.show)  # type: ignore[arg-type]
-            .contains_eager(Show.source)  # type: ignore[arg-type]
+            .contains_eager(Season.title)  # type: ignore[arg-type]
+            .contains_eager(Title.source)  # type: ignore[arg-type]
             .contains_eager(Source.plugin),  # type: ignore[arg-type]
         )
 
@@ -377,18 +377,18 @@ class EpisodeCanonicalEpisode(
 
 
 # TODO: Validate
-class BaseEpisodeCanonicalShow(SQLModel):
+class BaseEpisodeCanonicalTitle(SQLModel):
     episode_id: uuid.UUID = Field(foreign_key="episode.id", ondelete="CASCADE")
-    canonical_show_id: uuid.UUID = Field(foreign_key="show.id", ondelete="CASCADE")
+    canonical_title_id: uuid.UUID = Field(foreign_key="title.id", ondelete="CASCADE")
 
 
 # TODO: Validate
-class EpisodeCanonicalShow(BaseEpisodeCanonicalShow, table=True):
+class EpisodeCanonicalTitle(BaseEpisodeCanonicalTitle, table=True):
     __table_args__ = (
-        PrimaryKeyConstraint("episode_id", "canonical_show_id"),
+        PrimaryKeyConstraint("episode_id", "canonical_title_id"),
         Index(
-            "EpisodeCanonicalShow-canonical_show_id-index",
-            "canonical_show_id",
+            "EpisodeCanonicalTitle-canonical_title_id-index",
+            "canonical_title_id",
             "episode_id",
         ),
     )

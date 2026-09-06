@@ -23,13 +23,13 @@ from app.channels.schemas import ChannelOptions
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.titles.models import Title
 from app.users.models import User
 from app.utils import tz_datetime
 from tests.app.channels.utils import (
-    channel_show_show,
+    channel_title_title,
     create_random_channel,
-    create_random_channel_show,
+    create_random_channel_title,
 )
 from tests.app.episodes.utils import create_random_episode
 from tests.app.plugins.utils import create_random_plugin
@@ -39,8 +39,8 @@ from tests.app.watches.utils import create_random_watch
 
 
 # TODO: Validate
-class ShowSetup(TypedDict):
-    show: Show
+class TitleSetup(TypedDict):
+    title: Title
     season: Season
     recent: Episode
     old: Episode
@@ -56,7 +56,7 @@ class BuildSetup(TypedDict):
 # TODO: Validate
 class EpisodeSetup(BuildSetup):
     plugin: Plugin
-    shows: list[ShowSetup]
+    titles: list[TitleSetup]
 
 
 # TODO: Validate
@@ -84,7 +84,7 @@ def _sort_key(
 # TODO: Validate
 @pytest.fixture
 def episode_setup(session_scoped_session: Session) -> EpisodeSetup:
-    """Create a channel with 2 shows, each with 2 episodes (recent + old air dates)."""
+    """Create a channel with 2 titles, each with 2 episodes (recent + old air dates)."""
     user = create_random_user(session_scoped_session)
     channel = create_random_channel(session_scoped_session, user=user.id)
     plugin = create_random_plugin(session_scoped_session)
@@ -92,9 +92,9 @@ def episode_setup(session_scoped_session: Session) -> EpisodeSetup:
     recent_date = tz_datetime.now() - timedelta(days=1)
     old_date = tz_datetime.now() - timedelta(days=60)
 
-    shows: list[ShowSetup] = []
+    titles: list[TitleSetup] = []
     for _ in range(2):
-        channel_show = create_random_channel_show(
+        channel_title = create_random_channel_title(
             session_scoped_session,
             channel,
             plugin,
@@ -102,7 +102,7 @@ def episode_setup(session_scoped_session: Session) -> EpisodeSetup:
         )
         season = create_random_season(
             session_scoped_session,
-            channel_show_show(session_scoped_session, channel_show),
+            channel_title_title(session_scoped_session, channel_title),
         )
         recent_episode = create_random_episode(
             session_scoped_session,
@@ -116,9 +116,9 @@ def episode_setup(session_scoped_session: Session) -> EpisodeSetup:
             air_date=old_date,
             duration=200,
         )
-        shows.append(
+        titles.append(
             {
-                "show": channel_show_show(session_scoped_session, channel_show),
+                "title": channel_title_title(session_scoped_session, channel_title),
                 "season": season,
                 "recent": recent_episode,
                 "old": old_episode,
@@ -131,7 +131,7 @@ def episode_setup(session_scoped_session: Session) -> EpisodeSetup:
         "channel": channel,
         "user": user,
         "plugin": plugin,
-        "shows": shows,
+        "titles": titles,
         "session": session_scoped_session,
     }
 
@@ -179,18 +179,18 @@ def _combine_channels(
 # TODO: Validate
 def _all_episode_ids(setup: EpisodeSetup) -> set[uuid.UUID]:
     return {
-        setup["shows"][0]["recent"].id,
-        setup["shows"][0]["old"].id,
-        setup["shows"][1]["recent"].id,
-        setup["shows"][1]["old"].id,
+        setup["titles"][0]["recent"].id,
+        setup["titles"][0]["old"].id,
+        setup["titles"][1]["recent"].id,
+        setup["titles"][1]["old"].id,
     }
 
 
 # TODO: Validate
 def _recent_ids(setup: EpisodeSetup) -> set[uuid.UUID]:
     return {
-        setup["shows"][0]["recent"].id,
-        setup["shows"][1]["recent"].id,
+        setup["titles"][0]["recent"].id,
+        setup["titles"][1]["recent"].id,
     }
 
 
@@ -272,20 +272,20 @@ def test_descending_duration(episode_setup: EpisodeSetup) -> None:
 
 
 # TODO: Validate
-def test_sort_by_show_name(episode_setup: EpisodeSetup) -> None:
-    """Sorting by show name should group episodes by show."""
+def test_sort_by_title_name(episode_setup: EpisodeSetup) -> None:
+    """Sorting by title name should group episodes by title."""
     # Set distinct names so sorting is deterministic
-    episode_setup["shows"][0]["show"].name = "Alpha"
-    episode_setup["shows"][1]["show"].name = "Beta"
+    episode_setup["titles"][0]["title"].name = "Alpha"
+    episode_setup["titles"][1]["title"].name = "Beta"
     episode_setup["session"].flush()
 
     episodes = _build(
         episode_setup,
-        sort_by=[_sort_key("show.name", "ascending")],
+        sort_by=[_sort_key("title.name", "ascending")],
     )
-    show_names = [ep.season.show.name for ep in episodes]
-    assert show_names[:2] == ["Alpha", "Alpha"]
-    assert show_names[2:] == ["Beta", "Beta"]
+    title_names = [ep.season.title.name for ep in episodes]
+    assert title_names[:2] == ["Alpha", "Alpha"]
+    assert title_names[2:] == ["Beta", "Beta"]
 
 
 # TODO: Validate
@@ -344,31 +344,31 @@ def test_recently_aired_defaults_to_7_days(
 
 
 # TODO: Validate
-def test_sequential_interleave_alternates_shows(
+def test_sequential_interleave_alternates_titles(
     episode_setup: EpisodeSetup,
 ) -> None:
-    # Distinct names so interleaving by show.name has distinct partitions.
+    # Distinct names so interleaving by title.name has distinct partitions.
     # Randomly generated names can both be None, collapsing them into one
-    # partition where episodes from the same show can end up adjacent.
-    episode_setup["shows"][0]["show"].name = "Alpha"
-    episode_setup["shows"][1]["show"].name = "Beta"
+    # partition where episodes from the same title can end up adjacent.
+    episode_setup["titles"][0]["title"].name = "Alpha"
+    episode_setup["titles"][1]["title"].name = "Beta"
     episode_setup["session"].flush()
 
     episodes = _build(
         episode_setup,
         sort_by=[
             _sort_key(
-                "show.name",
+                "title.name",
                 "ascending",
                 display="interleave",
             ),
         ],
         random_seed=42,
     )
-    show_ids = [ep.season.show_id for ep in episodes]
-    # Episodes from different shows should alternate
-    for index in range(len(show_ids) - 1):
-        assert show_ids[index] != show_ids[index + 1]
+    title_ids = [ep.season.title_id for ep in episodes]
+    # Episodes from different titles should alternate
+    for index in range(len(title_ids) - 1):
+        assert title_ids[index] != title_ids[index + 1]
 
 
 # TODO: Validate
@@ -407,7 +407,7 @@ def test_random_interleave_is_deterministic_with_seed(
 
 
 # TODO: Validate
-def test_group_by_show_sum_duration(episode_setup: EpisodeSetup) -> None:
+def test_group_by_title_sum_duration(episode_setup: EpisodeSetup) -> None:
     episodes = _build(
         episode_setup,
         sort_by=[
@@ -422,7 +422,7 @@ def test_group_by_show_sum_duration(episode_setup: EpisodeSetup) -> None:
 
 
 # TODO: Validate
-def test_group_by_show_max_air_date(episode_setup: EpisodeSetup) -> None:
+def test_group_by_title_max_air_date(episode_setup: EpisodeSetup) -> None:
     episodes = _build(
         episode_setup,
         sort_by=[
@@ -437,12 +437,12 @@ def test_group_by_show_max_air_date(episode_setup: EpisodeSetup) -> None:
 
 
 # TODO: Validate
-def test_group_by_show_with_show_field(episode_setup: EpisodeSetup) -> None:
-    """Group by show with a show field just returns the field value directly."""
+def test_group_by_title_with_title_field(episode_setup: EpisodeSetup) -> None:
+    """Group by title with a title field just returns the field value directly."""
     episodes = _build(
         episode_setup,
         sort_by=[
-            _sort_key("show.name", "ascending"),
+            _sort_key("title.name", "ascending"),
         ],
     )
     assert len(episodes) == 4  # noqa: PLR2004
@@ -453,8 +453,8 @@ def test_last_watched_sort_ascending(episode_setup: EpisodeSetup) -> None:
     """Episodes watched longer ago should appear first with ascending."""
     old_watch_date = tz_datetime.now() - timedelta(days=30)
     recent_watch_date = tz_datetime.now() - timedelta(days=1)
-    older_episode = episode_setup["shows"][0]["recent"]
-    newer_episode = episode_setup["shows"][1]["recent"]
+    older_episode = episode_setup["titles"][0]["recent"]
+    newer_episode = episode_setup["titles"][1]["recent"]
     create_random_watch(
         episode_setup["session"],
         older_episode,
@@ -491,18 +491,18 @@ def test_last_watched_incomplete_uses_only_unverified_watches(
     """Incomplete ordering ranks by unverified watches and ignores verified ones."""
     completed_watch_date = tz_datetime.now() - timedelta(days=1)
     incomplete_watch_date = tz_datetime.now() - timedelta(days=30)
-    # Show 0 has only a verified (completed) watch.
+    # Title 0 has only a verified (completed) watch.
     create_random_watch(
         episode_setup["session"],
-        episode_setup["shows"][0]["recent"],
+        episode_setup["titles"][0]["recent"],
         watch_user=episode_setup["user"],
         verified=True,
         watch_date=completed_watch_date,
     )
-    # Show 1 has only an unverified (incomplete) watch.
+    # Title 1 has only an unverified (incomplete) watch.
     create_random_watch(
         episode_setup["session"],
-        episode_setup["shows"][1]["recent"],
+        episode_setup["titles"][1]["recent"],
         watch_user=episode_setup["user"],
         verified=False,
         watch_date=incomplete_watch_date,
@@ -512,20 +512,20 @@ def test_last_watched_incomplete_uses_only_unverified_watches(
         sort_by=[_sort_key("episode.last_watched_incomplete", "descending")],
     )
     assert len(episodes) == 4  # noqa: PLR2004
-    show_ids = [ep.season.show_id for ep in episodes]
-    # Only show 1 has an incomplete watch, so it sorts ahead of show 0, whose
+    title_ids = [ep.season.title_id for ep in episodes]
+    # Only title 1 has an incomplete watch, so it sorts ahead of title 0, whose
     # verified watch leaves its incomplete column null (nulls last).
-    show_0_positions = [
+    title_0_positions = [
         i
-        for i, sid in enumerate(show_ids)
-        if sid == episode_setup["shows"][0]["show"].id
+        for i, sid in enumerate(title_ids)
+        if sid == episode_setup["titles"][0]["title"].id
     ]
-    show_1_positions = [
+    title_1_positions = [
         i
-        for i, sid in enumerate(show_ids)
-        if sid == episode_setup["shows"][1]["show"].id
+        for i, sid in enumerate(title_ids)
+        if sid == episode_setup["titles"][1]["title"].id
     ]
-    assert min(show_1_positions) < min(show_0_positions)
+    assert min(title_1_positions) < min(title_0_positions)
 
 
 # TODO: Validate
@@ -549,7 +549,7 @@ def test_last_watched_without_user_ignored(
 def test_hide_watched_excludes_watched_episodes(
     episode_setup: EpisodeSetup,
 ) -> None:
-    watched_episode = episode_setup["shows"][0]["recent"]
+    watched_episode = episode_setup["titles"][0]["recent"]
     create_random_watch(
         episode_setup["session"],
         watched_episode,
@@ -563,10 +563,10 @@ def test_hide_watched_excludes_watched_episodes(
 
 
 # TODO: Validate
-def test_hide_unwatched_only_shows_watched(
+def test_hide_unwatched_only_titles_watched(
     episode_setup: EpisodeSetup,
 ) -> None:
-    watched_episode = episode_setup["shows"][0]["recent"]
+    watched_episode = episode_setup["titles"][0]["recent"]
     create_random_watch(
         episode_setup["session"],
         watched_episode,
@@ -582,7 +582,7 @@ def test_hide_unwatched_only_shows_watched(
 def test_unverified_watch_not_counted_as_watched(
     episode_setup: EpisodeSetup,
 ) -> None:
-    watched_episode = episode_setup["shows"][0]["recent"]
+    watched_episode = episode_setup["titles"][0]["recent"]
     create_random_watch(
         episode_setup["session"],
         watched_episode,
@@ -595,31 +595,31 @@ def test_unverified_watch_not_counted_as_watched(
 
 
 # TODO: Validate
-def test_only_started_shows(episode_setup: EpisodeSetup) -> None:
-    started_episode = episode_setup["shows"][0]["recent"]
+def test_only_started_titles(episode_setup: EpisodeSetup) -> None:
+    started_episode = episode_setup["titles"][0]["recent"]
     create_random_watch(
         episode_setup["session"],
         started_episode,
         watch_user=episode_setup["user"],
         verified=True,
     )
-    episodes = _build(episode_setup, new_shows_count=0)
-    show_ids = {ep.season.show_id for ep in episodes}
-    assert show_ids == {episode_setup["shows"][0]["show"].id}
+    episodes = _build(episode_setup, new_titles_count=0)
+    title_ids = {ep.season.title_id for ep in episodes}
+    assert title_ids == {episode_setup["titles"][0]["title"].id}
 
 
 # TODO: Validate
-def test_only_new_shows(episode_setup: EpisodeSetup) -> None:
-    started_episode = episode_setup["shows"][0]["recent"]
+def test_only_new_titles(episode_setup: EpisodeSetup) -> None:
+    started_episode = episode_setup["titles"][0]["recent"]
     create_random_watch(
         episode_setup["session"],
         started_episode,
         watch_user=episode_setup["user"],
         verified=True,
     )
-    episodes = _build(episode_setup, started_shows_count=0)
-    show_ids = {ep.season.show_id for ep in episodes}
-    assert show_ids == {episode_setup["shows"][1]["show"].id}
+    episodes = _build(episode_setup, started_titles_count=0)
+    title_ids = {ep.season.title_id for ep in episodes}
+    assert title_ids == {episode_setup["titles"][1]["title"].id}
 
 
 # TODO: Validate
@@ -667,7 +667,7 @@ def test_minimum_air_date_relative(episode_setup: EpisodeSetup) -> None:
 
 # TODO: Validate
 def test_deleted_episodes_excluded(episode_setup: EpisodeSetup) -> None:
-    deleted_episode = episode_setup["shows"][0]["recent"]
+    deleted_episode = episode_setup["titles"][0]["recent"]
     deleted_episode.deleted_at = tz_datetime.now()
     episode_setup["session"].flush()
 
@@ -775,10 +775,10 @@ def test_all_aggregation_functions(
 
 
 # TODO: Validate
-def test_group_by_show_groups_episodes_by_show(
+def test_group_by_title_groups_episodes_by_title(
     episode_setup: EpisodeSetup,
 ) -> None:
-    """All episodes from the same show should be adjacent."""
+    """All episodes from the same title should be adjacent."""
     episodes = _build(
         episode_setup,
         sort_by=[
@@ -789,18 +789,18 @@ def test_group_by_show_groups_episodes_by_show(
             ),
         ],
     )
-    show_ids = [ep.season.show_id for ep in episodes]
-    # Episodes from the same show should be grouped together
-    seen_shows = []
-    for show_id in show_ids:
-        if not seen_shows or seen_shows[-1] != show_id:
-            seen_shows.append(show_id)
-    assert len(seen_shows) == 2  # noqa: PLR2004
+    title_ids = [ep.season.title_id for ep in episodes]
+    # Episodes from the same title should be grouped together
+    seen_titles = []
+    for title_id in title_ids:
+        if not seen_titles or seen_titles[-1] != title_id:
+            seen_titles.append(title_id)
+    assert len(seen_titles) == 2  # noqa: PLR2004
 
 
 # TODO: Validate
-def test_group_by_show_min_duration(episode_setup: EpisodeSetup) -> None:
-    """Min aggregation should sort by minimum episode duration per show."""
+def test_group_by_title_min_duration(episode_setup: EpisodeSetup) -> None:
+    """Min aggregation should sort by minimum episode duration per title."""
     episodes = _build(
         episode_setup,
         sort_by=[
@@ -818,7 +818,7 @@ def test_group_by_show_min_duration(episode_setup: EpisodeSetup) -> None:
 def test_hide_watched_with_duration_filter(
     episode_setup: EpisodeSetup,
 ) -> None:
-    watched_episode = episode_setup["shows"][0]["recent"]
+    watched_episode = episode_setup["titles"][0]["recent"]
     create_random_watch(
         episode_setup["session"],
         watched_episode,
@@ -836,10 +836,10 @@ def test_hide_watched_with_duration_filter(
 
 
 # TODO: Validate
-def test_only_started_shows_with_duration_filter(
+def test_only_started_titles_with_duration_filter(
     episode_setup: EpisodeSetup,
 ) -> None:
-    started_episode = episode_setup["shows"][0]["recent"]
+    started_episode = episode_setup["titles"][0]["recent"]
     create_random_watch(
         episode_setup["session"],
         started_episode,
@@ -848,11 +848,11 @@ def test_only_started_shows_with_duration_filter(
     )
     episodes = _build(
         episode_setup,
-        new_shows_count=0,
+        new_titles_count=0,
         minimum_duration=150,
     )
-    show_ids = {ep.season.show_id for ep in episodes}
-    assert show_ids == {episode_setup["shows"][0]["show"].id}
+    title_ids = {ep.season.title_id for ep in episodes}
+    assert title_ids == {episode_setup["titles"][0]["title"].id}
     assert all(ep.duration >= 150 for ep in episodes)  # noqa: PLR2004
 
 
@@ -860,7 +860,7 @@ def test_only_started_shows_with_duration_filter(
 def test_hide_watched_with_air_date_filter(
     episode_setup: EpisodeSetup,
 ) -> None:
-    watched_episode = episode_setup["shows"][0]["old"]
+    watched_episode = episode_setup["titles"][0]["old"]
     create_random_watch(
         episode_setup["session"],
         watched_episode,
@@ -880,7 +880,7 @@ def test_hide_watched_with_air_date_filter(
 # TODO: Validate
 def test_all_filters_combined(episode_setup: EpisodeSetup) -> None:
     """Apply multiple filters simultaneously."""
-    watched_episode = episode_setup["shows"][0]["recent"]
+    watched_episode = episode_setup["titles"][0]["recent"]
     create_random_watch(
         episode_setup["session"],
         watched_episode,
@@ -902,7 +902,7 @@ def test_all_filters_combined(episode_setup: EpisodeSetup) -> None:
 def test_sort_ascending_with_hide_watched(
     episode_setup: EpisodeSetup,
 ) -> None:
-    watched_episode = episode_setup["shows"][0]["recent"]
+    watched_episode = episode_setup["titles"][0]["recent"]
     create_random_watch(
         episode_setup["session"],
         watched_episode,
@@ -940,10 +940,10 @@ def test_interleave_with_duration_filter(
 
 
 # TODO: Validate
-def test_group_by_show_with_hide_watched(
+def test_group_by_title_with_hide_watched(
     episode_setup: EpisodeSetup,
 ) -> None:
-    watched_episode = episode_setup["shows"][0]["recent"]
+    watched_episode = episode_setup["titles"][0]["recent"]
     create_random_watch(
         episode_setup["session"],
         watched_episode,
@@ -965,10 +965,10 @@ def test_group_by_show_with_hide_watched(
 
 
 # TODO: Validate
-def test_interleave_with_only_started_shows(
+def test_interleave_with_only_started_titles(
     episode_setup: EpisodeSetup,
 ) -> None:
-    started_episode = episode_setup["shows"][0]["recent"]
+    started_episode = episode_setup["titles"][0]["recent"]
     create_random_watch(
         episode_setup["session"],
         started_episode,
@@ -984,11 +984,11 @@ def test_interleave_with_only_started_shows(
                 display="randomize",
             ),
         ],
-        new_shows_count=0,
+        new_titles_count=0,
         random_seed=42,
     )
-    show_ids = {ep.season.show_id for ep in episodes}
-    assert show_ids == {episode_setup["shows"][0]["show"].id}
+    title_ids = {ep.season.title_id for ep in episodes}
+    assert title_ids == {episode_setup["titles"][0]["title"].id}
 
 
 # TODO: Validate
@@ -1003,8 +1003,8 @@ def test_random_sort_with_limit(episode_setup: EpisodeSetup) -> None:
 
 
 # TODO: Validate
-def test_group_by_show_then_episode_sort(episode_setup: EpisodeSetup) -> None:
-    """Group by show as primary, episode field as secondary."""
+def test_group_by_title_then_episode_sort(episode_setup: EpisodeSetup) -> None:
+    """Group by title as primary, episode field as secondary."""
     episodes = _build(
         episode_setup,
         sort_by=[
@@ -1045,7 +1045,7 @@ def test_two_normal_sorts(episode_setup: EpisodeSetup) -> None:
     episodes = _build(
         episode_setup,
         sort_by=[
-            _sort_key("show.name", "ascending"),
+            _sort_key("title.name", "ascending"),
             _sort_key("episode.duration", "descending"),
         ],
     )
@@ -1053,12 +1053,12 @@ def test_two_normal_sorts(episode_setup: EpisodeSetup) -> None:
 
 
 # TODO: Validate
-def test_show_field_with_interleave(episode_setup: EpisodeSetup) -> None:
+def test_title_field_with_interleave(episode_setup: EpisodeSetup) -> None:
     episodes = _build(
         episode_setup,
         sort_by=[
             _sort_key(
-                "show.name",
+                "title.name",
                 "ascending",
                 display="interleave",
             ),
@@ -1066,9 +1066,9 @@ def test_show_field_with_interleave(episode_setup: EpisodeSetup) -> None:
         random_seed=42,
     )
     assert len(episodes) == 4  # noqa: PLR2004
-    # Both shows should be present in results
-    show_ids = {ep.season.show_id for ep in episodes}
-    assert len(show_ids) == 2  # noqa: PLR2004
+    # Both titles should be present in results
+    title_ids = {ep.season.title_id for ep in episodes}
+    assert len(title_ids) == 2  # noqa: PLR2004
 
 
 # TODO: Validate
@@ -1076,7 +1076,7 @@ def test_hide_watched_recent_watch_hidden(
     episode_setup: EpisodeSetup,
 ) -> None:
     """Episodes watched after the cutoff should be hidden."""
-    watched_episode = episode_setup["shows"][0]["recent"]
+    watched_episode = episode_setup["titles"][0]["recent"]
     recent_watch_date = tz_datetime.now() - timedelta(hours=1)
     create_random_watch(
         episode_setup["session"],
@@ -1100,7 +1100,7 @@ def test_hide_watched_old_watch_still_visible(
     episode_setup: EpisodeSetup,
 ) -> None:
     """Episodes watched before the cutoff should still appear."""
-    watched_episode = episode_setup["shows"][0]["recent"]
+    watched_episode = episode_setup["titles"][0]["recent"]
     old_watch_date = tz_datetime.now() - timedelta(days=30)
     create_random_watch(
         episode_setup["session"],
@@ -1123,7 +1123,7 @@ def test_hide_watched_old_watch_still_visible(
 def test_hide_watched_with_max_watch_date_relative(
     episode_setup: EpisodeSetup,
 ) -> None:
-    watched_episode = episode_setup["shows"][0]["recent"]
+    watched_episode = episode_setup["titles"][0]["recent"]
     recent_watch_date = tz_datetime.now() - timedelta(hours=1)
     create_random_watch(
         episode_setup["session"],
@@ -1172,12 +1172,12 @@ def test_watch_filters_ignored_without_user(
 
 
 # TODO: Validate
-def test_show_filters_ignored_without_user(
+def test_title_filters_ignored_without_user(
     episode_setup: EpisodeSetup,
 ) -> None:
     channel_options = ChannelOptions(
-        started_shows_count=0,
-        new_shows_count=0,
+        started_titles_count=0,
+        new_titles_count=0,
     )
     builder = EpisodeQueryBuilder(
         episode_setup["session"],
@@ -1195,13 +1195,13 @@ def test_episodes_from_additional_channel_included(
     session = episode_setup["session"]
     user = episode_setup["user"]
     extra_channel = create_random_channel(session, user=user.id)
-    channel_show = create_random_channel_show(
+    channel_title = create_random_channel_title(
         session,
         extra_channel,
         episode_setup["plugin"],
         is_whitelist=False,
     )
-    season = create_random_season(session, channel_show_show(session, channel_show))
+    season = create_random_season(session, channel_title_title(session, channel_title))
     extra_episode = create_random_episode(session, season, duration=300)
     session.flush()
 
@@ -1227,7 +1227,7 @@ def test_recursively_included_channels_included(
     # TODO: Validate
     def _channel_with_episode() -> tuple[Channel, Episode]:
         channel = create_random_channel(session, user=user.id)
-        channel_show = create_random_channel_show(
+        channel_title = create_random_channel_title(
             session,
             channel,
             plugin,
@@ -1235,7 +1235,7 @@ def test_recursively_included_channels_included(
         )
         season = create_random_season(
             session,
-            channel_show_show(session, channel_show),
+            channel_title_title(session, channel_title),
         )
         episode = create_random_episode(session, season, duration=300)
         return channel, episode
@@ -1257,14 +1257,14 @@ def test_recursively_included_channels_included(
 
 
 # TODO: Validate
-def test_interleave_sequential_with_group_by_show_and_duration(
+def test_interleave_sequential_with_group_by_title_and_duration(
     session_scoped_session: Session,
 ) -> None:
-    """Interleave by show with group_by_show recently_aired sort.
+    """Interleave by title with group_by_title recently_aired sort.
 
-    1. Group shows by recently aired status (not-recent first when ascending)
-    2. Interleave episodes across shows within each group
-    3. Sort by duration descending within each show's episodes
+    1. Group titles by recently aired status (not-recent first when ascending)
+    2. Interleave episodes across titles within each group
+    3. Sort by duration descending within each title's episodes
     """
     user = create_random_user(session_scoped_session)
     channel = create_random_channel(session_scoped_session, user=user.id)
@@ -1273,16 +1273,16 @@ def test_interleave_sequential_with_group_by_show_and_duration(
     recent_date = tz_datetime.now() - timedelta(days=30)
     old_date = tz_datetime.now() - timedelta(days=400)
 
-    # Recent Show 1: has a recently aired episode (within 365 days)
-    recent_show_1 = create_random_channel_show(
+    # Recent Title 1: has a recently aired episode (within 365 days)
+    recent_title_1 = create_random_channel_title(
         session_scoped_session,
         channel,
         plugin,
         is_whitelist=False,
     )
-    recent_show_1_show = channel_show_show(session_scoped_session, recent_show_1)
-    recent_show_1_show.name = "Recent 1"
-    season_r1 = create_random_season(session_scoped_session, recent_show_1_show)
+    recent_title_1_title = channel_title_title(session_scoped_session, recent_title_1)
+    recent_title_1_title.name = "Recent 1"
+    season_r1 = create_random_season(session_scoped_session, recent_title_1_title)
     for duration in (3600, 2400, 1200):
         create_random_episode(
             session_scoped_session,
@@ -1291,16 +1291,16 @@ def test_interleave_sequential_with_group_by_show_and_duration(
             duration=duration,
         )
 
-    # Recent Show 2: also recently aired
-    recent_show_2 = create_random_channel_show(
+    # Recent Title 2: also recently aired
+    recent_title_2 = create_random_channel_title(
         session_scoped_session,
         channel,
         plugin,
         is_whitelist=False,
     )
-    recent_show_2_show = channel_show_show(session_scoped_session, recent_show_2)
-    recent_show_2_show.name = "Recent 2"
-    season_r2 = create_random_season(session_scoped_session, recent_show_2_show)
+    recent_title_2_title = channel_title_title(session_scoped_session, recent_title_2)
+    recent_title_2_title.name = "Recent 2"
+    season_r2 = create_random_season(session_scoped_session, recent_title_2_title)
     for duration in (3000, 2000, 1000):
         create_random_episode(
             session_scoped_session,
@@ -1309,16 +1309,16 @@ def test_interleave_sequential_with_group_by_show_and_duration(
             duration=duration,
         )
 
-    # Old Show: no episodes in the past 365 days
-    old_show = create_random_channel_show(
+    # Old Title: no episodes in the past 365 days
+    old_title = create_random_channel_title(
         session_scoped_session,
         channel,
         plugin,
         is_whitelist=False,
     )
-    old_show_show = channel_show_show(session_scoped_session, old_show)
-    old_show_show.name = "Old Show"
-    season_old = create_random_season(session_scoped_session, old_show_show)
+    old_title_title = channel_title_title(session_scoped_session, old_title)
+    old_title_title.name = "Old Title"
+    season_old = create_random_season(session_scoped_session, old_title_title)
     for duration in (5000, 4000, 3000):
         create_random_episode(
             session_scoped_session,
@@ -1338,7 +1338,7 @@ def test_interleave_sequential_with_group_by_show_and_duration(
         setup,
         sort_by=[
             _sort_key("episode.duration", "descending"),
-            _sort_key("show.name", "ascending", display="interleave"),
+            _sort_key("title.name", "ascending", display="interleave"),
             _sort_key(
                 "episode.recently_aired",
                 "ascending",
@@ -1352,24 +1352,24 @@ def test_interleave_sequential_with_group_by_show_and_duration(
     assert len(episodes) == 9  # noqa: PLR2004
 
     # With the current sort-key order, duration is primary and interleave on
-    # show name is secondary, so tiers can be mixed. We still expect the
-    # oldest show to lead (first episodes are from "Old Show") and both
-    # recent shows to appear in the result.
-    show_names = [episode.season.show.name for episode in episodes]
-    assert show_names[0] == "Old Show"
-    assert show_names[1] == "Old Show"
-    assert "Recent 1" in show_names
-    assert "Recent 2" in show_names
+    # title name is secondary, so tiers can be mixed. We still expect the
+    # oldest title to lead (first episodes are from "Old Title") and both
+    # recent titles to appear in the result.
+    title_names = [episode.season.title.name for episode in episodes]
+    assert title_names[0] == "Old Title"
+    assert title_names[1] == "Old Title"
+    assert "Recent 1" in title_names
+    assert "Recent 2" in title_names
 
-    # Within each show, episodes should be sorted by duration descending
-    for show_name in ("Recent 1", "Recent 2", "Old Show"):
-        show_durations = [
+    # Within each title, episodes should be sorted by duration descending
+    for title_name in ("Recent 1", "Recent 2", "Old Title"):
+        title_durations = [
             episode.duration
             for episode in episodes
-            if episode.season.show.name == show_name
+            if episode.season.title.name == title_name
         ]
-        assert show_durations == sorted(show_durations, reverse=True), (
-            f"{show_name} episodes not sorted by duration descending: {show_durations}"
+        assert title_durations == sorted(title_durations, reverse=True), (
+            f"{title_name} episodes not sorted by duration descending: {title_durations}"
         )
 
 
@@ -1381,28 +1381,28 @@ def test_whitelisted_season_with_marked_episode_excludes_episode(
     channel = create_random_channel(session_scoped_session, user=user.id)
     plugin = create_random_plugin(session_scoped_session)
 
-    channel_show = create_random_channel_show(
+    channel_title = create_random_channel_title(
         session_scoped_session,
         channel,
         plugin,
         is_whitelist=True,
     )
-    show = channel_show_show(session_scoped_session, channel_show)
-    season = create_random_season(session_scoped_session, show)
+    title = channel_title_title(session_scoped_session, channel_title)
+    season = create_random_season(session_scoped_session, title)
     episode_included = create_random_episode(session_scoped_session, season)
     episode_excluded = create_random_episode(session_scoped_session, season)
 
     # Whitelist the season
     session_scoped_session.add(
         ChannelSeasonFilter(
-            channel_show_id=channel_show.id,
+            channel_title_id=channel_title.id,
             season_id=season.id,
         ),
     )
     # Also mark the episode — this should exclude it from the whitelisted season
     session_scoped_session.add(
         ChannelEpisodeFilter(
-            channel_show_id=channel_show.id,
+            channel_title_id=channel_title.id,
             canonical_episode_id=canonical_id_of(episode_excluded),
         ),
     )
@@ -1424,28 +1424,28 @@ def test_blacklisted_season_with_marked_episode_includes_episode(
     channel = create_random_channel(session_scoped_session, user=user.id)
     plugin = create_random_plugin(session_scoped_session)
 
-    channel_show = create_random_channel_show(
+    channel_title = create_random_channel_title(
         session_scoped_session,
         channel,
         plugin,
         is_whitelist=False,
     )
-    show = channel_show_show(session_scoped_session, channel_show)
-    season = create_random_season(session_scoped_session, show)
+    title = channel_title_title(session_scoped_session, channel_title)
+    season = create_random_season(session_scoped_session, title)
     episode_excluded = create_random_episode(session_scoped_session, season)
     episode_included = create_random_episode(session_scoped_session, season)
 
     # Blacklist the season
     session_scoped_session.add(
         ChannelSeasonFilter(
-            channel_show_id=channel_show.id,
+            channel_title_id=channel_title.id,
             season_id=season.id,
         ),
     )
     # Also mark the episode — this should include it despite the season blacklist
     session_scoped_session.add(
         ChannelEpisodeFilter(
-            channel_show_id=channel_show.id,
+            channel_title_id=channel_title.id,
             canonical_episode_id=canonical_id_of(episode_included),
         ),
     )
@@ -1469,7 +1469,7 @@ def test_results_include_channel_id(episode_setup: EpisodeSetup) -> None:
 
 # TODO: Validate
 def test_results_include_watch_data(episode_setup: EpisodeSetup) -> None:
-    watched_episode = episode_setup["shows"][0]["recent"]
+    watched_episode = episode_setup["titles"][0]["recent"]
     create_random_watch(
         episode_setup["session"],
         watched_episode,
@@ -1494,32 +1494,32 @@ def test_blacklist_propagates_through_nested_inclusion(
 
     # Channel A owns episode Z.
     channel_a = create_random_channel(session, user=user.id)
-    channel_show_a = create_random_channel_show(
+    channel_title_a = create_random_channel_title(
         session,
         channel_a,
         plugin,
         is_whitelist=False,
     )
-    show = channel_show_show(session, channel_show_a)
-    season = create_random_season(session, show)
+    title = channel_title_title(session, channel_title_a)
+    season = create_random_season(session, title)
     episode_z = create_random_episode(session, season)
     # A second episode that is never blacklisted, used as a positive control to
     # prove A really is in scope (so Z's absence is the blacklist, not a missing A).
     episode_y = create_random_episode(session, season)
 
-    # Channel B includes A but blacklists Z via a filter-only show.
+    # Channel B includes A but blacklists Z via a filter-only title.
     channel_b = create_random_channel(session, user=user.id)
     _combine_channels(session, channel_b, [channel_a.id])
-    blacklist_show = create_random_channel_show(
+    blacklist_title = create_random_channel_title(
         session,
         channel_b,
-        show,
+        title,
         is_whitelist=False,
         is_blacklist_only=True,
     )
     session.add(
         ChannelEpisodeFilter(
-            channel_show_id=blacklist_show.id,
+            channel_title_id=blacklist_title.id,
             canonical_episode_id=canonical_id_of(episode_z),
         ),
     )
@@ -1542,7 +1542,7 @@ def test_blacklist_propagates_through_nested_inclusion(
         episodes = _build(setup)
         return {episode.id for episode in episodes}
 
-    # Baseline: viewing A directly shows both episodes.
+    # Baseline: viewing A directly titles both episodes.
     ids_a = included_episode_ids(channel_a, [])
     assert episode_z.id in ids_a
     assert episode_y.id in ids_a

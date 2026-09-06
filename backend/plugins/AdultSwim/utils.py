@@ -17,13 +17,13 @@ def build_url(path: str) -> str:
 
 
 # TODO: Validate
-def show_url(show_key: str) -> str:
-    return build_url(f"videos/{show_key}")
+def title_url(title_key: str) -> str:
+    return build_url(f"videos/{title_key}")
 
 
 # TODO: Validate
-def episode_url(show_key: str, episode_slug: str) -> str:
-    return build_url(f"videos/{show_key}/{episode_slug}")
+def episode_url(title_key: str, episode_slug: str) -> str:
+    return build_url(f"videos/{title_key}/{episode_slug}")
 
 
 # TODO: Validate
@@ -32,23 +32,23 @@ def source_requires_auth(source_key: str) -> bool:
 
 
 # TODO: Validate
-def season_keys(show: ShowModel) -> list[str]:
-    return [str(season.number) for season in show.seasons]
+def season_keys(title: ShowModel) -> list[str]:
+    return [str(season.number) for season in title.seasons]
 
 
 # TODO: Validate
-def episode_keys(show: ShowModel, wanted_season_keys: list[str]) -> list[str]:
+def episode_keys(title: ShowModel, wanted_season_keys: list[str]) -> list[str]:
     return [
         episode.id
-        for season in show.seasons
+        for season in title.seasons
         if str(season.number) in wanted_season_keys
         for episode in season.episodes
     ]
 
 
 # TODO: Validate
-def episode_key_for_slug(show: ShowModel, episode_slug: str) -> str | None:
-    for season in show.seasons:
+def episode_key_for_slug(title: ShowModel, episode_slug: str) -> str | None:
+    for season in title.seasons:
         for episode in season.episodes:
             if episode.slug == episode_slug:
                 return episode.id

@@ -21,9 +21,9 @@ from app.episodes.models import Episode
 from app.files.models import File
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show
-from app.shows.service.canonical import match_imported_shows_to_tmdb
 from app.sources.models import Source
+from app.titles.models import Title
+from app.titles.service.canonical import match_imported_titles_to_tmdb
 from plugins.utils.abstract_plugin import AbstractPlugin, URLImportResult
 from plugins.utils.base_plugin.files import BaseFile
 from plugins.utils.manage_plugins import import_plugins, plugins
@@ -265,25 +265,25 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
 
     # TODO: Validate
     @staticmethod
-    def _owning_plugin_key(entity: Plugin | Source | Show | Season | Episode) -> str:
+    def _owning_plugin_key(entity: Plugin | Source | Title | Season | Episode) -> str:
         """Return the key of the plugin whose records `entity` is one of."""
         match entity:
             case Plugin() as plugin:
                 return plugin.key
             case Source() as source:
                 return source.plugin.key
-            case Show() as show:
-                return show.source.plugin.key
+            case Title() as title:
+                return title.source.plugin.key
             case Season() as season:
-                return season.show.source.plugin.key
+                return season.title.source.plugin.key
             case Episode() as episode:
-                return episode.season.show.source.plugin.key
+                return episode.season.title.source.plugin.key
 
     # TODO: Validate
     def owning_plugin(
         self,
         session: Session,
-        entity: Plugin | Source | Show | Season | Episode,
+        entity: Plugin | Source | Title | Season | Episode,
     ) -> AbstractPlugin:
         """Return the plugin that reads and writes `entity`.
 
@@ -323,8 +323,8 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
     def _plugin_with_children_statement() -> SelectOfScalar[Plugin]:
         return select(Plugin).options(
             selectinload(Plugin.sources)  # type: ignore[arg-type]
-            .selectinload(Source.shows)  # type: ignore[arg-type]
-            .selectinload(Show.seasons)  # type: ignore[arg-type]
+            .selectinload(Source.titles)  # type: ignore[arg-type]
+            .selectinload(Title.seasons)  # type: ignore[arg-type]
             .selectinload(Season.episodes),  # type: ignore[arg-type]
         )
 
@@ -337,14 +337,14 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
         return sorted(
             (
                 {
-                    "show_key": result.show.key,
+                    "title_key": result.title.key,
                     "is_whitelist": result.is_whitelist,
                     "whitelist_season_keys": sorted(result.season_keys),
                     "whitelist_episode_keys": sorted(result.episode_keys),
                 }
                 for result in results
             ),
-            key=lambda result: result["show_key"],
+            key=lambda result: result["title_key"],
         )
 
     # TODO: Validate
@@ -358,10 +358,10 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
         assert url, "URL must be provided for URL import tests"
         self.imported_plugin = self.plugin_class(session)
         output = self.imported_plugin.import_url(url)
-        match_imported_shows_to_tmdb(
+        match_imported_titles_to_tmdb(
             session,
             self.imported_plugin,
-            [result.show for result in output],
+            [result.title for result in output],
         )
 
         session.flush()

@@ -5,11 +5,11 @@ from sqlmodel import Session
 
 from app.episodes.models import Episode
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.titles.models import Title
 
 
 # TODO: Validate
-def _cache[CanonicalT: Show | Season | Episode](
+def _cache[CanonicalT: Title | Season | Episode](
     session: Session,
     model: type[CanonicalT],
 ) -> dict[tuple[str, ...], CanonicalT]:
@@ -21,7 +21,7 @@ def _cache[CanonicalT: Show | Season | Episode](
 
 
 # TODO: Validate
-def _remembered[CanonicalT: Show | Season | Episode](
+def _remembered[CanonicalT: Title | Season | Episode](
     session: Session,
     model: type[CanonicalT],
     cache_key: tuple[str, ...],
@@ -35,7 +35,7 @@ def _remembered[CanonicalT: Show | Season | Episode](
 # TODO: Validate
 def _remember(
     session: Session,
-    canonical: Show | Season | Episode,
+    canonical: Title | Season | Episode,
     cache_key: tuple[str, ...],
 ) -> None:
     _cache(session, type(canonical))[cache_key] = canonical

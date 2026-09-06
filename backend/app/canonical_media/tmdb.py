@@ -5,9 +5,9 @@ series seasons and series episodes - so a number means nothing until which of th
 four it came from is said, and saying it is the whole of what the word is for:
 "TMDB movie 27205", "TMDB tv 1399", "TMDB season 3624", "TMDB episode 63056".
 
-A film is numbered once and stands as a show, a season and an episode all at
+A film is numbered once and stands as a title, a season and an episode all at
 that one number, so all three of its rows are named "TMDB movie 27205". Nothing
-is lost by that: a season is named within the show above it and an episode
+is lost by that: a season is named within the title above it and an episode
 within its season, so the three never have to be told apart from one another.
 
 Everything that used to read a `tmdb_id` column reads it back out of here, so
@@ -24,7 +24,7 @@ from app.media.media_type import TMDBMediaType
 TMDB_KEY_PREFIX = "TMDB"
 TMDB_KEY_LIKE = f"{TMDB_KEY_PREFIX} %"
 
-SHOW_LEVEL = "show"
+TITLE_LEVEL = "title"
 SEASON_LEVEL = "season"
 EPISODE_LEVEL = "episode"
 
@@ -33,7 +33,7 @@ EPISODE_LEVEL = "episode"
 # is one record however many rows stand for it.
 _MOVIE_WORD = "movie"
 _KEY_WORDS: dict[str, dict[TMDBMediaType, str]] = {
-    SHOW_LEVEL: {TMDBMediaType.movie: _MOVIE_WORD, TMDBMediaType.tv: "tv"},
+    TITLE_LEVEL: {TMDBMediaType.movie: _MOVIE_WORD, TMDBMediaType.tv: "tv"},
     SEASON_LEVEL: {TMDBMediaType.movie: _MOVIE_WORD, TMDBMediaType.tv: SEASON_LEVEL},
     EPISODE_LEVEL: {TMDBMediaType.movie: _MOVIE_WORD, TMDBMediaType.tv: EPISODE_LEVEL},
 }
@@ -47,16 +47,19 @@ def _tmdb_key(media_type: TMDBMediaType, level: str, tmdb_id: int) -> str:
     return f"{TMDB_KEY_PREFIX} {_KEY_WORDS[level][media_type]} {tmdb_id}"
 
 
-def tmdb_show_key(media_type: TMDBMediaType, tmdb_id: int) -> str:
-    """Return the unique key for a TMDB show."""
-    return _tmdb_key(media_type, SHOW_LEVEL, tmdb_id)
+# TODO: Validate
+def tmdb_title_key(media_type: TMDBMediaType, tmdb_id: int) -> str:
+    """Return the unique key for a TMDB title."""
+    return _tmdb_key(media_type, TITLE_LEVEL, tmdb_id)
 
 
+# TODO: Validate
 def tmdb_season_key(media_type: TMDBMediaType, tmdb_id: int) -> str:
     """Return the unique key for a TMDB season."""
     return _tmdb_key(media_type, SEASON_LEVEL, tmdb_id)
 
 
+# TODO: Validate
 def tmdb_episode_key(media_type: TMDBMediaType, tmdb_id: int) -> str:
     """Return the unique key for a TMDB episode."""
     return _tmdb_key(media_type, EPISODE_LEVEL, tmdb_id)
@@ -98,7 +101,7 @@ def not_tmdb_key_clause(key_column: ColumnElement[str]) -> ColumnElement[bool]:
 
 # TODO: Validate
 def tmdb_episode_url(
-    show_key: str | None,
+    title_key: str | None,
     season_number: int | None,
     episode_number: int | None,
 ) -> str | None:
@@ -109,9 +112,9 @@ def tmdb_episode_url(
     with nothing below it, so its one episode is that page. Media TMDB has no
     record of has no page at all.
     """
-    if not show_key or not is_tmdb_key(show_key):
+    if not title_key or not is_tmdb_key(title_key):
         return None
-    media_type, tmdb_id = parse_tmdb_key(show_key)
+    media_type, tmdb_id = parse_tmdb_key(title_key)
     if media_type is TMDBMediaType.movie:
         return f"{TMDB_PAGE_URL}/{media_type}/{tmdb_id}"
     if season_number is None or episode_number is None:
@@ -123,31 +126,31 @@ def tmdb_episode_url(
 
 
 # TODO: Validate
-def tmdb_season_url(show_key: str | None, season_number: int | None) -> str | None:
+def tmdb_season_url(title_key: str | None, season_number: int | None) -> str | None:
     """Return the page for a season on themoviedb.org, if TMDB has one.
 
     A film is a single page with nothing below it, so its one season is that
     page, and so is a series season TMDB has no number for.
     """
-    if not show_key or not is_tmdb_key(show_key):
+    if not title_key or not is_tmdb_key(title_key):
         return None
-    media_type, tmdb_id = parse_tmdb_key(show_key)
+    media_type, tmdb_id = parse_tmdb_key(title_key)
     if media_type is TMDBMediaType.movie or season_number is None:
         return f"{TMDB_PAGE_URL}/{media_type}/{tmdb_id}"
     return f"{TMDB_PAGE_URL}/{media_type}/{tmdb_id}/season/{season_number}"
 
 
 # TODO: Validate
-def tmdb_show_url(show_key: str | None) -> str | None:
+def tmdb_title_url(title_key: str | None) -> str | None:
     """Return the page for a title on themoviedb.org, if TMDB has one."""
-    if not show_key or not is_tmdb_key(show_key):
+    if not title_key or not is_tmdb_key(title_key):
         return None
-    media_type, tmdb_id = parse_tmdb_key(show_key)
+    media_type, tmdb_id = parse_tmdb_key(title_key)
     return f"{TMDB_PAGE_URL}/{media_type}/{tmdb_id}"
 
 
 # TODO: Validate
-class TmdbShowExtra(BaseModel):
+class TmdbTitleExtra(BaseModel):
     tmdb_episode_group_id: str | None = None
 
 
@@ -179,7 +182,7 @@ def dump_episode_extra(
 
 
 # TODO: Validate
-def parse_extra(extra: dict[str, Any] | None) -> TmdbShowExtra:
+def parse_extra(extra: dict[str, Any] | None) -> TmdbTitleExtra:
     """Return what `extra` says, or an empty answer where it says nothing.
 
     Anything that is not of this shape is read as saying nothing rather than
@@ -187,11 +190,11 @@ def parse_extra(extra: dict[str, Any] | None) -> TmdbShowExtra:
     a row written before this existed is a row to be read, not a failure.
     """
     if not extra:
-        return TmdbShowExtra()
+        return TmdbTitleExtra()
     try:
-        return TmdbShowExtra.model_validate(extra)
+        return TmdbTitleExtra.model_validate(extra)
     except ValidationError:
-        return TmdbShowExtra()
+        return TmdbTitleExtra()
 
 
 # TODO: Validate
@@ -209,14 +212,14 @@ def dump_extra(group_id: str | None) -> dict[str, Any]:
     """
     if not group_id:
         return {}
-    return TmdbShowExtra(tmdb_episode_group_id=group_id).model_dump()
+    return TmdbTitleExtra(tmdb_episode_group_id=group_id).model_dump()
 
 
 # TODO: Validate
-def get_media_type_and_tmdb_id(tmdb_show_key: str) -> tuple[TMDBMediaType, int]:
-    """Return the media type and the TMDB id from an `Show.key`."""
+def get_media_type_and_tmdb_id(tmdb_title_key: str) -> tuple[TMDBMediaType, int]:
+    """Return the media type and the TMDB id from an `Title.key`."""
     # Input will be either "TMDB tv ###" or "TMDB movie ###".
-    return parse_tmdb_key(tmdb_show_key)
+    return parse_tmdb_key(tmdb_title_key)
 
 
 # TODO: Validate
@@ -239,8 +242,8 @@ def get_media_type(tmdb_key: str) -> TMDBMediaType:
 
 
 # TODO: Validate
-def get_show_id(tmdb_show_key: str) -> int:
-    return get_media_type_and_tmdb_id(tmdb_show_key)[1]
+def get_title_id(tmdb_title_key: str) -> int:
+    return get_media_type_and_tmdb_id(tmdb_title_key)[1]
 
 
 # TODO: Validate

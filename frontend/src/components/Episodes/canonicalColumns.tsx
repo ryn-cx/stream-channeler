@@ -8,10 +8,10 @@ export type CanonicalEpisodeTableData = CanonicalEpisodeListOutput
 // TODO: Validate
 export const canonicalEpisodeColumns: ColumnDef<CanonicalEpisodeTableData>[] = [
   {
-    accessorKey: "canonical_show_name",
-    header: "Show",
+    accessorKey: "canonical_title_name",
+    header: "Title",
     cell: ({ row }) => (
-      <TruncatedCell value={row.original.canonical_show_name} />
+      <TruncatedCell value={row.original.canonical_title_name} />
     ),
   },
   {
@@ -105,10 +105,10 @@ export const canonicalEpisodeColumns: ColumnDef<CanonicalEpisodeTableData>[] = [
     ),
   },
   {
-    accessorKey: "canonical_show_key",
-    header: "Show Key",
+    accessorKey: "canonical_title_key",
+    header: "Title Key",
     cell: ({ row }) => (
-      <TruncatedCell value={row.original.canonical_show_key} />
+      <TruncatedCell value={row.original.canonical_title_key} />
     ),
   },
   {

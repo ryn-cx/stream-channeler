@@ -40,12 +40,12 @@ from app.episodes.user_urls import (
 from app.issue_reports.service.listing import list_episode_issue_reports
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.titles.models import Title
 from app.users.models import User
 
 
 # TODO: Validate
-def _select_with_canonical_season_and_show() -> SelectOfScalar[Episode]:
+def _select_with_canonical_season_and_title() -> SelectOfScalar[Episode]:
     """Select episodes with the season and title above each one already loaded."""
     return (
         select(Episode)
@@ -54,13 +54,13 @@ def _select_with_canonical_season_and_show() -> SelectOfScalar[Episode]:
             onclause=col(Episode.season_id) == Season.id,
         )
         .join(
-            Show,
-            onclause=col(Season.show_id) == Show.id,
+            Title,
+            onclause=col(Season.title_id) == Title.id,
         )
-        .where(is_canonical(Episode), is_canonical(Show))
+        .where(is_canonical(Episode), is_canonical(Title))
         .options(
             contains_eager(Episode.season).contains_eager(  # type: ignore[arg-type]
-                Season.show,  # type: ignore[arg-type]
+                Season.title,  # type: ignore[arg-type]
             ),
         )
     )
@@ -71,7 +71,7 @@ def _information_side(  # noqa: PLR0913 - one side of the comparison, field by f
     label: str,
     episode: Episode,
     season: Season,
-    show: Show,
+    title: Title,
     url: str | None,
     absolute_number: int | None,
 ) -> EpisodeInformationSide:
@@ -79,7 +79,7 @@ def _information_side(  # noqa: PLR0913 - one side of the comparison, field by f
         label=label,
         url=url,
         absolute_number=absolute_number,
-        **_record_fields(episode, season, show),
+        **_record_fields(episode, season, title),
     )
 
 
@@ -96,8 +96,8 @@ def episode_information(
     compare.
     """
     season = episode.season
-    show = season.show
-    source = show.source
+    title = season.title
+    source = title.source
 
     # The episode itself, beside the website's account of it. Named for TMDB because
     # that is where a canonical row's values come from when TMDB has a record; media it
@@ -108,18 +108,18 @@ def episode_information(
     # go rather than a query apiece.
     numbers = absolute_numbers_of(
         session,
-        {show.id} if counterpart is None else {show.id, counterpart[2].id},
+        {title.id} if counterpart is None else {title.id, counterpart[2].id},
     )
     tmdb: EpisodeInformationSide | None = None
     if counterpart:
-        canonical_episode, canonical_season, canonical_show = counterpart
+        canonical_episode, canonical_season, canonical_title = counterpart
         tmdb = _information_side(
             TMDB_PLUGIN_KEY,
             canonical_episode,
             canonical_season,
-            canonical_show,
+            canonical_title,
             tmdb_episode_url(
-                canonical_show.key,
+                canonical_title.key,
                 canonical_season.season_number,
                 canonical_episode.episode_number,
             ),
@@ -143,7 +143,7 @@ def episode_information(
             source.name or source.plugin.key,
             episode,
             season,
-            show,
+            title,
             episode.url,
             numbers.get(episode.id),
         ),
@@ -171,7 +171,7 @@ def canonical_episode_record(
     canonical_episode: Episode,
 ) -> CanonicalEpisodeRecord:
     """Read an `Episode` with the season and title above it."""
-    numbers = absolute_numbers_of(session, {canonical_episode.season.show_id})
+    numbers = absolute_numbers_of(session, {canonical_episode.season.title_id})
     return CanonicalEpisodeRecord(
         absolute_number=numbers.get(canonical_episode.id),
         **episode_record(canonical_episode).model_dump(),

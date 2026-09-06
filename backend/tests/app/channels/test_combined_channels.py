@@ -19,9 +19,9 @@ from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.users.models import User
 from tests.app.channels.utils import (
-    channel_show_show,
+    channel_title_title,
     create_random_channel,
-    create_random_channel_show,
+    create_random_channel_title,
 )
 from tests.app.episodes.utils import create_random_episode
 from tests.app.plugins.utils import create_random_plugin
@@ -72,19 +72,19 @@ def _channel_with_episodes(
     durations: list[int],
     channel_id: uuid.UUID | None = None,
 ) -> tuple[Channel, list[Episode]]:
-    """Build a channel holding one show whose episodes run for `durations`."""
+    """Build a channel holding one title whose episodes run for `durations`."""
     channel = (
         create_random_channel(session, user=user.id, id=channel_id)
         if channel_id is not None
         else create_random_channel(session, user=user.id)
     )
-    channel_show = create_random_channel_show(
+    channel_title = create_random_channel_title(
         session,
         channel,
         plugin,
         is_whitelist=False,
     )
-    season = create_random_season(session, channel_show_show(session, channel_show))
+    season = create_random_season(session, channel_title_title(session, channel_title))
     episodes = [
         create_random_episode(session, season, duration=duration)
         for duration in durations

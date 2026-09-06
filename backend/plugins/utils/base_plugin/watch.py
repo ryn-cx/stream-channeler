@@ -9,8 +9,8 @@ from app.canonical_media.episodes import canonical_id_of
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show
 from app.sources.models import Source
+from app.titles.models import Title
 from app.users.models import User
 from app.watches.identifiers import watched_dates_by_canonical_id
 
@@ -33,7 +33,7 @@ class BaseWatchMixin(ABC):
         statement = (
             select(Episode)
             .join(Season, col(Episode.season_id) == col(Season.id))
-            .join(Show, col(Season.show_id) == col(Show.id))
+            .join(Title, col(Season.title_id) == col(Title.id))
             .join(Source)
             .where(Source.plugin_id == self.plugin.id)
             .where(col(Episode.key).in_(episode_keys))

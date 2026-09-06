@@ -51,7 +51,7 @@ function placement(side: EpisodeInformationSide) {
 // TODO: Validate
 function heroSubtitle(data: EpisodeInformationOutput, preferSource: boolean) {
   const side = primarySide(data, preferSource)
-  return [side.show.name, ...placement(side)].filter(Boolean).join(" · ")
+  return [side.title.name, ...placement(side)].filter(Boolean).join(" · ")
 }
 
 // TODO: Validate
@@ -85,7 +85,7 @@ function sideLinks(side: EpisodeInformationSide) {
   return [
     { label: `${side.label} episode`, href: side.episode.url },
     { label: `${side.label} season`, href: side.season.url },
-    { label: `${side.label} show`, href: side.show.url },
+    { label: `${side.label} title`, href: side.title.url },
   ]
 }
 

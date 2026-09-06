@@ -12,7 +12,7 @@ from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.titles.models import Title
 from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.Netflix.shared import TITLE_URL_REGEX, NetflixShared
@@ -21,8 +21,8 @@ from plugins.Netflix.utils import (
     episode_url,
     ordered_seasons,
     season_episodes,
-    show_url,
     split_season_key,
+    title_url,
     title_video,
     upcoming_weekday,
 )
@@ -55,34 +55,34 @@ class NetflixMedia(NetflixShared, BaseImporter, ABC):
     @override
     def extract_media_info(self, url: str) -> MediaInfo:
         if match := re.match(self._domain_regex() + TITLE_URL_REGEX, url):
-            show_key = match.group("title_key")
-            self.raise_if_invalid_file(self.title_file(show_key), url)
-            return MediaInfo(show_key)
+            title_key = match.group("title_key")
+            self.raise_if_invalid_file(self.title_file(title_key), url)
+            return MediaInfo(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
     # TODO: Validate
-    def _title_video(self, show_key: str) -> TitleVideo:
-        return title_video(self.title_file(show_key).parsed(), show_key)
+    def _title_video(self, title_key: str) -> TitleVideo:
+        return title_video(self.title_file(title_key).parsed(), title_key)
 
     # TODO: Validate
     @override
-    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
-        # Required to detect changes to the show and new seasons of it.
-        return [self.title_file(show_key), self.seasons_file(show_key)]
+    def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
+        # Required to detect changes to the title and new seasons of it.
+        return [self.title_file(title_key), self.seasons_file(title_key)]
 
     # TODO: Validate
-    def _next_update_at(self, show_key: str, data_timestamp: datetime) -> datetime:
+    def _next_update_at(self, title_key: str, data_timestamp: datetime) -> datetime:
         """When to next refresh the title.
 
         While an episode is upcoming, refresh on the day it is scheduled; if that
         day is the current day, refresh the following day instead. Otherwise refresh
         monthly.
         """
-        weekday = upcoming_weekday(self._title_video(show_key))
+        weekday = upcoming_weekday(self._title_video(title_key))
         if weekday is None:
-            return staggered_monthly_update_at(show_key, data_timestamp)
+            return staggered_monthly_update_at(title_key, data_timestamp)
         days_ahead = (weekday - data_timestamp.weekday()) % 7
         # The scheduled day is the current day, so check again the following day.
         if days_ahead == 0:
@@ -94,18 +94,18 @@ class NetflixMedia(NetflixShared, BaseImporter, ABC):
 class NetflixSeries(NetflixMedia):
     # TODO: Validate
     @override
-    def tmdb_lookup_info(self, show_key: str) -> list[TMDBLookupInfo]:
-        self.title_file(show_key).download_if_outdated(
+    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
+        self.title_file(title_key).download_if_outdated(
             tz_datetime.now() - timedelta(days=7),
         )
-        video = self._title_video(show_key)
+        video = self._title_video(title_key)
         return [TMDBLookupInfo(video.title, TMDBMediaType.tv, video.latest_year)]
 
     # TODO: Validate
     @override
-    def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
-        _show_key, season_id = split_season_key(season_key)
-        return [self.season_episodes_file(season_id), self.seasons_file(show_key)]
+    def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
+        _title_key, season_id = split_season_key(season_key)
+        return [self.season_episodes_file(season_id), self.seasons_file(title_key)]
 
     # TODO: Validate
     @override
@@ -113,13 +113,13 @@ class NetflixSeries(NetflixMedia):
         self,
         episode_key: str,
         season_key: str,
-        show_key: str,
+        title_key: str,
     ) -> Sequence[BaseFile[Any]]:
-        return self._season_files(season_key, show_key)
+        return self._season_files(season_key, title_key)
 
     # TODO: Validate
-    def _ordered_seasons(self, show_key: str) -> list[SeasonNode]:
-        return ordered_seasons(self.seasons_file(show_key).parsed())
+    def _ordered_seasons(self, title_key: str) -> list[SeasonNode]:
+        return ordered_seasons(self.seasons_file(title_key).parsed())
 
     # TODO: Validate
     def _season_episodes(self, season_id: str | int) -> list[EpisodeNode]:
@@ -127,10 +127,10 @@ class NetflixSeries(NetflixMedia):
 
     # TODO: Validate
     @override
-    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
+    def _season_keys_from_title_files(self, title_key: str) -> list[str]:
         return [
-            build_season_key(show_key, season.video_id)
-            for season in self._ordered_seasons(show_key)
+            build_season_key(title_key, season.video_id)
+            for season in self._ordered_seasons(title_key)
         ]
 
     # TODO: Validate
@@ -138,13 +138,13 @@ class NetflixSeries(NetflixMedia):
     def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
-        show_key: str,
+        title_key: str,
     ) -> list[str]:
         if isinstance(season_keys, str):
             season_keys = [season_keys]
         episode_keys: list[str] = []
         for season_key in season_keys:
-            _show_key, season_id = split_season_key(season_key)
+            _title_key, season_id = split_season_key(season_key)
             episode_keys += [
                 str(episode.video_id) for episode in self._season_episodes(season_id)
             ]
@@ -152,62 +152,62 @@ class NetflixSeries(NetflixMedia):
 
     # TODO: Validate
     @override
-    def upsert_show(
+    def upsert_title(
         self,
         source: Source,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
-    ) -> Show:
-        show = Show.get_from_memory(self.session, source, show_key)
-        if self._show_is_outdated(show, force=force):
-            show_data = self._title_video(show_key)
-            data_timestamps = self.show_data_timestamps(show_key)
+    ) -> Title:
+        title = Title.get_from_memory(self.session, source, title_key)
+        if self._title_is_outdated(title, force=force):
+            title_data = self._title_video(title_key)
+            data_timestamps = self.title_data_timestamps(title_key)
             data_timestamp = data_timestamps[0]
-            new_show = Show(
-                key=show_key,
-                name=show_data.title,
-                description=show_data.short_synopsis,
+            new_title = Title(
+                key=title_key,
+                name=title_data.title,
+                description=title_data.short_synopsis,
                 media_type="Series",
-                url=show_url(show_key),
-                image_url=show_data.billboard_or_story_art960.url,
-                thumbnail_url=show_data.billboard_or_story_art960.url,
+                url=title_url(title_key),
+                image_url=title_data.billboard_or_story_art960.url,
+                thumbnail_url=title_data.billboard_or_story_art960.url,
                 data_timestamp=data_timestamp,
                 source_id=source.id,
             )
-            show = new_show.upsert(source, show)
-            show.set_update_at(
-                self._next_update_at(show_key, data_timestamp),
+            title = new_title.upsert(source, title)
+            title.set_update_at(
+                self._next_update_at(title_key, data_timestamp),
                 data_timestamps,
             )
 
-        self._upsert_seasons(show, force=force)
-        self._soft_delete_missing(show_key)
-        self.link_show_to_tmdb(show)
+        self._upsert_seasons(title, force=force)
+        self._soft_delete_missing(title_key)
+        self.link_title_to_tmdb(title)
 
-        return show
+        return title
 
     # TODO: Validate
-    def _upsert_seasons(self, show: Show, *, force: bool = False) -> None:
-        for sort_order, season_data in enumerate(self._ordered_seasons(show.key)):
-            season_key = build_season_key(show.key, season_data.video_id)
-            season = Season.get_from_memory(self.session, show, season_key)
-            if self._season_is_outdated(season, show.key, force=force):
-                data_timestamps = self.season_data_timestamps(season_key, show.key)
+    def _upsert_seasons(self, title: Title, *, force: bool = False) -> None:
+        for sort_order, season_data in enumerate(self._ordered_seasons(title.key)):
+            season_key = build_season_key(title.key, season_data.video_id)
+            season = Season.get_from_memory(self.session, title, season_key)
+            if self._season_is_outdated(season, title.key, force=force):
+                data_timestamps = self.season_data_timestamps(season_key, title.key)
                 new_season = Season(
                     key=season_key,
                     name=season_data.title,
                     season_number=sort_order + 1,
                     sort_order=sort_order,
                     data_timestamp=data_timestamps[0],
-                    show_id=show.id,
+                    title_id=title.id,
                 )
-                season = new_season.upsert(show, season)
+                season = new_season.upsert(title, season)
                 season.set_update_at(None, data_timestamps)
 
             self._upsert_episodes(
                 season,
-                show.key,
+                title.key,
                 season_data.video_id,
                 force=force,
             )
@@ -216,7 +216,7 @@ class NetflixSeries(NetflixMedia):
     def _upsert_episodes(
         self,
         season: Season,
-        show_key: str,
+        title_key: str,
         season_id: int,
         *,
         force: bool = False,
@@ -227,7 +227,7 @@ class NetflixSeries(NetflixMedia):
             if not self._episode_is_outdated(
                 episode,
                 season.key,
-                show_key,
+                title_key,
                 force=force,
             ):
                 continue
@@ -235,7 +235,7 @@ class NetflixSeries(NetflixMedia):
             data_timestamps = self.episode_data_timestamps(
                 episode_key,
                 season.key,
-                show_key,
+                title_key,
             )
             new_episode = Episode(
                 key=episode_key,
@@ -259,17 +259,17 @@ class NetflixSeries(NetflixMedia):
 class NetflixMovie(NetflixMedia):
     # TODO: Validate
     @override
-    def tmdb_lookup_info(self, show_key: str) -> list[TMDBLookupInfo]:
-        self.title_file(show_key).download_if_outdated(
+    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
+        self.title_file(title_key).download_if_outdated(
             tz_datetime.now() - timedelta(days=7),
         )
-        video = self._title_video(show_key)
+        video = self._title_video(title_key)
         return [TMDBLookupInfo(video.title, TMDBMediaType.movie, video.latest_year)]
 
     # TODO: Validate
     @override
-    def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
-        return [self.title_file(show_key)]
+    def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
+        return [self.title_file(title_key)]
 
     # TODO: Validate
     @override
@@ -277,21 +277,21 @@ class NetflixMovie(NetflixMedia):
         self,
         episode_key: str,
         season_key: str,
-        show_key: str,
+        title_key: str,
     ) -> Sequence[BaseFile[Any]]:
-        return [self.title_file(show_key)]
+        return [self.title_file(title_key)]
 
     # TODO: Validate
     @override
-    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
-        return [build_season_key(show_key, show_key)]
+    def _season_keys_from_title_files(self, title_key: str) -> list[str]:
+        return [build_season_key(title_key, title_key)]
 
     # TODO: Validate
     @override
     def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
-        show_key: str,
+        title_key: str,
     ) -> list[str]:
         if isinstance(season_keys, str):
             season_keys = [season_keys]
@@ -299,85 +299,85 @@ class NetflixMovie(NetflixMedia):
 
     # TODO: Validate
     @override
-    def upsert_show(
+    def upsert_title(
         self,
         source: Source,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
-    ) -> Show:
-        movie_data = self._title_video(show_key)
-        show = Show.get_from_memory(self.session, source, show_key)
-        if self._show_is_outdated(show, force=force):
-            data_timestamps = self.show_data_timestamps(show_key)
+    ) -> Title:
+        movie_data = self._title_video(title_key)
+        title = Title.get_from_memory(self.session, source, title_key)
+        if self._title_is_outdated(title, force=force):
+            data_timestamps = self.title_data_timestamps(title_key)
             data_timestamp = data_timestamps[0]
-            new_show = Show(
-                key=show_key,
+            new_title = Title(
+                key=title_key,
                 name=movie_data.title,
-                url=show_url(show_key),
+                url=title_url(title_key),
                 image_url=movie_data.billboard_or_story_art960.url,
                 thumbnail_url=movie_data.billboard_or_story_art960.url,
                 media_type="Movie",
                 data_timestamp=data_timestamp,
                 source_id=source.id,
             )
-            show = new_show.upsert(source, show)
-            show.set_update_at(
-                self._next_update_at(show_key, data_timestamp),
+            title = new_title.upsert(source, title)
+            title.set_update_at(
+                self._next_update_at(title_key, data_timestamp),
                 data_timestamps,
             )
 
-        self._upsert_season(show, movie_data, force=force)
-        self._soft_delete_missing(show_key)
-        self.link_show_to_tmdb(show)
+        self._upsert_season(title, movie_data, force=force)
+        self._soft_delete_missing(title_key)
+        self.link_title_to_tmdb(title)
 
-        return show
+        return title
 
     # TODO: Validate
     def _upsert_season(
         self,
-        show: Show,
+        title: Title,
         movie_data: TitleVideo,
         *,
         force: bool = False,
     ) -> None:
-        season_key = build_season_key(show.key, show.key)
-        season = Season.get_from_memory(self.session, show, season_key)
-        if self._season_is_outdated(season, show.key, force=force):
-            data_timestamps = self.season_data_timestamps(season_key, show.key)
+        season_key = build_season_key(title.key, title.key)
+        season = Season.get_from_memory(self.session, title, season_key)
+        if self._season_is_outdated(season, title.key, force=force):
+            data_timestamps = self.season_data_timestamps(season_key, title.key)
             new_season = Season(
                 key=season_key,
                 season_number=0,
                 sort_order=0,
                 data_timestamp=data_timestamps[0],
-                show_id=show.id,
+                title_id=title.id,
             )
-            season = new_season.upsert(show, season)
+            season = new_season.upsert(title, season)
             season.set_update_at(None, data_timestamps)
 
-        self._upsert_episode(season, show.key, movie_data, force=force)
+        self._upsert_episode(season, title.key, movie_data, force=force)
 
     # TODO: Validate
     def _upsert_episode(
         self,
         season: Season,
-        show_key: str,
+        title_key: str,
         movie_data: TitleVideo,
         *,
         force: bool = False,
     ) -> None:
-        episode = Episode.get_from_memory(self.session, season, show_key)
-        if self._episode_is_outdated(episode, season.key, show_key, force=force):
+        episode = Episode.get_from_memory(self.session, season, title_key)
+        if self._episode_is_outdated(episode, season.key, title_key, force=force):
             data_timestamps = self.episode_data_timestamps(
-                show_key,
+                title_key,
                 season.key,
-                show_key,
+                title_key,
             )
             new_episode = Episode(
-                key=show_key,
-                watch_identifier=watch_identifier(self.plugin_name(), show_key),
+                key=title_key,
+                watch_identifier=watch_identifier(self.plugin_name(), title_key),
                 name=movie_data.title,
-                url=episode_url(show_key),
+                url=episode_url(title_key),
                 image_url=movie_data.billboard_or_story_art960.url,
                 thumbnail_url=movie_data.billboard_or_story_art960.url,
                 episode_number=0,

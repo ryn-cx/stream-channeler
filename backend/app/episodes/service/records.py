@@ -22,25 +22,25 @@ from app.episodes.schemas import (
 )
 from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
-from app.shows.models import Show
-from app.shows.schemas import ShowPublic
 from app.sources.schemas import SourceListPublic
+from app.titles.models import Title
+from app.titles.schemas import TitlePublic
 
 
 # TODO: Validate
 def episode_record(episode: Episode) -> EpisodeRecord:
     """Return an `Episode` with the season, the title and the website above it."""
     season = episode.season
-    show = season.show
-    return EpisodeRecord(**_record_fields(episode, season, show))
+    title = season.title
+    return EpisodeRecord(**_record_fields(episode, season, title))
 
 
 # TODO: Validate
-def _record_fields(episode: Episode, season: Season, show: Show) -> dict[str, Any]:
+def _record_fields(episode: Episode, season: Season, title: Title) -> dict[str, Any]:
     """Return an episode and everything above it, each as the record it is."""
     return {
         "episode": EpisodeOutput.model_validate(episode),
         "season": SeasonOutput.model_validate(season),
-        "show": ShowPublic.model_validate(show),
-        "source": SourceListPublic.model_validate(show.source),
+        "title": TitlePublic.model_validate(title),
+        "source": SourceListPublic.model_validate(title.source),
     }

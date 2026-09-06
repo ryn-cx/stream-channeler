@@ -8,7 +8,7 @@ from sqlmodel import Session
 from app.issue_reports.models import (
     EpisodeIssueReport,
     SeasonIssueReport,
-    ShowIssueReport,
+    TitleIssueReport,
 )
 from app.issue_reports.schemas import (
     IssueReportCreate,
@@ -18,7 +18,7 @@ from app.issue_reports.schemas import (
 from app.schemas import Message
 from app.users.models import User
 
-type AnyIssueReport = EpisodeIssueReport | SeasonIssueReport | ShowIssueReport
+type AnyIssueReport = EpisodeIssueReport | SeasonIssueReport | TitleIssueReport
 
 
 # TODO: Validate
@@ -67,16 +67,16 @@ def season_issue_report(
 
 
 # TODO: Validate
-def show_issue_report(
+def title_issue_report(
     user: User | None,
     report_input: IssueReportCreate,
-    show_id: uuid.UUID,
-) -> ShowIssueReport:
-    """Build a report on a `Show`, on behalf of `user` when there is one."""
-    return ShowIssueReport(
+    title_id: uuid.UUID,
+) -> TitleIssueReport:
+    """Build a report on a `Title`, on behalf of `user` when there is one."""
+    return TitleIssueReport(
         report=report_input.report,
         user_id=user.id if user else None,
-        show_id=show_id,
+        title_id=title_id,
     )
 
 

@@ -24,8 +24,8 @@ from app.canonical_media.filters import is_non_canonical
 from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.seasons.models import Season
-from app.shows.models import Show
 from app.sources.models import Source
+from app.titles.models import Title
 from app.users.models import User
 from app.watches.models import Watch
 
@@ -84,8 +84,8 @@ def _candidates_by_watch_identifier(
         select(named.c.watch_identifier, Episode, Source.key)  # type: ignore[call-overload]
         .select_from(Episode)
         .join(Season, col(Season.id) == col(Episode.season_id))
-        .join(Show, col(Show.id) == col(Season.show_id))
-        .join(Source, col(Source.id) == col(Show.source_id))
+        .join(Title, col(Title.id) == col(Season.title_id))
+        .join(Source, col(Source.id) == col(Title.source_id))
         .join(canonical_link, links_of(Episode, canonical_link))
         .join(
             named,

@@ -12,7 +12,7 @@ from plugins.utils.base_plugin.base import BaseReadURL
 from plugins.utils.base_plugin.initialize import BasePluginInitializer
 
 if TYPE_CHECKING:
-    from app.shows.models import Show
+    from app.titles.models import Title
 
 
 # TODO: Validate
@@ -31,7 +31,7 @@ class Roku(RokuShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def get_media_importer(self, input: Show | str) -> RokuMedia:
+    def get_media_importer(self, input: Title | str) -> RokuMedia:
         if isinstance(input, str):
             domain_regex = self._domain_regex()
             for url_regex in self._url_regexes():
@@ -55,7 +55,7 @@ class Roku(RokuShared, BaseReadURL, AbstractPlugin, register=False):
             raise InvalidURLError(msg)
 
         if not input.media_type:
-            msg = "Show.media_type is not set."
+            msg = "Title.media_type is not set."
             raise AttributeError(msg)
         if input.media_type == "Movie":
             return RokuMovie(self)

@@ -65,7 +65,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { usePlugin, useSeason, useShow, useSource } from "@/hooks/useEntities"
+import { usePlugin, useSeason, useSource, useTitle } from "@/hooks/useEntities"
 import {
   usePersistedJsonState,
   usePersistedState,
@@ -897,7 +897,7 @@ export type MediaTab = typeof MEDIA_TAB | typeof CANONICAL_TAB
 export type MediaScope = {
   plugin_id?: string
   source_id?: string
-  show_id?: string
+  title_id?: string
   season_id?: string
 }
 
@@ -909,22 +909,22 @@ export type ScopeColumn = keyof MediaScope
 
 const SCOPE_COLUMNS: ScopeColumn[] = [
   "season_id",
-  "show_id",
+  "title_id",
   "source_id",
   "plugin_id",
 ]
 
 const SCOPE_ENTITIES: Record<ScopeColumn, EntityKey> = {
   season_id: "season",
-  show_id: "show",
+  title_id: "title",
   source_id: "source",
   plugin_id: "plugin",
 }
 
 const SCOPE_PATHS: Record<EntityKey, MediaPath> = {
   season: "/episodes",
-  show: "/seasons",
-  source: "/shows",
+  title: "/seasons",
+  source: "/titles",
   plugin: "/sources",
 }
 
@@ -944,7 +944,7 @@ export const childmostScope = (
 export type MediaPath =
   | "/plugins"
   | "/sources"
-  | "/shows"
+  | "/titles"
   | "/seasons"
   | "/episodes"
   | "/files"
@@ -958,7 +958,7 @@ export const validateMediaSearch = (
     typeof search.plugin_id === "string" ? search.plugin_id : undefined,
   source_id:
     typeof search.source_id === "string" ? search.source_id : undefined,
-  show_id: typeof search.show_id === "string" ? search.show_id : undefined,
+  title_id: typeof search.title_id === "string" ? search.title_id : undefined,
   season_id:
     typeof search.season_id === "string" ? search.season_id : undefined,
 })
@@ -1007,11 +1007,11 @@ function ScopedHeader({
   const { data: season } = useSeason(
     entity === "season" ? scope.value : undefined,
   )
-  const { data: show } = useShow(
-    entity === "show" ? scope.value : season?.show_id,
+  const { data: titleRecord } = useTitle(
+    entity === "title" ? scope.value : season?.title_id,
   )
   const { data: source } = useSource(
-    entity === "source" ? scope.value : show?.source_id,
+    entity === "source" ? scope.value : titleRecord?.source_id,
   )
   const { data: plugin } = usePlugin(
     entity === "plugin" ? scope.value : source?.plugin_id,
@@ -1021,7 +1021,7 @@ function ScopedHeader({
     <DetailBreadcrumb
       plugin={plugin}
       source={source}
-      show={show}
+      title={titleRecord}
       season={season}
       trailing={title}
       current={SCOPE_PATHS[entity] === path ? entity : undefined}

@@ -63,8 +63,8 @@ class UnmatchedSourceOutput(BaseModel):
     plugin_key: str | None
     created_at: datetime
     modified_at: datetime
-    show_id: uuid.UUID
-    show_name: str | None
+    title_id: uuid.UUID
+    title_name: str | None
 
 
 # TODO: Validate

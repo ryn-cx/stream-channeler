@@ -11,9 +11,9 @@ type ParentLinkCellProps =
       search: { season_id: string }
       name: string | null
     }
-  | { to: "/seasons"; search: { show_id: string }; name: string | null }
+  | { to: "/seasons"; search: { title_id: string }; name: string | null }
   | {
-      to: "/shows"
+      to: "/titles"
       search: { source_id: string }
       name: string | null
     }

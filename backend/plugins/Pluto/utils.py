@@ -18,24 +18,24 @@ def build_url(path: str) -> str:
 
 
 # TODO: Validate
-def series_url(show_key: str) -> str:
-    return build_url(f"{LOCALE}/on-demand/series/{show_key}/details")
+def series_url(title_key: str) -> str:
+    return build_url(f"{LOCALE}/on-demand/series/{title_key}/details")
 
 
 # TODO: Validate
-def movie_url(show_key: str) -> str:
-    return build_url(f"{LOCALE}/on-demand/movies/{show_key}/details")
+def movie_url(title_key: str) -> str:
+    return build_url(f"{LOCALE}/on-demand/movies/{title_key}/details")
 
 
 # TODO: Validate
-def season_url(show_key: str, season_number: int) -> str:
-    return build_url(f"{LOCALE}/on-demand/series/{show_key}/season/{season_number}")
+def season_url(title_key: str, season_number: int) -> str:
+    return build_url(f"{LOCALE}/on-demand/series/{title_key}/season/{season_number}")
 
 
 # TODO: Validate
-def episode_url(show_key: str, season_number: int, episode_key: str) -> str:
+def episode_url(title_key: str, season_number: int, episode_key: str) -> str:
     return build_url(
-        f"{LOCALE}/on-demand/series/{show_key}/season/{season_number}"
+        f"{LOCALE}/on-demand/series/{title_key}/season/{season_number}"
         f"/episode/{episode_key}",
     )
 
@@ -46,27 +46,27 @@ def search_url(query: str) -> str:
 
 
 # TODO: Validate
-def build_season_key(show_key: str, season_number: int) -> str:
-    """Encode the show key into the season key.
+def build_season_key(title_key: str, season_number: int) -> str:
+    """Encode the title key into the season key.
 
-    Every entity's data comes from the single file keyed by the show, but the
-    base plugin resolves episode files from a season key alone, so the show
+    Every entity's data comes from the single file keyed by the title, but the
+    base plugin resolves episode files from a season key alone, so the title
     key is carried inside it.
     """
-    return f"{show_key}:{season_number}"
+    return f"{title_key}:{season_number}"
 
 
 # TODO: Validate
-def movie_season_key(show_key: str) -> str:
+def movie_season_key(title_key: str) -> str:
     # A movie has no seasons of its own so its single season is given a
     # fixed number.
-    return build_season_key(show_key, 0)
+    return build_season_key(title_key, 0)
 
 
 # TODO: Validate
 def split_season_key(season_key: str) -> tuple[str, int]:
-    show_key, _, season_number = season_key.partition(":")
-    return show_key, int(season_number)
+    title_key, _, season_number = season_key.partition(":")
+    return title_key, int(season_number)
 
 
 # TODO: Validate

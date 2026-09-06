@@ -23,8 +23,8 @@ def build_url(path: str) -> str:
 
 
 # TODO: Validate
-def show_url(show_key: str | UUID, media_type: HuluMediaType) -> str:
-    return build_url(f"{media_type}/{show_key}")
+def title_url(title_key: str | UUID, media_type: HuluMediaType) -> str:
+    return build_url(f"{media_type}/{title_key}")
 
 
 # TODO: Validate
@@ -54,14 +54,14 @@ def thumbnail_url(path: str | None) -> str | None:
 
 
 # TODO: Validate
-def build_season_key(show_key: str, season_number: int) -> str:
-    return f"{show_key}:{season_number}"
+def build_season_key(title_key: str, season_number: int) -> str:
+    return f"{title_key}:{season_number}"
 
 
 # TODO: Validate
 def split_season_key(key: str) -> tuple[str, int]:
-    show_key, _, season_number = key.rpartition(":")
-    return show_key, int(season_number)
+    title_key, _, season_number = key.rpartition(":")
+    return title_key, int(season_number)
 
 
 # TODO: Validate
@@ -83,6 +83,7 @@ def season_items(season: SeasonModel) -> list[Item]:
     return list(items.values())
 
 
+# TODO: Validate
 def title_urls(page: AllSeriesModel | AllMoviesModel) -> list[str]:
     """Return all title URLs from the given page."""
     layout = page.props.page_props.layout

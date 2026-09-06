@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, override
 from app.media.media_type import TMDBMediaType
 from app.utils import tz_datetime
 from plugins.NHKWorld.media import NHKWorldMedia
-from plugins.NHKWorld.shared import SHOW_URL_REGEX, NHKWorldShared
+from plugins.NHKWorld.shared import TITLE_URL_REGEX, NHKWorldShared
 from plugins.NHKWorld.utils import build_url
 from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.base_plugin.base import BaseReadURL
@@ -16,8 +16,8 @@ from plugins.utils.base_plugin.initialize import BasePluginInitializer
 if TYPE_CHECKING:
     from datetime import datetime
 
-    from app.shows.models import Show
     from app.sources.models import Source
+    from app.titles.models import Title
 
 
 # TODO: Validate
@@ -37,11 +37,11 @@ class NHKWorld(NHKWorldShared, BaseReadURL, AbstractPlugin, register=False):
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
-        return (SHOW_URL_REGEX,)
+        return (TITLE_URL_REGEX,)
 
     # TODO: Validate
     @override
-    def get_media_importer(self, input: Show | str) -> NHKWorldMedia:
+    def get_media_importer(self, input: Title | str) -> NHKWorldMedia:
         return NHKWorldMedia(self)
 
     # TODO: Validate
@@ -63,7 +63,7 @@ class NHKWorld(NHKWorldShared, BaseReadURL, AbstractPlugin, register=False):
         media_type: TMDBMediaType,
         year: int | None = None,
     ) -> str | None:
-        search_file = self.shows_search_file(names[0], 0)
+        search_file = self.titles_search_file(names[0], 0)
         search_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         hits = search_file.parsed().hits.hits
         return build_url(hits[0].field_source.url) if hits else None

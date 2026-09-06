@@ -12,7 +12,7 @@ from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season as SeasonModel
-from app.shows.models import Show
+from app.titles.models import Title
 from app.utils import tz_datetime
 from plugins.HiDive.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
 from plugins.HiDive.shared import (
@@ -34,7 +34,7 @@ from plugins.HiDive.utils import (
     season_url,
     series_image_url,
     series_season_items,
-    show_url,
+    title_url,
     vod_hero,
 )
 from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
@@ -68,11 +68,11 @@ class HiDiveSeries(HiDiveMedia):
     def extract_media_info(self, url: str) -> MediaInfo:
         domain_regex = self._domain_regex()
         if match := re.match(domain_regex + SERIES_URL_REGEX, url):
-            show_key = match.group("series_key")
-            self.raise_if_invalid_file(self.series_file(show_key), url)
-            return MediaInfo(show_key)
+            title_key = match.group("series_key")
+            self.raise_if_invalid_file(self.series_file(title_key), url)
+            return MediaInfo(title_key)
 
-        # HiDive's interface does not do a good job of seperating shows and seasons
+        # HiDive's interface does not do a good job of seperating titles and seasons
         # and if a user uses a season URL it should be treated the same as a series
         # URL for a more intuitive user experience.
         if match := re.match(domain_regex + SEASON_URL_REGEX, url):
@@ -86,8 +86,8 @@ class HiDiveSeries(HiDiveMedia):
 
     # TODO: Validate
     @override
-    def tmdb_lookup_info(self, show_key: str) -> list[TMDBLookupInfo]:
-        series_file = self.series_file(show_key)
+    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
+        series_file = self.series_file(title_key)
         series_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         return [
             TMDBLookupInfo(
@@ -99,12 +99,12 @@ class HiDiveSeries(HiDiveMedia):
 
     # TODO: Validate
     @override
-    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
-        return [self.series_file(show_key)]
+    def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
+        return [self.series_file(title_key)]
 
     # TODO: Validate
     @override
-    def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
+    def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
         # The season file detects new episodes and changes to the season.
         return [self.season_file(season_key)]
 
@@ -114,15 +114,15 @@ class HiDiveSeries(HiDiveMedia):
         self,
         episode_key: str,
         season_key: str,
-        show_key: str,
+        title_key: str,
     ) -> Sequence[BaseFile[Any]]:
         # The vod file detects changes to the episode information.
         return [self.vod_file(episode_key), self.season_file(season_key)]
 
     # TODO: Validate
     @override
-    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
-        series_data = self.series_file(show_key).parsed()
+    def _season_keys_from_title_files(self, title_key: str) -> list[str]:
+        series_data = self.series_file(title_key).parsed()
         return [str(item.id) for item in series_season_items(series_data)]
 
     # TODO: Validate
@@ -130,7 +130,7 @@ class HiDiveSeries(HiDiveMedia):
     def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
-        show_key: str,
+        title_key: str,
     ) -> list[str]:
         if isinstance(season_keys, str):
             season_keys = [season_keys]
@@ -142,47 +142,47 @@ class HiDiveSeries(HiDiveMedia):
 
     # TODO: Validate
     @override
-    def upsert_show(
+    def upsert_title(
         self,
         source: Source,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
-    ) -> Show:
-        show = Show.get_from_memory(self.session, source, show_key)
-        if self._show_is_outdated(show, force=force):
-            series_data = self.series_file(show_key).parsed()
-            data_timestamps = self.show_data_timestamps(show_key)
-            new_show = Show(
-                key=show_key,
+    ) -> Title:
+        title = Title.get_from_memory(self.session, source, title_key)
+        if self._title_is_outdated(title, force=force):
+            series_data = self.series_file(title_key).parsed()
+            data_timestamps = self.title_data_timestamps(title_key)
+            new_title = Title(
+                key=title_key,
                 name=series_data.metadata.series.title,
                 media_type=SERIES_MEDIA_TYPE,
-                url=show_url(show_key),
+                url=title_url(title_key),
                 image_url=series_image_url(series_data),
                 thumbnail_url=series_image_url(series_data),
                 data_timestamp=data_timestamps[0],
                 source_id=source.id,
             )
-            show = new_show.upsert(source, show)
-            show.set_update_at(None, data_timestamps)
+            title = new_title.upsert(source, title)
+            title.set_update_at(None, data_timestamps)
 
-        self._upsert_seasons(show, force=force)
-        self._set_weekly_updates_from_episodes(show)
-        self._soft_delete_missing(show_key)
-        self.link_show_to_tmdb(show)
+        self._upsert_seasons(title, force=force)
+        self._set_weekly_updates_from_episodes(title)
+        self._soft_delete_missing(title_key)
+        self.link_title_to_tmdb(title)
 
-        return show
+        return title
 
     # TODO: Validate
-    def _upsert_seasons(self, show: Show, *, force: bool = False) -> None:
-        series_data = self.series_file(show.key).parsed()
+    def _upsert_seasons(self, title: Title, *, force: bool = False) -> None:
+        series_data = self.series_file(title.key).parsed()
         for sort_order, season_info in enumerate(series_season_items(series_data)):
             season_key = str(season_info.id)
             hero = season_hero(self.season_file(season_key).parsed())
 
-            season = SeasonModel.get_from_memory(self.session, show, season_key)
-            if self._season_is_outdated(season, show.key, force=force):
-                data_timestamps = self.season_data_timestamps(season_key, show.key)
+            season = SeasonModel.get_from_memory(self.session, title, season_key)
+            if self._season_is_outdated(season, title.key, force=force):
+                data_timestamps = self.season_data_timestamps(season_key, title.key)
                 new_season = SeasonModel(
                     key=season_key,
                     name=season_info.title,
@@ -192,18 +192,18 @@ class HiDiveSeries(HiDiveMedia):
                     image_url=hero_image_url(hero),
                     thumbnail_url=hero_image_url(hero),
                     data_timestamp=data_timestamps[0],
-                    show_id=show.id,
+                    title_id=title.id,
                 )
-                season = new_season.upsert(show, season)
+                season = new_season.upsert(title, season)
                 season.set_update_at(None, data_timestamps)
 
-            self._upsert_episodes(season, show.key, force=force)
+            self._upsert_episodes(season, title.key, force=force)
 
     # TODO: Validate
     def _upsert_episodes(
         self,
         season: SeasonModel,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
     ) -> None:
@@ -214,7 +214,7 @@ class HiDiveSeries(HiDiveMedia):
             if not self._episode_is_outdated(
                 episode,
                 season.key,
-                show_key,
+                title_key,
                 force=force,
             ):
                 continue
@@ -223,7 +223,7 @@ class HiDiveSeries(HiDiveMedia):
             data_timestamps = self.episode_data_timestamps(
                 episode_key,
                 season.key,
-                show_key,
+                title_key,
             )
             new_episode = Episode(
                 key=episode_key,
@@ -256,17 +256,17 @@ class HiDiveMovie(HiDiveMedia):
     @override
     def extract_media_info(self, url: str) -> MediaInfo:
         if match := re.match(self._domain_regex() + MOVIE_URL_REGEX, url):
-            show_key = match.group("movie_vod_key")
-            self.raise_if_invalid_file(self.vod_file(show_key), url)
-            return MediaInfo(show_key)
+            title_key = match.group("movie_vod_key")
+            self.raise_if_invalid_file(self.vod_file(title_key), url)
+            return MediaInfo(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
     # TODO: Validate
     @override
-    def tmdb_lookup_info(self, show_key: str) -> list[TMDBLookupInfo]:
-        vod_file = self.vod_file(show_key)
+    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
+        vod_file = self.vod_file(title_key)
         vod_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         hero = vod_hero(vod_file.parsed())
         premiere = release_date(hero)
@@ -280,12 +280,12 @@ class HiDiveMovie(HiDiveMedia):
 
     # TODO: Validate
     @override
-    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
-        return [self.vod_file(show_key)]
+    def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
+        return [self.vod_file(title_key)]
 
     # TODO: Validate
     @override
-    def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
+    def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
         return [self.vod_file(season_key)]
 
     # TODO: Validate
@@ -294,21 +294,21 @@ class HiDiveMovie(HiDiveMedia):
         self,
         episode_key: str,
         season_key: str,
-        show_key: str,
+        title_key: str,
     ) -> Sequence[BaseFile[Any]]:
         return [self.vod_file(episode_key)]
 
     # TODO: Validate
     @override
-    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
-        return [show_key]
+    def _season_keys_from_title_files(self, title_key: str) -> list[str]:
+        return [title_key]
 
     # TODO: Validate
     @override
     def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
-        show_key: str,
+        title_key: str,
     ) -> list[str]:
         if isinstance(season_keys, str):
             season_keys = [season_keys]
@@ -316,92 +316,92 @@ class HiDiveMovie(HiDiveMedia):
 
     # TODO: Validate
     @override
-    def upsert_show(
+    def upsert_title(
         self,
         source: Source,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
-    ) -> Show:
-        show = Show.get_from_memory(self.session, source, show_key)
-        if self._show_is_outdated(show, force=force):
-            hero = vod_hero(self.vod_file(show_key).parsed())
-            data_timestamps = self.show_data_timestamps(show_key)
-            new_show = Show(
-                key=show_key,
+    ) -> Title:
+        title = Title.get_from_memory(self.session, source, title_key)
+        if self._title_is_outdated(title, force=force):
+            hero = vod_hero(self.vod_file(title_key).parsed())
+            data_timestamps = self.title_data_timestamps(title_key)
+            new_title = Title(
+                key=title_key,
                 name=movie_title(hero),
                 description=movie_description(hero),
-                url=show_url(show_key, MOVIE_MEDIA_TYPE),
+                url=title_url(title_key, MOVIE_MEDIA_TYPE),
                 image_url=hero_image_url(hero),
                 thumbnail_url=hero_image_url(hero),
                 media_type=MOVIE_MEDIA_TYPE,
                 data_timestamp=data_timestamps[0],
                 source_id=source.id,
             )
-            show = new_show.upsert(source, show)
-            show.set_update_at(None, data_timestamps)
+            title = new_title.upsert(source, title)
+            title.set_update_at(None, data_timestamps)
 
-        self._upsert_seasons(show, force=force)
-        self._soft_delete_missing(show_key)
-        self.link_show_to_tmdb(show)
+        self._upsert_seasons(title, force=force)
+        self._soft_delete_missing(title_key)
+        self.link_title_to_tmdb(title)
 
-        return show
+        return title
 
     # TODO: Validate
-    def _upsert_seasons(self, show: Show, *, force: bool = False) -> None:
+    def _upsert_seasons(self, title: Title, *, force: bool = False) -> None:
         for sort_order, season_key in enumerate(
-            self._season_keys_from_show_files(show.key),
+            self._season_keys_from_title_files(title.key),
         ):
-            hero = vod_hero(self.vod_file(show.key).parsed())
+            hero = vod_hero(self.vod_file(title.key).parsed())
 
-            season = SeasonModel.get_from_memory(self.session, show, season_key)
-            if self._season_is_outdated(season, show.key, force=force):
-                data_timestamps = self.season_data_timestamps(season_key, show.key)
+            season = SeasonModel.get_from_memory(self.session, title, season_key)
+            if self._season_is_outdated(season, title.key, force=force):
+                data_timestamps = self.season_data_timestamps(season_key, title.key)
                 new_season = SeasonModel(
                     key=season_key,
                     name=movie_title(hero),
                     season_number=0,
                     sort_order=sort_order,
-                    url=show_url(show.key, MOVIE_MEDIA_TYPE),
+                    url=title_url(title.key, MOVIE_MEDIA_TYPE),
                     image_url=hero_image_url(hero),
                     thumbnail_url=hero_image_url(hero),
                     data_timestamp=data_timestamps[0],
-                    show_id=show.id,
+                    title_id=title.id,
                 )
-                season = new_season.upsert(show, season)
+                season = new_season.upsert(title, season)
                 season.set_update_at(None, data_timestamps)
 
-            self._upsert_episode(season, show.key, force=force)
+            self._upsert_episode(season, title.key, force=force)
 
     # TODO: Validate
     def _upsert_episode(
         self,
         season: SeasonModel,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
     ) -> None:
-        episode = Episode.get_from_memory(self.session, season, show_key)
+        episode = Episode.get_from_memory(self.session, season, title_key)
         if not self._episode_is_outdated(
             episode,
             season.key,
-            show_key,
+            title_key,
             force=force,
         ):
             return
 
-        hero = vod_hero(self.vod_file(show_key).parsed())
+        hero = vod_hero(self.vod_file(title_key).parsed())
         data_timestamps = self.episode_data_timestamps(
-            show_key,
+            title_key,
             season.key,
-            show_key,
+            title_key,
         )
         new_episode = Episode(
-            key=show_key,
-            watch_identifier=watch_identifier(self.plugin_name(), show_key),
+            key=title_key,
+            watch_identifier=watch_identifier(self.plugin_name(), title_key),
             name=movie_title(hero),
             description=movie_description(hero),
-            url=episode_url(show_key),
+            url=episode_url(title_key),
             image_url=hero_image_url(hero),
             thumbnail_url=hero_image_url(hero),
             episode_number=0,

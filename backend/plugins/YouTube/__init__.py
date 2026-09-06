@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
     from app.channels.models import ChannelQueue
     from app.seasons.models import Season
-    from app.shows.models import Show
+    from app.titles.models import Title
 
 
 # TODO: Validate
@@ -53,7 +53,7 @@ class YouTube(YouTubeShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def get_media_importer(self, input: Show | str) -> YouTubeMedia:
+    def get_media_importer(self, input: Title | str) -> YouTubeMedia:
         return YouTubeMedia(self)
 
     # TODO: Validate

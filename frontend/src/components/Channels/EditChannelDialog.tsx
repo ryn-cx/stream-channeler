@@ -105,7 +105,7 @@ export function EditChannelDialog({
         <DialogHeader>
           <DialogTitle>Edit Channel</DialogTitle>
           <DialogDescription>
-            Update this channel's details. Manage its shows and sort order from
+            Update this channel's details. Manage its titles and sort order from
             the channel itself.
           </DialogDescription>
         </DialogHeader>

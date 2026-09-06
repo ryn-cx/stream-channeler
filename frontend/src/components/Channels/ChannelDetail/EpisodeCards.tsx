@@ -106,34 +106,34 @@ export function EpisodeCards({
   const columnCount = useColumnCount(gridRef)
 
   const nextEpisodeMap = new Map<string, string>()
-  const lastSeenByShow = new Map<string, number>()
+  const lastSeenByTitle = new Map<string, number>()
   for (let i = 0; i < episodes.length; i++) {
-    const showId = episodes[i].show.id
-    const prevIndex = lastSeenByShow.get(showId)
+    const titleId = episodes[i].title.id
+    const prevIndex = lastSeenByTitle.get(titleId)
     if (prevIndex !== undefined) {
       nextEpisodeMap.set(episodes[prevIndex].id, episodes[i].id)
     }
-    lastSeenByShow.set(showId, i)
+    lastSeenByTitle.set(titleId, i)
   }
 
   // TODO: Validate
   const handleNextEpisode = (currentEpisodeId: string) => {
     const currentIndex = episodes.findIndex((ep) => ep.id === currentEpisodeId)
     if (currentIndex === -1) return
-    const showId = episodes[currentIndex].show.id
+    const titleId = episodes[currentIndex].title.id
 
-    // Walk forward through the run of same-show episodes already queued after
+    // Walk forward through the run of same-title episodes already queued after
     // the current one so repeated clicks keep extending the chain.
     let anchorIndex = currentIndex
     while (
       anchorIndex + 1 < episodes.length &&
-      episodes[anchorIndex + 1].show.id === showId
+      episodes[anchorIndex + 1].title.id === titleId
     ) {
       anchorIndex++
     }
 
     const nextEpisode = episodes.find(
-      (ep, index) => index > anchorIndex && ep.show.id === showId,
+      (ep, index) => index > anchorIndex && ep.title.id === titleId,
     )
     if (!nextEpisode) {
       showErrorToast("Couldn't find the next episode in the current list")

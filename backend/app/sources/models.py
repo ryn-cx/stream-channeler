@@ -25,7 +25,7 @@ from app.models import (
 from app.plugins.models import Plugin
 
 if TYPE_CHECKING:
-    from app.shows.models import Show
+    from app.titles.models import Title
 
 DIRECT_SORTABLE_FIELDS = ["id", "name"]
 
@@ -38,7 +38,7 @@ class BaseSource(BaseMediaMixin):
 
 
 # TODO: Validate
-class Source(BaseSource, ChildMediaMixin[Plugin, "Show"], table=True):
+class Source(BaseSource, ChildMediaMixin[Plugin, "Title"], table=True):
     PARENT_ID_FIELD: ClassVar[str] = "plugin_id"
 
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = []
@@ -55,7 +55,7 @@ class Source(BaseSource, ChildMediaMixin[Plugin, "Show"], table=True):
 
     plugin_id: uuid.UUID = Field(foreign_key="plugin.id", ondelete="CASCADE")
     plugin: Plugin = Relationship(back_populates="sources")
-    shows: list[Show] = Relationship(back_populates="source", cascade_delete=True)
+    titles: list[Title] = Relationship(back_populates="source", cascade_delete=True)
 
     # TODO: Validate
     @classmethod
@@ -79,8 +79,8 @@ class Source(BaseSource, ChildMediaMixin[Plugin, "Show"], table=True):
     # TODO: Validate
     @property
     @override
-    def children(self) -> list[Show]:
-        return self.shows
+    def children(self) -> list[Title]:
+        return self.titles
 
     # TODO: Validate
     def __str__(self) -> str:
@@ -107,12 +107,12 @@ class UnmatchedSource(BaseUnmatchedSource, TimestampIdAndHashMixin, table=True):
     __table_args__ = (
         PrimaryKeyConstraint("id"),
         UniqueConstraint(
-            "show_id",
+            "title_id",
             "provider_name",
-            name="UnmatchedSource-show_id-provider_name-unique",
+            name="UnmatchedSource-title_id-provider_name-unique",
         ),
-        Index("UnmatchedSource-show_id-index", "show_id"),
+        Index("UnmatchedSource-title_id-index", "title_id"),
     )
 
-    show_id: uuid.UUID = Field(foreign_key="show.id", ondelete="CASCADE")
-    show: Show = Relationship()
+    title_id: uuid.UUID = Field(foreign_key="title.id", ondelete="CASCADE")
+    title: Title = Relationship()

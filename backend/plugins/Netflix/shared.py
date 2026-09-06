@@ -10,7 +10,7 @@ from app.media.media_type import TMDBMediaType
 from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.Netflix.basic_files import BasicFiles
-from plugins.Netflix.utils import first_search_result_key, search_url, show_url
+from plugins.Netflix.utils import first_search_result_key, search_url, title_url
 
 TITLE_URL_REGEX = r"\/title\/(?P<title_key>\d+)(?:\/|$)"
 
@@ -69,7 +69,7 @@ class NetflixShared(BasicFiles):
     ) -> str | None:
         search_file = self.search_file(names[0], None)
         search_file.download_if_outdated(tz_datetime.now() - timedelta(days=30))
-        show_key = first_search_result_key(search_file.parsed())
-        if show_key is None:
+        title_key = first_search_result_key(search_file.parsed())
+        if title_key is None:
             return None
-        return show_url(show_key)
+        return title_url(title_key)

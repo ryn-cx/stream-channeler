@@ -15,8 +15,8 @@ from app.episodes.models import Episode
 from app.media.media_type import TMDBMediaType
 from app.models import Visibility
 from app.seasons.models import Season
-from app.shows.models import Show
 from app.sources.models import Source
+from app.titles.models import Title
 from app.users.models import User
 from app.users.service.accounts import get_or_create_plugin_user
 from app.utils import tz_datetime
@@ -103,21 +103,21 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
     # TODO: Validate
     def tmdb_lookup_info(
         self,
-        show_key: str,  # noqa: ARG002 - `show_key` is used by overrides.
+        title_key: str,  # noqa: ARG002 - `title_key` is used by overrides.
     ) -> list[TMDBLookupInfo]:
         return []
 
     # TODO: Validate
-    def link_show_to_tmdb(self, show: Show) -> None:
-        from app.shows.service.canonical import (  # noqa: PLC0415
-            link_show_to_tmdb_lookups,
+    def link_title_to_tmdb(self, title: Title) -> None:
+        from app.titles.service.canonical import (  # noqa: PLC0415
+            link_title_to_tmdb_lookups,
         )
 
         # self.session.commit()
-        link_show_to_tmdb_lookups(
+        link_title_to_tmdb_lookups(
             self.session,
-            show,
-            self.tmdb_lookup_info(show.key),
+            title,
+            self.tmdb_lookup_info(title.key),
         )
 
     # TODO: Validate
@@ -126,13 +126,14 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         cls.initializer.initialize_plugin(session)
 
     # TODO: Validate
-    def get_media_importer(self, input: Show | str) -> BaseImporter:  # noqa: ARG002
+    def get_media_importer(self, input: Title | str) -> BaseImporter:  # noqa: ARG002
         return cast("BaseImporter", self)
 
     # TODO: Validate
     def get_source_importer(self, source: Source) -> BaseImporter:  # noqa: ARG002
         return cast("BaseImporter", self)
 
+    # TODO: Validate
     def import_url(self, url: str) -> list[URLImportResult]:
         return self.get_media_importer(url).import_url(url)
 
@@ -152,23 +153,29 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
     def update_source(self, source: Source, update_at: datetime) -> None:
         self.get_source_importer(source).update_source(source, update_at)
 
-    def update_show(self, show: Show, *, force: bool = False) -> None:
-        self.get_media_importer(show).update_show(show, force=force)
+    # TODO: Validate
+    def update_title(self, title: Title, *, force: bool = False) -> None:
+        self.get_media_importer(title).update_title(title, force=force)
 
+    # TODO: Validate
     def update_season(self, season: Season) -> None:
-        self.get_media_importer(season.show).update_season(season)
+        self.get_media_importer(season.title).update_season(season)
 
+    # TODO: Validate
     def update_episode(self, episode: Episode) -> None:
-        self.get_media_importer(episode.season.show).update_episode(episode)
+        self.get_media_importer(episode.season.title).update_episode(episode)
 
-    def on_update_show_failure(self, show: Show, error: Exception) -> None:
-        self.get_media_importer(show).on_failure(show, error)
+    # TODO: Validate
+    def on_update_title_failure(self, title: Title, error: Exception) -> None:
+        self.get_media_importer(title).on_failure(title, error)
 
+    # TODO: Validate
     def on_update_season_failure(self, season: Season, error: Exception) -> None:
-        self.get_media_importer(season.show).on_failure(season, error)
+        self.get_media_importer(season.title).on_failure(season, error)
 
+    # TODO: Validate
     def on_update_episode_failure(self, episode: Episode, error: Exception) -> None:
-        self.get_media_importer(episode.season.show).on_failure(episode, error)
+        self.get_media_importer(episode.season.title).on_failure(episode, error)
 
     # TODO: Validate
     def raise_if_invalid_file(self, file: BaseFile[Any], url: str) -> None:
@@ -203,45 +210,45 @@ class BaseReadURL(BasePlugin, ABC):
     # TODO: Validate
     def _import_results(
         self,
-        show: Show,
+        title: Title,
         media_info: MediaInfo | None = None,
     ) -> list[URLImportResult]:
-        result_shows = [show, *show.canonical_shows]
+        result_titles = [title, *title.canonical_titles]
 
         if media_info and media_info.episode_key is not None:
-            episodes = [self._imported_episode(show, media_info.episode_key)]
+            episodes = [self._imported_episode(title, media_info.episode_key)]
             return [
-                URLImportResult.episode_import_results(result_show, episodes)
-                for result_show in result_shows
+                URLImportResult.episode_import_results(result_title, episodes)
+                for result_title in result_titles
             ]
 
         if media_info and media_info.season_key is not None:
-            seasons = [self._imported_season(show, media_info.season_key)]
+            seasons = [self._imported_season(title, media_info.season_key)]
             return [
-                URLImportResult.season_import_results(result_show, seasons)
-                for result_show in result_shows
+                URLImportResult.season_import_results(result_title, seasons)
+                for result_title in result_titles
             ]
 
         return [
-            URLImportResult.show_import_results(result_show)
-            for result_show in result_shows
+            URLImportResult.title_import_results(result_title)
+            for result_title in result_titles
         ]
 
     # TODO: Validate
-    def _imported_season(self, show: Show, season_key: str) -> Season:
-        for season in show.seasons:
+    def _imported_season(self, title: Title, season_key: str) -> Season:
+        for season in title.seasons:
             if season.key == season_key:
                 return season
 
-        msg = f"Season {season_key} not found in show {show.key}"
+        msg = f"Season {season_key} not found in title {title.key}"
         raise InvalidURLError(msg)
 
     # TODO: Validate
-    def _imported_episode(self, show: Show, episode_key: str) -> Episode:
-        for season in show.seasons:
+    def _imported_episode(self, title: Title, episode_key: str) -> Episode:
+        for season in title.seasons:
             for episode in season.episodes:
                 if episode.key == episode_key:
                     return episode
 
-        msg = f"Episode {episode_key} not found in show {show.key}"
+        msg = f"Episode {episode_key} not found in title {title.key}"
         raise InvalidURLError(msg)

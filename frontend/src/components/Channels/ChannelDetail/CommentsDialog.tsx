@@ -83,7 +83,7 @@ interface CommentNodeProps {
   preloaded?: boolean
 }
 
-// A top level comment shows on its own until its thread is asked for, and the thread
+// A top level comment titles on its own until its thread is asked for, and the thread
 // request returns every descendant nested, so one click reveals the whole tree. Replies
 // rendered from that response already carry their own children and never refetch.
 // TODO: Validate
@@ -142,7 +142,7 @@ function CommentNode({
             >
               {expanded
                 ? "Hide replies"
-                : `Show ${replyCount} ${replyCount === 1 ? "reply" : "replies"}`}
+                : `Title ${replyCount} ${replyCount === 1 ? "reply" : "replies"}`}
             </Button>
           )}
           {currentUserId === comment.user_id && (

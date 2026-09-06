@@ -22,22 +22,27 @@ MOVIE_URL_REGEX = rf"\/movie\/{SLUG_REGEX}(?P<movie_key>{UUID_REGEX})"
 VIDEO_URL_REGEX = rf"\/watch\/(?P<episode_key>{UUID_REGEX})"
 
 
+# TODO: Validate
 class HuluShared(BasicFiles):
+    # TODO: Validate
     @classmethod
     @override
     def plugin_name(cls) -> str:
         return "Hulu"
 
+    # TODO: Validate
     @classmethod
     @override
     def favicon_url(cls) -> str:
         return "https://www.hulu.com/favicon.ico"
 
+    # TODO: Validate
     @classmethod
     @override
     def _domain(cls) -> str:
         return "hulu.com"
 
+    # TODO: Validate
     @classmethod
     def manual_search_url(cls, query: str) -> str | None:
         return search_url(query)
@@ -77,10 +82,10 @@ class HuluShared(BasicFiles):
         ]
 
     # TODO: Validate
-    def _show_keys_from_all_xxx_files(self) -> set[str]:
-        """Get all show keys from the AllMovies and AllSeries files."""
-        show_keys: set[str] = set()
+    def _title_keys_from_all_xxx_files(self) -> set[str]:
+        """Get all title keys from the AllMovies and AllSeries files."""
+        title_keys: set[str] = set()
         for url in self._title_urls_from_all_xxx_files():
             match = strict_search(f"{SERIES_URL_REGEX}|{MOVIE_URL_REGEX}", url)
-            show_keys.add(match.group("series_key") or match.group("movie_key"))
-        return show_keys
+            title_keys.add(match.group("series_key") or match.group("movie_key"))
+        return title_keys

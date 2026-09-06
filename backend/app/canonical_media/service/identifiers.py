@@ -9,7 +9,7 @@ from sqlmodel import Session, col, select
 
 from app.canonical_media.filters import is_canonical, is_non_canonical
 from app.episodes.models import Episode, EpisodeCanonicalEpisode
-from app.shows.models import Show, ShowCanonicalShow
+from app.titles.models import Title, TitleCanonicalTitle
 
 
 # TODO: Validate
@@ -24,9 +24,9 @@ def canonical_ids_by_key(
     to, and is preferred where both are stored, since the non-canonical row is the one
     the canonical row was minted for.
 
-    Only episodes answer this way. A non-canonical show stands for however many
-    canonical shows a website mixed into it and names none of them in a column, so a
-    show key is asked of `canonical_show_ids_by_key` and answered with all of them.
+    Only episodes answer this way. A non-canonical title stands for however many
+    canonical titles a website mixed into it and names none of them in a column, so a
+    title key is asked of `canonical_title_ids_by_key` and answered with all of them.
     """
     if not keys:
         return {}
@@ -53,33 +53,33 @@ def canonical_ids_by_key(
 
 
 # TODO: Validate
-def canonical_show_ids_by_key(
+def canonical_title_ids_by_key(
     session: Session,
-    show_keys: Collection[str],
+    title_keys: Collection[str],
 ) -> dict[str, set[uuid.UUID]]:
-    if not show_keys:
+    if not title_keys:
         return {}
-    canonical_show_ids: dict[str, set[uuid.UUID]] = defaultdict(set)
+    canonical_title_ids: dict[str, set[uuid.UUID]] = defaultdict(set)
     copy_rows = session.exec(
         select(  # type: ignore[call-overload]
-            Show.key,
-            ShowCanonicalShow.canonical_show_id,
+            Title.key,
+            TitleCanonicalTitle.canonical_title_id,
         )
-        .join(ShowCanonicalShow, col(ShowCanonicalShow.show_id) == col(Show.id))
-        .where(is_non_canonical(Show), col(Show.key).in_(show_keys)),
+        .join(TitleCanonicalTitle, col(TitleCanonicalTitle.title_id) == col(Title.id))
+        .where(is_non_canonical(Title), col(Title.key).in_(title_keys)),
     ).all()
-    for show_key, canonical_show_id in copy_rows:
-        canonical_show_ids[show_key].add(canonical_show_id)
-    # A key naming a canonical show rather than a row standing for one is that
-    # show, which is what TMDB's own records are: they are the canonical rows, so
+    for title_key, canonical_title_id in copy_rows:
+        canonical_title_ids[title_key].add(canonical_title_id)
+    # A key naming a canonical title rather than a row standing for one is that
+    # title, which is what TMDB's own records are: they are the canonical rows, so
     # importing one of them straight onto a channel has nothing to resolve
     # through anything else.
     title_rows = session.exec(
         select(  # type: ignore[call-overload]
-            Show.key,
-            Show.id,
-        ).where(is_canonical(Show), col(Show.key).in_(show_keys)),
+            Title.key,
+            Title.id,
+        ).where(is_canonical(Title), col(Title.key).in_(title_keys)),
     ).all()
-    for show_key, canonical_show_id in title_rows:
-        canonical_show_ids[show_key].add(canonical_show_id)
-    return canonical_show_ids
+    for title_key, canonical_title_id in title_rows:
+        canonical_title_ids[title_key].add(canonical_title_id)
+    return canonical_title_ids

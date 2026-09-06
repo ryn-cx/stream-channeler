@@ -110,7 +110,7 @@ test.describe("Plugins management", () => {
 test.describe("Plugins empty state", () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
-  test("Shows empty state message when no plugins exist", async ({ page }) => {
+  test("Titles empty state message when no plugins exist", async ({ page }) => {
     const email = randomEmail()
     const password = randomPassword()
     await createUser({ email, password })

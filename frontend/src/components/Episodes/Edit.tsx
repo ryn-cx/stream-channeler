@@ -12,8 +12,8 @@ import { IssueReportsSection } from "@/components/ChannelCommon/IssueReportsSect
 import { AdminZone } from "@/components/Common/AdminZone"
 import { ModalContent } from "@/components/Common/ModalContent"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
-import EditShow from "@/components/Shows/Edit"
-import { TMDB_EPISODE_ORDER_PLUGIN } from "@/components/Shows/TmdbEpisodeOrderField"
+import EditTitle from "@/components/Titles/Edit"
+import { TMDB_EPISODE_ORDER_PLUGIN } from "@/components/Titles/TmdbEpisodeOrderField"
 import {
   Dialog,
   DialogBody,
@@ -22,7 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import useAuth from "@/hooks/useAuth"
-import { useShow } from "@/hooks/useEntities"
+import { useTitle } from "@/hooks/useEntities"
 
 import {
   CanonicalEpisodeControls,
@@ -43,10 +43,10 @@ export type EditableEpisodeFields = Pick<
 const VERIFIED_NOTE = "Manual: Verified"
 
 // TODO: Validate
-const EditShowOfEpisode = ({ showId }: { showId: string }) => {
-  const { data: show } = useShow(showId)
-  if (!show) return null
-  return <EditShow show={show} size="icon-sm" />
+const EditTitleOfEpisode = ({ titleId }: { titleId: string }) => {
+  const { data: title } = useTitle(titleId)
+  if (!title) return null
+  return <EditTitle title={title} size="icon-sm" />
 }
 
 interface EpisodeInformationContentProps {
@@ -77,7 +77,7 @@ export function EpisodeInformationContent({
   const isAdmin = Boolean(user?.is_superuser)
   const information = useEpisodeInformation(episode.id, enabled)
   const informationQueryKey = episodeInformationQueryKey(episode.id)
-  const showId = information.data?.source.show.id
+  const titleId = information.data?.source.title.id
   // TMDB's own rows are the episodes every website's row is settled against, so
   // there is nothing above them to link them to.
   const isTmdbEpisode =
@@ -100,7 +100,7 @@ export function EpisodeInformationContent({
         preferSource
         spelledOutDuration
         titleAction={
-          isAdmin && showId ? <EditShowOfEpisode showId={showId} /> : null
+          isAdmin && titleId ? <EditTitleOfEpisode titleId={titleId} /> : null
         }
       />
 

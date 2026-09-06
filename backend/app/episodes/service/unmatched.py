@@ -20,7 +20,7 @@ from sqlmodel import Session, and_, col, func, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.canonical_media.filters import is_canonical, is_non_canonical
-from app.channels.models import Channel, ChannelShow
+from app.channels.models import Channel, ChannelTitle
 from app.episodes.models import (
     Episode,
     EpisodeCanonicalEpisode,
@@ -35,7 +35,7 @@ from app.episodes.schemas import (
 from app.episodes.service.numbering import (
     _absolute_number_match,
     _best_match,
-    _candidates_for_shows,
+    _candidates_for_titles,
     _episode_number_absolute_match,
     _season_and_episode_match,
     _text_matchers,
@@ -43,15 +43,15 @@ from app.episodes.service.numbering import (
     absolute_numbers_of,
 )
 from app.episodes.service.records import _record_fields
-from app.episodes.service.tmdb_choices import _tmdb_ids_used_by_shows
+from app.episodes.service.tmdb_choices import _tmdb_ids_used_by_titles
 from app.plugins.identifiers import TMDB_PLUGIN_KEY, YOUTUBE_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.schemas import SortOption
 from app.seasons.models import Season
 from app.service.filters import _apply_filter_options
 from app.service.sorting import _apply_sort_options
-from app.shows.models import Show, ShowCanonicalShow
 from app.sources.models import Source
+from app.titles.models import Title, TitleCanonicalTitle
 from app.users.models import User
 from app.users.plugin_user import is_plugin_user
 
@@ -60,40 +60,40 @@ from app.users.plugin_user import is_plugin_user
 def _in_a_channel() -> ColumnElement[bool]:
     channel_owner = aliased(User)
     return (
-        select(ChannelShow.channel_id)
-        .select_from(ChannelShow)
-        .join(Channel, onclause=col(ChannelShow.channel_id) == Channel.id)
+        select(ChannelTitle.channel_id)
+        .select_from(ChannelTitle)
+        .join(Channel, onclause=col(ChannelTitle.channel_id) == Channel.id)
         .join(channel_owner, onclause=col(Channel.user_id) == channel_owner.id)
         .where(
-            col(ChannelShow.is_blacklist_only).is_(False),
+            col(ChannelTitle.is_blacklist_only).is_(False),
             ~is_plugin_user(channel_owner.email),
             or_(
-                col(ChannelShow.canonical_show_id).in_(
-                    select(ShowCanonicalShow.canonical_show_id)
-                    .where(col(ShowCanonicalShow.show_id) == col(Show.id))
-                    .correlate(Show),
+                col(ChannelTitle.canonical_title_id).in_(
+                    select(TitleCanonicalTitle.canonical_title_id)
+                    .where(col(TitleCanonicalTitle.title_id) == col(Title.id))
+                    .correlate(Title),
                 ),
                 and_(
-                    is_canonical(Show),
-                    col(ChannelShow.canonical_show_id) == col(Show.id),
+                    is_canonical(Title),
+                    col(ChannelTitle.canonical_title_id) == col(Title.id),
                 ),
             ),
         )
-        .correlate(Show)
+        .correlate(Title)
         .exists()
     )
 
 
 # TODO: Validate
 # Which joined column each sortable name is, since a name a non-canonical row is not
-# sorted by on its own row - the show it is under, the source that carries it - has no
+# sorted by on its own row - the title it is under, the source that carries it - has no
 # column of `Episode` to be read off.
 _UNMATCHED_COLUMNS: dict[str, Any] = {
-    # The combined column reads as the show it is under first, so that is what
+    # The combined column reads as the title it is under first, so that is what
     # sorting or filtering it is asking about.
-    "summary": Show.name,
-    "show_name": Show.name,
-    "show_year": Show.year,
+    "summary": Title.name,
+    "title_name": Title.name,
+    "title_year": Title.year,
     "source_name": Source.name,
     "plugin_name": Plugin.key,
     "season_name": Season.name,
@@ -115,12 +115,12 @@ _UNMATCHED_COLUMNS: dict[str, Any] = {
 # TODO: Validate
 def _unmatched_base(
     *,
-    non_canonical_shows_only: bool = False,
+    non_canonical_titles_only: bool = False,
 ) -> SelectOfScalar[Episode]:
     """Every canonical episode of a plugin other than TMDB and YouTube.
 
     The rows the page is drawn from, before anything is sorted, filtered or
-    counted. `contains_eager` carries the season, show and source back with each
+    counted. `contains_eager` carries the season, title and source back with each
     episode, since every one of them is read for every row and reaching them
     through the relationships would be three queries a row.
     """
@@ -128,13 +128,13 @@ def _unmatched_base(
         select(Episode)
         .select_from(Episode)
         .join(Season, onclause=col(Episode.season_id) == Season.id)
-        .join(Show, onclause=col(Season.show_id) == Show.id)
-        .join(Source, onclause=col(Show.source_id) == Source.id)
+        .join(Title, onclause=col(Season.title_id) == Title.id)
+        .join(Source, onclause=col(Title.source_id) == Source.id)
         .join(Plugin, onclause=col(Source.plugin_id) == Plugin.id)
         .options(
             contains_eager(Episode.season)  # type: ignore[arg-type]
-            .contains_eager(Season.show)  # type: ignore[arg-type]
-            .contains_eager(Show.source)  # type: ignore[arg-type]
+            .contains_eager(Season.title)  # type: ignore[arg-type]
+            .contains_eager(Title.source)  # type: ignore[arg-type]
             .contains_eager(Source.plugin),  # type: ignore[arg-type]
         )
         .where(
@@ -151,9 +151,9 @@ def _unmatched_base(
             col(Episode.canonical_episode_validated_at).is_(None),
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
-            col(Show.deleted_at).is_(None),
+            col(Title.deleted_at).is_(None),
             _in_a_channel(),
-            *([is_non_canonical(Show)] if non_canonical_shows_only else []),
+            *([is_non_canonical(Title)] if non_canonical_titles_only else []),
         )
     )
 
@@ -180,7 +180,7 @@ def list_unmatched_episodes(
     """Return a page of the canonical episodes outside TMDB and YouTube.
 
     Sorted, filtered and paged by the database rather than in the browser. There
-    are far more of these than a page shows, so ordering a page of them would
+    are far more of these than a page titles, so ordering a page of them would
     order only the ones already fetched: sorting by name would answer with the
     first names of whichever rows came back, not the first names there are.
 
@@ -189,7 +189,7 @@ def list_unmatched_episodes(
     rows being shown and not for every row there is.
     """
     base = _unmatched_base(
-        non_canonical_shows_only=params.non_canonical_shows_only,
+        non_canonical_titles_only=params.non_canonical_titles_only,
     )
     filtered = _apply_filter_options(
         base,
@@ -229,75 +229,75 @@ def _unmatched_outputs(
 ) -> list[UnmatchedEpisodeOutput]:
     """Describe each episode of a page, beside the TMDB episode closest to it."""
     rows = [
-        (episode, episode.season, episode.season.show, episode.season.show.source)
+        (episode, episode.season, episode.season.title, episode.season.title.source)
         for episode in episodes
     ]
-    candidates, candidate_numbers = _candidates_for_shows(
+    candidates, candidate_numbers = _candidates_for_titles(
         session,
-        {show for _episode, _season, show, _source in rows},
+        {title for _episode, _season, title, _source in rows},
     )
     source_numbers = absolute_numbers_of(
         session,
-        {show.id for _episode, _season, show, _source in rows},
+        {title.id for _episode, _season, title, _source in rows},
     )
-    used = _tmdb_ids_used_by_shows(
+    used = _tmdb_ids_used_by_titles(
         session,
-        {show.id for _episode, _season, show, _source in rows},
+        {title.id for _episode, _season, title, _source in rows},
     )
     description_matchers = _text_matchers(candidates, titles=False)
     title_matchers = _text_matchers(candidates, titles=True)
 
     return [
         UnmatchedEpisodeOutput(
-            **_record_fields(episode, season, show),
+            **_record_fields(episode, season, title),
             absolute_number=source_numbers.get(episode.id),
             best_match=_marked_used(
                 _best_match(
                     episode,
                     season,
-                    candidates.get(show.id, []),
-                    candidate_numbers.get(show.id, {}),
+                    candidates.get(title.id, []),
+                    candidate_numbers.get(title.id, {}),
                 ),
                 episode.id,
-                used.get(show.id, {}),
+                used.get(title.id, {}),
             ),
             season_episode_match=_marked_used(
                 _season_and_episode_match(
                     episode,
                     season,
-                    candidates.get(show.id, []),
-                    candidate_numbers.get(show.id, {}),
+                    candidates.get(title.id, []),
+                    candidate_numbers.get(title.id, {}),
                 ),
                 episode.id,
-                used.get(show.id, {}),
+                used.get(title.id, {}),
             ),
             absolute_number_match=_marked_used(
                 _absolute_number_match(
                     episode,
-                    candidates.get(show.id, []),
-                    candidate_numbers.get(show.id, {}),
+                    candidates.get(title.id, []),
+                    candidate_numbers.get(title.id, {}),
                     source_numbers.get(episode.id),
                 ),
                 episode.id,
-                used.get(show.id, {}),
+                used.get(title.id, {}),
             ),
             episode_number_absolute_match=_marked_used(
                 _episode_number_absolute_match(
                     episode,
-                    candidates.get(show.id, []),
-                    candidate_numbers.get(show.id, {}),
+                    candidates.get(title.id, []),
+                    candidate_numbers.get(title.id, {}),
                 ),
                 episode.id,
-                used.get(show.id, {}),
+                used.get(title.id, {}),
             ),
             description_embedding_matches=[
                 choice
                 for choice in (
-                    _marked_used(match, episode.id, used.get(show.id, {}))
+                    _marked_used(match, episode.id, used.get(title.id, {}))
                     for match in _text_matches(
                         episode,
-                        description_matchers.get(show.id),
-                        candidate_numbers.get(show.id, {}),
+                        description_matchers.get(title.id),
+                        candidate_numbers.get(title.id, {}),
                         titles=False,
                         blended=False,
                     )
@@ -307,11 +307,11 @@ def _unmatched_outputs(
             description_blended_matches=[
                 choice
                 for choice in (
-                    _marked_used(match, episode.id, used.get(show.id, {}))
+                    _marked_used(match, episode.id, used.get(title.id, {}))
                     for match in _text_matches(
                         episode,
-                        description_matchers.get(show.id),
-                        candidate_numbers.get(show.id, {}),
+                        description_matchers.get(title.id),
+                        candidate_numbers.get(title.id, {}),
                         titles=False,
                         blended=True,
                     )
@@ -321,11 +321,11 @@ def _unmatched_outputs(
             title_embedding_matches=[
                 choice
                 for choice in (
-                    _marked_used(match, episode.id, used.get(show.id, {}))
+                    _marked_used(match, episode.id, used.get(title.id, {}))
                     for match in _text_matches(
                         episode,
-                        title_matchers.get(show.id),
-                        candidate_numbers.get(show.id, {}),
+                        title_matchers.get(title.id),
+                        candidate_numbers.get(title.id, {}),
                         titles=True,
                         blended=False,
                     )
@@ -335,11 +335,11 @@ def _unmatched_outputs(
             title_blended_matches=[
                 choice
                 for choice in (
-                    _marked_used(match, episode.id, used.get(show.id, {}))
+                    _marked_used(match, episode.id, used.get(title.id, {}))
                     for match in _text_matches(
                         episode,
-                        title_matchers.get(show.id),
-                        candidate_numbers.get(show.id, {}),
+                        title_matchers.get(title.id),
+                        candidate_numbers.get(title.id, {}),
                         titles=True,
                         blended=True,
                     )
@@ -347,7 +347,7 @@ def _unmatched_outputs(
                 if choice is not None
             ],
         )
-        for episode, season, show, _source in rows
+        for episode, season, title, _source in rows
     ]
 
 
@@ -357,7 +357,7 @@ def _marked_used(
     episode_id: uuid.UUID,
     used: dict[int, list[EpisodeRecord]],
 ) -> TmdbEpisodeChoice | None:
-    """Say which of the show's other episodes already point at `choice`.
+    """Say which of the title's other episodes already point at `choice`.
 
     Suggested to one episode and taken by another is what a suggestion worth
     doubting looks like, since two episodes of one listing are rarely the same

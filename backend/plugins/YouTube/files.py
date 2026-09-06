@@ -25,7 +25,7 @@ from not_yt_dlapi.playlist_items import PlaylistItems as PlaylistItemsEndpoint
 from not_yt_dlapi.playlist_items.models import Item, PlaylistItemsModel
 from not_yt_dlapi.playlists import Playlists as PlaylistsEndpoint
 from not_yt_dlapi.playlists.models import PlaylistsModel
-from not_yt_dlapi.shows import Shows as ShowsEndpoint
+from not_yt_dlapi.shows import Shows as TitlesEndpoint
 from not_yt_dlapi.shows.models import ShowsModel
 from not_yt_dlapi.topic import Topic as TopicEndpoint
 from not_yt_dlapi.topic.models import TopicModel
@@ -376,17 +376,17 @@ class TopicReleases(PagedEndpointFile[TopicModel]):
 
 
 # TODO: Validate
-class ShowListing(PagedEndpointFile[ShowsModel]):
-    """Every season of a show and every stretch of each of them.
+class TitleListing(PagedEndpointFile[ShowsModel]):
+    """Every season of a title and every stretch of each of them.
 
     A season is its own thing to ask browse for and a long one is answered a
-    stretch at a time, so what is stored is every answer the show took, and only
+    stretch at a time, so what is stored is every answer the title took, and only
     the stretch that begins a season says which season the ones after it are of.
     """
 
     # TODO: Validate
     @override
-    def _endpoint(self) -> ShowsEndpoint:
+    def _endpoint(self) -> TitlesEndpoint:
         return not_yt_dlapi().shows
 
     # TODO: Validate
@@ -395,7 +395,7 @@ class ShowListing(PagedEndpointFile[ShowsModel]):
         return isinstance(error, ResourceNotFoundError)
 
     # TODO: Validate
-    def show_key(self) -> str | None:
+    def title_key(self) -> str | None:
         match = re.search(r"SC[A-Za-z0-9_-]{20,}", self.database_record.content or "")
         return match.group(0) if match else None
 
@@ -522,10 +522,10 @@ class PlaylistFeed(EndpointFile[ChannelFeedModel | PlaylistFeedModel]):
 
 
 # TODO: Validate
-class ShowPage(HTMLFile):
-    """Show page file.
+class TitlePage(HTMLFile):
+    """Title page file.
 
-    The API has no concept of a show, so a show and its seasons are read from the
+    The API has no concept of a title, so a title and its seasons are read from the
     page YouTube serves for it.
     """
 
@@ -534,15 +534,15 @@ class ShowPage(HTMLFile):
         self,
         session: Session,
         plugin: Plugin,
-        show_key: str,
+        title_key: str,
     ) -> None:
-        self.show_key = show_key
-        super().__init__(session, plugin, show_key)
+        self.title_key = title_key
+        super().__init__(session, plugin, title_key)
 
     # TODO: Validate
     @override
     def _url(self) -> str:
-        return f"https://www.youtube.com/show/{self.show_key}"
+        return f"https://www.youtube.com/show/{self.title_key}"
 
     # TODO: Validate
     @override
@@ -551,7 +551,7 @@ class ShowPage(HTMLFile):
             response = get_around_client().get(self._url())
             if not response.is_success:
                 logger.warning(
-                    "ShowPage fetch for {} returned HTTP {}; keeping the existing page.",
+                    "TitlePage fetch for {} returned HTTP {}; keeping the existing page.",
                     self.unique_identifier,
                     response.status_code,
                 )
@@ -564,9 +564,9 @@ class ShowPage(HTMLFile):
 
     # TODO: Validate
     def title(self) -> str | None:
-        """Return the name of the show.
+        """Return the name of the title.
 
-        The show's own title is the first one on the page; every later one belongs
+        The title's own title is the first one on the page; every later one belongs
         to an episode or a streaming service.
         """
         match = re.search(r'"title":\s*\{"simpleText":"([^"]+)"', self._content())

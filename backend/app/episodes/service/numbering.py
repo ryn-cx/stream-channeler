@@ -37,7 +37,7 @@ from app.episodes.schemas import (
 from app.episodes.service.records import _record_fields
 from app.episodes.text_matching import TextMatcher
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.titles.models import Title
 
 # An unnumbered season or episode is ordered after every numbered one.
 _UNNUMBERED = float("inf")
@@ -45,7 +45,7 @@ _UNNUMBERED = float("inf")
 
 # What an `Episode` can be pointed at: the episode itself, the season holding
 # it, and the title above that, all as TMDB has them.
-type _Candidate = tuple[Episode, Season, Show]
+type _Candidate = tuple[Episode, Season, Title]
 
 
 type Numbering = tuple[uuid.UUID, int | None, int | None]
@@ -93,7 +93,7 @@ def _score(
     season: Season,
     candidate: _Candidate,
 ) -> tuple[float, int]:
-    candidate_episode, candidate_season, _show = candidate
+    candidate_episode, candidate_season, _title = candidate
     numbering_matches = int(
         season.season_number is not None
         and episode.episode_number is not None
@@ -108,7 +108,7 @@ def _candidate_absolute_numbers(candidates: list[_Candidate]) -> dict[uuid.UUID,
     return absolute_numbers(
         [
             (episode.id, season.season_number, episode.episode_number)
-            for episode, season, _show in candidates
+            for episode, season, _title in candidates
         ],
     )
 
@@ -119,9 +119,9 @@ def _choice(
     absolute_numbers: dict[uuid.UUID, int],
     similarity: float,
 ) -> TmdbEpisodeChoice | None:
-    episode, season, show = candidate
+    episode, season, title = candidate
     return TmdbEpisodeChoice(
-        **_record_fields(episode, season, show),
+        **_record_fields(episode, season, title),
         absolute_number=absolute_numbers.get(episode.id),
         similarity=similarity,
     )
@@ -171,14 +171,14 @@ def _text_matchers(
     titles: bool,
 ) -> dict[uuid.UUID, tuple[list[_Candidate], TextMatcher]]:
     matchers: dict[uuid.UUID, tuple[list[_Candidate], TextMatcher]] = {}
-    for show_id, show_candidates in candidates.items():
+    for title_id, title_candidates in candidates.items():
         written = [
             candidate
-            for candidate in show_candidates
+            for candidate in title_candidates
             if _episode_text(candidate[0], titles=titles)
         ]
         if written:
-            matchers[show_id] = (
+            matchers[title_id] = (
                 written,
                 TextMatcher(
                     [
@@ -226,7 +226,7 @@ def _season_and_episode_match(
     absolute_numbers: dict[uuid.UUID, int],
 ) -> TmdbEpisodeChoice | None:
     for candidate in candidates:
-        candidate_episode, candidate_season, _show = candidate
+        candidate_episode, candidate_season, _title = candidate
         if (
             season.season_number is not None
             and episode.episode_number is not None
@@ -282,9 +282,9 @@ def _episode_number_absolute_match(
 
 
 # TODO: Validate
-def _candidates_by_show(
+def _candidates_by_title(
     session: Session,
-    canonical_show_ids: set[uuid.UUID],
+    canonical_title_ids: set[uuid.UUID],
 ) -> dict[uuid.UUID, list[_Candidate]]:
     """Return every TMDB episode of each linked title, keyed by the title.
 
@@ -292,36 +292,36 @@ def _candidates_by_show(
     episode, since every episode of the same title is compared against the same
     list.
     """
-    if not canonical_show_ids:
+    if not canonical_title_ids:
         return {}
 
     statement = (
-        select(Episode, Season, Show)
+        select(Episode, Season, Title)
         .join(
             Season,
             onclause=col(Episode.season_id) == Season.id,
         )
         .join(
-            Show,
-            onclause=col(Season.show_id) == Show.id,
+            Title,
+            onclause=col(Season.title_id) == Title.id,
         )
         .where(
             is_canonical(Episode),
-            is_canonical(Show),
-            col(Show.id).in_(canonical_show_ids),
+            is_canonical(Title),
+            col(Title.id).in_(canonical_title_ids),
             tmdb_key_clause(col(Episode.key)),
         )
     )
     candidates: dict[uuid.UUID, list[_Candidate]] = defaultdict(list)
-    for episode, season, show in session.exec(statement).all():
-        candidates[show.id].append((episode, season, show))
+    for episode, season, title in session.exec(statement).all():
+        candidates[title.id].append((episode, season, title))
     return candidates
 
 
 # TODO: Validate
-def _candidates_for_shows(
+def _candidates_for_titles(
     session: Session,
-    shows: Collection[Show],
+    titles: Collection[Title],
 ) -> tuple[dict[uuid.UUID, list[_Candidate]], dict[uuid.UUID, dict[uuid.UUID, int]]]:
     """Return the TMDB episodes each listing can be matched against, and their count.
 
@@ -331,23 +331,26 @@ def _candidates_for_shows(
     episode's place in a title is where that title puts it rather than where the
     two of them run together would.
     """
-    by_title = _candidates_by_show(
+    by_title = _candidates_by_title(
         session,
         {
-            canonical_show_id
-            for show in shows
-            for canonical_show_id in show.canonical_show_ids
+            canonical_title_id
+            for title in titles
+            for canonical_title_id in title.canonical_title_ids
         },
     )
     candidates: dict[uuid.UUID, list[_Candidate]] = {}
     numbers: dict[uuid.UUID, dict[uuid.UUID, int]] = {}
-    for show in shows:
-        titles = [by_title.get(title, []) for title in show.canonical_show_ids]
-        candidates[show.id] = [candidate for title in titles for candidate in title]
-        numbers[show.id] = {
+    for title in titles:
+        grouped = [
+            by_title.get(canonical_title_id, [])
+            for canonical_title_id in title.canonical_title_ids
+        ]
+        candidates[title.id] = [candidate for group in grouped for candidate in group]
+        numbers[title.id] = {
             candidate_id: number
-            for title in titles
-            for candidate_id, number in _candidate_absolute_numbers(title).items()
+            for group in grouped
+            for candidate_id, number in _candidate_absolute_numbers(group).items()
         }
     return candidates, numbers
 
@@ -377,7 +380,7 @@ def _absolute_number_column() -> ColumnElement[int]:
     episodes a website gave the very same numbering.
     """
     return func.row_number().over(
-        partition_by=col(Season.show_id),
+        partition_by=col(Season.title_id),
         order_by=(
             col(Season.season_number),
             nullslast(col(Episode.episode_number)),
@@ -389,7 +392,7 @@ def _absolute_number_column() -> ColumnElement[int]:
 # TODO: Validate
 def absolute_numbers_of(
     session: Session,
-    show_ids: Collection[uuid.UUID],
+    title_ids: Collection[uuid.UUID],
 ) -> dict[uuid.UUID, int]:
     """Count every episode of each title, and return that count by episode id.
 
@@ -399,12 +402,12 @@ def absolute_numbers_of(
     canonical, so a website's own title and a canonical title are both counted the
     way the title they are counts.
     """
-    if not show_ids:
+    if not title_ids:
         return {}
 
     statement = (
         select(Episode.id, _absolute_number_column())
         .join(Season, onclause=col(Episode.season_id) == Season.id)
-        .where(col(Season.show_id).in_(show_ids), _counted_episodes())
+        .where(col(Season.title_id).in_(title_ids), _counted_episodes())
     )
     return dict(session.exec(statement).all())

@@ -20,8 +20,8 @@ from app.media.media_type import TMDBMediaType
 from app.plugins.models import Plugin
 from app.plugins.schemas import TMDBMediaInfo
 from app.seasons.models import Season
-from app.shows.models import Show
 from app.sources.models import Source
+from app.titles.models import Title
 from app.utils import tz_datetime
 from app.watches.schemas import WatchImportResults
 from plugins.utils.manage_plugins import register_plugins
@@ -220,20 +220,20 @@ class AbstractPlugin(ABC):
         source.update_at = None
 
     # TODO: Validate
-    def update_show(self, show: Show, *, force: bool = False) -> None:  # noqa: ARG002 - `force` is used by overrides.
-        """Update an existing show in the database.
+    def update_title(self, title: Title, *, force: bool = False) -> None:  # noqa: ARG002 - `force` is used by overrides.
+        """Update an existing title in the database.
 
-        Called when `Show.update_at > datetime.now()`.
+        Called when `Title.update_at > datetime.now()`.
 
-        By default this will clear `Show.update_at`, override to implement `Plugin`
+        By default this will clear `Title.update_at`, override to implement `Plugin`
         specific update logic.
 
         Args:
-            show: The `Show` to update.
+            title: The `Title` to update.
             force: When True, re-upsert every record even if its data is unchanged.
 
         """
-        show.update_at = None
+        title.update_at = None
 
     # TODO: Validate
     def update_channel(self, channel: Channel) -> None:
@@ -302,11 +302,11 @@ class AbstractPlugin(ABC):
         raise error
 
     # TODO: Validate
-    def on_update_show_failure(self, show: Show, error: Exception) -> None:  # noqa: ARG002 - `show` is used by overrides.
-        """Handle a failure while updating a `Show`.
+    def on_update_title_failure(self, title: Title, error: Exception) -> None:  # noqa: ARG002 - `title` is used by overrides.
+        """Handle a failure while updating a `Title`.
 
         By default the error is re-raised so the caller applies its default
-        handling. Override to reschedule the show instead.
+        handling. Override to reschedule the title instead.
         """
         raise error
 
@@ -463,7 +463,7 @@ class AbstractPlugin(ABC):
     # TODO: Validate
     def tmdb_lookup_info(
         self,
-        show_key: str,  # noqa: ARG002 - `show_key` is used by overrides.
+        title_key: str,  # noqa: ARG002 - `title_key` is used by overrides.
     ) -> list[TMDBLookupInfo]:
         return []
 
@@ -507,9 +507,9 @@ class URLImportResult(BaseModel):
 
     Example outputs:
 
-      If a user adds a URL for a show it is assumed the user wants every
-      season/episode of that show and all future episodes as well:
-          show_key - Always required.
+      If a user adds a URL for a title it is assumed the user wants every
+      season/episode of that title and all future episodes as well:
+          title_key - Always required.
           is_whitelist=False - New seasons/episodes are added automatically.
 
       If the user adds a URL for a season it is assumed the user wants just the
@@ -524,7 +524,7 @@ class URLImportResult(BaseModel):
 
     """
 
-    show: Show
+    title: Title
     """The title that was imported from the URL."""
 
     season_keys: list[str] = Field(default=[])
@@ -544,15 +544,15 @@ class URLImportResult(BaseModel):
 
     # TODO: Validate
     @classmethod
-    def show_import_results(
+    def title_import_results(
         cls,
-        show: Show,
+        title: Title,
         *,
         is_whitelist: bool = False,
     ) -> URLImportResult:
-        """Return the result of importing the whole of `show`."""
+        """Return the result of importing the whole of `title`."""
         return cls(
-            show=show,
+            title=title,
             is_whitelist=is_whitelist,
         )
 
@@ -560,12 +560,12 @@ class URLImportResult(BaseModel):
     @classmethod
     def season_import_results(
         cls,
-        show: Show,
+        title: Title,
         seasons: Sequence[Season],
     ) -> URLImportResult:
-        """Return the result of importing only `seasons` of `show`."""
+        """Return the result of importing only `seasons` of `title`."""
         return cls(
-            show=show,
+            title=title,
             season_keys=[season.key for season in seasons],
             is_whitelist=True,
         )
@@ -574,12 +574,12 @@ class URLImportResult(BaseModel):
     @classmethod
     def episode_import_results(
         cls,
-        show: Show,
+        title: Title,
         episodes: Sequence[Episode],
     ) -> URLImportResult:
-        """Return the result of importing only `episodes` of `show`."""
+        """Return the result of importing only `episodes` of `title`."""
         return cls(
-            show=show,
+            title=title,
             episode_keys=[episode.key for episode in episodes],
             is_whitelist=True,
         )

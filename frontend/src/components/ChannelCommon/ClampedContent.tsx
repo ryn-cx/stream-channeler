@@ -46,7 +46,7 @@ export function ClampedContent({
           className="text-xs text-primary hover:underline"
           onClick={() => setExpanded(!expanded)}
         >
-          {expanded ? "Show less" : "Show more"}
+          {expanded ? "Title less" : "Title more"}
         </button>
       )}
     </div>

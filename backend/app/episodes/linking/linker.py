@@ -27,19 +27,19 @@ from app.episodes.name_matching import (
 from app.episodes.preload import preload_episodes
 from app.episodes.service.numbering import absolute_numbers
 from app.episodes.text_matching import TextMatcher
-from app.shows.models import Show
+from app.titles.models import Title
 
 
 # TODO: Validate
 class EpisodeLinker:
     # TODO: Validate
-    def __init__(self, session: Session, show: Show) -> None:
+    def __init__(self, session: Session, title: Title) -> None:
         self.session = session
-        self.show = show
-        preload_episodes(session, [show, *show.canonical_shows])
+        self.title = title
+        preload_episodes(session, [title, *title.canonical_titles])
         episodes = [
             episode
-            for season in show.active_children
+            for season in title.active_children
             for episode in season.active_children
         ]
         self.episodes = [
@@ -50,26 +50,26 @@ class EpisodeLinker:
         ]
         self.canonical_episodes = [
             episode
-            for canonical_show in show.canonical_shows
-            for season in canonical_show.active_children
+            for canonical_title in title.canonical_titles
+            for season in canonical_title.active_children
             for episode in season.active_children
             if is_tmdb_key(episode.key)
         ]
         self.season_numbers = {
             episode.id: season.season_number
-            for parent in (show, *show.canonical_shows)
+            for parent in (title, *title.canonical_titles)
             for season in parent.active_children
             for episode in season.active_children
         }
         self.facts = TmdbEpisodeFacts(
             session,
-            show.canonical_shows,
+            title.canonical_titles,
             self.canonical_episodes,
         )
         self.facts.preload()
-        preload_episodes(session, [show, *show.canonical_shows])
+        preload_episodes(session, [title, *title.canonical_titles])
         self.absolute_numbers: dict[uuid.UUID, int] = {}
-        for parent in (show, *show.canonical_shows):
+        for parent in (title, *title.canonical_titles):
             self.absolute_numbers |= absolute_numbers(
                 [
                     (episode.id, season.season_number, episode.episode_number)
@@ -124,7 +124,7 @@ class EpisodeLinker:
         ).all()
 
     # TODO: Validate
-    def link_show(self) -> None:
+    def link_title(self) -> None:
         self.link_named_episodes(self.episodes)
         self.link_unnamed_episodes(self.unnamed_episodes)
 

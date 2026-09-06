@@ -13,7 +13,7 @@ function looksLikePreview(value: unknown): value is Preview {
   return (
     Array.isArray(preview.episodes) &&
     typeof preview.seasons === "object" &&
-    typeof preview.shows === "object" &&
+    typeof preview.titles === "object" &&
     typeof preview.sources === "object" &&
     typeof preview.plugins === "object"
   )
@@ -38,18 +38,18 @@ function trimmed(preview: Preview): Preview {
     preview.seasons,
     episodes.map((episode) => episode.season_id),
   )
-  const shows = pick(
-    preview.shows,
-    Object.values(seasons).map((season) => season.show_id),
+  const titles = pick(
+    preview.titles,
+    Object.values(seasons).map((season) => season.title_id),
   )
   const sources = pick(
     preview.sources,
-    Object.values(shows).map((show) => show.source_id),
+    Object.values(titles).map((title) => title.source_id),
   )
   return {
     episodes,
     seasons,
-    shows,
+    titles,
     sources,
     plugins: pick(
       preview.plugins,

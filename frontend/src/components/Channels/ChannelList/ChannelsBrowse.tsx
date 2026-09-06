@@ -26,7 +26,7 @@ import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
-import { ManageShowsButton } from "../ChannelDetail/AddUrlsToQueueButton"
+import { ManageTitlesButton } from "../ChannelDetail/AddUrlsToQueueButton"
 import { ChannelDetailsButton } from "./ChannelDetailsButton"
 import DeleteChannel from "./DeleteChannel"
 import EditChannel from "./EditChannel"
@@ -207,10 +207,10 @@ function ChannelRow({
   const episodesWithDetails: EpisodeWithDetails[] = (data?.episodes ?? []).map(
     (episode) => {
       const season = data!.seasons[episode.season_id]
-      const show = data!.shows[season.show_id]
-      const source = data!.sources[show.source_id]
+      const title = data!.titles[season.title_id]
+      const source = data!.sources[title.source_id]
       const plugin = data!.plugins[source.plugin_id]
-      return { ...episode, season, show, source, plugin }
+      return { ...episode, season, title, source, plugin }
     },
   )
 
@@ -258,7 +258,7 @@ function ChannelRow({
         {readOnly ? (
           <>
             {isAdmin && (
-              <ManageShowsButton
+              <ManageTitlesButton
                 channelId={channel.id}
                 channelName={channel.name}
                 variant="icon"
@@ -289,7 +289,7 @@ function ChannelRow({
               channel={channel}
               showLabel={SHOW_BUTTON_LABELS}
             />
-            <ManageShowsButton
+            <ManageTitlesButton
               channelId={channel.id}
               channelName={channel.name}
               variant="icon"

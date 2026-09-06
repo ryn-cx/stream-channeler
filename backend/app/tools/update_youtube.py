@@ -22,7 +22,7 @@ from app.tools.update_outdated import _season_in_channel_exists
 from app.utils import tz_datetime
 from plugins.utils.manage_plugins import import_plugins
 from plugins.YouTube import YouTube
-from plugins.YouTube.files import is_an_album, is_show_key, is_video_key
+from plugins.YouTube.files import is_an_album, is_title_key, is_video_key
 
 logger = logger.bind(source="updater")
 
@@ -30,20 +30,19 @@ import_plugins()
 load_models()
 
 
-
 # TODO: Validate
 def _belongs_to_a_channel(season: Season) -> bool:
     """Report whether a season is the uploads of, or a playlist of, a channel.
 
-    A show that is a single video and a show read off a show page are shows
+    A title that is a single video and a title read off a title page are titles
     without a channel behind them, and neither has a feed for the run to ask
     what was added, so neither is what this update is for.
     """
-    show_key = season.show.key
+    title_key = season.title.key
     return (
-        not is_video_key(show_key)
-        and not is_show_key(show_key)
-        and not is_an_album(show_key)
+        not is_video_key(title_key)
+        and not is_title_key(title_key)
+        and not is_an_album(title_key)
         # A release is a season of the musician's Topic channel, and YouTube
         # serves no feed for one, so it is no more this run's than an album
         # imported on its own is.
@@ -52,7 +51,7 @@ def _belongs_to_a_channel(season: Season) -> bool:
 
 
 # TODO: Validate
-def _outdated_show_seasons(session: Session) -> list[Season]:
+def _outdated_title_seasons(session: Session) -> list[Season]:
     statement = (
         Season.select_with_plugin()
         .where(
@@ -62,7 +61,7 @@ def _outdated_show_seasons(session: Session) -> list[Season]:
             col(Season.deleted_at).is_(None),
             _season_in_channel_exists(),
         )
-        .options(contains_eager(Season.show))  # type: ignore[arg-type]
+        .options(contains_eager(Season.title))  # type: ignore[arg-type]
         .order_by(col(Season.update_at).asc())
     )
     return [
@@ -75,14 +74,14 @@ def _outdated_show_seasons(session: Session) -> list[Season]:
 # TODO: Validate
 def update_youtube() -> None:
     with Session(engine) as session:
-        seasons = _outdated_show_seasons(session)
+        seasons = _outdated_title_seasons(session)
         if not seasons:
-            logger.info("[YouTube] No outdated show seasons")
+            logger.info("[YouTube] No outdated title seasons")
             return
 
-        log_msg = f"[YouTube] Found {len(seasons)} outdated show seasons"
+        log_msg = f"[YouTube] Found {len(seasons)} outdated title seasons"
         logger.info(log_msg)
-        plugin = YouTube(session, seasons[0].show.source.plugin)
+        plugin = YouTube(session, seasons[0].title.source.plugin)
         try:
             plugin.update_seasons(seasons)
             session.commit()
@@ -95,12 +94,15 @@ def update_youtube() -> None:
             session.commit()
             return
 
-        log_msg = f"[YouTube] Updated {len(seasons)} show seasons"
+        log_msg = f"[YouTube] Updated {len(seasons)} title seasons"
         logger.info(log_msg)
 
 
 # TODO: Validate
 UPDATE_INTERVAL = 60.0 * 60.0 * 24
+
+
+# TODO: Validate
 def run_forever() -> None:
     while True:
         update_youtube()

@@ -31,7 +31,7 @@ from app.episodes.schemas import (
 from app.episodes.service.numbering import (
     _absolute_number_match,
     _best_match,
-    _candidates_for_shows,
+    _candidates_for_titles,
     _episode_number_absolute_match,
     _season_and_episode_match,
     absolute_numbers_of,
@@ -40,32 +40,32 @@ from app.episodes.service.records import _record_fields
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show, ShowCanonicalShow
 from app.sources.models import Source
+from app.titles.models import Title, TitleCanonicalTitle
 
 
 # TODO: Validate
 def _has_tmdb_title() -> ColumnElement[bool]:
-    """Whether TMDB holds any of the titles the outer `Show` is linked to.
+    """Whether TMDB holds any of the titles the outer `Title` is linked to.
 
     Any of them rather than one picked out of them, since a listing that mixes
     titles is as much linked to the second as of the first and an episode of
     either is one there are TMDB episodes to match it against.
     """
-    canonical_show = aliased(Show)
+    canonical_title = aliased(Title)
     return (
-        select(ShowCanonicalShow.show_id)
-        .select_from(ShowCanonicalShow)
+        select(TitleCanonicalTitle.title_id)
+        .select_from(TitleCanonicalTitle)
         .join(
-            canonical_show,
-            onclause=col(ShowCanonicalShow.canonical_show_id) == canonical_show.id,
+            canonical_title,
+            onclause=col(TitleCanonicalTitle.canonical_title_id) == canonical_title.id,
         )
         .where(
-            is_canonical(canonical_show),
-            col(ShowCanonicalShow.show_id) == col(Show.id),
-            tmdb_key_clause(col(canonical_show.key)),
+            is_canonical(canonical_title),
+            col(TitleCanonicalTitle.title_id) == col(Title.id),
+            tmdb_key_clause(col(canonical_title.key)),
         )
-        .correlate(Show)
+        .correlate(Title)
         .exists()
     )
 
@@ -74,7 +74,7 @@ def _has_tmdb_title() -> ColumnElement[bool]:
 def _unlocked_rows(
     session: Session,
     limit: int,
-) -> list[tuple[Episode, Season, Show, Source]]:
+) -> list[tuple[Episode, Season, Title, Source]]:
     """Return every episode whose TMDB link no `User` has settled.
 
     The episodes that were linked are kept rather than filtered out, which is
@@ -83,10 +83,10 @@ def _unlocked_rows(
     made against.
     """
     statement = (
-        select(Episode, Season, Show, Source)
+        select(Episode, Season, Title, Source)
         .join(Season, onclause=col(Episode.season_id) == Season.id)
-        .join(Show, onclause=col(Season.show_id) == Show.id)
-        .join(Source, onclause=col(Show.source_id) == Source.id)
+        .join(Title, onclause=col(Season.title_id) == Title.id)
+        .join(Source, onclause=col(Title.source_id) == Source.id)
         .join(Plugin, onclause=col(Source.plugin_id) == Plugin.id)
         .where(
             Plugin.key != TMDB_PLUGIN_KEY,
@@ -94,10 +94,10 @@ def _unlocked_rows(
             _has_tmdb_title(),
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
-            col(Show.deleted_at).is_(None),
+            col(Title.deleted_at).is_(None),
         )
         .order_by(
-            col(Show.name),
+            col(Title.name),
             col(Season.season_number),
             col(Episode.episode_number),
         )
@@ -117,44 +117,44 @@ def list_unlocked_episodes(
     no TMDB counterpart has no episodes to be matched against.
     """
     rows = _unlocked_rows(session, limit)
-    candidates, candidate_numbers = _candidates_for_shows(
+    candidates, candidate_numbers = _candidates_for_titles(
         session,
-        {show for _episode, _season, show, _source in rows},
+        {title for _episode, _season, title, _source in rows},
     )
     source_numbers = absolute_numbers_of(
         session,
-        {show.id for _episode, _season, show, _source in rows},
+        {title.id for _episode, _season, title, _source in rows},
     )
 
     outputs: list[UnlockedEpisodeOutput] = []
-    for episode, season, show, _source in rows:
+    for episode, season, title, _source in rows:
         best_match = _best_match(
             episode,
             season,
-            candidates.get(show.id, []),
-            candidate_numbers.get(show.id, {}),
+            candidates.get(title.id, []),
+            candidate_numbers.get(title.id, {}),
         )
         outputs.append(
             UnlockedEpisodeOutput(
-                **_record_fields(episode, season, show),
+                **_record_fields(episode, season, title),
                 absolute_number=source_numbers.get(episode.id),
                 best_match=best_match,
                 season_episode_match=_season_and_episode_match(
                     episode,
                     season,
-                    candidates.get(show.id, []),
-                    candidate_numbers.get(show.id, {}),
+                    candidates.get(title.id, []),
+                    candidate_numbers.get(title.id, {}),
                 ),
                 absolute_number_match=_absolute_number_match(
                     episode,
-                    candidates.get(show.id, []),
-                    candidate_numbers.get(show.id, {}),
+                    candidates.get(title.id, []),
+                    candidate_numbers.get(title.id, {}),
                     source_numbers.get(episode.id),
                 ),
                 episode_number_absolute_match=_episode_number_absolute_match(
                     episode,
-                    candidates.get(show.id, []),
-                    candidate_numbers.get(show.id, {}),
+                    candidates.get(title.id, []),
+                    candidate_numbers.get(title.id, {}),
                 ),
                 name_matches=bool(
                     best_match

@@ -36,7 +36,7 @@ from app.canonical_media.tmdb import (
 from app.episodes.models import Episode
 from app.models import MediaMixin
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.titles.models import Title
 
 # The three merged media models, named by the base they share so a level is
 # something to pass rather than something to branch on.
@@ -45,7 +45,7 @@ type MediaModel = type[MediaMixin[Any]]
 # What each level's canonical row answers for. Anything else belongs to the
 # non-canonical row alone — `url` above all, which says where rather than what.
 #
-# There is no such list for a show. A listing is linked to however many titles a
+# There is no such list for a title. A listing is linked to however many titles a
 # website mixed into it, so there is no one row to read a listing's name or
 # artwork off, and a listing is served as the website stored it.
 EPISODE_FIELDS = (
@@ -106,18 +106,18 @@ def _seasons_of(
 
 
 # TODO: Validate
-def _shows_of(
+def _titles_of(
     session: Session,
     canonical_seasons: Any,  # noqa: ANN401 - Any iterable of `Season`.
-) -> dict[UUID, Show]:
+) -> dict[UUID, Title]:
     """Load the canonical title holding each of `canonical_seasons`."""
-    ids = {season.show_id for season in canonical_seasons}
+    ids = {season.title_id for season in canonical_seasons}
     if not ids:
         return {}
     return {
-        show.id: show
-        for show in session.exec(
-            select(Show).where(is_canonical(Show), col(Show.id).in_(ids)),
+        title.id: title
+        for title in session.exec(
+            select(Title).where(is_canonical(Title), col(Title.id).in_(ids)),
         ).all()
     }
 
@@ -135,7 +135,7 @@ def serve_as_canonical_episodes[RowT](
     """
     canonical_rows = _canonical_rows(session, rows, EPISODE_ID_FIELD, Episode)
     seasons = _seasons_of(session, canonical_rows.values())
-    shows = _shows_of(session, seasons.values())
+    titles = _titles_of(session, seasons.values())
     for row in rows:
         canonical = canonical_rows.get(getattr(row, EPISODE_ID_FIELD, None))
         if canonical is None:
@@ -143,7 +143,7 @@ def serve_as_canonical_episodes[RowT](
         for field in EPISODE_FIELDS:
             setattr(row, field, getattr(canonical, field))
         season = seasons.get(canonical.season_id)
-        show = shows.get(season.show_id) if season else None
+        title = titles.get(season.title_id) if season else None
         setattr(row, TMDB_EPISODE_NUMBER_FIELD, canonical.episode_number)
         setattr(
             row,
@@ -156,7 +156,7 @@ def serve_as_canonical_episodes[RowT](
             row,
             TMDB_URL_FIELD,
             tmdb_episode_url(
-                show.key if show else None,
+                title.key if title else None,
                 native_season,
                 native_episode,
             ),
@@ -187,7 +187,7 @@ def native_numbering(
 def canonical_episode_of(
     session: Session,
     canonical_episode_id: UUID | None,
-) -> tuple[Episode, Season, Show] | None:
+) -> tuple[Episode, Season, Title] | None:
     """Return the episode a non-canonical row is of, with the season and title above it.
 
     A non-canonical row that is not of anything yet has nothing to return, which is the
@@ -197,18 +197,18 @@ def canonical_episode_of(
     if canonical_episode_id is None:
         return None
     return session.exec(
-        select(Episode, Season, Show)
+        select(Episode, Season, Title)
         .join(
             Season,
             onclause=col(Episode.season_id) == Season.id,
         )
         .join(
-            Show,
-            onclause=col(Season.show_id) == Show.id,
+            Title,
+            onclause=col(Season.title_id) == Title.id,
         )
         .where(
             is_canonical(Episode),
-            is_canonical(Show),
+            is_canonical(Title),
             Episode.id == canonical_episode_id,
         ),
     ).first()
@@ -218,7 +218,7 @@ def canonical_episode_of(
 def canonical_season_of(
     session: Session,
     season_id: UUID,
-) -> tuple[Season, Show] | None:
+) -> tuple[Season, Title] | None:
     """Return the season a non-canonical row's episodes are of, with the title above it.
 
     A season is not a non-canonical row of anything itself, so the answer is the season
@@ -229,7 +229,7 @@ def canonical_season_of(
     canonical_episode = aliased(Episode)
     copy_link = canonical_episode_link()
     return session.exec(
-        select(Season, Show)
+        select(Season, Title)
         .select_from(copy_episode)
         .join(copy_link, links_of(copy_episode, copy_link))
         .join(
@@ -237,9 +237,9 @@ def canonical_season_of(
             onclause=col(copy_link.canonical_episode_id) == canonical_episode.id,
         )
         .join(Season, onclause=col(canonical_episode.season_id) == Season.id)
-        .join(Show, onclause=col(Season.show_id) == Show.id)
+        .join(Title, onclause=col(Season.title_id) == Title.id)
         .where(
-            is_canonical(Show),
+            is_canonical(Title),
             col(copy_episode.season_id) == season_id,
             col(copy_episode.deleted_at).is_(None),
         ),
@@ -247,16 +247,16 @@ def canonical_season_of(
 
 
 # TODO: Validate
-def canonical_show_of(session: Session, show: Show) -> Show | None:
-    """Return the one title `show` is linked to, where it is linked to one.
+def canonical_title_of(session: Session, title: Title) -> Title | None:
+    """Return the one title `title` is linked to, where it is linked to one.
 
     A listing that mixes titles is as much linked to each of them as of any
     other, so there is no one title to set beside it and it is answered for with
     none.
     """
-    canonical_show_id = show.sole_canonical_show_id
-    if canonical_show_id is None:
+    canonical_title_id = title.sole_canonical_title_id
+    if canonical_title_id is None:
         return None
     return session.exec(
-        select(Show).where(is_canonical(Show), Show.id == canonical_show_id),
+        select(Title).where(is_canonical(Title), Title.id == canonical_title_id),
     ).first()

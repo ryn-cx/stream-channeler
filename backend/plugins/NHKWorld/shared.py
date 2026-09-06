@@ -10,21 +10,21 @@ from typing import TYPE_CHECKING, override
 from loguru import logger
 
 from app.channels.service.import_queue import add_urls_to_channel_import_queue
-from app.shows.models import Show
 from app.sources.models import Source
+from app.titles.models import Title
 from plugins.NHKWorld.basic_files import BasicFiles
 from plugins.NHKWorld.files import NewVideoEpisodes
-from plugins.NHKWorld.utils import search_url, show_url
+from plugins.NHKWorld.utils import search_url, title_url
 from plugins.utils.base_plugin.files import COMPLETED_STATUS
 
 if TYPE_CHECKING:
     from app.channels.models import Channel
 
 # https://www3.nhk.or.jp/nhkworld/en/shows/100years-midosuji/
-# The lookahead requires a non-numeric character so this matches show slugs but
+# The lookahead requires a non-numeric character so this matches title slugs but
 # not numeric episode URLs like https://www3.nhk.or.jp/nhkworld/en/shows/5001461/
-SHOW_URL_REGEX = (
-    r"\/nhkworld\/en\/shows\/(?P<show_key>(?=[a-z0-9_-]*[a-z_-])[a-z0-9_-]+)"
+TITLE_URL_REGEX = (
+    r"\/nhkworld\/en\/shows\/(?P<title_key>(?=[a-z0-9_-]*[a-z_-])[a-z0-9_-]+)"
     r"\/?(?:$|[?#])"
 )
 
@@ -80,47 +80,47 @@ class NHKWorldShared(BasicFiles):
             self.new_video_episodes_file,
         )
         for feed_file in new_files:
-            # Queueing the shows a file found commits, which lets go of every
-            # show read for it, and a show nothing holds is not in memory to be
+            # Queueing the titles a file found commits, which lets go of every
+            # title read for it, and a title nothing holds is not in memory to be
             # matched. Read back per file rather than once, so that a file after
-            # the first still recognises the shows already imported.
-            _cache = self._preload_sources(preload_shows=True).all()
+            # the first still recognises the titles already imported.
+            _cache = self._preload_sources(preload_titles=True).all()
             logger.info(
                 "Processing new episodes file: {}",
                 feed_file.database_record.key,
             )
-            new_show_ids: list[str] = []
+            new_title_ids: list[str] = []
             for item in feed_file.items():
-                show_id = item.video_program.id
-                if show := Show.get_from_memory(self.session, source, show_id):
-                    logger.info("Matched show: {}", show.name or show_id)
-                    show.set_update_at(item.video.published_at)
+                title_id = item.video_program.id
+                if title := Title.get_from_memory(self.session, source, title_id):
+                    logger.info("Matched title: {}", title.name or title_id)
+                    title.set_update_at(item.video.published_at)
                 else:
-                    new_show_ids.append(show_id)
+                    new_title_ids.append(title_id)
 
-            self._queue_new_shows(new_show_ids)
+            self._queue_new_titles(new_title_ids)
             feed_file.database_record.status = COMPLETED_STATUS
 
     # TODO: Validate
-    def _queue_new_shows(self, show_ids: list[str]) -> None:
-        """Queue the shows a feed file named that are not imported yet."""
-        new_show_urls: list[str] = []
-        for show_id in dict.fromkeys(show_ids):
-            logger.info("Queueing new show: {}", show_id)
-            new_show_urls.append(show_url(show_id))
+    def _queue_new_titles(self, title_ids: list[str]) -> None:
+        """Queue the titles a feed file named that are not imported yet."""
+        new_title_urls: list[str] = []
+        for title_id in dict.fromkeys(title_ids):
+            logger.info("Queueing new title: {}", title_id)
+            new_title_urls.append(title_url(title_id))
 
         # Queued in one call so the whole feed file costs a single commit.
-        if new_show_urls:
+        if new_title_urls:
             channel = self._feed_channel()
-            add_urls_to_channel_import_queue(self.session, channel, new_show_urls)
+            add_urls_to_channel_import_queue(self.session, channel, new_title_urls)
 
     # TODO: Validate
     def _feed_channel(self) -> Channel:
-        """Return the plugin owned channel every NHK World show is queued into.
+        """Return the plugin owned channel every NHK World title is queued into.
 
-        The new episodes feed only reaches back so far, so a show drops off it
+        The new episodes feed only reaches back so far, so a title drops off it
         once nothing new has aired and the channel is what keeps hold of the
-        whole library. It is created the first time a show is found rather than
+        whole library. It is created the first time a title is found rather than
         by hand.
         """
         return self.add_urls_to_plugin_channel(

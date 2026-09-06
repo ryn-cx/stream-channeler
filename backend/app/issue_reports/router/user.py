@@ -9,7 +9,7 @@ from app.auth.dependencies import SessionDep
 from app.issue_reports.dependencies import (
     EditableEpisodeIssueReport,
     EditableSeasonIssueReport,
-    EditableShowIssueReport,
+    EditableTitleIssueReport,
 )
 from app.issue_reports.schemas import (
     IssueReportOutput,
@@ -33,8 +33,8 @@ season_issue_report_router = APIRouter(
 )
 
 
-show_issue_report_router = APIRouter(
-    prefix="/show-issue-reports",
+title_issue_report_router = APIRouter(
+    prefix="/title-issue-reports",
     tags=["issue reports"],
 )
 
@@ -82,27 +82,27 @@ def delete_season_issue_report(
 
 
 # TODO: Validate
-@show_issue_report_router.patch("/{issue_report_id}")  # noqa: FAST003 - Used by EditableShowIssueReport.
-def update_show_issue_report(
+@title_issue_report_router.patch("/{issue_report_id}")  # noqa: FAST003 - Used by EditableTitleIssueReport.
+def update_title_issue_report(
     session: SessionDep,
-    issue_report: EditableShowIssueReport,
+    issue_report: EditableTitleIssueReport,
     report_input: IssueReportUpdate,
 ) -> IssueReportOutput:
-    """Rewrite a `ShowIssueReport` the `User` left."""
+    """Rewrite a `TitleIssueReport` the `User` left."""
     return update_issue_report_record(session, issue_report, report_input)
 
 
 # TODO: Validate
-@show_issue_report_router.delete("/{issue_report_id}")  # noqa: FAST003 - Used by EditableShowIssueReport.
-def delete_show_issue_report(
+@title_issue_report_router.delete("/{issue_report_id}")  # noqa: FAST003 - Used by EditableTitleIssueReport.
+def delete_title_issue_report(
     session: SessionDep,
-    issue_report: EditableShowIssueReport,
+    issue_report: EditableTitleIssueReport,
 ) -> Message:
-    """Drop a `ShowIssueReport` the `User` left."""
+    """Drop a `TitleIssueReport` the `User` left."""
     return delete_issue_report_record(session, issue_report)
 
 
 router = APIRouter()
 router.include_router(episode_issue_report_router)
 router.include_router(season_issue_report_router)
-router.include_router(show_issue_report_router)
+router.include_router(title_issue_report_router)

@@ -8,9 +8,9 @@ from typing import override
 
 from pools_closed import PoolsClosed
 from pools_closed.exceptions import ShowNotFoundError
-from pools_closed.show import Show as ShowEndpoint
+from pools_closed.show import Show as TitleEndpoint
 from pools_closed.show.models import ShowModel
-from pools_closed.shows import Shows as ShowsEndpoint
+from pools_closed.shows import Shows as TitlesEndpoint
 from pools_closed.shows.models import ShowsModel
 from sqlmodel import Session
 
@@ -26,27 +26,31 @@ def pools_closed() -> PoolsClosed:
 
 
 # TODO: Validate
-class ShowPage(EndpointFile[ShowModel]):
+class TitlePage(EndpointFile[ShowModel]):
+    # TODO: Validate
     @override
-    def _endpoint(self) -> ShowEndpoint:
+    def _endpoint(self) -> TitleEndpoint:
         return pools_closed().show
 
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ShowNotFoundError)
 
 
 # TODO: Validate
-class ShowsPage(EndpointFile[ShowsModel]):
+class TitlesPage(EndpointFile[ShowsModel]):
     # TODO: Validate
     def __init__(self, session: Session, plugin: Plugin) -> None:
-        super().__init__(session, plugin, "Shows")
+        super().__init__(session, plugin, "Titles")
 
+    # TODO: Validate
     @override
-    def _endpoint(self) -> ShowsEndpoint:
+    def _endpoint(self) -> TitlesEndpoint:
         return pools_closed().shows
 
     # Required because the endpoint takes no parameters
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download()

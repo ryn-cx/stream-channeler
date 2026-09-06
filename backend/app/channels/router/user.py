@@ -11,7 +11,7 @@ from app.auth.dependencies import (
 )
 from app.channels.dependencies import (
     EditableChannel,
-    EditableChannelCanonicalShow,
+    EditableChannelCanonicalTitle,
     EditableChannelQueueEntry,
     ReadableChannel,
 )
@@ -24,12 +24,12 @@ from app.channels.schemas import (
     ChannelOrderInput,
     ChannelOutput,
     ChannelQueueOutput,
-    ChannelShowMembership,
+    ChannelTitleMembership,
     ChannelUpdate,
     CombinedChannelInput,
     WhitelistEpisodeOutput,
-    WhitelistShowInput,
-    WhitelistShowOutput,
+    WhitelistTitleInput,
+    WhitelistTitleOutput,
 )
 from app.channels.service import (
     channels,
@@ -37,12 +37,12 @@ from app.channels.service import (
     favorites,
     import_queue,
     ordering,
-    shows,
+    titles,
     whitelist,
 )
 from app.media.service.deletion import delete_record
 from app.schemas import Message
-from app.shows.dependencies import ExistingShow
+from app.titles.dependencies import ExistingTitle
 
 channels_router = APIRouter(prefix="/channels", tags=["channels"])
 
@@ -157,25 +157,25 @@ def update_channel_combined_channels(
 
 # TODO: Validate
 @channels_router.get(
-    "/{channel_id}/whitelist/{canonical_show_id}/filtered-episodes",  # noqa: FAST003
+    "/{channel_id}/whitelist/{canonical_title_id}/filtered-episodes",  # noqa: FAST003
 )
 def get_channel_whitelist_filtered_episodes(
     session: SessionDep,
-    channel_show: EditableChannelCanonicalShow,
+    channel_title: EditableChannelCanonicalTitle,
 ) -> list[WhitelistEpisodeOutput]:
     """Read the episodes of a title that an entry names, whatever season they are in."""
-    return whitelist.filtered_whitelist_episodes(session, channel_show)
+    return whitelist.filtered_whitelist_episodes(session, channel_title)
 
 
 # TODO: Validate
-@channels_router.patch("/{channel_id}/whitelist/{canonical_show_id}")  # noqa: FAST003
+@channels_router.patch("/{channel_id}/whitelist/{canonical_title_id}")  # noqa: FAST003
 def update_channel_whitelist(
     session: SessionDep,
-    whitelist_config: WhitelistShowInput,
-    channel_show: EditableChannelCanonicalShow,
-) -> WhitelistShowOutput:
-    """Update the whitelist/blacklist for a show in a channel."""
-    return whitelist.update_whitelist_output(session, whitelist_config, channel_show)
+    whitelist_config: WhitelistTitleInput,
+    channel_title: EditableChannelCanonicalTitle,
+) -> WhitelistTitleOutput:
+    """Update the whitelist/blacklist for a title in a channel."""
+    return whitelist.update_whitelist_output(session, whitelist_config, channel_title)
 
 
 # TODO: Validate
@@ -186,7 +186,7 @@ def blacklist_channel_episode(
     blacklist_in: BlacklistEpisodeInput,
 ) -> Message:
     """Blacklist a single episode for a `Channel`."""
-    return whitelist.blacklist_episode_by_show_id(session, channel, blacklist_in)
+    return whitelist.blacklist_episode_by_title_id(session, channel, blacklist_in)
 
 
 # TODO: Validate
@@ -212,35 +212,35 @@ def update_channel_order(
 
 
 # TODO: Validate
-@channels_router.get("/for-show/{show_id}")  # noqa: FAST003
-def get_channels_for_show(
+@channels_router.get("/for-title/{title_id}")  # noqa: FAST003
+def get_channels_for_title(
     session: SessionDep,
     current_user: CurrentUser,
-    show: ExistingShow,
-) -> list[ChannelShowMembership]:
+    title: ExistingTitle,
+) -> list[ChannelTitleMembership]:
     """List the `User`'s `Channel`s, saying which already hold a title."""
-    return shows.channels_with_show_membership(session, current_user, show)
+    return titles.channels_with_title_membership(session, current_user, title)
 
 
 # TODO: Validate
-@channels_router.post("/{channel_id}/add-show/{show_id}")  # noqa: FAST003
-def add_channel_show(
+@channels_router.post("/{channel_id}/add-title/{title_id}")  # noqa: FAST003
+def add_channel_title(
     session: SessionDep,
     channel: EditableChannel,
-    show: ExistingShow,
+    title: ExistingTitle,
 ) -> Message:
     """Put a title, on every website it is on, onto a `Channel`."""
-    return shows.add_show(session, channel, show)
+    return titles.add_title(session, channel, title)
 
 
 # TODO: Validate
-@channels_router.delete("/{channel_id}/remove-show/{canonical_show_id}")  # noqa: FAST003
-def delete_channel_show(
+@channels_router.delete("/{channel_id}/remove-title/{canonical_title_id}")  # noqa: FAST003
+def delete_channel_title(
     session: SessionDep,
-    channel_show: EditableChannelCanonicalShow,
+    channel_title: EditableChannelCanonicalTitle,
 ) -> Message:
     """Remove a title, on every website it is on, from a `Channel`."""
-    return shows.remove_show(session, channel_show)
+    return titles.remove_title(session, channel_title)
 
 
 # TODO: Validate

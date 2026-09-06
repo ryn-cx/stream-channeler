@@ -24,7 +24,7 @@ import { handleError } from "@/utils"
  * Queue a list of addresses for import, one per line.
  *
  * A site can be picked to read its own URL formats, since what counts as an
- * address for a show is the site's own business and there is no guessing it from
+ * address for a title is the site's own business and there is no guessing it from
  * the box. Nothing is imported here: the addresses go on the channel's queue and
  * are read from there.
  */
@@ -137,7 +137,7 @@ export function AddByUrlPanel({ channelId }: { channelId: string }) {
       <textarea
         value={urlsInput}
         onChange={(e) => setUrlsInput(e.target.value)}
-        placeholder={"https://example.com/show-1\nhttps://example.com/show-2"}
+        placeholder={"https://example.com/title-1\nhttps://example.com/title-2"}
         rows={6}
         className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none"
         disabled={addUrlsMutation.isPending}

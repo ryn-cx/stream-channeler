@@ -15,34 +15,34 @@ export function EpisodeRows({ episodes, channelId }: EpisodeRowsProps) {
 
   // Build next episode map (same logic as EpisodeCards)
   const nextEpisodeMap = new Map<string, string>()
-  const lastSeenByShow = new Map<string, number>()
+  const lastSeenByTitle = new Map<string, number>()
   for (let index = 0; index < episodes.length; index++) {
-    const showId = episodes[index].show.id
-    const prevIndex = lastSeenByShow.get(showId)
+    const titleId = episodes[index].title.id
+    const prevIndex = lastSeenByTitle.get(titleId)
     if (prevIndex !== undefined) {
       nextEpisodeMap.set(episodes[prevIndex].id, episodes[index].id)
     }
-    lastSeenByShow.set(showId, index)
+    lastSeenByTitle.set(titleId, index)
   }
 
   // TODO: Validate
   const handleNextEpisode = (currentEpisodeId: string) => {
     const currentIndex = episodes.findIndex((ep) => ep.id === currentEpisodeId)
     if (currentIndex === -1) return
-    const showId = episodes[currentIndex].show.id
+    const titleId = episodes[currentIndex].title.id
 
-    // Walk forward through the run of same-show episodes already queued after
+    // Walk forward through the run of same-title episodes already queued after
     // the current one so repeated clicks keep extending the chain.
     let anchorIndex = currentIndex
     while (
       anchorIndex + 1 < episodes.length &&
-      episodes[anchorIndex + 1].show.id === showId
+      episodes[anchorIndex + 1].title.id === titleId
     ) {
       anchorIndex++
     }
 
     const nextEpisode = episodes.find(
-      (ep, index) => index > anchorIndex && ep.show.id === showId,
+      (ep, index) => index > anchorIndex && ep.title.id === titleId,
     )
     if (!nextEpisode) return
     const anchorEpisodeId = episodes[anchorIndex].id
@@ -71,29 +71,29 @@ export function EpisodeRows({ episodes, channelId }: EpisodeRowsProps) {
     )
   }
 
-  // Group episodes by show, preserving order of first appearance
-  const showGroups: Map<
+  // Group episodes by title, preserving order of first appearance
+  const titleGroups: Map<
     string,
-    { showName: string; episodes: EpisodeWithDetails[] }
+    { titleName: string; episodes: EpisodeWithDetails[] }
   > = new Map()
 
   for (const episode of episodes) {
-    const showId = episode.show.id
-    if (!showGroups.has(showId)) {
-      showGroups.set(showId, {
-        showName: episode.show.name || "Unknown",
+    const titleId = episode.title.id
+    if (!titleGroups.has(titleId)) {
+      titleGroups.set(titleId, {
+        titleName: episode.title.name || "Unknown",
         episodes: [],
       })
     }
-    showGroups.get(showId)!.episodes.push(episode)
+    titleGroups.get(titleId)!.episodes.push(episode)
   }
 
   return (
     <div className="flex flex-col gap-8 pb-8">
-      {[...showGroups.entries()].map(([showId, group]) => (
+      {[...titleGroups.entries()].map(([titleId, group]) => (
         <EpisodeRow
-          key={showId}
-          title={group.showName}
+          key={titleId}
+          title={group.titleName}
           episodes={group.episodes}
           channelId={channelId}
           nextEpisodeMap={nextEpisodeMap}

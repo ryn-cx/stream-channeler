@@ -53,7 +53,7 @@ export function TmdbMatchesAdminTable() {
     { id: "summary", desc: false },
   ])
   const [filterOptions, setFilterOptions] = useState<ColumnFiltersState>([])
-  const [nonCanonicalShowsOnly, setNonCanonicalShowsOnly] = useState(true)
+  const [nonCanonicalTitlesOnly, setNonCanonicalTitlesOnly] = useState(true)
   const [editing, setEditing] = useState<TmdbMatchRow | null>(null)
 
   const params = {
@@ -61,7 +61,7 @@ export function TmdbMatchesAdminTable() {
     limit: pagination.pageSize,
     sortOptions,
     filterOptions,
-    nonCanonicalShowsOnly,
+    nonCanonicalTitlesOnly,
   }
 
   const query = useQuery({
@@ -70,7 +70,7 @@ export function TmdbMatchesAdminTable() {
       EpisodesService.adminGetUnmatchedEpisodes({
         offset: params.offset,
         limit: params.limit,
-        nonCanonicalShowsOnly: params.nonCanonicalShowsOnly,
+        nonCanonicalTitlesOnly: params.nonCanonicalTitlesOnly,
         ...serializeTableQuery(params, tmdbMatchColumns),
       }),
     // The page already on screen is kept while the next one is read, so paging
@@ -107,15 +107,15 @@ export function TmdbMatchesAdminTable() {
         >
           <PageHeader title="TMDB Matches">
             <Button
-              variant={nonCanonicalShowsOnly ? "default" : "outline"}
+              variant={nonCanonicalTitlesOnly ? "default" : "outline"}
               onClick={() => {
-                setNonCanonicalShowsOnly(!nonCanonicalShowsOnly)
+                setNonCanonicalTitlesOnly(!nonCanonicalTitlesOnly)
                 setPagination({ ...pagination, pageIndex: 0 })
               }}
-              title="Show only the episodes of shows linked to a title"
+              title="Title only the episodes of titles linked to a title"
             >
-              {nonCanonicalShowsOnly ? <Link2 /> : <Link2Off />}
-              {nonCanonicalShowsOnly ? "Linked shows only" : "Every show"}
+              {nonCanonicalTitlesOnly ? <Link2 /> : <Link2Off />}
+              {nonCanonicalTitlesOnly ? "Linked titles only" : "Every title"}
             </Button>
             <TmdbLinkMultipleButton />
             <ColumnVisibilityButton table={table} />

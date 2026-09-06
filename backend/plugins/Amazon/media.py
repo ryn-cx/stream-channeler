@@ -12,7 +12,7 @@ from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.titles.models import Title
 from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.Amazon.shared import (
@@ -76,23 +76,23 @@ class AmazonMedia(AmazonShared, BaseImporter, ABC):
             msg = f"{message}: {url}"
             raise InvalidURLError(msg)
 
-        return MediaInfo(self.show_key_from_title_key(title_key))
+        return MediaInfo(self.title_key_from_title_key(title_key))
 
     # TODO: Validate
     @override  # Writes the title into every source it can be watched through.
     def import_url(self, url: str) -> list[URLImportResult]:
         media_info = self.extract_media_info(url)
-        if shows := self._preload_show(media_info.show_key).all():
+        if titles := self._preload_title(media_info.title_key).all():
             return [
                 result
-                for show in shows
-                for result in self._import_results(show, media_info)
+                for title in titles
+                for result in self._import_results(title, media_info)
             ]
 
         results: list[URLImportResult] = []
-        for source in self.title_sources(media_info.show_key):
-            show = self.upsert_show(source, media_info.show_key)
-            results += self._import_results(show, media_info)
+        for source in self.title_sources(media_info.title_key):
+            title = self.upsert_title(source, media_info.title_key)
+            results += self._import_results(title, media_info)
         return results
 
     # TODO: Validate
@@ -102,10 +102,10 @@ class AmazonMedia(AmazonShared, BaseImporter, ABC):
     # TODO: Validate
     def _tmdb_lookup_info(
         self,
-        show_key: str,
+        title_key: str,
         media_type: TMDBMediaType,
     ) -> list[TMDBLookupInfo]:
-        page = self.detail_file(show_key)
+        page = self.detail_file(title_key)
         page.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         return [
             TMDBLookupInfo(page.series_title(), media_type, page.release_year()),
@@ -113,18 +113,18 @@ class AmazonMedia(AmazonShared, BaseImporter, ABC):
 
     # TODO: Validate
     @override
-    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
-        # Required to detect changes to the show and new seasons of it.
-        return [self.detail_file(show_key)]
+    def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
+        # Required to detect changes to the title and new seasons of it.
+        return [self.detail_file(title_key)]
 
     # TODO: Validate
     @override
-    def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
+    def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
         return [
             # Required to detect changes to the season and new episodes of it.
             self.detail_file(season_key),
-            # Required to detect a season being taken off the show.
-            self.detail_file(show_key),
+            # Required to detect a season being taken off the title.
+            self.detail_file(title_key),
         ]
 
     # TODO: Validate
@@ -133,7 +133,7 @@ class AmazonMedia(AmazonShared, BaseImporter, ABC):
         self,
         episode_key: str,
         season_key: str,
-        show_key: str,
+        title_key: str,
     ) -> Sequence[BaseFile[Any]]:
         # The episode list comes down with the season's page, so the page is what
         # says whether an episode read out of it has changed.
@@ -141,23 +141,23 @@ class AmazonMedia(AmazonShared, BaseImporter, ABC):
 
     # TODO: Validate
     @override
-    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
-        return [season.key for season in self._season_entries(show_key)]
+    def _season_keys_from_title_files(self, title_key: str) -> list[str]:
+        return [season.key for season in self._season_entries(title_key)]
 
 
 # TODO: Validate
 class AmazonSeries(AmazonMedia):
     # TODO: Validate
     @override
-    def tmdb_lookup_info(self, show_key: str) -> list[TMDBLookupInfo]:
-        return self._tmdb_lookup_info(show_key, TMDBMediaType.tv)
+    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
+        return self._tmdb_lookup_info(title_key, TMDBMediaType.tv)
 
     # TODO: Validate
     @override
     def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
-        show_key: str,
+        title_key: str,
     ) -> list[str]:
         if isinstance(season_keys, str):
             season_keys = [season_keys]
@@ -169,47 +169,47 @@ class AmazonSeries(AmazonMedia):
 
     # TODO: Validate
     @override
-    def upsert_show(
+    def upsert_title(
         self,
         source: Source,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
-    ) -> Show:
-        page = self.detail_file(show_key)
-        show = Show.get_from_memory(self.session, source, show_key)
-        if self._show_is_outdated(show, force=force):
-            data_timestamps = self.show_data_timestamps(show_key)
+    ) -> Title:
+        page = self.detail_file(title_key)
+        title = Title.get_from_memory(self.session, source, title_key)
+        if self._title_is_outdated(title, force=force):
+            data_timestamps = self.title_data_timestamps(title_key)
             data_timestamp = data_timestamps[0]
-            new_show = Show(
-                key=show_key,
+            new_title = Title(
+                key=title_key,
                 name=page.series_title(),
                 description=page.synopsis(),
                 media_type="Series",
-                url=self._title_url(show_key),
+                url=self._title_url(title_key),
                 image_url=page.image_url(),
                 thumbnail_url=page.image_url(),
                 year=page.release_year(),
                 data_timestamp=data_timestamp,
                 source_id=source.id,
             )
-            show = new_show.upsert(source, show)
-            show.set_update_at(data_timestamp + timedelta(days=7), data_timestamps)
+            title = new_title.upsert(source, title)
+            title.set_update_at(data_timestamp + timedelta(days=7), data_timestamps)
 
-        self._upsert_seasons(show, force=force)
-        self._soft_delete_missing(show_key)
-        self._set_weekly_updates_from_episodes(show, update_show=False)
-        self.link_show_to_tmdb(show)
+        self._upsert_seasons(title, force=force)
+        self._soft_delete_missing(title_key)
+        self._set_weekly_updates_from_episodes(title, update_title=False)
+        self.link_title_to_tmdb(title)
 
-        return show
+        return title
 
     # TODO: Validate
-    def _upsert_seasons(self, show: Show, *, force: bool = False) -> None:
-        for sort_order, season_entry in enumerate(self._season_entries(show.key)):
+    def _upsert_seasons(self, title: Title, *, force: bool = False) -> None:
+        for sort_order, season_entry in enumerate(self._season_entries(title.key)):
             season_key = season_entry.key
-            season = Season.get_from_memory(self.session, show, season_key)
-            if self._season_is_outdated(season, show.key, force=force):
-                data_timestamps = self.season_data_timestamps(season_key, show.key)
+            season = Season.get_from_memory(self.session, title, season_key)
+            if self._season_is_outdated(season, title.key, force=force):
+                data_timestamps = self.season_data_timestamps(season_key, title.key)
                 new_season = Season(
                     key=season_key,
                     name=season_entry.name,
@@ -217,18 +217,18 @@ class AmazonSeries(AmazonMedia):
                     sort_order=sort_order,
                     url=detail_url(season_key),
                     data_timestamp=data_timestamps[0],
-                    show_id=show.id,
+                    title_id=title.id,
                 )
-                season = new_season.upsert(show, season)
+                season = new_season.upsert(title, season)
                 season.set_update_at(None, data_timestamps)
 
-            self._upsert_episodes(season, show.key, force=force)
+            self._upsert_episodes(season, title.key, force=force)
 
     # TODO: Validate
     def _upsert_episodes(
         self,
         season: Season,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
     ) -> None:
@@ -237,7 +237,7 @@ class AmazonSeries(AmazonMedia):
             if not self._episode_is_outdated(
                 episode,
                 season.key,
-                show_key,
+                title_key,
                 force=force,
             ):
                 continue
@@ -245,7 +245,7 @@ class AmazonSeries(AmazonMedia):
             data_timestamps = self.episode_data_timestamps(
                 item.key,
                 season.key,
-                show_key,
+                title_key,
             )
             new_episode = Episode(
                 key=item.key,
@@ -270,15 +270,15 @@ class AmazonSeries(AmazonMedia):
 class AmazonMovie(AmazonMedia):
     # TODO: Validate
     @override
-    def tmdb_lookup_info(self, show_key: str) -> list[TMDBLookupInfo]:
-        return self._tmdb_lookup_info(show_key, TMDBMediaType.movie)
+    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
+        return self._tmdb_lookup_info(title_key, TMDBMediaType.movie)
 
     # TODO: Validate
     @override
     def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
-        show_key: str,
+        title_key: str,
     ) -> list[str]:
         if isinstance(season_keys, str):
             season_keys = [season_keys]
@@ -287,85 +287,85 @@ class AmazonMovie(AmazonMedia):
 
     # TODO: Validate
     @override
-    def upsert_show(
+    def upsert_title(
         self,
         source: Source,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
-    ) -> Show:
-        page = self.detail_file(show_key)
-        show = Show.get_from_memory(self.session, source, show_key)
-        if self._show_is_outdated(show, force=force):
-            data_timestamps = self.show_data_timestamps(show_key)
+    ) -> Title:
+        page = self.detail_file(title_key)
+        title = Title.get_from_memory(self.session, source, title_key)
+        if self._title_is_outdated(title, force=force):
+            data_timestamps = self.title_data_timestamps(title_key)
             data_timestamp = data_timestamps[0]
-            new_show = Show(
-                key=show_key,
+            new_title = Title(
+                key=title_key,
                 name=page.title(),
                 description=page.synopsis(),
                 media_type="Movie",
-                url=self._title_url(show_key),
+                url=self._title_url(title_key),
                 image_url=page.image_url(),
                 thumbnail_url=page.image_url(),
                 year=page.release_year(),
                 data_timestamp=data_timestamp,
                 source_id=source.id,
             )
-            show = new_show.upsert(source, show)
-            show.set_update_at(
-                staggered_monthly_update_at(show_key, data_timestamp),
+            title = new_title.upsert(source, title)
+            title.set_update_at(
+                staggered_monthly_update_at(title_key, data_timestamp),
                 data_timestamps,
             )
 
-        self._upsert_season(show, force=force)
-        self._soft_delete_missing(show_key)
-        self._set_weekly_updates_from_episodes(show, update_show=False)
-        self.link_show_to_tmdb(show)
+        self._upsert_season(title, force=force)
+        self._soft_delete_missing(title_key)
+        self._set_weekly_updates_from_episodes(title, update_title=False)
+        self.link_title_to_tmdb(title)
 
-        return show
+        return title
 
     # TODO: Validate
-    def _upsert_season(self, show: Show, *, force: bool = False) -> None:
-        season = Season.get_from_memory(self.session, show, show.key)
-        if self._season_is_outdated(season, show.key, force=force):
-            data_timestamps = self.season_data_timestamps(show.key, show.key)
+    def _upsert_season(self, title: Title, *, force: bool = False) -> None:
+        season = Season.get_from_memory(self.session, title, title.key)
+        if self._season_is_outdated(season, title.key, force=force):
+            data_timestamps = self.season_data_timestamps(title.key, title.key)
             new_season = Season(
-                key=show.key,
+                key=title.key,
                 season_number=0,
                 sort_order=0,
                 data_timestamp=data_timestamps[0],
-                show_id=show.id,
+                title_id=title.id,
             )
-            season = new_season.upsert(show, season)
+            season = new_season.upsert(title, season)
             season.set_update_at(None, data_timestamps)
 
-        self._upsert_episode(season, show.key, force=force)
+        self._upsert_episode(season, title.key, force=force)
 
     # TODO: Validate
     def _upsert_episode(
         self,
         season: Season,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
     ) -> None:
-        episode = Episode.get_from_memory(self.session, season, show_key)
+        episode = Episode.get_from_memory(self.session, season, title_key)
         if not self._episode_is_outdated(
             episode,
             season.key,
-            show_key,
+            title_key,
             force=force,
         ):
             return
 
-        page = self.detail_file(show_key)
-        data_timestamps = self.episode_data_timestamps(show_key, season.key, show_key)
+        page = self.detail_file(title_key)
+        data_timestamps = self.episode_data_timestamps(title_key, season.key, title_key)
         new_episode = Episode(
-            key=show_key,
-            watch_identifier=watch_identifier(self.plugin_name(), show_key),
+            key=title_key,
+            watch_identifier=watch_identifier(self.plugin_name(), title_key),
             name=page.title(),
             description=page.synopsis(),
-            url=self._title_url(show_key),
+            url=self._title_url(title_key),
             image_url=page.image_url(),
             thumbnail_url=page.image_url(),
             duration=page.duration(),

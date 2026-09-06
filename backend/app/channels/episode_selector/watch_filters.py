@@ -37,7 +37,7 @@ from app.canonical_media.episodes import (
 from app.channels.episode_selector.canonical_entities import episode_id
 from app.episodes.models import Episode
 from app.seasons.models import Season
-from app.shows.models import Show, ShowCanonicalShow
+from app.titles.models import Title, TitleCanonicalTitle
 from app.users.models import User
 from app.watches.models import Watch
 
@@ -49,7 +49,7 @@ EPISODE_LAST_WATCH_COMPLETED_COLUMN = "episode_last_watch_completed_date"
 EPISODE_LAST_WATCH_INCOMPLETE_COLUMN = "episode_last_watch_incomplete_date"
 
 # Maps each last-watched sort field to the subquery column holding its latest
-# watch date. Aggregated per episode (not per show) so an episode is ranked by
+# watch date. Aggregated per episode (not per title) so an episode is ranked by
 # its own watch history. Completed = verified watches; incomplete = unverified
 # (partial) watches.
 LAST_WATCHED_COLUMNS = {
@@ -134,7 +134,7 @@ def hide_partially_watched_condition(user: User) -> ColumnElement[bool]:
 
 
 # TODO: Validate
-def started_show_ids(user: User) -> SelectOfScalar[UUID]:
+def started_title_ids(user: User) -> SelectOfScalar[UUID]:
     """Return the titles the `User` has watched anything of.
 
     The titles themselves rather than the websites' listings of them, since a watch is
@@ -148,13 +148,13 @@ def started_show_ids(user: User) -> SelectOfScalar[UUID]:
     named_link = canonical_episode_link()
     watched_episode = aliased(Episode)
     watched_season = aliased(Season)
-    watched_show = aliased(Show)
-    watched_link = aliased(ShowCanonicalShow)
+    watched_title = aliased(Title)
+    watched_link = aliased(TitleCanonicalTitle)
     return (
         select(
             func.coalesce(
-                col(watched_link.canonical_show_id),
-                col(watched_show.id),
+                col(watched_link.canonical_title_id),
+                col(watched_title.id),
             ),
         )
         .select_from(Watch)
@@ -174,10 +174,10 @@ def started_show_ids(user: User) -> SelectOfScalar[UUID]:
             watched_season,
             col(watched_episode.season_id) == col(watched_season.id),
         )
-        .join(watched_show, col(watched_season.show_id) == col(watched_show.id))
+        .join(watched_title, col(watched_season.title_id) == col(watched_title.id))
         # A title has no links and stands for itself; a listing has one row per
         # title it is linked to and stands for each.
-        .outerjoin(watched_link, col(watched_link.show_id) == col(watched_show.id))
+        .outerjoin(watched_link, col(watched_link.title_id) == col(watched_title.id))
         .where(Watch.user_id == user.id)
         .distinct()
     )

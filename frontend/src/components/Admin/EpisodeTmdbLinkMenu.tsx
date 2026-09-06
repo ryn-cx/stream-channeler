@@ -47,7 +47,7 @@ interface EpisodeTmdbLinkMenuProps {
 
 // TODO: Validate
 /**
- * Which of the show's own episodes are on this TMDB episode already.
+ * Which of the title's own episodes are on this TMDB episode already.
  *
  * A choice being spoken for is the reason it is worth passing over, so which
  * episode spoke for it is the next thing anybody asks - most often because that
@@ -110,13 +110,13 @@ function compareNumbers(
 /**
  * The TMDB episode an `Episode` stands for, and the ones it could stand for instead.
  *
- * The choices are every episode of every title the show is linked to, which is
- * reached by going from the episode up to its show and back down through the
- * titles that show is linked to. They read in the order the title runs by
+ * The choices are every episode of every title the title is linked to, which is
+ * reached by going from the episode up to its title and back down through the
+ * titles that title is linked to. They read in the order the title runs by
  * default, since that is how a website numbers its own episodes, and by how
  * close the names are when the numbering is no help.
  *
- * A title TMDB files an episode under is not always one the show is linked to,
+ * A title TMDB files an episode under is not always one the title is linked to,
  * so an address can be pasted in as well. It is read by the backend rather than
  * here, which is what imports the title on the way and turns the numbering in
  * an episode's address into the id the episode is linked by.
@@ -244,12 +244,12 @@ export function TmdbLinkPicker({
   const offered = choices ?? []
   const inScope = offered.filter(
     (choice) =>
-      (isSearch || (choice.from_show === false) === (order === "other")) &&
+      (isSearch || (choice.from_title === false) === (order === "other")) &&
       (showUsed || !choice.already_used) &&
       (isSearch ||
         wanted.length === 0 ||
         (choice.episode.name ?? "").toLowerCase().includes(wanted) ||
-        (choice.show.name ?? "").toLowerCase().includes(wanted)),
+        (choice.title.name ?? "").toLowerCase().includes(wanted)),
   )
 
   // TODO: Validate
@@ -297,7 +297,7 @@ export function TmdbLinkPicker({
           onClick={searchEverything}
         >
           <Search />
-          Search every show
+          Search every title
         </Button>
         <Tabs
           value={order}
@@ -306,7 +306,7 @@ export function TmdbLinkPicker({
           <TabsList>
             <TabsTrigger value="sequential">Sequential</TabsTrigger>
             <TabsTrigger value="similarity">Closest name</TabsTrigger>
-            <TabsTrigger value="other">Other Show Name Matches</TabsTrigger>
+            <TabsTrigger value="other">Other Title Name Matches</TabsTrigger>
           </TabsList>
         </Tabs>
         <Button
@@ -315,15 +315,15 @@ export function TmdbLinkPicker({
           onClick={() => setShowUsed(!showUsed)}
         >
           {showUsed ? <EyeOff /> : <Eye />}
-          {showUsed ? "Hide already used" : "Show already used"}
+          {showUsed ? "Hide already used" : "Title already used"}
         </Button>
       </div>
 
       <div className="max-h-96 overflow-y-auto rounded-lg border">
         {isSearch ? (
           <p className="border-b px-3 py-2 text-xs text-muted-foreground">
-            Every TMDB episode named “{searchedName}”, whichever show it belongs
-            to.
+            Every TMDB episode named “{searchedName}”, whichever title it
+            belongs to.
           </p>
         ) : null}
         {isLoading ? (
@@ -333,14 +333,14 @@ export function TmdbLinkPicker({
             {isSearch
               ? offered.length === 0
                 ? "No TMDB episode anywhere in the database is named that."
-                : "Every TMDB episode named that is already used by another episode of this show."
+                : "Every TMDB episode named that is already used by another episode of this title."
               : order === "other"
-                ? "No TMDB episode of any other show reads close enough to this name."
+                ? "No TMDB episode of any other title reads close enough to this name."
                 : offered.length === 0
                   ? "No TMDB episodes to choose from. Paste the address of the episode on TMDB to link it and read its title in."
                   : wanted.length > 0
                     ? "No TMDB episode of this title is named that."
-                    : "Every TMDB episode of this title is already used by another episode of this show."}
+                    : "Every TMDB episode of this title is already used by another episode of this title."}
           </p>
         ) : (
           ordered.map((choice) => (
@@ -353,7 +353,7 @@ export function TmdbLinkPicker({
                 choice.already_used ? <UsedByDetails choice={choice} /> : null
               }
               className={
-                choice.from_show === false
+                choice.from_title === false
                   ? "text-blue-600 dark:text-blue-400"
                   : undefined
               }

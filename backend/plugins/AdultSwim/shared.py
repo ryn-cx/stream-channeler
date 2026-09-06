@@ -13,11 +13,11 @@ from sqlmodel import col, select
 
 from app.channels.models import ChannelQueue, ChannelSourceFilter, URLStatus
 from app.channels.service.import_queue import add_urls_to_channel_import_queue
-from app.shows.models import Show
 from app.sources.models import Source
+from app.titles.models import Title
 from plugins.AdultSwim.basic_files import BasicFiles
 from plugins.AdultSwim.constants import FREE, SUBSCRIPTION
-from plugins.AdultSwim.utils import show_url
+from plugins.AdultSwim.utils import title_url
 from plugins.utils.base_plugin.files import COMPLETED_STATUS
 
 if TYPE_CHECKING:
@@ -27,9 +27,9 @@ if TYPE_CHECKING:
     from app.channels.models import Channel
 
 EPISODE_URL_REGEX = r"\/videos\/(?P<episode_path>[a-z0-9-]+\/[a-z0-9-]+)(?:[\/?#]|$)"
-SHOW_URL_REGEX = (
+TITLE_URL_REGEX = (
     r"\/(?!videos(?:$|[?#]|\/(?:$|[?#])))"
-    r"(?:videos\/)?(?P<show_key>[a-z0-9-]+)\/?(?:$|[?#])"
+    r"(?:videos\/)?(?P<title_key>[a-z0-9-]+)\/?(?:$|[?#])"
 )
 
 CHANNEL_DESCRIPTION_FILES = {
@@ -72,7 +72,7 @@ class AdultSwimShared(BasicFiles):
             key=source_key,
             name=source_key,
             favicon_url=self.favicon_url(),
-            data_timestamp=self.shows_file().data_timestamp(),
+            data_timestamp=self.titles_file().data_timestamp(),
             plugin_id=self.plugin.id,
             # update_at is not used because it Plugin.update_at is used instead because
             # there are multiple sources that used the same file.
@@ -107,67 +107,67 @@ class AdultSwimShared(BasicFiles):
         )
 
     # TODO: Validate
-    def _process_new_shows(self) -> None:
-        shows_page = self.shows_file()
-        record = shows_page.database_record
+    def _process_new_titles(self) -> None:
+        titles_page = self.titles_file()
+        record = titles_page.database_record
         if record.status == COMPLETED_STATUS:
             return
 
         queued_urls = self._queued_urls()
-        _cache = self._preload_sources(preload_shows=True).all()
-        new_show_urls: list[str] = []
-        for listed_show in shows_page.parsed().shows:
-            show_key = listed_show.slug
-            if show_key is None:
+        _cache = self._preload_sources(preload_titles=True).all()
+        new_title_urls: list[str] = []
+        for listed_title in titles_page.parsed().shows:
+            title_key = listed_title.slug
+            if title_key is None:
                 continue
             if any(
-                Show.get_from_memory(self.session, source, show_key)
+                Title.get_from_memory(self.session, source, title_key)
                 for source in self._sources.values()
             ):
                 continue
-            listed_show_url = show_url(show_key)
-            if listed_show_url in queued_urls:
+            listed_title_url = title_url(title_key)
+            if listed_title_url in queued_urls:
                 continue
-            logger.info("Queueing new show: {}", show_key)
-            queued_urls.add(listed_show_url)
-            new_show_urls.append(listed_show_url)
+            logger.info("Queueing new title: {}", title_key)
+            queued_urls.add(listed_title_url)
+            new_title_urls.append(listed_title_url)
 
-        if new_show_urls:
+        if new_title_urls:
             for channel in self._channels():
-                add_urls_to_channel_import_queue(self.session, channel, new_show_urls)
+                add_urls_to_channel_import_queue(self.session, channel, new_title_urls)
 
         record.status = COMPLETED_STATUS
 
     # TODO: Validate
     def _exclude_subscription_from_free_channel(self) -> None:
         channel = self._channel(FREE)
-        subscription_shows = self._subscription_shows_by_title()
-        for channel_show in channel.shows:
-            if channel_show.is_whitelist:
+        subscription_titles = self._subscription_titles_by_title()
+        for channel_title in channel.titles:
+            if channel_title.is_whitelist:
                 continue
             excluded = {
-                source_filter.show_id for source_filter in channel_show.source_filters
+                source_filter.title_id for source_filter in channel_title.source_filters
             }
-            for show_id in (
-                subscription_shows[channel_show.canonical_show_id] - excluded
+            for title_id in (
+                subscription_titles[channel_title.canonical_title_id] - excluded
             ):
-                logger.info("Excluding the subscription show from {}", FREE)
-                channel_show.source_filters.append(
+                logger.info("Excluding the subscription title from {}", FREE)
+                channel_title.source_filters.append(
                     ChannelSourceFilter(
-                        channel_show_id=channel_show.id,
-                        show_id=show_id,
+                        channel_title_id=channel_title.id,
+                        title_id=title_id,
                     ),
                 )
         self.session.commit()
 
     # TODO: Validate
-    def _subscription_shows_by_title(self) -> dict[UUID, set[UUID]]:
+    def _subscription_titles_by_title(self) -> dict[UUID, set[UUID]]:
         by_title: dict[UUID, set[UUID]] = defaultdict(set)
-        for show in self._sources[SUBSCRIPTION].shows:
-            if show.deleted_at is not None:
+        for title in self._sources[SUBSCRIPTION].titles:
+            if title.deleted_at is not None:
                 continue
-            for title_id in show.canonical_show_ids or [show.id]:
-                by_title[title_id].add(show.id)
+            for title_id in title.canonical_title_ids or [title.id]:
+                by_title[title_id].add(title.id)
         return by_title
 
     # TODO: Validate

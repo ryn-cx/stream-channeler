@@ -9,7 +9,7 @@ import { ClampedContent } from "@/components/ChannelCommon/ClampedContent"
 import { TmdbLink } from "@/components/ChannelCommon/TmdbLink"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { EditEpisodeById } from "@/components/Episodes/EditEpisodeById"
-import { EditShowById } from "@/components/Shows/EditShowById"
+import { EditTitleById } from "@/components/Titles/EditTitleById"
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { TmdbMatchActions, TmdbMatchConfirmButton } from "./TmdbMatchActions"
@@ -81,16 +81,16 @@ const NOTHING_TO_AGREE_WITH: Numbered = {
 interface Summarised extends Numbered {
   source_name: string | null
   plugin_name: string | null
-  show_name: string | null
-  show_year: number | null
-  show_url: string | null
+  title_name: string | null
+  title_year: number | null
+  title_url: string | null
   season_url: string | null
   name: string | null
   description: string | null
   url: string | null
   /** The rows themselves, for the pages this site holds them on. */
   source_id: string | null
-  show_id: string
+  title_id: string
   season_id: string
 }
 
@@ -217,7 +217,7 @@ function MatchSummary({
       <span className="block text-xs text-muted-foreground">
         {record.source_id ? (
           <Link
-            to="/shows"
+            to="/titles"
             search={{ source_id: record.source_id }}
             className="hover:underline"
           >
@@ -234,16 +234,16 @@ function MatchSummary({
       <span className="flex flex-wrap items-center gap-1 font-medium">
         <Link
           to="/seasons"
-          search={{ show_id: record.show_id }}
+          search={{ title_id: record.title_id }}
           className="min-w-0 hover:underline"
         >
-          {record.show_name ?? "Unnamed"}
-          {record.show_year === null ? "" : ` ${record.show_year}`}
+          {record.title_name ?? "Unnamed"}
+          {record.title_year === null ? "" : ` ${record.title_year}`}
         </Link>
-        <EditShowById showId={record.show_id} />
+        <EditTitleById titleId={record.title_id} />
         <ExternalLinkButton
-          url={record.show_url}
-          label="Open this show on the site it came from"
+          url={record.title_url}
+          label="Open this title on the site it came from"
         />
       </span>
       <span className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
@@ -350,11 +350,11 @@ function choiceSummarised(
     source_name: match.source.name ?? null,
     plugin_name: match.source.plugin_name ?? null,
     source_id: null,
-    show_id: match.show.id,
+    title_id: match.title.id,
     season_id: match.season.id,
-    show_name: match.show.name ?? null,
-    show_year: match.show.year ?? null,
-    show_url: match.show.tmdb_url ?? null,
+    title_name: match.title.name ?? null,
+    title_year: match.title.year ?? null,
+    title_url: match.title.tmdb_url ?? null,
     season_url: match.season.tmdb_url ?? null,
     season_number: match.season.season_number ?? null,
     episode_number: match.episode.episode_number ?? null,
@@ -371,11 +371,11 @@ function episodeSummarised(row: UnmatchedEpisodeOutput): Summarised {
     source_name: row.source.name ?? null,
     plugin_name: row.source.plugin_name ?? null,
     source_id: row.source.id,
-    show_id: row.show.id,
+    title_id: row.title.id,
     season_id: row.season.id,
-    show_name: row.show.name ?? null,
-    show_year: row.show.year ?? null,
-    show_url: row.show.url ?? null,
+    title_name: row.title.name ?? null,
+    title_year: row.title.year ?? null,
+    title_url: row.title.url ?? null,
     season_url: row.season.url ?? null,
     season_number: row.season.season_number ?? null,
     episode_number: row.episode.episode_number ?? null,
@@ -389,7 +389,7 @@ function episodeSummarised(row: UnmatchedEpisodeOutput): Summarised {
 export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
   {
     id: "summary",
-    accessorFn: (row) => row.show.name ?? "Unnamed",
+    accessorFn: (row) => row.title.name ?? "Unnamed",
     header: "Combined Episode",
     meta: { cellClassName: "align-top" },
     cell: ({ row }) => (
@@ -402,7 +402,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
   },
   {
     id: "number_match_summary",
-    accessorFn: (row) => row.season_episode_match?.show.name ?? "No match",
+    accessorFn: (row) => row.season_episode_match?.title.name ?? "No match",
     header: "Episode Number → Episode Number",
     meta: { serverBacked: false, cellClassName: "align-top" },
     cell: ({ row }) => {
@@ -441,7 +441,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
   },
   {
     id: "absolute_match_summary",
-    accessorFn: (row) => row.absolute_number_match?.show.name ?? "No match",
+    accessorFn: (row) => row.absolute_number_match?.title.name ?? "No match",
     header: "Absolute Number → Absolute Number",
     meta: { serverBacked: false, cellClassName: "align-top" },
     cell: ({ row }) => {
@@ -481,7 +481,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
   {
     id: "episode_absolute_match_summary",
     accessorFn: (row) =>
-      row.episode_number_absolute_match?.show.name ?? "No match",
+      row.episode_number_absolute_match?.title.name ?? "No match",
     header: "Episode Number → Absolute Number",
     meta: { serverBacked: false, cellClassName: "align-top" },
     cell: ({ row }) => {
@@ -520,7 +520,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
   {
     id: "description_embedding_match_summary",
     accessorFn: (row) =>
-      row.description_embedding_matches?.[0]?.show.name ?? "No match",
+      row.description_embedding_matches?.[0]?.title.name ?? "No match",
     header: "Description → Description (embedding)",
     meta: { serverBacked: false, cellClassName: "align-top" },
     cell: ({ row }) => {
@@ -567,7 +567,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
   {
     id: "description_blended_match_summary",
     accessorFn: (row) =>
-      row.description_blended_matches?.[0]?.show.name ?? "No match",
+      row.description_blended_matches?.[0]?.title.name ?? "No match",
     header: "Description → Description (blended)",
     meta: { serverBacked: false, cellClassName: "align-top" },
     cell: ({ row }) => {
@@ -614,7 +614,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
   {
     id: "title_embedding_match_summary",
     accessorFn: (row) =>
-      row.title_embedding_matches?.[0]?.show.name ?? "No match",
+      row.title_embedding_matches?.[0]?.title.name ?? "No match",
     header: "Title → Title (embedding)",
     meta: { serverBacked: false, cellClassName: "align-top" },
     cell: ({ row }) => {
@@ -661,7 +661,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
   {
     id: "title_blended_match_summary",
     accessorFn: (row) =>
-      row.title_blended_matches?.[0]?.show.name ?? "No match",
+      row.title_blended_matches?.[0]?.title.name ?? "No match",
     header: "Title → Title (blended)",
     meta: { serverBacked: false, cellClassName: "align-top" },
     cell: ({ row }) => {
@@ -706,27 +706,27 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
     },
   },
   {
-    id: "show_name",
-    accessorFn: (row) => row.show.name ?? "Unnamed",
-    header: "Show",
+    id: "title_name",
+    accessorFn: (row) => row.title.name ?? "Unnamed",
+    header: "Title",
     cell: ({ row }) => (
       <WrappingCell className="max-w-48">
         <Link
           to="/seasons"
-          search={{ show_id: row.original.show.id }}
+          search={{ title_id: row.original.title.id }}
           className="hover:underline"
         >
-          {row.original.show.name ?? "Unnamed"}
+          {row.original.title.name ?? "Unnamed"}
         </Link>
       </WrappingCell>
     ),
   },
   {
-    id: "show_year",
-    accessorFn: (row) => row.show.year ?? "",
+    id: "title_year",
+    accessorFn: (row) => row.title.year ?? "",
     header: "Year",
     cell: ({ row }) => (
-      <span className="tabular-nums">{row.original.show.year ?? ""}</span>
+      <span className="tabular-nums">{row.original.title.year ?? ""}</span>
     ),
   },
   {
@@ -738,7 +738,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
     cell: ({ row }) => (
       <WrappingCell className="max-w-32">
         <Link
-          to="/shows"
+          to="/titles"
           search={{ source_id: row.original.source.id }}
           className="hover:underline"
         >
@@ -820,26 +820,26 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
     ),
   },
   {
-    id: "match_show_name",
-    accessorFn: (row) => row.best_match?.show.name ?? "",
-    header: "Match show",
+    id: "match_title_name",
+    accessorFn: (row) => row.best_match?.title.name ?? "",
+    header: "Match title",
     meta: { serverBacked: false },
     cell: ({ row }) => (
       <WrappingCell className="max-w-48">
-        <SummaryLink href={row.original.best_match?.show.tmdb_url ?? null}>
-          {row.original.best_match?.show.name ?? ""}
+        <SummaryLink href={row.original.best_match?.title.tmdb_url ?? null}>
+          {row.original.best_match?.title.name ?? ""}
         </SummaryLink>
       </WrappingCell>
     ),
   },
   {
-    id: "match_show_year",
-    accessorFn: (row) => row.best_match?.show.year ?? "",
+    id: "match_title_year",
+    accessorFn: (row) => row.best_match?.title.year ?? "",
     header: "Match year",
     meta: { serverBacked: false },
     cell: ({ row }) => (
       <span className="tabular-nums">
-        {row.original.best_match?.show.year ?? ""}
+        {row.original.best_match?.title.year ?? ""}
       </span>
     ),
   },
@@ -944,15 +944,15 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
  * to sort by that one value.
  */
 export const TMDB_MATCH_DEFAULT_VISIBILITY = {
-  show_name: false,
-  show_year: false,
+  title_name: false,
+  title_year: false,
   season_name: false,
   season_number: false,
   episode_number: false,
   absolute_number: false,
   episode_name: false,
-  match_show_name: false,
-  match_show_year: false,
+  match_title_name: false,
+  match_title_year: false,
   match_season_number: false,
   match_episode_number: false,
   match_absolute_number: false,

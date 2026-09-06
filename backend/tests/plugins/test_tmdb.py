@@ -6,10 +6,10 @@ from typing import override
 
 from sqlmodel import Session
 
-from app.shows.models import Show
-from app.shows.service.canonical import (
-    match_imported_shows_to_tmdb,
-    match_show_to_tmdb,
+from app.titles.models import Title
+from app.titles.service.canonical import (
+    match_imported_titles_to_tmdb,
+    match_title_to_tmdb,
 )
 from plugins.TMDB import TMDB
 from plugins.Tubi import Tubi
@@ -42,7 +42,7 @@ class TMDBValidator(PluginValidator[TMDB]):
         "/{media_type}/{parse_url_response}/watch?language=en-US",
         # TMDB redirects a title's slug to the canonical URL, so a pasted link
         # usually carries one.
-        "/{media_type}/{parse_url_response}-{show_slug}",
+        "/{media_type}/{parse_url_response}-{title_slug}",
     )
 
 
@@ -55,7 +55,7 @@ class TestTVShow(
 ):
     media_type = "tv"
     parse_url_response = "107113"
-    show_slug = "only-murders-in-the-building"
+    title_slug = "only-murders-in-the-building"
     urls = (
         *TMDBValidator.urls,
         "/{media_type}/{parse_url_response}/seasons?language=en-US",
@@ -71,7 +71,7 @@ class TestArcher(
 ):
     media_type = "tv"
     parse_url_response = "10283"
-    show_slug = "archer"
+    title_slug = "archer"
     urls = (
         *TMDBValidator.urls,
         "/{media_type}/{parse_url_response}/seasons?language=en-US",
@@ -87,7 +87,7 @@ class TestWelcomeToTheJapariPark(
 ):
     media_type = "tv"
     parse_url_response = "88459"
-    show_slug = "welcome-to-the-japari-park"
+    title_slug = "welcome-to-the-japari-park"
     urls = (
         *TMDBValidator.urls,
         "/{media_type}/{parse_url_response}/seasons?language=en-US",
@@ -102,7 +102,7 @@ class TestLaidBackCamp(
 ):
     media_type = "tv"
     parse_url_response = "76075"
-    show_slug = "laid-back-camp"
+    title_slug = "laid-back-camp"
     urls = (
         *TMDBValidator.urls,
         "/{media_type}/{parse_url_response}/seasons?language=en-US",
@@ -117,7 +117,7 @@ class TestSpaceGhostAndDinoBoy(
 ):
     media_type = "tv"
     parse_url_response = "3303"
-    show_slug = "space-ghost-and-dino-boy"
+    title_slug = "space-ghost-and-dino-boy"
     urls = (
         *TMDBValidator.urls,
         "/{media_type}/{parse_url_response}/seasons?language=en-US",
@@ -133,7 +133,7 @@ class TestHuluTVShow(
 ):
     media_type = "tv"
     parse_url_response = "296756"
-    show_slug = "president-curtis"
+    title_slug = "president-curtis"
     urls = (
         *TMDBValidator.urls,
         "/{media_type}/{parse_url_response}/seasons?language=en-US",
@@ -149,14 +149,14 @@ class TestSuperman(
 ):
     media_type = "movie"
     parse_url_response = "95414"
-    show_slug = "superman"
+    title_slug = "superman"
 
 
 # TODO: Validate
 class TestSupermanRelinkedTubi(TMDBValidator):
     media_type = "movie"
     parse_url_response = "95414"
-    show_slug = "superman"
+    title_slug = "superman"
     urls = ("https://www.themoviedb.org/movie/95414-superman?language=en-US",)
     relinked_url = (
         "https://tubitv.com/series/300001134/superman-original-fleischer-restoration"
@@ -167,18 +167,18 @@ class TestSupermanRelinkedTubi(TMDBValidator):
     def _initialize_extra_files(self, session: Session) -> None:
         tubi = Tubi(session)
         results = tubi.import_url(self.relinked_url)
-        match_imported_shows_to_tmdb(
+        match_imported_titles_to_tmdb(
             session,
             tubi,
-            [result.show for result in results],
+            [result.title for result in results],
         )
 
     # TODO: Validate
-    def shows_of(self, session: Session, plugin_key: str) -> list[Show]:
+    def titles_of(self, session: Session, plugin_key: str) -> list[Title]:
         return [
-            show
-            for show in self.all_shows(session)
-            if show.source.plugin.key == plugin_key
+            title
+            for title in self.all_titles(session)
+            if title.source.plugin.key == plugin_key
         ]
 
     # TODO: Validate
@@ -187,12 +187,12 @@ class TestSupermanRelinkedTubi(TMDBValidator):
         session_with_files: Session,
     ) -> None:
         self.import_url(session_with_files)
-        tmdb_show = self.shows_of(session_with_files, "TMDB")[0]
+        tmdb_title = self.titles_of(session_with_files, "TMDB")[0]
 
-        listed = self.shows_of(session_with_files, "Tubi")
+        listed = self.titles_of(session_with_files, "Tubi")
         assert listed, "Watchmode listed no Tubi listing to take off."
-        for show in listed:
-            session_with_files.delete(show)
+        for title in listed:
+            session_with_files.delete(title)
         session_with_files.flush()
         session_with_files.expire_all()
 
@@ -200,22 +200,24 @@ class TestSupermanRelinkedTubi(TMDBValidator):
             tubi = Tubi(session_with_files)
             results = tubi.import_url(self.relinked_url)
             for result in results:
-                match_show_to_tmdb(session_with_files, result.show, tmdb_show)
+                match_title_to_tmdb(session_with_files, result.title, tmdb_title)
         session_with_files.flush()
         session_with_files.expire_all()
 
-        relinked_keys = {show.key for show in self.shows_of(session_with_files, "Tubi")}
+        relinked_keys = {
+            title.key for title in self.titles_of(session_with_files, "Tubi")
+        }
         assert relinked_keys == {"300001134"}
 
         with log_stats(self), frozen_clock(self.update_time), mock_update():
-            assert tmdb_show.data_timestamp
-            tmdb_show.update_at = tmdb_show.data_timestamp + timedelta(seconds=1)
-            TMDB(session_with_files).update_show(tmdb_show, force=True)
+            assert tmdb_title.data_timestamp
+            tmdb_title.update_at = tmdb_title.data_timestamp + timedelta(seconds=1)
+            TMDB(session_with_files).update_title(tmdb_title, force=True)
             session_with_files.flush()
         session_with_files.expire_all()
 
         assert {
-            show.key for show in self.shows_of(session_with_files, "Tubi")
+            title.key for title in self.titles_of(session_with_files, "Tubi")
         } == relinked_keys
         self.assert_state(session_with_files, "forced_update_keeps_relinked_listing")
 
@@ -236,10 +238,10 @@ class TestSupermanRelinkedTubi(TMDBValidator):
 
 #     media_type = "tv"
 #     parse_url_response = "30991"
-#     show_slug = "cowboy-bebop"
+#     title_slug = "cowboy-bebop"
 #     urls = (
 #         *TMDBValidator.urls,
-#         # Only a show has seasons, so the page listing them is a sub-page a
+#         # Only a title has seasons, so the page listing them is a sub-page a
 #         # movie's URLs cannot carry.
 #         "/{media_type}/{parse_url_response}/seasons?language=en-US",
 #     )
@@ -260,7 +262,7 @@ class TestSupermanRelinkedTubi(TMDBValidator):
 
 #     media_type = "tv"
 #     parse_url_response = "57041"
-#     show_slug = "gintama"
+#     title_slug = "gintama"
 #     urls = (
 #         *TMDBValidator.urls,
 #         "/{media_type}/{parse_url_response}/seasons?language=en-US",
@@ -276,7 +278,7 @@ class TestSupermanRelinkedTubi(TMDBValidator):
 # ):
 #     media_type = "tv"
 #     parse_url_response = "107113"
-#     show_slug = "only-murders-in-the-building"
+#     title_slug = "only-murders-in-the-building"
 #     urls = (
 #         *TMDBValidator.urls,
 #         "/{media_type}/{parse_url_response}/seasons?language=en-US",
@@ -310,14 +312,14 @@ class TestSupermanRelinkedTubi(TMDBValidator):
 #         keys: dict[str, str | None] = {}
 #         for plugin in self.select_plugins_with_children(session):
 #             for source in plugin.sources:
-#                 for show in source.shows:
-#                     for season in show.seasons:
+#                 for title in source.titles:
+#                     for season in title.seasons:
 #                         for episode in season.episodes:
 #                             path = SEPARATOR.join(
 #                                 (
 #                                     plugin.key,
 #                                     source.key,
-#                                     show.key,
+#                                     title.key,
 #                                     season.key,
 #                                     episode.key,
 #                                 ),
@@ -369,7 +371,7 @@ class TestSupermanRelinkedTubi(TMDBValidator):
 # ):
 #     media_type = "movie"
 #     parse_url_response = "566466"
-#     show_slug = "laid-back-camp-the-movie"
+#     title_slug = "laid-back-camp-the-movie"
 
 
 # # TODO: Validate
@@ -381,10 +383,10 @@ class TestSupermanRelinkedTubi(TMDBValidator):
 # ):
 #     media_type = "tv"
 #     parse_url_response = "76075"
-#     show_slug = "laid-back-camp"
+#     title_slug = "laid-back-camp"
 #     urls = (
 #         *TMDBValidator.urls,
-#         # Only a show has seasons, so the page listing them is a sub-page a
+#         # Only a title has seasons, so the page listing them is a sub-page a
 #         # movie's URLs cannot carry.
 #         "/{media_type}/{parse_url_response}/seasons?language=en-US",
 #     )

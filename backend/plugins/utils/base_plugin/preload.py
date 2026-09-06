@@ -13,8 +13,8 @@ from app.episodes.models import Episode, EpisodeCanonicalEpisode
 from app.files.models import File
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show
 from app.sources.models import Source
+from app.titles.models import Title
 from plugins.utils.base_plugin.files import (
     COMPLETED_STATUS,
     BaseFile,
@@ -33,27 +33,27 @@ class BasePreloadMixin(ABC):
         self,
         source_key: str | list[str] | None = None,
         *,
-        preload_shows: bool = False,
+        preload_titles: bool = False,
         preload_seasons: bool = False,
         preload_episodes: bool = False,
     ) -> ScalarResult[Source]:
-        """Preload the sources with optional related shows, seasons, and episodes.
+        """Preload the sources with optional related titles, seasons, and episodes.
 
         If no source_key is provided, all sources for the plugin will be preloaded.
         """
         options: list[Any] = []
         if preload_episodes:
             options.append(
-                selectinload(Source.shows)  # type: ignore[arg-type]
-                .selectinload(Show.seasons)  # type: ignore[arg-type]
+                selectinload(Source.titles)  # type: ignore[arg-type]
+                .selectinload(Title.seasons)  # type: ignore[arg-type]
                 .selectinload(Season.episodes),  # type: ignore[arg-type]
             )
         elif preload_seasons:
             options.append(
-                selectinload(Source.shows).selectinload(Show.seasons),  # type: ignore[arg-type]  # type: ignore[arg-type]
+                selectinload(Source.titles).selectinload(Title.seasons),  # type: ignore[arg-type]  # type: ignore[arg-type]
             )
-        elif preload_shows:
-            options.append(selectinload(Source.shows))  # type: ignore[arg-type]
+        elif preload_titles:
+            options.append(selectinload(Source.titles))  # type: ignore[arg-type]
         statement = select(Source).where(Source.plugin_id == self.plugin.id)
         if isinstance(source_key, list):
             statement = statement.where(Source.key.in_(source_key))  # type: ignore[attr-defined]
@@ -62,18 +62,18 @@ class BasePreloadMixin(ABC):
         return self.session.exec(statement.options(*options)).unique()
 
     # TODO: Validate
-    def _preload_show(
+    def _preload_title(
         self,
-        show: str | uuid.UUID,
+        title: str | uuid.UUID,
         source_key: str | None = None,
         *,
         preload_source: bool = False,
         preload_seasons: bool = False,
         preload_episodes: bool = False,
-    ) -> ScalarResult[Show]:
+    ) -> ScalarResult[Title]:
         options: list[Any] = []
         if preload_source:
-            options.append(joinedload(Show.source))  # type: ignore[arg-type]
+            options.append(joinedload(Title.source))  # type: ignore[arg-type]
         if preload_episodes:
             # What each episode already stands for is read with it, because
             # pointing an episode at another one reads the link it is replacing,
@@ -83,20 +83,20 @@ class BasePreloadMixin(ABC):
             # it is one query for every episode of the listing instead of one
             # each.
             options.append(
-                selectinload(Show.seasons)  # type: ignore[arg-type]
+                selectinload(Title.seasons)  # type: ignore[arg-type]
                 .selectinload(Season.episodes)  # type: ignore[arg-type]
                 .selectinload(Episode.canonical_episode_links)  # type: ignore[arg-type]
                 .selectinload(EpisodeCanonicalEpisode.canonical_episode),  # type: ignore[arg-type]
             )
         elif preload_seasons:
-            options.append(selectinload(Show.seasons))  # type: ignore[arg-type]
-        if isinstance(show, uuid.UUID):
-            statement = select(Show).where(Show.id == show)
+            options.append(selectinload(Title.seasons))  # type: ignore[arg-type]
+        if isinstance(title, uuid.UUID):
+            statement = select(Title).where(Title.id == title)
         else:
             statement = (
-                select(Show)
+                select(Title)
                 .join(Source)
-                .where(Source.plugin_id == self.plugin.id, Show.key == show)
+                .where(Source.plugin_id == self.plugin.id, Title.key == title)
             )
             if source_key is not None:
                 statement = statement.where(Source.key == source_key)
@@ -108,14 +108,14 @@ class BasePreloadMixin(ABC):
         season_id: uuid.UUID,
         *,
         preload_source: bool = False,
-        preload_show: bool = False,
+        preload_title: bool = False,
         preload_episodes: bool = False,
     ) -> ScalarResult[Season]:
         options: list[Any] = []
         if preload_source:
-            options.append(joinedload(Season.show).joinedload(Show.source))  # type: ignore[arg-type]
-        elif preload_show:
-            options.append(joinedload(Season.show))  # type: ignore[arg-type]
+            options.append(joinedload(Season.title).joinedload(Title.source))  # type: ignore[arg-type]
+        elif preload_title:
+            options.append(joinedload(Season.title))  # type: ignore[arg-type]
         if preload_episodes:
             options.append(selectinload(Season.episodes))  # type: ignore[arg-type]
         return self.session.exec(
@@ -128,19 +128,19 @@ class BasePreloadMixin(ABC):
         episode_id: uuid.UUID,
         *,
         preload_source: bool = False,
-        preload_show: bool = False,
+        preload_title: bool = False,
         preload_season: bool = False,
     ) -> ScalarResult[Episode]:
         options: list[Any] = []
         if preload_source:
             options.append(
                 joinedload(Episode.season)  # type: ignore[arg-type]
-                .joinedload(Season.show)  # type: ignore[arg-type]
-                .joinedload(Show.source),  # type: ignore[arg-type]
+                .joinedload(Season.title)  # type: ignore[arg-type]
+                .joinedload(Title.source),  # type: ignore[arg-type]
             )
-        elif preload_show:
+        elif preload_title:
             options.append(
-                joinedload(Episode.season).joinedload(Season.show),  # type: ignore[arg-type]
+                joinedload(Episode.season).joinedload(Season.title),  # type: ignore[arg-type]
             )
         elif preload_season:
             options.append(joinedload(Episode.season))  # type: ignore[arg-type]

@@ -32,8 +32,8 @@ from app.schemas import (
 )
 from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
-from app.shows.schemas import ShowPublic
 from app.sources.schemas import SourceListPublic
+from app.titles.schemas import TitlePublic
 
 
 # TODO: Validate
@@ -91,21 +91,21 @@ class EpisodeListOutput(EpisodeOutput):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)  # type: ignore[assignment]
 
     season_name: str | None = Field(validation_alias=AliasPath("season", "name"))
-    show_id: uuid.UUID = Field(validation_alias=AliasPath("season", "show_id"))
-    show_name: str | None = Field(
-        validation_alias=AliasPath("season", "show", "name"),
+    title_id: uuid.UUID = Field(validation_alias=AliasPath("season", "title_id"))
+    title_name: str | None = Field(
+        validation_alias=AliasPath("season", "title", "name"),
     )
     source_id: uuid.UUID = Field(
-        validation_alias=AliasPath("season", "show", "source_id"),
+        validation_alias=AliasPath("season", "title", "source_id"),
     )
     source_name: str | None = Field(
-        validation_alias=AliasPath("season", "show", "source", "name"),
+        validation_alias=AliasPath("season", "title", "source", "name"),
     )
     plugin_id: uuid.UUID = Field(
-        validation_alias=AliasPath("season", "show", "source", "plugin_id"),
+        validation_alias=AliasPath("season", "title", "source", "plugin_id"),
     )
     plugin_name: str | None = Field(
-        validation_alias=AliasPath("season", "show", "source", "plugin", "key"),
+        validation_alias=AliasPath("season", "title", "source", "plugin", "key"),
     )
 
 
@@ -120,7 +120,7 @@ class EpisodeRecord(BaseModel):
 
     episode: EpisodeOutput
     season: SeasonOutput
-    show: ShowPublic
+    title: TitlePublic
     source: SourceListPublic
 
     # TODO: Validate
@@ -129,12 +129,12 @@ class EpisodeRecord(BaseModel):
         if is_tmdb_key(self.episode.key):
             self.episode.tmdb_id = get_tmdb_id(self.episode.key)
         self.episode.tmdb_url = tmdb_episode_url(
-            self.show.key,
+            self.title.key,
             self.season.season_number,
             self.episode.episode_number,
         )
         self.season.tmdb_url = tmdb_season_url(
-            self.show.key,
+            self.title.key,
             self.season.season_number,
         )
         return self
@@ -204,9 +204,9 @@ class TmdbEpisodeChoice(EpisodeRecord):
 
     absolute_number: int | None
     similarity: float
-    from_show: bool = True
+    from_title: bool = True
     already_used: bool = False
-    # Which of the show's episodes are the ones using it. `already_used` is
+    # Which of the title's episodes are the ones using it. `already_used` is
     # whether there are any, kept as its own field because that is what the
     # choices are filtered on and a caller reading only the flag should not have
     # to count a list to get it.
@@ -233,7 +233,7 @@ class UnmatchedEpisodeOutput(EpisodeRecord):
 
 # TODO: Validate
 class UnmatchedReadOptions(ReadOptions):
-    non_canonical_shows_only: bool = False
+    non_canonical_titles_only: bool = False
 
 
 # TODO: Validate
@@ -339,14 +339,14 @@ class CanonicalEpisodeListOutput(CanonicalEpisodeOutput):
     canonical_season_name: str | None = Field(
         validation_alias=AliasPath("season", "name"),
     )
-    canonical_show_id: uuid.UUID = Field(
-        validation_alias=AliasPath("season", "show_id"),
+    canonical_title_id: uuid.UUID = Field(
+        validation_alias=AliasPath("season", "title_id"),
     )
-    canonical_show_name: str | None = Field(
-        validation_alias=AliasPath("season", "show", "name"),
+    canonical_title_name: str | None = Field(
+        validation_alias=AliasPath("season", "title", "name"),
     )
-    canonical_show_key: str | None = Field(
-        validation_alias=AliasPath("season", "show", "key"),
+    canonical_title_key: str | None = Field(
+        validation_alias=AliasPath("season", "title", "key"),
     )
 
 

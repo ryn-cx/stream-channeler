@@ -21,8 +21,8 @@ def build_url(path: str) -> str:
 
 
 # TODO: Validate
-def show_url(show_key: str) -> str:
-    return build_url(f"nhkworld/en/shows/{show_key}/")
+def title_url(title_key: str) -> str:
+    return build_url(f"nhkworld/en/shows/{title_key}/")
 
 
 # TODO: Validate

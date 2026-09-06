@@ -12,7 +12,7 @@ from plugins.utils.base_plugin.base import BaseReadURL
 from plugins.utils.base_plugin.initialize import BasePluginInitializer
 
 if TYPE_CHECKING:
-    from app.shows.models import Show
+    from app.titles.models import Title
 
 
 # TODO: Validate
@@ -31,7 +31,7 @@ class Netflix(NetflixShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def get_media_importer(self, input: Show | str) -> NetflixMedia:
+    def get_media_importer(self, input: Title | str) -> NetflixMedia:
         if isinstance(input, str):
             match = re.match(self._domain_regex() + TITLE_URL_REGEX, input)
             if not match:
@@ -40,14 +40,14 @@ class Netflix(NetflixShared, BaseReadURL, AbstractPlugin, register=False):
 
             # Movies and series are answered at the same address, so the title
             # has to be read before it is known which of the two it is.
-            show_key = match.group("title_key")
-            self.raise_if_invalid_file(self.title_file(show_key), input)
-            if is_movie(self.title_file(show_key).parsed(), show_key):
+            title_key = match.group("title_key")
+            self.raise_if_invalid_file(self.title_file(title_key), input)
+            if is_movie(self.title_file(title_key).parsed(), title_key):
                 return NetflixMovie(self)
             return NetflixSeries(self)
 
         if not input.media_type:
-            msg = "Show.media_type is not set."
+            msg = "Title.media_type is not set."
             raise AttributeError(msg)
         if input.media_type == "Movie":
             return NetflixMovie(self)

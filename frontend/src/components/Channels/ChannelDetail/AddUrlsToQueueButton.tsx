@@ -14,9 +14,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { useSearchablePlugins } from "@/hooks/useEntities"
-import { ManageShowsTabs } from "./ManageShowsTabs"
+import { ManageTitlesTabs } from "./ManageTitlesTabs"
 
-interface ManageShowsButtonProps {
+interface ManageTitlesButtonProps {
   channelId: string
   channelName?: string | null
   variant?: "button" | "menu" | "icon"
@@ -28,13 +28,13 @@ interface ManageShowsButtonProps {
 }
 
 // TODO: Validate
-export function ManageShowsButton({
+export function ManageTitlesButton({
   channelId,
   channelName,
   variant = "button",
   showLabel,
   combinedChannels,
-}: ManageShowsButtonProps) {
+}: ManageTitlesButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isFullScreen, setIsFullScreen] = useState(false)
   // Warm the searchable-plugins cache only once the modal is open, so the
@@ -46,7 +46,7 @@ export function ManageShowsButton({
       <DialogTrigger asChild>
         {variant === "icon" ? (
           <TooltipIconButton
-            label="Manage shows"
+            label="Manage titles"
             icon={<MonitorCog className="size-4" />}
             showLabel={showLabel}
           />
@@ -54,8 +54,8 @@ export function ManageShowsButton({
           <VariantTrigger
             variant={variant}
             icon={MonitorCog}
-            label="Manage shows"
-            iconTitle="Manage shows"
+            label="Manage titles"
+            iconTitle="Manage titles"
           />
         )}
       </DialogTrigger>
@@ -69,14 +69,14 @@ export function ManageShowsButton({
       >
         <DialogHeader className="px-8">
           <DialogTitle>
-            {channelName ? `Manage ${channelName} Shows` : "Manage Shows"}
+            {channelName ? `Manage ${channelName} Titles` : "Manage Titles"}
           </DialogTitle>
           <DialogDescription>
-            Search, import, and manage shows in your channel.
+            Search, import, and manage titles in your channel.
           </DialogDescription>
         </DialogHeader>
 
-        <ManageShowsTabs
+        <ManageTitlesTabs
           channelId={channelId}
           contentClassName="no-scrollbar flex-1 min-h-0 overflow-y-auto px-8 py-4"
           tabsListClassName="mx-4 h-auto"

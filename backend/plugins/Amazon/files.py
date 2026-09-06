@@ -67,6 +67,7 @@ class ShareLinkRedirect(TextFile):
     again is not another round trip.
     """
 
+    # TODO: Validate
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
@@ -141,16 +142,18 @@ class Detail(DownloadedFile[dict[str, Any]]):
     """
 
     # TODO: Validate
-    def __init__(self, session: Session, plugin: Plugin, title_key: str) -> None:
-        self.title_key = title_key
+    def __init__(self, session: Session, plugin: Plugin, detail_key: str) -> None:
+        self.detail_key = detail_key
         self.session = session
         self.plugin = plugin
-        super().__init__(session, plugin, title_key)
+        super().__init__(session, plugin, detail_key)
 
+    # TODO: Validate
     @override
     def _endpoint(self) -> DetailEndpoint:
         return deforestation().detail
 
+    # TODO: Validate
     @override
     def _parse(self, content: str) -> dict[str, Any]:
         """Return the page as Amazon wrote it."""
@@ -158,14 +161,17 @@ class Detail(DownloadedFile[dict[str, Any]]):
         return page
 
     # Occurs when a user puts in an invalid URL.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, TitleNotFoundError)
 
+    # TODO: Validate
     @override
     def acceptable_error_status(self) -> str:
-        return f"Invalid title {self.title_key}"
+        return f"Invalid title {self.detail_key}"
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         try:
@@ -176,6 +182,7 @@ class Detail(DownloadedFile[dict[str, Any]]):
                 raise
             return self._endpoint().download(landing_key)
 
+    # TODO: Validate
     @override
     def _download(self) -> None:
         super()._download()
@@ -186,6 +193,7 @@ class Detail(DownloadedFile[dict[str, Any]]):
         for page in self.episode_pages():
             page.download_if_outdated()
 
+    # TODO: Validate
     @override
     def is_outdated(self, minimum_timestamp: datetime | None = None) -> bool:
         if super().is_outdated(minimum_timestamp):
@@ -321,7 +329,7 @@ class Detail(DownloadedFile[dict[str, Any]]):
         if not self.database_record.content:
             return []
         return [
-            EpisodeList(self.session, self.plugin, self.title_key, index)
+            EpisodeList(self.session, self.plugin, self.detail_key, index)
             for index, page in enumerate(self._episode_page_entries())
             if not page["isSelected"]
         ]
@@ -358,7 +366,7 @@ class Detail(DownloadedFile[dict[str, Any]]):
             if entry["isSelected"]:
                 episodes += self._page_episodes()
             else:
-                page = EpisodeList(self.session, self.plugin, self.title_key, index)
+                page = EpisodeList(self.session, self.plugin, self.detail_key, index)
                 episodes += page.episodes()
         return episodes
 
@@ -457,17 +465,17 @@ class Detail(DownloadedFile[dict[str, Any]]):
         return any(payload.get("transaction") for payload in self._offer_payloads())
 
     # TODO: Validate
-    def show_key(self) -> str:
+    def title_key(self) -> str:
         """Return the key the title this page is for is stored under.
 
         A title can be reached by more than one id, so the key is the id the
         page it opens is addressed by rather than the one the link carried, and
-        a title pasted in either way is the one show.
+        a title pasted in either way is the one title.
 
         A series has no page of its own, so every one of its seasons carries the
         whole series and any of them would do as the series. The first is picked
         so that a series pasted in as one season and again as another is the one
-        show either way, rather than a show for each way in.
+        title either way, rather than a title for each way in.
         """
         seasons = self.seasons()
         if not seasons:
@@ -510,10 +518,12 @@ class EpisodeList(EndpointFile[DetailWidgetsModel]):
         self.plugin = plugin
         super().__init__(session, plugin, f"{season_key}/{page_index}")
 
+    # TODO: Validate
     @override
     def _endpoint(self) -> DetailWidgetsEndpoint:
         return deforestation().detail_widgets
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         detail = Detail(self.session, self.plugin, self.season_key)
@@ -539,10 +549,12 @@ class Search(EndpointFile[SearchModel]):
     file for a query rather than one for each page of it.
     """
 
+    # TODO: Validate
     @override
     def _endpoint(self) -> SearchEndpoint:
         return deforestation().search
 
+    # TODO: Validate
     @override
     def _next_update_at(self) -> datetime:
         return tz_datetime.now() + timedelta(days=30)

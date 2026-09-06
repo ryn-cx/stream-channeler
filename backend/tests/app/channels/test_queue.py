@@ -63,7 +63,11 @@ def test_a_url_already_queued_is_not_queued_twice(
     channel = create_random_channel(session_scoped_session)
     existing = create_random_channel_queue(session_scoped_session, channel)
 
-    import_queue.add_urls_to_channel_import_queue(session_scoped_session, channel, [existing.url])
+    import_queue.add_urls_to_channel_import_queue(
+        session_scoped_session,
+        channel,
+        [existing.url],
+    )
 
     assert queued_urls(session_scoped_session, channel) == [existing.url]
 
@@ -75,7 +79,11 @@ def test_the_same_url_given_twice_is_queued_once(
     channel = create_random_channel(session_scoped_session)
     url = random_lower_string()
 
-    import_queue.add_urls_to_channel_import_queue(session_scoped_session, channel, [url, url])
+    import_queue.add_urls_to_channel_import_queue(
+        session_scoped_session,
+        channel,
+        [url, url],
+    )
 
     assert queued_urls(session_scoped_session, channel) == [url]
 

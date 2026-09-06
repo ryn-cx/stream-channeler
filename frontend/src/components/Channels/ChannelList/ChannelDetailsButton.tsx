@@ -1,12 +1,13 @@
+// TODO: Validate
 import { Link } from "@tanstack/react-router"
 import { Info } from "lucide-react"
 import { useState } from "react"
 import { ChannelDescriptionMarkdown } from "@/components/Channels/ChannelDetail/ChannelDescription"
-import { ShowCardsWithInformation } from "@/components/Channels/ShowCardsWithInformation"
+import { TitleCardsWithInformation } from "@/components/Channels/TitleCardsWithInformation"
 import {
-  useAllChannelShows,
-  useChannelShowStats,
-} from "@/components/Channels/useChannelShows"
+  useAllChannelTitles,
+  useChannelTitleStats,
+} from "@/components/Channels/useChannelTitles"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import {
   type TriggerVariant,
@@ -36,32 +37,32 @@ export function ChannelDetailsButton({
 }: ChannelDetailsButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
 
-  const { data, isLoading } = useAllChannelShows(channel.id, {
+  const { data, isLoading } = useAllChannelTitles(channel.id, {
     enabled: isOpen,
   })
 
-  const canonicalShows = data?.canonical_shows ?? {}
+  const canonicalTitles = data?.canonical_titles ?? {}
   const groups = (data?.groups ?? [])
     .map((group) => ({
       ...group,
-      shows: (group.shows ?? []).filter((show) =>
-        show.canonical_show_id
-          ? !!canonicalShows[show.canonical_show_id]?.name
-          : !!show.name,
+      titles: (group.titles ?? []).filter((title) =>
+        title.canonical_title_id
+          ? !!canonicalTitles[title.canonical_title_id]?.name
+          : !!title.name,
       ),
     }))
-    .filter((group) => group.shows.length > 0)
+    .filter((group) => group.titles.length > 0)
 
-  const listedCanonicalShowIds = [
+  const listedCanonicalTitleIds = [
     ...new Set(
       groups.flatMap((group) =>
-        group.shows.map((show) => show.canonical_show_id ?? show.id),
+        group.titles.map((title) => title.canonical_title_id ?? title.id),
       ),
     ),
   ]
-  const { data: stats } = useChannelShowStats(
+  const { data: stats } = useChannelTitleStats(
     channel.id,
-    listedCanonicalShowIds,
+    listedCanonicalTitleIds,
   )
 
   return (
@@ -86,7 +87,7 @@ export function ChannelDetailsButton({
         <DialogHeader>
           <DialogTitle>{channel.name ?? "Channel"}</DialogTitle>
           <DialogDescription>
-            The channel's description and every show it includes.
+            The channel's description and every title it includes.
           </DialogDescription>
         </DialogHeader>
         <DialogBody className="space-y-4 py-2">
@@ -95,10 +96,10 @@ export function ChannelDetailsButton({
           )}
 
           {isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading shows...</p>
+            <p className="text-sm text-muted-foreground">Loading titles...</p>
           ) : groups.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No shows in this channel yet.
+              No titles in this channel yet.
             </p>
           ) : (
             groups.map((group) => (
@@ -112,11 +113,11 @@ export function ChannelDetailsButton({
                     {group.channel_name || "Unnamed Channel"}
                   </Link>
                 </h3>
-                <ShowCardsWithInformation
+                <TitleCardsWithInformation
                   channelId={group.channel_id}
-                  shows={group.shows}
+                  titles={group.titles}
                   sources={data?.sources ?? {}}
-                  canonicalShows={data?.canonical_shows ?? {}}
+                  canonicalTitles={data?.canonical_titles ?? {}}
                   canonicalSources={data?.canonical_sources ?? {}}
                   stats={stats ?? {}}
                 />

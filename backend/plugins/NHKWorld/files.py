@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, override
 
 from naphki import Naphki
 from naphki.exceptions import ProgramNotFoundError
-from naphki.shows_search import ShowsSearch as ShowsSearchEndpoint
+from naphki.shows_search import ShowsSearch as TitlesSearchEndpoint
 from naphki.shows_search.models import ShowsSearchModel
 from naphki.video_episodes import VideoEpisodes as VideoEpisodesEndpoint
 from naphki.video_episodes.models import VideoEpisodesModel
@@ -35,11 +35,13 @@ def naphki() -> Naphki:
 
 # TODO: Validate
 class VideoProgram(EndpointFile[VideoProgramModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> VideoProgramEndpoint:
         return naphki().video_program
 
     # Occurs when a user puts in an invalid URL.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ProgramNotFoundError)
@@ -47,10 +49,12 @@ class VideoProgram(EndpointFile[VideoProgramModel]):
 
 # TODO: Validate
 class VideoEpisodes(EndpointFile[VideoEpisodesModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> VideoEpisodesEndpoint:
         return naphki().video_episodes
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download_merged_until_datetime(self.unique_identifier)
@@ -62,11 +66,13 @@ class VideoEpisodes(EndpointFile[VideoEpisodesModel]):
 
 # TODO: Validate
 class NewVideoEpisodes(EndpointFile[VideoEpisodesModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> VideoEpisodesEndpoint:
         return naphki().video_episodes
 
     # TODO: Consider moving this login into naphki
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         # Page 20 at a time (the API default) rather than the 100-entry pages
@@ -83,7 +89,7 @@ class NewVideoEpisodes(EndpointFile[VideoEpisodesModel]):
 
 
 # TODO: Validate
-class ShowsSearch(EndpointFile[ShowsSearchModel]):
+class TitlesSearch(EndpointFile[ShowsSearchModel]):
     # TODO: Validate
     def __init__(
         self,
@@ -96,16 +102,19 @@ class ShowsSearch(EndpointFile[ShowsSearchModel]):
         self.offset = offset
         super().__init__(session, plugin, f"{query}/{offset}")
 
+    # TODO: Validate
     @override
-    def _endpoint(self) -> ShowsSearchEndpoint:
+    def _endpoint(self) -> TitlesSearchEndpoint:
         return naphki().shows_search
 
     # `size` keeps its default so a page request looks exactly like the one the
     # website makes.
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(self.query, from_=self.offset)
 
+    # TODO: Validate
     @override
     def _next_update_at(self) -> datetime:
         return tz_datetime.now() + timedelta(days=30)

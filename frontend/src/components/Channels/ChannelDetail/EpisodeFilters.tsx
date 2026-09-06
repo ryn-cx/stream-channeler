@@ -100,9 +100,9 @@ const formSchema = z.object({
     .optional(),
   maximumWatchDateAbsolute: z.string().optional(),
   maximumWatchDateRelative: z.coerce.number().optional(),
-  totalShowsCount: z.coerce.number().optional(),
-  startedShowsCount: z.coerce.number().optional(),
-  newShowsCount: z.coerce.number().optional(),
+  totalTitlesCount: z.coerce.number().optional(),
+  startedTitlesCount: z.coerce.number().optional(),
+  newTitlesCount: z.coerce.number().optional(),
   minimumAirDateAbsolute: z.string().optional(),
   minimumAirDateRelative: z.coerce.number().optional(),
   maximumAirDateAbsolute: z.string().optional(),
@@ -477,9 +477,9 @@ export function EpisodeFilters({
       sortBy: filterParams.sortBy as FormValues["sortBy"],
       maximumWatchDateAbsolute: filterParams.maximumWatchDateAbsolute,
       maximumWatchDateRelative: filterParams.maximumWatchDateRelative,
-      totalShowsCount: filterParams.totalShowsCount,
-      startedShowsCount: filterParams.startedShowsCount,
-      newShowsCount: filterParams.newShowsCount,
+      totalTitlesCount: filterParams.totalTitlesCount,
+      startedTitlesCount: filterParams.startedTitlesCount,
+      newTitlesCount: filterParams.newTitlesCount,
       minimumAirDateAbsolute: filterParams.minimumAirDateAbsolute,
       minimumAirDateRelative: filterParams.minimumAirDateRelative,
       maximumAirDateAbsolute: filterParams.maximumAirDateAbsolute,
@@ -679,9 +679,9 @@ export function EpisodeFilters({
       sortBy: parsedConfig.sortBy ?? [],
       maximumWatchDateAbsolute: parsedConfig.maximumWatchDateAbsolute ?? "",
       maximumWatchDateRelative: parsedConfig.maximumWatchDateRelative ?? "",
-      totalShowsCount: parsedConfig.totalShowsCount ?? "",
-      startedShowsCount: parsedConfig.startedShowsCount ?? "",
-      newShowsCount: parsedConfig.newShowsCount ?? "",
+      totalTitlesCount: parsedConfig.totalTitlesCount ?? "",
+      startedTitlesCount: parsedConfig.startedTitlesCount ?? "",
+      newTitlesCount: parsedConfig.newTitlesCount ?? "",
       minimumAirDateAbsolute: parsedConfig.minimumAirDateAbsolute ?? "",
       minimumAirDateRelative: parsedConfig.minimumAirDateRelative ?? "",
       maximumAirDateAbsolute: parsedConfig.maximumAirDateAbsolute ?? "",
@@ -804,15 +804,15 @@ export function EpisodeFilters({
                   {/* space-y-4 - Space between header and text */}
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <h3>Show Counts</h3>
+                      <h3>Title Counts</h3>
 
                       <FormField
                         control={form.control}
-                        name="totalShowsCount"
+                        name="totalTitlesCount"
                         render={({ field }) => (
                           <FormItem className="flex items-center gap-3 space-y-0">
                             <FormLabel className="font-normal w-28 shrink-0">
-                              Total Shows
+                              Total Titles
                             </FormLabel>
                             <FormControl>
                               <Input {...field} type="number" min={0} />
@@ -822,11 +822,11 @@ export function EpisodeFilters({
                       />
                       <FormField
                         control={form.control}
-                        name="startedShowsCount"
+                        name="startedTitlesCount"
                         render={({ field }) => (
                           <FormItem className="flex items-center gap-3 space-y-0">
                             <FormLabel className="font-normal w-28 shrink-0">
-                              Started Shows
+                              Started Titles
                             </FormLabel>
                             <FormControl>
                               <Input {...field} type="number" min={0} />
@@ -836,11 +836,11 @@ export function EpisodeFilters({
                       />
                       <FormField
                         control={form.control}
-                        name="newShowsCount"
+                        name="newTitlesCount"
                         render={({ field }) => (
                           <FormItem className="flex items-center gap-3 space-y-0">
                             <FormLabel className="font-normal w-28 shrink-0">
-                              New Shows
+                              New Titles
                             </FormLabel>
                             <FormControl>
                               <Input {...field} type="number" min={0} />

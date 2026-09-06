@@ -38,7 +38,7 @@ function sideRows(side: SeasonInformationSide): InformationRows {
     Name: season.name,
     "Season number": season.season_number,
     "Sort order": season.sort_order,
-    Show: side.show.name,
+    Title: side.title.name,
     Link: season.url ? (
       <ExternalAnchor href={season.url} label={season.url} />
     ) : null,
@@ -53,7 +53,7 @@ const ROW_LABELS = [
   "Name",
   "Season number",
   "Sort order",
-  "Show",
+  "Title",
   "Link",
   "Image",
   "Key",

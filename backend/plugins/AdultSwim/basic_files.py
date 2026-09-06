@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
-from plugins.AdultSwim.files import ShowPage, ShowsPage
+from plugins.AdultSwim.files import TitlePage, TitlesPage
 from plugins.utils.base_plugin.base import BasePlugin
 
 if TYPE_CHECKING:
@@ -13,14 +13,14 @@ if TYPE_CHECKING:
 # TODO: Validate
 class BasicFiles(BasePlugin):
     # TODO: Validate
-    def show_file(self, show_key: str) -> ShowPage:
-        return self._file(ShowPage, show_key)
+    def title_file(self, title_key: str) -> TitlePage:
+        return self._file(TitlePage, title_key)
 
     # TODO: Validate
-    def shows_file(self) -> ShowsPage:
-        return self._file(ShowsPage)
+    def titles_file(self) -> TitlesPage:
+        return self._file(TitlesPage)
 
     # TODO: Validate
     @override
-    def _source_files(self) -> Sequence[ShowsPage]:
-        return [self.shows_file()]
+    def _source_files(self) -> Sequence[TitlesPage]:
+        return [self.titles_file()]

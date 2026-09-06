@@ -11,9 +11,9 @@ from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.titles.models import Title
 from app.utils import tz_datetime
-from plugins.NHKWorld.shared import SHOW_URL_REGEX, NHKWorldShared
+from plugins.NHKWorld.shared import TITLE_URL_REGEX, NHKWorldShared
 from plugins.NHKWorld.utils import build_url, image_url, thumbnail_url
 from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
 from plugins.utils.base_plugin.importer import BaseImporter
@@ -32,40 +32,40 @@ class NHKWorldMedia(NHKWorldShared, BaseImporter):
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
-        return (SHOW_URL_REGEX,)
+        return (TITLE_URL_REGEX,)
 
     # TODO: Validate
     @override
     def extract_media_info(self, url: str) -> MediaInfo:
-        if match := re.match(self._domain_regex() + SHOW_URL_REGEX, url):
-            show_key = match.group("show_key")
-            self.raise_if_invalid_file(self.video_program_file(show_key), url)
-            return MediaInfo(show_key)
+        if match := re.match(self._domain_regex() + TITLE_URL_REGEX, url):
+            title_key = match.group("title_key")
+            self.raise_if_invalid_file(self.video_program_file(title_key), url)
+            return MediaInfo(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
     # TODO: Validate
     @override
-    def tmdb_lookup_info(self, show_key: str) -> list[TMDBLookupInfo]:
-        program_file = self.video_program_file(show_key)
+    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
+        program_file = self.video_program_file(title_key)
         program_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
         return [TMDBLookupInfo(program_file.parsed().title, TMDBMediaType.tv, None)]
 
     # TODO: Validate
     @override
-    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
-        # Required to detect changes to the show.
-        return [self.video_program_file(show_key)]
+    def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
+        # Required to detect changes to the title.
+        return [self.video_program_file(title_key)]
 
     # TODO: Validate
     @override
-    def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
+    def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
         return [
             # Required to detect changes to the season.
-            self.video_program_file(show_key),
+            self.video_program_file(title_key),
             # Required to detect new episodes.
-            self.video_episodes_file(show_key),
+            self.video_episodes_file(title_key),
         ]
 
     # TODO: Validate
@@ -74,24 +74,24 @@ class NHKWorldMedia(NHKWorldShared, BaseImporter):
         self,
         episode_key: str,
         season_key: str,
-        show_key: str,
+        title_key: str,
     ) -> Sequence[BaseFile[Any]]:
         # Required to detect changes to the episode.
-        return [self.video_episodes_file(show_key)]
+        return [self.video_episodes_file(title_key)]
 
     # TODO: Validate
     @override
-    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
+    def _season_keys_from_title_files(self, title_key: str) -> list[str]:
         # There are no seasons on NHK World, but the value returned should still match
         # the value used for Season.key.
-        return [show_key]
+        return [title_key]
 
     # TODO: Validate
     @override
     def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
-        show_key: str,
+        title_key: str,
     ) -> list[str]:
         if isinstance(season_keys, str):
             season_keys = [season_keys]
@@ -103,18 +103,18 @@ class NHKWorldMedia(NHKWorldShared, BaseImporter):
 
     # TODO: Validate
     @override
-    def upsert_show(
+    def upsert_title(
         self,
         source: Source,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
-    ) -> Show:
-        show = Show.get_from_memory(self.session, source, show_key)
-        if self._show_is_outdated(show, force=force):
-            program = self.video_program_file(show_key).parsed()
-            data_timestamps = self.show_data_timestamps(show_key)
-            new_show = Show(
+    ) -> Title:
+        title = Title.get_from_memory(self.session, source, title_key)
+        if self._title_is_outdated(title, force=force):
+            program = self.video_program_file(title_key).parsed()
+            data_timestamps = self.title_data_timestamps(title_key)
+            new_title = Title(
                 key=program.id,
                 name=program.title,
                 description=program.description,
@@ -125,48 +125,48 @@ class NHKWorldMedia(NHKWorldShared, BaseImporter):
                 data_timestamp=data_timestamps[0],
                 source_id=source.id,
             )
-            show = new_show.upsert(source, show)
-            show.set_update_at(None, data_timestamps)
+            title = new_title.upsert(source, title)
+            title.set_update_at(None, data_timestamps)
 
-        self._upsert_season(show, show_key, force=force)
-        self._soft_delete_missing(show_key)
-        self.link_show_to_tmdb(show)
+        self._upsert_season(title, title_key, force=force)
+        self._soft_delete_missing(title_key)
+        self.link_title_to_tmdb(title)
 
-        return show
+        return title
 
     # TODO: Validate
     def _upsert_season(
         self,
-        show: Show,
-        show_key: str,
+        title: Title,
+        title_key: str,
         *,
         force: bool = False,
     ) -> None:
-        season = Season.get_from_memory(self.session, show, show_key)
-        if self._season_is_outdated(season, show_key, force=force):
-            data_timestamps = self.season_data_timestamps(show_key, show_key)
+        season = Season.get_from_memory(self.session, title, title_key)
+        if self._season_is_outdated(season, title_key, force=force):
+            data_timestamps = self.season_data_timestamps(title_key, title_key)
             new_season = Season(
-                key=show_key,
+                key=title_key,
                 season_number=1,
                 sort_order=0,
                 data_timestamp=data_timestamps[0],
-                show_id=show.id,
+                title_id=title.id,
             )
-            season = new_season.upsert(show, season)
+            season = new_season.upsert(title, season)
             season.set_update_at(None, data_timestamps)
 
-        self._upsert_episodes(season, show_key, force=force)
+        self._upsert_episodes(season, title_key, force=force)
 
     # TODO: Validate
     def _upsert_episodes(
         self,
         season: Season,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
     ) -> None:
         # Episodes are listed newest to oldest.
-        items = list(reversed(self.video_episodes_file(show_key).items()))
+        items = list(reversed(self.video_episodes_file(title_key).items()))
         for sort_order, item in enumerate(items):
             season.set_update_at(item.video.expired_at)
 
@@ -174,7 +174,7 @@ class NHKWorldMedia(NHKWorldShared, BaseImporter):
             if not self._episode_is_outdated(
                 episode,
                 season.key,
-                show_key,
+                title_key,
                 force=force,
             ):
                 continue
@@ -182,7 +182,7 @@ class NHKWorldMedia(NHKWorldShared, BaseImporter):
             data_timestamps = self.episode_data_timestamps(
                 item.id,
                 season.key,
-                show_key,
+                title_key,
             )
             new_episode = Episode(
                 key=item.id,

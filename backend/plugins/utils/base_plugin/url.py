@@ -5,7 +5,7 @@ from typing import NamedTuple
 
 # TODO: Validate
 class MediaInfo(NamedTuple):
-    show_key: str
+    title_key: str
     season_key: str | None = None
     episode_key: str | None = None
 

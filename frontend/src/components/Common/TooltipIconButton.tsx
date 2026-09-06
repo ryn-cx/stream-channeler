@@ -20,7 +20,7 @@ interface TooltipIconButtonProps extends React.ComponentProps<typeof Button> {
   label: string
   icon: React.ReactNode
   /** Forces the label to render as button text (`true`) or to stay in the
-   * tooltip (`false`). Left unset, touch devices show it and pointer devices
+   * tooltip (`false`). Left unset, touch devices title it and pointer devices
    * keep the tooltip. */
   showLabel?: boolean
 }

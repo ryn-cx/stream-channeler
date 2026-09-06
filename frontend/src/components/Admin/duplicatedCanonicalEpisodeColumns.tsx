@@ -21,12 +21,12 @@ export const duplicatedCanonicalEpisodeColumns: ColumnDef<DuplicatedCanonicalEpi
       filterFn: "equalsString",
     },
     {
-      id: "show_name",
-      accessorFn: (row) => row.canonical.show.name ?? "",
-      header: "Canonical Show",
+      id: "title_name",
+      accessorFn: (row) => row.canonical.title.name ?? "",
+      header: "Canonical Title",
       cell: ({ row }) => {
-        const show = row.original.canonical.show
-        const url = show.tmdb_url ?? show.url
+        const title = row.original.canonical.title
+        const url = title.tmdb_url ?? title.url
         return url ? (
           <a
             href={url}
@@ -34,18 +34,18 @@ export const duplicatedCanonicalEpisodeColumns: ColumnDef<DuplicatedCanonicalEpi
             rel="noreferrer"
             className="hover:underline"
           >
-            {show.name ?? "Unnamed"}
+            {title.name ?? "Unnamed"}
           </a>
         ) : (
-          (show.name ?? "Unnamed")
+          (title.name ?? "Unnamed")
         )
       },
     },
     {
-      id: "show_year",
-      accessorFn: (row) => row.canonical.show.year ?? 0,
+      id: "title_year",
+      accessorFn: (row) => row.canonical.title.year ?? 0,
       header: "Year",
-      cell: ({ row }) => row.original.canonical.show.year ?? "",
+      cell: ({ row }) => row.original.canonical.title.year ?? "",
     },
     {
       id: "season_number",

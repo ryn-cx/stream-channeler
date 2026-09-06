@@ -28,8 +28,8 @@ if TYPE_CHECKING:
     from app.files.models import File
     from app.plugins.models import Plugin
     from app.seasons.models import Season
-    from app.shows.models import Show
     from app.sources.models import Source
+    from app.titles.models import Title
     from app.users.models import User
 
 
@@ -168,8 +168,8 @@ class BaseMediaMixin(SQLModel):
     )
 
 
-ChildT = TypeVar("ChildT", bound="Plugin | Source | Show | Season | Episode | File")
-ParentT = TypeVar("ParentT", bound="Plugin | Source | Show | Season")
+ChildT = TypeVar("ChildT", bound="Plugin | Source | Title | Season | Episode | File")
+ParentT = TypeVar("ParentT", bound="Plugin | Source | Title | Season")
 
 
 # TODO: Validate
@@ -186,8 +186,8 @@ class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):
         """Return the direct children of the record.
 
         - `Plugin` -> `Source | Files`
-        - `Source` -> `Show`
-        - `Show` -> `Season`
+        - `Source` -> `Title`
+        - `Title` -> `Season`
         - `Season` -> `Episode`
         - `Episode` -> `[]`
         """
@@ -198,8 +198,8 @@ class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):
         """Return the direct children of the record that are not deleted.
 
         - `Plugin` -> `Source | Files`
-        - `Source` -> `Show`
-        - `Show` -> `Season`
+        - `Source` -> `Title`
+        - `Title` -> `Season`
         - `Season` -> `Episode`
         - `Episode` -> `[]`
         """
@@ -267,11 +267,15 @@ class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):
         # a title says nothing about the rest, and the defaults SQLModel filled in
         # are not an account of them to write over what is stored.
         unset_keys = set(type(self).model_fields) - self.model_fields_set
-        protected_keys = protected_keys | unset_keys | {
-            "id",
-            "created_at",
-            "modified_at",
-        }
+        protected_keys = (
+            protected_keys
+            | unset_keys
+            | {
+                "id",
+                "created_at",
+                "modified_at",
+            }
+        )
         dumped = self.model_dump(exclude=protected_keys)
         existing_record.sqlmodel_update(dumped)
         return existing_record
@@ -339,8 +343,8 @@ class ChildMediaMixin(MediaMixin[ChildT], ABC, Generic[ParentT, ChildT]):  # noq
         """Return the parent of the record.
 
         - `Source` -> `Plugin`
-        - `Show` -> `Source`
-        - `Season` -> `Show`
+        - `Title` -> `Source`
+        - `Season` -> `Title`
         - `Episode` -> `Season`
         """
 

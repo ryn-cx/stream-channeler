@@ -27,7 +27,7 @@ def build_url(path: str) -> str:
 
 
 # TODO: Validate
-def show_url(key: str | int, media_type: str = SERIES_MEDIA_TYPE) -> str:
+def title_url(key: str | int, media_type: str = SERIES_MEDIA_TYPE) -> str:
     if media_type == MOVIE_MEDIA_TYPE:
         return build_url(f"video/{key}")
     return build_url(f"series/{key}")
@@ -214,10 +214,10 @@ def element_release_date(element: schedule_models.Element2) -> datetime:
 
 
 # TODO: Validate
-def card_show_name(text: str) -> str:
-    """Return the show a card is for, out of the "S1 E2 - Show Name" it is titled."""
-    _episode_number, separator, show_name = text.partition(" - ")
+def card_title_name(text: str) -> str:
+    """Return the title a card is for, out of the "S1 E2 - Title Name" it is titled."""
+    _episode_number, separator, title_name = text.partition(" - ")
     if not separator:
-        msg = f"Schedule card title has no show name: {text}"
+        msg = f"Schedule card title has no title name: {text}"
         raise ValueError(msg)
-    return show_name
+    return title_name

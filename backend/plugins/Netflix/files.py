@@ -1,7 +1,7 @@
 # TODO: Validate
 """The files a Netflix title is read out of.
 
-Netflix answers with the whole of a title at once, so a show, its seasons and
+Netflix answers with the whole of a title at once, so a title, its seasons and
 their episodes all come out of the one file the title is downloaded as.
 """
 
@@ -42,6 +42,7 @@ def meshfilm() -> Meshfilm:
 
 # TODO: Validate
 class Title(IntegerEndpointFile[LodpTitleAndPlansPageModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> LodpTitleAndPlansPage:
         return meshfilm().lodp_title_and_plans_page
@@ -49,10 +50,12 @@ class Title(IntegerEndpointFile[LodpTitleAndPlansPageModel]):
 
 # TODO: Validate
 class Seasons(IntegerEndpointFile[PreviewModalEpisodeSelectorModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> PreviewModalEpisodeSelector:
         return meshfilm().preview_modal_episode_selector
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(int(self.unique_identifier), 500)
@@ -62,10 +65,12 @@ class Seasons(IntegerEndpointFile[PreviewModalEpisodeSelectorModel]):
 class SeasonEpisodes(
     IntegerEndpointFile[PreviewModalEpisodeSelectorSeasonEpisodesModel],
 ):
+    # TODO: Validate
     @override
     def _endpoint(self) -> PreviewModalEpisodeSelectorSeasonEpisodes:
         return meshfilm().preview_modal_episode_selector_season_episodes
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(int(self.unique_identifier), 500)
@@ -85,14 +90,17 @@ class Search(EndpointFile[SearchPageResultsModel]):
         self.cursor = cursor
         super().__init__(session, plugin, f"{query}/{cursor}")
 
+    # TODO: Validate
     @override
     def _endpoint(self) -> SearchPageResults:
         return meshfilm().search_page_results
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(self.query, self.cursor or None)
 
+    # TODO: Validate
     @override
     def _next_update_at(self) -> datetime:
         return tz_datetime.now() + timedelta(days=30)

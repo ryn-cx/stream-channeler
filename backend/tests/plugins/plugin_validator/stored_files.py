@@ -16,7 +16,7 @@ from sqlmodel import Session
 from app.constants import ALL_TEST_FILES_FOLDER, ALL_TEST_FILES_METADATA_FOLDER
 from app.files.models import File
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.titles.models import Title
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.base_plugin import core
@@ -393,25 +393,25 @@ def _serve_before_grouping(
     def _download_all_episode_files(
         self: BasePlugin,
         season: str | Season,
-        show: str | Show | None = None,
+        title: str | Title | None = None,
         preloaded_files: Sequence[File] | None = None,
     ) -> list[File]:
         season_key = self._get_key(season)
-        show_key = self._get_show_key(season, show)
-        episode_keys = self._episode_keys_from_season_files(season_key, show_key)
+        title_key = self._get_title_key(season, title)
+        episode_keys = self._episode_keys_from_season_files(season_key, title_key)
         # Held for as long as the files are being reached for, because a preload
         # only warms the session and what it warmed is dropped once it is let go.
         _cache = self._preload_episode_files(
             episode_keys,
             season_key,
-            show_key,
+            title_key,
             preloaded_files,
         )
         for episode_key in episode_keys:
             self._download_outdated_files(
-                self._episode_files(episode_key, season_key, show_key),
+                self._episode_files(episode_key, season_key, title_key),
             )
-        return grouped_download(self, season, show, preloaded_files)
+        return grouped_download(self, season, title, preloaded_files)
 
     return _download_all_episode_files
 

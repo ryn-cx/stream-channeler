@@ -117,7 +117,7 @@ export function BlacklistEpisodeDialog({
     for (const target of selectedOwned) {
       mutation.mutate({
         targetChannelId: target.id,
-        showId: episode.show.id,
+        titleId: episode.title.id,
         episodeId: episode.id,
         expiresAt,
       })

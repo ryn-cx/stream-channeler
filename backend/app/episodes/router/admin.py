@@ -44,7 +44,7 @@ from app.episodes.schemas import (
     UnmatchedReadOptions,
 )
 from app.episodes.service.duplicates import get_duplicated_canonical_episodes
-from app.episodes.service.information import _select_with_canonical_season_and_show
+from app.episodes.service.information import _select_with_canonical_season_and_title
 from app.episodes.service.tmdb_choices import list_tmdb_episode_choices
 from app.episodes.service.unlocked import list_unlocked_episodes
 from app.episodes.service.unmatched import list_unmatched_episodes
@@ -52,8 +52,8 @@ from app.plugins.models import Plugin
 from app.schemas import ReadOptions
 from app.seasons.models import Season
 from app.service.responses import list_response
-from app.shows.models import Show
 from app.sources.models import Source
+from app.titles.models import Title
 
 """Episodes router."""
 
@@ -78,17 +78,17 @@ episodes_router = APIRouter(
 CANONICAL_EPISODE_EXTRA_COLUMNS: dict[str, Any] = {
     "canonical_season_id": Episode.season_id,
     "canonical_season_name": Season.name,
-    "canonical_show_id": Season.show_id,
-    "canonical_show_name": Show.name,
-    "canonical_show_key": Show.key,
+    "canonical_title_id": Season.title_id,
+    "canonical_title_name": Title.name,
+    "canonical_title_key": Title.key,
 }
 
 
 EPISODE_EXTRA_COLUMNS: dict[str, Any] = {
     "season_name": Season.name,
-    "show_id": Season.show_id,
-    "show_name": Show.name,
-    "source_id": Show.source_id,
+    "title_id": Season.title_id,
+    "title_name": Title.name,
+    "source_id": Title.source_id,
     "source_name": Source.name,
     "plugin_id": Source.plugin_id,
     "plugin_name": Plugin.key,
@@ -200,7 +200,7 @@ def admin_link_episode_by_tmdb_url(
 
     Read here rather than in the browser so that the title is imported on the way, which
     is what turns the numbering in an episode's address into the record the episode is
-    pointed at, and so that a title the show was not a non-canonical row of is linked to
+    pointed at, and so that a title the title was not a non-canonical row of is linked to
     it as well.
     """
     return EpisodeOutput.model_validate(
@@ -326,7 +326,7 @@ def get_canonical_episodes(
     """Get every `Episode`."""
     return canonical_list_response(
         session=session,
-        base=_select_with_canonical_season_and_show(),
+        base=_select_with_canonical_season_and_title(),
         response_model=CanonicalEpisodesPublic,
         schema=CanonicalEpisodeListOutput,
         read_options=read_options,

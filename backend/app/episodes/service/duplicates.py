@@ -27,9 +27,9 @@ from app.episodes.schemas import (
 )
 from app.episodes.service.records import _record_fields
 from app.seasons.models import Season
-from app.shows.models import Show
 from app.sources.models import Source
 from app.sources.schemas import SourceListPublic
+from app.titles.models import Title
 
 
 # TODO: Validate
@@ -42,19 +42,19 @@ def _duplicated_link_pairs(
     statement = (
         select(
             col(EpisodeCanonicalEpisode.canonical_episode_id),
-            col(Show.source_id),
+            col(Title.source_id),
         )
         .join(Episode, onclause=col(EpisodeCanonicalEpisode.episode_id) == Episode.id)
         .join(Season, onclause=col(Episode.season_id) == Season.id)
-        .join(Show, onclause=col(Season.show_id) == Show.id)
+        .join(Title, onclause=col(Season.title_id) == Title.id)
         .where(
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
-            col(Show.deleted_at).is_(None),
+            col(Title.deleted_at).is_(None),
         )
         .group_by(
             col(EpisodeCanonicalEpisode.canonical_episode_id),
-            col(Show.source_id),
+            col(Title.source_id),
         )
         .having(uses > 1, unsettled)
         .limit(limit)
@@ -74,21 +74,21 @@ def _episodes_linking_to(
     statement = (
         select(  # type: ignore[call-overload]
             col(EpisodeCanonicalEpisode.canonical_episode_id),
-            col(Show.source_id),
+            col(Title.source_id),
             Episode,
             Season,
-            Show,
+            Title,
         )
         .join(Episode, onclause=col(EpisodeCanonicalEpisode.episode_id) == Episode.id)
         .join(Season, onclause=col(Episode.season_id) == Season.id)
-        .join(Show, onclause=col(Season.show_id) == Show.id)
+        .join(Title, onclause=col(Season.title_id) == Title.id)
         .where(
             col(EpisodeCanonicalEpisode.canonical_episode_id).in_(
                 canonical_episode_ids,
             ),
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
-            col(Show.deleted_at).is_(None),
+            col(Title.deleted_at).is_(None),
         )
         .order_by(col(Season.season_number), col(Episode.episode_number))
     )
@@ -97,11 +97,13 @@ def _episodes_linking_to(
         tuple[uuid.UUID, uuid.UUID],
         list[EpisodeRecord],
     ] = defaultdict(list)
-    for canonical_id, source_id, episode, season, show in session.exec(statement).all():
+    for canonical_id, source_id, episode, season, title in session.exec(
+        statement,
+    ).all():
         if (canonical_id, source_id) not in wanted:
             continue
         linking[canonical_id, source_id].append(
-            EpisodeRecord(**_record_fields(episode, season, show)),
+            EpisodeRecord(**_record_fields(episode, season, title)),
         )
     return linking
 
@@ -124,12 +126,12 @@ def get_duplicated_canonical_episodes(
 
     linking = _episodes_linking_to(session, pairs)
     canonical_episodes = {
-        episode.id: (episode, season, show, source)
-        for episode, season, show, source in session.exec(
-            select(Episode, Season, Show, Source)
+        episode.id: (episode, season, title, source)
+        for episode, season, title, source in session.exec(
+            select(Episode, Season, Title, Source)
             .join(Season, onclause=col(Episode.season_id) == Season.id)
-            .join(Show, onclause=col(Season.show_id) == Show.id)
-            .join(Source, onclause=col(Show.source_id) == Source.id)
+            .join(Title, onclause=col(Season.title_id) == Title.id)
+            .join(Source, onclause=col(Title.source_id) == Source.id)
             .where(col(Episode.id).in_({canonical_id for canonical_id, _ in pairs})),
         ).all()
     }
@@ -148,11 +150,11 @@ def get_duplicated_canonical_episodes(
         source = sources.get(source_id)
         if found is None or source is None:
             continue
-        episode, season, show, _canonical_source = found
+        episode, season, title, _canonical_source = found
         outputs.append(
             DuplicatedCanonicalEpisodeOutput(
                 id=f"{episode.id}:{source.id}",
-                canonical=EpisodeRecord(**_record_fields(episode, season, show)),
+                canonical=EpisodeRecord(**_record_fields(episode, season, title)),
                 source=SourceListPublic.model_validate(source),
                 linked_episodes=linking.get((canonical_id, source_id), []),
             ),
@@ -161,7 +163,7 @@ def get_duplicated_canonical_episodes(
         outputs,
         key=lambda output: (
             output.source.name or "",
-            output.canonical.show.name or "",
+            output.canonical.title.name or "",
             output.canonical.season.season_number or 0,
             output.canonical.episode.episode_number or 0,
         ),

@@ -29,20 +29,20 @@ export const seasonColumns: ColumnDef<SeasonTableData>[] = [
     header: "Source",
     cell: ({ row }) => (
       <ParentLinkCell
-        to="/shows"
+        to="/titles"
         search={{ source_id: row.original.source_id }}
         name={row.original.source_name}
       />
     ),
   },
   {
-    accessorKey: "show_name",
-    header: "Show",
+    accessorKey: "title_name",
+    header: "Title",
     cell: ({ row }) => (
       <ParentLinkCell
         to="/seasons"
-        search={{ show_id: row.original.show_id }}
-        name={row.original.show_name}
+        search={{ title_id: row.original.title_id }}
+        name={row.original.title_name}
       />
     ),
   },

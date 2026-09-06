@@ -3,8 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Check, Copy, ExternalLink, Loader2, Sparkles } from "lucide-react"
 import { useState } from "react"
 
-import { ChannelsService, type ShowPublic, UsersService } from "@/client"
-import { useAllChannelShows } from "@/components/Channels/useChannelShows"
+import { ChannelsService, type TitlePublic, UsersService } from "@/client"
+import { useAllChannelTitles } from "@/components/Channels/useChannelTitles"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -93,18 +93,18 @@ async function findMissingImages(
 
 // TODO: Validate
 function buildGroupedSections(
-  showsByType: Record<string, ShowPublic[]>,
+  titlesByType: Record<string, TitlePublic[]>,
 ): string {
-  return Object.entries(showsByType)
-    .map(([type, shows]) => {
+  return Object.entries(titlesByType)
+    .map(([type, titles]) => {
       const uniqueNames = Array.from(
         new Set(
-          shows
-            .map((show) => show.name)
+          titles
+            .map((title) => title.name)
             .filter((name): name is string => Boolean(name)),
         ),
       ).sort((a, b) => a.localeCompare(b))
-      // Skip a whole section if every show in it was untitled.
+      // Skip a whole section if every title in it was untitled.
       if (uniqueNames.length === 0) return null
       const lines = uniqueNames.map((name) => `- ${name}`).join("\n")
       return `## ${type}\n${lines}`
@@ -115,16 +115,16 @@ function buildGroupedSections(
 
 // TODO: Validate
 function buildPrompt(
-  showsByType: Record<string, ShowPublic[]>,
+  titlesByType: Record<string, TitlePublic[]>,
   enabledServices: string[],
   alreadySuggested: Suggestion[] = [],
 ): string {
-  const groupedSections = buildGroupedSections(showsByType)
+  const groupedSections = buildGroupedSections(titlesByType)
 
   // Describe the channel using the media types it actually contains — only the
-  // types that have at least one titled show, matching the sections below.
-  const mediaTypes = Object.entries(showsByType)
-    .filter(([, shows]) => shows.some((show) => Boolean(show.name)))
+  // types that have at least one titled title, matching the sections below.
+  const mediaTypes = Object.entries(titlesByType)
+    .filter(([, titles]) => titles.some((title) => Boolean(title.name)))
     .map(([type]) => type)
   const mediaTypesPhrase =
     mediaTypes.length > 0 ? mediaTypes.join(" / ") : "content"
@@ -152,7 +152,7 @@ function buildPrompt(
 The user already follows the items below, grouped by type. Suggest 10 new items that are similar in theme, tone, or genre. Do not repeat anything from the existing list. There should be at least one type of suggestion for each of the different types in the existing list.
 
 Respond with a JSON array of objects only. No prose before or after. Each object must have:
-  - "title": string (the name of the show / movie / channel)
+  - "title": string (the name of the title / movie / channel)
   - "media_type": string — exactly one of "tv", "movie", or "video" ("video" means a YouTube channel)
   - "year": number (release year if known, otherwise omit)
   - "similar_to": array of strings (1 to 10 entries) (names taken from the existing list above — list as many as genuinely apply)
@@ -178,7 +178,7 @@ Example:
     "title": "{TITLE}",
     "media_type": "tv",
     "year": {YEAR},
-    "similar_to": ["{EXISTING SHOW 1}", "{EXISTING SHOW 2}", "{EXISTING SHOW 3}", "{EXISTING SHOW 4}", "{EXISTING SHOW 5}", "{EXISTING SHOW 6}", "{EXISTING SHOW 7}", "{EXISTING SHOW 8}", "{EXISTING SHOW 9}", "{EXISTING SHOW 10}"],
+    "similar_to": ["{EXISTING TITLE 1}", "{EXISTING TITLE 2}", "{EXISTING TITLE 3}", "{EXISTING TITLE 4}", "{EXISTING TITLE 5}", "{EXISTING TITLE 6}", "{EXISTING TITLE 7}", "{EXISTING TITLE 8}", "{EXISTING TITLE 9}", "{EXISTING TITLE 10}"],
     "description": "{ONE OR TWO SENTENCES DESCRIBING THE SUGGESTION ITSELF}",
     "url": "https://www.themoviedb.org/tv/{TMDB ID}",
     "image_url": "{DIRECT IMAGE URL IF CONFIDENT, OTHERWISE OMIT}"
@@ -192,12 +192,12 @@ ${groupedSections}
 }
 
 // TODO: Validate
-function groupShows(shows: ShowPublic[]): Record<string, ShowPublic[]> {
-  const groups: Record<string, ShowPublic[]> = {}
-  for (const show of shows) {
-    const key = show.media_type || "Other"
+function groupTitles(titles: TitlePublic[]): Record<string, TitlePublic[]> {
+  const groups: Record<string, TitlePublic[]> = {}
+  for (const title of titles) {
+    const key = title.media_type || "Other"
     if (!groups[key]) groups[key] = []
-    groups[key].push(show)
+    groups[key].push(title)
   }
   return groups
 }
@@ -249,10 +249,8 @@ export function AISuggestions({
   const [copiedMore, setCopiedMore] = useState(false)
   const [addingTitle, setAddingTitle] = useState<string | null>(null)
 
-  const { data: channelShows, isLoading: isLoadingShows } = useAllChannelShows(
-    channelId,
-    { refetchOnWindowFocus: false },
-  )
+  const { data: channelTitles, isLoading: isLoadingTitles } =
+    useAllChannelTitles(channelId, { refetchOnWindowFocus: false })
 
   const { data: sourcePreferences } = useQuery({
     queryKey: ["source-preferences"],
@@ -267,8 +265,8 @@ export function AISuggestions({
     )
     .map((preference) => preference.name ?? preference.source_key)
 
-  const shows = channelShows?.shows ?? []
-  const grouped = shows.length > 0 ? groupShows(shows) : null
+  const titles = channelTitles?.titles ?? []
+  const grouped = titles.length > 0 ? groupTitles(titles) : null
   const prompt = grouped ? buildPrompt(grouped, enabledServices) : ""
 
   // TODO: Validate
@@ -344,7 +342,7 @@ export function AISuggestions({
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Get show recommendations based on what's already in this channel. Copy
+        Get title recommendations based on what's already in this channel. Copy
         the prompt below, run it in whatever AI you like, then paste the JSON
         response back to see the suggestions. Nothing is sent through this
         server.
@@ -389,9 +387,9 @@ export function AISuggestions({
         </p>
       </div>
 
-      {!grouped && !isLoadingShows && (
+      {!grouped && !isLoadingTitles && (
         <p className="text-sm text-muted-foreground">
-          This channel has no shows yet — add some before asking for
+          This channel has no titles yet — add some before asking for
           suggestions.
         </p>
       )}

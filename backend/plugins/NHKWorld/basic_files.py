@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, override
 from app.files.models import File
 from plugins.NHKWorld.files import (
     NewVideoEpisodes,
-    ShowsSearch,
+    TitlesSearch,
     VideoEpisodes,
     VideoProgram,
 )
@@ -20,18 +20,18 @@ if TYPE_CHECKING:
 # TODO: Validate
 class BasicFiles(BasePlugin):
     # TODO: Validate
-    def shows_search_file(self, query: str, offset: int) -> ShowsSearch:
+    def titles_search_file(self, query: str, offset: int) -> TitlesSearch:
         """Contains one page of results for a search query."""
-        return self._file(ShowsSearch, query, offset)
+        return self._file(TitlesSearch, query, offset)
 
     # TODO: Validate
-    def video_program_file(self, show_key: str) -> VideoProgram:
-        """Contains a single show's information."""
-        return self._file(VideoProgram, show_key)
+    def video_program_file(self, title_key: str) -> VideoProgram:
+        """Contains a single title's information."""
+        return self._file(VideoProgram, title_key)
 
     # TODO: Validate
     def video_episodes_file(self, program_id: str) -> VideoEpisodes:
-        """Contains a show's episodes."""
+        """Contains a title's episodes."""
         return self._file(VideoEpisodes, program_id)
 
     # TODO: Consider making this a generic function

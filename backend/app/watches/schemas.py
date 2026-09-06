@@ -14,8 +14,8 @@ from app.schemas import (
     make_model_with_all_fields_optional,
 )
 from app.seasons.schemas import SeasonOutput
-from app.shows.schemas import ShowPublic
 from app.sources.schemas import SourcePublic
+from app.titles.schemas import TitlePublic
 from app.watches.models import BaseWatch, Watch
 
 
@@ -74,7 +74,7 @@ class WatchesListOutput(SQLModel):
     watches: list[WatchItem] = Field()
     episodes: dict[uuid.UUID, EpisodeOutput] = Field()
     seasons: dict[uuid.UUID, SeasonOutput] = Field()
-    shows: dict[uuid.UUID, ShowPublic] = Field()
+    titles: dict[uuid.UUID, TitlePublic] = Field()
     sources: dict[uuid.UUID, SourcePublic] = Field()
     plugins: dict[uuid.UUID, PluginOutput] = Field()
     total_count: int = Field(default=0)
@@ -84,8 +84,8 @@ class WatchesListOutput(SQLModel):
 
 # TODO: Validate
 class WatchImportResult(BaseModel):
-    show: str
-    show_url: str
+    title: str
+    title_url: str
     episode: str
     episode_url: str
 

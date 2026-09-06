@@ -10,7 +10,7 @@ from minbo import MinBO
 from minbo.exceptions import MovieNotFoundError, ShowNotFoundError
 from minbo.movie import Movie as MovieEndpoint
 from minbo.movie.models import MovieModel
-from minbo.show import Show as ShowEndpoint
+from minbo.show import Show as TitleEndpoint
 from minbo.show.models import ShowModel
 
 from plugins.utils.base_plugin.files import EndpointFile
@@ -29,11 +29,13 @@ def minbo() -> MinBO:
 
 
 # TODO: Validate
-class ShowFile(EndpointFile[ShowModel]):
+class TitleFile(EndpointFile[ShowModel]):
+    # TODO: Validate
     @override
-    def _endpoint(self) -> ShowEndpoint:
+    def _endpoint(self) -> TitleEndpoint:
         return minbo().show
 
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ShowNotFoundError)
@@ -46,21 +48,24 @@ class SeasonFile(EndpointFile[ShowModel]):
         self,
         session: Session,
         plugin: Plugin,
-        show_id: str,
+        title_id: str,
         season_number: int,
     ) -> None:
-        self.show_id = show_id
+        self.title_id = title_id
         self.season_number = season_number
-        super().__init__(session, plugin, f"{show_id}/{season_number}")
+        super().__init__(session, plugin, f"{title_id}/{season_number}")
 
+    # TODO: Validate
     @override
-    def _endpoint(self) -> ShowEndpoint:
+    def _endpoint(self) -> TitleEndpoint:
         return minbo().show
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self._endpoint().download(self.show_id, self.season_number)
+        return self._endpoint().download(self.title_id, self.season_number)
 
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ShowNotFoundError)
@@ -68,10 +73,12 @@ class SeasonFile(EndpointFile[ShowModel]):
 
 # TODO: Validate
 class MovieFile(EndpointFile[MovieModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> MovieEndpoint:
         return minbo().movie
 
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, MovieNotFoundError)

@@ -113,8 +113,8 @@ export function CanonicalEpisodeRow({
           {record.episode.name ?? "Unnamed"}
         </TmdbPageLink>
         <span className="block text-xs text-muted-foreground">
-          <TmdbPageLink url={record.show.tmdb_url}>
-            {record.show.name ?? "Unnamed"}
+          <TmdbPageLink url={record.title.tmdb_url}>
+            {record.title.name ?? "Unnamed"}
           </TmdbPageLink>
         </span>
       </span>

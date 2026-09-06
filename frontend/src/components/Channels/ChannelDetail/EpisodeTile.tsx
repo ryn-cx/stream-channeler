@@ -57,7 +57,7 @@ for (const path in allModules) {
 
 // TODO: Validate
 function TileOverlay({ episode }: { episode: EpisodeWithDetails }) {
-  const mediaType = episode.show.media_type || ""
+  const mediaType = episode.title.media_type || ""
   const pluginKey = episode.plugin.key
 
   let OverlayComponent: React.LazyExoticComponent<

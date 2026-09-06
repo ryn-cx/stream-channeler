@@ -60,15 +60,15 @@ CONCERT_URL_REGEX = build_url_regex("watch", "concert", group="concert_key")
 # https://www.crunchyroll.com/artist/MA899F54A4
 ARTIST_URL_REGEX = build_url_regex("artist", group="artist_key")
 # https://www.crunchyroll.com/series/GEXH3W29Z
-SERIES_URL_REGEX = build_url_regex("series", group="show_key")
+SERIES_URL_REGEX = build_url_regex("series", group="title_key")
 # https://www.crunchyroll.com/watch/GVWU8XW1Z
 EPISODE_URL_REGEX = build_url_regex("watch", group="episode_key")
 
 
 # TODO: Validate
-def show_is_a_series(show_key: str) -> bool:
-    """Report whether a `Show` key belongs to a series rather than an artist."""
-    return show_key.startswith("G")
+def title_is_a_series(title_key: str) -> bool:
+    """Report whether a `Title` key belongs to a series rather than an artist."""
+    return title_key.startswith("G")
 
 
 # TODO: Validate
@@ -88,12 +88,14 @@ def build_url(path: str) -> str:
     return f"https://crunchyroll.com/{path.lstrip('/')}"
 
 
-def series_url(show_key: str) -> str:
-    return build_url(f"series/{show_key}")
+# TODO: Validate
+def series_url(title_key: str) -> str:
+    return build_url(f"series/{title_key}")
 
 
-def artist_url(show_key: str) -> str:
-    return build_url(f"artist/{show_key}")
+# TODO: Validate
+def artist_url(title_key: str) -> str:
+    return build_url(f"artist/{title_key}")
 
 
 # TODO: Validate
@@ -136,7 +138,7 @@ def nearest_thumbnail(images: Sequence[SizedImage]) -> str | None:
 
 
 # TODO: Validate
-def show_image(images: SeriesImages) -> str | None:
+def title_image(images: SeriesImages) -> str | None:
     """Return the widest poster a listing carries, where it carries one.
 
     The wide one first because that is the shape the artwork is shown in, the
@@ -153,7 +155,7 @@ def show_image(images: SeriesImages) -> str | None:
 
 
 # TODO: Validate
-def show_thumbnail(images: SeriesImages) -> str | None:
+def title_thumbnail(images: SeriesImages) -> str | None:
     wide = images.poster_wide
     if wide and wide[0]:
         return nearest_thumbnail(wide[0])

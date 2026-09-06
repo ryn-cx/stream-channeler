@@ -1,3 +1,4 @@
+# TODO: Validate
 from __future__ import annotations
 
 import re
@@ -11,7 +12,7 @@ from plugins.Hulu.shared import (
     VIDEO_URL_REGEX,
     HuluShared,
 )
-from plugins.Hulu.utils import HuluMediaType, show_url
+from plugins.Hulu.utils import HuluMediaType, title_url
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.base import BaseReadURL
 from plugins.utils.base_plugin.initialize import BasePluginInitializer
@@ -19,14 +20,16 @@ from plugins.utils.base_plugin.initialize import BasePluginInitializer
 if TYPE_CHECKING:
     from datetime import datetime
 
-    from app.shows.models import Show
     from app.sources.models import Source
+    from app.titles.models import Title
 
 
+# TODO: Validate
 class HuluInitializer(HuluShared, BasePluginInitializer):
     pass
 
 
+# TODO: Validate
 class Hulu(
     HuluShared,
     BaseReadURL,
@@ -35,13 +38,15 @@ class Hulu(
 ):
     initializer = HuluInitializer
 
+    # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
         return (SERIES_URL_REGEX, MOVIE_URL_REGEX, VIDEO_URL_REGEX)
 
+    # TODO: Validate
     @override
-    def get_media_importer(self, input: Show | str) -> HuluMedia:
+    def get_media_importer(self, input: Title | str) -> HuluMedia:
         if isinstance(input, str):
             domain_regex = self._domain_regex()
             if re.match(domain_regex + SERIES_URL_REGEX, input):
@@ -64,7 +69,7 @@ class Hulu(
             raise InvalidURLError(msg)
 
         if not input.media_type:
-            msg = "Show.media_type is not set."
+            msg = "Title.media_type is not set."
             raise AttributeError(msg)
         if input.media_type == "Movie":
             return HuluMovie(self)
@@ -86,12 +91,12 @@ class Hulu(
         for group in self.search_file(names[0]).parsed().groups:
             for result in group.results:
                 if result.metrics_info.target_type == hulu_media_type:
-                    return show_url(result.metrics_info.target_id, hulu_media_type)
+                    return title_url(result.metrics_info.target_id, hulu_media_type)
         return None
 
     # TODO: Validate
     def update_source(self, source: Source, update_at: datetime) -> None:
         self._download_if_outdated(self._source_files(), update_at)
         self._create_channel_records()
-        self._mark_changed_shows_for_update(self._show_keys_from_all_xxx_files())
+        self._mark_changed_titles_for_update(self._title_keys_from_all_xxx_files())
         self.upsert_source(source.key)

@@ -17,13 +17,13 @@ from app.channels.episode_selector import EpisodeQueryBuilder
 from app.channels.models import Channel
 from app.channels.schemas import ChannelOptions
 from app.episodes.models import EpisodeCanonicalEpisode
-from app.shows.models import Show
+from app.titles.models import Title
 from app.users.models import User, UserSourcePreference
 from app.users.schemas import SourcePreference
 from tests.app.channels.utils import (
-    channel_show_show,
+    channel_title_title,
     create_random_channel,
-    create_random_channel_show,
+    create_random_channel_title,
 )
 from tests.app.episodes.utils import create_random_episode
 from tests.app.plugins.utils import create_random_plugin
@@ -38,7 +38,7 @@ SOURCE_KEY_B = "DedupTestSourceB"
 def _build_duplicated_channel(
     session: Session,
     user: User,
-) -> tuple[Channel, dict[str, Show]]:
+) -> tuple[Channel, dict[str, Title]]:
     """Build a channel with the same episode carried by two installed sources.
 
     The first source's row is the episode itself, since nothing else has a record
@@ -46,31 +46,31 @@ def _build_duplicated_channel(
     does once it works out the two are the same media.
     """
     channel = create_random_channel(session, user, is_public=False)
-    shows: dict[str, Show] = {}
+    titles: dict[str, Title] = {}
     canonical_episode = None
     for key in (SOURCE_KEY_A, SOURCE_KEY_B):
         plugin = create_random_plugin(session)
         source = create_random_source(session, plugin, key=key)
-        channel_show = create_random_channel_show(
+        channel_title = create_random_channel_title(
             session,
             channel,
             source,
             is_whitelist=False,
         )
-        show = channel_show_show(session, channel_show)
+        title = channel_title_title(session, channel_title)
         if canonical_episode is None:
-            canonical_episode = create_random_episode(session, show)
+            canonical_episode = create_random_episode(session, title)
         else:
-            episode = create_random_episode(session, show, is_canonical=False)
+            episode = create_random_episode(session, title, is_canonical=False)
             session.add(
                 EpisodeCanonicalEpisode(
                     episode_id=episode.id,
                     canonical_episode_id=canonical_episode.id,
                 ),
             )
-        shows[key] = show
+        titles[key] = title
     session.flush()
-    return channel, shows
+    return channel, titles
 
 
 # TODO: Validate
@@ -92,7 +92,7 @@ def _set_preferences(
 
 
 # TODO: Validate
-def _selected_show_ids(
+def _selected_title_ids(
     session: Session,
     channel: Channel,
     user: User,
@@ -104,7 +104,7 @@ def _selected_show_ids(
         channel_options or ChannelOptions(),
         user,
     )
-    return [result.episode.season.show.id for result in builder.get_episodes()]
+    return [result.episode.season.title.id for result in builder.get_episodes()]
 
 
 # A row that is the episode itself wins over a row linked to it whatever the
@@ -119,7 +119,7 @@ def test_duplicate_episode_collapses_to_priority_source(
     session_scoped_session: Session,
 ) -> None:
     user = create_random_user(session_scoped_session)
-    channel, shows = _build_duplicated_channel(session_scoped_session, user)
+    channel, titles = _build_duplicated_channel(session_scoped_session, user)
 
     # Prioritize SOURCE_KEY_B over SOURCE_KEY_A.
     _set_preferences(
@@ -131,9 +131,9 @@ def test_duplicate_episode_collapses_to_priority_source(
         ],
     )
 
-    show_ids = _selected_show_ids(session_scoped_session, channel, user)
+    title_ids = _selected_title_ids(session_scoped_session, channel, user)
 
-    assert show_ids == [shows[SOURCE_KEY_B].id]
+    assert title_ids == [titles[SOURCE_KEY_B].id]
 
 
 # TODO: Validate
@@ -141,7 +141,7 @@ def test_disabled_source_is_hidden_globally(
     session_scoped_session: Session,
 ) -> None:
     user = create_random_user(session_scoped_session)
-    channel, shows = _build_duplicated_channel(session_scoped_session, user)
+    channel, titles = _build_duplicated_channel(session_scoped_session, user)
 
     # SOURCE_KEY_B is the higher priority but globally disabled, so
     # SOURCE_KEY_A wins instead.
@@ -154,9 +154,9 @@ def test_disabled_source_is_hidden_globally(
         ],
     )
 
-    show_ids = _selected_show_ids(session_scoped_session, channel, user)
+    title_ids = _selected_title_ids(session_scoped_session, channel, user)
 
-    assert show_ids == [shows[SOURCE_KEY_A].id]
+    assert title_ids == [titles[SOURCE_KEY_A].id]
 
 
 # TODO: Validate
@@ -164,7 +164,7 @@ def test_channel_source_filter_stacks_on_top_of_preferences(
     session_scoped_session: Session,
 ) -> None:
     user = create_random_user(session_scoped_session)
-    channel, shows = _build_duplicated_channel(session_scoped_session, user)
+    channel, titles = _build_duplicated_channel(session_scoped_session, user)
 
     # Globally SOURCE_KEY_B wins, but the channel blacklists its source, so the
     # per-channel filter narrows the result to SOURCE_KEY_A.
@@ -177,10 +177,10 @@ def test_channel_source_filter_stacks_on_top_of_preferences(
         ],
     )
     options = ChannelOptions(
-        source_ids=[shows[SOURCE_KEY_B].source_id],
+        source_ids=[titles[SOURCE_KEY_B].source_id],
         source_ids_is_blacklist=True,
     )
 
-    show_ids = _selected_show_ids(session_scoped_session, channel, user, options)
+    title_ids = _selected_title_ids(session_scoped_session, channel, user, options)
 
-    assert show_ids == [shows[SOURCE_KEY_A].id]
+    assert title_ids == [titles[SOURCE_KEY_A].id]

@@ -7,7 +7,7 @@ from typing import ClassVar, Literal, overload
 from pydantic import BaseModel, Field
 from tminidb.search.multi.models import Result as MultiResult
 
-from app.canonical_media.tmdb import tmdb_show_key
+from app.canonical_media.tmdb import tmdb_title_key
 from app.media.media_type import TMDBMediaType
 from plugins.TMDB.basic_files import BasicFiles
 from plugins.TMDB.files import (
@@ -105,8 +105,8 @@ class TMDBSearch(BasicFiles):
             return (media_type, results[0].id) if results else None
 
         for result in self._search_for_title(None, name, year).parsed().results:
-            # SearchMulti returns movies, tv shows, people, collections etc. The results
-            # need to be filtered to only movies and tv shows.
+            # SearchMulti returns movies, tv titles, people, collections etc. The results
+            # need to be filtered to only movies and tv titles.
             if result.media_type in set(TMDBMediaType):
                 return TMDBMediaType(result.media_type), result.id
         return None
@@ -238,5 +238,5 @@ class TMDBSearch(BasicFiles):
             image_url=thumbnail_url(result.poster_path)
             or image_url(result.backdrop_path),
             media_type=self._SEARCH_MEDIA_TYPES[media_type],
-            media_identifier=tmdb_show_key(media_type, result.id),
+            media_identifier=tmdb_title_key(media_type, result.id),
         )

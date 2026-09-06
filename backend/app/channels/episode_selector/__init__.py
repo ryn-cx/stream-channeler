@@ -9,7 +9,7 @@ through:
 - `source_dedup` - which website's row for an episode stands for it
 - `canonical_columns` - reading the canonical row from inside the query
 - `sorting` - turning a sort key into the expression it orders by
-- `show_counts` - narrowing the result down to a handful of shows
+- `title_counts` - narrowing the result down to a handful of titles
 """
 
 from app.channels.episode_selector.query_builder import (

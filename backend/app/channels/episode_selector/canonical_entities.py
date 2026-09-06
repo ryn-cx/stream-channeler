@@ -30,13 +30,13 @@ from app.canonical_media.seasons import season_id_column
 from app.database import load_models
 from app.episodes.models import Episode
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.titles.models import Title
 
 load_models()
 
 CANONICAL_EPISODE = aliased(Episode)
 CANONICAL_SEASON = aliased(Season)
-CANONICAL_SHOW = aliased(Show)
+CANONICAL_TITLE = aliased(Title)
 # What says which episodes a listing stands for. The canonical episode is reached
 # through it rather than off the listing, so it is joined once here too and every
 # module reading the canonical episode reads it past this.
@@ -47,9 +47,9 @@ CANONICAL_EPISODE_LINK = canonical_episode_link()
 def episode_id() -> ColumnElement[UUID]:
     """Return the episode a row stands for, which is the row where it is canonical.
 
-    A website carries episodes the canonical show has no record of, so nothing
+    A website carries episodes the canonical title has no record of, so nothing
     was ever minted for them to stand for and they are the episode themselves.
-    They are still episodes of the canonical show the website's row is linked to,
+    They are still episodes of the canonical title the website's row is linked to,
     so everything
     keyed by the canonical episode reads this rather than the link.
     """

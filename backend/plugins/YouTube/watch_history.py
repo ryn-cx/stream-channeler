@@ -35,8 +35,8 @@ class WatchHistoryMixin(BaseWatchHistoryMixin):
                     episode_key=video_key,
                     watch_date=tz_datetime.fromisoformat(entry["time"]),
                     import_result=WatchImportResult(
-                        show=entry["subtitles"][0]["name"],
-                        show_url=entry["titleUrl"],
+                        title=entry["subtitles"][0]["name"],
+                        title_url=entry["titleUrl"],
                         episode=entry["title"].removeprefix("Watched "),
                         episode_url=entry["titleUrl"],
                     ),

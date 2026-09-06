@@ -31,13 +31,13 @@ def playlist_url(playlist_key: str) -> str:
 
 
 # TODO: Validate
-def show_url(show_key: str) -> str:
-    return build_url(f"show/{show_key}")
+def title_url(title_key: str) -> str:
+    return build_url(f"show/{title_key}")
 
 
 # TODO: Validate
-def show_season_url(show_key: str, season_number: str) -> str:
-    return build_url(f"show/{show_key}?season={season_number}")
+def title_season_url(title_key: str, season_number: str) -> str:
+    return build_url(f"show/{title_key}?season={season_number}")
 
 
 # TODO: Validate
@@ -59,15 +59,15 @@ def is_user_playlist(key: str) -> bool:
 def is_video_key(key: str) -> bool:
     """Return whether a  is for a video.
 
-    Show.key and Season.key is a video key if it is a free movie."""
+    Title.key and Season.key is a video key if it is a free movie."""
     # Videos are always 11 characters long and channels/playlists are never 11
     # characters long.
     return len(key) == 11  # noqa: PLR2004
 
 
 # TODO: Validate
-def is_show_key(key: str) -> bool:
-    """Report whether a key belongs to a show page."""
+def is_title_key(key: str) -> bool:
+    """Report whether a key belongs to a title page."""
     return key.startswith("SC")
 
 
@@ -76,7 +76,7 @@ def is_channel_key(key: str) -> bool:
     """Report whether a key belongs to a channel rather than to what one holds."""
     return not (
         is_video_key(key)
-        or is_show_key(key)
+        or is_title_key(key)
         or is_an_album(key)
         or is_user_playlist(key)
     )
@@ -98,28 +98,28 @@ def channel_key_from_uploads_playlist_key(key: str) -> str:
 
 
 # TODO: Validate
-def channel_uploads_playlist_key(show_key: str) -> str:
+def channel_uploads_playlist_key(title_key: str) -> str:
     """Return the playlist ID for the channel's uploads."""
-    return show_key[:1] + "U" + show_key[2:]
+    return title_key[:1] + "U" + title_key[2:]
 
 
 # TODO: Validate
-def show_season_key(show_key: str, season_number: str) -> str:
-    """Return the season key for one season of a show."""
-    return f"{show_key}/{season_number}"
+def title_season_key(title_key: str, season_number: str) -> str:
+    """Return the season key for one season of a title."""
+    return f"{title_key}/{season_number}"
 
 
 # TODO: Validate
-def is_show_season_key(key: str) -> bool:
-    """Report whether a key belongs to one season of a show."""
-    return is_show_key(key) and "/" in key
+def is_title_season_key(key: str) -> bool:
+    """Report whether a key belongs to one season of a title."""
+    return is_title_key(key) and "/" in key
 
 
 # TODO: Validate
-def split_show_season_key(season_key: str) -> tuple[str, str]:
-    """Split a season key back into its show key and season number."""
-    show_key, _, season_number = season_key.partition("/")
-    return show_key, season_number
+def split_title_season_key(season_key: str) -> tuple[str, str]:
+    """Split a season key back into its title key and season number."""
+    title_key, _, season_number = season_key.partition("/")
+    return title_key, season_number
 
 
 # TODO: Validate

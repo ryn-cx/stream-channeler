@@ -73,7 +73,7 @@ export function Dashboard() {
           <div className="text-center">
             <h2 className="text-xl font-semibold">Create channel</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Create a channel, add shows, and pick a sort order in a few quick
+              Create a channel, add titles, and pick a sort order in a few quick
               steps
             </p>
           </div>
@@ -105,7 +105,7 @@ export function Dashboard() {
           <div className="text-center">
             <h2 className="text-xl font-semibold">Stream Channeler Remote</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Play episodes back to back and queue shows for bulk import with a
+              Play episodes back to back and queue titles for bulk import with a
               companion userscript
             </p>
           </div>
@@ -133,7 +133,7 @@ export function Dashboard() {
               <div className="space-y-3 text-sm">
                 <p>
                   A channel is an automatically updated curated playlist of
-                  shows and movies. You choose exactly what appears on it and
+                  titles and movies. You choose exactly what appears on it and
                   how it's sorted.
                 </p>
                 <ol className="list-decimal list-inside space-y-1.5 ml-2">
@@ -183,26 +183,26 @@ export function Dashboard() {
             </AccordionContent>
           </AccordionItem>
 
-          {/* 3. Adding Shows */}
-          <AccordionItem value="add-shows">
+          {/* 3. Adding Titles */}
+          <AccordionItem value="add-titles">
             <AccordionTrigger>
               <span className="flex items-center gap-2">
                 <Search className="h-4 w-4" />
-                Adding Shows
+                Adding Titles
               </span>
             </AccordionTrigger>
             <AccordionContent>
               <div className="space-y-4 text-sm">
                 <p>
-                  There are two ways to add shows: <strong>Search</strong> and{" "}
+                  There are two ways to add titles: <strong>Search</strong> and{" "}
                   <strong>Manual URLs</strong>.
                 </p>
 
                 <div className="border rounded-lg p-4 space-y-2">
                   <h4 className="font-semibold">Search (Recommended)</h4>
                   <p>
-                    From the channel page, click <strong>Add Shows</strong> and
-                    use the <strong>Search</strong> tab. Type a show name and
+                    From the channel page, click <strong>Add Titles</strong> and
+                    use the <strong>Search</strong> tab. Type a title name and
                     results will appear from TMDB, covering the streaming
                     services it lists.
                   </p>
@@ -251,7 +251,7 @@ export function Dashboard() {
               <div className="space-y-4 text-sm">
                 <p>
                   Sorting controls the order episodes appear on your channel.
-                  You can sort by any field (air date, episode number, show
+                  You can sort by any field (air date, episode number, title
                   name, duration, etc.) and stack multiple sort rules. The last
                   rule is the primary sort.
                 </p>
@@ -270,9 +270,9 @@ export function Dashboard() {
                     </div>
                     <p className="text-muted-foreground">
                       Standard sorting. Episodes are ordered by the chosen
-                      field. All episodes from the same show will appear
+                      field. All episodes from the same title will appear
                       together. Use this when you want a straightforward sort
-                      like "newest first" or "alphabetical by show name."
+                      like "newest first" or "alphabetical by title name."
                     </p>
                   </div>
 
@@ -282,29 +282,29 @@ export function Dashboard() {
                       Interleave (Sequential / Random)
                     </div>
                     <p className="text-muted-foreground">
-                      Spreads episodes from different shows across the list
+                      Spreads episodes from different titles across the list
                       instead of grouping them. Think of it like shuffling a
-                      deck of cards: one episode from Show A, then one from Show
-                      B, then Show C, and so on. <strong>Sequential</strong>{" "}
-                      interleaves in a fixed order, while{" "}
-                      <strong>Random</strong> shuffles the show order each time.
-                      Great for a "TV channel" feel where you see variety
-                      instead of marathoning one show.
+                      deck of cards: one episode from Title A, then one from
+                      Title B, then Title C, and so on.{" "}
+                      <strong>Sequential</strong> interleaves in a fixed order,
+                      while <strong>Random</strong> shuffles the title order
+                      each time. Great for a "TV channel" feel where you see
+                      variety instead of marathoning one title.
                     </p>
                   </div>
 
                   <div className="border rounded-lg p-3 space-y-1">
                     <div className="flex items-center gap-2 font-medium">
                       <Layers className="h-4 w-4 text-primary" />
-                      Show Group
+                      Title Group
                     </div>
                     <p className="text-muted-foreground">
-                      Groups all episodes by show, then sorts the{" "}
-                      <em>shows themselves</em> using an aggregate function
+                      Groups all episodes by title, then sorts the{" "}
+                      <em>titles themselves</em> using an aggregate function
                       (sum, max, min, avg, count) on the chosen field. For
-                      example, "recently aired + show group + max" puts shows
+                      example, "recently aired + title group + max" puts titles
                       that have any recently aired episode first. Use this to
-                      prioritize certain shows over others based on their
+                      prioritize certain titles over others based on their
                       episodes' properties.
                     </p>
                   </div>
@@ -312,9 +312,9 @@ export function Dashboard() {
 
                 <div className="bg-muted/50 border rounded-lg p-3 text-muted-foreground">
                   <strong>Tip:</strong> Combine modes for powerful setups. For
-                  example, use Show Group to put recently-aired shows first,
-                  then Interleave to mix episodes between those shows, and
-                  Normal to sort by episode number within each show.
+                  example, use Title Group to put recently-aired titles first,
+                  then Interleave to mix episodes between those titles, and
+                  Normal to sort by episode number within each title.
                 </div>
               </div>
             </AccordionContent>
@@ -345,11 +345,11 @@ export function Dashboard() {
                     already watched
                   </li>
                   <li>
-                    <strong>Only Started Shows</strong>: only include shows
+                    <strong>Only Started Titles</strong>: only include titles
                     where you've watched at least one episode
                   </li>
                   <li>
-                    <strong>Only New Shows</strong>: only include shows you
+                    <strong>Only New Titles</strong>: only include titles you
                     haven't started yet
                   </li>
                   <li>
@@ -396,7 +396,7 @@ export function Dashboard() {
                 </p>
                 <p className="text-muted-foreground">
                   Watch data powers sorting options like "Last Watched" and
-                  filters like "Only Started Shows," making your channels
+                  filters like "Only Started Titles," making your channels
                   smarter over time.
                 </p>
               </div>
@@ -417,7 +417,7 @@ export function Dashboard() {
                   You can combine episodes from multiple channels into one view
                   using <strong>Additional Channels</strong>. This lets you
                   create a "super channel" that pulls from several smaller
-                  channels without duplicating shows.
+                  channels without duplicating titles.
                 </p>
                 <p>
                   Each channel keeps its own whitelist/blacklist settings, so
@@ -442,7 +442,7 @@ export function Dashboard() {
             <AccordionContent>
               <div className="space-y-3 text-sm">
                 <p>
-                  Each show in a channel can be in{" "}
+                  Each title in a channel can be in{" "}
                   <strong>Blacklist Mode</strong> (default) or{" "}
                   <strong>Whitelist Mode</strong>:
                 </p>

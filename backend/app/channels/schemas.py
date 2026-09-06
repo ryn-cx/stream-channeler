@@ -30,10 +30,10 @@ from app.schemas import (
 )
 from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
-from app.shows.models import Show
-from app.shows.schemas import ShowPublic
 from app.sources.models import Source
 from app.sources.schemas import SourcePublic
+from app.titles.models import Title
+from app.titles.schemas import TitlePublic
 
 
 # TODO: Validate
@@ -116,11 +116,11 @@ class ChannelPublicListOutput(BaseModel):
 
 
 # TODO: Validate
-class ChannelShowMembership(BaseModel):
+class ChannelTitleMembership(BaseModel):
     """One of the `User`'s `Channel`s, and whether it already holds a title.
 
     What a channel picker needs and nothing else. Reading it off the channels'
-    show lists means a request and a whole catalogue per channel, when the only
+    title lists means a request and a whole catalogue per channel, when the only
     question being asked of each is yes or no.
     """
 
@@ -130,7 +130,7 @@ class ChannelShowMembership(BaseModel):
     # A row the channel holds only to filter episodes out is not carrying the
     # title, so it reads as false: adding is what turns that row into one the
     # channel carries.
-    carries_show: bool
+    carries_title: bool
 
 
 # TODO: Validate
@@ -250,13 +250,13 @@ class EpisodeWithDetails(BaseModel):
 class ChannelEpisodeSeason(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    show_id: uuid.UUID
+    title_id: uuid.UUID
     name: str | None = Field(default=None)
     season_number: int | None = Field(default=None)
 
 
 # TODO: Validate
-class ChannelEpisodeShow(BaseModel):
+class ChannelEpisodeTitle(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
@@ -286,25 +286,25 @@ class ChannelEpisodePlugin(BaseModel):
 class ChannelEpisodesOutput(BaseModel):
     episodes: list[EpisodeWithDetails]
     seasons: dict[uuid.UUID, ChannelEpisodeSeason]
-    shows: dict[uuid.UUID, ChannelEpisodeShow]
+    titles: dict[uuid.UUID, ChannelEpisodeTitle]
     sources: dict[uuid.UUID, ChannelEpisodeSource]
     plugins: dict[uuid.UUID, ChannelEpisodePlugin]
 
 
 # TODO: Validate
-class ChannelShowGroup(BaseModel):
-    """The regular shows contributed by one channel within a combined channel."""
+class ChannelTitleGroup(BaseModel):
+    """The regular titles contributed by one channel within a combined channel."""
 
     channel_id: uuid.UUID
     channel_name: str | None
-    shows: list[ShowPublic] = Field(default_factory=list)
+    titles: list[TitlePublic] = Field(default_factory=list)
 
 
 # TODO: Validate
-class ChannelShowStats(BaseModel):
-    """What a channel's rows for one canonical show add up to.
+class ChannelTitleStats(BaseModel):
+    """What a channel's rows for one canonical title add up to.
 
-    A canonical show is counted by what its seasons and episodes are rather than by the
+    A canonical title is counted by what its seasons and episodes are rather than by the
     records holding them, so the same season on three websites is one season.
     """
 
@@ -313,23 +313,23 @@ class ChannelShowStats(BaseModel):
 
 
 # TODO: Validate
-class ChannelShowsOutput(BaseModel):
-    shows: list[ShowPublic] = Field(default_factory=list)
-    # Shows that don't belong to the channel but carry blacklist/whitelist entries for
+class ChannelTitlesOutput(BaseModel):
+    titles: list[TitlePublic] = Field(default_factory=list)
+    # Titles that don't belong to the channel but carry blacklist/whitelist entries for
     # episodes pulled in from other channels.
-    filter_only_shows: list[ShowPublic] = Field(default_factory=list)
+    filter_only_titles: list[TitlePublic] = Field(default_factory=list)
     sources: dict[uuid.UUID, SourcePublic] = Field(default_factory=dict)
-    # The canonical show behind each row, keyed by `canonical_show_id`. It carries
-    # the title's own name, which is what a show is read under rather than the name
+    # The canonical title behind each row, keyed by `canonical_title_id`. It carries
+    # the title's own name, which is what a title is read under rather than the name
     # any one website gave its row for it.
-    canonical_shows: dict[uuid.UUID, ShowPublic] = Field(default_factory=dict)
-    # The source each canonical show was written by, keyed by `canonical_show_id`.
-    # Kept apart from `sources` because that is where a show can be watched and
+    canonical_titles: dict[uuid.UUID, TitlePublic] = Field(default_factory=dict)
+    # The source each canonical title was written by, keyed by `canonical_title_id`.
+    # Kept apart from `sources` because that is where a title can be watched and
     # this is who wrote it down, which is never a website carrying it.
     canonical_sources: dict[uuid.UUID, SourcePublic] = Field(default_factory=dict)
-    # The regular shows grouped by the channel they come from, with the channel this
+    # The regular titles grouped by the channel they come from, with the channel this
     # endpoint was called on first and combined channels after it, sorted by name.
-    groups: list[ChannelShowGroup] = Field(default_factory=list)
+    groups: list[ChannelTitleGroup] = Field(default_factory=list)
     total: int = Field(default=0)
 
 
@@ -343,7 +343,7 @@ class WhitelistEntryInput(BaseInput):
 
 # TODO: Validate
 class BlacklistEpisodeInput(BaseInput):
-    show_id: uuid.UUID
+    title_id: uuid.UUID
     episode_id: uuid.UUID
     expires_at: datetime | None = Field(default=None)
 
@@ -355,17 +355,17 @@ class WhitelistEpisodeSourceEntryInput(BaseInput):
     # The website's own row for the episode, whose canonical episode is what the
     # entry ends up naming.
     episode_id: uuid.UUID
-    # The website's row for the show, which is what narrows the entry to one site.
-    show_id: uuid.UUID
+    # The website's row for the title, which is what narrows the entry to one site.
+    title_id: uuid.UUID
     marked: bool
     # `None` = never expires.
     expires_at: datetime | None = Field(default=None)
 
 
 # TODO: Validate
-class WhitelistShowInput(BaseInput):
+class WhitelistTitleInput(BaseInput):
     is_whitelist: bool | None = Field(default=None)
-    # Each entry's `id` is the `Show` id of one website's row for the show.
+    # Each entry's `id` is the `Title` id of one website's row for the title.
     sources: list[WhitelistEntryInput] = Field(default_factory=list)
     seasons: list[WhitelistEntryInput] = Field(default_factory=list)
     episodes: list[WhitelistEntryInput] = Field(default_factory=list)
@@ -376,15 +376,15 @@ class WhitelistShowInput(BaseInput):
 
 # TODO: Validate
 class WhitelistSourceOutput(BaseModel):
-    """One website's row for the show, and whether it is filtered."""
+    """One website's row for the title, and whether it is filtered."""
 
-    show_id: uuid.UUID
+    title_id: uuid.UUID
     source_id: uuid.UUID
     source_name: str | None
     favicon_url: str | None
     # The row itself, so a site carrying the title under more than one row can
     # name each of them, and so one can be edited without being fetched again.
-    show: ShowPublic
+    title: TitlePublic
     filtered: bool
     # TMDB is where the media is catalogued rather than a website it can be
     # watched on, so a row names it for the seasons it has a record of and never
@@ -395,8 +395,8 @@ class WhitelistSourceOutput(BaseModel):
 # TODO: Validate
 class WhitelistSeasonOutput(SeasonOutput):
     filtered: bool
-    # The `Show` ids of the websites' rows that carry this season.
-    show_ids: list[uuid.UUID]
+    # The `Title` ids of the websites' rows that carry this season.
+    title_ids: list[uuid.UUID]
 
 
 # TODO: Validate
@@ -408,7 +408,7 @@ class WhitelistEpisodeLinkOutput(EpisodeOutput):
     the same row as `id` and is kept as what the filters are keyed by.
     """
 
-    show_id: uuid.UUID
+    title_id: uuid.UUID
     episode_id: uuid.UUID
     # Whether an entry names this episode on this website alone, which is the
     # exception to whatever the season and episode entries decided.
@@ -423,8 +423,8 @@ class WhitelistEpisodeOutput(EpisodeOutput):
     canonical_episode_id: uuid.UUID
     filtered: bool
     expires_at: datetime | None = Field(default=None)
-    # The `Show` ids of the websites' rows that carry this episode.
-    show_ids: list[uuid.UUID]
+    # The `Title` ids of the websites' rows that carry this episode.
+    title_ids: list[uuid.UUID]
     # Each website's row on its own, so one website's account of the episode can
     # be read, and filtered, rather than only the row they were folded into.
     links: list[WhitelistEpisodeLinkOutput]
@@ -436,7 +436,7 @@ class WhitelistEpisodeOutput(EpisodeOutput):
 
 
 # TODO: Validate
-class WhitelistShowOutput(ShowPublic):
+class WhitelistTitleOutput(TitlePublic):
     """The title's sites and seasons, which is what the filter page opens on.
 
     The episodes are read a season at a time as each is expanded rather than all
@@ -460,7 +460,7 @@ class WhitelistEpisodesOutput(BaseModel):
 # TODO: Validate
 class SortOptionOutput(BaseModel):
     label: str
-    model: Literal["episode", "season", "show", "source", "plugin", "channel"]
+    model: Literal["episode", "season", "title", "source", "plugin", "channel"]
     field: str
 
 
@@ -475,12 +475,12 @@ class SortKeyInput(BaseInput):
     MODEL_MAP: ClassVar[
         dict[
             str,
-            type[Episode | Season | Show | Source | Plugin | Channel],
+            type[Episode | Season | Title | Source | Plugin | Channel],
         ]
     ] = {
         "episode": Episode,
         "season": Season,
-        "show": Show,
+        "title": Title,
         "source": Source,
         "plugin": Plugin,
         # An episode reads as coming from the channel it was added through, which
@@ -488,7 +488,7 @@ class SortKeyInput(BaseInput):
         "channel": Channel,
     }
 
-    model: Literal["episode", "season", "show", "source", "plugin", "channel"]
+    model: Literal["episode", "season", "title", "source", "plugin", "channel"]
     field: str
     direction: Literal["ascending", "descending"]
     order: Literal["sequential", "interleave", "randomize"] = Field()
@@ -501,7 +501,7 @@ class SortKeyInput(BaseInput):
     @property
     def model_class(
         self,
-    ) -> type[Episode | Season | Show | Source | Plugin | Channel]:
+    ) -> type[Episode | Season | Title | Source | Plugin | Channel]:
         return self.MODEL_MAP[self.model]
 
     # TODO: Validate
@@ -548,9 +548,9 @@ class ChannelOptions(BaseInput):
     maximum_watch_date_relative: int | None = Field(default=None)
     minimum_air_date_relative: int | None = Field(default=None)
     maximum_air_date_relative: int | None = Field(default=None)
-    total_shows_count: int | None = Field(default=None, ge=0)
-    started_shows_count: int | None = Field(default=None, ge=0)
-    new_shows_count: int | None = Field(default=None, ge=0)
+    total_titles_count: int | None = Field(default=None, ge=0)
+    started_titles_count: int | None = Field(default=None, ge=0)
+    new_titles_count: int | None = Field(default=None, ge=0)
     minimum_duration: int | None = Field(default=None)
     maximum_duration: int | None = Field(default=None)
     limit: int | None = Field(default=1000, ge=1, le=1000)

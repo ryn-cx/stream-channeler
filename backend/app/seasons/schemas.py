@@ -16,13 +16,13 @@ from app.schemas import (
     make_model_with_all_fields_optional,
 )
 from app.seasons.models import BaseSeason, Season
-from app.shows.models import Show
-from app.shows.schemas import ShowPublic
 from app.sources.schemas import SourceListPublic
+from app.titles.models import Title
+from app.titles.schemas import TitlePublic
 
 
 # TODO: Validate
-class SeasonCreate(BaseCreateWithParentAndKey[Season, Show], BaseSeason):
+class SeasonCreate(BaseCreateWithParentAndKey[Season, Title], BaseSeason):
     """Schema for creating a `Season`."""
 
 
@@ -38,7 +38,7 @@ class SeasonUpdate(
 class SeasonOutput(BaseSeason):
     """Schema for returning a `Season`."""
 
-    show_id: uuid.UUID
+    title_id: uuid.UUID
     id: uuid.UUID
     # The season's own page on themoviedb.org. TMDB builds the address out of the
     # key of the title above the season rather than out of anything the season
@@ -53,16 +53,16 @@ class SeasonListOutput(SeasonOutput):
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)  # type: ignore[assignment]
 
-    show_name: str | None = Field(validation_alias=AliasPath("show", "name"))
-    source_id: uuid.UUID = Field(validation_alias=AliasPath("show", "source_id"))
+    title_name: str | None = Field(validation_alias=AliasPath("title", "name"))
+    source_id: uuid.UUID = Field(validation_alias=AliasPath("title", "source_id"))
     source_name: str | None = Field(
-        validation_alias=AliasPath("show", "source", "name"),
+        validation_alias=AliasPath("title", "source", "name"),
     )
     plugin_id: uuid.UUID = Field(
-        validation_alias=AliasPath("show", "source", "plugin_id"),
+        validation_alias=AliasPath("title", "source", "plugin_id"),
     )
     plugin_name: str | None = Field(
-        validation_alias=AliasPath("show", "source", "plugin", "key"),
+        validation_alias=AliasPath("title", "source", "plugin", "key"),
     )
 
 
@@ -71,14 +71,14 @@ class SeasonRecord(BaseModel):
     """A `Season` and what holds it, each served as the record it already is."""
 
     season: SeasonOutput
-    show: ShowPublic
+    title: TitlePublic
     source: SourceListPublic
 
     # TODO: Validate
     @model_validator(mode="after")
     def _read_tmdb_url(self) -> Self:
         self.season.tmdb_url = tmdb_season_url(
-            self.show.key,
+            self.title.key,
             self.season.season_number,
         )
         return self

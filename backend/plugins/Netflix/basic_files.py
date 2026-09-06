@@ -12,8 +12,8 @@ class BasicFiles(BasePlugin):
         return self._file(Title, title_key)
 
     # TODO: Validate
-    def seasons_file(self, show_key: str) -> Seasons:
-        return self._file(Seasons, show_key)
+    def seasons_file(self, title_key: str) -> Seasons:
+        return self._file(Seasons, title_key)
 
     # TODO: Validate
     def season_episodes_file(self, season_id: str | int) -> SeasonEpisodes:

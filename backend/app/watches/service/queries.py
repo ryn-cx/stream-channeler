@@ -22,10 +22,10 @@ from app.schemas import ReadOptions
 from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
 from app.service.responses import get_read_results
-from app.shows.models import Show
-from app.shows.schemas import ShowPublic
 from app.sources.models import Source
 from app.sources.schemas import SourcePublic
+from app.titles.models import Title
+from app.titles.schemas import TitlePublic
 from app.users.models import User
 from app.watches.identifiers import (
     canonical_id_by_watch,
@@ -80,8 +80,8 @@ def _representative_episode_subquery(
         )
         .join(canonical_link, links_of(Episode, canonical_link))
         .join(Season, col(Season.id) == col(Episode.season_id))
-        .join(Show, col(Show.id) == col(Season.show_id))
-        .join(Source, col(Source.id) == col(Show.source_id))
+        .join(Title, col(Title.id) == col(Season.title_id))
+        .join(Source, col(Source.id) == col(Title.source_id))
         .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
         .where(col(Episode.deleted_at).is_(None))
         .where(col(Plugin.key) != TMDB_PLUGIN_KEY)
@@ -103,8 +103,8 @@ def _own_visible_episode_subquery() -> ScalarSelect[uuid.UUID]:
     return (
         select(col(WatchedEpisode.id))
         .join(Season, col(Season.id) == col(WatchedEpisode.season_id))
-        .join(Show, col(Show.id) == col(Season.show_id))
-        .join(Source, col(Source.id) == col(Show.source_id))
+        .join(Title, col(Title.id) == col(Season.title_id))
+        .join(Source, col(Source.id) == col(Title.source_id))
         .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
         .where(col(WatchedEpisode.id) == col(Watch.episode_id))
         .where(col(WatchedEpisode.deleted_at).is_(None))
@@ -143,8 +143,8 @@ def _episode_watch_base_statement(user_id: uuid.UUID) -> SelectOfScalar[Watch]:
             ),
         )
         .join(Season, col(Season.id) == col(Episode.season_id))
-        .join(Show, col(Show.id) == col(Season.show_id))
-        .join(Source, col(Source.id) == col(Show.source_id))
+        .join(Title, col(Title.id) == col(Season.title_id))
+        .join(Source, col(Source.id) == col(Title.source_id))
         .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
         .where(Watch.user_id == user_id)
     )
@@ -167,7 +167,7 @@ def get_watched_episodes(
         extra_columns={
             "plugin": col(Plugin.key),
             "source": col(Source.name),
-            "show": col(Show.name),
+            "title": col(Title.name),
             "season": col(Season.name),
             "episode": col(Episode.name),
         },
@@ -192,8 +192,8 @@ def _own_visible_episodes_by_watch(
         .select_from(Watch)
         .join(Episode, col(Episode.id) == col(Watch.episode_id))
         .join(Season, col(Season.id) == col(Episode.season_id))
-        .join(Show, col(Show.id) == col(Season.show_id))
-        .join(Source, col(Source.id) == col(Show.source_id))
+        .join(Title, col(Title.id) == col(Season.title_id))
+        .join(Source, col(Source.id) == col(Title.source_id))
         .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
         .where(
             col(Watch.id).in_(watch_ids),
@@ -248,7 +248,7 @@ def _format_watched_episodes_data(
 ) -> WatchesListOutput:
     episodes_dict: dict[uuid.UUID, EpisodeOutput] = {}
     seasons_dict: dict[uuid.UUID, SeasonOutput] = {}
-    shows_dict: dict[uuid.UUID, ShowPublic] = {}
+    titles_dict: dict[uuid.UUID, TitlePublic] = {}
     sources_dict: dict[uuid.UUID, SourcePublic] = {}
     plugins_dict: dict[uuid.UUID, PluginOutput] = {}
     watches: list[WatchItem] = []
@@ -260,8 +260,8 @@ def _format_watched_episodes_data(
         if episode is None:
             continue
         season = episode.season
-        show = season.show
-        source = show.source
+        title = season.title
+        source = title.source
         plugin = source.plugin
 
         canonical_episode_id = canonical_id_of(episode)
@@ -271,8 +271,8 @@ def _format_watched_episodes_data(
             )
         if season.id not in seasons_dict:
             seasons_dict[season.id] = SeasonOutput.model_validate(season)
-        if show.id not in shows_dict:
-            shows_dict[show.id] = ShowPublic.model_validate(show)
+        if title.id not in titles_dict:
+            titles_dict[title.id] = TitlePublic.model_validate(title)
         if source.id not in sources_dict:
             sources_dict[source.id] = SourcePublic.model_validate(source)
         if plugin.id not in plugins_dict:
@@ -293,7 +293,7 @@ def _format_watched_episodes_data(
         watches=watches,
         episodes=episodes_dict,
         seasons=seasons_dict,
-        shows=shows_dict,
+        titles=titles_dict,
         sources=sources_dict,
         plugins=plugins_dict,
     )

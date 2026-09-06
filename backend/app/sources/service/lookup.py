@@ -14,8 +14,8 @@ from app.plugins.identifiers import (
 )
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show
 from app.sources.models import Source
+from app.titles.models import Title
 
 OTHER_SOURCE_KEY = "Other"
 
@@ -43,12 +43,12 @@ def episode_counts_by_source_id(session: Session) -> dict[uuid.UUID, int]:
     # media or a non-canonical row of one, so both are counted under it.
     rows = session.exec(
         select(Source.id, func.count(col(Episode.id)))
-        .select_from(Show)
-        .join(Source, col(Show.source_id) == Source.id)
-        .join(Season, col(Season.show_id) == Show.id)
+        .select_from(Title)
+        .join(Source, col(Title.source_id) == Source.id)
+        .join(Season, col(Season.title_id) == Title.id)
         .join(Episode, col(Episode.season_id) == Season.id)
         .where(
-            col(Show.deleted_at).is_(None),
+            col(Title.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
             col(Episode.deleted_at).is_(None),
         )

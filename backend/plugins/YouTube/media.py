@@ -20,7 +20,7 @@ from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show
+from app.titles.models import Title
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
 from plugins.utils.base_plugin.importer import BaseImporter
@@ -36,16 +36,16 @@ from plugins.YouTube.utils import (
     is_an_album,
     is_channel_uploads_playlist_key,
     is_free_movies_channel,
-    is_show_key,
-    is_show_season_key,
+    is_title_key,
+    is_title_season_key,
     is_user_playlist,
     is_video_key,
     playlist_url,
-    show_season_key,
-    show_season_url,
-    show_url,
-    split_show_season_key,
+    split_title_season_key,
     thumbnail_url,
+    title_season_key,
+    title_season_url,
+    title_url,
     video_is_valid,
     video_url,
 )
@@ -72,8 +72,8 @@ PLAYLIST_VIDEO_URL_REGEX = (
     r"list=(?P<playlist_key>(?:PL|OLAK5uy_|UU)[^&]+)"
 )
 # https://www.youtube.com/playlist?list=TVSHX2-tv9KBHSAWLsDbH3h9vNzwxEAyyqXMw
-SHOW_PLAYLIST_URL_REGEX = (
-    LONG_DOMAIN_REGEX + r"\/playlist\?list=(?P<show_playlist_key>TVSH[^&]+)"
+TITLE_PLAYLIST_URL_REGEX = (
+    LONG_DOMAIN_REGEX + r"\/playlist\?list=(?P<title_playlist_key>TVSH[^&]+)"
 )
 # https://www.youtube.com/playlist?list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh
 PLAYLIST_URL_REGEX = (
@@ -92,8 +92,8 @@ CHANNEL_KEY_URL_REGEX = (
 )
 # https://www.youtube.com/show/SCYT6SmwXZxUksg_rJd_nzuw
 # https://www.youtube.com/show/SCYT6SmwXZxUksg_rJd_nzuw?season=23&sbp=...
-SHOW_URL_REGEX = (
-    LONG_DOMAIN_REGEX + r"\/show\/(?P<show_key>SC[A-Za-z0-9_-]+?)(?:$|[/?])"
+TITLE_URL_REGEX = (
+    LONG_DOMAIN_REGEX + r"\/show\/(?P<title_key>SC[A-Za-z0-9_-]+?)(?:$|[/?])"
 )
 # https://www.youtube.com/user/jawed
 CHANNEL_USERNAME_URL_REGEX = (
@@ -109,10 +109,10 @@ CHANNEL_HANDLE_URL_REGEX = (
 
 # TODO: Validate
 class YouTubeMedia(YouTubeShared, BaseImporter):
-    _show_key: str
+    _title_key: str
     _playlist_key: str
     _video_key: str | None
-    _whole_show: bool
+    _whole_title: bool
     _musician_track: bool
 
     # TODO: Validate
@@ -121,11 +121,11 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
     def _url_regexes(cls) -> tuple[str, ...]:
         return (
             PLAYLIST_VIDEO_URL_REGEX,  # Must be first due to regex overlap
-            SHOW_PLAYLIST_URL_REGEX,
+            TITLE_PLAYLIST_URL_REGEX,
             PLAYLIST_URL_REGEX,
             VIDEO_URL_REGEX,
             CHANNEL_KEY_URL_REGEX,
-            SHOW_URL_REGEX,
+            TITLE_URL_REGEX,
             CHANNEL_USERNAME_URL_REGEX,
             CHANNEL_HANDLE_URL_REGEX,
         )
@@ -149,16 +149,16 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
     @override
     def extract_media_info(self, url: str) -> MediaInfo:
         self._read_url(url)
-        if self._whole_show:
-            return MediaInfo(self._show_key)
+        if self._whole_title:
+            return MediaInfo(self._title_key)
         if self._video_key is None:
-            return MediaInfo(self._show_key, season_key=self._playlist_key)
+            return MediaInfo(self._title_key, season_key=self._playlist_key)
         # The track is looked for in every release of the musician, since the URL
-        # named no release and the show holds one season for each of them.
+        # named no release and the title holds one season for each of them.
         if self._musician_track:
-            return MediaInfo(self._show_key, episode_key=self._video_key)
+            return MediaInfo(self._title_key, episode_key=self._video_key)
         return MediaInfo(
-            self._show_key,
+            self._title_key,
             season_key=self._playlist_key,
             episode_key=self._video_key,
         )
@@ -166,7 +166,7 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
     # TODO: Validate
     def _read_url(self, url: str) -> None:  # noqa: PLR0911 - One return per kind of address.
         self._video_key = None
-        self._whole_show = False
+        self._whole_title = False
         self._musician_track = False
 
         if match := re.match(PLAYLIST_VIDEO_URL_REGEX, url):
@@ -174,8 +174,8 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
             self._read_playlist(match.group("playlist_key"), url)
             return
 
-        if match := re.match(SHOW_PLAYLIST_URL_REGEX, url):
-            self._read_show_playlist(match.group("show_playlist_key"), url)
+        if match := re.match(TITLE_PLAYLIST_URL_REGEX, url):
+            self._read_title_playlist(match.group("title_playlist_key"), url)
             return
 
         if match := re.match(PLAYLIST_URL_REGEX, url):
@@ -192,8 +192,8 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
             self._read_channel(channel_key, url)
             return
 
-        if match := re.match(SHOW_URL_REGEX, url):
-            self._read_show(match.group("show_key"), url)
+        if match := re.match(TITLE_URL_REGEX, url):
+            self._read_title(match.group("title_key"), url)
             return
 
         if match := re.match(CHANNEL_USERNAME_URL_REGEX, url):
@@ -239,20 +239,20 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
         # their own, and the playlist they are listed as is named after the channel,
         # so the channel is read off the key rather than looked up.
         if is_channel_uploads_playlist_key(playlist_key):
-            self._show_key = channel_key_from_uploads_playlist_key(playlist_key)
-            self._raise_if_invalid_channel(self._show_key, url)
+            self._title_key = channel_key_from_uploads_playlist_key(playlist_key)
+            self._raise_if_invalid_channel(self._title_key, url)
             return
 
-        # A release belongs to the musician's Topic channel, which is the show its
+        # A release belongs to the musician's Topic channel, which is the title its
         # tracks went up on, so importing it brings in the musician rather than the
         # release on its own. A release whose tracks went up somewhere else is its
-        # own show, since a channel that is not a Topic lists far more than music.
+        # own title, since a channel that is not a Topic lists far more than music.
         if is_an_album(playlist_key):
             music_playlist_file = self.music_playlist_file(playlist_key)
             self.raise_if_invalid_file(music_playlist_file, url)
             channel_key = music_playlist_file.artist_channel_id()
             if not channel_key:
-                self._show_key = playlist_key
+                self._title_key = playlist_key
                 return
             # The release is imported as one of the musician's when the channel its
             # tracks went up on is a Topic channel, which is something only that
@@ -261,12 +261,12 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
             # Nothing the channel lists names the release, so what the URL named is
             # remembered for the seasons of the channel to be read with.
             self.record_album_playlist_key(playlist_key)
-            self._show_key = channel_key
+            self._title_key = channel_key
             return
 
         playlist_items_file = self.playlist_items_file(playlist_key)
         self.raise_if_invalid_file(playlist_items_file, url)
-        self._show_key = get_first_item(
+        self._title_key = get_first_item(
             playlist_items_file.parsed().items,
         ).snippet.channel_id
 
@@ -278,113 +278,113 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
 
         channel_key = videos_file.parsed().items[0].snippet.channel_id
         # A channel that never lists this video cannot be imported to reach it, so the
-        # video is imported as a show of its own instead.
+        # video is imported as a title of its own instead.
         if is_free_movies_channel(channel_key):
-            self._show_key = video_key
+            self._title_key = video_key
         else:
-            self._show_key = channel_key
+            self._title_key = channel_key
 
-        if is_video_key(self._show_key):
-            self._playlist_key = self._show_key
+        if is_video_key(self._title_key):
+            self._playlist_key = self._title_key
             return
 
-        # Whether the show the video belongs to is a musician rather than a channel
+        # Whether the title the video belongs to is a musician rather than a channel
         # is something only the channel says, and what the URL brought in is named
         # by seasons that differ between the two.
-        self._raise_if_invalid_channel(self._show_key, url)
+        self._raise_if_invalid_channel(self._title_key, url)
 
         # A track on a Topic channel is listed by the release it is on rather than
         # by an uploads season, and which release that is only the musician's own
         # listing says, so the URL asks for the musician.
-        if self.is_topic_channel(self._show_key):
-            self._playlist_key = self._show_key
+        if self.is_topic_channel(self._title_key):
+            self._playlist_key = self._title_key
             self._musician_track = True
         else:
-            self._playlist_key = channel_uploads_playlist_key(self._show_key)
+            self._playlist_key = channel_uploads_playlist_key(self._title_key)
 
     # TODO: Validate
-    def _read_show_playlist(self, show_playlist_key: str, url: str) -> None:
-        show_listing_file = self.show_listing_file(show_playlist_key)
-        self.raise_if_invalid_file(show_listing_file, url)
-        show_key = show_listing_file.show_key()
-        if show_key is None:
+    def _read_title_playlist(self, title_playlist_key: str, url: str) -> None:
+        title_listing_file = self.title_listing_file(title_playlist_key)
+        self.raise_if_invalid_file(title_listing_file, url)
+        title_key = title_listing_file.title_key()
+        if title_key is None:
             msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
-        self._show_key = show_key
-        self._playlist_key = show_key
-        self._whole_show = True
-        self.raise_if_invalid_file(self.show_page_file(show_key), url)
+        self._title_key = title_key
+        self._playlist_key = title_key
+        self._whole_title = True
+        self.raise_if_invalid_file(self.title_page_file(title_key), url)
 
     # TODO: Validate
-    def _read_show(self, show_key: str, url: str) -> None:
-        self._show_key = show_key
+    def _read_title(self, title_key: str, url: str) -> None:
+        self._title_key = title_key
         # The page names the playlist the listing is asked for by, so it is read
         # before the listing rather than beside it.
-        self.raise_if_invalid_file(self.show_page_file(show_key), url)
-        self.raise_if_invalid_file(self.show_listing_file_for_show(show_key), url)
-        if not self.show_season_numbers_from_file(show_key):
+        self.raise_if_invalid_file(self.title_page_file(title_key), url)
+        self.raise_if_invalid_file(self.title_listing_file_for_title(title_key), url)
+        if not self.title_season_numbers_from_file(title_key):
             msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
 
-        # A URL for one season only asks for that season, where a URL for the show
+        # A URL for one season only asks for that season, where a URL for the title
         # asks for all of it.
         season = parse_qs(urlparse(url).query).get("season", [])
         if season:
-            self._playlist_key = show_season_key(show_key, season[0])
+            self._playlist_key = title_season_key(title_key, season[0])
         else:
-            self._playlist_key = show_key
-            self._whole_show = True
+            self._playlist_key = title_key
+            self._whole_title = True
 
     # TODO: Validate
-    def _read_channel(self, show_key: str, url: str) -> None:
-        self._show_key = show_key
+    def _read_channel(self, title_key: str, url: str) -> None:
+        self._title_key = title_key
         # A handle and a username are looked up in files of their own, and the
         # channel the key names is what says whether it is a Topic channel, so it is
         # read here rather than left to whatever asks first.
-        self._raise_if_invalid_channel(show_key, url)
+        self._raise_if_invalid_channel(title_key, url)
 
         # The channel only lists a fraction of the videos it owns, so importing it
         # would import almost none of them. Its videos are imported one at a time.
-        if is_free_movies_channel(show_key):
+        if is_free_movies_channel(title_key):
             msg = (
-                f"{show_key} does not list most of the videos it owns, so import "
+                f"{title_key} does not list most of the videos it owns, so import "
                 f"the URL of an individual video instead of the channel: {url}"
             )
             raise InvalidURLError(msg)
 
         # A Topic channel has no uploads season, because what it lists is releases,
-        # so the URL asks for the channel itself the way a show URL does.
-        if self.is_topic_channel(show_key):
-            self._playlist_key = show_key
-            self._whole_show = True
+        # so the URL asks for the channel itself the way a title URL does.
+        if self.is_topic_channel(title_key):
+            self._playlist_key = title_key
+            self._whole_title = True
         else:
-            self._playlist_key = channel_uploads_playlist_key(show_key)
+            self._playlist_key = channel_uploads_playlist_key(title_key)
 
-    # A YouTube show is always imported for a specific playlist.
+    # A YouTube title is always imported for a specific playlist.
     # TODO: Validate
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
         media_info = self.extract_media_info(url)
-        show_key = media_info.show_key
-        existing_show = self._preload_show(
-            show_key,
+        title_key = media_info.title_key
+        existing_title = self._preload_title(
+            title_key,
             preload_episodes=True,
         ).one_or_none()
 
-        if not existing_show:
-            existing_show = self.upsert_show(self.source, show_key)
+        if not existing_title:
+            existing_title = self.upsert_title(self.source, title_key)
 
         # If a channel is imported but a new playlist is added and that playlist is the
         # URL being imported this will update the channel information to include that
         # playlist.
-        elif self._playlist_is_missing(existing_show, self._playlist_key):
+        elif self._playlist_is_missing(existing_title, self._playlist_key):
             self._download_if_outdated(
-                self._show_files(show_key),
+                self._title_files(title_key),
                 tz_datetime.now(),
             )
-            existing_show = self.upsert_show(self.source, show_key)
+            existing_title = self.upsert_title(self.source, title_key)
 
-        return self._import_results(existing_show, media_info)
+        return self._import_results(existing_title, media_info)
 
     # TODO: Validate
     def update_seasons(self, seasons: Sequence[Season]) -> None:
@@ -405,7 +405,7 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
                 key
                 for key in self._episode_keys_from_season_files(
                     season.key,
-                    season.show.key,
+                    season.title.key,
                 )
                 if key not in video_keys
             )
@@ -413,7 +413,7 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
         self._batch_download_missing_videos(video_keys)
 
         for season in seasons:
-            self._update_and_upsert_show(season.show)
+            self._update_and_upsert_title(season.title)
             season.status = None
             self.session.commit()
             self.clear_file_cache()
@@ -472,186 +472,186 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
 
     # TODO: Validate
     @override
-    def tmdb_lookup_info(self, show_key: str) -> list[TMDBLookupInfo]:
+    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
         """Return what to look a title up on TMDB by, where TMDB holds one.
 
         A channel, a playlist and a musician's releases are things YouTube has
         and TMDB does not, so nothing is looked up for them and they are left
         standing for themselves.
         """
-        show = self._preload_show(show_key).one_or_none()
-        if show is None or not show.name:
+        title = self._preload_title(title_key).one_or_none()
+        if title is None or not title.name:
             return []
-        return [TMDBLookupInfo(show.name, self.tmdb_media_type(show_key), None)]
+        return [TMDBLookupInfo(title.name, self.tmdb_media_type(title_key), None)]
 
     # TODO: Validate
     @override
-    def upsert_show(  # noqa: PLR0911 - One return per kind of title.
+    def upsert_title(  # noqa: PLR0911 - One return per kind of title.
         self,
         source: Source,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
-    ) -> Show:
-        if is_video_key(show_key):
-            return self._upsert_show_movie(show_key, force=force)
-        if is_show_key(show_key):
-            return self._upsert_show_series(show_key, force=force)
-        if is_an_album(show_key):
-            return self._upsert_show_music(show_key, force=force)
-        if is_user_playlist(show_key):
-            return self._upsert_show_playlist(show_key, force=force)
-        if self.is_topic_channel(show_key):
-            return self._upsert_show_topic(show_key, force=force)
-        if self.is_movies_channel(show_key):
-            return self._upsert_show_channel(
-                self.paid_or_free_source(show_key),
-                show_key,
+    ) -> Title:
+        if is_video_key(title_key):
+            return self._upsert_title_movie(title_key, force=force)
+        if is_title_key(title_key):
+            return self._upsert_title_series(title_key, force=force)
+        if is_an_album(title_key):
+            return self._upsert_title_music(title_key, force=force)
+        if is_user_playlist(title_key):
+            return self._upsert_title_playlist(title_key, force=force)
+        if self.is_topic_channel(title_key):
+            return self._upsert_title_topic(title_key, force=force)
+        if self.is_movies_channel(title_key):
+            return self._upsert_title_channel(
+                self.paid_or_free_source(title_key),
+                title_key,
                 force=force,
             )
-        return self._upsert_show_channel(source, show_key, force=force)
+        return self._upsert_title_channel(source, title_key, force=force)
 
     # TODO: Validate
-    def _upsert_show_series(
+    def _upsert_title_series(
         self,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
-    ) -> Show:
-        show_page = self.show_page_file(show_key)
-        source = self.paid_or_free_source(show_key)
+    ) -> Title:
+        title_page = self.title_page_file(title_key)
+        source = self.paid_or_free_source(title_key)
 
-        show = Show.get_from_memory(self.session, source, show_key)
-        if self._show_is_outdated(show, force=force):
-            data_timestamps = self.show_data_timestamps(show_key)
+        title = Title.get_from_memory(self.session, source, title_key)
+        if self._title_is_outdated(title, force=force):
+            data_timestamps = self.title_data_timestamps(title_key)
             data_timestamp = data_timestamps[0]
-            new_show = Show(
-                key=show_key,
-                name=show_page.title(),
-                url=show_url(show_key),
+            new_title = Title(
+                key=title_key,
+                name=title_page.title(),
+                url=title_url(title_key),
                 media_type="Series",
                 data_timestamp=data_timestamp,
-                # A show only changes when a season is added to it.
+                # A title only changes when a season is added to it.
                 update_at=data_timestamp + timedelta(days=7),
                 source_id=source.id,
             )
-            show = new_show.upsert(source, show)
-            show.set_update_at(None, data_timestamps)
+            title = new_title.upsert(source, title)
+            title.set_update_at(None, data_timestamps)
 
-        self._upsert_seasons_series(show, show_key, force=force)
-        self._soft_delete_missing(show_key)
-        self.link_show_to_tmdb(show)
+        self._upsert_seasons_series(title, title_key, force=force)
+        self._soft_delete_missing(title_key)
+        self.link_title_to_tmdb(title)
 
-        return show
+        return title
 
     # TODO: Validate
     def _upsert_seasons_series(
         self,
-        show: Show,
-        show_key: str,
+        title: Title,
+        title_key: str,
         *,
         force: bool = False,
     ) -> None:
-        for season_key in self._season_keys_from_show_files(show_key):
-            _, season_number = split_show_season_key(season_key)
-            season = Season.get_from_memory(self.session, show, season_key)
-            if self._season_is_outdated(season, show_key, force=force):
-                data_timestamps = self.season_data_timestamps(season_key, show_key)
+        for season_key in self._season_keys_from_title_files(title_key):
+            _, season_number = split_title_season_key(season_key)
+            season = Season.get_from_memory(self.session, title, season_key)
+            if self._season_is_outdated(season, title_key, force=force):
+                data_timestamps = self.season_data_timestamps(season_key, title_key)
                 data_timestamp = data_timestamps[0]
                 new_season = Season(
                     key=season_key,
                     name=f"Season {season_number}",
                     season_number=int(season_number),
-                    url=show_season_url(show_key, season_number),
+                    url=title_season_url(title_key, season_number),
                     data_timestamp=data_timestamp,
-                    # A show only changes when a season or an episode is added
+                    # A title only changes when a season or an episode is added
                     # to it.
                     update_at=data_timestamp + timedelta(days=7),
-                    show_id=show.id,
+                    title_id=title.id,
                 )
-                season = new_season.upsert(show, season)
+                season = new_season.upsert(title, season)
                 season.set_update_at(None, data_timestamps)
-            self._upsert_episodes(season, show_key, force=force)
+            self._upsert_episodes(season, title_key, force=force)
 
     # TODO: Validate
-    def _upsert_show_channel(
+    def _upsert_title_channel(
         self,
         source: Source,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
-    ) -> Show:
-        show = Show.get_from_memory(self.session, source, show_key)
-        if self._show_is_outdated(show, force=force):
-            channel_file = self.channel_by_channel_id_file(show_key)
+    ) -> Title:
+        title = Title.get_from_memory(self.session, source, title_key)
+        if self._title_is_outdated(title, force=force):
+            channel_file = self.channel_by_channel_id_file(title_key)
             channel_item = get_first_item(channel_file.parsed().items)
-            data_timestamps = self.show_data_timestamps(show_key)
-            new_show = Show(
+            data_timestamps = self.title_data_timestamps(title_key)
+            new_title = Title(
                 key=channel_item.id,
-                name=self._channel_show_name(show_key, channel_item),
+                name=self._channel_title_name(title_key, channel_item),
                 url=channel_url(channel_item.id),
                 media_type="Movie"
-                if self.is_movies_channel(show_key)
+                if self.is_movies_channel(title_key)
                 else "YouTube Channel",
                 # Updating every 30 days is reasonable because this is only used for
                 # checking for new playlists and changes to the channel information.
                 update_at=channel_file.data_timestamp() + timedelta(days=365),
                 data_timestamp=data_timestamps[0],
-                canonical_show_validated_at=None
-                if self.is_movies_channel(show_key)
+                canonical_title_validated_at=None
+                if self.is_movies_channel(title_key)
                 else tz_datetime.now(),
                 source_id=source.id,
                 image_url=best_thumbnail_url(channel_item.snippet.thumbnails),
                 thumbnail_url=thumbnail_url(channel_item.snippet.thumbnails),
             )
-            show = new_show.upsert(source, show)
-            show.set_update_at(None, data_timestamps)
+            title = new_title.upsert(source, title)
+            title.set_update_at(None, data_timestamps)
 
-        self._upsert_seasons_channel(show, show_key, force=force)
-        self._soft_delete_missing(show_key)
-        if self.is_movies_channel(show_key):
-            self.link_show_to_tmdb(show)
+        self._upsert_seasons_channel(title, title_key, force=force)
+        self._soft_delete_missing(title_key)
+        if self.is_movies_channel(title_key):
+            self.link_title_to_tmdb(title)
 
-        return show
+        return title
 
     # TODO: Validate
-    def _channel_show_name(
+    def _channel_title_name(
         self,
-        show_key: str,
+        title_key: str,
         channel_item: ChannelItem,
     ) -> str | None:
         # Every channel generated for a title of YouTube's catalogue is named after
         # the catalogue rather than after the title, so the title is read off what
         # the channel uploaded, which is that one title however many times over.
-        if not self.is_movies_channel(show_key):
+        if not self.is_movies_channel(title_key):
             return channel_item.snippet.title
-        episode_keys = self.show_episode_keys_from_files(show_key)
+        episode_keys = self.title_episode_keys_from_files(title_key)
         if not episode_keys:
             return channel_item.snippet.title
         items = self.videos_file(episode_keys[0]).parsed().items
         return items[0].snippet.title if items else channel_item.snippet.title
 
     # TODO: Validate
-    def _upsert_show_movie(
+    def _upsert_title_movie(
         self,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
-    ) -> Show:
-        video_item = get_first_item(self.videos_file(show_key).parsed().items)
-        source = self.paid_or_free_source(show_key)
+    ) -> Title:
+        video_item = get_first_item(self.videos_file(title_key).parsed().items)
+        source = self.paid_or_free_source(title_key)
 
-        show = Show.get_from_memory(self.session, source, show_key)
-        if self._show_is_outdated(show, force=force):
-            data_timestamps = self.show_data_timestamps(show_key)
+        title = Title.get_from_memory(self.session, source, title_key)
+        if self._title_is_outdated(title, force=force):
+            data_timestamps = self.title_data_timestamps(title_key)
             data_timestamp = data_timestamps[0]
-            new_show = Show(
-                key=show_key,
+            new_title = Title(
+                key=title_key,
                 name=video_item.snippet.title,
                 # A YouTube video with a null character in the description caused
                 # importing to hang so it needs to be stripped out.
                 description=video_item.snippet.description.replace("\x00", ""),
-                url=video_url(show_key),
+                url=video_url(title_key),
                 media_type="Movie",
                 image_url=best_thumbnail_url(video_item.snippet.thumbnails),
                 thumbnail_url=thumbnail_url(video_item.snippet.thumbnails),
@@ -661,146 +661,146 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
                 update_at=data_timestamp + timedelta(days=365),
                 source_id=source.id,
             )
-            show = new_show.upsert(source, show)
-            show.set_update_at(None, data_timestamps)
+            title = new_title.upsert(source, title)
+            title.set_update_at(None, data_timestamps)
 
-        self._upsert_season_movie(show, show_key, force=force)
-        self._soft_delete_missing(show_key)
-        self.link_show_to_tmdb(show)
+        self._upsert_season_movie(title, title_key, force=force)
+        self._soft_delete_missing(title_key)
+        self.link_title_to_tmdb(title)
 
-        return show
+        return title
 
     # TODO: Validate
     def _upsert_season_movie(
         self,
-        show: Show,
-        show_key: str,
+        title: Title,
+        title_key: str,
         *,
         force: bool = False,
     ) -> None:
-        season = Season.get_from_memory(self.session, show, show_key)
-        if self._season_is_outdated(season, show_key, force=force):
-            video_item = get_first_item(self.videos_file(show_key).parsed().items)
-            data_timestamps = self.season_data_timestamps(show_key, show_key)
+        season = Season.get_from_memory(self.session, title, title_key)
+        if self._season_is_outdated(season, title_key, force=force):
+            video_item = get_first_item(self.videos_file(title_key).parsed().items)
+            data_timestamps = self.season_data_timestamps(title_key, title_key)
             data_timestamp = data_timestamps[0]
             new_season = Season(
-                key=show_key,
+                key=title_key,
                 name=video_item.snippet.title,
                 image_url=best_thumbnail_url(video_item.snippet.thumbnails),
                 thumbnail_url=thumbnail_url(video_item.snippet.thumbnails),
                 data_timestamp=data_timestamp,
-                show_id=show.id,
+                title_id=title.id,
             )
-            season = new_season.upsert(show, season)
+            season = new_season.upsert(title, season)
             season.set_update_at(data_timestamp, data_timestamps)
-        self._upsert_episodes(season, show_key, force=force)
+        self._upsert_episodes(season, title_key, force=force)
 
     # TODO: Validate
-    def _upsert_show_playlist(
+    def _upsert_title_playlist(
         self,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
-    ) -> Show:
+    ) -> Title:
         playlist_item = get_first_item(
-            self.playlist_info_file(show_key).parsed().items,
+            self.playlist_info_file(title_key).parsed().items,
         )
         source = self.links_source
 
-        show = Show.get_from_memory(self.session, source, show_key)
-        if self._show_is_outdated(show, force=force):
-            data_timestamps = self.show_data_timestamps(show_key)
+        title = Title.get_from_memory(self.session, source, title_key)
+        if self._title_is_outdated(title, force=force):
+            data_timestamps = self.title_data_timestamps(title_key)
             data_timestamp = data_timestamps[0]
-            new_show = Show(
-                key=show_key,
+            new_title = Title(
+                key=title_key,
                 name=playlist_item.snippet.title,
                 description=playlist_item.snippet.description.replace("\x00", ""),
-                url=playlist_url(show_key),
+                url=playlist_url(title_key),
                 media_type="Series",
                 image_url=best_thumbnail_url(playlist_item.snippet.thumbnails),
                 thumbnail_url=thumbnail_url(playlist_item.snippet.thumbnails),
                 data_timestamp=data_timestamp,
                 source_id=source.id,
             )
-            show = new_show.upsert(source, show)
-            show.set_update_at(data_timestamp + timedelta(hours=6), data_timestamps)
+            title = new_title.upsert(source, title)
+            title.set_update_at(data_timestamp + timedelta(hours=6), data_timestamps)
 
         self._upsert_season(
-            show=show,
-            show_key=show_key,
-            season_key=show_key,
+            title=title,
+            title_key=title_key,
+            season_key=title_key,
             name=playlist_item.snippet.title,
             playlist=playlist_item,
             force=force,
         )
-        self._soft_delete_missing(show_key)
+        self._soft_delete_missing(title_key)
 
-        return show
+        return title
 
     # TODO: Validate
-    def _upsert_show_music(
+    def _upsert_title_music(
         self,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
-    ) -> Show:
-        music_playlist = self.music_playlist_file(show_key)
+    ) -> Title:
+        music_playlist = self.music_playlist_file(title_key)
         source = self.source
 
-        show = Show.get_from_memory(self.session, source, show_key)
-        if self._show_is_outdated(show, force=force):
-            data_timestamps = self.show_data_timestamps(show_key)
+        title = Title.get_from_memory(self.session, source, title_key)
+        if self._title_is_outdated(title, force=force):
+            data_timestamps = self.title_data_timestamps(title_key)
             data_timestamp = data_timestamps[0]
-            new_show = Show(
-                key=show_key,
+            new_title = Title(
+                key=title_key,
                 name=self._music_name(music_playlist),
-                url=playlist_url(show_key),
+                url=playlist_url(title_key),
                 media_type=f"YouTube {music_playlist.release_type() or 'Album'}",
                 image_url=music_playlist.image_url(),
                 thumbnail_url=music_playlist.image_url(),
                 data_timestamp=data_timestamp,
                 source_id=source.id,
             )
-            show = new_show.upsert(source, show)
-            show.set_update_at(data_timestamp + timedelta(days=365), data_timestamps)
+            title = new_title.upsert(source, title)
+            title.set_update_at(data_timestamp + timedelta(days=365), data_timestamps)
 
         self._upsert_season_music(
-            show,
-            show_key,
-            show_key,
+            title,
+            title_key,
+            title_key,
             self._music_name(music_playlist),
             force=force,
         )
-        self._soft_delete_missing(show_key)
+        self._soft_delete_missing(title_key)
 
-        return show
+        return title
 
     # TODO: Validate
-    def _upsert_show_topic(
+    def _upsert_title_topic(
         self,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
-    ) -> Show:
+    ) -> Title:
         """Upsert the musician a Topic channel is generated for.
 
-        A release of theirs is a season of this show rather than a show of its
+        A release of theirs is a season of this title rather than a title of its
         own, which is what makes importing the channel import all of their music
         the way importing a channel imports all of its playlists.
         """
         source = self.source
 
-        show = Show.get_from_memory(self.session, source, show_key)
-        if self._show_is_outdated(show, force=force):
+        title = Title.get_from_memory(self.session, source, title_key)
+        if self._title_is_outdated(title, force=force):
             channel_item = get_first_item(
-                self.channel_by_channel_id_file(show_key).parsed().items,
+                self.channel_by_channel_id_file(title_key).parsed().items,
             )
-            data_timestamps = self.show_data_timestamps(show_key)
+            data_timestamps = self.title_data_timestamps(title_key)
             data_timestamp = data_timestamps[0]
-            new_show = Show(
-                key=show_key,
+            new_title = Title(
+                key=title_key,
                 name=channel_item.snippet.title,
-                url=channel_url(show_key),
+                url=channel_url(title_key),
                 media_type="YouTube Artist",
                 image_url=best_thumbnail_url(channel_item.snippet.thumbnails),
                 thumbnail_url=thumbnail_url(channel_item.snippet.thumbnails),
@@ -809,36 +809,36 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
                 update_at=data_timestamp + timedelta(days=365),
                 source_id=source.id,
             )
-            show = new_show.upsert(source, show)
-            show.set_update_at(None, data_timestamps)
+            title = new_title.upsert(source, title)
+            title.set_update_at(None, data_timestamps)
 
-        for season_key in self._season_keys_from_show_files(show_key):
+        for season_key in self._season_keys_from_title_files(title_key):
             music_playlist = self.music_playlist_file(season_key)
             self._upsert_season_music(
-                show,
+                title,
                 season_key,
-                show_key,
+                title_key,
                 music_playlist.title(),
                 force=force,
             )
-        self._soft_delete_missing(show_key)
+        self._soft_delete_missing(title_key)
 
-        return show
+        return title
 
     # TODO: Validate
     def _upsert_season_music(
         self,
-        show: Show,
+        title: Title,
         season_key: str,
-        show_key: str,
+        title_key: str,
         name: str | None,
         *,
         force: bool = False,
     ) -> None:
-        season = Season.get_from_memory(self.session, show, season_key)
-        if self._season_is_outdated(season, show_key, force=force):
+        season = Season.get_from_memory(self.session, title, season_key)
+        if self._season_is_outdated(season, title_key, force=force):
             music_playlist = self.music_playlist_file(season_key)
-            data_timestamps = self.season_data_timestamps(season_key, show_key)
+            data_timestamps = self.season_data_timestamps(season_key, title_key)
             data_timestamp = data_timestamps[0]
             new_season = Season(
                 key=season_key,
@@ -847,11 +847,11 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
                 image_url=music_playlist.image_url(),
                 thumbnail_url=music_playlist.image_url(),
                 data_timestamp=data_timestamp,
-                show_id=show.id,
+                title_id=title.id,
             )
-            season = new_season.upsert(show, season)
+            season = new_season.upsert(title, season)
             season.set_update_at(data_timestamp + timedelta(days=365), data_timestamps)
-        self._upsert_episodes(season, show_key, force=force)
+        self._upsert_episodes(season, title_key, force=force)
 
     # TODO: Validate
     @staticmethod
@@ -865,31 +865,31 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
     # TODO: Validate
     def _upsert_seasons_channel(
         self,
-        show: Show,
-        show_key: str,
+        title: Title,
+        title_key: str,
         *,
         force: bool = False,
     ) -> None:
-        self._upsert_season_channel_uploads(show, show_key, force=force)
-        if self.is_movies_channel(show_key):
+        self._upsert_season_channel_uploads(title, title_key, force=force)
+        if self.is_movies_channel(title_key):
             return
-        self._upsert_seasons_playlist(show, show_key, force=force)
-        self._upsert_seasons_album(show, show_key, force=force)
+        self._upsert_seasons_playlist(title, title_key, force=force)
+        self._upsert_seasons_album(title, title_key, force=force)
 
     # TODO: Validate
     def _upsert_seasons_album(
         self,
-        show: Show,
-        show_key: str,
+        title: Title,
+        title_key: str,
         *,
         force: bool = False,
     ) -> None:
-        for season_key in self._album_season_keys_from_database(show_key):
+        for season_key in self._album_season_keys_from_database(title_key):
             music_playlist = self.music_playlist_file(season_key)
             self._upsert_season_music(
-                show,
+                title,
                 season_key,
-                show_key,
+                title_key,
                 music_playlist.title(),
                 force=force,
             )
@@ -897,17 +897,17 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
     # TODO: Validate
     def _upsert_season(  # noqa: PLR0913
         self,
-        show: Show,
-        show_key: str,
+        title: Title,
+        title_key: str,
         season_key: str,
         name: str,
         playlist: ChannelItem | PlaylistsItem,
         *,
         force: bool = False,
     ) -> None:
-        season = Season.get_from_memory(self.session, show, season_key)
-        if self._season_is_outdated(season, show_key, force=force):
-            data_timestamps = self.season_data_timestamps(season_key, show_key)
+        season = Season.get_from_memory(self.session, title, season_key)
+        if self._season_is_outdated(season, title_key, force=force):
+            data_timestamps = self.season_data_timestamps(season_key, title_key)
             season = Season(
                 key=season_key,
                 name=name,
@@ -915,33 +915,33 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
                 image_url=best_thumbnail_url(playlist.snippet.thumbnails),
                 thumbnail_url=thumbnail_url(playlist.snippet.thumbnails),
                 data_timestamp=data_timestamps[0],
-                show_id=show.id,
-            ).upsert(show, season)
+                title_id=title.id,
+            ).upsert(title, season)
             season.set_update_at(
                 data_timestamps[0] + timedelta(hours=6),
                 data_timestamps,
             )
-        self._upsert_episodes(season, show_key, force=force)
+        self._upsert_episodes(season, title_key, force=force)
 
     # TODO: Validate
     def _upsert_season_channel_uploads(
         self,
-        show: Show,
-        show_key: str,
+        title: Title,
+        title_key: str,
         *,
         force: bool = False,
     ) -> None:
         channel_item = get_first_item(
-            self.channel_by_channel_id_file(show_key).parsed().items,
+            self.channel_by_channel_id_file(title_key).parsed().items,
         )
         if int(channel_item.statistics.video_count) == 0:
             return
-        uploads_key = channel_uploads_playlist_key(show.key)
+        uploads_key = channel_uploads_playlist_key(title.key)
         self._upsert_season(
-            show=show,
-            show_key=show_key,
+            title=title,
+            title_key=title_key,
             season_key=uploads_key,
-            name=f"Uploads from {show.name}",
+            name=f"Uploads from {title.name}",
             playlist=channel_item,
             force=force,
         )
@@ -949,25 +949,25 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
     # TODO: Validate
     def _upsert_seasons_playlist(
         self,
-        show: Show,
-        show_key: str,
+        title: Title,
+        title_key: str,
         *,
         force: bool = False,
     ) -> None:
-        channel_playlists_file = self.channel_playlists_file(show_key)
+        channel_playlists_file = self.channel_playlists_file(title_key)
         if not channel_playlists_file.database_record.content:
             return
         playlists_by_key = {
             parsed_playlist.id: parsed_playlist
             for parsed_playlist in channel_playlists_file.parsed().items
         }
-        uploads_key = channel_uploads_playlist_key(show.key)
-        for season_key in self._season_keys_from_show_files(show_key):
+        uploads_key = channel_uploads_playlist_key(title.key)
+        for season_key in self._season_keys_from_title_files(title_key):
             if season_key != uploads_key and season_key in playlists_by_key:
                 playlist = playlists_by_key[season_key]
                 self._upsert_season(
-                    show=show,
-                    show_key=show_key,
+                    title=title,
+                    title_key=title_key,
                     season_key=season_key,
                     name=playlist.snippet.title,
                     playlist=playlist,
@@ -978,29 +978,29 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
     def _upsert_episodes(
         self,
         season: Season,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
     ) -> None:
         # A season that is a single video holds only that video.
         if is_video_key(season.key):
-            self._upsert_episode(season, show_key, season.key, 0, force=force)
+            self._upsert_episode(season, title_key, season.key, 0, force=force)
             return
 
-        # A season of a show holds the episodes its page lists, in page order.
-        if is_show_season_key(season.key) or is_an_album(season.key):
+        # A season of a title holds the episodes its page lists, in page order.
+        if is_title_season_key(season.key) or is_an_album(season.key):
             episode_keys = self._season_episode_keys_from_file(season.key)
             for position, episode_key in enumerate(episode_keys):
                 self._upsert_episode(
                     season,
-                    show_key,
+                    title_key,
                     episode_key,
                     position,
                     force=force,
                 )
             return
 
-        usa_only = self.is_movies_channel(show_key)
+        usa_only = self.is_movies_channel(title_key)
         seen: set[str] = set()
         for item in self.playlist_items_file(season.key).parsed().items:
             episode_key = item.content_details.video_id
@@ -1011,7 +1011,7 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
             seen.add(episode_key)
             self._upsert_episode(
                 season,
-                show_key,
+                title_key,
                 episode_key,
                 item.snippet.position,
                 force=force,
@@ -1021,14 +1021,14 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
     def _upsert_episode(
         self,
         season: Season,
-        show_key: str,
+        title_key: str,
         episode_key: str,
         sort_order: int | None,
         *,
         force: bool = False,
     ) -> None:
         episode = Episode.get_from_memory(self.session, season, episode_key)
-        if not self._episode_is_outdated(episode, season.key, show_key, force=force):
+        if not self._episode_is_outdated(episode, season.key, title_key, force=force):
             return
 
         video_item = get_first_item(self.videos_file(episode_key).parsed().items)
@@ -1042,7 +1042,7 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
         data_timestamps = self.episode_data_timestamps(
             episode_key,
             season.key,
-            show_key,
+            title_key,
         )
         new_episode = Episode(
             key=video_item.id,
@@ -1057,7 +1057,7 @@ class YouTubeMedia(YouTubeShared, BaseImporter):
             image_url=best_thumbnail_url(video_snippet.thumbnails),
             thumbnail_url=thumbnail_url(video_snippet.thumbnails),
             sort_order=sort_order,
-            episode_number=self._get_episode_number(episode_key, season.key, show_key),
+            episode_number=self._get_episode_number(episode_key, season.key, title_key),
             data_timestamp=data_timestamps[0],
             season_id=season.id,
         )

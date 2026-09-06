@@ -11,8 +11,8 @@ from plugins.utils.base_plugin.base import BasePlugin
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from app.shows.models import Show
     from app.sources.models import Source
+    from app.titles.models import Title
     from plugins.utils.base_plugin.files import BaseFile
 
 
@@ -36,30 +36,30 @@ class StreamChannelerShared(WatchHistoryMixin, BasePlugin):
     def _source_keys(cls) -> tuple[str, ...]:
         return ()
 
-    # StreamChanneler stores no shows of its own. Defined here rather than on
+    # StreamChanneler stores no titles of its own. Defined here rather than on
     # the plugin class so the initializer, which shares this base, is concrete
     # too.
     # TODO: Validate
     @override
-    def upsert_show(
+    def upsert_title(
         self,
         source: Source,
-        show_key: str,
+        title_key: str,
         *,
         force: bool = False,
-    ) -> Show:
-        msg = "StreamChanneler does not support upserting shows"
+    ) -> Title:
+        msg = "StreamChanneler does not support upserting titles"
         raise NotImplementedError(msg)
 
     # StreamChanneler does not use files, so these abstract methods are no-ops.
     # TODO: Validate
     @override
-    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
+    def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
         return []
 
     # TODO: Validate
     @override
-    def _season_files(self, season_key: str, show_key: str) -> Sequence[BaseFile[Any]]:
+    def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
         return []
 
     # TODO: Validate
@@ -68,13 +68,13 @@ class StreamChannelerShared(WatchHistoryMixin, BasePlugin):
         self,
         episode_key: str,
         season_key: str,
-        show_key: str,
+        title_key: str,
     ) -> Sequence[BaseFile[Any]]:
         return []
 
     # TODO: Validate
     @override
-    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
+    def _season_keys_from_title_files(self, title_key: str) -> list[str]:
         return []
 
     # TODO: Validate
@@ -82,6 +82,6 @@ class StreamChannelerShared(WatchHistoryMixin, BasePlugin):
     def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
-        show_key: str,
+        title_key: str,
     ) -> list[str]:
         return []

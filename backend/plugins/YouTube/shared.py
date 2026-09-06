@@ -22,13 +22,13 @@ from plugins.YouTube.utils import (
     is_an_album,
     is_channel_key,
     is_free_movies_channel,
-    is_show_key,
-    is_show_season_key,
+    is_title_key,
+    is_title_season_key,
     is_user_playlist,
     is_video_key,
     search_url,
-    show_season_key,
-    split_show_season_key,
+    split_title_season_key,
+    title_season_key,
     video_is_valid,
 )
 from plugins.YouTube.watch_history import WatchHistoryMixin
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from datetime import datetime
 
-    from app.shows.models import Show
+    from app.titles.models import Title
     from plugins.utils.base_plugin.files import BaseFile
 
 
@@ -94,7 +94,7 @@ class YouTubeShared(WatchHistoryMixin, BasicFiles):
 
     # TODO: Validate
     @override
-    def soft_delete_missing_seasons(self, show_key: str) -> None:
+    def soft_delete_missing_seasons(self, title_key: str) -> None:
         return
 
     # TODO: Validate
@@ -113,15 +113,15 @@ class YouTubeShared(WatchHistoryMixin, BasicFiles):
         return self._sources[LINKS_SOURCE_KEY]
 
     # TODO: Validate
-    def show_channel_key(self, show_key: str) -> str | None:
-        # A show says nothing about who owns it, so what owns it is read off one of
-        # its videos, every one of which is owned by whoever the show is.
-        if is_channel_key(show_key):
-            return show_key
-        if is_video_key(show_key):
-            episode_key = show_key
+    def title_channel_key(self, title_key: str) -> str | None:
+        # A title says nothing about who owns it, so what owns it is read off one of
+        # its videos, every one of which is owned by whoever the title is.
+        if is_channel_key(title_key):
+            return title_key
+        if is_video_key(title_key):
+            episode_key = title_key
         else:
-            episode_keys = self.show_episode_keys_from_files(show_key)
+            episode_keys = self.title_episode_keys_from_files(title_key)
             if not episode_keys:
                 return None
             episode_key = episode_keys[0]
@@ -129,25 +129,25 @@ class YouTubeShared(WatchHistoryMixin, BasicFiles):
         return items[0].snippet.channel_id if items else None
 
     # TODO: Validate
-    def is_free_movie(self, show_key: str) -> bool:
-        channel_key = self.show_channel_key(show_key)
+    def is_free_movie(self, title_key: str) -> bool:
+        channel_key = self.title_channel_key(title_key)
         return channel_key is not None and is_free_movies_channel(channel_key)
 
     # TODO: Validate
-    def show_channel_title(self, show_key: str) -> str | None:
-        episode_keys = self.show_episode_keys_from_files(show_key)
+    def title_channel_title(self, title_key: str) -> str | None:
+        episode_keys = self.title_episode_keys_from_files(title_key)
         if not episode_keys:
             return None
         items = self.videos_file(episode_keys[0]).parsed().items
         return items[0].snippet.channel_title if items else None
 
     # TODO: Validate
-    def subscription_source(self, show_key: str) -> Source | None:
-        if not is_show_key(show_key):
+    def subscription_source(self, title_key: str) -> Source | None:
+        if not is_title_key(title_key):
             return None
-        if "Try now" not in self.show_listing_file_for_show(show_key).offer_labels():
+        if "Try now" not in self.title_listing_file_for_title(title_key).offer_labels():
             return None
-        channel_title = self.show_channel_title(show_key)
+        channel_title = self.title_channel_title(title_key)
         if not channel_title:
             return None
 
@@ -155,25 +155,25 @@ class YouTubeShared(WatchHistoryMixin, BasicFiles):
         return self.upsert_source(source_key)
 
     # TODO: Validate
-    def paid_or_free_source(self, show_key: str) -> Source:
-        if subscription := self.subscription_source(show_key):
+    def paid_or_free_source(self, title_key: str) -> Source:
+        if subscription := self.subscription_source(title_key):
             return subscription
-        if self.is_free_movie(show_key):
+        if self.is_free_movie(title_key):
             return self.free_source
         return self.paid_source
 
     # TODO: Validate
-    def tmdb_media_type(self, show_key: str) -> TMDBMediaType:
-        return TMDBMediaType.movie if is_video_key(show_key) else TMDBMediaType.tv
+    def tmdb_media_type(self, title_key: str) -> TMDBMediaType:
+        return TMDBMediaType.movie if is_video_key(title_key) else TMDBMediaType.tv
 
     # TODO: Validate
     def _get_episode_number(
         self,
         episode_key: str,
         season_key: str,
-        show_key: str,  # noqa: ARG002 - Matches how every other file is asked for.
+        title_key: str,  # noqa: ARG002 - Matches how every other file is asked for.
     ) -> int | None:
-        if not (is_show_season_key(season_key) or is_an_album(season_key)):
+        if not (is_title_season_key(season_key) or is_an_album(season_key)):
             return None
         episode_keys = self._season_episode_keys_from_file(season_key)
         if episode_key not in episode_keys:
@@ -181,74 +181,74 @@ class YouTubeShared(WatchHistoryMixin, BasicFiles):
         return episode_keys.index(episode_key) + 1
 
     # TODO: Validate
-    def _channel_has_only_uploads(self, show_key: str) -> bool:
-        return self.channel_playlists_file(show_key).has_only_uploads()
+    def _channel_has_only_uploads(self, title_key: str) -> bool:
+        return self.channel_playlists_file(title_key).has_only_uploads()
 
     # TODO: Validate
-    def _playlist_is_missing(self, show: Show, playlist_key: str) -> bool:
-        # A URL for a whole show asks for every season it has, so nothing is missing
+    def _playlist_is_missing(self, title: Title, playlist_key: str) -> bool:
+        # A URL for a whole title asks for every season it has, so nothing is missing
         # as long as it has been imported with seasons.
-        if is_show_key(playlist_key) and not is_show_season_key(playlist_key):
-            return not show.active_children
+        if is_title_key(playlist_key) and not is_title_season_key(playlist_key):
+            return not title.active_children
 
         # A URL for a Topic channel asks for every release the musician has, which
-        # is the whole show, so nothing is missing once it has been imported with
+        # is the whole title, so nothing is missing once it has been imported with
         # seasons.
-        if playlist_key == show.key and self.is_topic_channel(show.key):
-            return not show.active_children
+        if playlist_key == title.key and self.is_topic_channel(title.key):
+            return not title.active_children
 
         # If the playlist being checked is the channel uploads playlist it should only
         # be considered missing if the channel has at least one upload.
-        if playlist_key == channel_uploads_playlist_key(show.key):
-            channel_by_channel_id = self.channel_by_channel_id_file(show.key)
+        if playlist_key == channel_uploads_playlist_key(title.key):
+            channel_by_channel_id = self.channel_by_channel_id_file(title.key)
             channel_item = get_first_item(channel_by_channel_id.parsed().items)
             if int(channel_item.statistics.video_count) == 0:
                 return False
-        return not Season.get_from_memory(self.session, show, playlist_key)
+        return not Season.get_from_memory(self.session, title, playlist_key)
 
     # TODO: Validate
-    def show_episode_keys_from_files(self, show_key: str) -> list[str]:
-        """Return the episode keys of every season of a show, in season order."""
+    def title_episode_keys_from_files(self, title_key: str) -> list[str]:
+        """Return the episode keys of every season of a title, in season order."""
         return self._episode_keys_from_season_files(
-            self._season_keys_from_show_files(show_key),
-            show_key,
+            self._season_keys_from_title_files(title_key),
+            title_key,
         )
 
     # TODO: Validate
     @override
-    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:  # noqa: PLR0911
-        if is_video_key(show_key):
-            return [self.videos_file(show_key)]
-        if is_an_album(show_key):
-            return [self.music_playlist_file(show_key)]
-        if is_user_playlist(show_key):
-            return [self.playlist_info_file(show_key)]
-        # A show has no API of its own, so its page lists its seasons.
-        if is_show_key(show_key):
+    def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:  # noqa: PLR0911
+        if is_video_key(title_key):
+            return [self.videos_file(title_key)]
+        if is_an_album(title_key):
+            return [self.music_playlist_file(title_key)]
+        if is_user_playlist(title_key):
+            return [self.playlist_info_file(title_key)]
+        # A title has no API of its own, so its page lists its seasons.
+        if is_title_key(title_key):
             # The page comes first because it is what names the playlist the
             # listing is asked for by.
             return [
-                self.show_page_file(show_key),
-                self.show_listing_file_for_show(show_key),
+                self.title_page_file(title_key),
+                self.title_listing_file_for_title(title_key),
             ]
         # A Topic channel's releases are the only thing it lists, and the API says
         # nothing about them, so they are read off the channel's page instead of
         # out of the playlists it owns.
-        if self.is_topic_channel(show_key):
+        if self.is_topic_channel(title_key):
             return [
-                self.topic_releases_file(show_key),
-                self.channel_by_channel_id_file(show_key),
+                self.topic_releases_file(title_key),
+                self.channel_by_channel_id_file(title_key),
             ]
         # A channel generated for one title has no seasons but its uploads, so what
         # it lists is never read.
-        if self.is_movies_channel(show_key):
-            return [self.channel_by_channel_id_file(show_key)]
+        if self.is_movies_channel(title_key):
+            return [self.channel_by_channel_id_file(title_key)]
         return [
             # Required to detect new seasons (playlists).
-            self.channel_playlists_file(show_key),
+            self.channel_playlists_file(title_key),
             # ChannelByHandle is only used to get ChannelByChannelId so it is not used.
-            # Required to detect changes to the show (channel).
-            self.channel_by_channel_id_file(show_key),
+            # Required to detect changes to the title (channel).
+            self.channel_by_channel_id_file(title_key),
         ]
 
     # TODO: Validate
@@ -256,28 +256,28 @@ class YouTubeShared(WatchHistoryMixin, BasicFiles):
     def _season_files(
         self,
         season_key: str,
-        show_key: str,
+        title_key: str,
     ) -> Sequence[BaseFile[Any]]:
         # A season that is a single video is described by the video itself.
         if is_video_key(season_key):
             return [self.videos_file(season_key)]
-        # A season of a show is described by the page for that season.
-        if is_show_season_key(season_key):
-            show_key, _ = split_show_season_key(season_key)
-            return [self.show_listing_file_for_show(show_key)]
+        # A season of a title is described by the page for that season.
+        if is_title_season_key(season_key):
+            title_key, _ = split_title_season_key(season_key)
+            return [self.title_listing_file_for_title(title_key)]
         if is_an_album(season_key):
             return [self.music_playlist_file(season_key)]
-        if is_user_playlist(show_key):
+        if is_user_playlist(title_key):
             return [
                 self.playlist_items_file(season_key),
-                self.playlist_info_file(show_key),
+                self.playlist_info_file(title_key),
             ]
         return [
             # Required to detect new episodes (videos). Must stay first because
             # season_data_timestamp reads files[0].
             self.playlist_items_file(season_key),
             # Required to detect changes to the season (playlist).
-            self.channel_playlists_file(show_key),
+            self.channel_playlists_file(title_key),
         ]
 
     # TODO: Validate
@@ -286,37 +286,37 @@ class YouTubeShared(WatchHistoryMixin, BasicFiles):
         self,
         episode_key: str,
         season_key: str,
-        show_key: str,
+        title_key: str,
     ) -> Sequence[BaseFile[Any]]:
         # Required to detect changes to the episode (video).
         return [self.videos_file(episode_key)]
 
     # TODO: Validate
     @override
-    def _season_keys_from_show_files(self, show_key: str) -> list[str]:
-        # A show that is a single video has that video as its only season.
-        if is_video_key(show_key):
-            return [show_key]
+    def _season_keys_from_title_files(self, title_key: str) -> list[str]:
+        # A title that is a single video has that video as its only season.
+        if is_video_key(title_key):
+            return [title_key]
 
-        if is_an_album(show_key) or is_user_playlist(show_key):
-            return [show_key]
+        if is_an_album(title_key) or is_user_playlist(title_key):
+            return [title_key]
 
-        # A show has one season for every season its page lists.
-        if is_show_key(show_key):
+        # A title has one season for every season its page lists.
+        if is_title_key(title_key):
             return [
-                show_season_key(show_key, season_number)
-                for season_number in self.show_season_numbers_from_file(show_key)
+                title_season_key(title_key, season_number)
+                for season_number in self.title_season_numbers_from_file(title_key)
             ]
 
         # A Topic channel has one season for every release it lists.
-        if self.is_topic_channel(show_key):
+        if self.is_topic_channel(title_key):
             return self._with_album_seasons(
-                self.topic_release_keys_from_file(show_key),
-                show_key,
+                self.topic_release_keys_from_file(title_key),
+                title_key,
             )
 
         channel_item = get_first_item(
-            self.channel_by_channel_id_file(show_key).parsed().items,
+            self.channel_by_channel_id_file(title_key).parsed().items,
         )
         season_keys: list[str] = []
 
@@ -326,15 +326,15 @@ class YouTubeShared(WatchHistoryMixin, BasicFiles):
         # uploads are downloaded first because that will maximize the batch sizes and
         # minimize the number of API calls.
         if int(channel_item.statistics.video_count) > 0:
-            season_keys.append(channel_uploads_playlist_key(show_key))
+            season_keys.append(channel_uploads_playlist_key(title_key))
 
         # A channel generated for one title of YouTube's catalogue is that title and
         # nothing else, so what it uploaded is all of it and what it lists besides is
         # not the title.
-        if self.is_movies_channel(show_key):
+        if self.is_movies_channel(title_key):
             return season_keys
 
-        channel_playlists_file = self.channel_playlists_file(show_key)
+        channel_playlists_file = self.channel_playlists_file(title_key)
         if channel_playlists_file.database_record.content:
             season_keys.extend(
                 item.id
@@ -342,29 +342,32 @@ class YouTubeShared(WatchHistoryMixin, BasicFiles):
                 if item.content_details.item_count > 0
             )
 
-        return self._with_album_seasons(season_keys, show_key)
+        return self._with_album_seasons(season_keys, title_key)
 
     # TODO: Validate
-    def _with_album_seasons(self, season_keys: list[str], show_key: str) -> list[str]:
+    def _with_album_seasons(self, season_keys: list[str], title_key: str) -> list[str]:
         # An album playlist is auto-generated and listed by no channel, so it is only
         # ever added by an importing URL naming it and then always kept.
         return season_keys + [
             key
-            for key in self._album_season_keys_from_database(show_key)
+            for key in self._album_season_keys_from_database(title_key)
             if key not in season_keys
         ]
 
     # TODO: Validate
-    def _album_season_keys_from_database(self, show_key: str) -> list[str]:
+    def _album_season_keys_from_database(self, title_key: str) -> list[str]:
         season_keys: list[str] = []
         if self._importing_album_playlist_key:
             season_keys.append(self._importing_album_playlist_key)
 
-        existing_show = self._preload_show(show_key, preload_seasons=True).one_or_none()
-        if existing_show:
+        existing_title = self._preload_title(
+            title_key,
+            preload_seasons=True,
+        ).one_or_none()
+        if existing_title:
             season_keys.extend(
                 season.key
-                for season in existing_show.seasons
+                for season in existing_title.seasons
                 if is_an_album(season.key) and season.key not in season_keys
             )
         return season_keys
@@ -374,14 +377,14 @@ class YouTubeShared(WatchHistoryMixin, BasicFiles):
     def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
-        show_key: str,
+        title_key: str,
     ) -> list[str]:
         if isinstance(season_keys, str):
             season_keys = [season_keys]
         # A channel generated for one title uploads that title once per language it
         # was published in, and every one of them is the same film, so the one
         # published here is the only one worth holding.
-        usa_only = self.is_movies_channel(show_key)
+        usa_only = self.is_movies_channel(title_key)
         seen: set[str] = set()
         video_keys: list[str] = []
         for season_key in season_keys:
@@ -401,11 +404,11 @@ class YouTubeShared(WatchHistoryMixin, BasicFiles):
         if is_video_key(season_key):
             return [season_key]
 
-        # A season of a show holds the episodes listed on its page.
-        if is_show_season_key(season_key):
-            show_key, season_number = split_show_season_key(season_key)
-            episode_keys = self.show_listing_file_for_show(
-                show_key,
+        # A season of a title holds the episodes listed on its page.
+        if is_title_season_key(season_key):
+            title_key, season_number = split_title_season_key(season_key)
+            episode_keys = self.title_listing_file_for_title(
+                title_key,
             ).episode_keys_by_season()
             return episode_keys.get(int(season_number), [])
 
@@ -429,9 +432,9 @@ class YouTubeShared(WatchHistoryMixin, BasicFiles):
 
     # TODO: Validate
     @override
-    def _download_show_files_and_children(
+    def _download_title_files_and_children(
         self,
-        show_key: str,
+        title_key: str,
         update_at: datetime | None = None,
     ) -> None:
         """Read the channel before the files that depend on what it is.
@@ -441,17 +444,17 @@ class YouTubeShared(WatchHistoryMixin, BasicFiles):
         anything asks. Every video of every season is asked for in one batch
         rather than one at a time, since the API answers for fifty at once.
         """
-        if is_channel_key(show_key):
-            self.channel_by_channel_id_file(show_key).download_if_outdated(update_at)
-        # The page names the playlist the show's listing is asked for by, so the
-        # files a show has cannot be named until it has been read.
-        if is_show_key(show_key):
-            self.show_page_file(show_key).download_if_outdated(update_at)
+        if is_channel_key(title_key):
+            self.channel_by_channel_id_file(title_key).download_if_outdated(update_at)
+        # The page names the playlist the title's listing is asked for by, so the
+        # files a title has cannot be named until it has been read.
+        if is_title_key(title_key):
+            self.title_page_file(title_key).download_if_outdated(update_at)
 
-        self._download_if_outdated(self._show_files(show_key), update_at)
-        season_keys = self._season_keys_from_show_files(show_key)
+        self._download_if_outdated(self._title_files(title_key), update_at)
+        season_keys = self._season_keys_from_title_files(title_key)
         for season_key in season_keys:
-            self._download_if_outdated(self._season_files(season_key, show_key))
+            self._download_if_outdated(self._season_files(season_key, title_key))
         self._batch_download_missing_videos(
-            self._episode_keys_from_season_files(season_keys, show_key),
+            self._episode_keys_from_season_files(season_keys, title_key),
         )

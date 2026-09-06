@@ -7,7 +7,7 @@ from app.utils import tz_datetime
 from plugins.YouTube import YouTube
 from plugins.YouTube.files import (
     is_an_album,
-    is_show_season_key,
+    is_title_season_key,
     is_video_key,
 )
 from tests.plugins.plugin_validator import PluginValidator, StandardTests
@@ -17,12 +17,12 @@ from tests.plugins.plugin_validator import PluginValidator, StandardTests
 def _reads_a_feed(season_key: str) -> bool:
     """Report whether the season's update reads a feed for new videos.
 
-    A season that is a single video, and a season of a show, are re-read from
+    A season that is a single video, and a season of a title, are re-read from
     the page describing them instead, which is a file the season already has.
     """
     return not (
         is_video_key(season_key)
-        or is_show_season_key(season_key)
+        or is_title_season_key(season_key)
         or is_an_album(season_key)
     )
 
@@ -47,8 +47,8 @@ class YouTubeValidator(PluginValidator[YouTube]):
         """
         plugin = self.plugin_class(session)
         for source in self.select_plugin_with_children(session).sources:
-            for show in source.shows:
-                for season in show.seasons:
+            for title in source.titles:
+                for season in title.seasons:
                     if _reads_a_feed(season.key):
                         plugin.playlist_feed_file(season.key).download_if_outdated(
                             tz_datetime.now(),
@@ -117,17 +117,17 @@ class TestChannelPlaylist(StandardTests[YouTube], PlaylistValidator):
 # An album YouTube generated a playlist of, whose tracks went up on the
 # musician's own channel rather than on a Topic channel generated for them. A
 # channel that is not a Topic lists far more than music, so the release is a
-# show of its own instead of a season of the channel that published it.
+# title of its own instead of a season of the channel that published it.
 # TODO: Validate
 class TestMusicAlbumPlaylist(StandardTests[YouTube], PlaylistValidator):
     playlist_key = "OLAK5uy_mKcftf5tOvVhq-CsutohYLKrB1l8PqCG8"
 
 
-# The playlist a show is published as, which is what browse lists a show under
-# and is not the key the show's page is served at, so the URL names the show only
+# The playlist a title is published as, which is what browse lists a title under
+# and is not the key the title's page is served at, so the URL names the title only
 # by way of the listing it asks for.
 # TODO: Validate
-class TestShowPlaylistURL(StandardTests[YouTube], PlaylistValidator):
+class TestTitlePlaylistURL(StandardTests[YouTube], PlaylistValidator):
     playlist_key = "TVSHX2-tv9KBHSAWLsDbH3h9vNzwxEAyyqXMw"
 
 
@@ -157,7 +157,7 @@ class TestPaidMovie(StandardTests[YouTube], VideoValidator):
 
 # A title of YouTube's catalogue that is served free with ads. Every one of them
 # is owned by the one channel the whole free catalogue is published on, which
-# lists almost none of what it owns, so the title is a show of its own.
+# lists almost none of what it owns, so the title is a title of its own.
 # TODO: Validate
 class TestFreeMovie(StandardTests[YouTube], VideoValidator):
     video_key = "zKQGAv8gtBA"
@@ -169,27 +169,27 @@ class TestAnotherPaidMovie(StandardTests[YouTube], VideoValidator):
 
 
 # TODO: Validate
-class ShowVideoValidator(YouTubeValidator):
+class TitleVideoValidator(YouTubeValidator):
     urls = (
         "youtube.com/watch?v={video_key}",
-        "youtube.com/watch?v={video_key}&list={show_playlist_key}&index=2",
+        "youtube.com/watch?v={video_key}&list={title_playlist_key}&index=2",
     )
 
 
 # TODO: Validate
-class TestPaidShowVideo(StandardTests[YouTube], ShowVideoValidator):
+class TestPaidTitleVideo(StandardTests[YouTube], TitleVideoValidator):
     video_key = "8zWeHypLPRk"
-    show_playlist_key = "TVSHfA9WsdDU4jgSZuc4pG3gHBd3nWnvtjK8A"
+    title_playlist_key = "TVSHfA9WsdDU4jgSZuc4pG3gHBd3nWnvtjK8A"
 
 
 # TODO: Validate
-class ShowValidator(YouTubeValidator):
-    urls = ("youtube.com/show/{show_key}",)
+class TitleValidator(YouTubeValidator):
+    urls = ("youtube.com/show/{title_key}",)
 
 
 # TODO: Validate
-class TestSubscriptionShow(StandardTests[YouTube], ShowValidator):
-    show_key = "SC9aXZwJfzfg0g7pZ6ird15g"
+class TestSubscriptionTitle(StandardTests[YouTube], TitleValidator):
+    title_key = "SC9aXZwJfzfg0g7pZ6ird15g"
 
 
 # TODO: Validate

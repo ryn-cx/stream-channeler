@@ -79,7 +79,7 @@ function AdminIndex() {
                 All Issue Reports
               </CardTitle>
               <CardDescription>
-                Every issue reported against an episode, season or show, newest
+                Every issue reported against an episode, season or title, newest
                 first.
               </CardDescription>
             </CardHeader>
@@ -113,12 +113,12 @@ function AdminIndex() {
             </CardHeader>
           </Card>
         </Link>
-        <Link to="/admin/show-reports" className="block">
+        <Link to="/admin/title-reports" className="block">
           <Card className="h-full transition-colors hover:border-primary">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Tv className="size-5" />
-                Show Issue Reports
+                Title Issue Reports
               </CardTitle>
               <CardDescription>
                 Each reported title once, with how many issues were reported
@@ -155,15 +155,15 @@ function AdminIndex() {
             </CardHeader>
           </Card>
         </Link>
-        <Link to="/admin/unvalidated-shows" className="block">
+        <Link to="/admin/unvalidated-titles" className="block">
           <Card className="h-full transition-colors hover:border-primary">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ShieldCheck className="size-5" />
-                Unvalidated Shows
+                Unvalidated Titles
               </CardTitle>
               <CardDescription>
-                Every show whose canonical shows nobody has validated. A row
+                Every title whose canonical titles nobody has validated. A row
                 linked to a title is here so the link can be confirmed, and one
                 that is its own record is here so that TMDB having no
                 counterpart for it can be confirmed too.

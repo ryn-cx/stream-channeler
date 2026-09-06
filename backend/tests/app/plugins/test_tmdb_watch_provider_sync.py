@@ -6,13 +6,13 @@ import pytest
 from sqlmodel import Session
 
 from app.canonical_media.tmdb import (
-    tmdb_show_key,
+    tmdb_title_key,
 )
 from app.files.models import File
 from app.media.media_type import TMDBMediaType
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show, ShowCanonicalShow
+from app.titles.models import Title, TitleCanonicalTitle
 from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.TMDB import TMDB
@@ -20,17 +20,17 @@ from plugins.TMDB.files import TVSeasonsWatchProviders, TVSeriesWatchProviders
 from plugins.utils.base_plugin.files import COMPLETED_STATUS
 from tests.app.plugins.utils import create_random_plugin
 from tests.app.seasons.utils import create_random_season
-from tests.app.shows.utils import create_random_show
 from tests.app.sources.utils import create_random_source
+from tests.app.titles.utils import create_random_title
 
 
 # TODO: Validate
-def _sync_show_providers(
+def _sync_title_providers(
     session: Session,
-    show_key: str,
+    title_key: str,
     *stored: File,
 ) -> None:
-    """Sync the show's providers, then read the `stored` rows back.
+    """Sync the title's providers, then read the `stored` rows back.
 
     A plugin reads and writes its files through a session of its own, so the row
     a test put in place and the row the sync wrote to are two objects standing
@@ -39,7 +39,7 @@ def _sync_show_providers(
     the test set.
     """
     plugin = TMDB(session)
-    plugin.sync_show_watch_providers(show_key)
+    plugin.sync_title_watch_providers(title_key)
     plugin.file_session.flush()
     for record in stored:
         session.expire(record)
@@ -91,7 +91,7 @@ def _store_file(  # noqa: PLR0913
 
 
 # TODO: Validate
-def _store_show_providers(  # noqa: PLR0913
+def _store_title_providers(  # noqa: PLR0913
     session: Session,
     plugin: Plugin,
     tmdb_id: int,
@@ -147,24 +147,24 @@ def tmdb_plugin(function_scoped_session: Session) -> Plugin:
 
 # TODO: Validate
 @pytest.fixture
-def canonical_show(function_scoped_session: Session, tmdb_plugin: Plugin) -> Show:
-    return create_random_show(
+def canonical_title(function_scoped_session: Session, tmdb_plugin: Plugin) -> Title:
+    return create_random_title(
         function_scoped_session,
         tmdb_plugin.sources[0],
-        key=tmdb_show_key(TMDBMediaType.tv, 1399),
+        key=tmdb_title_key(TMDBMediaType.tv, 1399),
     )
 
 
 # TODO: Validate
 def _linked_listing(
     session: Session,
-    canonical: Show,
+    canonical: Title,
     plugin_key: str,
     data_timestamp: datetime,
-) -> tuple[Show, Season]:
+) -> tuple[Title, Season]:
     plugin = create_random_plugin(session, key=plugin_key)
     source = create_random_source(session, plugin, key=plugin_key)
-    listing = create_random_show(
+    listing = create_random_title(
         session,
         source,
         is_canonical=False,
@@ -178,10 +178,10 @@ def _linked_listing(
         data_timestamp=data_timestamp,
     )
     session.add(
-        ShowCanonicalShow(show_id=listing.id, canonical_show_id=canonical.id),
+        TitleCanonicalTitle(title_id=listing.id, canonical_title_id=canonical.id),
     )
     session.flush()
-    session.expire(canonical, ["non_canonical_shows"])
+    session.expire(canonical, ["non_canonical_titles"])
     return listing, season
 
 
@@ -192,16 +192,16 @@ class TestSyncWatchProviders:
         self,
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
-        canonical_show: Show,
+        canonical_title: Title,
     ) -> None:
         stored_at = tz_datetime.now() - timedelta(days=30)
         listing, season = _linked_listing(
             function_scoped_session,
-            canonical_show,
+            canonical_title,
             "Hulu",
             stored_at,
         )
-        _store_show_providers(
+        _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -209,7 +209,7 @@ class TestSyncWatchProviders:
             ["Netflix"],
             stored_at,
         )
-        newest = _store_show_providers(
+        newest = _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -218,7 +218,7 @@ class TestSyncWatchProviders:
             tz_datetime.now(),
         )
 
-        TMDB(function_scoped_session).sync_show_watch_providers(canonical_show.key)
+        TMDB(function_scoped_session).sync_title_watch_providers(canonical_title.key)
 
         assert listing.update_at == newest.data_timestamp
         assert season.update_at == newest.data_timestamp
@@ -228,16 +228,16 @@ class TestSyncWatchProviders:
         self,
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
-        canonical_show: Show,
+        canonical_title: Title,
     ) -> None:
         stored_at = tz_datetime.now() - timedelta(days=30)
         listing, _season = _linked_listing(
             function_scoped_session,
-            canonical_show,
+            canonical_title,
             "Netflix",
             stored_at,
         )
-        _store_show_providers(
+        _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -245,7 +245,7 @@ class TestSyncWatchProviders:
             ["Netflix"],
             stored_at,
         )
-        newest = _store_show_providers(
+        newest = _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -254,7 +254,7 @@ class TestSyncWatchProviders:
             tz_datetime.now(),
         )
 
-        TMDB(function_scoped_session).sync_show_watch_providers(canonical_show.key)
+        TMDB(function_scoped_session).sync_title_watch_providers(canonical_title.key)
 
         assert listing.update_at == newest.data_timestamp
 
@@ -263,22 +263,22 @@ class TestSyncWatchProviders:
         self,
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
-        canonical_show: Show,
+        canonical_title: Title,
     ) -> None:
         stored_at = tz_datetime.now() - timedelta(days=30)
         netflix, netflix_season = _linked_listing(
             function_scoped_session,
-            canonical_show,
+            canonical_title,
             "Netflix",
             stored_at,
         )
         hulu, _hulu_season = _linked_listing(
             function_scoped_session,
-            canonical_show,
+            canonical_title,
             "Hulu",
             stored_at,
         )
-        _store_show_providers(
+        _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -286,7 +286,7 @@ class TestSyncWatchProviders:
             ["Netflix"],
             stored_at,
         )
-        _store_show_providers(
+        _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -295,7 +295,7 @@ class TestSyncWatchProviders:
             tz_datetime.now(),
         )
 
-        TMDB(function_scoped_session).sync_show_watch_providers(canonical_show.key)
+        TMDB(function_scoped_session).sync_title_watch_providers(canonical_title.key)
 
         assert netflix.update_at is None
         assert netflix_season.update_at is None
@@ -306,16 +306,16 @@ class TestSyncWatchProviders:
         self,
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
-        canonical_show: Show,
+        canonical_title: Title,
     ) -> None:
         stored_at = tz_datetime.now() - timedelta(days=30)
         listing, season = _linked_listing(
             function_scoped_session,
-            canonical_show,
+            canonical_title,
             "Netflix",
             stored_at,
         )
-        _store_show_providers(
+        _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -323,7 +323,7 @@ class TestSyncWatchProviders:
             ["Netflix"],
             stored_at,
         )
-        _store_show_providers(
+        _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -332,7 +332,7 @@ class TestSyncWatchProviders:
             tz_datetime.now(),
         )
 
-        TMDB(function_scoped_session).sync_show_watch_providers(canonical_show.key)
+        TMDB(function_scoped_session).sync_title_watch_providers(canonical_title.key)
 
         assert listing.update_at is None
         assert season.update_at is None
@@ -342,16 +342,16 @@ class TestSyncWatchProviders:
         self,
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
-        canonical_show: Show,
+        canonical_title: Title,
     ) -> None:
         stored_at = tz_datetime.now() - timedelta(days=30)
         listing, season = _linked_listing(
             function_scoped_session,
-            canonical_show,
+            canonical_title,
             "Netflix",
             stored_at,
         )
-        _store_show_providers(
+        _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -359,7 +359,7 @@ class TestSyncWatchProviders:
             ["Netflix"],
             stored_at,
         )
-        _store_show_providers(
+        _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -368,22 +368,22 @@ class TestSyncWatchProviders:
             tz_datetime.now(),
         )
 
-        TMDB(function_scoped_session).sync_show_watch_providers(canonical_show.key)
+        TMDB(function_scoped_session).sync_title_watch_providers(canonical_title.key)
 
         assert listing.update_at is None
         assert season.update_at is None
 
     # TODO: Validate
-    def test_a_season_file_marks_the_same_records_the_show_file_would(
+    def test_a_season_file_marks_the_same_records_the_title_file_would(
         self,
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
-        canonical_show: Show,
+        canonical_title: Title,
     ) -> None:
         stored_at = tz_datetime.now() - timedelta(days=30)
         listing, season = _linked_listing(
             function_scoped_session,
-            canonical_show,
+            canonical_title,
             "Hulu",
             stored_at,
         )
@@ -406,20 +406,23 @@ class TestSyncWatchProviders:
             tz_datetime.now(),
         )
 
-        TMDB(function_scoped_session).sync_season_watch_providers(canonical_show.key, 1)
+        TMDB(function_scoped_session).sync_season_watch_providers(
+            canonical_title.key,
+            1,
+        )
 
         assert listing.update_at == newest.data_timestamp
         assert season.update_at == newest.data_timestamp
 
     # TODO: Validate
-    def test_a_season_sync_leaves_the_show_file_alone(
+    def test_a_season_sync_leaves_the_title_file_alone(
         self,
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
-        canonical_show: Show,
+        canonical_title: Title,
     ) -> None:
         stored_at = tz_datetime.now() - timedelta(days=30)
-        older_show_file = _store_show_providers(
+        older_title_file = _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -427,7 +430,7 @@ class TestSyncWatchProviders:
             ["Netflix"],
             stored_at,
         )
-        newer_show_file = _store_show_providers(
+        newer_title_file = _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -446,19 +449,19 @@ class TestSyncWatchProviders:
         )
 
         TMDB(function_scoped_session).sync_season_watch_providers(
-            canonical_show.key,
+            canonical_title.key,
             1,
         )
 
-        assert older_show_file.extra == {}
-        assert newer_show_file.extra == {}
+        assert older_title_file.extra == {}
+        assert newer_title_file.extra == {}
 
     # TODO: Validate
-    def test_a_show_sync_leaves_the_season_files_alone(
+    def test_a_title_sync_leaves_the_season_files_alone(
         self,
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
-        canonical_show: Show,
+        canonical_title: Title,
     ) -> None:
         stored_at = tz_datetime.now() - timedelta(days=30)
         older_season_file = _store_season_providers(
@@ -479,7 +482,7 @@ class TestSyncWatchProviders:
             ["Netflix", "Hulu"],
             tz_datetime.now(),
         )
-        _store_show_providers(
+        _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -488,7 +491,7 @@ class TestSyncWatchProviders:
             tz_datetime.now(),
         )
 
-        TMDB(function_scoped_session).sync_show_watch_providers(canonical_show.key)
+        TMDB(function_scoped_session).sync_title_watch_providers(canonical_title.key)
 
         assert older_season_file.extra == {}
         assert newer_season_file.extra == {}
@@ -499,10 +502,10 @@ class TestSyncWatchProviders:
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
     ) -> None:
-        movie = create_random_show(
+        movie = create_random_title(
             function_scoped_session,
             tmdb_plugin.sources[0],
-            key=tmdb_show_key(TMDBMediaType.movie, 27205),
+            key=tmdb_title_key(TMDBMediaType.movie, 27205),
         )
         listing, _season = _linked_listing(
             function_scoped_session,
@@ -511,7 +514,7 @@ class TestSyncWatchProviders:
             tz_datetime.now() - timedelta(days=30),
         )
 
-        TMDB(function_scoped_session).sync_show_watch_providers(movie.key)
+        TMDB(function_scoped_session).sync_title_watch_providers(movie.key)
 
         assert listing.update_at is None
 
@@ -523,9 +526,9 @@ class TestWatchProvidersFileStatus:
         self,
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
-        canonical_show: Show,
+        canonical_title: Title,
     ) -> None:
-        oldest = _store_show_providers(
+        oldest = _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -533,7 +536,7 @@ class TestWatchProvidersFileStatus:
             ["Netflix"],
             tz_datetime.now() - timedelta(days=60),
         )
-        middle = _store_show_providers(
+        middle = _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -541,7 +544,7 @@ class TestWatchProvidersFileStatus:
             ["Netflix", "Hulu"],
             tz_datetime.now() - timedelta(days=30),
         )
-        newest = _store_show_providers(
+        newest = _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -550,9 +553,9 @@ class TestWatchProvidersFileStatus:
             tz_datetime.now(),
         )
 
-        _sync_show_providers(
+        _sync_title_providers(
             function_scoped_session,
-            canonical_show.key,
+            canonical_title.key,
             oldest,
             middle,
             newest,
@@ -567,16 +570,16 @@ class TestWatchProvidersFileStatus:
         self,
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
-        canonical_show: Show,
+        canonical_title: Title,
     ) -> None:
         stored_at = tz_datetime.now() - timedelta(days=30)
         listing, _season = _linked_listing(
             function_scoped_session,
-            canonical_show,
+            canonical_title,
             "Hulu",
             stored_at,
         )
-        older = _store_show_providers(
+        older = _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -585,7 +588,7 @@ class TestWatchProvidersFileStatus:
             stored_at,
         )
         older.status = COMPLETED_STATUS
-        _store_show_providers(
+        _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -595,7 +598,7 @@ class TestWatchProvidersFileStatus:
         )
         function_scoped_session.flush()
 
-        TMDB(function_scoped_session).sync_show_watch_providers(canonical_show.key)
+        TMDB(function_scoped_session).sync_title_watch_providers(canonical_title.key)
 
         assert listing.update_at is None
 
@@ -604,9 +607,9 @@ class TestWatchProvidersFileStatus:
         self,
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
-        canonical_show: Show,
+        canonical_title: Title,
     ) -> None:
-        only = _store_show_providers(
+        only = _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -615,7 +618,7 @@ class TestWatchProvidersFileStatus:
             tz_datetime.now(),
         )
 
-        _sync_show_providers(function_scoped_session, canonical_show.key, only)
+        _sync_title_providers(function_scoped_session, canonical_title.key, only)
 
         assert only.status == "Incomplete"
 
@@ -623,7 +626,7 @@ class TestWatchProvidersFileStatus:
 # TODO: Validate
 class TestWatchProvidersFileKeys:
     # TODO: Validate
-    def test_a_show_file_is_keyed_by_the_day_it_was_downloaded(
+    def test_a_title_file_is_keyed_by_the_day_it_was_downloaded(
         self,
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
@@ -657,7 +660,7 @@ class TestWatchProvidersFileKeys:
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
     ) -> None:
-        _store_show_providers(
+        _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -665,7 +668,7 @@ class TestWatchProvidersFileKeys:
             ["Netflix"],
             tz_datetime.now() - timedelta(days=30),
         )
-        newest = _store_show_providers(
+        newest = _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -746,9 +749,9 @@ class TestWatchProvidersFileSchedule:
         self,
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
-        canonical_show: Show,
+        canonical_title: Title,
     ) -> None:
-        _store_show_providers(
+        _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -756,12 +759,12 @@ class TestWatchProvidersFileSchedule:
             ["Netflix"],
             tz_datetime.now() - timedelta(days=30),
         )
-        canonical_show.update_at = tz_datetime.now() - timedelta(days=1)
+        canonical_title.update_at = tz_datetime.now() - timedelta(days=1)
         plugin = TMDB(function_scoped_session)
 
         file = plugin.tv_series_watch_providers_file(
             1399,
-            plugin._due_watch_providers_date(canonical_show),  # noqa: SLF001
+            plugin._due_watch_providers_date(canonical_title),  # noqa: SLF001
         )
 
         today = tz_datetime.now().date().isoformat()
@@ -772,9 +775,9 @@ class TestWatchProvidersFileSchedule:
         self,
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
-        canonical_show: Show,
+        canonical_title: Title,
     ) -> None:
-        stored = _store_show_providers(
+        stored = _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -782,12 +785,12 @@ class TestWatchProvidersFileSchedule:
             ["Netflix"],
             tz_datetime.now() - timedelta(days=30),
         )
-        canonical_show.update_at = tz_datetime.now() + timedelta(days=1)
+        canonical_title.update_at = tz_datetime.now() + timedelta(days=1)
         plugin = TMDB(function_scoped_session)
 
         file = plugin.tv_series_watch_providers_file(
             1399,
-            plugin._due_watch_providers_date(canonical_show),  # noqa: SLF001
+            plugin._due_watch_providers_date(canonical_title),  # noqa: SLF001
         )
 
         assert file.file_key() == stored.key
@@ -797,9 +800,9 @@ class TestWatchProvidersFileSchedule:
         self,
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
-        canonical_show: Show,
+        canonical_title: Title,
     ) -> None:
-        stored = _store_show_providers(
+        stored = _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -807,12 +810,12 @@ class TestWatchProvidersFileSchedule:
             ["Netflix"],
             tz_datetime.now() - timedelta(days=30),
         )
-        canonical_show.update_at = None
+        canonical_title.update_at = None
         plugin = TMDB(function_scoped_session)
 
         file = plugin.tv_series_watch_providers_file(
             1399,
-            plugin._due_watch_providers_date(canonical_show),  # noqa: SLF001
+            plugin._due_watch_providers_date(canonical_title),  # noqa: SLF001
         )
 
         assert file.file_key() == stored.key
@@ -822,9 +825,9 @@ class TestWatchProvidersFileSchedule:
         self,
         function_scoped_session: Session,
         tmdb_plugin: Plugin,
-        canonical_show: Show,
+        canonical_title: Title,
     ) -> None:
-        older = _store_show_providers(
+        older = _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -833,7 +836,7 @@ class TestWatchProvidersFileSchedule:
             tz_datetime.now() - timedelta(days=30),
             tz_datetime.now() - timedelta(days=1),
         )
-        newer = _store_show_providers(
+        newer = _store_title_providers(
             function_scoped_session,
             tmdb_plugin,
             1399,
@@ -843,9 +846,9 @@ class TestWatchProvidersFileSchedule:
             tz_datetime.now() + timedelta(days=20),
         )
 
-        _sync_show_providers(
+        _sync_title_providers(
             function_scoped_session,
-            canonical_show.key,
+            canonical_title.key,
             older,
             newer,
         )

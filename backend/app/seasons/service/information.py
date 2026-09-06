@@ -12,22 +12,22 @@ from app.seasons.schemas import (
     SeasonInformationSide,
     SeasonOutput,
 )
-from app.shows.models import Show
-from app.shows.schemas import ShowPublic
 from app.sources.schemas import SourceListPublic
+from app.titles.models import Title
+from app.titles.schemas import TitlePublic
 
 
 # TODO: Validate
 def _information_side(
     label: str,
     season: Season,
-    show: Show,
+    title: Title,
 ) -> SeasonInformationSide:
     return SeasonInformationSide(
         label=label,
         season=SeasonOutput.model_validate(season),
-        show=ShowPublic.model_validate(show),
-        source=SourceListPublic.model_validate(show.source),
+        title=TitlePublic.model_validate(title),
+        source=SourceListPublic.model_validate(title.source),
     )
 
 
@@ -39,21 +39,21 @@ def season_information(session: Session, season: Season) -> SeasonInformationOut
     what is served already reads as TMDB has it and would leave nothing to
     compare.
     """
-    show = season.show
-    source = show.source
+    title = season.title
+    source = title.source
 
     counterpart = canonical_season_of(session, season.id)
     tmdb: SeasonInformationSide | None = None
     if counterpart:
-        canonical_season, canonical_show = counterpart
-        tmdb = _information_side(TMDB_PLUGIN_KEY, canonical_season, canonical_show)
+        canonical_season, canonical_title = counterpart
+        tmdb = _information_side(TMDB_PLUGIN_KEY, canonical_season, canonical_title)
 
     return SeasonInformationOutput(
         issue_reports=list_season_issue_reports(session, season.id),
         source=_information_side(
             source.name or source.plugin.key,
             season,
-            show,
+            title,
         ),
         tmdb=tmdb,
     )

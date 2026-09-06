@@ -7,8 +7,8 @@ from app.canonical_media.tmdb import (
 )
 from app.config import settings
 from app.episodes.models import Episode
-from app.shows.models import Show
-from app.shows.service.extra import update_show_episode_group, update_show_extra
+from app.titles.models import Title
+from app.titles.service.extra import update_title_episode_group, update_title_extra
 from app.users.models import User
 from app.watches.identifiers import watched_canonical_ids
 from app.watches.schemas import WatchCreate
@@ -29,10 +29,10 @@ class CrunchyrollValidator(PluginValidator[Crunchyroll]):
         "/series/{parse_url_response}/",
         # Crunchyroll redirects a series to the URL carrying its slug, so a
         # pasted link usually carries one.
-        "/series/{parse_url_response}/{show_slug}",
+        "/series/{parse_url_response}/{title_slug}",
         # A locale sits in front of the path for anybody not browsing from the
         # default one, and the same series is behind every one of them.
-        "/de/series/{parse_url_response}/{show_slug}",
+        "/de/series/{parse_url_response}/{title_slug}",
     )
 
 
@@ -41,10 +41,10 @@ class CrunchyrollValidator(PluginValidator[Crunchyroll]):
 # the spinoff is a third. Each of them is a title the listing is a copy of.
 # TODO: Validate
 class TestMixedTMDB(StandardTests[Crunchyroll], CrunchyrollValidator):
-    """Crunchyroll combines the Laid Back camp tv show and movie into a single series."""
+    """Crunchyroll combines the Laid Back camp tv title and movie into a single series."""
 
     parse_url_response = "GRWEW95KR"
-    show_slug = "laid-back-camp"
+    title_slug = "laid-back-camp"
 
 
 # A series TMDB has nothing to answer with, which leaves every episode standing
@@ -55,7 +55,7 @@ class TestNoTMDBMatchFound(StandardTests[Crunchyroll], CrunchyrollValidator):
     """Crunchyroll has a series that TMDB is not holding a title for."""
 
     parse_url_response = "G6DQNPE1R"
-    show_slug = "ah-my-buddha"
+    title_slug = "ah-my-buddha"
 
 
 # A series of several seasons that Crunchyroll and TMDB both file as one, which
@@ -67,7 +67,7 @@ class TestSeries1(StandardTests[Crunchyroll], CrunchyrollValidator):
     """Crunchyroll has a multi-season series TMDB holds as one title."""
 
     parse_url_response = "GYQWNXPZY"
-    show_slug = "fire-force"
+    title_slug = "fire-force"
 
 
 # The order Crunchyroll follows for Detective Conan, which is one of the episode
@@ -82,14 +82,14 @@ class TestSwappingEpisodeGroup(StandardTests[Crunchyroll], CrunchyrollValidator)
     """Crunchyroll numbers this series by an order of TMDB's rather than its own."""
 
     parse_url_response = "G6JQVM3ER"
-    show_slug = "detective-conan"
+    title_slug = "detective-conan"
 
     # TODO: Validate
-    def tmdb_show(self, session: Session) -> Show:
+    def tmdb_title(self, session: Session) -> Title:
         """Return the TMDB title the imported listing was matched to."""
-        for show in self.all_shows(session):
-            if is_tmdb_key(show.key):
-                return show
+        for title in self.all_titles(session):
+            if is_tmdb_key(title.key):
+                return title
         message = "The import matched no TMDB title to swap the order of"
         raise AssertionError(message)
 
@@ -112,11 +112,11 @@ class TestSwappingEpisodeGroup(StandardTests[Crunchyroll], CrunchyrollValidator)
         between the two is what the order is for.
         """
         self.import_url(session_with_files)
-        tmdb_show = self.tmdb_show(session_with_files)
+        tmdb_title = self.tmdb_title(session_with_files)
         with frozen_clock(self.update_time), mock_update():
-            update_show_extra(
+            update_title_extra(
                 session_with_files,
-                tmdb_show,
+                tmdb_title,
                 dump_extra(CRUNCHYROLL_EPISODE_GROUP),
             )
         self.assert_state(session_with_files, "swapped_episode_group")
@@ -134,22 +134,22 @@ class TestEpisodeGroupNameMatching(
     """Crunchyroll numbers this series as one of TMDB's other orders numbers it."""
 
     parse_url_response = "GYVNXMVP6"
-    show_slug = "cowboy-bebop"
+    title_slug = "cowboy-bebop"
 
     # TODO: Validate
-    def tmdb_show(self, session: Session) -> Show:
-        for show in self.all_shows(session):
-            if is_tmdb_key(show.key):
-                return show
+    def tmdb_title(self, session: Session) -> Title:
+        for title in self.all_titles(session):
+            if is_tmdb_key(title.key):
+                return title
         message = "The import matched no TMDB title to swap the order of"
         raise AssertionError(message)
 
     # TODO: Validate
-    def crunchyroll_show(self, session: Session) -> Show:
+    def crunchyroll_title(self, session: Session) -> Title:
         """Return the listing Crunchyroll itself carries."""
-        for show in self.all_shows(session):
-            if show.source.plugin.key == Crunchyroll.plugin_name():
-                return show
+        for title in self.all_titles(session):
+            if title.source.plugin.key == Crunchyroll.plugin_name():
+                return title
         message = "The import wrote no Crunchyroll listing to update"
         raise AssertionError(message)
 
@@ -164,7 +164,7 @@ class TestEpisodeGroupNameMatching(
         return [
             episode
             for episode in self.all_episodes(session)
-            if episode.season.show.source.plugin.key == Crunchyroll.plugin_name()
+            if episode.season.title.source.plugin.key == Crunchyroll.plugin_name()
         ]
 
     # TODO: Validate
@@ -209,7 +209,7 @@ class TestEpisodeGroupNameMatching(
         it as current would write nothing and match nothing.
         """
         self.import_url(session_with_files)
-        show = self.crunchyroll_show(session_with_files)
+        title = self.crunchyroll_title(session_with_files)
         for episode in self.crunchyroll_episodes(session_with_files):
             episode.canonical_episode = None
             episode.canonical_episode_validated_at = None
@@ -217,7 +217,7 @@ class TestEpisodeGroupNameMatching(
         session_with_files.flush()
 
         with frozen_clock(self.update_time), mock_update():
-            self.plugin_class(session_with_files).update_show(show, force=True)
+            self.plugin_class(session_with_files).update_title(title, force=True)
             session_with_files.flush()
 
         self.assert_every_episode_links_to_tmdb(session_with_files)
@@ -263,11 +263,11 @@ class TestEpisodeGroupNameMatching(
                 WatchCreate(verified=True),
             )
 
-        tmdb_show = self.tmdb_show(session_with_files)
+        tmdb_title = self.tmdb_title(session_with_files)
         with frozen_clock(self.update_time), mock_update():
-            update_show_episode_group(
+            update_title_episode_group(
                 session_with_files,
-                tmdb_show,
+                tmdb_title,
                 blu_ray_episode_group,
             )
             session_with_files.flush()

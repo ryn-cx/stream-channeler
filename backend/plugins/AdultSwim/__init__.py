@@ -9,7 +9,7 @@ from app.utils import tz_datetime
 from plugins.AdultSwim.media import AdultSwimMedia
 from plugins.AdultSwim.shared import (
     EPISODE_URL_REGEX,
-    SHOW_URL_REGEX,
+    TITLE_URL_REGEX,
     AdultSwimShared,
 )
 from plugins.utils.abstract_plugin import AbstractPlugin
@@ -19,7 +19,7 @@ from plugins.utils.base_plugin.search import BaseCatalogueSearchMixin
 
 if TYPE_CHECKING:
     from app.plugins.models import Plugin
-    from app.shows.models import Show
+    from app.titles.models import Title
 
 
 # TODO: Validate
@@ -35,7 +35,7 @@ class AdultSwimInitializer(BasePluginInitializer, AdultSwimShared):
     @override
     def _create_channel_records(self) -> None:
         self._channels()
-        self._process_new_shows()
+        self._process_new_titles()
 
 
 # TODO: Validate
@@ -52,18 +52,18 @@ class AdultSwim(
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
-        return (EPISODE_URL_REGEX, SHOW_URL_REGEX)
+        return (EPISODE_URL_REGEX, TITLE_URL_REGEX)
 
     # TODO: Validate
     @override
-    def get_media_importer(self, input: Show | str) -> AdultSwimMedia:
+    def get_media_importer(self, input: Title | str) -> AdultSwimMedia:
         return AdultSwimMedia(self)
 
     # TODO: Validate
     @override
     def update_plugin(self, plugin: Plugin) -> None:
-        logger.info("Checking Adult Swim for new shows")
-        self.shows_file().download_if_outdated(tz_datetime.now())
-        self._process_new_shows()
+        logger.info("Checking Adult Swim for new titles")
+        self.titles_file().download_if_outdated(tz_datetime.now())
+        self._process_new_titles()
         self._exclude_subscription_from_free_channel()
         plugin.update_at = tz_datetime.now() + self._next_update_interval()

@@ -15,7 +15,7 @@ from app.sources.models import Source
 from plugins.HiDive.basic_files import BasicFiles
 from plugins.HiDive.files import Schedule
 from plugins.HiDive.utils import (
-    card_show_name,
+    card_title_name,
     element_release_date,
     element_text,
     schedule_group_list,
@@ -87,12 +87,14 @@ class HiDiveShared(BasicFiles):
     def _process_new_schedule_files(self, source: Source) -> None:
         for schedule_file in self.get_incomplete_files(Schedule, self.schedule_file):
             # Queueing the titles a file found commits, which lets go of every
-            # show read for it, and a show nothing holds is not in memory to be
+            # title read for it, and a title nothing holds is not in memory to be
             # matched. Read back per file rather than once, so that a file after
             # the first still recognises the titles already imported.
             _cache = self._preload_sources(preload_seasons=True).all()
-            # TODO: Is there a better way to lookup shows?
-            shows_by_name = {show.name: show for show in source.shows if show.name}
+            # TODO: Is there a better way to lookup titles?
+            titles_by_name = {
+                title.name: title for title in source.titles if title.name
+            }
             logger.info(
                 "Processing schedule file: {}",
                 schedule_file.database_record.key,
@@ -103,39 +105,39 @@ class HiDiveShared(BasicFiles):
                 for group in group_list.attributes.groups or []:
                     for card in group.attributes.cards:
                         # Layout: content[0].elements[0] is the ISO release date,
-                        # elements[1] is "S1 E2 - Show Name".
+                        # elements[1] is "S1 E2 - Title Name".
                         elements = card.attributes.content[0].attributes.elements
                         release_date = element_release_date(elements[0])
-                        show_name = card_show_name(element_text(elements[1]))
-                        if show := shows_by_name.get(show_name):
-                            show.set_update_at(release_date)
-                            for season in show.seasons:
+                        title_name = card_title_name(element_text(elements[1]))
+                        if title := titles_by_name.get(title_name):
+                            title.set_update_at(release_date)
+                            for season in title.seasons:
                                 season.set_update_at(release_date)
                         else:
-                            unmatched_names.append(show_name)
+                            unmatched_names.append(title_name)
 
-            self._queue_new_shows(unmatched_names)
+            self._queue_new_titles(unmatched_names)
             schedule_file.database_record.status = COMPLETED_STATUS
 
     # TODO: Validate
-    def _queue_new_shows(self, show_names: list[str]) -> None:
+    def _queue_new_titles(self, title_names: list[str]) -> None:
         """Queue the titles a schedule file named that are not imported yet.
 
-        A card gives the show's name but not its URL, so the name is matched
+        A card gives the title's name but not its URL, so the name is matched
         against the imported catalogue to find it.
         """
-        new_show_urls: list[str] = []
-        for show_name in dict.fromkeys(show_names):
-            if show_url := self.search_for_url([show_name], TMDBMediaType.tv):
-                logger.info("Queueing new title: {}", show_name)
-                new_show_urls.append(show_url)
+        new_title_urls: list[str] = []
+        for title_name in dict.fromkeys(title_names):
+            if title_url := self.search_for_url([title_name], TMDBMediaType.tv):
+                logger.info("Queueing new title: {}", title_name)
+                new_title_urls.append(title_url)
             else:
-                logger.info("No search result for scheduled title: {}", show_name)
+                logger.info("No search result for scheduled title: {}", title_name)
 
         # Queued in one call so the whole schedule file costs a single commit.
-        if new_show_urls:
+        if new_title_urls:
             channel = self._schedule_channel()
-            add_urls_to_channel_import_queue(self.session, channel, new_show_urls)
+            add_urls_to_channel_import_queue(self.session, channel, new_title_urls)
 
     # TODO: Validate
     def _schedule_channel(self) -> Channel:

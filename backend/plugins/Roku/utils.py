@@ -26,8 +26,8 @@ def build_url(path: str) -> str:
 
 
 # TODO: Validate
-def show_url(show_key: str) -> str:
-    return build_url(f"details/{show_key}")
+def title_url(title_key: str) -> str:
+    return build_url(f"details/{title_key}")
 
 
 # TODO: Validate
@@ -50,25 +50,25 @@ def is_movie(content: ContentModel) -> bool:
 
 
 # TODO: Validate
-def build_season_key(show_key: str, season_number: int) -> str:
-    return f"{show_key}:{season_number}"
+def build_season_key(title_key: str, season_number: int) -> str:
+    return f"{title_key}:{season_number}"
 
 
 # TODO: Validate
 def split_season_key(season_key: str) -> tuple[str, int]:
-    show_key, _, season_number = season_key.rpartition(":")
-    return show_key, int(season_number)
+    title_key, _, season_number = season_key.rpartition(":")
+    return title_key, int(season_number)
 
 
 # TODO: Validate
-def show_episodes(content: ContentModel) -> list[ContentEpisode]:
+def title_episodes(content: ContentModel) -> list[ContentEpisode]:
     return content.episodes or []
 
 
 # TODO: Validate
 def season_numbers(content: ContentModel) -> list[int]:
     numbers: list[int] = []
-    for episode in show_episodes(content):
+    for episode in title_episodes(content):
         season_number = int(episode.season_number)
         if season_number not in numbers:
             numbers.append(season_number)
@@ -77,7 +77,7 @@ def season_numbers(content: ContentModel) -> list[int]:
 
 # TODO: Validate
 def first_episode_key(content: ContentModel, season_number: int) -> str:
-    for episode in show_episodes(content):
+    for episode in title_episodes(content):
         if int(episode.season_number) == season_number:
             return content_id(episode.meta.id)
     msg = f"No episodes for season {season_number}."

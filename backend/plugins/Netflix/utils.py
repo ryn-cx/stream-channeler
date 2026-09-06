@@ -38,7 +38,7 @@ WEEKDAYS = {
 }
 
 SEARCH_MEDIA_TYPES = {
-    "Show": "Series",
+    "Title": "Series",
     "Movie": "Movie",
 }
 
@@ -49,8 +49,8 @@ def build_url(path: str) -> str:
 
 
 # TODO: Validate
-def show_url(show_key: str) -> str:
-    return build_url(f"title/{show_key}")
+def title_url(title_key: str) -> str:
+    return build_url(f"title/{title_key}")
 
 
 # TODO: Validate
@@ -64,34 +64,34 @@ def search_url(query: str) -> str:
 
 
 # TODO: Validate
-def build_season_key(show_key: str, season_id: str | int) -> str:
-    return f"{show_key}:{season_id}"
+def build_season_key(title_key: str, season_id: str | int) -> str:
+    return f"{title_key}:{season_id}"
 
 
 # TODO: Validate
 def split_season_key(season_key: str) -> tuple[str, str]:
-    show_key, _, season_id = season_key.partition(":")
-    return show_key, season_id
+    title_key, _, season_id = season_key.partition(":")
+    return title_key, season_id
 
 
 # TODO: Validate
 def title_video(
     title: LodpTitleAndPlansPageModel,
-    show_key: str,
+    title_key: str,
 ) -> TitleVideo:
     video = next(
-        (video for video in title.data.videos if video.video_id == int(show_key)),
+        (video for video in title.data.videos if video.video_id == int(title_key)),
         None,
     )
     if video is None:
-        msg = f"No title found for {show_key}"
+        msg = f"No title found for {title_key}"
         raise ValueError(msg)
     return video
 
 
 # TODO: Validate
-def is_movie(title: LodpTitleAndPlansPageModel, show_key: str) -> bool:
-    return title_video(title, show_key).field__typename == "Movie"
+def is_movie(title: LodpTitleAndPlansPageModel, title_key: str) -> bool:
+    return title_video(title, title_key).field__typename == "Movie"
 
 
 # TODO: Validate
@@ -114,9 +114,9 @@ def season_episodes(
 
 # TODO: Validate
 def first_search_result_key(results: SearchPageResultsModel) -> str | None:
-    """Return the first movie or TV show in a page of search results.
+    """Return the first movie or TV title in a page of search results.
 
-    Netflix returns movies and shows intermixed. Suggestion entities
+    Netflix returns movies and titles intermixed. Suggestion entities
     (collections, autocomplete) carry no title and are skipped.
     """
     for section in results.data.page.sections.edges:

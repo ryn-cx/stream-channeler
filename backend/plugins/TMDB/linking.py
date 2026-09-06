@@ -10,9 +10,9 @@ class TMDBLinking(TMDBShared):
     # TODO: Validate
     def alternate_episode_numbers(
         self,
-        tmdb_tv_show_id: int,
+        tmdb_tv_title_id: int,
     ) -> dict[int, dict[int, frozenset[str]]]:
-        groups = self.tv_series_episode_groups_file(tmdb_tv_show_id).parsed()
+        groups = self.tv_series_episode_groups_file(tmdb_tv_title_id).parsed()
 
         numbers: dict[int, dict[int, set[str]]] = {}
         for option in groups.results:

@@ -8,9 +8,9 @@ import useAuth from "@/hooks/useAuth"
 
 /** A page this site holds a row on, and what names the row on it. */
 type MediaPage =
-  | { to: "/seasons"; search: { show_id: string } }
+  | { to: "/seasons"; search: { title_id: string } }
   | { to: "/episodes"; search: { season_id: string } }
-  | { to: "/shows"; search: { source_id: string } }
+  | { to: "/titles"; search: { source_id: string } }
 
 // TODO: Validate
 /**

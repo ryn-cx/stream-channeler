@@ -10,7 +10,7 @@ export interface GroupedIssueReport {
   media_type: IssueReportMediaType
   media_name: string | null
   season_name: string | null
-  show_name: string | null
+  title_name: string | null
   source_name: string | null
   report_count: number
   /** Every report on the record, run together into the one cell. */
@@ -36,7 +36,7 @@ export function groupIssueReports(
       media_type: report.media_type,
       media_name: report.media_name,
       season_name: report.season_name,
-      show_name: report.show_name,
+      title_name: report.title_name,
       source_name: report.source_name,
       report_count: 1,
       reports: report.report,
@@ -67,9 +67,9 @@ export const issueReportColumns: ColumnDef<IssueReportListOutput>[] = [
     ),
   },
   {
-    id: "show_name",
-    accessorFn: (row) => row.show_name ?? "",
-    header: "Show",
+    id: "title_name",
+    accessorFn: (row) => row.title_name ?? "",
+    header: "Title",
   },
   {
     id: "season_name",
@@ -119,9 +119,9 @@ export const groupedIssueReportColumns: ColumnDef<GroupedIssueReport>[] = [
     ),
   },
   {
-    id: "show_name",
-    accessorFn: (row) => row.show_name ?? "",
-    header: "Show",
+    id: "title_name",
+    accessorFn: (row) => row.title_name ?? "",
+    header: "Title",
   },
   {
     id: "season_name",

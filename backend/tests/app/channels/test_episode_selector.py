@@ -15,9 +15,9 @@ from app.channels.service.episodes import channel_episodes_output
 from app.users.models import User
 from app.watches.models import Watch
 from tests.app.channels.utils import (
-    channel_show_show,
+    channel_title_title,
     create_random_channel,
-    create_random_channel_show,
+    create_random_channel_title,
 )
 from tests.app.episodes.utils import create_random_episode
 from tests.app.users.utils import create_random_user
@@ -35,14 +35,14 @@ def owner(session_scoped_session: Session) -> User:
 def channel(session_scoped_session: Session, owner: User) -> Channel:
     """Build a channel holding one episode, which each test watches or does not."""
     channel = create_random_channel(session_scoped_session, user=owner.id)
-    channel_show = create_random_channel_show(
+    channel_title = create_random_channel_title(
         session_scoped_session,
         channel,
         is_whitelist=False,
     )
     create_random_episode(
         session_scoped_session,
-        channel_show_show(session_scoped_session, channel_show),
+        channel_title_title(session_scoped_session, channel_title),
     )
     session_scoped_session.flush()
     return channel
@@ -67,10 +67,10 @@ def episodes(
 # TODO: Validate
 def watch(session: Session, channel: Channel, owner: User, *, verified: bool) -> Watch:
     """Record the owner having watched the channel's one episode."""
-    show = channel_show_show(session, channel.shows[0])
+    title = channel_title_title(session, channel.titles[0])
     return create_random_watch(
         session,
-        show.seasons[0].episodes[0],
+        title.seasons[0].episodes[0],
         watch_user=owner,
         verified=verified,
     )

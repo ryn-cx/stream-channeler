@@ -15,21 +15,21 @@ import { handleError } from "@/utils"
 
 interface BlacklistedEpisodesDialogProps {
   channelId: string
-  canonicalShowId: string
-  showName: string
+  canonicalTitleId: string
+  titleName: string
   isOpen: boolean
   onClose: () => void
 }
 
-// Focused view of the episodes a (usually non-member) show has blacklisted on a channel,
+// Focused view of the episodes a (usually non-member) title has blacklisted on a channel,
 // letting the user remove individual blacklist entries. Reuses the whitelist endpoints:
 // every episode comes back with a `filtered` flag, so the blacklisted ones are the
-// filtered episodes of a blacklist-mode show.
+// filtered episodes of a blacklist-mode title.
 // TODO: Validate
 export function BlacklistedEpisodesDialog({
   channelId,
-  canonicalShowId,
-  showName,
+  canonicalTitleId,
+  titleName,
   isOpen,
   onClose,
 }: BlacklistedEpisodesDialogProps) {
@@ -37,20 +37,20 @@ export function BlacklistedEpisodesDialog({
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const { data: whitelistData, isLoading } = useQuery({
-    queryKey: ["channelShowWhitelist", channelId, canonicalShowId],
+    queryKey: ["channelTitleWhitelist", channelId, canonicalTitleId],
     queryFn: () =>
-      ChannelsService.getChannelWhitelist({ channelId, canonicalShowId }),
+      ChannelsService.getChannelWhitelist({ channelId, canonicalTitleId }),
     enabled: isOpen,
   })
 
   // Only the episodes an entry names, rather than the title's whole catalogue,
   // since a blacklist is read by its entries and nothing else here is shown.
   const { data: filteredEpisodes, isLoading: isLoadingEpisodes } = useQuery({
-    queryKey: ["channelShowFilteredEpisodes", channelId, canonicalShowId],
+    queryKey: ["channelTitleFilteredEpisodes", channelId, canonicalTitleId],
     queryFn: () =>
       ChannelsService.getChannelWhitelistFilteredEpisodes({
         channelId,
-        canonicalShowId,
+        canonicalTitleId,
       }),
     enabled: isOpen,
   })
@@ -59,19 +59,19 @@ export function BlacklistedEpisodesDialog({
     mutationFn: (episodeId: string) =>
       ChannelsService.updateChannelWhitelist({
         channelId,
-        canonicalShowId,
+        canonicalTitleId,
         requestBody: { episodes: [{ id: episodeId, marked: false }] },
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["channelShowWhitelist", channelId, canonicalShowId],
+        queryKey: ["channelTitleWhitelist", channelId, canonicalTitleId],
       })
       queryClient.invalidateQueries({
-        queryKey: ["channelShowFilteredEpisodes", channelId, canonicalShowId],
+        queryKey: ["channelTitleFilteredEpisodes", channelId, canonicalTitleId],
       })
       queryClient.invalidateQueries({ queryKey: ["episodes", channelId] })
-      // The show drops off the filter-only list once its last entry is removed.
-      queryClient.invalidateQueries({ queryKey: ["channel-shows", channelId] })
+      // The title drops off the filter-only list once its last entry is removed.
+      queryClient.invalidateQueries({ queryKey: ["channel-titles", channelId] })
       showSuccessToast("Episode removed from blacklist")
     },
     onError: handleError.bind(showErrorToast),
@@ -84,8 +84,8 @@ export function BlacklistedEpisodesDialog({
 
   // TODO: Validate
   const handleRemove = (episodeId: string) => {
-    // Removing the final entry deletes the filter-only show on the backend, so
-    // close the dialog instead of leaving it on a stale/missing show.
+    // Removing the final entry deletes the filter-only title on the backend, so
+    // close the dialog instead of leaving it on a stale/missing title.
     const isLast = blacklistedEpisodes.length === 1
     removeMutation.mutate(episodeId, {
       onSuccess: () => {
@@ -109,7 +109,7 @@ export function BlacklistedEpisodesDialog({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <ModalContent size="2xl">
         <DialogHeader>
-          <DialogTitle>Blacklisted Episodes - {showName}</DialogTitle>
+          <DialogTitle>Blacklisted Episodes - {titleName}</DialogTitle>
           <DialogDescription>
             Episodes hidden from this channel. Remove an entry to show the
             episode again.
@@ -121,7 +121,7 @@ export function BlacklistedEpisodesDialog({
             <p className="text-sm text-muted-foreground py-4">Loading…</p>
           ) : blacklistedEpisodes.length === 0 ? (
             <p className="text-sm text-muted-foreground py-4">
-              This show has no blacklisted episodes.
+              This title has no blacklisted episodes.
             </p>
           ) : (
             <div className="flex flex-col gap-1 py-2">

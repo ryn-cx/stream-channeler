@@ -2,7 +2,7 @@
 """Watchmode plugin.
 
 Looks up which services carry a title and nothing else. Watchmode holds no
-listing of its own that a `User` would watch, so this plugin stores no shows,
+listing of its own that a `User` would watch, so this plugin stores no titles,
 imports no URLs and is not searched: what it knows is handed to TMDB, which
 imports the URLs it gives on whichever scraper accepts them.
 """

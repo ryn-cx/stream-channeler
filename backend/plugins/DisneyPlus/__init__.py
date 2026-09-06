@@ -16,7 +16,7 @@ from plugins.utils.base_plugin.base import BaseReadURL
 from plugins.utils.base_plugin.initialize import BasePluginInitializer
 
 if TYPE_CHECKING:
-    from app.shows.models import Show
+    from app.titles.models import Title
 
 
 # TODO: Validate
@@ -35,7 +35,7 @@ class DisneyPlus(DisneyPlusShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def get_media_importer(self, input: Show | str) -> DisneyPlusMedia:
+    def get_media_importer(self, input: Title | str) -> DisneyPlusMedia:
         if isinstance(input, str):
             match = re.match(self._domain_regex() + ENTITY_URL_REGEX, input)
             if not match:
@@ -44,14 +44,14 @@ class DisneyPlus(DisneyPlusShared, BaseReadURL, AbstractPlugin, register=False):
 
             # Movies and series are answered at the same address, so the page has
             # to be read before it is known which of the two it is.
-            show_key = match.group("entity_key")
-            self.raise_if_invalid_file(self.entity_file(show_key), input)
-            if is_movie(self.entity_file(show_key).parsed()):
+            title_key = match.group("entity_key")
+            self.raise_if_invalid_file(self.entity_file(title_key), input)
+            if is_movie(self.entity_file(title_key).parsed()):
                 return DisneyPlusMovie(self)
             return DisneyPlusSeries(self)
 
         if not input.media_type:
-            msg = "Show.media_type is not set."
+            msg = "Title.media_type is not set."
             raise AttributeError(msg)
         if input.media_type == "Movie":
             return DisneyPlusMovie(self)
