@@ -619,6 +619,7 @@ export function ManageTitlesTabs({
         >
           <AISuggestions
             channelId={channelId}
+            isActive={activeTab === "ai"}
             onRequestSearch={(title) => {
               setSearchQuery(title)
               setActiveTab("search")

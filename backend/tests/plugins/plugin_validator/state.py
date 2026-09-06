@@ -14,7 +14,7 @@ from sqlalchemy import Column, Table
 from sqlalchemy import select as sqlalchemy_select
 from sqlmodel import Session, SQLModel
 
-EXCLUDED_TABLES = frozenset({"file", "user", "channel", "channelqueue"})
+EXCLUDED_TABLES = frozenset({"file", "user"})
 """The tables the dump leaves out.
 
 The stored test files are put into `file` before a test runs, so the table says

@@ -54,5 +54,5 @@ class HuluBaseFiles(BasePlugin):
 
     # TODO: Validate
     @override
-    def _source_files(self) -> Sequence[AllSeries | AllMovies]:
+    def _plugin_files(self) -> Sequence[AllSeries | AllMovies]:
         return [self.all_series_file(), self.all_movies_file()]

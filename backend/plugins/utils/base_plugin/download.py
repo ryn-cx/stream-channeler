@@ -107,6 +107,10 @@ class BaseDownloadMixin(ABC):
         return [file.data_timestamp() for file in self._source_files()]
 
     # TODO: Validate
+    def plugin_data_timestamps(self) -> list[datetime]:
+        return [file.data_timestamp() for file in self._plugin_files()]
+
+    # TODO: Validate
     def title_data_timestamp(self, title_key: str) -> datetime:
         """Return the newest data timestamp among the title's files."""
         return max(self.title_data_timestamps(title_key))

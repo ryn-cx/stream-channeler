@@ -2,11 +2,13 @@
 """What every other part of the plugin reads a title by."""
 
 from enum import StrEnum
+from typing import NamedTuple
 from urllib.parse import quote, quote_plus
 from uuid import UUID
 
 from wholoo.all_movies.models import AllMoviesModel
 from wholoo.all_series.models import AllSeriesModel
+from wholoo.movies.models import MoviesModel
 from wholoo.season.models import Item, SeasonModel
 from wholoo.tv.models import TVModel
 
@@ -94,3 +96,39 @@ def title_urls(page: AllSeriesModel | AllMoviesModel) -> list[str]:
         for item in component.items or []
         if item.href
     ]
+
+
+# TODO: Validate
+class HuluPlan(NamedTuple):
+    network: str
+    is_subscription: bool
+
+
+# TODO: Validate
+def title_plan(page: TVModel | MoviesModel) -> HuluPlan | None:
+    vod_items = page.details.vod_items
+    if vod_items is None:
+        return None
+    bundle = vod_items.focus.entity.bundle
+    # I have no idea why but these three numbers seem to represent the titles that are
+    # free on Hulu.
+    return HuluPlan(bundle.network_name, bundle.package_id not in (1, 2, 33))
+
+
+# TODO: Validate
+def genre_names(page: TVModel | MoviesModel) -> list[str]:
+    return page.details.entity.genre_names
+
+
+# TODO: Validate
+def plan_channel_name(subject: str, plan: HuluPlan | None) -> str:
+    if plan and plan.is_subscription:
+        return f"Hulu - {subject} (Subscription)"
+    return f"Hulu - {subject}"
+
+
+# TODO: Validate
+def plan_channel_description(subject: str, plan: HuluPlan | None) -> str:
+    if plan and plan.is_subscription:
+        return f"All {subject} on Hulu that require an additional subscription."
+    return f"All {subject} on Hulu."

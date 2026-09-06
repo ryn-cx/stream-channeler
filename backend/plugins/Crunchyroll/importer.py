@@ -346,7 +346,6 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
             self.__categories_by_title_key = categories_by_title_key
         return self.__categories_by_title_key
 
-    # TODO: Validate
     def create_channel_records(self) -> None:
         self._create_channel_records_from_file(self.catalogue_file().datums())
         for browse_json in self.get_incomplete_files(BrowseSeries, self.browse_file):
@@ -388,7 +387,11 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
         releases = [*self.catalogue_file().datums(), *browse_file.datums()]
         self._mark_series_as_outdated(releases)
         new_title_keys = {release.id for release in releases}
-        self._mark_mismatched_titles_as_outdated(self.source_name(), new_title_keys)
+        self._mark_mismatched_titles_as_outdated(
+            self.source_name(),
+            new_title_keys,
+            self.source_data_timestamps(),
+        )
         self.upsert_source(self.source_name())
 
 
@@ -652,5 +655,9 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
         self.create_channel_records()
         self._mark_artists_as_outdated(artists)
         new_title_keys = {artist.id for artist in artists}
-        self._mark_mismatched_titles_as_outdated(self.source_name(), new_title_keys)
+        self._mark_mismatched_titles_as_outdated(
+            self.source_name(),
+            new_title_keys,
+            self.source_data_timestamps(),
+        )
         self.upsert_source(self.source_name())

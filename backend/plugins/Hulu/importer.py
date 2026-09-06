@@ -1,9 +1,7 @@
-# TODO: Validate
 from __future__ import annotations
 
 import re
 from abc import ABC, abstractmethod
-from datetime import timedelta
 from typing import TYPE_CHECKING, Any, override
 
 from sqlmodel import col, select
@@ -13,7 +11,6 @@ from app.episodes.models import Episode
 from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.titles.models import Title
-from app.utils import tz_datetime
 from plugins.Hulu.shared import (
     MOVIE_URL_REGEX,
     SERIES_URL_REGEX,
@@ -24,11 +21,15 @@ from plugins.Hulu.utils import (
     HuluMediaType,
     build_season_key,
     episode_url,
+    genre_names,
     image_url,
+    plan_channel_description,
+    plan_channel_name,
     season_items,
     season_numbers,
     split_season_key,
     thumbnail_url,
+    title_plan,
     title_url,
 )
 from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
@@ -39,43 +40,85 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from app.sources.models import Source
+    from plugins.Hulu.files import Movie, Series
+    from plugins.Hulu.utils import HuluPlan
+    from plugins.utils.abstract_plugin import URLImportResult
     from plugins.utils.base_plugin.files import BaseFile
 
 
-# TODO: Validate
 class HuluImporter(HuluShared, BaseImporter, ABC):
-    # TODO: Validate
     @abstractmethod
-    def _add_title_to_media_type_channel(self, url: str) -> None: ...
+    def _media_type_name(self) -> str: ...
 
-    # TODO: Validate
+    @abstractmethod
+    @override
+    def _title_files(self, title_key: str) -> Sequence[Series | Movie]: ...
+
+    @override
+    def import_url(self, url: str) -> list[URLImportResult]:
+        media_info = self.extract_media_info(url)
+        if title := self._preload_title(media_info.title_key).one_or_none():
+            return self._import_results(title, media_info)
+
+        title_source = self.get_title_source(media_info.title_key)
+        title = self.upsert_title(title_source, media_info.title_key)
+        return self._import_results(title, media_info)
+
+    def get_title_source(self, title_key: str) -> Source:
+        plan = title_plan(self._title_files(title_key)[0].parsed())
+        source_key = "Hulu"
+        if plan and plan.is_subscription:
+            source_key += f" ({plan.network})"
+
+        if source_key not in self._sources:
+            self._sources[source_key] = self.upsert_source(source_key)
+
+        return self._sources[source_key]
+
     def add_title_to_plugin_channels(self, title: Title) -> None:
         if not title.url:  # Should be impossible.
             msg = "Title.url is not set."
             raise AttributeError(msg)
 
+        page = self._title_files(title.key)[0].parsed()
+        plan = title_plan(page)
         self._add_title_to_all_titles_channel(title.url)
-        self._add_title_to_media_type_channel(title.url)
+        self._add_title_to_plan_channel(title.url, self._media_type_name(), plan)
+        if plan:
+            self._add_title_to_plan_channel(title.url, plan.network, plan)
+        for genre in genre_names(page):
+            self._add_title_to_plan_channel(title.url, genre, plan)
+        if not (plan and plan.is_subscription):
+            self._add_title_to_included_titles_channel(title.url)
 
-    # TODO: Validate
     def _add_title_to_all_titles_channel(self, url: str) -> None:
-        channel = self.get_or_create_channel(
-            "Hulu - All Titles",
-            "All Titles on Hulu.",
-        )
+        channel_name = "Hulu - All Titles"
+        channel_description = "All Titles on Hulu."
+        channel = self.get_or_create_channel(channel_name, channel_description)
+        self.add_new_urls_to_channel(channel, [url])
+
+    def _add_title_to_plan_channel(
+        self,
+        url: str,
+        subject: str,
+        plan: HuluPlan | None,
+    ) -> None:
+        channel_name = plan_channel_name(subject, plan)
+        channel_description = plan_channel_description(subject, plan)
+        channel = self.get_or_create_channel(channel_name, channel_description)
+        self.add_new_urls_to_channel(channel, [url])
+
+    def _add_title_to_included_titles_channel(self, url: str) -> None:
+        channel_name = "Hulu - Included Titles"
+        channel_description = "All Titles included with a Hulu subscription."
+        channel = self.get_or_create_channel(channel_name, channel_description)
         self.add_new_urls_to_channel(channel, [url])
 
 
-# TODO: Validate
 class HuluSeriesImporter(HuluImporter):
-    # TODO: Validate
     @override
-    def _add_title_to_media_type_channel(self, url: str) -> None:
-        channel = self.get_or_create_channel(
-            "Hulu - TV Series",
-            "All TV Series on Hulu.",
-        )
-        self.add_new_urls_to_channel(channel, [url])
+    def _media_type_name(self) -> str:
+        return "Series"
 
     @classmethod
     @override
@@ -113,20 +156,16 @@ class HuluSeriesImporter(HuluImporter):
             year = premiere_date.year
         return [TMDBLookupInfo(parsed_series.name, TMDBMediaType.tv, year)]
 
-    # TODO: Validate
     @override
-    def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
-        # Includes title information and the list of seasons.
+    def _title_files(self, title_key: str) -> Sequence[Series]:
         return [self.series_file(title_key)]
 
-    # TODO: Validate
     @override
     def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
         _, season_number = split_season_key(season_key)
         # Includes season information and the list of episodes.
         return [self.season_file(title_key, season_number)]
 
-    # TODO: Validate
     @override
     def _episode_files(
         self,
@@ -138,7 +177,6 @@ class HuluSeriesImporter(HuluImporter):
         # Includes episode information.
         return [self.season_file(title_key, season_number)]
 
-    # TODO: Validate
     @override
     def _season_keys_from_title_files(self, title_key: str) -> list[str]:
         return [
@@ -146,9 +184,7 @@ class HuluSeriesImporter(HuluImporter):
             for season_number in season_numbers(self.series_file(title_key).parsed())
         ]
 
-    # TODO: Validate
     @override
-    # TODO: Validate
     def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
@@ -167,9 +203,7 @@ class HuluSeriesImporter(HuluImporter):
             ]
         return episode_keys
 
-    # TODO: Validate
     @override
-    # TODO: Validate
     def upsert_title(
         self,
         source: Source,
@@ -188,7 +222,7 @@ class HuluSeriesImporter(HuluImporter):
                 description=entity.description,
                 # TODO: There are mini series or documentary labels as well that could
                 # be intermixed here?
-                media_type="Series",
+                media_type=self._media_type_name(),
                 url=title_url(title_key, HuluMediaType.SERIES),
                 image_url=image_url(parsed_series.artwork.program_tile.path),
                 thumbnail_url=thumbnail_url(parsed_series.artwork.program_tile.path),
@@ -205,7 +239,6 @@ class HuluSeriesImporter(HuluImporter):
 
         return existing_title
 
-    # TODO: Validate
     def _upsert_seasons(self, title: Title, *, force: bool = False) -> None:
         for sort_order, season_number in enumerate(
             season_numbers(self.series_file(title.key).parsed()),
@@ -229,44 +262,13 @@ class HuluSeriesImporter(HuluImporter):
                 season = new_season.upsert(title, season)
                 season.set_update_at(None, data_timestamps)
 
-            self._set_season_update_at(season, title.key, season_number)
             self._upsert_episodes(season, force=force)
             self._set_season_update_at_based_on_last_episode(season)
 
-    # TODO: Validate
-    def _set_season_update_at(
-        self,
-        season: Season,
-        title_key: str,
-        season_number: int,
-    ) -> None:
-        start_dates = [
-            item.bundle.availability.start_date
-            for item in season_items(
-                self.season_file(title_key, season_number).parsed(),
-            )
-        ]
-        if not start_dates:
-            return
-
-        now = tz_datetime.now()
-        data_timestamps = self.season_data_timestamps(season.key, title_key)
-        for start_date in start_dates:
-            if start_date > now:
-                season.set_update_at(start_date, data_timestamps)
-
-        season.set_update_at(max(start_dates) + timedelta(days=7), data_timestamps)
-
-    # TODO: Validate
     def _upsert_episodes(self, season: Season, *, force: bool = False) -> None:
         title_key, season_number = split_season_key(season.key)
         items = season_items(self.season_file(title_key, season_number).parsed())
         for sort_order, item in enumerate(items):
-            # Don't import media that cannot actually be watched because that would just
-            # be annoying for the users.
-            if item.bundle.availability.start_date > tz_datetime.now():
-                continue
-
             episode_key = str(item.id)
             episode = Episode.get_from_memory(self.session, season, episode_key)
 
@@ -301,21 +303,14 @@ class HuluSeriesImporter(HuluImporter):
                 season_id=season.id,
             )
             episode = new_episode.upsert(season, episode)
-            episode.set_update_at(None, data_timestamps)
+            episode.set_update_at(episode.air_date, data_timestamps)
 
 
-# TODO: Validate
 class HuluMovieImporter(HuluImporter):
-    # TODO: Validate
     @override
-    def _add_title_to_media_type_channel(self, url: str) -> None:
-        channel = self.get_or_create_channel(
-            "Hulu - Movies",
-            "All Movies on Hulu.",
-        )
-        self.add_new_urls_to_channel(channel, [url])
+    def _media_type_name(self) -> str:
+        return "Movies"
 
-    # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
@@ -336,33 +331,23 @@ class HuluMovieImporter(HuluImporter):
         self.raise_if_invalid_file(self.movie_file(title_key), url)
         return URLTitleInfo(title_key)
 
-    # TODO: Validate
     @override
-    # TODO: Validate
     def tmdb_lookup_info(
         self,
         title_key: str,
     ) -> list[TMDBLookupInfo]:
         parsed_movie = self.movie_file(title_key).parsed()
-        return [
-            TMDBLookupInfo(
-                parsed_movie.name,
-                TMDBMediaType.movie,
-                parsed_movie.details.entity.premiere_date.year,
-            ),
-        ]
+        year = parsed_movie.details.entity.premiere_date.year
+        return [TMDBLookupInfo(parsed_movie.name, TMDBMediaType.movie, year)]
 
-    # TODO: Validate
     @override
-    def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
+    def _title_files(self, title_key: str) -> Sequence[Movie]:
         return [self.movie_file(title_key)]
 
-    # TODO: Validate
     @override
     def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
         return [self.movie_file(title_key)]
 
-    # TODO: Validate
     @override
     def _episode_files(
         self,
@@ -372,15 +357,11 @@ class HuluMovieImporter(HuluImporter):
     ) -> Sequence[BaseFile[Any]]:
         return [self.movie_file(title_key)]
 
-    # TODO: Validate
     @override
-    # TODO: Validate
     def _season_keys_from_title_files(self, title_key: str) -> list[str]:
         return [title_key]
 
-    # TODO: Validate
     @override
-    # TODO: Validate
     def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
@@ -390,9 +371,7 @@ class HuluMovieImporter(HuluImporter):
             season_keys = [season_keys]
         return list(season_keys)
 
-    # TODO: Validate
     @override
-    # TODO: Validate
     def upsert_title(
         self,
         source: Source,
@@ -425,7 +404,6 @@ class HuluMovieImporter(HuluImporter):
 
         return title
 
-    # TODO: Validate
     def _upsert_season(self, title: Title, *, force: bool = False) -> None:
         season = Season.get_from_memory(self.session, title, title.key)
         if self._season_is_outdated(season, title.key, force=force):
@@ -438,11 +416,11 @@ class HuluMovieImporter(HuluImporter):
                 title_id=title.id,
             )
             season = new_season.upsert(title, season)
+            # Movies should be updated from update_show.
             season.set_update_at(None, data_timestamps)
 
         self._upsert_episode(season, force=force)
 
-    # TODO: Validate
     def _upsert_episode(self, season: Season, *, force: bool = False) -> None:
         parsed_movie = self.movie_file(season.key).parsed()
         episode = Episode.get_from_memory(self.session, season, season.key)
@@ -472,4 +450,5 @@ class HuluMovieImporter(HuluImporter):
                 season_id=season.id,
             )
             episode = new_episode.upsert(season, episode)
+            # Movies should be updated from update_show.
             episode.set_update_at(None, data_timestamps)

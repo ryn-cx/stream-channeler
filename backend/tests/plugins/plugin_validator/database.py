@@ -16,6 +16,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 from sqlmodel.sql.expression import SelectOfScalar
 
+from app.channels.models import Channel
 from app.constants import TEST_FILES_FOLDER
 from app.episodes.models import Episode
 from app.files.models import File
@@ -348,6 +349,14 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
         )
 
     # TODO: Validate
+    @staticmethod
+    def _delete_channels(session: Session) -> None:
+        for channel in session.exec(select(Channel)).all():
+            session.delete(channel)
+        session.flush()
+        session.expire_all()
+
+    # TODO: Validate
     def _import_url(
         self,
         session: Session,
@@ -356,6 +365,7 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
         """Import the URL using the plugin."""
         url = url or self.url
         assert url, "URL must be provided for URL import tests"
+        self._delete_channels(session)
         self.imported_plugin = self.plugin_class(session)
         output = self.imported_plugin.import_url(url)
         match_imported_titles_to_tmdb(

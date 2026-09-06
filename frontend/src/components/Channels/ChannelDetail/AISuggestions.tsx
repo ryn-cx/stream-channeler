@@ -27,6 +27,7 @@ interface Suggestion {
 
 interface AISuggestionsProps {
   channelId: string
+  isActive: boolean
   onRequestSearch?: (title: string) => void
 }
 
@@ -212,6 +213,7 @@ function parseSuggestions(raw: string): Suggestion[] {
 // TODO: Validate
 export function AISuggestions({
   channelId,
+  isActive,
   onRequestSearch,
 }: AISuggestionsProps) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -250,7 +252,10 @@ export function AISuggestions({
   const [addingTitle, setAddingTitle] = useState<string | null>(null)
 
   const { data: channelTitles, isLoading: isLoadingTitles } =
-    useAllChannelTitles(channelId, { refetchOnWindowFocus: false })
+    useAllChannelTitles(channelId, {
+      enabled: isActive,
+      refetchOnWindowFocus: false,
+    })
 
   const { data: sourcePreferences } = useQuery({
     queryKey: ["source-preferences"],

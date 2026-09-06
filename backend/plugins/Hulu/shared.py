@@ -6,9 +6,7 @@ from __future__ import annotations
 from typing import override
 
 from app.sources.models import Source
-from app.utils import tz_datetime
 from app.utils.strict_re import strict_search
-from app.utils.update_at import staggered_monthly_update_at
 from plugins.Hulu.base_files import HuluBaseFiles
 from plugins.Hulu.utils import (
     HuluMediaType,
@@ -52,20 +50,16 @@ class HuluShared(HuluBaseFiles):
     # TODO: Validate
     @override
     def upsert_source(self, source_key: str) -> Source:
-        data_timestamps = self.source_data_timestamps()
-        existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
+        existing_source = Source.get(self.session, self.plugin, source_key)
         source = Source(
             key=source_key,
-            name=self.plugin_name(),
+            name=source_key,
             favicon_url=self.favicon_url(),
             link_to_tmdb=self.link_to_tmdb(),
-            data_timestamp=max(data_timestamps),
+            data_timestamp=max(self.plugin_data_timestamps()),
             plugin_id=self.plugin.id,
         ).upsert(self.plugin, existing_source)
-        source.set_update_at(
-            staggered_monthly_update_at(source_key, tz_datetime.now()),
-            data_timestamps,
-        )
+        source.set_update_at(None)
         return source
 
     # TODO: Validate

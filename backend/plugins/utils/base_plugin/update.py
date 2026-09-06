@@ -21,9 +21,9 @@ class BaseUpdateMixin(BaseSoftDeleteMixin, ABC):
         self,
         source_key: str | None,
         new_title_keys: Iterable[str],
+        data_timestamps: list[datetime],
     ) -> None:
         listed = set(new_title_keys)
-        data_timestamps = self.source_data_timestamps()
         for source in self._preload_sources(source_key, preload_titles=True):
             for title in source.titles:
                 is_listed = title.key in listed
