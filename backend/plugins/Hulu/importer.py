@@ -215,7 +215,6 @@ class HuluSeriesImporter(HuluImporter):
 
     # TODO: Validate
     def _upsert_seasons(self, title: Title, *, force: bool = False) -> None:
-        seasons: list[Season] = []
         for sort_order, season_number in enumerate(
             season_numbers(self.series_file(title.key).parsed()),
         ):
@@ -240,9 +239,7 @@ class HuluSeriesImporter(HuluImporter):
 
             self._set_season_update_at(season, title.key, season_number)
             self._upsert_episodes(season, force=force)
-            seasons.append(season)
-
-        self._set_season_update_at_based_on_last_episode(seasons[-1])
+            self._set_season_update_at_based_on_last_episode(season)
 
     # TODO: Validate
     def _set_season_update_at(
@@ -436,7 +433,6 @@ class HuluMovieImporter(HuluImporter):
 
         return title
 
-    # TODO: Validate
     def _upsert_season(self, title: Title, *, force: bool = False) -> None:
         season = Season.get_from_memory(self.session, title, title.key)
         if self._season_is_outdated(season, title.key, force=force):
@@ -453,7 +449,6 @@ class HuluMovieImporter(HuluImporter):
 
         self._upsert_episode(season, force=force)
 
-    # TODO: Validate
     def _upsert_episode(self, season: Season, *, force: bool = False) -> None:
         parsed_movie = self.movie_file(season.key).parsed()
         episode = Episode.get_from_memory(self.session, season, season.key)

@@ -318,7 +318,6 @@ class TMDBSeries(TMDBImporter):
         *,
         force: bool = False,
     ) -> None:
-        seasons: list[Season] = []
         # Whichever order the title is read in, seasons and episodes come back
         # the same shape, so nothing below asks which it was.
         for source in self.chosen_seasons(title_key):
@@ -347,9 +346,7 @@ class TMDBSeries(TMDBImporter):
                 tmdb_tv_title_id=tmdb_tv_title_id,
                 force=force,
             )
-            seasons.append(season)
-
-        self._set_season_update_at_based_on_last_episode(seasons[-1])
+            self._set_season_update_at_based_on_last_episode(season)
 
     # TODO: Validate
     def _upsert_episodes(

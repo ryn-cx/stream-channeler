@@ -4,13 +4,11 @@ from __future__ import annotations
 import re
 from abc import ABC, abstractmethod
 from datetime import timedelta
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, override
 
 from loguru import logger
 
 from app.canonical_media.keys import watch_identifier
-from app.channels.service.import_queue import add_urls_to_channel_import_queue
 from app.episodes.models import Episode
 from app.files.models import File
 from app.media.media_type import TMDBMediaType
@@ -51,20 +49,18 @@ if TYPE_CHECKING:
 
     from chirashi.artist_concerts.models import Datum as ConcertListingDatum
     from chirashi.artist_music_videos.models import Datum as MusicVideoListingDatum
+    from chirashi.browse_music.models import Datum as BrowseMusicDatum
     from chirashi.browse_series.models import Datum as BrowseSeriesDatum
 
-    from app.channels.models import Channel
     from plugins.utils.base_plugin.files import BaseFile
 
 
-# TODO: Validate
 class CrunchyrollImporter(CrunchyrollShared, BaseImporter, ABC):
-    # TODO: Validate
+    # TODO: Should this be part of the base plugin instead?
     @classmethod
     @abstractmethod
     def _source_update_interval(cls) -> timedelta: ...
 
-    # TODO: Validate
     @override
     def upsert_source(self, source_key: str) -> Source:
         data_timestamp = self.source_data_timestamp()
@@ -91,32 +87,25 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
 
     __categories_by_title_key: dict[str, list[str]] | None = None
 
-    # TODO: Validate
     @classmethod
     @override
     def _source_update_interval(cls) -> timedelta:
+        # The page lists episodes from newest to oldest, daily checks work best for
+        # this.
         return timedelta(days=1)
 
-    # TODO: Validate
     @staticmethod
     def title_url(title_key: str) -> str:
         return build_url(f"series/{title_key}")
 
-    # TODO: Validate
     @staticmethod
     def episode_url(episode_key: str) -> str:
         return build_url(f"watch/{episode_key}")
 
-    # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
         return (SERIES_URL_REGEX, EPISODE_URL_REGEX)
-
-    # TODO: Validate
-    @override
-    def _url_source(self) -> Source:
-        return self._sources[VIDEO_SOURCE]
 
     # TODO: Validate
     @override
@@ -275,8 +264,8 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
                 season.set_update_at(None, data_timestamp)
 
             self._upsert_episodes(season, title.key, force=force)
+            self._set_season_update_at_based_on_last_episode(season)
 
-    # TODO: Validate
     def _upsert_episodes(
         self,
         season: Season,
@@ -284,8 +273,8 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
         *,
         force: bool = False,
     ) -> None:
-        episodes_data = self.season_episodes_file(season.key).parsed()
-        for sort_order, episode_data in enumerate(episodes_data.data):
+        parsed_season_episodes = self.season_episodes_file(season.key).parsed()
+        for sort_order, episode_data in enumerate(parsed_season_episodes.data):
             episode = Episode.get_from_memory(self.session, season, episode_data.id)
             if not self._episode_is_outdated(
                 episode,
@@ -370,7 +359,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
     def _categories_by_title_key(self) -> dict[str, list[str]]:
         if self.__categories_by_title_key is None:
             categories_by_title_key: dict[str, list[str]] = {}
-            for datum in self.catalogue_file().data():
+            for datum in self.catalogue_file().datums():
                 categories_by_title_key[datum.id] = list(
                     datum.series_metadata.tenant_categories,
                 )
@@ -378,17 +367,9 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
         return self.__categories_by_title_key
 
     # TODO: Validate
-    def _plugin_channel(self) -> Channel:
-        """Return the plugin owned channel every Crunchyroll series is queued into."""
-        return self.add_urls_to_plugin_channel(
-            VIDEO_SOURCE,
-            "**Every anime from Crunchyroll in a single location.**",
-        )
-
-    # TODO: Validate
     def create_channel_records(self) -> None:
         _cache = self._preload_sources(VIDEO_SOURCE, preload_seasons=True).all()
-        self._create_channel_records_from_file(self.catalogue_file().data())
+        self._create_channel_records_from_file(self.catalogue_file().datums())
         for browse_json in self.get_incomplete_files(
             BrowseSeries,
             self.browse_file,
@@ -411,9 +392,9 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
             )
         ]
         if new_series_urls:
-            add_urls_to_channel_import_queue(
-                self.session,
-                self._plugin_channel(),
+            self.add_urls_to_plugin_channel(
+                VIDEO_SOURCE,
+                "All Anime on Crunchyroll.",
                 new_series_urls,
             )
 
@@ -441,7 +422,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
         browse_file = self.newest_browse_file()
         browse_file.download_if_outdated()
         self.create_channel_records()
-        releases = [*self.catalogue_file().data(), *browse_file.datums()]
+        releases = [*self.catalogue_file().datums(), *browse_file.datums()]
         self._mark_series_as_outdated(releases)
         self._mark_mismatched_titles_as_outdated(
             {release.id for release in releases},
@@ -490,11 +471,6 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
             CONCERT_URL_REGEX,
             ARTIST_URL_REGEX,
         )
-
-    # TODO: Validate
-    @override
-    def _url_source(self) -> Source:
-        return self._sources[MUSIC_SOURCE]
 
     # TODO: Validate
     @override
@@ -636,8 +612,6 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
             self._upsert_episodes(season, title.key, category, force=force)
             seasons.append(season)
 
-        self._set_season_update_at_based_on_last_episode(seasons[-1])
-
     # TODO: Validate
     def _upsert_episodes(
         self,
@@ -712,53 +686,47 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
             )
 
     # TODO: Validate
-    @staticmethod
-    def _channel_description() -> str:
-        return (Path(__file__).parent / "music_channel_description.md").read_text(
-            encoding="utf-8",
-        )
-
-    # TODO: Validate
-    def _plugin_channel(self) -> Channel:
-        """Return the plugin owned channel every Crunchyroll artist is queued into."""
-        return self.add_urls_to_plugin_channel(
-            MUSIC_SOURCE,
-            self._channel_description(),
-        )
-
-    # TODO: Validate
     def create_channel_records(self) -> None:
-        artists = self.browse_file().datums()
         _cache = self._preload_sources(MUSIC_SOURCE, preload_seasons=True).all()
-        new_artist_urls: list[str] = []
+        new_artist_urls = [
+            self.title_url(artist.id)
+            for artist in self.browse_file().datums()
+            if not Title.get_from_memory(
+                self.session,
+                self._sources[MUSIC_SOURCE],
+                artist.id,
+            )
+        ]
+        if new_artist_urls:
+            self.add_urls_to_plugin_channel(
+                MUSIC_SOURCE,
+                "All Music on Crunchyroll.",
+                new_artist_urls,
+            )
+
+    # TODO: Validate
+    def _mark_artists_as_outdated(self, artists: list[BrowseMusicDatum]) -> None:
+        _cache = self._preload_sources(MUSIC_SOURCE, preload_seasons=True).all()
         for artist in artists:
             if title := Title.get_from_memory(
                 self.session,
                 self._sources[MUSIC_SOURCE],
                 artist.id,
             ):
-                # It's easier to update the title and the artists at the same time.
                 title.set_update_at(artist.updated_at)
                 for season in title.seasons:
                     season.set_update_at(artist.updated_at)
-            else:
-                new_artist_urls.append(self.title_url(artist.id))
-
-        add_urls_to_channel_import_queue(
-            self.session,
-            self._plugin_channel(),
-            new_artist_urls,
-        )
 
     # TODO: Validate
     @override
     def update_source(self, source: Source, update_at: datetime) -> None:
         logger.info("Updating Source: {}", source.name)
-        # This is the only source file so no source_files wrapper is needed.
-        self.browse_file().download_if_outdated(update_at)
+        self._download_if_outdated(self._source_files(), update_at)
+        artists = self.browse_file().datums()
         self.create_channel_records()
+        self._mark_artists_as_outdated(artists)
         self._mark_mismatched_titles_as_outdated(
-            {artist.id for artist in self.browse_file().datums()},
+            {artist.id for artist in artists},
             source_key=MUSIC_SOURCE,
         )
         self.upsert_source(MUSIC_SOURCE)

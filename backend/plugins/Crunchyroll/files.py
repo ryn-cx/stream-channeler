@@ -1,4 +1,4 @@
-# TODO: Validate
+from abc import ABC
 from datetime import UTC, datetime, timedelta
 from functools import cache
 from typing import override
@@ -84,31 +84,25 @@ class SeasonEpisodes(EndpointFile[SeasonEpisodesModel]):
         return chirashi().season_episodes
 
 
-class BrowseSeries(PagedEndpointFile[BrowseSeriesModel]):
+class BaseBrowseSeries(PagedEndpointFile[BrowseSeriesModel], ABC):
     @override
     def _endpoint(self) -> BrowseSeriesEndpoint:
         return chirashi().browse_series
 
+    def datums(self) -> list[BrowseSeriesDatum]:
+        return self._endpoint().extract_data(self.parsed())
+
+
+class BrowseSeries(BaseBrowseSeries):
     @override
     def _download_pages(self) -> list[str]:
         return self._endpoint().download_until_datetime(
             end_datetime=self.identifier_datetime(),
         )
 
-    # TODO: Validate
-    def datums(self) -> list[BrowseSeriesDatum]:
-        return self._endpoint().extract_data(self.parsed())
 
-
-class Catalogue(PagedEndpointFile[BrowseSeriesModel]):
+class Catalogue(BaseBrowseSeries):
     """Special BrowseSeries that contains all of the titles on Crunchyroll."""
-
-    @override
-    def _endpoint(self) -> BrowseSeriesEndpoint:
-        return chirashi().browse_series
-
-    def data(self) -> list[BrowseSeriesDatum]:
-        return self._endpoint().extract_data(self.parsed())
 
     @override
     def _next_update_at(self) -> datetime:

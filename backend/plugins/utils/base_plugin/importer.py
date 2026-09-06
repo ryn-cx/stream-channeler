@@ -12,7 +12,6 @@ from app.utils import tz_datetime
 from plugins.utils.base_plugin.base import BasePlugin, BaseReadURL
 
 if TYPE_CHECKING:
-    from app.sources.models import Source
     from app.titles.models import Title
     from plugins.utils.abstract_plugin import URLImportResult
 
@@ -57,16 +56,12 @@ class BasePluginWorker(BasePlugin, ABC):
 # TODO: Validate
 class BaseImporter(BasePluginWorker, BaseReadURL, ABC):
     # TODO: Validate
-    def _url_source(self) -> Source:
-        return self._sources[self.source_name()]
-
-    # TODO: Validate
     def import_url(self, url: str) -> list[URLImportResult]:
         media_info = self.extract_media_info(url)
         if title := self._preload_title(media_info.title_key).one_or_none():
             return self._import_results(title, media_info)
 
-        title = self.upsert_title(self._url_source(), media_info.title_key)
+        title = self.upsert_title(self.source, media_info.title_key)
         return self._import_results(title, media_info)
 
     # TODO: Validate
