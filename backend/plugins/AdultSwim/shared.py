@@ -177,7 +177,7 @@ class AdultSwimShared(AdultSwimBaseFiles):
 
     # TODO: Validate
     def _channel(self, name: str) -> Channel:
-        return self.add_urls_to_plugin_channel(
+        return self.get_or_create_channel(
             name,
             (Path(__file__).parent / CHANNEL_DESCRIPTION_FILES[name]).read_text(
                 encoding="utf-8",

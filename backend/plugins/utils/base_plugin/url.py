@@ -4,7 +4,9 @@ from typing import NamedTuple
 
 
 # TODO: Validate
-class MediaInfo(NamedTuple):
+class URLTitleInfo(NamedTuple):
+    """Holds the title information that could be extracted from a URL."""
+
     title_key: str
     season_key: str | None = None
     episode_key: str | None = None
@@ -24,7 +26,7 @@ class BaseURLMixin:
         raise NotImplementedError
 
     # TODO: Validate
-    def extract_media_info(self, url: str) -> MediaInfo:
+    def extract_media_info(self, url: str) -> URLTitleInfo:
         raise NotImplementedError
 
     # TODO: Validate

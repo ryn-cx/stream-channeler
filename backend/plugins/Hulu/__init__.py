@@ -96,5 +96,8 @@ class Hulu(
     def update_source(self, source: Source, update_at: datetime) -> None:
         self._download_if_outdated(self._source_files(), update_at)
         self._create_channel_records()
-        self._mark_mismatched_titles_as_outdated(self._title_keys_from_all_xxx_files())
+        self._mark_mismatched_titles_as_outdated(
+            None,
+            self._title_keys_from_all_xxx_files(),
+        )
         self.upsert_source(source.key)

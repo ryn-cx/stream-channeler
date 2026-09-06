@@ -58,7 +58,7 @@ from plugins.utils.base_plugin.files import (
     BaseFile,
 )
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.utils.base_plugin.url import MediaInfo
+from plugins.utils.base_plugin.url import URLTitleInfo
 
 
 # TODO: Validate
@@ -269,7 +269,7 @@ class TMDBSeries(TMDBImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             series = self.tv_series_details_file(tmdb_tv_title_id).parsed()
-            data_timestamp = self.title_data_timestamp(title_key)
+            data_timestamps = self.title_data_timestamps(title_key)
             new_title = Title(
                 key=title_key,
                 name=series.name,
@@ -280,12 +280,12 @@ class TMDBSeries(TMDBImporter):
                 year=parse_release_year(series.first_air_date),
                 media_type="Series",
                 extra=title.extra if title else {},
-                data_timestamp=data_timestamp,
+                data_timestamp=max(data_timestamps),
                 canonical_title_validated_at=tz_datetime.now(),
                 source_id=source.id,
             )
             title = new_title.upsert(source, title)
-            title.set_update_at(None, data_timestamp)
+            title.set_update_at(None, data_timestamps)
 
         self._upsert_seasons(title, title_key, tmdb_tv_title_id, force=force)
         self._soft_delete_missing(title_key)
@@ -301,12 +301,14 @@ class TMDBSeries(TMDBImporter):
             for episode in season.active_children
             if episode.air_date
         ]
+        data_timestamps = self.title_data_timestamps(title.key)
         title.set_update_at(
             title_update_at(
                 title.key,
-                self.title_data_timestamp(title.key),
+                min(data_timestamps),
                 max(air_dates) if air_dates else None,
             ),
+            data_timestamps,
         )
 
     # TODO: Validate
@@ -323,7 +325,7 @@ class TMDBSeries(TMDBImporter):
         for source in self.chosen_seasons(title_key):
             season = Season.get_from_memory(self.session, title, source.key)
             if self._season_is_outdated(season, title_key, force=force):
-                data_timestamp = self.season_data_timestamp(source.key, title_key)
+                data_timestamps = self.season_data_timestamps(source.key, title_key)
                 new_season = Season(
                     key=source.key,
                     name=source.name,
@@ -331,13 +333,13 @@ class TMDBSeries(TMDBImporter):
                     sort_order=source.sort_order,
                     image_url=image_url(source.poster_path),
                     thumbnail_url=thumbnail_url(source.poster_path),
-                    data_timestamp=data_timestamp,
+                    data_timestamp=max(data_timestamps),
                     title_id=title.id,
                 )
                 season = new_season.upsert(title, season)
                 season.set_update_at(
                     None,
-                    data_timestamp,
+                    data_timestamps,
                 )
             self._upsert_episodes(
                 season=season,
@@ -369,7 +371,7 @@ class TMDBSeries(TMDBImporter):
                 force=force,
             ):
                 continue
-            data_timestamp = self.episode_data_timestamp(key, season_key, title_key)
+            data_timestamps = self.episode_data_timestamps(key, season_key, title_key)
             still_path = episode_source.still_path or self._fallback_backdrop_path(
                 tmdb_tv_title_id=tmdb_tv_title_id,
                 tmdb_tv_episode_id=episode_source.id,
@@ -396,13 +398,13 @@ class TMDBSeries(TMDBImporter):
                     tmdb_season_number=episode_source.season_number,
                     tmdb_episode_number=episode_source.episode_number,
                 ),
-                data_timestamp=data_timestamp,
+                data_timestamp=max(data_timestamps),
                 season_id=season.id,
             )
             episode = new_episode.upsert(season, episode)
             episode.set_update_at(
                 None,
-                data_timestamp,
+                data_timestamps,
             )
 
     # TODO: Validate
@@ -569,7 +571,7 @@ class TMDBSeries(TMDBImporter):
 
     # TODO: Validate
     @override
-    def extract_media_info(self, url: str) -> MediaInfo:
+    def extract_media_info(self, url: str) -> URLTitleInfo:
         regex_match = re.match(self._domain_regex() + TV_URL_REGEX, url)
         if regex_match is None:
             msg = f"Invalid {self.plugin_name()} URL: {url}"
@@ -577,7 +579,7 @@ class TMDBSeries(TMDBImporter):
 
         tmdb_tv_title_id = int(regex_match.group(f"{TMDBMediaType.tv}_tmdb_id"))
         self.raise_if_invalid_file(self.tv_series_details_file(tmdb_tv_title_id), url)
-        return MediaInfo(tmdb_title_key(TMDBMediaType.tv, tmdb_tv_title_id))
+        return URLTitleInfo(tmdb_title_key(TMDBMediaType.tv, tmdb_tv_title_id))
 
 
 # TODO: Validate
@@ -674,7 +676,7 @@ class TMDBMovie(TMDBImporter):
         parsed_movie_details = self.movies_details_file(tmdb_movie_id).parsed()
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamp = self.title_data_timestamp(title_key)
+            data_timestamps = self.title_data_timestamps(title_key)
             new_title = Title(
                 key=title_key,
                 name=parsed_movie_details.title,
@@ -690,12 +692,12 @@ class TMDBMovie(TMDBImporter):
                 ),
                 year=parse_release_year(parsed_movie_details.release_date),
                 media_type="Movie",
-                data_timestamp=data_timestamp,
+                data_timestamp=max(data_timestamps),
                 canonical_title_validated_at=tz_datetime.now(),
                 source_id=source.id,
             )
             title = new_title.upsert(source, title)
-            title.set_update_at(None, data_timestamp)
+            title.set_update_at(None, data_timestamps)
 
         self._upsert_season(title, title_key, tmdb_movie_id, force=force)
         return title
@@ -713,7 +715,7 @@ class TMDBMovie(TMDBImporter):
         season_key = tmdb_season_key(TMDBMediaType.movie, tmdb_movie_id)
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title_key, force=force):
-            data_timestamp = self.season_data_timestamp(season_key, title_key)
+            data_timestamps = self.season_data_timestamps(season_key, title_key)
             new_season = Season(
                 key=season_key,
                 name=parsed_movie_details.title,
@@ -727,13 +729,13 @@ class TMDBMovie(TMDBImporter):
                     parsed_movie_details.backdrop_path
                     or parsed_movie_details.poster_path,
                 ),
-                data_timestamp=data_timestamp,
+                data_timestamp=max(data_timestamps),
                 title_id=title.id,
             )
             season = new_season.upsert(title, season)
             season.set_update_at(
                 None,
-                data_timestamp,
+                data_timestamps,
             )
 
         self._upsert_episode(
@@ -766,7 +768,7 @@ class TMDBMovie(TMDBImporter):
             force=force,
         ):
             return
-        data_timestamp = self.episode_data_timestamp(
+        data_timestamps = self.episode_data_timestamps(
             episode_key,
             season_key,
             title_key,
@@ -787,13 +789,13 @@ class TMDBMovie(TMDBImporter):
             air_date=clean_air_datetime(parsed_movie_details.release_date),
             episode_number=0,
             sort_order=0,
-            data_timestamp=data_timestamp,
+            data_timestamp=max(data_timestamps),
             season_id=season.id,
         )
         episode = new_episode.upsert(season, episode)
         episode.set_update_at(
             None,
-            data_timestamp,
+            data_timestamps,
         )
 
     # TODO: Validate
@@ -804,7 +806,7 @@ class TMDBMovie(TMDBImporter):
 
     # TODO: Validate
     @override
-    def extract_media_info(self, url: str) -> MediaInfo:
+    def extract_media_info(self, url: str) -> URLTitleInfo:
         regex_match = re.match(self._domain_regex() + MOVIE_URL_REGEX, url)
         if regex_match is None:
             msg = f"Invalid {self.plugin_name()} URL: {url}"
@@ -812,4 +814,4 @@ class TMDBMovie(TMDBImporter):
 
         tmdb_movie_id = int(regex_match.group(f"{TMDBMediaType.movie}_tmdb_id"))
         self.raise_if_invalid_file(self.movies_details_file(tmdb_movie_id), url)
-        return MediaInfo(tmdb_title_key(TMDBMediaType.movie, tmdb_movie_id))
+        return URLTitleInfo(tmdb_title_key(TMDBMediaType.movie, tmdb_movie_id))

@@ -11,7 +11,9 @@ from app.utils.strict_re import strict_search
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.Hulu.base_files import HuluBaseFiles
 from plugins.Hulu.utils import (
+    HuluMediaType,
     search_url,
+    title_url,
     title_urls,
 )
 
@@ -50,37 +52,44 @@ class HuluShared(HuluBaseFiles):
     # TODO: Validate
     @override
     def upsert_source(self, source_key: str) -> Source:
-        data_timestamp = self.source_data_timestamp()
+        data_timestamps = self.source_data_timestamps()
         existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
         source = Source(
             key=source_key,
             name=self.plugin_name(),
             favicon_url=self.favicon_url(),
             link_to_tmdb=self.link_to_tmdb(),
-            data_timestamp=data_timestamp,
+            data_timestamp=max(data_timestamps),
             plugin_id=self.plugin.id,
         ).upsert(self.plugin, existing_source)
         source.set_update_at(
             staggered_monthly_update_at(source_key, tz_datetime.now()),
-            data_timestamp,
+            data_timestamps,
         )
         return source
 
     # TODO: Validate
     def _create_channel_records(self) -> None:
-        self.add_urls_to_plugin_channel(
+        channel = self.get_or_create_channel(
             "Hulu - All Titles",
             "All Titles on Hulu.",
-            self._title_urls_from_all_xxx_files(),
         )
+        self.add_new_urls_to_channel(channel, self._title_urls_from_all_xxx_files())
 
     # TODO: Validate
     def _title_urls_from_all_xxx_files(self) -> list[str]:
         """Get all title urls from the AllMovies and AllSeries files."""
-        return [
+        urls = []
+        for url in (
             *title_urls(self.all_series_file().parsed()),
             *title_urls(self.all_movies_file().parsed()),
-        ]
+        ):
+            match = strict_search(f"{SERIES_URL_REGEX}|{MOVIE_URL_REGEX}", url)
+            if series_key := match.group("series_key"):
+                urls.append(title_url(series_key, HuluMediaType.SERIES))
+            else:
+                urls.append(title_url(match.group("movie_key"), HuluMediaType.MOVIE))
+        return urls
 
     # TODO: Validate
     def _title_keys_from_all_xxx_files(self) -> set[str]:

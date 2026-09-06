@@ -71,7 +71,7 @@ class NHKWorldShared(NHKWorldBaseFiles):
             data_timestamp=data_timestamp,
             plugin_id=self.plugin.id,
         ).upsert(self.plugin, existing_source)
-        source.set_update_at(data_timestamp + timedelta(days=1))
+        source.set_update_at(data_timestamp + timedelta(days=1), [data_timestamp])
         return source
 
     # TODO: Validate
@@ -95,7 +95,7 @@ class NHKWorldShared(NHKWorldBaseFiles):
                 title_id = item.video_program.id
                 if title := Title.get_from_memory(self.session, source, title_id):
                     logger.info("Matched title: {}", title.name or title_id)
-                    title.set_update_at(item.video.published_at)
+                    title.set_update_at(item.video.published_at, [])
                 else:
                     new_title_ids.append(title_id)
 
@@ -124,7 +124,7 @@ class NHKWorldShared(NHKWorldBaseFiles):
         whole library. It is created the first time a title is found rather than
         by hand.
         """
-        return self.add_urls_to_plugin_channel(
+        return self.get_or_create_channel(
             self.plugin_name(),
             (Path(__file__).parent / "channel_description.md").read_text(
                 encoding="utf-8",

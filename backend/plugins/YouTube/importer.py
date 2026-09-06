@@ -24,7 +24,7 @@ from app.titles.models import Title
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.utils.base_plugin.url import MediaInfo
+from plugins.utils.base_plugin.url import URLTitleInfo
 from plugins.YouTube.constants import LONG_DOMAIN_REGEX, SHORT_DOMAIN_REGEX
 from plugins.YouTube.shared import YouTubeShared
 from plugins.YouTube.utils import (
@@ -147,17 +147,17 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
 
     # TODO: Validate
     @override
-    def extract_media_info(self, url: str) -> MediaInfo:
+    def extract_media_info(self, url: str) -> URLTitleInfo:
         self._read_url(url)
         if self._whole_title:
-            return MediaInfo(self._title_key)
+            return URLTitleInfo(self._title_key)
         if self._video_key is None:
-            return MediaInfo(self._title_key, season_key=self._playlist_key)
+            return URLTitleInfo(self._title_key, season_key=self._playlist_key)
         # The track is looked for in every release of the musician, since the URL
         # named no release and the title holds one season for each of them.
         if self._musician_track:
-            return MediaInfo(self._title_key, episode_key=self._video_key)
-        return MediaInfo(
+            return URLTitleInfo(self._title_key, episode_key=self._video_key)
+        return URLTitleInfo(
             self._title_key,
             season_key=self._playlist_key,
             episode_key=self._video_key,
@@ -523,19 +523,19 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
 
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamp = self.title_data_timestamp(title_key)
+            data_timestamps = self.title_data_timestamps(title_key)
             new_title = Title(
                 key=title_key,
                 name=title_page.title(),
                 url=title_url(title_key),
                 media_type="Series",
-                data_timestamp=data_timestamp,
+                data_timestamp=max(data_timestamps),
                 # A title only changes when a season is added to it.
-                update_at=data_timestamp + timedelta(days=7),
+                update_at=min(data_timestamps) + timedelta(days=7),
                 source_id=source.id,
             )
             title = new_title.upsert(source, title)
-            title.set_update_at(None, data_timestamp)
+            title.set_update_at(None, data_timestamps)
 
         self._upsert_seasons_series(title, title_key, force=force)
         self._soft_delete_missing(title_key)
@@ -555,20 +555,20 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
             _, season_number = split_title_season_key(season_key)
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title_key, force=force):
-                data_timestamp = self.season_data_timestamp(season_key, title_key)
+                data_timestamps = self.season_data_timestamps(season_key, title_key)
                 new_season = Season(
                     key=season_key,
                     name=f"Season {season_number}",
                     season_number=int(season_number),
                     url=title_season_url(title_key, season_number),
-                    data_timestamp=data_timestamp,
+                    data_timestamp=max(data_timestamps),
                     # A title only changes when a season or an episode is added
                     # to it.
-                    update_at=data_timestamp + timedelta(days=7),
+                    update_at=min(data_timestamps) + timedelta(days=7),
                     title_id=title.id,
                 )
                 season = new_season.upsert(title, season)
-                season.set_update_at(None, data_timestamp)
+                season.set_update_at(None, data_timestamps)
             self._upsert_episodes(season, title_key, force=force)
 
     # TODO: Validate
@@ -583,7 +583,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
         if self._title_is_outdated(title, force=force):
             channel_file = self.channel_by_channel_id_file(title_key)
             channel_item = get_first_item(channel_file.parsed().items)
-            data_timestamp = self.title_data_timestamp(title_key)
+            data_timestamps = self.title_data_timestamps(title_key)
             new_title = Title(
                 key=channel_item.id,
                 name=self._channel_title_name(title_key, channel_item),
@@ -594,7 +594,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
                 # Updating every 30 days is reasonable because this is only used for
                 # checking for new playlists and changes to the channel information.
                 update_at=channel_file.data_timestamp() + timedelta(days=365),
-                data_timestamp=data_timestamp,
+                data_timestamp=max(data_timestamps),
                 canonical_title_validated_at=None
                 if self.is_movies_channel(title_key)
                 else tz_datetime.now(),
@@ -603,7 +603,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
                 thumbnail_url=thumbnail_url(channel_item.snippet.thumbnails),
             )
             title = new_title.upsert(source, title)
-            title.set_update_at(None, data_timestamp)
+            title.set_update_at(None, data_timestamps)
 
         self._upsert_seasons_channel(title, title_key, force=force)
         self._soft_delete_missing(title_key)
@@ -641,7 +641,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
 
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamp = self.title_data_timestamp(title_key)
+            data_timestamps = self.title_data_timestamps(title_key)
             new_title = Title(
                 key=title_key,
                 name=video_item.snippet.title,
@@ -652,14 +652,14 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
                 media_type="Movie",
                 image_url=best_thumbnail_url(video_item.snippet.thumbnails),
                 thumbnail_url=thumbnail_url(video_item.snippet.thumbnails),
-                data_timestamp=data_timestamp,
+                data_timestamp=max(data_timestamps),
                 # Movies are only updated once a year to make sure they are still
                 # available.
-                update_at=data_timestamp + timedelta(days=365),
+                update_at=min(data_timestamps) + timedelta(days=365),
                 source_id=source.id,
             )
             title = new_title.upsert(source, title)
-            title.set_update_at(None, data_timestamp)
+            title.set_update_at(None, data_timestamps)
 
         self._upsert_season_movie(title, title_key, force=force)
         self._soft_delete_missing(title_key)
@@ -678,17 +678,17 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
         season = Season.get_from_memory(self.session, title, title_key)
         if self._season_is_outdated(season, title_key, force=force):
             video_item = get_first_item(self.videos_file(title_key).parsed().items)
-            data_timestamp = self.season_data_timestamp(title_key, title_key)
+            data_timestamps = self.season_data_timestamps(title_key, title_key)
             new_season = Season(
                 key=title_key,
                 name=video_item.snippet.title,
                 image_url=best_thumbnail_url(video_item.snippet.thumbnails),
                 thumbnail_url=thumbnail_url(video_item.snippet.thumbnails),
-                data_timestamp=data_timestamp,
+                data_timestamp=max(data_timestamps),
                 title_id=title.id,
             )
             season = new_season.upsert(title, season)
-            season.set_update_at(data_timestamp, data_timestamp)
+            season.set_update_at(min(data_timestamps), data_timestamps)
         self._upsert_episodes(season, title_key, force=force)
 
     # TODO: Validate
@@ -705,7 +705,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
 
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamp = self.title_data_timestamp(title_key)
+            data_timestamps = self.title_data_timestamps(title_key)
             new_title = Title(
                 key=title_key,
                 name=playlist_item.snippet.title,
@@ -714,11 +714,11 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
                 media_type="Series",
                 image_url=best_thumbnail_url(playlist_item.snippet.thumbnails),
                 thumbnail_url=thumbnail_url(playlist_item.snippet.thumbnails),
-                data_timestamp=data_timestamp,
+                data_timestamp=max(data_timestamps),
                 source_id=source.id,
             )
             title = new_title.upsert(source, title)
-            title.set_update_at(data_timestamp + timedelta(hours=6), data_timestamp)
+            title.set_update_at(min(data_timestamps) + timedelta(hours=6), data_timestamps)
 
         self._upsert_season(
             title=title,
@@ -744,7 +744,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
 
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamp = self.title_data_timestamp(title_key)
+            data_timestamps = self.title_data_timestamps(title_key)
             new_title = Title(
                 key=title_key,
                 name=self._music_name(music_playlist),
@@ -752,11 +752,11 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
                 media_type=f"YouTube {music_playlist.release_type() or 'Album'}",
                 image_url=music_playlist.image_url(),
                 thumbnail_url=music_playlist.image_url(),
-                data_timestamp=data_timestamp,
+                data_timestamp=max(data_timestamps),
                 source_id=source.id,
             )
             title = new_title.upsert(source, title)
-            title.set_update_at(data_timestamp + timedelta(days=365), data_timestamp)
+            title.set_update_at(min(data_timestamps) + timedelta(days=365), data_timestamps)
 
         self._upsert_season_music(
             title,
@@ -789,7 +789,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
             channel_item = get_first_item(
                 self.channel_by_channel_id_file(title_key).parsed().items,
             )
-            data_timestamp = self.title_data_timestamp(title_key)
+            data_timestamps = self.title_data_timestamps(title_key)
             new_title = Title(
                 key=title_key,
                 name=channel_item.snippet.title,
@@ -797,13 +797,13 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
                 media_type="YouTube Artist",
                 image_url=best_thumbnail_url(channel_item.snippet.thumbnails),
                 thumbnail_url=thumbnail_url(channel_item.snippet.thumbnails),
-                data_timestamp=data_timestamp,
+                data_timestamp=max(data_timestamps),
                 # A musician only changes when they put something out.
-                update_at=data_timestamp + timedelta(days=365),
+                update_at=min(data_timestamps) + timedelta(days=365),
                 source_id=source.id,
             )
             title = new_title.upsert(source, title)
-            title.set_update_at(None, data_timestamp)
+            title.set_update_at(None, data_timestamps)
 
         for season_key in self._season_keys_from_title_files(title_key):
             music_playlist = self.music_playlist_file(season_key)
@@ -831,18 +831,18 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title_key, force=force):
             music_playlist = self.music_playlist_file(season_key)
-            data_timestamp = self.season_data_timestamp(season_key, title_key)
+            data_timestamps = self.season_data_timestamps(season_key, title_key)
             new_season = Season(
                 key=season_key,
                 name=name,
                 url=playlist_url(season_key),
                 image_url=music_playlist.image_url(),
                 thumbnail_url=music_playlist.image_url(),
-                data_timestamp=data_timestamp,
+                data_timestamp=max(data_timestamps),
                 title_id=title.id,
             )
             season = new_season.upsert(title, season)
-            season.set_update_at(data_timestamp + timedelta(days=365), data_timestamp)
+            season.set_update_at(min(data_timestamps) + timedelta(days=365), data_timestamps)
         self._upsert_episodes(season, title_key, force=force)
 
     # TODO: Validate
@@ -899,19 +899,19 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
     ) -> None:
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title_key, force=force):
-            data_timestamp = self.season_data_timestamp(season_key, title_key)
+            data_timestamps = self.season_data_timestamps(season_key, title_key)
             season = Season(
                 key=season_key,
                 name=name,
                 url=playlist_url(season_key),
                 image_url=best_thumbnail_url(playlist.snippet.thumbnails),
                 thumbnail_url=thumbnail_url(playlist.snippet.thumbnails),
-                data_timestamp=data_timestamp,
+                data_timestamp=max(data_timestamps),
                 title_id=title.id,
             ).upsert(title, season)
             season.set_update_at(
-                data_timestamp + timedelta(hours=6),
-                data_timestamp,
+                min(data_timestamps) + timedelta(hours=6),
+                data_timestamps,
             )
         self._upsert_episodes(season, title_key, force=force)
 
@@ -1031,7 +1031,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
         if video_duration:
             duration = int(video_duration.total_seconds())
 
-        data_timestamp = self.episode_data_timestamp(
+        data_timestamps = self.episode_data_timestamps(
             episode_key,
             season.key,
             title_key,
@@ -1050,9 +1050,9 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
             thumbnail_url=thumbnail_url(video_snippet.thumbnails),
             sort_order=sort_order,
             episode_number=self._get_episode_number(episode_key, season.key, title_key),
-            data_timestamp=data_timestamp,
+            data_timestamp=max(data_timestamps),
             season_id=season.id,
         )
 
         episode = new_episode.upsert(season, episode)
-        episode.set_update_at(None, data_timestamp)
+        episode.set_update_at(None, data_timestamps)

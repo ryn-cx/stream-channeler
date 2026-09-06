@@ -73,14 +73,48 @@ class BaseDownloadMixin(ABC):
             file.download_if_outdated(update_at)
 
     # TODO: Validate
+    def title_data_timestamps(self, title_key: str) -> list[datetime]:
+        """Return the data timestamp of each of the title's files."""
+        return [file.data_timestamp() for file in self._title_files(title_key)]
+
+    # TODO: Validate
+    def season_data_timestamps(
+        self,
+        season_key: str,
+        title_key: str,
+    ) -> list[datetime]:
+        """Return the data timestamp of each of the season's files."""
+        return [
+            file.data_timestamp() for file in self._season_files(season_key, title_key)
+        ]
+
+    # TODO: Validate
+    def episode_data_timestamps(
+        self,
+        episode_key: str,
+        season_key: str,
+        title_key: str,
+    ) -> list[datetime]:
+        """Return the data timestamp of each of the episode's files."""
+        return [
+            file.data_timestamp()
+            for file in self._episode_files(episode_key, season_key, title_key)
+        ]
+
+    # TODO: Validate
+    def source_data_timestamps(self) -> list[datetime]:
+        """Return the data timestamp of each of the source's files."""
+        return [file.data_timestamp() for file in self._source_files()]
+
+    # TODO: Validate
     def title_data_timestamp(self, title_key: str) -> datetime:
-        """Return the data timestamp for the title's files."""
-        return self._title_files(title_key)[0].data_timestamp()
+        """Return the newest data timestamp among the title's files."""
+        return max(self.title_data_timestamps(title_key))
 
     # TODO: Validate
     def season_data_timestamp(self, season_key: str, title_key: str) -> datetime:
-        """Return the data timestamp for the season's files."""
-        return self._season_files(season_key, title_key)[0].data_timestamp()
+        """Return the newest data timestamp among the season's files."""
+        return max(self.season_data_timestamps(season_key, title_key))
 
     # TODO: Validate
     def episode_data_timestamp(
@@ -89,16 +123,13 @@ class BaseDownloadMixin(ABC):
         season_key: str,
         title_key: str,
     ) -> datetime:
-        """Return the data timestamp for the episode's files."""
-        return self._episode_files(
-            episode_key,
-            season_key,
-            title_key,
-        )[0].data_timestamp()
+        """Return the newest data timestamp among the episode's files."""
+        return max(self.episode_data_timestamps(episode_key, season_key, title_key))
 
     # TODO: Validate
     def source_data_timestamp(self) -> datetime:
-        return self._source_files()[0].data_timestamp()
+        """Return the newest data timestamp among the source's files."""
+        return max(self.source_data_timestamps())
 
     # TODO: Validate
     def _get_files_by_keys(self, file_keys: list[str]) -> Sequence[File]:

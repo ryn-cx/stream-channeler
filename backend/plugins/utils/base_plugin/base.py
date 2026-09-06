@@ -6,9 +6,10 @@ from collections.abc import Sequence
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, cast, override
 
-from sqlmodel import Session, select
+from sqlalchemy import or_
+from sqlmodel import Session, col, select
 
-from app.channels.models import Channel
+from app.channels.models import Channel, ChannelTitle
 from app.channels.service.import_queue import add_urls_to_channel_import_queue
 from app.channels.service.ordering import order_preset_options
 from app.episodes.models import Episode
@@ -16,8 +17,7 @@ from app.media.media_type import TMDBMediaType
 from app.models import Visibility
 from app.seasons.models import Season
 from app.sources.models import Source
-from app.titles.models import Title
-from app.users.models import User
+from app.titles.models import Title, TitleCanonicalTitle
 from app.users.service.accounts import get_or_create_plugin_user
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
@@ -27,7 +27,7 @@ from plugins.utils.abstract_plugin import (
 )
 from plugins.utils.base_plugin.files import BaseFile
 from plugins.utils.base_plugin.update import BaseUpdateMixin
-from plugins.utils.base_plugin.url import BaseURLMixin, MediaInfo
+from plugins.utils.base_plugin.url import BaseURLMixin, URLTitleInfo
 
 if TYPE_CHECKING:
     from plugins.utils.base_plugin.importer import BaseImporter
@@ -35,8 +35,6 @@ if TYPE_CHECKING:
 
 # TODO: Validate
 class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
-    __plugin_channels: tuple[User, dict[str, Channel]] | None = None
-
     if TYPE_CHECKING:
         # TODO: Validate
         def search_for_url(
@@ -52,15 +50,22 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         return self._sources[self.source_name()]
 
     # TODO: Validate
-    def add_urls_to_plugin_channel(
+    def get_or_create_channel(
         self,
         channel_name: str,
         channel_description: str,
-        urls: Sequence[str] = (),
     ) -> Channel:
         """Return the plugin owned channel `name`, creating it the first time."""
-        plugin_user, channels = self._plugin_channels()
-        if not (channel := channels.get(channel_name)):
+        plugin_user = get_or_create_plugin_user(
+            session=self.session,
+            plugin_name=self.plugin_name(),
+        )
+        channel = self.session.exec(
+            select(Channel)
+            .where(Channel.user_id == plugin_user.id)
+            .where(Channel.name == channel_name),
+        ).one_or_none()
+        if channel is None:
             channel = Channel(
                 name=channel_name,
                 description=channel_description,
@@ -73,32 +78,36 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
             )
             self.session.add(channel)
             self.session.flush()
-            channels[channel_name] = channel
-        add_urls_to_channel_import_queue(self.session, channel, urls)
         return channel
 
     # TODO: Validate
-    def _plugin_channels(self) -> tuple[User, dict[str, Channel]]:
-        """Return every channel the plugin user owns, read once per plugin.
+    def add_new_urls_to_channel(self, channel: Channel, urls: Sequence[str]) -> None:
+        urls_not_on_channel = self._urls_not_on_channel(channel, urls)
+        add_urls_to_channel_import_queue(self.session, channel, urls_not_on_channel)
 
-        A plugin whose catalogue is split across a hundred genres asks for a
-        hundred channels, and reading each one on its own is a query each.
-        """
-        if self.__plugin_channels is None:
-            plugin_user = get_or_create_plugin_user(
-                session=self.session,
-                plugin_name=self.plugin_name(),
-            )
-            self.__plugin_channels = (
-                plugin_user,
-                {
-                    channel.name: channel
-                    for channel in self.session.exec(
-                        select(Channel).where(Channel.user_id == plugin_user.id),
-                    ).all()
-                },
-            )
-        return self.__plugin_channels
+    # TODO: Validate
+    def _urls_not_on_channel(self, channel: Channel, urls: Sequence[str]) -> list[str]:
+        channel_canonical_title_ids = select(ChannelTitle.canonical_title_id).where(
+            ChannelTitle.channel_id == channel.id,
+        )
+        on_channel_urls = set(
+            self.session.exec(
+                select(Title.url).where(
+                    col(Title.url).in_(urls),
+                    or_(
+                        col(Title.id).in_(channel_canonical_title_ids),
+                        col(Title.id).in_(
+                            select(TitleCanonicalTitle.title_id).where(
+                                col(TitleCanonicalTitle.canonical_title_id).in_(
+                                    channel_canonical_title_ids,
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ).all(),
+        )
+        return [url for url in urls if url not in on_channel_urls]
 
     # TODO: Validate
     def tmdb_lookup_info(
@@ -213,7 +222,7 @@ class BaseReadURL(BasePlugin, ABC):
 
     # TODO: Validate
     @override
-    def extract_media_info(self, url: str) -> MediaInfo:
+    def extract_media_info(self, url: str) -> URLTitleInfo:
         msg = f"{self.plugin_name()} does not implement extract_media_info"
         raise NotImplementedError(msg)
 
@@ -221,7 +230,7 @@ class BaseReadURL(BasePlugin, ABC):
     def _import_results(
         self,
         title: Title,
-        media_info: MediaInfo | None = None,
+        media_info: URLTitleInfo | None = None,
     ) -> list[URLImportResult]:
         result_titles = [title, *title.canonical_titles]
 

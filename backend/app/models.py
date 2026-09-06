@@ -215,10 +215,12 @@ class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):
     def set_update_at(
         self,
         new_update_at_value: datetime | None,
-        data_timestamp: datetime | None = None,
+        data_timestamps: list[datetime] | None = None,
     ) -> None:
         """Set `update_at` based its current value and `new_update_at_value`."""
-        oldest_data_timestamp = data_timestamp or self.data_timestamp
+        if data_timestamps is None:
+            data_timestamps = [self.data_timestamp] if self.data_timestamp else []
+        oldest_data_timestamp = min(data_timestamps, default=None)
 
         # If the existing update_at is older than data_timestamp the update has
         # been completed and update_at can be cleared.

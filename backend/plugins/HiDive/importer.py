@@ -39,7 +39,7 @@ from plugins.HiDive.utils import (
 )
 from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.utils.base_plugin.url import MediaInfo
+from plugins.utils.base_plugin.url import URLTitleInfo
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -65,12 +65,12 @@ class HiDiveSeries(HiDiveImporter):
 
     # TODO: Validate
     @override
-    def extract_media_info(self, url: str) -> MediaInfo:
+    def extract_media_info(self, url: str) -> URLTitleInfo:
         domain_regex = self._domain_regex()
         if match := re.match(domain_regex + SERIES_URL_REGEX, url):
             title_key = match.group("series_key")
             self.raise_if_invalid_file(self.series_file(title_key), url)
-            return MediaInfo(title_key)
+            return URLTitleInfo(title_key)
 
         # HiDive's interface does not do a good job of seperating titles and seasons
         # and if a user uses a season URL it should be treated the same as a series
@@ -79,7 +79,7 @@ class HiDiveSeries(HiDiveImporter):
             season_key = match.group("season_key")
             season_file = self.season_file(season_key)
             self.raise_if_invalid_file(season_file, url)
-            return MediaInfo(str(season_file.parsed().metadata.series.series_id))
+            return URLTitleInfo(str(season_file.parsed().metadata.series.series_id))
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
@@ -152,7 +152,7 @@ class HiDiveSeries(HiDiveImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             series_data = self.series_file(title_key).parsed()
-            data_timestamp = self.title_data_timestamp(title_key)
+            data_timestamps = self.title_data_timestamps(title_key)
             new_title = Title(
                 key=title_key,
                 name=series_data.metadata.series.title,
@@ -160,11 +160,11 @@ class HiDiveSeries(HiDiveImporter):
                 url=title_url(title_key),
                 image_url=series_image_url(series_data),
                 thumbnail_url=series_image_url(series_data),
-                data_timestamp=data_timestamp,
+                data_timestamp=max(data_timestamps),
                 source_id=source.id,
             )
             title = new_title.upsert(source, title)
-            title.set_update_at(None, data_timestamp)
+            title.set_update_at(None, data_timestamps)
 
         self._upsert_seasons(title, force=force)
         self._set_weekly_updates_from_episodes(title)
@@ -182,7 +182,7 @@ class HiDiveSeries(HiDiveImporter):
 
             season = SeasonModel.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
-                data_timestamp = self.season_data_timestamp(season_key, title.key)
+                data_timestamps = self.season_data_timestamps(season_key, title.key)
                 new_season = SeasonModel(
                     key=season_key,
                     name=season_info.title,
@@ -191,11 +191,11 @@ class HiDiveSeries(HiDiveImporter):
                     url=season_url(season_key),
                     image_url=hero_image_url(hero),
                     thumbnail_url=hero_image_url(hero),
-                    data_timestamp=data_timestamp,
+                    data_timestamp=max(data_timestamps),
                     title_id=title.id,
                 )
                 season = new_season.upsert(title, season)
-                season.set_update_at(None, data_timestamp)
+                season.set_update_at(None, data_timestamps)
 
             self._upsert_episodes(season, title.key, force=force)
 
@@ -220,7 +220,7 @@ class HiDiveSeries(HiDiveImporter):
                 continue
 
             hero = vod_hero(self.vod_file(episode_key).parsed())
-            data_timestamp = self.episode_data_timestamp(
+            data_timestamps = self.episode_data_timestamps(
                 episode_key,
                 season.key,
                 title_key,
@@ -237,11 +237,11 @@ class HiDiveSeries(HiDiveImporter):
                 duration=item.duration,
                 sort_order=sort_order,
                 air_date=release_date(hero),
-                data_timestamp=data_timestamp,
+                data_timestamp=max(data_timestamps),
                 season_id=season.id,
             )
             episode = new_episode.upsert(season, episode)
-            episode.set_update_at(None, data_timestamp)
+            episode.set_update_at(None, data_timestamps)
 
 
 # TODO: Validate
@@ -254,11 +254,11 @@ class HiDiveMovie(HiDiveImporter):
 
     # TODO: Validate
     @override
-    def extract_media_info(self, url: str) -> MediaInfo:
+    def extract_media_info(self, url: str) -> URLTitleInfo:
         if match := re.match(self._domain_regex() + MOVIE_URL_REGEX, url):
             title_key = match.group("movie_vod_key")
             self.raise_if_invalid_file(self.vod_file(title_key), url)
-            return MediaInfo(title_key)
+            return URLTitleInfo(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
@@ -326,7 +326,7 @@ class HiDiveMovie(HiDiveImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             hero = vod_hero(self.vod_file(title_key).parsed())
-            data_timestamp = self.title_data_timestamp(title_key)
+            data_timestamps = self.title_data_timestamps(title_key)
             new_title = Title(
                 key=title_key,
                 name=movie_title(hero),
@@ -335,11 +335,11 @@ class HiDiveMovie(HiDiveImporter):
                 image_url=hero_image_url(hero),
                 thumbnail_url=hero_image_url(hero),
                 media_type=MOVIE_MEDIA_TYPE,
-                data_timestamp=data_timestamp,
+                data_timestamp=max(data_timestamps),
                 source_id=source.id,
             )
             title = new_title.upsert(source, title)
-            title.set_update_at(None, data_timestamp)
+            title.set_update_at(None, data_timestamps)
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing(title_key)
@@ -356,7 +356,7 @@ class HiDiveMovie(HiDiveImporter):
 
             season = SeasonModel.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
-                data_timestamp = self.season_data_timestamp(season_key, title.key)
+                data_timestamps = self.season_data_timestamps(season_key, title.key)
                 new_season = SeasonModel(
                     key=season_key,
                     name=movie_title(hero),
@@ -365,11 +365,11 @@ class HiDiveMovie(HiDiveImporter):
                     url=title_url(title.key, MOVIE_MEDIA_TYPE),
                     image_url=hero_image_url(hero),
                     thumbnail_url=hero_image_url(hero),
-                    data_timestamp=data_timestamp,
+                    data_timestamp=max(data_timestamps),
                     title_id=title.id,
                 )
                 season = new_season.upsert(title, season)
-                season.set_update_at(None, data_timestamp)
+                season.set_update_at(None, data_timestamps)
 
             self._upsert_episode(season, title.key, force=force)
 
@@ -391,7 +391,7 @@ class HiDiveMovie(HiDiveImporter):
             return
 
         hero = vod_hero(self.vod_file(title_key).parsed())
-        data_timestamp = self.episode_data_timestamp(
+        data_timestamps = self.episode_data_timestamps(
             title_key,
             season.key,
             title_key,
@@ -408,8 +408,8 @@ class HiDiveMovie(HiDiveImporter):
             sort_order=0,
             duration=movie_duration(hero),
             air_date=release_date(hero),
-            data_timestamp=data_timestamp,
+            data_timestamp=max(data_timestamps),
             season_id=season.id,
         )
         episode = new_episode.upsert(season, episode)
-        episode.set_update_at(None, data_timestamp)
+        episode.set_update_at(None, data_timestamps)

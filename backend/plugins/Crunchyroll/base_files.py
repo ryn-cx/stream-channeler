@@ -51,7 +51,7 @@ class CrunchyrollBaseFiles(BasePlugin):
     def catalogue_file(self) -> Catalogue:
         return self._file(Catalogue, "alphabetical")
 
-    def artist_concerts_or_artist_music_videos_file(
+    def season_file(
         self,
         artist_id: str,
         category: CrunchyrollMusicCategory,

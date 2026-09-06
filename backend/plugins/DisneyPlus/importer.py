@@ -31,7 +31,7 @@ from plugins.DisneyPlus.utils import (
 )
 from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.utils.base_plugin.url import MediaInfo
+from plugins.utils.base_plugin.url import URLTitleInfo
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -54,11 +54,11 @@ class DisneyPlusImporter(DisneyPlusShared, BaseImporter, ABC):
 
     # TODO: Validate
     @override
-    def extract_media_info(self, url: str) -> MediaInfo:
+    def extract_media_info(self, url: str) -> URLTitleInfo:
         if match := re.match(self._domain_regex() + ENTITY_URL_REGEX, url):
             title_key = match.group("entity_key")
             self.raise_if_invalid_file(self.entity_file(title_key), url)
-            return MediaInfo(title_key)
+            return URLTitleInfo(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
@@ -170,7 +170,7 @@ class DisneyPlusSeries(DisneyPlusImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             details = self._media_details(title_key)
-            data_timestamp = self.title_data_timestamp(title_key)
+            data_timestamps = self.title_data_timestamps(title_key)
             new_title = Title(
                 key=title_key,
                 name=required_value(details.title, "title"),
@@ -180,13 +180,13 @@ class DisneyPlusSeries(DisneyPlusImporter):
                 image_url=self._background_image_url(title_key),
                 thumbnail_url=self._background_image_url(title_key),
                 year=release_year(self._entity(title_key)),
-                data_timestamp=data_timestamp,
+                data_timestamp=max(data_timestamps),
                 source_id=source.id,
             )
             title = new_title.upsert(source, title)
             title.set_update_at(
-                staggered_monthly_update_at(title_key, data_timestamp),
-                data_timestamp,
+                staggered_monthly_update_at(title_key, min(data_timestamps)),
+                data_timestamps,
             )
 
         self._upsert_seasons(title, force=force)
@@ -203,7 +203,7 @@ class DisneyPlusSeries(DisneyPlusImporter):
             season_key = build_season_key(title.key, season_id)
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
-                data_timestamp = self.season_data_timestamp(season_key, title.key)
+                data_timestamps = self.season_data_timestamps(season_key, title.key)
                 new_season = Season(
                     key=season_key,
                     name=season_entry.name,
@@ -212,11 +212,11 @@ class DisneyPlusSeries(DisneyPlusImporter):
                         sort_order + 1,
                     ),
                     sort_order=sort_order,
-                    data_timestamp=data_timestamp,
+                    data_timestamp=max(data_timestamps),
                     title_id=title.id,
                 )
                 season = new_season.upsert(title, season)
-                season.set_update_at(None, data_timestamp)
+                season.set_update_at(None, data_timestamps)
 
             self._upsert_episodes(season, title.key, season_id, force=force)
 
@@ -240,7 +240,7 @@ class DisneyPlusSeries(DisneyPlusImporter):
             ):
                 continue
 
-            data_timestamp = self.episode_data_timestamp(
+            data_timestamps = self.episode_data_timestamps(
                 episode_key,
                 season.key,
                 title_key,
@@ -255,11 +255,11 @@ class DisneyPlusSeries(DisneyPlusImporter):
                 image_url=item.image_variants.default_image.source,
                 thumbnail_url=item.image_variants.default_image.source,
                 sort_order=sort_order,
-                data_timestamp=data_timestamp,
+                data_timestamp=max(data_timestamps),
                 season_id=season.id,
             )
             episode = new_episode.upsert(season, episode)
-            episode.set_update_at(None, data_timestamp)
+            episode.set_update_at(None, data_timestamps)
 
 
 # TODO: Validate
@@ -313,7 +313,7 @@ class DisneyPlusMovie(DisneyPlusImporter):
         details = self._media_details(title_key)
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamp = self.title_data_timestamp(title_key)
+            data_timestamps = self.title_data_timestamps(title_key)
             new_title = Title(
                 key=title_key,
                 name=required_value(details.title, "title"),
@@ -323,13 +323,13 @@ class DisneyPlusMovie(DisneyPlusImporter):
                 image_url=self._background_image_url(title_key),
                 thumbnail_url=self._background_image_url(title_key),
                 year=release_year(self._entity(title_key)),
-                data_timestamp=data_timestamp,
+                data_timestamp=max(data_timestamps),
                 source_id=source.id,
             )
             title = new_title.upsert(source, title)
             title.set_update_at(
-                staggered_monthly_update_at(title_key, data_timestamp),
-                data_timestamp,
+                staggered_monthly_update_at(title_key, min(data_timestamps)),
+                data_timestamps,
             )
 
         self._upsert_season(title, force=force)
@@ -344,16 +344,16 @@ class DisneyPlusMovie(DisneyPlusImporter):
         season_key = build_season_key(title.key, title.key)
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title.key, force=force):
-            data_timestamp = self.season_data_timestamp(season_key, title.key)
+            data_timestamps = self.season_data_timestamps(season_key, title.key)
             new_season = Season(
                 key=season_key,
                 season_number=0,
                 sort_order=0,
-                data_timestamp=data_timestamp,
+                data_timestamp=max(data_timestamps),
                 title_id=title.id,
             )
             season = new_season.upsert(title, season)
-            season.set_update_at(None, data_timestamp)
+            season.set_update_at(None, data_timestamps)
 
         self._upsert_episode(season, title.key, force=force)
 
@@ -368,7 +368,7 @@ class DisneyPlusMovie(DisneyPlusImporter):
         episode = Episode.get_from_memory(self.session, season, title_key)
         if self._episode_is_outdated(episode, season.key, title_key, force=force):
             details = self._media_details(title_key)
-            data_timestamp = self.episode_data_timestamp(
+            data_timestamps = self.episode_data_timestamps(
                 title_key,
                 season.key,
                 title_key,
@@ -383,8 +383,8 @@ class DisneyPlusMovie(DisneyPlusImporter):
                 thumbnail_url=self._background_image_url(title_key),
                 episode_number=0,
                 sort_order=0,
-                data_timestamp=data_timestamp,
+                data_timestamp=max(data_timestamps),
                 season_id=season.id,
             )
             episode = new_episode.upsert(season, episode)
-            episode.set_update_at(None, data_timestamp)
+            episode.set_update_at(None, data_timestamps)

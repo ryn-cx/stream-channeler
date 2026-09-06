@@ -81,7 +81,7 @@ class HiDiveShared(HiDiveBaseFiles):
             data_timestamp=data_timestamp,
             plugin_id=self.plugin.id,
         ).upsert(self.plugin, existing_source)
-        source.set_update_at(data_timestamp + timedelta(days=1))
+        source.set_update_at(data_timestamp + timedelta(days=1), [data_timestamp])
         return source
 
     # TODO: Validate
@@ -114,9 +114,9 @@ class HiDiveShared(HiDiveBaseFiles):
                         release_date = element_release_date(elements[0])
                         title_name = card_title_name(element_text(elements[1]))
                         if title := titles_by_name.get(title_name):
-                            title.set_update_at(release_date)
+                            title.set_update_at(release_date, [])
                             for season in title.seasons:
-                                season.set_update_at(release_date)
+                                season.set_update_at(release_date, [])
                         else:
                             unmatched_names.append(title_name)
 
@@ -151,7 +151,7 @@ class HiDiveShared(HiDiveBaseFiles):
         has aired and the channel is what keeps hold of the whole run. It is
         created the first time a title is found rather than by hand.
         """
-        return self.add_urls_to_plugin_channel(
+        return self.get_or_create_channel(
             self.plugin_name(),
             (Path(__file__).parent / "channel_description.md").read_text(
                 encoding="utf-8",

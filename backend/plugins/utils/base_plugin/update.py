@@ -19,27 +19,17 @@ class BaseUpdateMixin(BaseSoftDeleteMixin, ABC):
     # TODO: Validate
     def _mark_mismatched_titles_as_outdated(
         self,
-        listed_title_keys: Iterable[str],
-        source_key: str | None = None,
+        source_key: str | None,
+        new_title_keys: Iterable[str],
     ) -> None:
-        """Mark mismatched titles as outdated.
-
-        There are two ways a title can be considered mismatched:
-        1. It is listed in `listed_title_keys` but has been deleted.
-        2. It is not listed in `listed_title_keys` but exists and is not deleted.
-
-        Args:
-            listed_title_keys: All of the title keys that are expected to exist for the source.
-            source_key: The key of the source to check for mismatched titles. If None, all sources are checked.
-        """
-        listed = set(listed_title_keys)
-        data_timestamp = self.source_data_timestamp()
+        listed = set(new_title_keys)
+        data_timestamps = self.source_data_timestamps()
         for source in self._preload_sources(source_key, preload_titles=True):
             for title in source.titles:
                 is_listed = title.key in listed
                 is_deleted = title.deleted_at is not None
                 if is_listed == is_deleted:
-                    title.set_update_at(data_timestamp)
+                    title.set_update_at(min(data_timestamps), [])
 
     # TODO: Validate
     def _set_weekly_updates_from_episodes(
@@ -55,14 +45,16 @@ class BaseUpdateMixin(BaseSoftDeleteMixin, ABC):
         that is a better `update_at` value than the current `update_at` value.
         """
         preload_episodes(self.session, [title])
+        title_data_timestamps = self.title_data_timestamps(title.key)
         for season in title.active_children:
+            season_data_timestamps = self.season_data_timestamps(season.key, title.key)
             for episode in season.active_children:
                 if episode.air_date:
                     update_at = episode.air_date + timedelta(days=7)
                     if update_seasons:
-                        season.set_update_at(update_at)
+                        season.set_update_at(update_at, season_data_timestamps)
                     if update_title:
-                        title.set_update_at(update_at)
+                        title.set_update_at(update_at, title_data_timestamps)
 
     # TODO: Validate
     def _set_season_update_at_based_on_last_episode(self, season: Season) -> None:
@@ -71,13 +63,18 @@ class BaseUpdateMixin(BaseSoftDeleteMixin, ABC):
             raise ValueError(msg)
 
         preload_episodes(self.session, [season.title])
+        data_timestamps = self.season_data_timestamps(season.key, season.title.key)
         for episode in season.active_children:
             if episode.air_date:
-                season.set_update_at(episode.air_date)
-                season.set_update_at(episode.air_date + timedelta(days=7))
+                season.set_update_at(episode.air_date, data_timestamps)
+                season.set_update_at(
+                    episode.air_date + timedelta(days=7),
+                    data_timestamps,
+                )
 
         season.set_update_at(
-            staggered_monthly_update_at(season.key, season.data_timestamp),
+            staggered_monthly_update_at(season.key, min(data_timestamps)),
+            data_timestamps,
         )
 
     # TODO: Validate
