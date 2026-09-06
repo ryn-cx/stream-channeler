@@ -41,12 +41,12 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class HBOMaxMedia(HBOMaxShared, BaseImporter, ABC):
+class HBOMaxImporter(HBOMaxShared, BaseImporter, ABC):
     pass
 
 
 # TODO: Validate
-class HBOMaxSeries(HBOMaxMedia):
+class HBOMaxSeries(HBOMaxImporter):
     # TODO: Validate
     @classmethod
     @override
@@ -244,7 +244,7 @@ class HBOMaxSeries(HBOMaxMedia):
 
 
 # TODO: Validate
-class HBOMaxMovie(HBOMaxMedia):
+class HBOMaxMovie(HBOMaxImporter):
     # TODO: Validate
     @classmethod
     @override

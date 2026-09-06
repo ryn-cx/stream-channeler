@@ -78,7 +78,7 @@ def runtime_in_seconds(runtime: int | None) -> int | None:
 
 
 # TODO: Validate
-class TMDBMedia(TMDBExternalWebsites, BaseImporter):
+class TMDBImporter(TMDBExternalWebsites, BaseImporter):
     # TODO: Validate
     @abstractmethod
     def download_new_watch_providers_file(self, title: Title) -> None: ...
@@ -107,7 +107,7 @@ class TMDBMedia(TMDBExternalWebsites, BaseImporter):
 
 
 # TODO: Validate
-class TMDBSeries(TMDBMedia):
+class TMDBSeries(TMDBImporter):
     """Reads a TMDB series into records of TMDB's own."""
 
     # TODO: Validate
@@ -564,7 +564,7 @@ class TMDBSeries(TMDBMedia):
 
 
 # TODO: Validate
-class TMDBMovie(TMDBMedia):
+class TMDBMovie(TMDBImporter):
     """Reads a TMDB film into records of TMDB's own."""
 
     # TODO: Validate

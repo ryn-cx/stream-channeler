@@ -14,8 +14,6 @@ MUSIC_SOURCE = "Crunchyroll Music"
 
 # TODO: Validate
 class MusicCategory(StrEnum):
-    """One of the two listings an artist's releases are split into."""
-
     MUSIC_VIDEO = "musicvideo"
     CONCERT = "concert"
 
@@ -83,29 +81,8 @@ def music_episode_category(episode_key: str) -> MusicCategory:
     return CATEGORY_ID_PREFIXES[episode_key[:2]]
 
 
-# TODO: Validate
 def build_url(path: str) -> str:
     return f"https://crunchyroll.com/{path.lstrip('/')}"
-
-
-# TODO: Validate
-def series_url(title_key: str) -> str:
-    return build_url(f"series/{title_key}")
-
-
-# TODO: Validate
-def artist_url(title_key: str) -> str:
-    return build_url(f"artist/{title_key}")
-
-
-# TODO: Validate
-def series_episode_url(episode_key: str) -> str:
-    return build_url(f"watch/{episode_key}")
-
-
-# TODO: Validate
-def music_episode_url(category: MusicCategory, episode_key: str) -> str:
-    return build_url(f"watch/{category}/{episode_key}")
 
 
 # TODO: Validate

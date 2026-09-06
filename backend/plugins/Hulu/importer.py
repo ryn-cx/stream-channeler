@@ -43,7 +43,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class HuluMedia(HuluShared, BaseImporter, ABC):
+class HuluImporter(HuluShared, BaseImporter, ABC):
     # TODO: Validate
     @abstractmethod
     def _add_title_to_media_type_channel(self, url: str) -> None: ...
@@ -67,7 +67,7 @@ class HuluMedia(HuluShared, BaseImporter, ABC):
 
 
 # TODO: Validate
-class HuluSeries(HuluMedia):
+class HuluSeriesImporter(HuluImporter):
     # TODO: Validate
     @override
     def _add_title_to_media_type_channel(self, url: str) -> None:
@@ -311,7 +311,7 @@ class HuluSeries(HuluMedia):
 
 
 # TODO: Validate
-class HuluMovie(HuluMedia):
+class HuluMovieImporter(HuluImporter):
     # TODO: Validate
     @override
     def _add_title_to_media_type_channel(self, url: str) -> None:

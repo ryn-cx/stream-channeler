@@ -49,7 +49,7 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
     # TODO: Validate
     @property
     def source(self) -> Source:
-        return self._sources[self.plugin_name()]
+        return self._sources[self.source_name()]
 
     # TODO: Validate
     def add_urls_to_plugin_channel(
@@ -126,16 +126,21 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         cls.initializer.initialize_plugin(session)
 
     # TODO: Validate
-    def get_media_importer(self, input: Title | str) -> BaseImporter:  # noqa: ARG002
+    def _get_media_importer_from_url(self, url: str) -> BaseImporter:  # noqa: ARG002
         return cast("BaseImporter", self)
 
     # TODO: Validate
-    def get_source_importer(self, source: Source) -> BaseImporter:  # noqa: ARG002
+    def _get_media_importer_from_title(self, title: Title) -> BaseImporter:  # noqa: ARG002
+        return cast("BaseImporter", self)
+
+    # TODO: Validate
+    def get_media_importer_from_source(self, source: Source) -> BaseImporter:  # noqa: ARG002
+        """Get the media importer to use based on the source."""
         return cast("BaseImporter", self)
 
     # TODO: Validate
     def import_url(self, url: str) -> list[URLImportResult]:
-        return self.get_media_importer(url).import_url(url)
+        return self._get_media_importer_from_url(url).import_url(url)
 
     # TODO: Validate
     def import_search(
@@ -151,31 +156,35 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
 
     # TODO: Validate
     def update_source(self, source: Source, update_at: datetime) -> None:
-        self.get_source_importer(source).update_source(source, update_at)
+        self.get_media_importer_from_source(source).update_source(source, update_at)
 
     # TODO: Validate
     def update_title(self, title: Title, *, force: bool = False) -> None:
-        self.get_media_importer(title).update_title(title, force=force)
+        self._get_media_importer_from_title(title).update_title(title, force=force)
 
     # TODO: Validate
     def update_season(self, season: Season) -> None:
-        self.get_media_importer(season.title).update_season(season)
+        self._get_media_importer_from_title(season.title).update_season(season)
 
     # TODO: Validate
     def update_episode(self, episode: Episode) -> None:
-        self.get_media_importer(episode.season.title).update_episode(episode)
+        self._get_media_importer_from_title(episode.season.title).update_episode(
+            episode,
+        )
 
     # TODO: Validate
     def on_update_title_failure(self, title: Title, error: Exception) -> None:
-        self.get_media_importer(title).on_failure(title, error)
+        self._get_media_importer_from_title(title).on_failure(title, error)
 
     # TODO: Validate
     def on_update_season_failure(self, season: Season, error: Exception) -> None:
-        self.get_media_importer(season.title).on_failure(season, error)
+        self._get_media_importer_from_title(season.title).on_failure(season, error)
 
     # TODO: Validate
     def on_update_episode_failure(self, episode: Episode, error: Exception) -> None:
-        self.get_media_importer(episode.season.title).on_failure(episode, error)
+        self._get_media_importer_from_title(episode.season.title).on_failure(
+            episode, error,
+        )
 
     # TODO: Validate
     def raise_if_invalid_file(self, file: BaseFile[Any], url: str) -> None:

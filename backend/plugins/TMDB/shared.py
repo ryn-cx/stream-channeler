@@ -60,6 +60,12 @@ class TMDBShared(TMDBSearch):
     """
 
     # TODO: Validate
+    @classmethod
+    @override
+    def link_to_tmdb(cls) -> bool:
+        return False
+
+    # TODO: Validate
     @staticmethod
     def _watch_providers_due(record: Title) -> bool:
         if record.update_at is None:

@@ -49,6 +49,7 @@ class BaseUpsertMixin(BasePluginCore, BaseOutdatedCheckMixin, ABC):
             key=source_key,
             name=self.plugin_name(),
             favicon_url=self.favicon_url(),
+            link_to_tmdb=self.link_to_tmdb(),
             data_timestamp=self._existing_data_timestamp_or_now(existing_source),
             plugin_id=self.plugin.id,
         ).upsert(self.plugin, existing_source)

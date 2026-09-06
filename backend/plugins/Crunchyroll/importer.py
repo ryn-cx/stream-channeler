@@ -30,14 +30,11 @@ from plugins.Crunchyroll.utils import (
     SERIES_URL_REGEX,
     VIDEO_SOURCE,
     MusicCategory,
-    artist_url,
+    build_url,
     episode_image,
     episode_thumbnail,
     largest_image,
-    music_episode_url,
     nearest_thumbnail,
-    series_episode_url,
-    series_url,
     tenant_category_name,
     title_image,
     title_thumbnail,
@@ -53,13 +50,14 @@ if TYPE_CHECKING:
 
     from chirashi.artist_concerts.models import Datum as ConcertListingDatum
     from chirashi.artist_music_videos.models import Datum as MusicVideoListingDatum
+    from chirashi.browse_series.models import Datum as BrowseSeriesDatum
 
     from app.channels.models import Channel
     from plugins.utils.base_plugin.files import BaseFile
 
 
 # TODO: Validate
-class CrunchyrollMedia(CrunchyrollShared, BaseImporter, ABC):
+class CrunchyrollImporter(CrunchyrollShared, BaseImporter, ABC):
     _update_interval: ClassVar[timedelta]
 
     # TODO: Validate
@@ -71,6 +69,7 @@ class CrunchyrollMedia(CrunchyrollShared, BaseImporter, ABC):
             key=source_key,
             name=source_key,
             favicon_url=self.favicon_url(),
+            link_to_tmdb=self.link_to_tmdb(),
             data_timestamp=data_timestamp,
             plugin_id=self.plugin.id,
         ).upsert(self.plugin, existing_source)
@@ -79,9 +78,25 @@ class CrunchyrollMedia(CrunchyrollShared, BaseImporter, ABC):
 
 
 # TODO: Validate
-class CrunchyrollSeries(CrunchyrollMedia):
+class CrunchyrollAnimeImporter(CrunchyrollImporter):
+    """Plugin for handling Crunchyroll anime and live-action series.
+
+    Named CrunchyRollAnime because the majority of the titles it handles will be anime
+    and this name makes it as clear as possible that it does not import music content.
+    """
+
     __categories_by_title_key: dict[str, list[str]] | None = None
     _update_interval: ClassVar[timedelta] = timedelta(days=1)
+
+    # TODO: Validate
+    @staticmethod
+    def title_url(title_key: str) -> str:
+        return build_url(f"series/{title_key}")
+
+    # TODO: Validate
+    @staticmethod
+    def episode_url(episode_key: str) -> str:
+        return build_url(f"watch/{episode_key}")
 
     # TODO: Validate
     @classmethod
@@ -135,7 +150,9 @@ class CrunchyrollSeries(CrunchyrollMedia):
         return [
             TMDBLookupInfo(
                 series_data.title,
-                TMDBMediaType.movie if self._is_movie(title_key) else TMDBMediaType.tv,
+                TMDBMediaType.movie
+                if self.series_file(title_key).is_movie()
+                else TMDBMediaType.tv,
                 series_data.series_launch_year,
             ),
         ]
@@ -213,8 +230,10 @@ class CrunchyrollSeries(CrunchyrollMedia):
                 key=series_data.id,
                 name=series_data.title,
                 description=series_data.description,
-                media_type="Movie" if self._is_movie(title_key) else "Series",
-                url=series_url(series_data.id),
+                media_type=(
+                    "Movie" if self.series_file(title_key).is_movie() else "Series"
+                ),
+                url=self.title_url(series_data.id),
                 image_url=title_image(series_data.images),
                 thumbnail_url=title_thumbnail(series_data.images),
                 year=series_data.series_launch_year,
@@ -281,7 +300,7 @@ class CrunchyrollSeries(CrunchyrollMedia):
                 watch_identifier=watch_identifier(self.plugin_name(), episode_data.id),
                 name=episode_data.title,
                 episode_number=episode_data.episode_number,
-                url=series_episode_url(episode_data.id),
+                url=self.episode_url(episode_data.id),
                 description=episode_data.description,
                 image_url=episode_image(episode_data.images),
                 thumbnail_url=episode_thumbnail(episode_data.images),
@@ -363,77 +382,95 @@ class CrunchyrollSeries(CrunchyrollMedia):
 
     # TODO: Validate
     def create_channel_records(self) -> None:
-        self._process_browse_files()
-        self._process_catalogue_file()
-
-    # TODO: Validate
-    def _process_browse_files(self) -> None:
         _cache = self._preload_sources(VIDEO_SOURCE, preload_seasons=True).all()
+        self._create_channel_records_from_file(self.catalogue_file().data())
         for browse_json in self.get_incomplete_files(
             BrowseSeries,
             self.browse_file,
         ):
-            new_series_urls: list[str] = []
-            for release in browse_json.data():
-                if title := Title.get_from_memory(
-                    self.session,
-                    self._sources[VIDEO_SOURCE],
-                    release.id,
-                ):
-                    # last_public appears to represent the last time a public change
-                    # was made to the title's data. There is no way to detect what
-                    # season the update is for so both title and season need to be set
-                    # to be updated because the season will detect new episodes for
-                    # existing seasons and the titles will detect new seasons.
-                    title.set_update_at(release.last_public)
-                    for season in title.seasons:
-                        season.set_update_at(release.last_public)
-                else:
-                    new_series_urls.append(series_url(release.id))
-
-            if new_series_urls:
-                add_urls_to_channel_import_queue(
-                    self.session,
-                    self._plugin_channel(),
-                    new_series_urls,
-                )
-
+            self._create_channel_records_from_file(browse_json.data())
             browse_json.database_record.status = COMPLETED_STATUS
 
     # TODO: Validate
-    def _process_catalogue_file(self) -> None:
-        catalogue = self.catalogue_file().data()
+    def _create_channel_records_from_file(
+        self,
+        releases: list[BrowseSeriesDatum],
+    ) -> None:
+        new_series_urls = [
+            self.title_url(release.id)
+            for release in releases
+            if not Title.get_from_memory(
+                self.session,
+                self._sources[VIDEO_SOURCE],
+                release.id,
+            )
+        ]
+        if new_series_urls:
+            add_urls_to_channel_import_queue(
+                self.session,
+                self._plugin_channel(),
+                new_series_urls,
+            )
+
+    # TODO: Validate
+    def _mark_series_as_outdated(self, releases: list[BrowseSeriesDatum]) -> None:
         _cache = self._preload_sources(VIDEO_SOURCE, preload_seasons=True).all()
-        add_urls_to_channel_import_queue(
-            self.session,
-            self._plugin_channel(),
-            [
-                series_url(datum.id)
-                for datum in catalogue
-                if not Title.get_from_memory(
-                    self.session,
-                    self._sources[VIDEO_SOURCE],
-                    datum.id,
-                )
-            ],
-        )
+        for release in releases:
+            if title := Title.get_from_memory(
+                self.session,
+                self._sources[VIDEO_SOURCE],
+                release.id,
+            ):
+                # last_public appears to represent the last time a public change
+                # was made to the title's data. There is no way to detect what
+                # season the update is for so both title and season need to be set
+                # to be updated because the season will detect new episodes for
+                # existing seasons and the titles will detect new seasons.
+                title.set_update_at(release.last_public)
+                for season in title.seasons:
+                    season.set_update_at(release.last_public)
 
     # TODO: Validate
     @override
     def update_source(self, source: Source, update_at: datetime) -> None:
-        """Look for new series, which the video `Source` is scheduled for daily."""
-        if source.data_timestamp is None:  # Should be impossible.
-            msg = "Cannot update source without a data timestamp."
-            raise ValueError(msg)
-        self.browse_file(source.data_timestamp).download_if_outdated()
+        browse_file = self.newest_browse_file()
+        browse_file.download_if_outdated()
         self.create_channel_records()
+        releases = [*self.catalogue_file().data(), *browse_file.data()]
+        self._mark_series_as_outdated(releases)
+        self._mark_mismatched_titles_as_outdated(
+            {release.id for release in releases},
+            source_key=VIDEO_SOURCE,
+        )
         self.upsert_source(VIDEO_SOURCE)
 
 
 # TODO: Validate
-class CrunchyrollArtist(CrunchyrollMedia):
+class CrunchyRollMusicImporter(CrunchyrollImporter):
     # Check weekly for new music because updates do not need to be frequent.
     _update_interval: ClassVar[timedelta] = timedelta(days=7)
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def source_name(cls) -> str:
+        return MUSIC_SOURCE
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def link_to_tmdb(cls) -> bool:
+        return False
+
+    # TODO: Validate
+    @staticmethod
+    def title_url(title_key: str) -> str:
+        return build_url(f"artist/{title_key}")
+
+    # TODO: Validate
+    @staticmethod
+    def episode_url(category: MusicCategory, episode_key: str) -> str:
+        return build_url(f"watch/{category}/{episode_key}")
 
     # TODO: Validate
     @classmethod
@@ -561,7 +598,7 @@ class CrunchyrollArtist(CrunchyrollMedia):
                 name=artist_data.name,
                 description=artist_data.description,
                 media_type="Music",
-                url=artist_url(title_key),
+                url=self.title_url(title_key),
                 image_url=largest_image(artist_data.images.poster_wide),
                 thumbnail_url=nearest_thumbnail(artist_data.images.poster_wide),
                 data_timestamp=data_timestamps[0],
@@ -631,7 +668,7 @@ class CrunchyrollArtist(CrunchyrollMedia):
                 watch_identifier=watch_identifier(self.plugin_name(), episode_key),
                 name=details.title,
                 description=details.description,
-                url=music_episode_url(category, episode_key),
+                url=self.episode_url(category, episode_key),
                 image_url=largest_image(details.images.thumbnail),
                 thumbnail_url=nearest_thumbnail(details.images.thumbnail),
                 duration=details.duration_ms // 1000,
@@ -697,7 +734,7 @@ class CrunchyrollArtist(CrunchyrollMedia):
                 for season in title.seasons:
                     season.set_update_at(artist.updated_at)
             else:
-                new_artist_urls.append(artist_url(artist.id))
+                new_artist_urls.append(self.title_url(artist.id))
 
         add_urls_to_channel_import_queue(
             self.session,
@@ -712,7 +749,7 @@ class CrunchyrollArtist(CrunchyrollMedia):
         # This is the only source file so no source_files wrapper is needed.
         self.browse_file().download_if_outdated(update_at)
         self.create_channel_records()
-        self._mark_changed_titles_for_update(
+        self._mark_mismatched_titles_as_outdated(
             {artist.id for artist in self.browse_file().data()},
             source_key=MUSIC_SOURCE,
         )

@@ -25,7 +25,7 @@ FILE_SESSION_KEY = "plugin_file_session"
 
 
 # TODO: Validate
-def file_session_for(session: Session) -> Session:
+def get_file_session(session: Session) -> Session:
     """Return the session the plugin's files are read and written through.
 
     Files are downloaded while media is being written rather than beforehand, so
@@ -70,28 +70,34 @@ class BasePluginCore(ABC):
     _file_cache: dict[object, Any]
     initializer: ClassVar[type[BasePluginInitializer]]
 
-    # TODO: Validate
-    def __init__(
-        self,
-        session: Session,
-        plugin: Plugin | None = None,
-        sources: Sequence[Source] | None = None,
-    ) -> None:
+    def __init__(self, session: Session, plugin: Plugin | None = None) -> None:
+        """Initialize the plugin.
+
+        The `plugin` parameter can be used to bypass fetching the plugin from the
+        database if it is already in the session.
+        """
         self.session = session
-        self.file_session = file_session_for(session)
+        self.plugin = plugin or Plugin.get_one(session, self.plugin_name())
+        """The `Plugin` record from the database."""
+        self._sources = {source.key: source for source in self.plugin.sources}
+        """All of the `Source` records from the database in a dict keyed by
+        `Source.key`."""
         self._file_cache = {}
-        self.plugin = (
-            plugin
-            if plugin is not None
-            else Plugin.get_one(session, self.plugin_name())
-        )
+        self.file_session = get_file_session(session)
+        """Seperate session that can save files even if the main session is rolled back
+        so downloaded file data is not lost if importing/updating fails."""
         self.file_plugin = Plugin.get_one(self.file_session, self.plugin_name())
-        source_list = sources if sources is not None else self.plugin.sources
-        self._sources = {source.key: source for source in source_list}
+        """Seperate plugin used by the file_session. Required because to support saving
+        files independently of the main session."""
 
     @classmethod
     @abstractmethod
     def plugin_name(cls) -> str: ...
+
+    # TODO: Validate
+    @classmethod
+    def source_name(cls) -> str:
+        return cls.plugin_name()
 
     @classmethod
     @abstractmethod
@@ -101,6 +107,11 @@ class BasePluginCore(ABC):
     @classmethod
     def name_on_tmdb(cls) -> tuple[str, ...]:
         return (cls.plugin_name(),)
+
+    # TODO: Validate
+    @classmethod
+    def link_to_tmdb(cls) -> bool:
+        return True
 
     # TODO: Validate
     @classmethod

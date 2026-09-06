@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, override
 from loguru import logger
 
 from app.utils import tz_datetime
-from plugins.AdultSwim.media import AdultSwimMedia
+from plugins.AdultSwim.importer import AdultSwimImporter
 from plugins.AdultSwim.shared import (
     EPISODE_URL_REGEX,
     TITLE_URL_REGEX,
@@ -56,8 +56,13 @@ class AdultSwim(
 
     # TODO: Validate
     @override
-    def get_media_importer(self, input: Title | str) -> AdultSwimMedia:
-        return AdultSwimMedia(self)
+    def _get_media_importer_from_url(self, url: str) -> AdultSwimImporter:
+        return AdultSwimImporter(self)
+
+    # TODO: Validate
+    @override
+    def _get_media_importer_from_title(self, title: Title) -> AdultSwimImporter:
+        return AdultSwimImporter(self)
 
     # TODO: Validate
     @override

@@ -72,6 +72,7 @@ class AdultSwimShared(BasicFiles):
             key=source_key,
             name=source_key,
             favicon_url=self.favicon_url(),
+            link_to_tmdb=self.link_to_tmdb(),
             data_timestamp=self.titles_file().data_timestamp(),
             plugin_id=self.plugin.id,
             # update_at is not used because it Plugin.update_at is used instead because

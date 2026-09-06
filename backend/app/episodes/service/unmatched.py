@@ -44,7 +44,6 @@ from app.episodes.service.numbering import (
 )
 from app.episodes.service.records import _record_fields
 from app.episodes.service.tmdb_choices import _tmdb_ids_used_by_titles
-from app.plugins.identifiers import TMDB_PLUGIN_KEY, YOUTUBE_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.schemas import SortOption
 from app.seasons.models import Season
@@ -117,9 +116,7 @@ def _unmatched_base(
     *,
     non_canonical_titles_only: bool = False,
 ) -> SelectOfScalar[Episode]:
-    """Every canonical episode of a plugin other than TMDB and YouTube.
-
-    The rows the page is drawn from, before anything is sorted, filtered or
+    """The rows the page is drawn from, before anything is sorted, filtered or
     counted. `contains_eager` carries the season, title and source back with each
     episode, since every one of them is read for every row and reaching them
     through the relationships would be three queries a row.
@@ -138,11 +135,7 @@ def _unmatched_base(
             .contains_eager(Source.plugin),  # type: ignore[arg-type]
         )
         .where(
-            # TMDB's own episodes are what everything else is matched against,
-            # and YouTube's are nothing TMDB carries, so neither is waiting on a
-            # match the way the rest are.
-            col(Plugin.key).not_in((TMDB_PLUGIN_KEY, YOUTUBE_PLUGIN_KEY)),
-            col(Source.key) != "Crunchyroll Music",
+            col(Source.link_to_tmdb).is_(True),
             is_canonical(Episode),
             # An episode settled as one TMDB has no record of points at nothing
             # and is locked there, which reads as canonical the same way one
@@ -177,9 +170,7 @@ def list_unmatched_episodes(
     session: Session,
     params: UnmatchedReadOptions,
 ) -> UnmatchedEpisodesPublic:
-    """Return a page of the canonical episodes outside TMDB and YouTube.
-
-    Sorted, filtered and paged by the database rather than in the browser. There
+    """Sorted, filtered and paged by the database rather than in the browser. There
     are far more of these than a page titles, so ordering a page of them would
     order only the ones already fetched: sorting by name would answer with the
     first names of whichever rows came back, not the first names there are.

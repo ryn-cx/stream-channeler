@@ -66,6 +66,12 @@ class YouTubeShared(WatchHistoryMixin, BasicFiles):
     # TODO: Validate
     @classmethod
     @override
+    def link_to_tmdb(cls) -> bool:
+        return False
+
+    # TODO: Validate
+    @classmethod
+    @override
     def _source_keys(cls) -> tuple[str, ...]:
         return (cls.plugin_name(), FREE_SOURCE_KEY, PAID_SOURCE_KEY, LINKS_SOURCE_KEY)
 
@@ -82,6 +88,7 @@ class YouTubeShared(WatchHistoryMixin, BasicFiles):
             key=source_key,
             name=source_key,
             favicon_url=self.favicon_url(),
+            link_to_tmdb=self.link_to_tmdb(),
             data_timestamp=self._existing_data_timestamp_or_now(existing_source),
             plugin_id=self.plugin.id,
         ).upsert(self.plugin, existing_source)

@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, override
 
-from plugins.HiDive.media import HiDiveMedia, HiDiveMovie, HiDiveSeries
+from plugins.HiDive.importer import HiDiveImporter, HiDiveMovie, HiDiveSeries
 from plugins.HiDive.shared import (
     MOVIE_URL_REGEX,
     SEASON_URL_REGEX,
@@ -50,23 +50,25 @@ class HiDive(
 
     # TODO: Validate
     @override
-    def get_media_importer(self, input: Title | str) -> HiDiveMedia:
-        if isinstance(input, str):
-            domain_regex = self._domain_regex()
-            if re.match(domain_regex + SERIES_URL_REGEX, input):
-                return HiDiveSeries(self)
-            if re.match(domain_regex + SEASON_URL_REGEX, input):
-                return HiDiveSeries(self)
-            if re.match(domain_regex + MOVIE_URL_REGEX, input):
-                return HiDiveMovie(self)
+    def _get_media_importer_from_url(self, url: str) -> HiDiveImporter:
+        domain_regex = self._domain_regex()
+        if re.match(domain_regex + SERIES_URL_REGEX, url):
+            return HiDiveSeries(self)
+        if re.match(domain_regex + SEASON_URL_REGEX, url):
+            return HiDiveSeries(self)
+        if re.match(domain_regex + MOVIE_URL_REGEX, url):
+            return HiDiveMovie(self)
 
-            msg = f"Invalid {self.plugin_name()} URL: {input}"
-            raise InvalidURLError(msg)
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)
 
-        if not input.media_type:
+    # TODO: Validate
+    @override
+    def _get_media_importer_from_title(self, title: Title) -> HiDiveImporter:
+        if not title.media_type:
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
-        if input.media_type == "Movie":
+        if title.media_type == "Movie":
             return HiDiveMovie(self)
         return HiDiveSeries(self)
 

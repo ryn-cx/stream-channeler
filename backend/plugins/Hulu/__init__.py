@@ -5,7 +5,7 @@ import re
 from typing import TYPE_CHECKING, override
 
 from app.media.media_type import TMDBMediaType
-from plugins.Hulu.media import HuluMedia, HuluMovie, HuluSeries
+from plugins.Hulu.importer import HuluImporter, HuluMovieImporter, HuluSeriesImporter
 from plugins.Hulu.shared import (
     MOVIE_URL_REGEX,
     SERIES_URL_REGEX,
@@ -38,44 +38,42 @@ class Hulu(
 ):
     initializer = HuluInitializer
 
-    # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
         return (SERIES_URL_REGEX, MOVIE_URL_REGEX, VIDEO_URL_REGEX)
 
-    # TODO: Validate
     @override
-    def get_media_importer(self, input: Title | str) -> HuluMedia:
-        if isinstance(input, str):
-            domain_regex = self._domain_regex()
-            if re.match(domain_regex + SERIES_URL_REGEX, input):
-                return HuluSeries(self)
-            if re.match(domain_regex + MOVIE_URL_REGEX, input):
-                return HuluMovie(self)
+    def _get_media_importer_from_url(self, url: str) -> HuluImporter:
+        domain_regex = self._domain_regex()
+        if re.match(domain_regex + SERIES_URL_REGEX, url):
+            return HuluSeriesImporter(self)
+        if re.match(domain_regex + MOVIE_URL_REGEX, url):
+            return HuluMovieImporter(self)
 
-            # Watch URLs are the same for movies and series so extra analysis needs to
-            # be done.
-            if match := re.match(domain_regex + VIDEO_URL_REGEX, input):
-                redirect_url = self.watch_redirect_file(
-                    match.group("episode_key"),
-                ).parsed()
-                if re.search(SERIES_URL_REGEX, redirect_url):
-                    return HuluSeries(self)
-                if re.search(MOVIE_URL_REGEX, redirect_url):
-                    return HuluMovie(self)
+        # Watch URLs are the same for movies and series so extra analysis needs to
+        # be done.
+        if match := re.match(domain_regex + VIDEO_URL_REGEX, url):
+            redirect_url = self.watch_redirect_file(
+                match.group("episode_key"),
+            ).parsed()
+            if re.search(SERIES_URL_REGEX, redirect_url):
+                return HuluSeriesImporter(self)
+            if re.search(MOVIE_URL_REGEX, redirect_url):
+                return HuluMovieImporter(self)
 
-            msg = f"Invalid {self.plugin_name()} URL: {input}"
-            raise InvalidURLError(msg)
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)
 
-        if not input.media_type:
+    @override
+    def _get_media_importer_from_title(self, title: Title) -> HuluImporter:
+        if not title.media_type:
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
-        if input.media_type == "Movie":
-            return HuluMovie(self)
-        return HuluSeries(self)
+        if title.media_type == "Movie":
+            return HuluMovieImporter(self)
+        return HuluSeriesImporter(self)
 
-    # TODO: Validate
     @override
     def search_for_url(
         self,
@@ -98,5 +96,5 @@ class Hulu(
     def update_source(self, source: Source, update_at: datetime) -> None:
         self._download_if_outdated(self._source_files(), update_at)
         self._create_channel_records()
-        self._mark_changed_titles_for_update(self._title_keys_from_all_xxx_files())
+        self._mark_mismatched_titles_as_outdated(self._title_keys_from_all_xxx_files())
         self.upsert_source(source.key)

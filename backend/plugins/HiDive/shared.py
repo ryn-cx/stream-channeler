@@ -77,6 +77,7 @@ class HiDiveShared(BasicFiles):
             key=source_key,
             name=self.plugin_name(),
             favicon_url=self.favicon_url(),
+            link_to_tmdb=self.link_to_tmdb(),
             data_timestamp=data_timestamp,
             plugin_id=self.plugin.id,
         ).upsert(self.plugin, existing_source)

@@ -1,5 +1,5 @@
 # TODO: Validate
-"""Writing what Pluto TV says about a title into the database."""
+"""Writing what Tubi says about a title into the database."""
 
 from __future__ import annotations
 
@@ -13,16 +13,22 @@ from app.episodes.models import Episode
 from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.titles.models import Title
+from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
-from plugins.Pluto.constants import MILLISECONDS_PER_SECOND
-from plugins.Pluto.shared import MOVIE_URL_REGEX, SERIES_URL_REGEX, PlutoShared
-from plugins.Pluto.utils import (
+from plugins.Tubi.shared import (
+    EPISODE_URL_REGEX,
+    MOVIE_URL_REGEX,
+    SERIES_URL_REGEX,
+    TubiShared,
+)
+from plugins.Tubi.utils import (
     build_season_key,
+    episode_name,
     episode_url,
+    first_image,
     movie_season_key,
     movie_url,
     season_episodes,
-    season_url,
     seasons,
     series_url,
     split_season_key,
@@ -34,71 +40,32 @@ from plugins.utils.base_plugin.url import MediaInfo
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from notaplanet.items.models import ItemsModelItem
-    from notaplanet.seasons.models import Episode as SeriesEpisode
-    from notaplanet.seasons.models import Season as SeriesSeason
-    from notaplanet.seasons.models import SeasonsModel
+    from plugi.content.models import Child as SeasonChild
+    from plugi.content.models import Child1 as EpisodeChild
+    from plugi.content.models import ContentModel
 
     from app.sources.models import Source
     from plugins.utils.base_plugin.files import BaseFile
 
 
 # TODO: Validate
-class PlutoMedia(PlutoShared, BaseImporter, ABC):
-    pass
-
-
-# TODO: Validate
-class PlutoSeries(PlutoMedia):
+class TubiImporter(TubiShared, BaseImporter, ABC):
     # TODO: Validate
-    @classmethod
-    @override
-    def _url_regexes(cls) -> tuple[str, ...]:
-        return (SERIES_URL_REGEX,)
-
-    # TODO: Validate
-    @override
-    def extract_media_info(self, url: str) -> MediaInfo:
-        if match := re.match(self._domain_regex() + SERIES_URL_REGEX, url):
-            title_key = match.group("series_key")
-            self.raise_if_invalid_file(self.seasons_file(title_key), url)
-            return MediaInfo(title_key, episode_key=match.group("episode_key"))
-
-        msg = f"Invalid {self.plugin_name()} URL: {url}"
-        raise InvalidURLError(msg)
-
-    # TODO: Validate
-    def _series(self, title_key: str) -> SeasonsModel:
-        return self.seasons_file(title_key).parsed()
-
-    # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        return [TMDBLookupInfo(self._series(title_key).name, TMDBMediaType.tv, None)]
-
-    # TODO: Validate
-    def _seasons(self, title_key: str) -> list[SeriesSeason]:
-        return seasons(self._series(title_key))
-
-    # TODO: Validate
-    def _season_episodes(
-        self,
-        title_key: str,
-        season_number: int,
-    ) -> list[SeriesEpisode]:
-        return season_episodes(self._series(title_key), season_number)
+    def _content(self, title_key: str) -> ContentModel:
+        return self.content_file(title_key).parsed()
 
     # TODO: Validate
     @override
     def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
         # Required to detect changes to the title and new seasons of it.
-        return [self.seasons_file(title_key)]
+        return [self.content_file(title_key)]
 
     # TODO: Validate
     @override
     def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
-        # The seasons and their episodes all come down with the title's own file.
-        return [self.seasons_file(title_key)]
+        # Every season is listed inside the title's own file, so that file is what
+        # says whether a season read out of it has changed.
+        return [self.content_file(title_key)]
 
     # TODO: Validate
     @override
@@ -108,13 +75,68 @@ class PlutoSeries(PlutoMedia):
         season_key: str,
         title_key: str,
     ) -> Sequence[BaseFile[Any]]:
-        return [self.seasons_file(title_key)]
+        return [self.content_file(title_key)]
+
+    # TODO: Validate
+    def _tmdb_lookup_info(
+        self,
+        title_key: str,
+        media_type: TMDBMediaType,
+    ) -> list[TMDBLookupInfo]:
+        self.content_file(title_key).download_if_outdated(
+            tz_datetime.now() - timedelta(days=7),
+        )
+        content = self._content(title_key)
+        return [TMDBLookupInfo(content.title, media_type, content.year)]
+
+
+# TODO: Validate
+class TubiSeries(TubiImporter):
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_regexes(cls) -> tuple[str, ...]:
+        return (SERIES_URL_REGEX, EPISODE_URL_REGEX)
+
+    # TODO: Validate
+    @override
+    def extract_media_info(self, url: str) -> MediaInfo:
+        domain_regex = self._domain_regex()
+        if match := re.match(domain_regex + SERIES_URL_REGEX, url):
+            title_key = match.group("series_key")
+            self.raise_if_invalid_file(self.content_file(title_key), url)
+            return MediaInfo(title_key)
+
+        if match := re.match(domain_regex + EPISODE_URL_REGEX, url):
+            episode_key = match.group("episode_key")
+            self.raise_if_invalid_file(self.content_file(episode_key), url)
+            series_id = self._content(episode_key).series_id
+            if series_id is None:
+                msg = f"Invalid {self.plugin_name()} URL: {url}"
+                raise InvalidURLError(msg)
+            return MediaInfo(series_id, episode_key=episode_key)
+
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)
+
+    # TODO: Validate
+    @override
+    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
+        return self._tmdb_lookup_info(title_key, TMDBMediaType.tv)
+
+    # TODO: Validate
+    def _seasons(self, title_key: str) -> list[SeasonChild]:
+        return seasons(self._content(title_key))
+
+    # TODO: Validate
+    def _season_episodes(self, title_key: str, season_id: str) -> list[EpisodeChild]:
+        return season_episodes(self._content(title_key), season_id)
 
     # TODO: Validate
     @override
     def _season_keys_from_title_files(self, title_key: str) -> list[str]:
         return [
-            build_season_key(title_key, season.number)
+            build_season_key(title_key, season.id)
             for season in self._seasons(title_key)
         ]
 
@@ -129,10 +151,9 @@ class PlutoSeries(PlutoMedia):
             season_keys = [season_keys]
         episode_keys: list[str] = []
         for season_key in season_keys:
-            _title_key, season_number = split_season_key(season_key)
+            _title_key, season_id = split_season_key(season_key)
             episode_keys += [
-                episode.field_id
-                for episode in self._season_episodes(title_key, season_number)
+                episode.id for episode in self._season_episodes(title_key, season_id)
             ]
         return episode_keys
 
@@ -147,17 +168,17 @@ class PlutoSeries(PlutoMedia):
     ) -> Title:
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            series = self._series(title_key)
+            content = self._content(title_key)
             data_timestamps = self.title_data_timestamps(title_key)
             data_timestamp = data_timestamps[0]
             new_title = Title(
                 key=title_key,
-                name=series.name,
-                description=series.description,
+                name=content.title,
+                description=content.description,
                 media_type="Series",
                 url=series_url(title_key),
-                image_url=series.featured_image.path,
-                thumbnail_url=series.featured_image.path,
+                image_url=first_image(content.backgrounds),
+                thumbnail_url=first_image(content.backgrounds),
                 data_timestamp=data_timestamp,
                 source_id=source.id,
             )
@@ -172,17 +193,16 @@ class PlutoSeries(PlutoMedia):
 
     # TODO: Validate
     def _upsert_seasons(self, title: Title, *, force: bool = False) -> None:
-        for sort_order, series_season in enumerate(self._seasons(title.key)):
-            season_number = series_season.number
-            season_key = build_season_key(title.key, season_number)
+        for sort_order, season_content in enumerate(self._seasons(title.key)):
+            season_key = build_season_key(title.key, season_content.id)
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
                 data_timestamps = self.season_data_timestamps(season_key, title.key)
                 new_season = Season(
                     key=season_key,
-                    season_number=season_number,
+                    name=season_content.title,
+                    season_number=int(season_content.id),
                     sort_order=sort_order,
-                    url=season_url(title.key, season_number),
                     data_timestamp=data_timestamps[0],
                     title_id=title.id,
                 )
@@ -192,7 +212,7 @@ class PlutoSeries(PlutoMedia):
             self._upsert_episodes(
                 season,
                 title.key,
-                season_number,
+                season_content.id,
                 force=force,
             )
 
@@ -201,14 +221,14 @@ class PlutoSeries(PlutoMedia):
         self,
         season: Season,
         title_key: str,
-        season_number: int,
+        season_id: str,
         *,
         force: bool = False,
     ) -> None:
-        for sort_order, series_episode in enumerate(
-            self._season_episodes(title_key, season_number),
+        for sort_order, episode_content in enumerate(
+            self._season_episodes(title_key, season_id),
         ):
-            episode_key = series_episode.field_id
+            episode_key = episode_content.id
             episode = Episode.get_from_memory(self.session, season, episode_key)
             if not self._episode_is_outdated(
                 episode,
@@ -226,16 +246,13 @@ class PlutoSeries(PlutoMedia):
             new_episode = Episode(
                 key=episode_key,
                 watch_identifier=watch_identifier(self.plugin_name(), episode_key),
-                name=series_episode.name,
-                description=series_episode.description,
-                episode_number=series_episode.number,
-                url=episode_url(title_key, season_number, episode_key),
-                image_url=series_episode.poster16_9.path,
-                thumbnail_url=series_episode.poster16_9.path,
-                duration=(
-                    series_episode.original_content_duration // MILLISECONDS_PER_SECOND
-                ),
-                air_date=series_episode.clip.original_release_date,
+                name=episode_name(episode_content.title),
+                description=episode_content.description,
+                episode_number=int(episode_content.episode_number),
+                url=episode_url(episode_key),
+                image_url=first_image(episode_content.thumbnails),
+                thumbnail_url=first_image(episode_content.thumbnails),
+                duration=episode_content.duration,
                 sort_order=sort_order,
                 data_timestamp=data_timestamps[0],
                 season_id=season.id,
@@ -245,7 +262,7 @@ class PlutoSeries(PlutoMedia):
 
 
 # TODO: Validate
-class PlutoMovie(PlutoMedia):
+class TubiMovie(TubiImporter):
     # TODO: Validate
     @classmethod
     @override
@@ -257,40 +274,16 @@ class PlutoMovie(PlutoMedia):
     def extract_media_info(self, url: str) -> MediaInfo:
         if match := re.match(self._domain_regex() + MOVIE_URL_REGEX, url):
             title_key = match.group("movie_key")
-            self.raise_if_invalid_file(self.items_file(title_key), url)
+            self.raise_if_invalid_file(self.content_file(title_key), url)
             return MediaInfo(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
     # TODO: Validate
-    def _item(self, title_key: str) -> ItemsModelItem:
-        return self.items_file(title_key).parsed().root[0]
-
-    # TODO: Validate
     @override
     def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        return [TMDBLookupInfo(self._item(title_key).name, TMDBMediaType.movie, None)]
-
-    # TODO: Validate
-    @override
-    def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
-        return [self.items_file(title_key)]
-
-    # TODO: Validate
-    @override
-    def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
-        return [self.items_file(title_key)]
-
-    # TODO: Validate
-    @override
-    def _episode_files(
-        self,
-        episode_key: str,
-        season_key: str,
-        title_key: str,
-    ) -> Sequence[BaseFile[Any]]:
-        return [self.items_file(title_key)]
+        return self._tmdb_lookup_info(title_key, TMDBMediaType.movie)
 
     # TODO: Validate
     @override
@@ -317,19 +310,19 @@ class PlutoMovie(PlutoMedia):
         *,
         force: bool = False,
     ) -> Title:
-        item = self._item(title_key)
+        content = self._content(title_key)
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             data_timestamps = self.title_data_timestamps(title_key)
             data_timestamp = data_timestamps[0]
             new_title = Title(
                 key=title_key,
-                name=item.name,
-                description=item.description,
+                name=content.title,
+                description=content.description,
                 media_type="Movie",
                 url=movie_url(title_key),
-                image_url=item.featured_image.path,
-                thumbnail_url=item.featured_image.path,
+                image_url=first_image(content.backgrounds),
+                thumbnail_url=first_image(content.backgrounds),
                 data_timestamp=data_timestamp,
                 source_id=source.id,
             )
@@ -372,26 +365,29 @@ class PlutoMovie(PlutoMedia):
         force: bool = False,
     ) -> None:
         episode = Episode.get_from_memory(self.session, season, title_key)
-        if self._episode_is_outdated(episode, season.key, title_key, force=force):
-            item = self._item(title_key)
-            data_timestamps = self.episode_data_timestamps(
-                title_key,
-                season.key,
-                title_key,
-            )
-            new_episode = Episode(
-                key=title_key,
-                watch_identifier=watch_identifier(self.plugin_name(), title_key),
-                name=item.name,
-                description=item.description,
-                episode_number=0,
-                url=movie_url(title_key),
-                image_url=item.featured_image.path,
-                thumbnail_url=item.featured_image.path,
-                duration=(item.original_content_duration // MILLISECONDS_PER_SECOND),
-                sort_order=0,
-                data_timestamp=data_timestamps[0],
-                season_id=season.id,
-            )
-            episode = new_episode.upsert(season, episode)
-            episode.set_update_at(None, data_timestamps)
+        if not self._episode_is_outdated(
+            episode,
+            season.key,
+            title_key,
+            force=force,
+        ):
+            return
+
+        content = self._content(title_key)
+        data_timestamps = self.episode_data_timestamps(title_key, season.key, title_key)
+        new_episode = Episode(
+            key=title_key,
+            watch_identifier=watch_identifier(self.plugin_name(), title_key),
+            name=content.title,
+            description=content.description,
+            episode_number=0,
+            url=movie_url(title_key),
+            image_url=first_image(content.backgrounds),
+            thumbnail_url=first_image(content.backgrounds),
+            duration=content.duration,
+            sort_order=0,
+            data_timestamp=data_timestamps[0],
+            season_id=season.id,
+        )
+        episode = new_episode.upsert(season, episode)
+        episode.set_update_at(None, data_timestamps)

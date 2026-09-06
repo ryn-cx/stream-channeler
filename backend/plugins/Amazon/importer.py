@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class AmazonMedia(AmazonShared, BaseImporter, ABC):
+class AmazonImporter(AmazonShared, BaseImporter, ABC):
     # TODO: Validate
     @classmethod
     @override
@@ -146,7 +146,7 @@ class AmazonMedia(AmazonShared, BaseImporter, ABC):
 
 
 # TODO: Validate
-class AmazonSeries(AmazonMedia):
+class AmazonSeries(AmazonImporter):
     # TODO: Validate
     @override
     def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
@@ -267,7 +267,7 @@ class AmazonSeries(AmazonMedia):
 
 
 # TODO: Validate
-class AmazonMovie(AmazonMedia):
+class AmazonMovie(AmazonImporter):
     # TODO: Validate
     @override
     def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:

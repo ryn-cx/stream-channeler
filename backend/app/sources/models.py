@@ -33,6 +33,7 @@ DIRECT_SORTABLE_FIELDS = ["id", "name"]
 # TODO: Validate
 class BaseSource(BaseMediaMixin):
     name: str | None = Field(default=None)
+    link_to_tmdb: bool = Field(default=True)
     favicon_url: str | None = Field(default=None)
     image_url: str | None = Field(default=None)
 

@@ -51,12 +51,12 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class HiDiveMedia(HiDiveShared, BaseImporter, ABC):
+class HiDiveImporter(HiDiveShared, BaseImporter, ABC):
     pass
 
 
 # TODO: Validate
-class HiDiveSeries(HiDiveMedia):
+class HiDiveSeries(HiDiveImporter):
     # TODO: Validate
     @classmethod
     @override
@@ -245,7 +245,7 @@ class HiDiveSeries(HiDiveMedia):
 
 
 # TODO: Validate
-class HiDiveMovie(HiDiveMedia):
+class HiDiveMovie(HiDiveImporter):
     # TODO: Validate
     @classmethod
     @override

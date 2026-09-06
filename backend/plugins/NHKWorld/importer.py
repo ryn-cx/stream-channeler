@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class NHKWorldMedia(NHKWorldShared, BaseImporter):
+class NHKWorldImporter(NHKWorldShared, BaseImporter):
     # TODO: Validate
     @classmethod
     @override

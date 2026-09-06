@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, override
 
-from plugins.Amazon.media import AmazonMedia, AmazonMovie, AmazonSeries
+from plugins.Amazon.importer import AmazonImporter, AmazonMovie, AmazonSeries
 from plugins.Amazon.shared import (
     AMAZON_URL_REGEX,
     PRIME_VIDEO_URL_REGEX,
@@ -41,21 +41,23 @@ class Amazon(AmazonShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def get_media_importer(self, input: Title | str) -> AmazonMedia:
-        if isinstance(input, str):
-            # A film and a season of a series are answered at the same address,
-            # so the page has to be read before it is known which of the two it
-            # is.
-            title_key = self._url_title_key(input)
-            self.raise_if_invalid_file(self.detail_file(title_key), input)
-            if self._is_movie(title_key):
-                return AmazonMovie(self)
-            return AmazonSeries(self)
+    def _get_media_importer_from_url(self, url: str) -> AmazonImporter:
+        # A film and a season of a series are answered at the same address,
+        # so the page has to be read before it is known which of the two it
+        # is.
+        title_key = self._url_title_key(url)
+        self.raise_if_invalid_file(self.detail_file(title_key), url)
+        if self._is_movie(title_key):
+            return AmazonMovie(self)
+        return AmazonSeries(self)
 
-        if not input.media_type:
+    # TODO: Validate
+    @override
+    def _get_media_importer_from_title(self, title: Title) -> AmazonImporter:
+        if not title.media_type:
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
-        if input.media_type == "Movie":
+        if title.media_type == "Movie":
             return AmazonMovie(self)
         return AmazonSeries(self)
 

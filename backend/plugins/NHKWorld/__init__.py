@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, override
 
 from app.media.media_type import TMDBMediaType
 from app.utils import tz_datetime
-from plugins.NHKWorld.media import NHKWorldMedia
+from plugins.NHKWorld.importer import NHKWorldImporter
 from plugins.NHKWorld.shared import TITLE_URL_REGEX, NHKWorldShared
 from plugins.NHKWorld.utils import build_url
 from plugins.utils.abstract_plugin import AbstractPlugin
@@ -41,8 +41,13 @@ class NHKWorld(NHKWorldShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def get_media_importer(self, input: Title | str) -> NHKWorldMedia:
-        return NHKWorldMedia(self)
+    def _get_media_importer_from_url(self, url: str) -> NHKWorldImporter:
+        return NHKWorldImporter(self)
+
+    # TODO: Validate
+    @override
+    def _get_media_importer_from_title(self, title: Title) -> NHKWorldImporter:
+        return NHKWorldImporter(self)
 
     # TODO: Validate
     @override

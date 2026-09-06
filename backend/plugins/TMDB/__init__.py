@@ -8,7 +8,7 @@ from app.canonical_media.tmdb import (
     get_media_type_and_tmdb_id,
 )
 from app.media.media_type import TMDBMediaType
-from plugins.TMDB.media import TMDBMedia, TMDBMovie, TMDBSeries
+from plugins.TMDB.importer import TMDBImporter, TMDBMovie, TMDBSeries
 from plugins.TMDB.shared import (
     MOVIE_URL_REGEX,
     TV_URL_REGEX,
@@ -44,27 +44,32 @@ class TMDB(TMDBShared, BaseReadURL, AbstractPlugin, register=True):
         return (MOVIE_URL_REGEX, TV_URL_REGEX)
 
     # TODO: Validate
-    @override
     # TODO: Validate
-    def get_media_importer(self, input: Title | str | TMDBMediaType) -> TMDBMedia:
-        if isinstance(input, TMDBMediaType):
-            if input == TMDBMediaType.movie:
-                return TMDBMovie(self)
-            return TMDBSeries(self)
-        if isinstance(input, str):
-            domain_regex = self._domain_regex()
-            if re.match(domain_regex + MOVIE_URL_REGEX, input):
-                return TMDBMovie(self)
-            if re.match(domain_regex + TV_URL_REGEX, input):
-                return TMDBSeries(self)
-
-            msg = f"Invalid {self.plugin_name()} URL: {input}"
-            raise InvalidURLError(msg)
-
-        media_type, _ = get_media_type_and_tmdb_id(input.key)
+    def _get_media_importer_from_media_type(
+        self,
+        media_type: TMDBMediaType,
+    ) -> TMDBImporter:
         if media_type == TMDBMediaType.movie:
             return TMDBMovie(self)
         return TMDBSeries(self)
+
+    # TODO: Validate
+    @override
+    def _get_media_importer_from_url(self, url: str) -> TMDBImporter:
+        domain_regex = self._domain_regex()
+        if re.match(domain_regex + MOVIE_URL_REGEX, url):
+            return TMDBMovie(self)
+        if re.match(domain_regex + TV_URL_REGEX, url):
+            return TMDBSeries(self)
+
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)
+
+    # TODO: Validate
+    @override
+    def _get_media_importer_from_title(self, title: Title) -> TMDBImporter:
+        media_type, _ = get_media_type_and_tmdb_id(title.key)
+        return self._get_media_importer_from_media_type(media_type)
 
     # TODO: Validate
     @override
@@ -80,5 +85,5 @@ class TMDB(TMDBShared, BaseReadURL, AbstractPlugin, register=True):
             raise MediaNotFoundError(msg)
 
         found_media_type, tmdb_media_id = search_result
-        medai_importer = self.get_media_importer(found_media_type)
+        medai_importer = self._get_media_importer_from_media_type(found_media_type)
         return medai_importer.import_url(tiel_url(found_media_type, tmdb_media_id))

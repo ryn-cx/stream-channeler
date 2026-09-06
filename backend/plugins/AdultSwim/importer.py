@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class AdultSwimMedia(AdultSwimShared, BaseImporter):
+class AdultSwimImporter(AdultSwimShared, BaseImporter):
     # TODO: Validate
     @classmethod
     @override

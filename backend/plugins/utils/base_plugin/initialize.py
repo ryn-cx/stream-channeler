@@ -10,6 +10,10 @@ from plugins.utils.base_plugin.base import BasePlugin
 
 
 class BasePluginInitializer(BasePlugin, ABC):
+    """Base class for plugin initializers.
+
+    This is a seperate calss so"""
+
     # TODO: Validate
     @classmethod
     def initialize_plugin(cls, session: Session) -> None:
@@ -30,7 +34,9 @@ class BasePluginInitializer(BasePlugin, ABC):
 
     @classmethod
     def _create_plugin_record(cls, session: Session) -> Plugin:
-        """Create the plugin record for the plugin."""
+        """Create the plugin record for the plugin.
+
+        Automatically called during plugin initialization."""
         if plugin := Plugin.get(session, cls.plugin_name()):
             return plugin
 
@@ -48,11 +54,17 @@ class BasePluginInitializer(BasePlugin, ABC):
         return Plugin.get_one(session, cls.plugin_name())
 
     def _create_source_records(self) -> None:
-        """Create the source records for the plugin."""
+        """Create the source records for the plugin.
+
+        Creating the source often requires access to files so
+
+        Automatically called during plugin initialization."""
         for source_key in self._source_keys():
             if Source.get(self.session, self.plugin, source_key) is None:
                 self.upsert_source(source_key)
         self._sources = {source.key: source for source in self.plugin.sources}
 
     def _create_channel_records(self) -> None:
-        """Create the channel records for the plugin."""
+        """Create the channel records for the plugin.
+
+        Automatically called during plugin initialization."""

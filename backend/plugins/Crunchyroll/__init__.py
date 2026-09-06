@@ -1,19 +1,14 @@
 # TODO: Validate
-"""Crunchyroll plugin.
-
-Detects new media much faster than JustWatch and supports music.
-"""
-
 from __future__ import annotations
 
 import re
 from typing import TYPE_CHECKING, override
 
 from app.sources.models import Source
-from plugins.Crunchyroll.media import (
-    CrunchyrollArtist,
-    CrunchyrollMedia,
-    CrunchyrollSeries,
+from plugins.Crunchyroll.importer import (
+    CrunchyrollAnimeImporter,
+    CrunchyrollImporter,
+    CrunchyRollMusicImporter,
 )
 from plugins.Crunchyroll.shared import CrunchyrollShared
 from plugins.Crunchyroll.utils import (
@@ -24,7 +19,6 @@ from plugins.Crunchyroll.utils import (
     MUSIC_VIDEO_URL_REGEX,
     SERIES_URL_REGEX,
     VIDEO_SOURCE,
-    series_url,
 )
 from plugins.Crunchyroll.watch_history import WatchHistoryMixin
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
@@ -38,20 +32,22 @@ if TYPE_CHECKING:
 
 # TODO: Validate
 class CrunchyrollInitializer(BasePluginInitializer, CrunchyrollShared):
-    # TODO: Validate
     @override
     def _create_source_records(self) -> None:
+        # Default implementation calls self.upsert_source (Crunchyroll.upsert_source)
+        # which would then call self.browse_file() (Crunchyroll.browse_file) which does
+        # not work because .browse_file() has a different implementation in
+        # CrunchyrollSeries and CrunchyrollArtist.
         if Source.get(self.session, self.plugin, VIDEO_SOURCE) is None:
-            CrunchyrollSeries(self).upsert_source(VIDEO_SOURCE)
+            CrunchyrollAnimeImporter(self).upsert_source(VIDEO_SOURCE)
         if Source.get(self.session, self.plugin, MUSIC_SOURCE) is None:
-            CrunchyrollArtist(self).upsert_source(MUSIC_SOURCE)
+            CrunchyRollMusicImporter(self).upsert_source(MUSIC_SOURCE)
         self._sources = {source.key: source for source in self.plugin.sources}
 
-    # TODO: Validate
     @override
     def _create_channel_records(self) -> None:
-        CrunchyrollSeries(self).create_channel_records()
-        CrunchyrollArtist(self).create_channel_records()
+        CrunchyrollAnimeImporter(self).create_channel_records()
+        CrunchyRollMusicImporter(self).create_channel_records()
 
 
 # TODO: Validate
@@ -64,7 +60,6 @@ class Crunchyroll(
 ):
     initializer = CrunchyrollInitializer
 
-    # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
@@ -76,37 +71,29 @@ class Crunchyroll(
             EPISODE_URL_REGEX,
         )
 
-    # TODO: Validate
     @override
-    def get_media_importer(self, input: Title | str) -> CrunchyrollMedia:
-        if isinstance(input, str):
-            domain_regex = self._domain_regex()
-            for url_regex in (
-                MUSIC_VIDEO_URL_REGEX,
-                CONCERT_URL_REGEX,
-                ARTIST_URL_REGEX,
-            ):
-                if re.match(domain_regex + url_regex, input):
-                    return CrunchyrollArtist(self)
-            for url_regex in (SERIES_URL_REGEX, EPISODE_URL_REGEX):
-                if re.match(domain_regex + url_regex, input):
-                    return CrunchyrollSeries(self)
+    def _get_media_importer_from_url(self, url: str) -> CrunchyrollImporter:
+        domain_regex = self._domain_regex()
+        for url_regex in (MUSIC_VIDEO_URL_REGEX, CONCERT_URL_REGEX, ARTIST_URL_REGEX):
+            if re.match(domain_regex + url_regex, url):
+                return CrunchyRollMusicImporter(self)
+        for url_regex in (SERIES_URL_REGEX, EPISODE_URL_REGEX):
+            if re.match(domain_regex + url_regex, url):
+                return CrunchyrollAnimeImporter(self)
 
-            msg = f"Invalid {self.plugin_name()} URL: {input}"
-            raise InvalidURLError(msg)
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)
 
-        if input.key.startswith("MA"):  # MA might stand for Music Artist.
-            return CrunchyrollArtist(self)
-        return CrunchyrollSeries(self)
-
-    # TODO: Validate
     @override
-    def get_source_importer(self, source: Source) -> CrunchyrollMedia:
+    def _get_media_importer_from_title(self, title: Title) -> CrunchyrollImporter:
+        return self.get_media_importer_from_source(title.source)
+
+    @override
+    def get_media_importer_from_source(self, source: Source) -> CrunchyrollImporter:
         if source.key == MUSIC_SOURCE:
-            return CrunchyrollArtist(self)
-        return CrunchyrollSeries(self)
+            return CrunchyRollMusicImporter(self)
+        return CrunchyrollAnimeImporter(self)
 
-    # TODO: Validate
     @override
     def search_for_url(
         self,
@@ -119,5 +106,7 @@ class Crunchyroll(
                 # Series doesn't actually differentiate between movies and series as all
                 # movies are also labeled as series here.
                 if item.type == "series":
-                    return series_url(item.id)
+                    # search_for_url is used for TMDB cross-referencing so music entries
+                    # are ignored because TMDB does not have music entries.
+                    return CrunchyrollAnimeImporter.title_url(item.id)
         return None

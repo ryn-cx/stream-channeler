@@ -13,7 +13,7 @@ from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.base_plugin.base import BaseReadURL
 from plugins.utils.base_plugin.initialize import BasePluginInitializer
-from plugins.YouTube.media import YouTubeMedia
+from plugins.YouTube.importer import YouTubeImporter
 from plugins.YouTube.shared import YouTubeShared
 from plugins.YouTube.utils import is_quota_error
 
@@ -43,22 +43,27 @@ class YouTube(YouTubeShared, BaseReadURL, AbstractPlugin, register=False):
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
-        return YouTubeMedia._url_regexes()  # noqa: SLF001 - The importer owns the addresses.
+        return YouTubeImporter._url_regexes()  # noqa: SLF001 - The importer owns the addresses.
 
     # TODO: Validate
     @classmethod
     @override
     def url_regex(cls) -> str:
-        return YouTubeMedia.url_regex()
+        return YouTubeImporter.url_regex()
 
     # TODO: Validate
     @override
-    def get_media_importer(self, input: Title | str) -> YouTubeMedia:
-        return YouTubeMedia(self)
+    def _get_media_importer_from_url(self, url: str) -> YouTubeImporter:
+        return YouTubeImporter(self)
+
+    # TODO: Validate
+    @override
+    def _get_media_importer_from_title(self, title: Title) -> YouTubeImporter:
+        return YouTubeImporter(self)
 
     # TODO: Validate
     def update_seasons(self, seasons: Sequence[Season]) -> None:
-        YouTubeMedia(self).update_seasons(seasons)
+        YouTubeImporter(self).update_seasons(seasons)
 
     # TODO: Validate
     @override

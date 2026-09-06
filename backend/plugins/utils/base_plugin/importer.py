@@ -58,7 +58,7 @@ class BasePluginWorker(BasePlugin, ABC):
 class BaseImporter(BasePluginWorker, BaseReadURL, ABC):
     # TODO: Validate
     def _url_source(self) -> Source:
-        return self._sources[self.plugin_name()]
+        return self._sources[self.source_name()]
 
     # TODO: Validate
     def import_url(self, url: str) -> list[URLImportResult]:

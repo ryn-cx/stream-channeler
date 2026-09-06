@@ -108,7 +108,7 @@ CHANNEL_HANDLE_URL_REGEX = (
 
 
 # TODO: Validate
-class YouTubeMedia(YouTubeShared, BaseImporter):
+class YouTubeImporter(YouTubeShared, BaseImporter):
     _title_key: str
     _playlist_key: str
     _video_key: str | None

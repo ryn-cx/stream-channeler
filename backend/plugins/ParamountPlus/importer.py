@@ -40,12 +40,12 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class ParamountPlusMedia(ParamountPlusShared, BaseImporter, ABC):
+class ParamountPlusImporter(ParamountPlusShared, BaseImporter, ABC):
     pass
 
 
 # TODO: Validate
-class ParamountPlusSeries(ParamountPlusMedia):
+class ParamountPlusSeries(ParamountPlusImporter):
     # TODO: Validate
     @classmethod
     @override
@@ -232,7 +232,7 @@ class ParamountPlusSeries(ParamountPlusMedia):
 
 
 # TODO: Validate
-class ParamountPlusMovie(ParamountPlusMedia):
+class ParamountPlusMovie(ParamountPlusImporter):
     # TODO: Validate
     @classmethod
     @override
