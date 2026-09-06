@@ -6,7 +6,7 @@ from plugins.utils.base_plugin.base import BasePlugin
 
 
 # TODO: Validate
-class BasicFiles(BasePlugin):
+class DisneyPlusBaseFiles(BasePlugin):
     # TODO: Validate
     def entity_file(self, entity_id: str) -> Entity:
         return self._file(Entity, entity_id)

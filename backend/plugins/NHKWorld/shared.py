@@ -12,7 +12,7 @@ from loguru import logger
 from app.channels.service.import_queue import add_urls_to_channel_import_queue
 from app.sources.models import Source
 from app.titles.models import Title
-from plugins.NHKWorld.basic_files import BasicFiles
+from plugins.NHKWorld.base_files import NHKWorldBaseFiles
 from plugins.NHKWorld.files import NewVideoEpisodes
 from plugins.NHKWorld.utils import search_url, title_url
 from plugins.utils.base_plugin.files import COMPLETED_STATUS
@@ -30,7 +30,7 @@ TITLE_URL_REGEX = (
 
 
 # TODO: Validate
-class NHKWorldShared(BasicFiles):
+class NHKWorldShared(NHKWorldBaseFiles):
     # TODO: Add support for single episodes
     # TODO: Don't hardcode the favicon URL
     # TODO: Validate

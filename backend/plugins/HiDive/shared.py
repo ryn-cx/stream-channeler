@@ -12,7 +12,7 @@ from loguru import logger
 from app.channels.service.import_queue import add_urls_to_channel_import_queue
 from app.media.media_type import TMDBMediaType
 from app.sources.models import Source
-from plugins.HiDive.basic_files import BasicFiles
+from plugins.HiDive.base_files import HiDiveBaseFiles
 from plugins.HiDive.files import Schedule
 from plugins.HiDive.utils import (
     card_title_name,
@@ -37,7 +37,7 @@ MOVIE_URL_REGEX = r"\/video\/(?P<movie_vod_key>\d+)(?:\/|$)"
 
 
 # TODO: Validate
-class HiDiveShared(BasicFiles):
+class HiDiveShared(HiDiveBaseFiles):
     # TODO: Validate
     @classmethod
     @override
@@ -86,7 +86,10 @@ class HiDiveShared(BasicFiles):
 
     # TODO: Validate
     def _process_new_schedule_files(self, source: Source) -> None:
-        for schedule_file in self.get_incomplete_files(Schedule, self.schedule_file):
+        for schedule_file in self.get_incomplete_files(
+            Schedule,
+            self.schedule_file,
+        ):
             # Queueing the titles a file found commits, which lets go of every
             # title read for it, and a title nothing holds is not in memory to be
             # matched. Read back per file rather than once, so that a file after

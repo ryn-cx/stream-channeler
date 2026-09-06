@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class BasicFiles(BasePlugin):
+class AdultSwimBaseFiles(BasePlugin):
     # TODO: Validate
     def title_file(self, title_key: str) -> TitlePage:
         return self._file(TitlePage, title_key)

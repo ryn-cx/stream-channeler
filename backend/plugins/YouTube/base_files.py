@@ -27,7 +27,7 @@ from plugins.YouTube.utils import is_an_album, is_channel_key
 
 
 # TODO: Validate
-class BasicFiles(BasePlugin):
+class YouTubeBaseFiles(BasePlugin):
     _importing_album_playlist_key: str | None = None
 
     # TODO: Validate
@@ -39,7 +39,10 @@ class BasicFiles(BasePlugin):
         return self._file(ChannelByHandle, channel_handle)
 
     # TODO: Validate
-    def channel_by_username_file(self, channel_username: str) -> ChannelByUsername:
+    def channel_by_username_file(
+        self,
+        channel_username: str,
+    ) -> ChannelByUsername:
         return self._file(ChannelByUsername, channel_username)
 
     # TODO: Validate

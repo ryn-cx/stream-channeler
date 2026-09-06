@@ -26,7 +26,7 @@ from plugins.utils.base_plugin.base import BasePlugin
 
 
 # TODO: Validate
-class BasicFiles(BasePlugin):
+class TMDBBaseFiles(BasePlugin):
     # TODO: Validate
     def search_multi_file(self, query: str, page: int = 1) -> SearchMulti:
         return self._file(SearchMulti, query, page)
@@ -59,7 +59,10 @@ class BasicFiles(BasePlugin):
         return self._file(TVSeriesEpisodeGroups, tmdb_tv_title_id)
 
     # TODO: Validate
-    def tv_episode_groups_details_file(self, group_id: str) -> TVEpisodeGroupsDetails:
+    def tv_episode_groups_details_file(
+        self,
+        group_id: str,
+    ) -> TVEpisodeGroupsDetails:
         return self._file(TVEpisodeGroupsDetails, group_id)
 
     # TODO: Validate
@@ -107,7 +110,10 @@ class BasicFiles(BasePlugin):
     ) -> TVSeasonsChanges: ...
     # TODO: Validate
     @overload
-    def tv_seasons_changes_file(self, tmdb_tv_season_id: File) -> TVSeasonsChanges: ...
+    def tv_seasons_changes_file(
+        self,
+        tmdb_tv_season_id: File,
+    ) -> TVSeasonsChanges: ...
     # TODO: Validate
     def tv_seasons_changes_file(
         self,
@@ -115,7 +121,9 @@ class BasicFiles(BasePlugin):
         changed_on: date | None = None,
     ) -> TVSeasonsChanges:
         if isinstance(tmdb_tv_season_id, File):
-            identifier = TVSeasonsChanges.file_to_unique_identifier(tmdb_tv_season_id)
+            identifier = TVSeasonsChanges.file_to_unique_identifier(
+                tmdb_tv_season_id,
+            )
             season_tmdb_id_str, changed_on_str = identifier.split("/")
             tmdb_tv_season_id = int(season_tmdb_id_str)
             changed_on = date.fromisoformat(changed_on_str)
@@ -144,11 +152,17 @@ class BasicFiles(BasePlugin):
         )
 
     # TODO: Validate
-    def latest_tv_series_changes_file(self, tmdb_tv_title_id: int) -> TVSeriesChanges:
+    def latest_tv_series_changes_file(
+        self,
+        tmdb_tv_title_id: int,
+    ) -> TVSeriesChanges:
         """Return the latest TV Series Changes file for a title.
 
         If the file does not exist an initial one will be created."""
-        existing_file = self.latest_file_record(TVSeriesChanges, f"{tmdb_tv_title_id}/")
+        existing_file = self.latest_file_record(
+            TVSeriesChanges,
+            f"{tmdb_tv_title_id}/",
+        )
         # If the file does not exist an initial file will be downloaded that covers a
         # single day. If the file does exist only the second parameter is used to get it
         # from the database.
@@ -179,7 +193,9 @@ class BasicFiles(BasePlugin):
         downloaded_at: date | None = None,
     ) -> MoviesWatchProviders:
         if isinstance(tmdb_movie_id, File):
-            identifier = MoviesWatchProviders.file_to_unique_identifier(tmdb_movie_id)
+            identifier = MoviesWatchProviders.file_to_unique_identifier(
+                tmdb_movie_id,
+            )
             tmdb_id_str, downloaded_at_str = identifier.split("/")
             tmdb_movie_id = int(tmdb_id_str)
             downloaded_at = date.fromisoformat(downloaded_at_str)

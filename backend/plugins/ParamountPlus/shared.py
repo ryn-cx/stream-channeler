@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.ParamountPlus.basic_files import BasicFiles
+from plugins.ParamountPlus.base_files import ParamountPlusBaseFiles
 from plugins.ParamountPlus.utils import search_url
 
 # https://www.paramountplus.com/movies/video/ALVE01KT235XQDEK58R7H2012VNZMK/
@@ -15,7 +15,7 @@ TITLE_URL_REGEX = r"\/shows\/(?P<title_key>[a-z0-9-]+)(?:\/|$)"
 
 
 # TODO: Validate
-class ParamountPlusShared(BasicFiles):
+class ParamountPlusShared(ParamountPlusBaseFiles):
     # TODO: Validate
     @classmethod
     @override

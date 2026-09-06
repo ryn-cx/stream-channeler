@@ -115,7 +115,8 @@ def thumbnail_url(path: str | None) -> str | None:
     return _image_url("https://image.tmdb.org/t/p/w500", path)
 
 
-class SeasonInfo(NamedTuple):
+# TODO: Validate
+class TMDBSeasonInfo(NamedTuple):
     """Season information from the season details or episode group.
 
     Normally the data structure of the season details and episode groups are different,
@@ -130,8 +131,9 @@ class SeasonInfo(NamedTuple):
     episodes: Sequence[TvSeasonEpisode | TvEpisodeGroupEpisode]
     uses_episode_group: bool
 
+    # TODO: Validate
     @classmethod
-    def from_episode_group(cls, order: int, group: TvEpisodeGroup) -> SeasonInfo:
+    def from_episode_group(cls, order: int, group: TvEpisodeGroup) -> TMDBSeasonInfo:
         return cls(
             key=tmdb_season_key(TMDBMediaType.tv, order),
             name=group.name,
@@ -144,8 +146,9 @@ class SeasonInfo(NamedTuple):
             uses_episode_group=True,
         )
 
+    # TODO: Validate
     @classmethod
-    def from_season_details(cls, details: TvSeasonDetailsModel) -> SeasonInfo:
+    def from_season_details(cls, details: TvSeasonDetailsModel) -> TMDBSeasonInfo:
         return cls(
             key=tmdb_season_key(TMDBMediaType.tv, details.id),
             name=details.name,

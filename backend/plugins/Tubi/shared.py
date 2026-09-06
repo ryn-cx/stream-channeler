@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.Tubi.basic_files import BasicFiles
+from plugins.Tubi.base_files import TubiBaseFiles
 from plugins.Tubi.constants import CONTENT_ID_REGEX, SLUG_REGEX
 from plugins.Tubi.utils import search_url
 
@@ -20,7 +20,7 @@ EPISODE_URL_REGEX = (
 
 
 # TODO: Validate
-class TubiShared(BasicFiles):
+class TubiShared(TubiBaseFiles):
     # TODO: Validate
     @classmethod
     @override

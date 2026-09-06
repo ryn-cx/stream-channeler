@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.DisneyPlus.basic_files import BasicFiles
+from plugins.DisneyPlus.base_files import DisneyPlusBaseFiles
 from plugins.DisneyPlus.utils import search_url
 
 # https://www.disneyplus.com/browse/entity-3135b0cb-a002-438d-a9fd-60d86284c93f
@@ -19,7 +19,7 @@ ENTITY_URL_REGEX = (
 
 
 # TODO: Validate
-class DisneyPlusShared(BasicFiles):
+class DisneyPlusShared(DisneyPlusBaseFiles):
     # TODO: Validate
     @classmethod
     @override

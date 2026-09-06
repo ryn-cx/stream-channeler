@@ -6,7 +6,7 @@ from plugins.utils.base_plugin.base import BasePlugin
 
 
 # TODO: Validate
-class BasicFiles(BasePlugin):
+class AmazonBaseFiles(BasePlugin):
     # TODO: Validate
     def search_file(self, query: str) -> Search:
         """Return data for search results."""

@@ -6,7 +6,7 @@ from plugins.utils.base_plugin.base import BasePlugin
 
 
 # TODO: Validate
-class BasicFiles(BasePlugin):
+class HBOMaxBaseFiles(BasePlugin):
     # TODO: Validate
     def title_file(self, title_id: str) -> TitleFile:
         return self._file(TitleFile, title_id)

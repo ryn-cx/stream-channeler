@@ -148,8 +148,7 @@ class PlutoSeries(PlutoImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             series = self._series(title_key)
-            data_timestamps = self.title_data_timestamps(title_key)
-            data_timestamp = data_timestamps[0]
+            data_timestamp = self.title_data_timestamp(title_key)
             new_title = Title(
                 key=title_key,
                 name=series.name,
@@ -162,7 +161,7 @@ class PlutoSeries(PlutoImporter):
                 source_id=source.id,
             )
             title = new_title.upsert(source, title)
-            title.set_update_at(data_timestamp + timedelta(days=7), data_timestamps)
+            title.set_update_at(data_timestamp + timedelta(days=7), data_timestamp)
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing(title_key)
@@ -177,17 +176,17 @@ class PlutoSeries(PlutoImporter):
             season_key = build_season_key(title.key, season_number)
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
-                data_timestamps = self.season_data_timestamps(season_key, title.key)
+                data_timestamp = self.season_data_timestamp(season_key, title.key)
                 new_season = Season(
                     key=season_key,
                     season_number=season_number,
                     sort_order=sort_order,
                     url=season_url(title.key, season_number),
-                    data_timestamp=data_timestamps[0],
+                    data_timestamp=data_timestamp,
                     title_id=title.id,
                 )
                 season = new_season.upsert(title, season)
-                season.set_update_at(None, data_timestamps)
+                season.set_update_at(None, data_timestamp)
 
             self._upsert_episodes(
                 season,
@@ -218,7 +217,7 @@ class PlutoSeries(PlutoImporter):
             ):
                 continue
 
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamp = self.episode_data_timestamp(
                 episode_key,
                 season.key,
                 title_key,
@@ -237,11 +236,11 @@ class PlutoSeries(PlutoImporter):
                 ),
                 air_date=series_episode.clip.original_release_date,
                 sort_order=sort_order,
-                data_timestamp=data_timestamps[0],
+                data_timestamp=data_timestamp,
                 season_id=season.id,
             )
             episode = new_episode.upsert(season, episode)
-            episode.set_update_at(None, data_timestamps)
+            episode.set_update_at(None, data_timestamp)
 
 
 # TODO: Validate
@@ -320,8 +319,7 @@ class PlutoMovie(PlutoImporter):
         item = self._item(title_key)
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamps = self.title_data_timestamps(title_key)
-            data_timestamp = data_timestamps[0]
+            data_timestamp = self.title_data_timestamp(title_key)
             new_title = Title(
                 key=title_key,
                 name=item.name,
@@ -336,7 +334,7 @@ class PlutoMovie(PlutoImporter):
             title = new_title.upsert(source, title)
             title.set_update_at(
                 staggered_monthly_update_at(title_key, data_timestamp),
-                data_timestamps,
+                data_timestamp,
             )
 
         self._upsert_season(title, force=force)
@@ -350,16 +348,16 @@ class PlutoMovie(PlutoImporter):
         season_key = movie_season_key(title.key)
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title.key, force=force):
-            data_timestamps = self.season_data_timestamps(season_key, title.key)
+            data_timestamp = self.season_data_timestamp(season_key, title.key)
             new_season = Season(
                 key=season_key,
                 season_number=0,
                 sort_order=0,
-                data_timestamp=data_timestamps[0],
+                data_timestamp=data_timestamp,
                 title_id=title.id,
             )
             season = new_season.upsert(title, season)
-            season.set_update_at(None, data_timestamps)
+            season.set_update_at(None, data_timestamp)
 
         self._upsert_episode(season, title.key, force=force)
 
@@ -374,7 +372,7 @@ class PlutoMovie(PlutoImporter):
         episode = Episode.get_from_memory(self.session, season, title_key)
         if self._episode_is_outdated(episode, season.key, title_key, force=force):
             item = self._item(title_key)
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamp = self.episode_data_timestamp(
                 title_key,
                 season.key,
                 title_key,
@@ -390,8 +388,8 @@ class PlutoMovie(PlutoImporter):
                 thumbnail_url=item.featured_image.path,
                 duration=(item.original_content_duration // MILLISECONDS_PER_SECOND),
                 sort_order=0,
-                data_timestamp=data_timestamps[0],
+                data_timestamp=data_timestamp,
                 season_id=season.id,
             )
             episode = new_episode.upsert(season, episode)
-            episode.set_update_at(None, data_timestamps)
+            episode.set_update_at(None, data_timestamp)

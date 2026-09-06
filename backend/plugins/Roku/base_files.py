@@ -6,7 +6,7 @@ from plugins.utils.base_plugin.base import BasePlugin
 
 
 # TODO: Validate
-class BasicFiles(BasePlugin):
+class RokuBaseFiles(BasePlugin):
     # TODO: Validate
     def content_file(self, content_key: str) -> ContentFile:
         return self._file(ContentFile, content_key)

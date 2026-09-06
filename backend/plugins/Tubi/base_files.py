@@ -6,7 +6,7 @@ from plugins.utils.base_plugin.base import BasePlugin
 
 
 # TODO: Validate
-class BasicFiles(BasePlugin):
+class TubiBaseFiles(BasePlugin):
     # TODO: Validate
     def content_file(self, content_id: str) -> ContentFile:
         """Contains all of a Tubi title's data (title, seasons, episodes)."""

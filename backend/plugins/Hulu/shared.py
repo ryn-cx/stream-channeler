@@ -9,7 +9,7 @@ from app.sources.models import Source
 from app.utils import tz_datetime
 from app.utils.strict_re import strict_search
 from app.utils.update_at import staggered_monthly_update_at
-from plugins.Hulu.basic_files import BasicFiles
+from plugins.Hulu.base_files import HuluBaseFiles
 from plugins.Hulu.utils import (
     search_url,
     title_urls,
@@ -23,7 +23,7 @@ VIDEO_URL_REGEX = rf"\/watch\/(?P<episode_key>{UUID_REGEX})"
 
 
 # TODO: Validate
-class HuluShared(BasicFiles):
+class HuluShared(HuluBaseFiles):
     # TODO: Validate
     @classmethod
     @override
@@ -50,19 +50,19 @@ class HuluShared(BasicFiles):
     # TODO: Validate
     @override
     def upsert_source(self, source_key: str) -> Source:
-        file_timestamps = self._file_timestamps(self._source_files())
+        data_timestamp = self.source_data_timestamp()
         existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
         source = Source(
             key=source_key,
             name=self.plugin_name(),
             favicon_url=self.favicon_url(),
             link_to_tmdb=self.link_to_tmdb(),
-            data_timestamp=file_timestamps[0],
+            data_timestamp=data_timestamp,
             plugin_id=self.plugin.id,
         ).upsert(self.plugin, existing_source)
         source.set_update_at(
             staggered_monthly_update_at(source_key, tz_datetime.now()),
-            file_timestamps,
+            data_timestamp,
         )
         return source
 

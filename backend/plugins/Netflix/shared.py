@@ -9,14 +9,14 @@ from typing import override
 from app.media.media_type import TMDBMediaType
 from app.sources.models import Source
 from app.utils import tz_datetime
-from plugins.Netflix.basic_files import BasicFiles
+from plugins.Netflix.base_files import NetflixBaseFiles
 from plugins.Netflix.utils import first_search_result_key, search_url, title_url
 
 TITLE_URL_REGEX = r"\/title\/(?P<title_key>\d+)(?:\/|$)"
 
 
 # TODO: Validate
-class NetflixShared(BasicFiles):
+class NetflixShared(NetflixBaseFiles):
     # TODO: Validate
     @classmethod
     @override

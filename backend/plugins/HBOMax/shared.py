@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.HBOMax.basic_files import BasicFiles
+from plugins.HBOMax.base_files import HBOMaxBaseFiles
 from plugins.HBOMax.constants import SLUG_REGEX, UUID_REGEX
 from plugins.HBOMax.utils import search_url
 
@@ -22,7 +22,7 @@ TITLE_URL_REGEX = rf"\/[a-z-]+\/{SLUG_REGEX}(?:s\d+\/)?(?P<title_key>{UUID_REGEX
 
 
 # TODO: Validate
-class HBOMaxShared(BasicFiles):
+class HBOMaxShared(HBOMaxBaseFiles):
     # TODO: Validate
     @classmethod
     @override

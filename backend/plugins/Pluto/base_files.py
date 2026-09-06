@@ -6,7 +6,7 @@ from plugins.utils.base_plugin.base import BasePlugin
 
 
 # TODO: Validate
-class BasicFiles(BasePlugin):
+class PlutoBaseFiles(BasePlugin):
     # TODO: Validate
     def items_file(self, item_id: str) -> ItemsFile:
         """Contains the metadata of a single on-demand movie."""

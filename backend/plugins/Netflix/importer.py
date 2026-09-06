@@ -162,8 +162,7 @@ class NetflixSeries(NetflixImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             title_data = self._title_video(title_key)
-            data_timestamps = self.title_data_timestamps(title_key)
-            data_timestamp = data_timestamps[0]
+            data_timestamp = self.title_data_timestamp(title_key)
             new_title = Title(
                 key=title_key,
                 name=title_data.title,
@@ -178,7 +177,7 @@ class NetflixSeries(NetflixImporter):
             title = new_title.upsert(source, title)
             title.set_update_at(
                 self._next_update_at(title_key, data_timestamp),
-                data_timestamps,
+                data_timestamp,
             )
 
         self._upsert_seasons(title, force=force)
@@ -193,17 +192,17 @@ class NetflixSeries(NetflixImporter):
             season_key = build_season_key(title.key, season_data.video_id)
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
-                data_timestamps = self.season_data_timestamps(season_key, title.key)
+                data_timestamp = self.season_data_timestamp(season_key, title.key)
                 new_season = Season(
                     key=season_key,
                     name=season_data.title,
                     season_number=sort_order + 1,
                     sort_order=sort_order,
-                    data_timestamp=data_timestamps[0],
+                    data_timestamp=data_timestamp,
                     title_id=title.id,
                 )
                 season = new_season.upsert(title, season)
-                season.set_update_at(None, data_timestamps)
+                season.set_update_at(None, data_timestamp)
 
             self._upsert_episodes(
                 season,
@@ -232,7 +231,7 @@ class NetflixSeries(NetflixImporter):
             ):
                 continue
 
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamp = self.episode_data_timestamp(
                 episode_key,
                 season.key,
                 title_key,
@@ -248,11 +247,11 @@ class NetflixSeries(NetflixImporter):
                 thumbnail_url=episode_data.artwork.url,
                 duration=episode_data.runtime_sec,
                 sort_order=sort_order,
-                data_timestamp=data_timestamps[0],
+                data_timestamp=data_timestamp,
                 season_id=season.id,
             )
             episode = new_episode.upsert(season, episode)
-            episode.set_update_at(None, data_timestamps)
+            episode.set_update_at(None, data_timestamp)
 
 
 # TODO: Validate
@@ -309,8 +308,7 @@ class NetflixMovie(NetflixImporter):
         movie_data = self._title_video(title_key)
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamps = self.title_data_timestamps(title_key)
-            data_timestamp = data_timestamps[0]
+            data_timestamp = self.title_data_timestamp(title_key)
             new_title = Title(
                 key=title_key,
                 name=movie_data.title,
@@ -324,7 +322,7 @@ class NetflixMovie(NetflixImporter):
             title = new_title.upsert(source, title)
             title.set_update_at(
                 self._next_update_at(title_key, data_timestamp),
-                data_timestamps,
+                data_timestamp,
             )
 
         self._upsert_season(title, movie_data, force=force)
@@ -344,16 +342,16 @@ class NetflixMovie(NetflixImporter):
         season_key = build_season_key(title.key, title.key)
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title.key, force=force):
-            data_timestamps = self.season_data_timestamps(season_key, title.key)
+            data_timestamp = self.season_data_timestamp(season_key, title.key)
             new_season = Season(
                 key=season_key,
                 season_number=0,
                 sort_order=0,
-                data_timestamp=data_timestamps[0],
+                data_timestamp=data_timestamp,
                 title_id=title.id,
             )
             season = new_season.upsert(title, season)
-            season.set_update_at(None, data_timestamps)
+            season.set_update_at(None, data_timestamp)
 
         self._upsert_episode(season, title.key, movie_data, force=force)
 
@@ -368,7 +366,7 @@ class NetflixMovie(NetflixImporter):
     ) -> None:
         episode = Episode.get_from_memory(self.session, season, title_key)
         if self._episode_is_outdated(episode, season.key, title_key, force=force):
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamp = self.episode_data_timestamp(
                 title_key,
                 season.key,
                 title_key,
@@ -382,8 +380,8 @@ class NetflixMovie(NetflixImporter):
                 thumbnail_url=movie_data.billboard_or_story_art960.url,
                 episode_number=0,
                 sort_order=0,
-                data_timestamp=data_timestamps[0],
+                data_timestamp=data_timestamp,
                 season_id=season.id,
             )
             episode = new_episode.upsert(season, episode)
-            episode.set_update_at(None, data_timestamps)
+            episode.set_update_at(None, data_timestamp)

@@ -44,7 +44,6 @@ class TMDB(TMDBShared, BaseReadURL, AbstractPlugin, register=True):
         return (MOVIE_URL_REGEX, TV_URL_REGEX)
 
     # TODO: Validate
-    # TODO: Validate
     def _get_media_importer_from_media_type(
         self,
         media_type: TMDBMediaType,

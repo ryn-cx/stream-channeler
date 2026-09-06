@@ -48,7 +48,7 @@ def _unknown_import_result(watch_identifier: str) -> WatchImportResult:
 
 
 # TODO: Validate
-class WatchHistoryMixin(BaseWatchHistoryMixin):
+class StreamChannelerWatchHistoryMixin(BaseWatchHistoryMixin):
     """Export and import watches as Stream Channeler's own history file.
 
     Every other plugin keys its export on the website's own episode ids, which

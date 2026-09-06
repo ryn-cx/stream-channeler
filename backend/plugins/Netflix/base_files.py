@@ -1,12 +1,17 @@
 # TODO: Validate
 from __future__ import annotations
 
-from plugins.Netflix.files import Search, SeasonEpisodes, Seasons, Title
+from plugins.Netflix.files import (
+    Search,
+    SeasonEpisodes,
+    Seasons,
+    Title,
+)
 from plugins.utils.base_plugin.base import BasePlugin
 
 
 # TODO: Validate
-class BasicFiles(BasePlugin):
+class NetflixBaseFiles(BasePlugin):
     # TODO: Validate
     def title_file(self, title_key: str) -> Title:
         return self._file(Title, title_key)

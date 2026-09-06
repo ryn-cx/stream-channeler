@@ -11,7 +11,7 @@ from sqlmodel import col, select
 from app.canonical_media.filters import is_canonical
 from app.sources.models import Source
 from app.titles.models import Title, TitleCanonicalTitle
-from plugins.Crunchyroll.basic_files import BasicFiles
+from plugins.Crunchyroll.base_files import CrunchyrollBaseFiles
 from plugins.Crunchyroll.utils import MUSIC_SOURCE, VIDEO_SOURCE, build_url
 
 if TYPE_CHECKING:
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class CrunchyrollShared(BasicFiles):
+class CrunchyrollShared(CrunchyrollBaseFiles):
     # TODO: Validate
     @classmethod
     @override

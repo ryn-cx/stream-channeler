@@ -10,7 +10,6 @@ from datetime import datetime, timedelta
 from app.episodes.preload import preload_episodes
 from app.seasons.models import Season
 from app.titles.models import Title
-from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.utils.base_plugin.soft_delete import BaseSoftDeleteMixin
 
@@ -66,35 +65,20 @@ class BaseUpdateMixin(BaseSoftDeleteMixin, ABC):
                         title.set_update_at(update_at)
 
     # TODO: Validate
-    def _set_dynamic_update_at(self, title: Title) -> None:
-        preload_episodes(self.session, [title])
-        title_air_dates: list[datetime] = []
-        for season in title.active_children:
-            season_air_dates = [
-                episode.air_date
-                for episode in season.active_children
-                if episode.air_date
-            ]
-            self._try_update_at_values(season, season_air_dates)
-            title_air_dates += season_air_dates
-        self._try_update_at_values(title, title_air_dates)
+    def _set_season_update_at_based_on_last_episode(self, season: Season) -> None:
+        if not season.data_timestamp:  # Should be impossible
+            msg = f"Record {season.key} has no data_timestamp"
+            raise ValueError(msg)
 
-    # TODO: Validate
-    @staticmethod
-    def _try_update_at_values(
-        record: Title | Season,
-        air_dates: list[datetime],
-    ) -> None:
-        now = tz_datetime.now()
-        for air_date in air_dates:
-            if air_date > now:
-                record.set_update_at(air_date)
-        if air_dates:
-            record.set_update_at(max(air_dates) + timedelta(days=7))
-        if record.data_timestamp:
-            record.set_update_at(
-                staggered_monthly_update_at(record.key, record.data_timestamp),
-            )
+        preload_episodes(self.session, [season.title])
+        for episode in season.active_children:
+            if episode.air_date:
+                season.set_update_at(episode.air_date)
+                season.set_update_at(episode.air_date + timedelta(days=7))
+
+        season.set_update_at(
+            staggered_monthly_update_at(season.key, season.data_timestamp),
+        )
 
     # TODO: Validate
     def _update_and_upsert_title(

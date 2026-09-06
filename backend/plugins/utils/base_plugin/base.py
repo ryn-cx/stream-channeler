@@ -183,7 +183,8 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
     # TODO: Validate
     def on_update_episode_failure(self, episode: Episode, error: Exception) -> None:
         self._get_media_importer_from_title(episode.season.title).on_failure(
-            episode, error,
+            episode,
+            error,
         )
 
     # TODO: Validate

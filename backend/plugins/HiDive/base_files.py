@@ -4,7 +4,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from app.files.models import File
-from plugins.HiDive.files import Schedule, Search, Season, Series, Vod
+from plugins.HiDive.files import (
+    Schedule,
+    Search,
+    Season,
+    Series,
+    Vod,
+)
 from plugins.utils.base_plugin.base import BasePlugin
 
 if TYPE_CHECKING:
@@ -13,7 +19,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class BasicFiles(BasePlugin):
+class HiDiveBaseFiles(BasePlugin):
     # TODO: Validate
     def season_file(self, season_key: str | int) -> Season:
         return self._file(Season, str(season_key))

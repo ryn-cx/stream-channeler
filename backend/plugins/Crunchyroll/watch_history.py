@@ -15,7 +15,7 @@ from plugins.utils.base_plugin.watch_history import (
 
 
 # TODO: Validate
-class WatchHistoryMixin(BaseWatchHistoryMixin, CrunchyrollShared):
+class CrunchyrollWatchHistoryMixin(BaseWatchHistoryMixin, CrunchyrollShared):
     import_watch_history_file_extension = ".json"
 
     # TODO: Validate

@@ -15,7 +15,7 @@ from app.channels.models import ChannelQueue, ChannelSourceFilter, URLStatus
 from app.channels.service.import_queue import add_urls_to_channel_import_queue
 from app.sources.models import Source
 from app.titles.models import Title
-from plugins.AdultSwim.basic_files import BasicFiles
+from plugins.AdultSwim.base_files import AdultSwimBaseFiles
 from plugins.AdultSwim.constants import FREE, SUBSCRIPTION
 from plugins.AdultSwim.utils import title_url
 from plugins.utils.base_plugin.files import COMPLETED_STATUS
@@ -39,7 +39,7 @@ CHANNEL_DESCRIPTION_FILES = {
 
 
 # TODO: Validate
-class AdultSwimShared(BasicFiles):
+class AdultSwimShared(AdultSwimBaseFiles):
     # TODO: Validate
     @classmethod
     @override

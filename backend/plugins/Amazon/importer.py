@@ -179,8 +179,7 @@ class AmazonSeries(AmazonImporter):
         page = self.detail_file(title_key)
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamps = self.title_data_timestamps(title_key)
-            data_timestamp = data_timestamps[0]
+            data_timestamp = self.title_data_timestamp(title_key)
             new_title = Title(
                 key=title_key,
                 name=page.series_title(),
@@ -194,7 +193,7 @@ class AmazonSeries(AmazonImporter):
                 source_id=source.id,
             )
             title = new_title.upsert(source, title)
-            title.set_update_at(data_timestamp + timedelta(days=7), data_timestamps)
+            title.set_update_at(data_timestamp + timedelta(days=7), data_timestamp)
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing(title_key)
@@ -209,18 +208,18 @@ class AmazonSeries(AmazonImporter):
             season_key = season_entry.key
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
-                data_timestamps = self.season_data_timestamps(season_key, title.key)
+                data_timestamp = self.season_data_timestamp(season_key, title.key)
                 new_season = Season(
                     key=season_key,
                     name=season_entry.name,
                     season_number=season_entry.season_number,
                     sort_order=sort_order,
                     url=detail_url(season_key),
-                    data_timestamp=data_timestamps[0],
+                    data_timestamp=data_timestamp,
                     title_id=title.id,
                 )
                 season = new_season.upsert(title, season)
-                season.set_update_at(None, data_timestamps)
+                season.set_update_at(None, data_timestamp)
 
             self._upsert_episodes(season, title.key, force=force)
 
@@ -242,7 +241,7 @@ class AmazonSeries(AmazonImporter):
             ):
                 continue
 
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamp = self.episode_data_timestamp(
                 item.key,
                 season.key,
                 title_key,
@@ -259,11 +258,11 @@ class AmazonSeries(AmazonImporter):
                 duration=item.duration,
                 air_date=parse_date(item.release_date),
                 sort_order=sort_order,
-                data_timestamp=data_timestamps[0],
+                data_timestamp=data_timestamp,
                 season_id=season.id,
             )
             episode = new_episode.upsert(season, episode)
-            episode.set_update_at(None, data_timestamps)
+            episode.set_update_at(None, data_timestamp)
 
 
 # TODO: Validate
@@ -297,8 +296,7 @@ class AmazonMovie(AmazonImporter):
         page = self.detail_file(title_key)
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamps = self.title_data_timestamps(title_key)
-            data_timestamp = data_timestamps[0]
+            data_timestamp = self.title_data_timestamp(title_key)
             new_title = Title(
                 key=title_key,
                 name=page.title(),
@@ -314,7 +312,7 @@ class AmazonMovie(AmazonImporter):
             title = new_title.upsert(source, title)
             title.set_update_at(
                 staggered_monthly_update_at(title_key, data_timestamp),
-                data_timestamps,
+                data_timestamp,
             )
 
         self._upsert_season(title, force=force)
@@ -328,16 +326,16 @@ class AmazonMovie(AmazonImporter):
     def _upsert_season(self, title: Title, *, force: bool = False) -> None:
         season = Season.get_from_memory(self.session, title, title.key)
         if self._season_is_outdated(season, title.key, force=force):
-            data_timestamps = self.season_data_timestamps(title.key, title.key)
+            data_timestamp = self.season_data_timestamp(title.key, title.key)
             new_season = Season(
                 key=title.key,
                 season_number=0,
                 sort_order=0,
-                data_timestamp=data_timestamps[0],
+                data_timestamp=data_timestamp,
                 title_id=title.id,
             )
             season = new_season.upsert(title, season)
-            season.set_update_at(None, data_timestamps)
+            season.set_update_at(None, data_timestamp)
 
         self._upsert_episode(season, title.key, force=force)
 
@@ -359,7 +357,7 @@ class AmazonMovie(AmazonImporter):
             return
 
         page = self.detail_file(title_key)
-        data_timestamps = self.episode_data_timestamps(title_key, season.key, title_key)
+        data_timestamp = self.episode_data_timestamp(title_key, season.key, title_key)
         new_episode = Episode(
             key=title_key,
             watch_identifier=watch_identifier(self.plugin_name(), title_key),
@@ -372,8 +370,8 @@ class AmazonMovie(AmazonImporter):
             episode_number=0,
             sort_order=0,
             air_date=parse_date(page.release_date()),
-            data_timestamp=data_timestamps[0],
+            data_timestamp=data_timestamp,
             season_id=season.id,
         )
         episode = new_episode.upsert(season, episode)
-        episode.set_update_at(None, data_timestamps)
+        episode.set_update_at(None, data_timestamp)

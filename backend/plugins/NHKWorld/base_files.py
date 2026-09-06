@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class BasicFiles(BasePlugin):
+class NHKWorldBaseFiles(BasePlugin):
     # TODO: Validate
     def titles_search_file(self, query: str, offset: int) -> TitlesSearch:
         """Contains one page of results for a search query."""
@@ -42,7 +42,9 @@ class BasicFiles(BasePlugin):
     ) -> NewVideoEpisodes:
         """Contains the newest videos on the website."""
         if isinstance(feed_datetime, File):
-            str_datetime = NewVideoEpisodes.file_to_unique_identifier(feed_datetime)
+            str_datetime = NewVideoEpisodes.file_to_unique_identifier(
+                feed_datetime,
+            )
         else:
             str_datetime = str(feed_datetime)
         return self._file(NewVideoEpisodes, str_datetime)

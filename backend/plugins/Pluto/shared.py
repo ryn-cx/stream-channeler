@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.Pluto.basic_files import BasicFiles
+from plugins.Pluto.base_files import PlutoBaseFiles
 from plugins.Pluto.constants import DETAILS_REGEX, ITEM_ID_REGEX, LOCALE_REGEX
 from plugins.Pluto.utils import search_url
 
@@ -28,7 +28,7 @@ SERIES_URL_REGEX = (
 
 
 # TODO: Validate
-class PlutoShared(BasicFiles):
+class PlutoShared(PlutoBaseFiles):
     # TODO: Validate
     @classmethod
     @override

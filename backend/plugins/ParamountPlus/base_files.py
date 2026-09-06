@@ -1,18 +1,26 @@
 # TODO: Validate
 from __future__ import annotations
 
-from plugins.ParamountPlus.files import EpisodesFile, MovieFile, TitlePage
+from plugins.ParamountPlus.files import (
+    EpisodesFile,
+    MovieFile,
+    TitlePage,
+)
 from plugins.utils.base_plugin.base import BasePlugin
 
 
 # TODO: Validate
-class BasicFiles(BasePlugin):
+class ParamountPlusBaseFiles(BasePlugin):
     # TODO: Validate
     def title_page_file(self, title_id: str) -> TitlePage:
         return self._file(TitlePage, title_id)
 
     # TODO: Validate
-    def episodes_file(self, title_id: str, season_number: int) -> EpisodesFile:
+    def episodes_file(
+        self,
+        title_id: str,
+        season_number: int,
+    ) -> EpisodesFile:
         return self._file(EpisodesFile, title_id, season_number)
 
     # TODO: Validate

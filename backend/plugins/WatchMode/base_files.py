@@ -6,7 +6,7 @@ from plugins.WatchMode.files import TitleSources
 
 
 # TODO: Validate
-class BasicFiles(BasePlugin):
+class WatchModeBaseFiles(BasePlugin):
     # TODO: Validate
     def title_sources_file(self, title_key: str) -> TitleSources:
         """Return the listing file for the Watchmode title id `title_key`."""

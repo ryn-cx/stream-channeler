@@ -24,11 +24,13 @@ from app.canonical_media.tmdb import (
     tmdb_title_key,
 )
 from app.episodes.models import Episode
+from app.episodes.preload import preload_episodes
 from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.sources.models import Source
 from app.titles.models import Title
 from app.utils import tz_datetime
+from app.utils.update_at import title_update_at
 from plugins.TMDB.external_websites import TMDBExternalWebsites
 from plugins.TMDB.files import (
     MoviesWatchProviders,
@@ -41,7 +43,7 @@ from plugins.TMDB.shared import (
     TV_URL_REGEX,
 )
 from plugins.TMDB.utils import (
-    SeasonInfo,
+    TMDBSeasonInfo,
     image_url,
     parse_release_year,
     thumbnail_url,
@@ -267,8 +269,7 @@ class TMDBSeries(TMDBImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             series = self.tv_series_details_file(tmdb_tv_title_id).parsed()
-            data_timestamps = self.title_data_timestamps(title_key)
-            data_timestamp = data_timestamps[0]
+            data_timestamp = self.title_data_timestamp(title_key)
             new_title = Title(
                 key=title_key,
                 name=series.name,
@@ -284,12 +285,29 @@ class TMDBSeries(TMDBImporter):
                 source_id=source.id,
             )
             title = new_title.upsert(source, title)
-            title.set_update_at(None, data_timestamps)
+            title.set_update_at(None, data_timestamp)
 
         self._upsert_seasons(title, title_key, tmdb_tv_title_id, force=force)
         self._soft_delete_missing(title_key)
-        self._set_dynamic_update_at(title)
+        self._set_title_update_frequency(title)
         return title
+
+    # TODO: Validate
+    def _set_title_update_frequency(self, title: Title) -> None:
+        preload_episodes(self.session, [title])
+        air_dates = [
+            episode.air_date
+            for season in title.active_children
+            for episode in season.active_children
+            if episode.air_date
+        ]
+        title.set_update_at(
+            title_update_at(
+                title.key,
+                self.title_data_timestamp(title.key),
+                max(air_dates) if air_dates else None,
+            ),
+        )
 
     # TODO: Validate
     def _upsert_seasons(
@@ -300,13 +318,13 @@ class TMDBSeries(TMDBImporter):
         *,
         force: bool = False,
     ) -> None:
+        seasons: list[Season] = []
         # Whichever order the title is read in, seasons and episodes come back
         # the same shape, so nothing below asks which it was.
         for source in self.chosen_seasons(title_key):
             season = Season.get_from_memory(self.session, title, source.key)
             if self._season_is_outdated(season, title_key, force=force):
-                data_timestamps = self.season_data_timestamps(source.key, title_key)
-                data_timestamp = data_timestamps[0]
+                data_timestamp = self.season_data_timestamp(source.key, title_key)
                 new_season = Season(
                     key=source.key,
                     name=source.name,
@@ -320,7 +338,7 @@ class TMDBSeries(TMDBImporter):
                 season = new_season.upsert(title, season)
                 season.set_update_at(
                     None,
-                    data_timestamps,
+                    data_timestamp,
                 )
             self._upsert_episodes(
                 season=season,
@@ -329,12 +347,15 @@ class TMDBSeries(TMDBImporter):
                 tmdb_tv_title_id=tmdb_tv_title_id,
                 force=force,
             )
+            seasons.append(season)
+
+        self._set_season_update_at_based_on_last_episode(seasons[-1])
 
     # TODO: Validate
     def _upsert_episodes(
         self,
         season: Season,
-        source: SeasonInfo,
+        source: TMDBSeasonInfo,
         title_key: str,
         tmdb_tv_title_id: int,
         *,
@@ -351,8 +372,7 @@ class TMDBSeries(TMDBImporter):
                 force=force,
             ):
                 continue
-            data_timestamps = self.episode_data_timestamps(key, season_key, title_key)
-            data_timestamp = data_timestamps[0]
+            data_timestamp = self.episode_data_timestamp(key, season_key, title_key)
             still_path = episode_source.still_path or self._fallback_backdrop_path(
                 tmdb_tv_title_id=tmdb_tv_title_id,
                 tmdb_tv_episode_id=episode_source.id,
@@ -385,7 +405,7 @@ class TMDBSeries(TMDBImporter):
             episode = new_episode.upsert(season, episode)
             episode.set_update_at(
                 None,
-                data_timestamps,
+                data_timestamp,
             )
 
     # TODO: Validate
@@ -657,8 +677,7 @@ class TMDBMovie(TMDBImporter):
         parsed_movie_details = self.movies_details_file(tmdb_movie_id).parsed()
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamps = self.title_data_timestamps(title_key)
-            data_timestamp = data_timestamps[0]
+            data_timestamp = self.title_data_timestamp(title_key)
             new_title = Title(
                 key=title_key,
                 name=parsed_movie_details.title,
@@ -679,10 +698,9 @@ class TMDBMovie(TMDBImporter):
                 source_id=source.id,
             )
             title = new_title.upsert(source, title)
-            title.set_update_at(None, data_timestamps)
+            title.set_update_at(None, data_timestamp)
 
         self._upsert_season(title, title_key, tmdb_movie_id, force=force)
-        self._set_dynamic_update_at(title)
         return title
 
     # TODO: Validate
@@ -698,8 +716,7 @@ class TMDBMovie(TMDBImporter):
         season_key = tmdb_season_key(TMDBMediaType.movie, tmdb_movie_id)
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title_key, force=force):
-            data_timestamps = self.season_data_timestamps(season_key, title_key)
-            data_timestamp = data_timestamps[0]
+            data_timestamp = self.season_data_timestamp(season_key, title_key)
             new_season = Season(
                 key=season_key,
                 name=parsed_movie_details.title,
@@ -719,7 +736,7 @@ class TMDBMovie(TMDBImporter):
             season = new_season.upsert(title, season)
             season.set_update_at(
                 None,
-                data_timestamps,
+                data_timestamp,
             )
 
         self._upsert_episode(
@@ -729,6 +746,8 @@ class TMDBMovie(TMDBImporter):
             tmdb_movie_id=tmdb_movie_id,
             force=force,
         )
+
+        self._set_season_update_at_based_on_last_episode(season)
 
     # TODO: Validate
     def _upsert_episode(
@@ -750,12 +769,11 @@ class TMDBMovie(TMDBImporter):
             force=force,
         ):
             return
-        data_timestamps = self.episode_data_timestamps(
+        data_timestamp = self.episode_data_timestamp(
             episode_key,
             season_key,
             title_key,
         )
-        data_timestamp = data_timestamps[0]
         new_episode = Episode(
             key=episode_key,
             watch_identifier=watch_identifier(self.plugin_name(), episode_key),
@@ -778,7 +796,7 @@ class TMDBMovie(TMDBImporter):
         episode = new_episode.upsert(season, episode)
         episode.set_update_at(
             None,
-            data_timestamps,
+            data_timestamp,
         )
 
     # TODO: Validate

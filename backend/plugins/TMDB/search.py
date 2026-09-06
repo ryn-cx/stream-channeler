@@ -9,7 +9,7 @@ from tminidb.search.multi.models import Result as MultiResult
 
 from app.canonical_media.tmdb import tmdb_title_key
 from app.media.media_type import TMDBMediaType
-from plugins.TMDB.basic_files import BasicFiles
+from plugins.TMDB.base_files import TMDBBaseFiles
 from plugins.TMDB.files import (
     SearchMovie,
     SearchMulti,
@@ -41,7 +41,7 @@ def encode_cursor(page: int, offset: int) -> str:
 
 
 # TODO: Validate
-class MovieResult(BaseModel):
+class TMDBMovieResult(BaseModel):
     adult: bool
     backdrop_path: str | None
     id: int
@@ -61,7 +61,7 @@ class MovieResult(BaseModel):
 
 
 # TODO: Validate
-class TvShowResult(BaseModel):
+class TMDBTvShowResult(BaseModel):
     adult: bool
     backdrop_path: str | None
     id: int
@@ -81,17 +81,17 @@ class TvShowResult(BaseModel):
 
 
 # TODO: Validate
-def parse_movie_result(result: MultiResult) -> MovieResult:
-    return MovieResult.model_validate(result, from_attributes=True)
+def parse_movie_result(result: MultiResult) -> TMDBMovieResult:
+    return TMDBMovieResult.model_validate(result, from_attributes=True)
 
 
 # TODO: Validate
-def parse_tv_show_result(result: MultiResult) -> TvShowResult:
-    return TvShowResult.model_validate(result, from_attributes=True)
+def parse_tv_show_result(result: MultiResult) -> TMDBTvShowResult:
+    return TMDBTvShowResult.model_validate(result, from_attributes=True)
 
 
 # TODO: Validate
-class TMDBSearch(BasicFiles):
+class TMDBSearch(TMDBBaseFiles):
     # TODO: Validate
     def first_search_result(
         self,

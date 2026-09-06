@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.Roku.basic_files import BasicFiles
+from plugins.Roku.base_files import RokuBaseFiles
 from plugins.Roku.constants import CONTENT_ID_REGEX
 from plugins.Roku.utils import search_url
 
@@ -19,7 +19,7 @@ WATCH_URL_REGEX = rf"\/watch\/(?P<watch_content_key>{CONTENT_ID_REGEX})(?:\/|$)"
 
 
 # TODO: Validate
-class RokuShared(BasicFiles):
+class RokuShared(RokuBaseFiles):
     # TODO: Validate
     @classmethod
     @override

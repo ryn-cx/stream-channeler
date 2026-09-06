@@ -21,7 +21,7 @@ from app.utils import tz_datetime
 from plugins.TMDB.files import WatchProvidersFile
 from plugins.TMDB.search import TMDBSearch
 from plugins.TMDB.utils import (
-    SeasonInfo,
+    TMDBSeasonInfo,
     get_media_plugin,
     streaming_providers,
 )
@@ -107,7 +107,7 @@ class TMDBShared(TMDBSearch):
     def chosen_seasons(
         self,
         title_key: str,
-    ) -> list[SeasonInfo]:
+    ) -> list[TMDBSeasonInfo]:
         """Return the seasons for the title.
 
         If the title uses an episode_group the the seasons will be based on the contents
@@ -121,12 +121,12 @@ class TMDBShared(TMDBSearch):
 
         if group := self._chosen_episode_group(title_key):
             return [
-                SeasonInfo.from_episode_group(order, entry)
+                TMDBSeasonInfo.from_episode_group(order, entry)
                 for order, entry in enumerate(group.groups)
             ]
 
         return [
-            SeasonInfo.from_season_details(
+            TMDBSeasonInfo.from_season_details(
                 self.tv_seasons_details_file(
                     tmdb_tv_title_id=tmdb_tv_title_id,
                     season_number=season.season_number,

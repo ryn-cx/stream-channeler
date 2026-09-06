@@ -40,6 +40,7 @@ class ItemsFile(EndpointFile[ItemsModel]):
     def _endpoint(self) -> ItemsEndpoint:
         return notaplanet().items
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         data = self._endpoint().download([self.unique_identifier])
@@ -47,6 +48,7 @@ class ItemsFile(EndpointFile[ItemsModel]):
             raise ItemNotFoundError(self.unique_identifier)
         return data
 
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ItemNotFoundError)

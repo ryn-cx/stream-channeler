@@ -8,7 +8,7 @@ from app.sources.models import Source
 from plugins.Crunchyroll.importer import (
     CrunchyrollAnimeImporter,
     CrunchyrollImporter,
-    CrunchyRollMusicImporter,
+    CrunchyrollMusicImporter,
 )
 from plugins.Crunchyroll.shared import CrunchyrollShared
 from plugins.Crunchyroll.utils import (
@@ -20,7 +20,7 @@ from plugins.Crunchyroll.utils import (
     SERIES_URL_REGEX,
     VIDEO_SOURCE,
 )
-from plugins.Crunchyroll.watch_history import WatchHistoryMixin
+from plugins.Crunchyroll.watch_history import CrunchyrollWatchHistoryMixin
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.base import BaseReadURL
 from plugins.utils.base_plugin.initialize import BasePluginInitializer
@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 
 # TODO: Validate
 class CrunchyrollInitializer(BasePluginInitializer, CrunchyrollShared):
+    # TODO: Validate
     @override
     def _create_source_records(self) -> None:
         # Default implementation calls self.upsert_source (Crunchyroll.upsert_source)
@@ -41,18 +42,19 @@ class CrunchyrollInitializer(BasePluginInitializer, CrunchyrollShared):
         if Source.get(self.session, self.plugin, VIDEO_SOURCE) is None:
             CrunchyrollAnimeImporter(self).upsert_source(VIDEO_SOURCE)
         if Source.get(self.session, self.plugin, MUSIC_SOURCE) is None:
-            CrunchyRollMusicImporter(self).upsert_source(MUSIC_SOURCE)
+            CrunchyrollMusicImporter(self).upsert_source(MUSIC_SOURCE)
         self._sources = {source.key: source for source in self.plugin.sources}
 
+    # TODO: Validate
     @override
     def _create_channel_records(self) -> None:
         CrunchyrollAnimeImporter(self).create_channel_records()
-        CrunchyRollMusicImporter(self).create_channel_records()
+        CrunchyrollMusicImporter(self).create_channel_records()
 
 
 # TODO: Validate
 class Crunchyroll(
-    WatchHistoryMixin,
+    CrunchyrollWatchHistoryMixin,
     CrunchyrollShared,
     BaseReadURL,
     AbstractPlugin,
@@ -71,12 +73,13 @@ class Crunchyroll(
             EPISODE_URL_REGEX,
         )
 
+    # TODO: Validate
     @override
     def _get_media_importer_from_url(self, url: str) -> CrunchyrollImporter:
         domain_regex = self._domain_regex()
         for url_regex in (MUSIC_VIDEO_URL_REGEX, CONCERT_URL_REGEX, ARTIST_URL_REGEX):
             if re.match(domain_regex + url_regex, url):
-                return CrunchyRollMusicImporter(self)
+                return CrunchyrollMusicImporter(self)
         for url_regex in (SERIES_URL_REGEX, EPISODE_URL_REGEX):
             if re.match(domain_regex + url_regex, url):
                 return CrunchyrollAnimeImporter(self)
@@ -88,10 +91,11 @@ class Crunchyroll(
     def _get_media_importer_from_title(self, title: Title) -> CrunchyrollImporter:
         return self.get_media_importer_from_source(title.source)
 
+    # TODO: Validate
     @override
     def get_media_importer_from_source(self, source: Source) -> CrunchyrollImporter:
         if source.key == MUSIC_SOURCE:
-            return CrunchyRollMusicImporter(self)
+            return CrunchyrollMusicImporter(self)
         return CrunchyrollAnimeImporter(self)
 
     @override

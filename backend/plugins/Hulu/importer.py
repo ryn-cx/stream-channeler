@@ -189,7 +189,7 @@ class HuluSeriesImporter(HuluImporter):
         if self._title_is_outdated(existing_title, force=force):
             parsed_series = self.series_file(title_key).parsed()
             entity = parsed_series.details.entity
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamp = self.title_data_timestamp(title_key)
             new_title = Title(
                 key=title_key,
                 name=parsed_series.name,
@@ -200,11 +200,11 @@ class HuluSeriesImporter(HuluImporter):
                 url=title_url(title_key, HuluMediaType.SERIES),
                 image_url=image_url(parsed_series.artwork.program_tile.path),
                 thumbnail_url=thumbnail_url(parsed_series.artwork.program_tile.path),
-                data_timestamp=data_timestamps[0],
+                data_timestamp=data_timestamp,
                 source_id=source.id,
             )
             existing_title = new_title.upsert(source, existing_title)
-            existing_title.set_update_at(None, data_timestamps)
+            existing_title.set_update_at(None, data_timestamp)
 
         self._upsert_seasons(existing_title, force=force)
         self._soft_delete_missing(title_key)
@@ -215,13 +215,14 @@ class HuluSeriesImporter(HuluImporter):
 
     # TODO: Validate
     def _upsert_seasons(self, title: Title, *, force: bool = False) -> None:
+        seasons: list[Season] = []
         for sort_order, season_number in enumerate(
             season_numbers(self.series_file(title.key).parsed()),
         ):
             season_key = build_season_key(title.key, season_number)
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
-                data_timestamps = self.season_data_timestamps(season_key, title.key)
+                data_timestamp = self.season_data_timestamp(season_key, title.key)
                 new_season = Season(
                     key=season_key,
                     name=(
@@ -231,14 +232,17 @@ class HuluSeriesImporter(HuluImporter):
                     ),
                     season_number=season_number,
                     sort_order=sort_order,
-                    data_timestamp=data_timestamps[0],
+                    data_timestamp=data_timestamp,
                     title_id=title.id,
                 )
                 season = new_season.upsert(title, season)
-                season.set_update_at(None, data_timestamps)
+                season.set_update_at(None, data_timestamp)
 
             self._set_season_update_at(season, title.key, season_number)
             self._upsert_episodes(season, force=force)
+            seasons.append(season)
+
+        self._set_season_update_at_based_on_last_episode(seasons[-1])
 
     # TODO: Validate
     def _set_season_update_at(
@@ -286,7 +290,7 @@ class HuluSeriesImporter(HuluImporter):
 
             hero_artwork = item.artwork.video_horizontal_hero
             hero_path = hero_artwork.path if hero_artwork else None
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamp = self.episode_data_timestamp(
                 episode_key,
                 season.key,
                 title_key,
@@ -303,11 +307,11 @@ class HuluSeriesImporter(HuluImporter):
                 duration=item.duration,
                 air_date=item.premiere_date,
                 sort_order=sort_order,
-                data_timestamp=data_timestamps[0],
+                data_timestamp=data_timestamp,
                 season_id=season.id,
             )
             episode = new_episode.upsert(season, episode)
-            episode.set_update_at(None, data_timestamps)
+            episode.set_update_at(None, data_timestamp)
 
 
 # TODO: Validate
@@ -410,7 +414,7 @@ class HuluMovieImporter(HuluImporter):
         parsed_movie = self.movie_file(title_key).parsed()
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamp = self.title_data_timestamp(title_key)
             new_title = Title(
                 key=title_key,
                 name=parsed_movie.name,
@@ -419,11 +423,11 @@ class HuluMovieImporter(HuluImporter):
                 image_url=image_url(parsed_movie.artwork.program_tile.path),
                 thumbnail_url=thumbnail_url(parsed_movie.artwork.program_tile.path),
                 media_type="Movie",
-                data_timestamp=data_timestamps[0],
+                data_timestamp=data_timestamp,
                 source_id=source.id,
             )
             title = new_title.upsert(source, title)
-            title.set_update_at(None, data_timestamps)
+            title.set_update_at(None, data_timestamp)
 
         self._upsert_season(title, force=force)
         self._soft_delete_missing(title_key)
@@ -436,16 +440,16 @@ class HuluMovieImporter(HuluImporter):
     def _upsert_season(self, title: Title, *, force: bool = False) -> None:
         season = Season.get_from_memory(self.session, title, title.key)
         if self._season_is_outdated(season, title.key, force=force):
-            data_timestamps = self.season_data_timestamps(title.key, title.key)
+            data_timestamp = self.season_data_timestamp(title.key, title.key)
             new_season = Season(
                 key=title.key,
                 season_number=0,
                 sort_order=0,
-                data_timestamp=data_timestamps[0],
+                data_timestamp=data_timestamp,
                 title_id=title.id,
             )
             season = new_season.upsert(title, season)
-            season.set_update_at(None, data_timestamps)
+            season.set_update_at(None, data_timestamp)
 
         self._upsert_episode(season, force=force)
 
@@ -459,7 +463,7 @@ class HuluMovieImporter(HuluImporter):
             season.key,
             force=force,
         ):
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamp = self.episode_data_timestamp(
                 season.key,
                 season.key,
                 season.key,
@@ -475,8 +479,8 @@ class HuluMovieImporter(HuluImporter):
                 duration=parsed_movie.details.entity.duration,
                 episode_number=0,
                 sort_order=0,
-                data_timestamp=data_timestamps[0],
+                data_timestamp=data_timestamp,
                 season_id=season.id,
             )
             episode = new_episode.upsert(season, episode)
-            episode.set_update_at(None, data_timestamps)
+            episode.set_update_at(None, data_timestamp)

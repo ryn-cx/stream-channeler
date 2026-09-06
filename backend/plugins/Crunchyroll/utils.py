@@ -6,6 +6,7 @@ from enum import StrEnum
 from typing import Protocol
 
 from chirashi.season_episodes.models import Images as EpisodeImages
+from chirashi.series.models import Datum as SeriesDatum
 from chirashi.series.models import Images as SeriesImages
 
 VIDEO_SOURCE = "Crunchyroll"
@@ -13,20 +14,20 @@ MUSIC_SOURCE = "Crunchyroll Music"
 
 
 # TODO: Validate
-class MusicCategory(StrEnum):
+class CrunchyrollMusicCategory(StrEnum):
     MUSIC_VIDEO = "musicvideo"
     CONCERT = "concert"
 
 
 # The prefix Crunchyroll issues ids under, which is what a key is recognised by.
 CATEGORY_ID_PREFIXES = {
-    "MV": MusicCategory.MUSIC_VIDEO,
-    "MC": MusicCategory.CONCERT,
+    "MV": CrunchyrollMusicCategory.MUSIC_VIDEO,
+    "MC": CrunchyrollMusicCategory.CONCERT,
 }
 
 MUSIC_CATEGORY_NAMES = {
-    MusicCategory.CONCERT: "Concerts",
-    MusicCategory.MUSIC_VIDEO: "Music Videos",
+    CrunchyrollMusicCategory.CONCERT: "Concerts",
+    CrunchyrollMusicCategory.MUSIC_VIDEO: "Music Videos",
 }
 
 
@@ -72,11 +73,11 @@ def title_is_a_series(title_key: str) -> bool:
 # TODO: Validate
 def season_is_music(season_key: str) -> bool:
     """Report whether a `Season` key is for music."""
-    return season_key in set(MusicCategory)
+    return season_key in set(CrunchyrollMusicCategory)
 
 
 # TODO: Validate
-def music_episode_category(episode_key: str) -> MusicCategory:
+def music_episode_category(episode_key: str) -> CrunchyrollMusicCategory:
     """Return the listing an episode is a video or a concert of."""
     return CATEGORY_ID_PREFIXES[episode_key[:2]]
 
@@ -91,13 +92,13 @@ def tenant_category_name(tenant_category: str) -> str:
 
 
 # TODO: Validate
-class SizedImage(Protocol):
+class CrunchyrollSizedImage(Protocol):
     width: int
     source: str
 
 
 # TODO: Validate
-def largest_image(images: Sequence[SizedImage]) -> str | None:
+def largest_image(images: Sequence[CrunchyrollSizedImage]) -> str | None:
     """Return the source of the widest size Crunchyroll offers an image in."""
     if not images:
         return None
@@ -105,7 +106,7 @@ def largest_image(images: Sequence[SizedImage]) -> str | None:
 
 
 # TODO: Validate
-def nearest_thumbnail(images: Sequence[SizedImage]) -> str | None:
+def nearest_thumbnail(images: Sequence[CrunchyrollSizedImage]) -> str | None:
     if not images:
         return None
     wide_enough = [image for image in images if image.width >= 480]  # noqa: PLR2004
@@ -161,3 +162,8 @@ def episode_thumbnail(images: EpisodeImages) -> str | None:
     if not thumbnails or not thumbnails[0]:
         return None
     return nearest_thumbnail(thumbnails[0])
+
+
+# TODO: Validate
+def is_movie(series: SeriesDatum) -> bool:
+    return "type:movie" in series.keywords

@@ -101,33 +101,6 @@ class BaseDownloadMixin(ABC):
         return self._source_files()[0].data_timestamp()
 
     # TODO: Validate
-    @staticmethod
-    def _file_timestamps(files: Sequence[BaseFile[Any]]) -> list[datetime]:
-        return [file.data_timestamp() for file in files]
-
-    # TODO: Validate
-    def title_data_timestamps(self, title_key: str) -> list[datetime]:
-        """Return the data timestamp of each of the title's files."""
-        return self._file_timestamps(self._title_files(title_key))
-
-    # TODO: Validate
-    def season_data_timestamps(self, season_key: str, title_key: str) -> list[datetime]:
-        """Return the data timestamp of each of the season's files."""
-        return self._file_timestamps(self._season_files(season_key, title_key))
-
-    # TODO: Validate
-    def episode_data_timestamps(
-        self,
-        episode_key: str,
-        season_key: str,
-        title_key: str,
-    ) -> list[datetime]:
-        """Return the data timestamp of each of the episode's files."""
-        return self._file_timestamps(
-            self._episode_files(episode_key, season_key, title_key),
-        )
-
-    # TODO: Validate
     def _get_files_by_keys(self, file_keys: list[str]) -> Sequence[File]:
         if not file_keys:
             return []

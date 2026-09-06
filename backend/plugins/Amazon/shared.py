@@ -9,7 +9,7 @@ from typing import override
 from app.media.media_type import TMDBMediaType
 from app.sources.models import Source
 from app.utils import tz_datetime
-from plugins.Amazon.basic_files import BasicFiles
+from plugins.Amazon.base_files import AmazonBaseFiles
 from plugins.Amazon.constants import (
     MOVIE_ENTITY_TYPE,
     PURCHASE_SOURCE_SUFFIX,
@@ -39,7 +39,7 @@ AMAZON_URL_REGEX = (
 
 
 # TODO: Validate
-class AmazonShared(BasicFiles):
+class AmazonShared(AmazonBaseFiles):
     # TODO: Validate
     @classmethod
     @override

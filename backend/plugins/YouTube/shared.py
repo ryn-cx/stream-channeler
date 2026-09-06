@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, override
 from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.sources.models import Source
-from plugins.YouTube.basic_files import BasicFiles
+from plugins.YouTube.base_files import YouTubeBaseFiles
 from plugins.YouTube.constants import (
     FREE_SOURCE_KEY,
     LINKS_SOURCE_KEY,
@@ -31,7 +31,7 @@ from plugins.YouTube.utils import (
     title_season_key,
     video_is_valid,
 )
-from plugins.YouTube.watch_history import WatchHistoryMixin
+from plugins.YouTube.watch_history import YouTubeWatchHistoryMixin
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -42,7 +42,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class YouTubeShared(WatchHistoryMixin, BasicFiles):
+class YouTubeShared(YouTubeWatchHistoryMixin, YouTubeBaseFiles):
     # TODO: Validate
     @classmethod
     @override

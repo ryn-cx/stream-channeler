@@ -215,19 +215,10 @@ class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):
     def set_update_at(
         self,
         new_update_at_value: datetime | None,
-        data_timestamps: Sequence[datetime] = (),
+        data_timestamp: datetime | None = None,
     ) -> None:
-        """Set `update_at` based its current value and `new_update_at_value`.
-
-        `data_timestamps` are the timestamps of every file the record is read out
-        of. The record is only as current as the oldest of them, so an update is
-        only finished once all of them are newer than it. Without them the
-        record's own `data_timestamp` stands in, for a record read out of no
-        files of its own.
-        """
-        oldest_data_timestamp = (
-            min(data_timestamps) if data_timestamps else self.data_timestamp
-        )
+        """Set `update_at` based its current value and `new_update_at_value`."""
+        oldest_data_timestamp = data_timestamp or self.data_timestamp
 
         # If the existing update_at is older than data_timestamp the update has
         # been completed and update_at can be cleared.

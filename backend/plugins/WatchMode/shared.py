@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, override
 
-from plugins.WatchMode.basic_files import BasicFiles
+from plugins.WatchMode.base_files import WatchModeBaseFiles
 from plugins.WatchMode.utils import title_key
 
 if TYPE_CHECKING:
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class WatchModeShared(BasicFiles):
+class WatchModeShared(WatchModeBaseFiles):
     # TODO: Validate
     @classmethod
     @override

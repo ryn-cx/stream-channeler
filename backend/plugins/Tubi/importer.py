@@ -169,8 +169,7 @@ class TubiSeries(TubiImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             content = self._content(title_key)
-            data_timestamps = self.title_data_timestamps(title_key)
-            data_timestamp = data_timestamps[0]
+            data_timestamp = self.title_data_timestamp(title_key)
             new_title = Title(
                 key=title_key,
                 name=content.title,
@@ -183,7 +182,7 @@ class TubiSeries(TubiImporter):
                 source_id=source.id,
             )
             title = new_title.upsert(source, title)
-            title.set_update_at(data_timestamp + timedelta(days=7), data_timestamps)
+            title.set_update_at(data_timestamp + timedelta(days=7), data_timestamp)
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing(title_key)
@@ -197,17 +196,17 @@ class TubiSeries(TubiImporter):
             season_key = build_season_key(title.key, season_content.id)
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
-                data_timestamps = self.season_data_timestamps(season_key, title.key)
+                data_timestamp = self.season_data_timestamp(season_key, title.key)
                 new_season = Season(
                     key=season_key,
                     name=season_content.title,
                     season_number=int(season_content.id),
                     sort_order=sort_order,
-                    data_timestamp=data_timestamps[0],
+                    data_timestamp=data_timestamp,
                     title_id=title.id,
                 )
                 season = new_season.upsert(title, season)
-                season.set_update_at(None, data_timestamps)
+                season.set_update_at(None, data_timestamp)
 
             self._upsert_episodes(
                 season,
@@ -238,7 +237,7 @@ class TubiSeries(TubiImporter):
             ):
                 continue
 
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamp = self.episode_data_timestamp(
                 episode_key,
                 season.key,
                 title_key,
@@ -254,11 +253,11 @@ class TubiSeries(TubiImporter):
                 thumbnail_url=first_image(episode_content.thumbnails),
                 duration=episode_content.duration,
                 sort_order=sort_order,
-                data_timestamp=data_timestamps[0],
+                data_timestamp=data_timestamp,
                 season_id=season.id,
             )
             episode = new_episode.upsert(season, episode)
-            episode.set_update_at(None, data_timestamps)
+            episode.set_update_at(None, data_timestamp)
 
 
 # TODO: Validate
@@ -313,8 +312,7 @@ class TubiMovie(TubiImporter):
         content = self._content(title_key)
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamps = self.title_data_timestamps(title_key)
-            data_timestamp = data_timestamps[0]
+            data_timestamp = self.title_data_timestamp(title_key)
             new_title = Title(
                 key=title_key,
                 name=content.title,
@@ -329,7 +327,7 @@ class TubiMovie(TubiImporter):
             title = new_title.upsert(source, title)
             title.set_update_at(
                 staggered_monthly_update_at(title_key, data_timestamp),
-                data_timestamps,
+                data_timestamp,
             )
 
         self._upsert_season(title, force=force)
@@ -343,16 +341,16 @@ class TubiMovie(TubiImporter):
         season_key = movie_season_key(title.key)
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title.key, force=force):
-            data_timestamps = self.season_data_timestamps(season_key, title.key)
+            data_timestamp = self.season_data_timestamp(season_key, title.key)
             new_season = Season(
                 key=season_key,
                 season_number=0,
                 sort_order=0,
-                data_timestamp=data_timestamps[0],
+                data_timestamp=data_timestamp,
                 title_id=title.id,
             )
             season = new_season.upsert(title, season)
-            season.set_update_at(None, data_timestamps)
+            season.set_update_at(None, data_timestamp)
 
         self._upsert_episode(season, title.key, force=force)
 
@@ -374,7 +372,7 @@ class TubiMovie(TubiImporter):
             return
 
         content = self._content(title_key)
-        data_timestamps = self.episode_data_timestamps(title_key, season.key, title_key)
+        data_timestamp = self.episode_data_timestamp(title_key, season.key, title_key)
         new_episode = Episode(
             key=title_key,
             watch_identifier=watch_identifier(self.plugin_name(), title_key),
@@ -386,8 +384,8 @@ class TubiMovie(TubiImporter):
             thumbnail_url=first_image(content.backgrounds),
             duration=content.duration,
             sort_order=0,
-            data_timestamp=data_timestamps[0],
+            data_timestamp=data_timestamp,
             season_id=season.id,
         )
         episode = new_episode.upsert(season, episode)
-        episode.set_update_at(None, data_timestamps)
+        episode.set_update_at(None, data_timestamp)

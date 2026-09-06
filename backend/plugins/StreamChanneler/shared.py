@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, override
 
-from plugins.StreamChanneler.watch_history import WatchHistoryMixin
+from plugins.StreamChanneler.watch_history import StreamChannelerWatchHistoryMixin
 from plugins.utils.base_plugin.base import BasePlugin
 
 if TYPE_CHECKING:
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class StreamChannelerShared(WatchHistoryMixin, BasePlugin):
+class StreamChannelerShared(StreamChannelerWatchHistoryMixin, BasePlugin):
     # TODO: Validate
     @classmethod
     @override
