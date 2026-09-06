@@ -93,16 +93,5 @@ class Hulu(
     def update_source(self, source: Source, update_at: datetime) -> None:
         self._download_if_outdated(self._source_files(), update_at)
         self._create_channel_records()
-        self._mark_changed_shows_for_update()
+        self._mark_changed_shows_for_update(self._show_keys_from_all_xxx_files())
         self.upsert_source(source.key)
-
-    # TODO: Validate
-    def _mark_changed_shows_for_update(self) -> None:
-        listed_show_keys = self._listed_show_keys()
-        data_timestamp = self.source_data_timestamp()
-        for hulu_source in self._preload_sources(preload_shows=True):
-            for show in hulu_source.shows:
-                is_listed = show.key in listed_show_keys
-                is_deleted = show.deleted_at is not None
-                if is_listed == is_deleted:
-                    show.set_update_at(data_timestamp)

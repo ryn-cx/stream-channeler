@@ -65,20 +65,22 @@ class HuluShared(BasicFiles):
         self.add_urls_to_plugin_channel(
             "Hulu - All Titles",
             "All Titles on Hulu.",
-            self._all_title_urls(),
+            self._title_urls_from_all_xxx_files(),
         )
 
     # TODO: Validate
-    def _all_title_urls(self) -> list[str]:
+    def _title_urls_from_all_xxx_files(self) -> list[str]:
+        """Get all title urls from the AllMovies and AllSeries files."""
         return [
             *title_urls(self.all_series_file().parsed()),
             *title_urls(self.all_movies_file().parsed()),
         ]
 
     # TODO: Validate
-    def _listed_show_keys(self) -> set[str]:
+    def _show_keys_from_all_xxx_files(self) -> set[str]:
+        """Get all show keys from the AllMovies and AllSeries files."""
         show_keys: set[str] = set()
-        for url in self._all_title_urls():
+        for url in self._title_urls_from_all_xxx_files():
             match = strict_search(f"{SERIES_URL_REGEX}|{MOVIE_URL_REGEX}", url)
             show_keys.add(match.group("series_key") or match.group("movie_key"))
         return show_keys

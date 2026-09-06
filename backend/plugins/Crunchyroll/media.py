@@ -708,6 +708,12 @@ class CrunchyrollArtist(CrunchyrollMedia):
     # TODO: Validate
     @override
     def update_source(self, source: Source, update_at: datetime) -> None:
+        logger.info("Updating Source: {}", source.name)
+        # This is the only source file so no source_files wrapper is needed.
         self.browse_file().download_if_outdated(update_at)
         self.create_channel_records()
+        self._mark_changed_shows_for_update(
+            {artist.id for artist in self.browse_file().data()},
+            source_key=MUSIC_SOURCE,
+        )
         self.upsert_source(MUSIC_SOURCE)

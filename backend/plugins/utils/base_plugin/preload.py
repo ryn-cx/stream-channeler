@@ -37,6 +37,10 @@ class BasePreloadMixin(ABC):
         preload_seasons: bool = False,
         preload_episodes: bool = False,
     ) -> ScalarResult[Source]:
+        """Preload the sources with optional related shows, seasons, and episodes.
+
+        If no source_key is provided, all sources for the plugin will be preloaded.
+        """
         options: list[Any] = []
         if preload_episodes:
             options.append(
@@ -53,7 +57,7 @@ class BasePreloadMixin(ABC):
         statement = select(Source).where(Source.plugin_id == self.plugin.id)
         if isinstance(source_key, list):
             statement = statement.where(Source.key.in_(source_key))  # type: ignore[attr-defined]
-        elif source_key is not None:
+        elif source_key:
             statement = statement.where(Source.key == source_key)
         return self.session.exec(statement.options(*options)).unique()
 

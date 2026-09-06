@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from abc import ABC
+from collections.abc import Iterable
 from datetime import datetime, timedelta
 
 from app.episodes.preload import preload_episodes
@@ -16,6 +17,21 @@ from plugins.utils.base_plugin.soft_delete import BaseSoftDeleteMixin
 
 # TODO: Validate
 class BaseUpdateMixin(BaseSoftDeleteMixin, ABC):
+    # TODO: Validate
+    def _mark_changed_shows_for_update(
+        self,
+        listed_show_keys: Iterable[str],
+        source_key: str | None = None,
+    ) -> None:
+        listed = set(listed_show_keys)
+        data_timestamp = self.source_data_timestamp()
+        for source in self._preload_sources(source_key, preload_shows=True):
+            for show in source.shows:
+                is_listed = show.key in listed
+                is_deleted = show.deleted_at is not None
+                if is_listed == is_deleted:
+                    show.set_update_at(data_timestamp)
+
     # TODO: Validate
     def _set_weekly_updates_from_episodes(
         self,
@@ -78,13 +94,11 @@ class BaseUpdateMixin(BaseSoftDeleteMixin, ABC):
         *,
         force: bool = False,
     ) -> None:
-        """Read a stored listing again, and settle what its episodes are linked to.
+        """Update all files then upsert the show.
 
-        An update writes the same episodes an import does, so which TMDB episode
-        each of them is is worked out here too. Only the matching, and not the
-        rest of what an import settles: which title a listing is linked to is
-        read off a website's own account of itself, which an update is not
-        reading, and a canonical row has no title to point at at all.
+        Show files are updated using Show.udpate and the File.update_at values.
+        Season files are updated using Season.update and the File.update_at values.
+        Episode files are updated using Episode.update and the File.update_at values.
         """
         self._download_show_files_and_children(show.key, update_at)
         self._preload_show(show.id, preload_episodes=True).one()

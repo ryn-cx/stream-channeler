@@ -30,6 +30,7 @@ class BasePluginWorker(BasePlugin, ABC):
         source_name = show.source.name or show.source.key
         show_name = f"{show.name} ({show.key})" if show.name else show.key
         logger.info("Updating show: {} - {}", source_name, show_name)
+        # TODO: Is this preload needed since _update_and_upsert_show preloads?c
         stored_show = self._preload_show(show.key, source_key=show.source.key).one()
         self._update_and_upsert_show(stored_show, stored_show.update_at, force=force)
 
@@ -37,6 +38,7 @@ class BasePluginWorker(BasePlugin, ABC):
     @override
     def update_season(self, season: Season) -> None:
         logger.info("Updating season: {}", season.key)
+        # TODO: Is this preload needed since _update_and_upsert_show preloads?c
         stored_season = self._preload_season(season.id, preload_show=True).one()
         self._update_and_upsert_show(stored_season.show, stored_season.update_at)
 
@@ -44,6 +46,7 @@ class BasePluginWorker(BasePlugin, ABC):
     @override
     def update_episode(self, episode: Episode) -> None:
         logger.info("Updating episode: {}", episode.key)
+        # TODO: Is this preload needed since _update_and_upsert_show preloads?c
         stored_episode = self._preload_episode(episode.id, preload_source=True).one()
         self._update_and_upsert_show(
             stored_episode.season.show,
