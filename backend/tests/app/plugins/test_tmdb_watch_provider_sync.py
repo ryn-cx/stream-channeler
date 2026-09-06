@@ -17,7 +17,7 @@ from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.TMDB import TMDB
 from plugins.TMDB.files import TVSeasonsWatchProviders, TVSeriesWatchProviders
-from plugins.utils.base_plugin_v2.files import COMPLETED_STATUS
+from plugins.utils.base_plugin.files import COMPLETED_STATUS
 from tests.app.plugins.utils import create_random_plugin
 from tests.app.seasons.utils import create_random_season
 from tests.app.shows.utils import create_random_show

@@ -3,9 +3,11 @@
 
 from enum import StrEnum
 from urllib.parse import quote, quote_plus
+from uuid import UUID
 
-from wholoo.genre.models import GenreModel
-from wholoo.genres.models import GenresModel
+from wholoo.all_movies.models import AllMoviesModel
+from wholoo.all_series.models import AllSeriesModel
+from wholoo.season.models import Item, SeasonModel
 from wholoo.tv.models import TVModel
 
 
@@ -21,7 +23,7 @@ def build_url(path: str) -> str:
 
 
 # TODO: Validate
-def show_url(show_key: str, media_type: HuluMediaType) -> str:
+def show_url(show_key: str | UUID, media_type: HuluMediaType) -> str:
     return build_url(f"{media_type}/{show_key}")
 
 
@@ -74,22 +76,20 @@ def season_numbers(series: TVModel) -> list[int]:
 
 
 # TODO: Validate
-def listed_items(page: GenresModel | GenreModel) -> list[tuple[str, str]]:
+def season_items(season: SeasonModel) -> list[Item]:
+    items: dict[UUID, Item] = {}
+    for item in season.items:
+        items.setdefault(item.id, item)
+    return list(items.values())
+
+
+def title_urls(page: AllSeriesModel | AllMoviesModel) -> list[str]:
+    """Return all title URLs from the given page."""
     layout = page.props.page_props.layout
     return [
-        (item.name, item.href)
+        build_url(item.href)
         for component in layout.components or []
         if component.type == "list_card"
         for item in component.items or []
-        if item.name and item.href
+        if item.href
     ]
-
-
-# TODO: Validate
-def media_urls(genre: GenreModel) -> list[str]:
-    paths = {
-        href: None
-        for _name, href in listed_items(genre)
-        if href.startswith((f"/{HuluMediaType.MOVIE}/", f"/{HuluMediaType.SERIES}/"))
-    }
-    return [build_url(path) for path in paths]

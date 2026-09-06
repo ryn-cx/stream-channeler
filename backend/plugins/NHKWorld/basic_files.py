@@ -10,7 +10,7 @@ from plugins.NHKWorld.files import (
     VideoEpisodes,
     VideoProgram,
 )
-from plugins.utils.base_plugin_v3.base import BasePlugin
+from plugins.utils.base_plugin.base import BasePlugin
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

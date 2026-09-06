@@ -7,7 +7,7 @@ from typing import Any
 
 from loguru import logger
 
-from plugins.utils.base_plugin_v3.base import BasePlugin
+from plugins.utils.base_plugin.base import BasePlugin
 from plugins.YouTube.files import (
     ChannelByChannelId,
     ChannelByHandle,

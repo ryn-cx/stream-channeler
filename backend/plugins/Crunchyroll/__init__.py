@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, override
 
+from app.sources.models import Source
 from plugins.Crunchyroll.media import (
     CrunchyrollArtist,
     CrunchyrollMedia,
@@ -22,38 +23,32 @@ from plugins.Crunchyroll.utils import (
     MUSIC_SOURCE,
     MUSIC_VIDEO_URL_REGEX,
     SERIES_URL_REGEX,
-    artist_url,
-    episode_is_music,
-    episode_url,
+    VIDEO_SOURCE,
     series_url,
-    show_is_an_artist,
 )
 from plugins.Crunchyroll.watch_history import WatchHistoryMixin
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin_v3.base import BaseReadURL
-from plugins.utils.base_plugin_v3.initialize import BasePluginInitializer
+from plugins.utils.base_plugin.base import BaseReadURL
+from plugins.utils.base_plugin.initialize import BasePluginInitializer
 
 if TYPE_CHECKING:
-    from datetime import datetime
-
-    from chirashi.search.models import Item as SearchItem
-
     from app.media.media_type import TMDBMediaType
     from app.shows.models import Show
-    from app.sources.models import Source
 
 
-# TODO: Validate
 class CrunchyrollInitializer(BasePluginInitializer, CrunchyrollShared):
-    # TODO: Validate
+    @override
+    def _create_source_records(self) -> None:
+        if Source.get(self.session, self.plugin, VIDEO_SOURCE) is None:
+            CrunchyrollSeries(self).upsert_source(VIDEO_SOURCE)
+        if Source.get(self.session, self.plugin, MUSIC_SOURCE) is None:
+            CrunchyrollArtist(self).upsert_source(MUSIC_SOURCE)
+        self._sources = {source.key: source for source in self.plugin.sources}
+
     @override
     def _create_channel_records(self) -> None:
-        # These functions shouldn't be inlined because they are the same
-        # functions used for source updates.
-        self.process_new_browse_files()
-        self.process_new_music_browse_files()
-        self.add_series_to_plugin_channels()
-        self.add_music_to_plugin_channels()
+        CrunchyrollSeries(self).create_channel_records()
+        CrunchyrollArtist(self).create_channel_records()
 
 
 # TODO: Validate
@@ -64,14 +59,8 @@ class Crunchyroll(
     AbstractPlugin,
     register=False,
 ):
-    """Crunchyroll plugin.
-
-    Detects new media much faster than JustWatch and supports music.
-    """
-
     initializer = CrunchyrollInitializer
 
-    # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
@@ -83,7 +72,6 @@ class Crunchyroll(
             EPISODE_URL_REGEX,
         )
 
-    # TODO: Validate
     @override
     def get_media_importer(self, input: Show | str) -> CrunchyrollMedia:
         if isinstance(input, str):
@@ -102,19 +90,17 @@ class Crunchyroll(
             msg = f"Invalid {self.plugin_name()} URL: {input}"
             raise InvalidURLError(msg)
 
-        if show_is_an_artist(input.key):
+        if input.key.startswith("MA"):  # MA might stand for Music Artist.
             return CrunchyrollArtist(self)
         return CrunchyrollSeries(self)
 
     # TODO: Validate
     @override
-    def update_source(self, source: Source, update_at: datetime) -> None:
+    def get_source_importer(self, source: Source) -> CrunchyrollMedia:
         if source.key == MUSIC_SOURCE:
-            self.update_music_source()
-        else:
-            self.update_video_source(source)
+            return CrunchyrollArtist(self)
+        return CrunchyrollSeries(self)
 
-    # TODO: Validate
     @override
     def search_for_url(
         self,
@@ -124,15 +110,8 @@ class Crunchyroll(
     ) -> str | None:
         for datum in self.search_file(names[0]).parsed().data:
             for item in datum.items:
-                return self._search_result_url(item)
+                # Series doesn't actually differentiate between movies and series as all
+                # movies are also labeled as series here.
+                if item.type == "series":
+                    return series_url(item.id)
         return None
-
-    # TODO: Validate
-    @staticmethod
-    def _search_result_url(item: SearchItem) -> str:
-        item_key = item.id
-        if show_is_an_artist(item_key):
-            return artist_url(item_key)
-        if episode_is_music(item_key) or item.type == "episode":
-            return episode_url(item_key)
-        return series_url(item_key)

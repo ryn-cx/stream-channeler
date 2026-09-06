@@ -3,12 +3,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, cast, override
 
 from sqlmodel import Session, select
 
 from app.channels.models import Channel
 from app.channels.service.import_queue import add_urls_to_channel_import_queue
+from app.channels.service.ordering import order_preset_options
 from app.episodes.models import Episode
 from app.media.media_type import TMDBMediaType
 from app.models import Visibility
@@ -17,17 +19,18 @@ from app.shows.models import Show
 from app.sources.models import Source
 from app.users.models import User
 from app.users.service.accounts import get_or_create_plugin_user
+from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
     InvalidURLError,
     TMDBLookupInfo,
     URLImportResult,
 )
-from plugins.utils.base_plugin_v3.files import BaseFile
-from plugins.utils.base_plugin_v3.update import BaseUpdateMixin
-from plugins.utils.base_plugin_v3.url import BaseURLMixin, MediaInfo
+from plugins.utils.base_plugin.files import BaseFile
+from plugins.utils.base_plugin.update import BaseUpdateMixin
+from plugins.utils.base_plugin.url import BaseURLMixin, MediaInfo
 
 if TYPE_CHECKING:
-    from plugins.utils.base_plugin_v3.importer import BaseImporter
+    from plugins.utils.base_plugin.importer import BaseImporter
 
 
 # TODO: Validate
@@ -64,6 +67,8 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
                 visibility=Visibility.public,
                 anonymous=False,
                 score=-1,
+                default_order=order_preset_options(self.session, "Roll The Dice"),
+                update_at=tz_datetime.now() + timedelta(days=1),
                 user_id=plugin_user.id,
             )
             self.session.add(channel)
@@ -80,7 +85,10 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         hundred channels, and reading each one on its own is a query each.
         """
         if self.__plugin_channels is None:
-            plugin_user = get_or_create_plugin_user(session=self.session)
+            plugin_user = get_or_create_plugin_user(
+                session=self.session,
+                plugin_name=self.plugin_name(),
+            )
             self.__plugin_channels = (
                 plugin_user,
                 {
@@ -121,6 +129,10 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
     def get_media_importer(self, input: Show | str) -> BaseImporter:  # noqa: ARG002
         return cast("BaseImporter", self)
 
+    # TODO: Validate
+    def get_source_importer(self, source: Source) -> BaseImporter:  # noqa: ARG002
+        return cast("BaseImporter", self)
+
     def import_url(self, url: str) -> list[URLImportResult]:
         return self.get_media_importer(url).import_url(url)
 
@@ -135,6 +147,10 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         if url:
             return self.import_url(url)
         return []
+
+    # TODO: Validate
+    def update_source(self, source: Source, update_at: datetime) -> None:
+        self.get_source_importer(source).update_source(source, update_at)
 
     def update_show(self, show: Show, *, force: bool = False) -> None:
         self.get_media_importer(show).update_show(show, force=force)

@@ -11,7 +11,7 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
-from plugins.utils.base_plugin_v3.soft_delete import BaseSoftDeleteMixin
+from plugins.utils.base_plugin.soft_delete import BaseSoftDeleteMixin
 
 
 # TODO: Validate

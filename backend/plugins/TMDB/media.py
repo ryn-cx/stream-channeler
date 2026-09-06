@@ -51,20 +51,21 @@ from plugins.utils.abstract_plugin import (
     InvalidURLError,
     URLImportResult,
 )
-from plugins.utils.base_plugin_v3.files import (
+from plugins.utils.base_plugin.files import (
     COMPLETED_STATUS,
     BaseFile,
 )
-from plugins.utils.base_plugin_v3.importer import BaseImporter
-from plugins.utils.base_plugin_v3.url import MediaInfo
+from plugins.utils.base_plugin.importer import BaseImporter
+from plugins.utils.base_plugin.url import MediaInfo
 
 
-def clean_air_datetime(air_date: str | date) -> datetime | None:
+# TODO: Validate
+def clean_air_datetime(air_date: str | date | None) -> datetime | None:
     """Return a datetime for the air date and replaces empty strings with None.
 
     The TMDB API returns an empty string if the date is not known. Converting it to None
     makes it easier to work with."""
-    if isinstance(air_date, str):
+    if not isinstance(air_date, date):
         return None
     return tz_datetime.combine(air_date, datetime.min.time())
 
@@ -233,19 +234,10 @@ class TMDBSeries(TMDBMedia):
             for episode in season.episodes:
                 if episode.id != tmdb_tv_episode_id:
                     continue
-                files.extend(
-                    (
-                        # Contains all of the episode information except for
-                        # translations.
-                        self.tv_seasons_details_file(
-                            tmdb_tv_show_id=tmdb_tv_show_id,
-                            season_number=episode.season_number,
-                        ),
-                        self.tv_episodes_translations_file(
-                            tmdb_tv_show_id=tmdb_tv_show_id,
-                            season_number=episode.season_number,
-                            episode_number=episode.episode_number,
-                        ),
+                files.append(
+                    self.tv_seasons_details_file(
+                        tmdb_tv_show_id=tmdb_tv_show_id,
+                        season_number=episode.season_number,
                     ),
                 )
         return files
@@ -725,7 +717,8 @@ class TMDBMovie(TMDBMedia):
             )
             season = new_season.upsert(show, season)
             season.set_update_at(
-                None, data_timestamps,
+                None,
+                data_timestamps,
             )
 
         self._upsert_episode(

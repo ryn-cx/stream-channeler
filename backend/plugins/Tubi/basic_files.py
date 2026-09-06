@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from plugins.Tubi.files import ContentFile
-from plugins.utils.base_plugin_v3.base import BasePlugin
+from plugins.utils.base_plugin.base import BasePlugin
 
 
 # TODO: Validate

@@ -30,8 +30,8 @@ from app.log import configure_logging
 from app.seasons.models import Season
 from app.shows.models import Show, ShowCanonicalShow
 from app.shows.service.canonical import match_imported_shows_to_tmdb
-from app.users.constants import PLUGIN_USER_EMAIL
 from app.users.models import User
+from app.users.plugin_user import is_plugin_user
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
@@ -108,7 +108,7 @@ def _group_pending_urls_by_plugin(
         selector = (
             selector.join(Channel, col(ChannelQueue.channel_id) == col(Channel.id))
             .join(User, col(Channel.user_id) == col(User.id))
-            .where(col(User.email) != PLUGIN_USER_EMAIL)
+            .where(~is_plugin_user(User.email))
         )
     pending = session.exec(selector.order_by(col(ChannelQueue.created_at).asc())).all()
     for item in pending:

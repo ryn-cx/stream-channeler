@@ -6,7 +6,7 @@ from sqlmodel import Session
 
 from app.plugins.models import Plugin
 from app.sources.models import Source
-from plugins.utils.base_plugin_v2.base import BasePlugin
+from plugins.utils.base_plugin.base import BasePlugin
 
 
 class BasePluginInitializer(BasePlugin, ABC):

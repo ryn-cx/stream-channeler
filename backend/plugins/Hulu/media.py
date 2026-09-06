@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from abc import ABC
+from abc import ABC, abstractmethod
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, override
 
@@ -24,28 +24,57 @@ from plugins.Hulu.utils import (
     episode_url,
     image_url,
     build_season_key,
+    season_items,
     season_numbers,
     show_url,
     split_season_key,
     thumbnail_url,
 )
 from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
-from plugins.utils.base_plugin_v3.importer import BaseImporter
-from plugins.utils.base_plugin_v3.url import MediaInfo
+from plugins.utils.base_plugin.importer import BaseImporter
+from plugins.utils.base_plugin.url import MediaInfo
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from app.sources.models import Source
-    from plugins.utils.base_plugin_v3.files import BaseFile
+    from plugins.utils.base_plugin.files import BaseFile
 
 
 # TODO: Validate
 class HuluMedia(HuluShared, BaseImporter, ABC):
-    pass
+    # TODO: Validate
+    @abstractmethod
+    def _add_show_to_media_type_channel(self, url: str) -> None: ...
+
+    # TODO: Validate
+    def add_show_to_plugin_channels(self, show: Show) -> None:
+        if not show.url: # Should be impossible.
+            msg = "Show.url is not set."
+            raise AttributeError(msg)
+
+        self._add_show_to_all_titles_channel(show.url)
+        self._add_show_to_media_type_channel(show.url)
+
+    # TODO: Validate
+    def _add_show_to_all_titles_channel(self, url: str) -> None:
+        self.add_urls_to_plugin_channel(
+            "Hulu - All Titles",
+            "All Titles on Hulu.",
+            [url],
+        )
 
 
 class HuluSeries(HuluMedia):
+    # TODO: Validate
+    @override
+    def _add_show_to_media_type_channel(self, url: str) -> None:
+        self.add_urls_to_plugin_channel(
+            "Hulu - TV Series",
+            "All TV Series on Hulu.",
+            [url],
+        )
+
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
@@ -117,6 +146,7 @@ class HuluSeries(HuluMedia):
         ]
 
     @override
+    # TODO: Validate
     def _episode_keys_from_season_files(
         self,
         season_keys: str | list[str],
@@ -129,7 +159,9 @@ class HuluSeries(HuluMedia):
             show_key, season_number = split_season_key(key)
             episode_keys += [
                 str(item.id)
-                for item in self.season_file(show_key, season_number).parsed().items
+                for item in season_items(
+                    self.season_file(show_key, season_number).parsed(),
+                )
             ]
         return episode_keys
 
@@ -166,6 +198,7 @@ class HuluSeries(HuluMedia):
         self._upsert_seasons(existing_show, force=force)
         self._soft_delete_missing(show_key)
         self.link_show_to_tmdb(existing_show)
+        self.add_show_to_plugin_channels(existing_show)
 
         return existing_show
 
@@ -205,7 +238,7 @@ class HuluSeries(HuluMedia):
     ) -> None:
         start_dates = [
             item.bundle.availability.start_date
-            for item in self.season_file(show_key, season_number).parsed().items
+            for item in season_items(self.season_file(show_key, season_number).parsed())
         ]
         if not start_dates:
             return
@@ -217,10 +250,11 @@ class HuluSeries(HuluMedia):
 
         season.set_update_at(max(start_dates) + timedelta(days=7))
 
+    # TODO: Validate
     def _upsert_episodes(self, season: Season, *, force: bool = False) -> None:
         show_key, season_number = split_season_key(season.key)
-        season_items = self.season_file(show_key, season_number).parsed().items
-        for sort_order, item in enumerate(season_items):
+        items = season_items(self.season_file(show_key, season_number).parsed())
+        for sort_order, item in enumerate(items):
             # Don't import media that cannot actually be watched because that would just
             # be annoying for the users.
             if item.bundle.availability.start_date > tz_datetime.now():
@@ -264,6 +298,15 @@ class HuluSeries(HuluMedia):
 
 
 class HuluMovie(HuluMedia):
+    # TODO: Validate
+    @override
+    def _add_show_to_media_type_channel(self, url: str) -> None:
+        self.add_urls_to_plugin_channel(
+            "Hulu - Movies",
+            "All Movies on Hulu.",
+            [url],
+        )
+
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
@@ -362,6 +405,7 @@ class HuluMovie(HuluMedia):
         self._upsert_season(show, force=force)
         self._soft_delete_missing(show_key)
         self.link_show_to_tmdb(show)
+        self.add_show_to_plugin_channels(show)
 
         return show
 

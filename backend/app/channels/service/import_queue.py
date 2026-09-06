@@ -21,7 +21,7 @@ from app.channels.schemas import (
 )
 from app.schemas import Message
 from app.users.models import User
-from app.users.service.accounts import get_or_create_plugin_user
+from app.users.plugin_user import is_plugin_user
 from app.utils import tz_datetime
 
 
@@ -187,14 +187,13 @@ def all_channel_queues(
     )
     if not owner:
         selector = selector.where(Channel.user_id == current_user.id)
+    elif owner == MediaOwner.official:
+        selector = selector.where(is_plugin_user(User.email))
     else:
-        plugin_user = get_or_create_plugin_user(session=session)
-        if owner == MediaOwner.official:
-            selector = selector.where(Channel.user_id == plugin_user.id)
-        else:
-            selector = selector.where(
-                col(Channel.user_id).not_in([current_user.id, plugin_user.id]),
-            )
+        selector = selector.where(
+            ~is_plugin_user(User.email),
+            col(Channel.user_id) != current_user.id,
+        )
     return [
         _channel_queue_admin_output(channel, username, queue_entry)
         for queue_entry, channel, username in session.exec(selector).all()

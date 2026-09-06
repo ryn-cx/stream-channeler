@@ -7,8 +7,8 @@ from abc import ABC
 
 from app.seasons.models import Season
 from app.shows.models import Show
-from plugins.utils.base_plugin_v3.preload import BasePreloadMixin
-from plugins.utils.base_plugin_v3.upsert import BaseUpsertMixin
+from plugins.utils.base_plugin.preload import BasePreloadMixin
+from plugins.utils.base_plugin.upsert import BaseUpsertMixin
 
 
 # TODO: Validate

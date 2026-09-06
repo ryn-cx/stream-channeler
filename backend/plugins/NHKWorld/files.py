@@ -17,7 +17,7 @@ from naphki.video_program import VideoProgram as VideoProgramEndpoint
 from naphki.video_program.models import VideoProgramModel
 
 from app.utils import tz_datetime
-from plugins.utils.base_plugin_v3.files import EndpointFile
+from plugins.utils.base_plugin.files import EndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 if TYPE_CHECKING:

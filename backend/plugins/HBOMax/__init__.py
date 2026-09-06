@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING, override
 from plugins.HBOMax.media import HBOMaxMedia, HBOMaxMovie, HBOMaxSeries
 from plugins.HBOMax.shared import MOVIE_URL_REGEX, SHOW_URL_REGEX, HBOMaxShared
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin_v3.base import BaseReadURL
-from plugins.utils.base_plugin_v3.initialize import BasePluginInitializer
+from plugins.utils.base_plugin.base import BaseReadURL
+from plugins.utils.base_plugin.initialize import BasePluginInitializer
 
 if TYPE_CHECKING:
     from app.shows.models import Show

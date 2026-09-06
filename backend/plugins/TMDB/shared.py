@@ -25,7 +25,7 @@ from plugins.TMDB.utils import (
     get_media_plugin,
     streaming_providers,
 )
-from plugins.utils.base_plugin_v3.files import COMPLETED_STATUS
+from plugins.utils.base_plugin.files import COMPLETED_STATUS
 
 
 def provider_names(file: WatchProvidersFile) -> set[str]:

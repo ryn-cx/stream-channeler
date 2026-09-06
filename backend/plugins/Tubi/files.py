@@ -11,7 +11,7 @@ from plugi.content import Content as ContentEndpoint
 from plugi.content.models import ContentModel
 from plugi.exceptions import ContentNotFoundError
 
-from plugins.utils.base_plugin_v3.files import EndpointFile
+from plugins.utils.base_plugin.files import EndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 

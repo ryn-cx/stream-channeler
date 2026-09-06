@@ -10,8 +10,8 @@ from plugins.NHKWorld.media import NHKWorldMedia
 from plugins.NHKWorld.shared import SHOW_URL_REGEX, NHKWorldShared
 from plugins.NHKWorld.utils import build_url
 from plugins.utils.abstract_plugin import AbstractPlugin
-from plugins.utils.base_plugin_v3.base import BaseReadURL
-from plugins.utils.base_plugin_v3.initialize import BasePluginInitializer
+from plugins.utils.base_plugin.base import BaseReadURL
+from plugins.utils.base_plugin.initialize import BasePluginInitializer
 
 if TYPE_CHECKING:
     from datetime import datetime

@@ -30,7 +30,7 @@ from sqlmodel import Session
 
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
-from plugins.utils.base_plugin_v3.files import EndpointFile, IntegerEndpointFile
+from plugins.utils.base_plugin.files import EndpointFile, IntegerEndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 

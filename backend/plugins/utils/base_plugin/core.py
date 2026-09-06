@@ -16,10 +16,10 @@ from app.files.models import File
 from app.plugins.models import Plugin
 from app.sources.models import Source
 from app.utils import tz_datetime
-from plugins.utils.base_plugin_v3.files import INITIAL_FILE_IDENTIFIER, BaseFile
+from plugins.utils.base_plugin.files import INITIAL_FILE_IDENTIFIER, BaseFile
 
 if TYPE_CHECKING:
-    from plugins.utils.base_plugin_v3.initialize import BasePluginInitializer
+    from plugins.utils.base_plugin.initialize import BasePluginInitializer
 
 FILE_SESSION_KEY = "plugin_file_session"
 

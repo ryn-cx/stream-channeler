@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, override
 
+from app.media.media_type import TMDBMediaType
 from plugins.Hulu.media import HuluMedia, HuluMovie, HuluSeries
 from plugins.Hulu.shared import (
     MOVIE_URL_REGEX,
@@ -10,10 +11,10 @@ from plugins.Hulu.shared import (
     VIDEO_URL_REGEX,
     HuluShared,
 )
+from plugins.Hulu.utils import HuluMediaType, show_url
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin_v3.base import BaseReadURL
-from plugins.utils.base_plugin_v3.initialize import BasePluginInitializer
-from plugins.utils.base_plugin_v3.search import BaseCatalogueSearchMixin
+from plugins.utils.base_plugin.base import BaseReadURL
+from plugins.utils.base_plugin.initialize import BasePluginInitializer
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -22,17 +23,12 @@ if TYPE_CHECKING:
     from app.sources.models import Source
 
 
-class HuluInitializer(BasePluginInitializer, HuluShared):
-    @override
-    def _create_channel_records(self) -> None:
-        # This function shouldn't be inlined because it is the same function used for
-        # source updates.
-        self.add_utls_to_hulu_channel()
+class HuluInitializer(HuluShared, BasePluginInitializer):
+    pass
 
 
 class Hulu(
     HuluShared,
-    BaseCatalogueSearchMixin,
     BaseReadURL,
     AbstractPlugin,
     register=True,
@@ -74,7 +70,39 @@ class Hulu(
             return HuluMovie(self)
         return HuluSeries(self)
 
+    # TODO: Validate
+    @override
+    def search_for_url(
+        self,
+        names: list[str],
+        media_type: TMDBMediaType,
+        year: int | None = None,
+    ) -> str | None:
+        hulu_media_type = (
+            HuluMediaType.MOVIE
+            if media_type == TMDBMediaType.movie
+            else HuluMediaType.SERIES
+        )
+        for group in self.search_file(names[0]).parsed().groups:
+            for result in group.results:
+                if result.metrics_info.target_type == hulu_media_type:
+                    return show_url(result.metrics_info.target_id, hulu_media_type)
+        return None
+
+    # TODO: Validate
     def update_source(self, source: Source, update_at: datetime) -> None:
         self._download_if_outdated(self._source_files(), update_at)
-        self.add_utls_to_hulu_channel()
+        self._create_channel_records()
+        self._mark_changed_shows_for_update()
         self.upsert_source(source.key)
+
+    # TODO: Validate
+    def _mark_changed_shows_for_update(self) -> None:
+        listed_show_keys = self._listed_show_keys()
+        data_timestamp = self.source_data_timestamp()
+        for hulu_source in self._preload_sources(preload_shows=True):
+            for show in hulu_source.shows:
+                is_listed = show.key in listed_show_keys
+                is_deleted = show.deleted_at is not None
+                if is_listed == is_deleted:
+                    show.set_update_at(data_timestamp)

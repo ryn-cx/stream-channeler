@@ -32,8 +32,8 @@ from app.seasons.models import Season
 from app.shows.models import Show, ShowCanonicalShow
 from app.shows.service.canonical import match_show_to_tmdb
 from app.sources.models import Source
-from app.users.constants import PLUGIN_USER_EMAIL
 from app.users.models import User
+from app.users.plugin_user import is_plugin_user
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.manage_plugins import (
@@ -58,7 +58,7 @@ def _channel_inclusion_clause(
     return (
         col(ChannelShow.is_blacklist_only).is_(False)
         & channel_access_condition()
-        & (col(channel_owner.email) != PLUGIN_USER_EMAIL)
+        & ~is_plugin_user(channel_owner.email)
     )
 
 
@@ -247,7 +247,7 @@ def _any_channel_holds_a_title_exists() -> ColumnElement[bool]:
         .select_from(ChannelShow)
         .join(Channel, col(Channel.id) == col(ChannelShow.channel_id))
         .join(channel_owner, col(Channel.user_id) == col(channel_owner.id))
-        .where(col(channel_owner.email) != PLUGIN_USER_EMAIL)
+        .where(~is_plugin_user(channel_owner.email))
         .exists()
     )
 

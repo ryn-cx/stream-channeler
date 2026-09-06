@@ -25,8 +25,7 @@ from app.shows.models import Show
 from app.shows.service.canonical import match_imported_shows_to_tmdb
 from app.sources.models import Source
 from plugins.utils.abstract_plugin import AbstractPlugin, URLImportResult
-from plugins.utils.base_plugin_v2.files import BaseFile
-from plugins.utils.base_plugin_v3.files import BaseFile as BaseFileV3
+from plugins.utils.base_plugin.files import BaseFile
 from plugins.utils.manage_plugins import import_plugins, plugins
 from tests.conftest import init_db, savepoint_session, test_engine
 from tests.plugins.frozen_clock import frozen_clock
@@ -61,7 +60,6 @@ def date_downloads_at_import_time(import_time: datetime) -> Generator[None]:
 
     with (
         patch.object(BaseFile, "download_if_outdated", _download_if_outdated),
-        patch.object(BaseFileV3, "download_if_outdated", _download_if_outdated),
     ):
         yield
 

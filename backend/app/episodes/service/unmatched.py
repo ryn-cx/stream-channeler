@@ -52,8 +52,8 @@ from app.service.filters import _apply_filter_options
 from app.service.sorting import _apply_sort_options
 from app.shows.models import Show, ShowCanonicalShow
 from app.sources.models import Source
-from app.users.constants import PLUGIN_USER_EMAIL
 from app.users.models import User
+from app.users.plugin_user import is_plugin_user
 
 
 # TODO: Validate
@@ -66,7 +66,7 @@ def _in_a_channel() -> ColumnElement[bool]:
         .join(channel_owner, onclause=col(Channel.user_id) == channel_owner.id)
         .where(
             col(ChannelShow.is_blacklist_only).is_(False),
-            col(channel_owner.email) != PLUGIN_USER_EMAIL,
+            ~is_plugin_user(channel_owner.email),
             or_(
                 col(ChannelShow.canonical_show_id).in_(
                     select(ShowCanonicalShow.canonical_show_id)

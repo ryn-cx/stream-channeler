@@ -8,8 +8,8 @@ from plugins.Netflix.media import NetflixMedia, NetflixMovie, NetflixSeries
 from plugins.Netflix.shared import TITLE_URL_REGEX, NetflixShared
 from plugins.Netflix.utils import is_movie
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin_v3.base import BaseReadURL
-from plugins.utils.base_plugin_v3.initialize import BasePluginInitializer
+from plugins.utils.base_plugin.base import BaseReadURL
+from plugins.utils.base_plugin.initialize import BasePluginInitializer
 
 if TYPE_CHECKING:
     from app.shows.models import Show

@@ -74,6 +74,8 @@ class Channel(BaseAdminChannel, TimestampIdAndHashMixin, RootRecordMixin, table=
     user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
     user: User = Relationship(back_populates="channels")
 
+    update_at: datetime | None = DateTimeField(default=None)
+
     shows: list[ChannelShow] = Relationship(
         back_populates="channel",
         cascade_delete=True,

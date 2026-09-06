@@ -23,8 +23,8 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
-from plugins.utils.base_plugin_v3.importer import BaseImporter
-from plugins.utils.base_plugin_v3.url import MediaInfo
+from plugins.utils.base_plugin.importer import BaseImporter
+from plugins.utils.base_plugin.url import MediaInfo
 from plugins.YouTube.constants import LONG_DOMAIN_REGEX, SHORT_DOMAIN_REGEX
 from plugins.YouTube.shared import YouTubeShared
 from plugins.YouTube.utils import (
@@ -59,7 +59,7 @@ if TYPE_CHECKING:
 
     from app.sources.models import Source
     from plugins.utils.abstract_plugin import URLImportResult
-    from plugins.utils.base_plugin_v3.files import BaseFile
+    from plugins.utils.base_plugin.files import BaseFile
     from plugins.YouTube.files import MusicPlaylist, PlaylistFeed
 
 PENDING_UPDATE_STATUS = "Pending update"

@@ -13,7 +13,7 @@ from minbo.movie.models import MovieModel
 from minbo.show import Show as ShowEndpoint
 from minbo.show.models import ShowModel
 
-from plugins.utils.base_plugin_v3.files import EndpointFile
+from plugins.utils.base_plugin.files import EndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 if TYPE_CHECKING:

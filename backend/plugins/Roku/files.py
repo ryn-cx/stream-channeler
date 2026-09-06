@@ -16,7 +16,7 @@ from nana.content import Content as ContentEndpoint
 from nana.content.models import ContentModel
 from nana.exceptions import ContentNotFoundError
 
-from plugins.utils.base_plugin_v3.files import EndpointFile
+from plugins.utils.base_plugin.files import EndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 

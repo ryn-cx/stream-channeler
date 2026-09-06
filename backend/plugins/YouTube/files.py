@@ -35,7 +35,7 @@ from sqlmodel import Session
 
 from app.config import settings
 from app.plugins.models import Plugin
-from plugins.utils.base_plugin_v3.files import (
+from plugins.utils.base_plugin.files import (
     EndpointFile,
     HTMLFile,
     LoadEndpoint,

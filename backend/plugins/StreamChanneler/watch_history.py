@@ -23,7 +23,7 @@ from app.seasons.models import Season
 from app.shows.models import Show
 from app.watches.models import Watch
 from app.watches.schemas import WatchExportEntry, WatchImportResult
-from plugins.utils.base_plugin_v3.watch_history import (
+from plugins.utils.base_plugin.watch_history import (
     BaseWatchHistoryMixin,
     ParsedWatchEntry,
 )

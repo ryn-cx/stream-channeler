@@ -11,8 +11,8 @@ from loguru import logger
 from app.channels.models import URLStatus
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin
-from plugins.utils.base_plugin_v3.base import BaseReadURL
-from plugins.utils.base_plugin_v3.initialize import BasePluginInitializer
+from plugins.utils.base_plugin.base import BaseReadURL
+from plugins.utils.base_plugin.initialize import BasePluginInitializer
 from plugins.YouTube.media import YouTubeMedia
 from plugins.YouTube.shared import YouTubeShared
 from plugins.YouTube.utils import is_quota_error

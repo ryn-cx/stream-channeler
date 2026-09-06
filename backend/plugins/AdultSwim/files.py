@@ -15,7 +15,7 @@ from pools_closed.shows.models import ShowsModel
 from sqlmodel import Session
 
 from app.plugins.models import Plugin
-from plugins.utils.base_plugin_v3.files import EndpointFile
+from plugins.utils.base_plugin.files import EndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 

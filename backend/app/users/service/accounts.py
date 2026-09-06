@@ -10,8 +10,8 @@ from sqlmodel import Session
 from app.auth.schemas import UpdatePassword
 from app.auth.security import get_password_hash, verify_password
 from app.schemas import Message
-from app.users.constants import PLUGIN_USER_EMAIL, PLUGIN_USER_USERNAME
 from app.users.models import User
+from app.users.plugin_user import PLUGIN_USER_EMAIL_DOMAIN, plugin_user_email
 from app.users.schemas import (
     UserCreate,
     UserRegister,
@@ -27,22 +27,20 @@ from app.users.service.lookup import (
 
 
 # TODO: Validate
-def get_or_create_plugin_user(*, session: Session) -> User:
-    """Get or create the user that owns installed plugins."""
-    user = get_user_in_session(session=session, email=PLUGIN_USER_EMAIL)
-    if not user and not (
-        user := get_user_by_email(session=session, email=PLUGIN_USER_EMAIL)
-    ):
+def get_or_create_plugin_user(*, session: Session, plugin_name: str) -> User:
+    email = plugin_user_email(plugin_name)
+    user = get_user_in_session(session=session, email=email)
+    if not user and not (user := get_user_by_email(session=session, email=email)):
         user = create_user(
             session=session,
             user_create=UserCreate(
-                email=PLUGIN_USER_EMAIL,
-                username=PLUGIN_USER_USERNAME,
+                email=email,
+                username=plugin_name,
                 password=secrets.token_urlsafe(32),
                 is_superuser=False,
             ),
         )
-    _remembered_users(session)[PLUGIN_USER_EMAIL.lower()] = user
+    _remembered_users(session)[email.lower()] = user
     return user
 
 
@@ -74,6 +72,15 @@ def update_user(*, session: Session, db_user: User, user_in: UserUpdate) -> User
 
 
 # TODO: Validate
+def _reject_reserved_email(email: str | None) -> None:
+    if email and email.lower().endswith(f"@{PLUGIN_USER_EMAIL_DOMAIN.lower()}"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Email addresses on {PLUGIN_USER_EMAIL_DOMAIN} are reserved",
+        )
+
+
+# TODO: Validate
 def _reject_taken_email_or_username(
     session: Session,
     email: str | None,
@@ -100,6 +107,7 @@ def _reject_taken_email_or_username(
 # TODO: Validate
 def register_user(session: Session, user_in: UserRegister) -> User:
     """Create a `User` from a signup, refusing an address or name already taken."""
+    _reject_reserved_email(user_in.email)
     if get_user_by_email(session=session, email=user_in.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -123,6 +131,7 @@ def update_own_user(
     user_in: UserUpdateMe,
 ) -> User:
     """Update the fields a `User` may set on themselves."""
+    _reject_reserved_email(user_in.email)
     _reject_taken_email_or_username(
         session,
         user_in.email,

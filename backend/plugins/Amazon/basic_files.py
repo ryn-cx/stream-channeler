@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from plugins.Amazon.files import Detail, Search, ShareLinkRedirect
-from plugins.utils.base_plugin_v3.base import BasePlugin
+from plugins.utils.base_plugin.base import BasePlugin
 
 
 # TODO: Validate

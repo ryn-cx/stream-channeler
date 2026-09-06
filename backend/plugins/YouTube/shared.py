@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from datetime import datetime
 
     from app.shows.models import Show
-    from plugins.utils.base_plugin_v3.files import BaseFile
+    from plugins.utils.base_plugin.files import BaseFile
 
 
 # TODO: Validate

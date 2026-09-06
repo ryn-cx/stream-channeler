@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, override
 
 from app.files.models import File
 from plugins.HiDive.files import Schedule, Search, Season, Series, Vod
-from plugins.utils.base_plugin_v3.base import BasePlugin
+from plugins.utils.base_plugin.base import BasePlugin
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

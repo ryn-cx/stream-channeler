@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from app.media.media_type import TMDBMediaType
     from app.shows.models import Show
     from app.sources.models import Source
-    from plugins.utils.base_plugin_v3.files import BaseFile
+    from plugins.utils.base_plugin.files import BaseFile
 
 
 # TODO: Validate

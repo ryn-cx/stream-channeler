@@ -15,7 +15,7 @@ from app.sources.models import Source
 from plugins.NHKWorld.basic_files import BasicFiles
 from plugins.NHKWorld.files import NewVideoEpisodes
 from plugins.NHKWorld.utils import search_url, show_url
-from plugins.utils.base_plugin_v3.files import COMPLETED_STATUS
+from plugins.utils.base_plugin.files import COMPLETED_STATUS
 
 if TYPE_CHECKING:
     from app.channels.models import Channel

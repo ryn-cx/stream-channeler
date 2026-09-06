@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from plugins.AdultSwim.files import ShowPage, ShowsPage
-from plugins.utils.base_plugin_v3.base import BasePlugin
+from plugins.utils.base_plugin.base import BasePlugin
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

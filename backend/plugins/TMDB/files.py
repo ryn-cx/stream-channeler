@@ -10,10 +10,6 @@ from tminidb import TMiniDB
 from tminidb.exceptions import ResourceNotFoundError
 from tminidb.movie.details import MovieDetails as MovieEndpoint
 from tminidb.movie.details.models import MovieDetailsModel
-from tminidb.movie.translations import (
-    MovieTranslations as MovieTranslationsEndpoint,
-)
-from tminidb.movie.translations.models import MovieTranslationsModel
 from tminidb.movie.watch_providers import (
     MovieWatchProviders as MovieWatchProvidersEndpoint,
 )
@@ -24,10 +20,6 @@ from tminidb.search.multi import SearchMulti as SearchMultiEndpoint
 from tminidb.search.multi.models import SearchMultiModel
 from tminidb.search.tv import SearchTv as SearchTvEndpoint
 from tminidb.search.tv.models import SearchTvModel
-from tminidb.tv_episode.translations import (
-    TvEpisodeTranslations as TvEpisodeTranslationsEndpoint,
-)
-from tminidb.tv_episode.translations.models import TvEpisodeTranslationsModel
 from tminidb.tv_episode_group.details import (
     TvEpisodeGroupDetails as TvEpisodeGroupEndpoint,
 )
@@ -58,7 +50,7 @@ from tminidb.tv_series.watch_providers.models import TvSeriesWatchProvidersModel
 from app.config import settings
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
-from plugins.utils.base_plugin_v3.files import (
+from plugins.utils.base_plugin.files import (
     EndpointFile,
     IntegerEndpointFile,
 )
@@ -80,14 +72,6 @@ class MoviesDetails(IntegerEndpointFile[MovieDetailsModel]):
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ResourceNotFoundError)
-
-
-class MoviesTranslations(IntegerEndpointFile[MovieTranslationsModel]):
-    custom_class_key = "Movies/Translations"
-
-    @override
-    def _endpoint(self) -> MovieTranslationsEndpoint:
-        return tminidb().movie.translations
 
 
 class WatchProviders[T](EndpointFile[T], ABC):
@@ -246,39 +230,6 @@ class TVSeasonsDetails(EndpointFile[TvSeasonDetailsModel]):
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(self.tmdb_tv_show_id, self.season_number)
-
-
-class TVEpisodesTranslations(EndpointFile[TvEpisodeTranslationsModel]):
-    custom_class_key = "TV Episodes/Translations"
-
-    @override
-    def _endpoint(self) -> TvEpisodeTranslationsEndpoint:
-        return tminidb().tv_episode.translations
-
-    def __init__(
-        self,
-        session: Session,
-        plugin: Plugin,
-        tmdb_tv_show_id: int,
-        season_number: int,
-        episode_number: int,
-    ) -> None:
-        self.tmdb_tv_show_id = tmdb_tv_show_id
-        self.season_number = season_number
-        self.episode_number = episode_number
-        super().__init__(
-            session=session,
-            plugin=plugin,
-            unique_identifier=f"{tmdb_tv_show_id}/{season_number}/{episode_number}",
-        )
-
-    @override
-    def _download_file(self) -> str:
-        return self._endpoint().download(
-            series_id=self.tmdb_tv_show_id,
-            season_number=self.season_number,
-            episode_number=self.episode_number,
-        )
 
 
 class TVSeriesChanges(EndpointFile[TvSeriesChangesModel]):

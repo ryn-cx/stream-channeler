@@ -10,7 +10,7 @@ from sqlmodel import Session, col, select
 
 from app.files.models import File
 from app.plugins.models import Plugin
-from plugins.utils.base_plugin_v3.files import BaseFile
+from plugins.utils.base_plugin.files import BaseFile
 
 
 # TODO: Validate
@@ -95,6 +95,10 @@ class BaseDownloadMixin(ABC):
             season_key,
             show_key,
         )[0].data_timestamp()
+
+    # TODO: Validate
+    def source_data_timestamp(self) -> datetime:
+        return self._source_files()[0].data_timestamp()
 
     # TODO: Validate
     @staticmethod

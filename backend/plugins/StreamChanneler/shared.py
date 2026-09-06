@@ -6,14 +6,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, override
 
 from plugins.StreamChanneler.watch_history import WatchHistoryMixin
-from plugins.utils.base_plugin_v3.base import BasePlugin
+from plugins.utils.base_plugin.base import BasePlugin
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from app.shows.models import Show
     from app.sources.models import Source
-    from plugins.utils.base_plugin_v3.files import BaseFile
+    from plugins.utils.base_plugin.files import BaseFile
 
 
 # TODO: Validate

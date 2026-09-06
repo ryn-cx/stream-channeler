@@ -9,7 +9,7 @@ from loguru import logger
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.utils import tz_datetime
-from plugins.utils.base_plugin_v3.base import BasePlugin, BaseReadURL
+from plugins.utils.base_plugin.base import BasePlugin, BaseReadURL
 
 if TYPE_CHECKING:
     from app.shows.models import Show

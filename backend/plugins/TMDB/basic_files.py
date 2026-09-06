@@ -7,13 +7,11 @@ from app.files.models import File
 from app.utils import tz_datetime
 from plugins.TMDB.files import (
     MoviesDetails,
-    MoviesTranslations,
     MoviesWatchProviders,
     SearchMovie,
     SearchMulti,
     SearchTV,
     TVEpisodeGroupsDetails,
-    TVEpisodesTranslations,
     TVSeasonsChanges,
     TVSeasonsDetails,
     TVSeasonsWatchProviders,
@@ -23,7 +21,7 @@ from plugins.TMDB.files import (
     TVSeriesImages,
     TVSeriesWatchProviders,
 )
-from plugins.utils.base_plugin_v3.base import BasePlugin
+from plugins.utils.base_plugin.base import BasePlugin
 
 
 class BasicFiles(BasePlugin):
@@ -38,9 +36,6 @@ class BasicFiles(BasePlugin):
 
     def movies_details_file(self, tmdb_movie_id: int) -> MoviesDetails:
         return self._file(MoviesDetails, str(tmdb_movie_id))
-
-    def movies_translations_file(self, tmdb_movie_id: int) -> MoviesTranslations:
-        return self._file(MoviesTranslations, str(tmdb_movie_id))
 
     def tv_series_details_file(self, tmdb_tv_show_id: int) -> TVSeriesDetails:
         return self._file(TVSeriesDetails, tmdb_tv_show_id)
@@ -63,19 +58,6 @@ class BasicFiles(BasePlugin):
         season_number: int,
     ) -> TVSeasonsDetails:
         return self._file(TVSeasonsDetails, tmdb_tv_show_id, season_number)
-
-    def tv_episodes_translations_file(
-        self,
-        tmdb_tv_show_id: int,
-        season_number: int,
-        episode_number: int,
-    ) -> TVEpisodesTranslations:
-        return self._file(
-            TVEpisodesTranslations,
-            tmdb_tv_show_id,
-            season_number,
-            episode_number,
-        )
 
     @overload
     def tv_series_changes_file(

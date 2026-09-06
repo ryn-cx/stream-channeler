@@ -4,7 +4,6 @@
 from collections.abc import Sequence
 from enum import StrEnum
 from typing import Protocol
-from urllib.parse import quote_plus
 
 from chirashi.season_episodes.models import Images as EpisodeImages
 from chirashi.series.models import Images as SeriesImages
@@ -67,12 +66,6 @@ EPISODE_URL_REGEX = build_url_regex("watch", group="episode_key")
 
 
 # TODO: Validate
-def show_is_an_artist(show_key: str) -> bool:
-    """Report whether a `Show` key belongs to an artist rather than a series."""
-    return show_key.startswith("MA")
-
-
-# TODO: Validate
 def show_is_a_series(show_key: str) -> bool:
     """Report whether a `Show` key belongs to a series rather than an artist."""
     return show_key.startswith("G")
@@ -82,12 +75,6 @@ def show_is_a_series(show_key: str) -> bool:
 def season_is_music(season_key: str) -> bool:
     """Report whether a `Season` key is for music."""
     return season_key in set(MusicCategory)
-
-
-# TODO: Validate
-def episode_is_music(episode_key: str) -> bool:
-    """Report whether an `Episode` key belongs to a music video or a concert."""
-    return episode_key.startswith(tuple(CATEGORY_ID_PREFIXES))
 
 
 # TODO: Validate
@@ -101,28 +88,22 @@ def build_url(path: str) -> str:
     return f"https://crunchyroll.com/{path.lstrip('/')}"
 
 
-# TODO: Validate
 def series_url(show_key: str) -> str:
     return build_url(f"series/{show_key}")
 
 
-# TODO: Validate
 def artist_url(show_key: str) -> str:
     return build_url(f"artist/{show_key}")
 
 
 # TODO: Validate
-def episode_url(episode_key: str) -> str:
-    # Crunchyroll files a music video or a concert under the listing it belongs
-    # to, which its id says but the url still has to be told.
-    if episode_is_music(episode_key):
-        return build_url(f"watch/{music_episode_category(episode_key)}/{episode_key}")
+def series_episode_url(episode_key: str) -> str:
     return build_url(f"watch/{episode_key}")
 
 
 # TODO: Validate
-def search_url(query: str) -> str:
-    return build_url(f"search?q={quote_plus(query)}")
+def music_episode_url(category: MusicCategory, episode_key: str) -> str:
+    return build_url(f"watch/{category}/{episode_key}")
 
 
 # TODO: Validate

@@ -13,8 +13,10 @@ from chirashi.artist_music_videos import ArtistMusicVideos as ArtistMusicVideosE
 from chirashi.artist_music_videos.models import ArtistMusicVideosModel
 from chirashi.browse_music import BrowseMusic as BrowseMusicEndpoint
 from chirashi.browse_music.models import BrowseMusicModel
+from chirashi.browse_music.models import Datum as BrowseMusicDatum
 from chirashi.browse_series import Browse as BrowseSeriesEndpoint
 from chirashi.browse_series.models import BrowseSeriesModel
+from chirashi.browse_series.models import Datum as BrowseSeriesDatum
 from chirashi.concert import Concert as ConcertEndpoint
 from chirashi.concert.models import ConcertModel
 from chirashi.exceptions import (
@@ -39,7 +41,7 @@ from chirashi.series.models import Datum as SeriesDatum
 from chirashi.series.models import SeriesModel
 
 from app.utils import tz_datetime
-from plugins.utils.base_plugin_v3.files import EndpointFile, PagedEndpointFile
+from plugins.utils.base_plugin.files import EndpointFile, PagedEndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -108,6 +110,10 @@ class BrowseSeries(PagedEndpointFile[BrowseSeriesModel]):
             end_datetime=self.identifier_datetime(),
         )
 
+    # TODO: Validate
+    def data(self) -> list[BrowseSeriesDatum]:
+        return self._endpoint().extract_data(self.parsed())
+
 
 # TODO: Validate
 class Catalogue(PagedEndpointFile[BrowseSeriesModel]):
@@ -115,9 +121,14 @@ class Catalogue(PagedEndpointFile[BrowseSeriesModel]):
     def _endpoint(self) -> BrowseSeriesEndpoint:
         return chirashi().browse_series
 
+    # TODO: Validate
+    def data(self) -> list[BrowseSeriesDatum]:
+        return self._endpoint().extract_data(self.parsed())
+
+    # TODO: Validate
     @override
     def _next_update_at(self) -> datetime:
-        return tz_datetime.now() + timedelta(days=30)
+        return tz_datetime.now() + timedelta(days=7)
 
     @override
     def _download_pages(self) -> list[str]:
@@ -205,6 +216,10 @@ class BrowseMusic(PagedEndpointFile[BrowseMusicModel]):
     @override
     def _download_pages(self) -> list[str]:
         return self._endpoint().download_all()
+
+    # TODO: Validate
+    def data(self) -> list[BrowseMusicDatum]:
+        return self._endpoint().extract_data(self.parsed())
 
 
 # TODO: Validate

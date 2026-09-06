@@ -13,9 +13,9 @@ from plugins.AdultSwim.shared import (
     AdultSwimShared,
 )
 from plugins.utils.abstract_plugin import AbstractPlugin
-from plugins.utils.base_plugin_v3.base import BaseReadURL
-from plugins.utils.base_plugin_v3.initialize import BasePluginInitializer
-from plugins.utils.base_plugin_v3.search import BaseCatalogueSearchMixin
+from plugins.utils.base_plugin.base import BaseReadURL
+from plugins.utils.base_plugin.initialize import BasePluginInitializer
+from plugins.utils.base_plugin.search import BaseCatalogueSearchMixin
 
 if TYPE_CHECKING:
     from app.plugins.models import Plugin

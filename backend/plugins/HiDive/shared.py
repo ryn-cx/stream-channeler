@@ -21,7 +21,7 @@ from plugins.HiDive.utils import (
     schedule_group_list,
     search_url,
 )
-from plugins.utils.base_plugin_v3.files import COMPLETED_STATUS
+from plugins.utils.base_plugin.files import COMPLETED_STATUS
 
 if TYPE_CHECKING:
     from app.channels.models import Channel

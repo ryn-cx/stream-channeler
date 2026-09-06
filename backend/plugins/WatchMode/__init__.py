@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import override
 
 from plugins.utils.abstract_plugin import AbstractPlugin
-from plugins.utils.base_plugin_v3.initialize import BasePluginInitializer
+from plugins.utils.base_plugin.initialize import BasePluginInitializer
 from plugins.WatchMode.shared import WatchModeShared
 
 

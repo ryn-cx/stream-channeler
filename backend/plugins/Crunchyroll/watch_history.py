@@ -7,8 +7,8 @@ from typing import override
 from app.utils import tz_datetime
 from app.watches.schemas import WatchImportResult
 from plugins.Crunchyroll.shared import CrunchyrollShared
-from plugins.Crunchyroll.utils import episode_url, series_url
-from plugins.utils.base_plugin_v3.watch_history import (
+from plugins.Crunchyroll.utils import series_episode_url, series_url
+from plugins.utils.base_plugin.watch_history import (
     BaseWatchHistoryMixin,
     ParsedWatchEntry,
 )
@@ -31,7 +31,7 @@ class WatchHistoryMixin(BaseWatchHistoryMixin, CrunchyrollShared):
                         entry["panel"]["episode_metadata"]["series_id"],
                     ),
                     episode=entry["panel"]["title"],
-                    episode_url=episode_url(entry["id"]),
+                    episode_url=series_episode_url(entry["id"]),
                 ),
             )
             for entry in json.loads(content)

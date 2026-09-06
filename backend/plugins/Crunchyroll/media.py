@@ -3,14 +3,22 @@ from __future__ import annotations
 
 import re
 from abc import ABC
-from typing import TYPE_CHECKING, Any, override
+from datetime import timedelta
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, override
+
+from loguru import logger
 
 from app.canonical_media.keys import watch_identifier
+from app.channels.service.import_queue import add_urls_to_channel_import_queue
 from app.episodes.models import Episode
+from app.files.models import File
 from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.shows.models import Show
+from app.sources.models import Source
 from app.utils import tz_datetime
+from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries
 from plugins.Crunchyroll.shared import CrunchyrollShared
 from plugins.Crunchyroll.utils import (
     ARTIST_URL_REGEX,
@@ -20,38 +28,61 @@ from plugins.Crunchyroll.utils import (
     MUSIC_SOURCE,
     MUSIC_VIDEO_URL_REGEX,
     SERIES_URL_REGEX,
+    VIDEO_SOURCE,
     MusicCategory,
     artist_url,
     episode_image,
     episode_thumbnail,
-    episode_url,
     largest_image,
+    music_episode_url,
     nearest_thumbnail,
+    series_episode_url,
     series_url,
     show_image,
     show_thumbnail,
+    tenant_category_name,
 )
 from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
-from plugins.utils.base_plugin_v3.importer import BaseImporter
-from plugins.utils.base_plugin_v3.url import MediaInfo
+from plugins.utils.base_plugin.files import COMPLETED_STATUS, INITIAL_FILE_IDENTIFIER
+from plugins.utils.base_plugin.importer import BaseImporter
+from plugins.utils.base_plugin.url import MediaInfo
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from datetime import datetime
 
     from chirashi.artist_concerts.models import Datum as ConcertListingDatum
     from chirashi.artist_music_videos.models import Datum as MusicVideoListingDatum
 
-    from app.sources.models import Source
-    from plugins.utils.base_plugin_v3.files import BaseFile
+    from app.channels.models import Channel
+    from plugins.utils.base_plugin.files import BaseFile
 
 
 # TODO: Validate
 class CrunchyrollMedia(CrunchyrollShared, BaseImporter, ABC):
-    pass
+    _update_interval: ClassVar[timedelta]
+
+    # TODO: Validate
+    @override
+    def upsert_source(self, source_key: str) -> Source:
+        data_timestamp = self._file_timestamps(self._source_files())[0]
+        existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
+        source = Source(
+            key=source_key,
+            name=source_key,
+            favicon_url=self.favicon_url(),
+            data_timestamp=data_timestamp,
+            plugin_id=self.plugin.id,
+        ).upsert(self.plugin, existing_source)
+        source.set_update_at(data_timestamp + self._update_interval)
+        return source
 
 
 # TODO: Validate
 class CrunchyrollSeries(CrunchyrollMedia):
+    __categories_by_show_key: dict[str, list[str]] | None = None
+    _update_interval: ClassVar[timedelta] = timedelta(days=1)
+
     # TODO: Validate
     @classmethod
     @override
@@ -61,7 +92,7 @@ class CrunchyrollSeries(CrunchyrollMedia):
     # TODO: Validate
     @override
     def _url_source(self) -> Source:
-        return self.video_source
+        return self._sources[VIDEO_SOURCE]
 
     # TODO: Validate
     @override
@@ -100,7 +131,7 @@ class CrunchyrollSeries(CrunchyrollMedia):
     # TODO: Validate
     @override
     def tmdb_lookup_info(self, show_key: str) -> list[TMDBLookupInfo]:
-        series_data = self._series_datum(show_key)
+        series_data = self.series_file(show_key).datum()
         return [
             TMDBLookupInfo(
                 series_data.title,
@@ -176,7 +207,7 @@ class CrunchyrollSeries(CrunchyrollMedia):
     ) -> Show:
         show = Show.get_from_memory(self.session, source, show_key)
         if self._show_is_outdated(show, force=force):
-            series_data = self._series_datum(show_key)
+            series_data = self.series_file(show_key).datum()
             data_timestamps = self.show_data_timestamps(show_key)
             new_show = Show(
                 key=series_data.id,
@@ -197,6 +228,7 @@ class CrunchyrollSeries(CrunchyrollMedia):
         self._soft_delete_missing(show_key)
         self._set_weekly_updates_from_episodes(show)
         self.link_show_to_tmdb(show)
+        self.add_show_to_plugin_channels(show)
 
         return show
 
@@ -249,7 +281,7 @@ class CrunchyrollSeries(CrunchyrollMedia):
                 watch_identifier=watch_identifier(self.plugin_name(), episode_data.id),
                 name=episode_data.title,
                 episode_number=episode_data.episode_number,
-                url=episode_url(episode_data.id),
+                url=series_episode_url(episode_data.id),
                 description=episode_data.description,
                 image_url=episode_image(episode_data.images),
                 thumbnail_url=episode_thumbnail(episode_data.images),
@@ -262,9 +294,147 @@ class CrunchyrollSeries(CrunchyrollMedia):
             episode = new_episode.upsert(season, episode)
             episode.set_update_at(None, data_timestamps)
 
+    # TODO: Validate
+    def browse_file(
+        self,
+        browse: datetime | File | Literal["Initial"],
+    ) -> BrowseSeries:
+        """Return data for recently aired shows."""
+        if isinstance(browse, File):
+            return self._file(
+                BrowseSeries,
+                BrowseSeries.file_to_unique_identifier(browse),
+            )
+        return self._file(BrowseSeries, str(browse))
+
+    # TODO: Validate
+    def find_newest_browse_file(self) -> BrowseSeries | None:
+        """Return newest browse series file or None if one does not exist."""
+        if file := self.preload_latest_file(BrowseSeries):
+            return self.browse_file(file)
+        return None
+
+    # TODO: Validate
+    def newest_browse_file(self) -> BrowseSeries:
+        if file := self.find_newest_browse_file():
+            return file
+        initial = self.browse_file(INITIAL_FILE_IDENTIFIER)
+        initial.download_if_outdated()
+        return initial
+
+    # TODO: Validate
+    @override
+    def _source_files(self) -> Sequence[BrowseSeries]:
+        """Return the `Source` files for Crunchyroll video."""
+        return [self.newest_browse_file()]
+
+    # TODO: Validate
+    def add_show_to_plugin_channels(self, show: Show) -> None:
+        if not show.url:
+            msg = "Show.url is not set."
+            raise AttributeError(msg)
+
+        for tenant_category in self._categories_by_show_key().get(show.key, []):
+            category_name = tenant_category_name(tenant_category)
+            self.add_urls_to_plugin_channel(
+                f"{VIDEO_SOURCE} - {category_name}",
+                f"**Every {category_name} series on Crunchyroll.**",
+                [show.url],
+            )
+
+    # TODO: Validate
+    def _categories_by_show_key(self) -> dict[str, list[str]]:
+        if self.__categories_by_show_key is None:
+            categories_by_show_key: dict[str, list[str]] = {}
+            for datum in self.catalogue_file().data():
+                categories_by_show_key[datum.id] = list(
+                    datum.series_metadata.tenant_categories,
+                )
+            self.__categories_by_show_key = categories_by_show_key
+        return self.__categories_by_show_key
+
+    # TODO: Validate
+    def _plugin_channel(self) -> Channel:
+        """Return the plugin owned channel every Crunchyroll series is queued into."""
+        return self.add_urls_to_plugin_channel(
+            VIDEO_SOURCE,
+            "**Every anime from Crunchyroll in a single location.**",
+        )
+
+    # TODO: Validate
+    def create_channel_records(self) -> None:
+        self._process_browse_files()
+        self._process_catalogue_file()
+
+    # TODO: Validate
+    def _process_browse_files(self) -> None:
+        _cache = self._preload_sources(VIDEO_SOURCE, preload_seasons=True).all()
+        for browse_json in self.get_incomplete_files(
+            BrowseSeries,
+            self.browse_file,
+        ):
+            new_series_urls: list[str] = []
+            for release in browse_json.data():
+                if show := Show.get_from_memory(
+                    self.session,
+                    self._sources[VIDEO_SOURCE],
+                    release.id,
+                ):
+                    # last_public appears to represent the last time a public change
+                    # was made to the show's data. There is no way to detect what
+                    # season the update is for so both show and season need to be set
+                    # to be updated because the season will detect new episodes for
+                    # existing seasons and the shows will detect new seasons.
+                    show.set_update_at(release.last_public)
+                    for season in show.seasons:
+                        season.set_update_at(release.last_public)
+                else:
+                    new_series_urls.append(series_url(release.id))
+
+            if new_series_urls:
+                add_urls_to_channel_import_queue(
+                    self.session,
+                    self._plugin_channel(),
+                    new_series_urls,
+                )
+
+            browse_json.database_record.status = COMPLETED_STATUS
+
+    # TODO: Validate
+    def _process_catalogue_file(self) -> None:
+        catalogue = self.catalogue_file().data()
+        _cache = self._preload_sources(VIDEO_SOURCE, preload_seasons=True).all()
+        add_urls_to_channel_import_queue(
+            self.session,
+            self._plugin_channel(),
+            [
+                series_url(datum.id)
+                for datum in catalogue
+                if not Show.get_from_memory(
+                    self.session,
+                    self._sources[VIDEO_SOURCE],
+                    datum.id,
+                )
+            ],
+        )
+
+    # TODO: Validate
+    @override
+    def update_source(self, source: Source, update_at: datetime) -> None:
+        """Look for new series, which the video `Source` is scheduled for daily."""
+        if source.data_timestamp is None:  # Should be impossible.
+            msg = "Cannot update source without a data timestamp."
+            raise ValueError(msg)
+        self.browse_file(source.data_timestamp).download_if_outdated()
+        self.create_channel_records()
+        self.upsert_source(VIDEO_SOURCE)
+
 
 # TODO: Validate
 class CrunchyrollArtist(CrunchyrollMedia):
+    # Check weekly for new music because updates do not need to be frequent.
+    _update_interval: ClassVar[timedelta] = timedelta(days=7)
+
     # TODO: Validate
     @classmethod
     @override
@@ -403,6 +573,7 @@ class CrunchyrollArtist(CrunchyrollMedia):
 
         self._upsert_seasons(show, force=force)
         self._soft_delete_missing(show_key)
+        self.add_show_to_plugin_channels(show)
 
         return show
 
@@ -460,7 +631,7 @@ class CrunchyrollArtist(CrunchyrollMedia):
                 watch_identifier=watch_identifier(self.plugin_name(), episode_key),
                 name=details.title,
                 description=details.description,
-                url=episode_url(episode_key),
+                url=music_episode_url(category, episode_key),
                 image_url=largest_image(details.images.thumbnail),
                 thumbnail_url=nearest_thumbnail(details.images.thumbnail),
                 duration=details.duration_ms // 1000,
@@ -470,3 +641,73 @@ class CrunchyrollArtist(CrunchyrollMedia):
                 season_id=season.id,
             ).upsert(season, episode)
             episode.set_update_at(None, data_timestamps)
+
+    # TODO: Validate
+    def browse_file(self) -> BrowseMusic:
+        """Return data for all of the music."""
+        return self._file(BrowseMusic, "artists")
+
+    # TODO: Validate
+    @override
+    def _source_files(self) -> Sequence[BrowseMusic]:
+        """Return the `Source` files for Crunchyroll music."""
+        return [self.browse_file()]
+
+    # TODO: Validate
+    def add_show_to_plugin_channels(self, show: Show) -> None:
+        if not show.url:
+            msg = "Show.url is not set."
+            raise AttributeError(msg)
+
+        for genre in self.artist_file(show.key).parsed().data[0].genres:
+            self.add_urls_to_plugin_channel(
+                f"{MUSIC_SOURCE} - {genre.display_value}",
+                f"**Every {genre.display_value} artist on Crunchyroll.**",
+                [show.url],
+            )
+
+    # TODO: Validate
+    @staticmethod
+    def _channel_description() -> str:
+        return (Path(__file__).parent / "music_channel_description.md").read_text(
+            encoding="utf-8",
+        )
+
+    # TODO: Validate
+    def _plugin_channel(self) -> Channel:
+        """Return the plugin owned channel every Crunchyroll artist is queued into."""
+        return self.add_urls_to_plugin_channel(
+            MUSIC_SOURCE,
+            self._channel_description(),
+        )
+
+    # TODO: Validate
+    def create_channel_records(self) -> None:
+        artists = self.browse_file().data()
+        _cache = self._preload_sources(MUSIC_SOURCE, preload_seasons=True).all()
+        new_artist_urls: list[str] = []
+        for artist in artists:
+            if show := Show.get_from_memory(
+                self.session,
+                self._sources[MUSIC_SOURCE],
+                artist.id,
+            ):
+                # It's easier to update the show and the artists at the same time.
+                show.set_update_at(artist.updated_at)
+                for season in show.seasons:
+                    season.set_update_at(artist.updated_at)
+            else:
+                new_artist_urls.append(artist_url(artist.id))
+
+        add_urls_to_channel_import_queue(
+            self.session,
+            self._plugin_channel(),
+            new_artist_urls,
+        )
+
+    # TODO: Validate
+    @override
+    def update_source(self, source: Source, update_at: datetime) -> None:
+        self.browse_file().download_if_outdated(update_at)
+        self.create_channel_records()
+        self.upsert_source(MUSIC_SOURCE)

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from plugins.StreamChanneler.shared import StreamChannelerShared
 from plugins.utils.abstract_plugin import AbstractPlugin
-from plugins.utils.base_plugin_v3.initialize import BasePluginInitializer
+from plugins.utils.base_plugin.initialize import BasePluginInitializer
 
 
 # TODO: Validate

@@ -8,7 +8,7 @@ from typing import NamedTuple
 
 from app.episodes.text_matching import TextMatcher
 from app.media.media_type import TMDBMediaType
-from plugins.utils.base_plugin_v2.base import BasePlugin
+from plugins.utils.base_plugin.base import BasePlugin
 
 
 # TODO: Validate
@@ -34,7 +34,8 @@ class BaseCatalogueSearchMixin(BasePlugin, ABC):
     # TODO: Validate
     @classmethod
     def tmdb_media_type_to_plugin_media_type(
-        cls, media_type: TMDBMediaType
+        cls,
+        media_type: TMDBMediaType,
     ) -> tuple[str, ...]:
         """Return what this website files TMDB's `media_type` under.
 
@@ -55,6 +56,10 @@ class BaseCatalogueSearchMixin(BasePlugin, ABC):
         media_type: TMDBMediaType,
         year: int | None = None,  # noqa: ARG002 - `year` refines a search.
     ) -> str | None:
+        """Get the URL of the best matching title.
+
+        The default implementation assumes that the database has every title on the
+        website already imported."""
         wanted = self.tmdb_media_type_to_plugin_media_type(media_type)
         candidates = [show for show in self._named_shows() if show.media_type in wanted]
         if not candidates:

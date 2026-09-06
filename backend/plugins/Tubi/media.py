@@ -34,8 +34,8 @@ from plugins.Tubi.utils import (
     split_season_key,
 )
 from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
-from plugins.utils.base_plugin_v3.importer import BaseImporter
-from plugins.utils.base_plugin_v3.url import MediaInfo
+from plugins.utils.base_plugin.importer import BaseImporter
+from plugins.utils.base_plugin.url import MediaInfo
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     from plugi.content.models import ContentModel
 
     from app.sources.models import Source
-    from plugins.utils.base_plugin_v3.files import BaseFile
+    from plugins.utils.base_plugin.files import BaseFile
 
 
 # TODO: Validate

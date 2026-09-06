@@ -6,13 +6,14 @@ from __future__ import annotations
 import inspect
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
+from datetime import timedelta
 from functools import cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple
 
 from pydantic import BaseModel, Field
 
-from app.channels.models import ChannelQueue
+from app.channels.models import Channel, ChannelQueue
 from app.episodes.models import Episode
 from app.files.models import File
 from app.media.media_type import TMDBMediaType
@@ -21,6 +22,7 @@ from app.plugins.schemas import TMDBMediaInfo
 from app.seasons.models import Season
 from app.shows.models import Show
 from app.sources.models import Source
+from app.utils import tz_datetime
 from app.watches.schemas import WatchImportResults
 from plugins.utils.manage_plugins import register_plugins
 
@@ -232,6 +234,10 @@ class AbstractPlugin(ABC):
 
         """
         show.update_at = None
+
+    # TODO: Validate
+    def update_channel(self, channel: Channel) -> None:
+        channel.update_at = tz_datetime.now() + timedelta(days=1)
 
     # TODO: Validate
     def update_season(self, season: Season) -> None:

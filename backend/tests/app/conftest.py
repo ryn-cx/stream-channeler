@@ -5,8 +5,7 @@ from typing import Any
 
 import pytest
 
-from plugins.utils.base_plugin_v2.files import BaseFile
-from plugins.utils.base_plugin_v3.files import BaseFile as BaseFileV3
+from plugins.utils.base_plugin.files import BaseFile
 
 
 # TODO: Validate
@@ -23,4 +22,3 @@ def _block_file_downloads(monkeypatch: pytest.MonkeyPatch) -> None:
         return
 
     monkeypatch.setattr(BaseFile, "download_if_outdated", _no_download)
-    monkeypatch.setattr(BaseFileV3, "download_if_outdated", _no_download)

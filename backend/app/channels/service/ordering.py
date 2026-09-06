@@ -8,6 +8,7 @@ from uuid import UUID
 
 from sqlmodel import Session, col, delete, select
 
+from app.channel_orders.models import ChannelOrder
 from app.channels.models import (
     Channel,
     ChannelSavedEpisodeOrder,
@@ -144,6 +145,20 @@ def _season_sort_key(season: Season) -> tuple[bool, int, str]:
         season.season_number if season.season_number is not None else season.sort_order
     )
     return number is None, number or 0, str(season.id)
+
+
+# TODO: Validate
+def order_preset_options(session: Session, preset_name: str) -> str | None:
+    order = session.exec(
+        select(ChannelOrder).where(ChannelOrder.name == preset_name),
+    ).first()
+    if order is None:
+        return None
+    return ChannelOptions(order_preset_id=order.id).model_dump_json(
+        by_alias=True,
+        exclude_defaults=True,
+        exclude={"random_seed"},
+    )
 
 
 # TODO: Validate

@@ -38,7 +38,7 @@ from plugins.Amazon.utils import (
     widget_episode_available,
 )
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin_v3.files import (
+from plugins.utils.base_plugin.files import (
     DownloadedFile,
     EndpointFile,
     TextFile,

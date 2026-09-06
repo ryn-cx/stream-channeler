@@ -18,7 +18,7 @@ from app.sources.models import Source
 from plugins.AdultSwim.basic_files import BasicFiles
 from plugins.AdultSwim.constants import FREE, SUBSCRIPTION
 from plugins.AdultSwim.utils import show_url
-from plugins.utils.base_plugin_v3.files import COMPLETED_STATUS
+from plugins.utils.base_plugin.files import COMPLETED_STATUS
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

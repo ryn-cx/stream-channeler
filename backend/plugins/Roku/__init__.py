@@ -8,8 +8,8 @@ from plugins.Roku.media import RokuMedia, RokuMovie, RokuSeries
 from plugins.Roku.shared import DETAILS_URL_REGEX, WATCH_URL_REGEX, RokuShared
 from plugins.Roku.utils import is_movie
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin_v3.base import BaseReadURL
-from plugins.utils.base_plugin_v3.initialize import BasePluginInitializer
+from plugins.utils.base_plugin.base import BaseReadURL
+from plugins.utils.base_plugin.initialize import BasePluginInitializer
 
 if TYPE_CHECKING:
     from app.shows.models import Show
