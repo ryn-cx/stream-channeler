@@ -27,13 +27,11 @@ export function SourceFavicons({
               <img
                 referrerPolicy="no-referrer"
                 src={source.favicon_url}
-                alt={`${source.source_name} favicon`}
+                alt={`${source.source_key} favicon`}
                 className="size-6 shrink-0"
               />
             </TooltipTrigger>
-            <TooltipContent>
-              {source.source_name ?? "Unknown source"}
-            </TooltipContent>
+            <TooltipContent>{source.source_key}</TooltipContent>
           </Tooltip>
         )
       })}

@@ -101,7 +101,7 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
   },
 
   {
-    accessorFn: (row) => row.source.name,
+    accessorFn: (row) => row.source.key,
     id: "source",
     header: "Source",
     cell: ({ row }) => {
@@ -115,11 +115,11 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
             <img
               referrerPolicy="no-referrer"
               src={source.favicon_url}
-              alt={`${source.name} favicon`}
+              alt={`${source.key} favicon`}
               className="size-4"
             />
           )}
-          <span className="text-muted-foreground">{source.name ?? ""}</span>
+          <span className="text-muted-foreground">{source.key}</span>
           <SourceAdminLink sourceId={source.id} />
         </div>
       )

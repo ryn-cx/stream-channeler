@@ -80,6 +80,26 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         return channel
 
     # TODO: Validate
+    def _channel_name(self, subject: str) -> str:
+        return f"{subject} on {self.source_name()}"
+
+    # TODO: Validate
+    def _channel_description(self, subject: str) -> str:
+        return f"All {subject.removeprefix('All ')} titles on {self.source_name()}."
+
+    # TODO: Validate
+    def _add_urls_to_channel_by_prefix(
+        self,
+        urls: Sequence[str],
+        channel_prefix: str,
+    ) -> None:
+        channel = self.get_or_create_channel(
+            self._channel_name(channel_prefix),
+            self._channel_description(channel_prefix),
+        )
+        self.add_new_urls_to_channel(channel, urls)
+
+    # TODO: Validate
     def add_new_urls_to_channel(self, channel: Channel, urls: Sequence[str]) -> None:
         urls_not_on_channel = self._urls_not_on_channel(channel, urls)
         add_urls_to_channel_import_queue(self.session, channel, urls_not_on_channel)
@@ -107,11 +127,6 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
             ).all(),
         )
         return [url for url in urls if url not in on_channel_urls]
-
-    # TODO: Validate
-    def mark_title_for_linking(self, title: Title) -> None:
-        title.link_status = None
-        self.session.add(title)
 
     # TODO: Validate
     @classmethod

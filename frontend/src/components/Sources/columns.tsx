@@ -27,12 +27,12 @@ export const sourceColumns: ColumnDef<SourceTableData>[] = [
     ),
   },
   {
-    accessorKey: "name",
-    header: "Name",
+    accessorKey: "key",
+    header: "Key",
     cell: ({ row }) =>
       row.original.pending ? (
         <span className="font-medium text-muted-foreground block max-w-48 whitespace-normal wrap-break-word">
-          {row.original.name || `No Name (${row.original.key})`}
+          {row.original.key}
         </span>
       ) : (
         <div className="flex items-center gap-2">
@@ -41,7 +41,7 @@ export const sourceColumns: ColumnDef<SourceTableData>[] = [
             search={{ source_id: row.original.id }}
             className="font-medium text-primary hover:underline block max-w-48 whitespace-normal wrap-break-word"
           >
-            {row.original.name || `No Name (${row.original.key})`}
+            {row.original.key}
           </Link>
           <TooltipIconLink label="Seasons">
             <Link

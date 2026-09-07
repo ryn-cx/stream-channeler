@@ -167,9 +167,7 @@ class HiDiveSeries(HiDiveImporter):
             title.set_update_at(None, data_timestamps)
 
         self._upsert_seasons(title, force=force)
-        self._set_weekly_updates_from_episodes(title)
         self._soft_delete_missing(title_key)
-        self.mark_title_for_linking(title)
 
         return title
 
@@ -198,6 +196,7 @@ class HiDiveSeries(HiDiveImporter):
                 season.set_update_at(None, data_timestamps)
 
             self._upsert_episodes(season, title.key, force=force)
+            self._set_season_update_at_based_on_last_episode(season)
 
     # TODO: Validate
     def _upsert_episodes(
@@ -343,7 +342,6 @@ class HiDiveMovie(HiDiveImporter):
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing(title_key)
-        self.mark_title_for_linking(title)
 
         return title
 

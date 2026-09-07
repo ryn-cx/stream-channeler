@@ -501,7 +501,7 @@ export function EpisodeFilters({
   })
 
   const availableSources = [...(sourcesQuery.data ?? [])].sort((a, b) =>
-    (a.name ?? "").localeCompare(b.name ?? ""),
+    a.key.localeCompare(b.key),
   )
 
   const mutation = useMutation({
@@ -1383,7 +1383,7 @@ export function EpisodeFilters({
                                       <img
                                         referrerPolicy="no-referrer"
                                         src={source.favicon_url}
-                                        alt={`${source.name} favicon`}
+                                        alt={`${source.key} favicon`}
                                         className="size-4"
                                       />
                                     )}
@@ -1391,7 +1391,7 @@ export function EpisodeFilters({
                                       htmlFor={checkboxId}
                                       className="text-sm font-normal cursor-pointer flex-1"
                                     >
-                                      {source.name ?? source.id}
+                                      {source.key}
                                     </Label>
                                   </div>
                                 )

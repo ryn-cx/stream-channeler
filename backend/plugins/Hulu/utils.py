@@ -124,12 +124,3 @@ def title_plan(page: TVModel | MoviesModel) -> tuple[str, bool] | None:
     return bundle.network_name, is_subscription
 
 
-# TODO: Validate
-def get_channel_name(subject: str) -> str:
-    return f"{subject} on Hulu"
-
-
-# TODO: Validate
-def get_channel_description(subject: str) -> str:
-    return f"All {subject.removeprefix('All ')} titles on Hulu."
-

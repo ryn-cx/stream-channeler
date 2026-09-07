@@ -268,7 +268,7 @@ export function AISuggestions({
       (preference) =>
         preference.enabled && preference.source_key !== OTHER_SOURCE_KEY,
     )
-    .map((preference) => preference.name ?? preference.source_key)
+    .map((preference) => preference.source_key)
 
   const titles = channelTitles?.titles ?? []
   const grouped = titles.length > 0 ? groupTitles(titles) : null

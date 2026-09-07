@@ -28,7 +28,7 @@ export function groupBySource(sources: WhitelistSourceOutput[]): SourceGroup[] {
   for (const source of sources) {
     const group = groups.get(source.source_id) ?? {
       sourceId: source.source_id,
-      sourceName: source.source_name,
+      sourceName: source.source_key,
       faviconUrl: source.favicon_url,
       isTmdb: source.is_tmdb ?? false,
       rows: [],

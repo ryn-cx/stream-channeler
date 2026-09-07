@@ -1038,16 +1038,9 @@ export const ChannelEpisodeSourceSchema = {
             format: 'uuid',
             title: 'Plugin Id'
         },
-        name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
+        key: {
+            type: 'string',
+            title: 'Key'
         },
         favicon_url: {
             anyOf: [
@@ -1062,7 +1055,7 @@ export const ChannelEpisodeSourceSchema = {
         }
     },
     type: 'object',
-    required: ['plugin_id'],
+    required: ['plugin_id', 'key'],
     title: 'ChannelEpisodeSource'
 } as const;
 
@@ -3146,16 +3139,9 @@ export const EpisodeListOutputSchema = {
             format: 'uuid',
             title: 'Source Id'
         },
-        source_name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Source Name'
+        source_key: {
+            type: 'string',
+            title: 'Source Key'
         },
         plugin_id: {
             type: 'string',
@@ -3175,7 +3161,7 @@ export const EpisodeListOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'id', 'season_id', 'modified_at', 'season_name', 'title_id', 'title_name', 'source_id', 'source_name', 'plugin_id', 'plugin_name'],
+    required: ['key', 'id', 'season_id', 'modified_at', 'season_name', 'title_id', 'title_name', 'source_id', 'source_key', 'plugin_id', 'plugin_name'],
     title: 'EpisodeListOutput',
     description: 'Schema for returning a list of `Episode`s, with parent information.'
 } as const;
@@ -4500,20 +4486,13 @@ export const IssueReportListOutputSchema = {
             ],
             title: 'Title Name'
         },
-        source_name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Source Name'
+        source_key: {
+            type: 'string',
+            title: 'Source Key'
         }
     },
     type: 'object',
-    required: ['id', 'report', 'created_at', 'modified_at', 'user_id', 'media_type', 'media_id', 'media_name', 'season_name', 'title_name', 'source_name'],
+    required: ['id', 'report', 'created_at', 'modified_at', 'user_id', 'media_type', 'media_id', 'media_name', 'season_name', 'title_name', 'source_key'],
     title: 'IssueReportListOutput',
     description: 'Schema for returning an `IssueReport` alongside the record it was left on.'
 } as const;
@@ -5279,16 +5258,9 @@ export const SeasonListOutputSchema = {
             format: 'uuid',
             title: 'Source Id'
         },
-        source_name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Source Name'
+        source_key: {
+            type: 'string',
+            title: 'Source Key'
         },
         plugin_id: {
             type: 'string',
@@ -5308,7 +5280,7 @@ export const SeasonListOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'title_id', 'id', 'title_name', 'source_id', 'source_name', 'plugin_id', 'plugin_name'],
+    required: ['key', 'title_id', 'id', 'title_name', 'source_id', 'source_key', 'plugin_id', 'plugin_name'],
     title: 'SeasonListOutput',
     description: 'Schema for returning a list of `Season`s, with parent information.'
 } as const;
@@ -5667,16 +5639,10 @@ export const SourceListPublicSchema = {
             type: 'object',
             title: 'Extra'
         },
-        name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
+        link_to_tmdb: {
+            type: 'boolean',
+            title: 'Link To Tmdb',
+            default: true
         },
         favicon_url: {
             anyOf: [
@@ -5755,17 +5721,6 @@ export const SourcePreferenceOutputSchema = {
             type: 'boolean',
             title: 'Enabled',
             default: true
-        },
-        name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
         },
         favicon_url: {
             anyOf: [
@@ -5847,16 +5802,10 @@ export const SourcePublicSchema = {
             type: 'object',
             title: 'Extra'
         },
-        name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
+        link_to_tmdb: {
+            type: 'boolean',
+            title: 'Link To Tmdb',
+            default: true
         },
         favicon_url: {
             anyOf: [
@@ -6249,16 +6198,9 @@ export const TitleListPublicSchema = {
             ],
             title: 'Plugin Name'
         },
-        source_name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Source Name'
+        source_key: {
+            type: 'string',
+            title: 'Source Key'
         },
         plugin_id: {
             type: 'string',
@@ -6267,7 +6209,7 @@ export const TitleListPublicSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'source_id', 'id', 'plugin_name', 'source_name', 'plugin_id'],
+    required: ['key', 'source_id', 'id', 'plugin_name', 'source_key', 'plugin_id'],
     title: 'TitleListPublic',
     description: 'Schema for returning a list of `Title`s, with parent information.'
 } as const;
@@ -7422,16 +7364,9 @@ export const UnvalidatedTitleOutputSchema = {
             ],
             title: 'Plugin Name'
         },
-        source_name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Source Name'
+        source_key: {
+            type: 'string',
+            title: 'Source Key'
         },
         plugin_id: {
             type: 'string',
@@ -7456,7 +7391,7 @@ export const UnvalidatedTitleOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'source_id', 'id', 'plugin_name', 'source_name', 'plugin_id', 'linked_titles', 'episode_count', 'created_at'],
+    required: ['key', 'source_id', 'id', 'plugin_name', 'source_key', 'plugin_id', 'linked_titles', 'episode_count', 'created_at'],
     title: 'UnvalidatedTitleOutput',
     description: `A \`Title\` whose canonical titles no \`User\` has validated.
 
@@ -8980,16 +8915,9 @@ export const WhitelistSourceOutputSchema = {
             format: 'uuid',
             title: 'Source Id'
         },
-        source_name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Source Name'
+        source_key: {
+            type: 'string',
+            title: 'Source Key'
         },
         favicon_url: {
             anyOf: [
@@ -9016,7 +8944,7 @@ export const WhitelistSourceOutputSchema = {
         }
     },
     type: 'object',
-    required: ['title_id', 'source_id', 'source_name', 'favicon_url', 'title', 'filtered'],
+    required: ['title_id', 'source_id', 'source_key', 'favicon_url', 'title', 'filtered'],
     title: 'WhitelistSourceOutput',
     description: "One website's row for the title, and whether it is filtered."
 } as const;
@@ -9847,7 +9775,14 @@ export const tminidb__movie__details__strict_models__BelongsToCollectionSchema =
             title: 'Poster Path'
         },
         backdrop_path: {
-            type: 'string',
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Backdrop Path'
         }
     },
@@ -10366,6 +10301,20 @@ export const tminidb__movie__watch_providers__optional_models__UsSchema = {
             ],
             title: 'Link'
         },
+        flatrate: {
+            anyOf: [
+                {
+                    items: {
+                        '$ref': '#/components/schemas/tminidb__movie__watch_providers__optional_models__FlatrateItem'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Flatrate'
+        },
         ads: {
             anyOf: [
                 {
@@ -10393,20 +10342,6 @@ export const tminidb__movie__watch_providers__optional_models__UsSchema = {
                 }
             ],
             title: 'Rent'
-        },
-        flatrate: {
-            anyOf: [
-                {
-                    items: {
-                        '$ref': '#/components/schemas/tminidb__movie__watch_providers__optional_models__FlatrateItem'
-                    },
-                    type: 'array'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Flatrate'
         },
         buy: {
             anyOf: [
@@ -10567,6 +10502,20 @@ export const tminidb__movie__watch_providers__strict_models__UsSchema = {
             type: 'string',
             title: 'Link'
         },
+        flatrate: {
+            anyOf: [
+                {
+                    items: {
+                        '$ref': '#/components/schemas/tminidb__movie__watch_providers__strict_models__FlatrateItem'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Flatrate'
+        },
         ads: {
             anyOf: [
                 {
@@ -10594,20 +10543,6 @@ export const tminidb__movie__watch_providers__strict_models__UsSchema = {
                 }
             ],
             title: 'Rent'
-        },
-        flatrate: {
-            anyOf: [
-                {
-                    items: {
-                        '$ref': '#/components/schemas/tminidb__movie__watch_providers__strict_models__FlatrateItem'
-                    },
-                    type: 'array'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Flatrate'
         },
         buy: {
             anyOf: [
@@ -11051,7 +10986,9 @@ export const tminidb__tv_series__details__optional_models__NextEpisodeToAirSchem
         },
         runtime: {
             anyOf: [
-                {},
+                {
+                    type: 'integer'
+                },
                 {
                     type: 'null'
                 }
@@ -11917,7 +11854,14 @@ export const tminidb__tv_series__details__strict_models__NextEpisodeToAirSchema 
             title: 'Production Code'
         },
         runtime: {
-            type: 'null',
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Runtime'
         },
         season_number: {
@@ -12251,7 +12195,7 @@ export const tminidb__tv_series__details__strict_models__TvSeriesDetailsModelSch
     title: 'TvSeriesDetailsModel'
 } as const;
 
-export const tminidb__tv_series__watch_providers__optional_models__Ad1Schema = {
+export const tminidb__tv_series__watch_providers__optional_models__AdSchema = {
     properties: {
         logo_path: {
             anyOf: [
@@ -12299,7 +12243,7 @@ export const tminidb__tv_series__watch_providers__optional_models__Ad1Schema = {
         }
     },
     type: 'object',
-    title: 'Ad1'
+    title: 'Ad'
 } as const;
 
 export const tminidb__tv_series__watch_providers__optional_models__BuyItemSchema = {
@@ -12468,20 +12412,6 @@ export const tminidb__tv_series__watch_providers__optional_models__UsSchema = {
             ],
             title: 'Link'
         },
-        buy: {
-            anyOf: [
-                {
-                    items: {
-                        '$ref': '#/components/schemas/tminidb__tv_series__watch_providers__optional_models__BuyItem'
-                    },
-                    type: 'array'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Buy'
-        },
         flatrate: {
             anyOf: [
                 {
@@ -12496,11 +12426,25 @@ export const tminidb__tv_series__watch_providers__optional_models__UsSchema = {
             ],
             title: 'Flatrate'
         },
+        buy: {
+            anyOf: [
+                {
+                    items: {
+                        '$ref': '#/components/schemas/tminidb__tv_series__watch_providers__optional_models__BuyItem'
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Buy'
+        },
         ads: {
             anyOf: [
                 {
                     items: {
-                        '$ref': '#/components/schemas/tminidb__tv_series__watch_providers__optional_models__Ad1'
+                        '$ref': '#/components/schemas/tminidb__tv_series__watch_providers__optional_models__Ad'
                     },
                     type: 'array'
                 },
@@ -12529,7 +12473,7 @@ export const tminidb__tv_series__watch_providers__optional_models__UsSchema = {
     title: 'Us'
 } as const;
 
-export const tminidb__tv_series__watch_providers__strict_models__Ad1Schema = {
+export const tminidb__tv_series__watch_providers__strict_models__AdSchema = {
     properties: {
         logo_path: {
             type: 'string',
@@ -12550,7 +12494,7 @@ export const tminidb__tv_series__watch_providers__strict_models__Ad1Schema = {
     },
     type: 'object',
     required: ['logo_path', 'provider_id', 'provider_name', 'display_priority'],
-    title: 'Ad1'
+    title: 'Ad'
 } as const;
 
 export const tminidb__tv_series__watch_providers__strict_models__BuyItemSchema = {
@@ -12631,6 +12575,13 @@ export const tminidb__tv_series__watch_providers__strict_models__UsSchema = {
             type: 'string',
             title: 'Link'
         },
+        flatrate: {
+            items: {
+                '$ref': '#/components/schemas/tminidb__tv_series__watch_providers__strict_models__FlatrateItem'
+            },
+            type: 'array',
+            title: 'Flatrate'
+        },
         buy: {
             anyOf: [
                 {
@@ -12645,18 +12596,11 @@ export const tminidb__tv_series__watch_providers__strict_models__UsSchema = {
             ],
             title: 'Buy'
         },
-        flatrate: {
-            items: {
-                '$ref': '#/components/schemas/tminidb__tv_series__watch_providers__strict_models__FlatrateItem'
-            },
-            type: 'array',
-            title: 'Flatrate'
-        },
         ads: {
             anyOf: [
                 {
                     items: {
-                        '$ref': '#/components/schemas/tminidb__tv_series__watch_providers__strict_models__Ad1'
+                        '$ref': '#/components/schemas/tminidb__tv_series__watch_providers__strict_models__Ad'
                     },
                     type: 'array'
                 },

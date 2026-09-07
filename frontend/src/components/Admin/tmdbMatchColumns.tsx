@@ -79,7 +79,7 @@ const NOTHING_TO_AGREE_WITH: Numbered = {
 
 /** As much of one side of a row as the summary column reads. */
 interface Summarised extends Numbered {
-  source_name: string | null
+  source_key: string
   plugin_name: string | null
   title_name: string | null
   title_year: number | null
@@ -221,12 +221,12 @@ function MatchSummary({
             search={{ source_id: record.source_id }}
             className="hover:underline"
           >
-            {record.source_name ?? "Unknown source"}
+            {record.source_key}
             {record.plugin_name ? ` · ${record.plugin_name}` : ""}
           </Link>
         ) : (
           <>
-            {record.source_name ?? "Unknown source"}
+            {record.source_key}
             {record.plugin_name ? ` · ${record.plugin_name}` : ""}
           </>
         )}
@@ -347,7 +347,7 @@ function choiceSummarised(
 ): Summarised | null {
   if (!match) return null
   return {
-    source_name: match.source.name ?? null,
+    source_key: match.source.key,
     plugin_name: match.source.plugin_name ?? null,
     source_id: null,
     title_id: match.title.id,
@@ -368,7 +368,7 @@ function choiceSummarised(
 // TODO: Validate
 function episodeSummarised(row: UnmatchedEpisodeOutput): Summarised {
   return {
-    source_name: row.source.name ?? null,
+    source_key: row.source.key,
     plugin_name: row.source.plugin_name ?? null,
     source_id: row.source.id,
     title_id: row.title.id,
@@ -730,8 +730,8 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
     ),
   },
   {
-    id: "source_name",
-    accessorFn: (row) => row.source.name ?? "Unknown source",
+    id: "source_key",
+    accessorFn: (row) => row.source.key,
     header: "Source",
     meta: { filterVariant: "select" },
     filterFn: "equalsString",
@@ -742,7 +742,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
           search={{ source_id: row.original.source.id }}
           className="hover:underline"
         >
-          {row.original.source.name ?? "Unknown source"}
+          {row.original.source.key}
         </Link>
       </WrappingCell>
     ),

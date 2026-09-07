@@ -19,7 +19,6 @@ from plugins.Hulu.utils import (
     HuluMediaType,
     build_season_key,
     episode_url,
-    get_channel_name,
     image_url,
     season_items,
     season_numbers,
@@ -69,14 +68,13 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
         if plan:
             network, is_subscription = plan
             if is_subscription:
-                source_key = get_channel_name(network)
+                source_key = self._channel_name(network)
 
         if source_key not in self._sources:
             self._sources[source_key] = self.upsert_source(source_key)
 
         return self._sources[source_key]
 
-    # TODO: Validate
     def add_title_to_plugin_channels(self, title: Title) -> None:
         if not title.url:  # Should be impossible.
             msg = "Title.url is not set."
@@ -84,13 +82,13 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
 
         page = self._title_files(title.key)[0].parsed()
         plan = title_plan(page)
-        self._add_urls_to_subject_channel([title.url], "All Titles")
-        self._add_urls_to_subject_channel([title.url], self._media_type_name())
+        self._add_urls_to_channel_by_prefix([title.url], "All Titles")
+        self._add_urls_to_channel_by_prefix([title.url], self._media_type_name())
         if plan:
             network, _ = plan
-            self._add_urls_to_subject_channel([title.url], network)
+            self._add_urls_to_channel_by_prefix([title.url], network)
         for genre in page.details.entity.genre_names:
-            self._add_urls_to_subject_channel([title.url], genre)
+            self._add_urls_to_channel_by_prefix([title.url], genre)
 
 
 class HuluSeriesImporter(HuluImporter):
@@ -212,7 +210,6 @@ class HuluSeriesImporter(HuluImporter):
 
         self._upsert_seasons(existing_title, force=force)
         self._soft_delete_missing(title_key)
-        self.mark_title_for_linking(existing_title)
         self.add_title_to_plugin_channels(existing_title)
 
         return existing_title
@@ -377,7 +374,6 @@ class HuluMovieImporter(HuluImporter):
 
         self._upsert_season(title, force=force)
         self._soft_delete_missing(title_key)
-        self.mark_title_for_linking(title)
         self.add_title_to_plugin_channels(title)
 
         return title

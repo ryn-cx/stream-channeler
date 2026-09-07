@@ -60,16 +60,16 @@ function SourceFavicon({
       loading="lazy"
       decoding="async"
       src={source.favicon_url}
-      alt={`${source.name} favicon`}
+      alt={`${source.key} favicon`}
       className={`size-8 shrink-0${disabled ? " opacity-40 grayscale" : ""}`}
     />
   )
-  if (!source.name) return favicon
+  if (!source.key) return favicon
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>{favicon}</TooltipTrigger>
-      <TooltipContent>{source.name}</TooltipContent>
+      <TooltipContent>{source.key}</TooltipContent>
     </Tooltip>
   )
 }

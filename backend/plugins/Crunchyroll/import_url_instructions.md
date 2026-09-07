@@ -1,4 +1,3 @@
-<!-- TODO: Validate -->
 > [!TIP/Series]
 > `https://www.crunchyroll.com/series/GEXH3W29Z`
 > `https://www.crunchyroll.com/series/GEXH3W29Z/compass20-animation-project`

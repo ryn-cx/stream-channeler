@@ -270,7 +270,7 @@ class ChannelEpisodeSource(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     plugin_id: uuid.UUID
-    name: str | None = Field(default=None)
+    key: str
     favicon_url: str | None = Field(default=None)
 
 

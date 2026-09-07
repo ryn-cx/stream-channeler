@@ -58,10 +58,10 @@ export function DetailBreadcrumb({
   if (source) {
     crumbs.push({
       key: "source",
-      label: source.name || source.key,
+      label: source.key,
       link: (
         <Link to="/titles" search={{ source_id: source.id }}>
-          {source.name || source.key}
+          {source.key}
         </Link>
       ),
     })

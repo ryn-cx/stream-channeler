@@ -7,8 +7,8 @@ import { DuplicatedCanonicalEpisodeLinks } from "./DuplicatedCanonicalEpisodeLin
 export const duplicatedCanonicalEpisodeColumns: ColumnDef<DuplicatedCanonicalEpisodeOutput>[] =
   [
     {
-      id: "source_name",
-      accessorFn: (row) => row.source.name ?? "",
+      id: "source_key",
+      accessorFn: (row) => row.source.key,
       header: "Colliding Source",
       meta: { filterVariant: "select" },
       filterFn: "equalsString",
@@ -96,8 +96,8 @@ export const duplicatedCanonicalEpisodeColumns: ColumnDef<DuplicatedCanonicalEpi
       filterFn: "equalsString",
     },
     {
-      id: "canonical_source_name",
-      accessorFn: (row) => row.canonical.source.name ?? "",
+      id: "canonical_source_key",
+      accessorFn: (row) => row.canonical.source.key,
       header: "Canonical Source",
       meta: { filterVariant: "select" },
       filterFn: "equalsString",

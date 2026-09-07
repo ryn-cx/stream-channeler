@@ -25,13 +25,13 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
     ),
   },
   {
-    accessorKey: "source_name",
+    accessorKey: "source_key",
     header: "Source",
     cell: ({ row }) => (
       <ParentLinkCell
         to="/titles"
         search={{ source_id: row.original.source_id }}
-        name={row.original.source_name}
+        name={row.original.source_key}
       />
     ),
   },

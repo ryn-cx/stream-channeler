@@ -32,31 +32,6 @@ class BaseUpdateMixin(BaseSoftDeleteMixin, ABC):
                     title.set_update_at(min(data_timestamps), [])
 
     # TODO: Validate
-    def _set_weekly_updates_from_episodes(
-        self,
-        title: Title,
-        *,
-        update_title: bool = True,
-        update_seasons: bool = True,
-    ) -> None:
-        """Set update_at on the `Title`/`Season` based on `Episode.air_date`.
-
-        `update_at` will be set to be a week after the latest `Episode.air_date` if
-        that is a better `update_at` value than the current `update_at` value.
-        """
-        preload_episodes(self.session, [title])
-        title_data_timestamps = self.title_data_timestamps(title.key)
-        for season in title.active_children:
-            season_data_timestamps = self.season_data_timestamps(season.key, title.key)
-            for episode in season.active_children:
-                if episode.air_date:
-                    update_at = episode.air_date + timedelta(days=7)
-                    if update_seasons:
-                        season.set_update_at(update_at, season_data_timestamps)
-                    if update_title:
-                        title.set_update_at(update_at, title_data_timestamps)
-
-    # TODO: Validate
     def _set_season_update_at_based_on_last_episode(self, season: Season) -> None:
         if not season.data_timestamp:  # Should be impossible
             msg = f"Record {season.key} has no data_timestamp"
@@ -71,7 +46,15 @@ class BaseUpdateMixin(BaseSoftDeleteMixin, ABC):
                     episode.air_date + timedelta(days=7),
                     data_timestamps,
                 )
-
+                # Buffer days due to possible timestamp offsets
+                season.set_update_at(
+                    episode.air_date + timedelta(days=8),
+                    data_timestamps,
+                )
+                season.set_update_at(
+                    episode.air_date + timedelta(days=9),
+                    data_timestamps,
+                )
         season.set_update_at(
             staggered_monthly_update_at(season.key, min(data_timestamps)),
             data_timestamps,

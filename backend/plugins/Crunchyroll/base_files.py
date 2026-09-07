@@ -5,6 +5,7 @@ from plugins.Crunchyroll.files import (
     ArtistConcerts,
     ArtistMusicVideos,
     Catalogue,
+    Categories,
     Concert,
     MusicVideo,
     Objects,
@@ -23,6 +24,10 @@ class CrunchyrollBaseFiles(BasePlugin):
 
     def series_file(self, title_key: str) -> Series:
         return self._file(Series, title_key)
+
+    # TODO: Validate
+    def categories_file(self, title_key: str) -> Categories:
+        return self._file(Categories, title_key)
 
     def objects_file(self, episode_key: str) -> Objects:
         return self._file(Objects, episode_key)

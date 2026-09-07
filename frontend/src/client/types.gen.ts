@@ -208,7 +208,7 @@ export type ChannelEpisodeSeason = {
 
 export type ChannelEpisodeSource = {
     plugin_id: string;
-    name?: (string | null);
+    key: string;
     favicon_url?: (string | null);
 };
 
@@ -664,7 +664,7 @@ export type EpisodeListOutput = {
     title_id: string;
     title_name: (string | null);
     source_id: string;
-    source_name: (string | null);
+    source_key: string;
     plugin_id: string;
     plugin_name: (string | null);
 };
@@ -916,7 +916,7 @@ export type IssueReportListOutput = {
     media_name: (string | null);
     season_name: (string | null);
     title_name: (string | null);
-    source_name: (string | null);
+    source_key: string;
 };
 
 /**
@@ -1108,7 +1108,7 @@ export type SeasonListOutput = {
     tmdb_url?: (string | null);
     title_name: (string | null);
     source_id: string;
-    source_name: (string | null);
+    source_key: string;
     plugin_id: string;
     plugin_name: (string | null);
 };
@@ -1189,7 +1189,7 @@ export type SourceListPublic = {
     extra?: {
         [key: string]: unknown;
     };
-    name?: (string | null);
+    link_to_tmdb?: boolean;
     favicon_url?: (string | null);
     image_url?: (string | null);
     plugin_id: string;
@@ -1205,7 +1205,6 @@ export type SourcePreference = {
 export type SourcePreferenceOutput = {
     source_key: string;
     enabled?: boolean;
-    name?: (string | null);
     favicon_url?: (string | null);
     episode_count: number;
 };
@@ -1222,7 +1221,7 @@ export type SourcePublic = {
     extra?: {
         [key: string]: unknown;
     };
-    name?: (string | null);
+    link_to_tmdb?: boolean;
     favicon_url?: (string | null);
     image_url?: (string | null);
     plugin_id: string;
@@ -1293,7 +1292,7 @@ export type TitleListPublic = {
     tmdb_id?: (number | null);
     tmdb_url?: (string | null);
     plugin_name: (string | null);
-    source_name: (string | null);
+    source_key: string;
     plugin_id: string;
 };
 
@@ -1465,7 +1464,7 @@ export type tminidb__movie__details__strict_models__BelongsToCollection = {
     id: number;
     name: string;
     poster_path: string;
-    backdrop_path: string;
+    backdrop_path: (string | null);
 };
 
 export type tminidb__movie__details__strict_models__Genre = {
@@ -1558,9 +1557,9 @@ export type tminidb__movie__watch_providers__optional_models__RentItem = {
 
 export type tminidb__movie__watch_providers__optional_models__Us = {
     link?: (string | null);
+    flatrate?: (Array<tminidb__movie__watch_providers__optional_models__FlatrateItem> | null);
     ads?: (Array<tminidb__movie__watch_providers__optional_models__Ad> | null);
     rent?: (Array<tminidb__movie__watch_providers__optional_models__RentItem> | null);
-    flatrate?: (Array<tminidb__movie__watch_providers__optional_models__FlatrateItem> | null);
     buy?: (Array<tminidb__movie__watch_providers__optional_models__BuyItem> | null);
     free?: (Array<tminidb__movie__watch_providers__optional_models__FreeItem> | null);
 };
@@ -1602,9 +1601,9 @@ export type tminidb__movie__watch_providers__strict_models__RentItem = {
 
 export type tminidb__movie__watch_providers__strict_models__Us = {
     link: string;
+    flatrate?: (Array<tminidb__movie__watch_providers__strict_models__FlatrateItem> | null);
     ads?: (Array<tminidb__movie__watch_providers__strict_models__Ad> | null);
     rent?: (Array<tminidb__movie__watch_providers__strict_models__RentItem> | null);
-    flatrate?: (Array<tminidb__movie__watch_providers__strict_models__FlatrateItem> | null);
     buy?: (Array<tminidb__movie__watch_providers__strict_models__BuyItem> | null);
     free?: (Array<tminidb__movie__watch_providers__strict_models__FreeItem> | null);
 };
@@ -1656,7 +1655,7 @@ export type tminidb__tv_series__details__optional_models__NextEpisodeToAir = {
     episode_number?: (number | null);
     episode_type?: (string | null);
     production_code?: (string | null);
-    runtime?: (unknown | null);
+    runtime?: (number | null);
     season_number?: (number | null);
     show_id?: (number | null);
     still_path?: (unknown | null);
@@ -1774,7 +1773,7 @@ export type tminidb__tv_series__details__strict_models__NextEpisodeToAir = {
     episode_number: number;
     episode_type: string;
     production_code: string;
-    runtime: null;
+    runtime: (number | null);
     season_number: number;
     show_id: number;
     still_path: null;
@@ -1845,7 +1844,7 @@ export type tminidb__tv_series__details__strict_models__TvSeriesDetailsModel = {
     vote_count: number;
 };
 
-export type tminidb__tv_series__watch_providers__optional_models__Ad1 = {
+export type tminidb__tv_series__watch_providers__optional_models__Ad = {
     logo_path?: (string | null);
     provider_id?: (number | null);
     provider_name?: (string | null);
@@ -1875,13 +1874,13 @@ export type tminidb__tv_series__watch_providers__optional_models__FreeItem = {
 
 export type tminidb__tv_series__watch_providers__optional_models__Us = {
     link?: (string | null);
-    buy?: (Array<tminidb__tv_series__watch_providers__optional_models__BuyItem> | null);
     flatrate?: (Array<tminidb__tv_series__watch_providers__optional_models__FlatrateItem> | null);
-    ads?: (Array<tminidb__tv_series__watch_providers__optional_models__Ad1> | null);
+    buy?: (Array<tminidb__tv_series__watch_providers__optional_models__BuyItem> | null);
+    ads?: (Array<tminidb__tv_series__watch_providers__optional_models__Ad> | null);
     free?: (Array<tminidb__tv_series__watch_providers__optional_models__FreeItem> | null);
 };
 
-export type tminidb__tv_series__watch_providers__strict_models__Ad1 = {
+export type tminidb__tv_series__watch_providers__strict_models__Ad = {
     logo_path: string;
     provider_id: number;
     provider_name: string;
@@ -1911,9 +1910,9 @@ export type tminidb__tv_series__watch_providers__strict_models__FreeItem = {
 
 export type tminidb__tv_series__watch_providers__strict_models__Us = {
     link: string;
-    buy?: (Array<tminidb__tv_series__watch_providers__strict_models__BuyItem> | null);
     flatrate: Array<tminidb__tv_series__watch_providers__strict_models__FlatrateItem>;
-    ads?: (Array<tminidb__tv_series__watch_providers__strict_models__Ad1> | null);
+    buy?: (Array<tminidb__tv_series__watch_providers__strict_models__BuyItem> | null);
+    ads?: (Array<tminidb__tv_series__watch_providers__strict_models__Ad> | null);
     free?: (Array<tminidb__tv_series__watch_providers__strict_models__FreeItem> | null);
 };
 
@@ -2037,7 +2036,7 @@ export type UnvalidatedTitleOutput = {
     tmdb_id?: (number | null);
     tmdb_url?: (string | null);
     plugin_name: (string | null);
-    source_name: (string | null);
+    source_key: string;
     plugin_id: string;
     linked_titles: Array<UnvalidatedLinkedTitleOutput>;
     episode_count: number;
@@ -2353,7 +2352,7 @@ export type WhitelistSeasonOutput = {
 export type WhitelistSourceOutput = {
     title_id: string;
     source_id: string;
-    source_name: (string | null);
+    source_key: string;
     favicon_url: (string | null);
     title: TitlePublic;
     filtered: boolean;

@@ -5,21 +5,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
-from app.sources.models import Source
 from app.utils.strict_re import strict_search
 from plugins.Hulu.base_files import HuluBaseFiles
 from plugins.Hulu.utils import (
     HuluMediaType,
-    get_channel_description,
-    get_channel_name,
     search_url,
     title_url,
     title_urls,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     from wholoo.all_movies.models import AllMoviesModel
     from wholoo.all_series.models import AllSeriesModel
     from wholoo.genre.models import GenreModel
@@ -53,17 +48,7 @@ class HuluShared(HuluBaseFiles):
 
     # TODO: Validate
     def _create_channel_records(self) -> None:
-        self._add_urls_to_subject_channel(self._all_title_urls(), "All Titles")
-
-    def _add_urls_to_subject_channel(
-        self,
-        urls: Sequence[str],
-        channel_suffix: str,
-    ) -> None:
-        channel_name = get_channel_name(channel_suffix)
-        channel_description = get_channel_description(channel_suffix)
-        channel = self.get_or_create_channel(channel_name, channel_description)
-        self.add_new_urls_to_channel(channel, urls)
+        self._add_urls_to_channel_by_prefix(self._all_title_urls(), "All Titles")
 
     def _all_title_urls(self) -> list[str]:
         self._download_if_outdated(self._plugin_files())

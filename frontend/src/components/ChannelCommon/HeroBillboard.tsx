@@ -95,7 +95,7 @@ export function HeroBillboard({
             {episode.air_date && (
               <span>{new Date(episode.air_date).toLocaleDateString()}</span>
             )}
-            {episode.source.name && <span>{episode.source.name}</span>}
+            {episode.source.key && <span>{episode.source.key}</span>}
           </div>
 
           <div className="flex flex-wrap items-center gap-2 md:gap-3 mt-1 md:mt-2">

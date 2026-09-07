@@ -254,7 +254,7 @@ export function SeasonEpisodes({
                           className="flex-1 text-left text-sm hover:underline"
                           onClick={() => toggleLinkInformation(link.episode_id)}
                         >
-                          {linkSource?.source_name ?? "Unknown source"}
+                          {linkSource?.source_key ?? "Unknown source"}
                         </button>
                         <ExternalMediaLink
                           url={link.url}

@@ -16,6 +16,8 @@ from chirashi.browse_music.models import Datum as BrowseMusicDatum
 from chirashi.browse_series import Browse as BrowseSeriesEndpoint
 from chirashi.browse_series.models import BrowseSeriesModel
 from chirashi.browse_series.models import Datum as BrowseSeriesDatum
+from chirashi.categories import Categories as CategoriesEndpoint
+from chirashi.categories.models import CategoriesModel
 from chirashi.concert import Concert as ConcertEndpoint
 from chirashi.concert.models import ConcertModel
 from chirashi.exceptions import (
@@ -54,6 +56,16 @@ class Series(EndpointFile[SeriesModel]):
         return chirashi().series
 
     # Occurs when a user puts in an invalid series URL.
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, SeriesNotFoundError)
+
+
+class Categories(EndpointFile[CategoriesModel]):
+    @override
+    def _endpoint(self) -> CategoriesEndpoint:
+        return chirashi().categories
+
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, SeriesNotFoundError)

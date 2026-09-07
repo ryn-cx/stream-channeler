@@ -539,7 +539,6 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
 
         self._upsert_seasons_series(title, title_key, force=force)
         self._soft_delete_missing(title_key)
-        self.mark_title_for_linking(title)
 
         return title
 
@@ -607,8 +606,6 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
 
         self._upsert_seasons_channel(title, title_key, force=force)
         self._soft_delete_missing(title_key)
-        if self.is_movies_channel(title_key):
-            self.mark_title_for_linking(title)
 
         return title
 
@@ -663,7 +660,6 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
 
         self._upsert_season_movie(title, title_key, force=force)
         self._soft_delete_missing(title_key)
-        self.mark_title_for_linking(title)
 
         return title
 

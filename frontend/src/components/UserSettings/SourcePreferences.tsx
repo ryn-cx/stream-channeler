@@ -24,7 +24,7 @@ function sourceLabel(preference: SourcePreferenceOutput): string {
   if (preference.source_key === OTHER_SOURCE_KEY) {
     return "Other (custom media)"
   }
-  return preference.name ?? preference.source_key
+  return preference.source_key
 }
 
 // TODO: Validate
@@ -63,7 +63,7 @@ const SourcePreferences = () => {
 
   const visible = preferences.filter(
     (preference) =>
-      preference.episode_count > 0 || preference.source_key === "CustomMedia",
+      preference.episode_count > 0 || preference.source_key === "Custom Media",
   )
 
   // TODO: Validate

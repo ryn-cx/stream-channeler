@@ -71,7 +71,7 @@ export const columns: ColumnDef<EpisodeWithDetails>[] = [
   },
 
   {
-    accessorKey: "source.name",
+    accessorKey: "source.key",
     header: "Source",
     cell: ({ row }) => {
       const { source } = row.original
@@ -84,11 +84,11 @@ export const columns: ColumnDef<EpisodeWithDetails>[] = [
             <img
               referrerPolicy="no-referrer"
               src={source.favicon_url}
-              alt={`${source.name} favicon`}
+              alt={`${source.key} favicon`}
               className="size-4"
             />
           )}
-          <span className="text-muted-foreground">{source.name ?? ""}</span>
+          <span className="text-muted-foreground">{source.key}</span>
         </div>
       )
     },

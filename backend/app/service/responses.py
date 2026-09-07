@@ -140,6 +140,23 @@ def scoped_row_output[SchemaT: SQLModel](
 
 
 # TODO: Validate
+def _default_sorts(
+    model: Any,  # noqa: ANN401 - Any listed model, keyed by the columns read off it.
+    favorite_count: Any,  # noqa: ANN401 - The favorite-count expression, or None.
+    scope: RecordScope,
+    *,
+    random_tiebreaker: bool,
+) -> list[Any]:
+    if favorite_count is None:
+        if scope == RecordScope.public:
+            return [model.score, model.created_at]
+        return [model.created_at]
+    if random_tiebreaker:
+        return [favorite_count, model.score]
+    return [favorite_count, model.score, model.created_at]
+
+
+# TODO: Validate
 def scoped_list_response[ResponseT: BaseModel](  # noqa: PLR0913
     *,
     session: Session,
@@ -168,15 +185,14 @@ def scoped_list_response[ResponseT: BaseModel](  # noqa: PLR0913
         base = base.outerjoin(counts, counts.c.record_id == model.id)
         favorite_count = func.coalesce(counts.c.favorite_count, 0)
         extra_columns["favorite_count"] = favorite_count
-    default_sorts: list[Any]
-    if favorite_count is None:
-        default_sorts = [model.created_at]
-    else:
-        default_sorts = [favorite_count, model.score, model.created_at]
+    default_sorts = _default_sorts(
+        model,
+        favorite_count,
+        read_options.scope,
+        random_tiebreaker=random_tiebreaker,
+    )
     if read_options.scope == RecordScope.public:
         base = base.where(model.visibility == Visibility.public)
-        if favorite_count is None:
-            default_sorts = [model.score, model.created_at]
     elif read_options.scope == RecordScope.owned:
         if viewer is None:
             raise HTTPException(

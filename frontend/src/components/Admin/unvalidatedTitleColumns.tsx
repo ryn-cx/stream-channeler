@@ -39,8 +39,8 @@ export const unvalidatedTitleColumns: ColumnDef<UnvalidatedTitleOutput>[] = [
     filterFn: "equalsString",
   },
   {
-    id: "source_name",
-    accessorFn: (row) => row.source_name ?? "",
+    id: "source_key",
+    accessorFn: (row) => row.source_key,
     header: "Source",
     meta: { filterVariant: "select" },
     filterFn: "equalsString",

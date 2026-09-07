@@ -186,7 +186,6 @@ class TubiSeries(TubiImporter):
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing(title_key)
-        self.mark_title_for_linking(title)
 
         return title
 
@@ -332,7 +331,6 @@ class TubiMovie(TubiImporter):
 
         self._upsert_season(title, force=force)
         self._soft_delete_missing(title_key)
-        self.mark_title_for_linking(title)
 
         return title
 

@@ -87,11 +87,6 @@ def build_url(path: str) -> str:
 
 
 # TODO: Validate
-def tenant_category_name(tenant_category: str) -> str:
-    return " ".join(word.capitalize() for word in tenant_category.split("-"))
-
-
-# TODO: Validate
 class CrunchyrollSizedImage(Protocol):
     width: int
     source: str

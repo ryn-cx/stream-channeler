@@ -37,13 +37,7 @@ from app.plugins.models import Plugin
 from app.utils import tz_datetime
 from plugins.Hulu.utils import episode_url
 from plugins.utils.base_plugin.files import EndpointFile, TextFile
-
-
-# TODO: This is a temporary importing workaround.
-# from plugins.utils.get_around_client import get_around_client
-@cache
-def get_around_client() -> GetAround:
-    return GetAround(proxy=settings.PROXY)
+from plugins.utils.get_around_client import get_around_client
 
 
 @cache

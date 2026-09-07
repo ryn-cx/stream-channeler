@@ -36,7 +36,7 @@ export function CardSourceRow({
           <img
             referrerPolicy="no-referrer"
             src={episode.source.favicon_url}
-            alt={episode.source.name ?? undefined}
+            alt={episode.source.key}
             className="size-6"
           />
         )}

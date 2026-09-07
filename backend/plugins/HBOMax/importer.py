@@ -170,8 +170,6 @@ class HBOMaxSeries(HBOMaxImporter):
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing(title_key)
-        self._set_weekly_updates_from_episodes(title, update_title=False)
-        self.mark_title_for_linking(title)
 
         return title
 
@@ -196,6 +194,7 @@ class HBOMaxSeries(HBOMaxImporter):
                 season.set_update_at(None, data_timestamps)
 
             self._upsert_episodes(season, title.key, season_number, force=force)
+            self._set_season_update_at_based_on_last_episode(season)
 
     # TODO: Validate
     def _upsert_episodes(
@@ -345,8 +344,6 @@ class HBOMaxMovie(HBOMaxImporter):
 
         self._upsert_season(title, content, force=force)
         self._soft_delete_missing(title_key)
-        self._set_weekly_updates_from_episodes(title, update_title=False)
-        self.mark_title_for_linking(title)
 
         return title
 
@@ -373,6 +370,7 @@ class HBOMaxMovie(HBOMaxImporter):
             season.set_update_at(None, data_timestamps)
 
         self._upsert_episode(season, title.key, content, force=force)
+        self._set_season_update_at_based_on_last_episode(season)
 
     # TODO: Validate
     def _upsert_episode(

@@ -100,7 +100,6 @@ class TMDBImporter(TMDBExternalWebsites, BaseImporter):
 
         if not existing_title:
             existing_title = self.upsert_title(self.source, media_info.title_key)
-            self.mark_title_for_linking(existing_title)
 
         return self._import_results(existing_title, media_info)
 
@@ -440,7 +439,6 @@ class TMDBSeries(TMDBImporter):
         self.upsert_title(title.source, title.key, force=force)
         self.download_new_watch_providers_file(title)
         self.sync_title_watch_providers(title.key)
-        self.mark_title_for_linking(title)
 
     # TODO: Validate
     @override
@@ -616,7 +614,6 @@ class TMDBMovie(TMDBImporter):
         super().update_title(title, force=force)
         self.download_new_watch_providers_file(title)
         self.sync_title_watch_providers(title.key)
-        self.mark_title_for_linking(title)
 
     # TODO: Validate
     @override

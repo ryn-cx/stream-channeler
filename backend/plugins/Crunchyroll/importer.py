@@ -1,4 +1,3 @@
-# TODO: Validate
 from __future__ import annotations
 
 import re
@@ -33,7 +32,6 @@ from plugins.Crunchyroll.utils import (
     is_movie,
     largest_image,
     nearest_thumbnail,
-    tenant_category_name,
     title_image,
     title_thumbnail,
 )
@@ -77,15 +75,12 @@ class CrunchyrollImporter(CrunchyrollShared, BaseImporter, ABC):
         return source
 
 
-# TODO: Validate
 class CrunchyrollAnimeImporter(CrunchyrollImporter):
     """Plugin for handling Crunchyroll anime and live-action series.
 
     Named CrunchyRollAnime because the majority of the titles it handles will be anime
     and this name makes it as clear as possible that it does not import music content.
     """
-
-    __categories_by_title_key: dict[str, list[str]] | None = None
 
     @classmethod
     @override
@@ -107,7 +102,6 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
     def _url_regexes(cls) -> tuple[str, ...]:
         return (SERIES_URL_REGEX, EPISODE_URL_REGEX)
 
-    # TODO: Validate
     @override
     def get_media_info(self, url: str) -> URLTitleInfo:
         domain_regex = self._domain_regex()
@@ -122,7 +116,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
             self.raise_if_invalid_file(objects_file, url)
 
             # Episodes for different regions have different keys. The title is always
-            # imported for the original region for consistency.
+            # imported using the original region for consistency.
             for version in objects_file.parsed().data[0].episode_metadata.versions:
                 if version.original:
                     episode_key = version.guid
@@ -138,7 +132,6 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
-    @override
     def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
         series_data = self.series_file(title_key).parsed().data[0]
         media_type = TMDBMediaType.movie if is_movie(series_data) else TMDBMediaType.tv
@@ -152,6 +145,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
             self.seasons_file(title_key),
             # Required to detect changes to the title.
             self.series_file(title_key),
+            self.categories_file(title_key),
         ]
 
     @override
@@ -197,7 +191,6 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
             for episode in self.season_episodes_file(season_key).parsed().data
         ]
 
-    # TODO: Validate
     @override
     def upsert_title(
         self,
@@ -227,13 +220,10 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing(title_key)
-        self._set_weekly_updates_from_episodes(title)
-        self.mark_title_for_linking(title)
         self.add_title_to_plugin_channels(title)
 
         return title
 
-    # TODO: Validate
     def _upsert_seasons(self, title: Title, *, force: bool = False) -> None:
         seasons_file = self.seasons_file(title.key)
         for sort_order, season_data in enumerate(seasons_file.parsed().data):
@@ -307,42 +297,24 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
             )
         return self._file(BrowseSeries, str(browse))
 
-    # TODO: Validate
     def newest_browse_file(self) -> BrowseSeries:
         if file := self.preload_latest_file(BrowseSeries):
             return self.browse_file(file)
-        initial = self.browse_file(INITIAL_FILE_IDENTIFIER)
-        initial.download_if_outdated()
-        return initial
+        newest_browse_file = self.browse_file(INITIAL_FILE_IDENTIFIER)
+        newest_browse_file.download_if_outdated()
+        return newest_browse_file
 
     @override
     def _source_files(self) -> Sequence[BrowseSeries]:
         return [self.newest_browse_file()]
 
-    # TODO: Validate
     def add_title_to_plugin_channels(self, title: Title) -> None:
         if not title.url: # This should not be possible.
             msg = "Title.url is not set."
             raise AttributeError(msg)
 
-        for tenant_category in self._categories_by_title_key().get(title.key, []):
-            category_name = tenant_category_name(tenant_category)
-            channel = self.get_or_create_channel(
-                f"{self.source_name()} - {category_name}",
-                f"**Every {category_name} series on Crunchyroll.**",
-            )
-            self.add_new_urls_to_channel(channel, [title.url])
-
-    # TODO: Validate
-    def _categories_by_title_key(self) -> dict[str, list[str]]:
-        if self.__categories_by_title_key is None:
-            categories_by_title_key: dict[str, list[str]] = {}
-            for datum in self.catalogue_file().datums():
-                categories_by_title_key[datum.id] = list(
-                    datum.series_metadata.tenant_categories,
-                )
-            self.__categories_by_title_key = categories_by_title_key
-        return self.__categories_by_title_key
+        for datum in self.categories_file(title.key).parsed().data:
+            self._add_urls_to_channel_by_prefix([title.url], datum.localization.title)
 
     def create_channel_records(self) -> None:
         self._create_channel_records_from_file(self.catalogue_file().datums())
@@ -359,7 +331,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
         new_urls = [self.title_url(release.id) for release in releases]
         self.add_new_urls_to_channel(channel, new_urls)
 
-    def _mark_series_as_outdated(self, releases: list[BrowseSeriesDatum]) -> None:
+    def _mark_new_titles_as_outdated(self, releases: list[BrowseSeriesDatum]) -> None:
         _cache = self._preload_sources(self.source_name(), preload_seasons=True).all()
         for release in releases:
             if title := Title.get_from_memory(
@@ -376,13 +348,12 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
                 for season in title.seasons:
                     season.set_update_at(release.last_public, [])
 
-    # TODO: Validate
     @override
     def update_source(self, source: Source, update_at: datetime) -> None:
         browse_file = self.newest_browse_file()
         browse_file.download_if_outdated()
         self.create_channel_records()
-        self._mark_series_as_outdated(browse_file.datums())
+        self._mark_new_titles_as_outdated(browse_file.datums())
         self._mark_mismatched_titles_as_outdated(
             self.source_name(),
             {release.id for release in self.catalogue_file().datums()},
@@ -612,11 +583,7 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
             raise AttributeError(msg)
 
         for genre in self.artist_file(title.key).parsed().data[0].genres:
-            channel = self.get_or_create_channel(
-                f"{self.source_name()} - {genre.display_value}",
-                f"**Every {genre.display_value} artist on Crunchyroll.**",
-            )
-            self.add_new_urls_to_channel(channel, [title.url])
+            self._add_urls_to_channel_by_prefix([title.url], genre.display_value)
 
     def create_channel_records(self) -> None:
         channel = self.get_or_create_channel(

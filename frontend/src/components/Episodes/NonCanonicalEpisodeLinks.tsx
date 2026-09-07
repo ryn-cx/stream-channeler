@@ -87,7 +87,7 @@ export function NonCanonicalEpisodeLinks({
                   {linked.name ?? "Unnamed"}
                 </Link>
                 <span className="block text-xs text-muted-foreground">
-                  {linked.source_name ?? linked.plugin_name ?? linked.key}
+                  {linked.source_key ?? linked.plugin_name ?? linked.key}
                 </span>
               </span>
               <EditEpisode episode={linked} />

@@ -130,7 +130,6 @@ class NHKWorldImporter(NHKWorldShared, BaseImporter):
 
         self._upsert_season(title, title_key, force=force)
         self._soft_delete_missing(title_key)
-        self.mark_title_for_linking(title)
 
         return title
 
