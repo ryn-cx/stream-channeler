@@ -55,7 +55,6 @@ if TYPE_CHECKING:
 
 
 class CrunchyrollImporter(CrunchyrollShared, BaseImporter, ABC):
-    # TODO: Should this be part of the base plugin instead?
     @classmethod
     @abstractmethod
     def _source_update_interval(cls) -> timedelta: ...
@@ -66,7 +65,6 @@ class CrunchyrollImporter(CrunchyrollShared, BaseImporter, ABC):
         existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
         source = Source(
             key=source_key,
-            name=source_key,
             favicon_url=self.favicon_url(),
             link_to_tmdb=self.link_to_tmdb(),
             data_timestamp=max(data_timestamps),
@@ -111,7 +109,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
 
     # TODO: Validate
     @override
-    def extract_media_info(self, url: str) -> URLTitleInfo:
+    def get_media_info(self, url: str) -> URLTitleInfo:
         domain_regex = self._domain_regex()
         if match := re.match(domain_regex + SERIES_URL_REGEX, url):
             title_key = match.group("title_key")
@@ -230,7 +228,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing(title_key)
         self._set_weekly_updates_from_episodes(title)
-        self.link_title_to_tmdb(title)
+        self.mark_title_for_linking(title)
         self.add_title_to_plugin_channels(title)
 
         return title
@@ -428,7 +426,7 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
 
     # TODO: Validate
     @override
-    def extract_media_info(self, url: str) -> URLTitleInfo:
+    def get_media_info(self, url: str) -> URLTitleInfo:
         domain_regex = self._domain_regex()
         for url_regex, group in (
             (MUSIC_VIDEO_URL_REGEX, "music_video_key"),
@@ -649,7 +647,7 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
 
     @override
     def update_source(self, source: Source, update_at: datetime) -> None:
-        logger.info("Updating Source: {}", source.name)
+        logger.info("Updating Source: {}", source.key)
         self._download_if_outdated(self._source_files(), update_at)
         artists = self.browse_file().datums()
         self.create_channel_records()

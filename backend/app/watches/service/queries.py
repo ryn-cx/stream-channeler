@@ -166,7 +166,7 @@ def get_watched_episodes(
         current_user=user,
         extra_columns={
             "plugin": col(Plugin.key),
-            "source": col(Source.name),
+            "source": col(Source.key),
             "title": col(Title.name),
             "season": col(Season.name),
             "episode": col(Episode.name),

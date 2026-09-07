@@ -102,7 +102,7 @@ class Hulu(
         self._download_if_outdated(self._plugin_files(), plugin.update_at)
         self._create_channel_records()
         data_timestamps = self.plugin_data_timestamps()
-        new_titles = self._title_keys_from_all_xxx_files()
+        new_titles = self._all_title_keys()
         self._mark_mismatched_titles_as_outdated(None, new_titles, data_timestamps)
         plugin.data_timestamp = max(data_timestamps)
         plugin.update_at = staggered_monthly_update_at(plugin.key, tz_datetime.now())

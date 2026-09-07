@@ -36,7 +36,7 @@ class NHKWorldImporter(NHKWorldShared, BaseImporter):
 
     # TODO: Validate
     @override
-    def extract_media_info(self, url: str) -> URLTitleInfo:
+    def get_media_info(self, url: str) -> URLTitleInfo:
         if match := re.match(self._domain_regex() + TITLE_URL_REGEX, url):
             title_key = match.group("title_key")
             self.raise_if_invalid_file(self.video_program_file(title_key), url)
@@ -130,7 +130,7 @@ class NHKWorldImporter(NHKWorldShared, BaseImporter):
 
         self._upsert_season(title, title_key, force=force)
         self._soft_delete_missing(title_key)
-        self.link_title_to_tmdb(title)
+        self.mark_title_for_linking(title)
 
         return title
 

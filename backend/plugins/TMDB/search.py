@@ -19,7 +19,7 @@ from plugins.TMDB.utils import (
     image_url,
     parse_release_year,
     thumbnail_url,
-    tiel_url,
+    tmdb_url,
 )
 from plugins.utils.abstract_plugin import (
     PluginSearchResult,
@@ -233,7 +233,7 @@ class TMDBSearch(TMDBBaseFiles):
 
         return PluginSearchResult(
             title=title,
-            url=tiel_url(media_type, result.id),
+            url=tmdb_url(media_type, result.id),
             year=year,
             image_url=thumbnail_url(result.poster_path)
             or image_url(result.backdrop_path),

@@ -53,7 +53,7 @@ class NetflixImporter(NetflixShared, BaseImporter, ABC):
 
     # TODO: Validate
     @override
-    def extract_media_info(self, url: str) -> URLTitleInfo:
+    def get_media_info(self, url: str) -> URLTitleInfo:
         if match := re.match(self._domain_regex() + TITLE_URL_REGEX, url):
             title_key = match.group("title_key")
             self.raise_if_invalid_file(self.title_file(title_key), url)
@@ -182,7 +182,7 @@ class NetflixSeries(NetflixImporter):
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing(title_key)
-        self.link_title_to_tmdb(title)
+        self.mark_title_for_linking(title)
 
         return title
 
@@ -327,7 +327,7 @@ class NetflixMovie(NetflixImporter):
 
         self._upsert_season(title, movie_data, force=force)
         self._soft_delete_missing(title_key)
-        self.link_title_to_tmdb(title)
+        self.mark_title_for_linking(title)
 
         return title
 

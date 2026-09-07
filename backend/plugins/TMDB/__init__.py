@@ -14,7 +14,7 @@ from plugins.TMDB.shared import (
     TV_URL_REGEX,
     TMDBShared,
 )
-from plugins.TMDB.utils import tiel_url
+from plugins.TMDB.utils import tmdb_url
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
     InvalidURLError,
@@ -71,6 +71,10 @@ class TMDB(TMDBShared, BaseReadURL, AbstractPlugin, register=True):
         return self._get_media_importer_from_media_type(media_type)
 
     # TODO: Validate
+    def link_title_to_websites(self, title: Title) -> None:
+        self._get_media_importer_from_title(title).link_title_to_websites(title)
+
+    # TODO: Validate
     @override
     def import_search(
         self,
@@ -85,4 +89,4 @@ class TMDB(TMDBShared, BaseReadURL, AbstractPlugin, register=True):
 
         found_media_type, tmdb_media_id = search_result
         medai_importer = self._get_media_importer_from_media_type(found_media_type)
-        return medai_importer.import_url(tiel_url(found_media_type, tmdb_media_id))
+        return medai_importer.import_url(tmdb_url(found_media_type, tmdb_media_id))

@@ -58,7 +58,7 @@ def title_information(
         editable=current_user is not None and current_user.is_superuser,
         issue_reports=list_title_issue_reports(session, title.id),
         source=_information_side(
-            source.name or source.plugin.key,
+            source.key,
             title,
         ),
         tmdb=tmdb,

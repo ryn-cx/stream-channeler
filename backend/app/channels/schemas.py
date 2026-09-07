@@ -380,7 +380,7 @@ class WhitelistSourceOutput(BaseModel):
 
     title_id: uuid.UUID
     source_id: uuid.UUID
-    source_name: str | None
+    source_key: str
     favicon_url: str | None
     # The row itself, so a site carrying the title under more than one row can
     # name each of them, and so one can be edited without being fetched again.

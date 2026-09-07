@@ -8,7 +8,6 @@ from sqlmodel import Session
 
 from app.database import engine, load_models
 from app.titles.models import Title
-from app.titles.service.canonical import match_title_to_tmdb
 from plugins.utils.manage_plugins import (
     import_plugins,
     plugins,
@@ -28,7 +27,6 @@ def reimport_single_title(session: Session, title_id: uuid.UUID) -> None:
     logger.info(f"Reimporting {title.name or title.key} from {title.source.plugin.key}")
     plugin_instance = plugin_class(session, title.source.plugin)
     plugin_instance.update_title(title, force=True)
-    match_title_to_tmdb(session, title)
     session.commit()
 
 

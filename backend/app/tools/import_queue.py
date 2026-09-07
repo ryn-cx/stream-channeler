@@ -30,7 +30,6 @@ from app.episodes.models import Episode
 from app.log import configure_logging
 from app.seasons.models import Season
 from app.titles.models import Title, TitleCanonicalTitle
-from app.titles.service.canonical import match_imported_titles_to_tmdb
 from app.users.models import User
 from app.users.plugin_user import is_plugin_user
 from app.utils import tz_datetime
@@ -145,11 +144,6 @@ def _import_one(
         queue_item.status = URLStatus.IMPORTING
         plugin_instance = plugin_class(session)
         import_results = plugin_instance.import_url(queue_item.url)
-        match_imported_titles_to_tmdb(
-            session,
-            plugin_instance,
-            [result.title for result in import_results],
-        )
         add_results_to_channel(session, import_results, queue_item.channel)
     except InvalidURLError as error:
         logger.warning(f"[{plugin_key}] Invalid URL: {queue_item.url}")

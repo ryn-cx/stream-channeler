@@ -147,7 +147,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
 
     # TODO: Validate
     @override
-    def extract_media_info(self, url: str) -> URLTitleInfo:
+    def get_media_info(self, url: str) -> URLTitleInfo:
         self._read_url(url)
         if self._whole_title:
             return URLTitleInfo(self._title_key)
@@ -364,7 +364,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
     # TODO: Validate
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
-        media_info = self.extract_media_info(url)
+        media_info = self.get_media_info(url)
         title_key = media_info.title_key
         existing_title = self._preload_title(
             title_key,
@@ -539,7 +539,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
 
         self._upsert_seasons_series(title, title_key, force=force)
         self._soft_delete_missing(title_key)
-        self.link_title_to_tmdb(title)
+        self.mark_title_for_linking(title)
 
         return title
 
@@ -608,7 +608,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
         self._upsert_seasons_channel(title, title_key, force=force)
         self._soft_delete_missing(title_key)
         if self.is_movies_channel(title_key):
-            self.link_title_to_tmdb(title)
+            self.mark_title_for_linking(title)
 
         return title
 
@@ -663,7 +663,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter):
 
         self._upsert_season_movie(title, title_key, force=force)
         self._soft_delete_missing(title_key)
-        self.link_title_to_tmdb(title)
+        self.mark_title_for_linking(title)
 
         return title
 

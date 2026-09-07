@@ -20,7 +20,6 @@ from app.titles.models import Title
 from app.titles.schemas import (
     TmdbEpisodeGroupOption,
 )
-from app.titles.service.canonical import match_title_to_tmdb
 from app.titles.service.relinking import (
     _relink_non_canonical_titles,
     _reread_in_new_order,
@@ -116,12 +115,11 @@ def force_update_title(session: Session, title: Title) -> Title:
         raise HTTPException(status_code=422, detail=message)
 
     logger.info(
-        f"Updating title: {title.source.name or title.source.key} - "
+        f"Updating title: {title.source.key} - "
         f"{title.name or title.key} ({title.key})",
     )
     plugin_instance = plugin_class(session, title.source.plugin)
     plugin_instance.update_title(title, force=True)
-    match_title_to_tmdb(session, title)
     session.commit()
     session.refresh(title)
     return title

@@ -70,7 +70,6 @@ class AdultSwimShared(AdultSwimBaseFiles):
         existing_source = Source.get(self.session, self.plugin, source_key)
         source = Source(
             key=source_key,
-            name=source_key,
             favicon_url=self.favicon_url(),
             link_to_tmdb=self.link_to_tmdb(),
             data_timestamp=self.titles_file().data_timestamp(),

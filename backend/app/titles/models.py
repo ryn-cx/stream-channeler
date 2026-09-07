@@ -102,12 +102,19 @@ class Title(BaseTitle, ChildMediaMixin[Source, "Season"], table=True):
         ),
         Index("Title-deleted_at-index", "deleted_at"),
         Index("Title-is_canonical-index", "is_canonical"),
+        Index(
+            "Title-link_status-index",
+            "link_status",
+            postgresql_where=text("link_status IS NULL"),
+        ),
         *sortable_field_indexes(
             "Title",
             CANONICAL_SORTABLE_FIELDS,
             where=text("is_canonical IS TRUE"),
         ),
     )
+
+    link_status: str | None = Field(default=None)
 
     # Whether this row is the title itself rather than one website's row standing for it.
     # Which canonical titles a non-canonical row stands for is stored in

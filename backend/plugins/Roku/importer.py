@@ -86,7 +86,7 @@ class RokuImporter(RokuShared, BaseImporter, ABC):
 class RokuSeries(RokuImporter):
     # TODO: Validate
     @override
-    def extract_media_info(self, url: str) -> URLTitleInfo:
+    def get_media_info(self, url: str) -> URLTitleInfo:
         key = self._url_content_key(url)
         series = self._content(key).series
         if series is None:
@@ -187,7 +187,7 @@ class RokuSeries(RokuImporter):
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing(title_key)
         self._set_weekly_updates_from_episodes(title, update_title=False)
-        self.link_title_to_tmdb(title)
+        self.mark_title_for_linking(title)
 
         return title
 
@@ -262,7 +262,7 @@ class RokuSeries(RokuImporter):
 class RokuMovie(RokuImporter):
     # TODO: Validate
     @override
-    def extract_media_info(self, url: str) -> URLTitleInfo:
+    def get_media_info(self, url: str) -> URLTitleInfo:
         return URLTitleInfo(self._url_content_key(url))
 
     # TODO: Validate
@@ -335,7 +335,7 @@ class RokuMovie(RokuImporter):
         self._upsert_season(title, force=force)
         self._soft_delete_missing(title_key)
         self._set_weekly_updates_from_episodes(title, update_title=False)
-        self.link_title_to_tmdb(title)
+        self.mark_title_for_linking(title)
 
         return title
 

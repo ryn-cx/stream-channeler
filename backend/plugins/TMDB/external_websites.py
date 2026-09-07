@@ -38,11 +38,7 @@ class TMDBExternalWebsites(TMDBShared, ABC):
     """Return the provider file for the given title key."""
 
     # TODO: Validate
-    def _import_title_from_external_websites(
-        self,
-        title_key: str,
-        title: Title,
-    ) -> None:
+    def link_title_to_websites(self, title: Title) -> None:
         """Import the title from all external websites."""
         # TODO: TMDB should have a special Title object that makes empty names
         # impossible.
@@ -50,11 +46,11 @@ class TMDBExternalWebsites(TMDBShared, ABC):
             msg = f"{title} has no name to search other websites with."
             raise ValueError(msg)
 
-        media_type, _ = get_media_type_and_tmdb_id(title_key)
+        media_type, _ = get_media_type_and_tmdb_id(title.key)
         plugins_with_non_canonical_titles = self.plugins_with_non_canonical_titles(
             title,
         )
-        for provider in streaming_providers(self._provider_file(title_key).parsed()):
+        for provider in streaming_providers(self._provider_file(title.key).parsed()):
             media_plugin = get_media_plugin(provider.provider_name)
 
             # If there is no matching plugin the website's name is logged into the

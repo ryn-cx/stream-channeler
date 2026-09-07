@@ -27,12 +27,11 @@ from app.plugins.models import Plugin
 if TYPE_CHECKING:
     from app.titles.models import Title
 
-DIRECT_SORTABLE_FIELDS = ["id", "name"]
+DIRECT_SORTABLE_FIELDS = ["id", "key"]
 
 
 # TODO: Validate
 class BaseSource(BaseMediaMixin):
-    name: str | None = Field(default=None)
     link_to_tmdb: bool = Field(default=True)
     favicon_url: str | None = Field(default=None)
     image_url: str | None = Field(default=None)
@@ -87,10 +86,8 @@ class Source(BaseSource, ChildMediaMixin[Plugin, "Title"], table=True):
     def __str__(self) -> str:
         """Return a string representation of the Source."""
         base_source = "Source:"
-        if self.name:
-            base_source += f" {self.name}"
         if self.key:
-            base_source += f" ({self.key})"
+            base_source += f" {self.key}"
         if self.id:
             base_source += f" ({self.id})"
         return f"{self.plugin}\n{base_source}"

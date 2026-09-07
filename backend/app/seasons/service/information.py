@@ -51,7 +51,7 @@ def season_information(session: Session, season: Season) -> SeasonInformationOut
     return SeasonInformationOutput(
         issue_reports=list_season_issue_reports(session, season.id),
         source=_information_side(
-            source.name or source.plugin.key,
+            source.key,
             season,
             title,
         ),

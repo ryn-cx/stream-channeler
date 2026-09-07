@@ -32,7 +32,6 @@ from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.sources.models import Source
 from app.titles.models import Title, TitleCanonicalTitle
-from app.titles.service.canonical import match_title_to_tmdb
 from app.users.models import User
 from app.users.plugin_user import is_plugin_user
 from app.utils import tz_datetime
@@ -268,17 +267,6 @@ MEDIA_CLASSES_IN_ORDER: tuple[MediaClass, ...] = (
 
 
 # TODO: Validate
-def _title_of(item: MediaMixin[Any]) -> Title | None:
-    if isinstance(item, Title):
-        return item
-    if isinstance(item, Season):
-        return item.title
-    if isinstance(item, Episode):
-        return item.season.title
-    return None
-
-
-# TODO: Validate
 def _restrict_to_media_in_channel[ResultT](
     statement: SelectOfScalar[ResultT],
     media_class: MediaClass,
@@ -385,8 +373,6 @@ def _process_outdated_items(
                     update(item, item.update_at)
                 else:
                     update(item)
-                    if (updated_title := _title_of(item)) is not None:
-                        match_title_to_tmdb(session, updated_title)
 
                 log_msg = (
                     f"[{plugin_key}] Successfully updated {media_type_name}: {item.key}"

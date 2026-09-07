@@ -47,7 +47,7 @@ from plugins.TMDB.utils import (
     image_url,
     parse_release_year,
     thumbnail_url,
-    tiel_url,
+    tmdb_url,
 )
 from plugins.utils.abstract_plugin import (
     InvalidURLError,
@@ -92,7 +92,7 @@ class TMDBImporter(TMDBExternalWebsites, BaseImporter):
     # TODO: Validate
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
-        media_info = self.extract_media_info(url)
+        media_info = self.get_media_info(url)
         existing_title = self._preload_title(
             title=media_info.title_key,
             preload_episodes=True,
@@ -100,10 +100,7 @@ class TMDBImporter(TMDBExternalWebsites, BaseImporter):
 
         if not existing_title:
             existing_title = self.upsert_title(self.source, media_info.title_key)
-            self._import_title_from_external_websites(
-                media_info.title_key,
-                existing_title,
-            )
+            self.mark_title_for_linking(existing_title)
 
         return self._import_results(existing_title, media_info)
 
@@ -274,7 +271,7 @@ class TMDBSeries(TMDBImporter):
                 key=title_key,
                 name=series.name,
                 description=series.overview,
-                url=tiel_url(TMDBMediaType.tv, tmdb_tv_title_id),
+                url=tmdb_url(TMDBMediaType.tv, tmdb_tv_title_id),
                 image_url=image_url(series.backdrop_path or series.poster_path),
                 thumbnail_url=thumbnail_url(series.backdrop_path or series.poster_path),
                 year=parse_release_year(series.first_air_date),
@@ -381,7 +378,7 @@ class TMDBSeries(TMDBImporter):
                 watch_identifier=watch_identifier(self.plugin_name(), key),
                 name=episode_source.name,
                 description=episode_source.overview,
-                url=tiel_url(TMDBMediaType.tv, tmdb_tv_title_id),
+                url=tmdb_url(TMDBMediaType.tv, tmdb_tv_title_id),
                 image_url=image_url(still_path),
                 thumbnail_url=thumbnail_url(still_path),
                 duration=runtime_in_seconds(episode_source.runtime),
@@ -443,7 +440,7 @@ class TMDBSeries(TMDBImporter):
         self.upsert_title(title.source, title.key, force=force)
         self.download_new_watch_providers_file(title)
         self.sync_title_watch_providers(title.key)
-        self._import_title_from_external_websites(title.key, title)
+        self.mark_title_for_linking(title)
 
     # TODO: Validate
     @override
@@ -571,7 +568,7 @@ class TMDBSeries(TMDBImporter):
 
     # TODO: Validate
     @override
-    def extract_media_info(self, url: str) -> URLTitleInfo:
+    def get_media_info(self, url: str) -> URLTitleInfo:
         regex_match = re.match(self._domain_regex() + TV_URL_REGEX, url)
         if regex_match is None:
             msg = f"Invalid {self.plugin_name()} URL: {url}"
@@ -619,7 +616,7 @@ class TMDBMovie(TMDBImporter):
         super().update_title(title, force=force)
         self.download_new_watch_providers_file(title)
         self.sync_title_watch_providers(title.key)
-        self._import_title_from_external_websites(title.key, title)
+        self.mark_title_for_linking(title)
 
     # TODO: Validate
     @override
@@ -681,7 +678,7 @@ class TMDBMovie(TMDBImporter):
                 key=title_key,
                 name=parsed_movie_details.title,
                 description=parsed_movie_details.overview,
-                url=tiel_url(TMDBMediaType.movie, tmdb_movie_id),
+                url=tmdb_url(TMDBMediaType.movie, tmdb_movie_id),
                 image_url=image_url(
                     parsed_movie_details.backdrop_path
                     or parsed_movie_details.poster_path,
@@ -778,7 +775,7 @@ class TMDBMovie(TMDBImporter):
             watch_identifier=watch_identifier(self.plugin_name(), episode_key),
             name=parsed_movie_details.title,
             description=parsed_movie_details.overview,
-            url=tiel_url(TMDBMediaType.movie, tmdb_movie_id),
+            url=tmdb_url(TMDBMediaType.movie, tmdb_movie_id),
             image_url=image_url(
                 parsed_movie_details.backdrop_path or parsed_movie_details.poster_path,
             ),
@@ -806,7 +803,7 @@ class TMDBMovie(TMDBImporter):
 
     # TODO: Validate
     @override
-    def extract_media_info(self, url: str) -> URLTitleInfo:
+    def get_media_info(self, url: str) -> URLTitleInfo:
         regex_match = re.match(self._domain_regex() + MOVIE_URL_REGEX, url)
         if regex_match is None:
             msg = f"Invalid {self.plugin_name()} URL: {url}"

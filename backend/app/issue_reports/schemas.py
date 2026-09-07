@@ -61,7 +61,7 @@ class IssueReportListOutput(IssueReportOutput):
     media_name: str | None
     season_name: str | None
     title_name: str | None
-    source_name: str | None
+    source_key: str
 
 
 # TODO: Validate

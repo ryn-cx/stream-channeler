@@ -26,10 +26,6 @@ class BaseURLMixin:
         raise NotImplementedError
 
     # TODO: Validate
-    def extract_media_info(self, url: str) -> URLTitleInfo:
-        raise NotImplementedError
-
-    # TODO: Validate
     @classmethod
     def domains(cls) -> list[str]:
         """Return a list of the domains the plugin supports.

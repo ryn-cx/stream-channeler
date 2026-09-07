@@ -65,7 +65,6 @@ class NHKWorldShared(NHKWorldBaseFiles):
         existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
         source = Source(
             key=source_key,
-            name=self.plugin_name(),
             favicon_url=self.favicon_url(),
             link_to_tmdb=self.link_to_tmdb(),
             data_timestamp=data_timestamp,

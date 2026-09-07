@@ -88,7 +88,7 @@ def get_media_plugin(provider_name: str) -> type[AbstractPlugin] | None:
     return None
 
 
-def tiel_url(media_type: str, tmdb_media_id: int) -> str:
+def tmdb_url(media_type: str, tmdb_media_id: int) -> str:
     """Return the TMDB URL for the title."""
     return f"https://www.themoviedb.org/{media_type}/{tmdb_media_id}"
 

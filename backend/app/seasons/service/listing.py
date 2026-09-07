@@ -20,7 +20,7 @@ from app.users.models import User
 SEASON_EXTRA_COLUMNS: dict[str, Any] = {
     "title_name": Title.name,
     "source_id": Title.source_id,
-    "source_name": Source.name,
+    "source_key": Source.key,
     "plugin_id": Source.plugin_id,
     "plugin_name": Plugin.key,
 }

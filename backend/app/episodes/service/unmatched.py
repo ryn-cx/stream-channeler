@@ -93,7 +93,7 @@ _UNMATCHED_COLUMNS: dict[str, Any] = {
     "summary": Title.name,
     "title_name": Title.name,
     "title_year": Title.year,
-    "source_name": Source.name,
+    "source_key": Source.key,
     "plugin_name": Plugin.key,
     "season_name": Season.name,
     "season_number": Season.season_number,
@@ -158,7 +158,7 @@ def _expanded_sort_options(sort_options: list[SortOption]) -> list[SortOption]:
         expanded.append(option)
         if option.column == "summary":
             expanded += [
-                SortOption(id="source_name", desc=option.desc),
+                SortOption(id="source_key", desc=option.desc),
                 SortOption(id="season_number", desc=option.desc),
                 SortOption(id="episode_number", desc=option.desc),
             ]

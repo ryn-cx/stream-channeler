@@ -88,7 +88,7 @@ def _episode_reports(session: Session) -> list[IssueReportListOutput]:
                 "media_name": episode.name,
                 "season_name": season.name,
                 "title_name": title.name,
-                "source_name": source.name,
+                "source_key": source.key,
             },
         )
         for report, episode, season, title, source in session.exec(statement).all()
@@ -114,7 +114,7 @@ def _season_reports(session: Session) -> list[IssueReportListOutput]:
                 "media_name": season.name,
                 "season_name": season.name,
                 "title_name": title.name,
-                "source_name": source.name,
+                "source_key": source.key,
             },
         )
         for report, season, title, source in session.exec(statement).all()
@@ -139,7 +139,7 @@ def _title_reports(session: Session) -> list[IssueReportListOutput]:
                 "media_name": title.name,
                 "season_name": None,
                 "title_name": title.name,
-                "source_name": source.name,
+                "source_key": source.key,
             },
         )
         for report, title, source in session.exec(statement).all()

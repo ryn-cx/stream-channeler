@@ -61,7 +61,7 @@ titles_router = APIRouter(
 
 
 TITLE_EXTRA_COLUMNS: dict[str, Any] = {
-    "source_name": Source.name,
+    "source_key": Source.key,
     "plugin_id": Source.plugin_id,
     "plugin_name": Plugin.key,
 }

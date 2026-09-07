@@ -86,7 +86,6 @@ class YouTubeShared(YouTubeWatchHistoryMixin, YouTubeBaseFiles):
         existing_source = Source.get(self.session, self.plugin, source_key)
         source = Source(
             key=source_key,
-            name=source_key,
             favicon_url=self.favicon_url(),
             link_to_tmdb=self.link_to_tmdb(),
             data_timestamp=self._existing_data_timestamp_or_now(existing_source),

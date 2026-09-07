@@ -55,8 +55,8 @@ class SeasonListOutput(SeasonOutput):
 
     title_name: str | None = Field(validation_alias=AliasPath("title", "name"))
     source_id: uuid.UUID = Field(validation_alias=AliasPath("title", "source_id"))
-    source_name: str | None = Field(
-        validation_alias=AliasPath("title", "source", "name"),
+    source_key: str = Field(
+        validation_alias=AliasPath("title", "source", "key"),
     )
     plugin_id: uuid.UUID = Field(
         validation_alias=AliasPath("title", "source", "plugin_id"),

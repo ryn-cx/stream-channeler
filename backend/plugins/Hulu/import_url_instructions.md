@@ -1,4 +1,3 @@
-<!-- TODO: Validate -->
 > [!TIP/Series]
 > `https://www.hulu.com/series/7117a15d-128c-4c2b-a5b9-98adfa0f4505`
 > `https://www.hulu.com/series/chad-powers-7117a15d-128c-4c2b-a5b9-98adfa0f4505`

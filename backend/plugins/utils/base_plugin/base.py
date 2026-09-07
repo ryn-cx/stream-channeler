@@ -22,7 +22,6 @@ from app.users.service.accounts import get_or_create_plugin_user
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
     InvalidURLError,
-    TMDBLookupInfo,
     URLImportResult,
 )
 from plugins.utils.base_plugin.files import BaseFile
@@ -110,24 +109,9 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         return [url for url in urls if url not in on_channel_urls]
 
     # TODO: Validate
-    def tmdb_lookup_info(
-        self,
-        title_key: str,  # noqa: ARG002 - `title_key` is used by overrides.
-    ) -> list[TMDBLookupInfo]:
-        return []
-
-    # TODO: Validate
-    def link_title_to_tmdb(self, title: Title) -> None:
-        from app.titles.service.canonical import (  # noqa: PLC0415
-            link_title_to_tmdb_lookups,
-        )
-
-        # self.session.commit()
-        link_title_to_tmdb_lookups(
-            self.session,
-            title,
-            self.tmdb_lookup_info(title.key),
-        )
+    def mark_title_for_linking(self, title: Title) -> None:
+        title.link_status = None
+        self.session.add(title)
 
     # TODO: Validate
     @classmethod
@@ -221,9 +205,11 @@ class BaseReadURL(BasePlugin, ABC):
         return f"(?:{alternatives})"
 
     # TODO: Validate
-    @override
-    def extract_media_info(self, url: str) -> URLTitleInfo:
-        msg = f"{self.plugin_name()} does not implement extract_media_info"
+    def get_media_info(self, url: str) -> URLTitleInfo:
+        """Return information about the title extracted from the URL.
+
+        In some situations this may require network requests."""
+        msg = f"{self.plugin_name()} does not implement get_media_info"
         raise NotImplementedError(msg)
 
     # TODO: Validate

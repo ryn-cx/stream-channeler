@@ -50,7 +50,7 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
 
     # TODO: Validate
     @override
-    def extract_media_info(self, url: str) -> URLTitleInfo:
+    def get_media_info(self, url: str) -> URLTitleInfo:
         domain_regex = self._domain_regex()
         title_key: str | None
         if match := re.match(domain_regex + SHARE_URL_REGEX, url):
@@ -81,7 +81,7 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
     # TODO: Validate
     @override  # Writes the title into every source it can be watched through.
     def import_url(self, url: str) -> list[URLImportResult]:
-        media_info = self.extract_media_info(url)
+        media_info = self.get_media_info(url)
         if titles := self._preload_title(media_info.title_key).all():
             return [
                 result
@@ -198,7 +198,7 @@ class AmazonSeries(AmazonImporter):
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing(title_key)
         self._set_weekly_updates_from_episodes(title, update_title=False)
-        self.link_title_to_tmdb(title)
+        self.mark_title_for_linking(title)
 
         return title
 
@@ -318,7 +318,7 @@ class AmazonMovie(AmazonImporter):
         self._upsert_season(title, force=force)
         self._soft_delete_missing(title_key)
         self._set_weekly_updates_from_episodes(title, update_title=False)
-        self.link_title_to_tmdb(title)
+        self.mark_title_for_linking(title)
 
         return title
 

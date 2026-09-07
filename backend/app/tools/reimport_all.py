@@ -8,7 +8,6 @@ from app.database import engine, load_models
 from app.plugins.models import Plugin
 from app.sources.models import Source
 from app.titles.models import Title
-from app.titles.service.canonical import match_title_to_tmdb
 from plugins.utils.manage_plugins import (
     import_plugins,
     plugins,
@@ -42,7 +41,6 @@ def reimport_all_titles(session: Session) -> None:
         title = session.get_one(Title, (source_id, title_key))
         plugin_instance = plugin_class(session, title.source.plugin)
         plugin_instance.update_title(title, force=True)
-        match_title_to_tmdb(session, title)
         session.commit()
 
 

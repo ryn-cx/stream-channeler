@@ -140,7 +140,7 @@ def episode_information(
         canonical_episode_note=episode.canonical_episode_note,
         issue_reports=list_episode_issue_reports(session, episode.id),
         source=_information_side(
-            source.name or source.plugin.key,
+            source.key,
             episode,
             season,
             title,

@@ -19,6 +19,10 @@ from wholoo.exceptions import (
     MovieNotFoundError,
     SeriesNotFoundError,
 )
+from wholoo.genre import Genre as GenreEndpoint
+from wholoo.genre.models import GenreModel
+from wholoo.genres import Genres as GenresEndpoint
+from wholoo.genres.models import GenresModel
 from wholoo.movies import Movies as MoviesEndpoint
 from wholoo.movies.models import MoviesModel
 from wholoo.search import Search as SearchEndpoint
@@ -124,6 +128,22 @@ class AllMovies(EndpointFile[AllMoviesModel]):
     @override
     def _download_file(self) -> str:
         return self._endpoint().download()
+
+
+class Genres(EndpointFile[GenresModel]):
+    @override
+    def _endpoint(self) -> GenresEndpoint:
+        return wholoo().genres
+
+    @override
+    def _download_file(self) -> str:
+        return self._endpoint().download()
+
+
+class Genre(EndpointFile[GenreModel]):
+    @override
+    def _endpoint(self) -> GenreEndpoint:
+        return wholoo().genre
 
 
 class WatchRedirect(TextFile):

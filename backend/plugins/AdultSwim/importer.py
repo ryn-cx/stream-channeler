@@ -49,7 +49,7 @@ class AdultSwimImporter(AdultSwimShared, BaseImporter):
 
     # TODO: Validate
     @override
-    def extract_media_info(self, url: str) -> URLTitleInfo:
+    def get_media_info(self, url: str) -> URLTitleInfo:
         domain_regex = self._domain_regex()
 
         if match := re.match(domain_regex + EPISODE_URL_REGEX, url):
@@ -79,7 +79,7 @@ class AdultSwimImporter(AdultSwimShared, BaseImporter):
         same title, so an address names a title on both and each of them is
         written.
         """
-        media_info = self.extract_media_info(url)
+        media_info = self.get_media_info(url)
         titles = list(self._preload_title(media_info.title_key))
         if not titles:
             titles = [
@@ -171,7 +171,7 @@ class AdultSwimImporter(AdultSwimShared, BaseImporter):
         )
         self._soft_delete_missing(title_key)
         self._set_weekly_updates_from_episodes(title)
-        self.link_title_to_tmdb(title)
+        self.mark_title_for_linking(title)
 
         return title
 

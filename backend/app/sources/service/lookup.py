@@ -8,7 +8,6 @@ from sqlmodel import Session, col, func, select
 from app.episodes.models import Episode
 from app.plugins.identifiers import (
     CUSTOM_MEDIA_FAVICON_URL,
-    CUSTOM_MEDIA_NAME,
     CUSTOM_MEDIA_PLUGIN_KEY,
     CUSTOM_MEDIA_SOURCE_KEY,
 )
@@ -31,7 +30,7 @@ def sources_by_key(session: Session) -> dict[str, Source]:
         select(Source)
         .join(Plugin, col(Source.plugin_id) == Plugin.id)
         .where(col(Source.deleted_at).is_(None))
-        .order_by(col(Source.name), col(Source.key)),
+        .order_by(col(Source.key)),
     ).all()
     return {source.key: source for source in sources}
 
@@ -76,7 +75,6 @@ def get_or_create_custom_media_source(session: Session) -> Source:
     if source is None:
         source = Source(
             key=CUSTOM_MEDIA_SOURCE_KEY,
-            name=CUSTOM_MEDIA_NAME,
             favicon_url=CUSTOM_MEDIA_FAVICON_URL,
             plugin_id=plugin.id,
         )

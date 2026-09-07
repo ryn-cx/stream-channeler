@@ -92,7 +92,6 @@ def _source_preference_outputs(
             SourcePreferenceOutput(
                 source_key=preference.source_key,
                 enabled=preference.enabled,
-                name=source.name if source else None,
                 favicon_url=source.favicon_url if source else None,
                 episode_count=episode_count,
             ),

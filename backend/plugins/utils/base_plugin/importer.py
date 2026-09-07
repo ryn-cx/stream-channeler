@@ -50,7 +50,7 @@ class BasePluginWorker(BasePlugin, ABC):
 class BaseImporter(BasePluginWorker, BaseReadURL, ABC):
     # TODO: Validate
     def import_url(self, url: str) -> list[URLImportResult]:
-        media_info = self.extract_media_info(url)
+        media_info = self.get_media_info(url)
         if title := self._preload_title(media_info.title_key).one_or_none():
             return self._import_results(title, media_info)
 

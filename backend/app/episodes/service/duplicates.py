@@ -162,7 +162,7 @@ def get_duplicated_canonical_episodes(
     return sorted(
         outputs,
         key=lambda output: (
-            output.source.name or "",
+            output.source.key,
             output.canonical.title.name or "",
             output.canonical.season.season_number or 0,
             output.canonical.episode.episode_number or 0,

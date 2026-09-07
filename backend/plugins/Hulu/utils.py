@@ -2,12 +2,13 @@
 """What every other part of the plugin reads a title by."""
 
 from enum import StrEnum
-from typing import NamedTuple
 from urllib.parse import quote, quote_plus
 from uuid import UUID
 
 from wholoo.all_movies.models import AllMoviesModel
 from wholoo.all_series.models import AllSeriesModel
+from wholoo.genre.models import GenreModel
+from wholoo.genres.models import GenresModel
 from wholoo.movies.models import MoviesModel
 from wholoo.season.models import Item, SeasonModel
 from wholoo.tv.models import TVModel
@@ -86,7 +87,7 @@ def season_items(season: SeasonModel) -> list[Item]:
 
 
 # TODO: Validate
-def title_urls(page: AllSeriesModel | AllMoviesModel) -> list[str]:
+def title_urls(page: AllSeriesModel | AllMoviesModel | GenreModel) -> list[str]:
     """Return all title URLs from the given page."""
     layout = page.props.page_props.layout
     return [
@@ -99,13 +100,19 @@ def title_urls(page: AllSeriesModel | AllMoviesModel) -> list[str]:
 
 
 # TODO: Validate
-class HuluPlan(NamedTuple):
-    network: str
-    is_subscription: bool
+def genre_ids(page: GenresModel) -> list[str]:
+    layout = page.props.page_props.layout
+    return [
+        item.href.removeprefix("/hub/")
+        for component in layout.components or []
+        if component.type == "list_card"
+        for item in component.items or []
+        if item.href
+    ]
 
 
 # TODO: Validate
-def title_plan(page: TVModel | MoviesModel) -> HuluPlan | None:
+def title_plan(page: TVModel | MoviesModel) -> tuple[str, bool] | None:
     vod_items = page.details.vod_items
     if vod_items is None:
         return None
@@ -114,31 +121,15 @@ def title_plan(page: TVModel | MoviesModel) -> HuluPlan | None:
     is_subscription = bundle.package_id not in (1, 2, 33) and (
         bundle.network_name != "Sony"
     )
-    return HuluPlan(bundle.network_name, is_subscription)
-
-
-# TODO: Validate
-def genre_names(page: TVModel | MoviesModel) -> list[str]:
-    return page.details.entity.genre_names
+    return bundle.network_name, is_subscription
 
 
 # TODO: Validate
 def get_channel_name(subject: str) -> str:
-    return f"Hulu - {subject}"
+    return f"{subject} on Hulu"
 
 
 # TODO: Validate
 def get_channel_description(subject: str) -> str:
-    return f"All {subject} titles on Hulu."
+    return f"All {subject.removeprefix('All ')} titles on Hulu."
 
-
-# TODO: Validate
-def plan_source_key(plan: HuluPlan) -> str:
-    return f"{plan.network} on Hulu"
-
-
-# TODO: Validate
-def plan_channel_description(plan: HuluPlan) -> str:
-    if plan.is_subscription:
-        return f"All {plan.network} titles on Hulu that require an additional subscription."
-    return get_channel_description(plan.network)

@@ -427,7 +427,7 @@ def channel_whitelist_output(
         WhitelistSourceOutput(
             title_id=title.id,
             source_id=title.source.id,
-            source_name=title.source.name,
+            source_key=title.source.key,
             favicon_url=title.source.favicon_url,
             title=TitlePublic.model_validate(title),
             filtered=title.id in enabled_sources,
