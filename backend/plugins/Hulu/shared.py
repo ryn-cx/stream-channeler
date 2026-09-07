@@ -48,21 +48,6 @@ class HuluShared(HuluBaseFiles):
         return search_url(query)
 
     # TODO: Validate
-    @override
-    def upsert_source(self, source_key: str) -> Source:
-        existing_source = Source.get(self.session, self.plugin, source_key)
-        source = Source(
-            key=source_key,
-            name=source_key,
-            favicon_url=self.favicon_url(),
-            link_to_tmdb=self.link_to_tmdb(),
-            data_timestamp=max(self.plugin_data_timestamps()),
-            plugin_id=self.plugin.id,
-        ).upsert(self.plugin, existing_source)
-        source.set_update_at(None)
-        return source
-
-    # TODO: Validate
     def _create_channel_records(self) -> None:
         channel = self.get_or_create_channel(
             "Hulu - All Titles",

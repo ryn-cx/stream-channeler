@@ -6,6 +6,7 @@
 from typing import Any
 
 from fastapi import HTTPException
+from loguru import logger
 from sqlmodel import Session
 
 from app.canonical_media.tmdb import (
@@ -114,6 +115,10 @@ def force_update_title(session: Session, title: Title) -> Title:
         )
         raise HTTPException(status_code=422, detail=message)
 
+    logger.info(
+        f"Updating title: {title.source.name or title.source.key} - "
+        f"{title.name or title.key} ({title.key})",
+    )
     plugin_instance = plugin_class(session, title.source.plugin)
     plugin_instance.update_title(title, force=True)
     match_title_to_tmdb(session, title)

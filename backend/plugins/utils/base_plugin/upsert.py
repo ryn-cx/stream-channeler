@@ -42,12 +42,12 @@ class BaseUpsertMixin(BasePluginCore, BaseOutdatedCheckMixin, ABC):
         raise NotImplementedError(msg)
 
     # TODO: Validate
-    def upsert_source(self, source_key: str) -> Source:
+    def upsert_source(self, source_key: str, source_name: str | None = None) -> Source:
         """Create or update the plugin's `Source` record(s)."""
         existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
         source = Source(
             key=source_key,
-            name=self.plugin_name(),
+            name=source_name or self.plugin_name(),
             favicon_url=self.favicon_url(),
             link_to_tmdb=self.link_to_tmdb(),
             data_timestamp=self._existing_data_timestamp_or_now(existing_source),

@@ -9,6 +9,7 @@ from uuid import UUID
 
 from loguru import logger
 from sqlmodel import Session, col, or_, select
+from tqdm import tqdm
 
 from app.canonical_media.filters import is_canonical
 from app.canonical_media.seasons import season_ids_by_key
@@ -68,10 +69,17 @@ def import_queue(session: Session, *, skip_plugin_user_channels: bool = False) -
         session,
         skip_plugin_user_channels=skip_plugin_user_channels,
     )
-    for plugin_class, items in grouped.items():
-        with PLUGIN_LOCKS[plugin_class.plugin_name()]:
-            for item in items:
-                _import_one(session, item, plugin_class)
+    total = sum(len(items) for items in grouped.values())
+    if not total:
+        return
+    with tqdm(total=total, unit="url") as progress:
+        for plugin_class, items in grouped.items():
+            plugin_key = plugin_class.plugin_name()
+            with PLUGIN_LOCKS[plugin_key]:
+                for item in items:
+                    progress.set_description(f"[{plugin_key}] {item.url}")
+                    _import_one(session, item, plugin_class)
+                    progress.update()
 
 
 # TODO: Validate
@@ -540,7 +548,7 @@ def _merge_filters(
 
 
 if __name__ == "__main__":
-    configure_logging()
+    configure_logging(lambda message: tqdm.write(message, end=""))
     load_models()
     run_forever()
     logger.info("Import queue process stopped")

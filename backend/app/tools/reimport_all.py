@@ -1,9 +1,12 @@
 # TODO: Validate
 
 from loguru import logger
-from sqlmodel import Session
+from sqlmodel import Session, select
+from tqdm import tqdm
 
 from app.database import engine, load_models
+from app.plugins.models import Plugin
+from app.sources.models import Source
 from app.titles.models import Title
 from app.titles.service.canonical import match_title_to_tmdb
 from plugins.utils.manage_plugins import (
@@ -18,32 +21,35 @@ load_models()
 # TODO: Validate
 def reimport_all_titles(session: Session) -> None:
     plugin_classes_by_key = {plugin.plugin_name(): plugin for plugin in plugins}
-    titles = session.exec(
-        Title.select_with_plugin(),
+    listed = session.exec(
+        select(Title.source_id, Title.key, Title.name, Plugin.key)
+        .select_from(Title)
+        .join(Source)
+        .join(Plugin),
     ).all()
 
-    logger.info(f"Reimporting {len(titles)} titles")
-
-    for index, title in enumerate(titles, start=1):
-        logger.info(f"[{index}/{len(titles)}] Reimporting {title.name} ({title.id})")
-        plugin_class = plugin_classes_by_key.get(title.source.plugin.key)
+    progress = tqdm(listed, unit="title")
+    for source_id, title_key, title_name, plugin_key in progress:
+        progress.set_description(title_name or title_key)
+        plugin_class = plugin_classes_by_key.get(plugin_key)
 
         if plugin_class is None:
             logger.warning(
-                f"[{index}/{len(titles)}] Skipping {title.name}, "
-                f"plugin {title.source.plugin.key} is not installed",
+                f"Skipping {title_name}, plugin {plugin_key} is not installed",
             )
             continue
 
+        title = session.get_one(Title, (source_id, title_key))
         plugin_instance = plugin_class(session, title.source.plugin)
         plugin_instance.update_title(title, force=True)
-        logger.info(f"[{index}/{len(titles)}] Matching {title.name} to TMDB")
         match_title_to_tmdb(session, title)
         session.commit()
-        logger.info(f"[{index}/{len(titles)}] Finished {title.name}")
 
 
 if __name__ == "__main__":
+    logger.remove()
+    logger.add(lambda message: tqdm.write(message, end=""))
+
     with Session(engine) as session:
         reimport_all_titles(session)
 

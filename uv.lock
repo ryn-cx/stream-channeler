@@ -97,6 +97,7 @@ dependencies = [
     { name = "tenacity" },
     { name = "thefuzz" },
     { name = "tminidb" },
+    { name = "tqdm" },
     { name = "trivial-minus" },
     { name = "wampi" },
     { name = "wholoo" },
@@ -113,6 +114,7 @@ dev = [
     { name = "pytest-split" },
     { name = "ruff" },
     { name = "ty" },
+    { name = "types-tqdm" },
 ]
 
 [package.metadata]
@@ -154,6 +156,7 @@ requires-dist = [
     { name = "tenacity", specifier = ">=8.2.3,<9.0.0" },
     { name = "thefuzz", specifier = ">=0.22.1" },
     { name = "tminidb", git = "https://github.com/ryn-cx/tminidb" },
+    { name = "tqdm", specifier = ">=4.67.0" },
     { name = "trivial-minus", git = "https://github.com/ryn-cx/trivial-minus" },
     { name = "wampi", git = "https://github.com/ryn-cx/wampi" },
     { name = "wholoo", git = "https://github.com/ryn-cx/wholoo" },
@@ -170,6 +173,7 @@ dev = [
     { name = "pytest-split", specifier = ">=0.11.0" },
     { name = "ruff", specifier = ">=0.2.2,<1.0.0" },
     { name = "ty", specifier = ">=0.0.25" },
+    { name = "types-tqdm", specifier = ">=4.67.0" },
 ]
 
 [[package]]
@@ -2174,7 +2178,7 @@ wheels = [
 [[package]]
 name = "tminidb"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/tminidb#00487e3b27a3064f33f63fd0474c6d017b3417ff" }
+source = { git = "https://github.com/ryn-cx/tminidb#4b097bce7ec4d4b12b7ab1fe89ed0d82dc3db903" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -2278,6 +2282,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/36/bf/8825b5929afd84d0dabd606c67cd57b8388cb3ec385f7ef19c5cc2202069/typer-0.21.1.tar.gz", hash = "sha256:ea835607cd752343b6b2b7ce676893e5a0324082268b48f27aa058bdb7d2145d", size = 110371, upload-time = "2026-01-06T11:21:10.989Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a0/1d/d9257dd49ff2ca23ea5f132edf1281a0c4f9de8a762b9ae399b670a59235/typer-0.21.1-py3-none-any.whl", hash = "sha256:7985e89081c636b88d172c2ee0cfe33c253160994d47bdfdc302defd7d1f1d01", size = 47381, upload-time = "2026-01-06T11:21:09.824Z" },
+]
+
+[[package]]
+name = "types-tqdm"
+version = "4.70.0.20260906"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/fe/92/517d71d5a399cd2f8ead3b4328d987262478f22fbbe7f8312360d4c321d0/types_tqdm-4.70.0.20260906.tar.gz", hash = "sha256:6581dc996152a87d51ce2ea169169187ffc0a96dacdb8adbdef29cbee8c1e631", size = 19309, upload-time = "2026-09-06T06:35:31.916Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/81/ea/d12697988ab2c672877796ecaea69666e2379ee7b40f01f4540250d5a97b/types_tqdm-4.70.0.20260906-py3-none-any.whl", hash = "sha256:c3b88c694928515d601f73fa6646aa43adc0ef735bedbeebf0cc543f6a201ae8", size = 25181, upload-time = "2026-09-06T06:35:30.931Z" },
 ]
 
 [[package]]
@@ -2446,7 +2459,7 @@ wheels = [
 [[package]]
 name = "wholoo"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/wholoo#84daedd14317b8998e83d446795638a4bf5621f3" }
+source = { git = "https://github.com/ryn-cx/wholoo#3516107f8adb6895872d45df16ab49b24369ef8b" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },

@@ -110,9 +110,11 @@ def title_plan(page: TVModel | MoviesModel) -> HuluPlan | None:
     if vod_items is None:
         return None
     bundle = vod_items.focus.entity.bundle
-    # I have no idea why but these three numbers seem to represent the titles that are
-    # free on Hulu.
-    return HuluPlan(bundle.network_name, bundle.package_id not in (1, 2, 33))
+    # I have no idea why but these specifically need whitelisting.
+    is_subscription = bundle.package_id not in (1, 2, 33) and (
+        bundle.network_name != "Sony"
+    )
+    return HuluPlan(bundle.network_name, is_subscription)
 
 
 # TODO: Validate
@@ -121,14 +123,22 @@ def genre_names(page: TVModel | MoviesModel) -> list[str]:
 
 
 # TODO: Validate
-def plan_channel_name(subject: str, plan: HuluPlan | None) -> str:
-    if plan and plan.is_subscription:
-        return f"Hulu - {subject} (Subscription)"
+def get_channel_name(subject: str) -> str:
     return f"Hulu - {subject}"
 
 
 # TODO: Validate
-def plan_channel_description(subject: str, plan: HuluPlan | None) -> str:
-    if plan and plan.is_subscription:
-        return f"All {subject} on Hulu that require an additional subscription."
-    return f"All {subject} on Hulu."
+def get_channel_description(subject: str) -> str:
+    return f"All {subject} titles on Hulu."
+
+
+# TODO: Validate
+def plan_source_key(plan: HuluPlan) -> str:
+    return f"{plan.network} on Hulu"
+
+
+# TODO: Validate
+def plan_channel_description(plan: HuluPlan) -> str:
+    if plan.is_subscription:
+        return f"All {plan.network} titles on Hulu that require an additional subscription."
+    return get_channel_description(plan.network)

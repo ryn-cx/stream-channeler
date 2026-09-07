@@ -22,7 +22,7 @@ from tminidb.tv_season.watch_providers.models import (
 )
 from tminidb.tv_season.watch_providers.models import FreeItem as TvSeasonFreeItem
 from tminidb.tv_season.watch_providers.models import TvSeasonWatchProvidersModel
-from tminidb.tv_series.watch_providers.models import Ad1 as TvAd
+from tminidb.tv_series.watch_providers.models import Ad as TvAd
 from tminidb.tv_series.watch_providers.models import BuyItem as TvBuyItem
 from tminidb.tv_series.watch_providers.models import FlatrateItem as TvFlatrateItem
 from tminidb.tv_series.watch_providers.models import FreeItem as TvFreeItem

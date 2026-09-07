@@ -42,6 +42,7 @@ dependencies = [
   "tenacity<9.0.0,>=8.2.3",
   "thefuzz>=0.22.1",
   "tminidb",
+  "tqdm>=4.67.0",
   "trivial-minus",
   "wampi",
   "wholoo",
@@ -58,6 +59,7 @@ dev = [
   "pytest-split>=0.11.0",
   "ruff<1.0.0,>=0.2.2",
   "ty>=0.0.25",
+  "types-tqdm>=4.67.0",
 ]
 
 [build-system]

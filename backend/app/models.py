@@ -137,7 +137,11 @@ class TimestampIdAndHashMixin(SQLModel):
     # TODO: Validate
     def __hash__(self) -> int:
         """Return a hash representation of the record based on the `id`."""
-        return hash(self.id)
+        cached = self.__dict__.get("_record_hash")
+        if cached is None:
+            cached = hash(self.id)
+            self.__dict__["_record_hash"] = cached
+        return cached
 
     # TODO: Validate
     def __eq__(self, other: object) -> bool:

@@ -1,6 +1,8 @@
 # TODO: Validate
 import logging
 import sys
+from collections.abc import Callable
+from typing import TextIO
 
 from loguru import logger
 
@@ -33,10 +35,15 @@ class InterceptHandler(logging.Handler):
 
 
 # TODO: Validate
-def configure_logging() -> None:
+def configure_logging(sink: TextIO | Callable[[str], None] | None = None) -> None:
     logger.remove()
     logger.configure(extra={"source": "app"})
-    logger.add(sys.stdout, level="INFO", colorize=True, format=_STDOUT_FORMAT)
+    logger.add(
+        sink if sink is not None else sys.stdout,
+        level="INFO",
+        colorize=True,
+        format=_STDOUT_FORMAT,
+    )
     logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)

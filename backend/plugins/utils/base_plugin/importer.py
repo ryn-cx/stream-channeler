@@ -4,8 +4,6 @@ from __future__ import annotations
 from abc import ABC
 from typing import TYPE_CHECKING, override
 
-from loguru import logger
-
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.utils import tz_datetime
@@ -26,9 +24,6 @@ class BasePluginWorker(BasePlugin, ABC):
     # TODO: Validate
     @override
     def update_title(self, title: Title, *, force: bool = False) -> None:
-        source_name = title.source.name or title.source.key
-        title_name = f"{title.name} ({title.key})" if title.name else title.key
-        logger.info("Updating title: {} - {}", source_name, title_name)
         # TODO: Is this preload needed since _update_and_upsert_title preloads?c
         stored_title = self._preload_title(title.key, source_key=title.source.key).one()
         self._update_and_upsert_title(stored_title, stored_title.update_at, force=force)
@@ -36,7 +31,6 @@ class BasePluginWorker(BasePlugin, ABC):
     # TODO: Validate
     @override
     def update_season(self, season: Season) -> None:
-        logger.info("Updating season: {}", season.key)
         # TODO: Is this preload needed since _update_and_upsert_title preloads?c
         stored_season = self._preload_season(season.id, preload_title=True).one()
         self._update_and_upsert_title(stored_season.title, stored_season.update_at)
@@ -44,7 +38,6 @@ class BasePluginWorker(BasePlugin, ABC):
     # TODO: Validate
     @override
     def update_episode(self, episode: Episode) -> None:
-        logger.info("Updating episode: {}", episode.key)
         # TODO: Is this preload needed since _update_and_upsert_title preloads?c
         stored_episode = self._preload_episode(episode.id, preload_source=True).one()
         self._update_and_upsert_title(

@@ -3,6 +3,7 @@
 import uuid
 from collections.abc import Callable, Collection, Hashable, Iterable, Sequence
 
+import numpy  # noqa: ICN001 - Spelled out, as abbreviated names are not used here.
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import instance_state, set_committed_value
 from sqlmodel import Session, col, select
@@ -231,10 +232,23 @@ class EpisodeLinker:
         return next(iter(found)) if len(found) == 1 else None
 
     # TODO: Validate
+    @staticmethod
+    def _batched(
+        test: Callable[[Episode], list[tuple[float, Episode]]],
+    ) -> Callable[[Sequence[Episode]], list[list[tuple[float, Episode]]]]:
+        # TODO: Validate
+        def batched(
+            episodes: Sequence[Episode],
+        ) -> list[list[tuple[float, Episode]]]:
+            return [test(episode) for episode in episodes]
+
+        return batched
+
+    # TODO: Validate
     def _split_test(
         self,
         label: str,
-    ) -> tuple[str, Callable[[Episode], list[tuple[float, Episode]]]]:
+    ) -> tuple[str, Callable[[Sequence[Episode]], list[list[tuple[float, Episode]]]]]:
         index = self._exact_index(self.facts.names_of)
         loose_index = self._loose_index(self.facts.names_of)
 
@@ -254,7 +268,7 @@ class EpisodeLinker:
                 matched.append(found)
             return [(1.0, tmdb_episode) for tmdb_episode in matched]
 
-        return (label, test)
+        return (label, self._batched(test))
 
     # TODO: Validate
     def _exact_test(
@@ -262,7 +276,7 @@ class EpisodeLinker:
         texts_of: Callable[[Episode], Collection[str]],
         own_text_of: Callable[[Episode], str | None],
         label: str,
-    ) -> tuple[str, Callable[[Episode], list[tuple[float, Episode]]]]:
+    ) -> tuple[str, Callable[[Sequence[Episode]], list[list[tuple[float, Episode]]]]]:
         index = self._exact_index(texts_of)
 
         # TODO: Validate
@@ -270,59 +284,80 @@ class EpisodeLinker:
             found = self._sole_match(index, own_text_of(episode))
             return [(1.0, found)] if found else []
 
-        return (label, test)
+        return (label, self._batched(test))
 
     # TODO: Validate
     def _link_by_single_test(
         self,
         episodes: list[Episode],
-        test: tuple[str, Callable[[Episode], list[tuple[float, Episode]]]],
+        test: tuple[
+            str,
+            Callable[[Sequence[Episode]], list[list[tuple[float, Episode]]]],
+        ],
     ) -> list[Episode]:
         label, run = test
-        for episode in episodes:
-            for score, tmdb_episode in run(episode):
-                self._claim(
-                    episode,
-                    tmdb_episode,
-                    f"Automatic: {label} match ({round(score * 100)}%)",
-                )
+        for start in range(0, len(episodes), 256):
+            batch = episodes[start : start + 256]
+            for episode, found in zip(batch, run(batch), strict=True):
+                for score, tmdb_episode in found:
+                    self._claim(
+                        episode,
+                        tmdb_episode,
+                        f"Automatic: {label} match ({round(score * 100)}%)",
+                    )
         return self._unlinked(episodes)
 
     # TODO: Validate
     def _link_by_tests(
         self,
         episodes: list[Episode],
-        tests: list[tuple[str, Callable[[Episode], list[tuple[float, Episode]]]]],
+        tests: list[
+            tuple[str, Callable[[Sequence[Episode]], list[list[tuple[float, Episode]]]]]
+        ],
     ) -> list[Episode]:
-        for episode in episodes:
-            results = [
-                (label, found) for label, test in tests if (found := test(episode))
-            ]
-            if not results:
-                continue
-
-            matched = {
-                frozenset(tmdb_episode.id for _score, tmdb_episode in found)
-                for _label, found in results
-            }
-            widest = max(matched, key=len)
-            if any(not found <= widest for found in matched):
-                continue
-
-            results = [
-                (label, found)
-                for label, found in results
-                if frozenset(tmdb_episode.id for _score, tmdb_episode in found)
-                == widest
-            ]
-            labels = ", ".join(label for label, _found in results)
-            for score, tmdb_episode in results[0][1]:
-                self._claim(
+        for start in range(0, len(episodes), 256):
+            batch = episodes[start : start + 256]
+            found_by_test = [(label, test(batch)) for label, test in tests]
+            for position, episode in enumerate(batch):
+                self._link_one_by_tests(
                     episode,
-                    tmdb_episode,
-                    f"Automatic: {labels} match ({round(score * 100)}%)",
+                    [
+                        (label, found[position])
+                        for label, found in found_by_test
+                        if found[position]
+                    ],
                 )
         return self._unlinked(episodes)
+
+    # TODO: Validate
+    def _link_one_by_tests(
+        self,
+        episode: Episode,
+        results: list[tuple[str, list[tuple[float, Episode]]]],
+    ) -> None:
+        if not results:
+            return
+
+        matched = {
+            frozenset(tmdb_episode.id for _score, tmdb_episode in found)
+            for _label, found in results
+        }
+        widest = max(matched, key=len)
+        if any(not found <= widest for found in matched):
+            return
+
+        results = [
+            (label, found)
+            for label, found in results
+            if frozenset(tmdb_episode.id for _score, tmdb_episode in found) == widest
+        ]
+        labels = ", ".join(label for label, _found in results)
+        for score, tmdb_episode in results[0][1]:
+            self._claim(
+                episode,
+                tmdb_episode,
+                f"Automatic: {labels} match ({round(score * 100)}%)",
+            )
 
     # TODO: Validate
     @staticmethod
@@ -460,19 +495,57 @@ class EpisodeLinker:
 
     # TODO: Validate
     @staticmethod
-    def _ranked(
+    def _candidates_of(
         entries: list[tuple[Episode, str]],
-        scores: list[float],
+    ) -> tuple[list[Episode], numpy.ndarray]:
+        candidates: list[Episode] = []
+        positions: dict[uuid.UUID, int] = {}
+        entry_candidates: list[int] = []
+        for tmdb_episode, _text in entries:
+            position = positions.get(tmdb_episode.id)
+            if position is None:
+                position = len(candidates)
+                positions[tmdb_episode.id] = position
+                candidates.append(tmdb_episode)
+            entry_candidates.append(position)
+        return candidates, numpy.asarray(entry_candidates, dtype=numpy.intp)
+
+    # TODO: Validate
+    @staticmethod
+    def _runner_up(best: numpy.ndarray, first: int) -> int | None:
+        before = best[:first]
+        after = best[first + 1 :]
+        if not before.size and not after.size:
+            return None
+        if not after.size or (before.size and before.max() >= after.max()):
+            return int(numpy.argmax(before))
+        return first + 1 + int(numpy.argmax(after))
+
+    # TODO: Validate
+    @staticmethod
+    def _ranked(
+        candidates: list[Episode],
+        entry_candidates: numpy.ndarray,
+        scores: numpy.ndarray,
     ) -> list[tuple[float, Episode]]:
-        best: dict[Episode, float] = {}
-        for (tmdb_episode, _text), score in zip(entries, scores, strict=True):
-            if score > best.get(tmdb_episode, -1.0):
-                best[tmdb_episode] = score
-        return sorted(
-            ((score, tmdb_episode) for tmdb_episode, score in best.items()),
-            key=lambda scoring: scoring[0],
-            reverse=True,
-        )
+        best: numpy.ndarray
+        if len(candidates) == len(scores):
+            best = scores
+        else:
+            best = numpy.full(len(candidates), -1.0)
+            numpy.maximum.at(best, entry_candidates, scores)
+        if not best.size:
+            return []
+
+        first = int(numpy.argmax(best))
+        if best[first] <= -1.0:
+            return []
+        ranked = [(float(best[first]), candidates[first])]
+
+        second = EpisodeLinker._runner_up(best, first)
+        if second is not None and best[second] > -1.0:
+            ranked.append((float(best[second]), candidates[second]))
+        return ranked
 
     # TODO: Validate
     def _scored_tests(
@@ -483,7 +556,9 @@ class EpisodeLinker:
         *,
         blended: tuple[float, float],
         embedding: tuple[float, float],
-    ) -> list[tuple[str, Callable[[Episode], list[tuple[float, Episode]]]]]:
+    ) -> list[
+        tuple[str, Callable[[Sequence[Episode]], list[list[tuple[float, Episode]]]]]
+    ]:
         entries = [
             (tmdb_episode, text)
             for tmdb_episode in self.canonical_episodes
@@ -492,29 +567,47 @@ class EpisodeLinker:
         if not entries:
             return []
         matcher = TextMatcher([text for _tmdb_episode, text in entries])
+        candidates, entry_candidates = self._candidates_of(entries)
 
         # TODO: Validate
         def scored(
-            scores_of: Callable[[str], list[float]],
+            scores_of: Callable[[list[str]], numpy.ndarray],
             floor: float,
             margin: float,
-        ) -> Callable[[Episode], list[tuple[float, Episode]]]:
+        ) -> Callable[[Sequence[Episode]], list[list[tuple[float, Episode]]]]:
             # TODO: Validate
-            def test(episode: Episode) -> list[tuple[float, Episode]]:
-                own_text = (own_text_of(episode) or "").strip()
-                if not own_text:
+            def test(
+                episodes: Sequence[Episode],
+            ) -> list[list[tuple[float, Episode]]]:
+                own_texts = [
+                    (own_text_of(episode) or "").strip() for episode in episodes
+                ]
+                if not own_texts:
                     return []
-                found = self._confident_match(
-                    episode,
-                    self._ranked(entries, scores_of(own_text)),
-                    floor,
-                    margin,
-                )
-                return [found] if found else []
+                score_rows = scores_of(own_texts)
+                results: list[list[tuple[float, Episode]]] = []
+                for episode, own_text, scores in zip(
+                    episodes,
+                    own_texts,
+                    score_rows,
+                    strict=True,
+                ):
+                    found = (
+                        self._confident_match(
+                            episode,
+                            self._ranked(candidates, entry_candidates, scores),
+                            floor,
+                            margin,
+                        )
+                        if own_text
+                        else None
+                    )
+                    results.append([found] if found else [])
+                return results
 
             return test
 
         return [
-            (f"Blended {label}", scored(matcher.blended_scores, *blended)),
-            (f"Embedding {label}", scored(matcher.embedding_scores, *embedding)),
+            (f"Blended {label}", scored(matcher.blended_scores_of, *blended)),
+            (f"Embedding {label}", scored(matcher.embedding_scores_of, *embedding)),
         ]

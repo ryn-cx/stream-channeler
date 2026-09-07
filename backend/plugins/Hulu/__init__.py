@@ -1,6 +1,6 @@
-# TODO: Validate
 from __future__ import annotations
 
+from datetime import time, timedelta
 import re
 from typing import TYPE_CHECKING, override
 
@@ -20,21 +20,21 @@ from plugins.utils.base_plugin.base import BaseReadURL
 from plugins.utils.base_plugin.initialize import BasePluginInitializer
 
 if TYPE_CHECKING:
+    from sqlmodel import Session
+
     from app.plugins.models import Plugin
     from app.titles.models import Title
 
 
-# TODO: Validate
 class HuluInitializer(HuluShared, BasePluginInitializer):
-    # TODO: Validate
+    @classmethod
     @override
-    def _create_source_records(self) -> None:
-        super()._create_source_records()
-        if self.plugin.update_at is None:
-            self.plugin.update_at = tz_datetime.now()
+    def _create_plugin_record(cls, session: Session) -> Plugin:
+        plugin = super()._create_plugin_record(session)
+        plugin.update_at = tz_datetime.now() + timedelta(days=7)
+        return plugin
 
 
-# TODO: Validate
 class Hulu(
     HuluShared,
     BaseReadURL,
@@ -97,19 +97,12 @@ class Hulu(
                     return title_url(result.metrics_info.target_id, hulu_media_type)
         return None
 
-    # TODO: Validate
     @override
     def update_plugin(self, plugin: Plugin) -> None:
         self._download_if_outdated(self._plugin_files(), plugin.update_at)
         self._create_channel_records()
         data_timestamps = self.plugin_data_timestamps()
-        self._mark_mismatched_titles_as_outdated(
-            None,
-            self._title_keys_from_all_xxx_files(),
-            data_timestamps,
-        )
-        for source in self.plugin.sources:
-            if source.deleted_at is None:
-                self.upsert_source(source.key)
+        new_titles = self._title_keys_from_all_xxx_files()
+        self._mark_mismatched_titles_as_outdated(None, new_titles, data_timestamps)
         plugin.data_timestamp = max(data_timestamps)
         plugin.update_at = staggered_monthly_update_at(plugin.key, tz_datetime.now())

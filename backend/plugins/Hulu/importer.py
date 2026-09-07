@@ -4,8 +4,6 @@ import re
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, override
 
-from sqlmodel import col, select
-
 from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.media.media_type import TMDBMediaType
@@ -24,10 +22,12 @@ from plugins.Hulu.utils import (
     genre_names,
     image_url,
     plan_channel_description,
-    plan_channel_name,
+    plan_source_key,
     season_items,
     season_numbers,
     split_season_key,
+    get_channel_description,
+    get_channel_name,
     thumbnail_url,
     title_plan,
     title_url,
@@ -64,14 +64,15 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
         title = self.upsert_title(title_source, media_info.title_key)
         return self._import_results(title, media_info)
 
+    # TODO: Validate
     def get_title_source(self, title_key: str) -> Source:
         plan = title_plan(self._title_files(title_key)[0].parsed())
         source_key = "Hulu"
         if plan and plan.is_subscription:
-            source_key += f" ({plan.network})"
+            source_key = plan_source_key(plan)
 
         if source_key not in self._sources:
-            self._sources[source_key] = self.upsert_source(source_key)
+            self._sources[source_key] = self.upsert_source(source_key, source_key)
 
         return self._sources[source_key]
 
@@ -82,36 +83,26 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
 
         page = self._title_files(title.key)[0].parsed()
         plan = title_plan(page)
-        self._add_title_to_all_titles_channel(title.url)
-        self._add_title_to_plan_channel(title.url, self._media_type_name(), plan)
+        self._add_title_to_subject_channel(title.url, "Titles")
+        self._add_title_to_subject_channel(title.url, self._media_type_name())
         if plan:
-            self._add_title_to_plan_channel(title.url, plan.network, plan)
+            self._add_title_to_plan_channel(title.url, plan)
         for genre in genre_names(page):
-            self._add_title_to_plan_channel(title.url, genre, plan)
-        if not (plan and plan.is_subscription):
-            self._add_title_to_included_titles_channel(title.url)
+            self._add_title_to_subject_channel(title.url, genre)
 
-    def _add_title_to_all_titles_channel(self, url: str) -> None:
-        channel_name = "Hulu - All Titles"
-        channel_description = "All Titles on Hulu."
+    # TODO: Validate
+    def _add_title_to_subject_channel(self, url: str, channel_suffix: str) -> None:
+        channel_name = get_channel_name(channel_suffix)
+        channel_description = get_channel_description(channel_suffix)
         channel = self.get_or_create_channel(channel_name, channel_description)
         self.add_new_urls_to_channel(channel, [url])
 
-    def _add_title_to_plan_channel(
-        self,
-        url: str,
-        subject: str,
-        plan: HuluPlan | None,
-    ) -> None:
-        channel_name = plan_channel_name(subject, plan)
-        channel_description = plan_channel_description(subject, plan)
-        channel = self.get_or_create_channel(channel_name, channel_description)
-        self.add_new_urls_to_channel(channel, [url])
-
-    def _add_title_to_included_titles_channel(self, url: str) -> None:
-        channel_name = "Hulu - Included Titles"
-        channel_description = "All Titles included with a Hulu subscription."
-        channel = self.get_or_create_channel(channel_name, channel_description)
+    # TODO: Validate
+    def _add_title_to_plan_channel(self, url: str, plan: HuluPlan) -> None:
+        channel = self.get_or_create_channel(
+            plan_source_key(plan),
+            plan_channel_description(plan),
+        )
         self.add_new_urls_to_channel(channel, [url])
 
 

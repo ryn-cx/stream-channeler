@@ -12,6 +12,7 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import SelectOfScalar
+from tqdm import tqdm
 
 from app.canonical_media.episodes import canonical_episode_link, links_of
 from app.channels.episode_selector.visibility import channel_access_condition
@@ -368,6 +369,7 @@ def _process_outdated_items(
 
     updated_count = 0
     plugin_record = Plugin.get_one(session, plugin_key)
+    progress = tqdm(total=len(outdated_items), unit=media_type_name)
     for group in _grouped_by_title(outdated_items):
         # One view of the plugin per title, so what it read for the title answers
         # every item of it and is let go when the title is done with.
@@ -375,6 +377,8 @@ def _process_outdated_items(
         for item in group:
             log_msg = f"[{plugin_key}] Updating {media_type_name}: {item.key}"
             logger.info(log_msg)
+            progress.set_description(f"[{plugin_key}] {item.key}")
+            progress.update()
             try:
                 update = getattr(plugin_instance, update_method_name)
                 if media_class is Source:
@@ -408,6 +412,7 @@ def _process_outdated_items(
                     # the update until the issue is resolved.
                     item.update_at = tz_datetime.max()
                 session.commit()
+    progress.close()
 
     log_msg = (
         f"[{plugin_key}] Updated {updated_count} out of {len(outdated_items)} "
@@ -532,5 +537,5 @@ def _update_outdated_forever() -> None:
 
 
 if __name__ == "__main__":
-    configure_logging()
+    configure_logging(lambda message: tqdm.write(message, end=""))
     _update_outdated_forever()
