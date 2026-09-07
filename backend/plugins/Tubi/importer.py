@@ -91,7 +91,7 @@ class TubiImporter(TubiShared, BaseImporter, ABC):
 
 
 # TODO: Validate
-class TubiSeries(TubiImporter):
+class TubiSeriesImporter(TubiImporter):
     # TODO: Validate
     @classmethod
     @override
@@ -260,7 +260,7 @@ class TubiSeries(TubiImporter):
 
 
 # TODO: Validate
-class TubiMovie(TubiImporter):
+class TubiMovieImporter(TubiImporter):
     # TODO: Validate
     @classmethod
     @override

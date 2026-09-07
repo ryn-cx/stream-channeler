@@ -100,7 +100,7 @@ class DisneyPlusImporter(DisneyPlusShared, BaseImporter, ABC):
 
 
 # TODO: Validate
-class DisneyPlusSeries(DisneyPlusImporter):
+class DisneyPlusSeriesImporter(DisneyPlusImporter):
     # TODO: Validate
     @override
     def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
@@ -262,7 +262,7 @@ class DisneyPlusSeries(DisneyPlusImporter):
 
 
 # TODO: Validate
-class DisneyPlusMovie(DisneyPlusImporter):
+class DisneyPlusMovieImporter(DisneyPlusImporter):
     # TODO: Validate
     @override
     def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:

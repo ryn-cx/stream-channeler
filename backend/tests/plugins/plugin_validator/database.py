@@ -2,7 +2,7 @@
 """Putting the stored files in place and reading back what they built."""
 
 import json
-from collections.abc import Generator, Iterable
+from collections.abc import Generator, Iterable, Sequence
 from contextlib import ExitStack, contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -24,7 +24,7 @@ from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.sources.models import Source
 from app.titles.models import Title
-from app.titles.service.canonical import match_imported_titles_to_tmdb
+from app.titles.service.linking import link_plugin_title_to_tmdb
 from plugins.utils.abstract_plugin import AbstractPlugin, URLImportResult
 from plugins.utils.base_plugin.files import BaseFile
 from plugins.utils.manage_plugins import import_plugins, plugins
@@ -36,6 +36,27 @@ from tests.plugins.plugin_validator.stored_files import (
     date_at_import_time,
     stored_path,
 )
+
+
+# TODO: Validate
+def match_imported_titles_to_tmdb(
+    session: Session,
+    plugin_instance: AbstractPlugin,
+    titles: Sequence[Title],
+) -> None:
+    """Search TMDB for every title `plugin_instance` imported and link what is found.
+
+    A title already linked to a title is left as it is, since the link it carries
+    may have been settled by hand.
+    """
+    for title in titles:
+        if not title.is_canonical:
+            continue
+        link_plugin_title_to_tmdb(
+            session,
+            title,
+            plugin_instance.tmdb_lookup_info(title.key),
+        )
 
 
 # TODO: Validate

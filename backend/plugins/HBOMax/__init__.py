@@ -4,7 +4,11 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, override
 
-from plugins.HBOMax.importer import HBOMaxImporter, HBOMaxMovie, HBOMaxSeries
+from plugins.HBOMax.importer import (
+    HBOMaxImporter,
+    HBOMaxMovieImporter,
+    HBOMaxSeriesImporter,
+)
 from plugins.HBOMax.shared import MOVIE_URL_REGEX, TITLE_URL_REGEX, HBOMaxShared
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.base import BaseReadURL
@@ -30,22 +34,22 @@ class HBOMax(HBOMaxShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def _get_media_importer_from_url(self, url: str) -> HBOMaxImporter:
+    def media_importer_from_url(self, url: str) -> HBOMaxImporter:
         domain_regex = self._domain_regex()
         if re.match(domain_regex + MOVIE_URL_REGEX, url):
-            return HBOMaxMovie(self)
+            return HBOMaxMovieImporter(self)
         if re.match(domain_regex + TITLE_URL_REGEX, url):
-            return HBOMaxSeries(self)
+            return HBOMaxSeriesImporter(self)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
     # TODO: Validate
     @override
-    def _get_media_importer_from_title(self, title: Title) -> HBOMaxImporter:
+    def media_importer_from_title(self, title: Title) -> HBOMaxImporter:
         if not title.media_type:
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
         if title.media_type == "Movie":
-            return HBOMaxMovie(self)
-        return HBOMaxSeries(self)
+            return HBOMaxMovieImporter(self)
+        return HBOMaxSeriesImporter(self)

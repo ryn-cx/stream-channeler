@@ -32,17 +32,22 @@ from app.titles.schemas import (
     TmdbEpisodeGroupOption,
     UnvalidatedTitleOutput,
 )
-from app.titles.service.canonical import (
-    canonicalize_title,
+from app.titles.service.linking import (
     import_non_canonical_title_from_url,
-    set_canonical_title,
-    set_canonical_title_using_tmdb_url,
-    unset_canonical_title,
+    link_title_to_canonical_title,
+    link_title_to_canonical_title_from_tmdb_url,
+    make_title_canonical,
+    relink_title,
+    unlink_title_from_canonical_title,
 )
-from app.titles.service.extra import force_update_title, list_tmdb_episode_groups
-from app.titles.service.information import _title_output, update_title_record
-from app.titles.service.relinking import relink_title
-from app.titles.service.validation import list_unvalidated_titles, validate_title
+from app.titles.service.service import (
+    _title_output,
+    force_update_title,
+    list_tmdb_episode_groups,
+    list_unvalidated_titles,
+    update_title_record,
+    validate_title,
+)
 
 """Title router."""
 
@@ -149,7 +154,7 @@ def admin_link_title_to_canonical(
     since one page holding two titles is a thing websites do. Taking one off is
     `admin_unlink_title_from_canonical`.
     """
-    return _title_output(set_canonical_title(session, title, canonical_title))
+    return _title_output(link_title_to_canonical_title(session, title, canonical_title))
 
 
 # TODO: Validate
@@ -162,7 +167,7 @@ def admin_link_title_by_tmdb_url(
     url_input: TitleTmdbUrlInput,
 ) -> TitlePublic:
     return _title_output(
-        set_canonical_title_using_tmdb_url(session, title, url_input.url),
+        link_title_to_canonical_title_from_tmdb_url(session, title, url_input.url),
     )
 
 
@@ -190,7 +195,7 @@ def admin_unlink_title_from_canonical(
     canonical_title: AdminCanonicalTitle,
 ) -> TitlePublic:
     """Take one canonical title off what a `Title` stands for."""
-    return _title_output(unset_canonical_title(session, title, canonical_title))
+    return _title_output(unlink_title_from_canonical_title(session, title, canonical_title))
 
 
 # TODO: Validate
@@ -198,7 +203,7 @@ def admin_unlink_title_from_canonical(
     "/{title_id}/canonicalize",  # noqa: FAST003 - Used by ExistingTitle.
 )
 def admin_canonicalize_title(session: SessionDep, title: ExistingTitle) -> TitlePublic:
-    return _title_output(canonicalize_title(session, title))
+    return _title_output(make_title_canonical(session, title))
 
 
 # TODO: Validate

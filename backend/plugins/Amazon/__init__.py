@@ -2,15 +2,24 @@
 from __future__ import annotations
 
 import re
+from datetime import timedelta
 from typing import TYPE_CHECKING, override
 
-from plugins.Amazon.importer import AmazonImporter, AmazonMovie, AmazonSeries
+from app.media.media_type import TMDBMediaType
+from app.utils import tz_datetime
+from plugins.Amazon.constants import MOVIE_ENTITY_TYPE
+from plugins.Amazon.importer import (
+    AmazonImporter,
+    AmazonMovieImporter,
+    AmazonSeriesImporter,
+)
 from plugins.Amazon.shared import (
     AMAZON_URL_REGEX,
     PRIME_VIDEO_URL_REGEX,
     SHARE_URL_REGEX,
     AmazonShared,
 )
+from plugins.Amazon.utils import detail_url
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.base import BaseReadURL
 from plugins.utils.base_plugin.initialize import BasePluginInitializer
@@ -41,25 +50,25 @@ class Amazon(AmazonShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def _get_media_importer_from_url(self, url: str) -> AmazonImporter:
+    def media_importer_from_url(self, url: str) -> AmazonImporter:
         # A film and a season of a series are answered at the same address,
         # so the page has to be read before it is known which of the two it
         # is.
         title_key = self._url_title_key(url)
         self.raise_if_invalid_file(self.detail_file(title_key), url)
         if self._is_movie(title_key):
-            return AmazonMovie(self)
-        return AmazonSeries(self)
+            return AmazonMovieImporter(self)
+        return AmazonSeriesImporter(self)
 
     # TODO: Validate
     @override
-    def _get_media_importer_from_title(self, title: Title) -> AmazonImporter:
+    def media_importer_from_title(self, title: Title) -> AmazonImporter:
         if not title.media_type:
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
         if title.media_type == "Movie":
-            return AmazonMovie(self)
-        return AmazonSeries(self)
+            return AmazonMovieImporter(self)
+        return AmazonSeriesImporter(self)
 
     # TODO: Validate
     def _url_title_key(self, url: str) -> str:
@@ -75,3 +84,20 @@ class Amazon(AmazonShared, BaseReadURL, AbstractPlugin, register=False):
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
+
+    # TODO: Validate
+    @override
+    def search_for_url(
+        self,
+        names: list[str],
+        media_type: TMDBMediaType,
+        year: int | None = None,
+    ) -> str | None:
+        search_file = self.search_file(names[0])
+        search_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
+        results = search_file.results()
+        return detail_url(results[0]) if results else None
+
+    # TODO: Validate
+    def _is_movie(self, title_key: str) -> bool:
+        return self.detail_file(title_key).entity_type() == MOVIE_ENTITY_TYPE

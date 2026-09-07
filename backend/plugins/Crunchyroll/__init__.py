@@ -53,7 +53,7 @@ class Crunchyroll(
     CrunchyrollShared,
     BaseReadURL,
     AbstractPlugin,
-    register=False,
+    register=True,
 ):
     initializer = CrunchyrollInitializer
 
@@ -68,8 +68,9 @@ class Crunchyroll(
             EPISODE_URL_REGEX,
         )
 
+    # TODO: Validate
     @override
-    def _get_media_importer_from_url(self, url: str) -> CrunchyrollImporter:
+    def media_importer_from_url(self, url: str) -> CrunchyrollImporter:
         domain_regex = self._domain_regex()
         for url_regex in (MUSIC_VIDEO_URL_REGEX, CONCERT_URL_REGEX, ARTIST_URL_REGEX):
             if re.match(domain_regex + url_regex, url):
@@ -81,8 +82,9 @@ class Crunchyroll(
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
+    # TODO: Validate
     @override
-    def _get_media_importer_from_title(self, title: Title) -> CrunchyrollImporter:
+    def media_importer_from_title(self, title: Title) -> CrunchyrollImporter:
         return self.get_media_importer_from_source(title.source)
 
     @override

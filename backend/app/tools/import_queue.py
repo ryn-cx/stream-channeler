@@ -68,11 +68,11 @@ def import_queue(session: Session, *, skip_plugin_user_channels: bool = False) -
         session,
         skip_plugin_user_channels=skip_plugin_user_channels,
     )
-    total = sum(len(items) for items in grouped.values())
+    total = sum(len(items) for _, items in grouped)
     if not total:
         return
     with tqdm(total=total, unit="url") as progress:
-        for plugin_class, items in grouped.items():
+        for plugin_class, items in grouped:
             plugin_key = plugin_class.plugin_name()
             with PLUGIN_LOCKS[plugin_key]:
                 for item in items:
@@ -101,26 +101,35 @@ def _group_pending_urls_by_plugin(
     session: Session,
     *,
     skip_plugin_user_channels: bool = False,
-) -> dict[type[AbstractPlugin], list[ChannelQueue]]:
-    by_plugin: dict[type[AbstractPlugin], list[ChannelQueue]] = {}
+) -> list[tuple[type[AbstractPlugin], list[ChannelQueue]]]:
+    by_plugin: list[tuple[type[AbstractPlugin], list[ChannelQueue]]] = []
     unmatched: list[ChannelQueue] = []
-    selector = select(ChannelQueue).where(
-        col(ChannelQueue.status).in_([URLStatus.PENDING, URLStatus.IMPORTING]),
-        or_(
-            col(ChannelQueue.import_at).is_(None),
-            col(ChannelQueue.import_at) <= tz_datetime.now(),
-        ),
+    selector = (
+        select(ChannelQueue)
+        .join(Channel, col(ChannelQueue.channel_id) == col(Channel.id))
+        .join(User, col(Channel.user_id) == col(User.id))
+        .where(
+            col(ChannelQueue.status).in_([URLStatus.PENDING, URLStatus.IMPORTING]),
+            or_(
+                col(ChannelQueue.import_at).is_(None),
+                col(ChannelQueue.import_at) <= tz_datetime.now(),
+            ),
+        )
     )
     if skip_plugin_user_channels:
-        selector = (
-            selector.join(Channel, col(ChannelQueue.channel_id) == col(Channel.id))
-            .join(User, col(Channel.user_id) == col(User.id))
-            .where(~is_plugin_user(User.email))
-        )
-    pending = session.exec(selector.order_by(col(ChannelQueue.created_at).asc())).all()
+        selector = selector.where(~is_plugin_user(User.email))
+    pending = session.exec(
+        selector.order_by(
+            is_plugin_user(User.email).asc(),
+            col(ChannelQueue.created_at).asc(),
+        ),
+    ).all()
     for item in pending:
         if plugin_class := _get_plugin(item.url):
-            by_plugin.setdefault(plugin_class, []).append(item)
+            if by_plugin and by_plugin[-1][0] is plugin_class:
+                by_plugin[-1][1].append(item)
+            else:
+                by_plugin.append((plugin_class, [item]))
         elif item.status == URLStatus.PENDING:
             logger.warning(f"No valid plugin found for URL: {item.url}")
             item.status = URLStatus.FAILED

@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, override
 
-from plugins.Roku.importer import RokuImporter, RokuMovie, RokuSeries
+from plugins.Roku.importer import RokuImporter, RokuMovieImporter, RokuSeriesImporter
 from plugins.Roku.shared import DETAILS_URL_REGEX, WATCH_URL_REGEX, RokuShared
 from plugins.Roku.utils import is_movie
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
@@ -31,7 +31,7 @@ class Roku(RokuShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def _get_media_importer_from_url(self, url: str) -> RokuImporter:
+    def media_importer_from_url(self, url: str) -> RokuImporter:
         domain_regex = self._domain_regex()
         for url_regex in self._url_regexes():
             if match := re.match(domain_regex + url_regex, url):
@@ -45,20 +45,20 @@ class Roku(RokuShared, BaseReadURL, AbstractPlugin, register=False):
                 # A season or an episode belongs to a series, which is what
                 # is read and written.
                 if content.series is not None:
-                    return RokuSeries(self)
+                    return RokuSeriesImporter(self)
                 if is_movie(content):
-                    return RokuMovie(self)
-                return RokuSeries(self)
+                    return RokuMovieImporter(self)
+                return RokuSeriesImporter(self)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
     # TODO: Validate
     @override
-    def _get_media_importer_from_title(self, title: Title) -> RokuImporter:
+    def media_importer_from_title(self, title: Title) -> RokuImporter:
         if not title.media_type:
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
         if title.media_type == "Movie":
-            return RokuMovie(self)
-        return RokuSeries(self)
+            return RokuMovieImporter(self)
+        return RokuSeriesImporter(self)

@@ -40,9 +40,13 @@ if TYPE_CHECKING:
     from plugins.utils.base_plugin.files import BaseFile
 
 
+# TODO: Validate
 class HuluImporter(HuluShared, BaseImporter, ABC):
     @abstractmethod
     def _media_type_name(self) -> str: ...
+
+    @abstractmethod
+    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]: ...
 
     @abstractmethod
     @override

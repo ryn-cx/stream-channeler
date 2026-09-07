@@ -10,7 +10,7 @@ from app.titles.dependencies import ExistingTitle
 from app.titles.schemas import (
     TitleInformationOutput,
 )
-from app.titles.service.information import title_information
+from app.titles.service.service import title_information
 from app.users.dependencies import OptionalUser
 
 """Title router."""

@@ -3,19 +3,11 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import override
 
-from app.media.media_type import TMDBMediaType
-from app.sources.models import Source
-from app.utils import tz_datetime
 from plugins.Amazon.base_files import AmazonBaseFiles
-from plugins.Amazon.constants import (
-    MOVIE_ENTITY_TYPE,
-    PURCHASE_SOURCE_SUFFIX,
-    TITLE_KEY_REGEX,
-)
-from plugins.Amazon.utils import AmazonSeason, detail_url, search_url
+from plugins.Amazon.constants import TITLE_KEY_REGEX
+from plugins.Amazon.utils import search_url
 
 # https://watch.amazon.com/detail?gti=amzn1.dv.gti.92ad2133-d35e-1cb1-5d8e-f7b122a68228
 # The id Amazon writes into a share link, which names the title in a
@@ -82,86 +74,5 @@ class AmazonShared(AmazonBaseFiles):
         return search_url(query)
 
     # TODO: Validate
-    def search_for_url(
-        self,
-        names: list[str],
-        media_type: TMDBMediaType,  # noqa: ARG002 - `media_type` refines a search.
-        year: int | None = None,  # noqa: ARG002 - `year` refines a search.
-    ) -> str | None:
-        search_file = self.search_file(names[0])
-        search_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        results = search_file.results()
-        return detail_url(results[0]) if results else None
-
-    # TODO: Validate
     def title_key_from_share_key(self, share_key: str) -> str:
         return self.share_link_file(share_key).title_key()
-
-    # TODO: Validate
-    def title_key_from_title_key(self, title_key: str) -> str:
-        return self.detail_file(title_key).title_key()
-
-    # TODO: Validate
-    def _is_movie(self, title_key: str) -> bool:
-        return self.detail_file(title_key).entity_type() == MOVIE_ENTITY_TYPE
-
-    # TODO: Validate
-    def _season_available(self, season_key: str) -> bool:
-        return self.detail_file(season_key).unavailable_message() is None
-
-    # TODO: Validate
-    def _season_entries(self, title_key: str) -> list[AmazonSeason]:
-        page = self.detail_file(title_key)
-        seasons = page.seasons() or [
-            AmazonSeason(
-                key=page.compact_key(),
-                name=page.title(),
-                season_number=page.season_number() or 1,
-            ),
-        ]
-        return [season for season in seasons if self._season_available(season.key)]
-
-    # TODO: Validate
-    def title_sources(self, title_key: str) -> list[Source]:
-        """Return every `Source` a title belongs to, by how it can be watched.
-
-        A title is often offered more than one way, such as with a channel
-        subscription and as a purchase, and each way is a source of its own so
-        the title is found however the user can watch it. Only a title included
-        with Prime belongs to Prime Video itself.
-        """
-        detail_file = self.detail_file(title_key)
-        sources = [
-            self._extra_source(
-                f"{self.plugin_name()}:{channel.benefit_id}",
-                f"{self.plugin_name()} ({channel.name})",
-            )
-            for channel in detail_file.channels()
-        ]
-        if detail_file.included_with_prime():
-            sources.append(self.source)
-        if detail_file.purchasable():
-            sources.append(
-                self._extra_source(
-                    f"{self.plugin_name()}:{PURCHASE_SOURCE_SUFFIX}",
-                    f"{self.plugin_name()} ({PURCHASE_SOURCE_SUFFIX})",
-                ),
-            )
-        # A title with no way to watch it listed still belongs somewhere.
-        return sources or [self.source]
-
-    # TODO: Validate
-    def _extra_source(self, source_key: str, name: str) -> Source:
-        """Return one of the plugin's `Source`s other than its default one."""
-        # Looked up against the database rather than only the session, since a
-        # source other than the default is made the first time a title needs it
-        # and nothing loads it back into a later session before this reads it.
-        existing_source = Source.get(self.session, self.plugin, source_key)
-        source = Source(
-            key=source_key,
-            name=name,
-            favicon_url=self.favicon_url(),
-            plugin_id=self.plugin.id,
-        ).upsert(self.plugin, existing_source)
-        source.set_update_at(None)
-        return source

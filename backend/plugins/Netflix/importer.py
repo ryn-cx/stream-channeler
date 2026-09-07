@@ -91,7 +91,7 @@ class NetflixImporter(NetflixShared, BaseImporter, ABC):
 
 
 # TODO: Validate
-class NetflixSeries(NetflixImporter):
+class NetflixSeriesImporter(NetflixImporter):
     # TODO: Validate
     @override
     def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
@@ -254,7 +254,7 @@ class NetflixSeries(NetflixImporter):
 
 
 # TODO: Validate
-class NetflixMovie(NetflixImporter):
+class NetflixMovieImporter(NetflixImporter):
     # TODO: Validate
     @override
     def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:

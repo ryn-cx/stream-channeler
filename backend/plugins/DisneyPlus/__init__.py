@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, override
 
 from plugins.DisneyPlus.importer import (
     DisneyPlusImporter,
-    DisneyPlusMovie,
-    DisneyPlusSeries,
+    DisneyPlusMovieImporter,
+    DisneyPlusSeriesImporter,
 )
 from plugins.DisneyPlus.shared import ENTITY_URL_REGEX, DisneyPlusShared
 from plugins.DisneyPlus.utils import is_movie
@@ -35,7 +35,7 @@ class DisneyPlus(DisneyPlusShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def _get_media_importer_from_url(self, url: str) -> DisneyPlusImporter:
+    def media_importer_from_url(self, url: str) -> DisneyPlusImporter:
         match = re.match(self._domain_regex() + ENTITY_URL_REGEX, url)
         if not match:
             msg = f"Invalid {self.plugin_name()} URL: {url}"
@@ -46,15 +46,15 @@ class DisneyPlus(DisneyPlusShared, BaseReadURL, AbstractPlugin, register=False):
         title_key = match.group("entity_key")
         self.raise_if_invalid_file(self.entity_file(title_key), url)
         if is_movie(self.entity_file(title_key).parsed()):
-            return DisneyPlusMovie(self)
-        return DisneyPlusSeries(self)
+            return DisneyPlusMovieImporter(self)
+        return DisneyPlusSeriesImporter(self)
 
     # TODO: Validate
     @override
-    def _get_media_importer_from_title(self, title: Title) -> DisneyPlusImporter:
+    def media_importer_from_title(self, title: Title) -> DisneyPlusImporter:
         if not title.media_type:
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
         if title.media_type == "Movie":
-            return DisneyPlusMovie(self)
-        return DisneyPlusSeries(self)
+            return DisneyPlusMovieImporter(self)
+        return DisneyPlusSeriesImporter(self)

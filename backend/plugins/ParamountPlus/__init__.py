@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, override
 
 from plugins.ParamountPlus.importer import (
     ParamountPlusImporter,
-    ParamountPlusMovie,
-    ParamountPlusSeries,
+    ParamountPlusMovieImporter,
+    ParamountPlusSeriesImporter,
 )
 from plugins.ParamountPlus.shared import (
     MOVIE_URL_REGEX,
@@ -38,22 +38,22 @@ class ParamountPlus(ParamountPlusShared, BaseReadURL, AbstractPlugin, register=F
 
     # TODO: Validate
     @override
-    def _get_media_importer_from_url(self, url: str) -> ParamountPlusImporter:
+    def media_importer_from_url(self, url: str) -> ParamountPlusImporter:
         domain_regex = self._domain_regex()
         if re.match(domain_regex + MOVIE_URL_REGEX, url):
-            return ParamountPlusMovie(self)
+            return ParamountPlusMovieImporter(self)
         if re.match(domain_regex + TITLE_URL_REGEX, url):
-            return ParamountPlusSeries(self)
+            return ParamountPlusSeriesImporter(self)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
     # TODO: Validate
     @override
-    def _get_media_importer_from_title(self, title: Title) -> ParamountPlusImporter:
+    def media_importer_from_title(self, title: Title) -> ParamountPlusImporter:
         if not title.media_type:
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
         if title.media_type == "Movie":
-            return ParamountPlusMovie(self)
-        return ParamountPlusSeries(self)
+            return ParamountPlusMovieImporter(self)
+        return ParamountPlusSeriesImporter(self)

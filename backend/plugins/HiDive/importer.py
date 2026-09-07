@@ -56,7 +56,7 @@ class HiDiveImporter(HiDiveShared, BaseImporter, ABC):
 
 
 # TODO: Validate
-class HiDiveSeries(HiDiveImporter):
+class HiDiveSeriesImporter(HiDiveImporter):
     # TODO: Validate
     @classmethod
     @override
@@ -244,7 +244,7 @@ class HiDiveSeries(HiDiveImporter):
 
 
 # TODO: Validate
-class HiDiveMovie(HiDiveImporter):
+class HiDiveMovieImporter(HiDiveImporter):
     # TODO: Validate
     @classmethod
     @override

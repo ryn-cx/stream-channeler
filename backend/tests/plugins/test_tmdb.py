@@ -7,10 +7,7 @@ from typing import override
 from sqlmodel import Session
 
 from app.titles.models import Title
-from app.titles.service.canonical import (
-    match_imported_titles_to_tmdb,
-    match_title_to_tmdb,
-)
+from app.titles.service.linking import link_title_to_tmdb
 from plugins.TMDB import TMDB
 from plugins.Tubi import Tubi
 from tests.plugins.frozen_clock import frozen_clock
@@ -20,6 +17,7 @@ from tests.plugins.plugin_validator import (
     UpdateTests,
     URLTests,
 )
+from tests.plugins.plugin_validator.database import match_imported_titles_to_tmdb
 from tests.plugins.plugin_validator.log_stats import log_stats
 from tests.plugins.plugin_validator.stored_files import (
     mock_update,
@@ -200,7 +198,12 @@ class TestSupermanRelinkedTubi(TMDBValidator):
             tubi = Tubi(session_with_files)
             results = tubi.import_url(self.relinked_url)
             for result in results:
-                match_title_to_tmdb(session_with_files, result.title, tmdb_title)
+                link_title_to_tmdb(
+                    session_with_files,
+                    result.title,
+                    tmdb_title,
+                    "Automatic: Import match",
+                )
         session_with_files.flush()
         session_with_files.expire_all()
 

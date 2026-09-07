@@ -134,11 +134,17 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         cls.initializer.initialize_plugin(session)
 
     # TODO: Validate
-    def _get_media_importer_from_url(self, url: str) -> BaseImporter:  # noqa: ARG002
+    def media_importer(self, url_or_title: str | Title) -> BaseImporter:
+        if isinstance(url_or_title, str):
+            return self.media_importer_from_url(url_or_title)
+        return self.media_importer_from_title(url_or_title)
+
+    # TODO: Validate
+    def media_importer_from_url(self, url: str) -> BaseImporter:  # noqa: ARG002
         return cast("BaseImporter", self)
 
     # TODO: Validate
-    def _get_media_importer_from_title(self, title: Title) -> BaseImporter:  # noqa: ARG002
+    def media_importer_from_title(self, title: Title) -> BaseImporter:  # noqa: ARG002
         return cast("BaseImporter", self)
 
     # TODO: Validate
@@ -148,7 +154,7 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
 
     # TODO: Validate
     def import_url(self, url: str) -> list[URLImportResult]:
-        return self._get_media_importer_from_url(url).import_url(url)
+        return self.media_importer(url).import_url(url)
 
     # TODO: Validate
     def import_search(
@@ -168,29 +174,29 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
 
     # TODO: Validate
     def update_title(self, title: Title, *, force: bool = False) -> None:
-        self._get_media_importer_from_title(title).update_title(title, force=force)
+        self.media_importer(title).update_title(title, force=force)
 
     # TODO: Validate
     def update_season(self, season: Season) -> None:
-        self._get_media_importer_from_title(season.title).update_season(season)
+        self.media_importer(season.title).update_season(season)
 
     # TODO: Validate
     def update_episode(self, episode: Episode) -> None:
-        self._get_media_importer_from_title(episode.season.title).update_episode(
+        self.media_importer(episode.season.title).update_episode(
             episode,
         )
 
     # TODO: Validate
     def on_update_title_failure(self, title: Title, error: Exception) -> None:
-        self._get_media_importer_from_title(title).on_failure(title, error)
+        self.media_importer(title).on_failure(title, error)
 
     # TODO: Validate
     def on_update_season_failure(self, season: Season, error: Exception) -> None:
-        self._get_media_importer_from_title(season.title).on_failure(season, error)
+        self.media_importer(season.title).on_failure(season, error)
 
     # TODO: Validate
     def on_update_episode_failure(self, episode: Episode, error: Exception) -> None:
-        self._get_media_importer_from_title(episode.season.title).on_failure(
+        self.media_importer(episode.season.title).on_failure(
             episode,
             error,
         )

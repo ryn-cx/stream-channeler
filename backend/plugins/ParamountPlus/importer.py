@@ -45,7 +45,7 @@ class ParamountPlusImporter(ParamountPlusShared, BaseImporter, ABC):
 
 
 # TODO: Validate
-class ParamountPlusSeries(ParamountPlusImporter):
+class ParamountPlusSeriesImporter(ParamountPlusImporter):
     # TODO: Validate
     @classmethod
     @override
@@ -230,7 +230,7 @@ class ParamountPlusSeries(ParamountPlusImporter):
 
 
 # TODO: Validate
-class ParamountPlusMovie(ParamountPlusImporter):
+class ParamountPlusMovieImporter(ParamountPlusImporter):
     # TODO: Validate
     @classmethod
     @override

@@ -309,7 +309,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
         return [self.newest_browse_file()]
 
     def add_title_to_plugin_channels(self, title: Title) -> None:
-        if not title.url: # This should not be possible.
+        if not title.url:  # This should not be possible.
             msg = "Title.url is not set."
             raise AttributeError(msg)
 
@@ -322,14 +322,15 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
             self._create_channel_records_from_file(browse_json.datums())
             browse_json.database_record.status = COMPLETED_STATUS
 
+    # TODO: Validate
     def _create_channel_records_from_file(
         self,
         releases: list[BrowseSeriesDatum],
     ) -> None:
-        channel_name = f"{self.source_name()} - All Anime"
-        channel = self.get_or_create_channel(self.source_name(), channel_name)
-        new_urls = [self.title_url(release.id) for release in releases]
-        self.add_new_urls_to_channel(channel, new_urls)
+        self._add_urls_to_channel_by_prefix(
+            [self.title_url(release.id) for release in releases],
+            "All Titles",
+        )
 
     def _mark_new_titles_as_outdated(self, releases: list[BrowseSeriesDatum]) -> None:
         _cache = self._preload_sources(self.source_name(), preload_seasons=True).all()
@@ -585,14 +586,11 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
         for genre in self.artist_file(title.key).parsed().data[0].genres:
             self._add_urls_to_channel_by_prefix([title.url], genre.display_value)
 
+    # TODO: Validate
     def create_channel_records(self) -> None:
-        channel = self.get_or_create_channel(
-            self.source_name(),
-            "All Music on Crunchyroll.",
-        )
-        self.add_new_urls_to_channel(
-            channel,
+        self._add_urls_to_channel_by_prefix(
             [self.title_url(artist.id) for artist in self.browse_file().datums()],
+            "All Music",
         )
 
     def _mark_artists_as_outdated(self, artists: list[BrowseMusicDatum]) -> None:

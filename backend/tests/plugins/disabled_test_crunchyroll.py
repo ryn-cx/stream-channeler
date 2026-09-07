@@ -8,7 +8,7 @@ from app.canonical_media.tmdb import (
 from app.config import settings
 from app.episodes.models import Episode
 from app.titles.models import Title
-from app.titles.service.extra import update_title_episode_group, update_title_extra
+from app.titles.service.service import update_title_episode_group, update_title_extra
 from app.users.models import User
 from app.watches.identifiers import watched_canonical_ids
 from app.watches.schemas import WatchCreate

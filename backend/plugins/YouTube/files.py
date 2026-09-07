@@ -1,6 +1,7 @@
 # TODO: Validate
 import json
 import re
+from abc import ABC
 from collections import Counter
 from functools import cache
 from typing import Any, override
@@ -31,20 +32,16 @@ from not_yt_dlapi.topic import Topic as TopicEndpoint
 from not_yt_dlapi.topic.models import TopicModel
 from not_yt_dlapi.videos import Videos as VideosEndpoint
 from not_yt_dlapi.videos.models import VideosModel
-from sqlmodel import Session
 
 from app.config import settings
-from app.plugins.models import Plugin
 from plugins.utils.base_plugin.files import (
     EndpointFile,
-    HTMLFile,
     LoadEndpoint,
     PagedEndpointFile,
 )
 from plugins.utils.get_around_client import get_around_client
 
 
-# TODO: Validate
 @cache
 def not_yt_dlapi() -> NotYTDLAPI:
     return NotYTDLAPI(
@@ -53,126 +50,82 @@ def not_yt_dlapi() -> NotYTDLAPI:
     )
 
 
-# TODO: Validate
-class ChannelByChannelId(EndpointFile[ChannelsModel]):
-    # TODO: Validate
+class ChannelFile(EndpointFile[ChannelsModel], ABC):
     @override
     def _endpoint(self) -> ChannelsEndpoint:
         return not_yt_dlapi().channels
 
-    # TODO: Validate
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        # Occurs when importing an invalid channel URL.
+        return isinstance(error, ResourceNotFoundError)
+
+
+class ChannelByChannelId(ChannelFile):
     @override
     def _download_file(self) -> str:
+        # not_yt_dlapi().channels.download does not support positional arguments.
         return self._endpoint().download(channel_id=self.unique_identifier)
 
-    # Occurs when importing an invalid channel URL.
-    # TODO: Validate
-    @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ResourceNotFoundError)
-
 
 # TODO: Validate
-class ChannelByHandle(EndpointFile[ChannelsModel]):
-    # TODO: Validate
-    @override
-    def _endpoint(self) -> ChannelsEndpoint:
-        return not_yt_dlapi().channels
-
-    # TODO: Validate
+class ChannelByHandle(ChannelFile):
     @override
     def _download_file(self) -> str:
+        # not_yt_dlapi().channels.download does not support positional arguments.
         return self._endpoint().download(channel_handle=self.unique_identifier)
 
-    # Occurs when importing an invalid channel URL.
-    # TODO: Validate
-    @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ResourceNotFoundError)
 
-
-# TODO: Validate
-class ChannelByUsername(EndpointFile[ChannelsModel]):
-    # TODO: Validate
-    @override
-    def _endpoint(self) -> ChannelsEndpoint:
-        return not_yt_dlapi().channels
-
-    # TODO: Validate
+class ChannelByUsername(ChannelFile):
     @override
     def _download_file(self) -> str:
+        # not_yt_dlapi().channels.download does not support positional arguments.
         return self._endpoint().download(channel_username=self.unique_identifier)
 
-    # Occurs when importing an invalid channel URL.
-    # TODO: Validate
-    @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ResourceNotFoundError)
 
-
-# TODO: Validate
 class ChannelPlaylists(EndpointFile[PlaylistsModel]):
-    # TODO: Validate
     @override
     def _endpoint(self) -> PlaylistsEndpoint:
         return not_yt_dlapi().playlists
 
-    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download_merged(channel_id=self.unique_identifier)
 
-    # TODO: Validate
-    def has_only_uploads(self) -> bool:
-        if not self.database_record.content:
-            return True
-        return not any(
-            item.content_details.item_count > 0 for item in self.parsed().items
-        )
 
-
-# TODO: Validate
 class PlaylistInfo(EndpointFile[PlaylistsModel]):
-    # TODO: Validate
     @override
     def _endpoint(self) -> PlaylistsEndpoint:
         return not_yt_dlapi().playlists
 
-    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(playlist_ids=self.unique_identifier)
 
 
-# TODO: Validate
 class PlaylistItems(EndpointFile[PlaylistItemsModel]):
-    """Playlist items file."""
-
-    # TODO: Validate
     @override
     def _endpoint(self) -> PlaylistItemsEndpoint:
         return not_yt_dlapi().playlist_items
 
-    # TODO: Validate
     def items(self) -> list[Item]:
-        """Return the items the file holds."""
         return self.parsed().items
 
-    # Due to API limits this function merges new videos with existing videos instead of
-    # downloading all videos every time which over time will lead to a messy file with
-    # dead videos.
-    # TODO: Validate
     @override
     def _download_file(self) -> str:
+        # Due to API limits this function merges new videos with existing videos instead
+        # of downloading all videos every time. Over time the PlaylistItems file will
+        # become a mess but that is an acceptable trade-off to significantly reduce API
+        # usage.
+
         # If this is the first time downloading the file download all of the pages.
         if not self._existing_database_record:
             return self._endpoint().download_merged(self.unique_identifier)
 
+        stored_video_ids = self._stored_video_ids()
         pages: list[str] = []
         page_token: str | None = None
-        reached_existing_video = False
-        downloaded_all_pages = False
-        while not (reached_existing_video or downloaded_all_pages):
+        while True:
             downloaded_page = self._endpoint().download(
                 self.unique_identifier,
                 page_token=page_token,
@@ -180,16 +133,25 @@ class PlaylistItems(EndpointFile[PlaylistItemsModel]):
             pages.append(downloaded_page)
             loaded_page = self._endpoint().load(downloaded_page, self.log_id())
             page_token = loaded_page.next_page_token
-            downloaded_all_pages = page_token is None
 
-            reached_existing_video = any(
-                item.snippet.published_at < self.database_record.data_timestamp
+            # If a partial download occurred the downloaded pages need to be merged with
+            # the existing ones.
+            if page_token is None:
+                return self._endpoint().merge_pages(pages)
+
+            # If an existing video is found no more downloads need to be done.
+            if any(
+                item.content_details.video_id in stored_video_ids
                 for item in loaded_page.items
-            )
+            ):
+                return self._merged_items(pages, self._remove_deleted_items(pages))
 
-        if downloaded_all_pages:
-            return self._endpoint().merge_pages(pages)
-        return self._merged_items(pages, self._remove_deleted_items(pages))
+    # TODO: Validate
+    def _stored_video_ids(self) -> set[str]:
+        return {
+            item["contentDetails"]["videoId"]
+            for item in json.loads(self._stored_content())["items"]
+        }
 
     # TODO: Validate
     def _remove_deleted_items(self, pages: list[str]) -> list[dict[str, Any]]:
@@ -248,12 +210,10 @@ class Videos(EndpointFile[VideosModel]):
 
 # TODO: Validate
 class MusicPlaylist(EndpointFile[MusicModel]):
-    # TODO: Validate
     @override
     def _endpoint(self) -> MusicEndpoint:
         return not_yt_dlapi().music
 
-    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ResourceNotFoundError)
@@ -316,24 +276,10 @@ class MusicPlaylist(EndpointFile[MusicModel]):
 
 
 # TODO: Validate
-class TopicReleases(PagedEndpointFile[TopicModel]):
-    """The albums and singles a musician's Topic channel lists.
-
-    The channel lists a dozen releases on a shelf and the rest behind it, and a
-    shelf release is listed again by the first page behind it, so the pages are
-    stored as they were served and read back as one listing with each release
-    named once.
-    """
-
-    # TODO: Validate
+class Topic(PagedEndpointFile[TopicModel]):
     @override
     def _endpoint(self) -> TopicEndpoint:
         return not_yt_dlapi().topic
-
-    # TODO: Validate
-    @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ResourceNotFoundError)
 
     # The shelf a channel opens with writes its releases in a list of its own and
     # the panel behind it writes them into a grid, so both are read.
@@ -375,24 +321,13 @@ class TopicReleases(PagedEndpointFile[TopicModel]):
         return keys
 
 
-# TODO: Validate
-class TitleListing(PagedEndpointFile[ShowsModel]):
-    """Every season of a title and every stretch of each of them.
+# TODO: Update not-ytdlapi's name for this endpoint
+class Browse(PagedEndpointFile[ShowsModel]):
+    """A TV show on YouTube."""
 
-    A season is its own thing to ask browse for and a long one is answered a
-    stretch at a time, so what is stored is every answer the title took, and only
-    the stretch that begins a season says which season the ones after it are of.
-    """
-
-    # TODO: Validate
     @override
     def _endpoint(self) -> TitlesEndpoint:
         return not_yt_dlapi().shows
-
-    # TODO: Validate
-    @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ResourceNotFoundError)
 
     # TODO: Validate
     def title_key(self) -> str | None:
@@ -400,13 +335,22 @@ class TitleListing(PagedEndpointFile[ShowsModel]):
         return match.group(0) if match else None
 
     # TODO: Validate
+    def title_name(self) -> str | None:
+        return next(
+            (
+                item.playlist_sidebar_primary_info_renderer.title.simple_text
+                for page in self.parsed()
+                for item in page.sidebar.playlist_sidebar_renderer.items
+            ),
+            None,
+        )
+
+    # TODO: Validate
     def offer_labels(self) -> set[str]:
         return {
             badge.metadata_badge_renderer.label
             for page in self.parsed()
-            if page.sidebar is not None
             for item in page.sidebar.playlist_sidebar_renderer.items
-            if item.playlist_sidebar_primary_info_renderer.badges is not None
             for badge in item.playlist_sidebar_primary_info_renderer.badges
             if badge.metadata_badge_renderer.style == "BADGE_STYLE_TYPE_YPC"
         }
@@ -421,8 +365,6 @@ class TitleListing(PagedEndpointFile[ShowsModel]):
     # by.
     # TODO: Validate
     def _open_season(self, page: ShowsModel) -> int | None:
-        if page.contents is None:
-            return None
         for tab in page.contents.two_column_browse_results_renderer.tabs:
             for section in tab.tab_renderer.content.section_list_renderer.contents:
                 for item in section.item_section_renderer.contents:
@@ -444,8 +386,6 @@ class TitleListing(PagedEndpointFile[ShowsModel]):
 
     # TODO: Validate
     def _page_episode_keys(self, page: ShowsModel) -> list[str]:
-        if page.contents is None:
-            return []
         return [
             content.playlist_video_renderer.video_id
             for tab in page.contents.two_column_browse_results_renderer.tabs
@@ -471,42 +411,35 @@ class TitleListing(PagedEndpointFile[ShowsModel]):
         return episode_keys
 
 
-# TODO: Validate
 class PlaylistFeed(EndpointFile[ChannelFeedModel | PlaylistFeedModel]):
-    """Playlist feed file."""
-
-    # TODO: Validate
     def _is_channel_feed(self) -> bool:
         return self.unique_identifier.startswith("UU")
 
-    # TODO: Validate
     @override
     def _endpoint(self) -> LoadEndpoint[ChannelFeedModel | PlaylistFeedModel]:
         if self._is_channel_feed():
             return not_yt_dlapi().channel_feed
         return not_yt_dlapi().playlist_feed
 
-    # TODO: Validate
     @classmethod
     @override
     def _identifier_suffix(cls) -> str:
         return ".xml"
 
-    # TODO: Validate
     @override
     def _download_file(self) -> str:
         if self._is_channel_feed():
-            return not_yt_dlapi().channel_feed.download(
-                "UC" + self.unique_identifier[2:],
-            )
+            channel_id = "UC" + self.unique_identifier[2:]
+            return not_yt_dlapi().channel_feed.download(channel_id)
         return not_yt_dlapi().playlist_feed.download(self.unique_identifier)
 
-    # TODO: Validate
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
             try:
                 feed = self._download_file()
+            # Playlist feeds are really unreliable and sometimes return 404 errors for
+            # no reason.
             except (ChannelFeedNotFoundError, PlaylistFeedNotFoundError) as error:
                 logger.warning(
                     "PlaylistFeed fetch for {} returned HTTP {}.",
@@ -516,63 +449,5 @@ class PlaylistFeed(EndpointFile[ChannelFeedModel | PlaylistFeedModel]):
                 raise
             self.write(feed)
 
-    # TODO: Validate
-    def video_ids(self) -> list[str]:
-        return [entry.video_id for entry in self.parsed().entry]
-
-
-# TODO: Validate
-class TitlePage(HTMLFile):
-    """Title page file.
-
-    The API has no concept of a title, so a title and its seasons are read from the
-    page YouTube serves for it.
-    """
-
-    # TODO: Validate
-    def __init__(
-        self,
-        session: Session,
-        plugin: Plugin,
-        title_key: str,
-    ) -> None:
-        self.title_key = title_key
-        super().__init__(session, plugin, title_key)
-
-    # TODO: Validate
-    @override
-    def _url(self) -> str:
-        return f"https://www.youtube.com/show/{self.title_key}"
-
-    # TODO: Validate
-    @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            response = get_around_client().get(self._url())
-            if not response.is_success:
-                logger.warning(
-                    "TitlePage fetch for {} returned HTTP {}; keeping the existing page.",
-                    self.unique_identifier,
-                    response.status_code,
-                )
-                return
-            self.write(response.text)
-
-    # TODO: Validate
-    def _content(self) -> str:
-        return self.database_record.content or ""
-
-    # TODO: Validate
-    def title(self) -> str | None:
-        """Return the name of the title.
-
-        The title's own title is the first one on the page; every later one belongs
-        to an episode or a streaming service.
-        """
-        match = re.search(r'"title":\s*\{"simpleText":"([^"]+)"', self._content())
-        return json.loads(f'"{match.group(1)}"') if match else None
-
-    # TODO: Validate
-    def playlist_key(self) -> str | None:
-        match = re.search(r"TVSH[A-Za-z0-9_-]{20,}", self._content())
-        return match.group(0) if match else None
+    def video_ids(self) -> set[str]:
+        return {entry.video_id for entry in self.parsed().entry}

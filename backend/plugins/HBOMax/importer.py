@@ -46,7 +46,7 @@ class HBOMaxImporter(HBOMaxShared, BaseImporter, ABC):
 
 
 # TODO: Validate
-class HBOMaxSeries(HBOMaxImporter):
+class HBOMaxSeriesImporter(HBOMaxImporter):
     # TODO: Validate
     @classmethod
     @override
@@ -242,7 +242,7 @@ class HBOMaxSeries(HBOMaxImporter):
 
 
 # TODO: Validate
-class HBOMaxMovie(HBOMaxImporter):
+class HBOMaxMovieImporter(HBOMaxImporter):
     # TODO: Validate
     @classmethod
     @override

@@ -39,12 +39,18 @@ from chirashi.seasons import Seasons as SeasonsEndpoint
 from chirashi.seasons.models import SeasonsModel
 from chirashi.series import Series as SeriesEndpoint
 from chirashi.series.models import SeriesModel
+from get_around import GetAround
 
+from app.config import settings
 from app.utils import tz_datetime
 from plugins.utils.base_plugin.files import EndpointFile, PagedEndpointFile
-from plugins.utils.get_around_client import get_around_client
 
+# TODO: This is a temporary importing workaround.
 
+# from plugins.utils.get_around_client import get_around_client
+@cache
+def get_around_client() -> GetAround:
+    return GetAround(proxy=settings.PROXY)
 @cache
 def chirashi() -> Chirashi:
     return Chirashi(get_around_client=get_around_client())

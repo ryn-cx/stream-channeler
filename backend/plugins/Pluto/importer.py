@@ -49,7 +49,7 @@ class PlutoImporter(PlutoShared, BaseImporter, ABC):
 
 
 # TODO: Validate
-class PlutoSeries(PlutoImporter):
+class PlutoSeriesImporter(PlutoImporter):
     # TODO: Validate
     @classmethod
     @override
@@ -243,7 +243,7 @@ class PlutoSeries(PlutoImporter):
 
 
 # TODO: Validate
-class PlutoMovie(PlutoImporter):
+class PlutoMovieImporter(PlutoImporter):
     # TODO: Validate
     @classmethod
     @override

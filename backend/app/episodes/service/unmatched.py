@@ -14,13 +14,12 @@ episodes of a title one of them could be, and the writing down of whichever a
 import uuid
 from typing import Any
 
-from sqlalchemy.orm import aliased, contains_eager
-from sqlalchemy.sql.expression import ColumnElement
-from sqlmodel import Session, and_, col, func, or_, select
+from sqlalchemy.orm import contains_eager
+from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.canonical_media.filters import is_canonical, is_non_canonical
-from app.channels.models import Channel, ChannelTitle
+from app.channels.channel_scope import in_a_user_channel
 from app.episodes.models import (
     Episode,
     EpisodeCanonicalEpisode,
@@ -50,38 +49,7 @@ from app.seasons.models import Season
 from app.service.filters import _apply_filter_options
 from app.service.sorting import _apply_sort_options
 from app.sources.models import Source
-from app.titles.models import Title, TitleCanonicalTitle
-from app.users.models import User
-from app.users.plugin_user import is_plugin_user
-
-
-# TODO: Validate
-def _in_a_channel() -> ColumnElement[bool]:
-    channel_owner = aliased(User)
-    return (
-        select(ChannelTitle.channel_id)
-        .select_from(ChannelTitle)
-        .join(Channel, onclause=col(ChannelTitle.channel_id) == Channel.id)
-        .join(channel_owner, onclause=col(Channel.user_id) == channel_owner.id)
-        .where(
-            col(ChannelTitle.is_blacklist_only).is_(False),
-            ~is_plugin_user(channel_owner.email),
-            or_(
-                col(ChannelTitle.canonical_title_id).in_(
-                    select(TitleCanonicalTitle.canonical_title_id)
-                    .where(col(TitleCanonicalTitle.title_id) == col(Title.id))
-                    .correlate(Title),
-                ),
-                and_(
-                    is_canonical(Title),
-                    col(ChannelTitle.canonical_title_id) == col(Title.id),
-                ),
-            ),
-        )
-        .correlate(Title)
-        .exists()
-    )
-
+from app.titles.models import Title
 
 # TODO: Validate
 # Which joined column each sortable name is, since a name a non-canonical row is not
@@ -145,7 +113,7 @@ def _unmatched_base(
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
             col(Title.deleted_at).is_(None),
-            _in_a_channel(),
+            in_a_user_channel(),
             *([is_non_canonical(Title)] if non_canonical_titles_only else []),
         )
     )

@@ -54,7 +54,7 @@ class TMDB(TMDBShared, BaseReadURL, AbstractPlugin, register=True):
 
     # TODO: Validate
     @override
-    def _get_media_importer_from_url(self, url: str) -> TMDBImporter:
+    def media_importer_from_url(self, url: str) -> TMDBImporter:
         domain_regex = self._domain_regex()
         if re.match(domain_regex + MOVIE_URL_REGEX, url):
             return TMDBMovie(self)
@@ -66,13 +66,13 @@ class TMDB(TMDBShared, BaseReadURL, AbstractPlugin, register=True):
 
     # TODO: Validate
     @override
-    def _get_media_importer_from_title(self, title: Title) -> TMDBImporter:
+    def media_importer_from_title(self, title: Title) -> TMDBImporter:
         media_type, _ = get_media_type_and_tmdb_id(title.key)
         return self._get_media_importer_from_media_type(media_type)
 
     # TODO: Validate
     def link_title_to_websites(self, title: Title) -> None:
-        self._get_media_importer_from_title(title).link_title_to_websites(title)
+        self.media_importer_from_title(title).link_title_to_websites(title)
 
     # TODO: Validate
     @override

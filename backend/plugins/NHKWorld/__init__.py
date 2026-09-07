@@ -41,12 +41,12 @@ class NHKWorld(NHKWorldShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def _get_media_importer_from_url(self, url: str) -> NHKWorldImporter:
+    def media_importer_from_url(self, url: str) -> NHKWorldImporter:
         return NHKWorldImporter(self)
 
     # TODO: Validate
     @override
-    def _get_media_importer_from_title(self, title: Title) -> NHKWorldImporter:
+    def media_importer_from_title(self, title: Title) -> NHKWorldImporter:
         return NHKWorldImporter(self)
 
     # TODO: Validate

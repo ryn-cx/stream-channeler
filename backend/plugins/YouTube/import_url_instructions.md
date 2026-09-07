@@ -18,9 +18,3 @@
 > `https://www.youtube.com/watch?v=lVI_J1cbFb4&list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh`
 > `https://youtu.be/lVI_J1cbFb4?list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh`
 
-> [!CAUTION/Not Supported: Titles]
-> `https://www.youtube.com/playlist?list=TVSHI1FGTrUgFn4lRj_kLDPqR3ZC_PDpPGEPg`
-> `https://www.youtube.com/show/SC76ETXKYZoiPWiG6TLxkBLA`
->
-> Unfortunately, YouTube does not include title information in their API. As an alternative you can add all of the episodes of the title into a playlist and import that instead.
-

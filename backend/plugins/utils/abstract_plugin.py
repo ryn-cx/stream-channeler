@@ -463,7 +463,7 @@ class AbstractPlugin(ABC):
     # TODO: Validate
     def tmdb_lookup_info(
         self,
-        title_key: str,  # noqa: ARG002 - `title_key` is used by overrides.
+        title_key: str,
     ) -> list[TMDBLookupInfo]:
         msg = "tmdb_lookup_info is not supported by this plugin."
         raise NotImplementedError(msg)

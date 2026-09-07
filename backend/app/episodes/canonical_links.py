@@ -8,7 +8,6 @@ from fastapi import HTTPException
 from sqlmodel import Session, col, select
 
 from app.canonical_media.filters import is_canonical
-from app.canonical_media.service.creation import link_title_to_tmdb
 from app.episodes.models import (
     MANUAL_NOTE_PREFIX,
     Episode,
@@ -17,6 +16,7 @@ from app.episodes.models import (
 from app.episodes.schemas import EpisodeCanonicalLinkInput
 from app.seasons.models import Season
 from app.titles.models import Title
+from app.titles.service.linking import link_title_to_tmdb
 from app.utils import tz_datetime
 from plugins.TMDB import TMDB
 

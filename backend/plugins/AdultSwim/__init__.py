@@ -56,12 +56,12 @@ class AdultSwim(
 
     # TODO: Validate
     @override
-    def _get_media_importer_from_url(self, url: str) -> AdultSwimImporter:
+    def media_importer_from_url(self, url: str) -> AdultSwimImporter:
         return AdultSwimImporter(self)
 
     # TODO: Validate
     @override
-    def _get_media_importer_from_title(self, title: Title) -> AdultSwimImporter:
+    def media_importer_from_title(self, title: Title) -> AdultSwimImporter:
         return AdultSwimImporter(self)
 
     # TODO: Validate

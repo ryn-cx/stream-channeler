@@ -2,13 +2,13 @@
 import pytest
 from sqlmodel import Session
 
-from app.canonical_media.service.creation import link_title_to_tmdb
 from app.episodes.canonical_links import link_episode
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.sources.models import Source
 from app.titles.models import Title
+from app.titles.service.linking import link_title_to_tmdb
 
 
 # TODO: Validate

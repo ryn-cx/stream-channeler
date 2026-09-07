@@ -1,18 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, override
+from typing import override
 from urllib.parse import quote_plus
 
-from sqlmodel import col, select
-
-from app.canonical_media.filters import is_canonical
-from app.sources.models import Source
-from app.titles.models import Title, TitleCanonicalTitle
 from plugins.Crunchyroll.base_files import CrunchyrollBaseFiles
 from plugins.Crunchyroll.utils import MUSIC_SOURCE, VIDEO_SOURCE, build_url
-
-if TYPE_CHECKING:
-    from uuid import UUID
 
 
 class CrunchyrollShared(CrunchyrollBaseFiles):

@@ -83,7 +83,7 @@ class RokuImporter(RokuShared, BaseImporter, ABC):
 
 
 # TODO: Validate
-class RokuSeries(RokuImporter):
+class RokuSeriesImporter(RokuImporter):
     # TODO: Validate
     @override
     def get_media_info(self, url: str) -> URLTitleInfo:
@@ -258,7 +258,7 @@ class RokuSeries(RokuImporter):
 
 
 # TODO: Validate
-class RokuMovie(RokuImporter):
+class RokuMovieImporter(RokuImporter):
     # TODO: Validate
     @override
     def get_media_info(self, url: str) -> URLTitleInfo:

@@ -7,7 +7,6 @@ from abc import ABC, abstractmethod
 from loguru import logger
 from sqlmodel import select
 
-from app.canonical_media.service.creation import link_title_to_tmdb
 from app.canonical_media.tmdb import (
     get_media_type_and_tmdb_id,
 )
@@ -15,6 +14,7 @@ from app.media.media_type import TMDBMediaType
 from app.sources.models import UnmatchedSource
 from app.sources.service.unmatched import remove_unmatched_source
 from app.titles.models import Title
+from app.titles.service.linking import link_title_to_tmdb
 from plugins.TMDB.files import MoviesWatchProviders, TVSeriesWatchProviders
 from plugins.TMDB.shared import TMDBShared
 from plugins.TMDB.utils import (

@@ -15,7 +15,11 @@ from plugins.Hulu.shared import (
     HuluShared,
 )
 from plugins.Hulu.utils import HuluMediaType, title_url
-from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
+from plugins.utils.abstract_plugin import (
+    AbstractPlugin,
+    InvalidURLError,
+    TMDBLookupInfo,
+)
 from plugins.utils.base_plugin.base import BaseReadURL
 from plugins.utils.base_plugin.initialize import BasePluginInitializer
 
@@ -35,6 +39,7 @@ class HuluInitializer(HuluShared, BasePluginInitializer):
         return plugin
 
 
+# TODO: Validate
 class Hulu(
     HuluShared,
     BaseReadURL,
@@ -48,8 +53,9 @@ class Hulu(
     def _url_regexes(cls) -> tuple[str, ...]:
         return (SERIES_URL_REGEX, MOVIE_URL_REGEX, VIDEO_URL_REGEX)
 
+    # TODO: Validate
     @override
-    def _get_media_importer_from_url(self, url: str) -> HuluImporter:
+    def media_importer_from_url(self, url: str) -> HuluImporter:
         domain_regex = self._domain_regex()
         if re.match(domain_regex + SERIES_URL_REGEX, url):
             return HuluSeriesImporter(self)
@@ -70,14 +76,21 @@ class Hulu(
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
+    # TODO: Validate
     @override
-    def _get_media_importer_from_title(self, title: Title) -> HuluImporter:
+    def media_importer_from_title(self, title: Title) -> HuluImporter:
         if not title.media_type:
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
         if title.media_type == "Movie":
             return HuluMovieImporter(self)
         return HuluSeriesImporter(self)
+
+    # TODO: Validate
+    @override
+    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
+        title = self._preload_title(title_key).one()
+        return self.media_importer_from_title(title).tmdb_lookup_info(title_key)
 
     @override
     def search_for_url(
