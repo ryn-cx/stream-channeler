@@ -32,7 +32,14 @@ function TitlesPage() {
       path="/titles"
       columns={titleColumns}
       columnVisibilityKey="titles-column-visibility"
-      defaultHidden={{ key: false, id: false }}
+      defaultHidden={{
+        key: false,
+        canonical_title_id: false,
+        canonical_title_ids: false,
+        plugin_id: false,
+        source_id: false,
+        id: false,
+      }}
       emptyIcon={Clapperboard}
       fetchTable={async (params) => {
         const result = await TitlesService.getTitles({

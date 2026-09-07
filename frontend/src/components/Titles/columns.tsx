@@ -14,6 +14,7 @@ import { TitleActionsMenu } from "./ActionsMenu"
 
 export type TitleTableData = TitleListPublic & { pending?: boolean }
 
+// TODO: Validate
 export const titleColumns: ColumnDef<TitleTableData>[] = [
   {
     accessorKey: "plugin_name",
@@ -92,6 +93,11 @@ export const titleColumns: ColumnDef<TitleTableData>[] = [
     cell: ({ row }) => <TruncatedCell value={row.original.image_url} />,
   },
   {
+    accessorKey: "thumbnail_url",
+    header: "Thumbnail URL",
+    cell: ({ row }) => <TruncatedCell value={row.original.thumbnail_url} />,
+  },
+  {
     accessorKey: "tmdb_id",
     header: "TMDB ID",
     meta: { filterVariant: "range" },
@@ -100,6 +106,18 @@ export const titleColumns: ColumnDef<TitleTableData>[] = [
         {row.original.tmdb_id ?? "-"}
       </span>
     ),
+  },
+  {
+    accessorKey: "tmdb_url",
+    header: "TMDB URL",
+    enableSorting: false,
+    enableColumnFilter: false,
+    cell: ({ row }) => <TruncatedCell value={row.original.tmdb_url} />,
+  },
+  {
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) => <TruncatedCell value={row.original.status} />,
   },
   {
     accessorKey: "data_timestamp",
@@ -143,6 +161,34 @@ export const titleColumns: ColumnDef<TitleTableData>[] = [
     accessorKey: "key",
     header: "Key",
     cell: ({ row }) => <TruncatedCell value={row.original.key} />,
+  },
+  {
+    accessorKey: "canonical_title_id",
+    header: "Canonical Title ID",
+    enableSorting: false,
+    enableColumnFilter: false,
+    cell: ({ row }) => (
+      <TruncatedCell value={row.original.canonical_title_id} />
+    ),
+  },
+  {
+    accessorKey: "canonical_title_ids",
+    header: "Canonical Title IDs",
+    enableSorting: false,
+    enableColumnFilter: false,
+    cell: ({ row }) => (
+      <TruncatedCell value={row.original.canonical_title_ids?.join(", ")} />
+    ),
+  },
+  {
+    accessorKey: "plugin_id",
+    header: "Plugin ID",
+    cell: ({ row }) => <TruncatedCell value={row.original.plugin_id} />,
+  },
+  {
+    accessorKey: "source_id",
+    header: "Source ID",
+    cell: ({ row }) => <TruncatedCell value={row.original.source_id} />,
   },
   {
     accessorKey: "id",

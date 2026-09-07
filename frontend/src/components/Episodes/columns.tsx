@@ -11,6 +11,7 @@ import { EpisodeActionsMenu } from "./ActionsMenu"
 
 export type EpisodeTableData = EpisodeListOutput & { pending?: boolean }
 
+// TODO: Validate
 export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
   {
     accessorKey: "plugin_name",
@@ -107,6 +108,11 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
     cell: ({ row }) => <TruncatedCell value={row.original.image_url} />,
   },
   {
+    accessorKey: "thumbnail_url",
+    header: "Thumbnail URL",
+    cell: ({ row }) => <TruncatedCell value={row.original.thumbnail_url} />,
+  },
+  {
     accessorKey: "air_date",
     header: "Air Date",
     meta: { filterVariant: "dateRange" },
@@ -125,6 +131,11 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
         {row.original.duration ?? "-"}
       </span>
     ),
+  },
+  {
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) => <TruncatedCell value={row.original.status} />,
   },
   {
     accessorKey: "data_timestamp",
@@ -165,6 +176,19 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
     ),
   },
   {
+    accessorKey: "tmdb_url",
+    header: "TMDB URL",
+    enableSorting: false,
+    enableColumnFilter: false,
+    cell: ({ row }) => <TruncatedCell value={row.original.tmdb_url} />,
+  },
+  {
+    accessorKey: "modified_at",
+    header: "Modified At",
+    meta: { filterVariant: "dateRange" },
+    cell: ({ row }) => <DateCell value={row.original.modified_at} />,
+  },
+  {
     accessorKey: "canonical_episode_validated_at",
     header: "Link Validated At",
     meta: { filterVariant: "dateRange" },
@@ -180,6 +204,44 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
         {row.original.canonical_episode_note ?? "-"}
       </span>
     ),
+  },
+  {
+    accessorKey: "canonical_episode_id",
+    header: "Canonical Episode ID",
+    enableSorting: false,
+    enableColumnFilter: false,
+    cell: ({ row }) => (
+      <TruncatedCell value={row.original.canonical_episode_id} />
+    ),
+  },
+  {
+    accessorKey: "canonical_episode_ids",
+    header: "Canonical Episode IDs",
+    enableSorting: false,
+    enableColumnFilter: false,
+    cell: ({ row }) => (
+      <TruncatedCell value={row.original.canonical_episode_ids?.join(", ")} />
+    ),
+  },
+  {
+    accessorKey: "plugin_id",
+    header: "Plugin ID",
+    cell: ({ row }) => <TruncatedCell value={row.original.plugin_id} />,
+  },
+  {
+    accessorKey: "source_id",
+    header: "Source ID",
+    cell: ({ row }) => <TruncatedCell value={row.original.source_id} />,
+  },
+  {
+    accessorKey: "title_id",
+    header: "Title ID",
+    cell: ({ row }) => <TruncatedCell value={row.original.title_id} />,
+  },
+  {
+    accessorKey: "season_id",
+    header: "Season ID",
+    cell: ({ row }) => <TruncatedCell value={row.original.season_id} />,
   },
   {
     accessorKey: "id",

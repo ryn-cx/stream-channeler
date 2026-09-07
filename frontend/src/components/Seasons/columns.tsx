@@ -95,6 +95,23 @@ export const seasonColumns: ColumnDef<SeasonTableData>[] = [
     cell: ({ row }) => <TruncatedCell value={row.original.image_url} />,
   },
   {
+    accessorKey: "thumbnail_url",
+    header: "Thumbnail URL",
+    cell: ({ row }) => <TruncatedCell value={row.original.thumbnail_url} />,
+  },
+  {
+    accessorKey: "tmdb_url",
+    header: "TMDB URL",
+    enableSorting: false,
+    enableColumnFilter: false,
+    cell: ({ row }) => <TruncatedCell value={row.original.tmdb_url} />,
+  },
+  {
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) => <TruncatedCell value={row.original.status} />,
+  },
+  {
     accessorKey: "data_timestamp",
     header: "Data Timestamp",
     meta: { filterVariant: "dateRange" },
@@ -121,6 +138,21 @@ export const seasonColumns: ColumnDef<SeasonTableData>[] = [
     accessorKey: "key",
     header: "Key",
     cell: ({ row }) => <TruncatedCell value={row.original.key} />,
+  },
+  {
+    accessorKey: "plugin_id",
+    header: "Plugin ID",
+    cell: ({ row }) => <TruncatedCell value={row.original.plugin_id} />,
+  },
+  {
+    accessorKey: "source_id",
+    header: "Source ID",
+    cell: ({ row }) => <TruncatedCell value={row.original.source_id} />,
+  },
+  {
+    accessorKey: "title_id",
+    header: "Title ID",
+    cell: ({ row }) => <TruncatedCell value={row.original.title_id} />,
   },
   {
     accessorKey: "id",

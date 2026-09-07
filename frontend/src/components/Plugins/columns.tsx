@@ -78,6 +78,16 @@ export function pluginColumns(isAdmin = false): ColumnDef<PluginTableData>[] {
       },
     },
     {
+      accessorKey: "version",
+      header: "Version",
+      cell: ({ row }) => <TruncatedCell value={row.original.version} />,
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => <TruncatedCell value={row.original.status} />,
+    },
+    {
       accessorKey: "data_timestamp",
       header: "Data Timestamp",
       meta: { filterVariant: "dateRange" },
@@ -101,11 +111,6 @@ export function pluginColumns(isAdmin = false): ColumnDef<PluginTableData>[] {
       cell: ({ row }) => (
         <TruncatedCell value={extraText(row.original.extra)} />
       ),
-    },
-    {
-      accessorKey: "key",
-      header: "Key",
-      cell: ({ row }) => <TruncatedCell value={row.original.key} />,
     },
     {
       accessorKey: "id",

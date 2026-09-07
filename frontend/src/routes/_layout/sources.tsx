@@ -31,7 +31,7 @@ function SourcesPage() {
       path="/sources"
       columns={sourceColumns}
       columnVisibilityKey="sources-column-visibility"
-      defaultHidden={{ key: false, id: false }}
+      defaultHidden={{ key: false, plugin_id: false, id: false }}
       emptyIcon={Database}
       fetchTable={async (params) => {
         const result = await SourcesService.getSources({

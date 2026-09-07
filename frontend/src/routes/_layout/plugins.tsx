@@ -34,7 +34,7 @@ function PluginPage() {
       path="/plugins"
       columns={pluginColumns(isAdmin)}
       columnVisibilityKey="plugins-column-visibility"
-      defaultHidden={{ key: false, id: false }}
+      defaultHidden={{ id: false }}
       emptyIcon={Puzzle}
       fetchTable={async (params) => {
         const result = await PluginsService.getPlugins({

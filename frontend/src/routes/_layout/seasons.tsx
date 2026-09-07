@@ -31,7 +31,13 @@ function SeasonsPage() {
       path="/seasons"
       columns={seasonColumns}
       columnVisibilityKey="seasons-column-visibility"
-      defaultHidden={{ key: false, id: false }}
+      defaultHidden={{
+        key: false,
+        plugin_id: false,
+        source_id: false,
+        title_id: false,
+        id: false,
+      }}
       emptyIcon={Layers}
       fetchTable={async (params) => {
         const result = await SeasonsService.getSeasons({

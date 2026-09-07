@@ -31,7 +31,7 @@ function AllFilesPage() {
       path="/files"
       columns={fileColumns}
       columnVisibilityKey="files-column-visibility"
-      defaultHidden={{ id: false }}
+      defaultHidden={{ plugin_id: false, id: false }}
       emptyIcon={FileText}
       headerActions={plugin_id ? <AddFile pluginId={plugin_id} /> : undefined}
       fetchTable={async (params) => {

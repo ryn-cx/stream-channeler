@@ -2,6 +2,7 @@
 import type { ColumnDef } from "@tanstack/react-table"
 import type { CanonicalEpisodeListOutput } from "@/client"
 import { DateCell, TruncatedCell } from "@/components/Common/TableCells"
+import { extraText } from "@/lib/extra"
 
 export type CanonicalEpisodeTableData = CanonicalEpisodeListOutput
 
@@ -72,6 +73,11 @@ export const canonicalEpisodeColumns: ColumnDef<CanonicalEpisodeTableData>[] = [
     cell: ({ row }) => <TruncatedCell value={row.original.image_url} />,
   },
   {
+    accessorKey: "thumbnail_url",
+    header: "Thumbnail URL",
+    cell: ({ row }) => <TruncatedCell value={row.original.thumbnail_url} />,
+  },
+  {
     accessorKey: "air_date",
     header: "Air Date",
     meta: { filterVariant: "dateRange" },
@@ -109,6 +115,48 @@ export const canonicalEpisodeColumns: ColumnDef<CanonicalEpisodeTableData>[] = [
     header: "Title Key",
     cell: ({ row }) => (
       <TruncatedCell value={row.original.canonical_title_key} />
+    ),
+  },
+  {
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) => <TruncatedCell value={row.original.status} />,
+  },
+  {
+    accessorKey: "data_timestamp",
+    header: "Data Timestamp",
+    meta: { filterVariant: "dateRange" },
+    cell: ({ row }) => <DateCell value={row.original.data_timestamp} />,
+  },
+  {
+    accessorKey: "update_at",
+    header: "Update At",
+    meta: { filterVariant: "dateRange" },
+    cell: ({ row }) => <DateCell value={row.original.update_at} />,
+  },
+  {
+    accessorKey: "deleted_at",
+    header: "Deleted At",
+    meta: { filterVariant: "dateRange" },
+    cell: ({ row }) => <DateCell value={row.original.deleted_at} />,
+  },
+  {
+    accessorKey: "extra",
+    header: "Extra",
+    cell: ({ row }) => <TruncatedCell value={extraText(row.original.extra)} />,
+  },
+  {
+    accessorKey: "canonical_title_id",
+    header: "Title ID",
+    cell: ({ row }) => (
+      <TruncatedCell value={row.original.canonical_title_id} />
+    ),
+  },
+  {
+    accessorKey: "canonical_season_id",
+    header: "Season ID",
+    cell: ({ row }) => (
+      <TruncatedCell value={row.original.canonical_season_id} />
     ),
   },
   {

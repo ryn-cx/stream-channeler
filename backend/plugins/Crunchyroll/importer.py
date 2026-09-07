@@ -382,18 +382,15 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
         browse_file = self.newest_browse_file()
         browse_file.download_if_outdated()
         self.create_channel_records()
-        releases = [*self.catalogue_file().datums(), *browse_file.datums()]
-        self._mark_series_as_outdated(releases)
-        new_title_keys = {release.id for release in releases}
+        self._mark_series_as_outdated(browse_file.datums())
         self._mark_mismatched_titles_as_outdated(
             self.source_name(),
-            new_title_keys,
+            {release.id for release in self.catalogue_file().datums()},
             self.source_data_timestamps(),
         )
         self.upsert_source(self.source_name())
 
 
-# TODO: Validate
 class CrunchyrollMusicImporter(CrunchyrollImporter):
     @classmethod
     @override
@@ -424,7 +421,6 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
     def _url_regexes(cls) -> tuple[str, ...]:
         return (MUSIC_VIDEO_URL_REGEX, CONCERT_URL_REGEX, ARTIST_URL_REGEX)
 
-    # TODO: Validate
     @override
     def get_media_info(self, url: str) -> URLTitleInfo:
         domain_regex = self._domain_regex()

@@ -77,6 +77,11 @@ export const sourceColumns: ColumnDef<SourceTableData>[] = [
     cell: ({ row }) => <TruncatedCell value={row.original.image_url} />,
   },
   {
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) => <TruncatedCell value={row.original.status} />,
+  },
+  {
     accessorKey: "data_timestamp",
     header: "Data Timestamp",
     meta: { filterVariant: "dateRange" },
@@ -103,6 +108,11 @@ export const sourceColumns: ColumnDef<SourceTableData>[] = [
     accessorKey: "key",
     header: "Key",
     cell: ({ row }) => <TruncatedCell value={row.original.key} />,
+  },
+  {
+    accessorKey: "plugin_id",
+    header: "Plugin ID",
+    cell: ({ row }) => <TruncatedCell value={row.original.plugin_id} />,
   },
   {
     accessorKey: "id",

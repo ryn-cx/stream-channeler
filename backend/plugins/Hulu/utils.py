@@ -52,7 +52,7 @@ def image_url(path: str | None) -> str | None:
 def thumbnail_url(path: str | None) -> str | None:
     if path is None:
         return None
-    operations = quote('[{"resize":"480x480|max"},{"format":"webp"}]', safe=":,")
+    operations = quote('[{"resize":"600x600|max"},{"format":"webp"}]', safe=":,")
     return f"{path}&operations={operations}"
 
 

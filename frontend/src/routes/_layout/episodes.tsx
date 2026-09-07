@@ -35,7 +35,16 @@ function EpisodesPage() {
       path="/episodes"
       columns={episodeColumns}
       columnVisibilityKey="episodes-column-visibility"
-      defaultHidden={{ key: false, id: false }}
+      defaultHidden={{
+        key: false,
+        canonical_episode_id: false,
+        canonical_episode_ids: false,
+        plugin_id: false,
+        source_id: false,
+        title_id: false,
+        season_id: false,
+        id: false,
+      }}
       emptyIcon={Film}
       fetchTable={async (params) => {
         const result = await EpisodesService.getEpisodes({
@@ -52,7 +61,12 @@ function EpisodesPage() {
       }}
       canonical={{
         columns: canonicalEpisodeColumns,
-        defaultHidden: { key: false, id: false },
+        defaultHidden: {
+          key: false,
+          canonical_title_id: false,
+          canonical_season_id: false,
+          id: false,
+        },
         fetchTable: async (params) => {
           const result = await CanonicalEpisodesService.getCanonicalEpisodes({
             offset: params.offset,
