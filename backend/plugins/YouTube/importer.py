@@ -269,7 +269,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
             season.key,
             title_key,
         )
-        new_episode = Episode(
+        episode = Episode(
             key=video_item.id,
             watch_identifier=watch_identifier(self.plugin_name(), video_item.id),
             name=video_snippet.title,
@@ -285,7 +285,5 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
             episode_number=self._get_episode_number(episode_key, season.key, title_key),
             data_timestamp=max(data_timestamps),
             season_id=season.id,
-        )
-
-        episode = new_episode.upsert(season, episode)
+        ).upsert(season, episode)
         episode.set_update_at(None, data_timestamps)

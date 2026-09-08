@@ -4,7 +4,7 @@
 import json
 from collections.abc import Generator, Iterable, Sequence
 from contextlib import ExitStack, contextmanager
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -17,7 +17,7 @@ from sqlmodel import Session, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.channels.models import Channel
-from app.constants import TEST_FILES_FOLDER
+from app.constants import TEST_RESULTS_FOLDER
 from app.episodes.models import Episode
 from app.files.models import File
 from app.plugins.models import Plugin
@@ -158,8 +158,16 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
     update_time: datetime = UPDATE_TIME
     invalid_url: bool = False
     initializes_channels: bool = False
+    initializes_tmdb: bool = False
     restrict_registered_plugins: bool = True
     imported_plugin: PluginT
+
+    # TODO: Validate
+    def __init_subclass__(cls, **kwargs: object) -> None:
+        """Follow a class that moved its import with an update the day after it."""
+        super().__init_subclass__(**kwargs)
+        if "import_time" in cls.__dict__ and "update_time" not in cls.__dict__:
+            cls.update_time = cls.import_time + timedelta(days=1)
 
     # TODO: Validate
     def _url_variants(self) -> list[str]:
@@ -200,7 +208,7 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
         test_class = type(self)
         file_name = test_class.__module__.rsplit(".", maxsplit=1)[-1]
         return (
-            TEST_FILES_FOLDER
+            TEST_RESULTS_FOLDER
             / self.plugin_class.plugin_name()
             / file_name
             / test_class.__name__
@@ -389,11 +397,6 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
         self._delete_channels(session)
         self.imported_plugin = self.plugin_class(session)
         output = self.imported_plugin.import_url(url)
-        match_imported_titles_to_tmdb(
-            session,
-            self.imported_plugin,
-            [result.title for result in output],
-        )
 
         session.flush()
         session.expire_all()
@@ -406,12 +409,13 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
 
         Every other plugin is left unregistered, so what a URL is looked up
         against is the plugin under test, the plugins whose stored files say
-        they take part, and TMDB, which every plugin reaches for.
+        they take part, and TMDB where the class says it reaches for it.
         """
         plugin_keys = {
             plugin_key for plugin_key, _key, _path in self._files_to_import()
         }
-        plugin_keys.add("TMDB")
+        if self.initializes_tmdb:
+            plugin_keys.add("TMDB")
         plugin_keys.add(self.plugin_class.plugin_name())
         return [plugin_class_for(plugin_key) for plugin_key in sorted(plugin_keys)]
 
@@ -431,7 +435,8 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
         plugin_keys = {
             plugin_key for plugin_key, _key, _path in self._files_to_import()
         }
-        plugin_keys.add("TMDB")
+        if self.initializes_tmdb:
+            plugin_keys.add("TMDB")
         if self.initializes_channels:
             plugin_keys.discard(self.plugin_class.plugin_name())
         else:

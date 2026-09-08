@@ -198,7 +198,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
         if self._title_is_outdated(title, force=force):
             series_data = self.series_file(title_key).parsed().data[0]
             data_timestamps = self.title_data_timestamps(title_key)
-            new_title = Title(
+            title = Title(
                 key=series_data.id,
                 name=series_data.title,
                 description=series_data.description,
@@ -209,8 +209,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
                 year=series_data.series_launch_year,
                 data_timestamp=max(data_timestamps),
                 source_id=source.id,
-            )
-            title = new_title.upsert(source, title)
+            ).upsert(source, title)
             title.set_update_at(None, data_timestamps)
 
         self._upsert_seasons(title, force=force)
@@ -225,15 +224,14 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
             season = Season.get_from_memory(self.session, title, season_data.id)
             if self._season_is_outdated(season, title.key, force=force):
                 data_timestamps = self.season_data_timestamps(season_data.id, title.key)
-                new_season = Season(
+                season = Season(
                     key=season_data.id,
                     name=season_data.title,
                     season_number=season_data.season_number,
                     sort_order=sort_order,
                     data_timestamp=max(data_timestamps),
                     title_id=title.id,
-                )
-                season = new_season.upsert(title, season)
+                ).upsert(title, season)
                 season.set_update_at(None, data_timestamps)
 
             self._upsert_episodes(season, title.key, force=force)
@@ -262,7 +260,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
                 season.key,
                 title_key,
             )
-            new_episode = Episode(
+            episode = Episode(
                 key=episode_data.id,
                 watch_identifier=watch_identifier(self.plugin_name(), episode_data.id),
                 name=episode_data.title,
@@ -276,8 +274,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
                 air_date=episode_data.episode_air_date,
                 data_timestamp=max(data_timestamps),
                 season_id=season.id,
-            )
-            episode = new_episode.upsert(season, episode)
+            ).upsert(season, episode)
             episode.set_update_at(None, data_timestamps)
 
     def browse_file(
@@ -479,7 +476,7 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
         if self._title_is_outdated(title, force=force):
             artist_data = self.artist_file(title_key).parsed().data[0]
             data_timestamps = self.title_data_timestamps(title_key)
-            new_title = Title(
+            title = Title(
                 key=title_key,
                 name=artist_data.name,
                 description=artist_data.description,
@@ -490,8 +487,7 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
                 data_timestamp=max(data_timestamps),
                 canonical_title_validated_at=tz_datetime.now(),
                 source_id=source.id,
-            )
-            title = new_title.upsert(source, title)
+            ).upsert(source, title)
             # All updates are set by update_source.
             title.set_update_at(None, data_timestamps)
 

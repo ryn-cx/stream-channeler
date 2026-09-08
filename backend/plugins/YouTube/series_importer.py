@@ -84,7 +84,7 @@ class YouTubeTVShowImporter(YouTubeLicensedMediaImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             data_timestamps = self.title_data_timestamps(title_key)
-            new_title = Title(
+            title = Title(
                 key=title_key,
                 name=title_listing.title_name(),
                 url=title_url(title_key),
@@ -93,8 +93,7 @@ class YouTubeTVShowImporter(YouTubeLicensedMediaImporter):
                 # A title only changes when a season is added to it.
                 update_at=min(data_timestamps) + timedelta(days=7),
                 source_id=source.id,
-            )
-            title = new_title.upsert(source, title)
+            ).upsert(source, title)
             title.set_update_at(None, data_timestamps)
 
         self._upsert_seasons(title, title_key, force=force)
@@ -115,7 +114,7 @@ class YouTubeTVShowImporter(YouTubeLicensedMediaImporter):
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title_key, force=force):
                 data_timestamps = self.season_data_timestamps(season_key, title_key)
-                new_season = Season(
+                season = Season(
                     key=season_key,
                     name=f"Season {season_number}",
                     season_number=int(season_number),
@@ -125,7 +124,6 @@ class YouTubeTVShowImporter(YouTubeLicensedMediaImporter):
                     # to it.
                     update_at=min(data_timestamps) + timedelta(days=7),
                     title_id=title.id,
-                )
-                season = new_season.upsert(title, season)
+                ).upsert(title, season)
                 season.set_update_at(None, data_timestamps)
             self._upsert_episodes(season, title_key, force=force)

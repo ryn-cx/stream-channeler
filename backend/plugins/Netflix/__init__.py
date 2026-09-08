@@ -11,7 +11,6 @@ from plugins.Netflix.importer import (
     NetflixSeriesImporter,
 )
 from plugins.Netflix.shared import NetflixShared
-from plugins.Netflix.utils import title_url
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.base import BaseReadURL
 from plugins.utils.base_plugin.initialize import BasePluginInitializer
@@ -67,5 +66,5 @@ class Netflix(NetflixShared, BaseReadURL, AbstractPlugin, register=False):
             for entity in section.node.entities.edges:
                 unified_entity = entity.node.unified_entity
                 if unified_entity.field__typename in {"Title", "Movie"}:
-                    return title_url(str(unified_entity.video_id))
+                    return self.title_url(str(unified_entity.video_id))
         return None

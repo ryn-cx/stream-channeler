@@ -130,7 +130,7 @@ class ParamountPlusSeriesImporter(ParamountPlusImporter):
             first_season = self._season_numbers(title_key)[0]
             first_episode = self._season_episodes(title_key, first_season)[0]
             data_timestamps = self.title_data_timestamps(title_key)
-            new_title = Title(
+            title = Title(
                 key=title_key,
                 name=first_episode.series_title,
                 media_type="Series",
@@ -139,9 +139,10 @@ class ParamountPlusSeriesImporter(ParamountPlusImporter):
                 thumbnail_url=first_episode.thumb.large,
                 data_timestamp=max(data_timestamps),
                 source_id=source.id,
+            ).upsert(source, title)
+            title.set_update_at(
+                min(data_timestamps) + timedelta(days=7), data_timestamps
             )
-            title = new_title.upsert(source, title)
-            title.set_update_at(min(data_timestamps) + timedelta(days=7), data_timestamps)
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing(title_key)
@@ -156,15 +157,14 @@ class ParamountPlusSeriesImporter(ParamountPlusImporter):
             if self._season_is_outdated(season, title.key, force=force):
                 episodes = self._season_episodes(title.key, season_number)
                 data_timestamps = self.season_data_timestamps(season_key, title.key)
-                new_season = Season(
+                season = Season(
                     key=season_key,
                     name=episodes[0].season_title if episodes else None,
                     season_number=season_number,
                     sort_order=sort_order,
                     data_timestamp=max(data_timestamps),
                     title_id=title.id,
-                )
-                season = new_season.upsert(title, season)
+                ).upsert(title, season)
                 season.set_update_at(None, data_timestamps)
 
             self._upsert_episodes(season, title.key, season_number, force=force)
@@ -197,7 +197,7 @@ class ParamountPlusSeriesImporter(ParamountPlusImporter):
                 season.key,
                 title_key,
             )
-            new_episode = Episode(
+            episode = Episode(
                 key=episode_key,
                 watch_identifier=watch_identifier(self.plugin_name(), episode_key),
                 name=item.title.removeprefix("EPISODE_NAME - ") if item.title else None,
@@ -211,8 +211,7 @@ class ParamountPlusSeriesImporter(ParamountPlusImporter):
                 sort_order=sort_order,
                 data_timestamp=max(data_timestamps),
                 season_id=season.id,
-            )
-            episode = new_episode.upsert(season, episode)
+            ).upsert(season, episode)
             episode.set_update_at(None, data_timestamps)
 
 
@@ -288,7 +287,7 @@ class ParamountPlusMovieImporter(ParamountPlusImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             data_timestamps = self.title_data_timestamps(title_key)
-            new_title = Title(
+            title = Title(
                 key=title_key,
                 name=movie.name,
                 description=movie.description,
@@ -298,8 +297,7 @@ class ParamountPlusMovieImporter(ParamountPlusImporter):
                 thumbnail_url=movie.image,
                 data_timestamp=max(data_timestamps),
                 source_id=source.id,
-            )
-            title = new_title.upsert(source, title)
+            ).upsert(source, title)
             title.set_update_at(
                 staggered_monthly_update_at(title_key, min(data_timestamps)),
                 data_timestamps,
@@ -316,14 +314,13 @@ class ParamountPlusMovieImporter(ParamountPlusImporter):
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title.key, force=force):
             data_timestamps = self.season_data_timestamps(season_key, title.key)
-            new_season = Season(
+            season = Season(
                 key=season_key,
                 season_number=0,
                 sort_order=0,
                 data_timestamp=max(data_timestamps),
                 title_id=title.id,
-            )
-            season = new_season.upsert(title, season)
+            ).upsert(title, season)
             season.set_update_at(None, data_timestamps)
 
         self._upsert_episode(season, title.key, force=force)
@@ -348,7 +345,7 @@ class ParamountPlusMovieImporter(ParamountPlusImporter):
 
         movie = self._movie_data(title_key)
         data_timestamps = self.episode_data_timestamps(title_key, season.key, title_key)
-        new_episode = Episode(
+        episode = Episode(
             key=title_key,
             watch_identifier=watch_identifier(self.plugin_name(), title_key),
             name=movie.name,
@@ -361,6 +358,5 @@ class ParamountPlusMovieImporter(ParamountPlusImporter):
             air_date=movie.date_published,
             data_timestamp=max(data_timestamps),
             season_id=season.id,
-        )
-        episode = new_episode.upsert(season, episode)
+        ).upsert(season, episode)
         episode.set_update_at(None, data_timestamps)

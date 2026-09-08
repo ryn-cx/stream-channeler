@@ -65,7 +65,7 @@ class YouTubeMovieImporter(YouTubeLicensedMediaImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             data_timestamps = self.title_data_timestamps(title_key)
-            new_title = Title(
+            title = Title(
                 key=title_key,
                 name=video_item.snippet.title,
                 # A YouTube video with a null character in the description caused
@@ -80,8 +80,7 @@ class YouTubeMovieImporter(YouTubeLicensedMediaImporter):
                 # available.
                 update_at=min(data_timestamps) + timedelta(days=365),
                 source_id=source.id,
-            )
-            title = new_title.upsert(source, title)
+            ).upsert(source, title)
             title.set_update_at(None, data_timestamps)
 
         self._upsert_season(title, title_key, force=force)
@@ -101,14 +100,13 @@ class YouTubeMovieImporter(YouTubeLicensedMediaImporter):
         if self._season_is_outdated(season, title_key, force=force):
             video_item = get_first_item(self.videos_file(title_key).parsed().items)
             data_timestamps = self.season_data_timestamps(title_key, title_key)
-            new_season = Season(
+            season = Season(
                 key=title_key,
                 name=video_item.snippet.title,
                 image_url=image_url(video_item.snippet.thumbnails),
                 thumbnail_url=thumbnail_url(video_item.snippet.thumbnails),
                 data_timestamp=max(data_timestamps),
                 title_id=title.id,
-            )
-            season = new_season.upsert(title, season)
+            ).upsert(title, season)
             season.set_update_at(min(data_timestamps), data_timestamps)
         self._upsert_episodes(season, title_key, force=force)

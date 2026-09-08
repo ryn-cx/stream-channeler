@@ -33,7 +33,10 @@ from plugins.utils.abstract_plugin import (
     URLImportResult,
 )
 from tests.plugins.frozen_clock import frozen_clock
-from tests.plugins.plugin_validator.database import DatabaseMixin
+from tests.plugins.plugin_validator.database import (
+    DatabaseMixin,
+    match_imported_titles_to_tmdb,
+)
 from tests.plugins.plugin_validator.log_stats import log_stats
 from tests.plugins.plugin_validator.state import database_json, state_diff
 from tests.plugins.plugin_validator.stored_files import (
@@ -110,6 +113,7 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
         if not path.exists():
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(actual, encoding="utf-8")
+            incorrect_path.unlink(missing_ok=True)
             return
 
         expected = path.read_text(encoding="utf-8")
@@ -427,21 +431,23 @@ class ImportExistingURLTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
 
 # TODO: Validate
 class TMDBLookupTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
-    """Tests that importing a deleted TMDB title puts back what the lookup made.
-
-    What an import writes is partly worked out by looking the title up on TMDB,
-    so the rows a lookup made are only as good as what putting the title back
-    rebuilds. Taking the TMDB title off and importing it again is what says the
-    two routes to it agree, and what it has to leave behind is the dump the
-    import test recorded and nothing else.
-    """
+    initializes_tmdb = True
 
     # TODO: Validate
     def test_tmdb_lookup(self, session_with_files: Session) -> None:
         if not self.url or self.invalid_url:
             pytest.skip()
 
-        self.import_url(session_with_files)
+        results = self.import_url(session_with_files)
+        with frozen_clock(self.import_time):
+            match_imported_titles_to_tmdb(
+                session_with_files,
+                self.imported_plugin,
+                [result.title for result in results],
+            )
+            session_with_files.flush()
+        session_with_files.expire_all()
+
         tmdb_titles = [
             title
             for title in self.all_titles(session_with_files)
@@ -462,7 +468,7 @@ class TMDBLookupTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
             session_with_files.flush()
         session_with_files.expire_all()
 
-        self.assert_state(session_with_files, "import_url")
+        self.assert_state(session_with_files, "tmdb_lookup")
 
 
 # TODO: Validate

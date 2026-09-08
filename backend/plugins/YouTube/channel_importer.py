@@ -141,7 +141,7 @@ class YouTubeChannelImporter(
             channel_file = self.channel_by_channel_id_file(title_key)
             channel_item = get_first_item(channel_file.parsed().items)
             data_timestamps = self.title_data_timestamps(title_key)
-            new_title = Title(
+            title = Title(
                 key=channel_item.id,
                 name=channel_item.snippet.title,
                 url=channel_url(channel_item.id),
@@ -154,8 +154,7 @@ class YouTubeChannelImporter(
                 source_id=source.id,
                 image_url=image_url(channel_item.snippet.thumbnails),
                 thumbnail_url=thumbnail_url(channel_item.snippet.thumbnails),
-            )
-            title = new_title.upsert(source, title)
+            ).upsert(source, title)
             title.set_update_at(None, data_timestamps)
 
         self._upsert_seasons(title, title_key, force=force)

@@ -67,7 +67,7 @@ class YouTubePlaylistImporter(YouTubeUserImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             data_timestamps = self.title_data_timestamps(title_key)
-            new_title = Title(
+            title = Title(
                 key=title_key,
                 name=playlist_item.snippet.title,
                 description=playlist_item.snippet.description.replace("\x00", ""),
@@ -77,8 +77,7 @@ class YouTubePlaylistImporter(YouTubeUserImporter):
                 thumbnail_url=thumbnail_url(playlist_item.snippet.thumbnails),
                 data_timestamp=max(data_timestamps),
                 source_id=source.id,
-            )
-            title = new_title.upsert(source, title)
+            ).upsert(source, title)
             title.set_update_at(
                 min(data_timestamps) + timedelta(hours=6),
                 data_timestamps,

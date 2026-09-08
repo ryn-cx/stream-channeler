@@ -13,10 +13,16 @@ from meshfilm.preview_modal_episode_selector import (
     PreviewModalEpisodeSelector as PreviewModalEpisodeSelectorEndpoint,
 )
 from meshfilm.preview_modal_episode_selector.models import (
+    Node as SeasonNode,
+)
+from meshfilm.preview_modal_episode_selector.models import (
     PreviewModalEpisodeSelectorModel,
 )
 from meshfilm.preview_modal_episode_selector_season_episodes import (
     PreviewModalEpisodeSelectorSeasonEpisodes as PreviewModalEpisodeSelectorSeasonEpisodesEndpoint,
+)
+from meshfilm.preview_modal_episode_selector_season_episodes.models import (
+    Node as EpisodeNode,
 )
 from meshfilm.preview_modal_episode_selector_season_episodes.models import (
     PreviewModalEpisodeSelectorSeasonEpisodesModel,
@@ -61,6 +67,15 @@ class PreviewModalEpisodeSelector(
     def _download_file(self) -> str:
         return self._endpoint().download(int(self.unique_identifier), 500)
 
+    # TODO: Validate
+    def seasons(self) -> list[SeasonNode]:
+        video = self.parsed().data.videos[0]
+        if video.seasons is None:
+            msg = "No seasons found for this title."
+            raise ValueError(msg)
+
+        return [edge.node for edge in video.seasons.edges]
+
 
 class PreviewModalEpisodeSelectorSeasonEpisodes(
     IntegerEndpointFile[PreviewModalEpisodeSelectorSeasonEpisodesModel],
@@ -74,6 +89,15 @@ class PreviewModalEpisodeSelectorSeasonEpisodes(
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(int(self.unique_identifier), 500)
+
+    # TODO: Validate
+    def episodes(self) -> list[EpisodeNode]:
+        video = self.parsed().data.videos[0]
+        if video.episodes is None:
+            msg = "No episodes found for this season."
+            raise ValueError(msg)
+
+        return [edge.node for edge in video.episodes.edges]
 
 
 class SearchPageResults(EndpointFile[SearchPageResultsModel]):

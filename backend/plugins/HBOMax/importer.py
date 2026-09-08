@@ -139,7 +139,7 @@ class HBOMaxSeriesImporter(HBOMaxImporter):
         if self._title_is_outdated(title, force=force):
             content = self._title_content(title_key)
             data_timestamps = self.title_data_timestamps(title_key)
-            new_title = Title(
+            title = Title(
                 key=title_key,
                 name=content.title.full,
                 description=content.summary.full,
@@ -150,8 +150,7 @@ class HBOMaxSeriesImporter(HBOMaxImporter):
                 thumbnail_url=content.image_url_link,
                 data_timestamp=max(data_timestamps),
                 source_id=source.id,
-            )
-            title = new_title.upsert(source, title)
+            ).upsert(source, title)
             title.set_update_at(
                 staggered_monthly_update_at(title_key, min(data_timestamps)),
                 data_timestamps,
@@ -171,15 +170,14 @@ class HBOMaxSeriesImporter(HBOMaxImporter):
             if self._season_is_outdated(season, title.key, force=force):
                 entry = season_entry(title_file.parsed(), season_number)
                 data_timestamps = self.season_data_timestamps(season_key, title.key)
-                new_season = Season(
+                season = Season(
                     key=season_key,
                     name=entry.title.full,
                     season_number=season_number,
                     sort_order=sort_order,
                     data_timestamp=max(data_timestamps),
                     title_id=title.id,
-                )
-                season = new_season.upsert(title, season)
+                ).upsert(title, season)
                 season.set_update_at(None, data_timestamps)
 
             self._upsert_episodes(season, title.key, season_number, force=force)
@@ -212,7 +210,7 @@ class HBOMaxSeriesImporter(HBOMaxImporter):
                 season.key,
                 title_key,
             )
-            new_episode = Episode(
+            episode = Episode(
                 key=episode_key,
                 watch_identifier=watch_identifier(self.plugin_name(), episode_key),
                 name=str(item.title.full),
@@ -225,8 +223,7 @@ class HBOMaxSeriesImporter(HBOMaxImporter):
                 sort_order=sort_order,
                 data_timestamp=max(data_timestamps),
                 season_id=season.id,
-            )
-            episode = new_episode.upsert(season, episode)
+            ).upsert(season, episode)
             episode.set_update_at(None, data_timestamps)
 
 
@@ -302,7 +299,7 @@ class HBOMaxMovieImporter(HBOMaxImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             data_timestamps = self.title_data_timestamps(title_key)
-            new_title = Title(
+            title = Title(
                 key=title_key,
                 name=content.title.full,
                 description=content.summary.full,
@@ -313,8 +310,7 @@ class HBOMaxMovieImporter(HBOMaxImporter):
                 thumbnail_url=content.image_url_link,
                 data_timestamp=max(data_timestamps),
                 source_id=source.id,
-            )
-            title = new_title.upsert(source, title)
+            ).upsert(source, title)
             title.set_update_at(
                 staggered_monthly_update_at(title_key, min(data_timestamps)),
                 data_timestamps,
@@ -337,14 +333,13 @@ class HBOMaxMovieImporter(HBOMaxImporter):
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title.key, force=force):
             data_timestamps = self.season_data_timestamps(season_key, title.key)
-            new_season = Season(
+            season = Season(
                 key=season_key,
                 season_number=0,
                 sort_order=0,
                 data_timestamp=max(data_timestamps),
                 title_id=title.id,
-            )
-            season = new_season.upsert(title, season)
+            ).upsert(title, season)
             season.set_update_at(None, data_timestamps)
 
         self._upsert_episode(season, title.key, content, force=force)
@@ -366,7 +361,7 @@ class HBOMaxMovieImporter(HBOMaxImporter):
                 season.key,
                 title_key,
             )
-            new_episode = Episode(
+            episode = Episode(
                 key=title_key,
                 watch_identifier=watch_identifier(self.plugin_name(), title_key),
                 name=content.title.full,
@@ -378,6 +373,5 @@ class HBOMaxMovieImporter(HBOMaxImporter):
                 sort_order=0,
                 data_timestamp=max(data_timestamps),
                 season_id=season.id,
-            )
-            episode = new_episode.upsert(season, episode)
+            ).upsert(season, episode)
             episode.set_update_at(None, data_timestamps)

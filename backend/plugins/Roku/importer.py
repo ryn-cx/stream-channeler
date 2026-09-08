@@ -151,7 +151,7 @@ class RokuSeriesImporter(RokuImporter):
         if self._title_is_outdated(title, force=force):
             content = self._content(title_key)
             data_timestamps = self.title_data_timestamps(title_key)
-            new_title = Title(
+            title = Title(
                 key=title_key,
                 name=content.title,
                 description=content.description,
@@ -162,9 +162,10 @@ class RokuSeriesImporter(RokuImporter):
                 year=content.release_year,
                 data_timestamp=max(data_timestamps),
                 source_id=source.id,
+            ).upsert(source, title)
+            title.set_update_at(
+                min(data_timestamps) + timedelta(days=7), data_timestamps
             )
-            title = new_title.upsert(source, title)
-            title.set_update_at(min(data_timestamps) + timedelta(days=7), data_timestamps)
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing(title_key)
@@ -180,14 +181,13 @@ class RokuSeriesImporter(RokuImporter):
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
                 data_timestamps = self.season_data_timestamps(season_key, title.key)
-                new_season = Season(
+                season = Season(
                     key=season_key,
                     season_number=season_number,
                     sort_order=sort_order,
                     data_timestamp=max(data_timestamps),
                     title_id=title.id,
-                )
-                season = new_season.upsert(title, season)
+                ).upsert(title, season)
                 season.set_update_at(None, data_timestamps)
 
             self._upsert_episodes(season, title.key, season_number, force=force)
@@ -220,7 +220,7 @@ class RokuSeriesImporter(RokuImporter):
                 season.key,
                 title_key,
             )
-            new_episode = Episode(
+            episode = Episode(
                 key=episode_key,
                 watch_identifier=watch_identifier(self.plugin_name(), episode_key),
                 name=item.title,
@@ -234,8 +234,7 @@ class RokuSeriesImporter(RokuImporter):
                 sort_order=sort_order,
                 data_timestamp=max(data_timestamps),
                 season_id=season.id,
-            )
-            episode = new_episode.upsert(season, episode)
+            ).upsert(season, episode)
             episode.set_update_at(None, data_timestamps)
 
 
@@ -290,7 +289,7 @@ class RokuMovieImporter(RokuImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             data_timestamps = self.title_data_timestamps(title_key)
-            new_title = Title(
+            title = Title(
                 key=title_key,
                 name=content.title,
                 description=content.description,
@@ -301,8 +300,7 @@ class RokuMovieImporter(RokuImporter):
                 year=content.release_year,
                 data_timestamp=max(data_timestamps),
                 source_id=source.id,
-            )
-            title = new_title.upsert(source, title)
+            ).upsert(source, title)
             title.set_update_at(
                 staggered_monthly_update_at(title_key, min(data_timestamps)),
                 data_timestamps,
@@ -319,14 +317,13 @@ class RokuMovieImporter(RokuImporter):
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title.key, force=force):
             data_timestamps = self.season_data_timestamps(season_key, title.key)
-            new_season = Season(
+            season = Season(
                 key=season_key,
                 season_number=0,
                 sort_order=0,
                 data_timestamp=max(data_timestamps),
                 title_id=title.id,
-            )
-            season = new_season.upsert(title, season)
+            ).upsert(title, season)
             season.set_update_at(None, data_timestamps)
 
         self._upsert_episode(season, title.key, force=force)
@@ -351,7 +348,7 @@ class RokuMovieImporter(RokuImporter):
 
         content = self._content(title_key)
         data_timestamps = self.episode_data_timestamps(title_key, season.key, title_key)
-        new_episode = Episode(
+        episode = Episode(
             key=title_key,
             watch_identifier=watch_identifier(self.plugin_name(), title_key),
             name=content.title,
@@ -365,6 +362,5 @@ class RokuMovieImporter(RokuImporter):
             air_date=content.release_date,
             data_timestamp=max(data_timestamps),
             season_id=season.id,
-        )
-        episode = new_episode.upsert(season, episode)
+        ).upsert(season, episode)
         episode.set_update_at(None, data_timestamps)

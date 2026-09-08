@@ -87,7 +87,7 @@ class YouTubeMusicSeasons(YouTubeImporter):
         if self._season_is_outdated(season, title_key, force=force):
             music_playlist = self.music_playlist_file(season_key)
             data_timestamps = self.season_data_timestamps(season_key, title_key)
-            new_season = Season(
+            season = Season(
                 key=season_key,
                 name=name,
                 url=playlist_url(season_key),
@@ -95,8 +95,7 @@ class YouTubeMusicSeasons(YouTubeImporter):
                 thumbnail_url=music_playlist.image_url(),
                 data_timestamp=max(data_timestamps),
                 title_id=title.id,
-            )
-            season = new_season.upsert(title, season)
+            ).upsert(title, season)
             season.set_update_at(
                 min(data_timestamps) + timedelta(days=365),
                 data_timestamps,
@@ -178,7 +177,7 @@ class YouTubeAlbumImporter(YouTubeMusicImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             data_timestamps = self.title_data_timestamps(title_key)
-            new_title = Title(
+            title = Title(
                 key=title_key,
                 name=self._music_name(music_playlist),
                 url=playlist_url(title_key),
@@ -187,8 +186,7 @@ class YouTubeAlbumImporter(YouTubeMusicImporter):
                 thumbnail_url=music_playlist.image_url(),
                 data_timestamp=max(data_timestamps),
                 source_id=source.id,
-            )
-            title = new_title.upsert(source, title)
+            ).upsert(source, title)
             title.set_update_at(
                 min(data_timestamps) + timedelta(days=365),
                 data_timestamps,
@@ -251,7 +249,7 @@ class YouTubeTopicImporter(YouTubeMusicImporter):
                 self.channel_by_channel_id_file(title_key).parsed().items,
             )
             data_timestamps = self.title_data_timestamps(title_key)
-            new_title = Title(
+            title = Title(
                 key=title_key,
                 name=channel_item.snippet.title,
                 url=channel_url(title_key),
@@ -262,8 +260,7 @@ class YouTubeTopicImporter(YouTubeMusicImporter):
                 # A musician only changes when they put something out.
                 update_at=min(data_timestamps) + timedelta(days=365),
                 source_id=source.id,
-            )
-            title = new_title.upsert(source, title)
+            ).upsert(source, title)
             title.set_update_at(None, data_timestamps)
 
         for season_key in self._season_keys_from_title_files(title_key):

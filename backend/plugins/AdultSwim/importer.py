@@ -139,7 +139,7 @@ class AdultSwimImporter(AdultSwimShared, BaseImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             data_timestamps = self.title_data_timestamps(title_key)
-            new_title = Title(
+            title = Title(
                 key=title_key,
                 name=title_data.title,
                 description=metadata.description if metadata else None,
@@ -149,8 +149,7 @@ class AdultSwimImporter(AdultSwimShared, BaseImporter):
                 thumbnail_url=metadata.thumbnail if metadata else None,
                 data_timestamp=max(data_timestamps),
                 source_id=source.id,
-            )
-            title = new_title.upsert(source, title)
+            ).upsert(source, title)
             title.set_update_at(None, data_timestamps)
 
         self._upsert_seasons(
@@ -177,15 +176,14 @@ class AdultSwimImporter(AdultSwimShared, BaseImporter):
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
                 data_timestamps = self.season_data_timestamps(season_key, title.key)
-                new_season = Season(
+                season = Season(
                     key=season_key,
                     name=season_data.name,
                     season_number=season_data.number,
                     sort_order=sort_order,
                     data_timestamp=max(data_timestamps),
                     title_id=title.id,
-                )
-                season = new_season.upsert(title, season)
+                ).upsert(title, season)
                 season.set_update_at(None, data_timestamps)
 
             self._upsert_episodes(
@@ -227,7 +225,7 @@ class AdultSwimImporter(AdultSwimShared, BaseImporter):
                 season.key,
                 title_key,
             )
-            new_episode = Episode(
+            episode = Episode(
                 key=episode_data.id,
                 watch_identifier=watch_identifier(self.plugin_name(), episode_data.id),
                 name=episode_data.title,
@@ -244,8 +242,7 @@ class AdultSwimImporter(AdultSwimShared, BaseImporter):
                 sort_order=sort_order,
                 data_timestamp=max(data_timestamps),
                 season_id=season.id,
-            )
-            episode = new_episode.upsert(season, episode)
+            ).upsert(season, episode)
             episode.set_update_at(None, data_timestamps)
 
         season.soft_delete_missing_children(

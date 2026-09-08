@@ -1,4 +1,5 @@
-# TODO: Validate
+/tests/plugins/test_files/
+
 __pycache__
 app.egg-info
 *.pyc
@@ -7,5 +8,4 @@ app.egg-info
 htmlcov
 .cache
 .venv
-
-/tests/plugins/_files/
+/tests/plugins/results/**/stats/

@@ -105,7 +105,7 @@ class NHKWorldImporter(NHKWorldShared, BaseImporter):
         if self._title_is_outdated(title, force=force):
             program = self.video_program_file(title_key).parsed()
             data_timestamps = self.title_data_timestamps(title_key)
-            new_title = Title(
+            title = Title(
                 key=program.id,
                 name=program.title,
                 description=program.description,
@@ -115,8 +115,7 @@ class NHKWorldImporter(NHKWorldShared, BaseImporter):
                 media_type="Series",
                 data_timestamp=max(data_timestamps),
                 source_id=source.id,
-            )
-            title = new_title.upsert(source, title)
+            ).upsert(source, title)
             title.set_update_at(None, data_timestamps)
 
         self._upsert_season(title, title_key, force=force)
@@ -135,14 +134,13 @@ class NHKWorldImporter(NHKWorldShared, BaseImporter):
         season = Season.get_from_memory(self.session, title, title_key)
         if self._season_is_outdated(season, title_key, force=force):
             data_timestamps = self.season_data_timestamps(title_key, title_key)
-            new_season = Season(
+            season = Season(
                 key=title_key,
                 season_number=1,
                 sort_order=0,
                 data_timestamp=max(data_timestamps),
                 title_id=title.id,
-            )
-            season = new_season.upsert(title, season)
+            ).upsert(title, season)
             season.set_update_at(None, data_timestamps)
 
         self._upsert_episodes(season, title_key, force=force)
@@ -175,7 +173,7 @@ class NHKWorldImporter(NHKWorldShared, BaseImporter):
                 season.key,
                 title_key,
             )
-            new_episode = Episode(
+            episode = Episode(
                 key=item.id,
                 watch_identifier=watch_identifier(self.plugin_name(), item.id),
                 name=item.title,
@@ -189,6 +187,5 @@ class NHKWorldImporter(NHKWorldShared, BaseImporter):
                 episode_number=sort_order + 1,
                 data_timestamp=max(data_timestamps),
                 season_id=season.id,
-            )
-            episode = new_episode.upsert(season, episode)
+            ).upsert(season, episode)
             episode.set_update_at(None, data_timestamps)

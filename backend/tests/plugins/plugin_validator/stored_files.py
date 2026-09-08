@@ -285,7 +285,7 @@ def file_sessions_that_flush() -> Generator[None]:
         session.info[core.FILE_SESSION_KEY] = file_session
         return file_session
 
-    with patch.object(core, "file_session_for", patched):
+    with patch.object(core, "get_file_session", patched):
         yield
 
 

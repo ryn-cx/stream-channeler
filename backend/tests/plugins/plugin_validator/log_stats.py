@@ -154,8 +154,8 @@ def _log_sql_statement_count(
         stack_traces.append(f"SQL #{stats['sql_statements']}\n  {callers_str}")
         group_key = (" ".join(statement.split()), callers_str)
         grouped_queries[group_key] = grouped_queries.get(group_key, 0) + 1
-        logger.info(f"SQL #{stats['sql_statements']}")
-        logger.trace(f"Stack trace:\n {callers_str}")
+        # logger.info(f"SQL #{stats['sql_statements']}")
+        # logger.trace(f"Stack trace:\n {callers_str}")
 
     event.listen(Engine, "before_cursor_execute", count_queries)
     event.listen(Engine, "before_cursor_execute", log_queries)

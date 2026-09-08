@@ -1,4 +1,6 @@
 # TODO: Validate
+from datetime import UTC, datetime
+
 from plugins.Netflix import Netflix
 from tests.plugins.plugin_validator import PluginValidator, StandardTests
 
@@ -9,11 +11,10 @@ class NetflixValidator(PluginValidator[Netflix]):
 
 
 # TODO: Validate
-class TestDrStone(StandardTests[Netflix], NetflixValidator):
-    """Test a title with more than 10 episodes in a season."""
-
-    title_id = "81046193"
+class TestAiringShow(StandardTests[Netflix], NetflixValidator):
+    import_time = datetime(2026, 9, 7, tzinfo=UTC)
+    title_key = "82760630"
     urls = (
-        "/title/{title_id}",
-        "/title/{title_id}/",
+        "/title/{title_key}",
+        "/title/{title_key}/",
     )

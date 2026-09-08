@@ -23,11 +23,11 @@ class NetflixBaseFiles(BasePlugin):
     # TODO: Validate
     def season_episodes_file(
         self,
-        season_id: str | int,
+        season_video_key: str | int,
     ) -> PreviewModalEpisodeSelectorSeasonEpisodes:
         return self._file(
             PreviewModalEpisodeSelectorSeasonEpisodes,
-            str(season_id),
+            str(season_video_key),
         )
 
     # TODO: Validate
