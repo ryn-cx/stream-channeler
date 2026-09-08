@@ -31,16 +31,13 @@ from app.sources.models import Source
 from app.titles.models import Title
 from app.utils import tz_datetime
 from app.utils.update_at import title_update_at
+from plugins.TMDB.constants import MOVIE_URL_REGEX, TV_URL_REGEX
 from plugins.TMDB.external_websites import TMDBExternalWebsites
 from plugins.TMDB.files import (
     MoviesWatchProviders,
     TVSeasonsChanges,
     TVSeriesChanges,
     TVSeriesWatchProviders,
-)
-from plugins.TMDB.shared import (
-    MOVIE_URL_REGEX,
-    TV_URL_REGEX,
 )
 from plugins.TMDB.utils import (
     TMDBSeasonInfo,

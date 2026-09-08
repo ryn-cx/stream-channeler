@@ -15,7 +15,8 @@ from app.seasons.models import Season
 from app.titles.models import Title
 from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
-from plugins.Netflix.shared import TITLE_URL_REGEX, NetflixShared
+from plugins.Netflix.constants import TITLE_URL_REGEX
+from plugins.Netflix.shared import NetflixShared
 from plugins.Netflix.utils import (
     build_season_key,
     episode_url,

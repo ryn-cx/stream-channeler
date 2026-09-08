@@ -4,12 +4,13 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, override
 
+from plugins.DisneyPlus.constants import ENTITY_URL_REGEX
 from plugins.DisneyPlus.importer import (
     DisneyPlusImporter,
     DisneyPlusMovieImporter,
     DisneyPlusSeriesImporter,
 )
-from plugins.DisneyPlus.shared import ENTITY_URL_REGEX, DisneyPlusShared
+from plugins.DisneyPlus.shared import DisneyPlusShared
 from plugins.DisneyPlus.utils import is_movie
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.base import BaseReadURL

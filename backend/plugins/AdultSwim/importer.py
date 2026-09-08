@@ -11,11 +11,8 @@ from app.episodes.models import Episode
 from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.titles.models import Title
-from plugins.AdultSwim.shared import (
-    EPISODE_URL_REGEX,
-    TITLE_URL_REGEX,
-    AdultSwimShared,
-)
+from plugins.AdultSwim.constants import EPISODE_URL_REGEX, TITLE_URL_REGEX
+from plugins.AdultSwim.shared import AdultSwimShared
 from plugins.AdultSwim.utils import (
     episode_key_for_slug,
     episode_keys,

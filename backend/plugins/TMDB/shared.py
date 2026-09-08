@@ -35,20 +35,6 @@ def provider_names(file: WatchProvidersFile) -> set[str]:
 
 
 # TODO: Validate
-def title_url_regex(media_type: TMDBMediaType) -> str:
-    """Return the regex pattern for the given media type."""
-    return rf"\/{media_type}\/(?P<{media_type}_tmdb_id>\d+)"
-
-
-MOVIE_URL_REGEX = title_url_regex(TMDBMediaType.movie)
-
-
-TV_URL_REGEX = title_url_regex(TMDBMediaType.tv) + (
-    r"(?:\/season\/(?P<season_number>\d+)(?:\/episode\/(?P<episode_number>\d+))?)?"
-)
-
-
-# TODO: Validate
 class TMDBShared(TMDBSearch):
     """Reads TMDB into records of TMDB's own.
 

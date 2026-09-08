@@ -6,6 +6,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from urllib.parse import quote_plus
 
+from plugins.Netflix.constants import SEARCH_MEDIA_TYPES, WEEKDAYS
+
 if TYPE_CHECKING:
     from meshfilm.lodp_title_and_plans_page.models import (
         LodpTitleAndPlansPageModel,
@@ -26,21 +28,6 @@ if TYPE_CHECKING:
         PreviewModalEpisodeSelectorSeasonEpisodesModel,
     )
     from meshfilm.search_page_results.models import SearchPageResultsModel
-
-WEEKDAYS = {
-    "Monday": 0,
-    "Tuesday": 1,
-    "Wednesday": 2,
-    "Thursday": 3,
-    "Friday": 4,
-    "Saturday": 5,
-    "Sunday": 6,
-}
-
-SEARCH_MEDIA_TYPES = {
-    "Title": "Series",
-    "Movie": "Movie",
-}
 
 
 # TODO: Validate

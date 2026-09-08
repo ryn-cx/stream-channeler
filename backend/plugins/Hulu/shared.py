@@ -7,23 +7,13 @@ from typing import TYPE_CHECKING, override
 
 from app.utils.strict_re import strict_search
 from plugins.Hulu.base_files import HuluBaseFiles
-from plugins.Hulu.utils import (
-    HuluMediaType,
-    search_url,
-    title_url,
-    title_urls,
-)
+from plugins.Hulu.constants import MOVIE_URL_REGEX, SERIES_URL_REGEX, HuluMediaType
+from plugins.Hulu.utils import search_url, title_url, title_urls
 
 if TYPE_CHECKING:
     from wholoo.all_movies.models import AllMoviesModel
     from wholoo.all_series.models import AllSeriesModel
     from wholoo.genre.models import GenreModel
-
-UUID_REGEX = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
-SLUG_REGEX = r"(?:[a-z0-9-]+-)?"
-SERIES_URL_REGEX = rf"\/series\/{SLUG_REGEX}(?P<series_key>{UUID_REGEX})"
-MOVIE_URL_REGEX = rf"\/movie\/{SLUG_REGEX}(?P<movie_key>{UUID_REGEX})"
-VIDEO_URL_REGEX = rf"\/watch\/(?P<episode_key>{UUID_REGEX})"
 
 
 class HuluShared(HuluBaseFiles):

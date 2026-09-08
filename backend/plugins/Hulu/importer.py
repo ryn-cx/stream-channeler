@@ -9,14 +9,14 @@ from app.episodes.models import Episode
 from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.titles.models import Title
-from plugins.Hulu.shared import (
+from plugins.Hulu.constants import (
     MOVIE_URL_REGEX,
     SERIES_URL_REGEX,
     VIDEO_URL_REGEX,
-    HuluShared,
-)
-from plugins.Hulu.utils import (
     HuluMediaType,
+)
+from plugins.Hulu.shared import HuluShared
+from plugins.Hulu.utils import (
     build_season_key,
     episode_url,
     image_url,

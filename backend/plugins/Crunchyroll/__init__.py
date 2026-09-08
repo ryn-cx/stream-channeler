@@ -4,13 +4,7 @@ import re
 from typing import TYPE_CHECKING, override
 
 from app.sources.models import Source
-from plugins.Crunchyroll.importer import (
-    CrunchyrollAnimeImporter,
-    CrunchyrollImporter,
-    CrunchyrollMusicImporter,
-)
-from plugins.Crunchyroll.shared import CrunchyrollShared
-from plugins.Crunchyroll.utils import (
+from plugins.Crunchyroll.constants import (
     ARTIST_URL_REGEX,
     CONCERT_URL_REGEX,
     EPISODE_URL_REGEX,
@@ -19,6 +13,12 @@ from plugins.Crunchyroll.utils import (
     SERIES_URL_REGEX,
     VIDEO_SOURCE,
 )
+from plugins.Crunchyroll.importer import (
+    CrunchyrollAnimeImporter,
+    CrunchyrollImporter,
+    CrunchyrollMusicImporter,
+)
+from plugins.Crunchyroll.shared import CrunchyrollShared
 from plugins.Crunchyroll.watch_history import CrunchyrollWatchHistoryMixin
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.base import BaseReadURL

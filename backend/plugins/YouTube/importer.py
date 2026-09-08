@@ -12,14 +12,12 @@ from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.titles.models import Title
 from app.utils import tz_datetime
-from plugins.utils.abstract_plugin import TMDBLookupInfo
+from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.utils.base_plugin.url import URLTitleInfo
 from plugins.YouTube.constants import (
     URL_REGEXES,
 )
 from plugins.YouTube.shared import YouTubeShared
-from plugins.YouTube.url_parser import YouTubeURLParser
 from plugins.YouTube.utils import (
     batch_download_missing_videos,
     channel_uploads_playlist_key,
@@ -40,11 +38,13 @@ if TYPE_CHECKING:
 
     from plugins.utils.abstract_plugin import URLImportResult
     from plugins.utils.base_plugin.files import BaseFile
+    from plugins.utils.base_plugin.url import URLTitleInfo
+    from plugins.YouTube.url_parser import ParsedURL
 
 
 # TODO: Validate
 class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
-    _url_parser: YouTubeURLParser
+    parsed_url: ParsedURL | None = None
 
     # TODO: Validate
     @abstractmethod
@@ -183,30 +183,21 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
     # TODO: Validate
     @override
     def get_media_info(self, url: str) -> URLTitleInfo:
-        parser = YouTubeURLParser(self)
-        parser.parse(url)
-        self._url_parser = parser
-        self._importing_album_playlist_key = parser.album_playlist_key
+        return self._parsed_url(url).media_info()
 
-        if parser.whole_title:
-            return URLTitleInfo(parser.title_key)
-        if parser.video_key is None:
-            return URLTitleInfo(parser.title_key, season_key=parser.playlist_key)
-        # The track is looked for in every release of the musician, since the URL
-        # named no release and the title holds one season for each of them.
-        if parser.musician_track:
-            return URLTitleInfo(parser.title_key, episode_key=parser.video_key)
-        return URLTitleInfo(
-            parser.title_key,
-            season_key=parser.playlist_key,
-            episode_key=parser.video_key,
-        )
+    # TODO: Validate
+    def _parsed_url(self, url: str) -> ParsedURL:
+        if self.parsed_url is None:
+            msg = f"Ask {self.plugin_name()} for the importer of {url} first."
+            raise InvalidURLError(msg)
+        return self.parsed_url
 
     # A YouTube title is always imported for a specific playlist.
     # TODO: Validate
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
-        media_info = self.get_media_info(url)
+        parsed = self._parsed_url(url)
+        media_info = parsed.media_info()
         title_key = media_info.title_key
         existing_title = self._preload_title(
             title_key,
@@ -219,7 +210,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
         # If a channel is imported but a new playlist is added and that playlist is the
         # URL being imported this will update the channel information to include that
         # playlist.
-        elif self._playlist_is_missing(existing_title, self._url_parser.playlist_key):
+        elif self._playlist_is_missing(existing_title, parsed.playlist_key):
             self._download_if_outdated(
                 self._title_files(title_key),
                 tz_datetime.now(),

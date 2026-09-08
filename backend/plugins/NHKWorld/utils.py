@@ -6,13 +6,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from urllib.parse import quote_plus
 
+from plugins.NHKWorld.constants import MINIMUM_THUMBNAIL_WIDTH
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from naphki.video_episodes.models import Image as EpisodeImage
     from naphki.video_program.models import LandscapeItem, PortraitItem
-
-MINIMUM_THUMBNAIL_WIDTH = 480
 
 
 # TODO: Validate

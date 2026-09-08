@@ -15,9 +15,7 @@ from app.seasons.models import Season
 from app.sources.models import Source
 from app.titles.models import Title
 from app.utils import tz_datetime
-from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries
-from plugins.Crunchyroll.shared import CrunchyrollShared
-from plugins.Crunchyroll.utils import (
+from plugins.Crunchyroll.constants import (
     ARTIST_URL_REGEX,
     CONCERT_URL_REGEX,
     EPISODE_URL_REGEX,
@@ -26,6 +24,10 @@ from plugins.Crunchyroll.utils import (
     MUSIC_VIDEO_URL_REGEX,
     SERIES_URL_REGEX,
     CrunchyrollMusicCategory,
+)
+from plugins.Crunchyroll.files import BrowseMusic, BrowseSeries
+from plugins.Crunchyroll.shared import CrunchyrollShared
+from plugins.Crunchyroll.utils import (
     build_url,
     episode_image,
     episode_thumbnail,

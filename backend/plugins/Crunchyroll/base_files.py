@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from plugins.Crunchyroll.constants import CrunchyrollMusicCategory
 from plugins.Crunchyroll.files import (
     Artist,
     ArtistConcerts,
@@ -14,7 +15,7 @@ from plugins.Crunchyroll.files import (
     Seasons,
     Series,
 )
-from plugins.Crunchyroll.utils import CrunchyrollMusicCategory, music_episode_category
+from plugins.Crunchyroll.utils import music_episode_category
 from plugins.utils.base_plugin.base import BasePlugin
 
 

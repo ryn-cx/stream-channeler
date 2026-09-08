@@ -8,12 +8,9 @@ from app.canonical_media.tmdb import (
     get_media_type_and_tmdb_id,
 )
 from app.media.media_type import TMDBMediaType
+from plugins.TMDB.constants import MOVIE_URL_REGEX, TV_URL_REGEX
 from plugins.TMDB.importer import TMDBImporter, TMDBMovie, TMDBSeries
-from plugins.TMDB.shared import (
-    MOVIE_URL_REGEX,
-    TV_URL_REGEX,
-    TMDBShared,
-)
+from plugins.TMDB.shared import TMDBShared
 from plugins.TMDB.utils import tmdb_url
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,

@@ -6,8 +6,9 @@ from typing import TYPE_CHECKING, override
 
 from app.media.media_type import TMDBMediaType
 from app.utils import tz_datetime
+from plugins.NHKWorld.constants import TITLE_URL_REGEX
 from plugins.NHKWorld.importer import NHKWorldImporter
-from plugins.NHKWorld.shared import TITLE_URL_REGEX, NHKWorldShared
+from plugins.NHKWorld.shared import NHKWorldShared
 from plugins.NHKWorld.utils import build_url
 from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.base_plugin.base import BaseReadURL

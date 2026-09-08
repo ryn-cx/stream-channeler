@@ -15,7 +15,8 @@ from app.seasons.models import Season
 from app.titles.models import Title
 from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
-from plugins.Roku.shared import DETAILS_URL_REGEX, WATCH_URL_REGEX, RokuShared
+from plugins.Roku.constants import DETAILS_URL_REGEX, WATCH_URL_REGEX
+from plugins.Roku.shared import RokuShared
 from plugins.Roku.utils import (
     build_season_key,
     content_id,

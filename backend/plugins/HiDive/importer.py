@@ -14,13 +14,14 @@ from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season as SeasonModel
 from app.titles.models import Title
 from app.utils import tz_datetime
-from plugins.HiDive.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
-from plugins.HiDive.shared import (
+from plugins.HiDive.constants import (
+    MOVIE_MEDIA_TYPE,
     MOVIE_URL_REGEX,
     SEASON_URL_REGEX,
+    SERIES_MEDIA_TYPE,
     SERIES_URL_REGEX,
-    HiDiveShared,
 )
+from plugins.HiDive.shared import HiDiveShared
 from plugins.HiDive.utils import (
     episode_number,
     episode_url,

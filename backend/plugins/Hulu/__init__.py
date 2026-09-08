@@ -1,20 +1,21 @@
 from __future__ import annotations
 
-from datetime import time, timedelta
 import re
+from datetime import time, timedelta
 from typing import TYPE_CHECKING, override
 
 from app.media.media_type import TMDBMediaType
 from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
-from plugins.Hulu.importer import HuluImporter, HuluMovieImporter, HuluSeriesImporter
-from plugins.Hulu.shared import (
+from plugins.Hulu.constants import (
     MOVIE_URL_REGEX,
     SERIES_URL_REGEX,
     VIDEO_URL_REGEX,
-    HuluShared,
+    HuluMediaType,
 )
-from plugins.Hulu.utils import HuluMediaType, title_url
+from plugins.Hulu.importer import HuluImporter, HuluMovieImporter, HuluSeriesImporter
+from plugins.Hulu.shared import HuluShared
+from plugins.Hulu.utils import title_url
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
     InvalidURLError,

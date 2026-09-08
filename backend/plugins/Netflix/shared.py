@@ -10,8 +10,6 @@ from app.utils import tz_datetime
 from plugins.Netflix.base_files import NetflixBaseFiles
 from plugins.Netflix.utils import search_url
 
-TITLE_URL_REGEX = r"\/title\/(?P<title_key>\d+)(?:\/|$)"
-
 
 # TODO: Validate
 class NetflixShared(NetflixBaseFiles):

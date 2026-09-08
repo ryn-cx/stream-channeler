@@ -13,7 +13,8 @@ from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.titles.models import Title
 from app.utils.update_at import staggered_monthly_update_at
-from plugins.HBOMax.shared import MOVIE_URL_REGEX, TITLE_URL_REGEX, HBOMaxShared
+from plugins.HBOMax.constants import MOVIE_URL_REGEX, TITLE_URL_REGEX
+from plugins.HBOMax.shared import HBOMaxShared
 from plugins.HBOMax.utils import (
     build_episode_key,
     build_season_key,

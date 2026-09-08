@@ -4,7 +4,8 @@ from typing import override
 from urllib.parse import quote_plus
 
 from plugins.Crunchyroll.base_files import CrunchyrollBaseFiles
-from plugins.Crunchyroll.utils import MUSIC_SOURCE, VIDEO_SOURCE, build_url
+from plugins.Crunchyroll.constants import MUSIC_SOURCE, VIDEO_SOURCE
+from plugins.Crunchyroll.utils import build_url
 
 
 class CrunchyrollShared(CrunchyrollBaseFiles):

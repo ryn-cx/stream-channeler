@@ -7,12 +7,13 @@ from typing import TYPE_CHECKING, override
 
 from app.media.media_type import TMDBMediaType
 from app.utils import tz_datetime
+from plugins.Netflix.constants import TITLE_URL_REGEX
 from plugins.Netflix.importer import (
     NetflixImporter,
     NetflixMovieImporter,
     NetflixSeriesImporter,
 )
-from plugins.Netflix.shared import TITLE_URL_REGEX, NetflixShared
+from plugins.Netflix.shared import NetflixShared
 from plugins.Netflix.utils import first_search_result_key, is_movie, title_url
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.base import BaseReadURL

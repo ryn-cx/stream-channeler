@@ -14,11 +14,8 @@ from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.titles.models import Title
 from app.utils.update_at import staggered_monthly_update_at
-from plugins.ParamountPlus.shared import (
-    MOVIE_URL_REGEX,
-    TITLE_URL_REGEX,
-    ParamountPlusShared,
-)
+from plugins.ParamountPlus.constants import MOVIE_URL_REGEX, TITLE_URL_REGEX
+from plugins.ParamountPlus.shared import ParamountPlusShared
 from plugins.ParamountPlus.utils import (
     build_season_key,
     movie_url,

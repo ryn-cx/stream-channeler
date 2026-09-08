@@ -1,12 +1,9 @@
-# TODO: Validate
 from __future__ import annotations
 
 from plugins.utils.base_plugin.base import BasePlugin
 from plugins.YouTube.files import (
     Browse,
     ChannelByChannelId,
-    ChannelByHandle,
-    ChannelByUsername,
     ChannelPlaylists,
     MusicPlaylist,
     PlaylistFeed,
@@ -17,18 +14,9 @@ from plugins.YouTube.files import (
 )
 
 
-# TODO: Validate
 class YouTubeBaseFiles(BasePlugin):
-    _importing_album_playlist_key: str | None = None
-
     def channel_by_channel_id_file(self, title_key: str) -> ChannelByChannelId:
         return self._file(ChannelByChannelId, title_key)
-
-    def channel_by_handle_file(self, channel_handle: str) -> ChannelByHandle:
-        return self._file(ChannelByHandle, channel_handle)
-
-    def channel_by_username_file(self, channel_username: str) -> ChannelByUsername:
-        return self._file(ChannelByUsername, channel_username)
 
     def channel_playlists_file(self, title_key: str) -> ChannelPlaylists:
         return self._file(ChannelPlaylists, title_key)

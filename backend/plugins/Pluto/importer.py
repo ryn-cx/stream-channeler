@@ -14,8 +14,12 @@ from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.titles.models import Title
 from app.utils.update_at import staggered_monthly_update_at
-from plugins.Pluto.constants import MILLISECONDS_PER_SECOND
-from plugins.Pluto.shared import MOVIE_URL_REGEX, SERIES_URL_REGEX, PlutoShared
+from plugins.Pluto.constants import (
+    MILLISECONDS_PER_SECOND,
+    MOVIE_URL_REGEX,
+    SERIES_URL_REGEX,
+)
+from plugins.Pluto.shared import PlutoShared
 from plugins.Pluto.utils import (
     build_season_key,
     episode_url,

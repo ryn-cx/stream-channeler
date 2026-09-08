@@ -6,12 +6,9 @@ from typing import TYPE_CHECKING, override
 from loguru import logger
 
 from app.utils import tz_datetime
+from plugins.AdultSwim.constants import EPISODE_URL_REGEX, TITLE_URL_REGEX
 from plugins.AdultSwim.importer import AdultSwimImporter
-from plugins.AdultSwim.shared import (
-    EPISODE_URL_REGEX,
-    TITLE_URL_REGEX,
-    AdultSwimShared,
-)
+from plugins.AdultSwim.shared import AdultSwimShared
 from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.base_plugin.base import BaseReadURL
 from plugins.utils.base_plugin.initialize import BasePluginInitializer

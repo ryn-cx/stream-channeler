@@ -4,12 +4,13 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, override
 
+from plugins.Pluto.constants import MOVIE_URL_REGEX, SERIES_URL_REGEX
 from plugins.Pluto.importer import (
     PlutoImporter,
     PlutoMovieImporter,
     PlutoSeriesImporter,
 )
-from plugins.Pluto.shared import MOVIE_URL_REGEX, SERIES_URL_REGEX, PlutoShared
+from plugins.Pluto.shared import PlutoShared
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.base import BaseReadURL
 from plugins.utils.base_plugin.initialize import BasePluginInitializer

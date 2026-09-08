@@ -4,8 +4,9 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, override
 
+from plugins.Roku.constants import DETAILS_URL_REGEX, WATCH_URL_REGEX
 from plugins.Roku.importer import RokuImporter, RokuMovieImporter, RokuSeriesImporter
-from plugins.Roku.shared import DETAILS_URL_REGEX, WATCH_URL_REGEX, RokuShared
+from plugins.Roku.shared import RokuShared
 from plugins.Roku.utils import is_movie
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.base import BaseReadURL

@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NamedTuple, override
 from urllib.parse import parse_qs, urlparse
 
 from plugins.utils.abstract_plugin import InvalidURLError
+from plugins.utils.base_plugin.url import URLTitleInfo
+from plugins.YouTube.base_files import YouTubeBaseFiles
+from plugins.YouTube.channel_importer import YouTubeChannelImporter
 from plugins.YouTube.constants import (
     CHANNEL_HANDLE_URL_REGEX,
     CHANNEL_KEY_URL_REGEX,
@@ -16,189 +19,222 @@ from plugins.YouTube.constants import (
     TITLE_URL_REGEX,
     VIDEO_URL_REGEX,
 )
+from plugins.YouTube.files import ChannelByHandle, ChannelByUsername
+from plugins.YouTube.movie_importer import YouTubeMovieImporter
+from plugins.YouTube.music_importer import YouTubeAlbumImporter, YouTubeTopicImporter
+from plugins.YouTube.playlist_importer import YouTubePlaylistImporter
+from plugins.YouTube.series_importer import YouTubeTVShowImporter
 from plugins.YouTube.utils import (
+    batch_download_missing_videos,
     channel_key_from_uploads_playlist_key,
     channel_uploads_playlist_key,
     get_first_item,
     is_an_album,
     is_channel_uploads_playlist_key,
     is_free_movies_channel,
+    is_movies_channel,
+    is_title_key,
     is_topic_channel,
+    is_usa_video,
+    is_user_playlist,
     is_video_key,
     title_season_key,
     title_season_numbers_from_file,
+    video_is_valid,
 )
 
 if TYPE_CHECKING:
     from not_yt_dlapi.channels.models import ChannelsModel
 
     from plugins.utils.base_plugin.files import BaseFile
-    from plugins.YouTube.shared import YouTubeShared
+    from plugins.YouTube.importer import YouTubeImporter
 
 
 # TODO: Validate
-class YouTubeURLParser:
+class ParsedURL(NamedTuple):
     title_key: str
     playlist_key: str
-    video_key: str | None
-    whole_title: bool
-    musician_track: bool
-    album_playlist_key: str | None
+    video_key: str | None = None
+    whole_title: bool = False
+    musician_track: bool = False
+    album_playlist_key: str | None = None
 
     # TODO: Validate
-    def __init__(self, files: YouTubeShared) -> None:
-        self._files = files
+    def media_info(self) -> URLTitleInfo:
+        if self.whole_title:
+            return URLTitleInfo(self.title_key)
+        if self.video_key is None:
+            return URLTitleInfo(self.title_key, season_key=self.playlist_key)
+        # The track is looked for in every release of the musician, since the URL
+        # named no release and the title holds one season for each of them.
+        if self.musician_track:
+            return URLTitleInfo(self.title_key, episode_key=self.video_key)
+        return URLTitleInfo(
+            self.title_key,
+            season_key=self.playlist_key,
+            episode_key=self.video_key,
+        )
+
+
+# TODO: Validate
+class YouTubeURLParserMixin(YouTubeBaseFiles):
+    # TODO: Validate
+    @override
+    def media_importer_from_url(self, url: str) -> YouTubeImporter:
+        parsed = self._parsed_url(url)
+        importer = self.media_importer_from_title_key(parsed.title_key)
+        importer.parsed_url = parsed
+        return importer
 
     # TODO: Validate
-    def parse(self, url: str) -> None:  # noqa: PLR0911 - One return per kind of address.
-        self.video_key = None
-        self.whole_title = False
-        self.musician_track = False
-        self.album_playlist_key = None
+    def media_importer_from_title_key(self, title_key: str) -> YouTubeImporter:
+        if is_video_key(title_key):
+            return YouTubeMovieImporter(self)
+        if is_title_key(title_key):
+            return YouTubeTVShowImporter(self)
+        if is_an_album(title_key):
+            return YouTubeAlbumImporter(self)
+        if is_user_playlist(title_key):
+            return YouTubePlaylistImporter(self)
+        if is_topic_channel(self.channel_by_channel_id_file(title_key)):
+            return YouTubeTopicImporter(self)
+        return YouTubeChannelImporter(self)
 
+    # TODO: Validate
+    def _channel_by_handle_file(self, channel_handle: str) -> ChannelByHandle:
+        return self._file(ChannelByHandle, channel_handle)
+
+    # TODO: Validate
+    def _channel_by_username_file(self, channel_username: str) -> ChannelByUsername:
+        return self._file(ChannelByUsername, channel_username)
+
+    # TODO: Validate
+    def _parsed_url(self, url: str) -> ParsedURL:  # noqa: PLR0911 - One return per kind of address.
         if match := re.match(PLAYLIST_VIDEO_URL_REGEX, url):
-            self.video_key = match.group("video_key")
-            self._parse_playlist(match.group("playlist_key"), url)
-            return
+            parsed = self._parse_playlist(match.group("playlist_key"), url)
+            return parsed._replace(video_key=match.group("video_key"))
 
         if match := re.match(TITLE_PLAYLIST_URL_REGEX, url):
-            self._parse_title_playlist(match.group("title_playlist_key"), url)
-            return
+            return self._parse_title_playlist(match.group("title_playlist_key"), url)
 
         if match := re.match(PLAYLIST_URL_REGEX, url):
-            self._parse_playlist(match.group("playlist_key"), url)
-            return
+            return self._parse_playlist(match.group("playlist_key"), url)
 
         if match := re.match(VIDEO_URL_REGEX, url):
-            self._parse_video(match.group("video_key"), url)
-            return
+            return self._parse_video(match.group("video_key"), url)
 
         if match := re.match(CHANNEL_KEY_URL_REGEX, url):
-            channel_key = match.group("channel_key")
-            self._parsed_channel(
-                self._files.channel_by_channel_id_file(channel_key),
-                url,
-            )
-            self._parse_channel(channel_key, url)
-            return
+            return self._parse_channel(match.group("channel_key"), url)
 
         if match := re.match(TITLE_URL_REGEX, url):
-            self._parse_title(match.group("title_key"), url)
-            return
+            return self._parse_title(match.group("title_key"), url)
 
         if match := re.match(CHANNEL_USERNAME_URL_REGEX, url):
-            parsed = self._parsed_channel(
-                self._files.channel_by_username_file(match.group("channel_username")),
+            channel = self._parsed_channel(
+                self._channel_by_username_file(match.group("channel_username")),
                 url,
             )
-            self._parse_channel(get_first_item(parsed.items).id, url)
-            return
+            return self._parse_channel(get_first_item(channel.items).id, url)
 
         if match := re.match(CHANNEL_HANDLE_URL_REGEX, url):
-            parsed = self._parsed_channel(
-                self._files.channel_by_handle_file(match.group("channel_handle")),
+            channel = self._parsed_channel(
+                self._channel_by_handle_file(match.group("channel_handle")),
                 url,
             )
-            self._parse_channel(get_first_item(parsed.items).id, url)
-            return
+            return self._parse_channel(get_first_item(channel.items).id, url)
 
-        msg = f"Invalid {self._files.plugin_name()} URL: {url}"
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
     # TODO: Validate
     def _parsed_channel(self, channel_file: BaseFile[Any], url: str) -> ChannelsModel:
-        self._files.raise_if_invalid_file(channel_file, url)
+        self.raise_if_invalid_file(channel_file, url)
         channel: ChannelsModel = channel_file.parsed()
         if not channel.items:
-            msg = f"Invalid {self._files.plugin_name()} URL: {url}"
+            msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
         return channel
 
     # TODO: Validate
     def _raise_if_invalid_channel(self, channel_key: str, url: str) -> None:
-        self._parsed_channel(self._files.channel_by_channel_id_file(channel_key), url)
+        self._parsed_channel(self.channel_by_channel_id_file(channel_key), url)
 
     # TODO: Validate
-    def _parse_playlist(self, playlist_key: str, url: str) -> None:
-        self.playlist_key = playlist_key
-
+    def _parse_playlist(self, playlist_key: str, url: str) -> ParsedURL:
         if is_channel_uploads_playlist_key(playlist_key):
-            self.title_key = channel_key_from_uploads_playlist_key(playlist_key)
-            self._raise_if_invalid_channel(self.title_key, url)
-            return
+            title_key = channel_key_from_uploads_playlist_key(playlist_key)
+            self._raise_if_invalid_channel(title_key, url)
+            if is_movies_channel(self.channel_by_channel_id_file(title_key)):
+                return self._movies_channel_parsed_url(title_key, url)
+            return ParsedURL(title_key, playlist_key)
 
         if is_an_album(playlist_key):
-            music_playlist_file = self._files.music_playlist_file(playlist_key)
-            self._files.raise_if_invalid_file(music_playlist_file, url)
+            music_playlist_file = self.music_playlist_file(playlist_key)
+            self.raise_if_invalid_file(music_playlist_file, url)
             channel_key = music_playlist_file.artist_channel_id()
             if not channel_key:
-                self.title_key = playlist_key
-                return
+                return ParsedURL(playlist_key, playlist_key)
             self._raise_if_invalid_channel(channel_key, url)
-            self.album_playlist_key = playlist_key
-            self.title_key = channel_key
-            return
+            return ParsedURL(channel_key, playlist_key, album_playlist_key=playlist_key)
 
-        playlist_items_file = self._files.playlist_items_file(playlist_key)
-        self._files.raise_if_invalid_file(playlist_items_file, url)
-        self.title_key = get_first_item(
+        playlist_items_file = self.playlist_items_file(playlist_key)
+        self.raise_if_invalid_file(playlist_items_file, url)
+        title_key = get_first_item(
             playlist_items_file.parsed().items,
         ).snippet.channel_id
+        return ParsedURL(title_key, playlist_key)
 
     # TODO: Validate
-    def _parse_video(self, video_key: str, url: str) -> None:
-        self.video_key = video_key
-        videos_file = self._files.videos_file(video_key)
-        self._files.raise_if_invalid_file(videos_file, url)
+    def _parse_video(self, video_key: str, url: str) -> ParsedURL:
+        videos_file = self.videos_file(video_key)
+        self.raise_if_invalid_file(videos_file, url)
 
         channel_key = videos_file.parsed().items[0].snippet.channel_id
         if is_free_movies_channel(channel_key):
-            self.title_key = video_key
-        else:
-            self.title_key = channel_key
+            return ParsedURL(video_key, video_key, video_key=video_key)
 
-        if is_video_key(self.title_key):
-            self.playlist_key = self.title_key
-            return
+        self._raise_if_invalid_channel(channel_key, url)
 
-        self._raise_if_invalid_channel(self.title_key, url)
+        if is_movies_channel(self.channel_by_channel_id_file(channel_key)):
+            return self._movies_channel_parsed_url(channel_key, url)
 
-        if is_topic_channel(self._files.channel_by_channel_id_file(self.title_key)):
-            self.playlist_key = self.title_key
-            self.musician_track = True
-        else:
-            self.playlist_key = channel_uploads_playlist_key(self.title_key)
+        if is_topic_channel(self.channel_by_channel_id_file(channel_key)):
+            return ParsedURL(
+                channel_key,
+                channel_key,
+                video_key=video_key,
+                musician_track=True,
+            )
+        return ParsedURL(
+            channel_key,
+            channel_uploads_playlist_key(channel_key),
+            video_key=video_key,
+        )
 
     # TODO: Validate
-    def _parse_title_playlist(self, title_playlist_key: str, url: str) -> None:
-        title_listing_file = self._files.browse_file(title_playlist_key)
-        self._files.raise_if_invalid_file(title_listing_file, url)
+    def _parse_title_playlist(self, title_playlist_key: str, url: str) -> ParsedURL:
+        title_listing_file = self.browse_file(title_playlist_key)
+        self.raise_if_invalid_file(title_listing_file, url)
         title_key = title_listing_file.title_key()
         if title_key is None:
-            msg = f"Invalid {self._files.plugin_name()} URL: {url}"
+            msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
-        self.title_key = title_key
-        self.playlist_key = title_key
-        self.whole_title = True
+        return ParsedURL(title_key, title_key, whole_title=True)
 
     # TODO: Validate
-    def _parse_title(self, title_key: str, url: str) -> None:
-        self.title_key = title_key
-        self._files.raise_if_invalid_file(self._files.browse_file(title_key), url)
-        if not title_season_numbers_from_file(self._files.browse_file(title_key)):
-            msg = f"Invalid {self._files.plugin_name()} URL: {url}"
+    def _parse_title(self, title_key: str, url: str) -> ParsedURL:
+        self.raise_if_invalid_file(self.browse_file(title_key), url)
+        if not title_season_numbers_from_file(self.browse_file(title_key)):
+            msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
 
         season = parse_qs(urlparse(url).query).get("season", [])
         if season:
-            self.playlist_key = title_season_key(title_key, season[0])
-        else:
-            self.playlist_key = title_key
-            self.whole_title = True
+            return ParsedURL(title_key, title_season_key(title_key, season[0]))
+        return ParsedURL(title_key, title_key, whole_title=True)
 
     # TODO: Validate
-    def _parse_channel(self, title_key: str, url: str) -> None:
-        self.title_key = title_key
+    def _parse_channel(self, title_key: str, url: str) -> ParsedURL:
         self._raise_if_invalid_channel(title_key, url)
 
         if is_free_movies_channel(title_key):
@@ -208,8 +244,42 @@ class YouTubeURLParser:
             )
             raise InvalidURLError(msg)
 
-        if is_topic_channel(self._files.channel_by_channel_id_file(title_key)):
-            self.playlist_key = title_key
-            self.whole_title = True
-        else:
-            self.playlist_key = channel_uploads_playlist_key(title_key)
+        if is_movies_channel(self.channel_by_channel_id_file(title_key)):
+            return self._movies_channel_parsed_url(title_key, url)
+
+        if is_topic_channel(self.channel_by_channel_id_file(title_key)):
+            return ParsedURL(title_key, title_key, whole_title=True)
+        return ParsedURL(title_key, channel_uploads_playlist_key(title_key))
+
+    # TODO: Validate
+    def _movies_channel_parsed_url(self, channel_key: str, url: str) -> ParsedURL:
+        video_key = self._movies_channel_video_key(channel_key)
+        if video_key is None:
+            msg = (
+                f"{channel_key} uploaded no video that could be read as the film "
+                f"it was generated for: {url}"
+            )
+            raise InvalidURLError(msg)
+        return ParsedURL(video_key, video_key, video_key=video_key)
+
+    # TODO: Validate
+    def _movies_channel_video_key(self, channel_key: str) -> str | None:
+        uploads_file = self.playlist_items_file(
+            channel_uploads_playlist_key(channel_key),
+        )
+        if uploads_file.parsed_or_none() is None:
+            return None
+        video_keys = [
+            item.content_details.video_id
+            for item in uploads_file.parsed().items
+            if video_is_valid(item.snippet.title)
+        ]
+        if not video_keys:
+            return None
+        batch_download_missing_videos(
+            [self.videos_file(video_key) for video_key in video_keys],
+        )
+        for video_key in video_keys:
+            if is_usa_video(self.videos_file(video_key)):
+                return video_key
+        return video_keys[0]

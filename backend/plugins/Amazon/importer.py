@@ -16,13 +16,13 @@ from app.sources.models import Source
 from app.titles.models import Title
 from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
-from plugins.Amazon.constants import PURCHASE_SOURCE_SUFFIX
-from plugins.Amazon.shared import (
+from plugins.Amazon.constants import (
     AMAZON_URL_REGEX,
     PRIME_VIDEO_URL_REGEX,
+    PURCHASE_SOURCE_SUFFIX,
     SHARE_URL_REGEX,
-    AmazonShared,
 )
+from plugins.Amazon.shared import AmazonShared
 from plugins.Amazon.utils import AmazonSeason, detail_url, parse_date
 from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
 from plugins.utils.base_plugin.importer import BaseImporter

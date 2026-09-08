@@ -1,10 +1,8 @@
 from datetime import datetime, timedelta
 from functools import cache
-from http import HTTPStatus
 from typing import override
 
 from bs4 import BeautifulSoup
-from get_around import GetAround
 from sqlmodel import Session
 from wholoo import Wholoo
 from wholoo.all_movies import AllMovies as AllMoviesEndpoint
@@ -14,8 +12,6 @@ from wholoo.all_series.models import AllSeriesModel
 from wholoo.episode import Episode as EpisodeEndpoint
 from wholoo.episode.models import EpisodeModel
 from wholoo.exceptions import (
-    EpisodeNotFoundError,
-    HTTPError,
     MovieNotFoundError,
     SeriesNotFoundError,
 )
@@ -32,7 +28,6 @@ from wholoo.season.models import SeasonModel
 from wholoo.tv import TV
 from wholoo.tv.models import TVModel
 
-from app.config import settings
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
 from plugins.Hulu.utils import episode_url

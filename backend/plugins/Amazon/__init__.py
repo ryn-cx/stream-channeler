@@ -7,18 +7,18 @@ from typing import TYPE_CHECKING, override
 
 from app.media.media_type import TMDBMediaType
 from app.utils import tz_datetime
-from plugins.Amazon.constants import MOVIE_ENTITY_TYPE
+from plugins.Amazon.constants import (
+    AMAZON_URL_REGEX,
+    MOVIE_ENTITY_TYPE,
+    PRIME_VIDEO_URL_REGEX,
+    SHARE_URL_REGEX,
+)
 from plugins.Amazon.importer import (
     AmazonImporter,
     AmazonMovieImporter,
     AmazonSeriesImporter,
 )
-from plugins.Amazon.shared import (
-    AMAZON_URL_REGEX,
-    PRIME_VIDEO_URL_REGEX,
-    SHARE_URL_REGEX,
-    AmazonShared,
-)
+from plugins.Amazon.shared import AmazonShared
 from plugins.Amazon.utils import detail_url
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.base import BaseReadURL

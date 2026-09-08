@@ -16,7 +16,7 @@ from app.channels.service.import_queue import add_urls_to_channel_import_queue
 from app.sources.models import Source
 from app.titles.models import Title
 from plugins.AdultSwim.base_files import AdultSwimBaseFiles
-from plugins.AdultSwim.constants import FREE, SUBSCRIPTION
+from plugins.AdultSwim.constants import CHANNEL_DESCRIPTION_FILES, FREE, SUBSCRIPTION
 from plugins.AdultSwim.utils import title_url
 from plugins.utils.base_plugin.files import COMPLETED_STATUS
 
@@ -25,17 +25,6 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from app.channels.models import Channel
-
-EPISODE_URL_REGEX = r"\/videos\/(?P<episode_path>[a-z0-9-]+\/[a-z0-9-]+)(?:[\/?#]|$)"
-TITLE_URL_REGEX = (
-    r"\/(?!videos(?:$|[?#]|\/(?:$|[?#])))"
-    r"(?:videos\/)?(?P<title_key>[a-z0-9-]+)\/?(?:$|[?#])"
-)
-
-CHANNEL_DESCRIPTION_FILES = {
-    SUBSCRIPTION: "subscription_channel_description.md",
-    FREE: "free_channel_description.md",
-}
 
 
 # TODO: Validate

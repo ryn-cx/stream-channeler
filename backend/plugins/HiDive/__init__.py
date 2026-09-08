@@ -4,17 +4,13 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, override
 
+from plugins.HiDive.constants import MOVIE_URL_REGEX, SEASON_URL_REGEX, SERIES_URL_REGEX
 from plugins.HiDive.importer import (
     HiDiveImporter,
     HiDiveMovieImporter,
     HiDiveSeriesImporter,
 )
-from plugins.HiDive.shared import (
-    MOVIE_URL_REGEX,
-    SEASON_URL_REGEX,
-    SERIES_URL_REGEX,
-    HiDiveShared,
-)
+from plugins.HiDive.shared import HiDiveShared
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.base import BaseReadURL
 from plugins.utils.base_plugin.initialize import BasePluginInitializer

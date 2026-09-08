@@ -4,12 +4,13 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, override
 
+from plugins.HBOMax.constants import MOVIE_URL_REGEX, TITLE_URL_REGEX
 from plugins.HBOMax.importer import (
     HBOMaxImporter,
     HBOMaxMovieImporter,
     HBOMaxSeriesImporter,
 )
-from plugins.HBOMax.shared import MOVIE_URL_REGEX, TITLE_URL_REGEX, HBOMaxShared
+from plugins.HBOMax.shared import HBOMaxShared
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.base import BaseReadURL
 from plugins.utils.base_plugin.initialize import BasePluginInitializer

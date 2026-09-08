@@ -40,8 +40,8 @@ class YouTubeMusicSeasons(YouTubeImporter):
     # TODO: Validate
     def _album_season_keys_from_database(self, title_key: str) -> list[str]:
         season_keys: list[str] = []
-        if self._importing_album_playlist_key:
-            season_keys.append(self._importing_album_playlist_key)
+        if self.parsed_url and self.parsed_url.album_playlist_key:
+            season_keys.append(self.parsed_url.album_playlist_key)
 
         existing_title = self._preload_title(
             title_key,

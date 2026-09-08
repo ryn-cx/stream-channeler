@@ -6,16 +6,7 @@ from __future__ import annotations
 from typing import override
 
 from plugins.Roku.base_files import RokuBaseFiles
-from plugins.Roku.constants import CONTENT_ID_REGEX
 from plugins.Roku.utils import search_url
-
-# https://therokuchannel.roku.com/details/db1607f1cff2522bb795382bb4b5bcae
-# The title slug after the content id is decorative, only the id matters.
-DETAILS_URL_REGEX = (
-    rf"\/details\/(?P<details_content_key>{CONTENT_ID_REGEX})(?:\/[^\/?#]+)?(?:\/|$)"
-)
-# https://therokuchannel.roku.com/watch/db1607f1cff2522bb795382bb4b5bcae
-WATCH_URL_REGEX = rf"\/watch\/(?P<watch_content_key>{CONTENT_ID_REGEX})(?:\/|$)"
 
 
 # TODO: Validate

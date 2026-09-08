@@ -26,15 +26,6 @@ from plugins.utils.base_plugin.files import COMPLETED_STATUS
 if TYPE_CHECKING:
     from app.channels.models import Channel
 
-# https://www.hidive.com/series/1286
-SERIES_URL_REGEX = r"\/series\/(?P<series_key>\d+)(?:\/|$)"
-# https://www.hidive.com/season/20022
-SEASON_URL_REGEX = r"\/season\/(?P<season_key>\d+)(?:\/|$)"
-# https://www.hidive.com/video/586784
-MOVIE_URL_REGEX = r"\/video\/(?P<movie_vod_key>\d+)(?:\/|$)"
-
-# TODO: Add support for individual episodes of a series.
-
 
 # TODO: Validate
 class HiDiveShared(HiDiveBaseFiles):

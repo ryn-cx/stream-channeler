@@ -15,7 +15,8 @@ from app.seasons.models import Season
 from app.titles.models import Title
 from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
-from plugins.DisneyPlus.shared import ENTITY_URL_REGEX, DisneyPlusShared
+from plugins.DisneyPlus.constants import ENTITY_URL_REGEX
+from plugins.DisneyPlus.shared import DisneyPlusShared
 from plugins.DisneyPlus.utils import (
     background_image_url,
     build_season_key,

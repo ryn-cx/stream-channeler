@@ -1,7 +1,6 @@
 # TODO: Validate
 """What every other part of the plugin reads a title by."""
 
-from enum import StrEnum
 from urllib.parse import quote, quote_plus
 from uuid import UUID
 
@@ -13,11 +12,7 @@ from wholoo.movies.models import MoviesModel
 from wholoo.season.models import Item, SeasonModel
 from wholoo.tv.models import TVModel
 
-
-# TODO: Validate
-class HuluMediaType(StrEnum):
-    MOVIE = "movie"
-    SERIES = "series"
+from plugins.Hulu.constants import HuluMediaType
 
 
 # TODO: Validate
@@ -122,5 +117,3 @@ def title_plan(page: TVModel | MoviesModel) -> tuple[str, bool] | None:
         bundle.network_name != "Sony"
     )
     return bundle.network_name, is_subscription
-
-
