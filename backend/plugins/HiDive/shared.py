@@ -12,6 +12,7 @@ from loguru import logger
 from app.channels.service.import_queue import add_urls_to_channel_import_queue
 from app.media.media_type import TMDBMediaType
 from app.sources.models import Source
+from app.utils import tz_datetime
 from plugins.HiDive.base_files import HiDiveBaseFiles
 from plugins.HiDive.files import Schedule
 from plugins.HiDive.utils import (
@@ -21,7 +22,6 @@ from plugins.HiDive.utils import (
     schedule_group_list,
     search_url,
 )
-from plugins.utils.base_plugin.files import COMPLETED_STATUS
 
 if TYPE_CHECKING:
     from app.channels.models import Channel
@@ -60,7 +60,7 @@ class HiDiveShared(HiDiveBaseFiles):
     @override
     def upsert_source(self, source_key: str) -> Source:
         if not (latest_schedule_file := self.get_latest_schedule_file()):
-            latest_schedule_file = self._initial_file(Schedule)
+            latest_schedule_file = self.schedule_file(tz_datetime.now())
         data_timestamp = latest_schedule_file.data_timestamp()
 
         existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
@@ -76,7 +76,7 @@ class HiDiveShared(HiDiveBaseFiles):
 
     # TODO: Validate
     def _process_new_schedule_files(self, source: Source) -> None:
-        for schedule_file in self.get_incomplete_files(
+        for schedule_file in self._incomplete_files(
             Schedule,
             self.schedule_file,
         ):
@@ -91,7 +91,7 @@ class HiDiveShared(HiDiveBaseFiles):
             }
             logger.info(
                 "Processing schedule file: {}",
-                schedule_file.database_record.key,
+                schedule_file.record_key,
             )
             unmatched_names: list[str] = []
             for page in schedule_file.parsed():
@@ -111,7 +111,7 @@ class HiDiveShared(HiDiveBaseFiles):
                             unmatched_names.append(title_name)
 
             self._queue_new_titles(unmatched_names)
-            schedule_file.database_record.status = COMPLETED_STATUS
+            schedule_file.record_status = None
 
     # TODO: Validate
     def _queue_new_titles(self, title_names: list[str]) -> None:

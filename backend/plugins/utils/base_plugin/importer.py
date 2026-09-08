@@ -26,24 +26,38 @@ class BasePluginWorker(BasePlugin, ABC):
     def update_title(self, title: Title, *, force: bool = False) -> None:
         # TODO: Is this preload needed since _update_and_upsert_title preloads?c
         stored_title = self._preload_title(title.key, source_key=title.source.key).one()
-        self._update_and_upsert_title(stored_title, stored_title.update_at, force=force)
+        self._update_and_upsert_title(stored_title, force=force)
 
     # TODO: Validate
     @override
     def update_season(self, season: Season) -> None:
         # TODO: Is this preload needed since _update_and_upsert_title preloads?c
         stored_season = self._preload_season(season.id, preload_title=True).one()
-        self._update_and_upsert_title(stored_season.title, stored_season.update_at)
+        self._update_and_upsert_title(stored_season.title)
 
     # TODO: Validate
     @override
     def update_episode(self, episode: Episode) -> None:
         # TODO: Is this preload needed since _update_and_upsert_title preloads?c
         stored_episode = self._preload_episode(episode.id, preload_source=True).one()
-        self._update_and_upsert_title(
-            stored_episode.season.title,
-            stored_episode.update_at,
-        )
+        self._update_and_upsert_title(stored_episode.season.title)
+
+    # TODO: Validate
+    def _update_and_upsert_title(
+        self,
+        title: Title,
+        *,
+        force: bool = False,
+    ) -> None:
+        """Update all files then upsert the title.
+
+        Title files are updated using Title.update_at and the File.update_at values.
+        Season files are updated using Season.update_at and the File.update_at values.
+        Episode files are updated using Episode.update_at and the File.update_at values.
+        """
+        self._preload_title(title.id, preload_episodes=True).one()
+        self._download_outdated_files(title)
+        self._upsert_title(title.source, title.key, force=force)
 
 
 # TODO: Validate
@@ -54,7 +68,8 @@ class BaseImporter(BasePluginWorker, BaseReadURL, ABC):
         if title := self._preload_title(media_info.title_key).one_or_none():
             return self._import_results(title, media_info)
 
-        title = self.upsert_title(self.source, media_info.title_key)
+        self._download_initial_files(media_info.title_key)
+        title = self._upsert_title(self.source, media_info.title_key)
         return self._import_results(title, media_info)
 
     # TODO: Validate

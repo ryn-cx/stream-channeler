@@ -53,7 +53,7 @@ class Amazon(AmazonShared, BaseReadURL, AbstractPlugin, register=False):
         # so the page has to be read before it is known which of the two it
         # is.
         title_key = self._url_title_key(url)
-        self.raise_if_invalid_file(self.detail_file(title_key), url)
+        self.raise_invalid_url_if_no_content(self.detail_file(title_key), url)
         if self._is_movie(title_key):
             return AmazonMovieImporter(self)
         return AmazonSeriesImporter(self)

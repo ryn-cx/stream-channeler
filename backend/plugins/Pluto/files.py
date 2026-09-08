@@ -36,6 +36,7 @@ class ItemNotFoundError(NotAPlanetError):
 
 # TODO: Validate
 class ItemsFile(EndpointFile[ItemsModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> ItemsEndpoint:
         return notaplanet().items
@@ -53,6 +54,7 @@ class ItemsFile(EndpointFile[ItemsModel]):
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ItemNotFoundError)
 
+    # TODO: Validate
     @override
     def acceptable_error_status(self) -> str:
         """Return what is written down in place of a title that does not exist."""
@@ -61,14 +63,17 @@ class ItemsFile(EndpointFile[ItemsModel]):
 
 # TODO: Validate
 class SeasonsFile(EndpointFile[SeasonsModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> SeasonsEndpoint:
         return notaplanet().seasons
 
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, SeriesNotFoundError)
 
+    # TODO: Validate
     @override
     def acceptable_error_status(self) -> str:
         """Return what is written down in place of a series that does not exist."""

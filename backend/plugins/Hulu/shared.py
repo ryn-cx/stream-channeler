@@ -16,22 +16,27 @@ if TYPE_CHECKING:
     from wholoo.genre.models import GenreModel
 
 
+# TODO: Validate
 class HuluShared(HuluBaseFiles):
+    # TODO: Validate
     @classmethod
     @override
     def plugin_name(cls) -> str:
         return "Hulu"
 
+    # TODO: Validate
     @classmethod
     @override
     def favicon_url(cls) -> str:
         return "https://www.hulu.com/favicon.ico"
 
+    # TODO: Validate
     @classmethod
     @override
     def _domain(cls) -> str:
         return "hulu.com"
 
+    # TODO: Validate
     @classmethod
     def manual_search_url(cls, query: str) -> str | None:
         return search_url(query)
@@ -40,6 +45,7 @@ class HuluShared(HuluBaseFiles):
     def _create_channel_records(self) -> None:
         self._add_urls_to_channel_by_prefix(self._all_title_urls(), "All Titles")
 
+    # TODO: Validate
     def _all_title_urls(self) -> list[str]:
         self._download_if_outdated(self._plugin_files())
         pages: list[AllSeriesModel | AllMoviesModel | GenreModel] = [
@@ -59,6 +65,7 @@ class HuluShared(HuluBaseFiles):
                     )
         return list(urls)
 
+    # TODO: Validate
     def _all_title_keys(self) -> set[str]:
         title_keys: set[str] = set()
         for url in self._all_title_urls():

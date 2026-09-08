@@ -14,11 +14,11 @@ if TYPE_CHECKING:
 class AdultSwimBaseFiles(BasePlugin):
     # TODO: Validate
     def title_file(self, title_key: str) -> TitlePage:
-        return self._file(TitlePage, title_key)
+        return self._cached_file(TitlePage, title_key)
 
     # TODO: Validate
     def titles_file(self) -> TitlesPage:
-        return self._file(TitlesPage)
+        return self._cached_file(TitlesPage)
 
     # TODO: Validate
     @override

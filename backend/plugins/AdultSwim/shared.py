@@ -18,7 +18,7 @@ from app.titles.models import Title
 from plugins.AdultSwim.base_files import AdultSwimBaseFiles
 from plugins.AdultSwim.constants import CHANNEL_DESCRIPTION_FILES, FREE, SUBSCRIPTION
 from plugins.AdultSwim.utils import title_url
-from plugins.utils.base_plugin.files import COMPLETED_STATUS
+from plugins.utils.base_plugin.files import INCOMPLETE_STATUS
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -98,8 +98,7 @@ class AdultSwimShared(AdultSwimBaseFiles):
     # TODO: Validate
     def _process_new_titles(self) -> None:
         titles_page = self.titles_file()
-        record = titles_page.database_record
-        if record.status == COMPLETED_STATUS:
+        if titles_page.record_status != INCOMPLETE_STATUS:
             return
 
         queued_urls = self._queued_urls()
@@ -125,7 +124,7 @@ class AdultSwimShared(AdultSwimBaseFiles):
             for channel in self._channels():
                 add_urls_to_channel_import_queue(self.session, channel, new_title_urls)
 
-        record.status = COMPLETED_STATUS
+        titles_page.record_status = None
 
     # TODO: Validate
     def _exclude_subscription_from_free_channel(self) -> None:

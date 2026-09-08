@@ -146,7 +146,6 @@ class TMDBExternalWebsites(TMDBShared, ABC):
             return False
 
         plugin = plugin_class(self.session)
-        self.file_session.commit()
         savepoint = self.session.begin_nested()
         try:
             results = plugin.import_search([name], media_type, year)

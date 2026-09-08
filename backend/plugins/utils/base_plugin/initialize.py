@@ -1,3 +1,4 @@
+# TODO: Validate
 from __future__ import annotations
 
 from abc import ABC
@@ -9,6 +10,7 @@ from app.sources.models import Source
 from plugins.utils.base_plugin.base import BasePlugin
 
 
+# TODO: Validate
 class BasePluginInitializer(BasePlugin, ABC):
     """Base class for plugin initializers.
 
@@ -32,6 +34,7 @@ class BasePluginInitializer(BasePlugin, ABC):
         plugin_initializator._create_channel_records()
         plugin_initializator.plugin.status = None
 
+    # TODO: Validate
     @classmethod
     def _create_plugin_record(cls, session: Session) -> Plugin:
         """Create the plugin record for the plugin.
@@ -53,6 +56,7 @@ class BasePluginInitializer(BasePlugin, ABC):
         # session has been closed.
         return Plugin.get_one(session, cls.plugin_name())
 
+    # TODO: Validate
     def _create_source_records(self) -> None:
         """Create the source records for the plugin.
 
@@ -64,6 +68,7 @@ class BasePluginInitializer(BasePlugin, ABC):
                 self.upsert_source(source_key)
         self._sources = {source.key: source for source in self.plugin.sources}
 
+    # TODO: Validate
     def _create_channel_records(self) -> None:
         """Create the channel records for the plugin.
 

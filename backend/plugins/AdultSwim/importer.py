@@ -51,7 +51,7 @@ class AdultSwimImporter(AdultSwimShared, BaseImporter):
         if match := re.match(domain_regex + EPISODE_URL_REGEX, url):
             title_key, episode_slug = match.group("episode_path").split("/")
             title_file = self.title_file(title_key)
-            self.raise_if_invalid_file(title_file, url)
+            self.raise_invalid_url_if_no_content(title_file, url)
             episode_key = episode_key_for_slug(title_file.parsed(), episode_slug)
             if episode_key is None:
                 msg = f"Invalid {self.plugin_name()} URL: {url}"
@@ -60,7 +60,7 @@ class AdultSwimImporter(AdultSwimShared, BaseImporter):
 
         if match := re.match(domain_regex + TITLE_URL_REGEX, url):
             title_key = match.group("title_key")
-            self.raise_if_invalid_file(self.title_file(title_key), url)
+            self.raise_invalid_url_if_no_content(self.title_file(title_key), url)
             return URLTitleInfo(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
@@ -78,8 +78,9 @@ class AdultSwimImporter(AdultSwimShared, BaseImporter):
         media_info = self.get_media_info(url)
         titles = list(self._preload_title(media_info.title_key))
         if not titles:
+            self._download_initial_files(media_info.title_key)
             titles = [
-                self.upsert_title(source, media_info.title_key)
+                self._upsert_title(source, media_info.title_key)
                 for source in self._sources.values()
             ]
         return [
@@ -126,7 +127,7 @@ class AdultSwimImporter(AdultSwimShared, BaseImporter):
 
     # TODO: Validate
     @override
-    def upsert_title(
+    def _upsert_title(
         self,
         source: Source,
         title_key: str,
@@ -138,7 +139,7 @@ class AdultSwimImporter(AdultSwimShared, BaseImporter):
         hero = title_data.hero
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=title_key,
                 name=title_data.title,
@@ -175,7 +176,9 @@ class AdultSwimImporter(AdultSwimShared, BaseImporter):
             season_key = str(season_data.number)
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
-                data_timestamps = self.season_data_timestamps(season_key, title.key)
+                data_timestamps = self._season_files_data_timestamps(
+                    season_key, title.key
+                )
                 season = Season(
                     key=season_key,
                     name=season_data.name,
@@ -220,7 +223,7 @@ class AdultSwimImporter(AdultSwimShared, BaseImporter):
             ):
                 continue
 
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamps = self._episode_files_data_timestamps(
                 episode_data.id,
                 season.key,
                 title_key,

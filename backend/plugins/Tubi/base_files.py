@@ -10,4 +10,4 @@ class TubiBaseFiles(BasePlugin):
     # TODO: Validate
     def content_file(self, content_id: str) -> ContentFile:
         """Contains all of a Tubi title's data (title, seasons, episodes)."""
-        return self._file(ContentFile, content_id)
+        return self._cached_file(ContentFile, content_id)

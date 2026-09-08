@@ -41,7 +41,7 @@ class StreamChannelerShared(StreamChannelerWatchHistoryMixin, BasePlugin):
     # too.
     # TODO: Validate
     @override
-    def upsert_title(
+    def _upsert_title(
         self,
         source: Source,
         title_key: str,

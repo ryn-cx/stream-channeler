@@ -1,3 +1,4 @@
+# TODO: Validate
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -57,6 +58,7 @@ type Provider = (
 )
 
 
+# TODO: Validate
 def streaming_providers(
     watch_providers: WatchProviders,
 ) -> list[Provider]:
@@ -81,6 +83,7 @@ def streaming_providers(
     return list(providers_by_id.values())
 
 
+# TODO: Validate
 def get_media_plugin(provider_name: str) -> type[AbstractPlugin] | None:
     for plugin_class in sorted_plugins():
         if plugin_class.matches_tmdb_provider(provider_name):
@@ -88,11 +91,13 @@ def get_media_plugin(provider_name: str) -> type[AbstractPlugin] | None:
     return None
 
 
+# TODO: Validate
 def tmdb_url(media_type: str, tmdb_media_id: int) -> str:
     """Return the TMDB URL for the title."""
     return f"https://www.themoviedb.org/{media_type}/{tmdb_media_id}"
 
 
+# TODO: Validate
 def parse_release_year(value: str | date) -> int | None:
     """Return the year of the release date or None if it is not known.
 
@@ -103,14 +108,17 @@ def parse_release_year(value: str | date) -> int | None:
     return None
 
 
+# TODO: Validate
 def _image_url(base_url: str, path: str | None) -> str | None:
     return f"{base_url}{path}" if path else None
 
 
+# TODO: Validate
 def image_url(path: str | None) -> str | None:
     return _image_url("https://image.tmdb.org/t/p/original", path)
 
 
+# TODO: Validate
 def thumbnail_url(path: str | None) -> str | None:
     return _image_url("https://image.tmdb.org/t/p/w500", path)
 

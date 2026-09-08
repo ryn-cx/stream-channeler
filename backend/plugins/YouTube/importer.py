@@ -24,17 +24,16 @@ from plugins.YouTube.utils import (
     get_first_item,
     image_url,
     is_channel_key,
-    is_title_key,
-    is_title_season_key,
+    # is_title_key,
+    # is_title_season_key,
     is_topic_channel,
-    is_video_key,
+    # is_video_key,
     thumbnail_url,
     video_url,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from datetime import datetime
 
     from plugins.utils.abstract_plugin import URLImportResult
     from plugins.utils.base_plugin.files import BaseFile
@@ -67,8 +66,12 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
         return
 
     # TODO: Validate
-    def tmdb_media_type(self, title_key: str) -> TMDBMediaType:
-        return TMDBMediaType.movie if is_video_key(title_key) else TMDBMediaType.tv
+    def tmdb_media_type(
+        self,
+        title_key: str,  # noqa: ARG002 - Matches how every other file is asked for.
+    ) -> TMDBMediaType:
+        # return TMDBMediaType.movie if is_video_key(title_key) else TMDBMediaType.tv
+        return TMDBMediaType.tv
 
     # TODO: Validate
     def _get_episode_number(
@@ -94,8 +97,8 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
     def _playlist_is_missing(self, title: Title, playlist_key: str) -> bool:
         # A URL for a whole title asks for every season it has, so nothing is missing
         # as long as it has been imported with seasons.
-        if is_title_key(playlist_key) and not is_title_season_key(playlist_key):
-            return not title.active_children
+        # if is_title_key(playlist_key) and not is_title_season_key(playlist_key):
+        #     return not title.active_children
 
         # A URL for a Topic channel asks for every release the musician has, which
         # is the whole title, so nothing is missing once it has been imported with
@@ -114,6 +117,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
                 return False
         return not Season.get_from_memory(self.session, title, playlist_key)
 
+    # TODO: Validate
     @override
     def _episode_files(
         self,
@@ -145,22 +149,11 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
 
     # TODO: Validate
     @override
-    def _download_title_files_and_children(
-        self,
-        title_key: str,
-        update_at: datetime | None = None,
-    ) -> None:
-        """Read the channel before the files that depend on what it is.
-
-        Which files describe a channel is not the same for a Topic channel as for
-        any other, and only the channel says which it is, so it is read before
-        anything asks. Every video of every season is asked for in one batch
-        rather than one at a time, since the API answers for fifty at once.
-        """
+    def _download_initial_files(self, title_key: str) -> None:
         if is_channel_key(title_key):
-            self.channel_by_channel_id_file(title_key).download_if_outdated(update_at)
+            self.channel_by_channel_id_file(title_key).download_if_outdated()
 
-        self._download_if_outdated(self._title_files(title_key), update_at)
+        self._download_if_outdated(self._title_files(title_key))
         season_keys = self._season_keys_from_title_files(title_key)
         for season_key in season_keys:
             self._download_if_outdated(self._season_files(season_key, title_key))
@@ -170,6 +163,39 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
                 for video_key in self._episode_keys_from_season_files(
                     season_keys,
                     title_key,
+                )
+            ],
+        )
+
+    # TODO: Validate
+    @override
+    def _download_outdated_files(self, title: Title) -> None:
+        """Read the channel before the files that depend on what it is.
+
+        Which files describe a channel is not the same for a Topic channel as for
+        any other, and only the channel says which it is, so it is read before
+        anything asks. Every video of every season is asked for in one batch
+        rather than one at a time, since the API answers for fifty at once.
+        """
+        season_update_at = {season.key: season.update_at for season in title.seasons}
+        if is_channel_key(title.key):
+            self.channel_by_channel_id_file(title.key).download_if_outdated(
+                title.update_at,
+            )
+
+        self._download_if_outdated(self._title_files(title.key), title.update_at)
+        season_keys = self._season_keys_from_title_files(title.key)
+        for season_key in season_keys:
+            self._download_if_outdated(
+                self._season_files(season_key, title.key),
+                season_update_at.get(season_key),
+            )
+        batch_download_missing_videos(
+            [
+                self.videos_file(video_key)
+                for video_key in self._episode_keys_from_season_files(
+                    season_keys,
+                    title.key,
                 )
             ],
         )
@@ -205,7 +231,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
         ).one_or_none()
 
         if not existing_title:
-            existing_title = self.upsert_title(self.source, title_key)
+            existing_title = self._upsert_title(self.source, title_key)
 
         # If a channel is imported but a new playlist is added and that playlist is the
         # URL being imported this will update the channel information to include that
@@ -215,7 +241,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
                 self._title_files(title_key),
                 tz_datetime.now(),
             )
-            existing_title = self.upsert_title(self.source, title_key)
+            existing_title = self._upsert_title(self.source, title_key)
 
         return self._import_results(existing_title, media_info)
 
@@ -265,7 +291,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
         if video_duration := video_item.content_details.duration:
             duration = int(video_duration.total_seconds())
 
-        data_timestamps = self.episode_data_timestamps(
+        data_timestamps = self._episode_files_data_timestamps(
             episode_key,
             season.key,
             title_key,

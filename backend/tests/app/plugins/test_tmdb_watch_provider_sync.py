@@ -17,7 +17,7 @@ from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.TMDB import TMDB
 from plugins.TMDB.files import TVSeasonsWatchProviders, TVSeriesWatchProviders
-from plugins.utils.base_plugin.files import COMPLETED_STATUS
+from plugins.utils.base_plugin.files import INCOMPLETE_STATUS
 from tests.app.plugins.utils import create_random_plugin
 from tests.app.seasons.utils import create_random_season
 from tests.app.sources.utils import create_random_source
@@ -40,7 +40,7 @@ def _sync_title_providers(
     """
     plugin = TMDB(session)
     plugin.sync_title_watch_providers(title_key)
-    plugin.file_session.flush()
+    plugin.session.flush()
     for record in stored:
         session.expire(record)
 
@@ -561,9 +561,9 @@ class TestWatchProvidersFileStatus:
             newest,
         )
 
-        assert oldest.status == COMPLETED_STATUS
-        assert middle.status == COMPLETED_STATUS
-        assert newest.status == "Incomplete"
+        assert oldest.status is None
+        assert middle.status is None
+        assert newest.status == INCOMPLETE_STATUS
 
     # TODO: Validate
     def test_a_completed_file_is_not_compared_again(
@@ -587,7 +587,7 @@ class TestWatchProvidersFileStatus:
             ["Netflix"],
             stored_at,
         )
-        older.status = COMPLETED_STATUS
+        older.status = None
         _store_title_providers(
             function_scoped_session,
             tmdb_plugin,

@@ -30,6 +30,7 @@ def nana() -> Nana:
 class BaseContentFile(EndpointFile[ContentModel], ABC):
     """What every file read off the content endpoint has in common."""
 
+    # TODO: Validate
     @override
     def _endpoint(self) -> ContentEndpoint:
         return nana().content
@@ -37,6 +38,7 @@ class BaseContentFile(EndpointFile[ContentModel], ABC):
 
 # TODO: Validate
 class ContentFile(BaseContentFile):
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ContentNotFoundError)

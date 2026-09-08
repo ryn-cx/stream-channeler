@@ -25,7 +25,6 @@ from plugins.TMDB.utils import (
     get_media_plugin,
     streaming_providers,
 )
-from plugins.utils.base_plugin.files import COMPLETED_STATUS
 
 
 # TODO: Validate
@@ -64,7 +63,7 @@ class TMDBShared(TMDBSearch):
         if media_type == TMDBMediaType.movie:
             return TMDBMediaInfo(
                 detail=self.movies_details_file(tmdb_media_id).parsed(),
-                watch_providers=self.latest_movies_watch_providers_file(
+                watch_providers=self._get_or_create_latest_movies_watch_providers_file(
                     tmdb_media_id,
                 )
                 .parsed()
@@ -72,7 +71,7 @@ class TMDBShared(TMDBSearch):
             )
         return TMDBMediaInfo(
             detail=self.tv_series_details_file(tmdb_media_id).parsed(),
-            watch_providers=self.latest_tv_series_watch_providers_file(
+            watch_providers=self._get_or_create_latest_tv_series_watch_providers_file(
                 tmdb_media_id,
             )
             .parsed()
@@ -151,9 +150,8 @@ class TMDBShared(TMDBSearch):
                     changed_provider=changed_watch_provider,
                     update_at=new_watch_providers_file.data_timestamp(),
                 )
-            record = old_watch_providers_files.database_record
-            record.status = COMPLETED_STATUS
-            record.update_at = None
+            old_watch_providers_files.record_status = None
+            old_watch_providers_files.record_update_at = None
 
     # TODO: Validate
     def _process_changed_provider(

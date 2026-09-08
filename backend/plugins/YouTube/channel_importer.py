@@ -33,7 +33,7 @@ class YouTubeChannelImporter(
     # TODO: Validate
     def _channel_has_only_uploads(self, title_key: str) -> bool:
         channel_playlists_file = self.channel_playlists_file(title_key)
-        if not channel_playlists_file.database_record.content:
+        if not channel_playlists_file.record_content:
             return True
         return not any(
             item.content_details.item_count > 0
@@ -61,8 +61,6 @@ class YouTubeChannelImporter(
         if is_an_album(season_key):
             return [self.music_playlist_file(season_key)]
         return [
-            # Required to detect new episodes (videos). Must stay first because
-            # season_data_timestamp reads files[0].
             self.playlist_items_file(season_key),
             # Required to detect changes to the season (playlist).
             self.channel_playlists_file(title_key),
@@ -85,7 +83,7 @@ class YouTubeChannelImporter(
             season_keys.append(channel_uploads_playlist_key(title_key))
 
         channel_playlists_file = self.channel_playlists_file(title_key)
-        if channel_playlists_file.database_record.content:
+        if channel_playlists_file.record_content:
             season_keys.extend(
                 item.id
                 for item in channel_playlists_file.parsed().items
@@ -129,7 +127,7 @@ class YouTubeChannelImporter(
 
     # TODO: Validate
     @override
-    def upsert_title(
+    def _upsert_title(
         self,
         source: Source,
         title_key: str,
@@ -140,7 +138,7 @@ class YouTubeChannelImporter(
         if self._title_is_outdated(title, force=force):
             channel_file = self.channel_by_channel_id_file(title_key)
             channel_item = get_first_item(channel_file.parsed().items)
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=channel_item.id,
                 name=channel_item.snippet.title,
@@ -206,7 +204,7 @@ class YouTubeChannelImporter(
         force: bool = False,
     ) -> None:
         channel_playlists_file = self.channel_playlists_file(title_key)
-        if not channel_playlists_file.database_record.content:
+        if not channel_playlists_file.record_content:
             return
         playlists_by_key = {
             parsed_playlist.id: parsed_playlist

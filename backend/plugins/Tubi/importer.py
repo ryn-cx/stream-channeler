@@ -86,12 +86,12 @@ class TubiSeriesImporter(TubiImporter):
         domain_regex = self._domain_regex()
         if match := re.match(domain_regex + SERIES_URL_REGEX, url):
             title_key = match.group("series_key")
-            self.raise_if_invalid_file(self.content_file(title_key), url)
+            self.raise_invalid_url_if_no_content(self.content_file(title_key), url)
             return URLTitleInfo(title_key)
 
         if match := re.match(domain_regex + EPISODE_URL_REGEX, url):
             episode_key = match.group("episode_key")
-            self.raise_if_invalid_file(self.content_file(episode_key), url)
+            self.raise_invalid_url_if_no_content(self.content_file(episode_key), url)
             series_id = self._content(episode_key).series_id
             if series_id is None:
                 msg = f"Invalid {self.plugin_name()} URL: {url}"
@@ -136,7 +136,7 @@ class TubiSeriesImporter(TubiImporter):
 
     # TODO: Validate
     @override
-    def upsert_title(
+    def _upsert_title(
         self,
         source: Source,
         title_key: str,
@@ -146,7 +146,7 @@ class TubiSeriesImporter(TubiImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             content = self._content(title_key)
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=title_key,
                 name=content.title,
@@ -172,7 +172,9 @@ class TubiSeriesImporter(TubiImporter):
             season_key = build_season_key(title.key, season_content.id)
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
-                data_timestamps = self.season_data_timestamps(season_key, title.key)
+                data_timestamps = self._season_files_data_timestamps(
+                    season_key, title.key
+                )
                 season = Season(
                     key=season_key,
                     name=season_content.title,
@@ -212,7 +214,7 @@ class TubiSeriesImporter(TubiImporter):
             ):
                 continue
 
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamps = self._episode_files_data_timestamps(
                 episode_key,
                 season.key,
                 title_key,
@@ -247,7 +249,7 @@ class TubiMovieImporter(TubiImporter):
     def get_media_info(self, url: str) -> URLTitleInfo:
         if match := re.match(self._domain_regex() + MOVIE_URL_REGEX, url):
             title_key = match.group("movie_key")
-            self.raise_if_invalid_file(self.content_file(title_key), url)
+            self.raise_invalid_url_if_no_content(self.content_file(title_key), url)
             return URLTitleInfo(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
@@ -271,7 +273,7 @@ class TubiMovieImporter(TubiImporter):
 
     # TODO: Validate
     @override
-    def upsert_title(
+    def _upsert_title(
         self,
         source: Source,
         title_key: str,
@@ -281,7 +283,7 @@ class TubiMovieImporter(TubiImporter):
         content = self._content(title_key)
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=title_key,
                 name=content.title,
@@ -308,7 +310,7 @@ class TubiMovieImporter(TubiImporter):
         season_key = movie_season_key(title.key)
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title.key, force=force):
-            data_timestamps = self.season_data_timestamps(season_key, title.key)
+            data_timestamps = self._season_files_data_timestamps(season_key, title.key)
             season = Season(
                 key=season_key,
                 season_number=0,
@@ -338,7 +340,9 @@ class TubiMovieImporter(TubiImporter):
             return
 
         content = self._content(title_key)
-        data_timestamps = self.episode_data_timestamps(title_key, season.key, title_key)
+        data_timestamps = self._episode_files_data_timestamps(
+            title_key, season.key, title_key
+        )
         episode = Episode(
             key=title_key,
             watch_identifier=watch_identifier(self.plugin_name(), title_key),

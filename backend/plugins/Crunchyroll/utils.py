@@ -32,6 +32,7 @@ def music_episode_category(episode_key: str) -> CrunchyrollMusicCategory:
     return CATEGORY_ID_PREFIXES[episode_key[:2]]
 
 
+# TODO: Validate
 def build_url(path: str) -> str:
     return f"https://crunchyroll.com/{path.lstrip('/')}"
 

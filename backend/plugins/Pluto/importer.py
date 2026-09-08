@@ -64,7 +64,7 @@ class PlutoSeriesImporter(PlutoImporter):
     def get_media_info(self, url: str) -> URLTitleInfo:
         if match := re.match(self._domain_regex() + SERIES_URL_REGEX, url):
             title_key = match.group("series_key")
-            self.raise_if_invalid_file(self.seasons_file(title_key), url)
+            self.raise_invalid_url_if_no_content(self.seasons_file(title_key), url)
             return URLTitleInfo(title_key, episode_key=match.group("episode_key"))
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
@@ -136,7 +136,7 @@ class PlutoSeriesImporter(PlutoImporter):
 
     # TODO: Validate
     @override
-    def upsert_title(
+    def _upsert_title(
         self,
         source: Source,
         title_key: str,
@@ -146,7 +146,7 @@ class PlutoSeriesImporter(PlutoImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             series = self._series(title_key)
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=title_key,
                 name=series.name,
@@ -172,7 +172,9 @@ class PlutoSeriesImporter(PlutoImporter):
             season_key = build_season_key(title.key, season_number)
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
-                data_timestamps = self.season_data_timestamps(season_key, title.key)
+                data_timestamps = self._season_files_data_timestamps(
+                    season_key, title.key
+                )
                 season = Season(
                     key=season_key,
                     season_number=season_number,
@@ -212,7 +214,7 @@ class PlutoSeriesImporter(PlutoImporter):
             ):
                 continue
 
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamps = self._episode_files_data_timestamps(
                 episode_key,
                 season.key,
                 title_key,
@@ -250,7 +252,7 @@ class PlutoMovieImporter(PlutoImporter):
     def get_media_info(self, url: str) -> URLTitleInfo:
         if match := re.match(self._domain_regex() + MOVIE_URL_REGEX, url):
             title_key = match.group("movie_key")
-            self.raise_if_invalid_file(self.items_file(title_key), url)
+            self.raise_invalid_url_if_no_content(self.items_file(title_key), url)
             return URLTitleInfo(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
@@ -298,7 +300,7 @@ class PlutoMovieImporter(PlutoImporter):
 
     # TODO: Validate
     @override
-    def upsert_title(
+    def _upsert_title(
         self,
         source: Source,
         title_key: str,
@@ -308,7 +310,7 @@ class PlutoMovieImporter(PlutoImporter):
         item = self._item(title_key)
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=title_key,
                 name=item.name,
@@ -334,7 +336,7 @@ class PlutoMovieImporter(PlutoImporter):
         season_key = movie_season_key(title.key)
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title.key, force=force):
-            data_timestamps = self.season_data_timestamps(season_key, title.key)
+            data_timestamps = self._season_files_data_timestamps(season_key, title.key)
             season = Season(
                 key=season_key,
                 season_number=0,
@@ -357,7 +359,7 @@ class PlutoMovieImporter(PlutoImporter):
         episode = Episode.get_from_memory(self.session, season, title_key)
         if self._episode_is_outdated(episode, season.key, title_key, force=force):
             item = self._item(title_key)
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamps = self._episode_files_data_timestamps(
                 title_key,
                 season.key,
                 title_key,

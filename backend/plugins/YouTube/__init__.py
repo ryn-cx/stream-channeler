@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from app.titles.models import Title
 
 
+# TODO: Validate
 class YouTubeInitializer(BasePluginInitializer, YouTubeShared): ...
 
 
@@ -71,6 +72,7 @@ class YouTube(
             return YouTubeTopicImporter(self)
         return self.media_importer_from_title_key(title.key)
 
+    # TODO: Validate
     @override
     def update_season(self, season: Season) -> None:
         playlist_feed = self.playlist_feed_file(season.key)
@@ -94,6 +96,7 @@ class YouTube(
             )
             super().update_season(season)
 
+    # TODO: Validate
     @override
     def on_update_season_failure(self, season: Season, error: Exception) -> None:
         if isinstance(error, ChannelFeedNotFoundError | PlaylistFeedNotFoundError):
@@ -104,6 +107,7 @@ class YouTube(
             return
         super().on_update_season_failure(season, error)
 
+    # TODO: Validate
     @override
     def on_import_url_failure(
         self,

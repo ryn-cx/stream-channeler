@@ -52,6 +52,7 @@ from app.config import settings
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
 from plugins.utils.base_plugin.files import (
+    INCOMPLETE_STATUS,
     EndpointFile,
     IntegerEndpointFile,
 )
@@ -84,7 +85,7 @@ class WatchProviders[T](EndpointFile[T], ABC):
     # TODO: Validate
     @override
     def _initial_status_after_downloading(self) -> str:
-        return "Incomplete"
+        return INCOMPLETE_STATUS
 
 
 # TODO: Validate
@@ -271,6 +272,11 @@ class TVSeriesChanges(EndpointFile[TvSeriesChangesModel]):
 
     # TODO: Validate
     @override
+    def _initial_status_after_downloading(self) -> str:
+        return INCOMPLETE_STATUS
+
+    # TODO: Validate
+    @override
     def _endpoint(self) -> TvSeriesChangesEndpoint:
         return tminidb().tv_series.changes
 
@@ -304,6 +310,11 @@ class TVSeriesChanges(EndpointFile[TvSeriesChangesModel]):
 # TODO: Validate
 class TVSeasonsChanges(EndpointFile[TvSeasonChangesModel]):
     custom_class_key = "TV Seasons/Changes"
+
+    # TODO: Validate
+    @override
+    def _initial_status_after_downloading(self) -> str:
+        return INCOMPLETE_STATUS
 
     # TODO: Validate
     @override

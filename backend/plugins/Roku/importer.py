@@ -57,7 +57,7 @@ class RokuImporter(RokuShared, BaseImporter, ABC):
         for url_regex in self._url_regexes():
             if match := re.match(domain_regex + url_regex, url):
                 key = match.group(1)
-                self.raise_if_invalid_file(self.content_file(key), url)
+                self.raise_invalid_url_if_no_content(self.content_file(key), url)
                 return key
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
@@ -140,7 +140,7 @@ class RokuSeriesImporter(RokuImporter):
 
     # TODO: Validate
     @override
-    def upsert_title(
+    def _upsert_title(
         self,
         source: Source,
         title_key: str,
@@ -150,7 +150,7 @@ class RokuSeriesImporter(RokuImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             content = self._content(title_key)
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=title_key,
                 name=content.title,
@@ -178,7 +178,9 @@ class RokuSeriesImporter(RokuImporter):
             season_key = build_season_key(title.key, season_number)
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
-                data_timestamps = self.season_data_timestamps(season_key, title.key)
+                data_timestamps = self._season_files_data_timestamps(
+                    season_key, title.key
+                )
                 season = Season(
                     key=season_key,
                     season_number=season_number,
@@ -213,7 +215,7 @@ class RokuSeriesImporter(RokuImporter):
             ):
                 continue
 
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamps = self._episode_files_data_timestamps(
                 episode_key,
                 season.key,
                 title_key,
@@ -276,7 +278,7 @@ class RokuMovieImporter(RokuImporter):
 
     # TODO: Validate
     @override
-    def upsert_title(
+    def _upsert_title(
         self,
         source: Source,
         title_key: str,
@@ -286,7 +288,7 @@ class RokuMovieImporter(RokuImporter):
         content = self._content(title_key)
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=title_key,
                 name=content.title,
@@ -313,7 +315,7 @@ class RokuMovieImporter(RokuImporter):
         season_key = build_season_key(title.key, 0)
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title.key, force=force):
-            data_timestamps = self.season_data_timestamps(season_key, title.key)
+            data_timestamps = self._season_files_data_timestamps(season_key, title.key)
             season = Season(
                 key=season_key,
                 season_number=0,
@@ -344,7 +346,9 @@ class RokuMovieImporter(RokuImporter):
             return
 
         content = self._content(title_key)
-        data_timestamps = self.episode_data_timestamps(title_key, season.key, title_key)
+        data_timestamps = self._episode_files_data_timestamps(
+            title_key, season.key, title_key
+        )
         episode = Episode(
             key=title_key,
             watch_identifier=watch_identifier(self.plugin_name(), title_key),

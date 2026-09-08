@@ -36,11 +36,11 @@ class YouTubeUserImporter(YouTubeImporter):
     # TODO: Validate
     def _playlist_items_episode_keys(self, season_key: str) -> list[str]:
         playlist_items_file = self.playlist_items_file(season_key)
-        if not playlist_items_file.database_record.content:
+        if not playlist_items_file.record_content:
             msg = (
                 f"PlaylistItems file for season {season_key!r} has empty content "
                 f"(file key {playlist_items_file.file_key()!r}, extra "
-                f"{playlist_items_file.database_record.extra!r}). The playlist was "
+                f"{playlist_items_file.record_extra!r}). The playlist was "
                 f"likely not found when downloaded."
             )
             raise ValueError(msg)
@@ -76,7 +76,7 @@ class YouTubeUserImporter(YouTubeImporter):
     ) -> None:
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title_key, force=force):
-            data_timestamps = self.season_data_timestamps(season_key, title_key)
+            data_timestamps = self._season_files_data_timestamps(season_key, title_key)
             season = Season(
                 key=season_key,
                 name=name,

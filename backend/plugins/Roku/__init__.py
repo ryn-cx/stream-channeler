@@ -41,7 +41,7 @@ class Roku(RokuShared, BaseReadURL, AbstractPlugin, register=False):
                 # this one is.
                 key = match.group(1)
                 content_file = self.content_file(key)
-                self.raise_if_invalid_file(content_file, url)
+                self.raise_invalid_url_if_no_content(content_file, url)
                 content = content_file.parsed()
                 # A season or an episode belongs to a series, which is what
                 # is read and written.

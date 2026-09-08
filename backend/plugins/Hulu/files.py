@@ -1,3 +1,4 @@
+# TODO: Validate
 from functools import cache
 from typing import override
 
@@ -33,38 +34,48 @@ from plugins.utils.base_plugin.files import EndpointFile, TextFile
 from plugins.utils.get_around_client import get_around_client
 
 
+# TODO: Validate
 @cache
 def wholoo() -> Wholoo:
     return Wholoo(get_around_client=get_around_client())
 
 
 # TODO: Update the model name in wholoo to match this.
+# TODO: Validate
 class Series(EndpointFile[TVModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> TV:
         return wholoo().tv
 
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, SeriesNotFoundError)
 
 
+# TODO: Validate
 class Movie(EndpointFile[MoviesModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> MoviesEndpoint:
         return wholoo().movies
 
     # Occurs if the user tries to add an invalid URL.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, MovieNotFoundError)
 
 
+# TODO: Validate
 class Season(EndpointFile[SeasonModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> SeasonEndpoint:
         return wholoo().season
 
+    # TODO: Validate
     def __init__(
         self,
         session: Session,
@@ -76,60 +87,78 @@ class Season(EndpointFile[SeasonModel]):
         self.season_number = season_number
         super().__init__(session, plugin, f"{series_id}/{season_number}")
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(self.series_id, self.season_number)
 
 
+# TODO: Validate
 class Episode(EndpointFile[EpisodeModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> EpisodeEndpoint:
         return wholoo().episode
 
 
+# TODO: Validate
 class Search(EndpointFile[SearchModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> SearchEndpoint:
         return wholoo().search
 
 
+# TODO: Validate
 class AllSeries(EndpointFile[AllSeriesModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> AllSeriesEndpoint:
         return wholoo().all_series
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download()
 
 
+# TODO: Validate
 class AllMovies(EndpointFile[AllMoviesModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> AllMoviesEndpoint:
         return wholoo().all_movies
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download()
 
 
+# TODO: Validate
 class Genres(EndpointFile[GenresModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> GenresEndpoint:
         return wholoo().genres
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download()
 
 
+# TODO: Validate
 class Genre(EndpointFile[GenreModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> GenreEndpoint:
         return wholoo().genre
 
 
+# TODO: Validate
 class WatchRedirect(TextFile):
+    # TODO: Validate
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):

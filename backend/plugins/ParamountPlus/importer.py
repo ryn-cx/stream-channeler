@@ -53,7 +53,7 @@ class ParamountPlusSeriesImporter(ParamountPlusImporter):
     def get_media_info(self, url: str) -> URLTitleInfo:
         if match := re.match(self._domain_regex() + TITLE_URL_REGEX, url):
             title_key = match.group("title_key")
-            self.raise_if_invalid_file(self.title_page_file(title_key), url)
+            self.raise_invalid_url_if_no_content(self.title_page_file(title_key), url)
             return URLTitleInfo(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
@@ -118,7 +118,7 @@ class ParamountPlusSeriesImporter(ParamountPlusImporter):
 
     # TODO: Validate
     @override
-    def upsert_title(
+    def _upsert_title(
         self,
         source: Source,
         title_key: str,
@@ -129,7 +129,7 @@ class ParamountPlusSeriesImporter(ParamountPlusImporter):
         if self._title_is_outdated(title, force=force):
             first_season = self._season_numbers(title_key)[0]
             first_episode = self._season_episodes(title_key, first_season)[0]
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=title_key,
                 name=first_episode.series_title,
@@ -154,7 +154,9 @@ class ParamountPlusSeriesImporter(ParamountPlusImporter):
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
                 episodes = self._season_episodes(title.key, season_number)
-                data_timestamps = self.season_data_timestamps(season_key, title.key)
+                data_timestamps = self._season_files_data_timestamps(
+                    season_key, title.key
+                )
                 season = Season(
                     key=season_key,
                     name=episodes[0].season_title if episodes else None,
@@ -190,7 +192,7 @@ class ParamountPlusSeriesImporter(ParamountPlusImporter):
             ):
                 continue
 
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamps = self._episode_files_data_timestamps(
                 episode_key,
                 season.key,
                 title_key,
@@ -226,7 +228,7 @@ class ParamountPlusMovieImporter(ParamountPlusImporter):
     def get_media_info(self, url: str) -> URLTitleInfo:
         if match := re.match(self._domain_regex() + MOVIE_URL_REGEX, url):
             title_key = match.group("movie_key")
-            self.raise_if_invalid_file(self.movie_file(title_key), url)
+            self.raise_invalid_url_if_no_content(self.movie_file(title_key), url)
             return URLTitleInfo(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
@@ -274,7 +276,7 @@ class ParamountPlusMovieImporter(ParamountPlusImporter):
 
     # TODO: Validate
     @override
-    def upsert_title(
+    def _upsert_title(
         self,
         source: Source,
         title_key: str,
@@ -284,7 +286,7 @@ class ParamountPlusMovieImporter(ParamountPlusImporter):
         movie = self._movie_data(title_key)
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=title_key,
                 name=movie.name,
@@ -310,7 +312,7 @@ class ParamountPlusMovieImporter(ParamountPlusImporter):
         season_key = build_season_key(title.key, 0)
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title.key, force=force):
-            data_timestamps = self.season_data_timestamps(season_key, title.key)
+            data_timestamps = self._season_files_data_timestamps(season_key, title.key)
             season = Season(
                 key=season_key,
                 season_number=0,
@@ -341,7 +343,9 @@ class ParamountPlusMovieImporter(ParamountPlusImporter):
             return
 
         movie = self._movie_data(title_key)
-        data_timestamps = self.episode_data_timestamps(title_key, season.key, title_key)
+        data_timestamps = self._episode_files_data_timestamps(
+            title_key, season.key, title_key
+        )
         episode = Episode(
             key=title_key,
             watch_identifier=watch_identifier(self.plugin_name(), title_key),

@@ -1,3 +1,4 @@
+# TODO: Validate
 from __future__ import annotations
 
 import re
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
 
 
 class HuluInitializer(HuluShared, BasePluginInitializer):
+    # TODO: Validate
     @classmethod
     @override
     def _create_plugin_record(cls, session: Session) -> Plugin:
@@ -50,7 +52,6 @@ class Hulu(
     def _url_regexes(cls) -> tuple[str, ...]:
         return (SERIES_URL_REGEX, MOVIE_URL_REGEX, VIDEO_URL_REGEX)
 
-    # TODO: Validate
     @override
     def _media_importer_from_url(self, url: str) -> HuluImporter:
         domain_regex = self._domain_regex()
@@ -59,8 +60,9 @@ class Hulu(
         if re.match(domain_regex + MOVIE_URL_REGEX, url):
             return HuluMovieImporter(self)
 
-        # Watch URLs are the same for movies and series so extra analysis needs to
-        # be done.
+        # Movies and series use the same URL format for individual episodes. When trying
+        # to access the URL anonymously the user is directed to the title URL which
+        # contains the media type information.
         if match := re.match(domain_regex + VIDEO_URL_REGEX, url):
             redirect_url = self.watch_redirect_file(
                 match.group("episode_key"),
@@ -102,11 +104,12 @@ class Hulu(
                     return title_url(result.metrics_info.target_id, hulu_media_type)
         return None
 
+    # TODO: Validate
     @override
     def update_plugin(self, plugin: Plugin) -> None:
         self._download_if_outdated(self._plugin_files(), plugin.update_at)
         self._create_channel_records()
-        data_timestamps = self.plugin_data_timestamps()
+        data_timestamps = self._plugin_files_data_timestamps()
         new_titles = self._all_title_keys()
         self._mark_mismatched_titles_as_outdated(None, new_titles, data_timestamps)
         plugin.data_timestamp = max(data_timestamps)

@@ -1,3 +1,4 @@
+<!-- TODO: Validate -->
 > [!TIP/Series]
 > `https://www.crunchyroll.com/series/GEXH3W29Z`
 > `https://www.crunchyroll.com/series/GEXH3W29Z/compass20-animation-project`
@@ -17,4 +18,3 @@
 > [!TIP/Concert]
 > `https://www.crunchyroll.com/watch/concert/MC413F1C5C`
 > `https://www.crunchyroll.com/watch/concert/MC413F1C5C/lisa-ladybug`
-

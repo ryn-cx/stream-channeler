@@ -12,10 +12,10 @@ from loguru import logger
 from app.channels.service.import_queue import add_urls_to_channel_import_queue
 from app.sources.models import Source
 from app.titles.models import Title
+from app.utils import tz_datetime
 from plugins.NHKWorld.base_files import NHKWorldBaseFiles
 from plugins.NHKWorld.files import NewVideoEpisodes
 from plugins.NHKWorld.utils import search_url, title_url
-from plugins.utils.base_plugin.files import COMPLETED_STATUS
 
 if TYPE_CHECKING:
     from app.channels.models import Channel
@@ -52,7 +52,7 @@ class NHKWorldShared(NHKWorldBaseFiles):
     @override
     def upsert_source(self, source_key: str) -> Source:
         if not (latest_feed_file := self.latest_new_video_episodes_file()):
-            latest_feed_file = self._initial_file(NewVideoEpisodes)
+            latest_feed_file = self.new_video_episodes_file(tz_datetime.now())
         data_timestamp = latest_feed_file.data_timestamp()
         existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
         source = Source(
@@ -67,7 +67,7 @@ class NHKWorldShared(NHKWorldBaseFiles):
 
     # TODO: Validate
     def _process_new_episodes_files(self, source: Source) -> None:
-        new_files = self.get_incomplete_files(
+        new_files = self._incomplete_files(
             NewVideoEpisodes,
             self.new_video_episodes_file,
         )
@@ -79,7 +79,7 @@ class NHKWorldShared(NHKWorldBaseFiles):
             _cache = self._preload_sources(preload_titles=True).all()
             logger.info(
                 "Processing new episodes file: {}",
-                feed_file.database_record.key,
+                feed_file.record_key,
             )
             new_title_ids: list[str] = []
             for item in feed_file.items():
@@ -91,7 +91,7 @@ class NHKWorldShared(NHKWorldBaseFiles):
                     new_title_ids.append(title_id)
 
             self._queue_new_titles(new_title_ids)
-            feed_file.database_record.status = COMPLETED_STATUS
+            feed_file.record_status = None
 
     # TODO: Validate
     def _queue_new_titles(self, title_ids: list[str]) -> None:

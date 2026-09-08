@@ -25,7 +25,7 @@ from app.utils import tz_datetime
 from app.utils.sentinels import Sentinel
 from plugins.utils.get_around_client import get_around_client
 
-COMPLETED_STATUS = "Completed"
+INCOMPLETE_STATUS = "Incomplete"
 
 
 _UNLOADED = Sentinel("DATABASE_RECORD")
@@ -71,7 +71,7 @@ class BaseFile[T](ABC):
 
     # TODO: Validate
     @property
-    def database_record(self) -> File:
+    def _database_record(self) -> File:
         """Return the underlying database File object.
 
         The file must already be downloaded; callers are responsible for calling
@@ -84,22 +84,45 @@ class BaseFile[T](ABC):
         return record
 
     # TODO: Validate
+    @property
+    def record_content(self) -> str | None:
+        return self._database_record.content
+
+    # TODO: Validate
+    @property
+    def record_key(self) -> str:
+        return self._database_record.key
+
+    # TODO: Validate
+    @property
+    def record_extra(self) -> dict[str, Any]:
+        return self._database_record.extra
+
+    # TODO: Validate
+    @property
+    def record_status(self) -> str | None:
+        return self._database_record.status
+
+    # TODO: Validate
+    @record_status.setter
+    def record_status(self, value: str | None) -> None:
+        self._database_record.status = value
+
+    # TODO: Validate
+    @property
+    def record_update_at(self) -> datetime | None:
+        return self._database_record.update_at
+
+    # TODO: Validate
+    @record_update_at.setter
+    def record_update_at(self, value: datetime | None) -> None:
+        self._database_record.update_at = value
+
+    # TODO: Validate
     def data_timestamp(self) -> datetime:
         """Return the timestamp of the data in the file."""
         self.download_if_outdated()
-        return self.database_record.data_timestamp
-
-    # TODO: Validate
-    @staticmethod
-    def raise_if_not_is_instance[InstanceT](
-        value: object,
-        expected_type: type[InstanceT],
-    ) -> InstanceT:
-        """Return `value` narrowed to `expected_type`, raising if it is not one."""
-        if not isinstance(value, expected_type):
-            msg = f"Expected {expected_type.__name__}, got {type(value).__name__}."
-            raise TypeError(msg)
-        return value
+        return self._database_record.data_timestamp
 
     unique_identifier: str
 
@@ -184,26 +207,6 @@ class BaseFile[T](ABC):
             self._download()
 
     # TODO: Validate
-    @final  # Makes mocking downloads easier.
-    async def async_download_if_outdated(
-        self,
-        update_at: datetime | None = None,
-    ) -> None:
-        """Asynchronously download the file if it is outdated."""
-        if self.is_outdated(update_at):
-            await self._async_download()
-
-    # This is not an abstractmethod because async_download or download must be
-    # implemented, but not necessarily both.
-    # TODO: Validate
-    async def _async_download(self) -> None:
-        """Asynchronously download the file."""
-        msg = f"{type(self).__name__} does not implement async_download"
-        raise NotImplementedError(msg)
-
-    # This is not an abstractmethod because async_download or download must be
-    # implemented, but not necessarily both.
-    # TODO: Validate
     def _download(self) -> None:
         """Download the file."""
         msg = f"{type(self).__name__} does not implement _download"
@@ -226,7 +229,7 @@ class BaseFile[T](ABC):
         record.set_update_at(self._next_update_at())
         self._existing_database_record = record
         self._cached_parsed = None
-        self.__session.commit()
+        self.__session.flush()
 
     # TODO: Validate
     @abstractmethod
@@ -234,21 +237,22 @@ class BaseFile[T](ABC):
         """Read the stored file into the value `parsed` answers with."""
 
     # TODO: Validate
-    def _stored_content(self) -> str:
-        if not (content := self.database_record.content):
-            msg = "File content is empty, cannot parse."
+    @final
+    def content(self) -> str:
+        self.download_if_outdated()
+        if not (content := self.record_content):
+            msg = f"{self.class_key()}/{self.file_key()} has no content."
             raise ValueError(msg)
         return content
 
     # TODO: Validate
     @final
     def parsed(self) -> T:
-        self.download_if_outdated()
         if self._cached_parsed is None:
-            self._cached_parsed = self._parse(self._stored_content())
+            self._cached_parsed = self._parse(self.content())
         return self._cached_parsed
 
-    # TODO: Validate
+    # TODO: Deprecate, this is sloppy as shit.
     @final
     def parsed_or_none(self) -> T | None:
         """Return what the file holds, or None where it was stored empty.
@@ -258,18 +262,9 @@ class BaseFile[T](ABC):
         a failure to read, so it is answered with nothing rather than raised.
         """
         self.download_if_outdated()
-        if not self.database_record.content:
+        if not self.record_content:
             return None
         return self.parsed()
-
-    # TODO: Validate
-    @final
-    async def async_parsed(self) -> T:
-        """Return what the file holds, downloading it asynchronously if outdated."""
-        await self.async_download_if_outdated()
-        if self._cached_parsed is None:
-            self._cached_parsed = self._parse(self._stored_content())
-        return self._cached_parsed
 
     # TODO: Validate
     def does_not_exist(self) -> bool:
@@ -301,7 +296,7 @@ class BaseFile[T](ABC):
             return False
 
         # If the file is older than the minimum timestamp it is outdated.
-        return self.database_record.data_timestamp < minimum_timestamp
+        return self._database_record.data_timestamp < minimum_timestamp
 
 
 # TODO: Validate

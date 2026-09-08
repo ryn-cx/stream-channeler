@@ -1,12 +1,12 @@
 # TODO: Validate
 import json
-import re
 from abc import ABC
 from collections import Counter
 from functools import cache
 from typing import override
-from urllib.parse import parse_qs, urlsplit
 
+# import re
+# from urllib.parse import parse_qs, urlsplit
 from loguru import logger
 from not_yt_dlapi import NotYTDLAPI
 from not_yt_dlapi.channel_feed.models import ChannelFeedModel
@@ -26,8 +26,9 @@ from not_yt_dlapi.playlist_items import PlaylistItems as PlaylistItemsEndpoint
 from not_yt_dlapi.playlist_items.models import Item, PlaylistItemsModel
 from not_yt_dlapi.playlists import Playlists as PlaylistsEndpoint
 from not_yt_dlapi.playlists.models import PlaylistsModel
-from not_yt_dlapi.shows import Shows as TitlesEndpoint
-from not_yt_dlapi.shows.models import ShowsModel
+
+# from not_yt_dlapi.shows import Shows as TitlesEndpoint
+# from not_yt_dlapi.shows.models import ShowsModel
 from not_yt_dlapi.topic import Topic as TopicEndpoint
 from not_yt_dlapi.topic.models import TopicModel
 from not_yt_dlapi.videos import Videos as VideosEndpoint
@@ -42,6 +43,7 @@ from plugins.utils.base_plugin.files import (
 from plugins.utils.get_around_client import get_around_client
 
 
+# TODO: Validate
 @cache
 def not_yt_dlapi() -> NotYTDLAPI:
     return NotYTDLAPI(
@@ -50,18 +52,23 @@ def not_yt_dlapi() -> NotYTDLAPI:
     )
 
 
+# TODO: Validate
 class ChannelFile(EndpointFile[ChannelsModel], ABC):
+    # TODO: Validate
     @override
     def _endpoint(self) -> ChannelsEndpoint:
         return not_yt_dlapi().channels
 
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         # Occurs when importing an invalid channel URL.
         return isinstance(error, ResourceNotFoundError)
 
 
+# TODO: Validate
 class ChannelByChannelId(ChannelFile):
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         # not_yt_dlapi().channels.download does not support positional arguments.
@@ -70,37 +77,46 @@ class ChannelByChannelId(ChannelFile):
 
 # TODO: Validate
 class ChannelByHandle(ChannelFile):
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         # not_yt_dlapi().channels.download does not support positional arguments.
         return self._endpoint().download(channel_handle=self.unique_identifier)
 
 
+# TODO: Validate
 class ChannelByUsername(ChannelFile):
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         # not_yt_dlapi().channels.download does not support positional arguments.
         return self._endpoint().download(channel_username=self.unique_identifier)
 
 
+# TODO: Validate
 class ChannelPlaylists(EndpointFile[PlaylistsModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> PlaylistsEndpoint:
         return not_yt_dlapi().playlists
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download_merged(channel_id=self.unique_identifier)
 
 
-class PlaylistInfo(EndpointFile[PlaylistsModel]):
-    @override
-    def _endpoint(self) -> PlaylistsEndpoint:
-        return not_yt_dlapi().playlists
+# # TODO: Validate
+# class PlaylistInfo(EndpointFile[PlaylistsModel]):
+#     # TODO: Validate
+#     @override
+#     def _endpoint(self) -> PlaylistsEndpoint:
+#         return not_yt_dlapi().playlists
 
-    @override
-    def _download_file(self) -> str:
-        return self._endpoint().download(playlist_ids=self.unique_identifier)
+#     # TODO: Validate
+#     @override
+#     def _download_file(self) -> str:
+#         return self._endpoint().download(playlist_ids=self.unique_identifier)
 
 
 # TODO: Validate
@@ -117,10 +133,11 @@ class PlaylistItems(PagedEndpointFile[PlaylistItemsModel]):
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        if not self._existing_database_record:
+        record = self._existing_database_record
+        if record is None or record.content is None:
             return json.dumps(self._download_pages())
 
-        stored_pages: list[str] = json.loads(self._stored_content())
+        stored_pages: list[str] = json.loads(record.content)
         return json.dumps(self._new_pages(stored_pages) + stored_pages)
 
     # TODO: Validate
@@ -158,10 +175,12 @@ class Videos(EndpointFile[VideosModel]):
 
 # TODO: Validate
 class MusicPlaylist(EndpointFile[MusicModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> MusicEndpoint:
         return not_yt_dlapi().music
 
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ResourceNotFoundError)
@@ -225,6 +244,7 @@ class MusicPlaylist(EndpointFile[MusicModel]):
 
 # TODO: Validate
 class Topic(PagedEndpointFile[TopicModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> TopicEndpoint:
         return not_yt_dlapi().topic
@@ -269,111 +289,118 @@ class Topic(PagedEndpointFile[TopicModel]):
         return keys
 
 
-# TODO: Update not-ytdlapi's name for this endpoint
-class Browse(PagedEndpointFile[ShowsModel]):
-    """A TV show on YouTube."""
+# # TODO: Update not-ytdlapi's name for this endpoint
+# # TODO: Validate
+# class Browse(PagedEndpointFile[ShowsModel]):
+#     """A TV show on YouTube."""
 
-    @override
-    def _endpoint(self) -> TitlesEndpoint:
-        return not_yt_dlapi().shows
+#     # TODO: Validate
+#     @override
+#     def _endpoint(self) -> TitlesEndpoint:
+#         return not_yt_dlapi().shows
 
-    # TODO: Validate
-    def title_key(self) -> str | None:
-        match = re.search(r"SC[A-Za-z0-9_-]{20,}", self.database_record.content or "")
-        return match.group(0) if match else None
+#     # TODO: Validate
+#     def title_key(self) -> str | None:
+#         match = re.search(r"SC[A-Za-z0-9_-]{20,}", self.record_content or "")
+#         return match.group(0) if match else None
 
-    # TODO: Validate
-    def title_name(self) -> str | None:
-        return next(
-            (
-                item.playlist_sidebar_primary_info_renderer.title.simple_text
-                for page in self.parsed()
-                for item in page.sidebar.playlist_sidebar_renderer.items
-            ),
-            None,
-        )
+#     # TODO: Validate
+#     def title_name(self) -> str | None:
+#         return next(
+#             (
+#                 item.playlist_sidebar_primary_info_renderer.title.simple_text
+#                 for page in self.parsed()
+#                 for item in page.sidebar.playlist_sidebar_renderer.items
+#             ),
+#             None,
+#         )
 
-    # TODO: Validate
-    def offer_labels(self) -> set[str]:
-        return {
-            badge.metadata_badge_renderer.label
-            for page in self.parsed()
-            for item in page.sidebar.playlist_sidebar_renderer.items
-            for badge in item.playlist_sidebar_primary_info_renderer.badges
-            if badge.metadata_badge_renderer.style == "BADGE_STYLE_TYPE_YPC"
-        }
+#     # TODO: Validate
+#     def offer_labels(self) -> set[str]:
+#         return {
+#             badge.metadata_badge_renderer.label
+#             for page in self.parsed()
+#             for item in page.sidebar.playlist_sidebar_renderer.items
+#             for badge in item.playlist_sidebar_primary_info_renderer.badges
+#             if badge.metadata_badge_renderer.style == "BADGE_STYLE_TYPE_YPC"
+#         }
 
-    # TODO: Validate
-    def season_numbers(self) -> list[int]:
-        return sorted(self.episode_keys_by_season())
+#     # TODO: Validate
+#     def season_numbers(self) -> list[int]:
+#         return sorted(self.episode_keys_by_season())
 
-    # A season is chosen from the same menu a playlist is sorted from, so what tells
-    # the two apart is that a season says which season it is, and it says so in the
-    # address a person would read it at rather than in the endpoint browse is asked
-    # by.
-    # TODO: Validate
-    def _open_season(self, page: ShowsModel) -> int | None:
-        for tab in page.contents.two_column_browse_results_renderer.tabs:
-            for section in tab.tab_renderer.content.section_list_renderer.contents:
-                for item in section.item_section_renderer.contents:
-                    metadata = item.playlist_show_metadata_renderer
-                    if metadata is None:
-                        continue
-                    for menu_item in (
-                        metadata.collection.sort_filter_sub_menu_renderer.sub_menu_items
-                    ):
-                        if not menu_item.selected:
-                            continue
-                        query = urlsplit(
-                            menu_item.navigation_endpoint.command_metadata.web_command_metadata.url,
-                        ).query
-                        numbers = parse_qs(query).get("season", ())
-                        if numbers and numbers[0].isdigit():
-                            return int(numbers[0])
-        return None
+#     # A season is chosen from the same menu a playlist is sorted from, so what tells
+#     # the two apart is that a season says which season it is, and it says so in the
+#     # address a person would read it at rather than in the endpoint browse is asked
+#     # by.
+#     # TODO: Validate
+#     def _open_season(self, page: ShowsModel) -> int | None:
+#         for tab in page.contents.two_column_browse_results_renderer.tabs:
+#             for section in tab.tab_renderer.content.section_list_renderer.contents:
+#                 for item in section.item_section_renderer.contents:
+#                     metadata = item.playlist_show_metadata_renderer
+#                     if metadata is None:
+#                         continue
+#                     for menu_item in (
+#                         metadata.collection.sort_filter_sub_menu_renderer.sub_menu_items
+#                     ):
+#                         if not menu_item.selected:
+#                             continue
+#                         query = urlsplit(
+#                             menu_item.navigation_endpoint.command_metadata.web_command_metadata.url,
+#                         ).query
+#                         numbers = parse_qs(query).get("season", ())
+#                         if numbers and numbers[0].isdigit():
+#                             return int(numbers[0])
+#         return None
 
-    # TODO: Validate
-    def _page_episode_keys(self, page: ShowsModel) -> list[str]:
-        return [
-            content.playlist_video_renderer.video_id
-            for tab in page.contents.two_column_browse_results_renderer.tabs
-            for section in tab.tab_renderer.content.section_list_renderer.contents
-            for item in section.item_section_renderer.contents
-            if item.playlist_video_list_renderer is not None
-            for content in item.playlist_video_list_renderer.contents
-        ]
+#     # TODO: Validate
+#     def _page_episode_keys(self, page: ShowsModel) -> list[str]:
+#         return [
+#             content.playlist_video_renderer.video_id
+#             for tab in page.contents.two_column_browse_results_renderer.tabs
+#             for section in tab.tab_renderer.content.section_list_renderer.contents
+#             for item in section.item_section_renderer.contents
+#             if item.playlist_video_list_renderer is not None
+#             for content in item.playlist_video_list_renderer.contents
+#         ]
 
-    # TODO: Validate
-    def episode_keys_by_season(self) -> dict[int, list[str]]:
-        episode_keys: dict[int, list[str]] = {}
-        season_number: int | None = None
-        for page in self.parsed():
-            open_season = self._open_season(page)
-            if open_season is not None:
-                season_number = open_season
-            if season_number is None:
-                continue
-            episode_keys.setdefault(season_number, []).extend(
-                self._page_episode_keys(page),
-            )
-        return episode_keys
+#     # TODO: Validate
+#     def episode_keys_by_season(self) -> dict[int, list[str]]:
+#         episode_keys: dict[int, list[str]] = {}
+#         season_number: int | None = None
+#         for page in self.parsed():
+#             open_season = self._open_season(page)
+#             if open_season is not None:
+#                 season_number = open_season
+#             if season_number is None:
+#                 continue
+#             episode_keys.setdefault(season_number, []).extend(
+#                 self._page_episode_keys(page),
+#             )
+#         return episode_keys
 
 
+# TODO: Validate
 class PlaylistFeed(EndpointFile[ChannelFeedModel | PlaylistFeedModel]):
+    # TODO: Validate
     def _is_channel_feed(self) -> bool:
         return self.unique_identifier.startswith("UU")
 
+    # TODO: Validate
     @override
     def _endpoint(self) -> LoadEndpoint[ChannelFeedModel | PlaylistFeedModel]:
         if self._is_channel_feed():
             return not_yt_dlapi().channel_feed
         return not_yt_dlapi().playlist_feed
 
+    # TODO: Validate
     @classmethod
     @override
     def _identifier_suffix(cls) -> str:
         return ".xml"
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         if self._is_channel_feed():
@@ -381,6 +408,7 @@ class PlaylistFeed(EndpointFile[ChannelFeedModel | PlaylistFeedModel]):
             return not_yt_dlapi().channel_feed.download(channel_id)
         return not_yt_dlapi().playlist_feed.download(self.unique_identifier)
 
+    # TODO: Validate
     @override
     def _download(self) -> None:
         with self._log_download(self.unique_identifier):
@@ -397,5 +425,6 @@ class PlaylistFeed(EndpointFile[ChannelFeedModel | PlaylistFeedModel]):
                 raise
             self.write(feed)
 
+    # TODO: Validate
     def video_ids(self) -> set[str]:
         return {entry.video_id for entry in self.parsed().entry}

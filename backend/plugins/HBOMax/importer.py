@@ -58,7 +58,7 @@ class HBOMaxSeriesImporter(HBOMaxImporter):
     def get_media_info(self, url: str) -> URLTitleInfo:
         if match := re.match(self._domain_regex() + TITLE_URL_REGEX, url):
             title_key = match.group("title_key")
-            self.raise_if_invalid_file(self.title_file(title_key), url)
+            self.raise_invalid_url_if_no_content(self.title_file(title_key), url)
             return URLTitleInfo(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
@@ -128,7 +128,7 @@ class HBOMaxSeriesImporter(HBOMaxImporter):
 
     # TODO: Validate
     @override
-    def upsert_title(
+    def _upsert_title(
         self,
         source: Source,
         title_key: str,
@@ -138,7 +138,7 @@ class HBOMaxSeriesImporter(HBOMaxImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             content = self._title_content(title_key)
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=title_key,
                 name=content.title.full,
@@ -168,7 +168,9 @@ class HBOMaxSeriesImporter(HBOMaxImporter):
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
                 entry = season_entry(title_file.parsed(), season_number)
-                data_timestamps = self.season_data_timestamps(season_key, title.key)
+                data_timestamps = self._season_files_data_timestamps(
+                    season_key, title.key
+                )
                 season = Season(
                     key=season_key,
                     name=entry.title.full,
@@ -204,7 +206,7 @@ class HBOMaxSeriesImporter(HBOMaxImporter):
             ):
                 continue
 
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamps = self._episode_files_data_timestamps(
                 episode_key,
                 season.key,
                 title_key,
@@ -239,7 +241,7 @@ class HBOMaxMovieImporter(HBOMaxImporter):
     def get_media_info(self, url: str) -> URLTitleInfo:
         if match := re.match(self._domain_regex() + MOVIE_URL_REGEX, url):
             title_key = match.group("movie_key")
-            self.raise_if_invalid_file(self.movie_file(title_key), url)
+            self.raise_invalid_url_if_no_content(self.movie_file(title_key), url)
             return URLTitleInfo(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
@@ -287,7 +289,7 @@ class HBOMaxMovieImporter(HBOMaxImporter):
 
     # TODO: Validate
     @override
-    def upsert_title(
+    def _upsert_title(
         self,
         source: Source,
         title_key: str,
@@ -297,7 +299,7 @@ class HBOMaxMovieImporter(HBOMaxImporter):
         content = self._movie_content(title_key)
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=title_key,
                 name=content.title.full,
@@ -330,7 +332,7 @@ class HBOMaxMovieImporter(HBOMaxImporter):
         season_key = build_season_key(title.key, 0)
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title.key, force=force):
-            data_timestamps = self.season_data_timestamps(season_key, title.key)
+            data_timestamps = self._season_files_data_timestamps(season_key, title.key)
             season = Season(
                 key=season_key,
                 season_number=0,
@@ -354,7 +356,7 @@ class HBOMaxMovieImporter(HBOMaxImporter):
     ) -> None:
         episode = Episode.get_from_memory(self.session, season, title_key)
         if self._episode_is_outdated(episode, season.key, title_key, force=force):
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamps = self._episode_files_data_timestamps(
                 title_key,
                 season.key,
                 title_key,

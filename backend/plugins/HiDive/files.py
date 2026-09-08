@@ -23,7 +23,11 @@ from diving_board.series import models as series_models
 from diving_board.vod import Vod as VodEndpoint
 from diving_board.vod import models as vod_models
 
-from plugins.utils.base_plugin.files import EndpointFile, PagedEndpointFile
+from plugins.utils.base_plugin.files import (
+    INCOMPLETE_STATUS,
+    EndpointFile,
+    PagedEndpointFile,
+)
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -77,6 +81,11 @@ class Series(EndpointFile[series_models.SeriesModel]):
 
 # TODO: Validate
 class Schedule(PagedEndpointFile[schedule_models.ScheduleModel]):
+    # TODO: Validate
+    @override
+    def _initial_status_after_downloading(self) -> str:
+        return INCOMPLETE_STATUS
+
     # TODO: Validate
     @override
     def _endpoint(self) -> ScheduleEndpoint:

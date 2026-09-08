@@ -37,7 +37,9 @@ class NHKWorldImporter(NHKWorldShared, BaseImporter):
     def get_media_info(self, url: str) -> URLTitleInfo:
         if match := re.match(self._domain_regex() + TITLE_URL_REGEX, url):
             title_key = match.group("title_key")
-            self.raise_if_invalid_file(self.video_program_file(title_key), url)
+            self.raise_invalid_url_if_no_content(
+                self.video_program_file(title_key), url
+            )
             return URLTitleInfo(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
@@ -94,7 +96,7 @@ class NHKWorldImporter(NHKWorldShared, BaseImporter):
 
     # TODO: Validate
     @override
-    def upsert_title(
+    def _upsert_title(
         self,
         source: Source,
         title_key: str,
@@ -104,7 +106,7 @@ class NHKWorldImporter(NHKWorldShared, BaseImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             program = self.video_program_file(title_key).parsed()
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=program.id,
                 name=program.title,
@@ -133,7 +135,7 @@ class NHKWorldImporter(NHKWorldShared, BaseImporter):
     ) -> None:
         season = Season.get_from_memory(self.session, title, title_key)
         if self._season_is_outdated(season, title_key, force=force):
-            data_timestamps = self.season_data_timestamps(title_key, title_key)
+            data_timestamps = self._season_files_data_timestamps(title_key, title_key)
             season = Season(
                 key=title_key,
                 season_number=1,
@@ -167,7 +169,7 @@ class NHKWorldImporter(NHKWorldShared, BaseImporter):
             ):
                 continue
 
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamps = self._episode_files_data_timestamps(
                 item.id,
                 season.key,
                 title_key,

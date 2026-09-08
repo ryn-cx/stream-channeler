@@ -15,7 +15,7 @@ from naphki.video_episodes.models import VideoEpisodesModel
 from naphki.video_program import VideoProgram as VideoProgramEndpoint
 from naphki.video_program.models import VideoProgramModel
 
-from plugins.utils.base_plugin.files import EndpointFile
+from plugins.utils.base_plugin.files import INCOMPLETE_STATUS, EndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 if TYPE_CHECKING:
@@ -64,6 +64,11 @@ class VideoEpisodes(EndpointFile[VideoEpisodesModel]):
 
 # TODO: Validate
 class NewVideoEpisodes(EndpointFile[VideoEpisodesModel]):
+    # TODO: Validate
+    @override
+    def _initial_status_after_downloading(self) -> str:
+        return INCOMPLETE_STATUS
+
     # TODO: Validate
     @override
     def _endpoint(self) -> VideoEpisodesEndpoint:

@@ -55,7 +55,7 @@ class DisneyPlusImporter(DisneyPlusShared, BaseImporter, ABC):
     def get_media_info(self, url: str) -> URLTitleInfo:
         if match := re.match(self._domain_regex() + ENTITY_URL_REGEX, url):
             title_key = match.group("entity_key")
-            self.raise_if_invalid_file(self.entity_file(title_key), url)
+            self.raise_invalid_url_if_no_content(self.entity_file(title_key), url)
             return URLTitleInfo(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
@@ -136,7 +136,7 @@ class DisneyPlusSeriesImporter(DisneyPlusImporter):
 
     # TODO: Validate
     @override
-    def upsert_title(
+    def _upsert_title(
         self,
         source: Source,
         title_key: str,
@@ -146,7 +146,7 @@ class DisneyPlusSeriesImporter(DisneyPlusImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             details = self._media_details(title_key)
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=title_key,
                 name=required_value(details.title, "title"),
@@ -175,7 +175,9 @@ class DisneyPlusSeriesImporter(DisneyPlusImporter):
             season_key = build_season_key(title.key, season_id)
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
-                data_timestamps = self.season_data_timestamps(season_key, title.key)
+                data_timestamps = self._season_files_data_timestamps(
+                    season_key, title.key
+                )
                 season = Season(
                     key=season_key,
                     name=season_entry.name,
@@ -212,7 +214,7 @@ class DisneyPlusSeriesImporter(DisneyPlusImporter):
             ):
                 continue
 
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamps = self._episode_files_data_timestamps(
                 episode_key,
                 season.key,
                 title_key,
@@ -269,7 +271,7 @@ class DisneyPlusMovieImporter(DisneyPlusImporter):
 
     # TODO: Validate
     @override
-    def upsert_title(
+    def _upsert_title(
         self,
         source: Source,
         title_key: str,
@@ -279,7 +281,7 @@ class DisneyPlusMovieImporter(DisneyPlusImporter):
         details = self._media_details(title_key)
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=title_key,
                 name=required_value(details.title, "title"),
@@ -306,7 +308,7 @@ class DisneyPlusMovieImporter(DisneyPlusImporter):
         season_key = build_season_key(title.key, title.key)
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title.key, force=force):
-            data_timestamps = self.season_data_timestamps(season_key, title.key)
+            data_timestamps = self._season_files_data_timestamps(season_key, title.key)
             season = Season(
                 key=season_key,
                 season_number=0,
@@ -330,7 +332,7 @@ class DisneyPlusMovieImporter(DisneyPlusImporter):
         episode = Episode.get_from_memory(self.session, season, title_key)
         if self._episode_is_outdated(episode, season.key, title_key, force=force):
             details = self._media_details(title_key)
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamps = self._episode_files_data_timestamps(
                 title_key,
                 season.key,
                 title_key,

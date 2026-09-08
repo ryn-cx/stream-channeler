@@ -9,8 +9,8 @@ from plugins.utils.base_plugin.base import BasePlugin
 class DisneyPlusBaseFiles(BasePlugin):
     # TODO: Validate
     def entity_file(self, entity_id: str) -> Entity:
-        return self._file(Entity, entity_id)
+        return self._cached_file(Entity, entity_id)
 
     # TODO: Validate
     def season_file(self, entity_id: str, season_id: str) -> SeasonEntity:
-        return self._file(SeasonEntity, entity_id, season_id)
+        return self._cached_file(SeasonEntity, entity_id, season_id)

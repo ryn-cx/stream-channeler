@@ -11,7 +11,6 @@ from uuid import UUID
 
 from loguru import logger
 from pydantic import BaseModel, model_validator
-from sqlmodel import Session
 
 from app.constants import ALL_TEST_FILES_FOLDER, ALL_TEST_FILES_METADATA_FOLDER
 from app.files.models import File
@@ -19,7 +18,6 @@ from app.seasons.models import Season
 from app.titles.models import Title
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin
-from plugins.utils.base_plugin import core
 from plugins.utils.base_plugin.base import BasePlugin
 from plugins.utils.base_plugin.files import BaseFile
 from plugins.utils.manage_plugins import import_plugins
@@ -268,29 +266,6 @@ def restore_stored_metadata(record: File, owner_key: str, path: Path) -> None:
 
 # TODO: Validate
 @contextmanager
-def file_sessions_that_flush() -> Generator[None]:
-    # TODO: Validate
-    def patched(session: Session) -> Session:
-        existing: Session | None = session.info.get(core.FILE_SESSION_KEY)
-        if existing is not None:
-            return existing
-
-        file_session = Session(
-            session.get_bind(),
-            join_transaction_mode="rollback_only",
-        )
-        file_session.commit = file_session.flush  # type: ignore[method-assign]
-        file_session.rollback = file_session.expunge_all  # type: ignore[method-assign]
-        file_session.close = file_session.expunge_all  # type: ignore[method-assign]
-        session.info[core.FILE_SESSION_KEY] = file_session
-        return file_session
-
-    with patch.object(core, "get_file_session", patched):
-        yield
-
-
-# TODO: Validate
-@contextmanager
 def serve_downloads_from_disk() -> Generator[list[str]]:
     """Serve every download from the stored test files, downloading what is missing.
 
@@ -332,15 +307,15 @@ def serve_downloads_from_disk() -> Generator[list[str]]:
             # was in the table when it was stored is put back over it. Without
             # that a recording run records the time it ran while every run after
             # it reads the stored value, which is a mismatch in every test.
-            restore_stored_metadata(self.database_record, owner_key, path)
+            restore_stored_metadata(self._database_record, owner_key, path)
             return
 
         original_download_if_outdated(self, update_at)
         downloaded.append(self.file_key())
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(self.database_record.content or "", encoding="utf-8")
-            write_stored_metadata(owner_key, self.file_key(), self.database_record)
+            path.write_text(self.record_content or "", encoding="utf-8")
+            write_stored_metadata(owner_key, self.file_key(), self._database_record)
         except OSError as error:
             # Held until the run is over so the rest of the files are still
             # stored, and the report names every key at fault rather than only
@@ -408,7 +383,7 @@ def _serve_before_grouping(
             preloaded_files,
         )
         for episode_key in episode_keys:
-            self._download_outdated_files(
+            self._download_if_outdated(
                 self._episode_files(episode_key, season_key, title_key),
             )
         return grouped_download(self, season, title, preloaded_files)

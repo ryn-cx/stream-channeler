@@ -33,7 +33,7 @@ class BaseCatalogueSearchMixin(BasePlugin, ABC):
 
     # TODO: Validate
     @classmethod
-    def tmdb_media_type_to_plugin_media_type(
+    def _tmdb_media_type_to_plugin_media_type(
         cls,
         media_type: TMDBMediaType,
     ) -> tuple[str, ...]:
@@ -60,7 +60,7 @@ class BaseCatalogueSearchMixin(BasePlugin, ABC):
 
         The default implementation assumes that the database has every title on the
         website already imported."""
-        wanted = self.tmdb_media_type_to_plugin_media_type(media_type)
+        wanted = self._tmdb_media_type_to_plugin_media_type(media_type)
         candidates = [
             title for title in self._named_titles() if title.media_type in wanted
         ]

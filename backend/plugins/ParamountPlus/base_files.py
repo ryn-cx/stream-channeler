@@ -13,7 +13,7 @@ from plugins.utils.base_plugin.base import BasePlugin
 class ParamountPlusBaseFiles(BasePlugin):
     # TODO: Validate
     def title_page_file(self, title_id: str) -> TitlePage:
-        return self._file(TitlePage, title_id)
+        return self._cached_file(TitlePage, title_id)
 
     # TODO: Validate
     def episodes_file(
@@ -21,8 +21,8 @@ class ParamountPlusBaseFiles(BasePlugin):
         title_id: str,
         season_number: int,
     ) -> EpisodesFile:
-        return self._file(EpisodesFile, title_id, season_number)
+        return self._cached_file(EpisodesFile, title_id, season_number)
 
     # TODO: Validate
     def movie_file(self, movie_id: str) -> MovieFile:
-        return self._file(MovieFile, movie_id)
+        return self._cached_file(MovieFile, movie_id)

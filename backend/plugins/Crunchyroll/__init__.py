@@ -1,3 +1,4 @@
+# TODO: Validate
 from __future__ import annotations
 
 import re
@@ -31,7 +32,9 @@ if TYPE_CHECKING:
     from app.titles.models import Title
 
 
+# TODO: Validate
 class CrunchyrollInitializer(BasePluginInitializer, CrunchyrollShared):
+    # TODO: Validate
     @override
     def _create_source_records(self) -> None:
         # Default implementation calls self.upsert_source (Crunchyroll.upsert_source)
@@ -44,12 +47,14 @@ class CrunchyrollInitializer(BasePluginInitializer, CrunchyrollShared):
             CrunchyrollMusicImporter(self).upsert_source(MUSIC_SOURCE)
         self._sources = {source.key: source for source in self.plugin.sources}
 
+    # TODO: Validate
     @override
     def _create_channel_records(self) -> None:
         CrunchyrollAnimeImporter(self).create_channel_records()
         CrunchyrollMusicImporter(self).create_channel_records()
 
 
+# TODO: Validate
 class Crunchyroll(
     CrunchyrollWatchHistoryMixin,
     CrunchyrollShared,
@@ -59,6 +64,7 @@ class Crunchyroll(
 ):
     initializer = CrunchyrollInitializer
 
+    # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:

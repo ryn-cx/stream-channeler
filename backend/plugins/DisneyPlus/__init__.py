@@ -45,7 +45,7 @@ class DisneyPlus(DisneyPlusShared, BaseReadURL, AbstractPlugin, register=False):
         # Movies and series are answered at the same address, so the page has
         # to be read before it is known which of the two it is.
         title_key = match.group("entity_key")
-        self.raise_if_invalid_file(self.entity_file(title_key), url)
+        self.raise_invalid_url_if_no_content(self.entity_file(title_key), url)
         if is_movie(self.entity_file(title_key).parsed()):
             return DisneyPlusMovieImporter(self)
         return DisneyPlusSeriesImporter(self)

@@ -1,3 +1,4 @@
+# TODO: Validate
 from abc import ABC
 from datetime import UTC, datetime, timedelta
 from functools import cache
@@ -43,78 +44,107 @@ from get_around import GetAround
 
 from app.config import settings
 from app.utils import tz_datetime
-from plugins.utils.base_plugin.files import EndpointFile, PagedEndpointFile
+from plugins.utils.base_plugin.files import (
+    INCOMPLETE_STATUS,
+    EndpointFile,
+    PagedEndpointFile,
+)
 
 # TODO: This is a temporary importing workaround.
 
 
 # from plugins.utils.get_around_client import get_around_client
+# TODO: Validate
 @cache
 def get_around_client() -> GetAround:
     return GetAround(proxy=settings.PROXY)
 
 
+# TODO: Validate
 @cache
 def chirashi() -> Chirashi:
     return Chirashi(get_around_client=get_around_client())
 
 
+# TODO: Validate
 class Series(EndpointFile[SeriesModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> SeriesEndpoint:
         return chirashi().series
 
     # Occurs when a user puts in an invalid series URL.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, SeriesNotFoundError)
 
 
+# TODO: Validate
 class Categories(EndpointFile[CategoriesModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> CategoriesEndpoint:
         return chirashi().categories
 
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, SeriesNotFoundError)
 
 
+# TODO: Validate
 class Objects(EndpointFile[ObjectsModel]):
     """Episode information."""
 
+    # TODO: Validate
     @override
     def _endpoint(self) -> ObjectsEndpoint:
         return chirashi().objects
 
     # Occurs when a user puts in an invalid episode URL.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, EpisodeNotFoundError)
 
 
+# TODO: Validate
 class Seasons(EndpointFile[SeasonsModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> SeasonsEndpoint:
         return chirashi().seasons
 
 
+# TODO: Validate
 class SeasonEpisodes(EndpointFile[SeasonEpisodesModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> SeasonEpisodesEndpoint:
         return chirashi().season_episodes
 
 
+# TODO: Validate
 class BaseBrowseSeries(PagedEndpointFile[BrowseSeriesModel], ABC):
+    # TODO: Validate
     @override
     def _endpoint(self) -> BrowseSeriesEndpoint:
         return chirashi().browse_series
 
+    # TODO: Validate
     def datums(self) -> list[BrowseSeriesDatum]:
         return self._endpoint().extract_data(self.parsed())
 
 
+# TODO: Validate
 class BrowseSeries(BaseBrowseSeries):
+    # TODO: Validate
+    @override
+    def _initial_status_after_downloading(self) -> str:
+        return INCOMPLETE_STATUS
+
+    # TODO: Validate
     @override
     def _download_pages(self) -> list[str]:
         return self._endpoint().download_until_datetime(
@@ -122,13 +152,16 @@ class BrowseSeries(BaseBrowseSeries):
         )
 
 
+# TODO: Validate
 class Catalogue(BaseBrowseSeries):
     """Special BrowseSeries that contains all of the titles on Crunchyroll."""
 
+    # TODO: Validate
     @override
     def _next_update_at(self) -> datetime:
         return tz_datetime.now() + timedelta(days=7)
 
+    # TODO: Validate
     @override
     def _download_pages(self) -> list[str]:
         return self._endpoint().download_until_datetime(
@@ -139,65 +172,84 @@ class Catalogue(BaseBrowseSeries):
         )
 
 
+# TODO: Validate
 class Artist(EndpointFile[ArtistModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> ArtistEndpoint:
         return chirashi().artist
 
     # Occurs when a user puts in an invalid artist URL.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ArtistNotFoundError)
 
 
+# TODO: Validate
 class ArtistMusicVideos(EndpointFile[ArtistMusicVideosModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> ArtistMusicVideosEndpoint:
         return chirashi().artist_music_videos
 
 
+# TODO: Validate
 class ArtistConcerts(EndpointFile[ArtistConcertsModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> ArtistConcertsEndpoint:
         return chirashi().artist_concerts
 
 
+# TODO: Validate
 class MusicVideo(EndpointFile[MusicVideoModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> MusicVideoEndpoint:
         return chirashi().music_video
 
     # Occurs when a user puts in an invalid music video URL.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, MusicVideoNotFoundError)
 
 
+# TODO: Validate
 class Concert(EndpointFile[ConcertModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> ConcertEndpoint:
         return chirashi().concert
 
     # Occurs when a user puts in an invalid concert URL.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ConcertNotFoundError)
 
 
+# TODO: Validate
 class BrowseMusic(PagedEndpointFile[BrowseMusicModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> BrowseMusicEndpoint:
         return chirashi().browse_music
 
+    # TODO: Validate
     @override
     def _download_pages(self) -> list[str]:
         return self._endpoint().download_all()
 
+    # TODO: Validate
     def datums(self) -> list[BrowseMusicDatum]:
         return self._endpoint().extract_data(self.parsed())
 
 
+# TODO: Validate
 class Search(EndpointFile[SearchModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> SearchEndpoint:
         return chirashi().search

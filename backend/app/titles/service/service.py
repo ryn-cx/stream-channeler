@@ -60,7 +60,7 @@ def list_tmdb_episode_groups(
         return []
 
     groups_file = TMDB(session).tv_series_episode_groups_file(tmdb_id)
-    if not groups_file.database_record.content:
+    if not groups_file.record_content:
         return []
 
     return [
@@ -170,7 +170,7 @@ def validate_extra(
     groups_file = TMDB(session).tv_series_episode_groups_file(tmdb_id)
     known = (
         {group.id for group in groups_file.parsed().results}
-        if groups_file.database_record.content
+        if groups_file.record_content
         else set()
     )
     if group_id not in known:

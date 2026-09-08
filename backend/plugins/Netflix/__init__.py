@@ -1,3 +1,4 @@
+# TODO: Validate
 from __future__ import annotations
 
 import re
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
 class NetflixInitializer(BasePluginInitializer, NetflixShared): ...
 
 
+# TODO: Validate
 class Netflix(NetflixShared, BaseReadURL, AbstractPlugin, register=False):
     initializer = NetflixInitializer
 
@@ -36,14 +38,15 @@ class Netflix(NetflixShared, BaseReadURL, AbstractPlugin, register=False):
             msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
 
-        # Movies and files use the same title_file but include information that
-        # specifies its media type.
+        # Movies and series use the same URL format and the same title_file, but the
+        # title_file contains the media type information.
         title_key = match.group("title_key")
-        self.raise_if_invalid_file(self.title_file(title_key), url)
+        self.raise_invalid_url_if_no_content(self.title_file(title_key), url)
         if self.title_file(title_key).title_information().field__typename == "Movie":
             return NetflixMovieImporter(self)
         return NetflixSeriesImporter(self)
 
+    # TODO: Validate
     @override
     def _media_importer_from_title(self, title: Title) -> NetflixImporter:
         if not title.media_type:  # Should be impossible.
@@ -54,6 +57,7 @@ class Netflix(NetflixShared, BaseReadURL, AbstractPlugin, register=False):
             return NetflixMovieImporter(self)
         return NetflixSeriesImporter(self)
 
+    # TODO: Validate
     @override
     def search_for_title_url(
         self,

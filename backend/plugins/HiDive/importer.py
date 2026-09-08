@@ -67,7 +67,7 @@ class HiDiveSeriesImporter(HiDiveImporter):
         domain_regex = self._domain_regex()
         if match := re.match(domain_regex + SERIES_URL_REGEX, url):
             title_key = match.group("series_key")
-            self.raise_if_invalid_file(self.series_file(title_key), url)
+            self.raise_invalid_url_if_no_content(self.series_file(title_key), url)
             return URLTitleInfo(title_key)
 
         # HiDive's interface does not do a good job of seperating titles and seasons
@@ -76,7 +76,7 @@ class HiDiveSeriesImporter(HiDiveImporter):
         if match := re.match(domain_regex + SEASON_URL_REGEX, url):
             season_key = match.group("season_key")
             season_file = self.season_file(season_key)
-            self.raise_if_invalid_file(season_file, url)
+            self.raise_invalid_url_if_no_content(season_file, url)
             return URLTitleInfo(str(season_file.parsed().metadata.series.series_id))
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
@@ -127,7 +127,7 @@ class HiDiveSeriesImporter(HiDiveImporter):
 
     # TODO: Validate
     @override
-    def upsert_title(
+    def _upsert_title(
         self,
         source: Source,
         title_key: str,
@@ -137,7 +137,7 @@ class HiDiveSeriesImporter(HiDiveImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             series_data = self.series_file(title_key).parsed()
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=title_key,
                 name=series_data.metadata.series.title,
@@ -164,7 +164,9 @@ class HiDiveSeriesImporter(HiDiveImporter):
 
             season = SeasonModel.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
-                data_timestamps = self.season_data_timestamps(season_key, title.key)
+                data_timestamps = self._season_files_data_timestamps(
+                    season_key, title.key
+                )
                 season = SeasonModel(
                     key=season_key,
                     name=season_info.title,
@@ -202,7 +204,7 @@ class HiDiveSeriesImporter(HiDiveImporter):
                 continue
 
             hero = vod_hero(self.vod_file(episode_key).parsed())
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamps = self._episode_files_data_timestamps(
                 episode_key,
                 season.key,
                 title_key,
@@ -238,7 +240,7 @@ class HiDiveMovieImporter(HiDiveImporter):
     def get_media_info(self, url: str) -> URLTitleInfo:
         if match := re.match(self._domain_regex() + MOVIE_URL_REGEX, url):
             title_key = match.group("movie_vod_key")
-            self.raise_if_invalid_file(self.vod_file(title_key), url)
+            self.raise_invalid_url_if_no_content(self.vod_file(title_key), url)
             return URLTitleInfo(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
@@ -282,7 +284,7 @@ class HiDiveMovieImporter(HiDiveImporter):
 
     # TODO: Validate
     @override
-    def upsert_title(
+    def _upsert_title(
         self,
         source: Source,
         title_key: str,
@@ -293,7 +295,7 @@ class HiDiveMovieImporter(HiDiveImporter):
         if self._title_is_outdated(title, force=force):
             hero = vod_hero(self.vod_file(title_key).parsed())
             premiere = release_date(hero)
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=title_key,
                 name=movie_title(hero),
@@ -322,7 +324,9 @@ class HiDiveMovieImporter(HiDiveImporter):
 
             season = SeasonModel.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
-                data_timestamps = self.season_data_timestamps(season_key, title.key)
+                data_timestamps = self._season_files_data_timestamps(
+                    season_key, title.key
+                )
                 season = SeasonModel(
                     key=season_key,
                     name=movie_title(hero),
@@ -356,7 +360,7 @@ class HiDiveMovieImporter(HiDiveImporter):
             return
 
         hero = vod_hero(self.vod_file(title_key).parsed())
-        data_timestamps = self.episode_data_timestamps(
+        data_timestamps = self._episode_files_data_timestamps(
             title_key,
             season.key,
             title_key,

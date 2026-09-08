@@ -70,7 +70,7 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
             raise InvalidURLError(msg)
 
         detail_file = self.detail_file(title_key)
-        self.raise_if_invalid_file(detail_file, url)
+        self.raise_invalid_url_if_no_content(detail_file, url)
         if message := detail_file.unavailable_message():
             msg = f"{message}: {url}"
             raise InvalidURLError(msg)
@@ -88,9 +88,10 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
                 for result in self._import_results(title, media_info)
             ]
 
+        self._download_initial_files(media_info.title_key)
         results: list[URLImportResult] = []
         for source in self.title_sources(media_info.title_key):
-            title = self.upsert_title(source, media_info.title_key)
+            title = self._upsert_title(source, media_info.title_key)
             results += self._import_results(title, media_info)
         return results
 
@@ -216,7 +217,7 @@ class AmazonSeriesImporter(AmazonImporter):
 
     # TODO: Validate
     @override
-    def upsert_title(
+    def _upsert_title(
         self,
         source: Source,
         title_key: str,
@@ -226,7 +227,7 @@ class AmazonSeriesImporter(AmazonImporter):
         page = self.detail_file(title_key)
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=title_key,
                 name=page.series_title(),
@@ -254,7 +255,9 @@ class AmazonSeriesImporter(AmazonImporter):
             season_key = season_entry.key
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
-                data_timestamps = self.season_data_timestamps(season_key, title.key)
+                data_timestamps = self._season_files_data_timestamps(
+                    season_key, title.key
+                )
                 season = Season(
                     key=season_key,
                     name=season_entry.name,
@@ -287,7 +290,7 @@ class AmazonSeriesImporter(AmazonImporter):
             ):
                 continue
 
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamps = self._episode_files_data_timestamps(
                 item.key,
                 season.key,
                 title_key,
@@ -326,7 +329,7 @@ class AmazonMovieImporter(AmazonImporter):
 
     # TODO: Validate
     @override
-    def upsert_title(
+    def _upsert_title(
         self,
         source: Source,
         title_key: str,
@@ -336,7 +339,7 @@ class AmazonMovieImporter(AmazonImporter):
         page = self.detail_file(title_key)
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=title_key,
                 name=page.title(),
@@ -362,7 +365,7 @@ class AmazonMovieImporter(AmazonImporter):
     def _upsert_season(self, title: Title, *, force: bool = False) -> None:
         season = Season.get_from_memory(self.session, title, title.key)
         if self._season_is_outdated(season, title.key, force=force):
-            data_timestamps = self.season_data_timestamps(title.key, title.key)
+            data_timestamps = self._season_files_data_timestamps(title.key, title.key)
             season = Season(
                 key=title.key,
                 season_number=0,
@@ -393,7 +396,9 @@ class AmazonMovieImporter(AmazonImporter):
             return
 
         page = self.detail_file(title_key)
-        data_timestamps = self.episode_data_timestamps(title_key, season.key, title_key)
+        data_timestamps = self._episode_files_data_timestamps(
+            title_key, season.key, title_key
+        )
         episode = Episode(
             key=title_key,
             watch_identifier=watch_identifier(self.plugin_name(), title_key),

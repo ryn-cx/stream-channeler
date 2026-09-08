@@ -28,7 +28,9 @@ if TYPE_CHECKING:
     from plugins.utils.base_plugin.files import BaseFile
 
 
+# TODO: Validate
 class NetflixImporter(NetflixShared, BaseImporter, ABC):
+    # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
@@ -39,12 +41,13 @@ class NetflixImporter(NetflixShared, BaseImporter, ABC):
     def get_media_info(self, url: str) -> URLTitleInfo:
         if match := re.match(self._domain_regex() + TITLE_URL_REGEX, url):
             title_key = match.group("title_key")
-            self.raise_if_invalid_file(self.title_file(title_key), url)
+            self.raise_invalid_url_if_no_content(self.title_file(title_key), url)
             return URLTitleInfo(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
+    # TODO: Validate
     @override
     def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
         # Required to detect changes to the title and new seasons.
@@ -95,6 +98,7 @@ class NetflixSeriesImporter(NetflixImporter):
                 season.set_update_at(available_at + timedelta(hours=12))
                 season.set_update_at(available_at + timedelta(days=1))
 
+    # TODO: Validate
     @override
     def _season_keys_from_title_files(self, title_key: str) -> list[str]:
         return [
@@ -120,7 +124,7 @@ class NetflixSeriesImporter(NetflixImporter):
 
     # TODO: Validate
     @override
-    def upsert_title(
+    def _upsert_title(
         self,
         source: Source,
         title_key: str,
@@ -130,7 +134,7 @@ class NetflixSeriesImporter(NetflixImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             title_data = self.title_file(title_key).title_information()
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=title_key,
                 name=title_data.title,
@@ -158,7 +162,9 @@ class NetflixSeriesImporter(NetflixImporter):
             season_key = str(season_data.video_id)
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
-                data_timestamps = self.season_data_timestamps(season_key, title.key)
+                data_timestamps = self._season_files_data_timestamps(
+                    season_key, title.key
+                )
                 season = Season(
                     key=season_key,
                     name=season_data.title,
@@ -202,7 +208,7 @@ class NetflixSeriesImporter(NetflixImporter):
             ):
                 continue
 
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamps = self._episode_files_data_timestamps(
                 episode_key,
                 season.key,
                 title_key,
@@ -224,11 +230,14 @@ class NetflixSeriesImporter(NetflixImporter):
             episode.set_update_at(None)
 
 
+# TODO: Validate
 class NetflixMovieImporter(NetflixImporter):
+    # TODO: Validate
     @override
     def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
         return [self.title_file(title_key)]
 
+    # TODO: Validate
     @override
     def _episode_files(
         self,
@@ -238,10 +247,12 @@ class NetflixMovieImporter(NetflixImporter):
     ) -> Sequence[BaseFile[Any]]:
         return [self.title_file(title_key)]
 
+    # TODO: Validate
     @override
     def _season_keys_from_title_files(self, title_key: str) -> list[str]:
         return [title_key]
 
+    # TODO: Validate
     @override
     def _episode_keys_from_season_files(
         self,
@@ -252,7 +263,7 @@ class NetflixMovieImporter(NetflixImporter):
 
     # TODO: Validate
     @override
-    def upsert_title(
+    def _upsert_title(
         self,
         source: Source,
         title_key: str,
@@ -262,7 +273,7 @@ class NetflixMovieImporter(NetflixImporter):
         movie_data = self.title_file(title_key).title_information()
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamps = self.title_data_timestamps(title_key)
+            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=title_key,
                 name=movie_data.title,
@@ -292,7 +303,7 @@ class NetflixMovieImporter(NetflixImporter):
         season_key = title.key
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title.key, force=force):
-            data_timestamps = self.season_data_timestamps(season_key, title.key)
+            data_timestamps = self._season_files_data_timestamps(season_key, title.key)
             season = Season(
                 key=season_key,
                 season_number=0,
@@ -315,7 +326,7 @@ class NetflixMovieImporter(NetflixImporter):
     ) -> None:
         episode = Episode.get_from_memory(self.session, season, title_key)
         if self._episode_is_outdated(episode, season.key, title_key, force=force):
-            data_timestamps = self.episode_data_timestamps(
+            data_timestamps = self._episode_files_data_timestamps(
                 title_key,
                 season.key,
                 title_key,

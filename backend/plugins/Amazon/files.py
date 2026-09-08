@@ -99,7 +99,7 @@ class ShareLinkRedirect(TextFile):
     # TODO: Validate
     def location(self) -> str | None:
         """Return the address the share link pointed at."""
-        return self.database_record.content
+        return self.record_content
 
     # TODO: Validate
     def title_key(self) -> str:
@@ -325,7 +325,7 @@ class Detail(DownloadedFile[dict[str, Any]]):
         A season's page carries the page of its episode list that it opens on,
         so that one is read out of the page rather than asked for again.
         """
-        if not self.database_record.content:
+        if not self.record_content:
             return []
         return [
             EpisodeList(self.session, self.plugin, self.detail_key, index)

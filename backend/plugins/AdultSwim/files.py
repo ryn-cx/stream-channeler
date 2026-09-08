@@ -15,7 +15,7 @@ from pools_closed.shows.models import ShowsModel
 from sqlmodel import Session
 
 from app.plugins.models import Plugin
-from plugins.utils.base_plugin.files import EndpointFile
+from plugins.utils.base_plugin.files import INCOMPLETE_STATUS, EndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -54,3 +54,8 @@ class TitlesPage(EndpointFile[ShowsModel]):
     @override
     def _download_file(self) -> str:
         return self._endpoint().download()
+
+    # TODO: Validate
+    @override
+    def _initial_status_after_downloading(self) -> str:
+        return INCOMPLETE_STATUS

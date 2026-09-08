@@ -9,12 +9,12 @@ from plugins.utils.base_plugin.base import BasePlugin
 class HBOMaxBaseFiles(BasePlugin):
     # TODO: Validate
     def title_file(self, title_id: str) -> TitleFile:
-        return self._file(TitleFile, title_id)
+        return self._cached_file(TitleFile, title_id)
 
     # TODO: Validate
     def season_file(self, title_id: str, season_number: int) -> SeasonFile:
-        return self._file(SeasonFile, title_id, season_number)
+        return self._cached_file(SeasonFile, title_id, season_number)
 
     # TODO: Validate
     def movie_file(self, movie_id: str) -> MovieFile:
-        return self._file(MovieFile, movie_id)
+        return self._cached_file(MovieFile, movie_id)
