@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, cast, override
+from datetime import timedelta
+from typing import TYPE_CHECKING, Any, override
 
 from sqlalchemy import or_
 from sqlmodel import Session, col, select
@@ -22,6 +22,7 @@ from app.users.service.accounts import get_or_create_plugin_user
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import (
     InvalidURLError,
+    TMDBLookupInfo,
     URLImportResult,
 )
 from plugins.utils.base_plugin.files import BaseFile
@@ -36,7 +37,7 @@ if TYPE_CHECKING:
 class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
     if TYPE_CHECKING:
         # TODO: Validate
-        def search_for_url(
+        def search_for_title_url(
             self,
             names: list[str],
             media_type: TMDBMediaType,
@@ -136,21 +137,25 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
     # TODO: Validate
     def media_importer(self, url_or_title: str | Title) -> BaseImporter:
         if isinstance(url_or_title, str):
-            return self.media_importer_from_url(url_or_title)
-        return self.media_importer_from_title(url_or_title)
+            return self._media_importer_from_url(url_or_title)
+        return self._media_importer_from_title(url_or_title)
 
     # TODO: Validate
-    def media_importer_from_url(self, url: str) -> BaseImporter:  # noqa: ARG002
-        return cast("BaseImporter", self)
+    def _media_importer_from_url(self, url: str) -> BaseImporter:  # noqa: ARG002
+        return self  # type: ignore[return-value]  # ty: ignore[invalid-return-type]
 
     # TODO: Validate
-    def media_importer_from_title(self, title: Title) -> BaseImporter:  # noqa: ARG002
-        return cast("BaseImporter", self)
+    def _media_importer_from_title(self, title: Title) -> BaseImporter:  # noqa: ARG002
+        return self  # type: ignore[return-value]  # ty: ignore[invalid-return-type]
 
     # TODO: Validate
-    def get_media_importer_from_source(self, source: Source) -> BaseImporter:  # noqa: ARG002
-        """Get the media importer to use based on the source."""
-        return cast("BaseImporter", self)
+    def tmdb_lookup_info(self, title: Title) -> list[TMDBLookupInfo]:
+        if not title.name:
+            return []
+        media_type = (
+            TMDBMediaType.movie if title.media_type == "Movie" else TMDBMediaType.tv
+        )
+        return [TMDBLookupInfo(title.name, media_type, title.year)]
 
     # TODO: Validate
     def import_url(self, url: str) -> list[URLImportResult]:
@@ -163,14 +168,10 @@ class BasePlugin(BaseUpdateMixin, BaseURLMixin, ABC):
         media_type: TMDBMediaType,
         year: int | None = None,
     ) -> list[URLImportResult]:
-        url = self.search_for_url(names, media_type, year)
+        url = self.search_for_title_url(names, media_type, year)
         if url:
             return self.import_url(url)
         return []
-
-    # TODO: Validate
-    def update_source(self, source: Source, update_at: datetime) -> None:
-        self.get_media_importer_from_source(source).update_source(source, update_at)
 
     # TODO: Validate
     def update_title(self, title: Title, *, force: bool = False) -> None:

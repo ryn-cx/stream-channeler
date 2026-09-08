@@ -10,10 +10,8 @@ from typing import TYPE_CHECKING, Any, override
 
 from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
-from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.titles.models import Title
-from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.Netflix.constants import TITLE_URL_REGEX
 from plugins.Netflix.shared import NetflixShared
@@ -24,10 +22,8 @@ from plugins.Netflix.utils import (
     season_episodes,
     split_season_key,
     title_url,
-    title_video,
-    upcoming_weekday,
 )
-from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
+from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import URLTitleInfo
 
@@ -46,7 +42,6 @@ if TYPE_CHECKING:
 
 # TODO: Validate
 class NetflixImporter(NetflixShared, BaseImporter, ABC):
-    # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
@@ -63,45 +58,14 @@ class NetflixImporter(NetflixShared, BaseImporter, ABC):
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
-    # TODO: Validate
-    def _title_video(self, title_key: str) -> TitleVideo:
-        return title_video(self.title_file(title_key).parsed(), title_key)
-
-    # TODO: Validate
     @override
     def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
-        # Required to detect changes to the title and new seasons of it.
+        # Required to detect changes to the title and new seasons.
         return [self.title_file(title_key), self.seasons_file(title_key)]
-
-    # TODO: Validate
-    def _next_update_at(self, title_key: str, data_timestamp: datetime) -> datetime:
-        """When to next refresh the title.
-
-        While an episode is upcoming, refresh on the day it is scheduled; if that
-        day is the current day, refresh the following day instead. Otherwise refresh
-        monthly.
-        """
-        weekday = upcoming_weekday(self._title_video(title_key))
-        if weekday is None:
-            return staggered_monthly_update_at(title_key, data_timestamp)
-        days_ahead = (weekday - data_timestamp.weekday()) % 7
-        # The scheduled day is the current day, so check again the following day.
-        if days_ahead == 0:
-            days_ahead = 1
-        return data_timestamp + timedelta(days=days_ahead)
 
 
 # TODO: Validate
 class NetflixSeriesImporter(NetflixImporter):
-    # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        self.title_file(title_key).download_if_outdated(
-            tz_datetime.now() - timedelta(days=7),
-        )
-        video = self._title_video(title_key)
-        return [TMDBLookupInfo(video.title, TMDBMediaType.tv, video.latest_year)]
-
     # TODO: Validate
     @override
     def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
@@ -117,6 +81,27 @@ class NetflixSeriesImporter(NetflixImporter):
         title_key: str,
     ) -> Sequence[BaseFile[Any]]:
         return self._season_files(season_key, title_key)
+
+    # TODO: Validate
+    def _next_update_at(self, title_key: str, data_timestamp: datetime) -> datetime:
+        """When to next refresh the title.
+
+        While an episode is upcoming, refresh on the day it is scheduled; if that
+        day is the current day, refresh the following day instead. Otherwise refresh
+        monthly.
+        """
+        scheduled = [
+            datetime.strptime(
+                f"{episode.availability_date_messaging} {data_timestamp.year}",
+                "Available %B %d %Y",
+            ).replace(tzinfo=data_timestamp.tzinfo)
+            for season in self._ordered_seasons(title_key)
+            for episode in self._season_episodes(season.video_id)
+            if episode.availability_date_messaging
+        ]
+        if not scheduled:
+            return staggered_monthly_update_at(title_key, data_timestamp)
+        return max(min(scheduled), data_timestamp + timedelta(days=1))
 
     # TODO: Validate
     def _ordered_seasons(self, title_key: str) -> list[SeasonNode]:
@@ -162,13 +147,14 @@ class NetflixSeriesImporter(NetflixImporter):
     ) -> Title:
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            title_data = self._title_video(title_key)
+            title_data = self.title_file(title_key).title_information()
             data_timestamps = self.title_data_timestamps(title_key)
             new_title = Title(
                 key=title_key,
                 name=title_data.title,
                 description=title_data.short_synopsis,
                 media_type="Series",
+                year=title_data.latest_year,
                 url=title_url(title_key),
                 image_url=title_data.billboard_or_story_art960.url,
                 thumbnail_url=title_data.billboard_or_story_art960.url,
@@ -258,15 +244,6 @@ class NetflixSeriesImporter(NetflixImporter):
 class NetflixMovieImporter(NetflixImporter):
     # TODO: Validate
     @override
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        self.title_file(title_key).download_if_outdated(
-            tz_datetime.now() - timedelta(days=7),
-        )
-        video = self._title_video(title_key)
-        return [TMDBLookupInfo(video.title, TMDBMediaType.movie, video.latest_year)]
-
-    # TODO: Validate
-    @override
     def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
         return [self.title_file(title_key)]
 
@@ -305,7 +282,7 @@ class NetflixMovieImporter(NetflixImporter):
         *,
         force: bool = False,
     ) -> Title:
-        movie_data = self._title_video(title_key)
+        movie_data = self.title_file(title_key).title_information()
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             data_timestamps = self.title_data_timestamps(title_key)
@@ -313,6 +290,7 @@ class NetflixMovieImporter(NetflixImporter):
                 key=title_key,
                 name=movie_data.title,
                 url=title_url(title_key),
+                year=movie_data.latest_year,
                 image_url=movie_data.billboard_or_story_art960.url,
                 thumbnail_url=movie_data.billboard_or_story_art960.url,
                 media_type="Movie",
@@ -321,7 +299,7 @@ class NetflixMovieImporter(NetflixImporter):
             )
             title = new_title.upsert(source, title)
             title.set_update_at(
-                self._next_update_at(title_key, min(data_timestamps)),
+                staggered_monthly_update_at(title_key, min(data_timestamps)),
                 data_timestamps,
             )
 

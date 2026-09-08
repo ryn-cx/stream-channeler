@@ -10,10 +10,8 @@ from typing import TYPE_CHECKING, Any, override
 
 from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
-from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.titles.models import Title
-from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.Roku.constants import DETAILS_URL_REGEX, WATCH_URL_REGEX
 from plugins.Roku.shared import RokuShared
@@ -27,7 +25,7 @@ from plugins.Roku.utils import (
     title_url,
     video_url,
 )
-from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
+from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import URLTitleInfo
 
@@ -66,18 +64,6 @@ class RokuImporter(RokuShared, BaseImporter, ABC):
         raise InvalidURLError(msg)
 
     # TODO: Validate
-    def _tmdb_lookup_info(
-        self,
-        title_key: str,
-        media_type: TMDBMediaType,
-    ) -> list[TMDBLookupInfo]:
-        self.content_file(title_key).download_if_outdated(
-            tz_datetime.now() - timedelta(days=7),
-        )
-        content = self._content(title_key)
-        return [TMDBLookupInfo(content.title, media_type, content.release_year)]
-
-    # TODO: Validate
     @override
     def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
         return [self.content_file(title_key)]
@@ -99,11 +85,6 @@ class RokuSeriesImporter(RokuImporter):
         if "-" in key:
             return URLTitleInfo(title_key)
         return URLTitleInfo(title_key, episode_key=key)
-
-    # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        return self._tmdb_lookup_info(title_key, TMDBMediaType.tv)
 
     # TODO: Validate
     def _season_episodes(
@@ -264,11 +245,6 @@ class RokuMovieImporter(RokuImporter):
     @override
     def get_media_info(self, url: str) -> URLTitleInfo:
         return URLTitleInfo(self._url_content_key(url))
-
-    # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        return self._tmdb_lookup_info(title_key, TMDBMediaType.movie)
 
     # TODO: Validate
     @override

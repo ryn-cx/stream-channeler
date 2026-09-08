@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
 from functools import cache
 from typing import TYPE_CHECKING, override
 
@@ -16,7 +15,6 @@ from naphki.video_episodes.models import VideoEpisodesModel
 from naphki.video_program import VideoProgram as VideoProgramEndpoint
 from naphki.video_program.models import VideoProgramModel
 
-from app.utils import tz_datetime
 from plugins.utils.base_plugin.files import EndpointFile
 from plugins.utils.get_around_client import get_around_client
 
@@ -113,8 +111,3 @@ class TitlesSearch(EndpointFile[ShowsSearchModel]):
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(self.query, from_=self.offset)
-
-    # TODO: Validate
-    @override
-    def _next_update_at(self) -> datetime:
-        return tz_datetime.now() + timedelta(days=30)

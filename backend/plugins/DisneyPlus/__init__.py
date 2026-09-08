@@ -36,7 +36,7 @@ class DisneyPlus(DisneyPlusShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def media_importer_from_url(self, url: str) -> DisneyPlusImporter:
+    def _media_importer_from_url(self, url: str) -> DisneyPlusImporter:
         match = re.match(self._domain_regex() + ENTITY_URL_REGEX, url)
         if not match:
             msg = f"Invalid {self.plugin_name()} URL: {url}"
@@ -52,7 +52,7 @@ class DisneyPlus(DisneyPlusShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def media_importer_from_title(self, title: Title) -> DisneyPlusImporter:
+    def _media_importer_from_title(self, title: Title) -> DisneyPlusImporter:
         if not title.media_type:
             msg = "Title.media_type is not set."
             raise AttributeError(msg)

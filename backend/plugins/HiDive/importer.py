@@ -5,15 +5,12 @@ from __future__ import annotations
 
 import re
 from abc import ABC
-from datetime import timedelta
 from typing import TYPE_CHECKING, Any, override
 
 from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
-from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season as SeasonModel
 from app.titles.models import Title
-from app.utils import tz_datetime
 from plugins.HiDive.constants import (
     MOVIE_MEDIA_TYPE,
     MOVIE_URL_REGEX,
@@ -38,7 +35,7 @@ from plugins.HiDive.utils import (
     title_url,
     vod_hero,
 )
-from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
+from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import URLTitleInfo
 
@@ -84,19 +81,6 @@ class HiDiveSeriesImporter(HiDiveImporter):
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
-
-    # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        series_file = self.series_file(title_key)
-        series_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        return [
-            TMDBLookupInfo(
-                series_file.parsed().metadata.series.title,
-                TMDBMediaType.tv,
-                None,
-            ),
-        ]
 
     # TODO: Validate
     @override
@@ -265,21 +249,6 @@ class HiDiveMovieImporter(HiDiveImporter):
 
     # TODO: Validate
     @override
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        vod_file = self.vod_file(title_key)
-        vod_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        hero = vod_hero(vod_file.parsed())
-        premiere = release_date(hero)
-        return [
-            TMDBLookupInfo(
-                movie_title(hero),
-                TMDBMediaType.movie,
-                premiere.year if premiere else None,
-            ),
-        ]
-
-    # TODO: Validate
-    @override
     def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
         return [self.vod_file(title_key)]
 
@@ -326,11 +295,13 @@ class HiDiveMovieImporter(HiDiveImporter):
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             hero = vod_hero(self.vod_file(title_key).parsed())
+            premiere = release_date(hero)
             data_timestamps = self.title_data_timestamps(title_key)
             new_title = Title(
                 key=title_key,
                 name=movie_title(hero),
                 description=movie_description(hero),
+                year=premiere.year if premiere else None,
                 url=title_url(title_key, MOVIE_MEDIA_TYPE),
                 image_url=hero_image_url(hero),
                 thumbnail_url=hero_image_url(hero),

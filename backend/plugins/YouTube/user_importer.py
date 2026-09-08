@@ -14,7 +14,6 @@ from app.utils import tz_datetime
 from plugins.YouTube.importer import YouTubeImporter
 from plugins.YouTube.utils import (
     image_url,
-    is_usa_video,
     playlist_url,
     thumbnail_url,
     video_is_valid,
@@ -45,11 +44,13 @@ class YouTubeUserImporter(YouTubeImporter):
                 f"likely not found when downloaded."
             )
             raise ValueError(msg)
-        return [
-            item.content_details.video_id
-            for item in playlist_items_file.parsed().items
-            if video_is_valid(item.snippet.title)
-        ]
+        return list(
+            dict.fromkeys(
+                item.content_details.video_id
+                for item in playlist_items_file.items()
+                if video_is_valid(item.snippet.title)
+            ),
+        )
 
     # TODO: Validate
     @override
@@ -103,21 +104,18 @@ class YouTubeUserImporter(YouTubeImporter):
         season: Season,
         title_key: str,
         *,
-        usa_only: bool = False,
         force: bool = False,
     ) -> None:
         seen: set[str] = set()
-        for item in self.playlist_items_file(season.key).parsed().items:
+        for item in self.playlist_items_file(season.key).items():
             episode_key = item.content_details.video_id
             if not video_is_valid(item.snippet.title) or episode_key in seen:
                 continue
-            if usa_only and not is_usa_video(self.videos_file(episode_key)):
-                continue
-            seen.add(episode_key)
             self._upsert_episode(
                 season,
                 title_key,
                 episode_key,
-                item.snippet.position,
+                len(seen),
                 force=force,
             )
+            seen.add(episode_key)

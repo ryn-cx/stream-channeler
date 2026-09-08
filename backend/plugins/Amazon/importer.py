@@ -10,11 +10,9 @@ from typing import TYPE_CHECKING, Any, override
 
 from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
-from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.sources.models import Source
 from app.titles.models import Title
-from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.Amazon.constants import (
     AMAZON_URL_REGEX,
@@ -24,7 +22,7 @@ from plugins.Amazon.constants import (
 )
 from plugins.Amazon.shared import AmazonShared
 from plugins.Amazon.utils import AmazonSeason, detail_url, parse_date
-from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
+from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import URLTitleInfo
 
@@ -99,18 +97,6 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
     # TODO: Validate
     def _title_url(self, title_key: str) -> str:
         return detail_url(self.detail_file(title_key).compact_key())
-
-    # TODO: Validate
-    def _tmdb_lookup_info(
-        self,
-        title_key: str,
-        media_type: TMDBMediaType,
-    ) -> list[TMDBLookupInfo]:
-        page = self.detail_file(title_key)
-        page.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        return [
-            TMDBLookupInfo(page.series_title(), media_type, page.release_year()),
-        ]
 
     # TODO: Validate
     @override
@@ -213,11 +199,6 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
 
 # TODO: Validate
 class AmazonSeriesImporter(AmazonImporter):
-    # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        return self._tmdb_lookup_info(title_key, TMDBMediaType.tv)
-
     # TODO: Validate
     @override
     def _episode_keys_from_season_files(
@@ -335,11 +316,6 @@ class AmazonSeriesImporter(AmazonImporter):
 
 # TODO: Validate
 class AmazonMovieImporter(AmazonImporter):
-    # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        return self._tmdb_lookup_info(title_key, TMDBMediaType.movie)
-
     # TODO: Validate
     @override
     def _episode_keys_from_season_files(

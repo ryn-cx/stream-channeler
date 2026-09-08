@@ -25,6 +25,8 @@ from plugins.utils.base_plugin.base import BaseReadURL
 from plugins.utils.base_plugin.initialize import BasePluginInitializer
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
     from app.media.media_type import TMDBMediaType
     from app.titles.models import Title
 
@@ -70,7 +72,7 @@ class Crunchyroll(
 
     # TODO: Validate
     @override
-    def media_importer_from_url(self, url: str) -> CrunchyrollImporter:
+    def _media_importer_from_url(self, url: str) -> CrunchyrollImporter:
         domain_regex = self._domain_regex()
         for url_regex in (MUSIC_VIDEO_URL_REGEX, CONCERT_URL_REGEX, ARTIST_URL_REGEX):
             if re.match(domain_regex + url_regex, url):
@@ -84,17 +86,22 @@ class Crunchyroll(
 
     # TODO: Validate
     @override
-    def media_importer_from_title(self, title: Title) -> CrunchyrollImporter:
-        return self.get_media_importer_from_source(title.source)
-
-    @override
-    def get_media_importer_from_source(self, source: Source) -> CrunchyrollImporter:
-        if source.key == MUSIC_SOURCE:
+    def _media_importer_from_title(self, title: Title) -> CrunchyrollImporter:
+        if title.source.key == MUSIC_SOURCE:
             return CrunchyrollMusicImporter(self)
         return CrunchyrollAnimeImporter(self)
 
+    # TODO: Validate
     @override
-    def search_for_url(
+    def update_source(self, source: Source, update_at: datetime) -> None:
+        if source.key == MUSIC_SOURCE:
+            CrunchyrollMusicImporter(self).update_source(source, update_at)
+        else:
+            CrunchyrollAnimeImporter(self).update_source(source, update_at)
+
+    # TODO: Validate
+    @override
+    def search_for_title_url(
         self,
         names: list[str],
         media_type: TMDBMediaType,

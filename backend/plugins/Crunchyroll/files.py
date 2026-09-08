@@ -198,7 +198,3 @@ class Search(EndpointFile[SearchModel]):
     @override
     def _endpoint(self) -> SearchEndpoint:
         return chirashi().search
-
-    @override
-    def _next_update_at(self) -> datetime:
-        return tz_datetime.now() + timedelta(days=30)

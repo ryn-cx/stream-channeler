@@ -10,7 +10,6 @@ from loguru import logger
 from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.files.models import File
-from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.sources.models import Source
 from app.titles.models import Title
@@ -37,7 +36,7 @@ from plugins.Crunchyroll.utils import (
     title_image,
     title_thumbnail,
 )
-from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
+from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.files import COMPLETED_STATUS, INITIAL_FILE_IDENTIFIER
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import URLTitleInfo
@@ -133,12 +132,6 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
-
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        series_data = self.series_file(title_key).parsed().data[0]
-        media_type = TMDBMediaType.movie if is_movie(series_data) else TMDBMediaType.tv
-        year = series_data.series_launch_year
-        return [TMDBLookupInfo(series_data.title, media_type, year)]
 
     @override
     def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:

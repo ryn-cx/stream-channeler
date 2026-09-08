@@ -55,7 +55,7 @@ def match_imported_titles_to_tmdb(
         link_plugin_title_to_tmdb(
             session,
             title,
-            plugin_instance.tmdb_lookup_info(title.key),
+            plugin_instance.tmdb_lookup_info(title),
         )
 
 

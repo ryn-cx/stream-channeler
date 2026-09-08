@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any, override
 
 from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
-from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.titles.models import Title
 from app.utils.update_at import staggered_monthly_update_at
@@ -31,7 +30,7 @@ from plugins.Pluto.utils import (
     series_url,
     split_season_key,
 )
-from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
+from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import URLTitleInfo
 
@@ -74,11 +73,6 @@ class PlutoSeriesImporter(PlutoImporter):
     # TODO: Validate
     def _series(self, title_key: str) -> SeasonsModel:
         return self.seasons_file(title_key).parsed()
-
-    # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        return [TMDBLookupInfo(self._series(title_key).name, TMDBMediaType.tv, None)]
 
     # TODO: Validate
     def _seasons(self, title_key: str) -> list[SeriesSeason]:
@@ -268,11 +262,6 @@ class PlutoMovieImporter(PlutoImporter):
     # TODO: Validate
     def _item(self, title_key: str) -> ItemsModelItem:
         return self.items_file(title_key).parsed().root[0]
-
-    # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        return [TMDBLookupInfo(self._item(title_key).name, TMDBMediaType.movie, None)]
 
     # TODO: Validate
     @override

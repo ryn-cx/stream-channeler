@@ -10,10 +10,8 @@ from typing import TYPE_CHECKING, Any, override
 
 from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
-from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.titles.models import Title
-from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.Tubi.constants import EPISODE_URL_REGEX, MOVIE_URL_REGEX, SERIES_URL_REGEX
 from plugins.Tubi.shared import TubiShared
@@ -29,7 +27,7 @@ from plugins.Tubi.utils import (
     series_url,
     split_season_key,
 )
-from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
+from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import URLTitleInfo
 
@@ -73,18 +71,6 @@ class TubiImporter(TubiShared, BaseImporter, ABC):
     ) -> Sequence[BaseFile[Any]]:
         return [self.content_file(title_key)]
 
-    # TODO: Validate
-    def _tmdb_lookup_info(
-        self,
-        title_key: str,
-        media_type: TMDBMediaType,
-    ) -> list[TMDBLookupInfo]:
-        self.content_file(title_key).download_if_outdated(
-            tz_datetime.now() - timedelta(days=7),
-        )
-        content = self._content(title_key)
-        return [TMDBLookupInfo(content.title, media_type, content.year)]
-
 
 # TODO: Validate
 class TubiSeriesImporter(TubiImporter):
@@ -114,11 +100,6 @@ class TubiSeriesImporter(TubiImporter):
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
-
-    # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        return self._tmdb_lookup_info(title_key, TMDBMediaType.tv)
 
     # TODO: Validate
     def _seasons(self, title_key: str) -> list[SeasonChild]:
@@ -171,6 +152,7 @@ class TubiSeriesImporter(TubiImporter):
                 name=content.title,
                 description=content.description,
                 media_type="Series",
+                year=content.year,
                 url=series_url(title_key),
                 image_url=first_image(content.backgrounds),
                 thumbnail_url=first_image(content.backgrounds),
@@ -276,11 +258,6 @@ class TubiMovieImporter(TubiImporter):
 
     # TODO: Validate
     @override
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        return self._tmdb_lookup_info(title_key, TMDBMediaType.movie)
-
-    # TODO: Validate
-    @override
     def _season_keys_from_title_files(self, title_key: str) -> list[str]:
         return [movie_season_key(title_key)]
 
@@ -313,6 +290,7 @@ class TubiMovieImporter(TubiImporter):
                 name=content.title,
                 description=content.description,
                 media_type="Movie",
+                year=content.year,
                 url=movie_url(title_key),
                 image_url=first_image(content.backgrounds),
                 thumbnail_url=first_image(content.backgrounds),

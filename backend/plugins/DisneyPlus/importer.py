@@ -5,15 +5,12 @@ from __future__ import annotations
 
 import re
 from abc import ABC
-from datetime import timedelta
 from typing import TYPE_CHECKING, Any, override
 
 from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
-from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.titles.models import Title
-from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.DisneyPlus.constants import ENTITY_URL_REGEX
 from plugins.DisneyPlus.shared import DisneyPlusShared
@@ -30,7 +27,7 @@ from plugins.DisneyPlus.utils import (
     title_url,
     video_url,
 )
-from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
+from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import URLTitleInfo
 
@@ -82,31 +79,9 @@ class DisneyPlusImporter(DisneyPlusShared, BaseImporter, ABC):
         # Required to detect changes to the title and new seasons of it.
         return [self.entity_file(title_key)]
 
-    # TODO: Validate
-    def _tmdb_lookup_info(
-        self,
-        title_key: str,
-        media_type: TMDBMediaType,
-    ) -> list[TMDBLookupInfo]:
-        self.entity_file(title_key).download_if_outdated(
-            tz_datetime.now() - timedelta(days=7),
-        )
-        return [
-            TMDBLookupInfo(
-                required_value(self._media_details(title_key).title, "title"),
-                media_type,
-                release_year(self._entity(title_key)),
-            ),
-        ]
-
 
 # TODO: Validate
 class DisneyPlusSeriesImporter(DisneyPlusImporter):
-    # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        return self._tmdb_lookup_info(title_key, TMDBMediaType.tv)
-
     # TODO: Validate
     def _seasons(self, title_key: str) -> list[EntitySeason]:
         return seasons(self._entity(title_key))
@@ -264,11 +239,6 @@ class DisneyPlusSeriesImporter(DisneyPlusImporter):
 
 # TODO: Validate
 class DisneyPlusMovieImporter(DisneyPlusImporter):
-    # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        return self._tmdb_lookup_info(title_key, TMDBMediaType.movie)
-
     # TODO: Validate
     @override
     def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:

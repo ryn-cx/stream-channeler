@@ -1,11 +1,9 @@
 # TODO: Validate
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import TYPE_CHECKING, override
 
 from app.media.media_type import TMDBMediaType
-from app.utils import tz_datetime
 from plugins.NHKWorld.constants import TITLE_URL_REGEX
 from plugins.NHKWorld.importer import NHKWorldImporter
 from plugins.NHKWorld.shared import NHKWorldShared
@@ -42,12 +40,12 @@ class NHKWorld(NHKWorldShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def media_importer_from_url(self, url: str) -> NHKWorldImporter:
+    def _media_importer_from_url(self, url: str) -> NHKWorldImporter:
         return NHKWorldImporter(self)
 
     # TODO: Validate
     @override
-    def media_importer_from_title(self, title: Title) -> NHKWorldImporter:
+    def _media_importer_from_title(self, title: Title) -> NHKWorldImporter:
         return NHKWorldImporter(self)
 
     # TODO: Validate
@@ -63,13 +61,11 @@ class NHKWorld(NHKWorldShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def search_for_url(
+    def search_for_title_url(
         self,
         names: list[str],
         media_type: TMDBMediaType,
         year: int | None = None,
     ) -> str | None:
-        search_file = self.titles_search_file(names[0], 0)
-        search_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        hits = search_file.parsed().hits.hits
+        hits = self.titles_search_file(names[0], 0).parsed().hits.hits
         return build_url(hits[0].field_source.url) if hits else None

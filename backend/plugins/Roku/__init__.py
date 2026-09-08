@@ -32,7 +32,7 @@ class Roku(RokuShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def media_importer_from_url(self, url: str) -> RokuImporter:
+    def _media_importer_from_url(self, url: str) -> RokuImporter:
         domain_regex = self._domain_regex()
         for url_regex in self._url_regexes():
             if match := re.match(domain_regex + url_regex, url):
@@ -56,7 +56,7 @@ class Roku(RokuShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def media_importer_from_title(self, title: Title) -> RokuImporter:
+    def _media_importer_from_title(self, title: Title) -> RokuImporter:
         if not title.media_type:
             msg = "Title.media_type is not set."
             raise AttributeError(msg)

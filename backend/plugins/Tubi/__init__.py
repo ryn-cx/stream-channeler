@@ -31,7 +31,7 @@ class Tubi(TubiShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def media_importer_from_url(self, url: str) -> TubiImporter:
+    def _media_importer_from_url(self, url: str) -> TubiImporter:
         domain_regex = self._domain_regex()
         if re.match(domain_regex + MOVIE_URL_REGEX, url):
             return TubiMovieImporter(self)
@@ -47,7 +47,7 @@ class Tubi(TubiShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def media_importer_from_title(self, title: Title) -> TubiImporter:
+    def _media_importer_from_title(self, title: Title) -> TubiImporter:
         if not title.media_type:
             msg = "Title.media_type is not set."
             raise AttributeError(msg)

@@ -220,17 +220,16 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
         return self._import_results(existing_title, media_info)
 
     # TODO: Validate
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
+    def tmdb_lookup_info(self, title: Title) -> list[TMDBLookupInfo]:
         """Return what to look a title up on TMDB by, where TMDB holds one.
 
         A channel, a playlist and a musician's releases are things YouTube has
         and TMDB does not, so nothing is looked up for them and they are left
         standing for themselves.
         """
-        title = self._preload_title(title_key).one_or_none()
-        if title is None or not title.name:
+        if not title.name:
             return []
-        return [TMDBLookupInfo(title.name, self.tmdb_media_type(title_key), None)]
+        return [TMDBLookupInfo(title.name, self.tmdb_media_type(title.key), None)]
 
     # TODO: Validate
     def _upsert_episodes_in_file_order(

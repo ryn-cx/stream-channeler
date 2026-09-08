@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any, override
 
 from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
-from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.titles.models import Title
 from plugins.AdultSwim.constants import EPISODE_URL_REGEX, TITLE_URL_REGEX
@@ -21,7 +20,7 @@ from plugins.AdultSwim.utils import (
     source_requires_auth,
     title_url,
 )
-from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
+from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import URLTitleInfo
 
@@ -88,12 +87,6 @@ class AdultSwimImporter(AdultSwimShared, BaseImporter):
             for title in titles
             for result in self._import_results(title, media_info)
         ]
-
-    # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        title_page = self.title_file(title_key)
-        return [TMDBLookupInfo(title_page.parsed().title, TMDBMediaType.tv, None)]
 
     # TODO: Validate
     @override

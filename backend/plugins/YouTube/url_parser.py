@@ -80,7 +80,7 @@ class ParsedURL(NamedTuple):
 class YouTubeURLParserMixin(YouTubeBaseFiles):
     # TODO: Validate
     @override
-    def media_importer_from_url(self, url: str) -> YouTubeImporter:
+    def _media_importer_from_url(self, url: str) -> YouTubeImporter:
         parsed = self._parsed_url(url)
         importer = self.media_importer_from_title_key(parsed.title_key)
         importer.parsed_url = parsed
@@ -179,9 +179,7 @@ class YouTubeURLParserMixin(YouTubeBaseFiles):
 
         playlist_items_file = self.playlist_items_file(playlist_key)
         self.raise_if_invalid_file(playlist_items_file, url)
-        title_key = get_first_item(
-            playlist_items_file.parsed().items,
-        ).snippet.channel_id
+        title_key = get_first_item(playlist_items_file.items()).snippet.channel_id
         return ParsedURL(title_key, playlist_key)
 
     # TODO: Validate
@@ -271,7 +269,7 @@ class YouTubeURLParserMixin(YouTubeBaseFiles):
             return None
         video_keys = [
             item.content_details.video_id
-            for item in uploads_file.parsed().items
+            for item in uploads_file.items()
             if video_is_valid(item.snippet.title)
         ]
         if not video_keys:

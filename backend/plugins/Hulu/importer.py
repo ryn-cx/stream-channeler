@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any, override
 
 from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
-from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.titles.models import Title
 from plugins.Hulu.constants import (
@@ -27,7 +26,7 @@ from plugins.Hulu.utils import (
     title_plan,
     title_url,
 )
-from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
+from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import URLTitleInfo
 
@@ -44,9 +43,6 @@ if TYPE_CHECKING:
 class HuluImporter(HuluShared, BaseImporter, ABC):
     @abstractmethod
     def _media_type_name(self) -> str: ...
-
-    @abstractmethod
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]: ...
 
     @abstractmethod
     @override
@@ -126,17 +122,6 @@ class HuluSeriesImporter(HuluImporter):
         raise InvalidURLError(msg)
 
     @override
-    def tmdb_lookup_info(
-        self,
-        title_key: str,
-    ) -> list[TMDBLookupInfo]:
-        parsed_series = self.series_file(title_key).parsed()
-        year = None
-        if premiere_date := parsed_series.details.entity.premiere_date:
-            year = premiere_date.year
-        return [TMDBLookupInfo(parsed_series.name, TMDBMediaType.tv, year)]
-
-    @override
     def _title_files(self, title_key: str) -> Sequence[Series]:
         return [self.series_file(title_key)]
 
@@ -183,6 +168,7 @@ class HuluSeriesImporter(HuluImporter):
             ]
         return episode_keys
 
+    # TODO: Validate
     @override
     def upsert_title(
         self,
@@ -200,6 +186,7 @@ class HuluSeriesImporter(HuluImporter):
                 key=title_key,
                 name=parsed_series.name,
                 description=entity.description,
+                year=entity.premiere_date.year if entity.premiere_date else None,
                 # TODO: There are mini series or documentary labels as well that could
                 # be intermixed here?
                 media_type=self._media_type_name(),
@@ -311,15 +298,6 @@ class HuluMovieImporter(HuluImporter):
         return URLTitleInfo(title_key)
 
     @override
-    def tmdb_lookup_info(
-        self,
-        title_key: str,
-    ) -> list[TMDBLookupInfo]:
-        parsed_movie = self.movie_file(title_key).parsed()
-        year = parsed_movie.details.entity.premiere_date.year
-        return [TMDBLookupInfo(parsed_movie.name, TMDBMediaType.movie, year)]
-
-    @override
     def _title_files(self, title_key: str) -> Sequence[Movie]:
         return [self.movie_file(title_key)]
 
@@ -350,6 +328,7 @@ class HuluMovieImporter(HuluImporter):
             season_keys = [season_keys]
         return list(season_keys)
 
+    # TODO: Validate
     @override
     def upsert_title(
         self,
@@ -366,6 +345,7 @@ class HuluMovieImporter(HuluImporter):
                 key=title_key,
                 name=parsed_movie.name,
                 description=parsed_movie.details.entity.description,
+                year=parsed_movie.details.entity.premiere_date.year,
                 url=title_url(title_key, HuluMediaType.MOVIE),
                 image_url=image_url(parsed_movie.artwork.program_tile.path),
                 thumbnail_url=thumbnail_url(parsed_movie.artwork.program_tile.path),

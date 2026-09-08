@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, override
 
 from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
-from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.titles.models import Title
 from app.utils.update_at import staggered_monthly_update_at
@@ -27,7 +26,7 @@ from plugins.HBOMax.utils import (
     title_content,
     title_url,
 )
-from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
+from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import URLTitleInfo
 
@@ -68,18 +67,6 @@ class HBOMaxSeriesImporter(HBOMaxImporter):
     # TODO: Validate
     def _title_content(self, title_key: str) -> TitleContent:
         return title_content(self.title_file(title_key).parsed())
-
-    # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        content = self._title_content(title_key)
-        return [
-            TMDBLookupInfo(
-                content.title.full,
-                TMDBMediaType.tv,
-                int(content.release_year),
-            ),
-        ]
 
     # TODO: Validate
     @override
@@ -158,6 +145,7 @@ class HBOMaxSeriesImporter(HBOMaxImporter):
                 description=content.summary.full,
                 media_type="Series",
                 url=title_url(title_key),
+                year=int(content.release_year),
                 image_url=content.image_url_link,
                 thumbnail_url=content.image_url_link,
                 data_timestamp=max(data_timestamps),
@@ -267,18 +255,6 @@ class HBOMaxMovieImporter(HBOMaxImporter):
 
     # TODO: Validate
     @override
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        content = self._movie_content(title_key)
-        return [
-            TMDBLookupInfo(
-                content.title.full,
-                TMDBMediaType.movie,
-                int(content.release_year),
-            ),
-        ]
-
-    # TODO: Validate
-    @override
     def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
         return [self.movie_file(title_key)]
 
@@ -332,6 +308,7 @@ class HBOMaxMovieImporter(HBOMaxImporter):
                 description=content.summary.full,
                 media_type="Movie",
                 url=movie_url(title_key),
+                year=int(content.release_year),
                 image_url=content.image_url_link,
                 thumbnail_url=content.image_url_link,
                 data_timestamp=max(data_timestamps),

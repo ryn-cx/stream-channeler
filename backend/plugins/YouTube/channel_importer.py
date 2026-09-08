@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any, override
 
 from app.titles.models import Title
 from app.utils import tz_datetime
-from plugins.YouTube.licensed_importer import YouTubeLicensedMediaImporter
 from plugins.YouTube.music_importer import YouTubeMusicSeasons
 from plugins.YouTube.user_importer import YouTubeUserImporter
 from plugins.YouTube.utils import (
@@ -15,15 +14,11 @@ from plugins.YouTube.utils import (
     get_first_item,
     image_url,
     is_an_album,
-    is_movies_channel,
-    is_usa_video,
     thumbnail_url,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-
-    from not_yt_dlapi.channels.models import Item as ChannelItem
 
     from app.seasons.models import Season
     from app.sources.models import Source
@@ -33,7 +28,6 @@ if TYPE_CHECKING:
 # TODO: Validate
 class YouTubeChannelImporter(
     YouTubeUserImporter,
-    YouTubeLicensedMediaImporter,
     YouTubeMusicSeasons,
 ):
     # TODO: Validate
@@ -49,10 +43,6 @@ class YouTubeChannelImporter(
     # TODO: Validate
     @override
     def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
-        # A channel generated for one title has no seasons but its uploads, so what
-        # it lists is never read.
-        if is_movies_channel(self.channel_by_channel_id_file(title_key)):
-            return [self.channel_by_channel_id_file(title_key)]
         return [
             # Required to detect new seasons (playlists).
             self.channel_playlists_file(title_key),
@@ -94,12 +84,6 @@ class YouTubeChannelImporter(
         if int(channel_item.statistics.video_count) > 0:
             season_keys.append(channel_uploads_playlist_key(title_key))
 
-        # A channel generated for one title of YouTube's catalogue is that title and
-        # nothing else, so what it uploaded is all of it and what it lists besides is
-        # not the title.
-        if is_movies_channel(self.channel_by_channel_id_file(title_key)):
-            return season_keys
-
         channel_playlists_file = self.channel_playlists_file(title_key)
         if channel_playlists_file.database_record.content:
             season_keys.extend(
@@ -116,31 +100,6 @@ class YouTubeChannelImporter(
         if is_an_album(season_key):
             return self.music_playlist_file(season_key).track_keys()
         return self._playlist_items_episode_keys(season_key)
-
-    # TODO: Validate
-    @override
-    def _episode_keys_from_season_files(
-        self,
-        season_keys: str | list[str],
-        title_key: str,
-    ) -> list[str]:
-        if isinstance(season_keys, str):
-            season_keys = [season_keys]
-        # A channel generated for one title uploads that title once per language it
-        # was published in, and every one of them is the same film, so the one
-        # published here is the only one worth holding.
-        usa_only = is_movies_channel(self.channel_by_channel_id_file(title_key))
-        seen: set[str] = set()
-        video_keys: list[str] = []
-        for season_key in season_keys:
-            for video_key in self._season_episode_keys_from_file(season_key):
-                if video_key in seen:
-                    continue
-                if usa_only and not is_usa_video(self.videos_file(video_key)):
-                    continue
-                seen.add(video_key)
-                video_keys.append(video_key)
-        return video_keys
 
     # TODO: Validate
     @override
@@ -166,12 +125,7 @@ class YouTubeChannelImporter(
         if is_an_album(season.key):
             self._upsert_episodes_in_file_order(season, title_key, force=force)
             return
-        self._upsert_episodes_from_playlist_items(
-            season,
-            title_key,
-            usa_only=is_movies_channel(self.channel_by_channel_id_file(title_key)),
-            force=force,
-        )
+        self._upsert_episodes_from_playlist_items(season, title_key, force=force)
 
     # TODO: Validate
     @override
@@ -182,9 +136,6 @@ class YouTubeChannelImporter(
         *,
         force: bool = False,
     ) -> Title:
-        if is_movies_channel(self.channel_by_channel_id_file(title_key)):
-            source = self.paid_or_free_source(title_key)
-
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             channel_file = self.channel_by_channel_id_file(title_key)
@@ -192,18 +143,14 @@ class YouTubeChannelImporter(
             data_timestamps = self.title_data_timestamps(title_key)
             new_title = Title(
                 key=channel_item.id,
-                name=self._channel_title_name(title_key, channel_item),
+                name=channel_item.snippet.title,
                 url=channel_url(channel_item.id),
-                media_type="Movie"
-                if is_movies_channel(self.channel_by_channel_id_file(title_key))
-                else "YouTube Channel",
+                media_type="YouTube Channel",
                 # Updating every 30 days is reasonable because this is only used for
                 # checking for new playlists and changes to the channel information.
                 update_at=channel_file.data_timestamp() + timedelta(days=365),
                 data_timestamp=max(data_timestamps),
-                canonical_title_validated_at=None
-                if is_movies_channel(self.channel_by_channel_id_file(title_key))
-                else tz_datetime.now(),
+                canonical_title_validated_at=tz_datetime.now(),
                 source_id=source.id,
                 image_url=image_url(channel_item.snippet.thumbnails),
                 thumbnail_url=thumbnail_url(channel_item.snippet.thumbnails),
@@ -217,23 +164,6 @@ class YouTubeChannelImporter(
         return title
 
     # TODO: Validate
-    def _channel_title_name(
-        self,
-        title_key: str,
-        channel_item: ChannelItem,
-    ) -> str | None:
-        # Every channel generated for a title of YouTube's catalogue is named after
-        # the catalogue rather than after the title, so the title is read off what
-        # the channel uploaded, which is that one title however many times over.
-        if not is_movies_channel(self.channel_by_channel_id_file(title_key)):
-            return channel_item.snippet.title
-        episode_keys = self.title_episode_keys_from_files(title_key)
-        if not episode_keys:
-            return channel_item.snippet.title
-        items = self.videos_file(episode_keys[0]).parsed().items
-        return items[0].snippet.title if items else channel_item.snippet.title
-
-    # TODO: Validate
     def _upsert_seasons(
         self,
         title: Title,
@@ -242,8 +172,6 @@ class YouTubeChannelImporter(
         force: bool = False,
     ) -> None:
         self._upsert_season_uploads(title, title_key, force=force)
-        if is_movies_channel(self.channel_by_channel_id_file(title_key)):
-            return
         self._upsert_seasons_playlist(title, title_key, force=force)
         self._upsert_seasons_album(title, title_key, force=force)
 

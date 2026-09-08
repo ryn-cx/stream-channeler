@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
 from functools import cache
 from typing import override
 
@@ -24,7 +23,6 @@ from diving_board.series import models as series_models
 from diving_board.vod import Vod as VodEndpoint
 from diving_board.vod import models as vod_models
 
-from app.utils import tz_datetime
 from plugins.utils.base_plugin.files import EndpointFile, PagedEndpointFile
 from plugins.utils.get_around_client import get_around_client
 
@@ -104,8 +102,3 @@ class Search(EndpointFile[search_models.SearchModel]):
     @override
     def _endpoint(self) -> SearchEndpoint:
         return diving_board().search
-
-    # TODO: Validate
-    @override
-    def _next_update_at(self) -> datetime:
-        return tz_datetime.now() + timedelta(days=30)

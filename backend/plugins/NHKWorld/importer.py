@@ -4,19 +4,16 @@
 from __future__ import annotations
 
 import re
-from datetime import timedelta
 from typing import TYPE_CHECKING, Any, override
 
 from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
-from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.titles.models import Title
-from app.utils import tz_datetime
 from plugins.NHKWorld.constants import TITLE_URL_REGEX
 from plugins.NHKWorld.shared import NHKWorldShared
 from plugins.NHKWorld.utils import build_url, image_url, thumbnail_url
-from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
+from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import URLTitleInfo
 
@@ -45,13 +42,6 @@ class NHKWorldImporter(NHKWorldShared, BaseImporter):
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
-
-    # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        program_file = self.video_program_file(title_key)
-        program_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        return [TMDBLookupInfo(program_file.parsed().title, TMDBMediaType.tv, None)]
 
     # TODO: Validate
     @override

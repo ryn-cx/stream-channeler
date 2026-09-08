@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any, override
 
 from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
-from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.titles.models import Title
 from app.utils.update_at import staggered_monthly_update_at
@@ -22,7 +21,7 @@ from plugins.ParamountPlus.utils import (
     split_season_key,
     title_url,
 )
-from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
+from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import URLTitleInfo
 
@@ -67,15 +66,6 @@ class ParamountPlusSeriesImporter(ParamountPlusImporter):
     # TODO: Validate
     def _season_episodes(self, title_key: str, season_number: int) -> list[Datum]:
         return self.episodes_file(title_key, season_number).parsed().result.data
-
-    # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        first_season = self._season_numbers(title_key)[0]
-        first_episode = self._season_episodes(title_key, first_season)[0]
-        return [
-            TMDBLookupInfo(first_episode.series_title, TMDBMediaType.tv, None),
-        ]
 
     # TODO: Validate
     @override
@@ -248,12 +238,6 @@ class ParamountPlusMovieImporter(ParamountPlusImporter):
     # TODO: Validate
     def _movie_data(self, title_key: str) -> MovieModel:
         return self.movie_file(title_key).parsed()
-
-    # TODO: Validate
-    @override
-    def tmdb_lookup_info(self, title_key: str) -> list[TMDBLookupInfo]:
-        movie = self._movie_data(title_key)
-        return [TMDBLookupInfo(movie.name, TMDBMediaType.movie, None)]
 
     # TODO: Validate
     @override

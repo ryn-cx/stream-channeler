@@ -4,7 +4,7 @@ import re
 from abc import ABC
 from collections import Counter
 from functools import cache
-from typing import Any, override
+from typing import override
 from urllib.parse import parse_qs, urlsplit
 
 from loguru import logger
@@ -103,26 +103,33 @@ class PlaylistInfo(EndpointFile[PlaylistsModel]):
         return self._endpoint().download(playlist_ids=self.unique_identifier)
 
 
-class PlaylistItems(EndpointFile[PlaylistItemsModel]):
+# TODO: Validate
+class PlaylistItems(PagedEndpointFile[PlaylistItemsModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> PlaylistItemsEndpoint:
         return not_yt_dlapi().playlist_items
 
+    # TODO: Validate
     def items(self) -> list[Item]:
-        return self.parsed().items
+        return [item for page in self.parsed() for item in page.items]
 
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
-        # Due to API limits this function merges new videos with existing videos instead
-        # of downloading all videos every time. Over time the PlaylistItems file will
-        # become a mess but that is an acceptable trade-off to significantly reduce API
-        # usage.
-
-        # If this is the first time downloading the file download all of the pages.
         if not self._existing_database_record:
-            return self._endpoint().download_merged(self.unique_identifier)
+            return json.dumps(self._download_pages())
 
-        stored_video_ids = self._stored_video_ids()
+        stored_pages: list[str] = json.loads(self._stored_content())
+        return json.dumps(self._new_pages(stored_pages) + stored_pages)
+
+    # TODO: Validate
+    def _new_pages(self, stored_pages: list[str]) -> list[str]:
+        stored_video_ids = {
+            item["contentDetails"]["videoId"]
+            for page in stored_pages
+            for item in json.loads(page)["items"]
+        }
         pages: list[str] = []
         page_token: str | None = None
         while True:
@@ -134,70 +141,11 @@ class PlaylistItems(EndpointFile[PlaylistItemsModel]):
             loaded_page = self._endpoint().load(downloaded_page, self.log_id())
             page_token = loaded_page.next_page_token
 
-            # If a partial download occurred the downloaded pages need to be merged with
-            # the existing ones.
-            if page_token is None:
-                return self._endpoint().merge_pages(pages)
-
-            # If an existing video is found no more downloads need to be done.
-            if any(
+            if page_token is None or any(
                 item.content_details.video_id in stored_video_ids
                 for item in loaded_page.items
             ):
-                return self._merged_items(pages, self._remove_deleted_items(pages))
-
-    # TODO: Validate
-    def _stored_video_ids(self) -> set[str]:
-        return {
-            item["contentDetails"]["videoId"]
-            for item in json.loads(self._stored_content())["items"]
-        }
-
-    # TODO: Validate
-    def _remove_deleted_items(self, pages: list[str]) -> list[dict[str, Any]]:
-        downloaded_video_ids = self._downloaded_video_ids(pages)
-        stored_items: list[dict[str, Any]] = json.loads(self._stored_content())["items"]
-        kept_from = max(
-            (
-                index + 1
-                for index, item in enumerate(stored_items)
-                if item["contentDetails"]["videoId"] in downloaded_video_ids
-            ),
-            default=0,
-        )
-        return stored_items[kept_from:]
-
-    # TODO: Validate
-    def _downloaded_video_ids(self, pages: list[str]) -> set[str]:
-        return {
-            item["contentDetails"]["videoId"]
-            for page in pages
-            for item in json.loads(page)["items"]
-        }
-
-    # TODO: Validate
-    def _merged_items(
-        self,
-        pages: list[str],
-        kept_items: list[dict[str, Any]],
-    ) -> str:
-        downloaded_video_ids = self._downloaded_video_ids(pages)
-        items = [item for page in pages for item in json.loads(page)["items"]] + [
-            item
-            for item in kept_items
-            if item["contentDetails"]["videoId"] not in downloaded_video_ids
-        ]
-
-        for position, item in enumerate(items):
-            item["snippet"]["position"] = position
-
-        # Use pages[0] as the base because it has the correct value for
-        # .page_info.total_results.
-        document = json.loads(pages[0])
-        document["items"] = items
-        document.pop("nextPageToken", None)
-        document.pop("prevPageToken", None)
-        return json.dumps(document)
+                return pages
 
 
 # TODO: Validate

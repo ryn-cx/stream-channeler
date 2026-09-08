@@ -1,4 +1,3 @@
-from datetime import datetime, timedelta
 from functools import cache
 from typing import override
 
@@ -29,7 +28,6 @@ from wholoo.tv import TV
 from wholoo.tv.models import TVModel
 
 from app.plugins.models import Plugin
-from app.utils import tz_datetime
 from plugins.Hulu.utils import episode_url
 from plugins.utils.base_plugin.files import EndpointFile, TextFile
 from plugins.utils.get_around_client import get_around_client
@@ -93,10 +91,6 @@ class Search(EndpointFile[SearchModel]):
     @override
     def _endpoint(self) -> SearchEndpoint:
         return wholoo().search
-
-    @override
-    def _next_update_at(self) -> datetime:
-        return tz_datetime.now() + timedelta(days=30)
 
 
 class AllSeries(EndpointFile[AllSeriesModel]):

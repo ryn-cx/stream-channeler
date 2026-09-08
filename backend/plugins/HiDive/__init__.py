@@ -50,7 +50,7 @@ class HiDive(
 
     # TODO: Validate
     @override
-    def media_importer_from_url(self, url: str) -> HiDiveImporter:
+    def _media_importer_from_url(self, url: str) -> HiDiveImporter:
         domain_regex = self._domain_regex()
         if re.match(domain_regex + SERIES_URL_REGEX, url):
             return HiDiveSeriesImporter(self)
@@ -64,7 +64,7 @@ class HiDive(
 
     # TODO: Validate
     @override
-    def media_importer_from_title(self, title: Title) -> HiDiveImporter:
+    def _media_importer_from_title(self, title: Title) -> HiDiveImporter:
         if not title.media_type:
             msg = "Title.media_type is not set."
             raise AttributeError(msg)

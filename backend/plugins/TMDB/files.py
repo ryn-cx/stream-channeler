@@ -377,11 +377,6 @@ class SearchMulti(EndpointFile[SearchMultiModel]):
     def _download_file(self) -> str:
         return self._endpoint().download(self.query, page=self.page)
 
-    # TODO: Validate
-    @override
-    def _next_update_at(self) -> datetime:
-        return tz_datetime.now() + timedelta(days=30)
-
 
 # TODO: Validate
 class SearchMovie(EndpointFile[SearchMovieModel]):
@@ -409,11 +404,6 @@ class SearchMovie(EndpointFile[SearchMovieModel]):
     def _download_file(self) -> str:
         return self._endpoint().download(self.query, year=self.year)
 
-    # TODO: Validate
-    @override
-    def _next_update_at(self) -> datetime:
-        return tz_datetime.now() + timedelta(days=30)
-
 
 # TODO: Validate
 class SearchTV(EndpointFile[SearchTvModel]):
@@ -440,8 +430,3 @@ class SearchTV(EndpointFile[SearchTvModel]):
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(self.query, year=self.year)
-
-    # TODO: Validate
-    @override
-    def _next_update_at(self) -> datetime:
-        return tz_datetime.now() + timedelta(days=30)

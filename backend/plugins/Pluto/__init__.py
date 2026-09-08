@@ -35,7 +35,7 @@ class Pluto(PlutoShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def media_importer_from_url(self, url: str) -> PlutoImporter:
+    def _media_importer_from_url(self, url: str) -> PlutoImporter:
         domain_regex = self._domain_regex()
         if re.match(domain_regex + MOVIE_URL_REGEX, url):
             return PlutoMovieImporter(self)
@@ -47,7 +47,7 @@ class Pluto(PlutoShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def media_importer_from_title(self, title: Title) -> PlutoImporter:
+    def _media_importer_from_title(self, title: Title) -> PlutoImporter:
         if not title.media_type:
             msg = "Title.media_type is not set."
             raise AttributeError(msg)

@@ -10,6 +10,7 @@ from app.channels.channel_scope import in_a_user_channel
 from app.database import engine, load_models
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
+from app.sources.models import Source
 from app.titles.models import Title
 from app.titles.service.linking import link_plugin_title_to_tmdb
 from plugins.utils.manage_plugins import (
@@ -26,6 +27,7 @@ def _titles_due_for_linking(session: Session) -> Sequence[Title]:
     return session.exec(
         Title.select_with_plugin()
         .where(col(Title.link_status).is_(None))
+        .where(col(Source.link_to_tmdb).is_(True))
         .where(Plugin.key != TMDB_PLUGIN_KEY)
         .order_by(in_a_user_channel().desc(), col(Title.modified_at).asc()),
     ).all()
@@ -59,7 +61,7 @@ def link_titles_to_tmdb(session: Session) -> None:
         logger.info(f"[{plugin_key}] Linking to TMDB: {title.name or title.key}")
         plugin_instance = plugin_class(session, title.source.plugin)
         try:
-            tmdb_lookup_info = plugin_instance.tmdb_lookup_info(title.key)
+            tmdb_lookup_info = plugin_instance.tmdb_lookup_info(title)
             link_plugin_title_to_tmdb(session, title, tmdb_lookup_info)
         except NotImplementedError:
             logger.info(f"[{plugin_key}] Does not look its titles up on TMDB")

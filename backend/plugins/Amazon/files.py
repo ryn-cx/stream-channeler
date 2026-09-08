@@ -9,7 +9,7 @@ what asks for them and what turns them into models.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from functools import cache
 from typing import TYPE_CHECKING, Any, override
 
@@ -22,7 +22,6 @@ from deforestation.exceptions import RedirectedError, TitleNotFoundError
 from deforestation.search import Search as SearchEndpoint
 from deforestation.search.models import SearchModel
 
-from app.utils import tz_datetime
 from plugins.Amazon.constants import PRIME_BENEFIT_ID
 from plugins.Amazon.keys import title_key_from_location
 from plugins.Amazon.utils import (
@@ -553,11 +552,6 @@ class Search(EndpointFile[SearchModel]):
     @override
     def _endpoint(self) -> SearchEndpoint:
         return deforestation().search
-
-    # TODO: Validate
-    @override
-    def _next_update_at(self) -> datetime:
-        return tz_datetime.now() + timedelta(days=30)
 
     # TODO: Validate
     def results(self) -> list[str]:

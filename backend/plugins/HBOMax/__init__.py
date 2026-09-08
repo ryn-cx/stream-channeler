@@ -35,7 +35,7 @@ class HBOMax(HBOMaxShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def media_importer_from_url(self, url: str) -> HBOMaxImporter:
+    def _media_importer_from_url(self, url: str) -> HBOMaxImporter:
         domain_regex = self._domain_regex()
         if re.match(domain_regex + MOVIE_URL_REGEX, url):
             return HBOMaxMovieImporter(self)
@@ -47,7 +47,7 @@ class HBOMax(HBOMaxShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def media_importer_from_title(self, title: Title) -> HBOMaxImporter:
+    def _media_importer_from_title(self, title: Title) -> HBOMaxImporter:
         if not title.media_type:
             msg = "Title.media_type is not set."
             raise AttributeError(msg)

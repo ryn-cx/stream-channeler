@@ -66,7 +66,7 @@ class YouTube(
 
     # TODO: Validate
     @override
-    def media_importer_from_title(self, title: Title) -> YouTubeImporter:
+    def _media_importer_from_title(self, title: Title) -> YouTubeImporter:
         if title.media_type == "YouTube Artist":
             return YouTubeTopicImporter(self)
         return self.media_importer_from_title_key(title.key)

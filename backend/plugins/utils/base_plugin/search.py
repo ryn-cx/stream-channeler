@@ -50,7 +50,7 @@ class BaseCatalogueSearchMixin(BasePlugin, ABC):
         return ("Series",)
 
     # TODO: Validate
-    def search_for_url(
+    def search_for_title_url(
         self,
         names: list[str],
         media_type: TMDBMediaType,
