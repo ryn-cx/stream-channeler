@@ -144,6 +144,7 @@ class BaseFileAccessMixin(ABC):
     def raise_invalid_url_if_no_content(self, file: BaseFile[Any], url: str) -> None:
         """Raise an InvalidURLError if the given file has no content."""
         try:
+            file.download_if_outdated()
             file.content()
         except ValueError as error:
             msg = f"Invalid {self.plugin_name()} URL: {url}"

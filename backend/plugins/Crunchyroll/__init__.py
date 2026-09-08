@@ -119,7 +119,9 @@ class Crunchyroll(
         media_type: TMDBMediaType,
         year: int | None = None,
     ) -> str | None:
-        for datum in self.search_file(names[0]).parsed().data:
+        search_file = self.search_file(names[0])
+        search_file.download_if_outdated()
+        for datum in search_file.parsed().data:
             for item in datum.items:
                 # Series doesn't actually differentiate between movies and series as all
                 # movies are also labeled as series here.

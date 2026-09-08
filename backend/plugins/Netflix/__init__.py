@@ -77,6 +77,7 @@ class Netflix(NetflixShared, BaseReadURL, AbstractPlugin, register=False):
         year: int | None = None,
     ) -> str | None:
         search_file = self.search_file(names[0])
+        search_file.download_if_outdated()
         for section in search_file.parsed().data.page.sections.edges:
             for entity in section.node.entities.edges:
                 unified_entity = entity.node.unified_entity

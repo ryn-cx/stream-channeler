@@ -95,7 +95,9 @@ class Amazon(AmazonShared, BaseReadURL, AbstractPlugin, register=False):
         media_type: TMDBMediaType,
         year: int | None = None,
     ) -> str | None:
-        results = self.search_file(names[0]).results()
+        search_file = self.search_file(names[0])
+        search_file.download_if_outdated()
+        results = search_file.results()
         return detail_url(results[0]) if results else None
 
     # TODO: Validate

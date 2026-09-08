@@ -50,7 +50,9 @@ class TMDBExternalWebsites(TMDBShared, ABC):
         plugins_with_non_canonical_titles = self.plugins_with_non_canonical_titles(
             title,
         )
-        for provider in streaming_providers(self._provider_file(title.key).parsed()):
+        provider_file = self._provider_file(title.key)
+        provider_file.download_if_outdated()
+        for provider in streaming_providers(provider_file.parsed()):
             media_plugin = get_media_plugin(provider.provider_name)
 
             # If there is no matching plugin the website's name is logged into the

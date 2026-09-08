@@ -61,21 +61,24 @@ class TMDBShared(TMDBSearch):
     def media_info(self, media_identifier: str) -> TMDBMediaInfo:
         media_type, tmdb_media_id = get_media_type_and_tmdb_id(media_identifier)
         if media_type == TMDBMediaType.movie:
+            movie_details_file = self.movies_details_file(tmdb_media_id)
+            movie_providers_file = (
+                self._get_or_create_latest_movies_watch_providers_file(tmdb_media_id)
+            )
+            self._download_if_outdated([movie_details_file, movie_providers_file])
             return TMDBMediaInfo(
-                detail=self.movies_details_file(tmdb_media_id).parsed(),
-                watch_providers=self._get_or_create_latest_movies_watch_providers_file(
-                    tmdb_media_id,
-                )
-                .parsed()
-                .results.us,
+                detail=movie_details_file.parsed(),
+                watch_providers=movie_providers_file.parsed().results.us,
             )
+
+        series_details_file = self.tv_series_details_file(tmdb_media_id)
+        series_providers_file = (
+            self._get_or_create_latest_tv_series_watch_providers_file(tmdb_media_id)
+        )
+        self._download_if_outdated([series_details_file, series_providers_file])
         return TMDBMediaInfo(
-            detail=self.tv_series_details_file(tmdb_media_id).parsed(),
-            watch_providers=self._get_or_create_latest_tv_series_watch_providers_file(
-                tmdb_media_id,
-            )
-            .parsed()
-            .results.us,
+            detail=series_details_file.parsed(),
+            watch_providers=series_providers_file.parsed().results.us,
         )
 
     # TODO: Validate

@@ -75,5 +75,7 @@ class NHKWorld(NHKWorldShared, BaseReadURL, AbstractPlugin, register=False):
         media_type: TMDBMediaType,
         year: int | None = None,
     ) -> str | None:
-        hits = self.titles_search_file(names[0], 0).parsed().hits.hits
+        search_file = self.titles_search_file(names[0], 0)
+        search_file.download_if_outdated()
+        hits = search_file.parsed().hits.hits
         return build_url(hits[0].field_source.url) if hits else None

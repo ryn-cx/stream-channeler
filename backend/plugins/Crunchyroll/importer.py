@@ -341,7 +341,9 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
 
     # TODO: Validate
     def create_channel_records(self) -> None:
-        self._create_channel_records_from_file(self.catalogue_file().datums())
+        catalogue_file = self.catalogue_file()
+        catalogue_file.download_if_outdated()
+        self._create_channel_records_from_file(catalogue_file.datums())
         for browse_json in self._incomplete_files(BrowseSeries, self.browse_file):
             self._create_channel_records_from_file(browse_json.datums())
             browse_json.clear_status()
@@ -379,11 +381,13 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
     def update_source(self, source: Source, update_at: datetime) -> None:
         browse_file = self.newest_browse_file()
         browse_file.download_if_outdated()
+        catalogue_file = self.catalogue_file()
+        catalogue_file.download_if_outdated()
         self.create_channel_records()
         self._mark_new_titles_as_outdated(browse_file.datums())
         self._mark_mismatched_titles_as_outdated(
             self.source_name(),
-            {release.id for release in self.catalogue_file().datums()},
+            {release.id for release in catalogue_file.datums()},
             self._source_files_data_timestamps(),
         )
         self.upsert_source(self.source_name())
@@ -634,8 +638,10 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
 
     # TODO: Validate
     def create_channel_records(self) -> None:
+        browse_file = self.browse_file()
+        browse_file.download_if_outdated()
         self._add_urls_to_channel_by_prefix(
-            [self.title_url(artist.id) for artist in self.browse_file().datums()],
+            [self.title_url(artist.id) for artist in browse_file.datums()],
             "All Music",
         )
 

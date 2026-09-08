@@ -178,6 +178,7 @@ class TMDBSeries(TMDBImporter):
     def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
         _, tmdb_tv_title_id = get_media_type_and_tmdb_id(title_key)
         groups_file = self.tv_series_episode_groups_file(tmdb_tv_title_id)
+        groups_file.download_if_outdated()
         return [
             self.get_or_create_latest_tv_series_changes_file(tmdb_tv_title_id),
             self.tv_series_details_file(tmdb_tv_title_id),
@@ -406,7 +407,9 @@ class TMDBSeries(TMDBImporter):
             {},
         )
         if tmdb_tv_title_id not in cached:
-            images = self.tv_series_images_file(tmdb_tv_title_id).parsed()
+            images_file = self.tv_series_images_file(tmdb_tv_title_id)
+            images_file.download_if_outdated()
+            images = images_file.parsed()
             cached[tmdb_tv_title_id] = [
                 backdrop.file_path for backdrop in images.backdrops
             ]

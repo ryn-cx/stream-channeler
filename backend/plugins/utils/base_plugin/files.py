@@ -220,7 +220,6 @@ class BaseFile[T](ABC):
     # TODO: Validate
     @final
     def content(self) -> str:
-        self.download_if_outdated()
         if not (content := self.record_content):
             msg = f"{self.class_key()}/{self.file_key()} has no content."
             raise ValueError(msg)
@@ -233,6 +232,7 @@ class BaseFile[T](ABC):
             self._cached_parsed = self._parse(self.content())
         return self._cached_parsed
 
+    # TODO: Validate
     # TODO: Deprecate, this is sloppy as shit.
     @final
     def parsed_or_none(self) -> T | None:
@@ -242,7 +242,6 @@ class BaseFile[T](ABC):
         what says the question was asked and came back with nothing. That is not
         a failure to read, so it is answered with nothing rather than raised.
         """
-        self.download_if_outdated()
         if not self.record_content:
             return None
         return self.parsed()
@@ -457,38 +456,29 @@ class EndpointFile[T](DownloadedFile[T], ABC):
         return self._endpoint().load(content, self.log_id())
 
 
-# TODO: Validate
 class IntegerEndpointFile[T](EndpointFile[T], ABC):
-    # TODO: Validate
     @abstractmethod
     @override
     def _endpoint(self) -> IntegerLoadEndpoint[T]: ...
 
-    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(int(self.unique_identifier))
 
 
-# TODO: Validate
 class PagedEndpointFile[T](DownloadedFile[list[T]], ABC):
-    # TODO: Validate
     @abstractmethod
-    @override
     def _endpoint(self) -> Endpoint[T]: ...
 
-    # TODO: Validate
     def _download_pages(self) -> list[str]:
         """Download every page of the file, first to last."""
         endpoint = cast("PagedLoadEndpoint[T]", self._endpoint())
         return endpoint.download_all(self.unique_identifier)
 
-    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return json.dumps(self._download_pages())
 
-    # TODO: Validate
     @override
     def _parse(self, content: str) -> list[T]:
         pages: list[str] = json.loads(content)

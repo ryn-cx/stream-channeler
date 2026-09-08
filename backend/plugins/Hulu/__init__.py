@@ -78,7 +78,9 @@ class Hulu(
         if not (match := re.match(self._domain_regex() + VIDEO_URL_REGEX, url)):
             msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
-        return self.watch_redirect_file(match.group("episode_key")).parsed()
+        redirect_file = self.watch_redirect_file(match.group("episode_key"))
+        redirect_file.download_if_outdated()
+        return redirect_file.parsed()
 
     # TODO: Validate
     @override
@@ -116,7 +118,9 @@ class Hulu(
             if media_type == TMDBMediaType.movie
             else HuluMediaType.SERIES
         )
-        for group in self.search_file(names[0]).parsed().groups:
+        search_file = self.search_file(names[0])
+        search_file.download_if_outdated()
+        for group in search_file.parsed().groups:
             for result in group.results:
                 if result.metrics_info.target_type == hulu_media_type:
                     return title_url(result.metrics_info.target_id, hulu_media_type)

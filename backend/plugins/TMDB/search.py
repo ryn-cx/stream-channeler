@@ -188,7 +188,9 @@ class TMDBSearch(TMDBBaseFiles):
         next_cursor: str | None = None
 
         while len(results) < self.search_page_size():
-            parsed = self.search_multi_file(query, page).parsed()
+            search_file = self.search_multi_file(query, page)
+            search_file.download_if_outdated()
+            parsed = search_file.parsed()
             page_matches = [
                 self._search_result(result)
                 for result in parsed.results
