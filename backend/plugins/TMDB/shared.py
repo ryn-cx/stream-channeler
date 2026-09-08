@@ -150,8 +150,8 @@ class TMDBShared(TMDBSearch):
                     changed_provider=changed_watch_provider,
                     update_at=new_watch_providers_file.data_timestamp(),
                 )
-            old_watch_providers_files.record_status = None
-            old_watch_providers_files.record_update_at = None
+            old_watch_providers_files.clear_status()
+            old_watch_providers_files.clear_update_at()
 
     # TODO: Validate
     def _process_changed_provider(

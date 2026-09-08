@@ -23,6 +23,7 @@ from diving_board.series import models as series_models
 from diving_board.vod import Vod as VodEndpoint
 from diving_board.vod import models as vod_models
 
+from app.utils import tz_datetime
 from plugins.utils.base_plugin.files import (
     INCOMPLETE_STATUS,
     EndpointFile,
@@ -95,7 +96,7 @@ class Schedule(PagedEndpointFile[schedule_models.ScheduleModel]):
     @override
     def _download_pages(self) -> list[str]:
         # Start at the first of the month because it matches the normal API calls.
-        from_ = self.identifier_datetime().replace(
+        from_ = tz_datetime.fromisoformat(self.unique_identifier).replace(
             day=1,
             hour=0,
             minute=0,

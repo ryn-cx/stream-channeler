@@ -35,15 +35,21 @@ class ParamountPlus(ParamountPlusShared, BaseReadURL, AbstractPlugin, register=F
 
     # TODO: Validate
     @override
-    def _media_importer_from_url(self, url: str) -> ParamountPlusImporter:
+    def _validate_url(self, url: str) -> None:
         domain_regex = self._domain_regex()
-        if re.match(domain_regex + MOVIE_URL_REGEX, url):
-            return ParamountPlusMovieImporter(self)
-        if re.match(domain_regex + TITLE_URL_REGEX, url):
-            return ParamountPlusSeriesImporter(self)
+        for url_regex in (MOVIE_URL_REGEX, TITLE_URL_REGEX):
+            if re.match(domain_regex + url_regex, url):
+                return
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
+
+    # TODO: Validate
+    @override
+    def _media_importer_from_url(self, url: str) -> ParamountPlusImporter:
+        if re.match(self._domain_regex() + MOVIE_URL_REGEX, url):
+            return ParamountPlusMovieImporter(self)
+        return ParamountPlusSeriesImporter(self)
 
     # TODO: Validate
     @override

@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from app.titles.models import Title
 
 
+# TODO: Validate
 class HuluInitializer(HuluShared, BasePluginInitializer):
     # TODO: Validate
     @classmethod
@@ -47,11 +48,39 @@ class Hulu(
 ):
     initializer = HuluInitializer
 
+    # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
         return (SERIES_URL_REGEX, MOVIE_URL_REGEX, VIDEO_URL_REGEX)
 
+    # TODO: Validate
+    @override
+    def _validate_url(self, url: str) -> None:
+        domain_regex = self._domain_regex()
+        for url_regex in (SERIES_URL_REGEX, MOVIE_URL_REGEX):
+            if re.match(domain_regex + url_regex, url):
+                return
+
+        redirect_url = self._video_redirect_url(url)
+        for url_regex in (SERIES_URL_REGEX, MOVIE_URL_REGEX):
+            if re.search(url_regex, redirect_url):
+                return
+
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)
+
+    # TODO: Validate
+    def _video_redirect_url(self, url: str) -> str:
+        # Movies and series use the same URL format for individual episodes. When trying
+        # to access the URL anonymously the user is directed to the title URL which
+        # contains the media type information.
+        if not (match := re.match(self._domain_regex() + VIDEO_URL_REGEX, url)):
+            msg = f"Invalid {self.plugin_name()} URL: {url}"
+            raise InvalidURLError(msg)
+        return self.watch_redirect_file(match.group("episode_key")).parsed()
+
+    # TODO: Validate
     @override
     def _media_importer_from_url(self, url: str) -> HuluImporter:
         domain_regex = self._domain_regex()
@@ -60,20 +89,9 @@ class Hulu(
         if re.match(domain_regex + MOVIE_URL_REGEX, url):
             return HuluMovieImporter(self)
 
-        # Movies and series use the same URL format for individual episodes. When trying
-        # to access the URL anonymously the user is directed to the title URL which
-        # contains the media type information.
-        if match := re.match(domain_regex + VIDEO_URL_REGEX, url):
-            redirect_url = self.watch_redirect_file(
-                match.group("episode_key"),
-            ).parsed()
-            if re.search(SERIES_URL_REGEX, redirect_url):
-                return HuluSeriesImporter(self)
-            if re.search(MOVIE_URL_REGEX, redirect_url):
-                return HuluMovieImporter(self)
-
-        msg = f"Invalid {self.plugin_name()} URL: {url}"
-        raise InvalidURLError(msg)
+        if re.search(SERIES_URL_REGEX, self._video_redirect_url(url)):
+            return HuluSeriesImporter(self)
+        return HuluMovieImporter(self)
 
     # TODO: Validate
     @override

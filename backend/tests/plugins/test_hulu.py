@@ -83,6 +83,7 @@ class TestMovie(StandardTests[Hulu], TMDBLookupTests[Hulu], HuluValidator):
     def _initialize_extra_files(self, session: Session) -> None:
         for variant in self._url_variants():
             self._import_url(session, variant)
+        super()._initialize_extra_files(session)
 
 
 # TODO: Validate

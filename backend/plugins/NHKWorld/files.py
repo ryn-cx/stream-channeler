@@ -15,6 +15,7 @@ from naphki.video_episodes.models import VideoEpisodesModel
 from naphki.video_program import VideoProgram as VideoProgramEndpoint
 from naphki.video_program.models import VideoProgramModel
 
+from app.utils import tz_datetime
 from plugins.utils.base_plugin.files import INCOMPLETE_STATUS, EndpointFile
 from plugins.utils.get_around_client import get_around_client
 
@@ -83,7 +84,7 @@ class NewVideoEpisodes(EndpointFile[VideoEpisodesModel]):
         # the first page, and day-to-day there are rarely more than a handful of
         # new episodes, so a single page almost always covers the gap.
         return self._endpoint().download_merged_until_datetime(
-            end_datetime=self.identifier_datetime(),
+            end_datetime=tz_datetime.fromisoformat(self.unique_identifier),
         )
 
     # TODO: Validate

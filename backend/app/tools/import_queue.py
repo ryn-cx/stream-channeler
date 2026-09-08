@@ -89,7 +89,7 @@ def _get_plugin(url: str) -> type[AbstractPlugin] | None:
     # request, and an empty registry would fail every URL as unmatched.
     for plugin_class in sorted_plugins():
         # A plugin that imports no URL carries no pattern to match one against.
-        if not plugin_class.implements("import_url"):
+        if not plugin_class.implements("validate_and_import_url"):
             continue
         if plugin_class.is_valid_url_format(url):
             return plugin_class
@@ -152,7 +152,7 @@ def _import_one(
     try:
         queue_item.status = URLStatus.IMPORTING
         plugin_instance = plugin_class(session)
-        import_results = plugin_instance.import_url(queue_item.url)
+        import_results = plugin_instance.validate_and_import_url(queue_item.url)
         add_results_to_channel(session, import_results, queue_item.channel)
     except InvalidURLError as error:
         logger.warning(f"[{plugin_key}] Invalid URL: {queue_item.url}")

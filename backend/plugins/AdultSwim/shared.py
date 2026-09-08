@@ -124,7 +124,7 @@ class AdultSwimShared(AdultSwimBaseFiles):
             for channel in self._channels():
                 add_urls_to_channel_import_queue(self.session, channel, new_title_urls)
 
-        titles_page.record_status = None
+        titles_page.clear_status()
 
     # TODO: Validate
     def _exclude_subscription_from_free_channel(self) -> None:

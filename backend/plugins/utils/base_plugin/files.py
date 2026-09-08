@@ -7,13 +7,12 @@ from contextlib import contextmanager
 from datetime import datetime
 from typing import (
     Any,
-    Final,
     Protocol,
     cast,
     final,
     override,
 )
-from xml.etree.ElementTree import Element, fromstring
+from xml.etree import ElementTree  # noqa: ICN001
 
 from bs4 import BeautifulSoup
 from loguru import logger
@@ -29,15 +28,6 @@ INCOMPLETE_STATUS = "Incomplete"
 
 
 _UNLOADED = Sentinel("DATABASE_RECORD")
-
-INITIAL_FILE_IDENTIFIER: Final = "Initial"
-"""What a file keyed by a timestamp is identified by before there is one.
-
-The first of a series of timestamped files has no earlier file to catch up to,
-so it is named for being the first rather than for when it was downloaded. That
-keeps its key the same every time one is created from nothing, which a key made
-of the current time never is.
-"""
 
 
 # TODO: Validate
@@ -83,40 +73,38 @@ class BaseFile[T](ABC):
             raise ValueError(msg)
         return record
 
-    # TODO: Validate
     @property
     def record_content(self) -> str | None:
+        """Return the content of the file's database record."""
         return self._database_record.content
 
-    # TODO: Validate
     @property
     def record_key(self) -> str:
+        """Return the key of the file's database record."""
         return self._database_record.key
 
-    # TODO: Validate
     @property
     def record_extra(self) -> dict[str, Any]:
+        """Return the extra metadata of the file's database record."""
         return self._database_record.extra
 
-    # TODO: Validate
     @property
     def record_status(self) -> str | None:
+        """Return the status of the file's database record."""
         return self._database_record.status
 
-    # TODO: Validate
-    @record_status.setter
-    def record_status(self, value: str | None) -> None:
-        self._database_record.status = value
-
-    # TODO: Validate
     @property
     def record_update_at(self) -> datetime | None:
+        """Return the update timestamp of the file's database record."""
         return self._database_record.update_at
 
-    # TODO: Validate
-    @record_update_at.setter
-    def record_update_at(self, value: datetime | None) -> None:
-        self._database_record.update_at = value
+    def clear_status(self) -> None:
+        """Set a file's database record status to None."""
+        self._database_record.status = None
+
+    def clear_update_at(self) -> None:
+        """Set a file's database record update timestamp to None."""
+        self._database_record.update_at = None
 
     # TODO: Validate
     def data_timestamp(self) -> datetime:
@@ -125,13 +113,6 @@ class BaseFile[T](ABC):
         return self._database_record.data_timestamp
 
     unique_identifier: str
-
-    # TODO: Validate
-    def identifier_datetime(self) -> datetime:
-        """Return the datetime the identifier names, or now for the initial file."""
-        if self.unique_identifier == INITIAL_FILE_IDENTIFIER:
-            return tz_datetime.now()
-        return tz_datetime.fromisoformat(self.unique_identifier)
 
     # TODO: Validate
     @override
@@ -324,7 +305,7 @@ class TextFile(BaseFile[str], ABC):
 
 
 # TODO: Validate
-class XMLFile(BaseFile[Element], ABC):
+class XMLFile(BaseFile[ElementTree.Element], ABC):
     # TODO: Validate
     def __init__(
         self,
@@ -337,8 +318,8 @@ class XMLFile(BaseFile[Element], ABC):
 
     # TODO: Validate
     @override
-    def _parse(self, content: str) -> Element:
-        return fromstring(content)  # noqa: S314
+    def _parse(self, content: str) -> ElementTree.Element:
+        return ElementTree.fromstring(content)  # noqa: S314
 
     # TODO: Validate
     @classmethod

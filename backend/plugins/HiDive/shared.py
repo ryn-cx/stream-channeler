@@ -111,7 +111,7 @@ class HiDiveShared(HiDiveBaseFiles):
                             unmatched_names.append(title_name)
 
             self._queue_new_titles(unmatched_names)
-            schedule_file.record_status = None
+            schedule_file.clear_status()
 
     # TODO: Validate
     def _queue_new_titles(self, title_names: list[str]) -> None:

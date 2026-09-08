@@ -1,6 +1,7 @@
 # TODO: Validate
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, override
 
 from app.media.media_type import TMDBMediaType
@@ -8,7 +9,7 @@ from plugins.NHKWorld.constants import TITLE_URL_REGEX
 from plugins.NHKWorld.importer import NHKWorldImporter
 from plugins.NHKWorld.shared import NHKWorldShared
 from plugins.NHKWorld.utils import build_url
-from plugins.utils.abstract_plugin import AbstractPlugin
+from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.base import BaseReadURL
 from plugins.utils.base_plugin.initialize import BasePluginInitializer
 
@@ -37,6 +38,13 @@ class NHKWorld(NHKWorldShared, BaseReadURL, AbstractPlugin, register=False):
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
         return (TITLE_URL_REGEX,)
+
+    # TODO: Validate
+    @override
+    def _validate_url(self, url: str) -> None:
+        if not re.match(self._domain_regex() + TITLE_URL_REGEX, url):
+            msg = f"Invalid {self.plugin_name()} URL: {url}"
+            raise InvalidURLError(msg)
 
     # TODO: Validate
     @override

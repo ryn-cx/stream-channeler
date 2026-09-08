@@ -5,7 +5,7 @@ import re
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from functools import singledispatchmethod
-from typing import TYPE_CHECKING, Any, Literal, override
+from typing import TYPE_CHECKING, Any, override
 
 from loguru import logger
 
@@ -39,7 +39,6 @@ from plugins.Crunchyroll.utils import (
     title_thumbnail,
 )
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin.files import INITIAL_FILE_IDENTIFIER
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import URLTitleInfo
 
@@ -300,7 +299,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
     @singledispatchmethod
     def browse_file(
         self,
-        browse: datetime | File | Literal["Initial"],  # noqa: ARG002
+        browse: datetime | File,  # noqa: ARG002
     ) -> BrowseSeries:
         """Return data for recently aired titles."""
         raise TypeError
@@ -309,11 +308,6 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
     @browse_file.register
     def _browse_file_by_datetime(self, browse: datetime) -> BrowseSeries:
         return self._cached_file(BrowseSeries, str(browse))
-
-    # TODO: Validate
-    @browse_file.register
-    def _browse_file_by_identifier(self, browse: str) -> BrowseSeries:
-        return self._cached_file(BrowseSeries, browse)
 
     # TODO: Validate
     @browse_file.register
@@ -327,7 +321,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
     def newest_browse_file(self) -> BrowseSeries:
         if file := self.latest_file_record(BrowseSeries):
             return self.browse_file(file)
-        newest_browse_file = self.browse_file(INITIAL_FILE_IDENTIFIER)
+        newest_browse_file = self.browse_file(tz_datetime.now())
         newest_browse_file.download_if_outdated()
         return newest_browse_file
 
@@ -350,7 +344,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
         self._create_channel_records_from_file(self.catalogue_file().datums())
         for browse_json in self._incomplete_files(BrowseSeries, self.browse_file):
             self._create_channel_records_from_file(browse_json.datums())
-            browse_json.record_status = None
+            browse_json.clear_status()
 
     # TODO: Validate
     def _create_channel_records_from_file(

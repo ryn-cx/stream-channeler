@@ -48,13 +48,17 @@ class Amazon(AmazonShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
+    def _validate_url(self, url: str) -> None:
+        title_key = self._url_title_key(url)
+        self.raise_invalid_url_if_no_content(self.detail_file(title_key), url)
+
+    # TODO: Validate
+    @override
     def _media_importer_from_url(self, url: str) -> AmazonImporter:
         # A film and a season of a series are answered at the same address,
         # so the page has to be read before it is known which of the two it
         # is.
-        title_key = self._url_title_key(url)
-        self.raise_invalid_url_if_no_content(self.detail_file(title_key), url)
-        if self._is_movie(title_key):
+        if self._is_movie(self._url_title_key(url)):
             return AmazonMovieImporter(self)
         return AmazonSeriesImporter(self)
 

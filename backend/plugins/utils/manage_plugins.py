@@ -102,7 +102,7 @@ def get_plugin_for_url(
     for plugin_class in sorted_plugins():
         if (
             plugin_class is not exclude
-            and plugin_class.implements("import_url")
+            and plugin_class.implements("validate_and_import_url")
             and plugin_class.is_valid_url_format(url)
         ):
             return plugin_class

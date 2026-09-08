@@ -78,17 +78,23 @@ class Crunchyroll(
 
     # TODO: Validate
     @override
+    def _validate_url(self, url: str) -> None:
+        domain_regex = self._domain_regex()
+        for url_regex in self._url_regexes():
+            if re.match(domain_regex + url_regex, url):
+                return
+
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)
+
+    # TODO: Validate
+    @override
     def _media_importer_from_url(self, url: str) -> CrunchyrollImporter:
         domain_regex = self._domain_regex()
         for url_regex in (MUSIC_VIDEO_URL_REGEX, CONCERT_URL_REGEX, ARTIST_URL_REGEX):
             if re.match(domain_regex + url_regex, url):
                 return CrunchyrollMusicImporter(self)
-        for url_regex in (SERIES_URL_REGEX, EPISODE_URL_REGEX):
-            if re.match(domain_regex + url_regex, url):
-                return CrunchyrollAnimeImporter(self)
-
-        msg = f"Invalid {self.plugin_name()} URL: {url}"
-        raise InvalidURLError(msg)
+        return CrunchyrollAnimeImporter(self)
 
     # TODO: Validate
     @override

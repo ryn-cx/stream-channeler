@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from app.titles.models import Title
 
 
+# TODO: Validate
 class NetflixInitializer(BasePluginInitializer, NetflixShared): ...
 
 
@@ -27,21 +28,31 @@ class NetflixInitializer(BasePluginInitializer, NetflixShared): ...
 class Netflix(NetflixShared, BaseReadURL, AbstractPlugin, register=False):
     initializer = NetflixInitializer
 
+    # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
         return (TITLE_URL_REGEX,)
 
+    # TODO: Validate
     @override
-    def _media_importer_from_url(self, url: str) -> NetflixImporter:
+    def _validate_url(self, url: str) -> None:
+        title_key = self._url_title_key(url)
+        self.raise_invalid_url_if_no_content(self.title_file(title_key), url)
+
+    # TODO: Validate
+    def _url_title_key(self, url: str) -> str:
         if not (match := re.match(self._domain_regex() + TITLE_URL_REGEX, url)):
             msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
+        return match.group("title_key")
 
+    # TODO: Validate
+    @override
+    def _media_importer_from_url(self, url: str) -> NetflixImporter:
         # Movies and series use the same URL format and the same title_file, but the
         # title_file contains the media type information.
-        title_key = match.group("title_key")
-        self.raise_invalid_url_if_no_content(self.title_file(title_key), url)
+        title_key = self._url_title_key(url)
         if self.title_file(title_key).title_information().field__typename == "Movie":
             return NetflixMovieImporter(self)
         return NetflixSeriesImporter(self)

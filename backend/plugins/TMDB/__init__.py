@@ -51,15 +51,21 @@ class TMDB(TMDBShared, BaseReadURL, AbstractPlugin, register=True):
 
     # TODO: Validate
     @override
-    def _media_importer_from_url(self, url: str) -> TMDBImporter:
+    def _validate_url(self, url: str) -> None:
         domain_regex = self._domain_regex()
-        if re.match(domain_regex + MOVIE_URL_REGEX, url):
-            return TMDBMovie(self)
-        if re.match(domain_regex + TV_URL_REGEX, url):
-            return TMDBSeries(self)
+        for url_regex in (MOVIE_URL_REGEX, TV_URL_REGEX):
+            if re.match(domain_regex + url_regex, url):
+                return
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
+
+    # TODO: Validate
+    @override
+    def _media_importer_from_url(self, url: str) -> TMDBImporter:
+        if re.match(self._domain_regex() + MOVIE_URL_REGEX, url):
+            return TMDBMovie(self)
+        return TMDBSeries(self)
 
     # TODO: Validate
     @override

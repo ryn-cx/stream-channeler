@@ -396,7 +396,7 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
         assert url, "URL must be provided for URL import tests"
         self._delete_channels(session)
         self.imported_plugin = self.plugin_class(session)
-        output = self.imported_plugin.import_url(url)
+        output = self.imported_plugin.validate_and_import_url(url)
 
         session.flush()
         session.expire_all()

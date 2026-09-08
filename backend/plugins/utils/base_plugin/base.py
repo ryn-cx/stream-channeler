@@ -63,10 +63,12 @@ class BasePlugin(BaseFileAccessMixin, BaseURLMixin, AbstractPlugin, ABC):
         `Source.key`."""
         self._file_cache = {}
 
+    # TODO: Validate
     @classmethod
     @abstractmethod
     def plugin_name(cls) -> str: ...
 
+    # TODO: Validate
     @classmethod
     @abstractmethod
     def favicon_url(cls) -> str | None: ...
@@ -484,14 +486,13 @@ class BasePlugin(BaseFileAccessMixin, BaseURLMixin, AbstractPlugin, ABC):
     def _(self, title: Title) -> BaseImporter:
         return self._media_importer_from_title(title)
 
+    # TODO: Validate
+    def _validate_url(self, url: str) -> None:
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)
+
+    # TODO: Validate
     def _media_importer_from_url(self, url: str) -> BaseImporter:  # noqa: ARG002
-        """Return the media importer for the given URL.
-
-        This will also validate the URL and raise an error if it is invalid.
-
-        TODO: This function is doing more than it probably should, but it's much easier
-        to validate the URL and get the importer at the same time, seperating it would
-        duplicate a lot of code and make things more complicated."""
         return self  # type: ignore[return-value]  # ty: ignore[invalid-return-type]
 
     # TODO: Validate
@@ -508,7 +509,8 @@ class BasePlugin(BaseFileAccessMixin, BaseURLMixin, AbstractPlugin, ABC):
         return [TMDBLookupInfo(title.name, media_type, title.year)]
 
     # TODO: Validate
-    def import_url(self, url: str) -> list[URLImportResult]:
+    def validate_and_import_url(self, url: str) -> list[URLImportResult]:
+        self._validate_url(url)
         return self._media_importer(url).import_url(url)
 
     # TODO: Validate
@@ -520,7 +522,7 @@ class BasePlugin(BaseFileAccessMixin, BaseURLMixin, AbstractPlugin, ABC):
     ) -> list[URLImportResult]:
         url = self.search_for_title_url(names, media_type, year)
         if url:
-            return self.import_url(url)
+            return self.validate_and_import_url(url)
         return []
 
     # TODO: Validate

@@ -126,7 +126,7 @@ class AbstractPlugin(ABC):
         return False
 
     # TODO: Validate
-    def import_url(self, url: str) -> list[URLImportResult]:
+    def validate_and_import_url(self, url: str) -> list[URLImportResult]:
         """Import `url` into the database.
 
         Only called if `is_valid_url_format` returns `True` on the `url`.
@@ -142,7 +142,7 @@ class AbstractPlugin(ABC):
             valid.
 
         """
-        msg = "import_url is not supported by this plugin."
+        msg = "validate_and_import_url is not supported by this plugin."
         raise NotImplementedError(msg)
 
     # TODO: Validate

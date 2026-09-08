@@ -50,17 +50,24 @@ class HiDive(
 
     # TODO: Validate
     @override
+    def _validate_url(self, url: str) -> None:
+        domain_regex = self._domain_regex()
+        for url_regex in (SERIES_URL_REGEX, SEASON_URL_REGEX, MOVIE_URL_REGEX):
+            if re.match(domain_regex + url_regex, url):
+                return
+
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)
+
+    # TODO: Validate
+    @override
     def _media_importer_from_url(self, url: str) -> HiDiveImporter:
         domain_regex = self._domain_regex()
         if re.match(domain_regex + SERIES_URL_REGEX, url):
             return HiDiveSeriesImporter(self)
         if re.match(domain_regex + SEASON_URL_REGEX, url):
             return HiDiveSeriesImporter(self)
-        if re.match(domain_regex + MOVIE_URL_REGEX, url):
-            return HiDiveMovieImporter(self)
-
-        msg = f"Invalid {self.plugin_name()} URL: {url}"
-        raise InvalidURLError(msg)
+        return HiDiveMovieImporter(self)
 
     # TODO: Validate
     @override

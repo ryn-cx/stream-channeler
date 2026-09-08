@@ -29,7 +29,7 @@ _TMDB_MOVIE_URL = re.compile(r"themoviedb\.org/movie/(?P<tmdb_id>\d+)")
 
 # TODO: Validate
 def _import_tmdb_url(session: Session, url: str) -> Title:
-    imported = TMDB(session).import_url(url)
+    imported = TMDB(session).validate_and_import_url(url)
     return imported[0].title
 
 

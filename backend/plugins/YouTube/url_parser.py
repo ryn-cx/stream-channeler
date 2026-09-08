@@ -83,6 +83,11 @@ class ParsedURL(NamedTuple):
 class YouTubeURLParserMixin(YouTubeBaseFiles):
     # TODO: Validate
     @override
+    def _validate_url(self, url: str) -> None:
+        self._parsed_url(url)
+
+    # TODO: Validate
+    @override
     def _media_importer_from_url(self, url: str) -> YouTubeImporter:
         parsed = self._parsed_url(url)
         importer = self.media_importer_from_title_key(parsed.title_key)

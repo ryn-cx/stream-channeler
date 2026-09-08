@@ -164,7 +164,7 @@ class TestSupermanRelinkedTubi(TMDBValidator):
     @override
     def _initialize_extra_files(self, session: Session) -> None:
         tubi = Tubi(session)
-        results = tubi.import_url(self.relinked_url)
+        results = tubi.validate_and_import_url(self.relinked_url)
         match_imported_titles_to_tmdb(
             session,
             tubi,
@@ -196,7 +196,7 @@ class TestSupermanRelinkedTubi(TMDBValidator):
 
         with frozen_clock(self.import_time):
             tubi = Tubi(session_with_files)
-            results = tubi.import_url(self.relinked_url)
+            results = tubi.validate_and_import_url(self.relinked_url)
             for result in results:
                 link_title_to_tmdb(
                     session_with_files,

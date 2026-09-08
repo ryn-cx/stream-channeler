@@ -343,7 +343,7 @@ def link_title_to_canonical_title_from_tmdb_url(
             detail=f"{tmdb_url} is not the address of a TMDB film or series",
         )
 
-    imported_titles = TMDB(session).import_url(stripped_url)
+    imported_titles = TMDB(session).validate_and_import_url(stripped_url)
     canonical_title = session.exec(
         select(Title).where(
             is_canonical(Title),
@@ -377,7 +377,7 @@ def import_non_canonical_title_from_url(
 
     plugin_instance = plugin_class(session)
     try:
-        import_results = plugin_instance.import_url(stripped_url)
+        import_results = plugin_instance.validate_and_import_url(stripped_url)
     except InvalidURLError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 

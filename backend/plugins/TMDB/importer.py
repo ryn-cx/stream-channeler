@@ -505,7 +505,7 @@ class TMDBSeries(TMDBImporter):
                             changed_at.date(),
                         ).download_if_outdated()
 
-        changes_file.record_status = None
+        changes_file.clear_status()
 
     # TODO: Validate
     def _import_all_season_changes(self, title: Title) -> None:
@@ -552,7 +552,7 @@ class TMDBSeries(TMDBImporter):
                     update_at=changed_at,
                 )
 
-        changes_file.record_status = None
+        changes_file.clear_status()
 
     # TODO: Validate
     @classmethod

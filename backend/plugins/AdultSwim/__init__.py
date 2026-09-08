@@ -1,6 +1,7 @@
 # TODO: Validate
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, override
 
 from loguru import logger
@@ -9,7 +10,7 @@ from app.utils import tz_datetime
 from plugins.AdultSwim.constants import EPISODE_URL_REGEX, TITLE_URL_REGEX
 from plugins.AdultSwim.importer import AdultSwimImporter
 from plugins.AdultSwim.shared import AdultSwimShared
-from plugins.utils.abstract_plugin import AbstractPlugin
+from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.base import BaseReadURL
 from plugins.utils.base_plugin.initialize import BasePluginInitializer
 from plugins.utils.base_plugin.search import BaseCatalogueSearchMixin
@@ -50,6 +51,17 @@ class AdultSwim(
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
         return (EPISODE_URL_REGEX, TITLE_URL_REGEX)
+
+    # TODO: Validate
+    @override
+    def _validate_url(self, url: str) -> None:
+        domain_regex = self._domain_regex()
+        for url_regex in (EPISODE_URL_REGEX, TITLE_URL_REGEX):
+            if re.match(domain_regex + url_regex, url):
+                return
+
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)
 
     # TODO: Validate
     @override

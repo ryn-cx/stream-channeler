@@ -36,16 +36,23 @@ class DisneyPlus(DisneyPlusShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def _media_importer_from_url(self, url: str) -> DisneyPlusImporter:
-        match = re.match(self._domain_regex() + ENTITY_URL_REGEX, url)
-        if not match:
+    def _validate_url(self, url: str) -> None:
+        title_key = self._url_title_key(url)
+        self.raise_invalid_url_if_no_content(self.entity_file(title_key), url)
+
+    # TODO: Validate
+    def _url_title_key(self, url: str) -> str:
+        if not (match := re.match(self._domain_regex() + ENTITY_URL_REGEX, url)):
             msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
+        return match.group("entity_key")
 
+    # TODO: Validate
+    @override
+    def _media_importer_from_url(self, url: str) -> DisneyPlusImporter:
         # Movies and series are answered at the same address, so the page has
         # to be read before it is known which of the two it is.
-        title_key = match.group("entity_key")
-        self.raise_invalid_url_if_no_content(self.entity_file(title_key), url)
+        title_key = self._url_title_key(url)
         if is_movie(self.entity_file(title_key).parsed()):
             return DisneyPlusMovieImporter(self)
         return DisneyPlusSeriesImporter(self)

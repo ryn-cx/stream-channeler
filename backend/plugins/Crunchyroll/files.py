@@ -148,7 +148,7 @@ class BrowseSeries(BaseBrowseSeries):
     @override
     def _download_pages(self) -> list[str]:
         return self._endpoint().download_until_datetime(
-            end_datetime=self.identifier_datetime(),
+            end_datetime=tz_datetime.fromisoformat(self.unique_identifier),
         )
 
 

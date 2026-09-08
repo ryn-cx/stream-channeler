@@ -91,7 +91,7 @@ class NHKWorldShared(NHKWorldBaseFiles):
                     new_title_ids.append(title_id)
 
             self._queue_new_titles(new_title_ids)
-            feed_file.record_status = None
+            feed_file.clear_status()
 
     # TODO: Validate
     def _queue_new_titles(self, title_ids: list[str]) -> None:

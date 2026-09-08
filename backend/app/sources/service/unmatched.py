@@ -97,7 +97,7 @@ def import_unmatched_source(
 
     plugin_instance = plugin_class(session)
     try:
-        results = plugin_instance.import_url(url)
+        results = plugin_instance.validate_and_import_url(url)
     except InvalidURLError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 

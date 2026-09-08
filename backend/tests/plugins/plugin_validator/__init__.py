@@ -14,6 +14,7 @@ database, bar the files table, against the dump recorded the first time it ran.
 import json
 import os
 from datetime import datetime, timedelta
+from typing import override
 
 import pytest
 from sqlmodel import Session
@@ -475,7 +476,7 @@ class TMDBLookupTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
         with log_stats(self), frozen_clock(self.import_time):
             tmdb = TMDB(session_with_files)
             for tmdb_url in tmdb_urls:
-                tmdb.import_url(tmdb_url)
+                tmdb.validate_and_import_url(tmdb_url)
             session_with_files.flush()
         session_with_files.expire_all()
 
@@ -650,6 +651,39 @@ class DeletedSeasonWithEpisodeTests[PluginT: AbstractPlugin](
 
 
 # TODO: Validate
+class DeletedTitleTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
+    deleted_title_key = "plugin-validator-deleted-title"
+
+    # TODO: Validate
+    def _delete_title(self, session: Session, title: Title) -> None:
+        title.key = self.deleted_title_key
+        session.flush()
+
+    # TODO: Validate
+    @override
+    def _initialize_extra_files(self, session: Session) -> None:
+        super()._initialize_extra_files(session)
+        title = self.selected_title(session)
+        self._delete_title(session, title)
+        self.owning_plugin(session, title).update_title(title)
+        session.flush()
+
+    # TODO: Validate
+    def test_deleted_title(self, session_with_files: Session) -> None:
+        self.import_url(session_with_files)
+        title = self.selected_title(session_with_files)
+
+        with frozen_clock(self.update_time):
+            self._delete_title(session_with_files, title)
+
+        with log_stats(self), frozen_clock(self.update_time):
+            self.owning_plugin(session_with_files, title).update_title(title)
+            session_with_files.flush()
+
+        self.assert_state(session_with_files, "deleted_title")
+
+
+# TODO: Validate
 class AllUpdatesTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
     """Exhaustive test that updates every entity on its own."""
 
@@ -692,6 +726,7 @@ class DeletionTests[PluginT: AbstractPlugin](
     DeletedSeasonTests[PluginT],
     DeletedEpisodeUpdateTitleTests[PluginT],
     DeletedSeasonWithEpisodeTests[PluginT],
+    DeletedTitleTests[PluginT],
 ):
     """All soft-deletion tests."""
 
