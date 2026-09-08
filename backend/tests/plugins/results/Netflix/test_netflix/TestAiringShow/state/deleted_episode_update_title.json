@@ -1,0 +1,50 @@
+{
+  "episodecanonicaltitle": {
+    "plugin-validator-alt-fake-episode+82760630": {
+      "episode_id": "plugin-validator-alt-fake-episode",
+      "canonical_title_id": "82760630"
+    }
+  },
+  "plugin": {
+    "Netflix": {
+      "sources": {
+        "Netflix": {
+          "titles": {
+            "82760630": {
+              "seasons": {
+                "82760631": {
+                  "episodes": {
+                    "plugin-validator-alt-fake-episode": {
+                      "key": "plugin-validator-alt-fake-episode",
+                      "data_timestamp": "2026-09-08T00:00:00+00:00",
+                      "update_at": null,
+                      "deleted_at": "2026-09-08T00:00:00+00:00",
+                      "status": null,
+                      "extra": {},
+                      "id": "plugin-validator-alt-fake-episode",
+                      "created_at": "2026-09-08T00:00:00+00:00",
+                      "modified_at": "2026-09-08T00:00:00+00:00",
+                      "url": "https://example.com/fake-episode",
+                      "name": "Plugin Validator Alt Fake Episode",
+                      "description": null,
+                      "image_url": null,
+                      "thumbnail_url": null,
+                      "air_date": null,
+                      "episode_number": 9999,
+                      "duration": 1,
+                      "sort_order": 9999,
+                      "canonical_episode_validated_at": null,
+                      "is_canonical": true,
+                      "watch_identifier": "Netflix plugin-validator-alt-fake-episode",
+                      "season_id": "82760631"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

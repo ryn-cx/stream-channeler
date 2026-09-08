@@ -243,6 +243,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
         for position, episode_key in enumerate(episode_keys):
             self._upsert_episode(season, title_key, episode_key, position, force=force)
 
+    # TODO: Validate
     def _upsert_episode(
         self,
         season: Season,
@@ -286,4 +287,4 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
             data_timestamp=max(data_timestamps),
             season_id=season.id,
         ).upsert(season, episode)
-        episode.set_update_at(None, data_timestamps)
+        episode.set_update_at(None)

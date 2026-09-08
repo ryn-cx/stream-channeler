@@ -161,7 +161,6 @@ class DisneyPlusSeriesImporter(DisneyPlusImporter):
             ).upsert(source, title)
             title.set_update_at(
                 staggered_monthly_update_at(title_key, min(data_timestamps)),
-                data_timestamps,
             )
 
         self._upsert_seasons(title, force=force)
@@ -188,7 +187,7 @@ class DisneyPlusSeriesImporter(DisneyPlusImporter):
                     data_timestamp=max(data_timestamps),
                     title_id=title.id,
                 ).upsert(title, season)
-                season.set_update_at(None, data_timestamps)
+                season.set_update_at(None)
 
             self._upsert_episodes(season, title.key, season_id, force=force)
             self._set_season_update_at_based_on_last_episode(season)
@@ -231,7 +230,7 @@ class DisneyPlusSeriesImporter(DisneyPlusImporter):
                 data_timestamp=max(data_timestamps),
                 season_id=season.id,
             ).upsert(season, episode)
-            episode.set_update_at(None, data_timestamps)
+            episode.set_update_at(None)
 
 
 # TODO: Validate
@@ -295,7 +294,6 @@ class DisneyPlusMovieImporter(DisneyPlusImporter):
             ).upsert(source, title)
             title.set_update_at(
                 staggered_monthly_update_at(title_key, min(data_timestamps)),
-                data_timestamps,
             )
 
         self._upsert_season(title, force=force)
@@ -316,7 +314,7 @@ class DisneyPlusMovieImporter(DisneyPlusImporter):
                 data_timestamp=max(data_timestamps),
                 title_id=title.id,
             ).upsert(title, season)
-            season.set_update_at(None, data_timestamps)
+            season.set_update_at(None)
 
         self._upsert_episode(season, title.key, force=force)
         self._set_season_update_at_based_on_last_episode(season)
@@ -350,4 +348,4 @@ class DisneyPlusMovieImporter(DisneyPlusImporter):
                 data_timestamp=max(data_timestamps),
                 season_id=season.id,
             ).upsert(season, episode)
-            episode.set_update_at(None, data_timestamps)
+            episode.set_update_at(None)

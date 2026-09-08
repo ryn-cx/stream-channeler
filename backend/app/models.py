@@ -216,15 +216,9 @@ class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):
         """Return a select joined to `Plugin`."""
 
     # TODO: Validate
-    def set_update_at(
-        self,
-        new_update_at_value: datetime | None,
-        data_timestamps: list[datetime] | None = None,
-    ) -> None:
+    def set_update_at(self, new_update_at_value: datetime | None) -> None:
         """Set `update_at` based its current value and `new_update_at_value`."""
-        if data_timestamps is None:
-            data_timestamps = [self.data_timestamp] if self.data_timestamp else []
-        oldest_data_timestamp = min(data_timestamps, default=None)
+        oldest_data_timestamp = self.data_timestamp
 
         # If the existing update_at is older than data_timestamp the update has
         # been completed and update_at can be cleared.

@@ -58,6 +58,7 @@ class CrunchyrollImporter(CrunchyrollShared, BaseImporter, ABC):
     @abstractmethod
     def _source_update_interval(cls) -> timedelta: ...
 
+    # TODO: Validate
     @override
     def upsert_source(self, source_key: str) -> Source:
         data_timestamps = self.source_data_timestamps()
@@ -71,7 +72,6 @@ class CrunchyrollImporter(CrunchyrollShared, BaseImporter, ABC):
         ).upsert(self.plugin, existing_source)
         source.set_update_at(
             min(data_timestamps) + self._source_update_interval(),
-            data_timestamps,
         )
         return source
 
@@ -186,6 +186,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
             for episode in self.season_episodes_file(season_key).parsed().data
         ]
 
+    # TODO: Validate
     @override
     def upsert_title(
         self,
@@ -210,7 +211,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
                 data_timestamp=max(data_timestamps),
                 source_id=source.id,
             ).upsert(source, title)
-            title.set_update_at(None, data_timestamps)
+            title.set_update_at(None)
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing(title_key)
@@ -218,6 +219,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
 
         return title
 
+    # TODO: Validate
     def _upsert_seasons(self, title: Title, *, force: bool = False) -> None:
         seasons_file = self.seasons_file(title.key)
         for sort_order, season_data in enumerate(seasons_file.parsed().data):
@@ -232,11 +234,12 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
                     data_timestamp=max(data_timestamps),
                     title_id=title.id,
                 ).upsert(title, season)
-                season.set_update_at(None, data_timestamps)
+                season.set_update_at(None)
 
             self._upsert_episodes(season, title.key, force=force)
             self._set_season_update_at_based_on_last_episode(season)
 
+    # TODO: Validate
     def _upsert_episodes(
         self,
         season: Season,
@@ -275,7 +278,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
                 data_timestamp=max(data_timestamps),
                 season_id=season.id,
             ).upsert(season, episode)
-            episode.set_update_at(None, data_timestamps)
+            episode.set_update_at(None)
 
     def browse_file(
         self,
@@ -324,6 +327,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
             "All Titles",
         )
 
+    # TODO: Validate
     def _mark_new_titles_as_outdated(self, releases: list[BrowseSeriesDatum]) -> None:
         _cache = self._preload_sources(self.source_name(), preload_seasons=True).all()
         for release in releases:
@@ -337,9 +341,9 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
                 # season the update is for so both title and season need to be set
                 # to be updated because the season will detect new episodes for
                 # existing seasons and the titles will detect new seasons.
-                title.set_update_at(release.last_public, [])
+                title.set_update_at(release.last_public)
                 for season in title.seasons:
-                    season.set_update_at(release.last_public, [])
+                    season.set_update_at(release.last_public)
 
     @override
     def update_source(self, source: Source, update_at: datetime) -> None:
@@ -464,6 +468,7 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
             .data
         ]
 
+    # TODO: Validate
     @override
     def upsert_title(
         self,
@@ -489,7 +494,7 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
                 source_id=source.id,
             ).upsert(source, title)
             # All updates are set by update_source.
-            title.set_update_at(None, data_timestamps)
+            title.set_update_at(None)
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing(title_key)
@@ -497,6 +502,7 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
 
         return title
 
+    # TODO: Validate
     def _upsert_seasons(self, title: Title, *, force: bool = False) -> None:
         seasons: list[Season] = []
         for category in CrunchyrollMusicCategory:
@@ -510,11 +516,12 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
                     title_id=title.id,
                 ).upsert(title, season)
                 # All updates are set by update_source.
-                season.set_update_at(None, data_timestamps)
+                season.set_update_at(None)
 
             self._upsert_episodes(season, title.key, category, force=force)
             seasons.append(season)
 
+    # TODO: Validate
     def _upsert_episodes(
         self,
         season: Season,
@@ -559,7 +566,7 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
                 data_timestamp=max(data_timestamps),
                 season_id=season.id,
             ).upsert(season, episode)
-            episode.set_update_at(None, data_timestamps)
+            episode.set_update_at(None)
 
     def browse_file(self) -> BrowseMusic:
         """BrowseMusic contains data for all of the music."""
@@ -584,6 +591,7 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
             "All Music",
         )
 
+    # TODO: Validate
     def _mark_artists_as_outdated(self, artists: list[BrowseMusicDatum]) -> None:
         _cache = self._preload_sources(self.source_name(), preload_seasons=True).all()
         for artist in artists:
@@ -592,10 +600,10 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
                 self._sources[self.source_name()],
                 artist.id,
             ):
-                title.set_update_at(artist.updated_at, [])
+                title.set_update_at(artist.updated_at)
                 # For simplicity set the Title and the Seasons to both be outdated.
                 for season in title.seasons:
-                    season.set_update_at(artist.updated_at, [])
+                    season.set_update_at(artist.updated_at)
 
     @override
     def update_source(self, source: Source, update_at: datetime) -> None:

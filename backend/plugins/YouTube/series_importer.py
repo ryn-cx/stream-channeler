@@ -70,6 +70,7 @@ class YouTubeTVShowImporter(YouTubeLicensedMediaImporter):
     ) -> int | None:
         return self._episode_number_from_file_order(episode_key, season_key)
 
+    # TODO: Validate
     @override
     def upsert_title(
         self,
@@ -94,7 +95,7 @@ class YouTubeTVShowImporter(YouTubeLicensedMediaImporter):
                 update_at=min(data_timestamps) + timedelta(days=7),
                 source_id=source.id,
             ).upsert(source, title)
-            title.set_update_at(None, data_timestamps)
+            title.set_update_at(None)
 
         self._upsert_seasons(title, title_key, force=force)
         self._soft_delete_missing(title_key)
@@ -125,5 +126,5 @@ class YouTubeTVShowImporter(YouTubeLicensedMediaImporter):
                     update_at=min(data_timestamps) + timedelta(days=7),
                     title_id=title.id,
                 ).upsert(title, season)
-                season.set_update_at(None, data_timestamps)
+                season.set_update_at(None)
             self._upsert_episodes(season, title_key, force=force)

@@ -80,7 +80,6 @@ class YouTubePlaylistImporter(YouTubeUserImporter):
             ).upsert(source, title)
             title.set_update_at(
                 min(data_timestamps) + timedelta(hours=6),
-                data_timestamps,
             )
 
         self._upsert_playlist_season(

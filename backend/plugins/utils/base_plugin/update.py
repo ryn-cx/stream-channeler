@@ -29,7 +29,7 @@ class BaseUpdateMixin(BaseSoftDeleteMixin, ABC):
                 is_listed = title.key in listed
                 is_deleted = title.deleted_at is not None
                 if is_listed == is_deleted:
-                    title.set_update_at(min(data_timestamps), [])
+                    title.set_update_at(min(data_timestamps))
 
     # TODO: Validate
     def _set_season_update_at_based_on_last_episode(self, season: Season) -> None:
@@ -41,23 +41,19 @@ class BaseUpdateMixin(BaseSoftDeleteMixin, ABC):
         data_timestamps = self.season_data_timestamps(season.key, season.title.key)
         for episode in season.active_children:
             if episode.air_date:
-                season.set_update_at(episode.air_date, data_timestamps)
+                season.set_update_at(episode.air_date)
                 season.set_update_at(
                     episode.air_date + timedelta(days=7),
-                    data_timestamps,
                 )
                 # Buffer days due to possible timestamp offsets
                 season.set_update_at(
                     episode.air_date + timedelta(days=8),
-                    data_timestamps,
                 )
                 season.set_update_at(
                     episode.air_date + timedelta(days=9),
-                    data_timestamps,
                 )
         season.set_update_at(
             staggered_monthly_update_at(season.key, min(data_timestamps)),
-            data_timestamps,
         )
 
     # TODO: Validate

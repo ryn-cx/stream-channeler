@@ -81,7 +81,6 @@ class NetflixSeriesImporter(NetflixImporter):
         data_timestamp = min(data_timestamps)
         season.set_update_at(
             staggered_monthly_update_at(season.key, data_timestamp),
-            data_timestamps,
         )
         for episode in self.season_episodes_file(season_video_key).episodes():
             if episode.availability_date_messaging:
@@ -92,11 +91,9 @@ class NetflixSeriesImporter(NetflixImporter):
                 # The date listed doesn't have a specific time so check it once on the
                 # date, again halway through the day and one more time at the end of the
                 # day.
-                season.set_update_at(available_at, data_timestamps)
-                season.set_update_at(
-                    available_at + timedelta(hours=12), data_timestamps
-                )
-                season.set_update_at(available_at + timedelta(days=1), data_timestamps)
+                season.set_update_at(available_at)
+                season.set_update_at(available_at + timedelta(hours=12))
+                season.set_update_at(available_at + timedelta(days=1))
 
     @override
     def _season_keys_from_title_files(self, title_key: str) -> list[str]:
@@ -146,7 +143,7 @@ class NetflixSeriesImporter(NetflixImporter):
                 data_timestamp=max(data_timestamps),
                 source_id=source.id,
             ).upsert(source, title)
-            title.set_update_at(None, data_timestamps)
+            title.set_update_at(None)
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing(title_key)
@@ -224,7 +221,7 @@ class NetflixSeriesImporter(NetflixImporter):
                 data_timestamp=max(data_timestamps),
                 season_id=season.id,
             ).upsert(season, episode)
-            episode.set_update_at(None, data_timestamps)
+            episode.set_update_at(None)
 
 
 class NetflixMovieImporter(NetflixImporter):
@@ -253,6 +250,7 @@ class NetflixMovieImporter(NetflixImporter):
     ) -> list[str]:
         return [title_key]
 
+    # TODO: Validate
     @override
     def upsert_title(
         self,
@@ -276,13 +274,14 @@ class NetflixMovieImporter(NetflixImporter):
                 data_timestamp=max(data_timestamps),
                 source_id=source.id,
             ).upsert(source, title)
-            title.set_update_at(None, data_timestamps)
+            title.set_update_at(None)
 
         self._upsert_season(title, movie_data, force=force)
         self._soft_delete_missing(title_key)
 
         return title
 
+    # TODO: Validate
     def _upsert_season(
         self,
         title: Title,
@@ -301,10 +300,11 @@ class NetflixMovieImporter(NetflixImporter):
                 data_timestamp=max(data_timestamps),
                 title_id=title.id,
             ).upsert(title, season)
-            season.set_update_at(None, data_timestamps)
+            season.set_update_at(None)
 
         self._upsert_episode(season, title.key, movie_data, force=force)
 
+    # TODO: Validate
     def _upsert_episode(
         self,
         season: Season,
@@ -332,4 +332,4 @@ class NetflixMovieImporter(NetflixImporter):
                 data_timestamp=max(data_timestamps),
                 season_id=season.id,
             ).upsert(season, episode)
-            episode.set_update_at(None, data_timestamps)
+            episode.set_update_at(None)

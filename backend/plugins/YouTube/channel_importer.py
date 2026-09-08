@@ -155,7 +155,7 @@ class YouTubeChannelImporter(
                 image_url=image_url(channel_item.snippet.thumbnails),
                 thumbnail_url=thumbnail_url(channel_item.snippet.thumbnails),
             ).upsert(source, title)
-            title.set_update_at(None, data_timestamps)
+            title.set_update_at(None)
 
         self._upsert_seasons(title, title_key, force=force)
         self._soft_delete_missing(title_key)

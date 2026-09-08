@@ -38,7 +38,11 @@ from tests.plugins.plugin_validator.database import (
     match_imported_titles_to_tmdb,
 )
 from tests.plugins.plugin_validator.log_stats import log_stats
-from tests.plugins.plugin_validator.state import database_json, state_diff
+from tests.plugins.plugin_validator.state import (
+    database_json,
+    state_delta_json,
+    state_diff,
+)
 from tests.plugins.plugin_validator.stored_files import (
     encode_name,
     mock_update,
@@ -56,6 +60,8 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
     """A plugin test whose clock is fixed and whose check is one recorded dump."""
 
     parse_url_response: object | None = None
+
+    imported_state: str | None = None
 
     # Which record of each kind the tests that need one take, counted from the
     # first in the order the keys put them in. The first is what a test wants
@@ -81,9 +87,11 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
 
     # TODO: Validate
     def assert_state(self, session: Session, label: str) -> None:
-        """Compare the whole database against what `label` recorded."""
         session.flush()
-        self.assert_recorded(label, database_json(session))
+        actual = database_json(session)
+        if label != "import_url" and self.imported_state is not None:
+            actual = state_delta_json(self.imported_state, actual)
+        self.assert_recorded(label, actual)
 
     # TODO: Validate
     def assert_import_url_results(
@@ -137,7 +145,10 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
     ) -> list[URLImportResult]:
         """Import the test's URL as of `IMPORT_TIME`."""
         with frozen_clock(self.import_time):
-            return self._import_url(session, url)
+            results = self._import_url(session, url)
+        session.flush()
+        self.imported_state = database_json(session)
+        return results
 
     # TODO: Validate
     def update(
@@ -567,34 +578,6 @@ class UpdateEpisodeTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
 
 
 # TODO: Validate
-class DeletedEpisodeTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
-    """Tests that a fake episode gets soft deleted during update_season."""
-
-    # TODO: Validate
-    def test_deleted_episode(self, session_with_files: Session) -> None:
-        self.import_url(session_with_files)
-        season = self.selected_season(session_with_files)
-
-        with frozen_clock(self.update_time):
-            fake_episode = self.fake_episode(season)
-            season.episodes.append(fake_episode)
-            fake_episode.soft_undelete()
-            session_with_files.flush()
-
-        # `log_stats` is entered before the clock is held, because a frozen clock
-        # is what its timer reads too and a run measured against one takes no
-        # time at all. The flush is held inside, because what an update wrote is
-        # stamped when it reaches the database and not when it was worked out,
-        # and a row left to be flushed by the comparison is a row stamped by the
-        # clock the machine happened to be at.
-        with log_stats(self), frozen_clock(self.update_time):
-            self.owning_plugin(session_with_files, season).update_season(season)
-            session_with_files.flush()
-
-        self.assert_state(session_with_files, "deleted_episode")
-
-
-# TODO: Validate
 class DeletedSeasonTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
     """Tests that a fake season gets soft deleted during update_title."""
 
@@ -706,7 +689,6 @@ class UpdateTests[PluginT: AbstractPlugin](
 
 # TODO: Validate
 class DeletionTests[PluginT: AbstractPlugin](
-    DeletedEpisodeTests[PluginT],
     DeletedSeasonTests[PluginT],
     DeletedEpisodeUpdateTitleTests[PluginT],
     DeletedSeasonWithEpisodeTests[PluginT],

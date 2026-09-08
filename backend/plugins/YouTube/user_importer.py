@@ -86,7 +86,7 @@ class YouTubeUserImporter(YouTubeImporter):
                 data_timestamp=max(data_timestamps),
                 title_id=title.id,
             ).upsert(title, season)
-            season.set_update_at(None, data_timestamps)
+            season.set_update_at(None)
         self._create_missing_season_feed(season)
         self._upsert_episodes(season, title_key, force=force)
 

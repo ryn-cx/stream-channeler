@@ -81,7 +81,7 @@ class YouTubeMovieImporter(YouTubeLicensedMediaImporter):
                 update_at=min(data_timestamps) + timedelta(days=365),
                 source_id=source.id,
             ).upsert(source, title)
-            title.set_update_at(None, data_timestamps)
+            title.set_update_at(None)
 
         self._upsert_season(title, title_key, force=force)
         self._soft_delete_missing(title_key)
@@ -108,5 +108,5 @@ class YouTubeMovieImporter(YouTubeLicensedMediaImporter):
                 data_timestamp=max(data_timestamps),
                 title_id=title.id,
             ).upsert(title, season)
-            season.set_update_at(min(data_timestamps), data_timestamps)
+            season.set_update_at(min(data_timestamps))
         self._upsert_episodes(season, title_key, force=force)

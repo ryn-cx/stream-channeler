@@ -281,3 +281,84 @@ def state_diff(expected: str, actual: str) -> str:
             lineterm="",
         ),
     )
+
+
+_UNCHANGED = object()
+
+
+# TODO: Validate
+def _row_identity(row: object) -> str:
+    if isinstance(row, dict):
+        for name in _KEY_COLUMNS:
+            if name in row:
+                return str(row[name])
+        return _LINK_SEPARATOR.join(str(value) for value in row.values())
+    return json.dumps(row, sort_keys=True, default=str)
+
+
+# TODO: Validate
+def _rows_by_identity(rows: list[Any]) -> dict[str, Any] | None:
+    by_identity: dict[str, Any] = {}
+    for row in rows:
+        identity = _row_identity(row)
+        if identity in by_identity:
+            return None
+        by_identity[identity] = row
+    return by_identity
+
+
+# TODO: Validate
+def _list_delta(baseline: list[Any], actual: list[Any]) -> dict[str, Any]:
+    baseline_rows = _rows_by_identity(baseline)
+    actual_rows = _rows_by_identity(actual)
+    if baseline_rows is None or actual_rows is None:
+        return {
+            "removed": [row for row in baseline if row not in actual],
+            "added": [row for row in actual if row not in baseline],
+        }
+
+    delta: dict[str, Any] = {}
+    for identity, row in actual_rows.items():
+        if identity not in baseline_rows:
+            delta[identity] = row
+            continue
+        row_delta = _delta(baseline_rows[identity], row)
+        if row_delta is not _UNCHANGED:
+            delta[identity] = row_delta
+
+    for identity in baseline_rows:
+        if identity not in actual_rows:
+            delta[identity] = None
+    return delta
+
+
+# TODO: Validate
+def _dict_delta(baseline: dict[str, Any], actual: dict[str, Any]) -> dict[str, Any]:
+    delta: dict[str, Any] = {}
+    for name in sorted(baseline.keys() | actual.keys()):
+        if name not in actual:
+            delta[name] = None
+        elif name not in baseline:
+            delta[name] = actual[name]
+        else:
+            field_delta = _delta(baseline[name], actual[name])
+            if field_delta is not _UNCHANGED:
+                delta[name] = field_delta
+    return delta
+
+
+# TODO: Validate
+def _delta(baseline: object, actual: object) -> object:
+    if baseline == actual:
+        return _UNCHANGED
+    if isinstance(baseline, dict) and isinstance(actual, dict):
+        return _dict_delta(baseline, actual)
+    if isinstance(baseline, list) and isinstance(actual, list):
+        return _list_delta(baseline, actual)
+    return actual
+
+
+# TODO: Validate
+def state_delta_json(baseline: str, actual: str) -> str:
+    delta = _delta(json.loads(baseline), json.loads(actual))
+    return json.dumps({} if delta is _UNCHANGED else delta, indent=2)

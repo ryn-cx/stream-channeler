@@ -71,7 +71,7 @@ class HiDiveShared(HiDiveBaseFiles):
             data_timestamp=data_timestamp,
             plugin_id=self.plugin.id,
         ).upsert(self.plugin, existing_source)
-        source.set_update_at(data_timestamp + timedelta(days=1), [data_timestamp])
+        source.set_update_at(data_timestamp + timedelta(days=1))
         return source
 
     # TODO: Validate
@@ -104,9 +104,9 @@ class HiDiveShared(HiDiveBaseFiles):
                         release_date = element_release_date(elements[0])
                         title_name = card_title_name(element_text(elements[1]))
                         if title := titles_by_name.get(title_name):
-                            title.set_update_at(release_date, [])
+                            title.set_update_at(release_date)
                             for season in title.seasons:
-                                season.set_update_at(release_date, [])
+                                season.set_update_at(release_date)
                         else:
                             unmatched_names.append(title_name)
 

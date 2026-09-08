@@ -277,7 +277,7 @@ class TMDBSeries(TMDBImporter):
                 canonical_title_validated_at=tz_datetime.now(),
                 source_id=source.id,
             ).upsert(source, title)
-            title.set_update_at(None, data_timestamps)
+            title.set_update_at(None)
 
         self._upsert_seasons(title, title_key, tmdb_tv_title_id, force=force)
         self._soft_delete_missing(title_key)
@@ -300,7 +300,6 @@ class TMDBSeries(TMDBImporter):
                 min(data_timestamps),
                 max(air_dates) if air_dates else None,
             ),
-            data_timestamps,
         )
 
     # TODO: Validate
@@ -330,7 +329,6 @@ class TMDBSeries(TMDBImporter):
                 ).upsert(title, season)
                 season.set_update_at(
                     None,
-                    data_timestamps,
                 )
             self._upsert_episodes(
                 season=season,
@@ -394,7 +392,6 @@ class TMDBSeries(TMDBImporter):
             ).upsert(season, episode)
             episode.set_update_at(
                 None,
-                data_timestamps,
             )
 
     # TODO: Validate
@@ -684,7 +681,7 @@ class TMDBMovie(TMDBImporter):
                 canonical_title_validated_at=tz_datetime.now(),
                 source_id=source.id,
             ).upsert(source, title)
-            title.set_update_at(None, data_timestamps)
+            title.set_update_at(None)
 
         self._upsert_season(title, title_key, tmdb_movie_id, force=force)
         return title
@@ -721,7 +718,6 @@ class TMDBMovie(TMDBImporter):
             ).upsert(title, season)
             season.set_update_at(
                 None,
-                data_timestamps,
             )
 
         self._upsert_episode(
@@ -780,7 +776,6 @@ class TMDBMovie(TMDBImporter):
         ).upsert(season, episode)
         episode.set_update_at(
             None,
-            data_timestamps,
         )
 
     # TODO: Validate

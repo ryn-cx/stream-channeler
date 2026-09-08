@@ -62,7 +62,7 @@ class NHKWorldShared(NHKWorldBaseFiles):
             data_timestamp=data_timestamp,
             plugin_id=self.plugin.id,
         ).upsert(self.plugin, existing_source)
-        source.set_update_at(data_timestamp + timedelta(days=1), [data_timestamp])
+        source.set_update_at(data_timestamp + timedelta(days=1))
         return source
 
     # TODO: Validate
@@ -86,7 +86,7 @@ class NHKWorldShared(NHKWorldBaseFiles):
                 title_id = item.video_program.id
                 if title := Title.get_from_memory(self.session, source, title_id):
                     logger.info("Matched title: {}", title.name or title_id)
-                    title.set_update_at(item.video.published_at, [])
+                    title.set_update_at(item.video.published_at)
                 else:
                     new_title_ids.append(title_id)
 

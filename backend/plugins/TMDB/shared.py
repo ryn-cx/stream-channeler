@@ -174,9 +174,9 @@ class TMDBShared(TMDBSearch):
                 ):
                     # Watch provider status changing warrants a complete updates of both
                     # the title and season files for simplicity.
-                    canonical_link.non_canonical_title.set_update_at(update_at, [])
+                    canonical_link.non_canonical_title.set_update_at(update_at)
                     for season in canonical_link.non_canonical_title.active_children:
-                        season.set_update_at(update_at, [])
+                        season.set_update_at(update_at)
 
     # TODO: Validate
     @classmethod

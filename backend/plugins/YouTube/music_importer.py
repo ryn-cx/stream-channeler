@@ -98,7 +98,6 @@ class YouTubeMusicSeasons(YouTubeImporter):
             ).upsert(title, season)
             season.set_update_at(
                 min(data_timestamps) + timedelta(days=365),
-                data_timestamps,
             )
         self._upsert_episodes(season, title_key, force=force)
 
@@ -189,7 +188,6 @@ class YouTubeAlbumImporter(YouTubeMusicImporter):
             ).upsert(source, title)
             title.set_update_at(
                 min(data_timestamps) + timedelta(days=365),
-                data_timestamps,
             )
 
         self._upsert_season_music(
@@ -261,7 +259,7 @@ class YouTubeTopicImporter(YouTubeMusicImporter):
                 update_at=min(data_timestamps) + timedelta(days=365),
                 source_id=source.id,
             ).upsert(source, title)
-            title.set_update_at(None, data_timestamps)
+            title.set_update_at(None)
 
         for season_key in self._season_keys_from_title_files(title_key):
             music_playlist = self.music_playlist_file(season_key)

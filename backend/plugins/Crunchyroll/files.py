@@ -47,10 +47,13 @@ from plugins.utils.base_plugin.files import EndpointFile, PagedEndpointFile
 
 # TODO: This is a temporary importing workaround.
 
+
 # from plugins.utils.get_around_client import get_around_client
 @cache
 def get_around_client() -> GetAround:
     return GetAround(proxy=settings.PROXY)
+
+
 @cache
 def chirashi() -> Chirashi:
     return Chirashi(get_around_client=get_around_client())

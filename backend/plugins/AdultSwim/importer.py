@@ -150,7 +150,7 @@ class AdultSwimImporter(AdultSwimShared, BaseImporter):
                 data_timestamp=max(data_timestamps),
                 source_id=source.id,
             ).upsert(source, title)
-            title.set_update_at(None, data_timestamps)
+            title.set_update_at(None)
 
         self._upsert_seasons(
             title,
@@ -184,7 +184,7 @@ class AdultSwimImporter(AdultSwimShared, BaseImporter):
                     data_timestamp=max(data_timestamps),
                     title_id=title.id,
                 ).upsert(title, season)
-                season.set_update_at(None, data_timestamps)
+                season.set_update_at(None)
 
             self._upsert_episodes(
                 season,
@@ -243,7 +243,7 @@ class AdultSwimImporter(AdultSwimShared, BaseImporter):
                 data_timestamp=max(data_timestamps),
                 season_id=season.id,
             ).upsert(season, episode)
-            episode.set_update_at(None, data_timestamps)
+            episode.set_update_at(None)
 
         season.soft_delete_missing_children(
             episode_data.id for episode_data in episodes_data
