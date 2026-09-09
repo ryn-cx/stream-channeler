@@ -48,11 +48,6 @@ class TitlePage(SingleArgEndpointFile[ShowModel]):
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ShowNotFoundError)
 
-    # TODO: Validate
-    @override
-    def acceptable_error_status(self) -> str:
-        return f"Invalid title {self.unique_identifier}"
-
 
 # TODO: Validate
 class EpisodesFile(MultipleArgEndpointFile[EpisodesModel]):
@@ -93,8 +88,3 @@ class MovieFile(SingleArgEndpointFile[MovieModel]):
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, MovieNotFoundError)
-
-    # TODO: Validate
-    @override
-    def acceptable_error_status(self) -> str:
-        return f"Invalid movie_id {self.unique_identifier}"

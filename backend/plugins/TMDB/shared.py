@@ -47,7 +47,7 @@ class TMDBShared(TMDBSearch):
     # TODO: Validate
     @classmethod
     @override
-    def link_to_tmdb(cls) -> bool:
+    def _link_to_tmdb(cls) -> bool:
         return False
 
     # TODO: Validate

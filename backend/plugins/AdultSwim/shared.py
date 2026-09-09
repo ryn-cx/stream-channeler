@@ -55,12 +55,12 @@ class AdultSwimShared(AdultSwimBaseFiles):
 
     # TODO: Validate
     @override
-    def upsert_source(self, source_key: str) -> Source:
+    def _upsert_source(self, source_key: str) -> Source:
         existing_source = Source.get(self.session, self.plugin, source_key)
         source = Source(
             key=source_key,
             favicon_url=self.favicon_url(),
-            link_to_tmdb=self.link_to_tmdb(),
+            link_to_tmdb=self._link_to_tmdb(),
             data_timestamp=self.titles_file().data_timestamp(),
             plugin_id=self.plugin.id,
             # update_at is not used because it Plugin.update_at is used instead because

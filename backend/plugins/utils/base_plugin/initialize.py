@@ -1,8 +1,7 @@
-# TODO: Validate
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from sqlmodel import Session
 
@@ -10,6 +9,7 @@ from app.models import BaseMediaMixin
 from app.plugins.models import Plugin
 from app.sources.models import Source
 from app.utils import tz_datetime
+from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.base_plugin.file_access import BaseFileAccessMixin
 from plugins.utils.constants import INCOMPLETE_STATUS
 
@@ -17,33 +17,17 @@ if TYPE_CHECKING:
     from datetime import datetime
 
 
-# TODO: Validate
-class BaseInitializeMixin(BaseFileAccessMixin, ABC):
+class BaseInitializeMixin(BaseFileAccessMixin, AbstractPlugin, ABC):
     """Creates the database records a plugin needs before it can be used."""
 
     _sources: dict[str, Source]
-
-    if TYPE_CHECKING:
-        # TODO: Validate
-        def __init__(self, session: Session, plugin: Plugin | None = None) -> None: ...
-
-    @classmethod
-    @abstractmethod
-    def plugin_name(cls) -> str:
-        """Return the name of the plugin."""
 
     @classmethod
     def _source_keys(cls) -> tuple[str, ...]:
         """Return the keys of the sources associated with the plugin."""
         return (cls.plugin_name(),)
 
-    @classmethod
-    @abstractmethod
-    def favicon_url(cls) -> str:
-        """Return the URL of the plugin's favicon."""
-
-    # TODO: Validate
-    def link_to_tmdb(self) -> bool:
+    def _link_to_tmdb(self) -> bool:
         """Return whether the plugin should link to TMDB."""
         return True
 
@@ -54,21 +38,22 @@ class BaseInitializeMixin(BaseFileAccessMixin, ABC):
             return record.data_timestamp
         return tz_datetime.now()
 
-    # TODO: Validate
-    def upsert_source(self, source_key: str) -> Source:
-        """Create or update the plugin's `Source` record(s)."""
+    def _upsert_source(self, source_key: str) -> Source:
+        """Create or update the plugin's `Source` records."""
         existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
-        data_timestamp: datetime
+
+        # If there are source files use those as the data_timestamp, if there are no
+        # source files set the data_timestamp to the current date.
         try:
             self._source_files()
         except NotImplementedError:
-            data_timestamp = self._existing_data_timestamp_or_now(existing_source)
+            data_timestamp = tz_datetime.now()
         else:
             data_timestamp = self._source_files_data_timestamp()
         source = Source(
             key=source_key,
             favicon_url=self.favicon_url(),
-            link_to_tmdb=self.link_to_tmdb(),
+            link_to_tmdb=self._link_to_tmdb(),
             data_timestamp=data_timestamp,
             plugin_id=self.plugin.id,
         ).upsert(self.plugin, existing_source)
@@ -119,10 +104,9 @@ class BaseInitializeMixin(BaseFileAccessMixin, ABC):
         Automatically called during plugin initialization."""
         for source_key in self._source_keys():
             if Source.get(self.session, self.plugin, source_key) is None:
-                self.upsert_source(source_key)
+                self._upsert_source(source_key)
         self._sources = {source.key: source for source in self.plugin.sources}
 
-    # TODO: Validate
     def _create_initial_channel_records(self) -> None:
         """Create the initial channel records for the plugin.
 

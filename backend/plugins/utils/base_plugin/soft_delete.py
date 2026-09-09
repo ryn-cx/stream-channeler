@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from abc import ABC
 
+from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.base_plugin.file_access import BaseFileAccessMixin
 from plugins.utils.base_plugin.preload import BasePreloadMixin
 
 
-class BaseSoftDeleteMixin(BaseFileAccessMixin, BasePreloadMixin, ABC):
+class BaseSoftDeleteMixin(BaseFileAccessMixin, BasePreloadMixin, AbstractPlugin, ABC):
     def soft_delete_missing_seasons(self, title_key: str) -> None:
         """Soft-delete seasons whose keys are not in the title's season file."""
         season_keys = self._season_keys_from_title_files(title_key)

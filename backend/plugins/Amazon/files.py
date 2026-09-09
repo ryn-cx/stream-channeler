@@ -38,7 +38,7 @@ from plugins.Amazon.utils import (
 )
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.files import (
-    DownloadedFile,
+    APIClientFile,
     MultipleArgEndpointFile,
     SingleArgEndpointFile,
     TextFile,
@@ -69,33 +69,32 @@ class ShareLinkRedirect(TextFile):
 
     # TODO: Validate
     @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            # Asked for directly rather than through Deforestation, because that
-            # one fetches a page and hands back what it settled on, and what is
-            # wanted here is the address it was pointed at.
-            #
-            # Amazon decides where to point by what it is told is asking: a
-            # request naming no browser is sent to the page advertising its app
-            # rather than to the title, and that address carries no id.
-            response = httpx.get(
-                # Where a share link is written, which is its own domain rather
-                # than a path on Prime Video's.
-                "https://watch.amazon.com/detail",
-                params={"gti": self.unique_identifier},
-                headers={
-                    "User-Agent": (
-                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                        "AppleWebKit/537.36 (KHTML, like Gecko) "
-                        "Chrome/140.0.0.0 Safari/537.36"
-                    ),
-                },
-                follow_redirects=False,
-                # How long the redirect a share link answers with is waited
-                # for.
-                timeout=30,
-            )
-            self.write(response.headers.get("location"))
+    def _download_file(self) -> str | None:
+        # Asked for directly rather than through Deforestation, because that
+        # one fetches a page and hands back what it settled on, and what is
+        # wanted here is the address it was pointed at.
+        #
+        # Amazon decides where to point by what it is told is asking: a
+        # request naming no browser is sent to the page advertising its app
+        # rather than to the title, and that address carries no id.
+        response = httpx.get(
+            # Where a share link is written, which is its own domain rather
+            # than a path on Prime Video's.
+            "https://watch.amazon.com/detail",
+            params={"gti": self.unique_identifier},
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) "
+                    "Chrome/140.0.0.0 Safari/537.36"
+                ),
+            },
+            follow_redirects=False,
+            # How long the redirect a share link answers with is waited
+            # for.
+            timeout=30,
+        )
+        return response.headers.get("location")
 
     # TODO: Validate
     def location(self) -> str | None:
@@ -123,7 +122,7 @@ class ShareLinkRedirect(TextFile):
 
 
 # TODO: Validate
-class Detail(DownloadedFile[dict[str, Any]]):
+class Detail(APIClientFile[dict[str, Any]]):
     """A title's own page.
 
     A series has no page of its own on Prime Video: every page is one season of
@@ -168,11 +167,6 @@ class Detail(DownloadedFile[dict[str, Any]]):
 
     # TODO: Validate
     @override
-    def acceptable_error_status(self) -> str:
-        return f"Invalid title {self.detail_key}"
-
-    # TODO: Validate
-    @override
     def _download_file(self) -> str:
         try:
             return self._endpoint().download(self.detail_key)
@@ -184,8 +178,8 @@ class Detail(DownloadedFile[dict[str, Any]]):
 
     # TODO: Validate
     @override
-    def _download(self) -> None:
-        super()._download()
+    def _download_and_write(self) -> None:
+        super()._download_and_write()
 
         # The episode list is only ever read alongside the page it belongs to, so
         # the pages of it come down with the page rather than being asked for by

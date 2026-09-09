@@ -26,8 +26,14 @@ _UNLOADED = Sentinel("DATABASE_RECORD")
 # TODO: Validate
 class BaseFile[T](ABC):
     # TODO: Validate
-    def __init__(self, session: Session, plugin: Plugin) -> None:
+    def __init__(
+        self,
+        session: Session,
+        plugin: Plugin,
+        unique_identifier: str,
+    ) -> None:
         """Initialize the file."""
+        self.unique_identifier = unique_identifier
         self.__session = session
         self.__plugin = plugin
         self._cached_parsed: T | None = None
@@ -105,8 +111,6 @@ class BaseFile[T](ABC):
         self.download_if_outdated()
         return self._database_record.data_timestamp
 
-    unique_identifier: str
-
     # TODO: Validate
     @override
     def __eq__(self, other: object) -> bool:
@@ -178,13 +182,35 @@ class BaseFile[T](ABC):
     def download_if_outdated(self, update_at: datetime | None = None) -> None:
         """Download the file if it is outdated."""
         if self.is_outdated(update_at):
-            self._download()
+            self._download_and_write()
 
     # TODO: Validate
-    def _download(self) -> None:
-        """Download the file."""
-        msg = f"{type(self).__name__} does not implement _download"
-        raise NotImplementedError(msg)
+    @abstractmethod
+    def _download_file(self) -> str | None:
+        """Download the file and return the body as it was served."""
+
+    def _is_acceptable_error(self, error: Exception) -> bool:  # noqa: ARG002
+        """Return whether `error` should be allowed during a download.
+
+        If an error is allowed an empty file will be witten to the database to indicate
+        the failure."""
+        return False
+
+    def _initial_status_after_downloading(self) -> str | None:
+        """Return the initial value for `File.status` after completing a download."""
+        return None
+
+    # TODO: Validate
+    def _download_and_write(self) -> None:
+        with self._log_download(self.unique_identifier):
+            try:
+                data = self._download_file()
+            except Exception as error:
+                if not self._is_acceptable_error(error):
+                    raise
+                self.write(None, "Invalid")
+            else:
+                self.write(data, self._initial_status_after_downloading())
 
     # TODO: Validate
     def _next_update_at(self) -> datetime | None:
@@ -251,12 +277,12 @@ class BaseFile[T](ABC):
         if not self._existing_database_record:
             return True
 
-        # A file that asked to be downloaded again by now is outdated whatever it
-        # is being read against, so a file type that refreshes on its own says so
-        # once through `_next_update_at` rather than every caller passing a
-        # timestamp it has no reason to know.
         record_update_at = self._existing_database_record.update_at
-        if record_update_at and record_update_at <= tz_datetime.now():
+        if (
+            record_update_at
+            and record_update_at <= tz_datetime.now()
+            and self._existing_database_record.data_timestamp < record_update_at
+        ):
             return True
 
         # If there is no minimum timestamp and the file exists it is up to date.
@@ -272,24 +298,11 @@ class BaseFile[T](ABC):
         return self._database_record.data_timestamp < minimum_timestamp
 
 
-# TODO: Validate
 class TextFile(BaseFile[str], ABC):
-    # TODO: Validate
-    def __init__(
-        self,
-        session: Session,
-        plugin: Plugin,
-        unique_identifier: str,
-    ) -> None:
-        self.unique_identifier = unique_identifier
-        super().__init__(session, plugin)
-
-    # TODO: Validate
     @override
     def _parse(self, content: str) -> str:
         return content
 
-    # TODO: Validate
     @classmethod
     @override
     def _identifier_suffix(cls) -> str:
@@ -300,76 +313,29 @@ class Endpoint[T](Protocol):
     def load(self, data: str, log_id: str = "") -> T: ...
 
 
-# TODO: Validate
 class SingleArgEndpoint[T](Endpoint[T], Protocol):
-    # TODO: Validate
     def download(self, unique_identifier: str, /) -> str: ...
 
 
-# TODO: Validate
 class IntegerArgEndpoint[T](Endpoint[T], Protocol):
-    # TODO: Validate
     def download(self, unique_identifier: int, /) -> str: ...
 
 
-# TODO: Validate
 class NoArgsEndpoint[T](Endpoint[T], Protocol):
-    # TODO: Validate
     def download(self) -> str: ...
 
 
-# TODO: Validate
 class PagedEndpoint[T](Endpoint[T], Protocol):
-    # TODO: Validate
     def download_all(self, unique_identifier: str, /) -> list[str]: ...
 
 
-# TODO: Validate
-class DownloadedFile[T](BaseFile[T], ABC):
-    # TODO: Validate
+class APIClientFile[T](BaseFile[T], ABC):
     @abstractmethod
-    def _endpoint(self) -> Endpoint[Any]: ...
+    def _endpoint(self) -> Endpoint[Any]:
+        """Return the endpoint used to download the file.
 
-    # TODO: Validate
-    def __init__(
-        self,
-        session: Session,
-        plugin: Plugin,
-        unique_identifier: str,
-    ) -> None:
-        self.unique_identifier = unique_identifier
-        super().__init__(session, plugin)
-
-    # TODO: Validate
-    @abstractmethod
-    def _download_file(self) -> str:
-        """Download the file and return the body as it was served."""
-
-    # TODO: Validate
-    def _is_acceptable_error(self, error: Exception) -> bool:  # noqa: ARG002
-        """Return whether `error` should be caught during download."""
-        return False
-
-    # TODO: Validate
-    def acceptable_error_status(self) -> str:
-        return f"Invalid unique_identifier {self.unique_identifier}"
-
-    # TODO: Validate
-    def _initial_status_after_downloading(self) -> str | None:
-        return None
-
-    # TODO: Validate
-    @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            try:
-                data = self._download_file()
-            except Exception as error:
-                if not self._is_acceptable_error(error):
-                    raise
-                self.write(None, self.acceptable_error_status())
-            else:
-                self.write(data, self._initial_status_after_downloading())
+        The file suffix defaults to json because most API client files deal with JSON
+        fils."""
 
     @classmethod
     @override
@@ -377,11 +343,16 @@ class DownloadedFile[T](BaseFile[T], ABC):
         return ".json"
 
 
-# TODO: Validate
-class MultipleArgEndpointFile[T](DownloadedFile[T], ABC):
-    """Base class to use when endpoint.download() takes multiple args."""
+class MultipleArgEndpointFile[T](APIClientFile[T], ABC):
+    """Base class to use when endpoint.download() takes multiple args.
 
-    # TODO: Validate
+    There is no default implementation for `_download_file` because there is no
+    reasonable way to predict what parameters it will take.
+
+    Other endpoints subclass this out of convenience because the biggest difference
+    betweeen it and the single arguement classes is that those ones have more functions
+    that can be implemented in the base file class."""
+
     @abstractmethod
     @override
     def _endpoint(self) -> Endpoint[T]: ...
@@ -391,22 +362,18 @@ class MultipleArgEndpointFile[T](DownloadedFile[T], ABC):
         return self._endpoint().load(content, self.log_id())
 
 
-# TODO: Validate
 class SingleArgEndpointFile[T](MultipleArgEndpointFile[T], ABC):
     """Base class to use when `endpoint.download()` takes a single `str | int` arg."""
 
-    # TODO: Validate
     @abstractmethod
     @override
     def _endpoint(self) -> SingleArgEndpoint[T]: ...
 
-    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(self.unique_identifier)
 
 
-# TODO: Validate
 class NoArgsEndpointFile[T](MultipleArgEndpointFile[T], ABC):
     """Base class to use when `endpoint.download()` takes no args."""
 
@@ -414,7 +381,6 @@ class NoArgsEndpointFile[T](MultipleArgEndpointFile[T], ABC):
     @override
     def _endpoint(self) -> NoArgsEndpoint[T]: ...
 
-    # TODO: Validate
     def __init__(self, session: Session, plugin: Plugin) -> None:
         super().__init__(session, plugin, self.unique_identifier)
 
@@ -423,36 +389,31 @@ class NoArgsEndpointFile[T](MultipleArgEndpointFile[T], ABC):
         return self._endpoint().download()
 
 
-# TODO: Validate
 class IntegerArgEndpointFile[T](MultipleArgEndpointFile[T], ABC):
     """Base class to use when `endpoint.download()` takes a single `int` arg."""
 
-    # TODO: Validate
     @abstractmethod
     @override
     def _endpoint(self) -> IntegerArgEndpoint[T]: ...
 
-    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(int(self.unique_identifier))
 
 
-class PagedEndpointFile[T](DownloadedFile[list[T]], ABC):
+class PagedEndpointFile[T](APIClientFile[list[T]], ABC):
     """Base class to use when `endpoint.download_all()` takes a single `str | int` arg."""
 
-    # TODO: Validate
     @abstractmethod
+    @override
     def _endpoint(self) -> PagedEndpoint[T]: ...
 
-    # TODO: Validate
     @override
     def _download_file(self) -> str:
-        pages = self._endpoint().download_all(self.unique_identifier)
-        return json.dumps(pages)
+        downloaded_files = self._endpoint().download_all(self.unique_identifier)
+        return json.dumps(downloaded_files)
 
     @override
     def _parse(self, content: str) -> list[T]:
-        pages: list[str] = json.loads(content)
-        endpoint = self._endpoint()
-        return [endpoint.load(page, self.log_id()) for page in pages]
+        files: list[str] = json.loads(content)
+        return [self._endpoint().load(file, self.log_id()) for file in files]

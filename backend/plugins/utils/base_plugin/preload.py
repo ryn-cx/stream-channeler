@@ -7,10 +7,11 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, select
 
-from app.episodes.models import Episode, EpisodeCanonicalEpisode
+from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.sources.models import Source
 from app.titles.models import Title
+from plugins.utils.abstract_plugin import AbstractPlugin
 
 if TYPE_CHECKING:
     from sqlalchemy.engine.result import ScalarResult
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
     from app.plugins.models import Plugin
 
 
-class BasePreloadMixin(ABC):
+class BasePreloadMixin(AbstractPlugin, ABC):
     session: Session
     plugin: Plugin
 
@@ -73,7 +74,7 @@ class BasePreloadMixin(ABC):
             options.append(
                 selectinload(Title.seasons)  # type: ignore[arg-type]
                 .selectinload(Season.episodes)  # type: ignore[arg-type]
-                .selectinload(Episode.canonical_episode_links)  # type: ignore[arg-type]
+                .selectinload(Episode.canonical_episode_links),  # type: ignore[arg-type]
             )
         elif preload_seasons:
             options.append(selectinload(Title.seasons))  # type: ignore[arg-type]

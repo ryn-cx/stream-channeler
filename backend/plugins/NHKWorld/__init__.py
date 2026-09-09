@@ -54,7 +54,7 @@ class NHKWorld(NHKWorldShared, BaseImporter, AbstractPlugin, register=False):
         new_feed_file = self.new_video_episodes_file(source.data_timestamp)
         new_feed_file.download_if_outdated(update_at)
         self._process_new_episodes_files(source)
-        self.upsert_source(source.key)
+        self._upsert_source(source.key)
 
     # TODO: Validate
     @override

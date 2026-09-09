@@ -411,7 +411,7 @@ class PlaylistFeed(MultipleArgEndpointFile[ChannelFeedModel | PlaylistFeedModel]
 
     # TODO: Validate
     @override
-    def _download(self) -> None:
+    def _download_and_write(self) -> None:
         with self._log_download(self.unique_identifier):
             try:
                 feed = self._download_file()

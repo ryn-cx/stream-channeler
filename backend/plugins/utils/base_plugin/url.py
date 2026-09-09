@@ -1,8 +1,8 @@
 import re
 from abc import abstractmethod
-from typing import NamedTuple
+from typing import NamedTuple, override
 
-from plugins.utils.abstract_plugin import InvalidURLError
+from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 
 
 class ExtractedURLInfo(NamedTuple):
@@ -13,9 +13,10 @@ class ExtractedURLInfo(NamedTuple):
     episode_key: str | None = None
 
 
-class BaseURLMixin:
+class BaseURLMixin(AbstractPlugin):
     @classmethod
     @abstractmethod
+    @override
     def plugin_name(cls) -> str: ...
 
     def _validate_url(self, url: str) -> None:
@@ -23,6 +24,7 @@ class BaseURLMixin:
         raise InvalidURLError(msg)
 
     @classmethod
+    @override
     def is_valid_url_format(cls, url: str) -> bool:
         """Return whether the given URL matches the plugin's URL format."""
         # is not None is used to booleanize the response.

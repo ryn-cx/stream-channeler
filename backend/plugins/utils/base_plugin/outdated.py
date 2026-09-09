@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC
 from typing import TYPE_CHECKING, TypeIs
 
+from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.base_plugin.file_access import BaseFileAccessMixin
 
 if TYPE_CHECKING:
@@ -14,7 +15,7 @@ if TYPE_CHECKING:
     from app.titles.models import Title
 
 
-class BaseOutdatedMixin(BaseFileAccessMixin, ABC):
+class BaseOutdatedMixin(BaseFileAccessMixin, AbstractPlugin, ABC):
     def _title_is_outdated(
         self,
         title: Title | None,

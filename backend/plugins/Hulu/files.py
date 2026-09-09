@@ -143,17 +143,16 @@ class Genre(SingleArgEndpointFile[GenreModel]):
 class WatchRedirect(TextFile):
     # TODO: Validate
     @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            response = get_around_client().get(
-                episode_url(self.unique_identifier),
-                follow_redirects=True,
-            )
-            response.raise_for_status()
-            canonical = BeautifulSoup(response.text, "html.parser").select_one(
-                'link[rel="canonical"]',
-            )
-            if canonical is None:
-                msg = f"No canonical URL for {episode_url(self.unique_identifier)}"
-                raise ValueError(msg)
-            self.write(str(canonical["href"]))
+    def _download_file(self) -> str:
+        response = get_around_client().get(
+            episode_url(self.unique_identifier),
+            follow_redirects=True,
+        )
+        response.raise_for_status()
+        canonical = BeautifulSoup(response.text, "html.parser").select_one(
+            'link[rel="canonical"]',
+        )
+        if canonical is None:
+            msg = f"No canonical URL for {episode_url(self.unique_identifier)}"
+            raise ValueError(msg)
+        return str(canonical["href"])

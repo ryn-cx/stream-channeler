@@ -65,13 +65,13 @@ class CrunchyrollImporter(CrunchyrollShared, BaseImporter, ABC):
 
     # TODO: Validate
     @override
-    def upsert_source(self, source_key: str) -> Source:
+    def _upsert_source(self, source_key: str) -> Source:
         data_timestamps = self._source_files_data_timestamps()
         existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
         source = Source(
             key=source_key,
             favicon_url=self.favicon_url(),
-            link_to_tmdb=self.link_to_tmdb(),
+            link_to_tmdb=self._link_to_tmdb(),
             data_timestamp=max(data_timestamps),
             plugin_id=self.plugin.id,
         ).upsert(self.plugin, existing_source)
@@ -383,7 +383,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
             {release.id for release in catalogue_file.datums()},
             self._source_files_data_timestamps(),
         )
-        self.upsert_source(self.source_name())
+        self._upsert_source(self.source_name())
 
 
 # TODO: Validate
@@ -404,7 +404,7 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
     # TODO: Validate
     @classmethod
     @override
-    def link_to_tmdb(cls) -> bool:
+    def _link_to_tmdb(cls) -> bool:
         return False
 
     # TODO: Validate
@@ -662,4 +662,4 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
             new_title_keys,
             self._source_files_data_timestamps(),
         )
-        self.upsert_source(self.source_name())
+        self._upsert_source(self.source_name())

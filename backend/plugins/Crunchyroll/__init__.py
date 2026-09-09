@@ -51,13 +51,13 @@ class Crunchyroll(
                 self.session,
                 self.plugin,
                 self._file_cache,
-            ).upsert_source(VIDEO_SOURCE)
+            )._upsert_source(VIDEO_SOURCE)
         if Source.get(self.session, self.plugin, MUSIC_SOURCE) is None:
             CrunchyrollMusicImporter(
                 self.session,
                 self.plugin,
                 self._file_cache,
-            ).upsert_source(MUSIC_SOURCE)
+            )._upsert_source(MUSIC_SOURCE)
         self._sources = {source.key: source for source in self.plugin.sources}
 
     # TODO: Validate

@@ -3,27 +3,28 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
 from datetime import date, datetime
-from typing import Any
+from typing import Any, override
 
 from sqlmodel import Session, col, select
 
 from app.files.models import File
 from app.plugins.models import Plugin
 from app.titles.models import Title
-from plugins.utils.abstract_plugin import InvalidURLError
+from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.files import (
     BaseFile,
 )
 from plugins.utils.constants import INCOMPLETE_STATUS
 
 
-class BaseFileAccessMixin(ABC):
+class BaseFileAccessMixin(AbstractPlugin, ABC):
     session: Session
     plugin: Plugin
     _file_cache: dict[tuple[type[BaseFile[Any]], Any], BaseFile[Any]]
 
     @classmethod
     @abstractmethod
+    @override
     def plugin_name(cls) -> str: ...
 
     def _cached_file[FileT: BaseFile[Any]](
@@ -150,18 +151,22 @@ class BaseFileAccessMixin(ABC):
             raise InvalidURLError(msg) from error
 
     def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
-        """Return the files required to upsert the title."""
-        msg = "This plugin does not have title specific files."
-        raise NotImplementedError(msg)
+        """Return the files required to upsert the title.
+
+        The default implementation will raise because returning an empty list is more
+        error-prone than explicitly raising an error."""
+        raise NotImplementedError
 
     def _season_files(
         self,
         season_key: str,
         title_key: str,
     ) -> Sequence[BaseFile[Any]]:
-        """Return the files required to upsert the season."""
-        msg = "This plugin does not have season specific files."
-        raise NotImplementedError(msg)
+        """Return the files required to upsert the season.
+
+        The default implementation will raise because returning an empty list is more
+        error-prone than explicitly raising an error."""
+        raise NotImplementedError
 
     def _episode_files(
         self,
@@ -169,19 +174,22 @@ class BaseFileAccessMixin(ABC):
         season_key: str,
         title_key: str,
     ) -> Sequence[BaseFile[Any]]:
-        """Return the files required to upsert the episode."""
-        msg = "This plugin does not have episode specific files."
-        raise NotImplementedError(msg)
+        """Return the files required to upsert the episode.
+
+        The default implementation will raise because returning an empty list is more
+        error-prone than explicitly raising an error."""
+        raise NotImplementedError
 
     def _plugin_files(self) -> Sequence[BaseFile[Any]]:
         """Return the files required to upsert the plugin."""
-        msg = "This plugin does not have plugin specific files."
-        raise NotImplementedError(msg)
+        raise NotImplementedError
 
     def _source_files(self) -> Sequence[BaseFile[Any]]:
-        """Return the files required to upsert the source."""
-        msg = "This plugin does not have source specific files."
-        raise NotImplementedError(msg)
+        """Return the files required to upsert the source.
+
+        The default implementation will raise because returning an empty list is more
+        error-prone than explicitly raising an error."""
+        raise NotImplementedError
 
     def _title_files_data_timestamps(self, title_key: str) -> list[datetime]:
         """Return the data timestamp from each of the title's files."""
@@ -243,8 +251,7 @@ class BaseFileAccessMixin(ABC):
 
     def _season_keys_from_title_files(self, title_key: str) -> list[str]:
         """Return the season keys from the title's files."""
-        msg = "This plugin does not have season keys from file."
-        raise NotImplementedError(msg)
+        raise NotImplementedError
 
     def _episode_keys_from_season_files(
         self,
@@ -252,5 +259,4 @@ class BaseFileAccessMixin(ABC):
         title_key: str,
     ) -> list[str]:
         """Return the episode keys from the season's files."""
-        msg = "This plugin does not have episode keys from file."
-        raise NotImplementedError(msg)
+        raise NotImplementedError

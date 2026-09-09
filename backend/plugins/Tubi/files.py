@@ -32,8 +32,3 @@ class ContentFile(SingleArgEndpointFile[ContentModel]):
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ContentNotFoundError)
-
-    # TODO: Validate
-    @override
-    def acceptable_error_status(self) -> str:
-        return f"Invalid content_id {self.unique_identifier}"

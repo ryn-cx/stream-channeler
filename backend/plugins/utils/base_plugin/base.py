@@ -74,10 +74,9 @@ class BasePlugin(
     def name_on_tmdb(cls) -> tuple[str, ...]:
         return (cls.plugin_name(),)
 
-
-
     # TODO: Validate
     @classmethod
+    @override
     def matches_tmdb_provider(cls, provider_name: str) -> bool:
         return provider_name in cls.name_on_tmdb()
 
@@ -147,6 +146,7 @@ class BasePlugin(
         return self._sources[self.source_name()]
 
     # TODO: Validate
+    @override
     def tmdb_lookup_info(self, title: Title) -> list[TMDBLookupInfo]:
         if not title.name:
             return []

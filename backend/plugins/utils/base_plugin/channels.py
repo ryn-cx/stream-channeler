@@ -19,6 +19,7 @@ from app.users.models import User
 from app.users.plugin_user import is_plugin_user
 from app.users.service.accounts import get_or_create_automatic_channel_user
 from app.utils import tz_datetime
+from plugins.utils.abstract_plugin import AbstractPlugin
 
 if TYPE_CHECKING:
     import uuid
@@ -27,7 +28,7 @@ if TYPE_CHECKING:
     from app.plugins.models import Plugin
 
 
-class BaseChannelMixin(ABC):
+class BaseChannelMixin(AbstractPlugin, ABC):
     session: Session
     plugin: Plugin
 

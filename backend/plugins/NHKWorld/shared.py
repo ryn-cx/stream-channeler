@@ -45,7 +45,7 @@ class NHKWorldShared(NHKWorldBaseFiles):
 
     # TODO: Validate
     @override
-    def upsert_source(self, source_key: str) -> Source:
+    def _upsert_source(self, source_key: str) -> Source:
         if not (latest_feed_file := self.latest_new_video_episodes_file()):
             latest_feed_file = self.new_video_episodes_file(tz_datetime.now())
         data_timestamp = latest_feed_file.data_timestamp()
@@ -53,7 +53,7 @@ class NHKWorldShared(NHKWorldBaseFiles):
         source = Source(
             key=source_key,
             favicon_url=self.favicon_url(),
-            link_to_tmdb=self.link_to_tmdb(),
+            link_to_tmdb=self._link_to_tmdb(),
             data_timestamp=data_timestamp,
             plugin_id=self.plugin.id,
         ).upsert(self.plugin, existing_source)

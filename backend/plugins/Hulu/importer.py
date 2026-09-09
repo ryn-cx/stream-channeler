@@ -77,7 +77,7 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
                 source_key = self._channel_name(network)
 
         if source_key not in self._sources:
-            self._sources[source_key] = self.upsert_source(source_key)
+            self._sources[source_key] = self._upsert_source(source_key)
 
         return self._sources[source_key]
 

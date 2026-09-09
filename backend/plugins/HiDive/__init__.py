@@ -80,4 +80,4 @@ class HiDive(
         new_schedule_file = self.schedule_file(source.data_timestamp)
         new_schedule_file.download_if_outdated(update_at)
         self._process_new_schedule_files(source)
-        self.upsert_source(source.key)
+        self._upsert_source(source.key)

@@ -3,6 +3,7 @@ import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
+from typing import override
 
 from sqlmodel import Session, col, select
 
@@ -16,6 +17,7 @@ from app.users.models import User
 from app.watches.identifiers import watched_dates_by_canonical_id
 from app.watches.models import Watch
 from app.watches.schemas import WatchImportResult, WatchImportResults
+from plugins.utils.abstract_plugin import AbstractPlugin
 
 
 # TODO: Validate
@@ -38,7 +40,7 @@ class ParsedWatchEntry:
 
 
 # TODO: Validate
-class BaseWatchHistoryMixin(ABC):
+class BaseWatchHistoryMixin(AbstractPlugin, ABC):
     session: Session
     plugin: Plugin
 
@@ -97,6 +99,7 @@ class BaseWatchHistoryMixin(ABC):
         """Parse raw watch history content into entries ready for import."""
 
     # TODO: Validate
+    @override
     def import_watch_history(
         self,
         content: str,

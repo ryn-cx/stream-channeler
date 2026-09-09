@@ -57,12 +57,6 @@ class ItemsFile(MultipleArgEndpointFile[ItemsModel]):
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ItemNotFoundError)
 
-    # TODO: Validate
-    @override
-    def acceptable_error_status(self) -> str:
-        """Return what is written down in place of a title that does not exist."""
-        return f"Invalid item_id {self.unique_identifier}"
-
 
 # TODO: Validate
 class SeasonsFile(SingleArgEndpointFile[SeasonsModel]):
@@ -75,9 +69,3 @@ class SeasonsFile(SingleArgEndpointFile[SeasonsModel]):
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, SeriesNotFoundError)
-
-    # TODO: Validate
-    @override
-    def acceptable_error_status(self) -> str:
-        """Return what is written down in place of a series that does not exist."""
-        return f"Invalid series_id {self.unique_identifier}"
