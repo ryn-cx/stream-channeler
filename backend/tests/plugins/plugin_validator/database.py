@@ -96,7 +96,7 @@ def no_channel_initialization(
             stack.enter_context(
                 patch.object(
                     plugin_class,
-                    "_create_channel_records",
+                    "_create_initial_channel_records",
                     lambda _self: None,
                 ),
             )

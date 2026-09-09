@@ -58,7 +58,7 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
         if title := self._preload_title(media_info.title_key).one_or_none():
             return self._import_results(title, media_info)
 
-        self._download_initial_files(media_info.title_key)
+        self._preload_and_download_files(media_info.title_key)
         title_source = self.get_title_source(media_info.title_key)
         title = self._upsert_title(title_source, media_info.title_key)
         return self._import_results(title, media_info)

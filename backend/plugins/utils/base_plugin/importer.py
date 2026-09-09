@@ -52,7 +52,7 @@ class BaseImporter(BasePlugin, ABC):
         Season files are updated using Season.update_at and the File.update_at values.
         Episode files are updated using Episode.update_at and the File.update_at values.
         """
-        self._download_outdated_files(title)
+        self._preload_and_download_files(title)
         self._upsert_title(title.source, title.key, force=force)
 
     def import_url(self, url: str) -> list[URLImportResult]:
@@ -60,7 +60,7 @@ class BaseImporter(BasePlugin, ABC):
         if title := self._preload_title(media_info.title_key).one_or_none():
             return self._import_results(title, media_info)
 
-        self._download_initial_files(media_info.title_key)
+        self._preload_and_download_files(media_info.title_key)
         title = self._upsert_title(self.source, media_info.title_key)
         return self._import_results(title, media_info)
 

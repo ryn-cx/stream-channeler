@@ -18,3 +18,10 @@ class TestAiringShow(StandardTests[Netflix], NetflixValidator):
         "/title/{title_key}",
         "/title/{title_key}/",
     )
+
+
+# TODO: Validate
+class TestLargeTVShow(StandardTests[Netflix], NetflixValidator):
+    import_time = datetime(2026, 9, 8, tzinfo=UTC)
+    title_key = "80107103"
+    urls = ("/title/{title_key}",)

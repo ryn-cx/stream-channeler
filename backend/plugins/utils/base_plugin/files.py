@@ -38,18 +38,24 @@ class BaseFile[T](ABC):
         self.__plugin = plugin
         self._cached_parsed: T | None = None
         self.__database_record: File | None | Sentinel = _UNLOADED
+        """The database record, None (no record exists), or a Sentinel (the database
+        record may or may not exist).
+
+        This property is required because the files classes are initialized to get the
+        file names then all of the files are preloaded from the database so there is no
+        way to initialize the class with the database record already loaded."""
 
     # TODO: Validate
     @property
     def _existing_database_record(self) -> File | None:
+        # When downloading a file to validate the URL download_if_outdated will be
+        # called on a File with no database record so this lookup is required for that
+        # niche situation.
         if isinstance(self.__database_record, Sentinel):
-            key = self.file_key()
-            # The fallback File.get should only occur during tests when importing files
-            existing = File.get_from_memory(self.__session, self.__plugin, key)
-            self.__database_record = existing or File.get(
+            self.__database_record = File.get(
                 self.__session,
                 self.__plugin,
-                key,
+                self.file_key(),
             )
         return self.__database_record
 
@@ -58,58 +64,52 @@ class BaseFile[T](ABC):
     def _existing_database_record(self, value: File | None) -> None:
         self.__database_record = value
 
-    # TODO: Validate
-    @property
-    def _database_record(self) -> File:
-        """Return the underlying database File object.
+    def preload_record(self, record: File | None) -> None:
+        """Preload the database record for the file.
 
-        The file must already be downloaded; callers are responsible for calling
-        `download_if_outdated()` first. Reading a record never triggers a download.
-        """
-        record = self._existing_database_record
-        if record is None:
-            msg = f"{self.class_key()}/{self.file_key()} has not been downloaded."
-            raise ValueError(msg)
-        return record
+        The main purpose of this function is to save a reference to the database record
+        for the file, so it does not get garbage collected prematurely."""
+        self._existing_database_record = record
 
+    # It's impossible to make any of the _existing_database_record functions truely type
+    # safe.
     @property
     def record_content(self) -> str | None:
         """Return the content of the file's database record."""
-        return self._database_record.content
+        return self._existing_database_record.content  # type: ignore[union-attr]
 
     @property
     def record_key(self) -> str:
         """Return the key of the file's database record."""
-        return self._database_record.key
+        return self._existing_database_record.key  # type: ignore[union-attr]
 
     @property
     def record_extra(self) -> dict[str, Any]:
         """Return the extra metadata of the file's database record."""
-        return self._database_record.extra
+        return self._existing_database_record.extra  # type: ignore[union-attr]
 
     @property
     def record_status(self) -> str | None:
         """Return the status of the file's database record."""
-        return self._database_record.status
+        return self._existing_database_record.status  # type: ignore[union-attr]
 
     @property
     def record_update_at(self) -> datetime | None:
         """Return the update timestamp of the file's database record."""
-        return self._database_record.update_at
+        return self._existing_database_record.update_at  # type: ignore[union-attr]
 
     def clear_status(self) -> None:
         """Set a file's database record status to None."""
-        self._database_record.status = None
+        self._existing_database_record.status = None  # type: ignore[union-attr]
 
     def clear_update_at(self) -> None:
         """Set a file's database record update timestamp to None."""
-        self._database_record.update_at = None
+        self._existing_database_record.update_at = None  # type: ignore[union-attr]
 
-    # TODO: Validate
     def data_timestamp(self) -> datetime:
         """Return the timestamp of the data in the file."""
         self.download_if_outdated()
-        return self._database_record.data_timestamp
+        return self._existing_database_record.data_timestamp  # type: ignore[union-attr]
 
     # TODO: Validate
     @override
@@ -295,7 +295,7 @@ class BaseFile[T](ABC):
             return False
 
         # If the file is older than the minimum timestamp it is outdated.
-        return self._database_record.data_timestamp < minimum_timestamp
+        return self._existing_database_record.data_timestamp < minimum_timestamp
 
 
 class TextFile(BaseFile[str], ABC):

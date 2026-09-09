@@ -307,7 +307,11 @@ def serve_downloads_from_disk() -> Generator[list[str]]:
             # was in the table when it was stored is put back over it. Without
             # that a recording run records the time it ran while every run after
             # it reads the stored value, which is a mismatch in every test.
-            restore_stored_metadata(self._database_record, owner_key, path)
+            restore_stored_metadata(
+                self._existing_database_record,  # type: ignore[arg-type]
+                owner_key,
+                path,
+            )
             return
 
         original_download_if_outdated(self, update_at)
@@ -315,7 +319,11 @@ def serve_downloads_from_disk() -> Generator[list[str]]:
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(self.record_content or "", encoding="utf-8")
-            write_stored_metadata(owner_key, self.file_key(), self._database_record)
+            write_stored_metadata(
+                owner_key,
+                self.file_key(),
+                self._existing_database_record,  # type: ignore[arg-type]
+            )
         except OSError as error:
             # Held until the run is over so the rest of the files are still
             # stored, and the report names every key at fault rather than only

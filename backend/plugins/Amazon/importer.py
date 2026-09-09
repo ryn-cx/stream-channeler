@@ -88,7 +88,7 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
                 for result in self._import_results(title, media_info)
             ]
 
-        self._download_initial_files(media_info.title_key)
+        self._preload_and_download_files(media_info.title_key)
         results: list[URLImportResult] = []
         for source in self.title_sources(media_info.title_key):
             title = self._upsert_title(source, media_info.title_key)

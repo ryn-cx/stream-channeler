@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from datetime import date, datetime
+from itertools import chain
 from typing import Any, override
 
 from sqlmodel import Session, col, select
@@ -89,37 +90,100 @@ class BaseFileAccessMixin(AbstractPlugin, ABC):
         for file in files:
             file.download_if_outdated(update_at)
 
+    # TODO: Validate
+    def _preload_files(self, files: Sequence[BaseFile[Any]]) -> None:
+        """Preload the given files into the session cache."""
+        file_keys = [file.file_key() for file in files]
+        records = self.session.exec(
+            select(File).where(
+                File.plugin_id == self.plugin.id,
+                col(File.key).in_(file_keys),
+            ),
+        ).all()
+        records_by_key = {record.key: record for record in records}
+        for file in files:
+            file.preload_record(records_by_key.get(file.file_key()))
+
+    def _preload_and_download_title_files(
+        self,
+        title_key: str,
+        update_at: datetime | None,
+    ) -> None:
+        """Preload and download all title files for a title."""
+        title_files = self._title_files(title_key)
+        self._preload_files(title_files)
+        self._download_if_outdated(title_files, update_at)
+
+    def _preload_and_download_season_files(
+        self,
+        title_key: str,
+        update_ats: Mapping[str, datetime | None],
+    ) -> None:
+        """Preload and download all season files for a title."""
+        files_by_season_key = {
+            season_key: self._season_files(season_key, title_key)
+            for season_key in self._season_keys_from_title_files(title_key)
+        }
+        self._preload_files(list(chain.from_iterable(files_by_season_key.values())))
+        for season_key, season_files in files_by_season_key.items():
+            self._download_if_outdated(season_files, update_ats.get(season_key))
+
+    def _preload_and_download_episode_files(
+        self,
+        title_key: str,
+        update_ats: Mapping[tuple[str, str], datetime | None],
+    ) -> None:
+        """Preload and download all episode files for a title."""
+        files_by_episode_key = {
+            (season_key, episode_key): self._episode_files(
+                episode_key,
+                season_key,
+                title_key,
+            )
+            for season_key in self._season_keys_from_title_files(title_key)
+            for episode_key in self._episode_keys_from_season_files(
+                season_key,
+                title_key,
+            )
+        }
+        self._preload_files(list(chain.from_iterable(files_by_episode_key.values())))
+        for episode_key, episode_files in files_by_episode_key.items():
+            self._download_if_outdated(episode_files, update_ats.get(episode_key))
+
+    def _preload_and_download_files(self, title: Title | str) -> None:
+        """Preload and download all title, season, and episode files for a title."""
+        title_key: str
+        title_update_at: datetime | None
+        season_update_ats: dict[str, datetime | None]
+        episode_update_ats: dict[tuple[str, str], datetime | None]
+        if isinstance(title, str):
+            title_key = title
+            title_update_at = None
+            season_update_ats = {}
+            episode_update_ats = {}
+        else:
+            title_key = title.key
+            title_update_at = title.update_at
+            season_update_ats = {
+                season.key: season.update_at for season in title.seasons
+            }
+            episode_update_ats = {
+                (season.key, episode.key): episode.update_at
+                for season in title.seasons
+                for episode in season.episodes
+            }
+
+        self._preload_and_download_title_files(title_key, title_update_at)
+        self._preload_and_download_season_files(title_key, season_update_ats)
+        self._preload_and_download_episode_files(title_key, episode_update_ats)
+
     def _download_initial_files(self, title_key: str) -> None:
         """Download all of the initial title, season, and episode files for a `Title`."""
-        self._download_if_outdated(self._title_files(title_key))
-        for season_key in self._season_keys_from_title_files(title_key):
-            self._download_if_outdated(self._season_files(season_key, title_key))
-
-            episode_keys = self._episode_keys_from_season_files(season_key, title_key)
-            for episode_key in episode_keys:
-                episode_files = self._episode_files(episode_key, season_key, title_key)
-                self._download_if_outdated(episode_files)
+        self._preload_and_download_files(title_key)
 
     def _download_outdated_files(self, title: Title) -> None:
         """Download all of the outdated title, season, and episode files for a `Title`."""
-        season_update_ats = {season.key: season.update_at for season in title.seasons}
-        episode_update_ats = {
-            (season.key, episode.key): episode.update_at
-            for season in title.seasons
-            for episode in season.episodes
-        }
-
-        self._download_if_outdated(self._title_files(title.key), title.update_at)
-        for season_key in self._season_keys_from_title_files(title.key):
-            season_files = self._season_files(season_key, title.key)
-            season_update_at = season_update_ats.get(season_key)
-            self._download_if_outdated(season_files, season_update_at)
-
-            episode_keys = self._episode_keys_from_season_files(season_key, title.key)
-            for episode_key in episode_keys:
-                episode_file = self._episode_files(episode_key, season_key, title.key)
-                episode_update_at = episode_update_ats.get((season_key, episode_key))
-                self._download_if_outdated(episode_file, episode_update_at)
+        self._preload_and_download_files(title)
 
     def _incomplete_files[T: BaseFile[Any]](
         self,

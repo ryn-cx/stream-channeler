@@ -118,7 +118,7 @@ class AdultSwim(
         media_info = self.get_media_info(url)
         titles = list(self._preload_title(media_info.title_key))
         if not titles:
-            self._download_initial_files(media_info.title_key)
+            self._preload_and_download_files(media_info.title_key)
             titles = [
                 self._upsert_title(source, media_info.title_key)
                 for source in self._sources.values()

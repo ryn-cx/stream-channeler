@@ -31,6 +31,7 @@ from plugins.YouTube.utils import (
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from datetime import datetime
 
     from plugins.utils.abstract_plugin import URLImportResult
     from plugins.utils.base_plugin.files import BaseFile
@@ -146,27 +147,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
 
     # TODO: Validate
     @override
-    def _download_initial_files(self, title_key: str) -> None:
-        if is_channel_key(title_key):
-            self.channel_by_channel_id_file(title_key).download_if_outdated()
-
-        self._download_if_outdated(self._title_files(title_key))
-        season_keys = self._season_keys_from_title_files(title_key)
-        for season_key in season_keys:
-            self._download_if_outdated(self._season_files(season_key, title_key))
-        batch_download_missing_videos(
-            [
-                self.videos_file(video_key)
-                for video_key in self._episode_keys_from_season_files(
-                    season_keys,
-                    title_key,
-                )
-            ],
-        )
-
-    # TODO: Validate
-    @override
-    def _download_outdated_files(self, title: Title) -> None:
+    def _preload_and_download_files(self, title: Title | str) -> None:
         """Read the channel before the files that depend on what it is.
 
         Which files describe a channel is not the same for a Topic channel as for
@@ -174,25 +155,38 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
         anything asks. Every video of every season is asked for in one batch
         rather than one at a time, since the API answers for fifty at once.
         """
-        season_update_at = {season.key: season.update_at for season in title.seasons}
-        if is_channel_key(title.key):
-            self.channel_by_channel_id_file(title.key).download_if_outdated(
-                title.update_at,
+        title_key: str
+        title_update_at: datetime | None
+        season_update_ats: dict[str, datetime | None]
+        if isinstance(title, str):
+            title_key = title
+            title_update_at = None
+            season_update_ats = {}
+        else:
+            title_key = title.key
+            title_update_at = title.update_at
+            season_update_ats = {
+                season.key: season.update_at for season in title.seasons
+            }
+
+        if is_channel_key(title_key):
+            self.channel_by_channel_id_file(title_key).download_if_outdated(
+                title_update_at,
             )
 
-        self._download_if_outdated(self._title_files(title.key), title.update_at)
-        season_keys = self._season_keys_from_title_files(title.key)
+        self._download_if_outdated(self._title_files(title_key), title_update_at)
+        season_keys = self._season_keys_from_title_files(title_key)
         for season_key in season_keys:
             self._download_if_outdated(
-                self._season_files(season_key, title.key),
-                season_update_at.get(season_key),
+                self._season_files(season_key, title_key),
+                season_update_ats.get(season_key),
             )
         batch_download_missing_videos(
             [
                 self.videos_file(video_key)
                 for video_key in self._episode_keys_from_season_files(
                     season_keys,
-                    title.key,
+                    title_key,
                 )
             ],
         )
