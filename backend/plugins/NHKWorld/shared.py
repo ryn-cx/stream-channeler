@@ -48,7 +48,8 @@ class NHKWorldShared(NHKWorldBaseFiles):
     def _upsert_source(self, source_key: str) -> Source:
         if not (latest_feed_file := self.latest_new_video_episodes_file()):
             latest_feed_file = self.new_video_episodes_file(tz_datetime.now())
-        data_timestamp = latest_feed_file.data_timestamp()
+        latest_feed_file.download_if_outdated()
+        data_timestamp = latest_feed_file.record_data_timestamp
         existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
         source = Source(
             key=source_key,

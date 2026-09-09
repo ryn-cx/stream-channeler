@@ -71,7 +71,7 @@ class YouTube(
 
         old_feed_video_ids = playlist_feed.video_ids()
         playlist_feed.download_if_outdated(season.update_at)
-        season.update_at = playlist_feed.data_timestamp() + timedelta(hours=6)
+        season.update_at = playlist_feed.record_data_timestamp + timedelta(hours=6)
 
         if new_video_ids := playlist_feed.video_ids() - old_feed_video_ids:
             logger.info(

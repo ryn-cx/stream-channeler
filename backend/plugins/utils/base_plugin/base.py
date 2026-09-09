@@ -1,4 +1,3 @@
-# TODO: Validate
 from __future__ import annotations
 
 from abc import ABC
@@ -8,7 +7,6 @@ from typing import TYPE_CHECKING, Any, override
 
 from sqlmodel import Session
 
-from app.episodes.preload import preload_episodes
 from app.media.media_type import TMDBMediaType
 from app.plugins.models import Plugin
 from app.seasons.models import Season
@@ -29,7 +27,6 @@ if TYPE_CHECKING:
     from plugins.utils.base_plugin.files import BaseFile
 
 
-# TODO: Validate
 class BasePlugin(
     BaseChannelMixin,
     BaseInitializeMixin,
@@ -41,7 +38,6 @@ class BasePlugin(
     AbstractPlugin,
     ABC,
 ):
-    # TODO: Validate
     @override
     def __init__(
         self,
@@ -64,23 +60,21 @@ class BasePlugin(
         `Source.key`."""
         self._file_cache = file_cache if file_cache is not None else {}
 
-    # TODO: Validate
     @classmethod
     def source_name(cls) -> str:
         return cls.plugin_name()
 
-    # TODO: Validate
     @classmethod
     def name_on_tmdb(cls) -> tuple[str, ...]:
+        """Return the names on TMDB's provider list this plugin supports."""
         return (cls.plugin_name(),)
 
-    # TODO: Validate
     @classmethod
     @override
     def matches_tmdb_provider(cls, provider_name: str) -> bool:
+        """Return `True` if the the plugin supports the named provider from TMDB."""
         return provider_name in cls.name_on_tmdb()
 
-    # TODO: Validate
     def _upsert_title(
         self,
         source: Source,
@@ -88,37 +82,37 @@ class BasePlugin(
         *,
         force: bool = False,
     ) -> Title:
-        """Store the listing `title_key` names."""
-        # Not an abstractmethod, because a plugin that reads a title as one of
-        # several kinds writes each kind on its own and has nothing to write for
-        # a title it has not been told the kind of. Such a plugin is still a
-        # plugin, so what it cannot answer is raised when asked rather than kept
-        # from being built at all.
+        """Upserts a title completely."""
         msg = f"{self.plugin_name()} does not upsert titles."
         raise NotImplementedError(msg)
 
-    # TODO: Validate
     def _mark_mismatched_titles_as_outdated(
         self,
         source_key: str | None,
         new_title_keys: Iterable[str],
         data_timestamps: list[datetime],
     ) -> None:
-        listed = set(new_title_keys)
+        """Mark titles as outdated if they are mismatched with the new title keys.
+
+        Mismatched means one of the following:
+            Titles is listed in new_title_keys but are marked as deleted
+            Titles is not in new_title_keys but not marked as deleted.
+        """
+        new_title_keys = set(new_title_keys)
         for source in self._preload_sources(source_key, preload_titles=True):
             for title in source.titles:
-                is_listed = title.key in listed
+                is_listed = title.key in new_title_keys
                 is_deleted = title.deleted_at is not None
                 if is_listed == is_deleted:
                     title.set_update_at(min(data_timestamps))
 
     # TODO: Validate
     def _set_season_update_at_based_on_last_episode(self, season: Season) -> None:
+        """Set the update timestamp of a season based on the air dates of its episodes."""
         if not season.data_timestamp:  # Should be impossible
             msg = f"Record {season.key} has no data_timestamp"
             raise ValueError(msg)
 
-        preload_episodes(self.session, [season.title])
         data_timestamps = self._season_files_data_timestamps(
             season.key,
             season.title.key,
@@ -140,22 +134,25 @@ class BasePlugin(
             staggered_monthly_update_at(season.key, min(data_timestamps)),
         )
 
-    # TODO: Validate
     @property
     def source(self) -> Source:
+        """Return the source associated with this importer."""
         return self._sources[self.source_name()]
 
-    # TODO: Validate
     @override
     def tmdb_lookup_info(self, title: Title) -> list[TMDBLookupInfo]:
+        """Return the TMDB lookup information for the given title.
+
+        Used to lookup this title on TMDB"""
         if not title.name:
-            return []
+            msg = f"Title {title.key} has no name"
+            raise ValueError(msg)
+
         media_type = (
             TMDBMediaType.movie if title.media_type == "Movie" else TMDBMediaType.tv
         )
         return [TMDBLookupInfo(title.name, media_type, title.year)]
 
-    # TODO: Validate
     @override
     def update_channel(self, channel: Channel) -> None:
         self._remove_unlisted_queued_urls(channel)

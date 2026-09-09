@@ -1,4 +1,3 @@
-# TODO: Validate
 import json
 import time
 from abc import ABC, abstractmethod
@@ -23,9 +22,9 @@ from app.utils.sentinels import Sentinel
 _UNLOADED = Sentinel("DATABASE_RECORD")
 
 
-# TODO: Validate
 class BaseFile[T](ABC):
-    # TODO: Validate
+    custom_class_key: str | None = None
+
     def __init__(
         self,
         session: Session,
@@ -45,9 +44,8 @@ class BaseFile[T](ABC):
         file names then all of the files are preloaded from the database so there is no
         way to initialize the class with the database record already loaded."""
 
-    # TODO: Validate
     @property
-    def _existing_database_record(self) -> File | None:
+    def _database_record(self) -> File | None:
         # When downloading a file to validate the URL download_if_outdated will be
         # called on a File with no database record so this lookup is required for that
         # niche situation.
@@ -59,9 +57,8 @@ class BaseFile[T](ABC):
             )
         return self.__database_record
 
-    # TODO: Validate
-    @_existing_database_record.setter
-    def _existing_database_record(self, value: File | None) -> None:
+    @_database_record.setter
+    def _database_record(self, value: File | None) -> None:
         self.__database_record = value
 
     def preload_record(self, record: File | None) -> None:
@@ -69,78 +66,71 @@ class BaseFile[T](ABC):
 
         The main purpose of this function is to save a reference to the database record
         for the file, so it does not get garbage collected prematurely."""
-        self._existing_database_record = record
+        self._database_record = record
 
     # It's impossible to make any of the _existing_database_record functions truely type
-    # safe.
+    # safe so a lot of type ignores are required.
     @property
     def record_content(self) -> str | None:
         """Return the content of the file's database record."""
-        return self._existing_database_record.content  # type: ignore[union-attr]
+        return self._database_record.content  # type: ignore[union-attr]
 
     @property
     def record_key(self) -> str:
         """Return the key of the file's database record."""
-        return self._existing_database_record.key  # type: ignore[union-attr]
+        return self._database_record.key  # type: ignore[union-attr]
 
     @property
     def record_extra(self) -> dict[str, Any]:
         """Return the extra metadata of the file's database record."""
-        return self._existing_database_record.extra  # type: ignore[union-attr]
+        return self._database_record.extra  # type: ignore[union-attr]
 
     @property
     def record_status(self) -> str | None:
         """Return the status of the file's database record."""
-        return self._existing_database_record.status  # type: ignore[union-attr]
+        return self._database_record.status  # type: ignore[union-attr]
 
     @property
     def record_update_at(self) -> datetime | None:
         """Return the update timestamp of the file's database record."""
-        return self._existing_database_record.update_at  # type: ignore[union-attr]
+        return self._database_record.update_at  # type: ignore[union-attr]
+
+    @property
+    def record_data_timestamp(self) -> datetime:
+        """Return the data_timestamp from the file record."""
+        return self._database_record.data_timestamp  # type: ignore[union-attr]
 
     def clear_status(self) -> None:
         """Set a file's database record status to None."""
-        self._existing_database_record.status = None  # type: ignore[union-attr]
+        self._database_record.status = None  # type: ignore[union-attr]
 
     def clear_update_at(self) -> None:
         """Set a file's database record update timestamp to None."""
-        self._existing_database_record.update_at = None  # type: ignore[union-attr]
+        self._database_record.update_at = None  # type: ignore[union-attr]
 
-    def data_timestamp(self) -> datetime:
-        """Return the timestamp of the data in the file."""
-        self.download_if_outdated()
-        return self._existing_database_record.data_timestamp  # type: ignore[union-attr]
-
-    # TODO: Validate
     @override
     def __eq__(self, other: object) -> bool:
         return isinstance(other, BaseFile) and self.file_key() == other.file_key()
 
-    # TODO: Validate
     @override
     def __hash__(self) -> int:
         return hash(self.file_key())
 
-    custom_class_key: str | None = None
-
-    # TODO: Validate
     @classmethod
     def class_key(cls) -> str:
-        return cls.custom_class_key or cls.__name__.removeprefix("_")
+        """Return the class key used as a prefix in the file key."""
+        return cls.custom_class_key or cls.__name__
 
-    # TODO: Validate
     def file_key(self) -> str:
-        """Return the value for File.key."""
+        """Return the value used to identify the file and saved in File.key."""
         return (
             f"{type(self).class_key()}/{self.unique_identifier}"
             f"{self._identifier_suffix()}"
         )
 
-    # TODO: Validate
     def log_id(self) -> str:
         return f"{self.__plugin.key} - {self.file_key()}"
 
-    # TODO: Validate
     @classmethod
     def file_to_unique_identifier(cls, file: File) -> str:
         """Return the unique identifier for a file.
@@ -151,7 +141,6 @@ class BaseFile[T](ABC):
             cls._identifier_suffix(),
         )
 
-    # TODO: Validate
     @classmethod
     @abstractmethod
     def _identifier_suffix(cls) -> str:
@@ -160,13 +149,12 @@ class BaseFile[T](ABC):
         This is a file extension like .json, .xml, .html, etc.
         """
 
-    # TODO: Validate
     @contextmanager
     def _log_download(self, identifier: str) -> Generator[None]:
         """Context manager that logs downloads."""
         class_name = type(self).class_key()
         plugin_key = self.__plugin.key
-        action = "new" if self._existing_database_record else "initial"
+        action = "updated" if self._database_record else "initial"
         # This log is useful when a download fails.
         logger.info(f"Downloading {action} {plugin_key} {class_name} ({identifier})")
         start = time.monotonic()
@@ -177,14 +165,12 @@ class BaseFile[T](ABC):
             f"in {elapsed_time:.2f}s",
         )
 
-    # TODO: Validate
-    @final  # Makes mocking downloads easier.
+    @final  # _download_file should be overridden instead.
     def download_if_outdated(self, update_at: datetime | None = None) -> None:
         """Download the file if it is outdated."""
         if self.is_outdated(update_at):
             self._download_and_write()
 
-    # TODO: Validate
     @abstractmethod
     def _download_file(self) -> str | None:
         """Download the file and return the body as it was served."""
@@ -200,8 +186,8 @@ class BaseFile[T](ABC):
         """Return the initial value for `File.status` after completing a download."""
         return None
 
-    # TODO: Validate
     def _download_and_write(self) -> None:
+        """Download and write the file to the database with pretty logging."""
         with self._log_download(self.unique_identifier):
             try:
                 data = self._download_file()
@@ -212,76 +198,63 @@ class BaseFile[T](ABC):
             else:
                 self.write(data, self._initial_status_after_downloading())
 
-    # TODO: Validate
     def _next_update_at(self) -> datetime | None:
-        """Return when the file should be downloaded again, if it should be."""
+        """Set the frequency that the file should be updated."""
         return None
 
-    # TODO: Validate
     def write(self, content: str | None, status: str | None = None) -> None:
+        """Write the content and status to the database."""
         record = File(
             key=self.file_key(),
             content=content,
             data_timestamp=tz_datetime.now(),
             status=status,
             plugin_id=self.__plugin.id,
-        ).upsert(self.__plugin, self._existing_database_record)
+        ).upsert(self.__plugin, self._database_record)
         record.set_update_at(self._next_update_at())
-        self._existing_database_record = record
+        self._database_record = record
         self._cached_parsed = None
         self.__session.flush()
 
-    # TODO: Validate
     @abstractmethod
     def _parse(self, content: str) -> T:
-        """Read the stored file into the value `parsed` answers with."""
+        """Parse the file's content and returns the parsed representation.
 
-    # TODO: Validate
+        This is the internal function called by _parsed set by child implementations
+        that determine how the file's content is parsed."""
+
     @final
     def content(self) -> str:
+        """Return the content of the file."""
         if not (content := self.record_content):
             msg = f"{self.class_key()}/{self.file_key()} has no content."
             raise ValueError(msg)
         return content
 
-    # TODO: Validate
     @final
     def parsed(self) -> T:
+        """Return the parsed content of the file, caching the response."""
         if self._cached_parsed is None:
             self._cached_parsed = self._parse(self.content())
         return self._cached_parsed
 
-    # TODO: Validate
-    # TODO: Deprecate, this is sloppy as shit.
-    @final
-    def parsed_or_none(self) -> T | None:
-        """Return what the file holds, or None where it was stored empty.
-
-        What TMDB has no answer for is stored as a row with no content, which is
-        what says the question was asked and came back with nothing. That is not
-        a failure to read, so it is answered with nothing rather than raised.
-        """
-        if not self.record_content:
-            return None
-        return self.parsed()
-
-    # TODO: Validate
     def does_not_exist(self) -> bool:
-        """Report whether the file has never been stored."""
-        return self._existing_database_record is None
+        """Return whether the file has been downloaded."""
+        return self._database_record is None
 
-    # TODO: Validate
     def is_outdated(self, minimum_timestamp: datetime | None = None) -> bool:
-        """Check if the file is outdated."""
+        """Return whether the file is outdated."""
         # If there is no database record the file is outdated.
-        if not self._existing_database_record:
+        if not self._database_record:
             return True
 
-        record_update_at = self._existing_database_record.update_at
+        record_update_at = self.record_update_at
+        # If there is an update_at value that is in the past but newer than the file's
+        # data_timestamp it is outdated.
         if (
             record_update_at
             and record_update_at <= tz_datetime.now()
-            and self._existing_database_record.data_timestamp < record_update_at
+            and self._database_record.data_timestamp < record_update_at
         ):
             return True
 
@@ -295,7 +268,7 @@ class BaseFile[T](ABC):
             return False
 
         # If the file is older than the minimum timestamp it is outdated.
-        return self._existing_database_record.data_timestamp < minimum_timestamp
+        return self._database_record.data_timestamp < minimum_timestamp
 
 
 class TextFile(BaseFile[str], ABC):

@@ -25,7 +25,7 @@ from app.episodes.name_matching import (
     name_parts,
     plaintext,
 )
-from app.episodes.preload import preload_episodes
+from app.episodes.preload import DEPRECATED_preload_episodes
 from app.episodes.service.numbering import absolute_numbers
 from app.episodes.text_matching import TextMatcher
 from app.titles.models import Title
@@ -37,7 +37,7 @@ class EpisodeLinker:
     def __init__(self, session: Session, title: Title) -> None:
         self.session = session
         self.title = title
-        preload_episodes(session, [title, *title.canonical_titles])
+        DEPRECATED_preload_episodes(session, [title, *title.canonical_titles])
         episodes = [
             episode
             for season in title.active_children
@@ -68,7 +68,7 @@ class EpisodeLinker:
             self.canonical_episodes,
         )
         self.facts.preload()
-        preload_episodes(session, [title, *title.canonical_titles])
+        DEPRECATED_preload_episodes(session, [title, *title.canonical_titles])
         self.absolute_numbers: dict[uuid.UUID, int] = {}
         for parent in (title, *title.canonical_titles):
             self.absolute_numbers |= absolute_numbers(

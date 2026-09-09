@@ -134,7 +134,7 @@ class PlaylistItems(PagedEndpointFile[PlaylistItemsModel]):
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        record = self._existing_database_record
+        record = self._database_record
         if record is None or record.content is None:
             return json.dumps(self._endpoint().download_all(self.unique_identifier))
 
@@ -410,6 +410,8 @@ class PlaylistFeed(MultipleArgEndpointFile[ChannelFeedModel | PlaylistFeedModel]
         return not_yt_dlapi().playlist_feed.download(self.unique_identifier)
 
     # TODO: Validate
+    # Failed downloads need to be delayed for PlaylistFeed instead of writing the empty
+    # file so download_and_write must be overriden.
     @override
     def _download_and_write(self) -> None:
         with self._log_download(self.unique_identifier):

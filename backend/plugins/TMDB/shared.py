@@ -151,7 +151,7 @@ class TMDBShared(TMDBSearch):
                 self._process_changed_provider(
                     title_key=title_key,
                     changed_provider=changed_watch_provider,
-                    update_at=new_watch_providers_file.data_timestamp(),
+                    update_at=new_watch_providers_file.record_data_timestamp,
                 )
             old_watch_providers_files.clear_status()
             old_watch_providers_files.clear_update_at()

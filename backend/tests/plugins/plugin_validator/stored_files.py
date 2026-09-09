@@ -308,7 +308,7 @@ def serve_downloads_from_disk() -> Generator[list[str]]:
             # that a recording run records the time it ran while every run after
             # it reads the stored value, which is a mismatch in every test.
             restore_stored_metadata(
-                self._existing_database_record,  # type: ignore[arg-type]
+                self._database_record,  # type: ignore[arg-type]
                 owner_key,
                 path,
             )
@@ -322,7 +322,7 @@ def serve_downloads_from_disk() -> Generator[list[str]]:
             write_stored_metadata(
                 owner_key,
                 self.file_key(),
-                self._existing_database_record,  # type: ignore[arg-type]
+                self._database_record,  # type: ignore[arg-type]
             )
         except OSError as error:
             # Held until the run is over so the rest of the files are still
@@ -432,7 +432,7 @@ def mock_update() -> Generator[None]:
     def _mock(self: BaseFile[Any], update_at: datetime | None = None) -> None:
         if not self.is_outdated(update_at):
             return
-        record = self._existing_database_record
+        record = self._database_record
         if record is None:
             return
         logger.debug(f"Mock Updating {record.key}")

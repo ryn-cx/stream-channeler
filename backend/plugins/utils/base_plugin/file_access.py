@@ -255,20 +255,25 @@ class BaseFileAccessMixin(AbstractPlugin, ABC):
         error-prone than explicitly raising an error."""
         raise NotImplementedError
 
+    # TODO: Validate
     def _title_files_data_timestamps(self, title_key: str) -> list[datetime]:
         """Return the data timestamp from each of the title's files."""
-        return [file.data_timestamp() for file in self._title_files(title_key)]
+        files = self._title_files(title_key)
+        self._download_if_outdated(files)
+        return [file.record_data_timestamp for file in files]
 
+    # TODO: Validate
     def _season_files_data_timestamps(
         self,
         season_key: str,
         title_key: str,
     ) -> list[datetime]:
         """Return the data timestamp from each of the season's files."""
-        return [
-            file.data_timestamp() for file in self._season_files(season_key, title_key)
-        ]
+        files = self._season_files(season_key, title_key)
+        self._download_if_outdated(files)
+        return [file.record_data_timestamp for file in files]
 
+    # TODO: Validate
     def _episode_files_data_timestamps(
         self,
         episode_key: str,
@@ -276,18 +281,23 @@ class BaseFileAccessMixin(AbstractPlugin, ABC):
         title_key: str,
     ) -> list[datetime]:
         """Return the data timestamp from each of the episode's files."""
-        return [
-            file.data_timestamp()
-            for file in self._episode_files(episode_key, season_key, title_key)
-        ]
+        files = self._episode_files(episode_key, season_key, title_key)
+        self._download_if_outdated(files)
+        return [file.record_data_timestamp for file in files]
 
+    # TODO: Validate
     def _source_files_data_timestamps(self) -> list[datetime]:
         """Return the data timestamp from each of the source's files."""
-        return [file.data_timestamp() for file in self._source_files()]
+        files = self._source_files()
+        self._download_if_outdated(files)
+        return [file.record_data_timestamp for file in files]
 
+    # TODO: Validate
     def _plugin_files_data_timestamps(self) -> list[datetime]:
         """Return the data timestamp from each of the plugin's files."""
-        return [file.data_timestamp() for file in self._plugin_files()]
+        files = self._plugin_files()
+        self._download_if_outdated(files)
+        return [file.record_data_timestamp for file in files]
 
     def _title_files_data_timestamp(self, title_key: str) -> datetime:
         """Return the newest data timestamp from the title's files."""

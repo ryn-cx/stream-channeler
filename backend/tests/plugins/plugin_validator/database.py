@@ -76,7 +76,7 @@ def date_downloads_at_import_time(import_time: datetime) -> Generator[None]:
         update_at: datetime | None = None,
     ) -> None:
         served_download_if_outdated(self, update_at)
-        record = self._existing_database_record
+        record = self._database_record
         if record is not None:
             date_at_import_time(record, import_time)
 

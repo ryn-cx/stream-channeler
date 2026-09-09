@@ -145,7 +145,7 @@ class YouTubeChannelImporter(
                 media_type="YouTube Channel",
                 # Updating every 30 days is reasonable because this is only used for
                 # checking for new playlists and changes to the channel information.
-                update_at=channel_file.data_timestamp() + timedelta(days=365),
+                update_at=channel_file.record_data_timestamp + timedelta(days=365),
                 data_timestamp=self._title_files_data_timestamp(title_key),
                 canonical_title_validated_at=tz_datetime.now(),
                 source_id=source.id,

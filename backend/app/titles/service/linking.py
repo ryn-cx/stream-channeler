@@ -18,7 +18,7 @@ from app.canonical_media.filters import is_canonical
 from app.channels.models import ChannelTitle
 from app.episodes.linking import EpisodeLinker
 from app.episodes.models import MANUAL_NOTE_PREFIX, Episode, EpisodeCanonicalEpisode
-from app.episodes.preload import preload_episodes
+from app.episodes.preload import DEPRECATED_preload_episodes
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.titles.models import Title, TitleCanonicalTitle
 from app.utils import tz_datetime
@@ -42,7 +42,7 @@ def _reread_in_new_order(session: Session, title: Title) -> None:
 
 # TODO: Validate
 def _relinkable_episodes(session: Session, title: Title) -> list[Episode]:
-    preload_episodes(session, [title])
+    DEPRECATED_preload_episodes(session, [title])
     return [
         episode
         for season in title.active_children

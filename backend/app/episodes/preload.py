@@ -11,7 +11,7 @@ from app.titles.models import Title
 
 
 # TODO: Validate
-def preload_episodes(session: Session, titles: Sequence[Title]) -> None:
+def DEPRECATED_preload_episodes(session: Session, titles: Sequence[Title]) -> None:
     unread = [
         title.id
         for title in titles

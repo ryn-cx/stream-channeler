@@ -24,7 +24,7 @@ from app.canonical_media.tmdb import (
     tmdb_title_key,
 )
 from app.episodes.models import Episode
-from app.episodes.preload import preload_episodes
+from app.episodes.preload import DEPRECATED_preload_episodes
 from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.sources.models import Source
@@ -302,7 +302,7 @@ class TMDBSeries(TMDBImporter):
 
     # TODO: Validate
     def _set_title_update_frequency(self, title: Title) -> None:
-        preload_episodes(self.session, [title])
+        DEPRECATED_preload_episodes(self.session, [title])
         air_dates = [
             episode.air_date
             for season in title.active_children

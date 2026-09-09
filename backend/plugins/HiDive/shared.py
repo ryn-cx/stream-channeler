@@ -55,7 +55,8 @@ class HiDiveShared(HiDiveBaseFiles):
     def _upsert_source(self, source_key: str) -> Source:
         if not (latest_schedule_file := self.get_latest_schedule_file()):
             latest_schedule_file = self.schedule_file(tz_datetime.now())
-        data_timestamp = latest_schedule_file.data_timestamp()
+        latest_schedule_file.download_if_outdated()
+        data_timestamp = latest_schedule_file.record_data_timestamp
 
         existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
         source = Source(
