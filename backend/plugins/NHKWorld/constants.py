@@ -6,5 +6,3 @@ TITLE_URL_REGEX = (
     r"\/nhkworld\/en\/shows\/(?P<title_key>(?=[a-z0-9_-]*[a-z_-])[a-z0-9_-]+)"
     r"\/?(?:$|[?#])"
 )
-
-MINIMUM_THUMBNAIL_WIDTH = 480

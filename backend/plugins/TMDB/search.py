@@ -9,6 +9,10 @@ from tminidb.search.multi.models import Result as MultiResult
 
 from app.canonical_media.tmdb import tmdb_title_key
 from app.media.media_type import TMDBMediaType
+from app.plugins.schemas import (
+    PluginSearchResult,
+    PluginSearchResults,
+)
 from plugins.TMDB.base_files import TMDBBaseFiles
 from plugins.TMDB.files import (
     SearchMovie,
@@ -20,10 +24,6 @@ from plugins.TMDB.utils import (
     parse_release_year,
     thumbnail_url,
     tmdb_url,
-)
-from plugins.utils.abstract_plugin import (
-    PluginSearchResult,
-    PluginSearchResults,
 )
 
 

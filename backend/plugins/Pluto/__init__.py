@@ -12,21 +12,14 @@ from plugins.Pluto.importer import (
 )
 from plugins.Pluto.shared import PlutoShared
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin.base import BaseReadURL
-from plugins.utils.base_plugin.initialize import BasePluginInitializer
+from plugins.utils.base_plugin.importer import BaseImporter
 
 if TYPE_CHECKING:
     from app.titles.models import Title
 
 
 # TODO: Validate
-class PlutoInitializer(BasePluginInitializer, PlutoShared): ...
-
-
-# TODO: Validate
-class Pluto(PlutoShared, BaseReadURL, AbstractPlugin, register=False):
-    initializer = PlutoInitializer
-
+class Pluto(PlutoShared, BaseImporter, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override
@@ -36,7 +29,7 @@ class Pluto(PlutoShared, BaseReadURL, AbstractPlugin, register=False):
     # TODO: Validate
     @override
     def _validate_url(self, url: str) -> None:
-        domain_regex = self._domain_regex()
+        domain_regex = self._domains_regex()
         for url_regex in (MOVIE_URL_REGEX, SERIES_URL_REGEX):
             if re.match(domain_regex + url_regex, url):
                 return
@@ -47,9 +40,9 @@ class Pluto(PlutoShared, BaseReadURL, AbstractPlugin, register=False):
     # TODO: Validate
     @override
     def _media_importer_from_url(self, url: str) -> PlutoImporter:
-        if re.match(self._domain_regex() + MOVIE_URL_REGEX, url):
-            return PlutoMovieImporter(self)
-        return PlutoSeriesImporter(self)
+        if re.match(self._domains_regex() + MOVIE_URL_REGEX, url):
+            return PlutoMovieImporter(self.session, self.plugin, self._file_cache)
+        return PlutoSeriesImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
     @override
@@ -58,5 +51,5 @@ class Pluto(PlutoShared, BaseReadURL, AbstractPlugin, register=False):
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
         if title.media_type == "Movie":
-            return PlutoMovieImporter(self)
-        return PlutoSeriesImporter(self)
+            return PlutoMovieImporter(self.session, self.plugin, self._file_cache)
+        return PlutoSeriesImporter(self.session, self.plugin, self._file_cache)

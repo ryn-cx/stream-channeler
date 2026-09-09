@@ -13,21 +13,14 @@ from plugins.DisneyPlus.importer import (
 from plugins.DisneyPlus.shared import DisneyPlusShared
 from plugins.DisneyPlus.utils import is_movie
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin.base import BaseReadURL
-from plugins.utils.base_plugin.initialize import BasePluginInitializer
+from plugins.utils.base_plugin.importer import BaseImporter
 
 if TYPE_CHECKING:
     from app.titles.models import Title
 
 
 # TODO: Validate
-class DisneyPlusInitializer(BasePluginInitializer, DisneyPlusShared): ...
-
-
-# TODO: Validate
-class DisneyPlus(DisneyPlusShared, BaseReadURL, AbstractPlugin, register=False):
-    initializer = DisneyPlusInitializer
-
+class DisneyPlus(DisneyPlusShared, BaseImporter, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override
@@ -42,7 +35,7 @@ class DisneyPlus(DisneyPlusShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     def _url_title_key(self, url: str) -> str:
-        if not (match := re.match(self._domain_regex() + ENTITY_URL_REGEX, url)):
+        if not (match := re.match(self._domains_regex() + ENTITY_URL_REGEX, url)):
             msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
         return match.group("entity_key")
@@ -54,8 +47,8 @@ class DisneyPlus(DisneyPlusShared, BaseReadURL, AbstractPlugin, register=False):
         # to be read before it is known which of the two it is.
         title_key = self._url_title_key(url)
         if is_movie(self.entity_file(title_key).parsed()):
-            return DisneyPlusMovieImporter(self)
-        return DisneyPlusSeriesImporter(self)
+            return DisneyPlusMovieImporter(self.session, self.plugin, self._file_cache)
+        return DisneyPlusSeriesImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
     @override
@@ -64,5 +57,5 @@ class DisneyPlus(DisneyPlusShared, BaseReadURL, AbstractPlugin, register=False):
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
         if title.media_type == "Movie":
-            return DisneyPlusMovieImporter(self)
-        return DisneyPlusSeriesImporter(self)
+            return DisneyPlusMovieImporter(self.session, self.plugin, self._file_cache)
+        return DisneyPlusSeriesImporter(self.session, self.plugin, self._file_cache)

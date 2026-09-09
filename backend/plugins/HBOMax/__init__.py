@@ -12,21 +12,14 @@ from plugins.HBOMax.importer import (
 )
 from plugins.HBOMax.shared import HBOMaxShared
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin.base import BaseReadURL
-from plugins.utils.base_plugin.initialize import BasePluginInitializer
+from plugins.utils.base_plugin.importer import BaseImporter
 
 if TYPE_CHECKING:
     from app.titles.models import Title
 
 
 # TODO: Validate
-class HBOMaxInitializer(BasePluginInitializer, HBOMaxShared): ...
-
-
-# TODO: Validate
-class HBOMax(HBOMaxShared, BaseReadURL, AbstractPlugin, register=False):
-    initializer = HBOMaxInitializer
-
+class HBOMax(HBOMaxShared, BaseImporter, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override
@@ -36,7 +29,7 @@ class HBOMax(HBOMaxShared, BaseReadURL, AbstractPlugin, register=False):
     # TODO: Validate
     @override
     def _validate_url(self, url: str) -> None:
-        domain_regex = self._domain_regex()
+        domain_regex = self._domains_regex()
         for url_regex in (MOVIE_URL_REGEX, TITLE_URL_REGEX):
             if re.match(domain_regex + url_regex, url):
                 return
@@ -47,9 +40,9 @@ class HBOMax(HBOMaxShared, BaseReadURL, AbstractPlugin, register=False):
     # TODO: Validate
     @override
     def _media_importer_from_url(self, url: str) -> HBOMaxImporter:
-        if re.match(self._domain_regex() + MOVIE_URL_REGEX, url):
-            return HBOMaxMovieImporter(self)
-        return HBOMaxSeriesImporter(self)
+        if re.match(self._domains_regex() + MOVIE_URL_REGEX, url):
+            return HBOMaxMovieImporter(self.session, self.plugin, self._file_cache)
+        return HBOMaxSeriesImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
     @override
@@ -58,5 +51,5 @@ class HBOMax(HBOMaxShared, BaseReadURL, AbstractPlugin, register=False):
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
         if title.media_type == "Movie":
-            return HBOMaxMovieImporter(self)
-        return HBOMaxSeriesImporter(self)
+            return HBOMaxMovieImporter(self.session, self.plugin, self._file_cache)
+        return HBOMaxSeriesImporter(self.session, self.plugin, self._file_cache)

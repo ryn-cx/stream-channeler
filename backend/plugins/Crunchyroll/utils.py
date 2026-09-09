@@ -8,10 +8,13 @@ from chirashi.season_episodes.models import Images as EpisodeImages
 from chirashi.series.models import Datum as SeriesDatum
 from chirashi.series.models import Images as SeriesImages
 
-from plugins.Crunchyroll.constants import (
-    CATEGORY_ID_PREFIXES,
-    CrunchyrollMusicCategory,
-)
+from plugins.Crunchyroll.constants import CrunchyrollMusicCategory
+
+# The prefix Crunchyroll issues ids under, which is what a key is recognised by.
+CATEGORY_ID_PREFIXES = {
+    "MV": CrunchyrollMusicCategory.MUSIC_VIDEO,
+    "MC": CrunchyrollMusicCategory.CONCERT,
+}
 
 
 # TODO: Validate

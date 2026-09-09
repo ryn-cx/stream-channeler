@@ -9,21 +9,14 @@ from plugins.Roku.importer import RokuImporter, RokuMovieImporter, RokuSeriesImp
 from plugins.Roku.shared import RokuShared
 from plugins.Roku.utils import is_movie
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin.base import BaseReadURL
-from plugins.utils.base_plugin.initialize import BasePluginInitializer
+from plugins.utils.base_plugin.importer import BaseImporter
 
 if TYPE_CHECKING:
     from app.titles.models import Title
 
 
 # TODO: Validate
-class RokuInitializer(BasePluginInitializer, RokuShared): ...
-
-
-# TODO: Validate
-class Roku(RokuShared, BaseReadURL, AbstractPlugin, register=False):
-    initializer = RokuInitializer
-
+class Roku(RokuShared, BaseImporter, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override
@@ -38,7 +31,7 @@ class Roku(RokuShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     def _url_content_key(self, url: str) -> str:
-        domain_regex = self._domain_regex()
+        domain_regex = self._domains_regex()
         for url_regex in self._url_regexes():
             if match := re.match(domain_regex + url_regex, url):
                 return match.group(1)
@@ -56,10 +49,10 @@ class Roku(RokuShared, BaseReadURL, AbstractPlugin, register=False):
         # A season or an episode belongs to a series, which is what
         # is read and written.
         if content.series is not None:
-            return RokuSeriesImporter(self)
+            return RokuSeriesImporter(self.session, self.plugin, self._file_cache)
         if is_movie(content):
-            return RokuMovieImporter(self)
-        return RokuSeriesImporter(self)
+            return RokuMovieImporter(self.session, self.plugin, self._file_cache)
+        return RokuSeriesImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
     @override
@@ -68,5 +61,5 @@ class Roku(RokuShared, BaseReadURL, AbstractPlugin, register=False):
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
         if title.media_type == "Movie":
-            return RokuMovieImporter(self)
-        return RokuSeriesImporter(self)
+            return RokuMovieImporter(self.session, self.plugin, self._file_cache)
+        return RokuSeriesImporter(self.session, self.plugin, self._file_cache)

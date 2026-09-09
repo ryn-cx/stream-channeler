@@ -6,7 +6,6 @@ from __future__ import annotations
 from typing import override
 
 from plugins.HBOMax.base_files import HBOMaxBaseFiles
-from plugins.HBOMax.utils import search_url
 
 
 # TODO: Validate
@@ -32,10 +31,5 @@ class HBOMaxShared(HBOMaxBaseFiles):
     # TODO: Validate
     @classmethod
     @override
-    def domains(cls) -> list[str]:
+    def _domains(cls) -> list[str]:
         return ["play.hbomax.com", "hbomax.com"]
-
-    # TODO: Validate
-    @classmethod
-    def manual_search_url(cls, query: str) -> str | None:
-        return search_url(query)

@@ -11,18 +11,6 @@ class CrunchyrollMusicCategory(StrEnum):
     CONCERT = "concert"
 
 
-# The prefix Crunchyroll issues ids under, which is what a key is recognised by.
-CATEGORY_ID_PREFIXES = {
-    "MV": CrunchyrollMusicCategory.MUSIC_VIDEO,
-    "MC": CrunchyrollMusicCategory.CONCERT,
-}
-
-MUSIC_CATEGORY_NAMES = {
-    CrunchyrollMusicCategory.CONCERT: "Concerts",
-    CrunchyrollMusicCategory.MUSIC_VIDEO: "Music Videos",
-}
-
-
 # TODO: Validate
 def build_url_regex(*path: str, group: str) -> str:
     """Return the regex for a Crunchyroll url."""

@@ -13,21 +13,14 @@ from plugins.Netflix.importer import (
 )
 from plugins.Netflix.shared import NetflixShared
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin.base import BaseReadURL
-from plugins.utils.base_plugin.initialize import BasePluginInitializer
+from plugins.utils.base_plugin.importer import BaseImporter
 
 if TYPE_CHECKING:
     from app.titles.models import Title
 
 
 # TODO: Validate
-class NetflixInitializer(BasePluginInitializer, NetflixShared): ...
-
-
-# TODO: Validate
-class Netflix(NetflixShared, BaseReadURL, AbstractPlugin, register=False):
-    initializer = NetflixInitializer
-
+class Netflix(NetflixShared, BaseImporter, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override
@@ -42,7 +35,7 @@ class Netflix(NetflixShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     def _url_title_key(self, url: str) -> str:
-        if not (match := re.match(self._domain_regex() + TITLE_URL_REGEX, url)):
+        if not (match := re.match(self._domains_regex() + TITLE_URL_REGEX, url)):
             msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
         return match.group("title_key")
@@ -54,8 +47,8 @@ class Netflix(NetflixShared, BaseReadURL, AbstractPlugin, register=False):
         # title_file contains the media type information.
         title_key = self._url_title_key(url)
         if self.title_file(title_key).title_information().field__typename == "Movie":
-            return NetflixMovieImporter(self)
-        return NetflixSeriesImporter(self)
+            return NetflixMovieImporter(self.session, self.plugin, self._file_cache)
+        return NetflixSeriesImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
     @override
@@ -65,8 +58,8 @@ class Netflix(NetflixShared, BaseReadURL, AbstractPlugin, register=False):
             raise AttributeError(msg)
 
         if title.media_type == "Movie":
-            return NetflixMovieImporter(self)
-        return NetflixSeriesImporter(self)
+            return NetflixMovieImporter(self.session, self.plugin, self._file_cache)
+        return NetflixSeriesImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
     @override

@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from urllib.parse import quote
 
 from plugins.Pluto.constants import LOCALE
 
@@ -38,11 +37,6 @@ def episode_url(title_key: str, season_number: int, episode_key: str) -> str:
         f"{LOCALE}/on-demand/series/{title_key}/season/{season_number}"
         f"/episode/{episode_key}",
     )
-
-
-# TODO: Validate
-def search_url(query: str) -> str:
-    return build_url(f"{LOCALE}/search?query={quote(query)}")
 
 
 # TODO: Validate

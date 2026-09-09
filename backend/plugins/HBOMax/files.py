@@ -13,7 +13,10 @@ from minbo.movie.models import MovieModel
 from minbo.show import Show as TitleEndpoint
 from minbo.show.models import ShowModel
 
-from plugins.utils.base_plugin.files import EndpointFile
+from plugins.utils.base_plugin.files import (
+    SingleArgEndpointFile,
+    MultipleArgEndpointFile,
+)
 from plugins.utils.get_around_client import get_around_client
 
 if TYPE_CHECKING:
@@ -29,7 +32,7 @@ def minbo() -> MinBO:
 
 
 # TODO: Validate
-class TitleFile(EndpointFile[ShowModel]):
+class TitleFile(SingleArgEndpointFile[ShowModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> TitleEndpoint:
@@ -42,7 +45,7 @@ class TitleFile(EndpointFile[ShowModel]):
 
 
 # TODO: Validate
-class SeasonFile(EndpointFile[ShowModel]):
+class SeasonFile(MultipleArgEndpointFile[ShowModel]):
     # TODO: Validate
     def __init__(
         self,
@@ -72,7 +75,7 @@ class SeasonFile(EndpointFile[ShowModel]):
 
 
 # TODO: Validate
-class MovieFile(EndpointFile[MovieModel]):
+class MovieFile(SingleArgEndpointFile[MovieModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> MovieEndpoint:

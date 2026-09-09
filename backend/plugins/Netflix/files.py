@@ -31,7 +31,7 @@ from meshfilm.preview_modal_episode_selector_season_episodes.models import (
 from meshfilm.search_page_results import SearchPageResults as SearchPageResultsEndpoint
 from meshfilm.search_page_results.models import SearchPageResultsModel
 
-from plugins.utils.base_plugin.files import EndpointFile, IntegerEndpointFile
+from plugins.utils.base_plugin.files import SingleArgEndpointFile, IntegerArgEndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -42,7 +42,7 @@ def meshfilm() -> Meshfilm:
 
 
 # TODO: Validate
-class LodpTitleAndPlansPage(IntegerEndpointFile[LodpTitleAndPlansPageModel]):
+class LodpTitleAndPlansPage(IntegerArgEndpointFile[LodpTitleAndPlansPageModel]):
     """Title information."""
 
     # TODO: Validate
@@ -61,7 +61,7 @@ class LodpTitleAndPlansPage(IntegerEndpointFile[LodpTitleAndPlansPageModel]):
 
 # TODO: Validate
 class PreviewModalEpisodeSelector(
-    IntegerEndpointFile[PreviewModalEpisodeSelectorModel],
+    IntegerArgEndpointFile[PreviewModalEpisodeSelectorModel],
 ):
     """Season information."""
 
@@ -87,7 +87,7 @@ class PreviewModalEpisodeSelector(
 
 # TODO: Validate
 class PreviewModalEpisodeSelectorSeasonEpisodes(
-    IntegerEndpointFile[PreviewModalEpisodeSelectorSeasonEpisodesModel],
+    IntegerArgEndpointFile[PreviewModalEpisodeSelectorSeasonEpisodesModel],
 ):
     """Title information."""
 
@@ -112,7 +112,7 @@ class PreviewModalEpisodeSelectorSeasonEpisodes(
 
 
 # TODO: Validate
-class SearchPageResults(EndpointFile[SearchPageResultsModel]):
+class SearchPageResults(SingleArgEndpointFile[SearchPageResultsModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> SearchPageResultsEndpoint:

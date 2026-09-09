@@ -13,7 +13,10 @@ from notaplanet.items.models import ItemsModel
 from notaplanet.seasons import Seasons as SeasonsEndpoint
 from notaplanet.seasons.models import SeasonsModel
 
-from plugins.utils.base_plugin.files import EndpointFile
+from plugins.utils.base_plugin.files import (
+    SingleArgEndpointFile,
+    MultipleArgEndpointFile,
+)
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -35,7 +38,7 @@ class ItemNotFoundError(NotAPlanetError):
 
 
 # TODO: Validate
-class ItemsFile(EndpointFile[ItemsModel]):
+class ItemsFile(MultipleArgEndpointFile[ItemsModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> ItemsEndpoint:
@@ -62,7 +65,7 @@ class ItemsFile(EndpointFile[ItemsModel]):
 
 
 # TODO: Validate
-class SeasonsFile(EndpointFile[SeasonsModel]):
+class SeasonsFile(SingleArgEndpointFile[SeasonsModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> SeasonsEndpoint:

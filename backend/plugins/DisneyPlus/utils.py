@@ -37,11 +37,6 @@ def video_url(episode_id: str) -> str:
 
 
 # TODO: Validate
-def search_url() -> str:
-    return build_url("browse/search")
-
-
-# TODO: Validate
 def build_season_key(title_key: str, season_id: str) -> str:
     return f"{title_key}:{season_id}"
 

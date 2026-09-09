@@ -16,9 +16,7 @@ from app.channels.models import URLStatus
 from app.seasons.models import Season
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin
-from plugins.utils.base_plugin.base import BaseReadURL
-from plugins.utils.base_plugin.initialize import BasePluginInitializer
-from plugins.YouTube.constants import URL_REGEXES
+from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.YouTube.importer import YouTubeImporter
 from plugins.YouTube.music_importer import YouTubeTopicImporter
 from plugins.YouTube.shared import YouTubeShared
@@ -33,29 +31,17 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class YouTubeInitializer(BasePluginInitializer, YouTubeShared): ...
-
-
-# TODO: Validate
 class YouTube(
     YouTubeURLParserMixin,
     YouTubeShared,
-    BaseReadURL,
+    BaseImporter,
     AbstractPlugin,
     register=False,
 ):
-    initializer = YouTubeInitializer
-
     # TODO: Validate
     @classmethod
     @override
-    def _url_regexes(cls) -> tuple[str, ...]:
-        return URL_REGEXES
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def url_regex(cls) -> str:
+    def _url_regex(cls) -> str:
         # Some regex patterns have the same named groups which will cause issues so they
         # are stripped for the simple regex matching check. Also supporting both
         # youtube.com and youtu.be is a mess.
@@ -69,7 +55,7 @@ class YouTube(
     @override
     def _media_importer_from_title(self, title: Title) -> YouTubeImporter:
         if title.media_type == "YouTube Artist":
-            return YouTubeTopicImporter(self)
+            return YouTubeTopicImporter(self.session, self.plugin, self._file_cache)
         return self.media_importer_from_title_key(title.key)
 
     # TODO: Validate

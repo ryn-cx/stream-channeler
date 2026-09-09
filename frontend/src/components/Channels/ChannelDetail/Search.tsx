@@ -5,21 +5,10 @@ import { useCallback, useEffect, useState } from "react"
 import type { PluginSearchResult, TMDBMediaInfo } from "@/client"
 import { ChannelsService, PluginsService } from "@/client"
 import { useAllChannelTitles } from "@/components/Channels/useChannelTitles"
-import { SourceOptionLabel } from "@/components/Common/SourceOptionLabel"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
-import { useSearchablePlugins } from "@/hooks/useEntities"
 import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
 
@@ -36,12 +25,8 @@ function releaseYear(value: string | null | undefined): number | null {
   return value ? Number(value.slice(0, 4)) : null
 }
 
-// TMDB covers every service rather than one, so it is the source a search starts
-// on. Falls back to the first searchable plugin when TMDB is not available.
-const DEFAULT_PLUGIN_KEY = "TMDB"
-
-// The title a details modal is open for, built from the plugin result that was
-// clicked and the id the plugin issued it under.
+// The title a details modal is open for, built from the TMDB result that was
+// clicked and the id TMDB issued it under.
 export type SelectedTitle = {
   media_identifier: string
   title: string
@@ -561,7 +546,6 @@ export function TitleSearch({ channelId, initialQuery }: TitleSearchProps) {
   const [selectedResult, setSelectedResult] = useState<SelectedTitle | null>(
     null,
   )
-  const [pluginKey, setPluginKey] = useState("")
   const { showErrorToast } = useCustomToast()
   const addUrlMutation = useAddToQueue(channelId)
   const { pageIndex, cursor, reset, goToNextPage, goToPreviousPage } =
@@ -603,55 +587,10 @@ export function TitleSearch({ channelId, initialQuery }: TitleSearchProps) {
     [showErrorToast],
   )
 
-  const { data: searchablePlugins } = useSearchablePlugins()
-
-  const plugins = searchablePlugins ?? []
-  // Plugins that search in-app vs. plugins that only expose a website search
-  // page. The latter are offered under a "Manual Search Only" header and open
-  // their search page in a new tab instead of showing in-app results.
-  const inAppPlugins = plugins.filter((plugin) => !plugin.manual_search_only)
-  const manualPlugins = plugins.filter((plugin) => plugin.manual_search_only)
-  const manualPluginKeys = new Set(
-    manualPlugins.map((plugin) => plugin.plugin_key),
-  )
-
-  useEffect(() => {
-    if (!pluginKey && inAppPlugins.length > 0) {
-      const preferred = inAppPlugins.find(
-        (plugin) => plugin.plugin_key === DEFAULT_PLUGIN_KEY,
-      )
-      setPluginKey((preferred ?? inAppPlugins[0]).plugin_key)
-    }
-  }, [pluginKey, inAppPlugins])
-
   // TODO: Validate
-  const runSearch = async (key: string, rawQuery: string) => {
+  const runSearch = async (rawQuery: string) => {
     const trimmed = rawQuery.trim()
-    if (!key || !trimmed) return
-
-    // Manual-search-only plugins have no in-app search; open their website's
-    // search page in a new tab. The tab is opened synchronously so the browser
-    // keeps it tied to the click and doesn't block it as a popup.
-    if (manualPluginKeys.has(key)) {
-      const newTab = window.open("", "_blank")
-      if (newTab) newTab.opener = null
-      try {
-        const { url } = await PluginsService.manualSearchUrl({
-          pluginKey: key,
-          query: trimmed,
-        })
-        if (url) {
-          if (newTab) newTab.location.href = url
-        } else {
-          newTab?.close()
-          showErrorToast("No search page available")
-        }
-      } catch {
-        newTab?.close()
-        showErrorToast("Search failed")
-      }
-      return
-    }
+    if (!trimmed) return
 
     setIsCheckingUrl(true)
     setActiveSearch(null)
@@ -681,7 +620,7 @@ export function TitleSearch({ channelId, initialQuery }: TitleSearchProps) {
   }
 
   // TODO: Validate
-  const handleSearch = () => runSearch(pluginKey, searchQuery)
+  const handleSearch = () => runSearch(searchQuery)
   const isSearching = isCheckingUrl || isFetching
 
   return (
@@ -703,38 +642,6 @@ export function TitleSearch({ channelId, initialQuery }: TitleSearchProps) {
           {isSearching ? "Searching..." : "Search"}
         </Button>
       </div>
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Search:</span>
-        <Select value={pluginKey} onValueChange={setPluginKey}>
-          <SelectTrigger className="w-50">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {inAppPlugins.map((plugin) => (
-              <SelectItem key={plugin.plugin_key} value={plugin.plugin_key}>
-                <SourceOptionLabel
-                  name={plugin.name}
-                  faviconUrl={plugin.favicon_url}
-                />
-              </SelectItem>
-            ))}
-            {manualPlugins.length > 0 && (
-              <SelectGroup>
-                <SelectLabel>External Search Only</SelectLabel>
-                {manualPlugins.map((plugin) => (
-                  <SelectItem key={plugin.plugin_key} value={plugin.plugin_key}>
-                    <SourceOptionLabel
-                      name={plugin.name}
-                      faviconUrl={plugin.favicon_url}
-                    />
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            )}
-          </SelectContent>
-        </Select>
-      </div>
-
       {pluginResults && pluginResults.length > 0 && (
         <div className="flex flex-wrap gap-3">
           {pluginResults.map((result, index) => (

@@ -14,9 +14,6 @@ from plugins.YouTube.constants import (
     # PAID_SOURCE_KEY,
     SHORT_DOMAIN,
 )
-from plugins.YouTube.utils import (
-    search_url,
-)
 from plugins.YouTube.watch_history import YouTubeWatchHistoryMixin
 
 
@@ -39,7 +36,7 @@ class YouTubeShared(YouTubeWatchHistoryMixin, YouTubeBaseFiles):
     # TODO: Validate
     @classmethod
     @override
-    def domains(cls) -> list[str]:
+    def _domains(cls) -> list[str]:
         return [LONG_DOMAIN, SHORT_DOMAIN]
 
     # TODO: Validate
@@ -54,11 +51,6 @@ class YouTubeShared(YouTubeWatchHistoryMixin, YouTubeBaseFiles):
     def _source_keys(cls) -> tuple[str, ...]:
         # return (cls.plugin_name(), FREE_SOURCE_KEY, PAID_SOURCE_KEY, LINKS_SOURCE_KEY)
         return (cls.plugin_name(),)
-
-    # TODO: Validate
-    @classmethod
-    def manual_search_url(cls, query: str) -> str | None:
-        return search_url(query)
 
     # TODO: Validate
     @override

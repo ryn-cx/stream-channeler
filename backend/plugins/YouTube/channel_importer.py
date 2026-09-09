@@ -138,7 +138,6 @@ class YouTubeChannelImporter(
         if self._title_is_outdated(title, force=force):
             channel_file = self.channel_by_channel_id_file(title_key)
             channel_item = get_first_item(channel_file.parsed().items)
-            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=channel_item.id,
                 name=channel_item.snippet.title,
@@ -147,7 +146,7 @@ class YouTubeChannelImporter(
                 # Updating every 30 days is reasonable because this is only used for
                 # checking for new playlists and changes to the channel information.
                 update_at=channel_file.data_timestamp() + timedelta(days=365),
-                data_timestamp=max(data_timestamps),
+                data_timestamp=self._title_files_data_timestamp(title_key),
                 canonical_title_validated_at=tz_datetime.now(),
                 source_id=source.id,
                 image_url=image_url(channel_item.snippet.thumbnails),
@@ -156,7 +155,7 @@ class YouTubeChannelImporter(
             title.set_update_at(None)
 
         self._upsert_seasons(title, title_key, force=force)
-        self._soft_delete_missing(title_key)
+        self._soft_delete_missing_seasons_and_episodes(title_key)
 
         return title
 

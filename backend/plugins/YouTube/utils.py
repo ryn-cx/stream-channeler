@@ -7,7 +7,6 @@ import json
 import time
 from collections.abc import Sequence
 from typing import Any
-from urllib.parse import quote
 
 from loguru import logger
 from not_yt_dlapi.exceptions import APIError
@@ -49,11 +48,6 @@ def playlist_url(playlist_key: str) -> str:
 # # TODO: Validate
 # def title_season_url(title_key: str, season_number: str) -> str:
 #     return build_url(f"show/{title_key}?season={season_number}")
-
-
-# TODO: Validate
-def search_url(query: str) -> str:
-    return build_url(f"results?search_query={quote(query)}")
 
 
 # TODO: Validate

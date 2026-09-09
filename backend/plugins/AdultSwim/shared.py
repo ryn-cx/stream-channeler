@@ -18,7 +18,7 @@ from app.titles.models import Title
 from plugins.AdultSwim.base_files import AdultSwimBaseFiles
 from plugins.AdultSwim.constants import CHANNEL_DESCRIPTION_FILES, FREE, SUBSCRIPTION
 from plugins.AdultSwim.utils import title_url
-from plugins.utils.base_plugin.files import INCOMPLETE_STATUS
+from plugins.utils.constants import INCOMPLETE_STATUS
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

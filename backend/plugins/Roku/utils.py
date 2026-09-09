@@ -36,11 +36,6 @@ def video_url(episode_key: str) -> str:
 
 
 # TODO: Validate
-def search_url() -> str:
-    return build_url("search")
-
-
-# TODO: Validate
 def is_movie(content: ContentModel) -> bool:
     content_type = content.type
     if content_type not in (MOVIE_TYPE, "series"):

@@ -14,9 +14,6 @@ from app.titles.models import Title
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.YouTube.constants import (
-    URL_REGEXES,
-)
 from plugins.YouTube.shared import YouTubeShared
 from plugins.YouTube.utils import (
     batch_download_missing_videos,
@@ -37,7 +34,7 @@ if TYPE_CHECKING:
 
     from plugins.utils.abstract_plugin import URLImportResult
     from plugins.utils.base_plugin.files import BaseFile
-    from plugins.utils.base_plugin.url import URLTitleInfo
+    from plugins.utils.base_plugin.url import ExtractedURLInfo
     from plugins.YouTube.url_parser import ParsedURL
 
 
@@ -201,14 +198,8 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
         )
 
     # TODO: Validate
-    @classmethod
     @override
-    def _url_regexes(cls) -> tuple[str, ...]:
-        return URL_REGEXES
-
-    # TODO: Validate
-    @override
-    def get_media_info(self, url: str) -> URLTitleInfo:
+    def get_media_info(self, url: str) -> ExtractedURLInfo:
         return self._parsed_url(url).media_info()
 
     # TODO: Validate
@@ -291,11 +282,6 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
         if video_duration := video_item.content_details.duration:
             duration = int(video_duration.total_seconds())
 
-        data_timestamps = self._episode_files_data_timestamps(
-            episode_key,
-            season.key,
-            title_key,
-        )
         episode = Episode(
             key=video_item.id,
             watch_identifier=watch_identifier(self.plugin_name(), video_item.id),
@@ -310,7 +296,9 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
             thumbnail_url=thumbnail_url(video_snippet.thumbnails),
             sort_order=sort_order,
             episode_number=self._get_episode_number(episode_key, season.key, title_key),
-            data_timestamp=max(data_timestamps),
+            data_timestamp=self._episode_files_data_timestamp(
+                episode_key, season.key, title_key,
+            ),
             season_id=season.id,
         ).upsert(season, episode)
         episode.set_update_at(None)

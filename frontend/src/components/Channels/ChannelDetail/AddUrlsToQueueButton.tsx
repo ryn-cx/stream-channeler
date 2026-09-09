@@ -13,7 +13,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { useSearchablePlugins } from "@/hooks/useEntities"
 import { ManageTitlesTabs } from "./ManageTitlesTabs"
 
 interface ManageTitlesButtonProps {
@@ -37,10 +36,6 @@ export function ManageTitlesButton({
 }: ManageTitlesButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isFullScreen, setIsFullScreen] = useState(false)
-  // Warm the searchable-plugins cache only once the modal is open, so the
-  // channel list doesn't fetch it for every card just by rendering.
-  useSearchablePlugins(isOpen)
-
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>

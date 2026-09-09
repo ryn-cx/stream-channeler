@@ -481,6 +481,8 @@ class ChildMediaMixin(MediaMixin[ChildT], ABC, Generic[ParentT, ChildT]):  # noq
         if protected_keys is None:
             protected_keys = set()
         if existing_record:
+            if existing_record.deleted_at is not None:
+                existing_record.soft_undelete()
             return self._update_existing(existing_record, protected_keys)
         # self will always be a child of parent
         parent.add_child(self)  # type: ignore[arg-type]

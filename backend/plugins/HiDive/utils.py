@@ -6,7 +6,6 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from typing import TYPE_CHECKING
-from urllib.parse import quote_plus
 
 from plugins.HiDive.constants import (
     MOVIE_MEDIA_TYPE,
@@ -41,11 +40,6 @@ def season_url(season_key: str | int) -> str:
 # TODO: Validate
 def episode_url(episode_key: str | int) -> str:
     return build_url(f"video/{episode_key}")
-
-
-# TODO: Validate
-def search_url(query: str) -> str:
-    return build_url(f"search?q={quote_plus(query)}")
 
 
 # TODO: Validate

@@ -6,19 +6,9 @@ from typing import TYPE_CHECKING, Any, NamedTuple, override
 
 # from urllib.parse import parse_qs, urlparse
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin.url import URLTitleInfo
+from plugins.utils.base_plugin.url import ExtractedURLInfo
 from plugins.YouTube.base_files import YouTubeBaseFiles
 from plugins.YouTube.channel_importer import YouTubeChannelImporter
-from plugins.YouTube.constants import (
-    CHANNEL_HANDLE_URL_REGEX,
-    CHANNEL_KEY_URL_REGEX,
-    CHANNEL_USERNAME_URL_REGEX,
-    PLAYLIST_URL_REGEX,
-    PLAYLIST_VIDEO_URL_REGEX,
-    # TITLE_PLAYLIST_URL_REGEX,
-    # TITLE_URL_REGEX,
-    VIDEO_URL_REGEX,
-)
 from plugins.YouTube.files import ChannelByHandle, ChannelByUsername
 
 # from plugins.YouTube.movie_importer import YouTubeMovieImporter
@@ -63,16 +53,16 @@ class ParsedURL(NamedTuple):
     album_playlist_key: str | None = None
 
     # TODO: Validate
-    def media_info(self) -> URLTitleInfo:
+    def media_info(self) -> ExtractedURLInfo:
         if self.whole_title:
-            return URLTitleInfo(self.title_key)
+            return ExtractedURLInfo(self.title_key)
         if self.video_key is None:
-            return URLTitleInfo(self.title_key, season_key=self.playlist_key)
+            return ExtractedURLInfo(self.title_key, season_key=self.playlist_key)
         # The track is looked for in every release of the musician, since the URL
         # named no release and the title holds one season for each of them.
         if self.musician_track:
-            return URLTitleInfo(self.title_key, episode_key=self.video_key)
-        return URLTitleInfo(
+            return ExtractedURLInfo(self.title_key, episode_key=self.video_key)
+        return ExtractedURLInfo(
             self.title_key,
             season_key=self.playlist_key,
             episode_key=self.video_key,
@@ -97,16 +87,16 @@ class YouTubeURLParserMixin(YouTubeBaseFiles):
     # TODO: Validate
     def media_importer_from_title_key(self, title_key: str) -> YouTubeImporter:
         # if is_video_key(title_key):
-        #     return YouTubeMovieImporter(self)
+        #     return YouTubeMovieImporter.for_dispatcher(self)
         # if is_title_key(title_key):
-        #     return YouTubeTVShowImporter(self)
+        #     return YouTubeTVShowImporter.for_dispatcher(self)
         # if is_an_album(title_key):
-        #     return YouTubeAlbumImporter(self)
+        #     return YouTubeAlbumImporter.for_dispatcher(self)
         # if is_user_playlist(title_key):
-        #     return YouTubePlaylistImporter(self)
+        #     return YouTubePlaylistImporter.for_dispatcher(self)
         if is_topic_channel(self.channel_by_channel_id_file(title_key)):
-            return YouTubeTopicImporter(self)
-        return YouTubeChannelImporter(self)
+            return YouTubeTopicImporter(self.session, self.plugin, self._file_cache)
+        return YouTubeChannelImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
     def _channel_by_handle_file(self, channel_handle: str) -> ChannelByHandle:
@@ -118,33 +108,33 @@ class YouTubeURLParserMixin(YouTubeBaseFiles):
 
     # TODO: Validate
     def _parsed_url(self, url: str) -> ParsedURL:
-        if match := re.match(PLAYLIST_VIDEO_URL_REGEX, url):
+        if match := re.match(self._playlist_video_url_regex(), url):
             parsed = self._parse_playlist(match.group("playlist_key"), url)
             return parsed._replace(video_key=match.group("video_key"))
 
-        # if match := re.match(TITLE_PLAYLIST_URL_REGEX, url):
+        # if match := re.match(self._title_playlist_url_regex(), url):
         #     return self._parse_title_playlist(match.group("title_playlist_key"), url)
 
-        if match := re.match(PLAYLIST_URL_REGEX, url):
+        if match := re.match(self._playlist_url_regex(), url):
             return self._parse_playlist(match.group("playlist_key"), url)
 
-        if match := re.match(VIDEO_URL_REGEX, url):
+        if match := re.match(self._video_url_regex(), url):
             return self._parse_video(match.group("video_key"), url)
 
-        if match := re.match(CHANNEL_KEY_URL_REGEX, url):
+        if match := re.match(self._channel_key_url_regex(), url):
             return self._parse_channel(match.group("channel_key"), url)
 
-        # if match := re.match(TITLE_URL_REGEX, url):
+        # if match := re.match(self._title_url_regex(), url):
         #     return self._parse_title(match.group("title_key"), url)
 
-        if match := re.match(CHANNEL_USERNAME_URL_REGEX, url):
+        if match := re.match(self._channel_username_url_regex(), url):
             channel = self._parsed_channel(
                 self._channel_by_username_file(match.group("channel_username")),
                 url,
             )
             return self._parse_channel(get_first_item(channel.items).id, url)
 
-        if match := re.match(CHANNEL_HANDLE_URL_REGEX, url):
+        if match := re.match(self._channel_handle_url_regex(), url):
             channel = self._parsed_channel(
                 self._channel_by_handle_file(match.group("channel_handle")),
                 url,

@@ -4,9 +4,8 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from urllib.parse import quote_plus
 
-from plugins.NHKWorld.constants import MINIMUM_THUMBNAIL_WIDTH
+MINIMUM_THUMBNAIL_WIDTH = 480
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -23,11 +22,6 @@ def build_url(path: str) -> str:
 # TODO: Validate
 def title_url(title_key: str) -> str:
     return build_url(f"nhkworld/en/shows/{title_key}/")
-
-
-# TODO: Validate
-def search_url(query: str) -> str:
-    return build_url(f"nhkworld/en/shows/search/?q={quote_plus(query)}")
 
 
 # TODO: Validate

@@ -2,11 +2,9 @@
 from __future__ import annotations
 
 from typing import override
-from urllib.parse import quote_plus
 
 from plugins.Crunchyroll.base_files import CrunchyrollBaseFiles
 from plugins.Crunchyroll.constants import MUSIC_SOURCE, VIDEO_SOURCE
-from plugins.Crunchyroll.utils import build_url
 
 
 # TODO: Validate
@@ -34,8 +32,3 @@ class CrunchyrollShared(CrunchyrollBaseFiles):
     @override
     def _source_keys(cls) -> tuple[str, ...]:
         return (VIDEO_SOURCE, MUSIC_SOURCE)
-
-    # TODO: Validate
-    @classmethod
-    def manual_search_url(cls, query: str) -> str:
-        return build_url(f"search?q={quote_plus(query)}")

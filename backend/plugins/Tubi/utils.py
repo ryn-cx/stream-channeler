@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import re
 from typing import TYPE_CHECKING
-from urllib.parse import quote
 
 if TYPE_CHECKING:
     from plugi.content.models import Child as SeasonChild
@@ -31,11 +30,6 @@ def movie_url(title_key: str) -> str:
 # TODO: Validate
 def episode_url(episode_key: str) -> str:
     return build_url(f"tv-shows/{episode_key}")
-
-
-# TODO: Validate
-def search_url(query: str) -> str:
-    return build_url(f"search/{quote(query)}")
 
 
 # TODO: Validate

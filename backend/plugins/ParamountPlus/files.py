@@ -15,7 +15,7 @@ from trivial_minus.movie.models import MovieModel
 from trivial_minus.show import Show as TitleEndpoint
 from trivial_minus.show.models import ShowModel
 
-from plugins.utils.base_plugin.files import EndpointFile
+from plugins.utils.base_plugin.files import SingleArgEndpointFile, MultipleArgEndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 if TYPE_CHECKING:
@@ -31,7 +31,7 @@ def trivial_minus() -> TrivialMinus:
 
 
 # TODO: Validate
-class TitlePage(EndpointFile[ShowModel]):
+class TitlePage(SingleArgEndpointFile[ShowModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> TitleEndpoint:
@@ -55,7 +55,7 @@ class TitlePage(EndpointFile[ShowModel]):
 
 
 # TODO: Validate
-class EpisodesFile(EndpointFile[EpisodesModel]):
+class EpisodesFile(MultipleArgEndpointFile[EpisodesModel]):
     # TODO: Validate
     def __init__(
         self,
@@ -83,7 +83,7 @@ class EpisodesFile(EndpointFile[EpisodesModel]):
 
 
 # TODO: Validate
-class MovieFile(EndpointFile[MovieModel]):
+class MovieFile(SingleArgEndpointFile[MovieModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> MovieEndpoint:

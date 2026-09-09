@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from urllib.parse import quote
 
 if TYPE_CHECKING:
     from minbo.movie.models import Idref14 as MovieContent
@@ -26,11 +25,6 @@ def title_url(title_key: str) -> str:
 # TODO: Validate
 def movie_url(movie_key: str) -> str:
     return build_url(f"movie/{movie_key}")
-
-
-# TODO: Validate
-def search_url(query: str) -> str:
-    return build_url(f"search/result?q={quote(query)}")
 
 
 # TODO: Validate

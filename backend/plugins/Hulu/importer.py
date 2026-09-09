@@ -29,7 +29,7 @@ from plugins.Hulu.utils import (
 )
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.utils.base_plugin.url import URLTitleInfo
+from plugins.utils.base_plugin.url import ExtractedURLInfo
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -89,13 +89,13 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
 
         page = self._title_files(title.key)[0].parsed()
         plan = title_plan(page)
-        self._add_urls_to_channel_by_prefix([title.url], "All Titles")
-        self._add_urls_to_channel_by_prefix([title.url], self._media_type_name())
+        self._add_urls_to_channel([title.url], "All Titles")
+        self._add_urls_to_channel([title.url], self._media_type_name())
         if plan:
             network, _ = plan
-            self._add_urls_to_channel_by_prefix([title.url], network)
+            self._add_urls_to_channel([title.url], network)
         for genre in page.details.entity.genre_names:
-            self._add_urls_to_channel_by_prefix([title.url], genre)
+            self._add_urls_to_channel([title.url], genre)
 
 
 # TODO: Validate
@@ -113,18 +113,18 @@ class HuluSeriesImporter(HuluImporter):
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> URLTitleInfo:
-        domain_regex = self._domain_regex()
+    def get_media_info(self, url: str) -> ExtractedURLInfo:
+        domain_regex = self._domains_regex()
         if match := re.match(domain_regex + SERIES_URL_REGEX, url):
             title_key = match.group("series_key")
             self.raise_invalid_url_if_no_content(self.series_file(title_key), url)
-            return URLTitleInfo(title_key)
+            return ExtractedURLInfo(title_key)
 
         if match := re.match(domain_regex + VIDEO_URL_REGEX, url):
             episode_key = match.group("episode_key")
             episode_file = self.episode_file(episode_key)
             self.raise_invalid_url_if_no_content(episode_file, url)
-            return URLTitleInfo(
+            return ExtractedURLInfo(
                 str(episode_file.parsed().details.vod_items.focus.entity.series_id),
                 episode_key=episode_key,
             )
@@ -197,7 +197,6 @@ class HuluSeriesImporter(HuluImporter):
         if self._title_is_outdated(existing_title, force=force):
             parsed_series = self.series_file(title_key).parsed()
             entity = parsed_series.details.entity
-            data_timestamps = self._title_files_data_timestamps(title_key)
             existing_title = Title(
                 key=title_key,
                 name=parsed_series.name,
@@ -209,13 +208,13 @@ class HuluSeriesImporter(HuluImporter):
                 url=title_url(title_key, HuluMediaType.SERIES),
                 image_url=image_url(parsed_series.artwork.program_tile.path),
                 thumbnail_url=thumbnail_url(parsed_series.artwork.program_tile.path),
-                data_timestamp=max(data_timestamps),
+                data_timestamp=self._title_files_data_timestamp(title_key),
                 source_id=source.id,
             ).upsert(source, existing_title)
             existing_title.set_update_at(None)
 
         self._upsert_seasons(existing_title, force=force)
-        self._soft_delete_missing(title_key)
+        self._soft_delete_missing_seasons_and_episodes(title_key)
         self.add_title_to_plugin_channels(existing_title)
 
         return existing_title
@@ -228,9 +227,6 @@ class HuluSeriesImporter(HuluImporter):
             season_key = build_season_key(title.key, season_number)
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
-                data_timestamps = self._season_files_data_timestamps(
-                    season_key, title.key
-                )
                 season = Season(
                     key=season_key,
                     name=(
@@ -240,7 +236,9 @@ class HuluSeriesImporter(HuluImporter):
                     ),
                     season_number=season_number,
                     sort_order=sort_order,
-                    data_timestamp=max(data_timestamps),
+                    data_timestamp=self._season_files_data_timestamp(
+                        season_key, title.key,
+                    ),
                     title_id=title.id,
                 ).upsert(title, season)
                 season.set_update_at(None)
@@ -266,11 +264,6 @@ class HuluSeriesImporter(HuluImporter):
 
             hero_artwork = item.artwork.video_horizontal_hero
             hero_path = hero_artwork.path if hero_artwork else None
-            data_timestamps = self._episode_files_data_timestamps(
-                episode_key,
-                season.key,
-                title_key,
-            )
             episode = Episode(
                 key=episode_key,
                 watch_identifier=watch_identifier(self.plugin_name(), episode_key),
@@ -283,7 +276,9 @@ class HuluSeriesImporter(HuluImporter):
                 duration=item.duration,
                 air_date=item.premiere_date,
                 sort_order=sort_order,
-                data_timestamp=max(data_timestamps),
+                data_timestamp=self._episode_files_data_timestamp(
+                    episode_key, season.key, title_key,
+                ),
                 season_id=season.id,
             ).upsert(season, episode)
             episode.set_update_at(episode.air_date)
@@ -304,8 +299,8 @@ class HuluMovieImporter(HuluImporter):
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> URLTitleInfo:
-        domain_regex = self._domain_regex()
+    def get_media_info(self, url: str) -> ExtractedURLInfo:
+        domain_regex = self._domains_regex()
         if match := re.match(domain_regex + MOVIE_URL_REGEX, url):
             title_key = match.group("movie_key")
         elif match := re.match(domain_regex + VIDEO_URL_REGEX, url):
@@ -316,7 +311,7 @@ class HuluMovieImporter(HuluImporter):
             msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
         self.raise_invalid_url_if_no_content(self.movie_file(title_key), url)
-        return URLTitleInfo(title_key)
+        return ExtractedURLInfo(title_key)
 
     # TODO: Validate
     @override
@@ -366,7 +361,6 @@ class HuluMovieImporter(HuluImporter):
         parsed_movie = self.movie_file(title_key).parsed()
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=title_key,
                 name=parsed_movie.name,
@@ -376,13 +370,13 @@ class HuluMovieImporter(HuluImporter):
                 image_url=image_url(parsed_movie.artwork.program_tile.path),
                 thumbnail_url=thumbnail_url(parsed_movie.artwork.program_tile.path),
                 media_type="Movie",
-                data_timestamp=max(data_timestamps),
+                data_timestamp=self._title_files_data_timestamp(title_key),
                 source_id=source.id,
             ).upsert(source, title)
             title.set_update_at(None)
 
         self._upsert_season(title, force=force)
-        self._soft_delete_missing(title_key)
+        self._soft_delete_missing_seasons_and_episodes(title_key)
         self.add_title_to_plugin_channels(title)
 
         return title
@@ -391,12 +385,11 @@ class HuluMovieImporter(HuluImporter):
     def _upsert_season(self, title: Title, *, force: bool = False) -> None:
         season = Season.get_from_memory(self.session, title, title.key)
         if self._season_is_outdated(season, title.key, force=force):
-            data_timestamps = self._season_files_data_timestamps(title.key, title.key)
             season = Season(
                 key=title.key,
                 season_number=0,
                 sort_order=0,
-                data_timestamp=max(data_timestamps),
+                data_timestamp=self._season_files_data_timestamp(title.key, title.key),
                 title_id=title.id,
             ).upsert(title, season)
             # Movies should be updated from update_show.
@@ -414,11 +407,6 @@ class HuluMovieImporter(HuluImporter):
             season.key,
             force=force,
         ):
-            data_timestamps = self._episode_files_data_timestamps(
-                season.key,
-                season.key,
-                season.key,
-            )
             episode = Episode(
                 key=season.key,
                 watch_identifier=watch_identifier(self.plugin_name(), season.key),
@@ -430,7 +418,9 @@ class HuluMovieImporter(HuluImporter):
                 duration=parsed_movie.details.entity.duration,
                 episode_number=0,
                 sort_order=0,
-                data_timestamp=max(data_timestamps),
+                data_timestamp=self._episode_files_data_timestamp(
+                    season.key, season.key, season.key,
+                ),
                 season_id=season.id,
             ).upsert(season, episode)
             # Movies should be updated from update_show.

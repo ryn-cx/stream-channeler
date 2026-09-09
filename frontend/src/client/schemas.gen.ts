@@ -4820,38 +4820,6 @@ export const PluginOutputSchema = {
     description: 'Schema for returning a `Plugin`.'
 } as const;
 
-export const PluginSearchInformationSchema = {
-    properties: {
-        plugin_key: {
-            type: 'string',
-            title: 'Plugin Key'
-        },
-        name: {
-            type: 'string',
-            title: 'Name'
-        },
-        manual_search_only: {
-            type: 'boolean',
-            title: 'Manual Search Only',
-            default: false
-        },
-        favicon_url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Favicon Url'
-        }
-    },
-    type: 'object',
-    required: ['plugin_key', 'name'],
-    title: 'PluginSearchInformation'
-} as const;
-
 export const PluginSearchResultSchema = {
     properties: {
         title: {
@@ -4938,24 +4906,6 @@ export const PluginSearchResultsSchema = {
     required: ['results'],
     title: 'PluginSearchResults',
     description: 'A single page of results from a search query.'
-} as const;
-
-export const PluginSearchUrlSchema = {
-    properties: {
-        url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Url'
-        }
-    },
-    type: 'object',
-    title: 'PluginSearchUrl'
 } as const;
 
 export const PluginURLMatchSchema = {

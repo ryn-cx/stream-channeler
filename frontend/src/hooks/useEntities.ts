@@ -53,12 +53,3 @@ export function useEpisode(episodeId: string | undefined) {
     enabled: !!episodeId,
   })
 }
-
-// TODO: Validate
-export function useSearchablePlugins(enabled = true) {
-  return useQuery({
-    queryKey: ["searchable-plugins"],
-    queryFn: () => PluginsService.searchInformation(),
-    enabled,
-  })
-}

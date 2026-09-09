@@ -95,7 +95,7 @@ def no_channel_initialization(
         for plugin_class in plugin_classes:
             stack.enter_context(
                 patch.object(
-                    plugin_class.initializer,  # type: ignore[attr-defined]
+                    plugin_class,
                     "_create_channel_records",
                     lambda _self: None,
                 ),
@@ -186,7 +186,7 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
             if formatted.startswith("/"):
                 variants += [
                     domain + formatted
-                    for domain in self.plugin_class.domains()  # type: ignore[attr-defined]
+                    for domain in self.plugin_class._domains()  # type: ignore[attr-defined]  # noqa: SLF001
                 ]
             else:
                 variants.append(formatted)
@@ -447,7 +447,7 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
         ]
         with no_channel_initialization(plugin_classes):
             for plugin_class in plugin_classes:
-                plugin_class.initialize_plugin(session)  # type: ignore[attr-defined]
+                plugin_class.initialize_plugin(session)
 
         session.expire_all()
         session.commit()  # Set the rollback point.

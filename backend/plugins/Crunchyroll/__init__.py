@@ -22,8 +22,7 @@ from plugins.Crunchyroll.importer import (
 from plugins.Crunchyroll.shared import CrunchyrollShared
 from plugins.Crunchyroll.watch_history import CrunchyrollWatchHistoryMixin
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin.base import BaseReadURL
-from plugins.utils.base_plugin.initialize import BasePluginInitializer
+from plugins.utils.base_plugin.importer import BaseImporter
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -33,36 +32,47 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class CrunchyrollInitializer(BasePluginInitializer, CrunchyrollShared):
+class Crunchyroll(
+    CrunchyrollWatchHistoryMixin,
+    CrunchyrollShared,
+    BaseImporter,
+    AbstractPlugin,
+    register=False,
+):
     # TODO: Validate
     @override
-    def _create_source_records(self) -> None:
+    def _create_initial_source_records(self) -> None:
         # Default implementation calls self.upsert_source (Crunchyroll.upsert_source)
         # which would then call self.browse_file() (Crunchyroll.browse_file) which does
         # not work because .browse_file() has a different implementation in
         # CrunchyrollSeries and CrunchyrollArtist.
         if Source.get(self.session, self.plugin, VIDEO_SOURCE) is None:
-            CrunchyrollAnimeImporter(self).upsert_source(VIDEO_SOURCE)
+            CrunchyrollAnimeImporter(
+                self.session,
+                self.plugin,
+                self._file_cache,
+            ).upsert_source(VIDEO_SOURCE)
         if Source.get(self.session, self.plugin, MUSIC_SOURCE) is None:
-            CrunchyrollMusicImporter(self).upsert_source(MUSIC_SOURCE)
+            CrunchyrollMusicImporter(
+                self.session,
+                self.plugin,
+                self._file_cache,
+            ).upsert_source(MUSIC_SOURCE)
         self._sources = {source.key: source for source in self.plugin.sources}
 
     # TODO: Validate
     @override
-    def _create_channel_records(self) -> None:
-        CrunchyrollAnimeImporter(self).create_channel_records()
-        CrunchyrollMusicImporter(self).create_channel_records()
-
-
-# TODO: Validate
-class Crunchyroll(
-    CrunchyrollWatchHistoryMixin,
-    CrunchyrollShared,
-    BaseReadURL,
-    AbstractPlugin,
-    register=True,
-):
-    initializer = CrunchyrollInitializer
+    def _create_initial_channel_records(self) -> None:
+        CrunchyrollAnimeImporter(
+            self.session,
+            self.plugin,
+            self._file_cache,
+        ).create_channel_records()
+        CrunchyrollMusicImporter(
+            self.session,
+            self.plugin,
+            self._file_cache,
+        ).create_channel_records()
 
     # TODO: Validate
     @classmethod
@@ -79,7 +89,7 @@ class Crunchyroll(
     # TODO: Validate
     @override
     def _validate_url(self, url: str) -> None:
-        domain_regex = self._domain_regex()
+        domain_regex = self._domains_regex()
         for url_regex in self._url_regexes():
             if re.match(domain_regex + url_regex, url):
                 return
@@ -90,26 +100,44 @@ class Crunchyroll(
     # TODO: Validate
     @override
     def _media_importer_from_url(self, url: str) -> CrunchyrollImporter:
-        domain_regex = self._domain_regex()
+        domain_regex = self._domains_regex()
         for url_regex in (MUSIC_VIDEO_URL_REGEX, CONCERT_URL_REGEX, ARTIST_URL_REGEX):
             if re.match(domain_regex + url_regex, url):
-                return CrunchyrollMusicImporter(self)
-        return CrunchyrollAnimeImporter(self)
+                return CrunchyrollMusicImporter(
+                    self.session,
+                    self.plugin,
+                    self._file_cache,
+                )
+        return CrunchyrollAnimeImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
     @override
     def _media_importer_from_title(self, title: Title) -> CrunchyrollImporter:
         if title.source.key == MUSIC_SOURCE:
-            return CrunchyrollMusicImporter(self)
-        return CrunchyrollAnimeImporter(self)
+            return CrunchyrollMusicImporter(self.session, self.plugin, self._file_cache)
+        return CrunchyrollAnimeImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
     @override
     def update_source(self, source: Source, update_at: datetime) -> None:
         if source.key == MUSIC_SOURCE:
-            CrunchyrollMusicImporter(self).update_source(source, update_at)
+            CrunchyrollMusicImporter(
+                self.session,
+                self.plugin,
+                self._file_cache,
+            ).update_source(
+                source,
+                update_at,
+            )
         else:
-            CrunchyrollAnimeImporter(self).update_source(source, update_at)
+            CrunchyrollAnimeImporter(
+                self.session,
+                self.plugin,
+                self._file_cache,
+            ).update_source(
+                source,
+                update_at,
+            )
 
     # TODO: Validate
     @override

@@ -11,29 +11,21 @@ from app.media.media_type import TMDBMediaType
 from plugins.TMDB.constants import MOVIE_URL_REGEX, TV_URL_REGEX
 from plugins.TMDB.importer import TMDBImporter, TMDBMovie, TMDBSeries
 from plugins.TMDB.shared import TMDBShared
-from plugins.TMDB.utils import tmdb_url
+from plugins.TMDB.utils import Provider, tmdb_url
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
     InvalidURLError,
     MediaNotFoundError,
     URLImportResult,
 )
-from plugins.utils.base_plugin.base import BaseReadURL
-from plugins.utils.base_plugin.initialize import BasePluginInitializer
+from plugins.utils.base_plugin.importer import BaseImporter
 
 if TYPE_CHECKING:
     from app.titles.models import Title
 
 
 # TODO: Validate
-class TMDBInitializer(BasePluginInitializer, TMDBShared):
-    """Class for initializing TMDB's database entries."""
-
-
-# TODO: Validate
-class TMDB(TMDBShared, BaseReadURL, AbstractPlugin, register=True):
-    initializer = TMDBInitializer
-
+class TMDB(TMDBShared, BaseImporter, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override
@@ -46,13 +38,13 @@ class TMDB(TMDBShared, BaseReadURL, AbstractPlugin, register=True):
         media_type: TMDBMediaType,
     ) -> TMDBImporter:
         if media_type == TMDBMediaType.movie:
-            return TMDBMovie(self)
-        return TMDBSeries(self)
+            return TMDBMovie(self.session, self.plugin, self._file_cache)
+        return TMDBSeries(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
     @override
     def _validate_url(self, url: str) -> None:
-        domain_regex = self._domain_regex()
+        domain_regex = self._domains_regex()
         for url_regex in (MOVIE_URL_REGEX, TV_URL_REGEX):
             if re.match(domain_regex + url_regex, url):
                 return
@@ -63,9 +55,9 @@ class TMDB(TMDBShared, BaseReadURL, AbstractPlugin, register=True):
     # TODO: Validate
     @override
     def _media_importer_from_url(self, url: str) -> TMDBImporter:
-        if re.match(self._domain_regex() + MOVIE_URL_REGEX, url):
-            return TMDBMovie(self)
-        return TMDBSeries(self)
+        if re.match(self._domains_regex() + MOVIE_URL_REGEX, url):
+            return TMDBMovie(self.session, self.plugin, self._file_cache)
+        return TMDBSeries(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
     @override
@@ -74,8 +66,8 @@ class TMDB(TMDBShared, BaseReadURL, AbstractPlugin, register=True):
         return self._get_media_importer_from_media_type(media_type)
 
     # TODO: Validate
-    def link_title_to_websites(self, title: Title) -> None:
-        self._media_importer_from_title(title).link_title_to_websites(title)
+    def streaming_providers(self, title: Title) -> list[Provider]:
+        return self._media_importer_from_title(title).streaming_providers(title.key)
 
     # TODO: Validate
     @override

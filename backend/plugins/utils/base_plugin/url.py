@@ -1,96 +1,102 @@
-# TODO: Validate
 import re
+from abc import abstractmethod
 from typing import NamedTuple
 
+from plugins.utils.abstract_plugin import InvalidURLError
 
-# TODO: Validate
-class URLTitleInfo(NamedTuple):
-    """Holds the title information that could be extracted from a URL."""
+
+class ExtractedURLInfo(NamedTuple):
+    """Holds the information that could be extracted from a URL."""
 
     title_key: str
     season_key: str | None = None
     episode_key: str | None = None
 
 
-# TODO: Validate
 class BaseURLMixin:
-    # TODO: Validate
+    @classmethod
+    @abstractmethod
+    def plugin_name(cls) -> str: ...
+
+    def _validate_url(self, url: str) -> None:
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)
+
     @classmethod
     def is_valid_url_format(cls, url: str) -> bool:
-        return re.match(cls.url_regex(), url) is not None
+        """Return whether the given URL matches the plugin's URL format."""
+        # is not None is used to booleanize the response.
+        return re.match(cls._url_regex(), url) is not None
 
-    # TODO: Validate
     @classmethod
-    def url_regex(cls) -> str:
+    @abstractmethod
+    def _url_regexes(cls) -> tuple[str, ...]:
+        """Return a tuple of URL regex patterns that the plugin supports."""
+
+    @classmethod
+    def _url_regex(cls) -> str:
         """Return the regex string to check if a URL is supported by the plugin."""
-        raise NotImplementedError
+        domain_regex = cls._domains_regex()
+        alternatives = "|".join(
+            domain_regex + url_regex for url_regex in cls._url_regexes()
+        )
+        return f"(?:{alternatives})"
 
-    # TODO: Validate
     @classmethod
-    def domains(cls) -> list[str]:
+    def _domains(cls) -> list[str]:
         """Return a list of the domains the plugin supports.
 
-        The first domain should be the primary domain used by self._base_url().
+        The first domain is the primary domain which will be used by self._base_url().
 
         The domains should be in the format of example.com
 
-        Defaults to the single domain returned by `_domain`; plugins that support
-        multiple domains should override this instead.
+        Plugins that only support a single domain should override the `_domain` method
+        instead.
         """
         # This is used in tests to make sure the regex supports every domain.
         return [cls._domain()]
 
-    # TODO: Validate
     @classmethod
     def _domain(cls) -> str:
         """Return the single (primary) domain the plugin supports.
 
-        Plugins that support exactly one domain should override this. Plugins
-        that support multiple domains should override `domains` instead.
-
         The domain should be in the format of example.com
-        """
-        return cls.domains()[0]
 
-    # TODO: Validate
+        Plugins that support multiple domains should override the `domains` method
+        instead.
+        """
+        return cls._domains()[0]
+
     @classmethod
     def _base_url(cls) -> str:
-        """Return the base URL for the source.
-
-        The base url is in the format of https://example.com/
-        """
+        """Return the base URL for the source in the format of https://example.com/."""
         return f"https://{cls._domain()}/"
 
-    # TODO: Validate
     @classmethod
     def build_url(cls, path: str) -> str:
-        """Build an absolute URL from a path relative to the base URL.
+        """Build a URL for the URL path.
 
-        A leading slash is added to the path when missing, so callers can pass
-        either a bare path (`series/123`) or a root-relative path
-        (`/series/123`).
+        Args:
+            path (str): The URL path to build the full URL for. Leading slashes will
+            automatically be added/removed if necessary.
         """
-        base_url = cls._base_url().rstrip("/")
-        if not path.startswith("/"):
-            path = f"/{path}"
-        return f"{base_url}{path}"
+        return f"{cls._base_url()}{path.lstrip('/')}"
 
-    # TODO: Validate
     @classmethod
-    def _domain_regex(cls) -> str:
+    def _domains_regex(cls, domains: list[str] | None = None) -> str:
         """Return a regex string that matches all of the source's domains."""
-        if len(cls.domains()) > 1:
-            escaped_domains = [
-                cls.regex_escape_domain(domain) for domain in cls.domains()
-            ]
+        if domains is None:
+            domains = cls._domains()
+
+        if len(domains) > 1:
+            escaped_domains = [cls._regex_escape_domain(domain) for domain in domains]
             return "(?:" + "|".join(escaped_domains) + ")"
 
-        return cls.regex_escape_domain(cls._domain())
+        return cls._regex_escape_domain(domains[0])
 
-    # TODO: Validate
     @classmethod
-    def regex_escape_domain(cls, domain: str) -> str:
-        """Escapes a plain text domain in the format of example.com.
+    def _regex_escape_domain(cls, domain: str) -> str:
+        """Escapes a plain text domain.
 
         The escaping process will make a regex that matches the following:
         - example.com
@@ -99,5 +105,13 @@ class BaseURLMixin:
         - http://www.example.com
         - https://www.example.com
         - https://example.com
+
+        Args:
+            domain (str): The plain text domain to escape. It should be in the format of
+            example.com.
         """
+        if "." not in domain or "http" in domain or "www" in domain:
+            msg = f"Invalid domain format: {domain}"
+            raise ValueError(msg)
+
         return rf"(?:^(?:https?:\/\/)?(?:www\.)?{re.escape(domain)})"

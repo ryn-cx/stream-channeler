@@ -8,13 +8,10 @@ from datetime import datetime
 from typing import (
     Any,
     Protocol,
-    cast,
     final,
     override,
 )
-from xml.etree import ElementTree  # noqa: ICN001
 
-from bs4 import BeautifulSoup
 from loguru import logger
 from sqlmodel import Session
 
@@ -22,10 +19,6 @@ from app.files.models import File
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
 from app.utils.sentinels import Sentinel
-from plugins.utils.get_around_client import get_around_client
-
-INCOMPLETE_STATUS = "Incomplete"
-
 
 _UNLOADED = Sentinel("DATABASE_RECORD")
 
@@ -303,87 +296,30 @@ class TextFile(BaseFile[str], ABC):
         return ".txt"
 
 
-# TODO: Validate
-class XMLFile(BaseFile[ElementTree.Element], ABC):
-    # TODO: Validate
-    def __init__(
-        self,
-        session: Session,
-        plugin: Plugin,
-        unique_identifier: str,
-    ) -> None:
-        self.unique_identifier = unique_identifier
-        super().__init__(session, plugin)
-
-    # TODO: Validate
-    @override
-    def _parse(self, content: str) -> ElementTree.Element:
-        return ElementTree.fromstring(content)  # noqa: S314
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _identifier_suffix(cls) -> str:
-        return ".xml"
-
-
-# TODO: Validate
-class HTMLFile(BaseFile[BeautifulSoup], ABC):
-    # TODO: Validate
-    def __init__(
-        self,
-        session: Session,
-        plugin: Plugin,
-        unique_identifier: str,
-    ) -> None:
-        self.unique_identifier = unique_identifier
-        super().__init__(session, plugin)
-
-    # TODO: Validate
-    @abstractmethod
-    def _url(self) -> str:
-        """Return the address the page is served from."""
-
-    # TODO: Validate
-    @override
-    def _download(self) -> None:
-        with self._log_download(self.unique_identifier):
-            response = get_around_client().get(self._url(), follow_redirects=True)
-            response.raise_for_status()
-            self.write(response.text)
-
-    # TODO: Validate
-    @override
-    def _parse(self, content: str) -> BeautifulSoup:
-        return BeautifulSoup(content, "html.parser")
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _identifier_suffix(cls) -> str:
-        return ".html"
-
-
-# TODO: Validate
 class Endpoint[T](Protocol):
-    # TODO: Validate
     def load(self, data: str, log_id: str = "") -> T: ...
 
 
 # TODO: Validate
-class LoadEndpoint[T](Endpoint[T], Protocol):
+class SingleArgEndpoint[T](Endpoint[T], Protocol):
     # TODO: Validate
     def download(self, unique_identifier: str, /) -> str: ...
 
 
 # TODO: Validate
-class IntegerLoadEndpoint[T](Endpoint[T], Protocol):
+class IntegerArgEndpoint[T](Endpoint[T], Protocol):
     # TODO: Validate
     def download(self, unique_identifier: int, /) -> str: ...
 
 
 # TODO: Validate
-class PagedLoadEndpoint[T](Endpoint[T], Protocol):
+class NoArgsEndpoint[T](Endpoint[T], Protocol):
+    # TODO: Validate
+    def download(self) -> str: ...
+
+
+# TODO: Validate
+class PagedEndpoint[T](Endpoint[T], Protocol):
     # TODO: Validate
     def download_all(self, unique_identifier: str, /) -> list[str]: ...
 
@@ -405,10 +341,9 @@ class DownloadedFile[T](BaseFile[T], ABC):
         super().__init__(session, plugin)
 
     # TODO: Validate
+    @abstractmethod
     def _download_file(self) -> str:
         """Download the file and return the body as it was served."""
-        endpoint = cast("LoadEndpoint[T]", self._endpoint())
-        return endpoint.download(self.unique_identifier)
 
     # TODO: Validate
     def _is_acceptable_error(self, error: Exception) -> bool:  # noqa: ARG002
@@ -436,7 +371,6 @@ class DownloadedFile[T](BaseFile[T], ABC):
             else:
                 self.write(data, self._initial_status_after_downloading())
 
-    # TODO: Validate
     @classmethod
     @override
     def _identifier_suffix(cls) -> str:
@@ -444,40 +378,78 @@ class DownloadedFile[T](BaseFile[T], ABC):
 
 
 # TODO: Validate
-class EndpointFile[T](DownloadedFile[T], ABC):
+class MultipleArgEndpointFile[T](DownloadedFile[T], ABC):
+    """Base class to use when endpoint.download() takes multiple args."""
+
     # TODO: Validate
     @abstractmethod
     @override
     def _endpoint(self) -> Endpoint[T]: ...
 
-    # TODO: Validate
     @override
     def _parse(self, content: str) -> T:
         return self._endpoint().load(content, self.log_id())
 
 
-class IntegerEndpointFile[T](EndpointFile[T], ABC):
+# TODO: Validate
+class SingleArgEndpointFile[T](MultipleArgEndpointFile[T], ABC):
+    """Base class to use when `endpoint.download()` takes a single `str | int` arg."""
+
+    # TODO: Validate
     @abstractmethod
     @override
-    def _endpoint(self) -> IntegerLoadEndpoint[T]: ...
+    def _endpoint(self) -> SingleArgEndpoint[T]: ...
 
+    # TODO: Validate
+    @override
+    def _download_file(self) -> str:
+        return self._endpoint().download(self.unique_identifier)
+
+
+# TODO: Validate
+class NoArgsEndpointFile[T](MultipleArgEndpointFile[T], ABC):
+    """Base class to use when `endpoint.download()` takes no args."""
+
+    @abstractmethod
+    @override
+    def _endpoint(self) -> NoArgsEndpoint[T]: ...
+
+    # TODO: Validate
+    def __init__(self, session: Session, plugin: Plugin) -> None:
+        super().__init__(session, plugin, self.unique_identifier)
+
+    @override
+    def _download_file(self) -> str:
+        return self._endpoint().download()
+
+
+# TODO: Validate
+class IntegerArgEndpointFile[T](MultipleArgEndpointFile[T], ABC):
+    """Base class to use when `endpoint.download()` takes a single `int` arg."""
+
+    # TODO: Validate
+    @abstractmethod
+    @override
+    def _endpoint(self) -> IntegerArgEndpoint[T]: ...
+
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(int(self.unique_identifier))
 
 
 class PagedEndpointFile[T](DownloadedFile[list[T]], ABC):
+    """Base class to use when `endpoint.download_all()` takes a single `str | int` arg."""
+
+    # TODO: Validate
     @abstractmethod
-    def _endpoint(self) -> Endpoint[T]: ...
+    def _endpoint(self) -> PagedEndpoint[T]: ...
 
-    def _download_pages(self) -> list[str]:
-        """Download every page of the file, first to last."""
-        endpoint = cast("PagedLoadEndpoint[T]", self._endpoint())
-        return endpoint.download_all(self.unique_identifier)
-
+    # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return json.dumps(self._download_pages())
+        pages = self._endpoint().download_all(self.unique_identifier)
+        return json.dumps(pages)
 
     @override
     def _parse(self, content: str) -> list[T]:

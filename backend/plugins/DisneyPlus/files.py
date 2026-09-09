@@ -14,7 +14,7 @@ from kneeminus.exceptions import EntityNotFoundError
 from sqlmodel import Session
 
 from app.plugins.models import Plugin
-from plugins.utils.base_plugin.files import EndpointFile
+from plugins.utils.base_plugin.files import MultipleArgEndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -25,7 +25,7 @@ def kneeminus() -> KneeMinus:
 
 
 # TODO: Validate
-class Entity(EndpointFile[EntityModel]):
+class Entity(MultipleArgEndpointFile[EntityModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> EntityEndpoint:
@@ -44,7 +44,7 @@ class Entity(EndpointFile[EntityModel]):
 
 
 # TODO: Validate
-class SeasonEntity(EndpointFile[EntityModel]):
+class SeasonEntity(MultipleArgEndpointFile[EntityModel]):
     # TODO: Validate
     def __init__(
         self,

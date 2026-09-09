@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 from functools import cache
 from typing import override
 
@@ -25,10 +26,10 @@ from diving_board.vod import models as vod_models
 
 from app.utils import tz_datetime
 from plugins.utils.base_plugin.files import (
-    INCOMPLETE_STATUS,
-    EndpointFile,
+    SingleArgEndpointFile,
     PagedEndpointFile,
 )
+from plugins.utils.constants import INCOMPLETE_STATUS
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -39,7 +40,7 @@ def diving_board() -> DivingBoard:
 
 
 # TODO: Validate
-class Season(EndpointFile[season_models.SeasonModel]):
+class Season(SingleArgEndpointFile[season_models.SeasonModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> SeasonEndpoint:
@@ -53,7 +54,7 @@ class Season(EndpointFile[season_models.SeasonModel]):
 
 
 # TODO: Validate
-class Vod(EndpointFile[vod_models.VodModel]):
+class Vod(SingleArgEndpointFile[vod_models.VodModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> VodEndpoint:
@@ -67,7 +68,7 @@ class Vod(EndpointFile[vod_models.VodModel]):
 
 
 # TODO: Validate
-class Series(EndpointFile[series_models.SeriesModel]):
+class Series(SingleArgEndpointFile[series_models.SeriesModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> SeriesEndpoint:
@@ -89,12 +90,12 @@ class Schedule(PagedEndpointFile[schedule_models.ScheduleModel]):
 
     # TODO: Validate
     @override
-    def _endpoint(self) -> ScheduleEndpoint:
+    def _endpoint(self) -> ScheduleEndpoint:  # type: ignore[override]
         return diving_board().schedule
 
     # TODO: Validate
     @override
-    def _download_pages(self) -> list[str]:
+    def _download_file(self) -> str:
         # Start at the first of the month because it matches the normal API calls.
         from_ = tz_datetime.fromisoformat(self.unique_identifier).replace(
             day=1,
@@ -103,11 +104,11 @@ class Schedule(PagedEndpointFile[schedule_models.ScheduleModel]):
             second=0,
             microsecond=0,
         )
-        return self._endpoint().download_all(from_)
+        return json.dumps(self._endpoint().download_all(from_))
 
 
 # TODO: Validate
-class Search(EndpointFile[search_models.SearchModel]):
+class Search(SingleArgEndpointFile[search_models.SearchModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> SearchEndpoint:

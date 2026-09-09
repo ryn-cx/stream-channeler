@@ -1,5 +1,12 @@
 # TODO: Validate
 
+import os
+import queue
+import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from threading import Lock
+from typing import Any
+
 from loguru import logger
 from sqlmodel import Session, select
 from tqdm import tqdm
@@ -18,37 +25,82 @@ load_models()
 
 
 # TODO: Validate
-def reimport_all_titles(session: Session) -> None:
+def _reimport_worker(
+    listed: queue.SimpleQueue[tuple[uuid.UUID, str, str | None, str]],
+    progress: tqdm[Any],
+    progress_lock: Lock,
+) -> None:
     plugin_classes_by_key = {plugin.plugin_name(): plugin for plugin in plugins}
-    listed = session.exec(
-        select(Title.source_id, Title.key, Title.name, Plugin.key)
-        .select_from(Title)
-        .join(Source)
-        .join(Plugin),
-    ).all()
+    with Session(engine) as session:
+        plugin_records: dict[str, Plugin] = {}
+        while True:
+            try:
+                source_id, title_key, title_name, plugin_key = listed.get_nowait()
+            except queue.Empty:
+                return
 
-    progress = tqdm(listed, unit="title")
-    for source_id, title_key, title_name, plugin_key in progress:
-        progress.set_description(title_name or title_key)
-        plugin_class = plugin_classes_by_key.get(plugin_key)
+            with progress_lock:
+                progress.set_description(f"[{plugin_key}] {title_name or title_key}")
 
-        if plugin_class is None:
+            if plugin_key not in plugin_records:
+                plugin_records[plugin_key] = Plugin.get_one(session, plugin_key)
+            title = session.get_one(Title, (source_id, title_key))
+            plugin_instance = plugin_classes_by_key[plugin_key](
+                session,
+                plugin_records[plugin_key],
+            )
+            plugin_instance.update_title(title, force=True)
+            session.commit()
+
+            with progress_lock:
+                progress.update()
+
+
+# TODO: Validate
+def reimport_all_titles() -> None:
+    plugin_classes_by_key = {plugin.plugin_name(): plugin for plugin in plugins}
+    with Session(engine) as session:
+        listed = session.exec(
+            select(Title.source_id, Title.key, Title.name, Plugin.key)
+            .select_from(Title)
+            .join(Source)
+            .join(Plugin),
+        ).all()
+
+    pending: queue.SimpleQueue[tuple[uuid.UUID, str, str | None, str]] = (
+        queue.SimpleQueue()
+    )
+    total = 0
+    for source_id, title_key, title_name, plugin_key in listed:
+        if plugin_key not in plugin_classes_by_key:
             logger.warning(
                 f"Skipping {title_name}, plugin {plugin_key} is not installed",
             )
             continue
+        pending.put((source_id, title_key, title_name, plugin_key))
+        total += 1
 
-        title = session.get_one(Title, (source_id, title_key))
-        plugin_instance = plugin_class(session, title.source.plugin)
-        plugin_instance.update_title(title, force=True)
-        session.commit()
+    if not total:
+        return
+
+    progress_lock = Lock()
+    workers = os.cpu_count() or 1
+    with (
+        tqdm(total=total, unit="title") as progress,
+        ThreadPoolExecutor(max_workers=workers) as executor,
+    ):
+        futures = [
+            executor.submit(_reimport_worker, pending, progress, progress_lock)
+            for _ in range(workers)
+        ]
+        for future in as_completed(futures):
+            future.result()
 
 
 if __name__ == "__main__":
     logger.remove()
     logger.add(lambda message: tqdm.write(message, end=""))
 
-    with Session(engine) as session:
-        reimport_all_titles(session)
+    reimport_all_titles()
 
     logger.info("Reimport completed")

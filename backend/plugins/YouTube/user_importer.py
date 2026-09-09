@@ -76,14 +76,13 @@ class YouTubeUserImporter(YouTubeImporter):
     ) -> None:
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title_key, force=force):
-            data_timestamps = self._season_files_data_timestamps(season_key, title_key)
             season = Season(
                 key=season_key,
                 name=name,
                 url=playlist_url(season_key),
                 image_url=image_url(playlist.snippet.thumbnails),
                 thumbnail_url=thumbnail_url(playlist.snippet.thumbnails),
-                data_timestamp=max(data_timestamps),
+                data_timestamp=self._season_files_data_timestamp(season_key, title_key),
                 title_id=title.id,
             ).upsert(title, season)
             season.set_update_at(None)

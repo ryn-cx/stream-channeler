@@ -29,7 +29,7 @@ from plugins.Tubi.utils import (
 )
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.utils.base_plugin.url import URLTitleInfo
+from plugins.utils.base_plugin.url import ExtractedURLInfo
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -82,12 +82,12 @@ class TubiSeriesImporter(TubiImporter):
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> URLTitleInfo:
-        domain_regex = self._domain_regex()
+    def get_media_info(self, url: str) -> ExtractedURLInfo:
+        domain_regex = self._domains_regex()
         if match := re.match(domain_regex + SERIES_URL_REGEX, url):
             title_key = match.group("series_key")
             self.raise_invalid_url_if_no_content(self.content_file(title_key), url)
-            return URLTitleInfo(title_key)
+            return ExtractedURLInfo(title_key)
 
         if match := re.match(domain_regex + EPISODE_URL_REGEX, url):
             episode_key = match.group("episode_key")
@@ -96,7 +96,7 @@ class TubiSeriesImporter(TubiImporter):
             if series_id is None:
                 msg = f"Invalid {self.plugin_name()} URL: {url}"
                 raise InvalidURLError(msg)
-            return URLTitleInfo(series_id, episode_key=episode_key)
+            return ExtractedURLInfo(series_id, episode_key=episode_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
@@ -162,7 +162,7 @@ class TubiSeriesImporter(TubiImporter):
             title.set_update_at(min(data_timestamps) + timedelta(days=7))
 
         self._upsert_seasons(title, force=force)
-        self._soft_delete_missing(title_key)
+        self._soft_delete_missing_seasons_and_episodes(title_key)
 
         return title
 
@@ -172,15 +172,14 @@ class TubiSeriesImporter(TubiImporter):
             season_key = build_season_key(title.key, season_content.id)
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
-                data_timestamps = self._season_files_data_timestamps(
-                    season_key, title.key
-                )
                 season = Season(
                     key=season_key,
                     name=season_content.title,
                     season_number=int(season_content.id),
                     sort_order=sort_order,
-                    data_timestamp=max(data_timestamps),
+                    data_timestamp=self._season_files_data_timestamp(
+                        season_key, title.key,
+                    ),
                     title_id=title.id,
                 ).upsert(title, season)
                 season.set_update_at(None)
@@ -214,11 +213,6 @@ class TubiSeriesImporter(TubiImporter):
             ):
                 continue
 
-            data_timestamps = self._episode_files_data_timestamps(
-                episode_key,
-                season.key,
-                title_key,
-            )
             episode = Episode(
                 key=episode_key,
                 watch_identifier=watch_identifier(self.plugin_name(), episode_key),
@@ -230,7 +224,9 @@ class TubiSeriesImporter(TubiImporter):
                 thumbnail_url=first_image(episode_content.thumbnails),
                 duration=episode_content.duration,
                 sort_order=sort_order,
-                data_timestamp=max(data_timestamps),
+                data_timestamp=self._episode_files_data_timestamp(
+                    episode_key, season.key, title_key,
+                ),
                 season_id=season.id,
             ).upsert(season, episode)
             episode.set_update_at(None)
@@ -246,11 +242,11 @@ class TubiMovieImporter(TubiImporter):
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> URLTitleInfo:
-        if match := re.match(self._domain_regex() + MOVIE_URL_REGEX, url):
+    def get_media_info(self, url: str) -> ExtractedURLInfo:
+        if match := re.match(self._domains_regex() + MOVIE_URL_REGEX, url):
             title_key = match.group("movie_key")
             self.raise_invalid_url_if_no_content(self.content_file(title_key), url)
-            return URLTitleInfo(title_key)
+            return ExtractedURLInfo(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
@@ -301,7 +297,7 @@ class TubiMovieImporter(TubiImporter):
             )
 
         self._upsert_season(title, force=force)
-        self._soft_delete_missing(title_key)
+        self._soft_delete_missing_seasons_and_episodes(title_key)
 
         return title
 
@@ -310,12 +306,11 @@ class TubiMovieImporter(TubiImporter):
         season_key = movie_season_key(title.key)
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title.key, force=force):
-            data_timestamps = self._season_files_data_timestamps(season_key, title.key)
             season = Season(
                 key=season_key,
                 season_number=0,
                 sort_order=0,
-                data_timestamp=max(data_timestamps),
+                data_timestamp=self._season_files_data_timestamp(season_key, title.key),
                 title_id=title.id,
             ).upsert(title, season)
             season.set_update_at(None)
@@ -340,9 +335,6 @@ class TubiMovieImporter(TubiImporter):
             return
 
         content = self._content(title_key)
-        data_timestamps = self._episode_files_data_timestamps(
-            title_key, season.key, title_key
-        )
         episode = Episode(
             key=title_key,
             watch_identifier=watch_identifier(self.plugin_name(), title_key),
@@ -354,7 +346,9 @@ class TubiMovieImporter(TubiImporter):
             thumbnail_url=first_image(content.backgrounds),
             duration=content.duration,
             sort_order=0,
-            data_timestamp=max(data_timestamps),
+            data_timestamp=self._episode_files_data_timestamp(
+                title_key, season.key, title_key,
+            ),
             season_id=season.id,
         ).upsert(season, episode)
         episode.set_update_at(None)

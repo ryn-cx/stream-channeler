@@ -24,7 +24,7 @@ from plugins.Amazon.shared import AmazonShared
 from plugins.Amazon.utils import AmazonSeason, detail_url, parse_date
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.utils.base_plugin.url import URLTitleInfo
+from plugins.utils.base_plugin.url import ExtractedURLInfo
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -49,8 +49,8 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> URLTitleInfo:
-        domain_regex = self._domain_regex()
+    def get_media_info(self, url: str) -> ExtractedURLInfo:
+        domain_regex = self._domains_regex()
         title_key: str | None
         if match := re.match(domain_regex + SHARE_URL_REGEX, url):
             # Amazon answers a share link by pointing at the page its own ids key,
@@ -75,7 +75,7 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
             msg = f"{message}: {url}"
             raise InvalidURLError(msg)
 
-        return URLTitleInfo(self.title_key_from_title_key(title_key))
+        return ExtractedURLInfo(self.title_key_from_title_key(title_key))
 
     # TODO: Validate
     @override  # Writes the title into every source it can be watched through.
@@ -245,7 +245,7 @@ class AmazonSeriesImporter(AmazonImporter):
             )
 
         self._upsert_seasons(title, force=force)
-        self._soft_delete_missing(title_key)
+        self._soft_delete_missing_seasons_and_episodes(title_key)
 
         return title
 
@@ -255,16 +255,15 @@ class AmazonSeriesImporter(AmazonImporter):
             season_key = season_entry.key
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
-                data_timestamps = self._season_files_data_timestamps(
-                    season_key, title.key
-                )
                 season = Season(
                     key=season_key,
                     name=season_entry.name,
                     season_number=season_entry.season_number,
                     sort_order=sort_order,
                     url=detail_url(season_key),
-                    data_timestamp=max(data_timestamps),
+                    data_timestamp=self._season_files_data_timestamp(
+                        season_key, title.key,
+                    ),
                     title_id=title.id,
                 ).upsert(title, season)
                 season.set_update_at(None)
@@ -290,11 +289,6 @@ class AmazonSeriesImporter(AmazonImporter):
             ):
                 continue
 
-            data_timestamps = self._episode_files_data_timestamps(
-                item.key,
-                season.key,
-                title_key,
-            )
             episode = Episode(
                 key=item.key,
                 watch_identifier=watch_identifier(self.plugin_name(), item.key),
@@ -307,7 +301,9 @@ class AmazonSeriesImporter(AmazonImporter):
                 duration=item.duration,
                 air_date=parse_date(item.release_date),
                 sort_order=sort_order,
-                data_timestamp=max(data_timestamps),
+                data_timestamp=self._episode_files_data_timestamp(
+                    item.key, season.key, title_key,
+                ),
                 season_id=season.id,
             ).upsert(season, episode)
             episode.set_update_at(None)
@@ -357,7 +353,7 @@ class AmazonMovieImporter(AmazonImporter):
             )
 
         self._upsert_season(title, force=force)
-        self._soft_delete_missing(title_key)
+        self._soft_delete_missing_seasons_and_episodes(title_key)
 
         return title
 
@@ -365,12 +361,11 @@ class AmazonMovieImporter(AmazonImporter):
     def _upsert_season(self, title: Title, *, force: bool = False) -> None:
         season = Season.get_from_memory(self.session, title, title.key)
         if self._season_is_outdated(season, title.key, force=force):
-            data_timestamps = self._season_files_data_timestamps(title.key, title.key)
             season = Season(
                 key=title.key,
                 season_number=0,
                 sort_order=0,
-                data_timestamp=max(data_timestamps),
+                data_timestamp=self._season_files_data_timestamp(title.key, title.key),
                 title_id=title.id,
             ).upsert(title, season)
             season.set_update_at(None)
@@ -396,9 +391,6 @@ class AmazonMovieImporter(AmazonImporter):
             return
 
         page = self.detail_file(title_key)
-        data_timestamps = self._episode_files_data_timestamps(
-            title_key, season.key, title_key
-        )
         episode = Episode(
             key=title_key,
             watch_identifier=watch_identifier(self.plugin_name(), title_key),
@@ -411,7 +403,9 @@ class AmazonMovieImporter(AmazonImporter):
             episode_number=0,
             sort_order=0,
             air_date=parse_date(page.release_date()),
-            data_timestamp=max(data_timestamps),
+            data_timestamp=self._episode_files_data_timestamp(
+                title_key, season.key, title_key,
+            ),
             season_id=season.id,
         ).upsert(season, episode)
         episode.set_update_at(None)

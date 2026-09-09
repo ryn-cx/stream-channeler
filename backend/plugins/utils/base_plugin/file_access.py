@@ -12,9 +12,9 @@ from app.plugins.models import Plugin
 from app.titles.models import Title
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.files import (
-    INCOMPLETE_STATUS,
     BaseFile,
 )
+from plugins.utils.constants import INCOMPLETE_STATUS
 
 
 class BaseFileAccessMixin(ABC):
@@ -140,7 +140,6 @@ class BaseFileAccessMixin(ABC):
         )
         return [factory(file) for file in self.session.exec(statement).all()]
 
-    # TODO: Validate
     def raise_invalid_url_if_no_content(self, file: BaseFile[Any], url: str) -> None:
         """Raise an InvalidURLError if the given file has no content."""
         try:
@@ -236,6 +235,11 @@ class BaseFileAccessMixin(ABC):
         return max(
             self._episode_files_data_timestamps(episode_key, season_key, title_key),
         )
+
+    # TODO: Validate
+    def _source_files_data_timestamp(self) -> datetime:
+        """Return the newest data timestamp from the source's files."""
+        return max(self._source_files_data_timestamps())
 
     def _season_keys_from_title_files(self, title_key: str) -> list[str]:
         """Return the season keys from the title's files."""

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from plugins.utils.base_plugin.base import BasePlugin
+from plugins.YouTube.constants import LONG_DOMAIN, SHORT_DOMAIN
 from plugins.YouTube.files import (
     # Browse,
     ChannelByChannelId,
@@ -52,3 +53,92 @@ class YouTubeBaseFiles(BasePlugin):
     # TODO: Validate
     def topic_file(self, channel_key: str) -> Topic:
         return self._cached_file(Topic, channel_key)
+
+    # TODO: Validate
+    @classmethod
+    def _url_regexes(cls) -> tuple[str, ...]:
+        return (
+            cls._playlist_video_url_regex(),  # Must be first due to regex overlap
+            # cls._title_playlist_url_regex(),
+            cls._playlist_url_regex(),
+            cls._video_url_regex(),
+            cls._channel_key_url_regex(),
+            # cls._title_url_regex(),
+            cls._channel_username_url_regex(),
+            cls._channel_handle_url_regex(),
+        )
+
+    # TODO: Validate
+    @classmethod
+    def _playlist_video_url_regex(cls) -> str:
+        # https://www.youtube.com/watch?v=lVI_J1cbFb4&list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh
+        # https://youtu.be/lVI_J1cbFb4?list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh
+        return (
+            cls._domains_regex([LONG_DOMAIN, SHORT_DOMAIN])
+            + r"\/(?:watch\?v=)?(?P<video_key>[A-Za-z0-9_-]{11})[?&]"
+            r"list=(?P<playlist_key>(?:PL|OLAK5uy_|UU)[^&]+)"
+        )
+
+    # TODO: Validate
+    # @classmethod
+    # def _title_playlist_url_regex(cls) -> str:
+    #     # https://www.youtube.com/playlist?list=TVSHX2-tv9KBHSAWLsDbH3h9vNzwxEAyyqXMw
+    #     return cls._domain_regex([LONG_DOMAIN]) + (
+    #         r"\/playlist\?list=(?P<title_playlist_key>TVSH[^&]+)"
+    #     )
+
+    # TODO: Validate
+    @classmethod
+    def _playlist_url_regex(cls) -> str:
+        # https://www.youtube.com/playlist?list=PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh
+        return cls._domains_regex([LONG_DOMAIN]) + (
+            r"\/playlist\?list=(?P<playlist_key>(?:PL|OLAK5uy_|UU)[^&]+)"
+        )
+
+    # TODO: Validate
+    @classmethod
+    def _video_url_regex(cls) -> str:
+        # https://www.youtube.com/watch?v=jNQXAC9IVRw
+        # https://www.youtube.com/shorts/jNQXAC9IVRw
+        # https://youtu.be/jNQXAC9IVRw
+        long_domain = cls._domains_regex([LONG_DOMAIN])
+        short_domain = cls._domains_regex([SHORT_DOMAIN])
+        return (
+            rf"(?:{long_domain}\/(?:watch\?v=|shorts\/)|{short_domain}\/)"
+            r"(?P<video_key>[A-Za-z0-9_-]{11})(?:$|[?&])"
+        )
+
+    # TODO: Validate
+    @classmethod
+    def _channel_key_url_regex(cls) -> str:
+        # https://www.youtube.com/channel/UC4QobU6STFB0P71PMvOGN5A
+        return cls._domains_regex([LONG_DOMAIN]) + (
+            r"\/channel\/(?P<channel_key>UC.{22})(?:$|\/)"
+        )
+
+    # TODO: Validate
+    # @classmethod
+    # def _title_url_regex(cls) -> str:
+    #     # https://www.youtube.com/show/SCYT6SmwXZxUksg_rJd_nzuw
+    #     # https://www.youtube.com/show/SCYT6SmwXZxUksg_rJd_nzuw?season=23&sbp=...
+    #     return cls._domain_regex([LONG_DOMAIN]) + (
+    #         r"\/show\/(?P<title_key>SC[A-Za-z0-9_-]+?)(?:$|[/?])"
+    #     )
+
+    # TODO: Validate
+    @classmethod
+    def _channel_username_url_regex(cls) -> str:
+        # https://www.youtube.com/user/jawed
+        return cls._domains_regex([LONG_DOMAIN]) + (
+            r"\/user\/(?P<channel_username>.+?)(?:$|\/)"
+        )
+
+    # TODO: Validate
+    @classmethod
+    def _channel_handle_url_regex(cls) -> str:
+        # https://www.youtube.com/@jawed
+        # https://www.youtube.com/c/jawed
+        # https://www.youtube.com/jawed
+        return cls._domains_regex([LONG_DOMAIN]) + (
+            r"\/(?:c\/|@)?(?P<channel_handle>.+?)(?:$|\/)"
+        )

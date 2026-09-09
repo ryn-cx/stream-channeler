@@ -271,6 +271,6 @@ class YouTubeTopicImporter(YouTubeMusicImporter):
                 music_playlist.title(),
                 force=force,
             )
-        self._soft_delete_missing(title_key)
+        self._soft_delete_missing_seasons_and_episodes(title_key)
 
         return title

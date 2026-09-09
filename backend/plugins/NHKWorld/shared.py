@@ -15,7 +15,7 @@ from app.titles.models import Title
 from app.utils import tz_datetime
 from plugins.NHKWorld.base_files import NHKWorldBaseFiles
 from plugins.NHKWorld.files import NewVideoEpisodes
-from plugins.NHKWorld.utils import search_url, title_url
+from plugins.NHKWorld.utils import title_url
 
 if TYPE_CHECKING:
     from app.channels.models import Channel
@@ -42,11 +42,6 @@ class NHKWorldShared(NHKWorldBaseFiles):
     @override
     def plugin_name(cls) -> str:
         return "NHK World"
-
-    # TODO: Validate
-    @classmethod
-    def manual_search_url(cls, query: str) -> str | None:
-        return search_url(query)
 
     # TODO: Validate
     @override

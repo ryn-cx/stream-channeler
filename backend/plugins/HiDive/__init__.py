@@ -12,9 +12,7 @@ from plugins.HiDive.importer import (
 )
 from plugins.HiDive.shared import HiDiveShared
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin.base import BaseReadURL
-from plugins.utils.base_plugin.initialize import BasePluginInitializer
-from plugins.utils.base_plugin.search import BaseCatalogueSearchMixin
+from plugins.utils.base_plugin.importer import BaseImporter
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -24,23 +22,17 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class HiDiveInitializer(BasePluginInitializer, HiDiveShared):
-    # TODO: Validate
-    @override
-    def _create_channel_records(self) -> None:
-        self._schedule_channel()
-        self._process_new_schedule_files(self._sources[self.plugin_name()])
-
-
-# TODO: Validate
 class HiDive(
     HiDiveShared,
-    BaseCatalogueSearchMixin,
-    BaseReadURL,
+    BaseImporter,
     AbstractPlugin,
     register=False,
 ):
-    initializer = HiDiveInitializer
+    # TODO: Validate
+    @override
+    def _create_initial_channel_records(self) -> None:
+        self._schedule_channel()
+        self._process_new_schedule_files(self._sources[self.plugin_name()])
 
     # TODO: Validate
     @classmethod
@@ -51,7 +43,7 @@ class HiDive(
     # TODO: Validate
     @override
     def _validate_url(self, url: str) -> None:
-        domain_regex = self._domain_regex()
+        domain_regex = self._domains_regex()
         for url_regex in (SERIES_URL_REGEX, SEASON_URL_REGEX, MOVIE_URL_REGEX):
             if re.match(domain_regex + url_regex, url):
                 return
@@ -62,12 +54,12 @@ class HiDive(
     # TODO: Validate
     @override
     def _media_importer_from_url(self, url: str) -> HiDiveImporter:
-        domain_regex = self._domain_regex()
+        domain_regex = self._domains_regex()
         if re.match(domain_regex + SERIES_URL_REGEX, url):
-            return HiDiveSeriesImporter(self)
+            return HiDiveSeriesImporter(self.session, self.plugin, self._file_cache)
         if re.match(domain_regex + SEASON_URL_REGEX, url):
-            return HiDiveSeriesImporter(self)
-        return HiDiveMovieImporter(self)
+            return HiDiveSeriesImporter(self.session, self.plugin, self._file_cache)
+        return HiDiveMovieImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
     @override
@@ -76,8 +68,8 @@ class HiDive(
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
         if title.media_type == "Movie":
-            return HiDiveMovieImporter(self)
-        return HiDiveSeriesImporter(self)
+            return HiDiveMovieImporter(self.session, self.plugin, self._file_cache)
+        return HiDiveSeriesImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
     @override

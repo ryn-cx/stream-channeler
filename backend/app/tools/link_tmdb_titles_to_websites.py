@@ -11,7 +11,7 @@ from app.database import engine, load_models
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.titles.models import Title
-from plugins.TMDB import TMDB
+from app.titles.service.website_linking import link_title_to_websites
 from plugins.utils.manage_plugins import import_plugins
 
 import_plugins()
@@ -37,7 +37,7 @@ def link_tmdb_titles_to_websites(session: Session) -> None:
         progress.set_description(title.name or title.key)
         logger.info(f"[TMDB] Linking to websites: {title.name or title.key}")
         try:
-            TMDB(session, title.source.plugin).link_title_to_websites(title)
+            link_title_to_websites(session, title)
         except Exception:  # noqa: BLE001
             logger.exception(f"[TMDB] Failed to link {title.key} to websites")
             session.rollback()

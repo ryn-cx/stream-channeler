@@ -6,7 +6,6 @@ from __future__ import annotations
 from typing import override
 
 from plugins.ParamountPlus.base_files import ParamountPlusBaseFiles
-from plugins.ParamountPlus.utils import search_url
 
 
 # TODO: Validate
@@ -40,8 +39,3 @@ class ParamountPlusShared(ParamountPlusBaseFiles):
     @override
     def _domain(cls) -> str:
         return "paramountplus.com"
-
-    # TODO: Validate
-    @classmethod
-    def manual_search_url(cls, query: str) -> str | None:  # noqa: ARG003 - Paramount+ carries no query in a search address.
-        return search_url()

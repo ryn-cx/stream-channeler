@@ -6,7 +6,6 @@ from __future__ import annotations
 from typing import override
 
 from plugins.DisneyPlus.base_files import DisneyPlusBaseFiles
-from plugins.DisneyPlus.utils import search_url
 
 
 # TODO: Validate
@@ -28,8 +27,3 @@ class DisneyPlusShared(DisneyPlusBaseFiles):
     @override
     def _domain(cls) -> str:
         return "disneyplus.com"
-
-    # TODO: Validate
-    @classmethod
-    def manual_search_url(cls, query: str) -> str | None:  # noqa: ARG003 - Disney+ carries no query in a search address.
-        return search_url()

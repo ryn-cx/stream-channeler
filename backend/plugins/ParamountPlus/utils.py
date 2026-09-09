@@ -20,11 +20,6 @@ def movie_url(movie_key: str) -> str:
 
 
 # TODO: Validate
-def search_url() -> str:
-    return build_url("search/")
-
-
-# TODO: Validate
 def build_season_key(title_key: str, season_number: int) -> str:
     return f"{title_key}:{season_number}"
 

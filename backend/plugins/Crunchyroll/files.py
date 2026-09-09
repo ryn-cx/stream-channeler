@@ -1,4 +1,5 @@
 # TODO: Validate
+import json
 from abc import ABC
 from datetime import UTC, datetime, timedelta
 from functools import cache
@@ -45,20 +46,12 @@ from get_around import GetAround
 from app.config import settings
 from app.utils import tz_datetime
 from plugins.utils.base_plugin.files import (
-    INCOMPLETE_STATUS,
-    EndpointFile,
+    SingleArgEndpointFile,
     PagedEndpointFile,
 )
+from plugins.utils.constants import INCOMPLETE_STATUS
 
-# TODO: This is a temporary importing workaround.
-
-
-# from plugins.utils.get_around_client import get_around_client
-# TODO: Validate
-@cache
-def get_around_client() -> GetAround:
-    return GetAround(proxy=settings.PROXY)
-
+from plugins.utils.get_around_client import get_around_client
 
 # TODO: Validate
 @cache
@@ -67,7 +60,7 @@ def chirashi() -> Chirashi:
 
 
 # TODO: Validate
-class Series(EndpointFile[SeriesModel]):
+class Series(SingleArgEndpointFile[SeriesModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> SeriesEndpoint:
@@ -81,7 +74,7 @@ class Series(EndpointFile[SeriesModel]):
 
 
 # TODO: Validate
-class Categories(EndpointFile[CategoriesModel]):
+class Categories(SingleArgEndpointFile[CategoriesModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> CategoriesEndpoint:
@@ -94,7 +87,7 @@ class Categories(EndpointFile[CategoriesModel]):
 
 
 # TODO: Validate
-class Objects(EndpointFile[ObjectsModel]):
+class Objects(SingleArgEndpointFile[ObjectsModel]):
     """Episode information."""
 
     # TODO: Validate
@@ -110,7 +103,7 @@ class Objects(EndpointFile[ObjectsModel]):
 
 
 # TODO: Validate
-class Seasons(EndpointFile[SeasonsModel]):
+class Seasons(SingleArgEndpointFile[SeasonsModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> SeasonsEndpoint:
@@ -118,7 +111,7 @@ class Seasons(EndpointFile[SeasonsModel]):
 
 
 # TODO: Validate
-class SeasonEpisodes(EndpointFile[SeasonEpisodesModel]):
+class SeasonEpisodes(SingleArgEndpointFile[SeasonEpisodesModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> SeasonEpisodesEndpoint:
@@ -129,7 +122,7 @@ class SeasonEpisodes(EndpointFile[SeasonEpisodesModel]):
 class BaseBrowseSeries(PagedEndpointFile[BrowseSeriesModel], ABC):
     # TODO: Validate
     @override
-    def _endpoint(self) -> BrowseSeriesEndpoint:
+    def _endpoint(self) -> BrowseSeriesEndpoint:  # type: ignore[override]
         return chirashi().browse_series
 
     # TODO: Validate
@@ -146,9 +139,11 @@ class BrowseSeries(BaseBrowseSeries):
 
     # TODO: Validate
     @override
-    def _download_pages(self) -> list[str]:
-        return self._endpoint().download_until_datetime(
-            end_datetime=tz_datetime.fromisoformat(self.unique_identifier),
+    def _download_file(self) -> str:
+        return json.dumps(
+            self._endpoint().download_until_datetime(
+                end_datetime=tz_datetime.fromisoformat(self.unique_identifier),
+            ),
         )
 
 
@@ -163,17 +158,19 @@ class Catalogue(BaseBrowseSeries):
 
     # TODO: Validate
     @override
-    def _download_pages(self) -> list[str]:
-        return self._endpoint().download_until_datetime(
-            end_datetime=datetime.min.replace(tzinfo=UTC),
-            n=50,
-            sort_by="alphabetical",
-            referer="https://www.crunchyroll.com/videos/alphabetical",
+    def _download_file(self) -> str:
+        return json.dumps(
+            self._endpoint().download_until_datetime(
+                end_datetime=datetime.min.replace(tzinfo=UTC),
+                n=50,
+                sort_by="alphabetical",
+                referer="https://www.crunchyroll.com/videos/alphabetical",
+            ),
         )
 
 
 # TODO: Validate
-class Artist(EndpointFile[ArtistModel]):
+class Artist(SingleArgEndpointFile[ArtistModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> ArtistEndpoint:
@@ -187,7 +184,7 @@ class Artist(EndpointFile[ArtistModel]):
 
 
 # TODO: Validate
-class ArtistMusicVideos(EndpointFile[ArtistMusicVideosModel]):
+class ArtistMusicVideos(SingleArgEndpointFile[ArtistMusicVideosModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> ArtistMusicVideosEndpoint:
@@ -195,7 +192,7 @@ class ArtistMusicVideos(EndpointFile[ArtistMusicVideosModel]):
 
 
 # TODO: Validate
-class ArtistConcerts(EndpointFile[ArtistConcertsModel]):
+class ArtistConcerts(SingleArgEndpointFile[ArtistConcertsModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> ArtistConcertsEndpoint:
@@ -203,7 +200,7 @@ class ArtistConcerts(EndpointFile[ArtistConcertsModel]):
 
 
 # TODO: Validate
-class MusicVideo(EndpointFile[MusicVideoModel]):
+class MusicVideo(SingleArgEndpointFile[MusicVideoModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> MusicVideoEndpoint:
@@ -217,7 +214,7 @@ class MusicVideo(EndpointFile[MusicVideoModel]):
 
 
 # TODO: Validate
-class Concert(EndpointFile[ConcertModel]):
+class Concert(SingleArgEndpointFile[ConcertModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> ConcertEndpoint:
@@ -234,13 +231,13 @@ class Concert(EndpointFile[ConcertModel]):
 class BrowseMusic(PagedEndpointFile[BrowseMusicModel]):
     # TODO: Validate
     @override
-    def _endpoint(self) -> BrowseMusicEndpoint:
+    def _endpoint(self) -> BrowseMusicEndpoint:  # type: ignore[override]
         return chirashi().browse_music
 
     # TODO: Validate
     @override
-    def _download_pages(self) -> list[str]:
-        return self._endpoint().download_all()
+    def _download_file(self) -> str:
+        return json.dumps(self._endpoint().download_all())
 
     # TODO: Validate
     def datums(self) -> list[BrowseMusicDatum]:
@@ -248,7 +245,7 @@ class BrowseMusic(PagedEndpointFile[BrowseMusicModel]):
 
 
 # TODO: Validate
-class Search(EndpointFile[SearchModel]):
+class Search(SingleArgEndpointFile[SearchModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> SearchEndpoint:

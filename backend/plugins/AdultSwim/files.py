@@ -12,10 +12,9 @@ from pools_closed.show import Show as TitleEndpoint
 from pools_closed.show.models import ShowModel
 from pools_closed.shows import Shows as TitlesEndpoint
 from pools_closed.shows.models import ShowsModel
-from sqlmodel import Session
 
-from app.plugins.models import Plugin
-from plugins.utils.base_plugin.files import INCOMPLETE_STATUS, EndpointFile
+from plugins.utils.base_plugin.files import SingleArgEndpointFile, NoArgsEndpointFile
+from plugins.utils.constants import INCOMPLETE_STATUS
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -26,7 +25,7 @@ def pools_closed() -> PoolsClosed:
 
 
 # TODO: Validate
-class TitlePage(EndpointFile[ShowModel]):
+class TitlePage(SingleArgEndpointFile[ShowModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> TitleEndpoint:
@@ -39,21 +38,13 @@ class TitlePage(EndpointFile[ShowModel]):
 
 
 # TODO: Validate
-class TitlesPage(EndpointFile[ShowsModel]):
-    # TODO: Validate
-    def __init__(self, session: Session, plugin: Plugin) -> None:
-        super().__init__(session, plugin, "Titles")
+class TitlesPage(NoArgsEndpointFile[ShowsModel]):
+    unique_identifier = "Titles"
 
     # TODO: Validate
     @override
     def _endpoint(self) -> TitlesEndpoint:
         return pools_closed().shows
-
-    # Required because the endpoint takes no parameters
-    # TODO: Validate
-    @override
-    def _download_file(self) -> str:
-        return self._endpoint().download()
 
     # TODO: Validate
     @override

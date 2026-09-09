@@ -10,7 +10,6 @@ from app.channels.models import Channel
 from app.database import engine, load_models
 from app.log import configure_logging
 from app.users.models import User
-from app.users.plugin_user import plugin_user_email
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.manage_plugins import import_plugins, plugins
@@ -26,8 +25,7 @@ def _outdated_channels_by_plugin(
     session: Session,
 ) -> dict[type[AbstractPlugin], list[Channel]]:
     plugin_classes_by_email = {
-        plugin_user_email(plugin_class.plugin_name()).lower(): plugin_class
-        for plugin_class in plugins
+        plugin_class.plugin_name().lower(): plugin_class for plugin_class in plugins
     }
     rows = session.exec(
         select(Channel, User.email)

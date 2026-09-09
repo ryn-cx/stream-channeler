@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from typing import override
-from urllib.parse import quote_plus
 
 from plugins.Netflix.base_files import NetflixBaseFiles
 
@@ -42,8 +41,3 @@ class NetflixShared(NetflixBaseFiles):
     @classmethod
     def episode_url(cls, episode_key: str) -> str:
         return cls.build_url(f"watch/{episode_key}")
-
-    # TODO: Validate
-    @classmethod
-    def manual_search_url(cls, query: str) -> str | None:
-        return cls.build_url(f"search?q={quote_plus(query)}")

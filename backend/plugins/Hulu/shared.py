@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, override
 from app.utils.strict_re import strict_search
 from plugins.Hulu.base_files import HuluBaseFiles
 from plugins.Hulu.constants import MOVIE_URL_REGEX, SERIES_URL_REGEX, HuluMediaType
-from plugins.Hulu.utils import search_url, title_url, title_urls
+from plugins.Hulu.utils import title_url, title_urls
 
 if TYPE_CHECKING:
     from wholoo.all_movies.models import AllMoviesModel
@@ -37,13 +37,8 @@ class HuluShared(HuluBaseFiles):
         return "hulu.com"
 
     # TODO: Validate
-    @classmethod
-    def manual_search_url(cls, query: str) -> str | None:
-        return search_url(query)
-
-    # TODO: Validate
-    def _create_channel_records(self) -> None:
-        self._add_urls_to_channel_by_prefix(self._all_title_urls(), "All Titles")
+    def _create_initial_channel_records(self) -> None:
+        self._add_urls_to_channel(self._all_title_urls(), "All Titles")
 
     # TODO: Validate
     def _all_title_urls(self) -> list[str]:

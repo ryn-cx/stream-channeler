@@ -27,7 +27,7 @@ from plugins.Roku.utils import (
 )
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.utils.base_plugin.url import URLTitleInfo
+from plugins.utils.base_plugin.url import ExtractedURLInfo
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -53,7 +53,7 @@ class RokuImporter(RokuShared, BaseImporter, ABC):
 
     # TODO: Validate
     def _url_content_key(self, url: str) -> str:
-        domain_regex = self._domain_regex()
+        domain_regex = self._domains_regex()
         for url_regex in self._url_regexes():
             if match := re.match(domain_regex + url_regex, url):
                 key = match.group(1)
@@ -73,18 +73,18 @@ class RokuImporter(RokuShared, BaseImporter, ABC):
 class RokuSeriesImporter(RokuImporter):
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> URLTitleInfo:
+    def get_media_info(self, url: str) -> ExtractedURLInfo:
         key = self._url_content_key(url)
         series = self._content(key).series
         if series is None:
-            return URLTitleInfo(key)
+            return ExtractedURLInfo(key)
 
         # A season carries its number after its id, an episode does not, and only
         # an episode is a title of its own to point at.
         title_key = content_id(series.meta.id)
         if "-" in key:
-            return URLTitleInfo(title_key)
-        return URLTitleInfo(title_key, episode_key=key)
+            return ExtractedURLInfo(title_key)
+        return ExtractedURLInfo(title_key, episode_key=key)
 
     # TODO: Validate
     def _season_episodes(
@@ -166,7 +166,7 @@ class RokuSeriesImporter(RokuImporter):
             title.set_update_at(min(data_timestamps) + timedelta(days=7))
 
         self._upsert_seasons(title, force=force)
-        self._soft_delete_missing(title_key)
+        self._soft_delete_missing_seasons_and_episodes(title_key)
 
         return title
 
@@ -178,14 +178,13 @@ class RokuSeriesImporter(RokuImporter):
             season_key = build_season_key(title.key, season_number)
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
-                data_timestamps = self._season_files_data_timestamps(
-                    season_key, title.key
-                )
                 season = Season(
                     key=season_key,
                     season_number=season_number,
                     sort_order=sort_order,
-                    data_timestamp=max(data_timestamps),
+                    data_timestamp=self._season_files_data_timestamp(
+                        season_key, title.key,
+                    ),
                     title_id=title.id,
                 ).upsert(title, season)
                 season.set_update_at(None)
@@ -215,11 +214,6 @@ class RokuSeriesImporter(RokuImporter):
             ):
                 continue
 
-            data_timestamps = self._episode_files_data_timestamps(
-                episode_key,
-                season.key,
-                title_key,
-            )
             episode = Episode(
                 key=episode_key,
                 watch_identifier=watch_identifier(self.plugin_name(), episode_key),
@@ -232,7 +226,9 @@ class RokuSeriesImporter(RokuImporter):
                 duration=item.view_options[0].media.duration,
                 air_date=item.release_date,
                 sort_order=sort_order,
-                data_timestamp=max(data_timestamps),
+                data_timestamp=self._episode_files_data_timestamp(
+                    episode_key, season.key, title_key,
+                ),
                 season_id=season.id,
             ).upsert(season, episode)
             episode.set_update_at(None)
@@ -242,8 +238,8 @@ class RokuSeriesImporter(RokuImporter):
 class RokuMovieImporter(RokuImporter):
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> URLTitleInfo:
-        return URLTitleInfo(self._url_content_key(url))
+    def get_media_info(self, url: str) -> ExtractedURLInfo:
+        return ExtractedURLInfo(self._url_content_key(url))
 
     # TODO: Validate
     @override
@@ -306,7 +302,7 @@ class RokuMovieImporter(RokuImporter):
             )
 
         self._upsert_season(title, force=force)
-        self._soft_delete_missing(title_key)
+        self._soft_delete_missing_seasons_and_episodes(title_key)
 
         return title
 
@@ -315,12 +311,11 @@ class RokuMovieImporter(RokuImporter):
         season_key = build_season_key(title.key, 0)
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title.key, force=force):
-            data_timestamps = self._season_files_data_timestamps(season_key, title.key)
             season = Season(
                 key=season_key,
                 season_number=0,
                 sort_order=0,
-                data_timestamp=max(data_timestamps),
+                data_timestamp=self._season_files_data_timestamp(season_key, title.key),
                 title_id=title.id,
             ).upsert(title, season)
             season.set_update_at(None)
@@ -346,9 +341,6 @@ class RokuMovieImporter(RokuImporter):
             return
 
         content = self._content(title_key)
-        data_timestamps = self._episode_files_data_timestamps(
-            title_key, season.key, title_key
-        )
         episode = Episode(
             key=title_key,
             watch_identifier=watch_identifier(self.plugin_name(), title_key),
@@ -361,7 +353,9 @@ class RokuMovieImporter(RokuImporter):
             episode_number=0,
             sort_order=0,
             air_date=content.release_date,
-            data_timestamp=max(data_timestamps),
+            data_timestamp=self._episode_files_data_timestamp(
+                title_key, season.key, title_key,
+            ),
             season_id=season.id,
         ).upsert(season, episode)
         episode.set_update_at(None)

@@ -11,7 +11,7 @@ from plugi.content import Content as ContentEndpoint
 from plugi.content.models import ContentModel
 from plugi.exceptions import ContentNotFoundError
 
-from plugins.utils.base_plugin.files import EndpointFile
+from plugins.utils.base_plugin.files import SingleArgEndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -22,7 +22,7 @@ def plugi() -> Plugi:
 
 
 # TODO: Validate
-class ContentFile(EndpointFile[ContentModel]):
+class ContentFile(SingleArgEndpointFile[ContentModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> ContentEndpoint:

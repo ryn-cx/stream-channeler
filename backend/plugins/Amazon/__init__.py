@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, override
 from app.media.media_type import TMDBMediaType
 from plugins.Amazon.constants import (
     AMAZON_URL_REGEX,
-    MOVIE_ENTITY_TYPE,
     PRIME_VIDEO_URL_REGEX,
     SHARE_URL_REGEX,
 )
@@ -19,21 +18,14 @@ from plugins.Amazon.importer import (
 from plugins.Amazon.shared import AmazonShared
 from plugins.Amazon.utils import detail_url
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin.base import BaseReadURL
-from plugins.utils.base_plugin.initialize import BasePluginInitializer
+from plugins.utils.base_plugin.importer import BaseImporter
 
 if TYPE_CHECKING:
     from app.titles.models import Title
 
 
 # TODO: Validate
-class AmazonInitializer(BasePluginInitializer, AmazonShared): ...
-
-
-# TODO: Validate
-class Amazon(AmazonShared, BaseReadURL, AbstractPlugin, register=False):
-    initializer = AmazonInitializer
-
+class Amazon(AmazonShared, BaseImporter, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override
@@ -59,8 +51,8 @@ class Amazon(AmazonShared, BaseReadURL, AbstractPlugin, register=False):
         # so the page has to be read before it is known which of the two it
         # is.
         if self._is_movie(self._url_title_key(url)):
-            return AmazonMovieImporter(self)
-        return AmazonSeriesImporter(self)
+            return AmazonMovieImporter(self.session, self.plugin, self._file_cache)
+        return AmazonSeriesImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
     @override
@@ -69,12 +61,12 @@ class Amazon(AmazonShared, BaseReadURL, AbstractPlugin, register=False):
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
         if title.media_type == "Movie":
-            return AmazonMovieImporter(self)
-        return AmazonSeriesImporter(self)
+            return AmazonMovieImporter(self.session, self.plugin, self._file_cache)
+        return AmazonSeriesImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
     def _url_title_key(self, url: str) -> str:
-        domain_regex = self._domain_regex()
+        domain_regex = self._domains_regex()
         if match := re.match(domain_regex + SHARE_URL_REGEX, url):
             return self.title_key_from_share_key(
                 match.group("watch_amazon_title_key"),
@@ -102,4 +94,4 @@ class Amazon(AmazonShared, BaseReadURL, AbstractPlugin, register=False):
 
     # TODO: Validate
     def _is_movie(self, title_key: str) -> bool:
-        return self.detail_file(title_key).entity_type() == MOVIE_ENTITY_TYPE
+        return self.detail_file(title_key).entity_type() == "Movie"

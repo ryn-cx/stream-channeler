@@ -16,7 +16,7 @@ from nana.content import Content as ContentEndpoint
 from nana.content.models import ContentModel
 from nana.exceptions import ContentNotFoundError
 
-from plugins.utils.base_plugin.files import EndpointFile
+from plugins.utils.base_plugin.files import SingleArgEndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -27,7 +27,7 @@ def nana() -> Nana:
 
 
 # TODO: Validate
-class BaseContentFile(EndpointFile[ContentModel], ABC):
+class BaseContentFile(SingleArgEndpointFile[ContentModel], ABC):
     """What every file read off the content endpoint has in common."""
 
     # TODO: Validate

@@ -18,7 +18,6 @@ from app.episodes.models import Episode
 from app.files.models import File
 from app.media.media_type import TMDBMediaType
 from app.plugins.models import Plugin
-from app.plugins.schemas import TMDBMediaInfo
 from app.seasons.models import Season
 from app.sources.models import Source
 from app.titles.models import Title
@@ -113,8 +112,7 @@ class AbstractPlugin(ABC):
     def is_valid_url_format(cls, url: str) -> bool:  # noqa: ARG003
         """Check if `url` has the right format for the plugin.
 
-        Does NOT check if `url` is actually valid, this will be done by
-        `import_url`.
+        Does NOT check if `url` is actually valid, this will be done by `import_url`.
 
         Args:
             url: The URL to check.
@@ -153,9 +151,9 @@ class AbstractPlugin(ABC):
     ) -> None:
         """Handle a failure while importing a URL from a `Channel`'s queue.
 
-        By default the error is re-raised so the caller applies its default
-        handling, which marks the URL as failed. Override to reschedule the URL
-        instead, by setting `queue_item.status` and `queue_item.import_at`.
+        By default the error is re-raised so the caller applies its default handling,
+        which marks the URL as failed. Override to reschedule the URL instead, by
+        setting `queue_item.status` and `queue_item.import_at`.
         """
         raise error
 
@@ -180,9 +178,9 @@ class AbstractPlugin(ABC):
     def import_url_instructions(cls) -> str:
         """Markdown describing what URLs this plugin supports.
 
-        Read once per plugin from `import_url_instructions_file`, so the examples can
-        be edited without touching the plugin. Add that file to include example URLs
-        so users know what to paste.
+        Read once per plugin from `import_url_instructions_file`, so the examples can be
+        edited without touching the plugin. Add that file to include example URLs so
+        users know what to paste.
         """
         return cls._read_instructions_file(
             cls.import_url_instructions_file(),
@@ -225,8 +223,8 @@ class AbstractPlugin(ABC):
 
         Called when `Title.update_at > datetime.now()`.
 
-        By default this will clear `Title.update_at`, override to implement `Plugin`
-        specific update logic.
+        By default this will just clear `Title.update_at`, override to implement
+        `Plugin` specific update logic.
 
         Args:
             title: The `Title` to update.
@@ -237,6 +235,17 @@ class AbstractPlugin(ABC):
 
     # TODO: Validate
     def update_channel(self, channel: Channel) -> None:
+        """Update an existing channel in the database.
+
+        Called when `Channel.update_at > datetime.now()`.
+
+        By default this will just clear `Channel.update_at`, override to implement
+        `Plugin` specific update logic.
+
+        Args:
+            channel: The `Channel` to update.
+
+        """
         channel.update_at = tz_datetime.now() + timedelta(days=1)
 
     # TODO: Validate
@@ -245,7 +254,7 @@ class AbstractPlugin(ABC):
 
         Called when `Season.update_at > datetime.now()`.
 
-        By default this will clear `Season.update_at`, override to implement
+        By default this will just clear `Season.update_at`, override to implement
         `Plugin` specific update logic.
 
         Args:
@@ -260,7 +269,7 @@ class AbstractPlugin(ABC):
 
         Called when `Episode.update_at > datetime.now()`.
 
-        By default this will clear `Episode.update_at`, override to implement
+        By default this will just clear `Episode.update_at`, override to implement
         `Plugin` specific update logic.
 
         Args:
@@ -273,8 +282,8 @@ class AbstractPlugin(ABC):
     def update_file(self, file: File) -> None:
         """Update an existing file in the database.
 
-        By default this will clear `File.update_at`, override to implement
-        `Plugin` specific update logic.
+        By default this will just clear `File.update_at`, override to implement `Plugin`
+        specific update logic.
 
         Args:
             file: The `File` to update.
@@ -287,8 +296,8 @@ class AbstractPlugin(ABC):
     def on_update_plugin_failure(self, plugin: Plugin, error: Exception) -> None:  # noqa: ARG002 - `plugin` is used by overrides.
         """Handle a failure while updating a `Plugin`.
 
-        By default the error is re-raised so the caller applies its default
-        handling. Override to reschedule the plugin instead.
+        By default the error is re-raised so the caller applies its default handling.
+        Override to reschedule the plugin instead.
         """
         raise error
 
@@ -296,8 +305,8 @@ class AbstractPlugin(ABC):
     def on_update_source_failure(self, source: Source, error: Exception) -> None:  # noqa: ARG002 - `source` is used by overrides.
         """Handle a failure while updating a `Source`.
 
-        By default the error is re-raised so the caller applies its default
-        handling. Override to reschedule the source instead.
+        By default the error is re-raised so the caller applies its default handling.
+        Override to reschedule the source instead.
         """
         raise error
 
@@ -305,8 +314,8 @@ class AbstractPlugin(ABC):
     def on_update_title_failure(self, title: Title, error: Exception) -> None:  # noqa: ARG002 - `title` is used by overrides.
         """Handle a failure while updating a `Title`.
 
-        By default the error is re-raised so the caller applies its default
-        handling. Override to reschedule the title instead.
+        By default the error is re-raised so the caller applies its default handling.
+        Override to reschedule the title instead.
         """
         raise error
 
@@ -314,8 +323,8 @@ class AbstractPlugin(ABC):
     def on_update_season_failure(self, season: Season, error: Exception) -> None:  # noqa: ARG002 - `season` is used by overrides.
         """Handle a failure while updating a `Season`.
 
-        By default the error is re-raised so the caller applies its default
-        handling. Override to reschedule the season instead.
+        By default the error is re-raised so the caller applies its default handling.
+        Override to reschedule the season instead.
         """
         raise error
 
@@ -323,8 +332,8 @@ class AbstractPlugin(ABC):
     def on_update_episode_failure(self, episode: Episode, error: Exception) -> None:  # noqa: ARG002 - `episode` is used by overrides.
         """Handle a failure while updating an `Episode`.
 
-        By default the error is re-raised so the caller applies its default
-        handling. Override to reschedule the episode instead.
+        By default the error is re-raised so the caller applies its default handling.
+        Override to reschedule the episode instead.
         """
         raise error
 
@@ -344,8 +353,8 @@ class AbstractPlugin(ABC):
     def import_watch_history_instructions(cls) -> str:
         """Markdown text describing how to export and upload watch history.
 
-        Read once per plugin from `import_watch_history_instructions_file`, so the
-        steps can be edited without touching the plugin.
+        Read once per plugin from `import_watch_history_instructions_file`, so the steps
+        can be edited without touching the plugin.
         """
         return cls._read_instructions_file(
             cls.import_watch_history_instructions_file(),
@@ -382,21 +391,20 @@ class AbstractPlugin(ABC):
     ) -> str | None:
         """Return the address of the one title `names` name here, or None.
 
-        What TMDB cross references a title against, so the closest match is all
-        that matters and its address is all that is read off it. A service a
-        user searches for themselves offers `in_app_search` instead.
+        What TMDB cross references a title against, so the closest match is all that
+        matters and its address is all that is read off it. A service a user searches
+        for themselves offers `in_app_search` instead.
 
-        A title is written differently on every service that carries it, so
-        every name TMDB knows it by is handed over rather than one of them: a
-        service holding the title under a name TMDB does not lead with is still
-        matched. `media_type` and `year` are what tell two titles of one name
-        apart, which a name on its own cannot.
+        A title is written differently on every service that carries it, so every name
+        TMDB knows it by is handed over rather than one of them: a service holding the
+        title under a name TMDB does not lead with is still matched. `media_type` and
+        `year` are what tell two titles of one name apart, which a name on its own
+        cannot.
 
         Args:
-            names: Every name TMDB knows the title by, the one it leads with
-                first.
-            media_type: Which of the two halves of TMDB's catalogue the title
-                belongs to.
+            names: Every name TMDB knows the title by, the one it leads with first.
+            media_type: Which of the two halves of TMDB's catalogue the title belongs
+                to.
             year: The year TMDB gives the title, where it gives one.
 
         """
@@ -412,15 +420,13 @@ class AbstractPlugin(ABC):
     ) -> list[URLImportResult]:
         """Import the title `names` name here.
 
-        What TMDB hands a service it has listed a title on, since a service is
-        reached by the name of the title rather than by an address when TMDB has
-        no address for it. `media_type` and `year` are TMDB's own account of the
-        title and are there to tell two titles of one name apart, which a name
-        on its own cannot.
+        What TMDB hands a service it has listed a title on, since a service is reached
+        by the name of the title rather than by an address when TMDB has no address for
+        it. `media_type` and `year` are TMDB's own account of the title and are there to
+        tell two titles of one name apart, which a name on its own cannot.
 
         Args:
-            names: Every name TMDB knows the title by, the one it leads with
-                first.
+            names: Every name TMDB knows the title by, the one it leads with first.
             media_type: Which of a film and a series the title is.
             year: The year TMDB gives the title, where it gives one.
 
@@ -435,48 +441,12 @@ class AbstractPlugin(ABC):
         raise NotImplementedError(msg)
 
     # TODO: Validate
-    def in_app_search(
-        self,
-        query: str,
-        cursor: str | None = None,
-    ) -> PluginSearchResults:
-        """Return a page of everything `query` matches, for a user to pick from.
-
-        Paged, since a user reads the results and chooses among them rather than
-        taking whatever came first.
-        """
-        msg = "in_app_search is not supported by this plugin."
-        raise NotImplementedError(msg)
-
-    # TODO: Validate
-    def media_info(self, media_identifier: str) -> TMDBMediaInfo | None:
-        """Return the catalogue detail shown for one of the plugin's own results.
-
-        Args:
-            media_identifier: The `media_identifier` of a `PluginSearchResult`
-                this same plugin produced.
-
-        """
-        msg = "media_info is not supported by this plugin."
-        raise NotImplementedError(msg)
-
-    # TODO: Validate
     def tmdb_lookup_info(
         self,
         title: Title,
     ) -> list[TMDBLookupInfo]:
         msg = "tmdb_lookup_info is not supported by this plugin."
         raise NotImplementedError(msg)
-
-    # TODO: Validate
-    @classmethod
-    def manual_search_url(cls, query: str) -> str | None:  # noqa: ARG003 - `query` is used by overrides.
-        """Return the plugin website's own search-page URL for `query`.
-
-        Lets a user open the source site's search directly to find and non-canonical row
-        an importable URL. Returns None when the site has no such search page.
-        """
-        return None
 
     # TODO: Validate
     @classmethod
@@ -501,25 +471,25 @@ class MediaNotFoundError(Exception):
 class URLImportResult(BaseModel):
     """What a channel takes on from importing a single URL.
 
-    A channel holds the media itself rather than one website's records, so a
-    result names what was imported by the keys of the records the plugin just
-    wrote, and `add_results_to_channel` resolves each one to the canonical row
-    that record is linked to.
+    A channel holds the media itself rather than one website's records, so a result
+    names what was imported by the keys of the records the plugin just wrote, and
+    `add_results_to_channel` resolves each one to the canonical row that record is
+    linked to.
 
     Example outputs:
 
-      If a user adds a URL for a title it is assumed the user wants every
-      season/episode of that title and all future episodes as well:
+      If a user adds a URL for a title it is assumed the user wants every season/episode
+      of that title and all future episodes as well:
           title_key - Always required.
           is_whitelist=False - New seasons/episodes are added automatically.
 
-      If the user adds a URL for a season it is assumed the user wants just the
-      episodes from that season and all other seasons excluded:
+      If the user adds a URL for a season it is assumed the user wants just the episodes
+      from that season and all other seasons excluded:
           season_keys - Just the imported season.
           is_whitelist=True - New seasons need to be whitelisted by hand.
 
-      If the user adds a URL for an episode it is assumed the user wants just
-      that episode and all other episodes excluded:
+      If the user adds a URL for an episode it is assumed the user wants just that
+      episode and all other episodes excluded:
           episode_keys - Just the imported episode.
           is_whitelist=True - New episodes need to be whitelisted by hand.
 
@@ -537,10 +507,10 @@ class URLImportResult(BaseModel):
     is_whitelist: bool = Field(default=False)
     """Opt-in (True) vs. opt-out (False) behavior for new content.
 
-    When True, future seasons/episodes the plugin discovers are NOT added to
-    the user's channel automatically — the user must whitelist each one.
-    When False (the default), new content is added automatically and the user
-    must blacklist anything they don't want.
+    When True, future seasons/episodes the plugin discovers are NOT added to the user's
+    channel automatically — the user must whitelist each one. When False (the default),
+    new content is added automatically and the user must blacklist anything they don't
+    want.
     """
 
     # TODO: Validate
@@ -584,39 +554,3 @@ class URLImportResult(BaseModel):
             episode_keys=[episode.key for episode in episodes],
             is_whitelist=True,
         )
-
-
-# TODO: Validate
-class PluginSearchResult(BaseModel):
-    """Search result from a plugin."""
-
-    title: str
-    """Title of the search result."""
-    url: str
-    """URL of the search result."""
-    year: int | None = None
-    """Release year of the search result."""
-    image_url: str | None = None
-    """URL of the image representing the search result."""
-    media_type: str | None = None
-    """Media type of the search result."""
-    media_identifier: str | None = None
-    """What the plugin that produced the result knows the title by.
-
-    Passed back to that same plugin's `media_info` to open the result. Its
-    format is the plugin's own — TMDB writes `tv 1399` and `movie 27205`. None
-    when the plugin has no details to offer beyond the result itself.
-    """
-
-
-# TODO: Validate
-class PluginSearchResults(BaseModel):
-    """A single page of results from a search query."""
-
-    results: list[PluginSearchResult]
-
-    next_cursor: str | None = None
-    """Cursor to pass back to `search` for the next page.
-
-    None on the last page. Only ever interpreted by the plugin that produced it.
-    """

@@ -6,7 +6,6 @@ from __future__ import annotations
 from typing import override
 
 from plugins.Tubi.base_files import TubiBaseFiles
-from plugins.Tubi.utils import search_url
 
 
 # TODO: Validate
@@ -34,8 +33,3 @@ class TubiShared(TubiBaseFiles):
     @override
     def _domain(cls) -> str:
         return "tubitv.com"
-
-    # TODO: Validate
-    @classmethod
-    def manual_search_url(cls, query: str) -> str | None:
-        return search_url(query)

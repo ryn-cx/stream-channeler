@@ -39,7 +39,8 @@ from plugins.Amazon.utils import (
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.files import (
     DownloadedFile,
-    EndpointFile,
+    MultipleArgEndpointFile,
+    SingleArgEndpointFile,
     TextFile,
 )
 from plugins.utils.get_around_client import get_around_client
@@ -174,7 +175,7 @@ class Detail(DownloadedFile[dict[str, Any]]):
     @override
     def _download_file(self) -> str:
         try:
-            return super()._download_file()
+            return self._endpoint().download(self.detail_key)
         except RedirectedError as error:
             landing_key = title_key_from_location(error.location)
             if landing_key is None:
@@ -496,7 +497,7 @@ class Detail(DownloadedFile[dict[str, Any]]):
 
 
 # TODO: Validate
-class EpisodeList(EndpointFile[DetailWidgetsModel]):
+class EpisodeList(MultipleArgEndpointFile[DetailWidgetsModel]):
     """One page of a season's episode list.
 
     The page a season opens on only carries the episodes it shows, so every page
@@ -541,7 +542,7 @@ class EpisodeList(EndpointFile[DetailWidgetsModel]):
 
 
 # TODO: Validate
-class Search(EndpointFile[SearchModel]):
+class Search(SingleArgEndpointFile[SearchModel]):
     """Everything one search query matched.
 
     Prime Video answers a search with every match at once, so there is a single

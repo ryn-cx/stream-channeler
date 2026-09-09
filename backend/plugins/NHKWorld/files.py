@@ -16,7 +16,11 @@ from naphki.video_program import VideoProgram as VideoProgramEndpoint
 from naphki.video_program.models import VideoProgramModel
 
 from app.utils import tz_datetime
-from plugins.utils.base_plugin.files import INCOMPLETE_STATUS, EndpointFile
+from plugins.utils.base_plugin.files import (
+    SingleArgEndpointFile,
+    MultipleArgEndpointFile,
+)
+from plugins.utils.constants import INCOMPLETE_STATUS
 from plugins.utils.get_around_client import get_around_client
 
 if TYPE_CHECKING:
@@ -33,7 +37,7 @@ def naphki() -> Naphki:
 
 
 # TODO: Validate
-class VideoProgram(EndpointFile[VideoProgramModel]):
+class VideoProgram(SingleArgEndpointFile[VideoProgramModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> VideoProgramEndpoint:
@@ -47,7 +51,7 @@ class VideoProgram(EndpointFile[VideoProgramModel]):
 
 
 # TODO: Validate
-class VideoEpisodes(EndpointFile[VideoEpisodesModel]):
+class VideoEpisodes(MultipleArgEndpointFile[VideoEpisodesModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> VideoEpisodesEndpoint:
@@ -64,7 +68,7 @@ class VideoEpisodes(EndpointFile[VideoEpisodesModel]):
 
 
 # TODO: Validate
-class NewVideoEpisodes(EndpointFile[VideoEpisodesModel]):
+class NewVideoEpisodes(MultipleArgEndpointFile[VideoEpisodesModel]):
     # TODO: Validate
     @override
     def _initial_status_after_downloading(self) -> str:
@@ -93,7 +97,7 @@ class NewVideoEpisodes(EndpointFile[VideoEpisodesModel]):
 
 
 # TODO: Validate
-class TitlesSearch(EndpointFile[ShowsSearchModel]):
+class TitlesSearch(MultipleArgEndpointFile[ShowsSearchModel]):
     # TODO: Validate
     def __init__(
         self,

@@ -34,15 +34,15 @@ class HuluBaseFiles(BasePlugin):
 
     # TODO: Validate
     def all_series_file(self) -> AllSeries:
-        return self._cached_file(AllSeries, "all_series")
+        return self._cached_file(AllSeries)
 
     # TODO: Validate
     def all_movies_file(self) -> AllMovies:
-        return self._cached_file(AllMovies, "all_movies")
+        return self._cached_file(AllMovies)
 
     # TODO: Validate
     def genres_file(self) -> Genres:
-        return self._cached_file(Genres, "genres")
+        return self._cached_file(Genres)
 
     # TODO: Validate
     def genre_file(self, genre_id: str) -> Genre:

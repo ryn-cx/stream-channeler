@@ -30,11 +30,15 @@ from wholoo.tv.models import TVModel
 
 from app.plugins.models import Plugin
 from plugins.Hulu.utils import episode_url
-from plugins.utils.base_plugin.files import EndpointFile, TextFile
+from plugins.utils.base_plugin.files import (
+    SingleArgEndpointFile,
+    MultipleArgEndpointFile,
+    NoArgsEndpointFile,
+    TextFile,
+)
 from plugins.utils.get_around_client import get_around_client
 
 
-# TODO: Validate
 @cache
 def wholoo() -> Wholoo:
     return Wholoo(get_around_client=get_around_client())
@@ -42,7 +46,7 @@ def wholoo() -> Wholoo:
 
 # TODO: Update the model name in wholoo to match this.
 # TODO: Validate
-class Series(EndpointFile[TVModel]):
+class Series(SingleArgEndpointFile[TVModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> TV:
@@ -55,7 +59,7 @@ class Series(EndpointFile[TVModel]):
 
 
 # TODO: Validate
-class Movie(EndpointFile[MoviesModel]):
+class Movie(SingleArgEndpointFile[MoviesModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> MoviesEndpoint:
@@ -69,7 +73,7 @@ class Movie(EndpointFile[MoviesModel]):
 
 
 # TODO: Validate
-class Season(EndpointFile[SeasonModel]):
+class Season(MultipleArgEndpointFile[SeasonModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> SeasonEndpoint:
@@ -93,64 +97,43 @@ class Season(EndpointFile[SeasonModel]):
         return self._endpoint().download(self.series_id, self.season_number)
 
 
-# TODO: Validate
-class Episode(EndpointFile[EpisodeModel]):
-    # TODO: Validate
+class Episode(SingleArgEndpointFile[EpisodeModel]):
     @override
     def _endpoint(self) -> EpisodeEndpoint:
         return wholoo().episode
 
 
-# TODO: Validate
-class Search(EndpointFile[SearchModel]):
-    # TODO: Validate
+class Search(SingleArgEndpointFile[SearchModel]):
     @override
     def _endpoint(self) -> SearchEndpoint:
         return wholoo().search
 
 
-# TODO: Validate
-class AllSeries(EndpointFile[AllSeriesModel]):
-    # TODO: Validate
+class AllSeries(NoArgsEndpointFile[AllSeriesModel]):
+    unique_identifier = "all_series"
+
     @override
     def _endpoint(self) -> AllSeriesEndpoint:
         return wholoo().all_series
 
-    # TODO: Validate
-    @override
-    def _download_file(self) -> str:
-        return self._endpoint().download()
 
+class AllMovies(NoArgsEndpointFile[AllMoviesModel]):
+    unique_identifier = "all_movies"
 
-# TODO: Validate
-class AllMovies(EndpointFile[AllMoviesModel]):
-    # TODO: Validate
     @override
     def _endpoint(self) -> AllMoviesEndpoint:
         return wholoo().all_movies
 
-    # TODO: Validate
-    @override
-    def _download_file(self) -> str:
-        return self._endpoint().download()
 
+class Genres(NoArgsEndpointFile[GenresModel]):
+    unique_identifier = "genres"
 
-# TODO: Validate
-class Genres(EndpointFile[GenresModel]):
-    # TODO: Validate
     @override
     def _endpoint(self) -> GenresEndpoint:
         return wholoo().genres
 
-    # TODO: Validate
-    @override
-    def _download_file(self) -> str:
-        return self._endpoint().download()
 
-
-# TODO: Validate
-class Genre(EndpointFile[GenreModel]):
-    # TODO: Validate
+class Genre(SingleArgEndpointFile[GenreModel]):
     @override
     def _endpoint(self) -> GenreEndpoint:
         return wholoo().genre

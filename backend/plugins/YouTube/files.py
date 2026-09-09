@@ -36,8 +36,9 @@ from not_yt_dlapi.videos.models import VideosModel
 
 from app.config import settings
 from plugins.utils.base_plugin.files import (
-    EndpointFile,
-    LoadEndpoint,
+    Endpoint,
+    SingleArgEndpointFile,
+    MultipleArgEndpointFile,
     PagedEndpointFile,
 )
 from plugins.utils.get_around_client import get_around_client
@@ -53,7 +54,7 @@ def not_yt_dlapi() -> NotYTDLAPI:
 
 
 # TODO: Validate
-class ChannelFile(EndpointFile[ChannelsModel], ABC):
+class ChannelFile(MultipleArgEndpointFile[ChannelsModel], ABC):
     # TODO: Validate
     @override
     def _endpoint(self) -> ChannelsEndpoint:
@@ -94,7 +95,7 @@ class ChannelByUsername(ChannelFile):
 
 
 # TODO: Validate
-class ChannelPlaylists(EndpointFile[PlaylistsModel]):
+class ChannelPlaylists(MultipleArgEndpointFile[PlaylistsModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> PlaylistsEndpoint:
@@ -135,7 +136,7 @@ class PlaylistItems(PagedEndpointFile[PlaylistItemsModel]):
     def _download_file(self) -> str:
         record = self._existing_database_record
         if record is None or record.content is None:
-            return json.dumps(self._download_pages())
+            return json.dumps(self._endpoint().download_all(self.unique_identifier))
 
         stored_pages: list[str] = json.loads(record.content)
         return json.dumps(self._new_pages(stored_pages) + stored_pages)
@@ -166,7 +167,7 @@ class PlaylistItems(PagedEndpointFile[PlaylistItemsModel]):
 
 
 # TODO: Validate
-class Videos(EndpointFile[VideosModel]):
+class Videos(SingleArgEndpointFile[VideosModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> VideosEndpoint:
@@ -174,7 +175,7 @@ class Videos(EndpointFile[VideosModel]):
 
 
 # TODO: Validate
-class MusicPlaylist(EndpointFile[MusicModel]):
+class MusicPlaylist(SingleArgEndpointFile[MusicModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> MusicEndpoint:
@@ -382,14 +383,14 @@ class Topic(PagedEndpointFile[TopicModel]):
 
 
 # TODO: Validate
-class PlaylistFeed(EndpointFile[ChannelFeedModel | PlaylistFeedModel]):
+class PlaylistFeed(MultipleArgEndpointFile[ChannelFeedModel | PlaylistFeedModel]):
     # TODO: Validate
     def _is_channel_feed(self) -> bool:
         return self.unique_identifier.startswith("UU")
 
     # TODO: Validate
     @override
-    def _endpoint(self) -> LoadEndpoint[ChannelFeedModel | PlaylistFeedModel]:
+    def _endpoint(self) -> Endpoint[ChannelFeedModel | PlaylistFeedModel]:
         if self._is_channel_feed():
             return not_yt_dlapi().channel_feed
         return not_yt_dlapi().playlist_feed

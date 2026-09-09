@@ -1,7 +1,7 @@
 # TODO: Validate
 """What every other part of the plugin reads a title by."""
 
-from urllib.parse import quote, quote_plus
+from urllib.parse import quote
 from uuid import UUID
 
 from wholoo.all_movies.models import AllMoviesModel
@@ -28,11 +28,6 @@ def title_url(title_key: str | UUID, media_type: HuluMediaType) -> str:
 # TODO: Validate
 def episode_url(episode_key: str) -> str:
     return build_url(f"watch/{episode_key}")
-
-
-# TODO: Validate
-def search_url(query: str) -> str:
-    return build_url(f"search?q={quote_plus(query)}")
 
 
 # TODO: Validate

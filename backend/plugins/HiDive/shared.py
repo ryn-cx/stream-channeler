@@ -20,7 +20,6 @@ from plugins.HiDive.utils import (
     element_release_date,
     element_text,
     schedule_group_list,
-    search_url,
 )
 
 if TYPE_CHECKING:
@@ -50,11 +49,6 @@ class HiDiveShared(HiDiveBaseFiles):
     @override
     def _domain(cls) -> str:
         return "hidive.com"
-
-    # TODO: Validate
-    @classmethod
-    def manual_search_url(cls, query: str) -> str | None:
-        return search_url(query)
 
     # TODO: Validate
     @override

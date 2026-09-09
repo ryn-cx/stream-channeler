@@ -52,10 +52,11 @@ from app.config import settings
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
 from plugins.utils.base_plugin.files import (
-    INCOMPLETE_STATUS,
-    EndpointFile,
-    IntegerEndpointFile,
+    SingleArgEndpointFile,
+    IntegerArgEndpointFile,
+    MultipleArgEndpointFile,
 )
+from plugins.utils.constants import INCOMPLETE_STATUS
 
 
 # TODO: Validate
@@ -65,7 +66,7 @@ def tminidb() -> TMiniDB:
 
 
 # TODO: Validate
-class MoviesDetails(IntegerEndpointFile[MovieDetailsModel]):
+class MoviesDetails(IntegerArgEndpointFile[MovieDetailsModel]):
     custom_class_key = "Movies/Details"
 
     # TODO: Validate
@@ -81,7 +82,7 @@ class MoviesDetails(IntegerEndpointFile[MovieDetailsModel]):
 
 
 # TODO: Validate
-class WatchProviders[T](EndpointFile[T], ABC):
+class WatchProviders[T](MultipleArgEndpointFile[T], ABC):
     # TODO: Validate
     @override
     def _initial_status_after_downloading(self) -> str:
@@ -186,7 +187,7 @@ type WatchProvidersFile = (
 
 
 # TODO: Validate
-class TVSeriesDetails(IntegerEndpointFile[TvSeriesDetailsModel]):
+class TVSeriesDetails(IntegerArgEndpointFile[TvSeriesDetailsModel]):
     custom_class_key = "TV Series/Details"
 
     # TODO: Validate
@@ -202,7 +203,7 @@ class TVSeriesDetails(IntegerEndpointFile[TvSeriesDetailsModel]):
 
 
 # TODO: Validate
-class TVSeriesImages(IntegerEndpointFile[TvSeriesImagesModel]):
+class TVSeriesImages(MultipleArgEndpointFile[TvSeriesImagesModel]):
     custom_class_key = "TV Series/Images"
 
     # TODO: Validate
@@ -220,7 +221,7 @@ class TVSeriesImages(IntegerEndpointFile[TvSeriesImagesModel]):
 
 
 # TODO: Validate
-class TVSeriesEpisodeGroups(IntegerEndpointFile[TvSeriesEpisodeGroupsModel]):
+class TVSeriesEpisodeGroups(IntegerArgEndpointFile[TvSeriesEpisodeGroupsModel]):
     custom_class_key = "TV Series/Episode Groups"
 
     # TODO: Validate
@@ -230,7 +231,7 @@ class TVSeriesEpisodeGroups(IntegerEndpointFile[TvSeriesEpisodeGroupsModel]):
 
 
 # TODO: Validate
-class TVEpisodeGroupsDetails(EndpointFile[TvEpisodeGroupDetailsModel]):
+class TVEpisodeGroupsDetails(SingleArgEndpointFile[TvEpisodeGroupDetailsModel]):
     custom_class_key = "TV Episode Groups/Details"
 
     # TODO: Validate
@@ -240,7 +241,7 @@ class TVEpisodeGroupsDetails(EndpointFile[TvEpisodeGroupDetailsModel]):
 
 
 # TODO: Validate
-class TVSeasonsDetails(EndpointFile[TvSeasonDetailsModel]):
+class TVSeasonsDetails(MultipleArgEndpointFile[TvSeasonDetailsModel]):
     custom_class_key = "TV Seasons/Details"
 
     # TODO: Validate
@@ -267,7 +268,7 @@ class TVSeasonsDetails(EndpointFile[TvSeasonDetailsModel]):
 
 
 # TODO: Validate
-class TVSeriesChanges(EndpointFile[TvSeriesChangesModel]):
+class TVSeriesChanges(MultipleArgEndpointFile[TvSeriesChangesModel]):
     custom_class_key = "TV Series/Changes"
 
     # TODO: Validate
@@ -308,7 +309,7 @@ class TVSeriesChanges(EndpointFile[TvSeriesChangesModel]):
 
 
 # TODO: Validate
-class TVSeasonsChanges(EndpointFile[TvSeasonChangesModel]):
+class TVSeasonsChanges(MultipleArgEndpointFile[TvSeasonChangesModel]):
     custom_class_key = "TV Seasons/Changes"
 
     # TODO: Validate
@@ -363,7 +364,7 @@ class TVSeasonsChanges(EndpointFile[TvSeasonChangesModel]):
 
 
 # TODO: Validate
-class SearchMulti(EndpointFile[SearchMultiModel]):
+class SearchMulti(MultipleArgEndpointFile[SearchMultiModel]):
     custom_class_key = "Search/Multi"
 
     # TODO: Validate
@@ -390,7 +391,7 @@ class SearchMulti(EndpointFile[SearchMultiModel]):
 
 
 # TODO: Validate
-class SearchMovie(EndpointFile[SearchMovieModel]):
+class SearchMovie(MultipleArgEndpointFile[SearchMovieModel]):
     custom_class_key = "Search/Movie"
 
     # TODO: Validate
@@ -417,7 +418,7 @@ class SearchMovie(EndpointFile[SearchMovieModel]):
 
 
 # TODO: Validate
-class SearchTV(EndpointFile[SearchTvModel]):
+class SearchTV(MultipleArgEndpointFile[SearchTvModel]):
     custom_class_key = "Search/TV"
 
     # TODO: Validate

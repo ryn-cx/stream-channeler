@@ -32,7 +32,7 @@ from plugins.Pluto.utils import (
 )
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.utils.base_plugin.url import URLTitleInfo
+from plugins.utils.base_plugin.url import ExtractedURLInfo
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -61,11 +61,11 @@ class PlutoSeriesImporter(PlutoImporter):
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> URLTitleInfo:
-        if match := re.match(self._domain_regex() + SERIES_URL_REGEX, url):
+    def get_media_info(self, url: str) -> ExtractedURLInfo:
+        if match := re.match(self._domains_regex() + SERIES_URL_REGEX, url):
             title_key = match.group("series_key")
             self.raise_invalid_url_if_no_content(self.seasons_file(title_key), url)
-            return URLTitleInfo(title_key, episode_key=match.group("episode_key"))
+            return ExtractedURLInfo(title_key, episode_key=match.group("episode_key"))
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
@@ -161,7 +161,7 @@ class PlutoSeriesImporter(PlutoImporter):
             title.set_update_at(min(data_timestamps) + timedelta(days=7))
 
         self._upsert_seasons(title, force=force)
-        self._soft_delete_missing(title_key)
+        self._soft_delete_missing_seasons_and_episodes(title_key)
 
         return title
 
@@ -172,15 +172,14 @@ class PlutoSeriesImporter(PlutoImporter):
             season_key = build_season_key(title.key, season_number)
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
-                data_timestamps = self._season_files_data_timestamps(
-                    season_key, title.key
-                )
                 season = Season(
                     key=season_key,
                     season_number=season_number,
                     sort_order=sort_order,
                     url=season_url(title.key, season_number),
-                    data_timestamp=max(data_timestamps),
+                    data_timestamp=self._season_files_data_timestamp(
+                        season_key, title.key,
+                    ),
                     title_id=title.id,
                 ).upsert(title, season)
                 season.set_update_at(None)
@@ -214,11 +213,6 @@ class PlutoSeriesImporter(PlutoImporter):
             ):
                 continue
 
-            data_timestamps = self._episode_files_data_timestamps(
-                episode_key,
-                season.key,
-                title_key,
-            )
             episode = Episode(
                 key=episode_key,
                 watch_identifier=watch_identifier(self.plugin_name(), episode_key),
@@ -233,7 +227,9 @@ class PlutoSeriesImporter(PlutoImporter):
                 ),
                 air_date=series_episode.clip.original_release_date,
                 sort_order=sort_order,
-                data_timestamp=max(data_timestamps),
+                data_timestamp=self._episode_files_data_timestamp(
+                    episode_key, season.key, title_key,
+                ),
                 season_id=season.id,
             ).upsert(season, episode)
             episode.set_update_at(None)
@@ -249,11 +245,11 @@ class PlutoMovieImporter(PlutoImporter):
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> URLTitleInfo:
-        if match := re.match(self._domain_regex() + MOVIE_URL_REGEX, url):
+    def get_media_info(self, url: str) -> ExtractedURLInfo:
+        if match := re.match(self._domains_regex() + MOVIE_URL_REGEX, url):
             title_key = match.group("movie_key")
             self.raise_invalid_url_if_no_content(self.items_file(title_key), url)
-            return URLTitleInfo(title_key)
+            return ExtractedURLInfo(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
@@ -327,7 +323,7 @@ class PlutoMovieImporter(PlutoImporter):
             )
 
         self._upsert_season(title, force=force)
-        self._soft_delete_missing(title_key)
+        self._soft_delete_missing_seasons_and_episodes(title_key)
 
         return title
 
@@ -336,12 +332,11 @@ class PlutoMovieImporter(PlutoImporter):
         season_key = movie_season_key(title.key)
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title.key, force=force):
-            data_timestamps = self._season_files_data_timestamps(season_key, title.key)
             season = Season(
                 key=season_key,
                 season_number=0,
                 sort_order=0,
-                data_timestamp=max(data_timestamps),
+                data_timestamp=self._season_files_data_timestamp(season_key, title.key),
                 title_id=title.id,
             ).upsert(title, season)
             season.set_update_at(None)
@@ -359,11 +354,6 @@ class PlutoMovieImporter(PlutoImporter):
         episode = Episode.get_from_memory(self.session, season, title_key)
         if self._episode_is_outdated(episode, season.key, title_key, force=force):
             item = self._item(title_key)
-            data_timestamps = self._episode_files_data_timestamps(
-                title_key,
-                season.key,
-                title_key,
-            )
             episode = Episode(
                 key=title_key,
                 watch_identifier=watch_identifier(self.plugin_name(), title_key),
@@ -375,7 +365,9 @@ class PlutoMovieImporter(PlutoImporter):
                 thumbnail_url=item.featured_image.path,
                 duration=(item.original_content_duration // MILLISECONDS_PER_SECOND),
                 sort_order=0,
-                data_timestamp=max(data_timestamps),
+                data_timestamp=self._episode_files_data_timestamp(
+                    title_key, season.key, title_key,
+                ),
                 season_id=season.id,
             ).upsert(season, episode)
             episode.set_update_at(None)

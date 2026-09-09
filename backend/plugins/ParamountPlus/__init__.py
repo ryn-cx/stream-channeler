@@ -12,21 +12,14 @@ from plugins.ParamountPlus.importer import (
 )
 from plugins.ParamountPlus.shared import ParamountPlusShared
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin.base import BaseReadURL
-from plugins.utils.base_plugin.initialize import BasePluginInitializer
+from plugins.utils.base_plugin.importer import BaseImporter
 
 if TYPE_CHECKING:
     from app.titles.models import Title
 
 
 # TODO: Validate
-class ParamountPlusInitializer(BasePluginInitializer, ParamountPlusShared): ...
-
-
-# TODO: Validate
-class ParamountPlus(ParamountPlusShared, BaseReadURL, AbstractPlugin, register=False):
-    initializer = ParamountPlusInitializer
-
+class ParamountPlus(ParamountPlusShared, BaseImporter, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override
@@ -36,7 +29,7 @@ class ParamountPlus(ParamountPlusShared, BaseReadURL, AbstractPlugin, register=F
     # TODO: Validate
     @override
     def _validate_url(self, url: str) -> None:
-        domain_regex = self._domain_regex()
+        domain_regex = self._domains_regex()
         for url_regex in (MOVIE_URL_REGEX, TITLE_URL_REGEX):
             if re.match(domain_regex + url_regex, url):
                 return
@@ -47,9 +40,13 @@ class ParamountPlus(ParamountPlusShared, BaseReadURL, AbstractPlugin, register=F
     # TODO: Validate
     @override
     def _media_importer_from_url(self, url: str) -> ParamountPlusImporter:
-        if re.match(self._domain_regex() + MOVIE_URL_REGEX, url):
-            return ParamountPlusMovieImporter(self)
-        return ParamountPlusSeriesImporter(self)
+        if re.match(self._domains_regex() + MOVIE_URL_REGEX, url):
+            return ParamountPlusMovieImporter(
+                self.session,
+                self.plugin,
+                self._file_cache,
+            )
+        return ParamountPlusSeriesImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
     @override
@@ -58,5 +55,9 @@ class ParamountPlus(ParamountPlusShared, BaseReadURL, AbstractPlugin, register=F
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
         if title.media_type == "Movie":
-            return ParamountPlusMovieImporter(self)
-        return ParamountPlusSeriesImporter(self)
+            return ParamountPlusMovieImporter(
+                self.session,
+                self.plugin,
+                self._file_cache,
+            )
+        return ParamountPlusSeriesImporter(self.session, self.plugin, self._file_cache)

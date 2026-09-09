@@ -6,7 +6,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
-from urllib.parse import quote_plus
 
 from app.utils import tz_datetime
 from plugins.Amazon.constants import IMAGE_PREFERENCE
@@ -58,11 +57,6 @@ def build_url(path: str) -> str:
 # TODO: Validate
 def detail_url(compact_key: str) -> str:
     return build_url(f"detail/{compact_key}")
-
-
-# TODO: Validate
-def search_url(query: str) -> str:
-    return build_url(f"region/na/search?phrase={quote_plus(query)}")
 
 
 # TODO: Validate

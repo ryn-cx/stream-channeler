@@ -1004,13 +1004,6 @@ export type PluginOutput = {
     id: string;
 };
 
-export type PluginSearchInformation = {
-    plugin_key: string;
-    name: string;
-    manual_search_only?: boolean;
-    favicon_url?: (string | null);
-};
-
 /**
  * Search result from a plugin.
  */
@@ -1029,10 +1022,6 @@ export type PluginSearchResult = {
 export type PluginSearchResults = {
     results: Array<PluginSearchResult>;
     next_cursor?: (string | null);
-};
-
-export type PluginSearchUrl = {
-    url?: (string | null);
 };
 
 /**
@@ -3112,15 +3101,6 @@ export type PluginsMatchUrlData = {
 };
 
 export type PluginsMatchUrlResponse = (PluginURLMatch);
-
-export type PluginsSearchInformationResponse = (Array<PluginSearchInformation>);
-
-export type PluginsManualSearchUrlData = {
-    pluginKey: string;
-    query: string;
-};
-
-export type PluginsManualSearchUrlResponse = (PluginSearchUrl);
 
 export type PluginsInAppSearchData = {
     cursor?: (string | null);
