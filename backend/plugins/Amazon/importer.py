@@ -262,7 +262,8 @@ class AmazonSeriesImporter(AmazonImporter):
                     sort_order=sort_order,
                     url=detail_url(season_key),
                     data_timestamp=self._season_files_data_timestamp(
-                        season_key, title.key,
+                        season_key,
+                        title.key,
                     ),
                     title_id=title.id,
                 ).upsert(title, season)
@@ -281,32 +282,32 @@ class AmazonSeriesImporter(AmazonImporter):
     ) -> None:
         for sort_order, item in enumerate(self.detail_file(season.key).episodes()):
             episode = Episode.get_from_memory(self.session, season, item.key)
-            if not self._episode_is_outdated(
+            if self._episode_is_outdated(
                 episode,
                 season.key,
                 title_key,
                 force=force,
             ):
-                continue
-
-            episode = Episode(
-                key=item.key,
-                watch_identifier=watch_identifier(self.plugin_name(), item.key),
-                name=item.title,
-                episode_number=item.episode_number,
-                url=detail_url(item.compact_key),
-                description=item.synopsis,
-                image_url=item.image_url,
-                thumbnail_url=item.image_url,
-                duration=item.duration,
-                air_date=parse_date(item.release_date),
-                sort_order=sort_order,
-                data_timestamp=self._episode_files_data_timestamp(
-                    item.key, season.key, title_key,
-                ),
-                season_id=season.id,
-            ).upsert(season, episode)
-            episode.set_update_at(None)
+                episode = Episode(
+                    key=item.key,
+                    watch_identifier=watch_identifier(self.plugin_name(), item.key),
+                    name=item.title,
+                    episode_number=item.episode_number,
+                    url=detail_url(item.compact_key),
+                    description=item.synopsis,
+                    image_url=item.image_url,
+                    thumbnail_url=item.image_url,
+                    duration=item.duration,
+                    air_date=parse_date(item.release_date),
+                    sort_order=sort_order,
+                    data_timestamp=self._episode_files_data_timestamp(
+                        item.key,
+                        season.key,
+                        title_key,
+                    ),
+                    season_id=season.id,
+                ).upsert(season, episode)
+                episode.set_update_at(None)
 
 
 # TODO: Validate
@@ -382,30 +383,30 @@ class AmazonMovieImporter(AmazonImporter):
         force: bool = False,
     ) -> None:
         episode = Episode.get_from_memory(self.session, season, title_key)
-        if not self._episode_is_outdated(
+        if self._episode_is_outdated(
             episode,
             season.key,
             title_key,
             force=force,
         ):
-            return
-
-        page = self.detail_file(title_key)
-        episode = Episode(
-            key=title_key,
-            watch_identifier=watch_identifier(self.plugin_name(), title_key),
-            name=page.title(),
-            description=page.synopsis(),
-            url=self._title_url(title_key),
-            image_url=page.image_url(),
-            thumbnail_url=page.image_url(),
-            duration=page.duration(),
-            episode_number=0,
-            sort_order=0,
-            air_date=parse_date(page.release_date()),
-            data_timestamp=self._episode_files_data_timestamp(
-                title_key, season.key, title_key,
-            ),
-            season_id=season.id,
-        ).upsert(season, episode)
-        episode.set_update_at(None)
+            page = self.detail_file(title_key)
+            episode = Episode(
+                key=title_key,
+                watch_identifier=watch_identifier(self.plugin_name(), title_key),
+                name=page.title(),
+                description=page.synopsis(),
+                url=self._title_url(title_key),
+                image_url=page.image_url(),
+                thumbnail_url=page.image_url(),
+                duration=page.duration(),
+                episode_number=0,
+                sort_order=0,
+                air_date=parse_date(page.release_date()),
+                data_timestamp=self._episode_files_data_timestamp(
+                    title_key,
+                    season.key,
+                    title_key,
+                ),
+                season_id=season.id,
+            ).upsert(season, episode)
+            episode.set_update_at(None)

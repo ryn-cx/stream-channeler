@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from functools import singledispatchmethod
 from typing import TYPE_CHECKING, override
 
 from app.files.models import File
@@ -38,23 +37,14 @@ class HiDiveBaseFiles(BasePlugin):
         return self._cached_file(Series, str(series_key))
 
     # TODO: Validate
-    @singledispatchmethod
-    def schedule_file(self, input_date: datetime | File) -> Schedule:  # noqa: ARG002
+    def schedule_file(self, input_date: datetime | File) -> Schedule:
         """Return a cached Schedule for the given datetime or existing File."""
-        raise TypeError
-
-    # TODO: Validate
-    @schedule_file.register
-    def _schedule_file_by_datetime(self, input_date: datetime) -> Schedule:
+        if isinstance(input_date, File):
+            return self._cached_file(
+                Schedule,
+                Schedule.file_to_unique_identifier(input_date),
+            )
         return self._cached_file(Schedule, input_date.isoformat())
-
-    # TODO: Validate
-    @schedule_file.register
-    def _schedule_file_by_record(self, input_date: File) -> Schedule:
-        return self._cached_file(
-            Schedule,
-            Schedule.file_to_unique_identifier(input_date),
-        )
 
     # TODO: Validate
     def get_latest_schedule_file(self) -> Schedule | None:

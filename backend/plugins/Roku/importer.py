@@ -183,7 +183,8 @@ class RokuSeriesImporter(RokuImporter):
                     season_number=season_number,
                     sort_order=sort_order,
                     data_timestamp=self._season_files_data_timestamp(
-                        season_key, title.key,
+                        season_key,
+                        title.key,
                     ),
                     title_id=title.id,
                 ).upsert(title, season)
@@ -206,32 +207,32 @@ class RokuSeriesImporter(RokuImporter):
         ):
             episode_key = content_id(item.meta.id)
             episode = Episode.get_from_memory(self.session, season, episode_key)
-            if not self._episode_is_outdated(
+            if self._episode_is_outdated(
                 episode,
                 season.key,
                 title_key,
                 force=force,
             ):
-                continue
-
-            episode = Episode(
-                key=episode_key,
-                watch_identifier=watch_identifier(self.plugin_name(), episode_key),
-                name=item.title,
-                episode_number=int(item.episode_number),
-                url=video_url(episode_key),
-                description=item.description,
-                image_url=item.image_map.grid.path,
-                thumbnail_url=item.image_map.grid.path,
-                duration=item.view_options[0].media.duration,
-                air_date=item.release_date,
-                sort_order=sort_order,
-                data_timestamp=self._episode_files_data_timestamp(
-                    episode_key, season.key, title_key,
-                ),
-                season_id=season.id,
-            ).upsert(season, episode)
-            episode.set_update_at(None)
+                episode = Episode(
+                    key=episode_key,
+                    watch_identifier=watch_identifier(self.plugin_name(), episode_key),
+                    name=item.title,
+                    episode_number=int(item.episode_number),
+                    url=video_url(episode_key),
+                    description=item.description,
+                    image_url=item.image_map.grid.path,
+                    thumbnail_url=item.image_map.grid.path,
+                    duration=item.view_options[0].media.duration,
+                    air_date=item.release_date,
+                    sort_order=sort_order,
+                    data_timestamp=self._episode_files_data_timestamp(
+                        episode_key,
+                        season.key,
+                        title_key,
+                    ),
+                    season_id=season.id,
+                ).upsert(season, episode)
+                episode.set_update_at(None)
 
 
 # TODO: Validate
@@ -332,30 +333,30 @@ class RokuMovieImporter(RokuImporter):
         force: bool = False,
     ) -> None:
         episode = Episode.get_from_memory(self.session, season, title_key)
-        if not self._episode_is_outdated(
+        if self._episode_is_outdated(
             episode,
             season.key,
             title_key,
             force=force,
         ):
-            return
-
-        content = self._content(title_key)
-        episode = Episode(
-            key=title_key,
-            watch_identifier=watch_identifier(self.plugin_name(), title_key),
-            name=content.title,
-            description=content.description,
-            url=video_url(title_key),
-            image_url=content.image_map.detail_poster.path,
-            thumbnail_url=content.image_map.detail_poster.path,
-            duration=content.run_time_seconds,
-            episode_number=0,
-            sort_order=0,
-            air_date=content.release_date,
-            data_timestamp=self._episode_files_data_timestamp(
-                title_key, season.key, title_key,
-            ),
-            season_id=season.id,
-        ).upsert(season, episode)
-        episode.set_update_at(None)
+            content = self._content(title_key)
+            episode = Episode(
+                key=title_key,
+                watch_identifier=watch_identifier(self.plugin_name(), title_key),
+                name=content.title,
+                description=content.description,
+                url=video_url(title_key),
+                image_url=content.image_map.detail_poster.path,
+                thumbnail_url=content.image_map.detail_poster.path,
+                duration=content.run_time_seconds,
+                episode_number=0,
+                sort_order=0,
+                air_date=content.release_date,
+                data_timestamp=self._episode_files_data_timestamp(
+                    title_key,
+                    season.key,
+                    title_key,
+                ),
+                season_id=season.id,
+            ).upsert(season, episode)
+            episode.set_update_at(None)

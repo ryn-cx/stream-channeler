@@ -1,4 +1,3 @@
-# TODO: Validate
 from __future__ import annotations
 
 from abc import ABC
@@ -16,7 +15,6 @@ if TYPE_CHECKING:
 
 
 class BaseOutdatedMixin(BaseFileAccessMixin, ABC):
-    # TODO: Validate
     def _title_is_outdated(
         self,
         title: Title | None,
@@ -25,8 +23,11 @@ class BaseOutdatedMixin(BaseFileAccessMixin, ABC):
     ) -> TypeIs[None]:
         """Return True if the title is outdated.
 
-        A title is considered outdated if a title file is newer than the title's
-        data timestamp.
+        TypeIs[None] tells the type checker that if the title is up to date it must be
+        an actual `Title` and it cannot be None.
+
+        A title is considered outdated if a title file is newer than the title's data
+        timestamp.
         """
         if title is None or force:
             return True
@@ -35,7 +36,6 @@ class BaseOutdatedMixin(BaseFileAccessMixin, ABC):
             self._title_files_data_timestamp(title.key),
         )
 
-    # TODO: Validate
     def _season_is_outdated(
         self,
         season: Season | None,
@@ -45,8 +45,11 @@ class BaseOutdatedMixin(BaseFileAccessMixin, ABC):
     ) -> TypeIs[None]:
         """Return True if the season is outdated.
 
-        A season is considered outdated if a season file is newer than the season's
-        data timestamp.
+        TypeIs[None] tells the type checker that if the season is up to date it must be
+        an actual `Season` and it cannot be None.
+
+        A season is considered outdated if a season file is newer than the season's data
+        timestamp.
         """
         if season is None or force:
             return True
@@ -55,7 +58,6 @@ class BaseOutdatedMixin(BaseFileAccessMixin, ABC):
             self._season_files_data_timestamp(season.key, title_key),
         )
 
-    # TODO: Validate
     def _episode_is_outdated(
         self,
         episode: Episode | None,
@@ -65,6 +67,9 @@ class BaseOutdatedMixin(BaseFileAccessMixin, ABC):
         force: bool = False,
     ) -> TypeIs[None]:
         """Return True if the episode is outdated.
+
+        TypeIs[None] tells the type checker that if the episode is up to date it must be
+        an actual `Episode` and it cannot be None.
 
         An episode is considered outdated if an episode file is newer than the episode's
         data timestamp.
@@ -76,7 +81,6 @@ class BaseOutdatedMixin(BaseFileAccessMixin, ABC):
             self._episode_files_data_timestamp(episode.key, season_key, title_key),
         )
 
-    # TODO: Validate
     @staticmethod
     def _record_is_outdated(
         record: BaseMediaMixin,
@@ -84,7 +88,7 @@ class BaseOutdatedMixin(BaseFileAccessMixin, ABC):
     ) -> bool:
         """Return True if the record is outdated.
 
-        A record is considered outdated its timestamp is less than the provided
+        A record is considered outdated if its timestamp is less than the provided
         minimum_timestamp.
         """
         if not record.data_timestamp:

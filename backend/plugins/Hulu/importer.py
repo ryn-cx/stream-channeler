@@ -237,7 +237,8 @@ class HuluSeriesImporter(HuluImporter):
                     season_number=season_number,
                     sort_order=sort_order,
                     data_timestamp=self._season_files_data_timestamp(
-                        season_key, title.key,
+                        season_key,
+                        title.key,
                     ),
                     title_id=title.id,
                 ).upsert(title, season)
@@ -254,34 +255,34 @@ class HuluSeriesImporter(HuluImporter):
             episode_key = str(item.id)
             episode = Episode.get_from_memory(self.session, season, episode_key)
 
-            if not self._episode_is_outdated(
+            if self._episode_is_outdated(
                 episode,
                 season.key,
                 title_key,
                 force=force,
             ):
-                continue
-
-            hero_artwork = item.artwork.video_horizontal_hero
-            hero_path = hero_artwork.path if hero_artwork else None
-            episode = Episode(
-                key=episode_key,
-                watch_identifier=watch_identifier(self.plugin_name(), episode_key),
-                name=item.name,
-                episode_number=int(item.number),
-                url=episode_url(episode_key),
-                description=item.description,
-                image_url=image_url(hero_path),
-                thumbnail_url=thumbnail_url(hero_path),
-                duration=item.duration,
-                air_date=item.premiere_date,
-                sort_order=sort_order,
-                data_timestamp=self._episode_files_data_timestamp(
-                    episode_key, season.key, title_key,
-                ),
-                season_id=season.id,
-            ).upsert(season, episode)
-            episode.set_update_at(episode.air_date)
+                hero_artwork = item.artwork.video_horizontal_hero
+                hero_path = hero_artwork.path if hero_artwork else None
+                episode = Episode(
+                    key=episode_key,
+                    watch_identifier=watch_identifier(self.plugin_name(), episode_key),
+                    name=item.name,
+                    episode_number=int(item.number),
+                    url=episode_url(episode_key),
+                    description=item.description,
+                    image_url=image_url(hero_path),
+                    thumbnail_url=thumbnail_url(hero_path),
+                    duration=item.duration,
+                    air_date=item.premiere_date,
+                    sort_order=sort_order,
+                    data_timestamp=self._episode_files_data_timestamp(
+                        episode_key,
+                        season.key,
+                        title_key,
+                    ),
+                    season_id=season.id,
+                ).upsert(season, episode)
+                episode.set_update_at(episode.air_date)
 
 
 # TODO: Validate
@@ -419,7 +420,9 @@ class HuluMovieImporter(HuluImporter):
                 episode_number=0,
                 sort_order=0,
                 data_timestamp=self._episode_files_data_timestamp(
-                    season.key, season.key, season.key,
+                    season.key,
+                    season.key,
+                    season.key,
                 ),
                 season_id=season.id,
             ).upsert(season, episode)

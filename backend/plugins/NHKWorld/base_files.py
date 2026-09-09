@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from functools import singledispatchmethod
 from typing import TYPE_CHECKING, override
 
 from app.files.models import File
@@ -37,32 +36,17 @@ class NHKWorldBaseFiles(BasePlugin):
 
     # TODO: Consider making this a generic function
     # TODO: Validate
-    @singledispatchmethod
     def new_video_episodes_file(
         self,
-        feed_datetime: datetime | File,  # noqa: ARG002
+        feed_datetime: datetime | File,
     ) -> NewVideoEpisodes:
         """Contains the newest videos on the website."""
-        raise TypeError
-
-    # TODO: Validate
-    @new_video_episodes_file.register
-    def _new_video_episodes_file_by_datetime(
-        self,
-        feed_datetime: datetime,
-    ) -> NewVideoEpisodes:
+        if isinstance(feed_datetime, File):
+            return self._cached_file(
+                NewVideoEpisodes,
+                NewVideoEpisodes.file_to_unique_identifier(feed_datetime),
+            )
         return self._cached_file(NewVideoEpisodes, str(feed_datetime))
-
-    # TODO: Validate
-    @new_video_episodes_file.register
-    def _new_video_episodes_file_by_record(
-        self,
-        feed_datetime: File,
-    ) -> NewVideoEpisodes:
-        return self._cached_file(
-            NewVideoEpisodes,
-            NewVideoEpisodes.file_to_unique_identifier(feed_datetime),
-        )
 
     # TODO: Validate
     def latest_new_video_episodes_file(self) -> NewVideoEpisodes | None:

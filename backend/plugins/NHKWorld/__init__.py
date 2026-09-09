@@ -197,31 +197,29 @@ class NHKWorld(NHKWorldShared, BaseImporter, AbstractPlugin, register=False):
             season.set_update_at(item.video.expired_at)
 
             episode = Episode.get_from_memory(self.session, season, item.id)
-            if not self._episode_is_outdated(
+            if self._episode_is_outdated(
                 episode,
                 season.key,
                 title_key,
                 force=force,
             ):
-                continue
-
-            episode = Episode(
-                key=item.id,
-                watch_identifier=watch_identifier(self.plugin_name(), item.id),
-                name=item.title,
-                url=build_url(item.url),
-                description=item.description,
-                image_url=image_url(item.images),
-                thumbnail_url=thumbnail_url(item.images),
-                air_date=item.first_broadcasted_at,
-                duration=item.video.duration,
-                sort_order=sort_order,
-                episode_number=sort_order + 1,
-                data_timestamp=self._episode_files_data_timestamp(
-                    item.id,
-                    season.key,
-                    title_key,
-                ),
-                season_id=season.id,
-            ).upsert(season, episode)
-            episode.set_update_at(None)
+                episode = Episode(
+                    key=item.id,
+                    watch_identifier=watch_identifier(self.plugin_name(), item.id),
+                    name=item.title,
+                    url=build_url(item.url),
+                    description=item.description,
+                    image_url=image_url(item.images),
+                    thumbnail_url=thumbnail_url(item.images),
+                    air_date=item.first_broadcasted_at,
+                    duration=item.video.duration,
+                    sort_order=sort_order,
+                    episode_number=sort_order + 1,
+                    data_timestamp=self._episode_files_data_timestamp(
+                        item.id,
+                        season.key,
+                        title_key,
+                    ),
+                    season_id=season.id,
+                ).upsert(season, episode)
+                episode.set_update_at(None)

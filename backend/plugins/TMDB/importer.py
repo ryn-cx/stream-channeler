@@ -340,7 +340,8 @@ class TMDBSeries(TMDBImporter):
                     image_url=image_url(source.poster_path),
                     thumbnail_url=thumbnail_url(source.poster_path),
                     data_timestamp=self._season_files_data_timestamp(
-                        source.key, title_key,
+                        source.key,
+                        title_key,
                     ),
                     title_id=title.id,
                 ).upsert(title, season)
@@ -370,47 +371,48 @@ class TMDBSeries(TMDBImporter):
         for sort_order, episode_source in enumerate(source.episodes):
             key = tmdb_episode_key(TMDBMediaType.tv, episode_source.id)
             episode = Episode.get_from_memory(self.session, season, key)
-            if not self._episode_is_outdated(
+            if self._episode_is_outdated(
                 episode=episode,
                 season_key=season_key,
                 title_key=title_key,
                 force=force,
             ):
-                continue
-            still_path = episode_source.still_path or self._fallback_backdrop_path(
-                tmdb_tv_title_id=tmdb_tv_title_id,
-                tmdb_tv_episode_id=episode_source.id,
-            )
-            episode = Episode(
-                key=key,
-                watch_identifier=watch_identifier(self.plugin_name(), key),
-                name=episode_source.name,
-                description=episode_source.overview,
-                url=tmdb_url(TMDBMediaType.tv, tmdb_tv_title_id),
-                image_url=image_url(still_path),
-                thumbnail_url=thumbnail_url(still_path),
-                duration=runtime_in_seconds(episode_source.runtime),
-                air_date=clean_air_datetime(episode_source.air_date),
-                # Episode groups still have the original episode number listed so the
-                # episode number for them is based on the index.
-                episode_number=(
-                    sort_order + 1
-                    if source.uses_episode_group
-                    else episode_source.episode_number
-                ),
-                sort_order=sort_order,
-                extra=dump_episode_extra(
-                    tmdb_season_number=episode_source.season_number,
-                    tmdb_episode_number=episode_source.episode_number,
-                ),
-                data_timestamp=self._episode_files_data_timestamp(
-                    key, season_key, title_key,
-                ),
-                season_id=season.id,
-            ).upsert(season, episode)
-            episode.set_update_at(
-                None,
-            )
+                still_path = episode_source.still_path or self._fallback_backdrop_path(
+                    tmdb_tv_title_id=tmdb_tv_title_id,
+                    tmdb_tv_episode_id=episode_source.id,
+                )
+                episode = Episode(
+                    key=key,
+                    watch_identifier=watch_identifier(self.plugin_name(), key),
+                    name=episode_source.name,
+                    description=episode_source.overview,
+                    url=tmdb_url(TMDBMediaType.tv, tmdb_tv_title_id),
+                    image_url=image_url(still_path),
+                    thumbnail_url=thumbnail_url(still_path),
+                    duration=runtime_in_seconds(episode_source.runtime),
+                    air_date=clean_air_datetime(episode_source.air_date),
+                    # Episode groups still have the original episode number listed so
+                    # the episode number for them is based on the index.
+                    episode_number=(
+                        sort_order + 1
+                        if source.uses_episode_group
+                        else episode_source.episode_number
+                    ),
+                    sort_order=sort_order,
+                    extra=dump_episode_extra(
+                        tmdb_season_number=episode_source.season_number,
+                        tmdb_episode_number=episode_source.episode_number,
+                    ),
+                    data_timestamp=self._episode_files_data_timestamp(
+                        key,
+                        season_key,
+                        title_key,
+                    ),
+                    season_id=season.id,
+                ).upsert(season, episode)
+                episode.set_update_at(
+                    None,
+                )
 
     # TODO: Validate
     def _title_backdrop_paths(self, tmdb_tv_title_id: int) -> list[str]:
@@ -766,37 +768,38 @@ class TMDBMovie(TMDBImporter):
         parsed_movie_details = self.movies_details_file(tmdb_movie_id).parsed()
         episode_key = tmdb_episode_key(TMDBMediaType.movie, tmdb_movie_id)
         episode = Episode.get_from_memory(self.session, season, episode_key)
-        if not self._episode_is_outdated(
+        if self._episode_is_outdated(
             episode=episode,
             season_key=season_key,
             title_key=title_key,
             force=force,
         ):
-            return
-        episode = Episode(
-            key=episode_key,
-            watch_identifier=watch_identifier(self.plugin_name(), episode_key),
-            name=parsed_movie_details.title,
-            description=parsed_movie_details.overview,
-            url=tmdb_url(TMDBMediaType.movie, tmdb_movie_id),
-            image_url=image_url(
-                parsed_movie_details.backdrop_path or parsed_movie_details.poster_path,
-            ),
-            thumbnail_url=thumbnail_url(
-                parsed_movie_details.backdrop_path or parsed_movie_details.poster_path,
-            ),
-            duration=runtime_in_seconds(parsed_movie_details.runtime),
-            air_date=clean_air_datetime(parsed_movie_details.release_date),
-            episode_number=0,
-            sort_order=0,
-            data_timestamp=self._episode_files_data_timestamp(
-                episode_key, season_key, title_key,
-            ),
-            season_id=season.id,
-        ).upsert(season, episode)
-        episode.set_update_at(
-            None,
-        )
+            episode = Episode(
+                key=episode_key,
+                watch_identifier=watch_identifier(self.plugin_name(), episode_key),
+                name=parsed_movie_details.title,
+                description=parsed_movie_details.overview,
+                url=tmdb_url(TMDBMediaType.movie, tmdb_movie_id),
+                image_url=image_url(
+                    parsed_movie_details.backdrop_path
+                    or parsed_movie_details.poster_path,
+                ),
+                thumbnail_url=thumbnail_url(
+                    parsed_movie_details.backdrop_path
+                    or parsed_movie_details.poster_path,
+                ),
+                duration=runtime_in_seconds(parsed_movie_details.runtime),
+                air_date=clean_air_datetime(parsed_movie_details.release_date),
+                episode_number=0,
+                sort_order=0,
+                data_timestamp=self._episode_files_data_timestamp(
+                    episode_key,
+                    season_key,
+                    title_key,
+                ),
+                season_id=season.id,
+            ).upsert(season, episode)
+            episode.set_update_at(None)
 
     # TODO: Validate
     @classmethod

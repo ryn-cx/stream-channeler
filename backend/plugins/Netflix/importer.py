@@ -162,7 +162,8 @@ class NetflixSeriesImporter(NetflixImporter):
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
                 data_timestamps = self._season_files_data_timestamps(
-                    season_key, title.key,
+                    season_key,
+                    title.key,
                 )
                 season = Season(
                     key=season_key,
@@ -199,31 +200,31 @@ class NetflixSeriesImporter(NetflixImporter):
         ):
             episode_key = str(episode_data.video_id)
             episode = Episode.get_from_memory(self.session, season, episode_key)
-            if not self._episode_is_outdated(
+            if self._episode_is_outdated(
                 episode,
                 season.key,
                 title_key,
                 force=force,
             ):
-                continue
-
-            episode = Episode(
-                key=episode_key,
-                watch_identifier=watch_identifier(self.plugin_name(), episode_key),
-                name=episode_data.title,
-                episode_number=episode_data.number,
-                url=self.episode_url(episode_key),
-                description=episode_data.contextual_synopsis.text,
-                image_url=episode_data.artwork.url,
-                thumbnail_url=episode_data.artwork.url,
-                duration=episode_data.runtime_sec,
-                sort_order=sort_order,
-                data_timestamp=self._episode_files_data_timestamp(
-                    episode_key, season.key, title_key,
-                ),
-                season_id=season.id,
-            ).upsert(season, episode)
-            episode.set_update_at(None)
+                episode = Episode(
+                    key=episode_key,
+                    watch_identifier=watch_identifier(self.plugin_name(), episode_key),
+                    name=episode_data.title,
+                    episode_number=episode_data.number,
+                    url=self.episode_url(episode_key),
+                    description=episode_data.contextual_synopsis.text,
+                    image_url=episode_data.artwork.url,
+                    thumbnail_url=episode_data.artwork.url,
+                    duration=episode_data.runtime_sec,
+                    sort_order=sort_order,
+                    data_timestamp=self._episode_files_data_timestamp(
+                        episode_key,
+                        season.key,
+                        title_key,
+                    ),
+                    season_id=season.id,
+                ).upsert(season, episode)
+                episode.set_update_at(None)
 
 
 # TODO: Validate
@@ -330,7 +331,9 @@ class NetflixMovieImporter(NetflixImporter):
                 episode_number=0,
                 sort_order=0,
                 data_timestamp=self._episode_files_data_timestamp(
-                    title_key, season.key, title_key,
+                    title_key,
+                    season.key,
+                    title_key,
                 ),
                 season_id=season.id,
             ).upsert(season, episode)

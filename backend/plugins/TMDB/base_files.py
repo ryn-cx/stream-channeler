@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from datetime import date
-from functools import singledispatchmethod
 
 from app.files.models import File
 from app.utils import tz_datetime
@@ -74,21 +73,19 @@ class TMDBBaseFiles(BasePlugin):
         return self._cached_file(TVSeasonsDetails, tmdb_tv_title_id, season_number)
 
     # TODO: Validate
-    @singledispatchmethod
     def tv_series_changes_file(
         self,
-        tmdb_tv_title_id: int | File,  # noqa: ARG002
-        downloaded_to: date | None = None,  # noqa: ARG002
+        tmdb_tv_title_id: int | File,
+        downloaded_to: date | None = None,
     ) -> TVSeriesChanges:
-        raise TypeError
+        if isinstance(tmdb_tv_title_id, File):
+            identifier = TVSeriesChanges.file_to_unique_identifier(tmdb_tv_title_id)
+            tmdb_id_str, downloaded_to_str = identifier.split("/")
+            return self.tv_series_changes_file(
+                int(tmdb_id_str),
+                date.fromisoformat(downloaded_to_str),
+            )
 
-    # TODO: Validate
-    @tv_series_changes_file.register
-    def _tv_series_changes_file_by_id(
-        self,
-        tmdb_tv_title_id: int,
-        downloaded_to: date,
-    ) -> TVSeriesChanges:
         existing_record = self.latest_file_record(
             file_class=TVSeriesChanges,
             file_prefix=tmdb_tv_title_id,
@@ -106,48 +103,20 @@ class TMDBBaseFiles(BasePlugin):
         )
 
     # TODO: Validate
-    @tv_series_changes_file.register
-    def _tv_series_changes_file_by_record(
-        self,
-        tmdb_tv_title_id: File,
-    ) -> TVSeriesChanges:
-        identifier = TVSeriesChanges.file_to_unique_identifier(tmdb_tv_title_id)
-        tmdb_id_str, downloaded_to_str = identifier.split("/")
-        return self.tv_series_changes_file(
-            int(tmdb_id_str),
-            date.fromisoformat(downloaded_to_str),
-        )
-
-    # TODO: Validate
-    @singledispatchmethod
     def tv_seasons_changes_file(
         self,
-        tmdb_tv_season_id: int | File,  # noqa: ARG002
-        changed_on: date | None = None,  # noqa: ARG002
+        tmdb_tv_season_id: int | File,
+        changed_on: date | None = None,
     ) -> TVSeasonsChanges:
-        raise TypeError
+        if isinstance(tmdb_tv_season_id, File):
+            identifier = TVSeasonsChanges.file_to_unique_identifier(tmdb_tv_season_id)
+            season_tmdb_id_str, changed_on_str = identifier.split("/")
+            return self.tv_seasons_changes_file(
+                int(season_tmdb_id_str),
+                date.fromisoformat(changed_on_str),
+            )
 
-    # TODO: Validate
-    @tv_seasons_changes_file.register
-    def _tv_seasons_changes_file_by_id(
-        self,
-        tmdb_tv_season_id: int,
-        changed_on: date,
-    ) -> TVSeasonsChanges:
         return self._cached_file(TVSeasonsChanges, tmdb_tv_season_id, changed_on)
-
-    # TODO: Validate
-    @tv_seasons_changes_file.register
-    def _tv_seasons_changes_file_by_record(
-        self,
-        tmdb_tv_season_id: File,
-    ) -> TVSeasonsChanges:
-        identifier = TVSeasonsChanges.file_to_unique_identifier(tmdb_tv_season_id)
-        season_tmdb_id_str, changed_on_str = identifier.split("/")
-        return self.tv_seasons_changes_file(
-            int(season_tmdb_id_str),
-            date.fromisoformat(changed_on_str),
-        )
 
     # TODO: Validate
     def incomplete_tv_seasons_changes_files(
@@ -192,35 +161,20 @@ class TMDBBaseFiles(BasePlugin):
         )
 
     # TODO: Validate
-    @singledispatchmethod
     def movies_watch_providers_file(
         self,
-        tmdb_movie_id: int | File,  # noqa: ARG002
-        downloaded_at: date | None = None,  # noqa: ARG002
+        tmdb_movie_id: int | File,
+        downloaded_at: date | None = None,
     ) -> MoviesWatchProviders:
-        raise TypeError
+        if isinstance(tmdb_movie_id, File):
+            identifier = MoviesWatchProviders.file_to_unique_identifier(tmdb_movie_id)
+            tmdb_id_str, downloaded_at_str = identifier.split("/")
+            return self.movies_watch_providers_file(
+                int(tmdb_id_str),
+                date.fromisoformat(downloaded_at_str),
+            )
 
-    # TODO: Validate
-    @movies_watch_providers_file.register
-    def _movies_watch_providers_file_by_id(
-        self,
-        tmdb_movie_id: int,
-        downloaded_at: date,
-    ) -> MoviesWatchProviders:
         return self._cached_file(MoviesWatchProviders, tmdb_movie_id, downloaded_at)
-
-    # TODO: Validate
-    @movies_watch_providers_file.register
-    def _movies_watch_providers_file_by_record(
-        self,
-        tmdb_movie_id: File,
-    ) -> MoviesWatchProviders:
-        identifier = MoviesWatchProviders.file_to_unique_identifier(tmdb_movie_id)
-        tmdb_id_str, downloaded_at_str = identifier.split("/")
-        return self.movies_watch_providers_file(
-            int(tmdb_id_str),
-            date.fromisoformat(downloaded_at_str),
-        )
 
     # TODO: Validate
     def _get_or_create_latest_movies_watch_providers_file(
@@ -263,38 +217,25 @@ class TMDBBaseFiles(BasePlugin):
         )
 
     # TODO: Validate
-    @singledispatchmethod
     def tv_series_watch_providers_file(
         self,
-        tmdb_tv_title_id: int | File,  # noqa: ARG002
-        downloaded_at: date | None = None,  # noqa: ARG002
+        tmdb_tv_title_id: int | File,
+        downloaded_at: date | None = None,
     ) -> TVSeriesWatchProviders:
-        raise TypeError
+        if isinstance(tmdb_tv_title_id, File):
+            identifier = TVSeriesWatchProviders.file_to_unique_identifier(
+                tmdb_tv_title_id,
+            )
+            tmdb_id_str, downloaded_at_str = identifier.split("/")
+            return self.tv_series_watch_providers_file(
+                int(tmdb_id_str),
+                date.fromisoformat(downloaded_at_str),
+            )
 
-    # TODO: Validate
-    @tv_series_watch_providers_file.register
-    def _tv_series_watch_providers_file_by_id(
-        self,
-        tmdb_tv_title_id: int,
-        downloaded_at: date,
-    ) -> TVSeriesWatchProviders:
         return self._cached_file(
             TVSeriesWatchProviders,
             tmdb_tv_title_id,
             downloaded_at,
-        )
-
-    # TODO: Validate
-    @tv_series_watch_providers_file.register
-    def _tv_series_watch_providers_file_by_record(
-        self,
-        tmdb_tv_title_id: File,
-    ) -> TVSeriesWatchProviders:
-        identifier = TVSeriesWatchProviders.file_to_unique_identifier(tmdb_tv_title_id)
-        tmdb_id_str, downloaded_at_str = identifier.split("/")
-        return self.tv_series_watch_providers_file(
-            int(tmdb_id_str),
-            date.fromisoformat(downloaded_at_str),
         )
 
     # TODO: Validate
@@ -320,44 +261,28 @@ class TMDBBaseFiles(BasePlugin):
         )
 
     # TODO: Validate
-    @singledispatchmethod
     def tv_seasons_watch_providers_file(
         self,
-        tmdb_tv_title_id: int | File,  # noqa: ARG002
-        season_number: int | None = None,  # noqa: ARG002
-        downloaded_at: date | None = None,  # noqa: ARG002
+        tmdb_tv_title_id: int | File,
+        season_number: int | None = None,
+        downloaded_at: date | None = None,
     ) -> TVSeasonsWatchProviders:
-        raise TypeError
+        if isinstance(tmdb_tv_title_id, File):
+            identifier = TVSeasonsWatchProviders.file_to_unique_identifier(
+                tmdb_tv_title_id,
+            )
+            tmdb_id_str, season_number_str, downloaded_at_str = identifier.split("/")
+            return self.tv_seasons_watch_providers_file(
+                int(tmdb_id_str),
+                int(season_number_str),
+                date.fromisoformat(downloaded_at_str),
+            )
 
-    # TODO: Validate
-    @tv_seasons_watch_providers_file.register
-    def _tv_seasons_watch_providers_file_by_id(
-        self,
-        tmdb_tv_title_id: int,
-        season_number: int,
-        downloaded_at: date,
-    ) -> TVSeasonsWatchProviders:
         return self._cached_file(
             TVSeasonsWatchProviders,
             tmdb_tv_title_id,
             season_number,
             downloaded_at,
-        )
-
-    # TODO: Validate
-    @tv_seasons_watch_providers_file.register
-    def _tv_seasons_watch_providers_file_by_record(
-        self,
-        tmdb_tv_title_id: File,
-    ) -> TVSeasonsWatchProviders:
-        identifier = TVSeasonsWatchProviders.file_to_unique_identifier(
-            tmdb_tv_title_id,
-        )
-        tmdb_id_str, season_number_str, downloaded_at_str = identifier.split("/")
-        return self.tv_seasons_watch_providers_file(
-            int(tmdb_id_str),
-            int(season_number_str),
-            date.fromisoformat(downloaded_at_str),
         )
 
     # TODO: Validate

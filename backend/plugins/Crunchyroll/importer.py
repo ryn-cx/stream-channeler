@@ -4,7 +4,6 @@ from __future__ import annotations
 import re
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
-from functools import singledispatchmethod
 from typing import TYPE_CHECKING, Any, override
 
 from loguru import logger
@@ -247,7 +246,8 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
                     season_number=season_data.season_number,
                     sort_order=sort_order,
                     data_timestamp=self._season_files_data_timestamp(
-                        season_data.id, title.key,
+                        season_data.id,
+                        title.key,
                     ),
                     title_id=title.id,
                 ).upsert(title, season)
@@ -267,54 +267,48 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
         parsed_season_episodes = self.season_episodes_file(season.key).parsed()
         for sort_order, episode_data in enumerate(parsed_season_episodes.data):
             episode = Episode.get_from_memory(self.session, season, episode_data.id)
-            if not self._episode_is_outdated(
+            if self._episode_is_outdated(
                 episode,
                 season.key,
                 title_key,
                 force=force,
             ):
-                continue
-
-            episode = Episode(
-                key=episode_data.id,
-                watch_identifier=watch_identifier(self.plugin_name(), episode_data.id),
-                name=episode_data.title,
-                episode_number=episode_data.episode_number,
-                url=self.episode_url(episode_data.id),
-                description=episode_data.description,
-                image_url=episode_image(episode_data.images),
-                thumbnail_url=episode_thumbnail(episode_data.images),
-                duration=episode_data.duration_ms // 1000,
-                sort_order=sort_order,
-                air_date=episode_data.episode_air_date,
-                data_timestamp=self._episode_files_data_timestamp(
-                    episode_data.id, season.key, title_key,
-                ),
-                season_id=season.id,
-            ).upsert(season, episode)
-            episode.set_update_at(None)
+                episode = Episode(
+                    key=episode_data.id,
+                    watch_identifier=watch_identifier(
+                        self.plugin_name(),
+                        episode_data.id,
+                    ),
+                    name=episode_data.title,
+                    episode_number=episode_data.episode_number,
+                    url=self.episode_url(episode_data.id),
+                    description=episode_data.description,
+                    image_url=episode_image(episode_data.images),
+                    thumbnail_url=episode_thumbnail(episode_data.images),
+                    duration=episode_data.duration_ms // 1000,
+                    sort_order=sort_order,
+                    air_date=episode_data.episode_air_date,
+                    data_timestamp=self._episode_files_data_timestamp(
+                        episode_data.id,
+                        season.key,
+                        title_key,
+                    ),
+                    season_id=season.id,
+                ).upsert(season, episode)
+                episode.set_update_at(None)
 
     # TODO: Validate
-    @singledispatchmethod
     def browse_file(
         self,
-        browse: datetime | File,  # noqa: ARG002
+        browse: datetime | File,
     ) -> BrowseSeries:
         """Return data for recently aired titles."""
-        raise TypeError
-
-    # TODO: Validate
-    @browse_file.register
-    def _browse_file_by_datetime(self, browse: datetime) -> BrowseSeries:
+        if isinstance(browse, File):
+            return self._cached_file(
+                BrowseSeries,
+                BrowseSeries.file_to_unique_identifier(browse),
+            )
         return self._cached_file(BrowseSeries, str(browse))
-
-    # TODO: Validate
-    @browse_file.register
-    def _browse_file_by_record(self, browse: File) -> BrowseSeries:
-        return self._cached_file(
-            BrowseSeries,
-            BrowseSeries.file_to_unique_identifier(browse),
-        )
 
     # TODO: Validate
     def newest_browse_file(self) -> BrowseSeries:
@@ -557,7 +551,8 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
                     key=category,
                     name=MUSIC_CATEGORY_NAMES[category],
                     data_timestamp=self._season_files_data_timestamp(
-                        category, title.key,
+                        category,
+                        title.key,
                     ),
                     title_id=title.id,
                 ).upsert(title, season)
@@ -584,32 +579,32 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
         for sort_order, datum in enumerate(reversed(listing)):
             episode_key = datum.id
             episode = Episode.get_from_memory(self.session, season, episode_key)
-            if not self._episode_is_outdated(
+            if self._episode_is_outdated(
                 episode,
                 season.key,
                 title_key,
                 force=force,
             ):
-                continue
-
-            details = self.concert_or_music_video_file(episode_key).parsed().data[0]
-            episode = Episode(
-                key=episode_key,
-                watch_identifier=watch_identifier(self.plugin_name(), episode_key),
-                name=details.title,
-                description=details.description,
-                url=self.episode_url(category, episode_key),
-                image_url=largest_image(details.images.thumbnail),
-                thumbnail_url=nearest_thumbnail(details.images.thumbnail),
-                duration=details.duration_ms // 1000,
-                sort_order=sort_order,
-                air_date=details.original_release,
-                data_timestamp=self._episode_files_data_timestamp(
-                    episode_key, season.key, title_key,
-                ),
-                season_id=season.id,
-            ).upsert(season, episode)
-            episode.set_update_at(None)
+                details = self.concert_or_music_video_file(episode_key).parsed().data[0]
+                episode = Episode(
+                    key=episode_key,
+                    watch_identifier=watch_identifier(self.plugin_name(), episode_key),
+                    name=details.title,
+                    description=details.description,
+                    url=self.episode_url(category, episode_key),
+                    image_url=largest_image(details.images.thumbnail),
+                    thumbnail_url=nearest_thumbnail(details.images.thumbnail),
+                    duration=details.duration_ms // 1000,
+                    sort_order=sort_order,
+                    air_date=details.original_release,
+                    data_timestamp=self._episode_files_data_timestamp(
+                        episode_key,
+                        season.key,
+                        title_key,
+                    ),
+                    season_id=season.id,
+                ).upsert(season, episode)
+                episode.set_update_at(None)
 
     # TODO: Validate
     def browse_file(self) -> BrowseMusic:

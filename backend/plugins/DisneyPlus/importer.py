@@ -184,7 +184,8 @@ class DisneyPlusSeriesImporter(DisneyPlusImporter):
                     ),
                     sort_order=sort_order,
                     data_timestamp=self._season_files_data_timestamp(
-                        season_key, title.key,
+                        season_key,
+                        title.key,
                     ),
                     title_id=title.id,
                 ).upsert(title, season)
@@ -205,30 +206,30 @@ class DisneyPlusSeriesImporter(DisneyPlusImporter):
         for sort_order, item in enumerate(self._season_episodes(title_key, season_id)):
             episode_key = str(item.field_id)
             episode = Episode.get_from_memory(self.session, season, episode_key)
-            if not self._episode_is_outdated(
+            if self._episode_is_outdated(
                 episode,
                 season.key,
                 title_key,
                 force=force,
             ):
-                continue
-
-            episode = Episode(
-                key=episode_key,
-                watch_identifier=watch_identifier(self.plugin_name(), episode_key),
-                name=item.title,
-                episode_number=sort_order + 1,
-                url=video_url(episode_key),
-                description=item.metadata.summary,
-                image_url=item.image_variants.default_image.source,
-                thumbnail_url=item.image_variants.default_image.source,
-                sort_order=sort_order,
-                data_timestamp=self._episode_files_data_timestamp(
-                    episode_key, season.key, title_key,
-                ),
-                season_id=season.id,
-            ).upsert(season, episode)
-            episode.set_update_at(None)
+                episode = Episode(
+                    key=episode_key,
+                    watch_identifier=watch_identifier(self.plugin_name(), episode_key),
+                    name=item.title,
+                    episode_number=sort_order + 1,
+                    url=video_url(episode_key),
+                    description=item.metadata.summary,
+                    image_url=item.image_variants.default_image.source,
+                    thumbnail_url=item.image_variants.default_image.source,
+                    sort_order=sort_order,
+                    data_timestamp=self._episode_files_data_timestamp(
+                        episode_key,
+                        season.key,
+                        title_key,
+                    ),
+                    season_id=season.id,
+                ).upsert(season, episode)
+                episode.set_update_at(None)
 
 
 # TODO: Validate
@@ -338,7 +339,9 @@ class DisneyPlusMovieImporter(DisneyPlusImporter):
                 episode_number=0,
                 sort_order=0,
                 data_timestamp=self._episode_files_data_timestamp(
-                    title_key, season.key, title_key,
+                    title_key,
+                    season.key,
+                    title_key,
                 ),
                 season_id=season.id,
             ).upsert(season, episode)

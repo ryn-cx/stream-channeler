@@ -254,37 +254,38 @@ class AdultSwim(
         ]
         for sort_order, episode_data in enumerate(episodes_data):
             episode = Episode.get_from_memory(self.session, season, episode_data.id)
-            if not self._episode_is_outdated(
+            if self._episode_is_outdated(
                 episode,
                 season.key,
                 title_key,
                 force=force,
             ):
-                continue
-
-            episode = Episode(
-                key=episode_data.id,
-                watch_identifier=watch_identifier(self.plugin_name(), episode_data.id),
-                name=episode_data.title,
-                description=episode_data.description,
-                url=episode_url(
-                    episode_data.collection_slug,
-                    episode_data.slug,
-                ),
-                image_url=episode_data.poster,
-                thumbnail_url=episode_data.poster,
-                air_date=episode_data.first_airing or episode_data.launch_date,
-                duration=int(episode_data.duration),
-                episode_number=episode_data.episode_number,
-                sort_order=sort_order,
-                data_timestamp=self._episode_files_data_timestamp(
-                    episode_data.id,
-                    season.key,
-                    title_key,
-                ),
-                season_id=season.id,
-            ).upsert(season, episode)
-            episode.set_update_at(None)
+                episode = Episode(
+                    key=episode_data.id,
+                    watch_identifier=watch_identifier(
+                        self.plugin_name(),
+                        episode_data.id,
+                    ),
+                    name=episode_data.title,
+                    description=episode_data.description,
+                    url=episode_url(
+                        episode_data.collection_slug,
+                        episode_data.slug,
+                    ),
+                    image_url=episode_data.poster,
+                    thumbnail_url=episode_data.poster,
+                    air_date=episode_data.first_airing or episode_data.launch_date,
+                    duration=int(episode_data.duration),
+                    episode_number=episode_data.episode_number,
+                    sort_order=sort_order,
+                    data_timestamp=self._episode_files_data_timestamp(
+                        episode_data.id,
+                        season.key,
+                        title_key,
+                    ),
+                    season_id=season.id,
+                ).upsert(season, episode)
+                episode.set_update_at(None)
 
         season.soft_delete_missing_children(
             episode_data.id for episode_data in episodes_data

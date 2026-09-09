@@ -103,7 +103,7 @@ def _external_link_exists(  # noqa: PLR0913 - The session joins what was a metho
         # The external link can already exist.
         media_plugin.plugin_name() in plugins_with_non_canonical_titles
         # Or the external link can be made right now.
-        or _import_external_plugin(
+        or _import_search_and_link_to_tmdb(
             session=session,
             plugin_class=media_plugin,
             title=title,
@@ -126,7 +126,7 @@ def _plugins_with_non_canonical_titles(session: Session, title: Title) -> set[st
 
 
 # TODO: Validate
-def _import_external_plugin(  # noqa: PLR0913 - The session joins what was a method's arguments.
+def _import_search_and_link_to_tmdb(  # noqa: PLR0913 - The session joins what was a method's arguments.
     session: Session,
     plugin_class: type[AbstractPlugin],
     title: Title,
