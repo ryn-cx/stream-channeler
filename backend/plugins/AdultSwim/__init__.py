@@ -23,7 +23,7 @@ from plugins.AdultSwim.utils import (
 )
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.utils.base_plugin.url import ExtractedURLInfo
+from plugins.utils.base_plugin.url import ParsedURL
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -65,17 +65,6 @@ class AdultSwim(
 
     # TODO: Validate
     @override
-    def _validate_url(self, url: str) -> None:
-        domain_regex = self._domains_regex()
-        for url_regex in (EPISODE_URL_REGEX, TITLE_URL_REGEX):
-            if re.match(domain_regex + url_regex, url):
-                return
-
-        msg = f"Invalid {self.plugin_name()} URL: {url}"
-        raise InvalidURLError(msg)
-
-    # TODO: Validate
-    @override
     def update_plugin(self, plugin: Plugin) -> None:
         logger.info("Checking Adult Swim for new titles")
         self.titles_file().download_if_outdated(tz_datetime.now())
@@ -85,7 +74,7 @@ class AdultSwim(
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> ExtractedURLInfo:
+    def parse_url(self, url: str) -> ParsedURL:
         domain_regex = self._domains_regex()
 
         if match := re.match(domain_regex + EPISODE_URL_REGEX, url):
@@ -96,12 +85,12 @@ class AdultSwim(
             if episode_key is None:
                 msg = f"Invalid {self.plugin_name()} URL: {url}"
                 raise InvalidURLError(msg)
-            return ExtractedURLInfo(title_key, episode_key=episode_key)
+            return ParsedURL(title_key, episode_key=episode_key)
 
         if match := re.match(domain_regex + TITLE_URL_REGEX, url):
             title_key = match.group("title_key")
             self.raise_invalid_url_if_no_content(self.title_file(title_key), url)
-            return ExtractedURLInfo(title_key)
+            return ParsedURL(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
@@ -115,7 +104,7 @@ class AdultSwim(
         same title, so an address names a title on both and each of them is
         written.
         """
-        media_info = self.get_media_info(url)
+        media_info = self.parse_url(url)
         titles = list(self._preload_title(media_info.title_key))
         if not titles:
             self._preload_and_download_files(media_info.title_key)

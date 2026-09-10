@@ -56,7 +56,7 @@ from plugins.utils.base_plugin.files import (
     BaseFile,
 )
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.utils.base_plugin.url import ExtractedURLInfo
+from plugins.utils.base_plugin.url import ParsedURL
 
 
 # TODO: Validate
@@ -103,7 +103,7 @@ class TMDBImporter(TMDBShared, BaseImporter, ABC):
     # TODO: Validate
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
-        media_info = self.get_media_info(url)
+        media_info = self.parse_url(url)
         existing_title = self._preload_title(
             title=media_info.title_key,
             preload_episodes=True,
@@ -579,7 +579,7 @@ class TMDBSeries(TMDBImporter):
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> ExtractedURLInfo:
+    def parse_url(self, url: str) -> ParsedURL:
         regex_match = re.match(self._domains_regex() + TV_URL_REGEX, url)
         if regex_match is None:
             msg = f"Invalid {self.plugin_name()} URL: {url}"
@@ -590,7 +590,7 @@ class TMDBSeries(TMDBImporter):
             self.tv_series_details_file(tmdb_tv_title_id),
             url,
         )
-        return ExtractedURLInfo(tmdb_title_key(TMDBMediaType.tv, tmdb_tv_title_id))
+        return ParsedURL(tmdb_title_key(TMDBMediaType.tv, tmdb_tv_title_id))
 
 
 # TODO: Validate
@@ -809,7 +809,7 @@ class TMDBMovie(TMDBImporter):
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> ExtractedURLInfo:
+    def parse_url(self, url: str) -> ParsedURL:
         regex_match = re.match(self._domains_regex() + MOVIE_URL_REGEX, url)
         if regex_match is None:
             msg = f"Invalid {self.plugin_name()} URL: {url}"
@@ -820,4 +820,4 @@ class TMDBMovie(TMDBImporter):
             self.movies_details_file(tmdb_movie_id),
             url,
         )
-        return ExtractedURLInfo(tmdb_title_key(TMDBMediaType.movie, tmdb_movie_id))
+        return ParsedURL(tmdb_title_key(TMDBMediaType.movie, tmdb_movie_id))

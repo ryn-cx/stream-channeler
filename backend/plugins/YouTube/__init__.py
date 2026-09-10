@@ -16,7 +16,6 @@ from app.channels.models import URLStatus
 from app.seasons.models import Season
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin
-from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.YouTube.importer import YouTubeImporter
 from plugins.YouTube.music_importer import YouTubeTopicImporter
 from plugins.YouTube.shared import YouTubeShared
@@ -34,7 +33,6 @@ if TYPE_CHECKING:
 class YouTube(
     YouTubeURLParserMixin,
     YouTubeShared,
-    BaseImporter,
     AbstractPlugin,
     register=False,
 ):
@@ -57,30 +55,6 @@ class YouTube(
         if title.media_type == "YouTube Artist":
             return YouTubeTopicImporter(self.session, self.plugin, self._file_cache)
         return self.media_importer_from_title_key(title.key)
-
-    # TODO: Validate
-    @override
-    def update_season(self, season: Season) -> None:
-        playlist_feed = self.playlist_feed_file(season.key)
-
-        # PlaylistFeed is not a required file because sometimes it will return 404
-        # errors for hours at a time so an initial file may need to be downloaded here.
-        if playlist_feed.does_not_exist():
-            playlist_feed.download_if_outdated()
-            return
-
-        old_feed_video_ids = playlist_feed.video_ids()
-        playlist_feed.download_if_outdated(season.update_at)
-        season.update_at = playlist_feed.record_data_timestamp + timedelta(hours=6)
-
-        if new_video_ids := playlist_feed.video_ids() - old_feed_video_ids:
-            logger.info(
-                "Found {} new videos in season {}: {}",
-                len(new_video_ids),
-                season.name or season.key,
-                ", ".join(sorted(new_video_ids)),
-            )
-            super().update_season(season)
 
     # TODO: Validate
     @override

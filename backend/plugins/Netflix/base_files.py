@@ -1,26 +1,21 @@
-# TODO: Validate
 from __future__ import annotations
 
 from plugins.Netflix.files import (
-    LodpTitleAndPlansPage,
+    DetailModal,
     PreviewModalEpisodeSelector,
     PreviewModalEpisodeSelectorSeasonEpisodes,
-    SearchPageResults,
+    SearchPageQueryResults,
 )
 from plugins.utils.base_plugin.base import BasePlugin
 
 
-# TODO: Validate
 class NetflixBaseFiles(BasePlugin):
-    # TODO: Validate
-    def title_file(self, title_key: str) -> LodpTitleAndPlansPage:
-        return self._cached_file(LodpTitleAndPlansPage, title_key)
+    def title_file(self, title_key: str) -> DetailModal:
+        return self._cached_file(DetailModal, title_key)
 
-    # TODO: Validate
     def seasons_file(self, title_key: str) -> PreviewModalEpisodeSelector:
         return self._cached_file(PreviewModalEpisodeSelector, title_key)
 
-    # TODO: Validate
     def season_episodes_file(
         self,
         season_video_key: str | int,
@@ -30,6 +25,5 @@ class NetflixBaseFiles(BasePlugin):
             str(season_video_key),
         )
 
-    # TODO: Validate
-    def search_file(self, query: str) -> SearchPageResults:
-        return self._cached_file(SearchPageResults, query)
+    def search_file(self, query: str) -> SearchPageQueryResults:
+        return self._cached_file(SearchPageQueryResults, query)

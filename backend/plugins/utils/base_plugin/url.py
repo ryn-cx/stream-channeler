@@ -2,10 +2,10 @@ import re
 from abc import abstractmethod
 from typing import NamedTuple, override
 
-from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
+from plugins.utils.abstract_plugin import AbstractPlugin
 
 
-class ExtractedURLInfo(NamedTuple):
+class ParsedURL(NamedTuple):
     """Holds the information that could be extracted from a URL."""
 
     title_key: str
@@ -18,10 +18,6 @@ class BaseURLMixin(AbstractPlugin):
     @abstractmethod
     @override
     def plugin_name(cls) -> str: ...
-
-    def _validate_url(self, url: str) -> None:
-        msg = f"Invalid {self.plugin_name()} URL: {url}"
-        raise InvalidURLError(msg)
 
     @classmethod
     @override

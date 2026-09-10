@@ -29,7 +29,7 @@ from plugins.Tubi.utils import (
 )
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.utils.base_plugin.url import ExtractedURLInfo
+from plugins.utils.base_plugin.url import ParsedURL
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -82,12 +82,12 @@ class TubiSeriesImporter(TubiImporter):
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> ExtractedURLInfo:
+    def parse_url(self, url: str) -> ParsedURL:
         domain_regex = self._domains_regex()
         if match := re.match(domain_regex + SERIES_URL_REGEX, url):
             title_key = match.group("series_key")
             self.raise_invalid_url_if_no_content(self.content_file(title_key), url)
-            return ExtractedURLInfo(title_key)
+            return ParsedURL(title_key)
 
         if match := re.match(domain_regex + EPISODE_URL_REGEX, url):
             episode_key = match.group("episode_key")
@@ -96,7 +96,7 @@ class TubiSeriesImporter(TubiImporter):
             if series_id is None:
                 msg = f"Invalid {self.plugin_name()} URL: {url}"
                 raise InvalidURLError(msg)
-            return ExtractedURLInfo(series_id, episode_key=episode_key)
+            return ParsedURL(series_id, episode_key=episode_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
@@ -191,6 +191,7 @@ class TubiSeriesImporter(TubiImporter):
                 season_content.id,
                 force=force,
             )
+            self._set_season_update_at_based_on_last_episode(season)
 
     # TODO: Validate
     def _upsert_episodes(
@@ -243,11 +244,11 @@ class TubiMovieImporter(TubiImporter):
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> ExtractedURLInfo:
+    def parse_url(self, url: str) -> ParsedURL:
         if match := re.match(self._domains_regex() + MOVIE_URL_REGEX, url):
             title_key = match.group("movie_key")
             self.raise_invalid_url_if_no_content(self.content_file(title_key), url)
-            return ExtractedURLInfo(title_key)
+            return ParsedURL(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
@@ -317,6 +318,7 @@ class TubiMovieImporter(TubiImporter):
             season.set_update_at(None)
 
         self._upsert_episode(season, title.key, force=force)
+        self._set_season_update_at_based_on_last_episode(season)
 
     # TODO: Validate
     def _upsert_episode(

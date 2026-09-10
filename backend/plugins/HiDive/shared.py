@@ -117,7 +117,7 @@ class HiDiveShared(HiDiveBaseFiles):
         """
         new_title_urls: list[str] = []
         for title_name in dict.fromkeys(title_names):
-            if title_url := self.search_for_title_url([title_name], TMDBMediaType.tv):
+            if title_url := self.search_for_title_url(title_name, TMDBMediaType.tv):
                 logger.info("Queueing new title: {}", title_name)
                 new_title_urls.append(title_url)
             else:

@@ -1,4 +1,3 @@
-# TODO: Validate
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -94,8 +93,8 @@ class BaseChannelMixin(AbstractPlugin, ABC):
         urls_not_in_queue = self._urls_not_in_queue(channel, urls)
         add_urls_to_channel_import_queue(self.session, channel, urls_not_in_queue)
 
-    # TODO: Validate
     def _urls_not_in_queue(self, channel: Channel, urls: Sequence[str]) -> list[str]:
+        """Return the URLs that are not currently in the channel's import queue."""
         queued_urls = set(
             self.session.exec(
                 select(ChannelQueue.url).where(
@@ -106,10 +105,8 @@ class BaseChannelMixin(AbstractPlugin, ABC):
         )
         return [url for url in urls if url not in queued_urls]
 
-    # TODO: Validate
-    def _remove_unlisted_queued_urls(self, channel: Channel) -> None:
-        """Drop the queued URLs of an automatic channel that the website dropped."""
-        queue_rows = self.session.exec(
+    def _remove_queue_entries_with_deleted_titles(self, channel: Channel) -> None:
+        urls_in_queue = self.session.exec(
             select(ChannelQueue)
             .join(Channel, col(Channel.id) == col(ChannelQueue.channel_id))
             .join(User, col(User.id) == col(Channel.user_id))
@@ -118,68 +115,63 @@ class BaseChannelMixin(AbstractPlugin, ABC):
                 is_plugin_user(User.email),
             ),
         ).all()
-        if not queue_rows:
-            return
 
-        unlisted_urls = self._unlisted_urls({queue_row.url for queue_row in queue_rows})
-        for queue_row in queue_rows:
-            if queue_row.url in unlisted_urls:
-                self.session.delete(queue_row)
+        for queue_entry in self._deleted_titles_in_queue(urls_in_queue):
+            self.session.delete(queue_entry)
 
-    # TODO: Validate
-    def _unlisted_urls(self, urls: set[str]) -> set[str]:
-        """Return the URLs the plugin holds nothing but deleted titles for.
-
-        A URL the plugin holds no title for at all is not answered with, because it
-        is a URL waiting to be imported rather than one the website dropped.
-        """
-        titles = self.session.exec(
+    def _deleted_titles_in_queue(
+        self,
+        queue_entries: Sequence[ChannelQueue],
+    ) -> list[ChannelQueue]:
+        title_in_queue = self.session.exec(
             select(Title)
             .join(Source)
             .where(
                 Source.plugin_id == self.plugin.id,
-                col(Title.url).in_(urls),
+                col(Title.url).in_(
+                    {queue_entry.url for queue_entry in queue_entries},
+                ),
             )
             .options(selectinload(Title.canonical_title_links)),  # type: ignore[arg-type]
         ).all()
 
-        titles_by_url: dict[str, list[Title]] = {}
-        for title in titles:
+        titles_by_queued_url: dict[str, list[Title]] = {}
+        for title in title_in_queue:
             if title.url:
-                titles_by_url.setdefault(title.url, []).append(title)
+                titles_by_queued_url.setdefault(title.url, []).append(title)
 
-        canonical_ids_by_url = {
-            url: {
+        canonical_ids_by_queued_url = {
+            queued_url: {
                 canonical_title_id
-                for title in url_titles
+                for title in queued_url_titles
                 for canonical_title_id in title.canonical_title_ids
             }
-            for url, url_titles in titles_by_url.items()
-            if all(title.deleted_at is not None for title in url_titles)
+            for queued_url, queued_url_titles in titles_by_queued_url.items()
+            if all(title.deleted_at is not None for title in queued_url_titles)
         }
-        listed_canonical_title_ids = self._listed_canonical_title_ids(
+        active_canonical_title_ids = self._active_canonical_title_ids(
             {
                 canonical_title_id
-                for canonical_title_ids in canonical_ids_by_url.values()
+                for canonical_title_ids in canonical_ids_by_queued_url.values()
                 for canonical_title_id in canonical_title_ids
             },
         )
-        return {
-            url
-            for url, canonical_title_ids in canonical_ids_by_url.items()
-            if not canonical_title_ids & listed_canonical_title_ids
+        deleted_urls_in_queue = {
+            queued_url
+            for queued_url, canonical_title_ids in canonical_ids_by_queued_url.items()
+            if not canonical_title_ids & active_canonical_title_ids
         }
+        return [
+            queue_entry
+            for queue_entry in queue_entries
+            if queue_entry.url in deleted_urls_in_queue
+        ]
 
-    # TODO: Validate
-    def _listed_canonical_title_ids(
+    def _active_canonical_title_ids(
         self,
         canonical_title_ids: set[uuid.UUID],
     ) -> set[uuid.UUID]:
-        """Return the canonical titles the plugin still holds a live title for."""
-        if not canonical_title_ids:
-            return set()
-
-        listed_ids = self.session.exec(
+        active_title_ids = self.session.exec(
             select(Title.id)
             .join(Source)
             .where(
@@ -188,7 +180,7 @@ class BaseChannelMixin(AbstractPlugin, ABC):
                 col(Title.deleted_at).is_(None),
             ),
         ).all()
-        linked_ids = self.session.exec(
+        active_titles_canonical_ids = self.session.exec(
             select(TitleCanonicalTitle.canonical_title_id)
             .join(Title, col(Title.id) == col(TitleCanonicalTitle.title_id))
             .join(Source)
@@ -198,4 +190,4 @@ class BaseChannelMixin(AbstractPlugin, ABC):
                 col(Title.deleted_at).is_(None),
             ),
         ).all()
-        return set(listed_ids) | set(linked_ids)
+        return set(active_title_ids) | set(active_titles_canonical_ids)

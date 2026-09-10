@@ -385,58 +385,20 @@ class AbstractPlugin(ABC):
     # TODO: Validate
     def search_for_title_url(
         self,
-        names: list[str],
+        name: str,
         media_type: TMDBMediaType,
         year: int | None = None,
     ) -> str | None:
-        """Return the address of the one title `names` name here, or None.
-
-        What TMDB cross references a title against, so the closest match is all that
-        matters and its address is all that is read off it. A service a user searches
-        for themselves offers `in_app_search` instead.
-
-        A title is written differently on every service that carries it, so every name
-        TMDB knows it by is handed over rather than one of them: a service holding the
-        title under a name TMDB does not lead with is still matched. `media_type` and
-        `year` are what tell two titles of one name apart, which a name on its own
-        cannot.
-
-        Args:
-            names: Every name TMDB knows the title by, the one it leads with first.
-            media_type: Which of the two halves of TMDB's catalogue the title belongs
-                to.
-            year: The year TMDB gives the title, where it gives one.
-
-        """
         msg = "search_for_url is not supported by this plugin."
         raise NotImplementedError(msg)
 
     # TODO: Validate
     def import_search(
         self,
-        names: list[str],
+        name: str,
         media_type: TMDBMediaType,
         year: int | None = None,
     ) -> list[URLImportResult]:
-        """Import the title `names` name here.
-
-        What TMDB hands a service it has listed a title on, since a service is reached
-        by the name of the title rather than by an address when TMDB has no address for
-        it. `media_type` and `year` are TMDB's own account of the title and are there to
-        tell two titles of one name apart, which a name on its own cannot.
-
-        Args:
-            names: Every name TMDB knows the title by, the one it leads with first.
-            media_type: Which of a film and a series the title is.
-            year: The year TMDB gives the title, where it gives one.
-
-        Returns:
-            A list of `URLImportResult`.
-
-        Raises:
-            `MediaNotFoundError` if the service carries no title of that name.
-
-        """
         msg = "import_search is not supported by this plugin."
         raise NotImplementedError(msg)
 

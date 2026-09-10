@@ -273,7 +273,7 @@ def _find_tmdb_titles(
     for lookup_info in lookup_infos:
         try:
             search_results = tmdb_plugin.import_search(
-                [lookup_info.name],
+                lookup_info.name,
                 lookup_info.media_type,
                 lookup_info.year,
             )

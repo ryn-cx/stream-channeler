@@ -14,7 +14,7 @@ from plugins.NHKWorld.shared import NHKWorldShared
 from plugins.NHKWorld.utils import build_url, image_url, thumbnail_url
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.utils.base_plugin.url import ExtractedURLInfo
+from plugins.utils.base_plugin.url import ParsedURL
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -40,13 +40,6 @@ class NHKWorld(NHKWorldShared, BaseImporter, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def _validate_url(self, url: str) -> None:
-        if not re.match(self._domains_regex() + TITLE_URL_REGEX, url):
-            msg = f"Invalid {self.plugin_name()} URL: {url}"
-            raise InvalidURLError(msg)
-
-    # TODO: Validate
-    @override
     def update_source(self, source: Source, update_at: datetime) -> None:
         if source.data_timestamp is None:
             msg = "Cannot update source without a data timestamp."
@@ -60,25 +53,25 @@ class NHKWorld(NHKWorldShared, BaseImporter, AbstractPlugin, register=False):
     @override
     def search_for_title_url(
         self,
-        names: list[str],
+        name: str,
         media_type: TMDBMediaType,
         year: int | None = None,
     ) -> str | None:
-        search_file = self.titles_search_file(names[0], 0)
+        search_file = self.titles_search_file(name, 0)
         search_file.download_if_outdated()
         hits = search_file.parsed().hits.hits
         return build_url(hits[0].field_source.url) if hits else None
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> ExtractedURLInfo:
+    def parse_url(self, url: str) -> ParsedURL:
         if match := re.match(self._domains_regex() + TITLE_URL_REGEX, url):
             title_key = match.group("title_key")
             self.raise_invalid_url_if_no_content(
                 self.video_program_file(title_key),
                 url,
             )
-            return ExtractedURLInfo(title_key)
+            return ParsedURL(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)

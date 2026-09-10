@@ -140,7 +140,7 @@ def _import_search_and_link_to_tmdb(  # noqa: PLR0913 - The session joins what w
     plugin = plugin_class(session)
     savepoint = session.begin_nested()
     try:
-        results = plugin.import_search([name], media_type, year)
+        results = plugin.import_search(name, media_type, year)
         for result in results:
             link_title_to_tmdb(
                 session,

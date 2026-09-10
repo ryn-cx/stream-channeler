@@ -21,8 +21,7 @@ from plugins.Crunchyroll.importer import (
 )
 from plugins.Crunchyroll.shared import CrunchyrollShared
 from plugins.Crunchyroll.watch_history import CrunchyrollWatchHistoryMixin
-from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin.importer import BaseImporter
+from plugins.utils.abstract_plugin import AbstractPlugin
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -35,7 +34,6 @@ if TYPE_CHECKING:
 class Crunchyroll(
     CrunchyrollWatchHistoryMixin,
     CrunchyrollShared,
-    BaseImporter,
     AbstractPlugin,
     register=False,
 ):
@@ -88,17 +86,6 @@ class Crunchyroll(
 
     # TODO: Validate
     @override
-    def _validate_url(self, url: str) -> None:
-        domain_regex = self._domains_regex()
-        for url_regex in self._url_regexes():
-            if re.match(domain_regex + url_regex, url):
-                return
-
-        msg = f"Invalid {self.plugin_name()} URL: {url}"
-        raise InvalidURLError(msg)
-
-    # TODO: Validate
-    @override
     def _media_importer_from_url(self, url: str) -> CrunchyrollImporter:
         domain_regex = self._domains_regex()
         for url_regex in (MUSIC_VIDEO_URL_REGEX, CONCERT_URL_REGEX, ARTIST_URL_REGEX):
@@ -143,11 +130,11 @@ class Crunchyroll(
     @override
     def search_for_title_url(
         self,
-        names: list[str],
+        name: str,
         media_type: TMDBMediaType,
         year: int | None = None,
     ) -> str | None:
-        search_file = self.search_file(names[0])
+        search_file = self.search_file(name)
         search_file.download_if_outdated()
         for datum in search_file.parsed().data:
             for item in datum.items:

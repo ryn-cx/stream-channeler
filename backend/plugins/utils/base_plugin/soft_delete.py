@@ -14,7 +14,6 @@ class BaseSoftDeleteMixin(BaseFileAccessMixin, BasePreloadMixin, AbstractPlugin,
         for title in self._preload_title(title_key, preload_seasons=True).all():
             title.soft_delete_missing_children(season_keys)
 
-    # TODO: Validate
     def _soft_delete_missing_seasons_and_episodes(self, title_key: str) -> None:
         """Soft-delete all missing seasons and episodes for the given title."""
         self.soft_delete_missing_seasons(title_key)
@@ -24,6 +23,4 @@ class BaseSoftDeleteMixin(BaseFileAccessMixin, BasePreloadMixin, AbstractPlugin,
         }
         for title in self._preload_title(title_key, preload_episodes=True).all():
             for season in title.seasons:
-                season.soft_delete_missing_children(
-                    episode_keys_by_season.get(season.key, []),
-                )
+                season.soft_delete_missing_children(episode_keys_by_season[season.key])

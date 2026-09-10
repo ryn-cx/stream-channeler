@@ -12,7 +12,7 @@ from loguru import logger
 from not_yt_dlapi.exceptions import APIError
 
 from plugins.YouTube.files import (
-    # Browse,
+    Browse,
     ChannelByChannelId,
     Topic,
     Videos,
@@ -40,14 +40,14 @@ def playlist_url(playlist_key: str) -> str:
     return build_url(f"playlist?list={playlist_key}")
 
 
-# # TODO: Validate
-# def title_url(title_key: str) -> str:
-#     return build_url(f"show/{title_key}")
+# TODO: Validate
+def title_url(title_key: str) -> str:
+    return build_url(f"show/{title_key}")
 
 
-# # TODO: Validate
-# def title_season_url(title_key: str, season_number: str) -> str:
-#     return build_url(f"show/{title_key}?season={season_number}")
+# TODO: Validate
+def title_season_url(title_key: str, season_number: str) -> str:
+    return build_url(f"show/{title_key}?season={season_number}")
 
 
 # TODO: Validate
@@ -92,9 +92,9 @@ def is_channel_uploads_playlist_key(key: str) -> bool:
     return key.startswith("UU")
 
 
-# # TODO: Validate
-# def is_regular_playlist(key: str) -> bool:
-#     return key.startswith("PL") or is_channel_uploads_playlist_key(key)
+# TODO: Validate
+def is_regular_playlist(key: str) -> bool:
+    return key.startswith("PL") or is_channel_uploads_playlist_key(key)
 
 
 # TODO: Validate
@@ -108,23 +108,23 @@ def channel_uploads_playlist_key(title_key: str) -> str:
     return title_key[:1] + "U" + title_key[2:]
 
 
-# # TODO: Validate
-# def title_season_key(title_key: str, season_number: str) -> str:
-#     """Return the season key for one season of a title."""
-#     return f"{title_key}/{season_number}"
+# TODO: Validate
+def title_season_key(title_key: str, season_number: str) -> str:
+    """Return the season key for one season of a title."""
+    return f"{title_key}/{season_number}"
 
 
-# # TODO: Validate
-# def is_title_season_key(key: str) -> bool:
-#     """Report whether a key belongs to one season of a title."""
-#     return is_title_key(key) and "/" in key
+# TODO: Validate
+def is_title_season_key(key: str) -> bool:
+    """Report whether a key belongs to one season of a title."""
+    return is_title_key(key) and "/" in key
 
 
-# # TODO: Validate
-# def split_title_season_key(season_key: str) -> tuple[str, str]:
-#     """Split a season key back into its title key and season number."""
-#     title_key, _, season_number = season_key.partition("/")
-#     return title_key, season_number
+# TODO: Validate
+def split_title_season_key(season_key: str) -> tuple[str, str]:
+    """Split a season key back into its title key and season number."""
+    title_key, _, season_number = season_key.partition("/")
+    return title_key, season_number
 
 
 # TODO: Validate
@@ -135,15 +135,15 @@ def get_first_item[T](items: Sequence[T] | None) -> T:
     return items[0]
 
 
-# # TODO: Validate
-# def is_free_movies_channel(channel_key: str) -> bool:
-#     """Report whether a channel is the one YouTube's free catalogue is published on.
+# TODO: Validate
+def is_free_movies_channel(channel_key: str) -> bool:
+    """Report whether a channel is the one YouTube's free catalogue is published on.
 
-#     Everything YouTube serves free with ads is owned by this one channel, and a
-#     title that has to be bought or rented is owned by a channel generated for
-#     that title alone, so who owns a video is what says which of the two it is.
-#     """
-#     return channel_key == "UCuVPpxrm2VAgpH3Ktln4HXg"
+    Everything YouTube serves free with ads is owned by this one channel, and a
+    title that has to be bought or rented is owned by a channel generated for
+    that title alone, so who owns a video is what says which of the two it is.
+    """
+    return channel_key == "UCuVPpxrm2VAgpH3Ktln4HXg"
 
 
 # TODO: Validate
@@ -197,33 +197,33 @@ def is_topic_channel(channel_file: ChannelByChannelId) -> bool:
     return items[0].snippet.title.endswith(" - Topic")
 
 
-# # TODO: Validate
-# def is_movies_channel(channel_file: ChannelByChannelId) -> bool:
-#     if not is_channel_key(channel_file.unique_identifier):
-#         return False
+# TODO: Validate
+def is_movies_channel(channel_file: ChannelByChannelId) -> bool:
+    if not is_channel_key(channel_file.unique_identifier):
+        return False
 
-#     if channel_file.is_outdated() or not channel_file.record_content:
-#         return False
-#     items = channel_file.parsed().items
-#     if not items:
-#         return False
-#     return items[0].snippet.title == "YouTube Movies"
+    if channel_file.is_outdated() or not channel_file.record_content:
+        return False
+    items = channel_file.parsed().items
+    if not items:
+        return False
+    return items[0].snippet.title == "YouTube Movies"
 
 
-# # TODO: Validate
-# def is_usa_video(videos_file: Videos) -> bool:
-#     # A video that has not been read yet is taken to be one, since what says
-#     # otherwise is the video itself and reading it is what this decides.
-#     if videos_file.is_outdated() or not videos_file.record_content:
-#         return True
+# TODO: Validate
+def is_usa_video(videos_file: Videos) -> bool:
+    # A video that has not been read yet is taken to be one, since what says
+    # otherwise is the video itself and reading it is what this decides.
+    if videos_file.is_outdated() or not videos_file.record_content:
+        return True
 
-#     items = videos_file.parsed().items
-#     if not items:
-#         return False
-#     restriction = items[0].content_details.region_restriction
-#     if restriction is None or restriction.allowed is None:
-#         return False
-#     return "US" in restriction.allowed
+    items = videos_file.parsed().items
+    if not items:
+        return False
+    restriction = items[0].content_details.region_restriction
+    if restriction is None or restriction.allowed is None:
+        return False
+    return "US" in restriction.allowed
 
 
 # TODO: Validate
@@ -236,9 +236,9 @@ def topic_release_keys_from_file(topic_file: Topic) -> list[str]:
     ]
 
 
-# # TODO: Validate
-# def title_season_numbers_from_file(show_file: Browse) -> list[str]:
-#     return [str(number) for number in show_file.season_numbers()]
+# TODO: Validate
+def title_season_numbers_from_file(show_file: Browse) -> list[str]:
+    return [str(number) for number in show_file.season_numbers()]
 
 
 # TODO: Validate

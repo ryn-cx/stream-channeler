@@ -18,14 +18,13 @@ from plugins.Amazon.importer import (
 from plugins.Amazon.shared import AmazonShared
 from plugins.Amazon.utils import detail_url
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin.importer import BaseImporter
 
 if TYPE_CHECKING:
     from app.titles.models import Title
 
 
 # TODO: Validate
-class Amazon(AmazonShared, BaseImporter, AbstractPlugin, register=False):
+class Amazon(AmazonShared, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override
@@ -40,17 +39,13 @@ class Amazon(AmazonShared, BaseImporter, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def _validate_url(self, url: str) -> None:
-        title_key = self._url_title_key(url)
-        self.raise_invalid_url_if_no_content(self.detail_file(title_key), url)
-
-    # TODO: Validate
-    @override
     def _media_importer_from_url(self, url: str) -> AmazonImporter:
         # A film and a season of a series are answered at the same address,
         # so the page has to be read before it is known which of the two it
         # is.
-        if self._is_movie(self._url_title_key(url)):
+        title_key = self._url_title_key(url)
+        self.raise_invalid_url_if_no_content(self.detail_file(title_key), url)
+        if self._is_movie(title_key):
             return AmazonMovieImporter(self.session, self.plugin, self._file_cache)
         return AmazonSeriesImporter(self.session, self.plugin, self._file_cache)
 
@@ -83,11 +78,11 @@ class Amazon(AmazonShared, BaseImporter, AbstractPlugin, register=False):
     @override
     def search_for_title_url(
         self,
-        names: list[str],
+        name: str,
         media_type: TMDBMediaType,
         year: int | None = None,
     ) -> str | None:
-        search_file = self.search_file(names[0])
+        search_file = self.search_file(name)
         search_file.download_if_outdated()
         results = search_file.results()
         return detail_url(results[0]) if results else None

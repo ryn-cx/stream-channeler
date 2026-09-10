@@ -11,11 +11,15 @@ from plugins.utils.base_plugin.base import BasePlugin
 
 if TYPE_CHECKING:
     from app.titles.models import Title
-    from plugins.utils.base_plugin.url import ExtractedURLInfo
+    from plugins.utils.base_plugin.url import ParsedURL
 
 
 class BaseImporter(BasePlugin, ABC):
-    def get_media_info(self, url: str) -> ExtractedURLInfo:
+    # TODO: Validate
+    def validate_url(self, url: str) -> None:  # noqa: ARG002
+        return
+
+    def parse_url(self, url: str) -> ParsedURL:
         """Return information about the title extracted from the URL.
 
         In some situations this may require network requests."""
@@ -56,7 +60,7 @@ class BaseImporter(BasePlugin, ABC):
         self._upsert_title(title.source, title.key, force=force)
 
     def import_url(self, url: str) -> list[URLImportResult]:
-        media_info = self.get_media_info(url)
+        media_info = self.parse_url(url)
         if title := self._preload_title(media_info.title_key).one_or_none():
             return self._import_results(title, media_info)
 
@@ -67,7 +71,7 @@ class BaseImporter(BasePlugin, ABC):
     def _import_results(
         self,
         title: Title,
-        media_info: ExtractedURLInfo | None = None,
+        media_info: ParsedURL | None = None,
     ) -> list[URLImportResult]:
         """Return a list of import results for the given title and media info."""
 

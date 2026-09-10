@@ -20,6 +20,7 @@ from app.channels.models import Channel
 from app.constants import TEST_RESULTS_FOLDER
 from app.episodes.models import Episode
 from app.files.models import File
+from app.media.media_type import TMDBMediaType
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.sources.models import Source
@@ -154,6 +155,9 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
 
     plugin_class: type[PluginT]
     urls: tuple[str, ...] = ()
+    search_name: str | None = None
+    search_media_type: TMDBMediaType = TMDBMediaType.tv
+    search_year: int | None = None
     import_time: datetime = IMPORT_TIME
     update_time: datetime = UPDATE_TIME
     invalid_url: bool = False
@@ -397,6 +401,23 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
         self._delete_channels(session)
         self.imported_plugin = self.plugin_class(session)
         output = self.imported_plugin.validate_and_import_url(url)
+
+        session.flush()
+        session.expire_all()
+
+        return output
+
+    # TODO: Validate
+    def _import_search(self, session: Session) -> list[URLImportResult]:
+        """Import the title the class names using the plugin's own search."""
+        assert self.search_name, "A search name must be provided for search tests"
+        self._delete_channels(session)
+        self.imported_plugin = self.plugin_class(session)
+        output = self.imported_plugin.import_search(
+            self.search_name,
+            self.search_media_type,
+            self.search_year,
+        )
 
         session.flush()
         session.expire_all()

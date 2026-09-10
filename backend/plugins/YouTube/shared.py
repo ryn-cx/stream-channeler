@@ -7,10 +7,10 @@ from typing import override
 
 from plugins.YouTube.base_files import YouTubeBaseFiles
 from plugins.YouTube.constants import (
-    # FREE_SOURCE_KEY,
-    # LINKS_SOURCE_KEY,
+    FREE_SOURCE_KEY,
+    LINKS_SOURCE_KEY,
     LONG_DOMAIN,
-    # PAID_SOURCE_KEY,
+    PAID_SOURCE_KEY,
     SHORT_DOMAIN,
 )
 from plugins.YouTube.watch_history import YouTubeWatchHistoryMixin
@@ -48,5 +48,9 @@ class YouTubeShared(YouTubeWatchHistoryMixin, YouTubeBaseFiles):
     @classmethod
     @override
     def _source_keys(cls) -> tuple[str, ...]:
-        # return (cls.plugin_name(), FREE_SOURCE_KEY, PAID_SOURCE_KEY, LINKS_SOURCE_KEY)
-        return (cls.plugin_name(),)
+        return (
+            cls.plugin_name(),
+            FREE_SOURCE_KEY,
+            PAID_SOURCE_KEY,
+            LINKS_SOURCE_KEY,
+        )

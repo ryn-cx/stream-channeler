@@ -9,25 +9,18 @@ from plugins.Roku.importer import RokuImporter, RokuMovieImporter, RokuSeriesImp
 from plugins.Roku.shared import RokuShared
 from plugins.Roku.utils import is_movie
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin.importer import BaseImporter
 
 if TYPE_CHECKING:
     from app.titles.models import Title
 
 
 # TODO: Validate
-class Roku(RokuShared, BaseImporter, AbstractPlugin, register=False):
+class Roku(RokuShared, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
         return (DETAILS_URL_REGEX, WATCH_URL_REGEX)
-
-    # TODO: Validate
-    @override
-    def _validate_url(self, url: str) -> None:
-        content_file = self.content_file(self._url_content_key(url))
-        self.raise_invalid_url_if_no_content(content_file, url)
 
     # TODO: Validate
     def _url_content_key(self, url: str) -> str:
@@ -45,7 +38,9 @@ class Roku(RokuShared, BaseImporter, AbstractPlugin, register=False):
         # Every kind of content is answered at the same address, so
         # the content has to be read before it is known which of them
         # this one is.
-        content = self.content_file(self._url_content_key(url)).parsed()
+        content_file = self.content_file(self._url_content_key(url))
+        self.raise_invalid_url_if_no_content(content_file, url)
+        content = content_file.parsed()
         # A season or an episode belongs to a series, which is what
         # is read and written.
         if content.series is not None:

@@ -22,8 +22,7 @@ if TYPE_CHECKING:
 
     from app.sources.models import Source
     from plugins.utils.base_plugin.files import BaseFile
-
-    # from plugins.YouTube.files import MusicPlaylist
+    from plugins.YouTube.files import MusicPlaylist
 
 
 # TODO: Validate
@@ -103,13 +102,13 @@ class YouTubeMusicSeasons(YouTubeImporter):
         self._upsert_episodes(season, title_key, force=force)
 
     # TODO: Validate
-    # @staticmethod
-    # def _music_name(music_playlist: MusicPlaylist) -> str | None:
-    #     title = music_playlist.title()
-    #     artists = music_playlist.artists()
-    #     if not title or not artists:
-    #         return title
-    #     return f"{title} - {', '.join(artists)}"
+    @staticmethod
+    def _music_name(music_playlist: MusicPlaylist) -> str | None:
+        title = music_playlist.title()
+        artists = music_playlist.artists()
+        if not title or not artists:
+            return title
+        return f"{title} - {', '.join(artists)}"
 
 
 # TODO: Validate
@@ -150,57 +149,57 @@ class YouTubeMusicImporter(YouTubeMusicSeasons):
         self._upsert_episodes_in_file_order(season, title_key, force=force)
 
 
-# # TODO: Validate
-# class YouTubeAlbumImporter(YouTubeMusicImporter):
-#     # TODO: Validate
-#     @override
-#     def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
-#         return [self.music_playlist_file(title_key)]
+# TODO: Validate
+class YouTubeAlbumImporter(YouTubeMusicImporter):
+    # TODO: Validate
+    @override
+    def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
+        return [self.music_playlist_file(title_key)]
 
-#     # TODO: Validate
-#     @override
-#     def _season_keys_from_title_files(self, title_key: str) -> list[str]:
-#         return [title_key]
+    # TODO: Validate
+    @override
+    def _season_keys_from_title_files(self, title_key: str) -> list[str]:
+        return [title_key]
 
-#     # TODO: Validate
-#     @override
-#     def upsert_title(
-#         self,
-#         source: Source,
-#         title_key: str,
-#         *,
-#         force: bool = False,
-#     ) -> Title:
-#         music_playlist = self.music_playlist_file(title_key)
-#         source = self.source
+    # TODO: Validate
+    @override
+    def _upsert_title(
+        self,
+        source: Source,
+        title_key: str,
+        *,
+        force: bool = False,
+    ) -> Title:
+        music_playlist = self.music_playlist_file(title_key)
+        source = self.source
 
-#         title = Title.get_from_memory(self.session, source, title_key)
-#         if self._title_is_outdated(title, force=force):
-#             data_timestamps = self._title_files_data_timestamps(title_key)
-#             title = Title(
-#                 key=title_key,
-#                 name=self._music_name(music_playlist),
-#                 url=playlist_url(title_key),
-#                 media_type=f"YouTube {music_playlist.release_type() or 'Album'}",
-#                 image_url=music_playlist.image_url(),
-#                 thumbnail_url=music_playlist.image_url(),
-#                 data_timestamp=max(data_timestamps),
-#                 source_id=source.id,
-#             ).upsert(source, title)
-#             title.set_update_at(
-#                 min(data_timestamps) + timedelta(days=365),
-#             )
+        title = Title.get_from_memory(self.session, source, title_key)
+        if self._title_is_outdated(title, force=force):
+            data_timestamps = self._title_files_data_timestamps(title_key)
+            title = Title(
+                key=title_key,
+                name=self._music_name(music_playlist),
+                url=playlist_url(title_key),
+                media_type=f"YouTube {music_playlist.release_type() or 'Album'}",
+                image_url=music_playlist.image_url(),
+                thumbnail_url=music_playlist.image_url(),
+                data_timestamp=max(data_timestamps),
+                source_id=source.id,
+            ).upsert(source, title)
+            title.set_update_at(
+                min(data_timestamps) + timedelta(days=365),
+            )
 
-#         self._upsert_season_music(
-#             title,
-#             title_key,
-#             title_key,
-#             self._music_name(music_playlist),
-#             force=force,
-#         )
-#         self._soft_delete_missing(title_key)
+        self._upsert_season_music(
+            title,
+            title_key,
+            title_key,
+            self._music_name(music_playlist),
+            force=force,
+        )
+        self._soft_delete_missing_seasons_and_episodes(title_key)
 
-#         return title
+        return title
 
 
 # TODO: Validate

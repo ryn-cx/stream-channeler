@@ -16,19 +16,22 @@ if TYPE_CHECKING:
 
 
 class BaseMediaImporterMixin(BaseURLMixin, AbstractPlugin, ABC):
+    # TODO: Validate
     @override
     def validate_and_import_url(self, url: str) -> list[URLImportResult]:
-        self._validate_url(url)
-        return self._media_importer(url).import_url(url)
+        media_importer = self._media_importer(url)
+        media_importer.validate_url(url)
+        return media_importer.import_url(url)
 
+    # TODO: Validate
     @override
     def import_search(
         self,
-        names: list[str],
+        name: str,
         media_type: TMDBMediaType,
         year: int | None = None,
     ) -> list[URLImportResult]:
-        if url := self.search_for_title_url(names, media_type, year):
+        if url := self.search_for_title_url(name, media_type, year):
             return self.validate_and_import_url(url)
         return []
 

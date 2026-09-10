@@ -1255,7 +1255,7 @@ wheels = [
 [[package]]
 name = "meshfilm"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/meshfilm#502daeecfe763a61f2140d99744f899b9432af26" }
+source = { git = "https://github.com/ryn-cx/meshfilm#d5636fbebc573232cedd83ea5c12e725b71b0cc1" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -2459,7 +2459,7 @@ wheels = [
 [[package]]
 name = "wholoo"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/wholoo#bcc0e248d9a65b1ec20e1e1a03eedf315baaacb8" }
+source = { git = "https://github.com/ryn-cx/wholoo#ba902ab796ea627fdf6b934922a0e644739979b5" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },

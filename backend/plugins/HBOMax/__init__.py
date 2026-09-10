@@ -11,31 +11,19 @@ from plugins.HBOMax.importer import (
     HBOMaxSeriesImporter,
 )
 from plugins.HBOMax.shared import HBOMaxShared
-from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin.importer import BaseImporter
+from plugins.utils.abstract_plugin import AbstractPlugin
 
 if TYPE_CHECKING:
     from app.titles.models import Title
 
 
 # TODO: Validate
-class HBOMax(HBOMaxShared, BaseImporter, AbstractPlugin, register=False):
+class HBOMax(HBOMaxShared, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
         return (MOVIE_URL_REGEX, TITLE_URL_REGEX)
-
-    # TODO: Validate
-    @override
-    def _validate_url(self, url: str) -> None:
-        domain_regex = self._domains_regex()
-        for url_regex in (MOVIE_URL_REGEX, TITLE_URL_REGEX):
-            if re.match(domain_regex + url_regex, url):
-                return
-
-        msg = f"Invalid {self.plugin_name()} URL: {url}"
-        raise InvalidURLError(msg)
 
     # TODO: Validate
     @override

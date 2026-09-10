@@ -106,7 +106,6 @@ class BasePlugin(
                 if is_listed == is_deleted:
                     title.set_update_at(min(data_timestamps))
 
-    # TODO: Validate
     def _set_season_update_at_based_on_last_episode(self, season: Season) -> None:
         """Set the update timestamp of a season based on the air dates of its episodes."""
         if not season.data_timestamp:  # Should be impossible
@@ -155,5 +154,5 @@ class BasePlugin(
 
     @override
     def update_channel(self, channel: Channel) -> None:
-        self._remove_unlisted_queued_urls(channel)
+        self._remove_queue_entries_with_deleted_titles(channel)
         super().update_channel(channel)

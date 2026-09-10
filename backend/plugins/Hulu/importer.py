@@ -29,7 +29,7 @@ from plugins.Hulu.utils import (
 )
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.utils.base_plugin.url import ExtractedURLInfo
+from plugins.utils.base_plugin.url import ParsedURL
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -54,14 +54,14 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
     # TODO: Validate
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
-        media_info = self.get_media_info(url)
-        if title := self._preload_title(media_info.title_key).one_or_none():
-            return self._import_results(title, media_info)
+        parsed_url = self.parse_url(url)
+        if title := self._preload_title(parsed_url.title_key).one_or_none():
+            return self._import_results(title, parsed_url)
 
-        self._preload_and_download_files(media_info.title_key)
-        title_source = self.get_title_source(media_info.title_key)
-        title = self._upsert_title(title_source, media_info.title_key)
-        return self._import_results(title, media_info)
+        self._preload_and_download_files(parsed_url.title_key)
+        title_source = self.get_title_source(parsed_url.title_key)
+        title = self._upsert_title(title_source, parsed_url.title_key)
+        return self._import_results(title, parsed_url)
 
     # TODO: Validate
     def get_title_source(self, title_key: str) -> Source:
@@ -69,7 +69,7 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
 
         Seperate sources are used for titles that require additional subscription plans.
         """
-        plan = title_plan(self._title_files(title_key)[0].parsed())
+        plan = title_plan(self._title_files(title_key)[0].details())
         source_key = "Hulu"
         if plan:
             network, is_subscription = plan
@@ -87,14 +87,14 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
             msg = "Title.url is not set."
             raise AttributeError(msg)
 
-        page = self._title_files(title.key)[0].parsed()
-        plan = title_plan(page)
+        details = self._title_files(title.key)[0].details()
+        plan = title_plan(details)
         self._add_urls_to_channel([title.url], "All Titles")
         self._add_urls_to_channel([title.url], self._media_type_name())
         if plan:
             network, _ = plan
             self._add_urls_to_channel([title.url], network)
-        for genre in page.details.entity.genre_names:
+        for genre in details.entity.genre_names:
             self._add_urls_to_channel([title.url], genre)
 
 
@@ -113,21 +113,18 @@ class HuluSeriesImporter(HuluImporter):
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> ExtractedURLInfo:
+    def parse_url(self, url: str) -> ParsedURL:
         domain_regex = self._domains_regex()
         if match := re.match(domain_regex + SERIES_URL_REGEX, url):
             title_key = match.group("series_key")
             self.raise_invalid_url_if_no_content(self.series_file(title_key), url)
-            return ExtractedURLInfo(title_key)
+            return ParsedURL(title_key)
 
         if match := re.match(domain_regex + VIDEO_URL_REGEX, url):
             episode_key = match.group("episode_key")
             episode_file = self.episode_file(episode_key)
             self.raise_invalid_url_if_no_content(episode_file, url)
-            return ExtractedURLInfo(
-                str(episode_file.parsed().details.vod_items.focus.entity.series_id),
-                episode_key=episode_key,
-            )
+            return ParsedURL(episode_file.series_key(), episode_key=episode_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
@@ -300,7 +297,7 @@ class HuluMovieImporter(HuluImporter):
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> ExtractedURLInfo:
+    def parse_url(self, url: str) -> ParsedURL:
         domain_regex = self._domains_regex()
         if match := re.match(domain_regex + MOVIE_URL_REGEX, url):
             title_key = match.group("movie_key")
@@ -312,7 +309,7 @@ class HuluMovieImporter(HuluImporter):
             msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
         self.raise_invalid_url_if_no_content(self.movie_file(title_key), url)
-        return ExtractedURLInfo(title_key)
+        return ParsedURL(title_key)
 
     # TODO: Validate
     @override
@@ -364,12 +361,14 @@ class HuluMovieImporter(HuluImporter):
         if self._title_is_outdated(title, force=force):
             title = Title(
                 key=title_key,
-                name=parsed_movie.name,
-                description=parsed_movie.details.entity.description,
-                year=parsed_movie.details.entity.premiere_date.year,
+                name=parsed_movie.entity.name,
+                description=parsed_movie.entity.description,
+                year=parsed_movie.entity.premiere_date.year,
                 url=title_url(title_key, HuluMediaType.MOVIE),
-                image_url=image_url(parsed_movie.artwork.program_tile.path),
-                thumbnail_url=thumbnail_url(parsed_movie.artwork.program_tile.path),
+                image_url=image_url(parsed_movie.entity.artwork.program_tile.path),
+                thumbnail_url=thumbnail_url(
+                    parsed_movie.entity.artwork.program_tile.path,
+                ),
                 media_type="Movie",
                 data_timestamp=self._title_files_data_timestamp(title_key),
                 source_id=source.id,
@@ -411,12 +410,14 @@ class HuluMovieImporter(HuluImporter):
             episode = Episode(
                 key=season.key,
                 watch_identifier=watch_identifier(self.plugin_name(), season.key),
-                name=parsed_movie.name,
-                description=parsed_movie.details.entity.description,
+                name=parsed_movie.entity.name,
+                description=parsed_movie.entity.description,
                 url=episode_url(season.key),
-                image_url=image_url(parsed_movie.artwork.program_tile.path),
-                thumbnail_url=thumbnail_url(parsed_movie.artwork.program_tile.path),
-                duration=parsed_movie.details.entity.duration,
+                image_url=image_url(parsed_movie.entity.artwork.program_tile.path),
+                thumbnail_url=thumbnail_url(
+                    parsed_movie.entity.artwork.program_tile.path,
+                ),
+                duration=parsed_movie.entity.duration,
                 episode_number=0,
                 sort_order=0,
                 data_timestamp=self._episode_files_data_timestamp(

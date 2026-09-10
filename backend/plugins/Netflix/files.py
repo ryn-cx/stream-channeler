@@ -5,11 +5,9 @@ from functools import cache
 from typing import override
 
 from meshfilm import Meshfilm
-from meshfilm.lodp_title_and_plans_page import (
-    LodpTitleAndPlansPage as LodpTitleAndPlansPageEndpoint,
-)
-from meshfilm.lodp_title_and_plans_page.models import LodpTitleAndPlansPageModel
-from meshfilm.lodp_title_and_plans_page.models import Video1 as TitleVideo
+from meshfilm.detail_modal import DetailModal as DetailModalEndpoint
+from meshfilm.detail_modal.models import DetailModalModel
+from meshfilm.exceptions import TitleNotFoundError
 from meshfilm.preview_modal_episode_selector import (
     PreviewModalEpisodeSelector as PreviewModalEpisodeSelectorEndpoint,
 )
@@ -28,35 +26,40 @@ from meshfilm.preview_modal_episode_selector_season_episodes.models import (
 from meshfilm.preview_modal_episode_selector_season_episodes.models import (
     PreviewModalEpisodeSelectorSeasonEpisodesModel,
 )
-from meshfilm.search_page_results import SearchPageResults as SearchPageResultsEndpoint
-from meshfilm.search_page_results.models import SearchPageResultsModel
+from meshfilm.search_page_query_results import (
+    SearchPageQueryResults as SearchPageQueryResultsEndpoint,
+)
+from meshfilm.search_page_query_results.models import SearchPageQueryResultsModel
 
-from plugins.utils.base_plugin.files import SingleArgEndpointFile, IntegerArgEndpointFile
+from plugins.utils.base_plugin.files import (
+    IntegerArgEndpointFile,
+    SingleArgEndpointFile,
+)
 from plugins.utils.get_around_client import get_around_client
 
 
 # TODO: Validate
 @cache
 def meshfilm() -> Meshfilm:
-    return Meshfilm(get_around_client=get_around_client())
+    # Netflix needs to use the proxy because get-around sometimes routes to an IP in
+    # another country which causes incorrect results.
+    return Meshfilm(get_around_client=get_around_client(proxy=True))
 
 
 # TODO: Validate
-class LodpTitleAndPlansPage(IntegerArgEndpointFile[LodpTitleAndPlansPageModel]):
+class DetailModal(IntegerArgEndpointFile[DetailModalModel]):
     """Title information."""
 
     # TODO: Validate
     @override
-    def _endpoint(self) -> LodpTitleAndPlansPageEndpoint:
-        return meshfilm().lodp_title_and_plans_page
+    def _endpoint(self) -> DetailModalEndpoint:
+        return meshfilm().detail_modal
 
+    # Occurs if the user tries to add an invalid URL.
     # TODO: Validate
-    def title_information(self) -> TitleVideo:
-        """Return the title information.
-
-        The location of the title information makes it look like it would be information
-        for a video."""
-        return self.parsed().data.videos[0]
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, TitleNotFoundError)
 
 
 # TODO: Validate
@@ -77,19 +80,14 @@ class PreviewModalEpisodeSelector(
 
     # TODO: Validate
     def seasons(self) -> list[SeasonNode]:
-        video = self.parsed().data.videos[0]
-        if video.seasons is None:
-            msg = "No seasons found for this title."
-            raise ValueError(msg)
-
-        return [edge.node for edge in video.seasons.edges]
+        return [edge.node for edge in self.parsed().seasons.edges]
 
 
 # TODO: Validate
 class PreviewModalEpisodeSelectorSeasonEpisodes(
     IntegerArgEndpointFile[PreviewModalEpisodeSelectorSeasonEpisodesModel],
 ):
-    """Title information."""
+    """Season Episodes information."""
 
     # TODO: Validate
     @override
@@ -99,21 +97,16 @@ class PreviewModalEpisodeSelectorSeasonEpisodes(
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self._endpoint().download(int(self.unique_identifier), 500)
+        return self._endpoint().download(int(self.unique_identifier), count=500)
 
     # TODO: Validate
     def episodes(self) -> list[EpisodeNode]:
-        video = self.parsed().data.videos[0]
-        if video.episodes is None:
-            msg = "No episodes found for this season."
-            raise ValueError(msg)
-
-        return [edge.node for edge in video.episodes.edges]
+        return [edge.node for edge in self.parsed().episodes.edges]
 
 
 # TODO: Validate
-class SearchPageResults(SingleArgEndpointFile[SearchPageResultsModel]):
+class SearchPageQueryResults(SingleArgEndpointFile[SearchPageQueryResultsModel]):
     # TODO: Validate
     @override
-    def _endpoint(self) -> SearchPageResultsEndpoint:
-        return meshfilm().search_page_results
+    def _endpoint(self) -> SearchPageQueryResultsEndpoint:
+        return meshfilm().search_page_query_results

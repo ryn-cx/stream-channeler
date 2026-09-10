@@ -2,7 +2,6 @@
 from functools import cache
 from typing import override
 
-from bs4 import BeautifulSoup
 from sqlmodel import Session
 from wholoo import Wholoo
 from wholoo.all_movies import AllMovies as AllMoviesEndpoint
@@ -12,6 +11,7 @@ from wholoo.all_series.models import AllSeriesModel
 from wholoo.episode import Episode as EpisodeEndpoint
 from wholoo.episode.models import EpisodeModel
 from wholoo.exceptions import (
+    EpisodeNotFoundError,
     MovieNotFoundError,
     SeriesNotFoundError,
 )
@@ -26,15 +26,14 @@ from wholoo.search.models import SearchModel
 from wholoo.season import Season as SeasonEndpoint
 from wholoo.season.models import SeasonModel
 from wholoo.tv import TV
+from wholoo.tv.models import Details as TVDetails
 from wholoo.tv.models import TVModel
 
 from app.plugins.models import Plugin
-from plugins.Hulu.utils import episode_url
 from plugins.utils.base_plugin.files import (
-    SingleArgEndpointFile,
     MultipleArgEndpointFile,
     NoArgsEndpointFile,
-    TextFile,
+    SingleArgEndpointFile,
 )
 from plugins.utils.get_around_client import get_around_client
 
@@ -57,6 +56,10 @@ class Series(SingleArgEndpointFile[TVModel]):
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, SeriesNotFoundError)
 
+    # TODO: Validate
+    def details(self) -> TVDetails:
+        return self.parsed().details
+
 
 # TODO: Validate
 class Movie(SingleArgEndpointFile[MoviesModel]):
@@ -70,6 +73,27 @@ class Movie(SingleArgEndpointFile[MoviesModel]):
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, MovieNotFoundError)
+
+    # TODO: Validate
+    def details(self) -> MoviesModel:
+        return self.parsed()
+
+
+# TODO: Validate
+class Episode(SingleArgEndpointFile[EpisodeModel]):
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> EpisodeEndpoint:
+        return wholoo().episode
+
+    # TODO: Validate
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, EpisodeNotFoundError)
+
+    # TODO: Validate
+    def series_key(self) -> str:
+        return str(self.parsed().entity.series_id)
 
 
 # TODO: Validate
@@ -95,12 +119,6 @@ class Season(MultipleArgEndpointFile[SeasonModel]):
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(self.series_id, self.season_number)
-
-
-class Episode(SingleArgEndpointFile[EpisodeModel]):
-    @override
-    def _endpoint(self) -> EpisodeEndpoint:
-        return wholoo().episode
 
 
 class Search(SingleArgEndpointFile[SearchModel]):
@@ -137,22 +155,3 @@ class Genre(SingleArgEndpointFile[GenreModel]):
     @override
     def _endpoint(self) -> GenreEndpoint:
         return wholoo().genre
-
-
-# TODO: Validate
-class WatchRedirect(TextFile):
-    # TODO: Validate
-    @override
-    def _download_file(self) -> str:
-        response = get_around_client().get(
-            episode_url(self.unique_identifier),
-            follow_redirects=True,
-        )
-        response.raise_for_status()
-        canonical = BeautifulSoup(response.text, "html.parser").select_one(
-            'link[rel="canonical"]',
-        )
-        if canonical is None:
-            msg = f"No canonical URL for {episode_url(self.unique_identifier)}"
-            raise ValueError(msg)
-        return str(canonical["href"])

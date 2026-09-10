@@ -11,31 +11,19 @@ from plugins.Pluto.importer import (
     PlutoSeriesImporter,
 )
 from plugins.Pluto.shared import PlutoShared
-from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin.importer import BaseImporter
+from plugins.utils.abstract_plugin import AbstractPlugin
 
 if TYPE_CHECKING:
     from app.titles.models import Title
 
 
 # TODO: Validate
-class Pluto(PlutoShared, BaseImporter, AbstractPlugin, register=False):
+class Pluto(PlutoShared, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
         return (MOVIE_URL_REGEX, SERIES_URL_REGEX)
-
-    # TODO: Validate
-    @override
-    def _validate_url(self, url: str) -> None:
-        domain_regex = self._domains_regex()
-        for url_regex in (MOVIE_URL_REGEX, SERIES_URL_REGEX):
-            if re.match(domain_regex + url_regex, url):
-                return
-
-        msg = f"Invalid {self.plugin_name()} URL: {url}"
-        raise InvalidURLError(msg)
 
     # TODO: Validate
     @override

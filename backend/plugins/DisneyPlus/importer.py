@@ -29,7 +29,7 @@ from plugins.DisneyPlus.utils import (
 )
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.utils.base_plugin.url import ExtractedURLInfo
+from plugins.utils.base_plugin.url import ParsedURL
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -52,11 +52,11 @@ class DisneyPlusImporter(DisneyPlusShared, BaseImporter, ABC):
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> ExtractedURLInfo:
+    def parse_url(self, url: str) -> ParsedURL:
         if match := re.match(self._domains_regex() + ENTITY_URL_REGEX, url):
             title_key = match.group("entity_key")
             self.raise_invalid_url_if_no_content(self.entity_file(title_key), url)
-            return ExtractedURLInfo(title_key)
+            return ParsedURL(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)

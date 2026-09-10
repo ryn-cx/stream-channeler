@@ -14,7 +14,6 @@ database, bar the files table, against the dump recorded the first time it ran.
 import json
 import os
 from datetime import datetime, timedelta
-from typing import override
 
 import pytest
 from sqlmodel import Session
@@ -149,6 +148,19 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
             results = self._import_url(session, url)
         session.flush()
         self.imported_state = database_json(session)
+        return results
+
+    # TODO: Validate
+    def import_search(self, session: Session) -> list[URLImportResult]:
+        """Import the name the test class names, as of `IMPORT_TIME`.
+
+        `imported_state` is left alone, unlike the URL import, because what a
+        search test compares is the whole database rather than what a URL import
+        already put there.
+        """
+        with frozen_clock(self.import_time):
+            results = self._import_search(session)
+        session.flush()
         return results
 
     # TODO: Validate
@@ -365,6 +377,9 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
                 with frozen_clock(self.import_time):
                     self._initialize_import_data(session_with_files)
                     self._initialize_extra_files(session_with_files)
+            if self.search_name:
+                with frozen_clock(self.import_time):
+                    self._import_search(session_with_files)
         finally:
             # Written even when the run failed, so the files it did reach are
             # recorded rather than downloaded again by the next run.
@@ -384,6 +399,26 @@ class ImportURLTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
             results = self.import_url(session_with_files)
         self.assert_import_url_results(results, "import_url_results")
         self.assert_state(session_with_files, "import_url")
+
+
+# TODO: Validate
+class ImportSearchTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
+    """Tests that importing the name a class names leaves the database as recorded.
+
+    What TMDB reaches a plugin by when it has no address for a title, so the
+    name is a constant of the test class the way a URL is, and what the search
+    settles on is checked the same way an import from an address is.
+    """
+
+    # TODO: Validate
+    def test_import_search(self, session_with_files: Session) -> None:
+        if not self.search_name:
+            pytest.skip()
+
+        with log_stats(self):
+            results = self.import_search(session_with_files)
+        self.assert_import_url_results(results, "import_search_results")
+        self.assert_state(session_with_files, "import_search")
 
 
 # TODO: Validate
@@ -651,39 +686,6 @@ class DeletedSeasonWithEpisodeTests[PluginT: AbstractPlugin](
 
 
 # TODO: Validate
-class DeletedTitleTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
-    deleted_title_key = "plugin-validator-deleted-title"
-
-    # TODO: Validate
-    def _delete_title(self, session: Session, title: Title) -> None:
-        title.key = self.deleted_title_key
-        session.flush()
-
-    # TODO: Validate
-    @override
-    def _initialize_extra_files(self, session: Session) -> None:
-        super()._initialize_extra_files(session)
-        title = self.selected_title(session)
-        self._delete_title(session, title)
-        self.owning_plugin(session, title).update_title(title)
-        session.flush()
-
-    # TODO: Validate
-    def test_deleted_title(self, session_with_files: Session) -> None:
-        self.import_url(session_with_files)
-        title = self.selected_title(session_with_files)
-
-        with frozen_clock(self.update_time):
-            self._delete_title(session_with_files, title)
-
-        with log_stats(self), frozen_clock(self.update_time):
-            self.owning_plugin(session_with_files, title).update_title(title)
-            session_with_files.flush()
-
-        self.assert_state(session_with_files, "deleted_title")
-
-
-# TODO: Validate
 class AllUpdatesTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
     """Exhaustive test that updates every entity on its own."""
 
@@ -726,7 +728,6 @@ class DeletionTests[PluginT: AbstractPlugin](
     DeletedSeasonTests[PluginT],
     DeletedEpisodeUpdateTitleTests[PluginT],
     DeletedSeasonWithEpisodeTests[PluginT],
-    DeletedTitleTests[PluginT],
 ):
     """All soft-deletion tests."""
 
@@ -734,6 +735,7 @@ class DeletionTests[PluginT: AbstractPlugin](
 # TODO: Validate
 class StandardTests[PluginT: AbstractPlugin](
     URLTests[PluginT],
+    ImportSearchTests[PluginT],
     UpdateTests[PluginT],
     DeletionTests[PluginT],
     AllUpdatesTests[PluginT],

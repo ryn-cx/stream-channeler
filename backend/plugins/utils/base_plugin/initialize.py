@@ -38,6 +38,7 @@ class BaseInitializeMixin(BaseFileAccessMixin, AbstractPlugin, ABC):
             return record.data_timestamp
         return tz_datetime.now()
 
+    # TODO: Validate
     def _upsert_source(self, source_key: str) -> Source:
         """Create or update the plugin's `Source` records."""
         existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
@@ -45,10 +46,11 @@ class BaseInitializeMixin(BaseFileAccessMixin, AbstractPlugin, ABC):
         # If there are source files use those as the data_timestamp, if there are no
         # source files set the data_timestamp to the current date.
         try:
-            self._source_files()
+            source_files = self._source_files()
         except NotImplementedError:
             data_timestamp = tz_datetime.now()
         else:
+            self._download_if_outdated(source_files)
             data_timestamp = self._source_files_data_timestamp()
         source = Source(
             key=source_key,

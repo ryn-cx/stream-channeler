@@ -4,19 +4,26 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, override
 
-from plugins.HiDive.constants import MOVIE_URL_REGEX, SEASON_URL_REGEX, SERIES_URL_REGEX
+from plugins.HiDive.constants import (
+    MOVIE_MEDIA_TYPE,
+    MOVIE_URL_REGEX,
+    SEASON_URL_REGEX,
+    SERIES_MEDIA_TYPE,
+    SERIES_URL_REGEX,
+)
 from plugins.HiDive.importer import (
     HiDiveImporter,
     HiDiveMovieImporter,
     HiDiveSeriesImporter,
 )
 from plugins.HiDive.shared import HiDiveShared
-from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin.importer import BaseImporter
+from plugins.HiDive.utils import title_url
+from plugins.utils.abstract_plugin import AbstractPlugin
 
 if TYPE_CHECKING:
     from datetime import datetime
 
+    from app.media.media_type import TMDBMediaType
     from app.sources.models import Source
     from app.titles.models import Title
 
@@ -24,7 +31,6 @@ if TYPE_CHECKING:
 # TODO: Validate
 class HiDive(
     HiDiveShared,
-    BaseImporter,
     AbstractPlugin,
     register=False,
 ):
@@ -39,17 +45,6 @@ class HiDive(
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
         return (SERIES_URL_REGEX, SEASON_URL_REGEX, MOVIE_URL_REGEX)
-
-    # TODO: Validate
-    @override
-    def _validate_url(self, url: str) -> None:
-        domain_regex = self._domains_regex()
-        for url_regex in (SERIES_URL_REGEX, SEASON_URL_REGEX, MOVIE_URL_REGEX):
-            if re.match(domain_regex + url_regex, url):
-                return
-
-        msg = f"Invalid {self.plugin_name()} URL: {url}"
-        raise InvalidURLError(msg)
 
     # TODO: Validate
     @override
@@ -70,6 +65,25 @@ class HiDive(
         if title.media_type == "Movie":
             return HiDiveMovieImporter(self.session, self.plugin, self._file_cache)
         return HiDiveSeriesImporter(self.session, self.plugin, self._file_cache)
+
+    # TODO: Validate
+    @override
+    def search_for_title_url(
+        self,
+        name: str,
+        media_type: TMDBMediaType,
+        year: int | None = None,
+    ) -> str | None:
+        search_file = self.search_file(name)
+        search_file.download_if_outdated()
+        for element in search_file.parsed().elements:
+            for card in element.attributes.cards or []:
+                card_identifier = card.attributes.action.data.id
+                type_prefix, _, title_key = card_identifier.partition("#")
+                if type_prefix == "VOD":
+                    return title_url(title_key, MOVIE_MEDIA_TYPE)
+                return title_url(title_key, SERIES_MEDIA_TYPE)
+        return None
 
     # TODO: Validate
     @override

@@ -24,7 +24,7 @@ from plugins.Amazon.shared import AmazonShared
 from plugins.Amazon.utils import AmazonSeason, detail_url, parse_date
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.utils.base_plugin.url import ExtractedURLInfo
+from plugins.utils.base_plugin.url import ParsedURL
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -49,7 +49,7 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> ExtractedURLInfo:
+    def parse_url(self, url: str) -> ParsedURL:
         domain_regex = self._domains_regex()
         title_key: str | None
         if match := re.match(domain_regex + SHARE_URL_REGEX, url):
@@ -75,12 +75,12 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
             msg = f"{message}: {url}"
             raise InvalidURLError(msg)
 
-        return ExtractedURLInfo(self.title_key_from_title_key(title_key))
+        return ParsedURL(self.title_key_from_title_key(title_key))
 
     # TODO: Validate
     @override  # Writes the title into every source it can be watched through.
     def import_url(self, url: str) -> list[URLImportResult]:
-        media_info = self.get_media_info(url)
+        media_info = self.parse_url(url)
         if titles := self._preload_title(media_info.title_key).all():
             return [
                 result

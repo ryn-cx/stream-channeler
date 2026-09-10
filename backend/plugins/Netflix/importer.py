@@ -17,12 +17,12 @@ from plugins.Netflix.constants import TITLE_URL_REGEX
 from plugins.Netflix.shared import NetflixShared
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.utils.base_plugin.url import ExtractedURLInfo
+from plugins.utils.base_plugin.url import ParsedURL
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from meshfilm.lodp_title_and_plans_page.models import Video1 as TitleVideo
+    from meshfilm.detail_modal.models import DetailModalModel
 
     from app.sources.models import Source
     from plugins.utils.base_plugin.files import BaseFile
@@ -38,11 +38,11 @@ class NetflixImporter(NetflixShared, BaseImporter, ABC):
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> ExtractedURLInfo:
+    def parse_url(self, url: str) -> ParsedURL:
         if match := re.match(self._domains_regex() + TITLE_URL_REGEX, url):
             title_key = match.group("title_key")
             self.raise_invalid_url_if_no_content(self.title_file(title_key), url)
-            return ExtractedURLInfo(title_key)
+            return ParsedURL(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
@@ -133,16 +133,16 @@ class NetflixSeriesImporter(NetflixImporter):
     ) -> Title:
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            title_data = self.title_file(title_key).title_information()
+            title_data = self.title_file(title_key).parsed()
             title = Title(
                 key=title_key,
                 name=title_data.title,
-                description=title_data.short_synopsis,
+                description=title_data.contextual_synopsis.text,
                 media_type="Series",
                 year=title_data.latest_year,
                 url=self.title_url(title_key),
-                image_url=title_data.billboard_or_story_art960.url,
-                thumbnail_url=title_data.billboard_or_story_art960.url,
+                image_url=title_data.story_art.url,
+                thumbnail_url=title_data.story_art.url,
                 data_timestamp=self._title_files_data_timestamp(title_key),
                 source_id=source.id,
             ).upsert(source, title)
@@ -267,7 +267,7 @@ class NetflixMovieImporter(NetflixImporter):
         *,
         force: bool = False,
     ) -> Title:
-        movie_data = self.title_file(title_key).title_information()
+        movie_data = self.title_file(title_key).parsed()
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             title = Title(
@@ -275,8 +275,8 @@ class NetflixMovieImporter(NetflixImporter):
                 name=movie_data.title,
                 url=self.title_url(title_key),
                 year=movie_data.latest_year,
-                image_url=movie_data.billboard_or_story_art960.url,
-                thumbnail_url=movie_data.billboard_or_story_art960.url,
+                image_url=movie_data.story_art.url,
+                thumbnail_url=movie_data.story_art.url,
                 media_type="Movie",
                 data_timestamp=self._title_files_data_timestamp(title_key),
                 source_id=source.id,
@@ -292,7 +292,7 @@ class NetflixMovieImporter(NetflixImporter):
     def _upsert_season(
         self,
         title: Title,
-        movie_data: TitleVideo,
+        movie_data: DetailModalModel,
         *,
         force: bool = False,
     ) -> None:
@@ -315,7 +315,7 @@ class NetflixMovieImporter(NetflixImporter):
         self,
         season: Season,
         title_key: str,
-        movie_data: TitleVideo,
+        movie_data: DetailModalModel,
         *,
         force: bool = False,
     ) -> None:
@@ -326,8 +326,8 @@ class NetflixMovieImporter(NetflixImporter):
                 watch_identifier=watch_identifier(self.plugin_name(), title_key),
                 name=movie_data.title,
                 url=self.episode_url(title_key),
-                image_url=movie_data.billboard_or_story_art960.url,
-                thumbnail_url=movie_data.billboard_or_story_art960.url,
+                image_url=movie_data.story_art.url,
+                thumbnail_url=movie_data.story_art.url,
                 episode_number=0,
                 sort_order=0,
                 data_timestamp=self._episode_files_data_timestamp(

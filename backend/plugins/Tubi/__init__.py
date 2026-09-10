@@ -7,31 +7,19 @@ from typing import TYPE_CHECKING, override
 from plugins.Tubi.constants import EPISODE_URL_REGEX, MOVIE_URL_REGEX, SERIES_URL_REGEX
 from plugins.Tubi.importer import TubiImporter, TubiMovieImporter, TubiSeriesImporter
 from plugins.Tubi.shared import TubiShared
-from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin.importer import BaseImporter
+from plugins.utils.abstract_plugin import AbstractPlugin
 
 if TYPE_CHECKING:
     from app.titles.models import Title
 
 
 # TODO: Validate
-class Tubi(TubiShared, BaseImporter, AbstractPlugin, register=False):
+class Tubi(TubiShared, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
         return (MOVIE_URL_REGEX, SERIES_URL_REGEX, EPISODE_URL_REGEX)
-
-    # TODO: Validate
-    @override
-    def _validate_url(self, url: str) -> None:
-        domain_regex = self._domains_regex()
-        for url_regex in (MOVIE_URL_REGEX, SERIES_URL_REGEX, EPISODE_URL_REGEX):
-            if re.match(domain_regex + url_regex, url):
-                return
-
-        msg = f"Invalid {self.plugin_name()} URL: {url}"
-        raise InvalidURLError(msg)
 
     # TODO: Validate
     @override

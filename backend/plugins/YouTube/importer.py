@@ -4,7 +4,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from datetime import timedelta
 from typing import TYPE_CHECKING, Any, override
+
+from loguru import logger
 
 from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
@@ -21,10 +24,10 @@ from plugins.YouTube.utils import (
     get_first_item,
     image_url,
     is_channel_key,
-    # is_title_key,
-    # is_title_season_key,
+    is_title_key,
+    is_title_season_key,
     is_topic_channel,
-    # is_video_key,
+    is_video_key,
     thumbnail_url,
     video_url,
 )
@@ -35,13 +38,37 @@ if TYPE_CHECKING:
 
     from plugins.utils.abstract_plugin import URLImportResult
     from plugins.utils.base_plugin.files import BaseFile
-    from plugins.utils.base_plugin.url import ExtractedURLInfo
-    from plugins.YouTube.url_parser import ParsedURL
+    from plugins.utils.base_plugin.url import ParsedURL
+    from plugins.YouTube.url_parser import YouTubeParsedURL
 
 
 # TODO: Validate
 class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
-    parsed_url: ParsedURL | None = None
+    parsed_url: YouTubeParsedURL | None = None
+
+    # TODO: Validate
+    @override
+    def update_season(self, season: Season) -> None:
+        playlist_feed = self.playlist_feed_file(season.key)
+
+        # PlaylistFeed is not a required file because sometimes it will return 404
+        # errors for hours at a time so an initial file may need to be downloaded here.
+        if playlist_feed.does_not_exist():
+            playlist_feed.download_if_outdated()
+            return
+
+        old_feed_video_ids = playlist_feed.video_ids()
+        playlist_feed.download_if_outdated(season.update_at)
+        season.update_at = playlist_feed.record_data_timestamp + timedelta(hours=6)
+
+        if new_video_ids := playlist_feed.video_ids() - old_feed_video_ids:
+            logger.info(
+                "Found {} new videos in season {}: {}",
+                len(new_video_ids),
+                season.name or season.key,
+                ", ".join(sorted(new_video_ids)),
+            )
+            super().update_season(season)
 
     # TODO: Validate
     @abstractmethod
@@ -64,12 +91,8 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
         return
 
     # TODO: Validate
-    def tmdb_media_type(
-        self,
-        title_key: str,  # noqa: ARG002 - Matches how every other file is asked for.
-    ) -> TMDBMediaType:
-        # return TMDBMediaType.movie if is_video_key(title_key) else TMDBMediaType.tv
-        return TMDBMediaType.tv
+    def tmdb_media_type(self, title_key: str) -> TMDBMediaType:
+        return TMDBMediaType.movie if is_video_key(title_key) else TMDBMediaType.tv
 
     # TODO: Validate
     def _get_episode_number(
@@ -95,8 +118,8 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
     def _playlist_is_missing(self, title: Title, playlist_key: str) -> bool:
         # A URL for a whole title asks for every season it has, so nothing is missing
         # as long as it has been imported with seasons.
-        # if is_title_key(playlist_key) and not is_title_season_key(playlist_key):
-        #     return not title.active_children
+        if is_title_key(playlist_key) and not is_title_season_key(playlist_key):
+            return not title.active_children
 
         # A URL for a Topic channel asks for every release the musician has, which
         # is the whole title, so nothing is missing once it has been imported with
@@ -193,11 +216,11 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> ExtractedURLInfo:
+    def parse_url(self, url: str) -> ParsedURL:
         return self._parsed_url(url).media_info()
 
     # TODO: Validate
-    def _parsed_url(self, url: str) -> ParsedURL:
+    def _parsed_url(self, url: str) -> YouTubeParsedURL:
         if self.parsed_url is None:
             msg = f"Ask {self.plugin_name()} for the importer of {url} first."
             raise InvalidURLError(msg)

@@ -37,7 +37,7 @@ from plugins.HiDive.utils import (
 )
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.utils.base_plugin.url import ExtractedURLInfo
+from plugins.utils.base_plugin.url import ParsedURL
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -63,12 +63,12 @@ class HiDiveSeriesImporter(HiDiveImporter):
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> ExtractedURLInfo:
+    def parse_url(self, url: str) -> ParsedURL:
         domain_regex = self._domains_regex()
         if match := re.match(domain_regex + SERIES_URL_REGEX, url):
             title_key = match.group("series_key")
             self.raise_invalid_url_if_no_content(self.series_file(title_key), url)
-            return ExtractedURLInfo(title_key)
+            return ParsedURL(title_key)
 
         # HiDive's interface does not do a good job of seperating titles and seasons
         # and if a user uses a season URL it should be treated the same as a series
@@ -77,7 +77,7 @@ class HiDiveSeriesImporter(HiDiveImporter):
             season_key = match.group("season_key")
             season_file = self.season_file(season_key)
             self.raise_invalid_url_if_no_content(season_file, url)
-            return ExtractedURLInfo(str(season_file.parsed().metadata.series.series_id))
+            return ParsedURL(str(season_file.parsed().metadata.series.series_id))
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
@@ -233,11 +233,11 @@ class HiDiveMovieImporter(HiDiveImporter):
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> ExtractedURLInfo:
+    def parse_url(self, url: str) -> ParsedURL:
         if match := re.match(self._domains_regex() + MOVIE_URL_REGEX, url):
             title_key = match.group("movie_vod_key")
             self.raise_invalid_url_if_no_content(self.vod_file(title_key), url)
-            return ExtractedURLInfo(title_key)
+            return ParsedURL(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)

@@ -90,7 +90,6 @@ class BaseFileAccessMixin(AbstractPlugin, ABC):
         for file in files:
             file.download_if_outdated(update_at)
 
-    # TODO: Validate
     def _preload_files(self, files: Sequence[BaseFile[Any]]) -> None:
         """Preload the given files into the session cache."""
         file_keys = [file.file_key() for file in files]
@@ -255,14 +254,10 @@ class BaseFileAccessMixin(AbstractPlugin, ABC):
         error-prone than explicitly raising an error."""
         raise NotImplementedError
 
-    # TODO: Validate
     def _title_files_data_timestamps(self, title_key: str) -> list[datetime]:
         """Return the data timestamp from each of the title's files."""
-        files = self._title_files(title_key)
-        self._download_if_outdated(files)
-        return [file.record_data_timestamp for file in files]
+        return [file.record_data_timestamp for file in self._title_files(title_key)]
 
-    # TODO: Validate
     def _season_files_data_timestamps(
         self,
         season_key: str,
@@ -270,10 +265,8 @@ class BaseFileAccessMixin(AbstractPlugin, ABC):
     ) -> list[datetime]:
         """Return the data timestamp from each of the season's files."""
         files = self._season_files(season_key, title_key)
-        self._download_if_outdated(files)
         return [file.record_data_timestamp for file in files]
 
-    # TODO: Validate
     def _episode_files_data_timestamps(
         self,
         episode_key: str,
@@ -282,22 +275,15 @@ class BaseFileAccessMixin(AbstractPlugin, ABC):
     ) -> list[datetime]:
         """Return the data timestamp from each of the episode's files."""
         files = self._episode_files(episode_key, season_key, title_key)
-        self._download_if_outdated(files)
         return [file.record_data_timestamp for file in files]
 
-    # TODO: Validate
     def _source_files_data_timestamps(self) -> list[datetime]:
         """Return the data timestamp from each of the source's files."""
-        files = self._source_files()
-        self._download_if_outdated(files)
-        return [file.record_data_timestamp for file in files]
+        return [file.record_data_timestamp for file in self._source_files()]
 
-    # TODO: Validate
     def _plugin_files_data_timestamps(self) -> list[datetime]:
         """Return the data timestamp from each of the plugin's files."""
-        files = self._plugin_files()
-        self._download_if_outdated(files)
-        return [file.record_data_timestamp for file in files]
+        return [file.record_data_timestamp for file in self._plugin_files()]
 
     def _title_files_data_timestamp(self, title_key: str) -> datetime:
         """Return the newest data timestamp from the title's files."""
@@ -318,7 +304,6 @@ class BaseFileAccessMixin(AbstractPlugin, ABC):
             self._episode_files_data_timestamps(episode_key, season_key, title_key),
         )
 
-    # TODO: Validate
     def _source_files_data_timestamp(self) -> datetime:
         """Return the newest data timestamp from the source's files."""
         return max(self._source_files_data_timestamps())

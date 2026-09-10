@@ -14,18 +14,16 @@ from plugins.TMDB.shared import TMDBShared
 from plugins.TMDB.utils import Provider, tmdb_url
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
-    InvalidURLError,
     MediaNotFoundError,
     URLImportResult,
 )
-from plugins.utils.base_plugin.importer import BaseImporter
 
 if TYPE_CHECKING:
     from app.titles.models import Title
 
 
 # TODO: Validate
-class TMDB(TMDBShared, BaseImporter, AbstractPlugin, register=False):
+class TMDB(TMDBShared, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override
@@ -40,17 +38,6 @@ class TMDB(TMDBShared, BaseImporter, AbstractPlugin, register=False):
         if media_type == TMDBMediaType.movie:
             return TMDBMovie(self.session, self.plugin, self._file_cache)
         return TMDBSeries(self.session, self.plugin, self._file_cache)
-
-    # TODO: Validate
-    @override
-    def _validate_url(self, url: str) -> None:
-        domain_regex = self._domains_regex()
-        for url_regex in (MOVIE_URL_REGEX, TV_URL_REGEX):
-            if re.match(domain_regex + url_regex, url):
-                return
-
-        msg = f"Invalid {self.plugin_name()} URL: {url}"
-        raise InvalidURLError(msg)
 
     # TODO: Validate
     @override
@@ -73,15 +60,15 @@ class TMDB(TMDBShared, BaseImporter, AbstractPlugin, register=False):
     @override
     def import_search(
         self,
-        names: list[str],
+        name: str,
         media_type: TMDBMediaType | None = None,
         year: int | None = None,
     ) -> list[URLImportResult]:
-        search_result = self.first_search_result(names[0], media_type, year)
+        search_result = self.first_search_result(name, media_type, year)
         if not search_result:
-            msg = f"Could not find {names[0]} on {self.plugin_name()}."
+            msg = f"Could not find {name} on {self.plugin_name()}."
             raise MediaNotFoundError(msg)
 
         found_media_type, tmdb_media_id = search_result
-        medai_importer = self._get_media_importer_from_media_type(found_media_type)
-        return medai_importer.import_url(tmdb_url(found_media_type, tmdb_media_id))
+        media_importer = self._get_media_importer_from_media_type(found_media_type)
+        return media_importer.import_url(tmdb_url(found_media_type, tmdb_media_id))

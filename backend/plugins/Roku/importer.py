@@ -27,7 +27,7 @@ from plugins.Roku.utils import (
 )
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.utils.base_plugin.url import ExtractedURLInfo
+from plugins.utils.base_plugin.url import ParsedURL
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -73,18 +73,18 @@ class RokuImporter(RokuShared, BaseImporter, ABC):
 class RokuSeriesImporter(RokuImporter):
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> ExtractedURLInfo:
+    def parse_url(self, url: str) -> ParsedURL:
         key = self._url_content_key(url)
         series = self._content(key).series
         if series is None:
-            return ExtractedURLInfo(key)
+            return ParsedURL(key)
 
         # A season carries its number after its id, an episode does not, and only
         # an episode is a title of its own to point at.
         title_key = content_id(series.meta.id)
         if "-" in key:
-            return ExtractedURLInfo(title_key)
-        return ExtractedURLInfo(title_key, episode_key=key)
+            return ParsedURL(title_key)
+        return ParsedURL(title_key, episode_key=key)
 
     # TODO: Validate
     def _season_episodes(
@@ -239,8 +239,8 @@ class RokuSeriesImporter(RokuImporter):
 class RokuMovieImporter(RokuImporter):
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> ExtractedURLInfo:
-        return ExtractedURLInfo(self._url_content_key(url))
+    def parse_url(self, url: str) -> ParsedURL:
+        return ParsedURL(self._url_content_key(url))
 
     # TODO: Validate
     @override

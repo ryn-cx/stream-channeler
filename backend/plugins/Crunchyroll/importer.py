@@ -38,7 +38,7 @@ from plugins.Crunchyroll.utils import (
 )
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.utils.base_plugin.url import ExtractedURLInfo
+from plugins.utils.base_plugin.url import ParsedURL
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -115,12 +115,12 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> ExtractedURLInfo:
+    def parse_url(self, url: str) -> ParsedURL:
         domain_regex = self._domains_regex()
         if match := re.match(domain_regex + SERIES_URL_REGEX, url):
             title_key = match.group("title_key")
             self.raise_invalid_url_if_no_content(self.series_file(title_key), url)
-            return ExtractedURLInfo(title_key)
+            return ParsedURL(title_key)
 
         if match := re.match(domain_regex + EPISODE_URL_REGEX, url):
             episode_key = match.group("episode_key")
@@ -136,7 +136,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
 
             original_file = self.objects_file(episode_key)
             self.raise_invalid_url_if_no_content(original_file, url)
-            return ExtractedURLInfo(
+            return ParsedURL(
                 original_file.parsed().data[0].episode_metadata.series_id,
                 episode_key=episode_key,
             )
@@ -425,7 +425,7 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
 
     # TODO: Validate
     @override
-    def get_media_info(self, url: str) -> ExtractedURLInfo:
+    def parse_url(self, url: str) -> ParsedURL:
         domain_regex = self._domains_regex()
         for url_regex, group in (
             (MUSIC_VIDEO_URL_REGEX, "music_video_key"),
@@ -435,7 +435,7 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
                 episode_key = match.group(group)
                 music_file = self.concert_or_music_video_file(episode_key)
                 self.raise_invalid_url_if_no_content(music_file, url)
-                return ExtractedURLInfo(
+                return ParsedURL(
                     music_file.parsed().data[0].artist.id,
                     episode_key=episode_key,
                 )
@@ -443,7 +443,7 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
         if match := re.match(domain_regex + ARTIST_URL_REGEX, url):
             title_key = match.group("artist_key")
             self.raise_invalid_url_if_no_content(self.artist_file(title_key), url)
-            return ExtractedURLInfo(title_key)
+            return ParsedURL(title_key)
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)

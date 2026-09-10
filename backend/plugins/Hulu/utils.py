@@ -10,6 +10,7 @@ from wholoo.genre.models import GenreModel
 from wholoo.genres.models import GenresModel
 from wholoo.movies.models import MoviesModel
 from wholoo.season.models import Item, SeasonModel
+from wholoo.tv.models import Details as TVDetails
 from wholoo.tv.models import TVModel
 
 from plugins.Hulu.constants import HuluMediaType
@@ -79,31 +80,17 @@ def season_items(season: SeasonModel) -> list[Item]:
 # TODO: Validate
 def title_urls(page: AllSeriesModel | AllMoviesModel | GenreModel) -> list[str]:
     """Return all title URLs from the given page."""
-    layout = page.props.page_props.layout
-    return [
-        build_url(item.href)
-        for component in layout.components or []
-        if component.type == "list_card"
-        for item in component.items or []
-        if item.href
-    ]
+    return [build_url(item.href) for item in page.items]
 
 
 # TODO: Validate
 def genre_ids(page: GenresModel) -> list[str]:
-    layout = page.props.page_props.layout
-    return [
-        item.href.removeprefix("/hub/")
-        for component in layout.components or []
-        if component.type == "list_card"
-        for item in component.items or []
-        if item.href
-    ]
+    return [item.href.removeprefix("/hub/") for item in page.items]
 
 
 # TODO: Validate
-def title_plan(page: TVModel | MoviesModel) -> tuple[str, bool] | None:
-    vod_items = page.details.vod_items
+def title_plan(details: TVDetails | MoviesModel) -> tuple[str, bool] | None:
+    vod_items = details.vod_items
     if vod_items is None:
         return None
     bundle = vod_items.focus.entity.bundle
