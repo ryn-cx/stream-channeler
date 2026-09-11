@@ -96,6 +96,17 @@ interface Summarised extends Numbered {
 }
 
 // TODO: Validate
+function titleLabel(record: Summarised): string {
+  return `${record.title_name ?? "Unnamed"} (${record.title_year ?? "Unknown"})`
+}
+
+// TODO: Validate
+function seasonLabel(record: Summarised): string {
+  const number = `Season ${record.season_number ?? "?"}`
+  return record.season_name ? `${number} (${record.season_name})` : number
+}
+
+// TODO: Validate
 function ExternalLinkButton({
   url,
   label,
@@ -238,8 +249,7 @@ function MatchSummary({
           search={{ title_id: record.title_id }}
           className="min-w-0 hover:underline"
         >
-          {record.title_name ?? "Unnamed"}
-          {record.title_year === null ? "" : ` ${record.title_year}`}
+          {titleLabel(record)}
         </Link>
         <EditTitleById titleId={record.title_id} />
         <ExternalLinkButton
@@ -256,7 +266,7 @@ function MatchSummary({
             agreement.season && agreeingNumber,
           )}
         >
-          {record.season_name ?? `Season ${record.season_number ?? "?"}`}
+          {seasonLabel(record)}
         </Link>
         <ExternalLinkButton
           url={record.season_url}
@@ -568,13 +578,13 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
     },
   },
   {
-    id: "description_blended_match_summary",
+    id: "description_tfidf_match_summary",
     accessorFn: (row) =>
-      row.description_blended_matches?.[0]?.title.name ?? "No match",
-    header: "Description → Description (blended)",
+      row.description_tfidf_matches?.[0]?.title.name ?? "No match",
+    header: "Description → Description (tf-idf)",
     meta: { serverBacked: false, cellClassName: "align-top" },
     cell: ({ row }) => {
-      const found = row.original.description_blended_matches ?? []
+      const found = row.original.description_tfidf_matches ?? []
       if (found.length === 0) {
         return (
           <WrappingCell className="max-w-72 text-muted-foreground">
@@ -604,7 +614,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
                   <TmdbMatchConfirmButton
                     episodeId={row.original.episode.id}
                     match={textMatch}
-                    kind="description_blended"
+                    kind="description_tfidf"
                   />
                 }
               />
@@ -662,13 +672,13 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
     },
   },
   {
-    id: "title_blended_match_summary",
+    id: "title_tfidf_match_summary",
     accessorFn: (row) =>
-      row.title_blended_matches?.[0]?.title.name ?? "No match",
-    header: "Title → Title (blended)",
+      row.title_tfidf_matches?.[0]?.title.name ?? "No match",
+    header: "Title → Title (tf-idf)",
     meta: { serverBacked: false, cellClassName: "align-top" },
     cell: ({ row }) => {
-      const found = row.original.title_blended_matches ?? []
+      const found = row.original.title_tfidf_matches ?? []
       if (found.length === 0) {
         return (
           <WrappingCell className="max-w-72 text-muted-foreground">
@@ -698,7 +708,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
                   <TmdbMatchConfirmButton
                     episodeId={row.original.episode.id}
                     match={textMatch}
-                    kind="title_blended"
+                    kind="title_tfidf"
                   />
                 }
               />

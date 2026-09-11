@@ -1,5 +1,5 @@
 // TODO: Validate
-import { Maximize2, Minimize2, Pencil } from "lucide-react"
+import { Pencil } from "lucide-react"
 import { useState } from "react"
 
 import {
@@ -181,7 +181,6 @@ const EditEpisode = ({ episode, open, onOpenChange }: EditEpisodeProps) => {
   const [isOpenHere, setIsOpenHere] = useState(false)
   const isOpen = open ?? isOpenHere
   const setIsOpen = onOpenChange ?? setIsOpenHere
-  const [isFullScreen, setIsFullScreen] = useState(false)
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -192,23 +191,8 @@ const EditEpisode = ({ episode, open, onOpenChange }: EditEpisodeProps) => {
           onClick={() => setIsOpen(true)}
         />
       ) : null}
-      <ModalContent
-        size={isFullScreen ? "full" : "3xl"}
-        className={
-          isFullScreen
-            ? "max-h-none h-[calc(100dvh-2rem)] overflow-y-hidden"
-            : "max-h-[calc(100dvh-2rem)] overflow-y-hidden"
-        }
-      >
-        <TooltipIconButton
-          label={isFullScreen ? "Shrink to a window" : "Fill the screen"}
-          icon={isFullScreen ? <Minimize2 /> : <Maximize2 />}
-          size="icon-sm"
-          className="absolute left-4 top-4 z-10"
-          onClick={() => setIsFullScreen(!isFullScreen)}
-        />
-
-        <DialogHeader className="px-8">
+      <ModalContent size="3xl" className="overflow-y-hidden">
+        <DialogHeader>
           <DialogTitle>Episode Information</DialogTitle>
           <DialogDescription>
             What the website and TMDB each say about this episode, and which

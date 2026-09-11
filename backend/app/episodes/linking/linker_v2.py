@@ -1,6 +1,7 @@
 # TODO: Validate
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -30,9 +31,9 @@ class EpisodeRecord:
     season_number: int | None
     linked_episode: EpisodeRecord | None = None
     link_note: str | None = None
-    blended_name_match: EpisodeMatch | None = None
+    tfidf_name_match: EpisodeMatch | None = None
     embedding_name_match: EpisodeMatch | None = None
-    blended_description_match: EpisodeMatch | None = None
+    tfidf_description_match: EpisodeMatch | None = None
     embedding_description_match: EpisodeMatch | None = None
 
 
@@ -61,16 +62,36 @@ def match_categories(
     episode: EpisodeRecord,
 ) -> tuple[tuple[str, EpisodeMatch | None], ...]:
     return (
-        ("Blended name", episode.blended_name_match),
+        ("TF-IDF name", episode.tfidf_name_match),
         ("Embedding name", episode.embedding_name_match),
-        ("Blended description", episode.blended_description_match),
+        ("TF-IDF description", episode.tfidf_description_match),
         ("Embedding description", episode.embedding_description_match),
     )
 
 
 # TODO: Validate
-def set_blended_name_match(episode: EpisodeRecord, match: EpisodeMatch) -> None:
-    episode.blended_name_match = match
+def tfidf_name_match(episode: EpisodeRecord) -> EpisodeMatch | None:
+    return episode.tfidf_name_match
+
+
+# TODO: Validate
+def embedding_name_match(episode: EpisodeRecord) -> EpisodeMatch | None:
+    return episode.embedding_name_match
+
+
+# TODO: Validate
+def tfidf_description_match(episode: EpisodeRecord) -> EpisodeMatch | None:
+    return episode.tfidf_description_match
+
+
+# TODO: Validate
+def embedding_description_match(episode: EpisodeRecord) -> EpisodeMatch | None:
+    return episode.embedding_description_match
+
+
+# TODO: Validate
+def set_tfidf_name_match(episode: EpisodeRecord, match: EpisodeMatch) -> None:
+    episode.tfidf_name_match = match
 
 
 # TODO: Validate
@@ -79,8 +100,8 @@ def set_embedding_name_match(episode: EpisodeRecord, match: EpisodeMatch) -> Non
 
 
 # TODO: Validate
-def set_blended_description_match(episode: EpisodeRecord, match: EpisodeMatch) -> None:
-    episode.blended_description_match = match
+def set_tfidf_description_match(episode: EpisodeRecord, match: EpisodeMatch) -> None:
+    episode.tfidf_description_match = match
 
 
 # TODO: Validate
@@ -150,6 +171,64 @@ def episode_description(episode: EpisodeRecord) -> str:
 
 
 # TODO: Validate
+def exact_key(text: str) -> str:
+    return text.casefold()
+
+
+# TODO: Validate
+def fuzzy_key(text: str) -> str:
+    without_the = re.sub(r"\bthe\b", "", text.casefold())
+    return re.sub(r"[^a-z0-9]", "", without_the)
+
+
+# TODO: Validate
+def episode_name_key(episode: EpisodeRecord) -> str:
+    return exact_key(episode_name(episode))
+
+
+# TODO: Validate
+def fuzzy_episode_name_key(episode: EpisodeRecord) -> str:
+    return fuzzy_key(episode_name(episode))
+
+
+# TODO: Validate
+def episode_description_key(episode: EpisodeRecord) -> str:
+    return exact_key(episode_description(episode))
+
+
+# TODO: Validate
+def fuzzy_episode_description_key(episode: EpisodeRecord) -> str:
+    return fuzzy_key(episode_description(episode))
+
+
+# TODO: Validate
+def episodes_by_key(
+    episodes: list[EpisodeRecord],
+    key_of: Callable[[EpisodeRecord], str],
+) -> defaultdict[str, list[EpisodeRecord]]:
+    grouped: defaultdict[str, list[EpisodeRecord]] = defaultdict(list)
+    for episode in episodes:
+        if episode.linked_episode is not None:
+            continue
+        key = key_of(episode)
+        if key:
+            grouped[key].append(episode)
+    return grouped
+
+
+# TODO: Validate
+def episodes_by_number(
+    episodes: list[EpisodeRecord],
+) -> defaultdict[tuple[int, int], list[EpisodeRecord]]:
+    grouped: defaultdict[tuple[int, int], list[EpisodeRecord]] = defaultdict(list)
+    for episode in episodes:
+        if episode.season_number is None or episode.episode_number is None:
+            continue
+        grouped[episode.season_number, episode.episode_number].append(episode)
+    return grouped
+
+
+# TODO: Validate
 class EpisodeLinkerV2:
     # TODO: Validate
     def __init__(self, session: Session, linked_title: Title) -> None:
@@ -171,40 +250,67 @@ class EpisodeLinkerV2:
     def link_titles(self) -> None:
         # Link identical titles first because it is fast and can reduce the number of
         # episodes for the slower more complex matching methods.
-        self.link_identical_titles()
+        self._link_matching_keys(episode_name_key, "Exact name")
+        self._link_matching_keys(fuzzy_episode_name_key, "Fuzzy name")
+        self._link_matching_keys(episode_description_key, "Exact description")
+        self._link_matching_keys(fuzzy_episode_description_key, "Fuzzy description")
         self.score_matches(
             episode_name,
-            set_blended_name_match,
+            set_tfidf_name_match,
             set_embedding_name_match,
         )
         self.score_matches(
             episode_description,
-            set_blended_description_match,
+            set_tfidf_description_match,
             set_embedding_description_match,
         )
-        self._link_two_way_matches_with_episode_number()
+        self._link_two_way_number_matches(embedding_name_match, "Embedding name")
+        self._link_two_way_number_matches(tfidf_name_match, "TF-IDF name")
+        self._link_two_way_number_matches(
+            tfidf_description_match,
+            "Embedding description",
+        )
+        self._link_two_way_number_matches(
+            embedding_description_match,
+            "TF-IDF description",
+        )
+        self._link_agreed_high_score_matches()
         self._link_perfect_two_way_matches()
         self.save_links()
 
     # TODO: Validate
-    def link_identical_titles(self) -> None:
-        tmdb_episodes_by_name: defaultdict[str, list[EpisodeRecord]] = defaultdict(list)
-        for tmdb_episode in self.tmdb_episodes:
-            name = episode_name(tmdb_episode).casefold()
-            if name:
-                tmdb_episodes_by_name[name].append(tmdb_episode)
-
-        episodes_by_name: defaultdict[str, list[EpisodeRecord]] = defaultdict(list)
-        for episode in self.episodes:
-            name = episode_name(episode).casefold()
-            if name:
-                episodes_by_name[name].append(episode)
-
-        for name, episodes in episodes_by_name.items():
-            tmdb_episodes = tmdb_episodes_by_name[name]
-            if len(episodes) != 1 or len(tmdb_episodes) != 1:
+    def _link_matching_keys(
+        self,
+        key_of: Callable[[EpisodeRecord], str],
+        label: str,
+    ) -> None:
+        tmdb_episodes_by_key = episodes_by_key(self.tmdb_episodes, key_of)
+        for key, episodes in episodes_by_key(self.episodes, key_of).items():
+            tmdb_episodes = tmdb_episodes_by_key[key]
+            if not tmdb_episodes:
                 continue
-            self.link(episodes[0], tmdb_episodes[0], "Automatic: Exact name match")
+            if len(episodes) == 1 and len(tmdb_episodes) == 1:
+                self.link(episodes[0], tmdb_episodes[0], f"Automatic: {label} match")
+                continue
+            self._link_matching_keys_by_number(episodes, tmdb_episodes, label)
+
+    # TODO: Validate
+    def _link_matching_keys_by_number(
+        self,
+        episodes: list[EpisodeRecord],
+        tmdb_episodes: list[EpisodeRecord],
+        label: str,
+    ) -> None:
+        numbered_tmdb_episodes = episodes_by_number(tmdb_episodes)
+        for number, numbered_episodes in episodes_by_number(episodes).items():
+            candidates = numbered_tmdb_episodes[number]
+            if len(numbered_episodes) != 1 or len(candidates) != 1:
+                continue
+            self.link(
+                numbered_episodes[0],
+                candidates[0],
+                f"Automatic: {label} and episode number match",
+            )
 
     # TODO: Validate
     def save_links(self) -> None:
@@ -247,27 +353,68 @@ class EpisodeLinkerV2:
         return matches
 
     # TODO: Validate
-    def _link_two_way_matches_with_episode_number(self) -> None:
+    def _link_two_way_number_matches(
+        self,
+        match_of: Callable[[EpisodeRecord], EpisodeMatch | None],
+        label: str,
+    ) -> None:
         for episode in self.episodes:
             if episode.linked_episode is not None:
                 continue
             if episode.episode_number is None or episode.season_number is None:
                 continue
-            matches = self.two_way_matches(episode)
-            if len(matches) != 1:
+            match = match_of(episode)
+            if match is None or not match.valid or match.score < 0.8:  # noqa: PLR2004
                 continue
-            tmdb_episode = matches[0]
+            tmdb_episode = match.episode
             if tmdb_episode.linked_episode is not None:
                 continue
             if tmdb_episode.episode_number != episode.episode_number:
                 continue
             if tmdb_episode.season_number != episode.season_number:
                 continue
+            mutual = match_of(tmdb_episode)
+            if mutual is None or not mutual.valid or mutual.episode is not episode:
+                continue
             self.link(
                 episode,
                 tmdb_episode,
-                two_way_note(episode, tmdb_episode, "with episode number"),
+                f"Automatic: {label} ({round(match.score * 100)}%) two-way match "
+                "with episode number",
             )
+
+    # TODO: Validate
+    def _link_agreed_high_score_matches(self) -> None:
+        for episode in self.episodes:
+            if episode.linked_episode is not None:
+                continue
+            tmdb_episode = self._agreed_high_score_match(episode)
+            if tmdb_episode is None or tmdb_episode.linked_episode is not None:
+                continue
+            self.link(
+                episode,
+                tmdb_episode,
+                two_way_note(episode, tmdb_episode, "with a high score"),
+            )
+
+    # TODO: Validate
+    def _agreed_high_score_match(
+        self,
+        episode: EpisodeRecord,
+    ) -> EpisodeRecord | None:
+        agreed: EpisodeRecord | None = None
+        for index, (_label, best) in enumerate(match_categories(episode)):
+            if best is None or best.score < 0.9:  # noqa: PLR2004
+                continue
+            if not best.valid:
+                return None
+            mutual = match_categories(best.episode)[index][1]
+            if mutual is None or not mutual.valid or mutual.episode is not episode:
+                return None
+            if agreed is not None and agreed is not best.episode:
+                return None
+            agreed = best.episode
+        return agreed
 
     # TODO: Validate
     def _link_perfect_two_way_matches(self) -> None:
@@ -304,7 +451,7 @@ class EpisodeLinkerV2:
     def score_matches(
         self,
         text_of: Callable[[EpisodeRecord], str],
-        set_blended_match: Callable[[EpisodeRecord, EpisodeMatch], None],
+        set_tfidf_match: Callable[[EpisodeRecord, EpisodeMatch], None],
         set_embedding_match: Callable[[EpisodeRecord, EpisodeMatch], None],
     ) -> None:
         episodes = [
@@ -322,13 +469,15 @@ class EpisodeLinkerV2:
 
         matcher = TextMatcher([text_of(episode) for episode in episodes])
         tmdb_texts = [text_of(tmdb_episode) for tmdb_episode in tmdb_episodes]
-        blended_scores, embedding_scores = matcher.blended_and_embedding_scores_of(
-            tmdb_texts,
-        )
-        assign_best_matches(episodes, tmdb_episodes, blended_scores, set_blended_match)
         assign_best_matches(
             episodes,
             tmdb_episodes,
-            embedding_scores,
+            matcher.tfidf_scores_of(tmdb_texts),
+            set_tfidf_match,
+        )
+        assign_best_matches(
+            episodes,
+            tmdb_episodes,
+            matcher.embedding_scores_of(tmdb_texts),
             set_embedding_match,
         )

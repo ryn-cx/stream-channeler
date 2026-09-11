@@ -1,6 +1,6 @@
 // TODO: Validate
 import { Link } from "@tanstack/react-router"
-import { Info, Maximize2, Minimize2 } from "lucide-react"
+import { Info } from "lucide-react"
 import { useState } from "react"
 import { ChannelDescriptionMarkdown } from "@/components/Channels/ChannelDetail/ChannelDescription"
 import { TitleCardsWithInformation } from "@/components/Channels/TitleCardsWithInformation"
@@ -8,20 +8,12 @@ import {
   useAllChannelTitles,
   useChannelTitleStats,
 } from "@/components/Channels/useChannelTitles"
-import { ModalContent } from "@/components/Common/ModalContent"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import {
   type TriggerVariant,
   VariantTrigger,
 } from "@/components/Common/VariantTrigger"
-import {
-  Dialog,
-  DialogBody,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+import { WinBoxModal } from "@/components/Common/WinBoxModal"
 
 interface ChannelDetailsButtonProps {
   channel: { id: string; name?: string | null; description?: string | null }
@@ -36,7 +28,6 @@ export function ChannelDetailsButton({
   showLabel,
 }: ChannelDetailsButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [isFullScreen, setIsFullScreen] = useState(false)
 
   const { data, isLoading } = useAllChannelTitles(channel.id, {
     enabled: isOpen,
@@ -64,42 +55,33 @@ export function ChannelDetailsButton({
   const { data: stats } = useChannelTitleStats(channel.id, listedTmdbTitleIds)
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        {variant === "icon" ? (
-          <TooltipIconButton
-            label="Details"
-            icon={<Info className="size-4" />}
-            showLabel={showLabel}
-          />
-        ) : (
-          <VariantTrigger
-            variant={variant}
-            icon={Info}
-            label="Details"
-            iconTitle="Details"
-          />
-        )}
-      </DialogTrigger>
-      <ModalContent
-        size={isFullScreen ? "full" : "6xl"}
-        className={
-          isFullScreen
-            ? "max-h-none h-[calc(100dvh-2rem)] flex flex-col overflow-hidden"
-            : "max-h-[85vh] flex flex-col overflow-hidden"
-        }
+    <>
+      {variant === "icon" ? (
+        <TooltipIconButton
+          label="Details"
+          icon={<Info className="size-4" />}
+          showLabel={showLabel}
+          onClick={() => setIsOpen(true)}
+        />
+      ) : (
+        <VariantTrigger
+          variant={variant}
+          icon={Info}
+          label="Details"
+          iconTitle="Details"
+          onClick={() => setIsOpen(true)}
+        />
+      )}
+
+      <WinBoxModal
+        open={isOpen}
+        title={channel.name ?? "Channel"}
+        onClose={() => setIsOpen(false)}
       >
-        <DialogHeader className="pl-8">
-          <DialogTitle>{channel.name ?? "Channel"}</DialogTitle>
-          <DialogDescription>
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
             The channel's description and every title it includes.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogBody
-          className={
-            isFullScreen ? "flex-1 max-h-none space-y-4 py-2" : "space-y-4 py-2"
-          }
-        >
+          </p>
           {channel.description && (
             <ChannelDescriptionMarkdown description={channel.description} />
           )}
@@ -133,16 +115,8 @@ export function ChannelDetailsButton({
               </div>
             ))
           )}
-        </DialogBody>
-
-        <TooltipIconButton
-          label={isFullScreen ? "Shrink to a window" : "Fill the screen"}
-          icon={isFullScreen ? <Minimize2 /> : <Maximize2 />}
-          size="icon-sm"
-          className="absolute left-4 top-4 z-10"
-          onClick={() => setIsFullScreen(!isFullScreen)}
-        />
-      </ModalContent>
-    </Dialog>
+        </div>
+      </WinBoxModal>
+    </>
   )
 }

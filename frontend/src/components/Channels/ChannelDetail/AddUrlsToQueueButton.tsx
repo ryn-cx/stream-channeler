@@ -1,5 +1,5 @@
 // TODO: Validate
-import { Maximize2, Minimize2, MonitorCog } from "lucide-react"
+import { MonitorCog } from "lucide-react"
 import { useState } from "react"
 import { ModalContent } from "@/components/Common/ModalContent"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
@@ -35,7 +35,6 @@ export function ManageTitlesButton({
   combinedChannels,
 }: ManageTitlesButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [isFullScreen, setIsFullScreen] = useState(false)
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -54,15 +53,8 @@ export function ManageTitlesButton({
           />
         )}
       </DialogTrigger>
-      <ModalContent
-        size={isFullScreen ? "full" : "3xl"}
-        className={
-          isFullScreen
-            ? "max-h-none h-[calc(100dvh-2rem)] flex flex-col"
-            : "max-h-[85vh] flex flex-col"
-        }
-      >
-        <DialogHeader className="px-8">
+      <ModalContent size="3xl">
+        <DialogHeader>
           <DialogTitle>
             {channelName ? `Manage ${channelName} Titles` : "Manage Titles"}
           </DialogTitle>
@@ -84,20 +76,6 @@ export function ManageTitlesButton({
             Close
           </Button>
         </DialogFooter>
-
-        {/*
-          Opposite the close, since the two do the same kind of thing to the
-          window rather than to what is in it. Last of the children rather than
-          first: an opening window puts the cursor on whatever it finds first,
-          and a tooltip taken as read on the way in says nothing to anybody.
-        */}
-        <TooltipIconButton
-          label={isFullScreen ? "Shrink to a window" : "Fill the screen"}
-          icon={isFullScreen ? <Minimize2 /> : <Maximize2 />}
-          size="icon-sm"
-          className="absolute left-4 top-4 z-10"
-          onClick={() => setIsFullScreen(!isFullScreen)}
-        />
       </ModalContent>
     </Dialog>
   )

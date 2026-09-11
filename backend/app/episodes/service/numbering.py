@@ -197,7 +197,7 @@ def _text_matches(
     absolute_numbers: dict[uuid.UUID, int],
     *,
     titles: bool,
-    blended: bool,
+    tfidf: bool,
 ) -> list[TmdbEpisodeChoice]:
     text = _episode_text(episode, titles=titles)
     if matcher is None or not text:
@@ -205,8 +205,8 @@ def _text_matches(
 
     written_candidates, text_matcher = matcher
     scores = (
-        text_matcher.blended_scores(text)
-        if blended
+        text_matcher.tfidf_scores(text)
+        if tfidf
         else text_matcher.embedding_scores(text)
     )
     ranked = sorted(range(len(scores)), key=lambda index: scores[index], reverse=True)

@@ -90,6 +90,7 @@ class BaseEpisode(BaseTmdbEpisode):
     """Base model for an `Episode`."""
 
     tmdb_episode_validated_at: datetime | None = DateTimeField(default=None)
+    tmdb_note: str | None = Field(default=None)
 
 
 # TODO: Validate
@@ -308,6 +309,7 @@ class Episode(BaseEpisode, ChildMediaMixin[Season, Never], table=True):
         """
         protected_keys = set(protected_keys or ()) | {
             "tmdb_episode_validated_at",
+            "tmdb_note",
             "is_linked",
         }
         return super().upsert(parent, existing_record, protected_keys)

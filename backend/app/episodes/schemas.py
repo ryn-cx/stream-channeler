@@ -245,9 +245,9 @@ class UnmatchedEpisodeOutput(EpisodeRecord):
     absolute_number_match: TmdbEpisodeChoice | None
     episode_number_absolute_match: TmdbEpisodeChoice | None
     description_embedding_matches: list[TmdbEpisodeChoice] = []
-    description_blended_matches: list[TmdbEpisodeChoice] = []
+    description_tfidf_matches: list[TmdbEpisodeChoice] = []
     title_embedding_matches: list[TmdbEpisodeChoice] = []
-    title_blended_matches: list[TmdbEpisodeChoice] = []
+    title_tfidf_matches: list[TmdbEpisodeChoice] = []
 
 
 # TODO: Validate

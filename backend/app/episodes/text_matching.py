@@ -114,7 +114,7 @@ class TextMatcher:
         return scores.astype(numpy.float64)
 
     # TODO: Validate
-    def _tfidf_scores_of(self, descriptions: list[str]) -> numpy.ndarray:
+    def tfidf_scores_of(self, descriptions: list[str]) -> numpy.ndarray:
         return numpy.asarray(
             [self._tfidf_scores(description) for description in descriptions],
         )
@@ -126,7 +126,7 @@ class TextMatcher:
     ) -> tuple[numpy.ndarray, numpy.ndarray]:
         embedding_scores = self.embedding_scores_of(descriptions)
         blended_scores: numpy.ndarray = (
-            0.6 * self._tfidf_scores_of(descriptions) + 0.4 * embedding_scores
+            0.6 * self.tfidf_scores_of(descriptions) + 0.4 * embedding_scores
         )
         return blended_scores, embedding_scores
 
@@ -142,4 +142,9 @@ class TextMatcher:
     # TODO: Validate
     def blended_scores(self, description: str) -> list[float]:
         scores: list[float] = self.blended_scores_of([description])[0].tolist()
+        return scores
+
+    # TODO: Validate
+    def tfidf_scores(self, description: str) -> list[float]:
+        scores: list[float] = self.tfidf_scores_of([description])[0].tolist()
         return scores

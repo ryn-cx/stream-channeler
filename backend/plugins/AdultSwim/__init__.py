@@ -12,12 +12,13 @@ from app.tmdb_media.keys import watch_identifier
 from plugins.AdultSwim.constants import EPISODE_URL_REGEX, TITLE_URL_REGEX
 from plugins.AdultSwim.shared import AdultSwimShared
 from plugins.AdultSwim.utils import (
+    episode_air_date,
     episode_key_from_slug,
     episode_url,
     season_key,
     season_name,
     source_episodes,
-    source_requires_auth,
+    source_seasons,
     title_url,
 )
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
@@ -131,14 +132,13 @@ class AdultSwim(
             ).upsert(source, title)
             title.set_update_at(None)
 
-        requires_auth = source_requires_auth(source.key)
         self._upsert_seasons(
             title,
             title_data,
-            requires_auth=requires_auth,
+            source_key=source.key,
             force=force,
         )
-        self._soft_delete_missing(title, title_data, requires_auth=requires_auth)
+        self._soft_delete_missing(title, title_data, source_key=source.key)
 
         return title
 
@@ -148,17 +148,14 @@ class AdultSwim(
         title: Title,
         title_data: ShowModel,
         *,
-        requires_auth: bool,
+        source_key: str,
     ) -> None:
         episode_keys_by_season = {
             season_key(season_data): [
                 episode_data.id
-                for episode_data in source_episodes(
-                    season_data,
-                    requires_auth=requires_auth,
-                )
+                for episode_data in source_episodes(season_data, source_key)
             ]
-            for season_data in title_data.seasons
+            for season_data in source_seasons(title_data, source_key)
         }
         title.soft_delete_missing_children(episode_keys_by_season)
         for season in title.seasons:
@@ -171,10 +168,12 @@ class AdultSwim(
         title: Title,
         title_data: ShowModel,
         *,
-        requires_auth: bool,
+        source_key: str,
         force: bool = False,
     ) -> None:
-        for sort_order, season_data in enumerate(title_data.seasons):
+        for sort_order, season_data in enumerate(
+            source_seasons(title_data, source_key),
+        ):
             key = season_key(season_data)
             season = Season.get_from_memory(self.session, title, key)
             if self._season_is_outdated(season, title.key, force=force):
@@ -195,7 +194,7 @@ class AdultSwim(
                 season,
                 title.key,
                 season_data,
-                requires_auth=requires_auth,
+                source_key=source_key,
                 force=force,
             )
             self._set_season_update_at_based_on_last_episode(season)
@@ -207,10 +206,10 @@ class AdultSwim(
         title_key: str,
         season_data: SeasonData,
         *,
-        requires_auth: bool,
+        source_key: str,
         force: bool = False,
     ) -> None:
-        episodes_data = source_episodes(season_data, requires_auth=requires_auth)
+        episodes_data = source_episodes(season_data, source_key)
         for sort_order, episode_data in enumerate(episodes_data):
             episode = Episode.get_from_memory(self.session, season, episode_data.id)
             if self._episode_is_outdated(
@@ -233,7 +232,7 @@ class AdultSwim(
                     ),
                     image_url=episode_data.poster,
                     thumbnail_url=episode_data.poster,
-                    air_date=episode_data.first_airing or episode_data.launch_date,
+                    air_date=episode_air_date(episode_data),
                     duration=int(episode_data.duration),
                     episode_number=episode_data.episode_number,
                     sort_order=sort_order,

@@ -34,9 +34,7 @@ import { usePersistedJsonState } from "@/hooks/usePersistedState"
 
 const STORAGE_KEY = "admin-v2-link-episode"
 
-// Working through these is done a page at a time, and the closest TMDB episode
-// for each is worked out by comparing names, so a page is kept small.
-const PAGE_SIZE = 20
+const PAGE_SIZE = 100
 
 // TODO: Validate
 export function LinkEpisodeAdminTable() {

@@ -2573,6 +2573,17 @@ export const EpisodeListOutputSchema = {
             ],
             title: 'Tmdb Episode Validated At'
         },
+        tmdb_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Note'
+        },
         id: {
             type: 'string',
             format: 'uuid',
@@ -2871,6 +2882,17 @@ export const EpisodeOutputSchema = {
                 }
             ],
             title: 'Tmdb Episode Validated At'
+        },
+        tmdb_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Note'
         },
         id: {
             type: 'string',
@@ -3181,6 +3203,17 @@ export const EpisodeUpdateSchema = {
                 }
             ],
             title: 'Tmdb Episode Validated At'
+        },
+        tmdb_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Note'
         },
         tmdb_episode_note: {
             anyOf: [
@@ -6847,12 +6880,12 @@ export const UnlockedEpisodeOutputSchema = {
             title: 'Description Embedding Matches',
             default: []
         },
-        description_blended_matches: {
+        description_tfidf_matches: {
             items: {
                 '$ref': '#/components/schemas/TmdbEpisodeChoice'
             },
             type: 'array',
-            title: 'Description Blended Matches',
+            title: 'Description Tfidf Matches',
             default: []
         },
         title_embedding_matches: {
@@ -6863,12 +6896,12 @@ export const UnlockedEpisodeOutputSchema = {
             title: 'Title Embedding Matches',
             default: []
         },
-        title_blended_matches: {
+        title_tfidf_matches: {
             items: {
                 '$ref': '#/components/schemas/TmdbEpisodeChoice'
             },
             type: 'array',
-            title: 'Title Blended Matches',
+            title: 'Title Tfidf Matches',
             default: []
         },
         name_matches: {
@@ -6959,12 +6992,12 @@ export const UnmatchedEpisodeOutputSchema = {
             title: 'Description Embedding Matches',
             default: []
         },
-        description_blended_matches: {
+        description_tfidf_matches: {
             items: {
                 '$ref': '#/components/schemas/TmdbEpisodeChoice'
             },
             type: 'array',
-            title: 'Description Blended Matches',
+            title: 'Description Tfidf Matches',
             default: []
         },
         title_embedding_matches: {
@@ -6975,12 +7008,12 @@ export const UnmatchedEpisodeOutputSchema = {
             title: 'Title Embedding Matches',
             default: []
         },
-        title_blended_matches: {
+        title_tfidf_matches: {
             items: {
                 '$ref': '#/components/schemas/TmdbEpisodeChoice'
             },
             type: 'array',
-            title: 'Title Blended Matches',
+            title: 'Title Tfidf Matches',
             default: []
         }
     },
@@ -8290,6 +8323,17 @@ export const WhitelistEpisodeLinkOutputSchema = {
             ],
             title: 'Tmdb Episode Validated At'
         },
+        tmdb_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Note'
+        },
         id: {
             type: 'string',
             format: 'uuid',
@@ -8566,6 +8610,17 @@ export const WhitelistEpisodeOutputSchema = {
                 }
             ],
             title: 'Tmdb Episode Validated At'
+        },
+        tmdb_note: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Note'
         },
         id: {
             type: 'string',

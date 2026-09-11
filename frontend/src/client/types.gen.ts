@@ -565,6 +565,7 @@ export type EpisodeListOutput = {
     duration?: (number | null);
     sort_order?: (number | null);
     tmdb_episode_validated_at?: (string | null);
+    tmdb_note?: (string | null);
     id: string;
     season_id: string;
     modified_at: string;
@@ -604,6 +605,7 @@ export type EpisodeOutput = {
     duration?: (number | null);
     sort_order?: (number | null);
     tmdb_episode_validated_at?: (string | null);
+    tmdb_note?: (string | null);
     id: string;
     season_id: string;
     modified_at: string;
@@ -672,6 +674,7 @@ export type EpisodeUpdate = {
     duration?: (number | null);
     sort_order?: (number | null);
     tmdb_episode_validated_at?: (string | null);
+    tmdb_note?: (string | null);
     tmdb_episode_note?: (string | null);
 };
 
@@ -1944,9 +1947,9 @@ export type UnlockedEpisodeOutput = {
     absolute_number_match: (TmdbEpisodeChoice | null);
     episode_number_absolute_match: (TmdbEpisodeChoice | null);
     description_embedding_matches?: Array<TmdbEpisodeChoice>;
-    description_blended_matches?: Array<TmdbEpisodeChoice>;
+    description_tfidf_matches?: Array<TmdbEpisodeChoice>;
     title_embedding_matches?: Array<TmdbEpisodeChoice>;
-    title_blended_matches?: Array<TmdbEpisodeChoice>;
+    title_tfidf_matches?: Array<TmdbEpisodeChoice>;
     name_matches: boolean;
 };
 
@@ -1964,9 +1967,9 @@ export type UnmatchedEpisodeOutput = {
     absolute_number_match: (TmdbEpisodeChoice | null);
     episode_number_absolute_match: (TmdbEpisodeChoice | null);
     description_embedding_matches?: Array<TmdbEpisodeChoice>;
-    description_blended_matches?: Array<TmdbEpisodeChoice>;
+    description_tfidf_matches?: Array<TmdbEpisodeChoice>;
     title_embedding_matches?: Array<TmdbEpisodeChoice>;
-    title_blended_matches?: Array<TmdbEpisodeChoice>;
+    title_tfidf_matches?: Array<TmdbEpisodeChoice>;
 };
 
 /**
@@ -2261,6 +2264,7 @@ export type WhitelistEpisodeLinkOutput = {
     duration?: (number | null);
     sort_order?: (number | null);
     tmdb_episode_validated_at?: (string | null);
+    tmdb_note?: (string | null);
     id: string;
     season_id: string;
     modified_at: string;
@@ -2294,6 +2298,7 @@ export type WhitelistEpisodeOutput = {
     duration?: (number | null);
     sort_order?: (number | null);
     tmdb_episode_validated_at?: (string | null);
+    tmdb_note?: (string | null);
     id: string;
     season_id: string;
     modified_at: string;

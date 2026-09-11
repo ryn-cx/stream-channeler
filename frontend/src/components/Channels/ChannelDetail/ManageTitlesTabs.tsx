@@ -10,8 +10,6 @@ import {
   Link2,
   List,
   ListX,
-  Maximize2,
-  Minimize2,
   Search,
   Sparkles,
   Trash2,
@@ -33,8 +31,7 @@ import {
   useChannelTitlesPage,
 } from "@/components/Channels/useChannelTitles"
 import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
-import { ModalContent } from "@/components/Common/ModalContent"
-import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
+import { WinBoxModal } from "@/components/Common/WinBoxModal"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
@@ -114,7 +111,6 @@ export function ManageTitlesTabs({
   const [noteDialogOpen, setNoteDialogOpen] = useState(false)
   const [selectedNote, setSelectedNote] = useState<string | null>(null)
   const [selectedTitle, setSelectedTitle] = useState<TitleGroup | null>(null)
-  const [isTitleFullScreen, setIsTitleFullScreen] = useState(false)
   const [blacklistTitle, setBlacklistTitle] = useState<TitleGroup | null>(null)
   const [removeTitle, setRemoveTitle] = useState<TitleGroup | null>(null)
   const [activeTab, setActiveTabState] = useState<string>("search")
@@ -489,47 +485,20 @@ export function ManageTitlesTabs({
             one gets a window of its own rather than pushing the list it was
             opened from out to the width the table wants.
           */}
-          <Dialog
+          <WinBoxModal
             open={selectedTitle != null}
-            onOpenChange={(open) => {
-              if (!open) setSelectedTitle(null)
-            }}
+            title={selectedTitle?.name || "Unknown Title"}
+            onClose={() => setSelectedTitle(null)}
           >
-            <ModalContent
-              size={isTitleFullScreen ? "full" : "6xl"}
-              className={
-                isTitleFullScreen
-                  ? "max-h-none h-[calc(100dvh-2rem)] flex flex-col overflow-hidden"
-                  : "max-h-[85vh] flex flex-col overflow-hidden"
-              }
-            >
-              <DialogHeader className="px-8">
-                <DialogTitle>
-                  {selectedTitle?.name || "Unknown Title"}
-                </DialogTitle>
-              </DialogHeader>
-              {selectedTitle && (
-                <div className="no-scrollbar flex-1 min-h-0 overflow-y-auto px-8 py-4">
-                  <WhitelistManager
-                    channelId={channelId}
-                    tmdbTitleId={selectedTitle.tmdbTitleId}
-                    titleName={selectedTitle.name || "Unknown Title"}
-                    onClose={() => setSelectedTitle(null)}
-                  />
-                </div>
-              )}
-
-              <TooltipIconButton
-                label={
-                  isTitleFullScreen ? "Shrink to a window" : "Fill the screen"
-                }
-                icon={isTitleFullScreen ? <Minimize2 /> : <Maximize2 />}
-                size="icon-sm"
-                className="absolute left-4 top-4 z-10"
-                onClick={() => setIsTitleFullScreen(!isTitleFullScreen)}
+            {selectedTitle && (
+              <WhitelistManager
+                channelId={channelId}
+                tmdbTitleId={selectedTitle.tmdbTitleId}
+                titleName={selectedTitle.name || "Unknown Title"}
+                onClose={() => setSelectedTitle(null)}
               />
-            </ModalContent>
-          </Dialog>
+            )}
+          </WinBoxModal>
 
           {filterOnlyTitlesList.length > 0 && (
             <div className="space-y-2">

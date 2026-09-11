@@ -50,9 +50,9 @@ export function TmdbMatchConfirmButton({
     | "absolute"
     | "episode_absolute"
     | "description_embedding"
-    | "description_blended"
+    | "description_tfidf"
     | "title_embedding"
-    | "title_blended"
+    | "title_tfidf"
 }) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const reread = useRereadTmdbMatches()
@@ -82,9 +82,9 @@ export function TmdbMatchConfirmButton({
     absolute: ListOrdered,
     episode_absolute: ArrowRightLeft,
     description_embedding: Sparkles,
-    description_blended: Blend,
+    description_tfidf: Blend,
     title_embedding: Type,
-    title_blended: Combine,
+    title_tfidf: Combine,
   }
   const labels = {
     name: "Name Match",
@@ -92,9 +92,9 @@ export function TmdbMatchConfirmButton({
     absolute: "Absolute Match",
     episode_absolute: "Episode as Absolute Match",
     description_embedding: "Description Match",
-    description_blended: "Blended Description Match",
+    description_tfidf: "TF-IDF Description Match",
     title_embedding: "Title Match",
-    title_blended: "Blended Title Match",
+    title_tfidf: "TF-IDF Title Match",
   }
   const Icon = icons[kind]
   const label = labels[kind]

@@ -260,12 +260,12 @@ def _unmatched_outputs(
                         description_matchers.get(title.id),
                         candidate_numbers.get(title.id, {}),
                         titles=False,
-                        blended=False,
+                        tfidf=False,
                     )
                 )
                 if choice is not None
             ],
-            description_blended_matches=[
+            description_tfidf_matches=[
                 choice
                 for choice in (
                     _marked_used(match, episode.id, used.get(title.id, {}))
@@ -274,7 +274,7 @@ def _unmatched_outputs(
                         description_matchers.get(title.id),
                         candidate_numbers.get(title.id, {}),
                         titles=False,
-                        blended=True,
+                        tfidf=True,
                     )
                 )
                 if choice is not None
@@ -288,12 +288,12 @@ def _unmatched_outputs(
                         title_matchers.get(title.id),
                         candidate_numbers.get(title.id, {}),
                         titles=True,
-                        blended=False,
+                        tfidf=False,
                     )
                 )
                 if choice is not None
             ],
-            title_blended_matches=[
+            title_tfidf_matches=[
                 choice
                 for choice in (
                     _marked_used(match, episode.id, used.get(title.id, {}))
@@ -302,7 +302,7 @@ def _unmatched_outputs(
                         title_matchers.get(title.id),
                         candidate_numbers.get(title.id, {}),
                         titles=True,
-                        blended=True,
+                        tfidf=True,
                     )
                 )
                 if choice is not None

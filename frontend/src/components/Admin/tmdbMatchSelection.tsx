@@ -34,9 +34,9 @@ export const MATCH_KINDS = [
     field: "description_embedding_matches",
   },
   {
-    kind: "description_blended",
-    label: "Description (blended)",
-    field: "description_blended_matches",
+    kind: "description_tfidf",
+    label: "Description (tf-idf)",
+    field: "description_tfidf_matches",
   },
   {
     kind: "title_embedding",
@@ -44,9 +44,9 @@ export const MATCH_KINDS = [
     field: "title_embedding_matches",
   },
   {
-    kind: "title_blended",
-    label: "Title (blended)",
-    field: "title_blended_matches",
+    kind: "title_tfidf",
+    label: "Title (tf-idf)",
+    field: "title_tfidf_matches",
   },
 ] as const
 
