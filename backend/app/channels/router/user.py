@@ -11,8 +11,8 @@ from app.auth.dependencies import (
 )
 from app.channels.dependencies import (
     EditableChannel,
-    EditableChannelCanonicalTitle,
     EditableChannelQueueEntry,
+    EditableChannelTmdbTitle,
     ReadableChannel,
 )
 from app.channels.models import Channel, ChannelQueue
@@ -157,22 +157,22 @@ def update_channel_combined_channels(
 
 # TODO: Validate
 @channels_router.get(
-    "/{channel_id}/whitelist/{canonical_title_id}/filtered-episodes",  # noqa: FAST003
+    "/{channel_id}/whitelist/{tmdb_title_id}/filtered-episodes",  # noqa: FAST003
 )
 def get_channel_whitelist_filtered_episodes(
     session: SessionDep,
-    channel_title: EditableChannelCanonicalTitle,
+    channel_title: EditableChannelTmdbTitle,
 ) -> list[WhitelistEpisodeOutput]:
     """Read the episodes of a title that an entry names, whatever season they are in."""
     return whitelist.filtered_whitelist_episodes(session, channel_title)
 
 
 # TODO: Validate
-@channels_router.patch("/{channel_id}/whitelist/{canonical_title_id}")  # noqa: FAST003
+@channels_router.patch("/{channel_id}/whitelist/{tmdb_title_id}")  # noqa: FAST003
 def update_channel_whitelist(
     session: SessionDep,
     whitelist_config: WhitelistTitleInput,
-    channel_title: EditableChannelCanonicalTitle,
+    channel_title: EditableChannelTmdbTitle,
 ) -> WhitelistTitleOutput:
     """Update the whitelist/blacklist for a title in a channel."""
     return whitelist.update_whitelist_output(session, whitelist_config, channel_title)
@@ -234,10 +234,10 @@ def add_channel_title(
 
 
 # TODO: Validate
-@channels_router.delete("/{channel_id}/remove-title/{canonical_title_id}")  # noqa: FAST003
+@channels_router.delete("/{channel_id}/remove-title/{tmdb_title_id}")  # noqa: FAST003
 def delete_channel_title(
     session: SessionDep,
-    channel_title: EditableChannelCanonicalTitle,
+    channel_title: EditableChannelTmdbTitle,
 ) -> Message:
     """Remove a title, on every website it is on, from a `Channel`."""
     return titles.remove_title(session, channel_title)

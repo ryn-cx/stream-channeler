@@ -2,22 +2,21 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, override
+from datetime import timedelta
+from typing import TYPE_CHECKING, override
 
-from loguru import logger
-
-from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.titles.models import Title
-from app.utils import tz_datetime
+from app.tmdb_media.keys import watch_identifier
 from plugins.AdultSwim.constants import EPISODE_URL_REGEX, TITLE_URL_REGEX
 from plugins.AdultSwim.shared import AdultSwimShared
 from plugins.AdultSwim.utils import (
-    episode_key_for_slug,
-    episode_keys,
+    episode_key_from_slug,
     episode_url,
-    season_keys,
+    season_key,
+    season_name,
+    source_episodes,
     source_requires_auth,
     title_url,
 )
@@ -26,15 +25,13 @@ from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import ParsedURL
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from datetime import datetime
 
     from pools_closed.show.models import Season as SeasonData
     from pools_closed.show.models import ShowModel
 
-    from app.plugins.models import Plugin
     from app.sources.models import Source
     from plugins.utils.abstract_plugin import URLImportResult
-    from plugins.utils.base_plugin.files import BaseFile
 
 
 # TODO: Validate
@@ -42,20 +39,12 @@ class AdultSwim(
     AdultSwimShared,
     BaseImporter,
     AbstractPlugin,
-    register=False,
+    register=True,
 ):
     # TODO: Validate
     @override
-    def _create_initial_source_records(self) -> None:
-        super()._create_initial_source_records()
-        if self.plugin.update_at is None:
-            self.plugin.update_at = tz_datetime.now()
-
-    # TODO: Validate
-    @override
-    def _create_initial_channel_records(self) -> None:
-        self._channels()
-        self._process_new_titles()
+    def _next_plugin_update_at(self) -> datetime:
+        return max(self._plugin_files_data_timestamps()) + timedelta(days=7)
 
     # TODO: Validate
     @classmethod
@@ -65,48 +54,45 @@ class AdultSwim(
 
     # TODO: Validate
     @override
-    def update_plugin(self, plugin: Plugin) -> None:
-        logger.info("Checking Adult Swim for new titles")
-        self.titles_file().download_if_outdated(tz_datetime.now())
-        self._process_new_titles()
-        self._exclude_subscription_from_free_channel()
-        plugin.update_at = tz_datetime.now() + self._next_update_interval()
-
-    # TODO: Validate
-    @override
-    def parse_url(self, url: str) -> ParsedURL:
+    def validate_url(self, url: str) -> None:
         domain_regex = self._domains_regex()
-
         if match := re.match(domain_regex + EPISODE_URL_REGEX, url):
             title_key, episode_slug = match.group("episode_path").split("/")
             title_file = self.title_file(title_key)
             self.raise_invalid_url_if_no_content(title_file, url)
-            episode_key = episode_key_for_slug(title_file.parsed(), episode_slug)
-            if episode_key is None:
-                msg = f"Invalid {self.plugin_name()} URL: {url}"
-                raise InvalidURLError(msg)
-            return ParsedURL(title_key, episode_key=episode_key)
+            if episode_key_from_slug(title_file.parsed(), episode_slug):
+                return
 
         if match := re.match(domain_regex + TITLE_URL_REGEX, url):
-            title_key = match.group("title_key")
-            self.raise_invalid_url_if_no_content(self.title_file(title_key), url)
-            return ParsedURL(title_key)
+            self.raise_invalid_url_if_no_content(
+                self.title_file(match.group("title_key")),
+                url,
+            )
+            return
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
-    # TODO: Validate
+    @override
+    def parse_url(self, url: str) -> ParsedURL:
+        domain_regex = self._domains_regex()
+        if match := re.match(domain_regex + EPISODE_URL_REGEX, url):
+            title_key, episode_slug = match.group("episode_path").split("/")
+            title_data = self.title_file(title_key).parsed()
+            if episode_key := episode_key_from_slug(title_data, episode_slug):
+                return ParsedURL(title_key, episode_key=episode_key)
+
+        if match := re.match(domain_regex + TITLE_URL_REGEX, url):
+            return ParsedURL(match.group("title_key"))
+
+        # Should be impossible
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)
+
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
-        """Import the title into every source Adult Swim is offered through.
-
-        The free listing and the subscription one hold different episodes of the
-        same title, so an address names a title on both and each of them is
-        written.
-        """
         media_info = self.parse_url(url)
-        titles = list(self._preload_title(media_info.title_key))
-        if not titles:
+        if not (titles := self._preload_title(media_info.title_key).all()):
             self._preload_and_download_files(media_info.title_key)
             titles = [
                 self._upsert_title(source, media_info.title_key)
@@ -117,42 +103,6 @@ class AdultSwim(
             for title in titles
             for result in self._import_results(title, media_info)
         ]
-
-    # TODO: Validate
-    @override
-    def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
-        return [self.title_file(title_key)]
-
-    # TODO: Validate
-    @override
-    def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
-        return [self.title_file(title_key)]
-
-    # TODO: Validate
-    @override
-    def _episode_files(
-        self,
-        episode_key: str,
-        season_key: str,
-        title_key: str,
-    ) -> Sequence[BaseFile[Any]]:
-        return [self.title_file(title_key)]
-
-    # TODO: Validate
-    @override
-    def _season_keys_from_title_files(self, title_key: str) -> list[str]:
-        return season_keys(self.title_file(title_key).parsed())
-
-    # TODO: Validate
-    @override
-    def _episode_keys_from_season_files(
-        self,
-        season_keys: str | list[str],
-        title_key: str,
-    ) -> list[str]:
-        if isinstance(season_keys, str):
-            season_keys = [season_keys]
-        return episode_keys(self.title_file(title_key).parsed(), season_keys)
 
     # TODO: Validate
     @override
@@ -174,22 +124,46 @@ class AdultSwim(
                 description=metadata.description if metadata else None,
                 media_type="Series",
                 url=title_url(title_key),
-                image_url=hero.image_url if hero else None,
+                image_url=hero.image_url,
                 thumbnail_url=metadata.thumbnail if metadata else None,
                 data_timestamp=self._title_files_data_timestamp(title_key),
                 source_id=source.id,
             ).upsert(source, title)
             title.set_update_at(None)
 
+        requires_auth = source_requires_auth(source.key)
         self._upsert_seasons(
             title,
             title_data,
-            requires_auth=source_requires_auth(source.key),
+            requires_auth=requires_auth,
             force=force,
         )
-        self._soft_delete_missing_seasons_and_episodes(title_key)
+        self._soft_delete_missing(title, title_data, requires_auth=requires_auth)
 
         return title
+
+    # TODO: Validate
+    def _soft_delete_missing(
+        self,
+        title: Title,
+        title_data: ShowModel,
+        *,
+        requires_auth: bool,
+    ) -> None:
+        episode_keys_by_season = {
+            season_key(season_data): [
+                episode_data.id
+                for episode_data in source_episodes(
+                    season_data,
+                    requires_auth=requires_auth,
+                )
+            ]
+            for season_data in title_data.seasons
+        }
+        title.soft_delete_missing_children(episode_keys_by_season)
+        for season in title.seasons:
+            if season.key in episode_keys_by_season:
+                season.soft_delete_missing_children(episode_keys_by_season[season.key])
 
     # TODO: Validate
     def _upsert_seasons(
@@ -201,16 +175,16 @@ class AdultSwim(
         force: bool = False,
     ) -> None:
         for sort_order, season_data in enumerate(title_data.seasons):
-            season_key = str(season_data.number)
-            season = Season.get_from_memory(self.session, title, season_key)
+            key = season_key(season_data)
+            season = Season.get_from_memory(self.session, title, key)
             if self._season_is_outdated(season, title.key, force=force):
                 season = Season(
-                    key=season_key,
-                    name=season_data.name,
+                    key=key,
+                    name=season_name(season_data),
                     season_number=season_data.number,
                     sort_order=sort_order,
                     data_timestamp=self._season_files_data_timestamp(
-                        season_key,
+                        key,
                         title.key,
                     ),
                     title_id=title.id,
@@ -236,11 +210,7 @@ class AdultSwim(
         requires_auth: bool,
         force: bool = False,
     ) -> None:
-        episodes_data = [
-            episode_data
-            for episode_data in season_data.episodes
-            if episode_data.auth == requires_auth
-        ]
+        episodes_data = source_episodes(season_data, requires_auth=requires_auth)
         for sort_order, episode_data in enumerate(episodes_data):
             episode = Episode.get_from_memory(self.session, season, episode_data.id)
             if self._episode_is_outdated(
@@ -275,7 +245,3 @@ class AdultSwim(
                     season_id=season.id,
                 ).upsert(season, episode)
                 episode.set_update_at(None)
-
-        season.soft_delete_missing_children(
-            episode_data.id for episode_data in episodes_data
-        )

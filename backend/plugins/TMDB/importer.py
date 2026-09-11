@@ -10,10 +10,16 @@ from datetime import date, datetime
 from random import Random
 from typing import Any, override
 
-from app.canonical_media.keys import (
+from app.episodes.models import Episode
+from app.episodes.preload import DEPRECATED_preload_episodes
+from app.media.media_type import TMDBMediaType
+from app.seasons.models import Season
+from app.sources.models import Source
+from app.titles.models import Title
+from app.tmdb_media.keys import (
     watch_identifier,
 )
-from app.canonical_media.tmdb import (
+from app.tmdb_media.tmdb import (
     chosen_group_id,
     dump_episode_extra,
     get_media_type_and_episode_id,
@@ -23,12 +29,6 @@ from app.canonical_media.tmdb import (
     tmdb_season_key,
     tmdb_title_key,
 )
-from app.episodes.models import Episode
-from app.episodes.preload import DEPRECATED_preload_episodes
-from app.media.media_type import TMDBMediaType
-from app.seasons.models import Season
-from app.sources.models import Source
-from app.titles.models import Title
 from app.utils import tz_datetime
 from app.utils.update_at import title_update_at
 from plugins.TMDB.constants import MOVIE_URL_REGEX, TV_URL_REGEX
@@ -110,6 +110,7 @@ class TMDBImporter(TMDBShared, BaseImporter, ABC):
         ).one_or_none()
 
         if not existing_title:
+            self._preload_and_download_files(media_info.title_key)
             existing_title = self._upsert_title(self.source, media_info.title_key)
 
         return self._import_results(existing_title, media_info)
@@ -290,7 +291,7 @@ class TMDBSeries(TMDBImporter):
                 media_type="Series",
                 extra=title.extra if title else {},
                 data_timestamp=self._title_files_data_timestamp(title_key),
-                canonical_title_validated_at=tz_datetime.now(),
+                tmdb_title_validated_at=tz_datetime.now(),
                 source_id=source.id,
             ).upsert(source, title)
             title.set_update_at(None)
@@ -468,6 +469,7 @@ class TMDBSeries(TMDBImporter):
                 tmdb_tv_title_id,
                 tz_datetime.now().date(),
             ).download_if_outdated()
+            self.forget_latest_tv_series_changes_file(tmdb_tv_title_id)
 
     # TODO: Validate
     def _import_all_title_changes(self, title: Title) -> None:
@@ -704,7 +706,7 @@ class TMDBMovie(TMDBImporter):
                 year=parse_release_year(parsed_movie_details.release_date),
                 media_type="Movie",
                 data_timestamp=self._title_files_data_timestamp(title_key),
-                canonical_title_validated_at=tz_datetime.now(),
+                tmdb_title_validated_at=tz_datetime.now(),
                 source_id=source.id,
             ).upsert(source, title)
             title.set_update_at(None)

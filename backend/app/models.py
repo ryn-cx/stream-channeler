@@ -178,10 +178,7 @@ ParentT = TypeVar("ParentT", bound="Plugin | Source | Title | Season")
 
 # TODO: Validate
 class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):  # noqa: UP046
-    # The column saying outright whether this row is the media itself, for the
-    # models that hold both kinds of row in one table. Those models carry
-    # `is_canonical` as a column of their own; the rest leave this unset.
-    CANONICAL_FLAG_FIELD: ClassVar[str | None] = None
+    LINKED_FLAG_FIELD: ClassVar[str | None] = None
 
     # TODO: Validate
     @property

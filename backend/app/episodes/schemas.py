@@ -15,13 +15,7 @@ from pydantic import (
 )
 from sqlmodel import Session
 
-from app.canonical_media.tmdb import (
-    get_tmdb_id,
-    is_tmdb_key,
-    tmdb_episode_url,
-    tmdb_season_url,
-)
-from app.episodes.models import BaseCanonicalEpisode, BaseEpisode, Episode
+from app.episodes.models import BaseEpisode, BaseTmdbEpisode, Episode
 from app.issue_reports.schemas import IssueReportOutput
 from app.schemas import (
     BaseCreateWithParentAndKey,
@@ -34,6 +28,12 @@ from app.seasons.models import Season
 from app.seasons.schemas import SeasonOutput
 from app.sources.schemas import SourceListPublic
 from app.titles.schemas import TitlePublic
+from app.tmdb_media.tmdb import (
+    get_tmdb_id,
+    is_tmdb_key,
+    tmdb_episode_url,
+    tmdb_season_url,
+)
 
 
 # TODO: Validate
@@ -48,7 +48,7 @@ class EpisodeUpdate(
 ):
     """Schema for updating an `Episode`."""
 
-    canonical_episode_note: str | None = None
+    tmdb_episode_note: str | None = None
 
     # TODO: Validate
     @override
@@ -56,8 +56,8 @@ class EpisodeUpdate(
         # The note is a column of the links rather than of the episode, so the
         # generic update - which writes the episode's own columns and nothing
         # else - passes over it and it is written here instead.
-        if "canonical_episode_note" in self.model_fields_set:
-            existing_record.canonical_episode_note = self.canonical_episode_note
+        if "tmdb_episode_note" in self.model_fields_set:
+            existing_record.tmdb_episode_note = self.tmdb_episode_note
         return super().update(session, existing_record)
 
 
@@ -70,15 +70,15 @@ class EpisodeOutput(BaseEpisode):
     id: uuid.UUID
     season_id: uuid.UUID
     modified_at: datetime
-    canonical_episode_note: str | None = None
-    canonical_episode_id: uuid.UUID | None = Field(
+    tmdb_episode_note: str | None = None
+    tmdb_episode_id: uuid.UUID | None = Field(
         default=None,
         validation_alias=AliasChoices(
-            "canonical_episode_id",
-            "sole_canonical_episode_id",
+            "tmdb_episode_id",
+            "sole_tmdb_episode_id",
         ),
     )
-    canonical_episode_ids: list[uuid.UUID] = Field(default_factory=list)
+    tmdb_episode_ids: list[uuid.UUID] = Field(default_factory=list)
     tmdb_id: int | None = None
     tmdb_url: str | None = None
 
@@ -141,7 +141,7 @@ class EpisodeRecord(BaseModel):
 
 
 # TODO: Validate
-class CanonicalEpisodeRecord(EpisodeRecord):
+class TmdbEpisodeRecord(EpisodeRecord):
     """A canonical episode, with how far into its title the episode is.
 
     The count is not a column of the episode: it is where the episode falls among
@@ -175,12 +175,31 @@ class EpisodeInformationOutput(BaseModel):
     """
 
     episode_id: uuid.UUID
-    canonical_episode_validated_at: datetime | None
-    canonical_episode_note: str | None
+    tmdb_episode_validated_at: datetime | None
+    tmdb_episode_note: str | None
     issue_reports: list[IssueReportOutput]
     source: EpisodeInformationSide
     tmdb: EpisodeInformationSide | None
     user_url: str | None
+
+
+# TODO: Validate
+class EpisodeDatabaseColumn(BaseModel):
+    name: str
+    value: str | None
+
+
+# TODO: Validate
+class EpisodeDatabaseRow(BaseModel):
+    episode_id: uuid.UUID
+    label: str
+    columns: list[EpisodeDatabaseColumn]
+
+
+# TODO: Validate
+class EpisodeDatabaseOutput(BaseModel):
+    episode: EpisodeDatabaseRow
+    tmdb_episodes: list[EpisodeDatabaseRow]
 
 
 # TODO: Validate
@@ -190,7 +209,7 @@ class UserEpisodeUrlInput(BaseInput):
 
 # TODO: Validate
 class UserEpisodeUrlOutput(BaseModel):
-    canonical_episode_id: uuid.UUID
+    tmdb_episode_id: uuid.UUID
     url: str | None
 
 
@@ -233,7 +252,8 @@ class UnmatchedEpisodeOutput(EpisodeRecord):
 
 # TODO: Validate
 class UnmatchedReadOptions(ReadOptions):
-    non_canonical_titles_only: bool = False
+    linked_titles_only: bool = False
+    in_user_channels_only: bool = True
 
 
 # TODO: Validate
@@ -265,7 +285,7 @@ class UnlockedEpisodeOutput(UnmatchedEpisodeOutput):
 
 
 # TODO: Validate
-class DuplicatedCanonicalEpisodeOutput(BaseModel):
+class DuplicatedTmdbEpisodeOutput(BaseModel):
     """A canonical episode more than one episode of a single source is linked to.
 
     TMDB is what a title is usually canonical against, but a canonical row of any
@@ -276,7 +296,7 @@ class DuplicatedCanonicalEpisodeOutput(BaseModel):
     id: str
     """The canonical episode and the source together, since a row is the pair."""
 
-    canonical: EpisodeRecord
+    tmdb: EpisodeRecord
     source: SourceListPublic
     linked_episodes: list[EpisodeRecord]
 
@@ -289,9 +309,9 @@ class EpisodeTmdbUrlInput(BaseModel):
 
 
 # TODO: Validate
-class EpisodeCanonicalLinkInput(BaseModel):
+class EpisodeTmdbLinkInput(BaseModel):
     episode_id: uuid.UUID
-    canonical_episode_id: uuid.UUID
+    tmdb_episode_id: uuid.UUID
 
 
 # TODO: Validate
@@ -305,7 +325,7 @@ class EpisodesPublic(BaseModel):
 
 
 # TODO: Validate
-class CanonicalEpisodeOutput(BaseCanonicalEpisode):
+class TmdbEpisodeOutput(BaseTmdbEpisode):
     """Schema for returning a `Episode`.
 
     An episode hangs off its season by the same column a non-canonical row hangs off the
@@ -315,7 +335,7 @@ class CanonicalEpisodeOutput(BaseCanonicalEpisode):
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)  # type: ignore[assignment]
 
-    canonical_season_id: uuid.UUID = Field(validation_alias=AliasPath("season_id"))
+    tmdb_season_id: uuid.UUID = Field(validation_alias=AliasPath("season_id"))
     id: uuid.UUID
     created_at: datetime
     modified_at: datetime
@@ -331,30 +351,30 @@ class CanonicalEpisodeOutput(BaseCanonicalEpisode):
 
 
 # TODO: Validate
-class CanonicalEpisodeListOutput(CanonicalEpisodeOutput):
+class TmdbEpisodeListOutput(TmdbEpisodeOutput):
     """Schema for returning a list of `Episode`s, with what holds them."""
 
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
-    canonical_season_name: str | None = Field(
+    tmdb_season_name: str | None = Field(
         validation_alias=AliasPath("season", "name"),
     )
-    canonical_title_id: uuid.UUID = Field(
+    tmdb_title_id: uuid.UUID = Field(
         validation_alias=AliasPath("season", "title_id"),
     )
-    canonical_title_name: str | None = Field(
+    tmdb_title_name: str | None = Field(
         validation_alias=AliasPath("season", "title", "name"),
     )
-    canonical_title_key: str | None = Field(
+    tmdb_title_key: str | None = Field(
         validation_alias=AliasPath("season", "title", "key"),
     )
 
 
 # TODO: Validate
-class CanonicalEpisodesPublic(BaseModel):
+class TmdbEpisodesPublic(BaseModel):
     """Schema for returning a list of `Episode`s."""
 
-    data: list[CanonicalEpisodeListOutput]
+    data: list[TmdbEpisodeListOutput]
     total_count: int
     filtered_count: int
     is_server_side: bool

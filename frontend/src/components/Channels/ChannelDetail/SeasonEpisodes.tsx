@@ -39,7 +39,7 @@ export function episodeLabel(episode: WhitelistEpisodeOutput) {
 
 interface SeasonEpisodesProps {
   channelId: string
-  canonicalTitleId: string
+  tmdbTitleId: string
   seasonId: string
   /** Whether the season itself carries an entry, which the labels read against. */
   seasonEnabled: boolean
@@ -66,7 +66,7 @@ interface SeasonEpisodesProps {
 // TODO: Validate
 export function SeasonEpisodes({
   channelId,
-  canonicalTitleId,
+  tmdbTitleId,
   seasonId,
   seasonEnabled,
   sourcesByTitleId,
@@ -90,14 +90,14 @@ export function SeasonEpisodes({
     queryKey: [
       "channelTitleSeasonEpisodes",
       channelId,
-      canonicalTitleId,
+      tmdbTitleId,
       seasonId,
       offset,
     ],
     queryFn: () =>
       ChannelsService.getChannelWhitelistEpisodes({
         channelId,
-        canonicalTitleId,
+        tmdbTitleId,
         seasonId,
         offset,
         limit: PAGE_SIZE,
@@ -157,17 +157,17 @@ export function SeasonEpisodes({
         const expiry = episodeExpiry(episode)
         const episodeTmdbTitleIds = catalogueTitleIds(episode.title_ids)
         return (
-          <div key={episode.canonical_episode_id}>
+          <div key={episode.tmdb_episode_id}>
             <div className="flex items-center gap-2 p-2 hover:bg-accent/30 rounded">
               <Button
                 className="ml-8"
                 variant="ghost"
                 size="icon-sm"
                 onClick={() =>
-                  toggleEpisodeInformation(episode.canonical_episode_id)
+                  toggleEpisodeInformation(episode.tmdb_episode_id)
                 }
               >
-                {informationEpisodeId === episode.canonical_episode_id ? (
+                {informationEpisodeId === episode.tmdb_episode_id ? (
                   <ChevronDown className="h-4 w-4" />
                 ) : (
                   <ChevronRight className="h-4 w-4" />
@@ -185,7 +185,7 @@ export function SeasonEpisodes({
                 type="button"
                 className="flex-1 text-left text-sm hover:underline"
                 onClick={() =>
-                  toggleEpisodeInformation(episode.canonical_episode_id)
+                  toggleEpisodeInformation(episode.tmdb_episode_id)
                 }
               >
                 {episodeLabel(episode)}
@@ -223,7 +223,7 @@ export function SeasonEpisodes({
                 label="Open this episode's season here"
               />
             </div>
-            {informationEpisodeId === episode.canonical_episode_id && (
+            {informationEpisodeId === episode.tmdb_episode_id && (
               <div className="ml-16 space-y-1">
                 {episode.links.map((link) => {
                   const linkSource = sourcesByTitleId.get(link.title_id)

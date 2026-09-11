@@ -11,7 +11,7 @@ from app.auth.dependencies import (
 )
 from app.channels.dependencies import (
     ReadableChannel,
-    ReadableChannelCanonicalTitle,
+    ReadableChannelTmdbTitle,
 )
 from app.channels.schemas import (
     ChannelEpisodesOutput,
@@ -88,15 +88,16 @@ def get_channel_episodes(
 # FAST003 - Parameter is used by ReadableChannel.
 # TODO: Validate
 @channels_router.get("/{channel_id}/titles")  # noqa: FAST003
-def get_channel_titles(
+def get_channel_titles(  # noqa: PLR0913 - the listing is paged and searched
     channel: ReadableChannel,
     user: OptionalUser,
     session: SessionDep,
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=CHANNEL_TITLE_PAGE)] = CHANNEL_TITLE_PAGE,
+    query: Annotated[str | None, Query()] = None,
 ) -> ChannelTitlesOutput:
     """Read all titles for a channel, including those from its child channels."""
-    return titles.channel_titles_output(channel, user, session, offset, limit)
+    return titles.channel_titles_output(channel, user, session, offset, limit, query)
 
 
 # TODO: Validate
@@ -104,9 +105,9 @@ def get_channel_titles(
 def get_channel_title_stats(
     channel: ReadableChannel,  # noqa: ARG001
     session: SessionDep,
-    canonical_title_ids: Annotated[list[uuid.UUID], Query()],
+    tmdb_title_ids: Annotated[list[uuid.UUID], Query()],
 ) -> dict[uuid.UUID, ChannelTitleStats]:
-    return titles.channel_title_stats_output(session, canonical_title_ids)
+    return titles.channel_title_stats_output(session, tmdb_title_ids)
 
 
 # FAST003 - Parameter is used by ReadableChannel.
@@ -120,25 +121,25 @@ def get_channel_sources(
     return sources.channel_sources_output(channel, session)
 
 
-# FAST003 - Parameter is used by ReadableChannelCanonicalTitle.
+# FAST003 - Parameter is used by ReadableChannelTmdbTitle.
 # TODO: Validate
-@channels_router.get("/{channel_id}/whitelist/{canonical_title_id}")  # noqa: FAST003
+@channels_router.get("/{channel_id}/whitelist/{tmdb_title_id}")  # noqa: FAST003
 def get_channel_whitelist(
     session: SessionDep,
-    channel_title: ReadableChannelCanonicalTitle,
+    channel_title: ReadableChannelTmdbTitle,
 ) -> WhitelistTitleOutput:
     """Read the sites and seasons of a title's filters in a channel."""
     return whitelist.channel_whitelist_output(session, channel_title)
 
 
-# FAST003 - Parameters are used by ReadableChannelCanonicalTitle.
+# FAST003 - Parameters are used by ReadableChannelTmdbTitle.
 # TODO: Validate
 @channels_router.get(
-    "/{channel_id}/whitelist/{canonical_title_id}/seasons/{season_id}/episodes",  # noqa: FAST003
+    "/{channel_id}/whitelist/{tmdb_title_id}/seasons/{season_id}/episodes",  # noqa: FAST003
 )
 def get_channel_whitelist_episodes(
     session: SessionDep,
-    channel_title: ReadableChannelCanonicalTitle,
+    channel_title: ReadableChannelTmdbTitle,
     season_id: uuid.UUID,
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=WHITELIST_EPISODE_PAGE)] = (

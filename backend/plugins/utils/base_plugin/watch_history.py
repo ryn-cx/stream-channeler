@@ -7,14 +7,14 @@ from typing import override
 
 from sqlmodel import Session, col, select
 
-from app.canonical_media.episodes import canonical_id_of
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.sources.models import Source
 from app.titles.models import Title
+from app.tmdb_media.episodes import tmdb_record_id_of
 from app.users.models import User
-from app.watches.identifiers import watched_dates_by_canonical_id
+from app.watches.identifiers import watched_dates_by_tmdb_record_id
 from app.watches.models import Watch
 from app.watches.schemas import WatchImportResult, WatchImportResults
 from plugins.utils.abstract_plugin import AbstractPlugin
@@ -65,7 +65,7 @@ class BaseWatchHistoryMixin(AbstractPlugin, ABC):
         return {episode.key: episode for episode in self.session.exec(statement)}
 
     # TODO: Validate
-    def _get_watched_dates_by_canonical_id(
+    def _get_watched_dates_by_tmdb_record_id(
         self,
         user: User,
         episodes_by_key: dict[str, Episode],
@@ -79,10 +79,10 @@ class BaseWatchHistoryMixin(AbstractPlugin, ABC):
         its own group - which is the whole of a plugin nothing has been minted
         for.
         """
-        return watched_dates_by_canonical_id(
+        return watched_dates_by_tmdb_record_id(
             self.session,
             user.id,
-            {canonical_id_of(episode) for episode in episodes_by_key.values()},
+            {tmdb_record_id_of(episode) for episode in episodes_by_key.values()},
         )
 
     """Base mixin providing the shared `import_watch_history` workflow.
@@ -112,7 +112,7 @@ class BaseWatchHistoryMixin(AbstractPlugin, ABC):
 
         episode_keys = [entry.episode_key for entry in parsed_entries]
         episodes_on_database = self._get_episodes_by_key(episode_keys)
-        watched_dates_by_episode = self._get_watched_dates_by_canonical_id(
+        watched_dates_by_episode = self._get_watched_dates_by_tmdb_record_id(
             user,
             episodes_on_database,
         )
@@ -132,7 +132,7 @@ class BaseWatchHistoryMixin(AbstractPlugin, ABC):
             # watched is asked of every link to it, so importing one website's
             # history does not re-record what another website already recorded.
             watched_dates = watched_dates_by_episode.setdefault(
-                canonical_id_of(episode),
+                tmdb_record_id_of(episode),
                 [],
             )
             if (new_only and watched_dates) or entry.watch_date in watched_dates:

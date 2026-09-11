@@ -13,7 +13,6 @@ from tests.plugins.frozen_clock import frozen_clock
 from tests.plugins.plugin_validator import (
     PluginValidator,
     StandardTests,
-    TMDBLookupTests,
 )
 from tests.plugins.plugin_validator.log_stats import log_stats
 
@@ -66,7 +65,7 @@ class TestInitializeChannel(HuluValidator):
 
 
 # TODO: Validate
-class TestMovie(StandardTests[Hulu], TMDBLookupTests[Hulu], HuluValidator):
+class TestMovie(StandardTests[Hulu], HuluValidator):
     import_time = datetime(2026, 9, 2, tzinfo=UTC)
     update_time = datetime(2026, 9, 3, tzinfo=UTC)
     movie_id = "34bc6b99-813f-4d5d-bbe7-f3099b45879b"
@@ -87,7 +86,7 @@ class TestMovie(StandardTests[Hulu], TMDBLookupTests[Hulu], HuluValidator):
 
 
 # TODO: Validate
-class TestSeries(StandardTests[Hulu], TMDBLookupTests[Hulu], HuluValidator):
+class TestSeries(StandardTests[Hulu], HuluValidator):
     series_id = "7117a15d-128c-4c2b-a5b9-98adfa0f4505"
     title_slug = "chad-powers"
     urls = (
@@ -98,7 +97,7 @@ class TestSeries(StandardTests[Hulu], TMDBLookupTests[Hulu], HuluValidator):
 
 
 # TODO: Validate
-class TestSeriesEpisode(StandardTests[Hulu], TMDBLookupTests[Hulu], HuluValidator):
+class TestSeriesEpisode(StandardTests[Hulu], HuluValidator):
     import_time = datetime(2026, 9, 2, tzinfo=UTC)
     update_time = datetime(2026, 9, 3, tzinfo=UTC)
     episode_id = "c282fbd1-d649-4a69-8733-ad9e52222858"

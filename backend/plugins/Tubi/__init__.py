@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class Tubi(TubiShared, AbstractPlugin, register=False):
+class Tubi(TubiShared, AbstractPlugin, register=True):
     # TODO: Validate
     @classmethod
     @override

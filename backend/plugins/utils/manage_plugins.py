@@ -94,7 +94,7 @@ def initialize_plugins() -> None:
 
 
 # TODO: Validate
-def get_plugin_for_url(
+def get_plugin_from_url(
     url: str,
     exclude: type[AbstractPlugin] | None = None,
 ) -> type[AbstractPlugin] | None:

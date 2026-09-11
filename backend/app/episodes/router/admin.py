@@ -12,8 +12,34 @@ from app.auth.dependencies import (
     SuperUser,
     get_current_active_superuser,
 )
-from app.canonical_media.read import canonical_list_response
-from app.episodes.canonical_links import (
+from app.episodes.dependencies import (
+    AdminTmdbEpisode,
+    ExistingEpisode,
+)
+from app.episodes.models import Episode
+from app.episodes.schemas import (
+    DuplicatedTmdbEpisodeOutput,
+    EpisodeDatabaseOutput,
+    EpisodeListOutput,
+    EpisodeOutput,
+    EpisodesPublic,
+    EpisodeTmdbLinkInput,
+    EpisodeTmdbUrlInput,
+    EpisodeUpdate,
+    TmdbEpisodeChoice,
+    TmdbEpisodeListOutput,
+    TmdbEpisodesPublic,
+    UnlockedEpisodeOutput,
+    UnmatchedEpisodesPublic,
+    UnmatchedReadOptions,
+)
+from app.episodes.service.database_rows import episode_database_rows
+from app.episodes.service.duplicates import get_duplicated_tmdb_episodes
+from app.episodes.service.information import _select_with_tmdb_season_and_title
+from app.episodes.service.tmdb_choices import list_tmdb_episode_choices
+from app.episodes.service.unlocked import list_unlocked_episodes
+from app.episodes.service.unmatched import list_unmatched_episodes
+from app.episodes.tmdb_links import (
     link_episode,
     link_episode_using_tmdb_url,
     link_episodes,
@@ -21,46 +47,22 @@ from app.episodes.canonical_links import (
     mark_episodes_absent_from_tmdb,
     quick_unlink_episode,
     unlink_episode,
-    verify_canonical_link,
+    verify_tmdb_link,
 )
-from app.episodes.dependencies import (
-    AdminCanonicalEpisode,
-    ExistingEpisode,
-)
-from app.episodes.models import Episode
-from app.episodes.schemas import (
-    CanonicalEpisodeListOutput,
-    CanonicalEpisodesPublic,
-    DuplicatedCanonicalEpisodeOutput,
-    EpisodeCanonicalLinkInput,
-    EpisodeListOutput,
-    EpisodeOutput,
-    EpisodesPublic,
-    EpisodeTmdbUrlInput,
-    EpisodeUpdate,
-    TmdbEpisodeChoice,
-    UnlockedEpisodeOutput,
-    UnmatchedEpisodesPublic,
-    UnmatchedReadOptions,
-)
-from app.episodes.service.duplicates import get_duplicated_canonical_episodes
-from app.episodes.service.information import _select_with_canonical_season_and_title
-from app.episodes.service.tmdb_choices import list_tmdb_episode_choices
-from app.episodes.service.unlocked import list_unlocked_episodes
-from app.episodes.service.unmatched import list_unmatched_episodes
 from app.plugins.models import Plugin
 from app.schemas import ReadOptions
 from app.seasons.models import Season
 from app.service.responses import list_response
 from app.sources.models import Source
 from app.titles.models import Title
+from app.tmdb_media.read import tmdb_list_response
 
 """Episodes router."""
 
 
-canonical_episodes_router = APIRouter(
-    prefix="/episodes/canonical",
-    tags=["canonical-episodes"],
+tmdb_episodes_router = APIRouter(
+    prefix="/episodes/tmdb",
+    tags=["tmdb-episodes"],
 )
 
 
@@ -72,15 +74,15 @@ episodes_router = APIRouter(
 
 
 # Every column the canonical list is sorted and filtered by that an `Episode` does not
-# answer to under the name it is served as. `canonical_season_id` is among them now that
+# answer to under the name it is served as. `tmdb_season_id` is among them now that
 # an episode hangs off its season by `season_id` like any non-canonical row: without it
 # here the column is silently unsortable.
-CANONICAL_EPISODE_EXTRA_COLUMNS: dict[str, Any] = {
-    "canonical_season_id": Episode.season_id,
-    "canonical_season_name": Season.name,
-    "canonical_title_id": Season.title_id,
-    "canonical_title_name": Title.name,
-    "canonical_title_key": Title.key,
+TMDB_EPISODE_EXTRA_COLUMNS: dict[str, Any] = {
+    "tmdb_season_id": Episode.season_id,
+    "tmdb_season_name": Season.name,
+    "tmdb_title_id": Season.title_id,
+    "tmdb_title_name": Title.name,
+    "tmdb_title_key": Title.key,
 }
 
 
@@ -138,22 +140,22 @@ def admin_get_unlocked_episodes(
 
 # TODO: Validate
 @episodes_router.get(
-    "/duplicated-canonical-episodes",
+    "/duplicated-tmdb-episodes",
 )
-def admin_get_duplicated_canonical_episodes(
+def admin_get_duplicated_tmdb_episodes(
     session: SessionDep,
     limit: Annotated[int, Query(ge=1, le=1000)] = 200,
-) -> list[DuplicatedCanonicalEpisodeOutput]:
+) -> list[DuplicatedTmdbEpisodeOutput]:
     """Get every canonical `Episode` that has multiple non-canonical `Episode`s linked to
     it from a single source."""
-    return get_duplicated_canonical_episodes(session, limit)
+    return get_duplicated_tmdb_episodes(session, limit)
 
 
 # TODO: Validate
 @episodes_router.put("/tmdb-links")
 def admin_link_episodes_to_tmdb(
     session: SessionDep,
-    links: list[EpisodeCanonicalLinkInput],
+    links: list[EpisodeTmdbLinkInput],
 ) -> list[EpisodeOutput]:
     return [
         EpisodeOutput.model_validate(episode)
@@ -171,6 +173,16 @@ def admin_mark_episodes_absent_from_tmdb(
         EpisodeOutput.model_validate(episode)
         for episode in mark_episodes_absent_from_tmdb(session, episode_ids)
     ]
+
+
+# TODO: Validate
+@episodes_router.get(
+    "/{episode_id}/database",  # noqa: FAST003 - Used by ExistingEpisode.
+)
+def admin_get_episode_database_rows(
+    episode: ExistingEpisode,
+) -> EpisodeDatabaseOutput:
+    return episode_database_rows(episode)
 
 
 # TODO: Validate
@@ -210,12 +222,12 @@ def admin_link_episode_by_tmdb_url(
 
 # TODO: Validate
 @episodes_router.put(
-    "/{episode_id}/canonical/{canonical_episode_id}",  # noqa: FAST003 - Used by the dependencies.
+    "/{episode_id}/tmdb/{tmdb_episode_id}",  # noqa: FAST003 - Used by the dependencies.
 )
 def admin_link_episode_to_tmdb(
     session: SessionDep,
     episode: ExistingEpisode,
-    canonical_episode: AdminCanonicalEpisode,
+    tmdb_episode: AdminTmdbEpisode,
 ) -> EpisodeOutput:
     """Add the episode an admin chose to what an `Episode` stands for.
 
@@ -224,25 +236,25 @@ def admin_link_episode_to_tmdb(
 
     Added to whatever the row already stands for rather than put in its place,
     since a website running two episodes together in one listing is a thing
-    websites do. Taking one off is `admin_unlink_episode_from_canonical`.
+    websites do. Taking one off is `admin_unlink_episode_from_tmdb_episode`.
     """
     return EpisodeOutput.model_validate(
-        link_episode(session, episode, canonical_episode),
+        link_episode(session, episode, tmdb_episode),
     )
 
 
 # TODO: Validate
 @episodes_router.delete(
-    "/{episode_id}/canonical/{canonical_episode_id}",  # noqa: FAST003 - Used by the dependencies.
+    "/{episode_id}/tmdb/{tmdb_episode_id}",  # noqa: FAST003 - Used by the dependencies.
 )
-def admin_unlink_episode_from_canonical(
+def admin_unlink_episode_from_tmdb_episode(
     session: SessionDep,
     episode: ExistingEpisode,
-    canonical_episode: AdminCanonicalEpisode,
+    tmdb_episode: AdminTmdbEpisode,
 ) -> EpisodeOutput:
     """Take one episode off what an `Episode` stands for."""
     return EpisodeOutput.model_validate(
-        unlink_episode(session, episode, canonical_episode),
+        unlink_episode(session, episode, tmdb_episode),
     )
 
 
@@ -283,14 +295,14 @@ def admin_mark_episode_absent_from_tmdb(
 
 # TODO: Validate
 @episodes_router.put(
-    "/{episode_id}/verify-canonical-link",  # noqa: FAST003 - Used by ExistingEpisode.
+    "/{episode_id}/verify-tmdb-link",  # noqa: FAST003 - Used by ExistingEpisode.
 )
-def admin_verify_canonical_link(
+def admin_verify_tmdb_link(
     session: SessionDep,
     episode: ExistingEpisode,
 ) -> EpisodeOutput:
     """Settle the canonical links an `Episode` already carries, and lock them."""
-    return EpisodeOutput.model_validate(verify_canonical_link(session, episode))
+    return EpisodeOutput.model_validate(verify_tmdb_link(session, episode))
 
 
 # TODO: Validate
@@ -317,28 +329,28 @@ def update_episode(
 
 
 # TODO: Validate
-@canonical_episodes_router.get("")
-def get_canonical_episodes(
+@tmdb_episodes_router.get("")
+def get_tmdb_episodes(
     session: SessionDep,
     current_user: SuperUser,
     read_options: Annotated[ReadOptions, Query()],
-) -> CanonicalEpisodesPublic:
+) -> TmdbEpisodesPublic:
     """Get every `Episode`."""
-    return canonical_list_response(
+    return tmdb_list_response(
         session=session,
-        base=_select_with_canonical_season_and_title(),
-        response_model=CanonicalEpisodesPublic,
-        schema=CanonicalEpisodeListOutput,
+        base=_select_with_tmdb_season_and_title(),
+        response_model=TmdbEpisodesPublic,
+        schema=TmdbEpisodeListOutput,
         read_options=read_options,
         current_user=current_user,
-        extra_columns=CANONICAL_EPISODE_EXTRA_COLUMNS,
+        extra_columns=TMDB_EPISODE_EXTRA_COLUMNS,
     )
 
 
 router = APIRouter()
 
 
-router.include_router(canonical_episodes_router)
+router.include_router(tmdb_episodes_router)
 
 
 router.include_router(episodes_router)

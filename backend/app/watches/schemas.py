@@ -56,7 +56,7 @@ class WatchItem(BaseWatch):
     # episode that identifier resolved to here, and is what keys `episodes` on
     # the list output.
     watch_identifier: str
-    canonical_episode_id: uuid.UUID
+    tmdb_episode_id: uuid.UUID
 
     # TODO: Validate
     def __hash__(self) -> int:
@@ -122,13 +122,13 @@ class WatchExportEntry(BaseModel):
     the import's own setting to say what those watches are.
 
     A file exported before the identifier was named as such holds it under
-    `canonical_episode_key`, and holds the same string: the old key was the
+    `tmdb_episode_key`, and holds the same string: the old key was the
     plugin's name in front of its own id, which is what the identifier is. So
     the old name is still read, and a backup taken then still imports.
     """
 
     watch_identifier: str = PydanticField(
-        validation_alias=AliasChoices("watch_identifier", "canonical_episode_key"),
+        validation_alias=AliasChoices("watch_identifier", "tmdb_episode_key"),
     )
     watch_date: datetime
     verified: bool | None = None

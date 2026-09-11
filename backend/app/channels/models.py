@@ -17,7 +17,6 @@ from sqlmodel import (
     SQLModel,
 )
 
-from app.canonical_media.episodes import canonical_id_of
 from app.episodes.models import Episode
 from app.models import (
     DateTimeField,
@@ -27,6 +26,7 @@ from app.models import (
 )
 from app.seasons.models import Season
 from app.titles.models import Title
+from app.tmdb_media.episodes import tmdb_record_id_of
 from app.users.models import User
 
 if TYPE_CHECKING:
@@ -121,7 +121,7 @@ class BaseChannelTitle(SQLModel):
     """Base model representing the media that belongs to a `Channel`."""
 
     channel_id: uuid.UUID = Field(foreign_key="channel.id", ondelete="CASCADE")
-    canonical_title_id: uuid.UUID = Field(
+    tmdb_title_id: uuid.UUID = Field(
         foreign_key="title.id",
         ondelete="CASCADE",
     )
@@ -146,9 +146,9 @@ class ChannelTitle(BaseChannelTitle, TimestampIdAndHashMixin, table=True):
     __table_args__ = (
         # Used to ensure each canonical title is unique within a channel.
         # Used by cascade deletions when a channel is deleted.
-        PrimaryKeyConstraint("channel_id", "canonical_title_id"),
+        PrimaryKeyConstraint("channel_id", "tmdb_title_id"),
         # Used to find every channel a canonical title belongs to.
-        Index("ChannelTitle-canonical_title_id-index", "canonical_title_id"),
+        Index("ChannelTitle-tmdb_title_id-index", "tmdb_title_id"),
     )
 
     channel: Channel = Relationship(back_populates="titles")
@@ -176,7 +176,7 @@ class ChannelTitle(BaseChannelTitle, TimestampIdAndHashMixin, table=True):
         cls,
         session: Session,
         channel: Channel,
-        canonical_title_id: uuid.UUID,
+        tmdb_title_id: uuid.UUID,
         *,
         options: Sequence[ORMOption] | None = None,
         populate_existing: bool = False,
@@ -198,7 +198,7 @@ class ChannelTitle(BaseChannelTitle, TimestampIdAndHashMixin, table=True):
         """
         return session.get(
             cls,
-            (channel.id, canonical_title_id),
+            (channel.id, tmdb_title_id),
             options=options,
             populate_existing=populate_existing,
             with_for_update=with_for_update,
@@ -213,7 +213,7 @@ class ChannelTitle(BaseChannelTitle, TimestampIdAndHashMixin, table=True):
         cls,
         session: Session,
         channel: Channel,
-        canonical_title_id: uuid.UUID,
+        tmdb_title_id: uuid.UUID,
         *,
         options: Sequence[ORMOption] | None = None,
         populate_existing: bool = False,
@@ -238,7 +238,7 @@ class ChannelTitle(BaseChannelTitle, TimestampIdAndHashMixin, table=True):
         """
         return session.get_one(
             cls,
-            (channel.id, canonical_title_id),
+            (channel.id, tmdb_title_id),
             options=options,
             populate_existing=populate_existing,
             with_for_update=with_for_update,
@@ -384,7 +384,7 @@ class ChannelSeasonFilter(BaseChannelSeasonFilter, TimestampIdAndHashMixin, tabl
 class BaseChannelEpisodeFilter(SQLModel):
     """Base model representing the episodes that are filtered for a `ChannelTitle`."""
 
-    canonical_episode_id: uuid.UUID = Field(
+    tmdb_episode_id: uuid.UUID = Field(
         foreign_key="episode.id",
         ondelete="CASCADE",
     )
@@ -407,11 +407,11 @@ class ChannelEpisodeFilter(
     __table_args__ = (
         # Used to ensure each episode is unique within a ChannelTitle.
         # Used to cascade deletions when a channel title is deleted.
-        PrimaryKeyConstraint("channel_title_id", "canonical_episode_id"),
+        PrimaryKeyConstraint("channel_title_id", "tmdb_episode_id"),
         # Used to find every channel title filtering an episode.
         Index(
-            "ChannelEpisodeFilter-canonical_episode_id-index",
-            "canonical_episode_id",
+            "ChannelEpisodeFilter-tmdb_episode_id-index",
+            "tmdb_episode_id",
         ),
     )
 
@@ -445,12 +445,12 @@ class ChannelEpisodeFilter(
             The matching ChannelEpisodeFilter if found, else None.
 
         """
-        canonical_id = (
-            canonical_id_of(episode) if isinstance(episode, Episode) else episode
+        tmdb_record_id = (
+            tmdb_record_id_of(episode) if isinstance(episode, Episode) else episode
         )
         return session.get(
             cls,
-            (channel_title.id, canonical_id),
+            (channel_title.id, tmdb_record_id),
             options=options,
             populate_existing=populate_existing,
             with_for_update=with_for_update,
@@ -464,7 +464,7 @@ class ChannelEpisodeFilter(
 class BaseChannelEpisodeSourceFilter(SQLModel):
     """Base model representing a filtered episode on one website only."""
 
-    canonical_episode_id: uuid.UUID = Field(
+    tmdb_episode_id: uuid.UUID = Field(
         foreign_key="episode.id",
         ondelete="CASCADE",
     )
@@ -495,11 +495,11 @@ class ChannelEpisodeSourceFilter(
         # Used to ensure each episode and linked title pair is unique within a
         # ChannelTitle.
         # Used to cascade deletions when a channel title is deleted.
-        PrimaryKeyConstraint("channel_title_id", "canonical_episode_id", "title_id"),
+        PrimaryKeyConstraint("channel_title_id", "tmdb_episode_id", "title_id"),
         # Used to find every channel title filtering an episode.
         Index(
-            "ChannelEpisodeSourceFilter-canonical_episode_id-index",
-            "canonical_episode_id",
+            "ChannelEpisodeSourceFilter-tmdb_episode_id-index",
+            "tmdb_episode_id",
         ),
         # Used to cascade deletions when a title is deleted.
         Index("ChannelEpisodeSourceFilter-title_id-index", "title_id"),
@@ -536,13 +536,13 @@ class ChannelEpisodeSourceFilter(
             The matching `ChannelEpisodeSourceFilter` if found, else `None`.
 
         """
-        canonical_id = (
-            canonical_id_of(episode) if isinstance(episode, Episode) else episode
+        tmdb_record_id = (
+            tmdb_record_id_of(episode) if isinstance(episode, Episode) else episode
         )
         title_id = title.id if isinstance(title, Title) else title
         return session.get(
             cls,
-            (channel_title.id, canonical_id, title_id),
+            (channel_title.id, tmdb_record_id, title_id),
             options=options,
             populate_existing=populate_existing,
             with_for_update=with_for_update,
@@ -599,15 +599,15 @@ class ChannelSavedEpisodeOrder(
     table=True,
 ):
     __table_args__ = (
-        PrimaryKeyConstraint("channel_id", "canonical_episode_id"),
+        PrimaryKeyConstraint("channel_id", "tmdb_episode_id"),
         Index(
             "ChannelSavedEpisodeOrder-channel_id-position-index",
             "channel_id",
             "position",
         ),
         Index(
-            "ChannelSavedEpisodeOrder-canonical_episode_id-index",
-            "canonical_episode_id",
+            "ChannelSavedEpisodeOrder-tmdb_episode_id-index",
+            "tmdb_episode_id",
         ),
     )
 
@@ -616,7 +616,7 @@ class ChannelSavedEpisodeOrder(
 
     # The canonical episode, so a saved position survives the row it was saved
     # against being deleted and covers every row standing for that episode.
-    canonical_episode_id: uuid.UUID = Field(
+    tmdb_episode_id: uuid.UUID = Field(
         foreign_key="episode.id",
         ondelete="CASCADE",
     )

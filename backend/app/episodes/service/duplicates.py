@@ -19,10 +19,10 @@ from sqlmodel import Session, col, func, select
 
 from app.episodes.models import (
     Episode,
-    EpisodeCanonicalEpisode,
+    EpisodeTmdbEpisode,
 )
 from app.episodes.schemas import (
-    DuplicatedCanonicalEpisodeOutput,
+    DuplicatedTmdbEpisodeOutput,
     EpisodeRecord,
 )
 from app.episodes.service.records import _record_fields
@@ -37,14 +37,14 @@ def _duplicated_link_pairs(
     session: Session,
     limit: int,
 ) -> list[tuple[uuid.UUID, uuid.UUID]]:
-    uses = func.count(col(EpisodeCanonicalEpisode.episode_id).distinct())
-    unsettled = func.bool_or(col(Episode.canonical_episode_validated_at).is_(None))
+    uses = func.count(col(EpisodeTmdbEpisode.episode_id).distinct())
+    unsettled = func.bool_or(col(Episode.tmdb_episode_validated_at).is_(None))
     statement = (
         select(
-            col(EpisodeCanonicalEpisode.canonical_episode_id),
+            col(EpisodeTmdbEpisode.tmdb_episode_id),
             col(Title.source_id),
         )
-        .join(Episode, onclause=col(EpisodeCanonicalEpisode.episode_id) == Episode.id)
+        .join(Episode, onclause=col(EpisodeTmdbEpisode.episode_id) == Episode.id)
         .join(Season, onclause=col(Episode.season_id) == Season.id)
         .join(Title, onclause=col(Season.title_id) == Title.id)
         .where(
@@ -53,15 +53,15 @@ def _duplicated_link_pairs(
             col(Title.deleted_at).is_(None),
         )
         .group_by(
-            col(EpisodeCanonicalEpisode.canonical_episode_id),
+            col(EpisodeTmdbEpisode.tmdb_episode_id),
             col(Title.source_id),
         )
         .having(uses > 1, unsettled)
         .limit(limit)
     )
     return [
-        (canonical_id, source_id)
-        for canonical_id, source_id in session.exec(statement).all()
+        (tmdb_record_id, source_id)
+        for tmdb_record_id, source_id in session.exec(statement).all()
     ]
 
 
@@ -70,21 +70,21 @@ def _episodes_linking_to(
     session: Session,
     pairs: Collection[tuple[uuid.UUID, uuid.UUID]],
 ) -> dict[tuple[uuid.UUID, uuid.UUID], list[EpisodeRecord]]:
-    canonical_episode_ids = {canonical_id for canonical_id, _source_id in pairs}
+    tmdb_episode_ids = {tmdb_record_id for tmdb_record_id, _source_id in pairs}
     statement = (
         select(  # type: ignore[call-overload]
-            col(EpisodeCanonicalEpisode.canonical_episode_id),
+            col(EpisodeTmdbEpisode.tmdb_episode_id),
             col(Title.source_id),
             Episode,
             Season,
             Title,
         )
-        .join(Episode, onclause=col(EpisodeCanonicalEpisode.episode_id) == Episode.id)
+        .join(Episode, onclause=col(EpisodeTmdbEpisode.episode_id) == Episode.id)
         .join(Season, onclause=col(Episode.season_id) == Season.id)
         .join(Title, onclause=col(Season.title_id) == Title.id)
         .where(
-            col(EpisodeCanonicalEpisode.canonical_episode_id).in_(
-                canonical_episode_ids,
+            col(EpisodeTmdbEpisode.tmdb_episode_id).in_(
+                tmdb_episode_ids,
             ),
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
@@ -97,22 +97,22 @@ def _episodes_linking_to(
         tuple[uuid.UUID, uuid.UUID],
         list[EpisodeRecord],
     ] = defaultdict(list)
-    for canonical_id, source_id, episode, season, title in session.exec(
+    for tmdb_record_id, source_id, episode, season, title in session.exec(
         statement,
     ).all():
-        if (canonical_id, source_id) not in wanted:
+        if (tmdb_record_id, source_id) not in wanted:
             continue
-        linking[canonical_id, source_id].append(
+        linking[tmdb_record_id, source_id].append(
             EpisodeRecord(**_record_fields(episode, season, title)),
         )
     return linking
 
 
 # TODO: Validate
-def get_duplicated_canonical_episodes(
+def get_duplicated_tmdb_episodes(
     session: Session,
     limit: int,
-) -> list[DuplicatedCanonicalEpisodeOutput]:
+) -> list[DuplicatedTmdbEpisodeOutput]:
     """Return every canonical episode a single source points more than one episode at.
 
     Two episodes of one website standing for the same canonical episode is a
@@ -125,14 +125,14 @@ def get_duplicated_canonical_episodes(
         return []
 
     linking = _episodes_linking_to(session, pairs)
-    canonical_episodes = {
+    tmdb_episodes = {
         episode.id: (episode, season, title, source)
         for episode, season, title, source in session.exec(
             select(Episode, Season, Title, Source)
             .join(Season, onclause=col(Episode.season_id) == Season.id)
             .join(Title, onclause=col(Season.title_id) == Title.id)
             .join(Source, onclause=col(Title.source_id) == Source.id)
-            .where(col(Episode.id).in_({canonical_id for canonical_id, _ in pairs})),
+            .where(col(Episode.id).in_({tmdb_record_id for tmdb_record_id, _ in pairs})),
         ).all()
     }
     sources = {
@@ -144,27 +144,27 @@ def get_duplicated_canonical_episodes(
         ).all()
     }
 
-    outputs: list[DuplicatedCanonicalEpisodeOutput] = []
-    for canonical_id, source_id in pairs:
-        found = canonical_episodes.get(canonical_id)
+    outputs: list[DuplicatedTmdbEpisodeOutput] = []
+    for tmdb_record_id, source_id in pairs:
+        found = tmdb_episodes.get(tmdb_record_id)
         source = sources.get(source_id)
         if found is None or source is None:
             continue
-        episode, season, title, _canonical_source = found
+        episode, season, title, _tmdb_source = found
         outputs.append(
-            DuplicatedCanonicalEpisodeOutput(
+            DuplicatedTmdbEpisodeOutput(
                 id=f"{episode.id}:{source.id}",
-                canonical=EpisodeRecord(**_record_fields(episode, season, title)),
+                tmdb=EpisodeRecord(**_record_fields(episode, season, title)),
                 source=SourceListPublic.model_validate(source),
-                linked_episodes=linking.get((canonical_id, source_id), []),
+                linked_episodes=linking.get((tmdb_record_id, source_id), []),
             ),
         )
     return sorted(
         outputs,
         key=lambda output: (
             output.source.key,
-            output.canonical.title.name or "",
-            output.canonical.season.season_number or 0,
-            output.canonical.episode.episode_number or 0,
+            output.tmdb.title.name or "",
+            output.tmdb.season.season_number or 0,
+            output.tmdb.episode.episode_number or 0,
         ),
     )

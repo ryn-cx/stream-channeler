@@ -8,15 +8,15 @@ from app.auth.dependencies import (
     SessionDep,
 )
 from app.episodes.dependencies import (
-    AdminCanonicalEpisode,
+    AdminTmdbEpisode,
     ExistingEpisode,
 )
 from app.episodes.schemas import (
-    CanonicalEpisodeRecord,
+    TmdbEpisodeRecord,
     UserEpisodeUrlInput,
     UserEpisodeUrlOutput,
 )
-from app.episodes.service.information import canonical_episode_record
+from app.episodes.service.information import tmdb_episode_record
 from app.episodes.service.urls import (
     clear_episode_url_for_user,
     set_episode_url_for_user,
@@ -25,9 +25,9 @@ from app.episodes.service.urls import (
 """Episodes router."""
 
 
-canonical_episodes_router = APIRouter(
-    prefix="/episodes/canonical",
-    tags=["canonical-episodes"],
+tmdb_episodes_router = APIRouter(
+    prefix="/episodes/tmdb",
+    tags=["tmdb-episodes"],
 )
 
 
@@ -56,19 +56,19 @@ def delete_episode_user_url(
 
 
 # TODO: Validate
-@canonical_episodes_router.get("/{canonical_episode_id}")  # noqa: FAST003 - Used by AdminCanonicalEpisode.
-def get_canonical_episode_by_id(
+@tmdb_episodes_router.get("/{tmdb_episode_id}")  # noqa: FAST003 - Used by AdminTmdbEpisode.
+def get_tmdb_episode_by_id(
     session: SessionDep,
-    canonical_episode: AdminCanonicalEpisode,
-) -> CanonicalEpisodeRecord:
+    tmdb_episode: AdminTmdbEpisode,
+) -> TmdbEpisodeRecord:
     """Get a `Episode`, with the season and title above it."""
-    return canonical_episode_record(session, canonical_episode)
+    return tmdb_episode_record(session, tmdb_episode)
 
 
 router = APIRouter()
 
 
-router.include_router(canonical_episodes_router)
+router.include_router(tmdb_episodes_router)
 
 
 router.include_router(episodes_router)

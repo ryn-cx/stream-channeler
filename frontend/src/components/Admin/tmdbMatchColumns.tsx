@@ -84,6 +84,7 @@ interface Summarised extends Numbered {
   title_name: string | null
   title_year: number | null
   title_url: string | null
+  season_name: string | null
   season_url: string | null
   name: string | null
   description: string | null
@@ -255,7 +256,7 @@ function MatchSummary({
             agreement.season && agreeingNumber,
           )}
         >
-          Season {record.season_number ?? "?"}
+          {record.season_name ?? `Season ${record.season_number ?? "?"}`}
         </Link>
         <ExternalLinkButton
           url={record.season_url}
@@ -355,6 +356,7 @@ function choiceSummarised(
     title_name: match.title.name ?? null,
     title_year: match.title.year ?? null,
     title_url: match.title.tmdb_url ?? null,
+    season_name: match.season.name ?? null,
     season_url: match.season.tmdb_url ?? null,
     season_number: match.season.season_number ?? null,
     episode_number: match.episode.episode_number ?? null,
@@ -376,6 +378,7 @@ function episodeSummarised(row: UnmatchedEpisodeOutput): Summarised {
     title_name: row.title.name ?? null,
     title_year: row.title.year ?? null,
     title_url: row.title.url ?? null,
+    season_name: row.season.name ?? null,
     season_url: row.season.url ?? null,
     season_number: row.season.season_number ?? null,
     episode_number: row.episode.episode_number ?? null,
@@ -917,11 +920,11 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
   },
   {
     id: "identifier_note",
-    accessorFn: (row) => row.episode.canonical_episode_note ?? "",
+    accessorFn: (row) => row.episode.tmdb_episode_note ?? "",
     header: "Note",
     cell: ({ row }) => (
       <WrappingCell className="max-w-48 text-xs text-muted-foreground">
-        {row.original.episode.canonical_episode_note ?? ""}
+        {row.original.episode.tmdb_episode_note ?? ""}
       </WrappingCell>
     ),
   },

@@ -8,12 +8,12 @@ from typing import TYPE_CHECKING, Any, override
 
 from loguru import logger
 
-from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.files.models import File
 from app.seasons.models import Season
 from app.sources.models import Source
 from app.titles.models import Title
+from app.tmdb_media.keys import watch_identifier
 from app.utils import tz_datetime
 from plugins.Crunchyroll.constants import (
     ARTIST_URL_REGEX,
@@ -329,8 +329,14 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
             msg = "Title.url is not set."
             raise AttributeError(msg)
 
-        for datum in self.categories_file(title.key).parsed().data:
-            self._add_urls_to_channel([title.url], datum.localization.title)
+        channel_keys = ["All Titles"]
+        channel_keys.extend(
+            datum.localization.title
+            for datum in self.categories_file(title.key).parsed().data
+        )
+        channel_key_urls = [(channel_key, title.url) for channel_key in channel_keys]
+        self.remove_urls_from_other_channels(channel_key_urls)
+        self.add_new_urls_to_channel(channel_key_urls)
 
     # TODO: Validate
     def create_channel_records(self) -> None:
@@ -346,9 +352,8 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
         self,
         releases: list[BrowseSeriesDatum],
     ) -> None:
-        self._add_urls_to_channel(
-            [self.title_url(release.id) for release in releases],
-            "All Titles",
+        self.add_new_urls_to_channel(
+            [("All Titles", self.title_url(release.id)) for release in releases],
         )
 
     # TODO: Validate
@@ -529,7 +534,7 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
                 image_url=largest_image(artist_data.images.poster_wide),
                 thumbnail_url=nearest_thumbnail(artist_data.images.poster_wide),
                 data_timestamp=self._title_files_data_timestamp(title_key),
-                canonical_title_validated_at=tz_datetime.now(),
+                tmdb_title_validated_at=tz_datetime.now(),
                 source_id=source.id,
             ).upsert(source, title)
             # All updates are set by update_source.
@@ -622,16 +627,21 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
             msg = "Title.url is not set."
             raise AttributeError(msg)
 
-        for genre in self.artist_file(title.key).parsed().data[0].genres:
-            self._add_urls_to_channel([title.url], genre.display_value)
+        channel_keys = ["All Music"]
+        channel_keys.extend(
+            genre.display_value
+            for genre in self.artist_file(title.key).parsed().data[0].genres
+        )
+        channel_key_urls = [(channel_key, title.url) for channel_key in channel_keys]
+        self.remove_urls_from_other_channels(channel_key_urls)
+        self.add_new_urls_to_channel(channel_key_urls)
 
     # TODO: Validate
     def create_channel_records(self) -> None:
         browse_file = self.browse_file()
         browse_file.download_if_outdated()
-        self._add_urls_to_channel(
-            [self.title_url(artist.id) for artist in browse_file.datums()],
-            "All Music",
+        self.add_new_urls_to_channel(
+            [("All Music", self.title_url(artist.id)) for artist in browse_file.datums()],
         )
 
     # TODO: Validate

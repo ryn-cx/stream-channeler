@@ -18,25 +18,20 @@ from datetime import datetime, timedelta
 import pytest
 from sqlmodel import Session
 
-from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
-from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.sources.models import Source
 from app.titles.models import Title
+from app.tmdb_media.keys import watch_identifier
 from app.utils import tz_datetime
-from plugins.TMDB import TMDB
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
     InvalidURLError,
     URLImportResult,
 )
 from tests.plugins.frozen_clock import frozen_clock
-from tests.plugins.plugin_validator.database import (
-    DatabaseMixin,
-    match_imported_titles_to_tmdb,
-)
+from tests.plugins.plugin_validator.database import DatabaseMixin
 from tests.plugins.plugin_validator.log_stats import log_stats
 from tests.plugins.plugin_validator.state import (
     database_json,
@@ -63,12 +58,6 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
 
     imported_state: str | None = None
 
-    # Which record of each kind the tests that need one take, counted from the
-    # first in the order the keys put them in. The first is what a test wants
-    # unless that one says nothing worth reading - a season with a single
-    # episode, a title whose episodes are all alike - and naming another here is
-    # what points a test at one that does. Picking by key order rather than at
-    # random is what lets the run be compared against a recording at all.
     source_index: int = 0
     title_index: int = 0
     season_index: int = 0
@@ -207,13 +196,41 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
         ]
 
     # TODO: Validate
+    def source_titles(self, source: Source) -> list[Title]:
+        """Every live title of one source, in the order their keys put them in."""
+        return [
+            title
+            for title in sorted(source.titles, key=lambda title: title.key)
+            if title.deleted_at is None
+        ]
+
+    # TODO: Validate
+    def source_seasons(self, source: Source) -> list[Season]:
+        """Every live season of one source, in the order their keys put them in."""
+        return [
+            season
+            for title in self.source_titles(source)
+            for season in sorted(title.seasons, key=lambda season: season.key)
+            if season.deleted_at is None
+        ]
+
+    # TODO: Validate
+    def source_episodes(self, source: Source) -> list[Episode]:
+        """Every live episode of one source, in the order their keys put them in."""
+        return [
+            episode
+            for season in self.source_seasons(source)
+            for episode in sorted(season.episodes, key=lambda episode: episode.key)
+            if episode.deleted_at is None
+        ]
+
+    # TODO: Validate
     def all_titles(self, session: Session) -> list[Title]:
         """Every live title of every plugin, in the order their keys put them in."""
         return [
             title
             for source in self.all_sources(session)
-            for title in sorted(source.titles, key=lambda title: title.key)
-            if title.deleted_at is None
+            for title in self.source_titles(source)
         ]
 
     # TODO: Validate
@@ -221,9 +238,8 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
         """Every live season of every plugin, in the order their keys put them in."""
         return [
             season
-            for title in self.all_titles(session)
-            for season in sorted(title.seasons, key=lambda season: season.key)
-            if season.deleted_at is None
+            for source in self.all_sources(session)
+            for season in self.source_seasons(source)
         ]
 
     # TODO: Validate
@@ -231,9 +247,8 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
         """Every live episode of every plugin, in the order their keys put them in."""
         return [
             episode
-            for season in self.all_seasons(session)
-            for episode in sorted(season.episodes, key=lambda episode: episode.key)
-            if episode.deleted_at is None
+            for source in self.all_sources(session)
+            for episode in self.source_episodes(source)
         ]
 
     # TODO: Validate
@@ -252,52 +267,65 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
         return [
             title
             for source in self.plugin_sources(session)
-            for title in sorted(source.titles, key=lambda title: title.key)
-            if title.deleted_at is None
+            for title in self.source_titles(source)
         ]
 
     # TODO: Validate
     def plugin_seasons(self, session: Session) -> list[Season]:
         return [
             season
-            for title in self.plugin_titles(session)
-            for season in sorted(title.seasons, key=lambda season: season.key)
-            if season.deleted_at is None
+            for source in self.plugin_sources(session)
+            for season in self.source_seasons(source)
         ]
 
     # TODO: Validate
     def plugin_episodes(self, session: Session) -> list[Episode]:
         return [
             episode
-            for season in self.plugin_seasons(session)
-            for episode in sorted(season.episodes, key=lambda episode: episode.key)
-            if episode.deleted_at is None
+            for source in self.plugin_sources(session)
+            for episode in self.source_episodes(source)
         ]
 
     # TODO: Validate
-    def selected_source(self, session: Session) -> Source:
-        """Return the source a test that works on one takes.
+    def selected_sources(self, session: Session) -> list[Source]:
+        """Return every source a test that works on one takes.
 
         The existing validator picks one at random, which a test comparing
-        against a recorded dump cannot do, so the one the class names is taken
-        instead and the first is what it names unless it says otherwise.
+        against a recorded dump cannot do, so the ones the class names are taken
+        instead and the first of each source is what it names unless it says
+        otherwise. Every source is covered rather than only the first, because a
+        plugin that splits its catalogue across sources - a free listing beside
+        a subscription one - holds different media in each, so a dump of one of
+        them says nothing about the other.
         """
-        return self.plugin_sources(session)[self.source_index]
+        return self.plugin_sources(session)[self.source_index :]
 
     # TODO: Validate
-    def selected_title(self, session: Session) -> Title:
-        """Return the title a test that works on one takes."""
-        return self.plugin_titles(session)[self.title_index]
+    def selected_titles(self, session: Session) -> list[Title]:
+        """Return the title each source contributes to a test that works on one."""
+        return [
+            titles[self.title_index]
+            for source in self.selected_sources(session)
+            if (titles := self.source_titles(source))
+        ]
 
     # TODO: Validate
-    def selected_season(self, session: Session) -> Season:
-        """Return the season a test that works on one takes."""
-        return self.plugin_seasons(session)[self.season_index]
+    def selected_seasons(self, session: Session) -> list[Season]:
+        """Return the season each source contributes to a test that works on one."""
+        return [
+            seasons[self.season_index]
+            for source in self.selected_sources(session)
+            if (seasons := self.source_seasons(source))
+        ]
 
     # TODO: Validate
-    def selected_episode(self, session: Session) -> Episode:
-        """Return the episode a test that works on one takes."""
-        return self.plugin_episodes(session)[self.episode_index]
+    def selected_episodes(self, session: Session) -> list[Episode]:
+        """Return the episode each source contributes to a test that works on one."""
+        return [
+            episodes[self.episode_index]
+            for source in self.selected_sources(session)
+            if (episodes := self.source_episodes(source))
+        ]
 
     # TODO: Validate
     def fake_season(self, title: Title) -> Season:
@@ -384,6 +412,7 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
             # Written even when the run failed, so the files it did reach are
             # recorded rather than downloaded again by the next run.
             self._export_files_manifest(session_with_files)
+            self._export_files(session_with_files)
 
 
 # TODO: Validate
@@ -477,48 +506,6 @@ class ImportExistingURLTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
 
 
 # TODO: Validate
-class TMDBLookupTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
-    initializes_tmdb = True
-
-    # TODO: Validate
-    def test_tmdb_lookup(self, session_with_files: Session) -> None:
-        if not self.url or self.invalid_url:
-            pytest.skip()
-
-        results = self.import_url(session_with_files)
-        with frozen_clock(self.import_time):
-            match_imported_titles_to_tmdb(
-                session_with_files,
-                self.imported_plugin,
-                [result.title for result in results],
-            )
-            session_with_files.flush()
-        session_with_files.expire_all()
-
-        tmdb_titles = [
-            title
-            for title in self.all_titles(session_with_files)
-            if title.source.plugin.key == TMDB_PLUGIN_KEY
-        ]
-        assert tmdb_titles, "The import looked nothing up on TMDB."
-
-        tmdb_urls = [title.url for title in tmdb_titles]
-        for title in tmdb_titles:
-            session_with_files.delete(title)
-        session_with_files.flush()
-        session_with_files.expire_all()
-
-        with log_stats(self), frozen_clock(self.import_time):
-            tmdb = TMDB(session_with_files)
-            for tmdb_url in tmdb_urls:
-                tmdb.validate_and_import_url(tmdb_url)
-            session_with_files.flush()
-        session_with_files.expire_all()
-
-        self.assert_state(session_with_files, "tmdb_lookup")
-
-
-# TODO: Validate
 class UpdatePluginTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
     """Tests that updating the plugin refreshes what the plugin itself holds.
 
@@ -560,20 +547,26 @@ class UpdateSourceTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
             pytest.skip()
 
         self.import_url(session_with_files)
-        source = self.selected_source(session_with_files)
+        sources = self.selected_sources(session_with_files)
         timestamp = self.update_time + timedelta(minutes=1)
         with frozen_clock(self.update_time):
-            self._create_source_update_entry(self.imported_plugin, source, timestamp)
-            # Seed update_at later than the pending air_date so set_update_at
-            # overwrites it with the earlier value.
-            for title in source.titles:
-                title.update_at = timestamp + timedelta(minutes=1)
-                for season in title.seasons:
-                    if season.update_at:
-                        season.update_at = timestamp + timedelta(minutes=1)
+            for source in sources:
+                self._create_source_update_entry(
+                    self.imported_plugin,
+                    source,
+                    timestamp,
+                )
+                # Seed update_at later than the pending air_date so set_update_at
+                # overwrites it with the earlier value.
+                for title in source.titles:
+                    title.update_at = timestamp + timedelta(minutes=1)
+                    for season in title.seasons:
+                        if season.update_at:
+                            season.update_at = timestamp + timedelta(minutes=1)
 
         with log_stats(self):
-            self.update(session_with_files, source)
+            for source in sources:
+                self.update(session_with_files, source)
         self.assert_state(session_with_files, "update_source")
 
 
@@ -585,7 +578,8 @@ class UpdateTitleTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
     def test_update_title(self, session_with_files: Session) -> None:
         self.import_url(session_with_files)
         with log_stats(self):
-            self.update(session_with_files, self.selected_title(session_with_files))
+            for title in self.selected_titles(session_with_files):
+                self.update(session_with_files, title)
         self.assert_state(session_with_files, "update_title")
 
 
@@ -597,7 +591,8 @@ class UpdateSeasonTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
     def test_update_season(self, session_with_files: Session) -> None:
         self.import_url(session_with_files)
         with log_stats(self):
-            self.update(session_with_files, self.selected_season(session_with_files))
+            for season in self.selected_seasons(session_with_files):
+                self.update(session_with_files, season)
         self.assert_state(session_with_files, "update_season")
 
 
@@ -609,7 +604,8 @@ class UpdateEpisodeTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
     def test_update_episode(self, session_with_files: Session) -> None:
         self.import_url(session_with_files)
         with log_stats(self):
-            self.update(session_with_files, self.selected_episode(session_with_files))
+            for episode in self.selected_episodes(session_with_files):
+                self.update(session_with_files, episode)
         self.assert_state(session_with_files, "update_episode")
 
 
@@ -620,16 +616,18 @@ class DeletedSeasonTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
     # TODO: Validate
     def test_deleted_season(self, session_with_files: Session) -> None:
         self.import_url(session_with_files)
-        title = self.selected_title(session_with_files)
+        titles = self.selected_titles(session_with_files)
 
         with frozen_clock(self.update_time):
-            fake_season = self.fake_season(title)
-            title.seasons.append(fake_season)
-            fake_season.soft_undelete()
+            for title in titles:
+                fake_season = self.fake_season(title)
+                title.seasons.append(fake_season)
+                fake_season.soft_undelete()
             session_with_files.flush()
 
         with log_stats(self), frozen_clock(self.update_time):
-            self.owning_plugin(session_with_files, title).update_title(title)
+            for title in titles:
+                self.owning_plugin(session_with_files, title).update_title(title)
             session_with_files.flush()
 
         self.assert_state(session_with_files, "deleted_season")
@@ -644,17 +642,19 @@ class DeletedEpisodeUpdateTitleTests[PluginT: AbstractPlugin](
     # TODO: Validate
     def test_deleted_episode_update_title(self, session_with_files: Session) -> None:
         self.import_url(session_with_files)
-        season = self.selected_season(session_with_files)
-        title = season.title
+        seasons = self.selected_seasons(session_with_files)
 
         with frozen_clock(self.update_time):
-            fake_episode = self.fake_episode(season)
-            season.episodes.append(fake_episode)
-            fake_episode.soft_undelete()
+            for season in seasons:
+                fake_episode = self.fake_episode(season)
+                season.episodes.append(fake_episode)
+                fake_episode.soft_undelete()
             session_with_files.flush()
 
         with log_stats(self), frozen_clock(self.update_time):
-            self.owning_plugin(session_with_files, title).update_title(title)
+            for season in seasons:
+                title = season.title
+                self.owning_plugin(session_with_files, title).update_title(title)
             session_with_files.flush()
 
         self.assert_state(session_with_files, "deleted_episode_update_title")
@@ -669,17 +669,19 @@ class DeletedSeasonWithEpisodeTests[PluginT: AbstractPlugin](
     # TODO: Validate
     def test_deleted_season_with_episode(self, session_with_files: Session) -> None:
         self.import_url(session_with_files)
-        title = self.selected_title(session_with_files)
+        titles = self.selected_titles(session_with_files)
 
         with frozen_clock(self.update_time):
-            fake_season = self.fake_season(title)
-            title.seasons.append(fake_season)
-            fake_season.episodes.append(self.fake_episode(fake_season))
-            fake_season.soft_undelete()
+            for title in titles:
+                fake_season = self.fake_season(title)
+                title.seasons.append(fake_season)
+                fake_season.episodes.append(self.fake_episode(fake_season))
+                fake_season.soft_undelete()
             session_with_files.flush()
 
         with log_stats(self), frozen_clock(self.update_time):
-            self.owning_plugin(session_with_files, title).update_title(title)
+            for title in titles:
+                self.owning_plugin(session_with_files, title).update_title(title)
             session_with_files.flush()
 
         self.assert_state(session_with_files, "deleted_season_with_episode")

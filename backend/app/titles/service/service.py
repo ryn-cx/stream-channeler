@@ -7,13 +7,6 @@ from loguru import logger
 from sqlalchemy import func
 from sqlmodel import Session, col, select
 
-from app.canonical_media.metadata import canonical_title_of
-from app.canonical_media.tmdb import (
-    chosen_group_id,
-    dump_extra,
-    get_media_type_and_tmdb_id,
-    get_tmdb_id,
-)
 from app.episodes.models import Episode
 from app.issue_reports.service.listing import list_title_issue_reports
 from app.media.media_type import TMDBMediaType
@@ -32,8 +25,15 @@ from app.titles.schemas import (
     UnvalidatedTitleOutput,
 )
 from app.titles.service.linking import (
-    _relink_non_canonical_titles,
-    _reread_in_new_order,
+    _old_relink_episodes,
+    _old_reread_in_new_order,
+)
+from app.tmdb_media.metadata import tmdb_title_of
+from app.tmdb_media.tmdb import (
+    chosen_group_id,
+    dump_extra,
+    get_media_type_and_tmdb_id,
+    get_tmdb_id,
 )
 from app.users.models import User
 from app.utils import tz_datetime
@@ -99,8 +99,8 @@ def update_title_extra(
     session.add(title)
 
     if reordered:
-        _reread_in_new_order(session, title)
-        _relink_non_canonical_titles(session, title)
+        _old_reread_in_new_order(session, title)
+        _old_relink_episodes(session, title)
     session.commit()
 
 
@@ -207,7 +207,7 @@ def title_information(
     """
     source = title.source
 
-    counterpart = canonical_title_of(session, title)
+    counterpart = tmdb_title_of(session, title)
     tmdb: TitleInformationSide | None = None
     if counterpart:
         tmdb = _information_side(TMDB_PLUGIN_KEY, counterpart)
@@ -257,7 +257,7 @@ def validate_title(session: Session, title: Title) -> Title:
     to be one TMDB holds no counterpart for, which is one decision about two
     answers and so one column either way.
     """
-    title.canonical_title_validated_at = tz_datetime.now()
+    title.tmdb_title_validated_at = tz_datetime.now()
     session.add(title)
     session.commit()
     session.refresh(title)
@@ -273,7 +273,7 @@ def list_unvalidated_titles(
     titles = session.exec(
         Title.select_with_plugin_eager()
         .where(
-            col(Title.canonical_title_validated_at).is_(None),
+            col(Title.tmdb_title_validated_at).is_(None),
             col(Title.deleted_at).is_(None),
         )
         .order_by(col(Title.name))
@@ -301,15 +301,15 @@ def list_unvalidated_titles(
             created_at=title.created_at,
             linked_titles=[
                 UnvalidatedLinkedTitleOutput(
-                    id=link.canonical_title.id,
-                    name=link.canonical_title.name,
-                    year=link.canonical_title.year,
-                    url=link.canonical_title.url,
-                    image_url=link.canonical_title.image_url,
-                    tmdb_id=get_tmdb_id(link.canonical_title.key),
+                    id=link.tmdb_title.id,
+                    name=link.tmdb_title.name,
+                    year=link.tmdb_title.year,
+                    url=link.tmdb_title.url,
+                    image_url=link.tmdb_title.image_url,
+                    tmdb_id=get_tmdb_id(link.tmdb_title.key),
                     note=link.note,
                 )
-                for link in title.canonical_title_links
+                for link in title.tmdb_title_links
             ],
         )
         for title in titles

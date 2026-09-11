@@ -4,10 +4,10 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, override
 
-from app.canonical_media.tmdb import (
+from app.media.media_type import TMDBMediaType
+from app.tmdb_media.tmdb import (
     get_media_type_and_tmdb_id,
 )
-from app.media.media_type import TMDBMediaType
 from plugins.TMDB.constants import MOVIE_URL_REGEX, TV_URL_REGEX
 from plugins.TMDB.importer import TMDBImporter, TMDBMovie, TMDBSeries
 from plugins.TMDB.shared import TMDBShared
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class TMDB(TMDBShared, AbstractPlugin, register=False):
+class TMDB(TMDBShared, AbstractPlugin, register=True):
     # TODO: Validate
     @classmethod
     @override
@@ -65,10 +65,8 @@ class TMDB(TMDBShared, AbstractPlugin, register=False):
         year: int | None = None,
     ) -> list[URLImportResult]:
         search_result = self.first_search_result(name, media_type, year)
-        if not search_result:
-            msg = f"Could not find {name} on {self.plugin_name()}."
-            raise MediaNotFoundError(msg)
-
-        found_media_type, tmdb_media_id = search_result
-        media_importer = self._get_media_importer_from_media_type(found_media_type)
-        return media_importer.import_url(tmdb_url(found_media_type, tmdb_media_id))
+        if search_result:
+            found_media_type, tmdb_media_id = search_result
+            media_importer = self._get_media_importer_from_media_type(found_media_type)
+            return media_importer.import_url(tmdb_url(found_media_type, tmdb_media_id))
+        return []

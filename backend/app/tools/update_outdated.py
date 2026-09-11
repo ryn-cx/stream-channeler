@@ -14,7 +14,6 @@ from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import SelectOfScalar
 from tqdm import tqdm
 
-from app.canonical_media.episodes import canonical_episode_link, links_of
 from app.channels.episode_selector.visibility import channel_access_condition
 from app.channels.models import (
     Channel,
@@ -31,7 +30,8 @@ from app.models import MediaMixin
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.sources.models import Source
-from app.titles.models import Title, TitleCanonicalTitle
+from app.titles.models import Title, TitleTmdbTitle
+from app.tmdb_media.episodes import links_of, tmdb_episode_link
 from app.users.models import User
 from app.users.plugin_user import is_plugin_user
 from app.utils import tz_datetime
@@ -79,18 +79,18 @@ def _channel_season_exists(
     clause to the row it is being asked about.
     """
     copy_episode = aliased(Episode)
-    canonical_episode = aliased(Episode)
-    copy_link = canonical_episode_link()
-    canonical_season = aliased(Season)
+    tmdb_episode = aliased(Episode)
+    copy_link = tmdb_episode_link()
+    tmdb_season = aliased(Season)
     copy_title = aliased(Title)
-    copy_title_link = aliased(TitleCanonicalTitle)
+    copy_title_link = aliased(TitleTmdbTitle)
     channel_owner = aliased(User)
     season_id = func.coalesce(
-        col(canonical_episode.season_id),
+        col(tmdb_episode.season_id),
         col(copy_episode.season_id),
     )
     episode_id = func.coalesce(
-        col(copy_link.canonical_episode_id),
+        col(copy_link.tmdb_episode_id),
         col(copy_episode.id),
     )
     conditions = [condition(copy_title)] if condition else []
@@ -103,12 +103,12 @@ def _channel_season_exists(
     return (
         statement.outerjoin(copy_link, links_of(copy_episode, copy_link))
         .outerjoin(
-            canonical_episode,
-            col(copy_link.canonical_episode_id) == col(canonical_episode.id),
+            tmdb_episode,
+            col(copy_link.tmdb_episode_id) == col(tmdb_episode.id),
         )
         .outerjoin(
-            canonical_season,
-            col(canonical_episode.season_id) == col(canonical_season.id),
+            tmdb_season,
+            col(tmdb_episode.season_id) == col(tmdb_season.id),
         )
         .join(copy_title, col(copy_title.id) == col(season.title_id))
         # An episode with no canonical row of its own belongs to every title its listing
@@ -124,10 +124,10 @@ def _channel_season_exists(
         # reaches those rows.
         .join(
             ChannelTitle,
-            col(ChannelTitle.canonical_title_id)
+            col(ChannelTitle.tmdb_title_id)
             == func.coalesce(
-                col(canonical_season.title_id),
-                col(copy_title_link.canonical_title_id),
+                col(tmdb_season.title_id),
+                col(copy_title_link.tmdb_title_id),
                 col(copy_title.id),
             ),
         )
@@ -149,7 +149,7 @@ def _channel_season_exists(
             ChannelEpisodeFilter,
             and_(
                 col(ChannelEpisodeFilter.channel_title_id) == col(ChannelTitle.id),
-                col(ChannelEpisodeFilter.canonical_episode_id) == episode_id,
+                col(ChannelEpisodeFilter.tmdb_episode_id) == episode_id,
                 or_(
                     col(ChannelEpisodeFilter.expires_at).is_(None),
                     col(ChannelEpisodeFilter.expires_at) > tz_datetime.now(),
@@ -161,7 +161,7 @@ def _channel_season_exists(
             and_(
                 col(ChannelEpisodeSourceFilter.channel_title_id)
                 == col(ChannelTitle.id),
-                col(ChannelEpisodeSourceFilter.canonical_episode_id) == episode_id,
+                col(ChannelEpisodeSourceFilter.tmdb_episode_id) == episode_id,
                 col(ChannelEpisodeSourceFilter.title_id) == col(copy_title.id),
                 or_(
                     col(ChannelEpisodeSourceFilter.expires_at).is_(None),

@@ -14,8 +14,8 @@ from minbo.show import Show as TitleEndpoint
 from minbo.show.models import ShowModel
 
 from plugins.utils.base_plugin.files import (
-    SingleArgEndpointFile,
     MultipleArgEndpointFile,
+    SingleArgEndpointFile,
 )
 from plugins.utils.get_around_client import get_around_client
 

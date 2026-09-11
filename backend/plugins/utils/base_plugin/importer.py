@@ -75,7 +75,7 @@ class BaseImporter(BasePlugin, ABC):
     ) -> list[URLImportResult]:
         """Return a list of import results for the given title and media info."""
 
-        result_titles = [title, *title.canonical_titles]
+        result_titles = [title, *title.tmdb_titles]
 
         if media_info and media_info.episode_key is not None:
             episodes = [self._imported_episode(title, media_info.episode_key)]

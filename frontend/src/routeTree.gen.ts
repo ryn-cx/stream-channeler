@@ -29,10 +29,12 @@ import { Route as LayoutDashboardRouteImport } from './routes/_layout/dashboard'
 import { Route as LayoutCreditsRouteImport } from './routes/_layout/credits'
 import { Route as LayoutChannelOrdersRouteImport } from './routes/_layout/channel-orders'
 import { Route as LayoutChannelCommentsRouteImport } from './routes/_layout/channel-comments'
+import { Route as LayoutAdminV2RouteImport } from './routes/_layout/admin-v2'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as LayoutOnboardingIndexRouteImport } from './routes/_layout/onboarding.index'
 import { Route as LayoutChannelsIndexRouteImport } from './routes/_layout/channels.index'
 import { Route as LayoutAdminIndexRouteImport } from './routes/_layout/admin.index'
+import { Route as LayoutAdminV2IndexRouteImport } from './routes/_layout/admin-v2.index'
 import { Route as LayoutWatchesImportRouteImport } from './routes/_layout/watches_.import'
 import { Route as LayoutChannelsBrowseRouteImport } from './routes/_layout/channels.browse'
 import { Route as LayoutChannelsChannelIdRouteImport } from './routes/_layout/channels.$channelId'
@@ -46,9 +48,10 @@ import { Route as LayoutAdminSeasonReportsRouteImport } from './routes/_layout/a
 import { Route as LayoutAdminReportsRouteImport } from './routes/_layout/admin.reports'
 import { Route as LayoutAdminManageFilesRouteImport } from './routes/_layout/admin.manage-files'
 import { Route as LayoutAdminEpisodeReportsRouteImport } from './routes/_layout/admin.episode-reports'
-import { Route as LayoutAdminDuplicatedCanonicalEpisodesRouteImport } from './routes/_layout/admin.duplicated-canonical-episodes'
+import { Route as LayoutAdminDuplicatedTmdbEpisodesRouteImport } from './routes/_layout/admin.duplicated-tmdb-episodes'
 import { Route as LayoutAdminChannelsRouteImport } from './routes/_layout/admin.channels'
 import { Route as LayoutAdminChannelQueuesRouteImport } from './routes/_layout/admin.channel-queues'
+import { Route as LayoutAdminV2LinkEpisodeRouteImport } from './routes/_layout/admin-v2.link-episode'
 import { Route as LayoutUsersUserIdChannelsRouteImport } from './routes/_layout/users.$userId.channels'
 import { Route as LayoutOnboardingChannelIdTitlesRouteImport } from './routes/_layout/onboarding.$channelId.titles'
 import { Route as LayoutOnboardingChannelIdSortRouteImport } from './routes/_layout/onboarding.$channelId.sort'
@@ -154,6 +157,11 @@ const LayoutChannelCommentsRoute = LayoutChannelCommentsRouteImport.update({
   path: '/channel-comments',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutAdminV2Route = LayoutAdminV2RouteImport.update({
+  id: '/admin-v2',
+  path: '/admin-v2',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutAdminRoute = LayoutAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -173,6 +181,11 @@ const LayoutAdminIndexRoute = LayoutAdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => LayoutAdminRoute,
+} as any)
+const LayoutAdminV2IndexRoute = LayoutAdminV2IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => LayoutAdminV2Route,
 } as any)
 const LayoutWatchesImportRoute = LayoutWatchesImportRouteImport.update({
   id: '/watches_/import',
@@ -244,10 +257,10 @@ const LayoutAdminEpisodeReportsRoute =
     path: '/episode-reports',
     getParentRoute: () => LayoutAdminRoute,
   } as any)
-const LayoutAdminDuplicatedCanonicalEpisodesRoute =
-  LayoutAdminDuplicatedCanonicalEpisodesRouteImport.update({
-    id: '/duplicated-canonical-episodes',
-    path: '/duplicated-canonical-episodes',
+const LayoutAdminDuplicatedTmdbEpisodesRoute =
+  LayoutAdminDuplicatedTmdbEpisodesRouteImport.update({
+    id: '/duplicated-tmdb-episodes',
+    path: '/duplicated-tmdb-episodes',
     getParentRoute: () => LayoutAdminRoute,
   } as any)
 const LayoutAdminChannelsRoute = LayoutAdminChannelsRouteImport.update({
@@ -260,6 +273,12 @@ const LayoutAdminChannelQueuesRoute =
     id: '/channel-queues',
     path: '/channel-queues',
     getParentRoute: () => LayoutAdminRoute,
+  } as any)
+const LayoutAdminV2LinkEpisodeRoute =
+  LayoutAdminV2LinkEpisodeRouteImport.update({
+    id: '/link-episode',
+    path: '/link-episode',
+    getParentRoute: () => LayoutAdminV2Route,
   } as any)
 const LayoutUsersUserIdChannelsRoute =
   LayoutUsersUserIdChannelsRouteImport.update({
@@ -299,6 +318,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRouteWithChildren
+  '/admin-v2': typeof LayoutAdminV2RouteWithChildren
   '/channel-comments': typeof LayoutChannelCommentsRoute
   '/channel-orders': typeof LayoutChannelOrdersRoute
   '/credits': typeof LayoutCreditsRoute
@@ -313,9 +333,10 @@ export interface FileRoutesByFullPath {
   '/sources': typeof LayoutSourcesRoute
   '/titles': typeof LayoutTitlesRoute
   '/watches': typeof LayoutWatchesRoute
+  '/admin-v2/link-episode': typeof LayoutAdminV2LinkEpisodeRoute
   '/admin/channel-queues': typeof LayoutAdminChannelQueuesRoute
   '/admin/channels': typeof LayoutAdminChannelsRoute
-  '/admin/duplicated-canonical-episodes': typeof LayoutAdminDuplicatedCanonicalEpisodesRoute
+  '/admin/duplicated-tmdb-episodes': typeof LayoutAdminDuplicatedTmdbEpisodesRoute
   '/admin/episode-reports': typeof LayoutAdminEpisodeReportsRoute
   '/admin/manage-files': typeof LayoutAdminManageFilesRoute
   '/admin/reports': typeof LayoutAdminReportsRoute
@@ -329,6 +350,7 @@ export interface FileRoutesByFullPath {
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/channels/browse': typeof LayoutChannelsBrowseRoute
   '/watches/import': typeof LayoutWatchesImportRoute
+  '/admin-v2/': typeof LayoutAdminV2IndexRoute
   '/admin/': typeof LayoutAdminIndexRoute
   '/channels/': typeof LayoutChannelsIndexRoute
   '/onboarding/': typeof LayoutOnboardingIndexRoute
@@ -357,9 +379,10 @@ export interface FileRoutesByTo {
   '/titles': typeof LayoutTitlesRoute
   '/watches': typeof LayoutWatchesRoute
   '/': typeof LayoutIndexRoute
+  '/admin-v2/link-episode': typeof LayoutAdminV2LinkEpisodeRoute
   '/admin/channel-queues': typeof LayoutAdminChannelQueuesRoute
   '/admin/channels': typeof LayoutAdminChannelsRoute
-  '/admin/duplicated-canonical-episodes': typeof LayoutAdminDuplicatedCanonicalEpisodesRoute
+  '/admin/duplicated-tmdb-episodes': typeof LayoutAdminDuplicatedTmdbEpisodesRoute
   '/admin/episode-reports': typeof LayoutAdminEpisodeReportsRoute
   '/admin/manage-files': typeof LayoutAdminManageFilesRoute
   '/admin/reports': typeof LayoutAdminReportsRoute
@@ -373,6 +396,7 @@ export interface FileRoutesByTo {
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/channels/browse': typeof LayoutChannelsBrowseRoute
   '/watches/import': typeof LayoutWatchesImportRoute
+  '/admin-v2': typeof LayoutAdminV2IndexRoute
   '/admin': typeof LayoutAdminIndexRoute
   '/channels': typeof LayoutChannelsIndexRoute
   '/onboarding': typeof LayoutOnboardingIndexRoute
@@ -390,6 +414,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_layout/admin': typeof LayoutAdminRouteWithChildren
+  '/_layout/admin-v2': typeof LayoutAdminV2RouteWithChildren
   '/_layout/channel-comments': typeof LayoutChannelCommentsRoute
   '/_layout/channel-orders': typeof LayoutChannelOrdersRoute
   '/_layout/credits': typeof LayoutCreditsRoute
@@ -405,9 +430,10 @@ export interface FileRoutesById {
   '/_layout/titles': typeof LayoutTitlesRoute
   '/_layout/watches': typeof LayoutWatchesRoute
   '/_layout/': typeof LayoutIndexRoute
+  '/_layout/admin-v2/link-episode': typeof LayoutAdminV2LinkEpisodeRoute
   '/_layout/admin/channel-queues': typeof LayoutAdminChannelQueuesRoute
   '/_layout/admin/channels': typeof LayoutAdminChannelsRoute
-  '/_layout/admin/duplicated-canonical-episodes': typeof LayoutAdminDuplicatedCanonicalEpisodesRoute
+  '/_layout/admin/duplicated-tmdb-episodes': typeof LayoutAdminDuplicatedTmdbEpisodesRoute
   '/_layout/admin/episode-reports': typeof LayoutAdminEpisodeReportsRoute
   '/_layout/admin/manage-files': typeof LayoutAdminManageFilesRoute
   '/_layout/admin/reports': typeof LayoutAdminReportsRoute
@@ -421,6 +447,7 @@ export interface FileRoutesById {
   '/_layout/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/_layout/channels/browse': typeof LayoutChannelsBrowseRoute
   '/_layout/watches_/import': typeof LayoutWatchesImportRoute
+  '/_layout/admin-v2/': typeof LayoutAdminV2IndexRoute
   '/_layout/admin/': typeof LayoutAdminIndexRoute
   '/_layout/channels/': typeof LayoutChannelsIndexRoute
   '/_layout/onboarding/': typeof LayoutOnboardingIndexRoute
@@ -439,6 +466,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/admin'
+    | '/admin-v2'
     | '/channel-comments'
     | '/channel-orders'
     | '/credits'
@@ -453,9 +481,10 @@ export interface FileRouteTypes {
     | '/sources'
     | '/titles'
     | '/watches'
+    | '/admin-v2/link-episode'
     | '/admin/channel-queues'
     | '/admin/channels'
-    | '/admin/duplicated-canonical-episodes'
+    | '/admin/duplicated-tmdb-episodes'
     | '/admin/episode-reports'
     | '/admin/manage-files'
     | '/admin/reports'
@@ -469,6 +498,7 @@ export interface FileRouteTypes {
     | '/channels/$channelId'
     | '/channels/browse'
     | '/watches/import'
+    | '/admin-v2/'
     | '/admin/'
     | '/channels/'
     | '/onboarding/'
@@ -497,9 +527,10 @@ export interface FileRouteTypes {
     | '/titles'
     | '/watches'
     | '/'
+    | '/admin-v2/link-episode'
     | '/admin/channel-queues'
     | '/admin/channels'
-    | '/admin/duplicated-canonical-episodes'
+    | '/admin/duplicated-tmdb-episodes'
     | '/admin/episode-reports'
     | '/admin/manage-files'
     | '/admin/reports'
@@ -513,6 +544,7 @@ export interface FileRouteTypes {
     | '/channels/$channelId'
     | '/channels/browse'
     | '/watches/import'
+    | '/admin-v2'
     | '/admin'
     | '/channels'
     | '/onboarding'
@@ -529,6 +561,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/_layout/admin'
+    | '/_layout/admin-v2'
     | '/_layout/channel-comments'
     | '/_layout/channel-orders'
     | '/_layout/credits'
@@ -544,9 +577,10 @@ export interface FileRouteTypes {
     | '/_layout/titles'
     | '/_layout/watches'
     | '/_layout/'
+    | '/_layout/admin-v2/link-episode'
     | '/_layout/admin/channel-queues'
     | '/_layout/admin/channels'
-    | '/_layout/admin/duplicated-canonical-episodes'
+    | '/_layout/admin/duplicated-tmdb-episodes'
     | '/_layout/admin/episode-reports'
     | '/_layout/admin/manage-files'
     | '/_layout/admin/reports'
@@ -560,6 +594,7 @@ export interface FileRouteTypes {
     | '/_layout/channels/$channelId'
     | '/_layout/channels/browse'
     | '/_layout/watches_/import'
+    | '/_layout/admin-v2/'
     | '/_layout/admin/'
     | '/_layout/channels/'
     | '/_layout/onboarding/'
@@ -720,6 +755,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutChannelCommentsRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/admin-v2': {
+      id: '/_layout/admin-v2'
+      path: '/admin-v2'
+      fullPath: '/admin-v2'
+      preLoaderRoute: typeof LayoutAdminV2RouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/admin': {
       id: '/_layout/admin'
       path: '/admin'
@@ -747,6 +789,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof LayoutAdminIndexRouteImport
       parentRoute: typeof LayoutAdminRoute
+    }
+    '/_layout/admin-v2/': {
+      id: '/_layout/admin-v2/'
+      path: '/'
+      fullPath: '/admin-v2/'
+      preLoaderRoute: typeof LayoutAdminV2IndexRouteImport
+      parentRoute: typeof LayoutAdminV2Route
     }
     '/_layout/watches_/import': {
       id: '/_layout/watches_/import'
@@ -839,11 +888,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminEpisodeReportsRouteImport
       parentRoute: typeof LayoutAdminRoute
     }
-    '/_layout/admin/duplicated-canonical-episodes': {
-      id: '/_layout/admin/duplicated-canonical-episodes'
-      path: '/duplicated-canonical-episodes'
-      fullPath: '/admin/duplicated-canonical-episodes'
-      preLoaderRoute: typeof LayoutAdminDuplicatedCanonicalEpisodesRouteImport
+    '/_layout/admin/duplicated-tmdb-episodes': {
+      id: '/_layout/admin/duplicated-tmdb-episodes'
+      path: '/duplicated-tmdb-episodes'
+      fullPath: '/admin/duplicated-tmdb-episodes'
+      preLoaderRoute: typeof LayoutAdminDuplicatedTmdbEpisodesRouteImport
       parentRoute: typeof LayoutAdminRoute
     }
     '/_layout/admin/channels': {
@@ -859,6 +908,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/channel-queues'
       preLoaderRoute: typeof LayoutAdminChannelQueuesRouteImport
       parentRoute: typeof LayoutAdminRoute
+    }
+    '/_layout/admin-v2/link-episode': {
+      id: '/_layout/admin-v2/link-episode'
+      path: '/link-episode'
+      fullPath: '/admin-v2/link-episode'
+      preLoaderRoute: typeof LayoutAdminV2LinkEpisodeRouteImport
+      parentRoute: typeof LayoutAdminV2Route
     }
     '/_layout/users/$userId/channels': {
       id: '/_layout/users/$userId/channels'
@@ -901,7 +957,7 @@ declare module '@tanstack/react-router' {
 interface LayoutAdminRouteChildren {
   LayoutAdminChannelQueuesRoute: typeof LayoutAdminChannelQueuesRoute
   LayoutAdminChannelsRoute: typeof LayoutAdminChannelsRoute
-  LayoutAdminDuplicatedCanonicalEpisodesRoute: typeof LayoutAdminDuplicatedCanonicalEpisodesRoute
+  LayoutAdminDuplicatedTmdbEpisodesRoute: typeof LayoutAdminDuplicatedTmdbEpisodesRoute
   LayoutAdminEpisodeReportsRoute: typeof LayoutAdminEpisodeReportsRoute
   LayoutAdminManageFilesRoute: typeof LayoutAdminManageFilesRoute
   LayoutAdminReportsRoute: typeof LayoutAdminReportsRoute
@@ -918,8 +974,8 @@ interface LayoutAdminRouteChildren {
 const LayoutAdminRouteChildren: LayoutAdminRouteChildren = {
   LayoutAdminChannelQueuesRoute: LayoutAdminChannelQueuesRoute,
   LayoutAdminChannelsRoute: LayoutAdminChannelsRoute,
-  LayoutAdminDuplicatedCanonicalEpisodesRoute:
-    LayoutAdminDuplicatedCanonicalEpisodesRoute,
+  LayoutAdminDuplicatedTmdbEpisodesRoute:
+    LayoutAdminDuplicatedTmdbEpisodesRoute,
   LayoutAdminEpisodeReportsRoute: LayoutAdminEpisodeReportsRoute,
   LayoutAdminManageFilesRoute: LayoutAdminManageFilesRoute,
   LayoutAdminReportsRoute: LayoutAdminReportsRoute,
@@ -935,6 +991,20 @@ const LayoutAdminRouteChildren: LayoutAdminRouteChildren = {
 
 const LayoutAdminRouteWithChildren = LayoutAdminRoute._addFileChildren(
   LayoutAdminRouteChildren,
+)
+
+interface LayoutAdminV2RouteChildren {
+  LayoutAdminV2LinkEpisodeRoute: typeof LayoutAdminV2LinkEpisodeRoute
+  LayoutAdminV2IndexRoute: typeof LayoutAdminV2IndexRoute
+}
+
+const LayoutAdminV2RouteChildren: LayoutAdminV2RouteChildren = {
+  LayoutAdminV2LinkEpisodeRoute: LayoutAdminV2LinkEpisodeRoute,
+  LayoutAdminV2IndexRoute: LayoutAdminV2IndexRoute,
+}
+
+const LayoutAdminV2RouteWithChildren = LayoutAdminV2Route._addFileChildren(
+  LayoutAdminV2RouteChildren,
 )
 
 interface LayoutOnboardingRouteChildren {
@@ -958,6 +1028,7 @@ const LayoutOnboardingRouteWithChildren =
 
 interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRouteWithChildren
+  LayoutAdminV2Route: typeof LayoutAdminV2RouteWithChildren
   LayoutChannelCommentsRoute: typeof LayoutChannelCommentsRoute
   LayoutChannelOrdersRoute: typeof LayoutChannelOrdersRoute
   LayoutCreditsRoute: typeof LayoutCreditsRoute
@@ -982,6 +1053,7 @@ interface LayoutRouteChildren {
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRouteWithChildren,
+  LayoutAdminV2Route: LayoutAdminV2RouteWithChildren,
   LayoutChannelCommentsRoute: LayoutChannelCommentsRoute,
   LayoutChannelOrdersRoute: LayoutChannelOrdersRoute,
   LayoutCreditsRoute: LayoutCreditsRoute,

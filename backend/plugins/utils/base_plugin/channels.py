@@ -8,12 +8,12 @@ from typing import TYPE_CHECKING
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, select
 
-from app.channels.models import Channel, ChannelQueue
+from app.channels.models import Channel, ChannelQueue, ChannelTitle
 from app.channels.service.import_queue import add_urls_to_channel_import_queue
 from app.channels.service.ordering import order_preset_options
 from app.models import Visibility
 from app.sources.models import Source
-from app.titles.models import Title, TitleCanonicalTitle
+from app.titles.models import Title, TitleTmdbTitle
 from app.users.models import User
 from app.users.plugin_user import is_plugin_user
 from app.users.service.accounts import get_or_create_automatic_channel_user
@@ -83,15 +83,93 @@ class BaseChannelMixin(AbstractPlugin, ABC):
             "This is an automatically generated channel based on the titles that have been imported by all of Stream Channeler's users."
         )
 
-    def _add_urls_to_channel(self, urls: Sequence[str], title_prefix: str) -> None:
-        """Add the given URLs to the channel specified using the title prefix."""
-        channel = self.get_or_create_channel(
-            self._channel_name(title_prefix),
-            self._channel_description(title_prefix),
-        )
+    # TODO: Validate
+    def remove_urls_from_other_channels(
+        self,
+        channel_key_urls: Sequence[tuple[str, str]],
+    ) -> None:
+        channel_names_by_url: dict[str, set[str]] = {}
+        for channel_key, url in channel_key_urls:
+            channel_names_by_url.setdefault(url, set()).add(
+                self._channel_name(channel_key),
+            )
 
-        urls_not_in_queue = self._urls_not_in_queue(channel, urls)
-        add_urls_to_channel_import_queue(self.session, channel, urls_not_in_queue)
+        stale_entries = [
+            (queue_entry, channel)
+            for queue_entry, channel in self.session.exec(
+                select(ChannelQueue, Channel)
+                .join(Channel, col(Channel.id) == col(ChannelQueue.channel_id))
+                .where(
+                    Channel.user_id == self.automatic_channel_user.id,
+                    col(ChannelQueue.url).in_(channel_names_by_url),
+                ),
+            ).all()
+            if channel.name not in channel_names_by_url[queue_entry.url]
+        ]
+        if not stale_entries:
+            return
+
+        tmdb_title_ids_by_url = self._tmdb_title_ids_by_url(
+            {queue_entry.url for queue_entry, _ in stale_entries},
+        )
+        for queue_entry, channel in stale_entries:
+            for tmdb_title_id in tmdb_title_ids_by_url.get(
+                queue_entry.url,
+                set(),
+            ):
+                channel_title = ChannelTitle.get(
+                    self.session,
+                    channel,
+                    tmdb_title_id,
+                )
+                if channel_title:
+                    self.session.delete(channel_title)
+            self.session.delete(queue_entry)
+        self.session.commit()
+
+    # TODO: Validate
+    def _tmdb_title_ids_by_url(
+        self,
+        urls: set[str],
+    ) -> dict[str, set[uuid.UUID]]:
+        titles = self.session.exec(
+            select(Title)
+            .join(Source)
+            .where(
+                Source.plugin_id == self.plugin.id,
+                col(Title.url).in_(urls),
+            )
+            .options(selectinload(Title.tmdb_title_links)),  # type: ignore[arg-type]
+        ).all()
+
+        tmdb_title_ids_by_url: dict[str, set[uuid.UUID]] = {}
+        for title in titles:
+            if title.url:
+                tmdb_title_ids_by_url.setdefault(title.url, set()).update(
+                    set(title.tmdb_title_ids) or {title.id},
+                )
+        return tmdb_title_ids_by_url
+
+    # TODO: Validate
+    def add_new_urls_to_channel(
+        self,
+        channel_key_urls: Sequence[tuple[str, str]],
+    ) -> None:
+        urls_by_channel_key: dict[str, list[str]] = {}
+        for channel_key, url in channel_key_urls:
+            urls_by_channel_key.setdefault(channel_key, []).append(url)
+
+        for channel_key, urls in urls_by_channel_key.items():
+            channel = self.get_or_create_channel(
+                self._channel_name(channel_key),
+                self._channel_description(channel_key),
+            )
+            if urls_not_in_queue := self._urls_not_in_queue(channel, urls):
+                add_urls_to_channel_import_queue(
+                    self.session,
+                    channel,
+                    urls_not_in_queue,
+                )
 
     def _urls_not_in_queue(self, channel: Channel, urls: Sequence[str]) -> list[str]:
         """Return the URLs that are not currently in the channel's import queue."""
@@ -132,7 +210,7 @@ class BaseChannelMixin(AbstractPlugin, ABC):
                     {queue_entry.url for queue_entry in queue_entries},
                 ),
             )
-            .options(selectinload(Title.canonical_title_links)),  # type: ignore[arg-type]
+            .options(selectinload(Title.tmdb_title_links)),  # type: ignore[arg-type]
         ).all()
 
         titles_by_queued_url: dict[str, list[Title]] = {}
@@ -140,26 +218,26 @@ class BaseChannelMixin(AbstractPlugin, ABC):
             if title.url:
                 titles_by_queued_url.setdefault(title.url, []).append(title)
 
-        canonical_ids_by_queued_url = {
+        tmdb_record_ids_by_queued_url = {
             queued_url: {
-                canonical_title_id
+                tmdb_title_id
                 for title in queued_url_titles
-                for canonical_title_id in title.canonical_title_ids
+                for tmdb_title_id in title.tmdb_title_ids
             }
             for queued_url, queued_url_titles in titles_by_queued_url.items()
             if all(title.deleted_at is not None for title in queued_url_titles)
         }
-        active_canonical_title_ids = self._active_canonical_title_ids(
+        active_tmdb_title_ids = self._active_tmdb_title_ids(
             {
-                canonical_title_id
-                for canonical_title_ids in canonical_ids_by_queued_url.values()
-                for canonical_title_id in canonical_title_ids
+                tmdb_title_id
+                for tmdb_title_ids in tmdb_record_ids_by_queued_url.values()
+                for tmdb_title_id in tmdb_title_ids
             },
         )
         deleted_urls_in_queue = {
             queued_url
-            for queued_url, canonical_title_ids in canonical_ids_by_queued_url.items()
-            if not canonical_title_ids & active_canonical_title_ids
+            for queued_url, tmdb_title_ids in tmdb_record_ids_by_queued_url.items()
+            if not tmdb_title_ids & active_tmdb_title_ids
         }
         return [
             queue_entry
@@ -167,27 +245,27 @@ class BaseChannelMixin(AbstractPlugin, ABC):
             if queue_entry.url in deleted_urls_in_queue
         ]
 
-    def _active_canonical_title_ids(
+    def _active_tmdb_title_ids(
         self,
-        canonical_title_ids: set[uuid.UUID],
+        tmdb_title_ids: set[uuid.UUID],
     ) -> set[uuid.UUID]:
         active_title_ids = self.session.exec(
             select(Title.id)
             .join(Source)
             .where(
                 Source.plugin_id == self.plugin.id,
-                col(Title.id).in_(canonical_title_ids),
+                col(Title.id).in_(tmdb_title_ids),
                 col(Title.deleted_at).is_(None),
             ),
         ).all()
-        active_titles_canonical_ids = self.session.exec(
-            select(TitleCanonicalTitle.canonical_title_id)
-            .join(Title, col(Title.id) == col(TitleCanonicalTitle.title_id))
+        active_titles_tmdb_record_ids = self.session.exec(
+            select(TitleTmdbTitle.tmdb_title_id)
+            .join(Title, col(Title.id) == col(TitleTmdbTitle.title_id))
             .join(Source)
             .where(
                 Source.plugin_id == self.plugin.id,
-                col(TitleCanonicalTitle.canonical_title_id).in_(canonical_title_ids),
+                col(TitleTmdbTitle.tmdb_title_id).in_(tmdb_title_ids),
                 col(Title.deleted_at).is_(None),
             ),
         ).all()
-        return set(active_title_ids) | set(active_titles_canonical_ids)
+        return set(active_title_ids) | set(active_titles_tmdb_record_ids)

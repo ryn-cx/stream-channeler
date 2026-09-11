@@ -17,15 +17,15 @@ from app.media.service.records import editable_record, existing_record, readable
 # website filed two titles under stands for each of them, and naming the channel's
 # entry by it would leave the two entries indistinguishable.
 # TODO: Validate
-def _require_owned_channel_canonical_title(
+def _require_owned_channel_tmdb_title(
     session: SessionDep,
     channel: EditableChannel,
-    canonical_title_id: uuid.UUID,
+    tmdb_title_id: uuid.UUID,
 ) -> ChannelTitle:
     channel_title = session.exec(
         select(ChannelTitle).where(
             ChannelTitle.channel_id == channel.id,
-            ChannelTitle.canonical_title_id == canonical_title_id,
+            ChannelTitle.tmdb_title_id == tmdb_title_id,
         ),
     ).first()
     if channel_title is None:
@@ -36,17 +36,17 @@ def _require_owned_channel_canonical_title(
 # Reading which of a title's seasons and episodes a channel carries says no more
 # than watching the channel already does, so it is gated on the channel being the
 # viewer's to see rather than theirs to edit. Setting the filters stays with
-# `EditableChannelCanonicalTitle`.
+# `EditableChannelTmdbTitle`.
 # TODO: Validate
-def _require_readable_channel_canonical_title(
+def _require_readable_channel_tmdb_title(
     session: SessionDep,
     channel: ReadableChannel,
-    canonical_title_id: uuid.UUID,
+    tmdb_title_id: uuid.UUID,
 ) -> ChannelTitle:
     channel_title = session.exec(
         select(ChannelTitle).where(
             ChannelTitle.channel_id == channel.id,
-            ChannelTitle.canonical_title_id == canonical_title_id,
+            ChannelTitle.tmdb_title_id == tmdb_title_id,
         ),
     ).first()
     if channel_title is None:
@@ -85,18 +85,18 @@ def _require_queue_entry(session: SessionDep, queue_id: uuid.UUID) -> ChannelQue
     return queue_entry
 
 
-EditableChannelCanonicalTitle = Annotated[
+EditableChannelTmdbTitle = Annotated[
     ChannelTitle,
-    Depends(_require_owned_channel_canonical_title),
+    Depends(_require_owned_channel_tmdb_title),
 ]
 EditableChannelQueueEntry = Annotated[
     ChannelQueue,
     Depends(_require_channel_queue_entry),
 ]
 ExistingChannelQueueEntry = Annotated[ChannelQueue, Depends(_require_queue_entry)]
-ReadableChannelCanonicalTitle = Annotated[
+ReadableChannelTmdbTitle = Annotated[
     ChannelTitle,
-    Depends(_require_readable_channel_canonical_title),
+    Depends(_require_readable_channel_tmdb_title),
 ]
 EditableChannel = Annotated[Channel, Depends(editable_record(Channel, "channel_id"))]
 ReadableChannel = Annotated[Channel, Depends(readable_record(Channel, "channel_id"))]

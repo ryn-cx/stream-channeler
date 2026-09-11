@@ -13,10 +13,10 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, and_, col, or_, select
 
-from app.canonical_media.filters import is_canonical
 from app.channels.models import Channel, ChannelTitle
 from app.models import Visibility
-from app.titles.models import Title, TitleCanonicalTitle
+from app.titles.models import Title, TitleTmdbTitle
+from app.tmdb_media.filters import is_not_linked
 from app.users.models import User
 from app.users.plugin_user import is_plugin_user
 
@@ -126,14 +126,14 @@ def in_a_user_channel() -> ColumnElement[bool]:
             col(ChannelTitle.is_blacklist_only).is_(False),
             ~is_plugin_user(channel_owner.email),
             or_(
-                col(ChannelTitle.canonical_title_id).in_(
-                    select(TitleCanonicalTitle.canonical_title_id)
-                    .where(col(TitleCanonicalTitle.title_id) == col(Title.id))
+                col(ChannelTitle.tmdb_title_id).in_(
+                    select(TitleTmdbTitle.tmdb_title_id)
+                    .where(col(TitleTmdbTitle.title_id) == col(Title.id))
                     .correlate(Title),
                 ),
                 and_(
-                    is_canonical(Title),
-                    col(ChannelTitle.canonical_title_id) == col(Title.id),
+                    is_not_linked(Title),
+                    col(ChannelTitle.tmdb_title_id) == col(Title.id),
                 ),
             ),
         )

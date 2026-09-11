@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING, Any
 
 from sqlmodel import Session
 
-from app.canonical_media.tmdb import (
-    get_tmdb_id,
-    parse_tmdb_key,
-)
 from app.episodes.models import Episode
 from app.media.media_type import TMDBMediaType
 from app.titles.models import Title
+from app.tmdb_media.tmdb import (
+    get_tmdb_id,
+    parse_tmdb_key,
+)
 
 if TYPE_CHECKING:
     from plugins.TMDB.linking import TMDBLinking
@@ -25,12 +25,12 @@ class TmdbEpisodeFacts:
     def __init__(
         self,
         session: Session,
-        canonical_titles: Sequence[Title],
-        canonical_episodes: Sequence[Episode],
+        tmdb_titles: Sequence[Title],
+        tmdb_episodes: Sequence[Episode],
     ) -> None:
         self.session = session
-        self.canonical_titles = canonical_titles
-        self.canonical_episodes = canonical_episodes
+        self.tmdb_titles = tmdb_titles
+        self.tmdb_episodes = tmdb_episodes
 
     # TODO: Validate
     def preload(self) -> None:
@@ -61,8 +61,8 @@ class TmdbEpisodeFacts:
         )
         tmdb = self._tmdb(self.session)
         by_tmdb_id: dict[int, dict[int, frozenset[str]]] = {}
-        for canonical_title in self.canonical_titles:
-            media_type, tmdb_title_id = parse_tmdb_key(canonical_title.key)
+        for tmdb_title in self.tmdb_titles:
+            media_type, tmdb_title_id = parse_tmdb_key(tmdb_title.key)
             if media_type is not TMDBMediaType.tv:
                 continue
             if tmdb_title_id not in cache:
@@ -70,7 +70,7 @@ class TmdbEpisodeFacts:
             by_tmdb_id |= cache[tmdb_title_id]
 
         alternate_numbers: dict[uuid.UUID, dict[int, frozenset[str]]] = {}
-        for tmdb_episode in self.canonical_episodes:
+        for tmdb_episode in self.tmdb_episodes:
             tmdb_episode_id = get_tmdb_id(tmdb_episode.key)
             if numbers := by_tmdb_id.get(tmdb_episode_id):
                 alternate_numbers[tmdb_episode.id] = numbers

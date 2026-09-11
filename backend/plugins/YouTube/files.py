@@ -36,9 +36,9 @@ from not_yt_dlapi.videos.models import VideosModel
 from app.config import settings
 from plugins.utils.base_plugin.files import (
     Endpoint,
-    SingleArgEndpointFile,
     MultipleArgEndpointFile,
     PagedEndpointFile,
+    SingleArgEndpointFile,
 )
 from plugins.utils.get_around_client import get_around_client
 

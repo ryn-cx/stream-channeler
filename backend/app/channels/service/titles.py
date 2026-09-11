@@ -10,18 +10,6 @@ from sqlalchemy import distinct, exists
 from sqlalchemy.orm import aliased, selectinload
 from sqlmodel import Session, col, func, select
 
-from app.canonical_media.episodes import (
-    canonical_episode_link,
-    links_of,
-    links_to,
-)
-from app.canonical_media.filters import (
-    is_canonical,
-    is_non_canonical,
-)
-from app.canonical_media.tmdb import (
-    tmdb_key_clause,
-)
 from app.channels.channel_scope import (
     child_channel_ids,
     resolve_channel_ids,
@@ -43,8 +31,20 @@ from app.schemas import Message
 from app.seasons.models import Season
 from app.sources.models import Source
 from app.sources.schemas import SourcePublic
-from app.titles.models import Title, TitleCanonicalTitle
+from app.titles.models import Title, TitleTmdbTitle
 from app.titles.schemas import TitlePublic
+from app.tmdb_media.episodes import (
+    links_of,
+    links_to,
+    tmdb_episode_link,
+)
+from app.tmdb_media.filters import (
+    is_linked,
+    is_not_linked,
+)
+from app.tmdb_media.tmdb import (
+    tmdb_key_clause,
+)
 from app.users.models import User
 
 CHANNEL_TITLE_PAGE = 100
@@ -57,11 +57,11 @@ ChannelTitleRow = tuple[uuid.UUID, uuid.UUID]
 
 
 # TODO: Validate
-def titles_by_canonical_id(
+def titles_by_tmdb_record_id(
     session: Session,
-    canonical_title_ids: Collection[UUID],
+    tmdb_title_ids: Collection[UUID],
 ) -> dict[UUID, list[Title]]:
-    """Return every website's row for each canonical title in `canonical_title_ids`.
+    """Return every website's row for each canonical title in `tmdb_title_ids`.
 
     A `ChannelTitle` names a canonical title rather than one website's row, so the
     rows it stands for have to be looked up by the title they all stand for. A row
@@ -76,31 +76,31 @@ def titles_by_canonical_id(
     mixes titles is linked to each of them alike and stands for every one.
     """
     grouped: dict[UUID, list[Title]] = defaultdict(list)
-    if not canonical_title_ids:
+    if not tmdb_title_ids:
         return grouped
 
     copy_season = aliased(Season)
-    canonical_episode = aliased(Episode)
-    canonical_season = aliased(Season)
-    canonical_link = canonical_episode_link()
+    tmdb_episode = aliased(Episode)
+    tmdb_season = aliased(Season)
+    tmdb_link = tmdb_episode_link()
     carried = session.exec(
-        select(canonical_season.title_id, Title.id)
+        select(tmdb_season.title_id, Title.id)
         .select_from(Episode)
-        .join(canonical_link, links_of(Episode, canonical_link))
+        .join(tmdb_link, links_of(Episode, tmdb_link))
         .join(
-            canonical_episode,
-            col(canonical_episode.id) == col(canonical_link.canonical_episode_id),
+            tmdb_episode,
+            col(tmdb_episode.id) == col(tmdb_link.tmdb_episode_id),
         )
         .join(
-            canonical_season,
-            col(canonical_season.id) == col(canonical_episode.season_id),
+            tmdb_season,
+            col(tmdb_season.id) == col(tmdb_episode.season_id),
         )
         .join(copy_season, col(copy_season.id) == col(Episode.season_id))
         .join(Title, col(Title.id) == col(copy_season.title_id))
         .join(Source, col(Source.id) == col(Title.source_id))
         .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
         .where(
-            col(canonical_season.title_id).in_(canonical_title_ids),
+            col(tmdb_season.title_id).in_(tmdb_title_ids),
             col(Episode.deleted_at).is_(None),
             col(copy_season.deleted_at).is_(None),
             col(Title.deleted_at).is_(None),
@@ -112,14 +112,14 @@ def titles_by_canonical_id(
     ).all()
 
     linked = session.exec(
-        select(TitleCanonicalTitle.canonical_title_id, Title.id)
+        select(TitleTmdbTitle.tmdb_title_id, Title.id)
         .select_from(Title)
-        .join(TitleCanonicalTitle, col(TitleCanonicalTitle.title_id) == col(Title.id))
+        .join(TitleTmdbTitle, col(TitleTmdbTitle.title_id) == col(Title.id))
         .join(Source, col(Source.id) == col(Title.source_id))
         .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
         .where(
-            col(TitleCanonicalTitle.canonical_title_id).in_(canonical_title_ids),
-            is_non_canonical(Title),
+            col(TitleTmdbTitle.tmdb_title_id).in_(tmdb_title_ids),
+            is_linked(Title),
             col(Title.deleted_at).is_(None),
             Plugin.key != TMDB_PLUGIN_KEY,
         )
@@ -128,15 +128,15 @@ def titles_by_canonical_id(
 
     # A title nothing else holds a record of is the row that is the record, and
     # that row is where it is watched, so it stands for itself and no link points
-    # at it. TMDB's own rows are gathered by `tmdb_titles_by_canonical_id`, since
+    # at it. TMDB's own rows are gathered by `tmdb_titles_by_id`, since
     # TMDB is not somewhere anything is watched.
     standalone = session.exec(
         select(Title.id)
         .join(Source, col(Source.id) == col(Title.source_id))
         .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
         .where(
-            col(Title.id).in_(canonical_title_ids),
-            is_canonical(Title),
+            col(Title.id).in_(tmdb_title_ids),
+            is_not_linked(Title),
             col(Title.deleted_at).is_(None),
             Plugin.key != TMDB_PLUGIN_KEY,
         ),
@@ -147,25 +147,25 @@ def titles_by_canonical_id(
         title.id: title
         for title in session.exec(
             select(Title)
-            .where(col(Title.id).in_({title_id for _canonical_id, title_id in pairs}))
+            .where(col(Title.id).in_({title_id for _tmdb_record_id, title_id in pairs}))
             .options(selectinload(Title.source).selectinload(Source.plugin)),  # type: ignore[arg-type]
         ).all()
     }
 
     listed: dict[UUID, set[UUID]] = defaultdict(set)
-    for canonical_title_id, title_id in pairs:
-        if title_id in listed[canonical_title_id]:
+    for tmdb_title_id, title_id in pairs:
+        if title_id in listed[tmdb_title_id]:
             continue
-        listed[canonical_title_id].add(title_id)
-        grouped[canonical_title_id].append(titles_by_id[title_id])
+        listed[tmdb_title_id].add(title_id)
+        grouped[tmdb_title_id].append(titles_by_id[title_id])
 
     return grouped
 
 
 # TODO: Validate
-def tmdb_titles_by_canonical_id(
+def tmdb_titles_by_id(
     session: Session,
-    canonical_title_ids: Iterable[UUID],
+    tmdb_title_ids: Iterable[UUID],
 ) -> dict[UUID, list[Title]]:
     """Return TMDB's own row for each canonical title, keyed by the title.
 
@@ -178,54 +178,54 @@ def tmdb_titles_by_canonical_id(
     what a row mixing titles leaves behind.
     """
     grouped: dict[UUID, list[Title]] = defaultdict(list)
-    canonical_title_ids = set(canonical_title_ids)
-    if not canonical_title_ids:
+    tmdb_title_ids = set(tmdb_title_ids)
+    if not tmdb_title_ids:
         return grouped
 
-    canonical_titles = session.exec(
+    tmdb_titles = session.exec(
         select(Title)
         .join(Source)
         .join(Plugin)
         .where(
-            col(Title.id).in_(canonical_title_ids),
+            col(Title.id).in_(tmdb_title_ids),
             col(Title.deleted_at).is_(None),
             Plugin.key == TMDB_PLUGIN_KEY,
         ),
     ).all()
-    for canonical_title in canonical_titles:
-        grouped[canonical_title.id].append(canonical_title)
+    for tmdb_title in tmdb_titles:
+        grouped[tmdb_title.id].append(tmdb_title)
 
     rows = session.exec(
-        select(TitleCanonicalTitle.canonical_title_id, Title)  # type: ignore[call-overload]
-        .select_from(TitleCanonicalTitle)
-        .join(Title, col(Title.id) == col(TitleCanonicalTitle.title_id))
+        select(TitleTmdbTitle.tmdb_title_id, Title)  # type: ignore[call-overload]
+        .select_from(TitleTmdbTitle)
+        .join(Title, col(Title.id) == col(TitleTmdbTitle.title_id))
         .join(Source)
         .join(Plugin)
         .where(
-            col(TitleCanonicalTitle.canonical_title_id).in_(canonical_title_ids),
+            col(TitleTmdbTitle.tmdb_title_id).in_(tmdb_title_ids),
             col(Title.deleted_at).is_(None),
             Plugin.key == TMDB_PLUGIN_KEY,
         ),
     ).all()
-    for canonical_title_id, title in rows:
-        if title not in grouped[canonical_title_id]:
-            grouped[canonical_title_id].append(title)
+    for tmdb_title_id, title in rows:
+        if title not in grouped[tmdb_title_id]:
+            grouped[tmdb_title_id].append(title)
     return grouped
 
 
 # TODO: Validate
-def titles_for_channel_title(
+def titles_from_channel_title(
     session: Session,
     channel_title: ChannelTitle,
 ) -> list[Title]:
     """Return every website's row for the title `channel_title` is about."""
-    return titles_by_canonical_id(session, [channel_title.canonical_title_id])[
-        channel_title.canonical_title_id
+    return titles_by_tmdb_record_id(session, [channel_title.tmdb_title_id])[
+        channel_title.tmdb_title_id
     ]
 
 
 # TODO: Validate
-def tmdb_titles_for_channel_title(
+def tmdb_titles_from_channel_title(
     session: Session,
     channel_title: ChannelTitle,
 ) -> list[Title]:
@@ -234,8 +234,8 @@ def tmdb_titles_for_channel_title(
     TMDB is not one of the websites a title can be watched on, so its row is
     kept apart from them and only stands for what TMDB has a record of.
     """
-    return tmdb_titles_by_canonical_id(session, [channel_title.canonical_title_id])[
-        channel_title.canonical_title_id
+    return tmdb_titles_by_id(session, [channel_title.tmdb_title_id])[
+        channel_title.tmdb_title_id
     ]
 
 
@@ -256,12 +256,12 @@ def channels_with_title_membership(
     each, which reading every channel's catalogue back answers the long way
     round.
     """
-    canonical_title_ids = set(title.canonical_title_ids) or {title.id}
+    tmdb_title_ids = set(title.tmdb_title_ids) or {title.id}
 
     carrying_channel_ids = set(
         session.exec(
             select(col(ChannelTitle.channel_id)).where(
-                col(ChannelTitle.canonical_title_id).in_(canonical_title_ids),
+                col(ChannelTitle.tmdb_title_id).in_(tmdb_title_ids),
                 col(ChannelTitle.is_blacklist_only).is_(False),
             ),
         ).all(),
@@ -284,15 +284,15 @@ def channels_with_title_membership(
 
 # TODO: Validate
 def add_title_to_channel(session: Session, channel: Channel, title: Title) -> None:
-    canonical_title_ids = set(title.canonical_title_ids) or {title.id}
+    tmdb_title_ids = set(title.tmdb_title_ids) or {title.id}
 
     channel_titles: list[ChannelTitle] = []
-    for canonical_title_id in canonical_title_ids:
-        channel_title = ChannelTitle.get(session, channel, canonical_title_id)
+    for tmdb_title_id in tmdb_title_ids:
+        channel_title = ChannelTitle.get(session, channel, tmdb_title_id)
         if channel_title is None:
             channel_title = ChannelTitle(
                 channel_id=channel.id,
-                canonical_title_id=canonical_title_id,
+                tmdb_title_id=tmdb_title_id,
                 is_whitelist=False,
                 is_blacklist_only=False,
             )
@@ -305,9 +305,9 @@ def add_title_to_channel(session: Session, channel: Channel, title: Title) -> No
 
 
 # TODO: Validate
-def _canonical_titles(
+def _tmdb_titles(
     session: Session,
-    canonical_title_ids: set[uuid.UUID],
+    tmdb_title_ids: set[uuid.UUID],
 ) -> dict[uuid.UUID, TitlePublic]:
     """Return the title itself for each title the channel holds, keyed by it.
 
@@ -315,22 +315,22 @@ def _canonical_titles(
     record of it, and that is the name it is read under rather than whatever any
     one website called its own row for it.
     """
-    if not canonical_title_ids:
+    if not tmdb_title_ids:
         return {}
 
-    canonical_titles = session.exec(
-        select(Title).where(col(Title.id).in_(canonical_title_ids)),
+    tmdb_titles = session.exec(
+        select(Title).where(col(Title.id).in_(tmdb_title_ids)),
     ).all()
     return {
-        canonical_title.id: TitlePublic.model_validate(canonical_title)
-        for canonical_title in canonical_titles
+        tmdb_title.id: TitlePublic.model_validate(tmdb_title)
+        for tmdb_title in tmdb_titles
     }
 
 
 # TODO: Validate
-def _canonical_sources(
+def _tmdb_sources(
     session: Session,
-    canonical_title_ids: set[uuid.UUID],
+    tmdb_title_ids: set[uuid.UUID],
 ) -> dict[uuid.UUID, SourcePublic]:
     """Return the source each title itself was written by, keyed by the title.
 
@@ -339,25 +339,25 @@ def _canonical_sources(
     a title anything catalogued. Every row has a source now, including the minted
     ones, so what tells the two apart is who issued the key.
     """
-    if not canonical_title_ids:
+    if not tmdb_title_ids:
         return {}
 
-    canonical_titles = session.exec(
+    tmdb_titles = session.exec(
         select(Title).where(
-            col(Title.id).in_(canonical_title_ids),
+            col(Title.id).in_(tmdb_title_ids),
             tmdb_key_clause(col(Title.key)),
         ),
     ).all()
     return {
-        canonical_title.id: SourcePublic.model_validate(canonical_title.source)
-        for canonical_title in canonical_titles
+        tmdb_title.id: SourcePublic.model_validate(tmdb_title.source)
+        for tmdb_title in tmdb_titles
     }
 
 
 # TODO: Validate
 def _channel_title_stats(
     session: Session,
-    canonical_title_ids: set[uuid.UUID],
+    tmdb_title_ids: set[uuid.UUID],
 ) -> dict[uuid.UUID, ChannelTitleStats]:
     """Return what each title's seasons and episodes add up to.
 
@@ -369,65 +369,65 @@ def _channel_title_stats(
     it to be linked to has no such answer and counts towards the title its
     website's listing is linked to, under that website's own season.
     """
-    if not canonical_title_ids:
+    if not tmdb_title_ids:
         return {}
 
-    canonical_episode = aliased(Episode)
-    canonical_link = canonical_episode_link()
+    tmdb_episode = aliased(Episode)
+    tmdb_link = tmdb_episode_link()
     rows = session.exec(
         select(
             Season.title_id,
             func.count(distinct(col(Season.id))),
-            func.count(distinct(col(canonical_episode.id))),
+            func.count(distinct(col(tmdb_episode.id))),
         )
         .select_from(Season)
         .join(
-            canonical_episode,
-            col(canonical_episode.season_id) == col(Season.id),
+            tmdb_episode,
+            col(tmdb_episode.season_id) == col(Season.id),
         )
-        .join(canonical_link, links_to(canonical_episode, canonical_link))
-        .join(Episode, col(Episode.id) == col(canonical_link.episode_id))
+        .join(tmdb_link, links_to(tmdb_episode, tmdb_link))
+        .join(Episode, col(Episode.id) == col(tmdb_link.episode_id))
         .where(
-            is_canonical(canonical_episode),
-            col(Season.title_id).in_(canonical_title_ids),
+            is_not_linked(tmdb_episode),
+            col(Season.title_id).in_(tmdb_title_ids),
             col(Episode.deleted_at).is_(None),
         )
         .group_by(col(Season.title_id)),
     ).all()
 
     counts = {
-        canonical_title_id: [season_count, episode_count]
-        for canonical_title_id, season_count, episode_count in rows
+        tmdb_title_id: [season_count, episode_count]
+        for tmdb_title_id, season_count, episode_count in rows
     }
-    for canonical_title_id, season_count, episode_count in _linked_title_stats(
+    for tmdb_title_id, season_count, episode_count in _linked_title_stats(
         session,
-        canonical_title_ids,
+        tmdb_title_ids,
     ):
-        totals = counts.setdefault(canonical_title_id, [0, 0])
+        totals = counts.setdefault(tmdb_title_id, [0, 0])
         totals[0] += season_count
         totals[1] += episode_count
 
-    for canonical_title_id, season_count, episode_count in _standalone_title_stats(
+    for tmdb_title_id, season_count, episode_count in _standalone_title_stats(
         session,
-        canonical_title_ids,
+        tmdb_title_ids,
     ):
-        totals = counts.setdefault(canonical_title_id, [0, 0])
+        totals = counts.setdefault(tmdb_title_id, [0, 0])
         totals[0] += season_count
         totals[1] += episode_count
 
     return {
-        canonical_title_id: ChannelTitleStats(
+        tmdb_title_id: ChannelTitleStats(
             season_count=season_count,
             episode_count=episode_count,
         )
-        for canonical_title_id, (season_count, episode_count) in counts.items()
+        for tmdb_title_id, (season_count, episode_count) in counts.items()
     }
 
 
 # TODO: Validate
 def _standalone_title_stats(
     session: Session,
-    canonical_title_ids: set[uuid.UUID],
+    tmdb_title_ids: set[uuid.UUID],
 ) -> Sequence[tuple[uuid.UUID, int, int]]:
     """Return what a title that is its own listing holds.
 
@@ -448,8 +448,8 @@ def _standalone_title_stats(
         .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
         .join(Episode, col(Episode.season_id) == col(Season.id))
         .where(
-            col(Season.title_id).in_(canonical_title_ids),
-            is_canonical(Title),
+            col(Season.title_id).in_(tmdb_title_ids),
+            is_not_linked(Title),
             Plugin.key != TMDB_PLUGIN_KEY,
             col(Title.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
@@ -462,7 +462,7 @@ def _standalone_title_stats(
 # TODO: Validate
 def _linked_title_stats(
     session: Session,
-    canonical_title_ids: set[uuid.UUID],
+    tmdb_title_ids: set[uuid.UUID],
 ) -> Sequence[tuple[uuid.UUID, int, int]]:
     """Return what the episodes no title has a record of add up to.
 
@@ -475,7 +475,7 @@ def _linked_title_stats(
     linked_title = aliased(Title)
     return session.exec(
         select(
-            TitleCanonicalTitle.canonical_title_id,
+            TitleTmdbTitle.tmdb_title_id,
             func.count(distinct(col(linked_season.id))),
             func.count(distinct(col(Episode.id))),
         )
@@ -483,72 +483,80 @@ def _linked_title_stats(
         .join(linked_season, col(linked_season.id) == col(Episode.season_id))
         .join(linked_title, col(linked_title.id) == col(linked_season.title_id))
         .join(
-            TitleCanonicalTitle,
-            col(TitleCanonicalTitle.title_id) == col(linked_title.id),
+            TitleTmdbTitle,
+            col(TitleTmdbTitle.title_id) == col(linked_title.id),
         )
         .where(
-            col(TitleCanonicalTitle.canonical_title_id).in_(canonical_title_ids),
-            is_canonical(Episode),
-            is_non_canonical(linked_title),
+            col(TitleTmdbTitle.tmdb_title_id).in_(tmdb_title_ids),
+            is_not_linked(Episode),
+            is_linked(linked_title),
             col(Episode.deleted_at).is_(None),
             col(linked_season.deleted_at).is_(None),
             col(linked_title.deleted_at).is_(None),
         )
-        .group_by(col(TitleCanonicalTitle.canonical_title_id)),
+        .group_by(col(TitleTmdbTitle.tmdb_title_id)),
     ).all()
 
 
 # TODO: Validate
-def _paged_canonical_title_ids(
+def _paged_tmdb_title_ids(
     session: Session,
     channel_ids: Collection[uuid.UUID],
     offset: int,
     limit: int,
+    query: str | None = None,
 ) -> tuple[list[uuid.UUID], int]:
-    total = session.exec(
-        select(func.count(distinct(col(ChannelTitle.canonical_title_id)))).where(
-            col(ChannelTitle.channel_id).in_(channel_ids),
-            col(ChannelTitle.is_blacklist_only).is_(False),
-        ),
-    ).one()
+    listed = [
+        col(ChannelTitle.channel_id).in_(channel_ids),
+        col(ChannelTitle.is_blacklist_only).is_(False),
+    ]
+    if query:
+        listed.append(col(Title.name).ilike(f"%{query}%"))
 
-    canonical_title_ids = session.exec(
-        select(ChannelTitle.canonical_title_id)
+    total = session.exec(
+        select(func.count(distinct(col(ChannelTitle.tmdb_title_id))))
         .join(
             Title,
-            col(Title.id) == col(ChannelTitle.canonical_title_id),
+            col(Title.id) == col(ChannelTitle.tmdb_title_id),
             isouter=True,
         )
-        .where(
-            col(ChannelTitle.channel_id).in_(channel_ids),
-            col(ChannelTitle.is_blacklist_only).is_(False),
+        .where(*listed),
+    ).one()
+
+    tmdb_title_ids = session.exec(
+        select(ChannelTitle.tmdb_title_id)
+        .join(
+            Title,
+            col(Title.id) == col(ChannelTitle.tmdb_title_id),
+            isouter=True,
         )
-        .group_by(col(ChannelTitle.canonical_title_id), func.lower(col(Title.name)))
-        .order_by(func.lower(col(Title.name)), col(ChannelTitle.canonical_title_id))
+        .where(*listed)
+        .group_by(col(ChannelTitle.tmdb_title_id), func.lower(col(Title.name)))
+        .order_by(func.lower(col(Title.name)), col(ChannelTitle.tmdb_title_id))
         .offset(offset)
         .limit(limit),
     ).all()
-    return list(canonical_title_ids), total
+    return list(tmdb_title_ids), total
 
 
 # TODO: Validate
-def _filter_only_canonical_title_ids(
+def _filter_only_tmdb_title_ids(
     session: Session,
     channel_ids: Collection[uuid.UUID],
 ) -> list[uuid.UUID]:
     regular = aliased(ChannelTitle)
     return list(
         session.exec(
-            select(ChannelTitle.canonical_title_id)
+            select(ChannelTitle.tmdb_title_id)
             .where(
                 col(ChannelTitle.channel_id).in_(channel_ids),
                 col(ChannelTitle.is_blacklist_only).is_(True),
                 ~exists(
-                    select(regular.canonical_title_id)
+                    select(regular.tmdb_title_id)
                     .where(
                         col(regular.channel_id).in_(channel_ids),
-                        col(regular.canonical_title_id)
-                        == col(ChannelTitle.canonical_title_id),
+                        col(regular.tmdb_title_id)
+                        == col(ChannelTitle.tmdb_title_id),
                         col(regular.is_blacklist_only).is_(False),
                     )
                     .correlate(ChannelTitle),
@@ -562,18 +570,19 @@ def _filter_only_canonical_title_ids(
 # TODO: Validate
 def channel_title_stats_output(
     session: Session,
-    canonical_title_ids: Collection[uuid.UUID],
+    tmdb_title_ids: Collection[uuid.UUID],
 ) -> dict[uuid.UUID, ChannelTitleStats]:
-    return _channel_title_stats(session, set(canonical_title_ids))
+    return _channel_title_stats(session, set(tmdb_title_ids))
 
 
 # TODO: Validate
-def channel_titles_output(
+def channel_titles_output(  # noqa: PLR0913 - the listing is paged and searched
     channel: Channel,
     user: User | None,
     session: Session,
     offset: int = 0,
     limit: int = CHANNEL_TITLE_PAGE,
+    query: str | None = None,
 ) -> ChannelTitlesOutput:
     """Read all titles for a channel, including those from its child channels."""
     output = ChannelTitlesOutput()
@@ -585,38 +594,39 @@ def channel_titles_output(
         child_channel_ids(channel),
     )
 
-    paged_title_ids, output.total = _paged_canonical_title_ids(
+    paged_title_ids, output.total = _paged_tmdb_title_ids(
         session,
         channel_ids,
         offset,
         limit,
+        query,
     )
     listed_title_ids = {
         *paged_title_ids,
-        *_filter_only_canonical_title_ids(session, channel_ids),
+        *_filter_only_tmdb_title_ids(session, channel_ids),
     }
     channel_titles = session.exec(
         select(ChannelTitle).where(
             col(ChannelTitle.channel_id).in_(channel_ids),
-            col(ChannelTitle.canonical_title_id).in_(listed_title_ids),
+            col(ChannelTitle.tmdb_title_id).in_(listed_title_ids),
         ),
     ).all()
     # A `ChannelTitle` is a title, so each one stands for every website's non-canonical
     # row of it.
-    canonical_title_ids = {
-        channel_title.canonical_title_id for channel_title in channel_titles
+    tmdb_title_ids = {
+        channel_title.tmdb_title_id for channel_title in channel_titles
     }
-    non_canonical_titles = titles_by_canonical_id(session, canonical_title_ids)
+    linked_titles = titles_by_tmdb_record_id(session, tmdb_title_ids)
 
     # A title no website carries has only TMDB's own non-canonical row of it, and
     # leaving that out would leave the title out of the list it was added to, which is
     # the one place it would have shown that it is there at all.
     unwatchable = {
-        canonical_title_id
-        for canonical_title_id in canonical_title_ids
-        if not non_canonical_titles[canonical_title_id]
+        tmdb_title_id
+        for tmdb_title_id in tmdb_title_ids
+        if not linked_titles[tmdb_title_id]
     }
-    non_canonical_titles.update(tmdb_titles_by_canonical_id(session, unwatchable))
+    linked_titles.update(tmdb_titles_by_id(session, unwatchable))
 
     # A title can appear in several of the combined channels; deduplicate by the title it
     # is listed under and the non-canonical row it is. A title counts as a regular title
@@ -628,8 +638,8 @@ def channel_titles_output(
     titles_by_channel: dict[uuid.UUID, dict[ChannelTitleRow, TitlePublic]] = {}
     channel_names: dict[uuid.UUID, str | None] = {}
     for channel_title in channel_titles:
-        canonical_title_id = channel_title.canonical_title_id
-        for title in non_canonical_titles[canonical_title_id]:
+        tmdb_title_id = channel_title.tmdb_title_id
+        for title in linked_titles[tmdb_title_id]:
             source = title.source
             plugin = source.plugin
 
@@ -638,8 +648,8 @@ def channel_titles_output(
             # channel under whichever of them was added. That is what gathers the
             # non-canonical rows of one title into the one row, and what the row's own
             # totals and missing fields are then filled in from.
-            key = (canonical_title_id, title.id)
-            update = {"canonical_title_id": canonical_title_id}
+            key = (tmdb_title_id, title.id)
+            update = {"tmdb_title_id": tmdb_title_id}
 
             if channel_title.is_blacklist_only:
                 filter_only_titles.setdefault(
@@ -697,8 +707,8 @@ def channel_titles_output(
     # Every title the channel holds rather than every title its non-canonical rows are
     # of, since a non-canonical row that mixes titles is listed under whichever of them
     # the channel was told to hold.
-    output.canonical_sources = _canonical_sources(session, canonical_title_ids)
-    output.canonical_titles = _canonical_titles(session, canonical_title_ids)
+    output.tmdb_sources = _tmdb_sources(session, tmdb_title_ids)
+    output.tmdb_titles = _tmdb_titles(session, tmdb_title_ids)
 
     return output
 
@@ -720,15 +730,15 @@ def remove_title(
     channel_title: ChannelTitle,
 ) -> Message:
     """Remove a title, on every website it is on, from a `Channel`."""
-    titles = titles_for_channel_title(session, channel_title)
+    titles = titles_from_channel_title(session, channel_title)
     # The title's own name is what is left to say when no website's non-canonical row of
     # it carries one, which is the case for a title only TMDB has a record of.
-    canonical_title = session.exec(
-        select(Title).where(Title.id == channel_title.canonical_title_id),
+    tmdb_title = session.exec(
+        select(Title).where(Title.id == channel_title.tmdb_title_id),
     ).first()
     name = next(
         (title.name for title in titles if title.name),
-        canonical_title.name if canonical_title else None,
+        tmdb_title.name if tmdb_title else None,
     )
     session.delete(channel_title)
     session.commit()

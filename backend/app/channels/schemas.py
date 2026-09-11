@@ -228,7 +228,7 @@ class EpisodeWithDetails(BaseModel):
     air_date: datetime | None = Field(default=None)
     episode_number: int | None = Field(default=None)
     duration: int | None = Field(default=None)
-    canonical_episode_id: uuid.UUID | None = Field(default=None)
+    tmdb_episode_id: uuid.UUID | None = Field(default=None)
     watch_date: datetime | None = Field(default=None)
     verified: bool | None = Field(default=None)
     episode_watch_id: uuid.UUID | None = Field(default=None)
@@ -319,14 +319,14 @@ class ChannelTitlesOutput(BaseModel):
     # episodes pulled in from other channels.
     filter_only_titles: list[TitlePublic] = Field(default_factory=list)
     sources: dict[uuid.UUID, SourcePublic] = Field(default_factory=dict)
-    # The canonical title behind each row, keyed by `canonical_title_id`. It carries
+    # The canonical title behind each row, keyed by `tmdb_title_id`. It carries
     # the title's own name, which is what a title is read under rather than the name
     # any one website gave its row for it.
-    canonical_titles: dict[uuid.UUID, TitlePublic] = Field(default_factory=dict)
-    # The source each canonical title was written by, keyed by `canonical_title_id`.
+    tmdb_titles: dict[uuid.UUID, TitlePublic] = Field(default_factory=dict)
+    # The source each canonical title was written by, keyed by `tmdb_title_id`.
     # Kept apart from `sources` because that is where a title can be watched and
     # this is who wrote it down, which is never a website carrying it.
-    canonical_sources: dict[uuid.UUID, SourcePublic] = Field(default_factory=dict)
+    tmdb_sources: dict[uuid.UUID, SourcePublic] = Field(default_factory=dict)
     # The regular titles grouped by the channel they come from, with the channel this
     # endpoint was called on first and combined channels after it, sorted by name.
     groups: list[ChannelTitleGroup] = Field(default_factory=list)
@@ -420,7 +420,7 @@ class WhitelistEpisodeLinkOutput(EpisodeOutput):
 class WhitelistEpisodeOutput(EpisodeOutput):
     # What a filter names, which is the episode itself where the row is one, so
     # every row served here carries one however it was stored.
-    canonical_episode_id: uuid.UUID
+    tmdb_episode_id: uuid.UUID
     filtered: bool
     expires_at: datetime | None = Field(default=None)
     # The `Title` ids of the websites' rows that carry this episode.

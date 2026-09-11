@@ -16,7 +16,7 @@ from sqlmodel import Session
 from app.channels.episode_selector import EpisodeQueryBuilder
 from app.channels.models import Channel
 from app.channels.schemas import ChannelOptions
-from app.episodes.models import EpisodeCanonicalEpisode
+from app.episodes.models import EpisodeTmdbEpisode
 from app.titles.models import Title
 from app.users.models import User, UserSourcePreference
 from app.users.schemas import SourcePreference
@@ -47,7 +47,7 @@ def _build_duplicated_channel(
     """
     channel = create_random_channel(session, user, is_public=False)
     titles: dict[str, Title] = {}
-    canonical_episode = None
+    tmdb_episode = None
     for key in (SOURCE_KEY_A, SOURCE_KEY_B):
         plugin = create_random_plugin(session)
         source = create_random_source(session, plugin, key=key)
@@ -58,14 +58,14 @@ def _build_duplicated_channel(
             is_whitelist=False,
         )
         title = channel_title_title(session, channel_title)
-        if canonical_episode is None:
-            canonical_episode = create_random_episode(session, title)
+        if tmdb_episode is None:
+            tmdb_episode = create_random_episode(session, title)
         else:
-            episode = create_random_episode(session, title, is_canonical=False)
+            episode = create_random_episode(session, title, is_linked=True)
             session.add(
-                EpisodeCanonicalEpisode(
+                EpisodeTmdbEpisode(
                     episode_id=episode.id,
-                    canonical_episode_id=canonical_episode.id,
+                    tmdb_episode_id=tmdb_episode.id,
                 ),
             )
         titles[key] = title

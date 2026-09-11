@@ -2,20 +2,20 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { Film } from "lucide-react"
 
-import { CanonicalEpisodesService, EpisodesService } from "@/client"
+import { EpisodesService, TmdbEpisodesService } from "@/client"
 import {
   MediaListPage,
   serializeTableQuery,
   validateMediaSearch,
 } from "@/components/Common/DataTable"
 import {
-  type CanonicalEpisodeTableData,
-  canonicalEpisodeColumns,
-} from "@/components/Episodes/canonicalColumns"
-import {
   type EpisodeTableData,
   episodeColumns,
 } from "@/components/Episodes/columns"
+import {
+  type TmdbEpisodeTableData,
+  tmdbEpisodeColumns,
+} from "@/components/Episodes/tmdbColumns"
 import { requireSuperuser } from "@/hooks/useAuth"
 
 export const Route = createFileRoute("/_layout/episodes")({
@@ -30,15 +30,15 @@ export const Route = createFileRoute("/_layout/episodes")({
 // TODO: Validate
 function EpisodesPage() {
   return (
-    <MediaListPage<EpisodeTableData, CanonicalEpisodeTableData>
+    <MediaListPage<EpisodeTableData, TmdbEpisodeTableData>
       title="Episodes"
       path="/episodes"
       columns={episodeColumns}
       columnVisibilityKey="episodes-column-visibility"
       defaultHidden={{
         key: false,
-        canonical_episode_id: false,
-        canonical_episode_ids: false,
+        tmdb_episode_id: false,
+        tmdb_episode_ids: false,
         plugin_id: false,
         source_id: false,
         title_id: false,
@@ -59,19 +59,19 @@ function EpisodesPage() {
           is_server_side: result.is_server_side,
         }
       }}
-      canonical={{
-        columns: canonicalEpisodeColumns,
+      tmdb={{
+        columns: tmdbEpisodeColumns,
         defaultHidden: {
           key: false,
-          canonical_title_id: false,
-          canonical_season_id: false,
+          tmdb_title_id: false,
+          tmdb_season_id: false,
           id: false,
         },
         fetchTable: async (params) => {
-          const result = await CanonicalEpisodesService.getCanonicalEpisodes({
+          const result = await TmdbEpisodesService.getTmdbEpisodes({
             offset: params.offset,
             limit: params.limit,
-            ...serializeTableQuery(params, canonicalEpisodeColumns),
+            ...serializeTableQuery(params, tmdbEpisodeColumns),
           })
           return {
             data: result.data,

@@ -75,7 +75,7 @@ type KeyById = dict[uuid.UUID, str]
 def _dump_value(value: object, rows_by_id: RowsById, keys: KeyById) -> object:
     """Return `value` as something JSON holds and two runs write the same way."""
     if isinstance(value, uuid.UUID):
-        return _key_for(value, rows_by_id, keys)
+        return _key_from(value, rows_by_id, keys)
     if isinstance(value, datetime):
         return value.astimezone(UTC).isoformat()
     if isinstance(value, Enum):
@@ -84,7 +84,7 @@ def _dump_value(value: object, rows_by_id: RowsById, keys: KeyById) -> object:
 
 
 # TODO: Validate
-def _key_for(row_id: uuid.UUID, rows_by_id: RowsById, keys: KeyById) -> str:
+def _key_from(row_id: uuid.UUID, rows_by_id: RowsById, keys: KeyById) -> str:
     """Return the key of the row `row_id` points at.
 
     An id is generated afresh on every run, so an id written down as it is says

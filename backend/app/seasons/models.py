@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from app.episodes.models import Episode
     from app.issue_reports.models import SeasonIssueReport
 
-CANONICAL_SORTABLE_FIELDS = [
+TMDB_SORTABLE_FIELDS = [
     "name",
     "season_number",
     "sort_order",
@@ -69,14 +69,14 @@ class Season(BaseSeason, ChildMediaMixin[Title, "Episode"], table=True):
         "sequential_zero_last",
     ]
     SORTABLE_FIELDS: ClassVar[list[str]] = (
-        CANONICAL_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS
+        TMDB_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS
     )
 
     __table_args__ = (
         PrimaryKeyConstraint("title_id", "key"),
         UniqueConstraint("id"),
         Index("Season-deleted_at-index", "deleted_at"),
-        *sortable_field_indexes("Season", CANONICAL_SORTABLE_FIELDS),
+        *sortable_field_indexes("Season", TMDB_SORTABLE_FIELDS),
     )
 
     title_id: uuid.UUID = Field(foreign_key="title.id", ondelete="CASCADE")

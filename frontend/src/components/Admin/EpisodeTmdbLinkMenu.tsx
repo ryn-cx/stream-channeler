@@ -19,11 +19,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
-import {
-  CanonicalEpisodeRow,
-  numbering,
-  TmdbPageLink,
-} from "./CanonicalEpisodeRow"
+import { numbering, TmdbEpisodeRow, TmdbPageLink } from "./TmdbEpisodeRow"
 import {
   SETTLE_TMDB_MATCH_MUTATION_KEY,
   type SettleTmdbMatchVariables,
@@ -169,7 +165,7 @@ export function TmdbLinkPicker({
   })
 
   // TODO: Validate
-  const dropChoice = async (canonicalEpisodeId: string) => {
+  const dropChoice = async (tmdbEpisodeId: string) => {
     const choicesKey = ["admin-tmdb-choices", episodeId]
     await queryClient.cancelQueries({ queryKey: choicesKey })
     const previous = queryClient.getQueriesData<TmdbEpisodeChoice[]>({
@@ -178,7 +174,7 @@ export function TmdbLinkPicker({
     queryClient.setQueriesData<TmdbEpisodeChoice[]>(
       { queryKey: choicesKey },
       (offered) =>
-        offered?.filter((choice) => choice.episode.id !== canonicalEpisodeId),
+        offered?.filter((choice) => choice.episode.id !== tmdbEpisodeId),
     )
     return previous
   }
@@ -193,10 +189,10 @@ export function TmdbLinkPicker({
   const linkMutation = useMutation({
     mutationKey: SETTLE_TMDB_MATCH_MUTATION_KEY,
     mutationFn: ({
-      canonicalEpisodeId,
-    }: SettleTmdbMatchVariables & { canonicalEpisodeId: string }) =>
-      EpisodesService.adminLinkEpisodeToTmdb({ episodeId, canonicalEpisodeId }),
-    onMutate: ({ canonicalEpisodeId }) => dropChoice(canonicalEpisodeId),
+      tmdbEpisodeId,
+    }: SettleTmdbMatchVariables & { tmdbEpisodeId: string }) =>
+      EpisodesService.adminLinkEpisodeToTmdb({ episodeId, tmdbEpisodeId }),
+    onMutate: ({ tmdbEpisodeId }) => dropChoice(tmdbEpisodeId),
     onSuccess: (linked) => {
       showSuccessToast("Episode linked to TMDB")
       queryClient.invalidateQueries({ queryKey: informationQueryKey })
@@ -344,7 +340,7 @@ export function TmdbLinkPicker({
           </p>
         ) : (
           ordered.map((choice) => (
-            <CanonicalEpisodeRow
+            <TmdbEpisodeRow
               key={choice.episode.id}
               record={choice}
               absoluteNumber={choice.absolute_number}
@@ -371,7 +367,7 @@ export function TmdbLinkPicker({
                     onClick={() =>
                       linkMutation.mutate({
                         episodeIds: [episodeId],
-                        canonicalEpisodeId: choice.episode.id,
+                        tmdbEpisodeId: choice.episode.id,
                       })
                     }
                   >

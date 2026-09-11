@@ -92,6 +92,7 @@ class BaseURLMixin(AbstractPlugin):
 
         return cls._regex_escape_domain(domains[0])
 
+    # TODO: Validate
     @classmethod
     def _regex_escape_domain(cls, domain: str) -> str:
         """Escapes a plain text domain.
@@ -108,7 +109,7 @@ class BaseURLMixin(AbstractPlugin):
             domain (str): The plain text domain to escape. It should be in the format of
             example.com.
         """
-        if "." not in domain or "http" in domain or "www" in domain:
+        if "." not in domain or domain.startswith(("http://", "https://", "www.")):
             msg = f"Invalid domain format: {domain}"
             raise ValueError(msg)
 

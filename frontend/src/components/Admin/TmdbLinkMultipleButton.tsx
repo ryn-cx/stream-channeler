@@ -54,7 +54,7 @@ export function TmdbLinkMultipleButton() {
           ? [
               {
                 episode_id: row.episode.id,
-                canonical_episode_id: match.episode.id,
+                tmdb_episode_id: match.episode.id,
               },
             ]
           : []

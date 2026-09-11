@@ -20,7 +20,7 @@ from app.channels.schemas import (
     SortOptionOutput,
     WhitelistEpisodeOutput,
 )
-from app.channels.service.episodes import _canonical_episode_id, _SeasonEpisodeRow
+from app.channels.service.episodes import _SeasonEpisodeRow, _tmdb_episode_id
 from app.episodes.models import Episode
 from app.models import ZERO_LAST_SUFFIX
 from app.seasons.models import Season
@@ -48,14 +48,14 @@ def set_channel_order(
     seen: set[UUID] = set()
     position = 0
     for episode_id in episode_ids:
-        canonical_episode_id = _canonical_episode_id(session, episode_id)
-        if canonical_episode_id is None or canonical_episode_id in seen:
+        tmdb_episode_id = _tmdb_episode_id(session, episode_id)
+        if tmdb_episode_id is None or tmdb_episode_id in seen:
             continue
-        seen.add(canonical_episode_id)
+        seen.add(tmdb_episode_id)
         session.add(
             ChannelSavedEpisodeOrder(
                 channel_id=channel.id,
-                canonical_episode_id=canonical_episode_id,
+                tmdb_episode_id=tmdb_episode_id,
                 position=position,
             ),
         )
@@ -94,9 +94,9 @@ _UNORDERED = float("inf")
 
 
 # TODO: Validate
-def _canonical_orders(
+def _tmdb_orders(
     session: Session,
-    canonical_episode_ids: Collection[uuid.UUID],
+    tmdb_episode_ids: Collection[uuid.UUID],
 ) -> dict[uuid.UUID, float]:
     """Read where each canonical episode sits, keyed by its id.
 
@@ -106,11 +106,11 @@ def _canonical_orders(
     double-length episode its own way is what puts a non-canonical row's own order out
     of step with the episode being listed.
     """
-    if not canonical_episode_ids:
+    if not tmdb_episode_ids:
         return {}
     rows = session.exec(
         select(Episode.id, Episode.episode_number, Episode.sort_order).where(
-            col(Episode.id).in_(set(canonical_episode_ids)),
+            col(Episode.id).in_(set(tmdb_episode_ids)),
         ),
     ).all()
     orders: dict[uuid.UUID, float] = {}

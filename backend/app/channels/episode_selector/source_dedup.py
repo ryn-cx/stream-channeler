@@ -31,7 +31,7 @@ class SourceDedupConfig:
     other_enabled: bool
 
     # TODO: Validate
-    def priority_for(self, source_key: str | None) -> int:
+    def priority_from(self, source_key: str | None) -> int:
         """Return the priority of a source key, falling back to `Other`."""
         if source_key is None:
             return self.other_priority

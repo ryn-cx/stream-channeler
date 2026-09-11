@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import re
-from datetime import time, timedelta
+from datetime import timedelta
 from typing import TYPE_CHECKING, override
 
 from app.media.media_type import TMDBMediaType
-from app.utils import tz_datetime
-from app.utils.update_at import staggered_monthly_update_at
 from plugins.Hulu.constants import (
     MOVIE_URL_REGEX,
     SERIES_URL_REGEX,
@@ -19,23 +17,21 @@ from plugins.Hulu.utils import title_url
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 
 if TYPE_CHECKING:
-    from sqlmodel import Session
+    from datetime import datetime
 
-    from app.plugins.models import Plugin
     from app.titles.models import Title
 
 
+# TODO: Validate
 class Hulu(
     HuluShared,
     AbstractPlugin,
-    register=False,
+    register=True,
 ):
-    @classmethod
-    @override  # Overrideen so update_at can be set.
-    def _create_initial_plugin_record(cls, session: Session) -> Plugin:
-        plugin = super()._create_initial_plugin_record(session)
-        plugin.update_at = tz_datetime.now() + timedelta(days=7)
-        return plugin
+    # TODO: Validate
+    @override
+    def _next_plugin_update_at(self) -> datetime:
+        return max(self._plugin_files_data_timestamps()) + timedelta(days=7)
 
     @classmethod
     @override
@@ -60,6 +56,7 @@ class Hulu(
                 return HuluSeriesImporter(self.session, self.plugin, self._file_cache)
             return HuluMovieImporter(self.session, self.plugin, self._file_cache)
 
+        # Should only occur on invalid episode URLs.
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
@@ -91,17 +88,3 @@ class Hulu(
             if result.metrics_info.target_type == hulu_media_type:
                 return title_url(result.metrics_info.target_id, hulu_media_type)
         return None
-
-    @override
-    def update_plugin(self, plugin: Plugin) -> None:
-        """Update the plugin with the latest data.
-
-        Downloads the movie/series/genres lists from Hulu then imports the data into the
-        database."""
-        self._download_if_outdated(self._plugin_files(), plugin.update_at)
-        self._create_initial_channel_records()
-        data_timestamps = self._plugin_files_data_timestamps()
-        new_titles = self._all_title_keys()
-        self._mark_mismatched_titles_as_outdated(None, new_titles, data_timestamps)
-        plugin.data_timestamp = max(data_timestamps)
-        plugin.update_at = staggered_monthly_update_at(plugin.key, tz_datetime.now())

@@ -9,11 +9,11 @@ from typing import TYPE_CHECKING, Any, override
 
 from loguru import logger
 
-from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.titles.models import Title
+from app.tmdb_media.keys import watch_identifier
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
 from plugins.utils.base_plugin.importer import BaseImporter

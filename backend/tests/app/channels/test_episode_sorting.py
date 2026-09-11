@@ -11,7 +11,6 @@ import pytest
 from pydantic import ValidationError
 from sqlmodel import Session, col, delete
 
-from app.canonical_media.episodes import canonical_id_of
 from app.channels.episode_selector import EpisodeQueryBuilder, EpisodeResult
 from app.channels.models import (
     Channel,
@@ -24,6 +23,7 @@ from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.titles.models import Title
+from app.tmdb_media.episodes import tmdb_record_id_of
 from app.users.models import User
 from app.utils import tz_datetime
 from tests.app.channels.utils import (
@@ -1403,7 +1403,7 @@ def test_whitelisted_season_with_marked_episode_excludes_episode(
     session_scoped_session.add(
         ChannelEpisodeFilter(
             channel_title_id=channel_title.id,
-            canonical_episode_id=canonical_id_of(episode_excluded),
+            tmdb_episode_id=tmdb_record_id_of(episode_excluded),
         ),
     )
     session_scoped_session.flush()
@@ -1446,7 +1446,7 @@ def test_blacklisted_season_with_marked_episode_includes_episode(
     session_scoped_session.add(
         ChannelEpisodeFilter(
             channel_title_id=channel_title.id,
-            canonical_episode_id=canonical_id_of(episode_included),
+            tmdb_episode_id=tmdb_record_id_of(episode_included),
         ),
     )
     session_scoped_session.flush()
@@ -1520,7 +1520,7 @@ def test_blacklist_propagates_through_nested_inclusion(
     session.add(
         ChannelEpisodeFilter(
             channel_title_id=blacklist_title.id,
-            canonical_episode_id=canonical_id_of(episode_z),
+            tmdb_episode_id=tmdb_record_id_of(episode_z),
         ),
     )
 

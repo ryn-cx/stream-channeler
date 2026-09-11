@@ -189,38 +189,36 @@ export const episodeColumns: ColumnDef<EpisodeTableData>[] = [
     cell: ({ row }) => <DateCell value={row.original.modified_at} />,
   },
   {
-    accessorKey: "canonical_episode_validated_at",
+    accessorKey: "tmdb_episode_validated_at",
     header: "Link Validated At",
     meta: { filterVariant: "dateRange" },
     cell: ({ row }) => (
-      <DateCell value={row.original.canonical_episode_validated_at} />
+      <DateCell value={row.original.tmdb_episode_validated_at} />
     ),
   },
   {
-    accessorKey: "canonical_episode_note",
+    accessorKey: "tmdb_episode_note",
     header: "Link Note",
     cell: ({ row }) => (
       <span className="text-muted-foreground">
-        {row.original.canonical_episode_note ?? "-"}
+        {row.original.tmdb_episode_note ?? "-"}
       </span>
     ),
   },
   {
-    accessorKey: "canonical_episode_id",
-    header: "Canonical Episode ID",
+    accessorKey: "tmdb_episode_id",
+    header: "TMDB Episode ID",
     enableSorting: false,
     enableColumnFilter: false,
-    cell: ({ row }) => (
-      <TruncatedCell value={row.original.canonical_episode_id} />
-    ),
+    cell: ({ row }) => <TruncatedCell value={row.original.tmdb_episode_id} />,
   },
   {
-    accessorKey: "canonical_episode_ids",
-    header: "Canonical Episode IDs",
+    accessorKey: "tmdb_episode_ids",
+    header: "TMDB Episode IDs",
     enableSorting: false,
     enableColumnFilter: false,
     cell: ({ row }) => (
-      <TruncatedCell value={row.original.canonical_episode_ids?.join(", ")} />
+      <TruncatedCell value={row.original.tmdb_episode_ids?.join(", ")} />
     ),
   },
   {

@@ -3,15 +3,15 @@ import uuid
 
 from sqlmodel import Session, col, func, select
 
-from app.canonical_media.episodes import (
-    canonical_id_of,
-)
 from app.episodes.models import Episode
 from app.media.service.deletion import delete_record
 from app.schemas import Message
+from app.tmdb_media.episodes import (
+    tmdb_record_id_of,
+)
 from app.watches.exceptions import WatchAlreadyExistsError
 from app.watches.identifiers import (
-    watches_of_canonical_ids,
+    watches_of_tmdb_record_ids,
 )
 from app.watches.models import Watch
 from app.watches.schemas import (
@@ -38,9 +38,9 @@ def create_watch(
     # own identifier that is stored. What it counts for is worked out on the way
     # back out, where the identifier is read to the episode the link is of and
     # every other link to that episode counts too.
-    canonical_id = canonical_id_of(episode)
+    tmdb_record_id = tmdb_record_id_of(episode)
 
-    unverified_watch_query = watches_of_canonical_ids(user_id, [canonical_id]).where(
+    unverified_watch_query = watches_of_tmdb_record_ids(user_id, [tmdb_record_id]).where(
         col(Watch.verified) == False,  # noqa: E712 - SQLAlchemy syntax
     )
     if session.exec(unverified_watch_query).first():

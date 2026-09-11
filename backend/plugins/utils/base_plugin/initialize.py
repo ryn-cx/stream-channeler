@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, override
+from abc import ABC
+from typing import TYPE_CHECKING
 
 from sqlmodel import Session
 
@@ -77,6 +77,9 @@ class BaseInitializeMixin(BaseFileAccessMixin, AbstractPlugin, ABC):
         plugin_initializator = cls(session, plugin)
         plugin_initializator._create_initial_source_records()
         plugin_initializator._create_initial_channel_records()
+        plugin_initializator.plugin.update_at = (
+            plugin_initializator._next_plugin_update_at()
+        )
         plugin_initializator.plugin.status = None
 
     @classmethod

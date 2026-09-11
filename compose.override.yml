@@ -89,6 +89,7 @@ services:
     # TODO: remove once coverage is done locally
     volumes:
       - ./backend/htmlcov:/app/backend/htmlcov
+      - huggingface-cache:/root/.cache/huggingface
     environment:
       SMTP_HOST: "mailcatcher"
       SMTP_PORT: "1025"
@@ -185,6 +186,8 @@ services:
           action: rebuild
     ports:
       - "${BACKEND_TEST_PORT}:8000"
+    volumes:
+      - huggingface-cache:/root/.cache/huggingface
 
   mailcatcher:
     image: schickling/mailcatcher
@@ -260,6 +263,10 @@ services:
       - ./frontend/test-results:/app/frontend/test-results
     ports:
       - "${PLAYWRIGHT_PORT}:9323"
+
+volumes:
+  huggingface-cache:
+    name: stream-channeler-huggingface-cache
 
 networks:
   traefik-public:

@@ -1,6 +1,6 @@
 // TODO: Validate
 import { Link } from "@tanstack/react-router"
-import { Info } from "lucide-react"
+import { Info, Maximize2, Minimize2 } from "lucide-react"
 import { useState } from "react"
 import { ChannelDescriptionMarkdown } from "@/components/Channels/ChannelDetail/ChannelDescription"
 import { TitleCardsWithInformation } from "@/components/Channels/TitleCardsWithInformation"
@@ -8,6 +8,7 @@ import {
   useAllChannelTitles,
   useChannelTitleStats,
 } from "@/components/Channels/useChannelTitles"
+import { ModalContent } from "@/components/Common/ModalContent"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import {
   type TriggerVariant,
@@ -16,7 +17,6 @@ import {
 import {
   Dialog,
   DialogBody,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
@@ -36,34 +36,32 @@ export function ChannelDetailsButton({
   showLabel,
 }: ChannelDetailsButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [isFullScreen, setIsFullScreen] = useState(false)
 
   const { data, isLoading } = useAllChannelTitles(channel.id, {
     enabled: isOpen,
   })
 
-  const canonicalTitles = data?.canonical_titles ?? {}
+  const tmdbTitles = data?.tmdb_titles ?? {}
   const groups = (data?.groups ?? [])
     .map((group) => ({
       ...group,
       titles: (group.titles ?? []).filter((title) =>
-        title.canonical_title_id
-          ? !!canonicalTitles[title.canonical_title_id]?.name
+        title.tmdb_title_id
+          ? !!tmdbTitles[title.tmdb_title_id]?.name
           : !!title.name,
       ),
     }))
     .filter((group) => group.titles.length > 0)
 
-  const listedCanonicalTitleIds = [
+  const listedTmdbTitleIds = [
     ...new Set(
       groups.flatMap((group) =>
-        group.titles.map((title) => title.canonical_title_id ?? title.id),
+        group.titles.map((title) => title.tmdb_title_id ?? title.id),
       ),
     ),
   ]
-  const { data: stats } = useChannelTitleStats(
-    channel.id,
-    listedCanonicalTitleIds,
-  )
+  const { data: stats } = useChannelTitleStats(channel.id, listedTmdbTitleIds)
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -83,14 +81,25 @@ export function ChannelDetailsButton({
           />
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[calc(100%-2rem)] max-h-[80vh] flex flex-col">
-        <DialogHeader>
+      <ModalContent
+        size={isFullScreen ? "full" : "6xl"}
+        className={
+          isFullScreen
+            ? "max-h-none h-[calc(100dvh-2rem)] flex flex-col overflow-hidden"
+            : "max-h-[85vh] flex flex-col overflow-hidden"
+        }
+      >
+        <DialogHeader className="pl-8">
           <DialogTitle>{channel.name ?? "Channel"}</DialogTitle>
           <DialogDescription>
             The channel's description and every title it includes.
           </DialogDescription>
         </DialogHeader>
-        <DialogBody className="space-y-4 py-2">
+        <DialogBody
+          className={
+            isFullScreen ? "flex-1 max-h-none space-y-4 py-2" : "space-y-4 py-2"
+          }
+        >
           {channel.description && (
             <ChannelDescriptionMarkdown description={channel.description} />
           )}
@@ -117,15 +126,23 @@ export function ChannelDetailsButton({
                   channelId={group.channel_id}
                   titles={group.titles}
                   sources={data?.sources ?? {}}
-                  canonicalTitles={data?.canonical_titles ?? {}}
-                  canonicalSources={data?.canonical_sources ?? {}}
+                  tmdbTitles={data?.tmdb_titles ?? {}}
+                  tmdbSources={data?.tmdb_sources ?? {}}
                   stats={stats ?? {}}
                 />
               </div>
             ))
           )}
         </DialogBody>
-      </DialogContent>
+
+        <TooltipIconButton
+          label={isFullScreen ? "Shrink to a window" : "Fill the screen"}
+          icon={isFullScreen ? <Minimize2 /> : <Maximize2 />}
+          size="icon-sm"
+          className="absolute left-4 top-4 z-10"
+          onClick={() => setIsFullScreen(!isFullScreen)}
+        />
+      </ModalContent>
     </Dialog>
   )
 }

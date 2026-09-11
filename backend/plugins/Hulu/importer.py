@@ -5,10 +5,10 @@ import re
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, override
 
-from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.titles.models import Title
+from app.tmdb_media.keys import watch_identifier
 from plugins.Hulu.constants import (
     MOVIE_URL_REGEX,
     SERIES_URL_REGEX,
@@ -55,13 +55,12 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
         parsed_url = self.parse_url(url)
-        if title := self._preload_title(parsed_url.title_key).one_or_none():
-            return self._import_results(title, parsed_url)
-
-        self._preload_and_download_files(parsed_url.title_key)
-        title_source = self.get_title_source(parsed_url.title_key)
-        title = self._upsert_title(title_source, parsed_url.title_key)
+        if not (title := self._preload_title(parsed_url.title_key).one_or_none()):
+            self._preload_and_download_files(parsed_url.title_key)
+            title_source = self.get_title_source(parsed_url.title_key)
+            title = self._upsert_title(title_source, parsed_url.title_key)
         return self._import_results(title, parsed_url)
+
 
     # TODO: Validate
     def get_title_source(self, title_key: str) -> Source:
@@ -89,13 +88,14 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
 
         details = self._title_files(title.key)[0].details()
         plan = title_plan(details)
-        self._add_urls_to_channel([title.url], "All Titles")
-        self._add_urls_to_channel([title.url], self._media_type_name())
+        channel_keys = ["All Titles", self._media_type_name()]
         if plan:
             network, _ = plan
-            self._add_urls_to_channel([title.url], network)
-        for genre in details.entity.genre_names:
-            self._add_urls_to_channel([title.url], genre)
+            channel_keys.append(network)
+        channel_keys.extend(details.entity.genre_names)
+        channel_key_urls = [(channel_key, title.url) for channel_key in channel_keys]
+        self.remove_urls_from_other_channels(channel_key_urls)
+        self.add_new_urls_to_channel(channel_key_urls)
 
 
 # TODO: Validate

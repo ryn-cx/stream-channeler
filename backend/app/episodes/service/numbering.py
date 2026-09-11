@@ -19,10 +19,6 @@ from sqlalchemy import nullslast
 from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, and_, col, func, select
 
-from app.canonical_media.filters import is_canonical
-from app.canonical_media.tmdb import (
-    tmdb_key_clause,
-)
 from app.episodes.models import (
     Episode,
 )
@@ -38,6 +34,10 @@ from app.episodes.service.records import _record_fields
 from app.episodes.text_matching import TextMatcher
 from app.seasons.models import Season
 from app.titles.models import Title
+from app.tmdb_media.filters import is_not_linked
+from app.tmdb_media.tmdb import (
+    tmdb_key_clause,
+)
 
 # An unnumbered season or episode is ordered after every numbered one.
 _UNNUMBERED = float("inf")
@@ -284,7 +284,7 @@ def _episode_number_absolute_match(
 # TODO: Validate
 def _candidates_by_title(
     session: Session,
-    canonical_title_ids: set[uuid.UUID],
+    tmdb_title_ids: set[uuid.UUID],
 ) -> dict[uuid.UUID, list[_Candidate]]:
     """Return every TMDB episode of each linked title, keyed by the title.
 
@@ -292,7 +292,7 @@ def _candidates_by_title(
     episode, since every episode of the same title is compared against the same
     list.
     """
-    if not canonical_title_ids:
+    if not tmdb_title_ids:
         return {}
 
     statement = (
@@ -306,9 +306,9 @@ def _candidates_by_title(
             onclause=col(Season.title_id) == Title.id,
         )
         .where(
-            is_canonical(Episode),
-            is_canonical(Title),
-            col(Title.id).in_(canonical_title_ids),
+            is_not_linked(Episode),
+            is_not_linked(Title),
+            col(Title.id).in_(tmdb_title_ids),
             tmdb_key_clause(col(Episode.key)),
         )
     )
@@ -319,7 +319,7 @@ def _candidates_by_title(
 
 
 # TODO: Validate
-def _candidates_for_titles(
+def _candidates_from_titles(
     session: Session,
     titles: Collection[Title],
 ) -> tuple[dict[uuid.UUID, list[_Candidate]], dict[uuid.UUID, dict[uuid.UUID, int]]]:
@@ -334,17 +334,17 @@ def _candidates_for_titles(
     by_title = _candidates_by_title(
         session,
         {
-            canonical_title_id
+            tmdb_title_id
             for title in titles
-            for canonical_title_id in title.canonical_title_ids
+            for tmdb_title_id in title.tmdb_title_ids
         },
     )
     candidates: dict[uuid.UUID, list[_Candidate]] = {}
     numbers: dict[uuid.UUID, dict[uuid.UUID, int]] = {}
     for title in titles:
         grouped = [
-            by_title.get(canonical_title_id, [])
-            for canonical_title_id in title.canonical_title_ids
+            by_title.get(tmdb_title_id, [])
+            for tmdb_title_id in title.tmdb_title_ids
         ]
         candidates[title.id] = [candidate for group in grouped for candidate in group]
         numbers[title.id] = {

@@ -11,10 +11,10 @@ from app.schemas import Message
 from app.sources.models import UnmatchedSource
 from app.sources.schemas import UnmatchedSourceImport, UnmatchedSourceOutput
 from app.titles.models import Title
-from app.titles.service.linking import link_title_to_tmdb
+from app.titles.service.linking import old_link_title_to_tmdb
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.manage_plugins import get_plugin_for_url
+from plugins.utils.manage_plugins import get_plugin_from_url
 
 
 # TODO: Validate
@@ -82,7 +82,7 @@ def import_unmatched_source(
     import_input: UnmatchedSourceImport,
 ) -> Message:
     url = import_input.url.strip()
-    plugin_class = get_plugin_for_url(url)
+    plugin_class = get_plugin_from_url(url)
     if plugin_class is None:
         raise HTTPException(
             status_code=400,
@@ -102,7 +102,7 @@ def import_unmatched_source(
         raise HTTPException(status_code=400, detail=str(error)) from error
 
     for result in results:
-        link_title_to_tmdb(session, result.title, title, "Automatic: Import match")
+        old_link_title_to_tmdb(session, result.title, title, "Automatic: Import match")
 
     session.delete(unmatched_source)
     session.commit()

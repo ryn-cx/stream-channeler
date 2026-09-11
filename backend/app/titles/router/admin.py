@@ -12,17 +12,13 @@ from app.auth.dependencies import (
     SuperUser,
     get_current_active_superuser,
 )
-from app.canonical_media.filters import is_canonical
-from app.canonical_media.read import canonical_list_response
 from app.plugins.models import Plugin
 from app.schemas import ReadOptions
 from app.service.responses import list_response
 from app.sources.models import Source
-from app.titles.dependencies import AdminCanonicalTitle, ExistingTitle
+from app.titles.dependencies import AdminTmdbTitle, ExistingTitle
 from app.titles.models import Title
 from app.titles.schemas import (
-    CanonicalTitleOutput,
-    CanonicalTitlesPublic,
     TitleImportUrlInput,
     TitleListPublic,
     TitlePublic,
@@ -30,15 +26,17 @@ from app.titles.schemas import (
     TitleTmdbUrlInput,
     TitleUpdate,
     TmdbEpisodeGroupOption,
+    TmdbTitleOutput,
+    TmdbTitlesPublic,
     UnvalidatedTitleOutput,
 )
 from app.titles.service.linking import (
-    import_non_canonical_title_from_url,
-    link_title_to_canonical_title,
-    link_title_to_canonical_title_from_tmdb_url,
-    make_title_canonical,
-    relink_title,
-    unlink_title_from_canonical_title,
+    old_import_linked_title_from_url,
+    old_link_title_to_tmdb_title,
+    old_link_title_to_tmdb_title_from_url,
+    old_make_title_unlinked,
+    old_relink_title,
+    old_unlink_title_from_tmdb_title,
 )
 from app.titles.service.service import (
     _title_output,
@@ -48,13 +46,15 @@ from app.titles.service.service import (
     update_title_record,
     validate_title,
 )
+from app.tmdb_media.filters import is_not_linked
+from app.tmdb_media.read import tmdb_list_response
 
 """Title router."""
 
 
-canonical_titles_router = APIRouter(
-    prefix="/titles/canonical",
-    tags=["canonical-titles"],
+tmdb_titles_router = APIRouter(
+    prefix="/titles/tmdb",
+    tags=["tmdb-titles"],
 )
 
 
@@ -113,12 +113,12 @@ def get_title(title: ExistingTitle) -> TitlePublic:
 
 # TODO: Validate
 @titles_router.get(
-    "/{title_id}/non-canonical",  # noqa: FAST003 - Used by ExistingTitle.
+    "/{title_id}/linked",  # noqa: FAST003 - Used by ExistingTitle.
 )
-def get_non_canonical_titles(title: ExistingTitle) -> list[TitleListPublic]:
+def get_linked_titles(title: ExistingTitle) -> list[TitleListPublic]:
     return [
-        TitleListPublic.model_validate(link.non_canonical_title)
-        for link in title.non_canonical_title_links
+        TitleListPublic.model_validate(link.linked_title)
+        for link in title.linked_title_links
     ]
 
 
@@ -137,12 +137,12 @@ def update_title(
 
 # TODO: Validate
 @titles_router.put(
-    "/{title_id}/canonical/{canonical_title_id}",  # noqa: FAST003 - Used by the dependencies.
+    "/{title_id}/tmdb/{tmdb_title_id}",  # noqa: FAST003 - Used by the dependencies.
 )
-def admin_link_title_to_canonical(
+def admin_link_title_to_tmdb(
     session: SessionDep,
     title: ExistingTitle,
-    canonical_title: AdminCanonicalTitle,
+    tmdb_title: AdminTmdbTitle,
 ) -> TitlePublic:
     """Add the canonical title an admin chose to what a `Title` stands for.
 
@@ -152,14 +152,16 @@ def admin_link_title_to_canonical(
 
     Added to whatever the row already stands for rather than put in its place,
     since one page holding two titles is a thing websites do. Taking one off is
-    `admin_unlink_title_from_canonical`.
+    `admin_unlink_title_from_tmdb`.
     """
-    return _title_output(link_title_to_canonical_title(session, title, canonical_title))
+    return _title_output(
+        old_link_title_to_tmdb_title(session, title, tmdb_title),
+    )
 
 
 # TODO: Validate
 @titles_router.put(
-    "/{title_id}/canonical-by-tmdb-url",  # noqa: FAST003 - Used by the dependencies.
+    "/{title_id}/tmdb-by-url",  # noqa: FAST003 - Used by the dependencies.
 )
 def admin_link_title_by_tmdb_url(
     session: SessionDep,
@@ -167,43 +169,45 @@ def admin_link_title_by_tmdb_url(
     url_input: TitleTmdbUrlInput,
 ) -> TitlePublic:
     return _title_output(
-        link_title_to_canonical_title_from_tmdb_url(session, title, url_input.url),
+        old_link_title_to_tmdb_title_from_url(session, title, url_input.url),
     )
 
 
 # TODO: Validate
 @titles_router.post(
-    "/{title_id}/non-canonical-by-url",  # noqa: FAST003 - Used by the dependencies.
+    "/{title_id}/linked-by-url",  # noqa: FAST003 - Used by the dependencies.
 )
-def admin_link_non_canonical_title_by_url(
+def admin_link_linked_title_by_url(
     session: SessionDep,
     title: ExistingTitle,
     url_input: TitleImportUrlInput,
 ) -> TitlePublic:
     return _title_output(
-        import_non_canonical_title_from_url(session, title, url_input.url),
+        old_import_linked_title_from_url(session, title, url_input.url),
     )
 
 
 # TODO: Validate
 @titles_router.delete(
-    "/{title_id}/canonical/{canonical_title_id}",  # noqa: FAST003 - Used by the dependencies.
+    "/{title_id}/tmdb/{tmdb_title_id}",  # noqa: FAST003 - Used by the dependencies.
 )
-def admin_unlink_title_from_canonical(
+def admin_unlink_title_from_tmdb(
     session: SessionDep,
     title: ExistingTitle,
-    canonical_title: AdminCanonicalTitle,
+    tmdb_title: AdminTmdbTitle,
 ) -> TitlePublic:
     """Take one canonical title off what a `Title` stands for."""
-    return _title_output(unlink_title_from_canonical_title(session, title, canonical_title))
+    return _title_output(
+        old_unlink_title_from_tmdb_title(session, title, tmdb_title),
+    )
 
 
 # TODO: Validate
 @titles_router.post(
-    "/{title_id}/canonicalize",  # noqa: FAST003 - Used by ExistingTitle.
+    "/{title_id}/unlink",  # noqa: FAST003 - Used by ExistingTitle.
 )
-def admin_canonicalize_title(session: SessionDep, title: ExistingTitle) -> TitlePublic:
-    return _title_output(make_title_canonical(session, title))
+def admin_unlink_title(session: SessionDep, title: ExistingTitle) -> TitlePublic:
+    return _title_output(old_make_title_unlinked(session, title))
 
 
 # TODO: Validate
@@ -224,7 +228,7 @@ def admin_relink_title_episodes(
     title: ExistingTitle,
 ) -> TitlePublic:
     """Work out every unsettled episode link on a `Title` again from scratch."""
-    return _title_output(relink_title(session, title))
+    return _title_output(old_relink_title(session, title))
 
 
 # TODO: Validate
@@ -252,18 +256,18 @@ def get_title_tmdb_episode_groups(
 # title itself, which every row standing for it resolves to, and is served to admins
 # alone.
 # TODO: Validate
-@canonical_titles_router.get("")
-def get_canonical_titles(
+@tmdb_titles_router.get("")
+def get_tmdb_titles(
     session: SessionDep,
     current_user: SuperUser,
     read_options: Annotated[ReadOptions, Query()],
-) -> CanonicalTitlesPublic:
+) -> TmdbTitlesPublic:
     """Get every `Title`."""
-    return canonical_list_response(
+    return tmdb_list_response(
         session=session,
-        base=select(Title).where(is_canonical(Title)),
-        response_model=CanonicalTitlesPublic,
-        schema=CanonicalTitleOutput,
+        base=select(Title).where(is_not_linked(Title)),
+        response_model=TmdbTitlesPublic,
+        schema=TmdbTitleOutput,
         read_options=read_options,
         current_user=current_user,
     )
@@ -272,7 +276,7 @@ def get_canonical_titles(
 router = APIRouter()
 
 
-router.include_router(canonical_titles_router)
+router.include_router(tmdb_titles_router)
 
 
 router.include_router(titles_router)

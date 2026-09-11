@@ -28,104 +28,6 @@ export type Body_watches_import_watch_history = {
 };
 
 /**
- * Schema for returning a list of `Episode`s, with what holds them.
- */
-export type CanonicalEpisodeListOutput = {
-    key: string;
-    data_timestamp?: (string | null);
-    update_at?: (string | null);
-    deleted_at?: (string | null);
-    status?: (string | null);
-    extra?: {
-        [key: string]: unknown;
-    };
-    url?: (string | null);
-    name?: (string | null);
-    description?: (string | null);
-    image_url?: (string | null);
-    thumbnail_url?: (string | null);
-    air_date?: (string | null);
-    episode_number?: (number | null);
-    duration?: (number | null);
-    sort_order?: (number | null);
-    canonical_season_id: string;
-    id: string;
-    created_at: string;
-    modified_at: string;
-    tmdb_id?: (number | null);
-    canonical_season_name: (string | null);
-    canonical_title_id: string;
-    canonical_title_name: (string | null);
-    canonical_title_key: (string | null);
-};
-
-/**
- * A canonical episode, with how far into its title the episode is.
- *
- * The count is not a column of the episode: it is where the episode falls among
- * the ones the title holds, so it is worked out against the title each time
- * rather than stored and left to go stale as the title grows.
- */
-export type CanonicalEpisodeRecord = {
-    episode: EpisodeOutput;
-    season: SeasonOutput;
-    title: TitlePublic;
-    source: SourceListPublic;
-    absolute_number: (number | null);
-};
-
-/**
- * Schema for returning a list of `Episode`s.
- */
-export type CanonicalEpisodesPublic = {
-    data: Array<CanonicalEpisodeListOutput>;
-    total_count: number;
-    filtered_count: number;
-    is_server_side: boolean;
-};
-
-/**
- * Schema for returning a `Title`.
- *
- * `tmdb_id` and `tmdb_url` are read back out of `key` rather than stored, since
- * the key is the whole of what says which TMDB record a title is. They are
- * served for reading only: nothing can be sorted or filtered by a value the
- * database does not hold a column for.
- */
-export type CanonicalTitleOutput = {
-    key: string;
-    data_timestamp?: (string | null);
-    update_at?: (string | null);
-    deleted_at?: (string | null);
-    status?: (string | null);
-    extra?: {
-        [key: string]: unknown;
-    };
-    name?: (string | null);
-    media_type?: (string | null);
-    description?: (string | null);
-    url?: (string | null);
-    image_url?: (string | null);
-    thumbnail_url?: (string | null);
-    year?: (number | null);
-    id: string;
-    created_at: string;
-    modified_at: string;
-    tmdb_id?: (number | null);
-    tmdb_url?: (string | null);
-};
-
-/**
- * Schema for returning a list of `Title`s.
- */
-export type CanonicalTitlesPublic = {
-    data: Array<CanonicalTitleOutput>;
-    total_count: number;
-    filtered_count: number;
-    is_server_side: boolean;
-};
-
-/**
  * Schema for creating a `Channel` as an admin.
  */
 export type ChannelAdminCreate = {
@@ -485,10 +387,10 @@ export type ChannelTitlesOutput = {
     sources?: {
         [key: string]: SourcePublic;
     };
-    canonical_titles?: {
+    tmdb_titles?: {
         [key: string]: TitlePublic;
     };
-    canonical_sources?: {
+    tmdb_sources?: {
         [key: string]: SourcePublic;
     };
     groups?: Array<ChannelTitleGroup>;
@@ -588,16 +490,27 @@ export type CommentUpdate = {
  * provider can be pointed at twice, so what is served is the canonical episode
  * itself and the source that collided on it rather than anything TMDB's own.
  */
-export type DuplicatedCanonicalEpisodeOutput = {
+export type DuplicatedTmdbEpisodeOutput = {
     id: string;
-    canonical: EpisodeRecord;
+    tmdb: EpisodeRecord;
     source: SourceListPublic;
     linked_episodes: Array<EpisodeRecord>;
 };
 
-export type EpisodeCanonicalLinkInput = {
+export type EpisodeDatabaseColumn = {
+    name: string;
+    value: (string | null);
+};
+
+export type EpisodeDatabaseOutput = {
+    episode: EpisodeDatabaseRow;
+    tmdb_episodes: Array<EpisodeDatabaseRow>;
+};
+
+export type EpisodeDatabaseRow = {
     episode_id: string;
-    canonical_episode_id: string;
+    label: string;
+    columns: Array<EpisodeDatabaseColumn>;
 };
 
 /**
@@ -609,8 +522,8 @@ export type EpisodeCanonicalLinkInput = {
  */
 export type EpisodeInformationOutput = {
     episode_id: string;
-    canonical_episode_validated_at: (string | null);
-    canonical_episode_note: (string | null);
+    tmdb_episode_validated_at: (string | null);
+    tmdb_episode_note: (string | null);
     issue_reports: Array<IssueReportOutput>;
     source: EpisodeInformationSide;
     tmdb: (EpisodeInformationSide | null);
@@ -651,13 +564,13 @@ export type EpisodeListOutput = {
     episode_number?: (number | null);
     duration?: (number | null);
     sort_order?: (number | null);
-    canonical_episode_validated_at?: (string | null);
+    tmdb_episode_validated_at?: (string | null);
     id: string;
     season_id: string;
     modified_at: string;
-    canonical_episode_note?: (string | null);
-    canonical_episode_id?: (string | null);
-    canonical_episode_ids?: Array<(string)>;
+    tmdb_episode_note?: (string | null);
+    tmdb_episode_id?: (string | null);
+    tmdb_episode_ids?: Array<(string)>;
     tmdb_id?: (number | null);
     tmdb_url?: (string | null);
     season_name: (string | null);
@@ -690,13 +603,13 @@ export type EpisodeOutput = {
     episode_number?: (number | null);
     duration?: (number | null);
     sort_order?: (number | null);
-    canonical_episode_validated_at?: (string | null);
+    tmdb_episode_validated_at?: (string | null);
     id: string;
     season_id: string;
     modified_at: string;
-    canonical_episode_note?: (string | null);
-    canonical_episode_id?: (string | null);
-    canonical_episode_ids?: Array<(string)>;
+    tmdb_episode_note?: (string | null);
+    tmdb_episode_id?: (string | null);
+    tmdb_episode_ids?: Array<(string)>;
     tmdb_id?: (number | null);
     tmdb_url?: (string | null);
 };
@@ -723,6 +636,11 @@ export type EpisodesPublic = {
     total_count: number;
     filtered_count: number;
     is_server_side: boolean;
+};
+
+export type EpisodeTmdbLinkInput = {
+    episode_id: string;
+    tmdb_episode_id: string;
 };
 
 /**
@@ -753,8 +671,8 @@ export type EpisodeUpdate = {
     episode_number?: (number | null);
     duration?: (number | null);
     sort_order?: (number | null);
-    canonical_episode_validated_at?: (string | null);
-    canonical_episode_note?: (string | null);
+    tmdb_episode_validated_at?: (string | null);
+    tmdb_episode_note?: (string | null);
 };
 
 export type EpisodeWithDetails = {
@@ -767,7 +685,7 @@ export type EpisodeWithDetails = {
     air_date?: (string | null);
     episode_number?: (number | null);
     duration?: (number | null);
-    canonical_episode_id?: (string | null);
+    tmdb_episode_id?: (string | null);
     watch_date?: (string | null);
     verified?: (boolean | null);
     episode_watch_id?: (string | null);
@@ -1273,11 +1191,11 @@ export type TitleListPublic = {
     image_url?: (string | null);
     thumbnail_url?: (string | null);
     year?: (number | null);
-    canonical_title_validated_at?: (string | null);
+    tmdb_title_validated_at?: (string | null);
     source_id: string;
     id: string;
-    canonical_title_id?: (string | null);
-    canonical_title_ids?: Array<(string)>;
+    tmdb_title_id?: (string | null);
+    tmdb_title_ids?: Array<(string)>;
     tmdb_id?: (number | null);
     tmdb_url?: (string | null);
     plugin_name: (string | null);
@@ -1304,11 +1222,11 @@ export type TitlePublic = {
     image_url?: (string | null);
     thumbnail_url?: (string | null);
     year?: (number | null);
-    canonical_title_validated_at?: (string | null);
+    tmdb_title_validated_at?: (string | null);
     source_id: string;
     id: string;
-    canonical_title_id?: (string | null);
-    canonical_title_ids?: Array<(string)>;
+    tmdb_title_id?: (string | null);
+    tmdb_title_ids?: Array<(string)>;
     tmdb_id?: (number | null);
     tmdb_url?: (string | null);
     plugin_name?: (string | null);
@@ -1347,7 +1265,7 @@ export type TitleUpdate = {
     image_url?: (string | null);
     thumbnail_url?: (string | null);
     year?: (number | null);
-    canonical_title_validated_at?: (string | null);
+    tmdb_title_validated_at?: (string | null);
 };
 
 /**
@@ -1384,9 +1302,107 @@ export type TmdbEpisodeGroupOption = {
     type: number;
 };
 
+/**
+ * Schema for returning a list of `Episode`s, with what holds them.
+ */
+export type TmdbEpisodeListOutput = {
+    key: string;
+    data_timestamp?: (string | null);
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    status?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
+    url?: (string | null);
+    name?: (string | null);
+    description?: (string | null);
+    image_url?: (string | null);
+    thumbnail_url?: (string | null);
+    air_date?: (string | null);
+    episode_number?: (number | null);
+    duration?: (number | null);
+    sort_order?: (number | null);
+    tmdb_season_id: string;
+    id: string;
+    created_at: string;
+    modified_at: string;
+    tmdb_id?: (number | null);
+    tmdb_season_name: (string | null);
+    tmdb_title_id: string;
+    tmdb_title_name: (string | null);
+    tmdb_title_key: (string | null);
+};
+
+/**
+ * A canonical episode, with how far into its title the episode is.
+ *
+ * The count is not a column of the episode: it is where the episode falls among
+ * the ones the title holds, so it is worked out against the title each time
+ * rather than stored and left to go stale as the title grows.
+ */
+export type TmdbEpisodeRecord = {
+    episode: EpisodeOutput;
+    season: SeasonOutput;
+    title: TitlePublic;
+    source: SourceListPublic;
+    absolute_number: (number | null);
+};
+
+/**
+ * Schema for returning a list of `Episode`s.
+ */
+export type TmdbEpisodesPublic = {
+    data: Array<TmdbEpisodeListOutput>;
+    total_count: number;
+    filtered_count: number;
+    is_server_side: boolean;
+};
+
 export type TMDBMediaInfo = {
     detail: (tminidb__movie__details__strict_models__MovieDetailsModel | tminidb__movie__details__optional_models__MovieDetailsModel | tminidb__tv_series__details__strict_models__TvSeriesDetailsModel | tminidb__tv_series__details__optional_models__TvSeriesDetailsModel);
     watch_providers?: (tminidb__movie__watch_providers__strict_models__Us | tminidb__movie__watch_providers__optional_models__Us | tminidb__tv_series__watch_providers__strict_models__Us | tminidb__tv_series__watch_providers__optional_models__Us | null);
+};
+
+/**
+ * Schema for returning a `Title`.
+ *
+ * `tmdb_id` and `tmdb_url` are read back out of `key` rather than stored, since
+ * the key is the whole of what says which TMDB record a title is. They are
+ * served for reading only: nothing can be sorted or filtered by a value the
+ * database does not hold a column for.
+ */
+export type TmdbTitleOutput = {
+    key: string;
+    data_timestamp?: (string | null);
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    status?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
+    name?: (string | null);
+    media_type?: (string | null);
+    description?: (string | null);
+    url?: (string | null);
+    image_url?: (string | null);
+    thumbnail_url?: (string | null);
+    year?: (number | null);
+    id: string;
+    created_at: string;
+    modified_at: string;
+    tmdb_id?: (number | null);
+    tmdb_url?: (string | null);
+};
+
+/**
+ * Schema for returning a list of `Title`s.
+ */
+export type TmdbTitlesPublic = {
+    data: Array<TmdbTitleOutput>;
+    total_count: number;
+    filtered_count: number;
+    is_server_side: boolean;
 };
 
 export type tminidb__movie__details__optional_models__BelongsToCollection = {
@@ -2017,11 +2033,11 @@ export type UnvalidatedTitleOutput = {
     image_url?: (string | null);
     thumbnail_url?: (string | null);
     year?: (number | null);
-    canonical_title_validated_at?: (string | null);
+    tmdb_title_validated_at?: (string | null);
     source_id: string;
     id: string;
-    canonical_title_id?: (string | null);
-    canonical_title_ids?: Array<(string)>;
+    tmdb_title_id?: (string | null);
+    tmdb_title_ids?: Array<(string)>;
     tmdb_id?: (number | null);
     tmdb_url?: (string | null);
     plugin_name: (string | null);
@@ -2056,7 +2072,7 @@ export type UserEpisodeUrlInput = {
 };
 
 export type UserEpisodeUrlOutput = {
-    canonical_episode_id: string;
+    tmdb_episode_id: string;
     url: (string | null);
 };
 
@@ -2149,7 +2165,7 @@ export type WatchesListOutput = {
  * the import's own setting to say what those watches are.
  *
  * A file exported before the identifier was named as such holds it under
- * `canonical_episode_key`, and holds the same string: the old key was the
+ * `tmdb_episode_key`, and holds the same string: the old key was the
  * plugin's name in front of its own id, which is what the identifier is. So
  * the old name is still read, and a backup taken then still imports.
  */
@@ -2178,7 +2194,7 @@ export type WatchItem = {
     id: string;
     episode_id: (string | null);
     watch_identifier: string;
-    canonical_episode_id: string;
+    tmdb_episode_id: string;
 };
 
 /**
@@ -2244,13 +2260,13 @@ export type WhitelistEpisodeLinkOutput = {
     episode_number?: (number | null);
     duration?: (number | null);
     sort_order?: (number | null);
-    canonical_episode_validated_at?: (string | null);
+    tmdb_episode_validated_at?: (string | null);
     id: string;
     season_id: string;
     modified_at: string;
-    canonical_episode_note?: (string | null);
-    canonical_episode_id?: (string | null);
-    canonical_episode_ids?: Array<(string)>;
+    tmdb_episode_note?: (string | null);
+    tmdb_episode_id?: (string | null);
+    tmdb_episode_ids?: Array<(string)>;
     tmdb_id?: (number | null);
     tmdb_url?: (string | null);
     title_id: string;
@@ -2277,13 +2293,13 @@ export type WhitelistEpisodeOutput = {
     episode_number?: (number | null);
     duration?: (number | null);
     sort_order?: (number | null);
-    canonical_episode_validated_at?: (string | null);
+    tmdb_episode_validated_at?: (string | null);
     id: string;
     season_id: string;
     modified_at: string;
-    canonical_episode_note?: (string | null);
-    canonical_episode_id: string;
-    canonical_episode_ids?: Array<(string)>;
+    tmdb_episode_note?: (string | null);
+    tmdb_episode_id: string;
+    tmdb_episode_ids?: Array<(string)>;
     tmdb_id?: (number | null);
     tmdb_url?: (string | null);
     filtered: boolean;
@@ -2379,11 +2395,11 @@ export type WhitelistTitleOutput = {
     image_url?: (string | null);
     thumbnail_url?: (string | null);
     year?: (number | null);
-    canonical_title_validated_at?: (string | null);
+    tmdb_title_validated_at?: (string | null);
     source_id: string;
     id: string;
-    canonical_title_id?: (string | null);
-    canonical_title_ids?: Array<(string)>;
+    tmdb_title_id?: (string | null);
+    tmdb_title_ids?: Array<(string)>;
     tmdb_id?: (number | null);
     tmdb_url?: (string | null);
     plugin_name?: (string | null);
@@ -2391,36 +2407,6 @@ export type WhitelistTitleOutput = {
     sources: Array<WhitelistSourceOutput>;
     seasons: Array<WhitelistSeasonOutput>;
 };
-
-export type CanonicalEpisodesGetCanonicalEpisodeByIdData = {
-    canonicalEpisodeId: string;
-};
-
-export type CanonicalEpisodesGetCanonicalEpisodeByIdResponse = (CanonicalEpisodeRecord);
-
-export type CanonicalEpisodesGetCanonicalEpisodesData = {
-    filterOptions?: string;
-    limit?: number;
-    offset?: number;
-    sortOptions?: string;
-};
-
-export type CanonicalEpisodesGetCanonicalEpisodesResponse = (CanonicalEpisodesPublic);
-
-export type CanonicalTitlesGetCanonicalTitleByIdData = {
-    canonicalTitleId: string;
-};
-
-export type CanonicalTitlesGetCanonicalTitleByIdResponse = (CanonicalTitleOutput);
-
-export type CanonicalTitlesGetCanonicalTitlesData = {
-    filterOptions?: string;
-    limit?: number;
-    offset?: number;
-    sortOptions?: string;
-};
-
-export type CanonicalTitlesGetCanonicalTitlesResponse = (CanonicalTitlesPublic);
 
 export type ChannelOrdersCreateChannelOrderData = {
     requestBody: ChannelOrderCreate;
@@ -2567,23 +2553,23 @@ export type ChannelsGetChannelCombinedChannelsData = {
 export type ChannelsGetChannelCombinedChannelsResponse = (Array<CombinedChannelOutput>);
 
 export type ChannelsGetChannelWhitelistFilteredEpisodesData = {
-    canonicalTitleId: string;
     channelId: string;
+    tmdbTitleId: string;
 };
 
 export type ChannelsGetChannelWhitelistFilteredEpisodesResponse = (Array<WhitelistEpisodeOutput>);
 
 export type ChannelsUpdateChannelWhitelistData = {
-    canonicalTitleId: string;
     channelId: string;
     requestBody: WhitelistTitleInput;
+    tmdbTitleId: string;
 };
 
 export type ChannelsUpdateChannelWhitelistResponse = (WhitelistTitleOutput);
 
 export type ChannelsGetChannelWhitelistData = {
-    canonicalTitleId: string;
     channelId: string;
+    tmdbTitleId: string;
 };
 
 export type ChannelsGetChannelWhitelistResponse = (WhitelistTitleOutput);
@@ -2623,8 +2609,8 @@ export type ChannelsAddChannelTitleData = {
 export type ChannelsAddChannelTitleResponse = (Message);
 
 export type ChannelsDeleteChannelTitleData = {
-    canonicalTitleId: string;
     channelId: string;
+    tmdbTitleId: string;
 };
 
 export type ChannelsDeleteChannelTitleResponse = (Message);
@@ -2687,13 +2673,14 @@ export type ChannelsGetChannelTitlesData = {
     channelId: string;
     limit?: number;
     offset?: number;
+    query?: (string | null);
 };
 
 export type ChannelsGetChannelTitlesResponse = (ChannelTitlesOutput);
 
 export type ChannelsGetChannelTitleStatsData = {
-    canonicalTitleIds: Array<(string)>;
     channelId: string;
+    tmdbTitleIds: Array<(string)>;
 };
 
 export type ChannelsGetChannelTitleStatsResponse = ({
@@ -2707,11 +2694,11 @@ export type ChannelsGetChannelSourcesData = {
 export type ChannelsGetChannelSourcesResponse = (Array<SourcePublic>);
 
 export type ChannelsGetChannelWhitelistEpisodesData = {
-    canonicalTitleId: string;
     channelId: string;
     limit?: number;
     offset?: number;
     seasonId: string;
+    tmdbTitleId: string;
 };
 
 export type ChannelsGetChannelWhitelistEpisodesResponse = (WhitelistEpisodesOutput);
@@ -2818,11 +2805,11 @@ export type EpisodesGetEpisodeInformationData = {
 
 export type EpisodesGetEpisodeInformationResponse = (EpisodeInformationOutput);
 
-export type EpisodesGetNonCanonicalEpisodesData = {
+export type EpisodesGetLinkedEpisodesData = {
     episodeId: string;
 };
 
-export type EpisodesGetNonCanonicalEpisodesResponse = (Array<EpisodeListOutput>);
+export type EpisodesGetLinkedEpisodesResponse = (Array<EpisodeListOutput>);
 
 export type EpisodesGetEpisodesData = {
     filterOptions?: string;
@@ -2835,8 +2822,9 @@ export type EpisodesGetEpisodesResponse = (EpisodesPublic);
 
 export type EpisodesAdminGetUnmatchedEpisodesData = {
     filterOptions?: string;
+    inUserChannelsOnly?: boolean;
     limit?: number;
-    nonCanonicalTitlesOnly?: boolean;
+    linkedTitlesOnly?: boolean;
     offset?: number;
     sortOptions?: string;
 };
@@ -2849,14 +2837,14 @@ export type EpisodesAdminGetUnlockedEpisodesData = {
 
 export type EpisodesAdminGetUnlockedEpisodesResponse = (Array<UnlockedEpisodeOutput>);
 
-export type EpisodesAdminGetDuplicatedCanonicalEpisodesData = {
+export type EpisodesAdminGetDuplicatedTmdbEpisodesData = {
     limit?: number;
 };
 
-export type EpisodesAdminGetDuplicatedCanonicalEpisodesResponse = (Array<DuplicatedCanonicalEpisodeOutput>);
+export type EpisodesAdminGetDuplicatedTmdbEpisodesResponse = (Array<DuplicatedTmdbEpisodeOutput>);
 
 export type EpisodesAdminLinkEpisodesToTmdbData = {
-    requestBody: Array<EpisodeCanonicalLinkInput>;
+    requestBody: Array<EpisodeTmdbLinkInput>;
 };
 
 export type EpisodesAdminLinkEpisodesToTmdbResponse = (Array<EpisodeOutput>);
@@ -2866,6 +2854,12 @@ export type EpisodesAdminMarkEpisodesAbsentFromTmdbData = {
 };
 
 export type EpisodesAdminMarkEpisodesAbsentFromTmdbResponse = (Array<EpisodeOutput>);
+
+export type EpisodesAdminGetEpisodeDatabaseRowsData = {
+    episodeId: string;
+};
+
+export type EpisodesAdminGetEpisodeDatabaseRowsResponse = (EpisodeDatabaseOutput);
 
 export type EpisodesAdminGetTmdbEpisodeChoicesData = {
     episodeId: string;
@@ -2883,18 +2877,18 @@ export type EpisodesAdminLinkEpisodeByTmdbUrlData = {
 export type EpisodesAdminLinkEpisodeByTmdbUrlResponse = (EpisodeOutput);
 
 export type EpisodesAdminLinkEpisodeToTmdbData = {
-    canonicalEpisodeId: string;
     episodeId: string;
+    tmdbEpisodeId: string;
 };
 
 export type EpisodesAdminLinkEpisodeToTmdbResponse = (EpisodeOutput);
 
-export type EpisodesAdminUnlinkEpisodeFromCanonicalData = {
-    canonicalEpisodeId: string;
+export type EpisodesAdminUnlinkEpisodeFromTmdbEpisodeData = {
     episodeId: string;
+    tmdbEpisodeId: string;
 };
 
-export type EpisodesAdminUnlinkEpisodeFromCanonicalResponse = (EpisodeOutput);
+export type EpisodesAdminUnlinkEpisodeFromTmdbEpisodeResponse = (EpisodeOutput);
 
 export type EpisodesAdminQuickUnlinkEpisodeData = {
     episodeId: string;
@@ -2914,11 +2908,11 @@ export type EpisodesAdminMarkEpisodeAbsentFromTmdbData = {
 
 export type EpisodesAdminMarkEpisodeAbsentFromTmdbResponse = (EpisodeOutput);
 
-export type EpisodesAdminVerifyCanonicalLinkData = {
+export type EpisodesAdminVerifyTmdbLinkData = {
     episodeId: string;
 };
 
-export type EpisodesAdminVerifyCanonicalLinkResponse = (EpisodeOutput);
+export type EpisodesAdminVerifyTmdbLinkResponse = (EpisodeOutput);
 
 export type EpisodesGetEpisodeData = {
     episodeId: string;
@@ -3206,25 +3200,25 @@ export type TitlesUpdateTitleData = {
 
 export type TitlesUpdateTitleResponse = (TitlePublic);
 
-export type TitlesGetNonCanonicalTitlesData = {
+export type TitlesGetLinkedTitlesData = {
     titleId: string;
 };
 
-export type TitlesGetNonCanonicalTitlesResponse = (Array<TitleListPublic>);
+export type TitlesGetLinkedTitlesResponse = (Array<TitleListPublic>);
 
-export type TitlesAdminLinkTitleToCanonicalData = {
-    canonicalTitleId: string;
+export type TitlesAdminLinkTitleToTmdbData = {
     titleId: string;
+    tmdbTitleId: string;
 };
 
-export type TitlesAdminLinkTitleToCanonicalResponse = (TitlePublic);
+export type TitlesAdminLinkTitleToTmdbResponse = (TitlePublic);
 
-export type TitlesAdminUnlinkTitleFromCanonicalData = {
-    canonicalTitleId: string;
+export type TitlesAdminUnlinkTitleFromTmdbData = {
     titleId: string;
+    tmdbTitleId: string;
 };
 
-export type TitlesAdminUnlinkTitleFromCanonicalResponse = (TitlePublic);
+export type TitlesAdminUnlinkTitleFromTmdbResponse = (TitlePublic);
 
 export type TitlesAdminLinkTitleByTmdbUrlData = {
     requestBody: TitleTmdbUrlInput;
@@ -3233,18 +3227,18 @@ export type TitlesAdminLinkTitleByTmdbUrlData = {
 
 export type TitlesAdminLinkTitleByTmdbUrlResponse = (TitlePublic);
 
-export type TitlesAdminLinkNonCanonicalTitleByUrlData = {
+export type TitlesAdminLinkLinkedTitleByUrlData = {
     requestBody: TitleImportUrlInput;
     titleId: string;
 };
 
-export type TitlesAdminLinkNonCanonicalTitleByUrlResponse = (TitlePublic);
+export type TitlesAdminLinkLinkedTitleByUrlResponse = (TitlePublic);
 
-export type TitlesAdminCanonicalizeTitleData = {
+export type TitlesAdminUnlinkTitleData = {
     titleId: string;
 };
 
-export type TitlesAdminCanonicalizeTitleResponse = (TitlePublic);
+export type TitlesAdminUnlinkTitleResponse = (TitlePublic);
 
 export type TitlesAdminValidateTitleData = {
     titleId: string;
@@ -3269,6 +3263,36 @@ export type TitlesGetTitleTmdbEpisodeGroupsData = {
 };
 
 export type TitlesGetTitleTmdbEpisodeGroupsResponse = (Array<TmdbEpisodeGroupOption>);
+
+export type TmdbEpisodesGetTmdbEpisodeByIdData = {
+    tmdbEpisodeId: string;
+};
+
+export type TmdbEpisodesGetTmdbEpisodeByIdResponse = (TmdbEpisodeRecord);
+
+export type TmdbEpisodesGetTmdbEpisodesData = {
+    filterOptions?: string;
+    limit?: number;
+    offset?: number;
+    sortOptions?: string;
+};
+
+export type TmdbEpisodesGetTmdbEpisodesResponse = (TmdbEpisodesPublic);
+
+export type TmdbTitlesGetTmdbTitleByIdData = {
+    tmdbTitleId: string;
+};
+
+export type TmdbTitlesGetTmdbTitleByIdResponse = (TmdbTitleOutput);
+
+export type TmdbTitlesGetTmdbTitlesData = {
+    filterOptions?: string;
+    limit?: number;
+    offset?: number;
+    sortOptions?: string;
+};
+
+export type TmdbTitlesGetTmdbTitlesResponse = (TmdbTitlesPublic);
 
 export type UnmatchedSourcesAdminGetUnmatchedSourcesResponse = (Array<UnmatchedSourceOutput>);
 

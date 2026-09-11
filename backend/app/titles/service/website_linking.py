@@ -7,11 +7,11 @@ from typing import TYPE_CHECKING
 from loguru import logger
 from sqlmodel import Session, select
 
-from app.canonical_media.tmdb import get_media_type_and_tmdb_id
 from app.sources.models import UnmatchedSource
 from app.sources.service.unmatched import remove_unmatched_source
 from app.titles.models import Title
-from app.titles.service.linking import link_title_to_tmdb
+from app.titles.service.linking import old_link_title_to_tmdb
+from app.tmdb_media.tmdb import get_media_type_and_tmdb_id
 from plugins.TMDB import TMDB
 from plugins.TMDB.utils import get_media_plugin
 from plugins.utils.abstract_plugin import AbstractPlugin, MediaNotFoundError
@@ -30,7 +30,7 @@ def link_title_to_websites(session: Session, title: Title) -> None:
         raise ValueError(msg)
 
     media_type, _ = get_media_type_and_tmdb_id(title.key)
-    plugins_with_non_canonical_titles = _plugins_with_non_canonical_titles(
+    plugins_with_linked_titles = _plugins_with_linked_titles(
         session,
         title,
     )
@@ -50,9 +50,9 @@ def link_title_to_websites(session: Session, title: Title) -> None:
             title=title,
             name=title.name,
             media_type=media_type,
-            plugins_with_non_canonical_titles=plugins_with_non_canonical_titles,
+            plugins_with_linked_titles=plugins_with_linked_titles,
         ):
-            plugins_with_non_canonical_titles.add(media_plugin.plugin_name())
+            plugins_with_linked_titles.add(media_plugin.plugin_name())
             # This will clear out records for new/updated plugins and entries for
             # titles that where manually linked to TMDB.
             remove_unmatched_source(session, title.id, provider.provider_name)
@@ -97,11 +97,11 @@ def _external_link_exists(  # noqa: PLR0913 - The session joins what was a metho
     title: Title,
     name: str,
     media_type: TMDBMediaType,
-    plugins_with_non_canonical_titles: set[str],
+    plugins_with_linked_titles: set[str],
 ) -> bool:
     return (
         # The external link can already exist.
-        media_plugin.plugin_name() in plugins_with_non_canonical_titles
+        media_plugin.plugin_name() in plugins_with_linked_titles
         # Or the external link can be made right now.
         or _import_search_and_link_to_tmdb(
             session=session,
@@ -115,13 +115,13 @@ def _external_link_exists(  # noqa: PLR0913 - The session joins what was a metho
 
 
 # TODO: Validate
-def _plugins_with_non_canonical_titles(session: Session, title: Title) -> set[str]:
+def _plugins_with_linked_titles(session: Session, title: Title) -> set[str]:
     # TODO: Is flush/expire still needed?
     session.flush()
-    session.expire(title, ["non_canonical_title_links"])
+    session.expire(title, ["linked_title_links"])
     return {
-        link.non_canonical_title.source.plugin.key
-        for link in title.non_canonical_title_links
+        link.linked_title.source.plugin.key
+        for link in title.linked_title_links
     }
 
 
@@ -142,7 +142,7 @@ def _import_search_and_link_to_tmdb(  # noqa: PLR0913 - The session joins what w
     try:
         results = plugin.import_search(name, media_type, year)
         for result in results:
-            link_title_to_tmdb(
+            old_link_title_to_tmdb(
                 session,
                 result.title,
                 title,

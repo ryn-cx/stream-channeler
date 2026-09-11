@@ -13,17 +13,17 @@ import { useEditTableRow } from "@/components/Common/useEditTableRow"
 import useAuth from "@/hooks/useAuth"
 import { extraText, parseExtraText } from "@/lib/extra"
 import { optionalString } from "@/lib/formSchemas"
-import { CanonicalizeTitleButton } from "./CanonicalizeTitleButton"
-import { CanonicalTitleField } from "./CanonicalTitleField"
 import { ForceUpdateTitleButton } from "./ForceUpdateTitleButton"
-import { NonCanonicalTitleField } from "./NonCanonicalTitleField"
-import { NonCanonicalTitleLinks } from "./NonCanonicalTitleLinks"
+import { LinkedTitleField } from "./LinkedTitleField"
+import { LinkedTitleLinks } from "./LinkedTitleLinks"
 import {
   episodeGroupIdOf,
   TMDB_EPISODE_ORDER_PLUGIN,
   TmdbEpisodeOrderField,
   withEpisodeGroupId,
 } from "./TmdbEpisodeOrderField"
+import { TmdbTitleField } from "./TmdbTitleField"
+import { UnlinkTitleButton } from "./UnlinkTitleButton"
 
 const formSchema = z.object({
   extra: optionalString,
@@ -114,19 +114,19 @@ const EditTitle = ({ title, size, open, onOpenChange }: EditTitleProps) => {
       {user?.is_superuser &&
         (isTmdbTitle ? (
           <div className="space-y-3">
-            <NonCanonicalTitleLinks titleId={title.id} enabled={isOpen} />
-            <NonCanonicalTitleField titleId={title.id} />
+            <LinkedTitleLinks titleId={title.id} enabled={isOpen} />
+            <LinkedTitleField titleId={title.id} />
           </div>
         ) : (
           <div className="space-y-3">
-            <CanonicalTitleField
+            <TmdbTitleField
               titleId={title.id}
-              canonicalTitleIds={title.canonical_title_ids ?? []}
+              tmdbTitleIds={title.tmdb_title_ids ?? []}
               enabled={isOpen}
             />
-            <CanonicalizeTitleButton
+            <UnlinkTitleButton
               titleId={title.id}
-              canonicalTitleIds={title.canonical_title_ids ?? []}
+              tmdbTitleIds={title.tmdb_title_ids ?? []}
             />
           </div>
         ))}

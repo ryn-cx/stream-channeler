@@ -18,11 +18,10 @@ from sqlalchemy.orm import contains_eager
 from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.canonical_media.filters import is_canonical, is_non_canonical
 from app.channels.channel_scope import in_a_user_channel
 from app.episodes.models import (
     Episode,
-    EpisodeCanonicalEpisode,
+    EpisodeTmdbEpisode,
 )
 from app.episodes.schemas import (
     EpisodeRecord,
@@ -34,7 +33,7 @@ from app.episodes.schemas import (
 from app.episodes.service.numbering import (
     _absolute_number_match,
     _best_match,
-    _candidates_for_titles,
+    _candidates_from_titles,
     _episode_number_absolute_match,
     _season_and_episode_match,
     _text_matchers,
@@ -50,6 +49,7 @@ from app.service.filters import _apply_filter_options
 from app.service.sorting import _apply_sort_options
 from app.sources.models import Source
 from app.titles.models import Title
+from app.tmdb_media.filters import is_linked, is_not_linked
 
 # TODO: Validate
 # Which joined column each sortable name is, since a name a non-canonical row is not
@@ -71,8 +71,8 @@ _UNMATCHED_COLUMNS: dict[str, Any] = {
     # one column a row can be sorted or filtered by is read off the links the
     # row carries.
     "identifier_note": (
-        select(func.min(col(EpisodeCanonicalEpisode.note)))
-        .where(col(EpisodeCanonicalEpisode.episode_id) == col(Episode.id))
+        select(func.min(col(EpisodeTmdbEpisode.note)))
+        .where(col(EpisodeTmdbEpisode.episode_id) == col(Episode.id))
         .correlate(Episode)
         .scalar_subquery()
     ),
@@ -82,7 +82,8 @@ _UNMATCHED_COLUMNS: dict[str, Any] = {
 # TODO: Validate
 def _unmatched_base(
     *,
-    non_canonical_titles_only: bool = False,
+    linked_titles_only: bool = False,
+    in_user_channels_only: bool = True,
 ) -> SelectOfScalar[Episode]:
     """The rows the page is drawn from, before anything is sorted, filtered or
     counted. `contains_eager` carries the season, title and source back with each
@@ -104,17 +105,17 @@ def _unmatched_base(
         )
         .where(
             col(Source.link_to_tmdb).is_(True),
-            is_canonical(Episode),
+            is_not_linked(Episode),
             # An episode settled as one TMDB has no record of points at nothing
             # and is locked there, which reads as canonical the same way one
             # nothing has worked out yet does. The lock is what tells them
             # apart, and a settled episode is waiting on nobody.
-            col(Episode.canonical_episode_validated_at).is_(None),
+            col(Episode.tmdb_episode_validated_at).is_(None),
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
             col(Title.deleted_at).is_(None),
-            in_a_user_channel(),
-            *([is_non_canonical(Title)] if non_canonical_titles_only else []),
+            *([in_a_user_channel()] if in_user_channels_only else []),
+            *([is_linked(Title)] if linked_titles_only else []),
         )
     )
 
@@ -148,7 +149,8 @@ def list_unmatched_episodes(
     rows being shown and not for every row there is.
     """
     base = _unmatched_base(
-        non_canonical_titles_only=params.non_canonical_titles_only,
+        linked_titles_only=params.linked_titles_only,
+        in_user_channels_only=params.in_user_channels_only,
     )
     filtered = _apply_filter_options(
         base,
@@ -191,7 +193,7 @@ def _unmatched_outputs(
         (episode, episode.season, episode.season.title, episode.season.title.source)
         for episode in episodes
     ]
-    candidates, candidate_numbers = _candidates_for_titles(
+    candidates, candidate_numbers = _candidates_from_titles(
         session,
         {title for _episode, _season, title, _source in rows},
     )

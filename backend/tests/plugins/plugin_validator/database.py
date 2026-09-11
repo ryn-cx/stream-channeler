@@ -2,7 +2,8 @@
 """Putting the stored files in place and reading back what they built."""
 
 import json
-from collections.abc import Generator, Iterable, Sequence
+import shutil
+from collections.abc import Generator, Iterable
 from contextlib import ExitStack, contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -17,7 +18,7 @@ from sqlmodel import Session, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from app.channels.models import Channel
-from app.constants import TEST_RESULTS_FOLDER
+from app.constants import ALL_TEST_FILES_FOLDER, TEST_RESULTS_FOLDER
 from app.episodes.models import Episode
 from app.files.models import File
 from app.media.media_type import TMDBMediaType
@@ -25,7 +26,6 @@ from app.plugins.models import Plugin
 from app.seasons.models import Season
 from app.sources.models import Source
 from app.titles.models import Title
-from app.titles.service.linking import link_plugin_title_to_tmdb
 from plugins.utils.abstract_plugin import AbstractPlugin, URLImportResult
 from plugins.utils.base_plugin.files import BaseFile
 from plugins.utils.manage_plugins import import_plugins, plugins
@@ -37,27 +37,6 @@ from tests.plugins.plugin_validator.stored_files import (
     date_at_import_time,
     stored_path,
 )
-
-
-# TODO: Validate
-def match_imported_titles_to_tmdb(
-    session: Session,
-    plugin_instance: AbstractPlugin,
-    titles: Sequence[Title],
-) -> None:
-    """Search TMDB for every title `plugin_instance` imported and link what is found.
-
-    A title already linked to a title is left as it is, since the link it carries
-    may have been settled by hand.
-    """
-    for title in titles:
-        if not title.is_canonical:
-            continue
-        link_plugin_title_to_tmdb(
-            session,
-            title,
-            plugin_instance.tmdb_lookup_info(title),
-        )
 
 
 # TODO: Validate
@@ -128,7 +107,7 @@ def only_registered_plugins(
 
 
 # TODO: Validate
-def plugin_class_for(plugin_key: str) -> type[AbstractPlugin]:
+def plugin_class_from(plugin_key: str) -> type[AbstractPlugin]:
     """Return the plugin class for a plugin key.
 
     Unregistered plugins are included because a registered plugin can create
@@ -162,7 +141,6 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
     update_time: datetime = UPDATE_TIME
     invalid_url: bool = False
     initializes_channels: bool = False
-    initializes_tmdb: bool = False
     restrict_registered_plugins: bool = True
     imported_plugin: PluginT
 
@@ -276,6 +254,25 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
         )
 
     # TODO: Validate
+    def dumped_files_path(self) -> Path:
+        return self.files_directory_path() / "_files"
+
+    # TODO: Validate
+    def _export_files(self, session: Session) -> None:
+        destination = self.dumped_files_path()
+        if destination.exists():
+            shutil.rmtree(destination)
+        statement = select(File.key, Plugin.key).join(Plugin)
+        for file_key, plugin_key in session.exec(statement).all():
+            owner_key = plugin_class_from(plugin_key).__module__.split(".")[1]
+            stored = stored_path(owner_key, file_key)
+            if not stored.is_file():
+                continue
+            target = destination / stored.relative_to(ALL_TEST_FILES_FOLDER)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(stored, target)
+
+    # TODO: Validate
     def _files_to_import(self) -> list[tuple[str, str, Path]]:
         """Return the plugin key, file key and stored path of each file needed.
 
@@ -335,7 +332,7 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
             return self.imported_plugin
         built: dict[str, AbstractPlugin] = session.info.setdefault("owning_plugins", {})
         if plugin_key not in built:
-            built[plugin_key] = plugin_class_for(plugin_key)(session)
+            built[plugin_key] = plugin_class_from(plugin_key)(session)
         return built[plugin_key]
 
     # TODO: Validate
@@ -426,19 +423,11 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
 
     # TODO: Validate
     def _registered_plugin_classes(self) -> list[type[AbstractPlugin]]:
-        """Return the plugins a run of this class is allowed to see.
-
-        Every other plugin is left unregistered, so what a URL is looked up
-        against is the plugin under test, the plugins whose stored files say
-        they take part, and TMDB where the class says it reaches for it.
-        """
         plugin_keys = {
             plugin_key for plugin_key, _key, _path in self._files_to_import()
         }
-        if self.initializes_tmdb:
-            plugin_keys.add("TMDB")
         plugin_keys.add(self.plugin_class.plugin_name())
-        return [plugin_class_for(plugin_key) for plugin_key in sorted(plugin_keys)]
+        return [plugin_class_from(plugin_key) for plugin_key in sorted(plugin_keys)]
 
     # TODO: Validate
     @pytest.fixture(scope="class", autouse=True)
@@ -456,15 +445,13 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
         plugin_keys = {
             plugin_key for plugin_key, _key, _path in self._files_to_import()
         }
-        if self.initializes_tmdb:
-            plugin_keys.add("TMDB")
         if self.initializes_channels:
             plugin_keys.discard(self.plugin_class.plugin_name())
         else:
             plugin_keys.add(self.plugin_class.plugin_name())
 
         plugin_classes = [
-            plugin_class_for(plugin_key) for plugin_key in sorted(plugin_keys)
+            plugin_class_from(plugin_key) for plugin_key in sorted(plugin_keys)
         ]
         with no_channel_initialization(plugin_classes):
             for plugin_class in plugin_classes:

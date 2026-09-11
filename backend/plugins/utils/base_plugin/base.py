@@ -86,6 +86,16 @@ class BasePlugin(
         msg = f"{self.plugin_name()} does not upsert titles."
         raise NotImplementedError(msg)
 
+    # TODO: Validate
+    @override
+    def _update_plugin(self, plugin: Plugin) -> None:
+        self._download_if_outdated(self._plugin_files(), plugin.update_at)
+        self._create_initial_channel_records()
+        data_timestamps = self._plugin_files_data_timestamps()
+        new_title_keys = self._title_keys_from_plugin_files()
+        self._mark_mismatched_titles_as_outdated(None, new_title_keys, data_timestamps)
+        plugin.data_timestamp = max(data_timestamps)
+
     def _mark_mismatched_titles_as_outdated(
         self,
         source_key: str | None,
@@ -140,9 +150,7 @@ class BasePlugin(
 
     @override
     def tmdb_lookup_info(self, title: Title) -> list[TMDBLookupInfo]:
-        """Return the TMDB lookup information for the given title.
-
-        Used to lookup this title on TMDB"""
+        """Return the TMDB lookup information for the given title."""
         if not title.name:
             msg = f"Title {title.key} has no name"
             raise ValueError(msg)

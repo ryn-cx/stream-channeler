@@ -38,10 +38,12 @@ class HuluShared(HuluBaseFiles):
 
     # TODO: Validate
     def _create_initial_channel_records(self) -> None:
-        self._add_urls_to_channel(self._all_title_urls(), "All Titles")
+        self.add_new_urls_to_channel(
+            [("All Titles", url) for url in self._title_urls_from_plugin_files()],
+        )
 
     # TODO: Validate
-    def _all_title_urls(self) -> list[str]:
+    def _title_urls_from_plugin_files(self) -> list[str]:
         self._download_if_outdated(self._plugin_files())
         pages: list[AllSeriesModel | AllMoviesModel | GenreModel] = [
             self.all_series_file().parsed(),
@@ -61,9 +63,9 @@ class HuluShared(HuluBaseFiles):
         return list(urls)
 
     # TODO: Validate
-    def _all_title_keys(self) -> set[str]:
+    def _title_keys_from_plugin_files(self) -> set[str]:
         title_keys: set[str] = set()
-        for url in self._all_title_urls():
+        for url in self._title_urls_from_plugin_files():
             match = strict_search(f"{SERIES_URL_REGEX}|{MOVIE_URL_REGEX}", url)
             title_keys.add(match.group("series_key") or match.group("movie_key"))
         return title_keys

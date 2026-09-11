@@ -23,7 +23,7 @@ def create_random_title(
     # A title no other record exists of is the record, so it stands for itself and
     # its own id is the canonical title id everything else names it by. Building
     # the linked pair instead is what a test that is about linking does for itself.
-    kwargs.setdefault("is_canonical", True)
+    kwargs.setdefault("is_linked", False)
     title = build_random_model(Title, source_id=parent.id, deleted_at=None, **kwargs)
     session.add(title)
     session.flush()  # Allows title.source and title.seasons to be accessed.

@@ -13,7 +13,7 @@ from app.episodes.schemas import (
     EpisodeInformationOutput,
     EpisodeListOutput,
 )
-from app.episodes.service.information import episode_information, non_canonical_episodes
+from app.episodes.service.information import episode_information, linked_episodes
 from app.users.dependencies import OptionalUser
 
 """Episodes router."""
@@ -35,11 +35,11 @@ def get_episode_information(
 
 # TODO: Validate
 @episodes_router.get(
-    "/{episode_id}/non-canonical",  # noqa: FAST003 - Used by ExistingEpisode.
+    "/{episode_id}/linked",  # noqa: FAST003 - Used by ExistingEpisode.
 )
-def get_non_canonical_episodes(episode: ExistingEpisode) -> list[EpisodeListOutput]:
+def get_linked_episodes(episode: ExistingEpisode) -> list[EpisodeListOutput]:
     """Get every website's row standing for an `Episode`."""
-    return non_canonical_episodes(episode)
+    return linked_episodes(episode)
 
 
 router = APIRouter()

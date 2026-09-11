@@ -1,5 +1,5 @@
 // TODO: Validate
-import { useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import type { ChannelTitleGroup, ChannelTitlesOutput } from "@/client"
 import { ChannelsService } from "@/client"
 
@@ -14,8 +14,8 @@ function mergeChannelTitlePages(
     titles: [],
     filter_only_titles: pages[0]?.filter_only_titles ?? [],
     sources: {},
-    canonical_titles: {},
-    canonical_sources: {},
+    tmdb_titles: {},
+    tmdb_sources: {},
     groups: [],
     total: pages[0]?.total ?? 0,
   }
@@ -23,8 +23,8 @@ function mergeChannelTitlePages(
   for (const page of pages) {
     merged.titles?.push(...(page.titles ?? []))
     Object.assign(merged.sources ?? {}, page.sources)
-    Object.assign(merged.canonical_titles ?? {}, page.canonical_titles)
-    Object.assign(merged.canonical_sources ?? {}, page.canonical_sources)
+    Object.assign(merged.tmdb_titles ?? {}, page.tmdb_titles)
+    Object.assign(merged.tmdb_sources ?? {}, page.tmdb_sources)
     for (const group of page.groups ?? []) {
       const merging = groups.get(group.channel_id)
       if (merging) {
@@ -43,15 +43,32 @@ function mergeChannelTitlePages(
 }
 
 // TODO: Validate
-export function useChannelTitlesPage(channelId: string, pageIndex: number) {
+export function channelTitlesQueryKey(
+  channelId: string,
+  pageIndex: number,
+  query: string,
+) {
+  return ["channel-titles", channelId, pageIndex, query]
+}
+
+// TODO: Validate
+export function useChannelTitlesPage(
+  channelId: string,
+  pageIndex: number,
+  query = "",
+) {
   return useQuery({
-    queryKey: ["channel-titles", channelId, pageIndex],
+    queryKey: channelTitlesQueryKey(channelId, pageIndex, query),
     queryFn: () =>
       ChannelsService.getChannelTitles({
         channelId,
         offset: pageIndex * CHANNEL_TITLE_PAGE,
         limit: CHANNEL_TITLE_PAGE,
+        query: query || undefined,
       }),
+    // The page a listing is on is read from the total it comes back with, so a
+    // page being fetched must not read as a listing of nothing.
+    placeholderData: keepPreviousData,
   })
 }
 
@@ -86,12 +103,12 @@ export function useAllChannelTitles(
 // TODO: Validate
 export function useChannelTitleStats(
   channelId: string,
-  canonicalTitleIds: string[],
+  tmdbTitleIds: string[],
 ) {
   return useQuery({
-    queryKey: ["channel-title-stats", channelId, canonicalTitleIds],
+    queryKey: ["channel-title-stats", channelId, tmdbTitleIds],
     queryFn: () =>
-      ChannelsService.getChannelTitleStats({ channelId, canonicalTitleIds }),
-    enabled: canonicalTitleIds.length > 0,
+      ChannelsService.getChannelTitleStats({ channelId, tmdbTitleIds }),
+    enabled: tmdbTitleIds.length > 0,
   })
 }

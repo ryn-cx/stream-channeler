@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from datetime import date, datetime
 from itertools import chain
 from typing import Any, override
@@ -245,6 +245,10 @@ class BaseFileAccessMixin(AbstractPlugin, ABC):
 
     def _plugin_files(self) -> Sequence[BaseFile[Any]]:
         """Return the files required to upsert the plugin."""
+        raise NotImplementedError
+
+    # TODO: Validate
+    def _title_keys_from_plugin_files(self) -> Iterable[str]:
         raise NotImplementedError
 
     def _source_files(self) -> Sequence[BaseFile[Any]]:

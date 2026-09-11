@@ -16,13 +16,13 @@ from uuid import UUID
 from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, func, select
 
-from app.canonical_media.episodes import canonical_id_of
-from app.canonical_media.filters import is_canonical
 from app.channels.episode_selector.watch_filters import started_title_ids
 from app.channels.schemas import ChannelOptions
 from app.episodes.models import Episode
 from app.seasons.models import Season
-from app.titles.models import Title, TitleCanonicalTitle
+from app.titles.models import Title, TitleTmdbTitle
+from app.tmdb_media.episodes import tmdb_record_id_of
+from app.tmdb_media.filters import is_not_linked
 from app.users.models import User
 
 
@@ -48,13 +48,13 @@ def selected_title_ids(
     if not user or not episodes:
         return None
 
-    episode_to_titles = _titles_by_canonical_episode(session, episodes)
+    episode_to_titles = _titles_by_tmdb_episode(session, episodes)
     started: set[UUID] = set(session.exec(started_title_ids(user)).all())
 
     title_order: list[tuple[UUID, bool]] = []
     seen: set[UUID] = set()
     for episode in episodes:
-        for title_id in episode_to_titles[canonical_id_of(episode)]:
+        for title_id in episode_to_titles[tmdb_record_id_of(episode)]:
             if title_id in seen:
                 continue
             seen.add(title_id)
@@ -69,7 +69,7 @@ def selected_title_ids(
 
 
 # TODO: Validate
-def _titles_by_canonical_episode(
+def _titles_by_tmdb_episode(
     session: Session,
     episodes: list[Episode],
 ) -> dict[UUID, set[UUID]]:
@@ -81,17 +81,17 @@ def _titles_by_canonical_episode(
     there the canonical titles are the ones that row stands for - all of them,
     since a row stands for one no more than for another.
     """
-    canonical_episode_ids = {canonical_id_of(episode) for episode in episodes}
+    tmdb_episode_ids = {tmdb_record_id_of(episode) for episode in episodes}
     counted_episode = aliased(Episode)
     counted_season = aliased(Season)
     counted_title = aliased(Title)
-    counted_link = aliased(TitleCanonicalTitle)
-    canonical_title_ids: dict[UUID, set[UUID]] = defaultdict(set)
+    counted_link = aliased(TitleTmdbTitle)
+    tmdb_title_ids: dict[UUID, set[UUID]] = defaultdict(set)
     rows = session.exec(
         select(
             counted_episode.id,
             func.coalesce(
-                col(counted_link.canonical_title_id),
+                col(counted_link.tmdb_title_id),
                 col(counted_title.id),
             ),
         )
@@ -105,13 +105,13 @@ def _titles_by_canonical_episode(
         # has a link per canonical title and stands for each.
         .outerjoin(counted_link, col(counted_link.title_id) == col(counted_title.id))
         .where(
-            is_canonical(counted_episode),
-            col(counted_episode.id).in_(canonical_episode_ids),
+            is_not_linked(counted_episode),
+            col(counted_episode.id).in_(tmdb_episode_ids),
         ),
     ).all()
-    for canonical_episode_id, canonical_title_id in rows:
-        canonical_title_ids[canonical_episode_id].add(canonical_title_id)
-    return canonical_title_ids
+    for tmdb_episode_id, tmdb_title_id in rows:
+        tmdb_title_ids[tmdb_episode_id].add(tmdb_title_id)
+    return tmdb_title_ids
 
 
 # TODO: Validate

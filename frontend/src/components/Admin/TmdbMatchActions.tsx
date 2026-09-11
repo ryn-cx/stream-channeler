@@ -62,7 +62,7 @@ export function TmdbMatchConfirmButton({
     mutationFn: ({ episodeIds }: SettleTmdbMatchVariables) =>
       EpisodesService.adminLinkEpisodeToTmdb({
         episodeId: episodeIds[0],
-        canonicalEpisodeId: match.episode.id,
+        tmdbEpisodeId: match.episode.id,
       }),
     onSuccess: () =>
       showSuccessToast(

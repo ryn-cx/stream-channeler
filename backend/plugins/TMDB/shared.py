@@ -9,14 +9,14 @@ from typing import override
 
 from tminidb.tv_episode_group.details.models import TvEpisodeGroupDetailsModel
 
-from app.canonical_media.tmdb import (
+from app.media.media_type import TMDBMediaType
+from app.plugins.schemas import TMDBMediaInfo
+from app.titles.models import Title
+from app.tmdb_media.tmdb import (
     chosen_group_id,
     get_media_type_and_season_id,
     get_media_type_and_tmdb_id,
 )
-from app.media.media_type import TMDBMediaType
-from app.plugins.schemas import TMDBMediaInfo
-from app.titles.models import Title
 from app.utils import tz_datetime
 from plugins.TMDB.files import WatchProvidersFile
 from plugins.TMDB.search import TMDBSearch
@@ -113,14 +113,17 @@ class TMDBShared(TMDBSearch):
                 for order, entry in enumerate(group.groups)
             ]
 
-        return [
-            TMDBSeasonInfo.from_season_details(
-                self.tv_seasons_details_file(
-                    tmdb_tv_title_id=tmdb_tv_title_id,
-                    season_number=season.season_number,
-                ).parsed(),
+        season_files = [
+            self.tv_seasons_details_file(
+                tmdb_tv_title_id=tmdb_tv_title_id,
+                season_number=season.season_number,
             )
             for season in self.tv_series_details_file(tmdb_tv_title_id).parsed().seasons
+        ]
+        self._download_if_outdated(season_files)
+        return [
+            TMDBSeasonInfo.from_season_details(season_file.parsed())
+            for season_file in season_files
         ]
 
     # TODO: Validate
@@ -167,16 +170,16 @@ class TMDBShared(TMDBSearch):
 
         Sets the title.updated_at and season.updated_at values."""
         if plugin := get_media_plugin(changed_provider):
-            canonical_title = Title.get_one(self.session, self.source, title_key)
-            for canonical_link in canonical_title.non_canonical_title_links:
+            tmdb_title = Title.get_one(self.session, self.source, title_key)
+            for tmdb_link in tmdb_title.linked_title_links:
                 if (
-                    canonical_link.non_canonical_title.source.plugin.key
+                    tmdb_link.linked_title.source.plugin.key
                     == plugin.plugin_name()
                 ):
                     # Watch provider status changing warrants a complete updates of both
                     # the title and season files for simplicity.
-                    canonical_link.non_canonical_title.set_update_at(update_at)
-                    for season in canonical_link.non_canonical_title.active_children:
+                    tmdb_link.linked_title.set_update_at(update_at)
+                    for season in tmdb_link.linked_title.active_children:
                         season.set_update_at(update_at)
 
     # TODO: Validate

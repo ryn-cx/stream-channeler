@@ -5,7 +5,7 @@ from sqlmodel import Session
 
 from app.channels.models import Channel, ChannelQueue, ChannelTitle
 from app.channels.schemas import ChannelOutput
-from app.channels.service.titles import titles_for_channel_title
+from app.channels.service.titles import titles_from_channel_title
 from app.models import Visibility
 from app.plugins.models import Plugin
 from app.sources.models import Source
@@ -53,7 +53,7 @@ def create_random_channel_title(
     channel_title = build_random_model(
         ChannelTitle,
         channel_id=channel.id,
-        canonical_title_id=parent.sole_canonical_title_id or parent.id,
+        tmdb_title_id=parent.sole_tmdb_title_id or parent.id,
         **kwargs,
     )
     session.add(channel_title)
@@ -68,7 +68,7 @@ def channel_title_title(session: Session, channel_title: ChannelTitle) -> Title:
     A `ChannelTitle` names a title rather than one website's copy of it, and a test
     only ever creates the one copy, so the first match is that copy.
     """
-    return titles_for_channel_title(session, channel_title)[0]
+    return titles_from_channel_title(session, channel_title)[0]
 
 
 # TODO: Validate

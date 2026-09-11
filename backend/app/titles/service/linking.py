@@ -14,15 +14,21 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import instance_state, set_committed_value
 from sqlmodel import Session, col, delete, select
 
-from app.canonical_media.filters import is_canonical
 from app.channels.models import ChannelTitle
-from app.episodes.linking import EpisodeLinker
-from app.episodes.models import MANUAL_NOTE_PREFIX, Episode, EpisodeCanonicalEpisode
-from app.episodes.preload import DEPRECATED_preload_episodes
+from app.episodes.linking import EpisodeLinkerV2
+from app.episodes.models import (
+    MANUAL_NOTE_PREFIX,
+    Episode,
+    EpisodeTmdbEpisode,
+    is_manual_note,
+)
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
-from app.titles.models import Title, TitleCanonicalTitle
+from app.seasons.models import Season
+from app.titles.models import Title, TitleTmdbTitle
+from app.tmdb_media.filters import is_not_linked
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import MediaNotFoundError
+from plugins.utils.manage_plugins import plugins
 
 if TYPE_CHECKING:
     from plugins.utils.abstract_plugin import TMDBLookupInfo
@@ -31,7 +37,206 @@ _TMDB_TITLE_URL = re.compile(r"themoviedb\.org/(?:movie|tv)/(?P<tmdb_id>\d+)")
 
 
 # TODO: Validate
-def _reread_in_new_order(session: Session, title: Title) -> None:
+def tmdb_titles_from_lookup_info(
+    session: Session,
+    lookup_infos: Sequence[TMDBLookupInfo],
+) -> set[Title]:
+    from plugins.TMDB import TMDB  # noqa: PLC0415
+
+    tmdb_plugin = TMDB(session)
+    tmdb_titles: set[Title] = set()
+    for lookup_info in lookup_infos:
+        search_results = tmdb_plugin.import_search(
+            lookup_info.name,
+            lookup_info.media_type,
+            lookup_info.year,
+        )
+        for search_result in search_results:
+            tmdb_titles.add(search_result.title)
+    return tmdb_titles
+
+
+# TODO: Validate
+def tmdb_titles_from_title(session: Session, title: Title) -> set[Title]:
+    plugin_classes_by_key = {plugin.plugin_name(): plugin for plugin in plugins}
+    plugin_key = title.source.plugin.key
+    plugin_class = plugin_classes_by_key[plugin_key]
+    plugin_instance = plugin_class(session, title.source.plugin)
+    return tmdb_titles_from_lookup_info(
+        session, plugin_instance.tmdb_lookup_info(title)
+    )
+
+
+# TODO: Validate
+def link_new_title_to_tmdb(session: Session, title: Title) -> None:
+    if title.link_status:
+        msg = "link_new_title_to_tmdb should only be called on new titles."
+        raise ValueError(msg)
+    if title.source.plugin.key == "TMDB":
+        msg = "link_new_title_to_tmdb should not be called on TMDB titles."
+        raise ValueError(msg)
+
+    plugin_key = title.source.plugin.key
+    logger.info(f"[{plugin_key}] Linking to TMDB: {title}")
+    for tmdb_title in tmdb_titles_from_title(session, title):
+        note = "Automatic: Found match on TMDB"
+        link_unlinked_title_to_tmdb(session, title, tmdb_title, note)
+    if title.tmdb_title_links:
+        logger.info(f"[{plugin_key}] Linked to TMDB: {title}")
+        title.link_status = "Linked"
+    else:
+        logger.info(f"[{plugin_key}] No Match Found on TMDB: {title}")
+        title.link_status = "No Match Found"
+    session.add(title)
+    session.commit()
+
+
+# TODO: Validate
+def link_unlinked_title_to_tmdb(
+    session: Session,
+    title: Title,
+    tmdb_title: Title,
+    note: str,
+) -> TitleTmdbTitle:
+    """Link an unlinked title to a TMDB title and update all channels containing it.
+
+    Channels that include the unlinked title will have it replaced with the TMDB
+    title."""
+    channel_titles = session.exec(
+        select(ChannelTitle).where(
+            ChannelTitle.tmdb_title_id == title.id,
+        ),
+    ).all()
+    channel_titles_by_channel_id = {
+        channel_title.channel_id: channel_title for channel_title in channel_titles
+    }
+    channels_with_title_and_tmdb_title = set(
+        session.exec(
+            select(ChannelTitle.channel_id).where(
+                col(ChannelTitle.tmdb_title_id) == tmdb_title.id,
+                col(ChannelTitle.channel_id).in_(
+                    list(channel_titles_by_channel_id),
+                ),
+            ),
+        ).all(),
+    )
+
+    # Replace the unlinked title with the TMDB title.
+    for channel_id, channel_title in channel_titles_by_channel_id.items():
+        if channel_id in channels_with_title_and_tmdb_title:
+            continue
+        session.add(
+            ChannelTitle(
+                channel_id=channel_id,
+                tmdb_title_id=tmdb_title.id,
+                is_whitelist=channel_title.is_whitelist,
+                is_blacklist_only=channel_title.is_blacklist_only,
+            ),
+        )
+
+    # Remove the unlinked title from all channels.
+    for channel_title in channel_titles:
+        session.delete(channel_title)
+    session.flush()
+
+    link = TitleTmdbTitle(
+        title_id=title.id,
+        tmdb_title_id=tmdb_title.id,
+        note=note,
+        manual_tmdb_link=is_manual_note(note),
+    )
+    session.add(link)
+    session.flush()
+    session.expire(title, ["tmdb_title_links", "is_linked"])
+    _old_relink_episode(session, title)
+    return link
+
+
+# TODO: Validate
+def _old_relink_episodes(session: Session, tmdb_title: Title) -> None:
+    """Match every non-canonical row of `tmdb_title` against it again."""
+    for link in list(tmdb_title.linked_title_links):
+        _old_relink_episode(session, link.linked_title)
+
+
+# TODO: Validate
+def _old_relink_episode(
+    session: Session,
+    linked_title: Title,
+) -> None:
+    _old_clear_tmdb_episode_links(
+        session,
+        _old_relinkable_episodes(session, linked_title),
+    )
+    linker = EpisodeLinkerV2(session, linked_title)
+    with session.no_autoflush:
+        linker.link_titles()
+
+
+# TODO: Validate
+def _old_relinkable_episodes(session: Session, title: Title) -> list[Episode]:
+    if "seasons" in instance_state(title).unloaded or any(
+        "episodes" in instance_state(season).unloaded for season in title.seasons
+    ):
+        session.exec(
+            select(Season)
+            .where(col(Season.title_id) == title.id)
+            .options(
+                selectinload(Season.episodes),  # type: ignore[arg-type]
+            ),
+        ).all()
+    return [
+        episode
+        for season in title.active_children
+        for episode in season.active_children
+        if episode.tmdb_episode_validated_at is None
+    ]
+
+
+# TODO: Validate
+def _old_clear_tmdb_episode_links(
+    session: Session,
+    episodes: Sequence[Episode],
+) -> None:
+    _old_preload_tmdb_episode_links(session, episodes)
+    # A link a `User` settled themselves is left where it is, so what is cleared
+    # is only ever a guess an automatic match made.
+    kept_links = {
+        episode.id: [
+            link for link in episode.tmdb_episode_links if link.manual_tmdb_link
+        ]
+        for episode in episodes
+    }
+    dropped_links = [
+        link
+        for episode in episodes
+        for link in episode.tmdb_episode_links
+        if not link.manual_tmdb_link
+    ]
+    if not dropped_links:
+        return
+
+    session.exec(
+        delete(EpisodeTmdbEpisode).where(
+            col(EpisodeTmdbEpisode.episode_id).in_(
+                [episode.id for episode in episodes],
+            ),
+            col(EpisodeTmdbEpisode.manual_tmdb_link).is_(False),
+        ),
+    )
+    for link in dropped_links:
+        if link in session:
+            session.expunge(link)
+    for episode in episodes:
+        set_committed_value(
+            episode,
+            "tmdb_episode_links",
+            kept_links[episode.id],
+        )
+
+
+# TODO: Validate
+def _old_reread_in_new_order(session: Session, title: Title) -> None:
     """Read `title` again so its seasons and numbering are the chosen order's."""
     # Imported here for the same reason as above.
     from plugins.TMDB import TMDB  # noqa: PLC0415
@@ -41,25 +246,14 @@ def _reread_in_new_order(session: Session, title: Title) -> None:
 
 
 # TODO: Validate
-def _relinkable_episodes(session: Session, title: Title) -> list[Episode]:
-    DEPRECATED_preload_episodes(session, [title])
-    return [
-        episode
-        for season in title.active_children
-        for episode in season.active_children
-        if episode.canonical_episode_validated_at is None
-    ]
-
-
-# TODO: Validate
-def _preload_canonical_episode_links(
+def _old_preload_tmdb_episode_links(
     session: Session,
     episodes: Sequence[Episode],
 ) -> None:
     unread = [
         episode.id
         for episode in episodes
-        if "canonical_episode_links" in instance_state(episode).unloaded
+        if "tmdb_episode_links" in instance_state(episode).unloaded
     ]
     if not unread:
         return
@@ -67,78 +261,33 @@ def _preload_canonical_episode_links(
         select(Episode)
         .where(col(Episode.id).in_(unread))
         .options(
-            selectinload(Episode.canonical_episode_links).selectinload(  # type: ignore[arg-type]
-                EpisodeCanonicalEpisode.canonical_episode,  # type: ignore[arg-type]
+            selectinload(Episode.tmdb_episode_links).selectinload(  # type: ignore[arg-type]
+                EpisodeTmdbEpisode.tmdb_episode,  # type: ignore[arg-type]
             ),
         ),
     ).all()
 
 
 # TODO: Validate
-def _clear_canonical_episode_links(
-    session: Session,
-    episodes: Sequence[Episode],
-) -> None:
-    _preload_canonical_episode_links(session, episodes)
-    links = [link for episode in episodes for link in episode.canonical_episode_links]
-    if not links:
-        return
-
-    session.exec(
-        delete(EpisodeCanonicalEpisode).where(
-            col(EpisodeCanonicalEpisode.episode_id).in_(
-                [episode.id for episode in episodes],
-            ),
-        ),
-    )
-    for link in links:
-        if link in session:
-            session.expunge(link)
-    for episode in episodes:
-        set_committed_value(episode, "canonical_episode_links", [])
-
-
-# TODO: Validate
-def _relink_non_canonical_titles(session: Session, canonical_title: Title) -> None:
-    """Match every non-canonical row of `canonical_title` against it again."""
-    for link in list(canonical_title.non_canonical_title_links):
-        _relink_non_canonical_title(session, link.non_canonical_title)
-
-
-# TODO: Validate
-def _relink_non_canonical_title(
-    session: Session,
-    non_canonical_title: Title,
-) -> None:
-    _clear_canonical_episode_links(
-        session,
-        _relinkable_episodes(session, non_canonical_title),
-    )
-    linker = EpisodeLinker(session, non_canonical_title)
-    with session.no_autoflush:
-        linker.link_title()
-
-
-# TODO: Validate
-def relink_title(session: Session, title: Title) -> Title:
-    if title.is_canonical:
-        _relink_non_canonical_titles(session, title)
+def old_relink_title(session: Session, title: Title) -> Title:
+    if not title.is_linked:
+        _old_relink_episodes(session, title)
     else:
-        _relink_non_canonical_title(session, title)
+        _old_relink_episode(session, title)
     session.commit()
     session.refresh(title)
     return title
 
 
 # TODO: Validate
-def _validate_titles(title: Title, tmdb_title: Title) -> None:
+def _old_validate_titles(title: Title, tmdb_title: Title) -> None:
     """Validate that `title` and `tmdb_title` can be linked.
 
     The title cannot have any other canonical titles linked to it and it cannot be a TMDB
     title.
 
     The TMDB title must be canonical TMDB title."""
-    if not tmdb_title.is_canonical:
+    if tmdb_title.is_linked:
         message = f"{tmdb_title} is not a canonical title."
         raise ValueError(message)
     if tmdb_title.source.plugin.key != TMDB_PLUGIN_KEY:
@@ -147,160 +296,79 @@ def _validate_titles(title: Title, tmdb_title: Title) -> None:
     if title.source.plugin.key == TMDB_PLUGIN_KEY:
         message = f"{title} is a TMDB title."
         raise ValueError(message)
-    if title.non_canonical_title_links:
+    if title.linked_title_links:
         message = f"{title} has other titles linked to it."
         raise ValueError(message)
 
 
 # TODO: Validate
-def link_title_to_tmdb(
-    session: Session,
+def _old_link_linked_title(
     title: Title,
     tmdb_title: Title,
     note: str,
-) -> TitleCanonicalTitle:
-    """Link a title to TMDB then links the title's episodes to TMDB.
-
-    Will not remove any existing title links.
-    Will relink existing titles to try to find better matches."""
-    _validate_titles(title, tmdb_title)
-    link: TitleCanonicalTitle
-    if title.is_canonical:
-        link = _link_canonical_title(session, title, tmdb_title, note)
-    else:
-        link = _link_non_canonical_title(title, tmdb_title, note)
-
-    session.add(link)
-    session.flush()
-    session.expire(title, ["canonical_title_links", "is_canonical"])
-    _relink_non_canonical_title(session, title)
-    return link
-
-
-# TODO: Validate
-def _link_non_canonical_title(
-    title: Title,
-    tmdb_title: Title,
-    note: str,
-) -> TitleCanonicalTitle:
+) -> TitleTmdbTitle:
     # If the link already exists nothing needs to be done.
-    for tmdb_link in title.canonical_title_links:
-        if tmdb_link.canonical_title_id == tmdb_title.id:
+    for tmdb_link in title.tmdb_title_links:
+        if tmdb_link.tmdb_title_id == tmdb_title.id:
             return tmdb_link
 
-    return TitleCanonicalTitle(
+    return TitleTmdbTitle(
         title_id=title.id,
-        canonical_title_id=tmdb_title.id,
+        tmdb_title_id=tmdb_title.id,
         note=note,
+        manual_tmdb_link=is_manual_note(note),
     )
 
 
 # TODO: Validate
-def _link_canonical_title(
-    session: Session,
-    title: Title,
-    tmdb_title: Title,
-    note: str,
-) -> TitleCanonicalTitle:
-    _update_channels(session, title, tmdb_title)
-
-    return TitleCanonicalTitle(
-        title_id=title.id,
-        canonical_title_id=tmdb_title.id,
-        note=note,
-    )
-
-
-# TODO: Validate
-def _update_channels(
-    session: Session,
-    title: Title,
-    canonical_title: Title,
-) -> None:
-    """Update channels to replace the original canonical title with the TMDB title."""
-    channels_with_title = set(
-        session.exec(
-            select(ChannelTitle.channel_id).where(
-                ChannelTitle.canonical_title_id == title.id,
-            ),
-        ).all(),
-    )
-    if not channels_with_title:
-        return
-
-    channels_with_title_and_tmdb_title = set(
-        session.exec(
-            select(ChannelTitle.channel_id).where(
-                ChannelTitle.canonical_title_id == canonical_title.id,
-                col(ChannelTitle.channel_id).in_(channels_with_title),
-            ),
-        ).all(),
-    )
-    for channel_id in channels_with_title - channels_with_title_and_tmdb_title:
-        session.add(
-            ChannelTitle(
-                channel_id=channel_id,
-                canonical_title_id=canonical_title.id,
-                is_whitelist=False,
-                is_blacklist_only=False,
-            ),
-        )
-    session.flush()
-
-
-# TODO: Validate
-def link_plugin_title_to_tmdb(
+def old_link_title_by_tmdb_lookups(
     session: Session,
     unlinked_title: Title,
     lookup_infos: Sequence[TMDBLookupInfo],
 ) -> None:
     """Link a plugin's title to TMDB using tmdb_lookup_info."""
-    tmdb_titles = _find_tmdb_titles(session, lookup_infos)
+    tmdb_titles = tmdb_titles_from_lookup_info(session, lookup_infos)
     for tmdb_title in tmdb_titles:
         note = "Automatic: Found match on TMDB"
-        link_title_to_tmdb(session, unlinked_title, tmdb_title, note)
+        old_link_title_to_tmdb(session, unlinked_title, tmdb_title, note)
 
 
 # TODO: Validate
-def _find_tmdb_titles(
+def old_link_title_to_tmdb(
     session: Session,
-    lookup_infos: Sequence[TMDBLookupInfo],
-) -> list[Title]:
-    from plugins.TMDB import TMDB  # noqa: PLC0415
+    title: Title,
+    tmdb_title: Title,
+    note: str,
+) -> TitleTmdbTitle:
+    """Link a title to TMDB then links the title's episodes to TMDB.
 
-    tmdb_plugin = TMDB(session)
-    tmdb_titles: list[Title] = []
-    for lookup_info in lookup_infos:
-        try:
-            search_results = tmdb_plugin.import_search(
-                lookup_info.name,
-                lookup_info.media_type,
-                lookup_info.year,
-            )
-        except MediaNotFoundError:
-            continue
-        tmdb_title = next(
-            (search_result.title for search_result in search_results),
-            None,
-        )
-        if tmdb_title and tmdb_title not in tmdb_titles:
-            tmdb_titles.append(tmdb_title)
-    return tmdb_titles
+    Will not remove any existing title links.
+    Will relink existing titles to try to find better matches."""
+    _old_validate_titles(title, tmdb_title)
+    if not title.is_linked:
+        return link_unlinked_title_to_tmdb(session, title, tmdb_title, note)
+
+    link = _old_link_linked_title(title, tmdb_title, note)
+    session.add(link)
+    session.flush()
+    session.expire(title, ["tmdb_title_links", "is_linked"])
+    _old_relink_episode(session, title)
+    return link
 
 
 # TODO: Validate
-def link_title_to_canonical_title(
+def old_link_title_to_tmdb_title(
     session: Session,
     website_title: Title,
-    canonical_title: Title,
+    tmdb_title: Title,
 ) -> Title:
-    """Add an admin's chosen `canonical_title` to what `website_title` stands for.
+    """Add an admin's chosen `tmdb_title` to what `website_title` stands for.
 
     Added alongside any existing links rather than replacing them, since one page
-    can hold several titles. Removing one is `unlink_title_from_canonical_title`.
+    can hold several titles. Removing one is `old_unlink_title_from_tmdb_title`.
     The choice is locked so the next import cannot overrule it.
     """
-    if website_title.non_canonical_title_links:
+    if website_title.linked_title_links:
         message = "A title other titles are linked to cannot be linked to one itself."
         raise HTTPException(status_code=409, detail=message)
 
@@ -308,18 +376,18 @@ def link_title_to_canonical_title(
         remove_plugin_unmatched_sources,
     )
 
-    link_title_to_tmdb(
+    old_link_title_to_tmdb(
         session,
         website_title,
-        canonical_title,
+        tmdb_title,
         note=f"{MANUAL_NOTE_PREFIX}Selection",
     )
     remove_plugin_unmatched_sources(
         session,
-        canonical_title.id,
+        tmdb_title.id,
         website_title.source.plugin.key,
     )
-    website_title.canonical_title_validated_at = tz_datetime.now()
+    website_title.tmdb_title_validated_at = tz_datetime.now()
     session.add(website_title)
 
     session.commit()
@@ -328,7 +396,7 @@ def link_title_to_canonical_title(
 
 
 # TODO: Validate
-def link_title_to_canonical_title_from_tmdb_url(
+def old_link_title_to_tmdb_title_from_url(
     session: Session,
     website_title: Title,
     tmdb_url: str,
@@ -344,34 +412,34 @@ def link_title_to_canonical_title_from_tmdb_url(
         )
 
     imported_titles = TMDB(session).validate_and_import_url(stripped_url)
-    canonical_title = session.exec(
+    tmdb_title = session.exec(
         select(Title).where(
-            is_canonical(Title),
+            is_not_linked(Title),
             Title.key == imported_titles[0].title.key,
         ),
     ).one()
-    return link_title_to_canonical_title(session, website_title, canonical_title)
+    return old_link_title_to_tmdb_title(session, website_title, tmdb_title)
 
 
 # TODO: Validate
-def import_non_canonical_title_from_url(
+def old_import_linked_title_from_url(
     session: Session,
-    canonical_title: Title,
+    tmdb_title: Title,
     title_url: str,
 ) -> Title:
-    """Import the title at `title_url` and link it to `canonical_title`."""
+    """Import the title at `title_url` and link it to `tmdb_title`."""
     from app.sources.service.unmatched import (  # noqa: PLC0415
         remove_plugin_unmatched_sources,
     )
     from plugins.utils.abstract_plugin import InvalidURLError  # noqa: PLC0415
-    from plugins.utils.manage_plugins import get_plugin_for_url  # noqa: PLC0415
+    from plugins.utils.manage_plugins import get_plugin_from_url  # noqa: PLC0415
 
     stripped_url = title_url.strip()
-    if not canonical_title.is_canonical:
+    if tmdb_title.is_linked:
         message = "A title linked to a canonical title cannot hold rows of its own."
         raise HTTPException(status_code=409, detail=message)
 
-    plugin_class = get_plugin_for_url(stripped_url)
+    plugin_class = get_plugin_from_url(stripped_url)
     if plugin_class is None:
         raise HTTPException(status_code=400, detail=f"No plugin imports {stripped_url}")
 
@@ -382,82 +450,83 @@ def import_non_canonical_title_from_url(
         raise HTTPException(status_code=400, detail=str(error)) from error
 
     for import_result in import_results:
-        link_title_to_tmdb(
+        old_link_title_to_tmdb(
             session,
             import_result.title,
-            canonical_title,
+            tmdb_title,
             "Automatic: Import match",
         )
 
     remove_plugin_unmatched_sources(
         session,
-        canonical_title.id,
+        tmdb_title.id,
         plugin_class.plugin_name(),
     )
     session.flush()
-    session.expire(canonical_title, ["non_canonical_title_links"])
+    session.expire(tmdb_title, ["linked_title_links"])
     imported_title_keys = {import_result.title.key for import_result in import_results}
-    for non_canonical_title_link in canonical_title.non_canonical_title_links:
-        non_canonical_title = non_canonical_title_link.non_canonical_title
-        if non_canonical_title.key not in imported_title_keys:
+    for linked_title_link in tmdb_title.linked_title_links:
+        linked_title = linked_title_link.linked_title
+        if linked_title.key not in imported_title_keys:
             continue
-        non_canonical_title.canonical_title_validated_at = tz_datetime.now()
-        non_canonical_title_link.note = f"{MANUAL_NOTE_PREFIX}Selection"
-        session.add(non_canonical_title)
-        session.add(non_canonical_title_link)
+        linked_title.tmdb_title_validated_at = tz_datetime.now()
+        linked_title_link.note = f"{MANUAL_NOTE_PREFIX}Selection"
+        linked_title_link.manual_tmdb_link = True
+        session.add(linked_title)
+        session.add(linked_title_link)
 
     session.commit()
-    session.refresh(canonical_title)
-    return canonical_title
+    session.refresh(tmdb_title)
+    return tmdb_title
 
 
 # TODO: Validate
-def unlink_title_from_canonical_title(
+def old_unlink_title_from_tmdb_title(
     session: Session,
     website_title: Title,
-    canonical_title: Title,
+    tmdb_title: Title,
 ) -> Title:
-    """Take `canonical_title` off what `website_title` stands for.
+    """Take `tmdb_title` off what `website_title` stands for.
 
     Episodes matched against it are unmatched, hand-settled or not, and the rest
     are matched again against the links that are left. The lock is left as it is.
     """
-    for canonical_title_link in list(website_title.canonical_title_links):
-        if canonical_title_link.canonical_title_id == canonical_title.id:
-            session.delete(canonical_title_link)
+    for tmdb_title_link in list(website_title.tmdb_title_links):
+        if tmdb_title_link.tmdb_title_id == tmdb_title.id:
+            session.delete(tmdb_title_link)
     session.flush()
     # Read again rather than left as it is, since a link deleted is still in the
     # collection it was read out of and what the row stands for now is what the
     # episodes below are settled against.
-    session.expire(website_title, ["canonical_title_links", "is_canonical"])
+    session.expire(website_title, ["tmdb_title_links", "is_linked"])
 
-    _unlink_episodes_from_dropped_canonical_titles(session, website_title)
-    _relink_non_canonical_title(session, website_title)
+    _old_unlink_episodes_from_dropped_tmdb_titles(session, website_title)
+    _old_relink_episode(session, website_title)
     session.commit()
     session.refresh(website_title)
     return website_title
 
 
 # TODO: Validate
-def make_title_canonical(session: Session, website_title: Title) -> Title:
+def old_make_title_unlinked(session: Session, website_title: Title) -> Title:
     """Make `website_title` canonical again, dropping every TMDB link it has."""
-    if not website_title.canonical_title_links:
+    if not website_title.tmdb_title_links:
         message = "This title is already a canonical title."
         raise HTTPException(status_code=409, detail=message)
 
-    _move_channel_titles_to_title(
+    _old_move_channel_titles_to_title(
         session,
         website_title,
-        website_title.canonical_title_ids,
+        website_title.tmdb_title_ids,
     )
 
-    for canonical_title_link in list(website_title.canonical_title_links):
-        session.delete(canonical_title_link)
+    for tmdb_title_link in list(website_title.tmdb_title_links):
+        session.delete(tmdb_title_link)
     session.flush()
-    session.expire(website_title, ["canonical_title_links", "is_canonical"])
+    session.expire(website_title, ["tmdb_title_links", "is_linked"])
 
-    _unlink_episodes_from_dropped_canonical_titles(session, website_title)
-    website_title.canonical_title_validated_at = tz_datetime.now()
+    _old_unlink_episodes_from_dropped_tmdb_titles(session, website_title)
+    website_title.tmdb_title_validated_at = tz_datetime.now()
     session.add(website_title)
     session.commit()
     session.refresh(website_title)
@@ -465,22 +534,22 @@ def make_title_canonical(session: Session, website_title: Title) -> Title:
 
 
 # TODO: Validate
-def _move_channel_titles_to_title(
+def _old_move_channel_titles_to_title(
     session: Session,
-    new_canonical_title: Title,
-    previous_canonical_title_ids: list[uuid.UUID],
+    new_tmdb_title: Title,
+    previous_tmdb_title_ids: list[uuid.UUID],
 ) -> None:
     """Move channel membership from the previous canonical titles onto the title."""
     channel_ids = set(
         session.exec(
             select(ChannelTitle.channel_id).where(
-                ChannelTitle.canonical_title_id == new_canonical_title.id,
+                ChannelTitle.tmdb_title_id == new_tmdb_title.id,
             ),
         ).all(),
     )
     previous_channel_titles = session.exec(
         select(ChannelTitle).where(
-            col(ChannelTitle.canonical_title_id).in_(previous_canonical_title_ids),
+            col(ChannelTitle.tmdb_title_id).in_(previous_tmdb_title_ids),
         ),
     ).all()
     for channel_title in previous_channel_titles:
@@ -490,7 +559,7 @@ def _move_channel_titles_to_title(
         session.add(
             ChannelTitle(
                 channel_id=channel_title.channel_id,
-                canonical_title_id=new_canonical_title.id,
+                tmdb_title_id=new_tmdb_title.id,
                 is_whitelist=False,
                 is_blacklist_only=False,
             ),
@@ -499,25 +568,23 @@ def _move_channel_titles_to_title(
 
 
 # TODO: Validate
-def _unlink_episodes_from_dropped_canonical_titles(
+def _old_unlink_episodes_from_dropped_tmdb_titles(
     session: Session,
     website_title: Title,
 ) -> None:
     """Take every episode of `website_title` off a record no linked title holds."""
-    canonical_title_ids = {
-        canonical_title.id for canonical_title in website_title.canonical_titles
-    }
+    tmdb_title_ids = {tmdb_title.id for tmdb_title in website_title.tmdb_titles}
     for season in website_title.active_children:
         for episode in season.active_children:
-            for canonical_episode_link in list(episode.canonical_episode_links):
-                canonical_episode = canonical_episode_link.canonical_episode
-                if canonical_episode.season.title_id in canonical_title_ids:
+            for tmdb_episode_link in list(episode.tmdb_episode_links):
+                tmdb_episode = tmdb_episode_link.tmdb_episode
+                if tmdb_episode.season.title_id in tmdb_title_ids:
                     continue
-                session.delete(canonical_episode_link)
+                session.delete(tmdb_episode_link)
             session.flush()
-            session.expire(episode, ["canonical_episode_links", "is_canonical"])
+            session.expire(episode, ["tmdb_episode_links", "is_linked"])
 
-            if not episode.canonical_episode_links:
-                episode.canonical_episode_validated_at = None
+            if not episode.tmdb_episode_links:
+                episode.tmdb_episode_validated_at = None
                 session.add(episode)
     session.flush()

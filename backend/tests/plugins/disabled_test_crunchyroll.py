@@ -1,16 +1,16 @@
 # TODO: Validate
 from sqlmodel import Session, select
 
-from app.canonical_media.tmdb import (
-    dump_extra,
-    is_tmdb_key,
-)
 from app.config import settings
 from app.episodes.models import Episode
 from app.titles.models import Title
 from app.titles.service.service import update_title_episode_group, update_title_extra
+from app.tmdb_media.tmdb import (
+    dump_extra,
+    is_tmdb_key,
+)
 from app.users.models import User
-from app.watches.identifiers import watched_canonical_ids
+from app.watches.identifiers import watched_tmdb_record_ids
 from app.watches.schemas import WatchCreate
 from app.watches.service.management import create_watch
 from plugins.Crunchyroll import Crunchyroll
@@ -173,7 +173,7 @@ class TestEpisodeGroupNameMatching(
         unlinked = [
             episode.key
             for episode in self.crunchyroll_episodes(session)
-            if episode.canonical_episode is None
+            if episode.tmdb_episode is None
         ]
         assert not unlinked, (
             f"These episodes were matched to no TMDB episode: {unlinked}"
@@ -211,9 +211,9 @@ class TestEpisodeGroupNameMatching(
         self.import_url(session_with_files)
         title = self.crunchyroll_title(session_with_files)
         for episode in self.crunchyroll_episodes(session_with_files):
-            episode.canonical_episode = None
-            episode.canonical_episode_validated_at = None
-            episode.canonical_episode_note = None
+            episode.tmdb_episode = None
+            episode.tmdb_episode_validated_at = None
+            episode.tmdb_episode_note = None
         session_with_files.flush()
 
         with frozen_clock(self.update_time), mock_update():
@@ -250,7 +250,7 @@ class TestEpisodeGroupNameMatching(
         user = self.watching_user(session_with_files)
         episode = self.crunchyroll_episode_named(session_with_files, episode_name)
 
-        canonical = episode.canonical_episode
+        canonical = episode.tmdb_episode
         assert canonical is not None
         assert canonical.name == episode_name
         assert canonical.episode_number == episode_number
@@ -274,10 +274,10 @@ class TestEpisodeGroupNameMatching(
         session_with_files.expire_all()
 
         reordered = self.crunchyroll_episode_named(session_with_files, episode_name)
-        reordered_canonical = reordered.canonical_episode
-        assert reordered_canonical is not None
-        assert reordered_canonical.name == episode_name
-        assert reordered_canonical.episode_number == reordered_episode_number
+        reordered_tmdb = reordered.tmdb_episode
+        assert reordered_tmdb is not None
+        assert reordered_tmdb.name == episode_name
+        assert reordered_tmdb.episode_number == reordered_episode_number
 
-        watched = set(session_with_files.exec(watched_canonical_ids(user.id)).all())
-        assert watched == {reordered_canonical.id}
+        watched = set(session_with_files.exec(watched_tmdb_record_ids(user.id)).all())
+        assert watched == {reordered_tmdb.id}

@@ -52,9 +52,9 @@ from app.config import settings
 from app.plugins.models import Plugin
 from app.utils import tz_datetime
 from plugins.utils.base_plugin.files import (
-    SingleArgEndpointFile,
     IntegerArgEndpointFile,
     MultipleArgEndpointFile,
+    SingleArgEndpointFile,
 )
 from plugins.utils.constants import INCOMPLETE_STATUS
 

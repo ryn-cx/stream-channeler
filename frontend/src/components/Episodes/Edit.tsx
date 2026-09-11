@@ -1,5 +1,5 @@
 // TODO: Validate
-import { Pencil } from "lucide-react"
+import { Maximize2, Minimize2, Pencil } from "lucide-react"
 import { useState } from "react"
 
 import {
@@ -23,21 +23,18 @@ import {
 } from "@/components/ui/dialog"
 import useAuth from "@/hooks/useAuth"
 import { useTitle } from "@/hooks/useEntities"
-
-import {
-  CanonicalEpisodeControls,
-  CanonicalEpisodeList,
-} from "./CanonicalEpisodeField"
 import type { EpisodeTableData } from "./columns"
-import { NonCanonicalEpisodeLinks } from "./NonCanonicalEpisodeLinks"
+import { EpisodeDatabaseDetails } from "./EpisodeDatabaseDetails"
+import { LinkedEpisodeLinks } from "./LinkedEpisodeLinks"
+import { TmdbEpisodeControls, TmdbEpisodeList } from "./TmdbEpisodeField"
 
 export type EditableEpisodeFields = Pick<
   EpisodeTableData,
   | "id"
-  | "canonical_episode_ids"
+  | "tmdb_episode_ids"
   | "episode_number"
-  | "canonical_episode_validated_at"
-  | "canonical_episode_note"
+  | "tmdb_episode_validated_at"
+  | "tmdb_episode_note"
 >
 
 const VERIFIED_NOTE = "Manual: Verified"
@@ -82,14 +79,15 @@ export function EpisodeInformationContent({
   // there is nothing above them to link them to.
   const isTmdbEpisode =
     information.data?.source.source.plugin_name === TMDB_EPISODE_ORDER_PLUGIN
-  const [canonicalEpisodeIds, setCanonicalEpisodeIds] = useState(
-    episode.canonical_episode_ids ?? [],
+  const [tmdbEpisodeIds, setTmdbEpisodeIds] = useState(
+    episode.tmdb_episode_ids ?? [],
   )
 
-  const [canonicalEpisodeValidatedAt, setCanonicalEpisodeValidatedAt] =
-    useState(episode.canonical_episode_validated_at?.slice(0, 16) ?? "")
-  const [canonicalEpisodeNote, setCanonicalEpisodeNote] = useState(
-    episode.canonical_episode_note ?? "",
+  const [tmdbEpisodeValidatedAt, setTmdbEpisodeValidatedAt] = useState(
+    episode.tmdb_episode_validated_at?.slice(0, 16) ?? "",
+  )
+  const [tmdbEpisodeNote, setTmdbEpisodeNote] = useState(
+    episode.tmdb_episode_note ?? "",
   )
 
   return (
@@ -113,48 +111,49 @@ export function EpisodeInformationContent({
       ) : null}
 
       {/*
-              A canonical episode is asked the question the other way around: it
+              A tmdb episode is asked the question the other way around: it
               stands for nothing itself, and what is worth reading on it is the
               website rows that came to it.
             */}
       {isTmdbEpisode ? (
-        <NonCanonicalEpisodeLinks episodeId={episode.id} enabled={enabled} />
+        <LinkedEpisodeLinks episodeId={episode.id} enabled={enabled} />
       ) : (
-        <CanonicalEpisodeList
+        <TmdbEpisodeList
           episodeId={episode.id}
-          canonicalEpisodeIds={canonicalEpisodeIds}
+          tmdbEpisodeIds={tmdbEpisodeIds}
           enabled={enabled}
           editable={isAdmin}
           onLinksChanged={(linked) =>
-            setCanonicalEpisodeIds(linked.canonical_episode_ids ?? [])
+            setTmdbEpisodeIds(linked.tmdb_episode_ids ?? [])
           }
         />
       )}
 
-      {isAdmin && !isTmdbEpisode ? (
+      {isAdmin ? (
         <AdminZone>
-          <CanonicalEpisodeControls
-            episodeId={episode.id}
-            seasonNumber={null}
-            episodeNumber={episode.episode_number ?? null}
-            canonicalEpisodeValidatedAt={canonicalEpisodeValidatedAt}
-            canonicalEpisodeNote={canonicalEpisodeNote}
-            hasLinks={canonicalEpisodeIds.length > 0}
-            enabled={enabled}
-            onVerified={() => {
-              setCanonicalEpisodeValidatedAt(
-                new Date().toISOString().slice(0, 16),
-              )
-              setCanonicalEpisodeNote(VERIFIED_NOTE)
-            }}
-            onLinksChanged={(linked) => {
-              setCanonicalEpisodeIds(linked.canonical_episode_ids ?? [])
-              setCanonicalEpisodeValidatedAt(
-                linked.canonical_episode_validated_at?.slice(0, 16) ?? "",
-              )
-              setCanonicalEpisodeNote(linked.canonical_episode_note ?? "")
-            }}
-          />
+          {!isTmdbEpisode ? (
+            <TmdbEpisodeControls
+              episodeId={episode.id}
+              seasonNumber={null}
+              episodeNumber={episode.episode_number ?? null}
+              tmdbEpisodeValidatedAt={tmdbEpisodeValidatedAt}
+              tmdbEpisodeNote={tmdbEpisodeNote}
+              hasLinks={tmdbEpisodeIds.length > 0}
+              enabled={enabled}
+              onVerified={() => {
+                setTmdbEpisodeValidatedAt(new Date().toISOString().slice(0, 16))
+                setTmdbEpisodeNote(VERIFIED_NOTE)
+              }}
+              onLinksChanged={(linked) => {
+                setTmdbEpisodeIds(linked.tmdb_episode_ids ?? [])
+                setTmdbEpisodeValidatedAt(
+                  linked.tmdb_episode_validated_at?.slice(0, 16) ?? "",
+                )
+                setTmdbEpisodeNote(linked.tmdb_episode_note ?? "")
+              }}
+            />
+          ) : null}
+          <EpisodeDatabaseDetails episodeId={episode.id} enabled={enabled} />
         </AdminZone>
       ) : null}
 
@@ -182,6 +181,7 @@ const EditEpisode = ({ episode, open, onOpenChange }: EditEpisodeProps) => {
   const [isOpenHere, setIsOpenHere] = useState(false)
   const isOpen = open ?? isOpenHere
   const setIsOpen = onOpenChange ?? setIsOpenHere
+  const [isFullScreen, setIsFullScreen] = useState(false)
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -193,10 +193,22 @@ const EditEpisode = ({ episode, open, onOpenChange }: EditEpisodeProps) => {
         />
       ) : null}
       <ModalContent
-        size="3xl"
-        className="max-h-[calc(100dvh-2rem)] overflow-y-hidden"
+        size={isFullScreen ? "full" : "3xl"}
+        className={
+          isFullScreen
+            ? "max-h-none h-[calc(100dvh-2rem)] overflow-y-hidden"
+            : "max-h-[calc(100dvh-2rem)] overflow-y-hidden"
+        }
       >
-        <DialogHeader>
+        <TooltipIconButton
+          label={isFullScreen ? "Shrink to a window" : "Fill the screen"}
+          icon={isFullScreen ? <Minimize2 /> : <Maximize2 />}
+          size="icon-sm"
+          className="absolute left-4 top-4 z-10"
+          onClick={() => setIsFullScreen(!isFullScreen)}
+        />
+
+        <DialogHeader className="px-8">
           <DialogTitle>Episode Information</DialogTitle>
           <DialogDescription>
             What the website and TMDB each say about this episode, and which

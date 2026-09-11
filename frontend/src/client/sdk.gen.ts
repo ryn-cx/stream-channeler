@@ -3,107 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { CanonicalEpisodesGetCanonicalEpisodeByIdData, CanonicalEpisodesGetCanonicalEpisodeByIdResponse, CanonicalEpisodesGetCanonicalEpisodesData, CanonicalEpisodesGetCanonicalEpisodesResponse, CanonicalTitlesGetCanonicalTitleByIdData, CanonicalTitlesGetCanonicalTitleByIdResponse, CanonicalTitlesGetCanonicalTitlesData, CanonicalTitlesGetCanonicalTitlesResponse, ChannelOrdersCreateChannelOrderData, ChannelOrdersCreateChannelOrderResponse, ChannelOrdersGetChannelOrdersData, ChannelOrdersGetChannelOrdersResponse, ChannelOrdersGetFavoriteChannelOrderIdsResponse, ChannelOrdersFavoriteChannelOrderData, ChannelOrdersFavoriteChannelOrderResponse, ChannelOrdersUnfavoriteChannelOrderData, ChannelOrdersUnfavoriteChannelOrderResponse, ChannelOrdersCopyChannelOrderData, ChannelOrdersCopyChannelOrderResponse, ChannelOrdersUpdateChannelOrderData, ChannelOrdersUpdateChannelOrderResponse, ChannelOrdersDeleteChannelOrderData, ChannelOrdersDeleteChannelOrderResponse, ChannelOrdersGetChannelOrderData, ChannelOrdersGetChannelOrderResponse, ChannelOrdersGetFeaturedChannelOrdersResponse, ChannelOrdersAdminUpdateChannelOrderData, ChannelOrdersAdminUpdateChannelOrderResponse, ChannelsCreateChannelData, ChannelsCreateChannelResponse, ChannelsGetChannelsData, ChannelsGetChannelsResponse, ChannelsUpdateChannelData, ChannelsUpdateChannelResponse, ChannelsDeleteChannelData, ChannelsDeleteChannelResponse, ChannelsGetChannelData, ChannelsGetChannelResponse, ChannelsBulkImportQueueUrlsData, ChannelsBulkImportQueueUrlsResponse, ChannelsGetFavoriteChannelIdsResponse, ChannelsFavoriteChannelData, ChannelsFavoriteChannelResponse, ChannelsUpdateFavoriteChannelData, ChannelsUpdateFavoriteChannelResponse, ChannelsUnfavoriteChannelData, ChannelsUnfavoriteChannelResponse, ChannelsUpdateChannelCombinedChannelsData, ChannelsUpdateChannelCombinedChannelsResponse, ChannelsGetChannelCombinedChannelsData, ChannelsGetChannelCombinedChannelsResponse, ChannelsGetChannelWhitelistFilteredEpisodesData, ChannelsGetChannelWhitelistFilteredEpisodesResponse, ChannelsUpdateChannelWhitelistData, ChannelsUpdateChannelWhitelistResponse, ChannelsGetChannelWhitelistData, ChannelsGetChannelWhitelistResponse, ChannelsBlacklistChannelEpisodeData, ChannelsBlacklistChannelEpisodeResponse, ChannelsUpdateChannelDefaultOrderData, ChannelsUpdateChannelDefaultOrderResponse, ChannelsUpdateChannelOrderData, ChannelsUpdateChannelOrderResponse, ChannelsGetChannelsForTitleData, ChannelsGetChannelsForTitleResponse, ChannelsAddChannelTitleData, ChannelsAddChannelTitleResponse, ChannelsDeleteChannelTitleData, ChannelsDeleteChannelTitleResponse, ChannelsGetChannelQueueData, ChannelsGetChannelQueueResponse, ChannelsCreateChannelQueueUrlsData, ChannelsCreateChannelQueueUrlsResponse, ChannelsDeleteChannelQueueUrlData, ChannelsDeleteChannelQueueUrlResponse, ChannelsClearChannelCompletedQueueData, ChannelsClearChannelCompletedQueueResponse, ChannelsGetSortOptionsResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelTitlesData, ChannelsGetChannelTitlesResponse, ChannelsGetChannelTitleStatsData, ChannelsGetChannelTitleStatsResponse, ChannelsGetChannelSourcesData, ChannelsGetChannelSourcesResponse, ChannelsGetChannelWhitelistEpisodesData, ChannelsGetChannelWhitelistEpisodesResponse, ChannelsAdminCreateChannelData, ChannelsAdminCreateChannelResponse, ChannelsAdminUpdateChannelData, ChannelsAdminUpdateChannelResponse, ChannelsGetAllChannelQueuesData, ChannelsGetAllChannelQueuesResponse, ChannelsAdminUpdateChannelQueueData, ChannelsAdminUpdateChannelQueueResponse, ChannelsAdminDeleteChannelQueueData, ChannelsAdminDeleteChannelQueueResponse, CommentsReadMyChannelCommentsData, CommentsReadMyChannelCommentsResponse, CommentsReadUnreadCommentCountResponse, CommentsMarkCommentsReadData, CommentsMarkCommentsReadResponse, CommentsUpdateChannelCommentData, CommentsUpdateChannelCommentResponse, CommentsDeleteChannelCommentData, CommentsDeleteChannelCommentResponse, CommentsCreateChannelCommentData, CommentsCreateChannelCommentResponse, CommentsReadChannelCommentsData, CommentsReadChannelCommentsResponse, CommentsReadCommentRepliesData, CommentsReadCommentRepliesResponse, EpisodesSetEpisodeUserUrlData, EpisodesSetEpisodeUserUrlResponse, EpisodesDeleteEpisodeUserUrlData, EpisodesDeleteEpisodeUserUrlResponse, EpisodesGetEpisodeInformationData, EpisodesGetEpisodeInformationResponse, EpisodesGetNonCanonicalEpisodesData, EpisodesGetNonCanonicalEpisodesResponse, EpisodesGetEpisodesData, EpisodesGetEpisodesResponse, EpisodesAdminGetUnmatchedEpisodesData, EpisodesAdminGetUnmatchedEpisodesResponse, EpisodesAdminGetUnlockedEpisodesData, EpisodesAdminGetUnlockedEpisodesResponse, EpisodesAdminGetDuplicatedCanonicalEpisodesData, EpisodesAdminGetDuplicatedCanonicalEpisodesResponse, EpisodesAdminLinkEpisodesToTmdbData, EpisodesAdminLinkEpisodesToTmdbResponse, EpisodesAdminMarkEpisodesAbsentFromTmdbData, EpisodesAdminMarkEpisodesAbsentFromTmdbResponse, EpisodesAdminGetTmdbEpisodeChoicesData, EpisodesAdminGetTmdbEpisodeChoicesResponse, EpisodesAdminLinkEpisodeByTmdbUrlData, EpisodesAdminLinkEpisodeByTmdbUrlResponse, EpisodesAdminLinkEpisodeToTmdbData, EpisodesAdminLinkEpisodeToTmdbResponse, EpisodesAdminUnlinkEpisodeFromCanonicalData, EpisodesAdminUnlinkEpisodeFromCanonicalResponse, EpisodesAdminQuickUnlinkEpisodeData, EpisodesAdminQuickUnlinkEpisodeResponse, EpisodesAdminUnlinkEpisodeFromTmdbData, EpisodesAdminUnlinkEpisodeFromTmdbResponse, EpisodesAdminMarkEpisodeAbsentFromTmdbData, EpisodesAdminMarkEpisodeAbsentFromTmdbResponse, EpisodesAdminVerifyCanonicalLinkData, EpisodesAdminVerifyCanonicalLinkResponse, EpisodesGetEpisodeData, EpisodesGetEpisodeResponse, EpisodesUpdateEpisodeData, EpisodesUpdateEpisodeResponse, FilesGetFilesData, FilesGetFilesResponse, FilesGetFileManifestResponse, FilesDumpMissingFilesData, FilesDumpMissingFilesResponse, FilesImportFilesData, FilesImportFilesResponse, FilesGetFileData, FilesGetFileResponse, FilesUpdateFileData, FilesUpdateFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, FilesCreateFileData, FilesCreateFileResponse, IssueReportsUpdateEpisodeIssueReportData, IssueReportsUpdateEpisodeIssueReportResponse, IssueReportsDeleteEpisodeIssueReportData, IssueReportsDeleteEpisodeIssueReportResponse, IssueReportsUpdateSeasonIssueReportData, IssueReportsUpdateSeasonIssueReportResponse, IssueReportsDeleteSeasonIssueReportData, IssueReportsDeleteSeasonIssueReportResponse, IssueReportsUpdateTitleIssueReportData, IssueReportsUpdateTitleIssueReportResponse, IssueReportsDeleteTitleIssueReportData, IssueReportsDeleteTitleIssueReportResponse, IssueReportsGetEpisodeIssueReportsData, IssueReportsGetEpisodeIssueReportsResponse, IssueReportsCreateEpisodeIssueReportData, IssueReportsCreateEpisodeIssueReportResponse, IssueReportsGetSeasonIssueReportsData, IssueReportsGetSeasonIssueReportsResponse, IssueReportsCreateSeasonIssueReportData, IssueReportsCreateSeasonIssueReportResponse, IssueReportsGetTitleIssueReportsData, IssueReportsGetTitleIssueReportsResponse, IssueReportsCreateTitleIssueReportData, IssueReportsCreateTitleIssueReportResponse, IssueReportsGetIssueReportsData, IssueReportsGetIssueReportsResponse, LoginTestTokenResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PluginsImportWatchHistoryInformationResponse, PluginsImportUrlInformationResponse, PluginsMatchUrlData, PluginsMatchUrlResponse, PluginsInAppSearchData, PluginsInAppSearchResponse, PluginsMediaInfoData, PluginsMediaInfoResponse, PluginsGetPluginsData, PluginsGetPluginsResponse, PluginsGetPluginData, PluginsGetPluginResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetSeasonInformationData, SeasonsGetSeasonInformationResponse, SeasonsGetSeasonsData, SeasonsGetSeasonsResponse, SeasonsGetSeasonData, SeasonsGetSeasonResponse, SourcesGetSourcesData, SourcesGetSourcesResponse, SourcesGetSourceData, SourcesGetSourceResponse, TitlesGetTitleInformationData, TitlesGetTitleInformationResponse, TitlesGetTitlesData, TitlesGetTitlesResponse, TitlesAdminGetUnvalidatedTitlesData, TitlesAdminGetUnvalidatedTitlesResponse, TitlesGetTitleData, TitlesGetTitleResponse, TitlesUpdateTitleData, TitlesUpdateTitleResponse, TitlesGetNonCanonicalTitlesData, TitlesGetNonCanonicalTitlesResponse, TitlesAdminLinkTitleToCanonicalData, TitlesAdminLinkTitleToCanonicalResponse, TitlesAdminUnlinkTitleFromCanonicalData, TitlesAdminUnlinkTitleFromCanonicalResponse, TitlesAdminLinkTitleByTmdbUrlData, TitlesAdminLinkTitleByTmdbUrlResponse, TitlesAdminLinkNonCanonicalTitleByUrlData, TitlesAdminLinkNonCanonicalTitleByUrlResponse, TitlesAdminCanonicalizeTitleData, TitlesAdminCanonicalizeTitleResponse, TitlesAdminValidateTitleData, TitlesAdminValidateTitleResponse, TitlesAdminRelinkTitleEpisodesData, TitlesAdminRelinkTitleEpisodesResponse, TitlesAdminForceUpdateTitleData, TitlesAdminForceUpdateTitleResponse, TitlesGetTitleTmdbEpisodeGroupsData, TitlesGetTitleTmdbEpisodeGroupsResponse, UnmatchedSourcesAdminGetUnmatchedSourcesResponse, UnmatchedSourcesAdminImportUnmatchedSourceData, UnmatchedSourcesAdminImportUnmatchedSourceResponse, UnmatchedSourcesAdminIgnoreUnmatchedSourceData, UnmatchedSourcesAdminIgnoreUnmatchedSourceResponse, UnmatchedSourcesAdminDeleteUnmatchedSourceData, UnmatchedSourcesAdminDeleteUnmatchedSourceResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersReadSourcePreferencesResponse, UsersUpdateSourcePreferencesData, UsersUpdateSourcePreferencesResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersGetUserPublicChannelsData, UsersGetUserPublicChannelsResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersAdminListUserChannelsData, UsersAdminListUserChannelsResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsHealthCheckResponse, UtilsTestEmailData, UtilsTestEmailResponse, WatchesGetWatchesData, WatchesGetWatchesResponse, WatchesUpdateWatchData, WatchesUpdateWatchResponse, WatchesDeleteWatchData, WatchesDeleteWatchResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse, WatchesExportWatchHistoryResponse, WatchesCreateWatchData, WatchesCreateWatchResponse, WatchesAdminRelinkWatchesResponse } from './types.gen';
-
-export class CanonicalEpisodesService {
-    /**
-     * Get Canonical Episode By Id
-     * Get a `Episode`, with the season and title above it.
-     * @param data The data for the request.
-     * @param data.canonicalEpisodeId
-     * @returns CanonicalEpisodeRecord Successful Response
-     * @throws ApiError
-     */
-    public static getCanonicalEpisodeById(data: CanonicalEpisodesGetCanonicalEpisodeByIdData): CancelablePromise<CanonicalEpisodesGetCanonicalEpisodeByIdResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/episodes/canonical/{canonical_episode_id}',
-            path: {
-                canonical_episode_id: data.canonicalEpisodeId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get Canonical Episodes
-     * Get every `Episode`.
-     * @param data The data for the request.
-     * @param data.sortOptions
-     * @param data.filterOptions
-     * @param data.offset
-     * @param data.limit
-     * @returns CanonicalEpisodesPublic Successful Response
-     * @throws ApiError
-     */
-    public static getCanonicalEpisodes(data: CanonicalEpisodesGetCanonicalEpisodesData = {}): CancelablePromise<CanonicalEpisodesGetCanonicalEpisodesResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/episodes/canonical',
-            query: {
-                sort_options: data.sortOptions,
-                filter_options: data.filterOptions,
-                offset: data.offset,
-                limit: data.limit
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-}
-
-export class CanonicalTitlesService {
-    /**
-     * Get Canonical Title By Id
-     * Get a `Title`.
-     * @param data The data for the request.
-     * @param data.canonicalTitleId
-     * @returns CanonicalTitleOutput Successful Response
-     * @throws ApiError
-     */
-    public static getCanonicalTitleById(data: CanonicalTitlesGetCanonicalTitleByIdData): CancelablePromise<CanonicalTitlesGetCanonicalTitleByIdResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/titles/canonical/{canonical_title_id}',
-            path: {
-                canonical_title_id: data.canonicalTitleId
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Get Canonical Titles
-     * Get every `Title`.
-     * @param data The data for the request.
-     * @param data.sortOptions
-     * @param data.filterOptions
-     * @param data.offset
-     * @param data.limit
-     * @returns CanonicalTitlesPublic Successful Response
-     * @throws ApiError
-     */
-    public static getCanonicalTitles(data: CanonicalTitlesGetCanonicalTitlesData = {}): CancelablePromise<CanonicalTitlesGetCanonicalTitlesResponse> {
-        return __request(OpenAPI, {
-            method: 'GET',
-            url: '/api/v1/titles/canonical',
-            query: {
-                sort_options: data.sortOptions,
-                filter_options: data.filterOptions,
-                offset: data.offset,
-                limit: data.limit
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-}
+import type { ChannelOrdersCreateChannelOrderData, ChannelOrdersCreateChannelOrderResponse, ChannelOrdersGetChannelOrdersData, ChannelOrdersGetChannelOrdersResponse, ChannelOrdersGetFavoriteChannelOrderIdsResponse, ChannelOrdersFavoriteChannelOrderData, ChannelOrdersFavoriteChannelOrderResponse, ChannelOrdersUnfavoriteChannelOrderData, ChannelOrdersUnfavoriteChannelOrderResponse, ChannelOrdersCopyChannelOrderData, ChannelOrdersCopyChannelOrderResponse, ChannelOrdersUpdateChannelOrderData, ChannelOrdersUpdateChannelOrderResponse, ChannelOrdersDeleteChannelOrderData, ChannelOrdersDeleteChannelOrderResponse, ChannelOrdersGetChannelOrderData, ChannelOrdersGetChannelOrderResponse, ChannelOrdersGetFeaturedChannelOrdersResponse, ChannelOrdersAdminUpdateChannelOrderData, ChannelOrdersAdminUpdateChannelOrderResponse, ChannelsCreateChannelData, ChannelsCreateChannelResponse, ChannelsGetChannelsData, ChannelsGetChannelsResponse, ChannelsUpdateChannelData, ChannelsUpdateChannelResponse, ChannelsDeleteChannelData, ChannelsDeleteChannelResponse, ChannelsGetChannelData, ChannelsGetChannelResponse, ChannelsBulkImportQueueUrlsData, ChannelsBulkImportQueueUrlsResponse, ChannelsGetFavoriteChannelIdsResponse, ChannelsFavoriteChannelData, ChannelsFavoriteChannelResponse, ChannelsUpdateFavoriteChannelData, ChannelsUpdateFavoriteChannelResponse, ChannelsUnfavoriteChannelData, ChannelsUnfavoriteChannelResponse, ChannelsUpdateChannelCombinedChannelsData, ChannelsUpdateChannelCombinedChannelsResponse, ChannelsGetChannelCombinedChannelsData, ChannelsGetChannelCombinedChannelsResponse, ChannelsGetChannelWhitelistFilteredEpisodesData, ChannelsGetChannelWhitelistFilteredEpisodesResponse, ChannelsUpdateChannelWhitelistData, ChannelsUpdateChannelWhitelistResponse, ChannelsGetChannelWhitelistData, ChannelsGetChannelWhitelistResponse, ChannelsBlacklistChannelEpisodeData, ChannelsBlacklistChannelEpisodeResponse, ChannelsUpdateChannelDefaultOrderData, ChannelsUpdateChannelDefaultOrderResponse, ChannelsUpdateChannelOrderData, ChannelsUpdateChannelOrderResponse, ChannelsGetChannelsForTitleData, ChannelsGetChannelsForTitleResponse, ChannelsAddChannelTitleData, ChannelsAddChannelTitleResponse, ChannelsDeleteChannelTitleData, ChannelsDeleteChannelTitleResponse, ChannelsGetChannelQueueData, ChannelsGetChannelQueueResponse, ChannelsCreateChannelQueueUrlsData, ChannelsCreateChannelQueueUrlsResponse, ChannelsDeleteChannelQueueUrlData, ChannelsDeleteChannelQueueUrlResponse, ChannelsClearChannelCompletedQueueData, ChannelsClearChannelCompletedQueueResponse, ChannelsGetSortOptionsResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelTitlesData, ChannelsGetChannelTitlesResponse, ChannelsGetChannelTitleStatsData, ChannelsGetChannelTitleStatsResponse, ChannelsGetChannelSourcesData, ChannelsGetChannelSourcesResponse, ChannelsGetChannelWhitelistEpisodesData, ChannelsGetChannelWhitelistEpisodesResponse, ChannelsAdminCreateChannelData, ChannelsAdminCreateChannelResponse, ChannelsAdminUpdateChannelData, ChannelsAdminUpdateChannelResponse, ChannelsGetAllChannelQueuesData, ChannelsGetAllChannelQueuesResponse, ChannelsAdminUpdateChannelQueueData, ChannelsAdminUpdateChannelQueueResponse, ChannelsAdminDeleteChannelQueueData, ChannelsAdminDeleteChannelQueueResponse, CommentsReadMyChannelCommentsData, CommentsReadMyChannelCommentsResponse, CommentsReadUnreadCommentCountResponse, CommentsMarkCommentsReadData, CommentsMarkCommentsReadResponse, CommentsUpdateChannelCommentData, CommentsUpdateChannelCommentResponse, CommentsDeleteChannelCommentData, CommentsDeleteChannelCommentResponse, CommentsCreateChannelCommentData, CommentsCreateChannelCommentResponse, CommentsReadChannelCommentsData, CommentsReadChannelCommentsResponse, CommentsReadCommentRepliesData, CommentsReadCommentRepliesResponse, EpisodesSetEpisodeUserUrlData, EpisodesSetEpisodeUserUrlResponse, EpisodesDeleteEpisodeUserUrlData, EpisodesDeleteEpisodeUserUrlResponse, EpisodesGetEpisodeInformationData, EpisodesGetEpisodeInformationResponse, EpisodesGetLinkedEpisodesData, EpisodesGetLinkedEpisodesResponse, EpisodesGetEpisodesData, EpisodesGetEpisodesResponse, EpisodesAdminGetUnmatchedEpisodesData, EpisodesAdminGetUnmatchedEpisodesResponse, EpisodesAdminGetUnlockedEpisodesData, EpisodesAdminGetUnlockedEpisodesResponse, EpisodesAdminGetDuplicatedTmdbEpisodesData, EpisodesAdminGetDuplicatedTmdbEpisodesResponse, EpisodesAdminLinkEpisodesToTmdbData, EpisodesAdminLinkEpisodesToTmdbResponse, EpisodesAdminMarkEpisodesAbsentFromTmdbData, EpisodesAdminMarkEpisodesAbsentFromTmdbResponse, EpisodesAdminGetEpisodeDatabaseRowsData, EpisodesAdminGetEpisodeDatabaseRowsResponse, EpisodesAdminGetTmdbEpisodeChoicesData, EpisodesAdminGetTmdbEpisodeChoicesResponse, EpisodesAdminLinkEpisodeByTmdbUrlData, EpisodesAdminLinkEpisodeByTmdbUrlResponse, EpisodesAdminLinkEpisodeToTmdbData, EpisodesAdminLinkEpisodeToTmdbResponse, EpisodesAdminUnlinkEpisodeFromTmdbEpisodeData, EpisodesAdminUnlinkEpisodeFromTmdbEpisodeResponse, EpisodesAdminQuickUnlinkEpisodeData, EpisodesAdminQuickUnlinkEpisodeResponse, EpisodesAdminUnlinkEpisodeFromTmdbData, EpisodesAdminUnlinkEpisodeFromTmdbResponse, EpisodesAdminMarkEpisodeAbsentFromTmdbData, EpisodesAdminMarkEpisodeAbsentFromTmdbResponse, EpisodesAdminVerifyTmdbLinkData, EpisodesAdminVerifyTmdbLinkResponse, EpisodesGetEpisodeData, EpisodesGetEpisodeResponse, EpisodesUpdateEpisodeData, EpisodesUpdateEpisodeResponse, FilesGetFilesData, FilesGetFilesResponse, FilesGetFileManifestResponse, FilesDumpMissingFilesData, FilesDumpMissingFilesResponse, FilesImportFilesData, FilesImportFilesResponse, FilesGetFileData, FilesGetFileResponse, FilesUpdateFileData, FilesUpdateFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, FilesCreateFileData, FilesCreateFileResponse, IssueReportsUpdateEpisodeIssueReportData, IssueReportsUpdateEpisodeIssueReportResponse, IssueReportsDeleteEpisodeIssueReportData, IssueReportsDeleteEpisodeIssueReportResponse, IssueReportsUpdateSeasonIssueReportData, IssueReportsUpdateSeasonIssueReportResponse, IssueReportsDeleteSeasonIssueReportData, IssueReportsDeleteSeasonIssueReportResponse, IssueReportsUpdateTitleIssueReportData, IssueReportsUpdateTitleIssueReportResponse, IssueReportsDeleteTitleIssueReportData, IssueReportsDeleteTitleIssueReportResponse, IssueReportsGetEpisodeIssueReportsData, IssueReportsGetEpisodeIssueReportsResponse, IssueReportsCreateEpisodeIssueReportData, IssueReportsCreateEpisodeIssueReportResponse, IssueReportsGetSeasonIssueReportsData, IssueReportsGetSeasonIssueReportsResponse, IssueReportsCreateSeasonIssueReportData, IssueReportsCreateSeasonIssueReportResponse, IssueReportsGetTitleIssueReportsData, IssueReportsGetTitleIssueReportsResponse, IssueReportsCreateTitleIssueReportData, IssueReportsCreateTitleIssueReportResponse, IssueReportsGetIssueReportsData, IssueReportsGetIssueReportsResponse, LoginTestTokenResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PluginsImportWatchHistoryInformationResponse, PluginsImportUrlInformationResponse, PluginsMatchUrlData, PluginsMatchUrlResponse, PluginsInAppSearchData, PluginsInAppSearchResponse, PluginsMediaInfoData, PluginsMediaInfoResponse, PluginsGetPluginsData, PluginsGetPluginsResponse, PluginsGetPluginData, PluginsGetPluginResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetSeasonInformationData, SeasonsGetSeasonInformationResponse, SeasonsGetSeasonsData, SeasonsGetSeasonsResponse, SeasonsGetSeasonData, SeasonsGetSeasonResponse, SourcesGetSourcesData, SourcesGetSourcesResponse, SourcesGetSourceData, SourcesGetSourceResponse, TitlesGetTitleInformationData, TitlesGetTitleInformationResponse, TitlesGetTitlesData, TitlesGetTitlesResponse, TitlesAdminGetUnvalidatedTitlesData, TitlesAdminGetUnvalidatedTitlesResponse, TitlesGetTitleData, TitlesGetTitleResponse, TitlesUpdateTitleData, TitlesUpdateTitleResponse, TitlesGetLinkedTitlesData, TitlesGetLinkedTitlesResponse, TitlesAdminLinkTitleToTmdbData, TitlesAdminLinkTitleToTmdbResponse, TitlesAdminUnlinkTitleFromTmdbData, TitlesAdminUnlinkTitleFromTmdbResponse, TitlesAdminLinkTitleByTmdbUrlData, TitlesAdminLinkTitleByTmdbUrlResponse, TitlesAdminLinkLinkedTitleByUrlData, TitlesAdminLinkLinkedTitleByUrlResponse, TitlesAdminUnlinkTitleData, TitlesAdminUnlinkTitleResponse, TitlesAdminValidateTitleData, TitlesAdminValidateTitleResponse, TitlesAdminRelinkTitleEpisodesData, TitlesAdminRelinkTitleEpisodesResponse, TitlesAdminForceUpdateTitleData, TitlesAdminForceUpdateTitleResponse, TitlesGetTitleTmdbEpisodeGroupsData, TitlesGetTitleTmdbEpisodeGroupsResponse, TmdbEpisodesGetTmdbEpisodeByIdData, TmdbEpisodesGetTmdbEpisodeByIdResponse, TmdbEpisodesGetTmdbEpisodesData, TmdbEpisodesGetTmdbEpisodesResponse, TmdbTitlesGetTmdbTitleByIdData, TmdbTitlesGetTmdbTitleByIdResponse, TmdbTitlesGetTmdbTitlesData, TmdbTitlesGetTmdbTitlesResponse, UnmatchedSourcesAdminGetUnmatchedSourcesResponse, UnmatchedSourcesAdminImportUnmatchedSourceData, UnmatchedSourcesAdminImportUnmatchedSourceResponse, UnmatchedSourcesAdminIgnoreUnmatchedSourceData, UnmatchedSourcesAdminIgnoreUnmatchedSourceResponse, UnmatchedSourcesAdminDeleteUnmatchedSourceData, UnmatchedSourcesAdminDeleteUnmatchedSourceResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersReadSourcePreferencesResponse, UsersUpdateSourcePreferencesData, UsersUpdateSourcePreferencesResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersGetUserPublicChannelsData, UsersGetUserPublicChannelsResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersAdminListUserChannelsData, UsersAdminListUserChannelsResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsHealthCheckResponse, UtilsTestEmailData, UtilsTestEmailResponse, WatchesGetWatchesData, WatchesGetWatchesResponse, WatchesUpdateWatchData, WatchesUpdateWatchResponse, WatchesDeleteWatchData, WatchesDeleteWatchResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse, WatchesExportWatchHistoryResponse, WatchesCreateWatchData, WatchesCreateWatchResponse, WatchesAdminRelinkWatchesResponse } from './types.gen';
 
 export class ChannelOrdersService {
     /**
@@ -606,7 +506,7 @@ export class ChannelsService {
      * Get Channel Whitelist Filtered Episodes
      * Read the episodes of a title that an entry names, whatever season they are in.
      * @param data The data for the request.
-     * @param data.canonicalTitleId
+     * @param data.tmdbTitleId
      * @param data.channelId
      * @returns WhitelistEpisodeOutput Successful Response
      * @throws ApiError
@@ -614,9 +514,9 @@ export class ChannelsService {
     public static getChannelWhitelistFilteredEpisodes(data: ChannelsGetChannelWhitelistFilteredEpisodesData): CancelablePromise<ChannelsGetChannelWhitelistFilteredEpisodesResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/channels/{channel_id}/whitelist/{canonical_title_id}/filtered-episodes',
+            url: '/api/v1/channels/{channel_id}/whitelist/{tmdb_title_id}/filtered-episodes',
             path: {
-                canonical_title_id: data.canonicalTitleId,
+                tmdb_title_id: data.tmdbTitleId,
                 channel_id: data.channelId
             },
             errors: {
@@ -629,7 +529,7 @@ export class ChannelsService {
      * Update Channel Whitelist
      * Update the whitelist/blacklist for a title in a channel.
      * @param data The data for the request.
-     * @param data.canonicalTitleId
+     * @param data.tmdbTitleId
      * @param data.channelId
      * @param data.requestBody
      * @returns WhitelistTitleOutput Successful Response
@@ -638,9 +538,9 @@ export class ChannelsService {
     public static updateChannelWhitelist(data: ChannelsUpdateChannelWhitelistData): CancelablePromise<ChannelsUpdateChannelWhitelistResponse> {
         return __request(OpenAPI, {
             method: 'PATCH',
-            url: '/api/v1/channels/{channel_id}/whitelist/{canonical_title_id}',
+            url: '/api/v1/channels/{channel_id}/whitelist/{tmdb_title_id}',
             path: {
-                canonical_title_id: data.canonicalTitleId,
+                tmdb_title_id: data.tmdbTitleId,
                 channel_id: data.channelId
             },
             body: data.requestBody,
@@ -655,7 +555,7 @@ export class ChannelsService {
      * Get Channel Whitelist
      * Read the sites and seasons of a title's filters in a channel.
      * @param data The data for the request.
-     * @param data.canonicalTitleId
+     * @param data.tmdbTitleId
      * @param data.channelId
      * @returns WhitelistTitleOutput Successful Response
      * @throws ApiError
@@ -663,9 +563,9 @@ export class ChannelsService {
     public static getChannelWhitelist(data: ChannelsGetChannelWhitelistData): CancelablePromise<ChannelsGetChannelWhitelistResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/channels/{channel_id}/whitelist/{canonical_title_id}',
+            url: '/api/v1/channels/{channel_id}/whitelist/{tmdb_title_id}',
             path: {
-                canonical_title_id: data.canonicalTitleId,
+                tmdb_title_id: data.tmdbTitleId,
                 channel_id: data.channelId
             },
             errors: {
@@ -794,7 +694,7 @@ export class ChannelsService {
      * Delete Channel Title
      * Remove a title, on every website it is on, from a `Channel`.
      * @param data The data for the request.
-     * @param data.canonicalTitleId
+     * @param data.tmdbTitleId
      * @param data.channelId
      * @returns Message Successful Response
      * @throws ApiError
@@ -802,9 +702,9 @@ export class ChannelsService {
     public static deleteChannelTitle(data: ChannelsDeleteChannelTitleData): CancelablePromise<ChannelsDeleteChannelTitleResponse> {
         return __request(OpenAPI, {
             method: 'DELETE',
-            url: '/api/v1/channels/{channel_id}/remove-title/{canonical_title_id}',
+            url: '/api/v1/channels/{channel_id}/remove-title/{tmdb_title_id}',
             path: {
-                canonical_title_id: data.canonicalTitleId,
+                tmdb_title_id: data.tmdbTitleId,
                 channel_id: data.channelId
             },
             errors: {
@@ -985,6 +885,7 @@ export class ChannelsService {
      * @param data.channelId
      * @param data.offset
      * @param data.limit
+     * @param data.query
      * @returns ChannelTitlesOutput Successful Response
      * @throws ApiError
      */
@@ -997,7 +898,8 @@ export class ChannelsService {
             },
             query: {
                 offset: data.offset,
-                limit: data.limit
+                limit: data.limit,
+                query: data.query
             },
             errors: {
                 422: 'Validation Error'
@@ -1009,7 +911,7 @@ export class ChannelsService {
      * Get Channel Title Stats
      * @param data The data for the request.
      * @param data.channelId
-     * @param data.canonicalTitleIds
+     * @param data.tmdbTitleIds
      * @returns ChannelTitleStats Successful Response
      * @throws ApiError
      */
@@ -1021,7 +923,7 @@ export class ChannelsService {
                 channel_id: data.channelId
             },
             query: {
-                canonical_title_ids: data.canonicalTitleIds
+                tmdb_title_ids: data.tmdbTitleIds
             },
             errors: {
                 422: 'Validation Error'
@@ -1055,7 +957,7 @@ export class ChannelsService {
      * Read one page of a season's episodes, as the filter page expands it.
      * @param data The data for the request.
      * @param data.seasonId
-     * @param data.canonicalTitleId
+     * @param data.tmdbTitleId
      * @param data.channelId
      * @param data.offset
      * @param data.limit
@@ -1065,10 +967,10 @@ export class ChannelsService {
     public static getChannelWhitelistEpisodes(data: ChannelsGetChannelWhitelistEpisodesData): CancelablePromise<ChannelsGetChannelWhitelistEpisodesResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/channels/{channel_id}/whitelist/{canonical_title_id}/seasons/{season_id}/episodes',
+            url: '/api/v1/channels/{channel_id}/whitelist/{tmdb_title_id}/seasons/{season_id}/episodes',
             path: {
                 season_id: data.seasonId,
-                canonical_title_id: data.canonicalTitleId,
+                tmdb_title_id: data.tmdbTitleId,
                 channel_id: data.channelId
             },
             query: {
@@ -1438,17 +1340,17 @@ export class EpisodesService {
     }
     
     /**
-     * Get Non Canonical Episodes
+     * Get Linked Episodes
      * Get every website's row standing for an `Episode`.
      * @param data The data for the request.
      * @param data.episodeId
      * @returns EpisodeListOutput Successful Response
      * @throws ApiError
      */
-    public static getNonCanonicalEpisodes(data: EpisodesGetNonCanonicalEpisodesData): CancelablePromise<EpisodesGetNonCanonicalEpisodesResponse> {
+    public static getLinkedEpisodes(data: EpisodesGetLinkedEpisodesData): CancelablePromise<EpisodesGetLinkedEpisodesResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/episodes/{episode_id}/non-canonical',
+            url: '/api/v1/episodes/{episode_id}/linked',
             path: {
                 episode_id: data.episodeId
             },
@@ -1493,7 +1395,8 @@ export class EpisodesService {
      * @param data.filterOptions
      * @param data.offset
      * @param data.limit
-     * @param data.nonCanonicalTitlesOnly
+     * @param data.linkedTitlesOnly
+     * @param data.inUserChannelsOnly
      * @returns UnmatchedEpisodesPublic Successful Response
      * @throws ApiError
      */
@@ -1506,7 +1409,8 @@ export class EpisodesService {
                 filter_options: data.filterOptions,
                 offset: data.offset,
                 limit: data.limit,
-                non_canonical_titles_only: data.nonCanonicalTitlesOnly
+                linked_titles_only: data.linkedTitlesOnly,
+                in_user_channels_only: data.inUserChannelsOnly
             },
             errors: {
                 422: 'Validation Error'
@@ -1536,18 +1440,18 @@ export class EpisodesService {
     }
     
     /**
-     * Admin Get Duplicated Canonical Episodes
+     * Admin Get Duplicated Tmdb Episodes
      * Get every canonical `Episode` that has multiple non-canonical `Episode`s linked to
      * it from a single source.
      * @param data The data for the request.
      * @param data.limit
-     * @returns DuplicatedCanonicalEpisodeOutput Successful Response
+     * @returns DuplicatedTmdbEpisodeOutput Successful Response
      * @throws ApiError
      */
-    public static adminGetDuplicatedCanonicalEpisodes(data: EpisodesAdminGetDuplicatedCanonicalEpisodesData = {}): CancelablePromise<EpisodesAdminGetDuplicatedCanonicalEpisodesResponse> {
+    public static adminGetDuplicatedTmdbEpisodes(data: EpisodesAdminGetDuplicatedTmdbEpisodesData = {}): CancelablePromise<EpisodesAdminGetDuplicatedTmdbEpisodesResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/episodes/duplicated-canonical-episodes',
+            url: '/api/v1/episodes/duplicated-tmdb-episodes',
             query: {
                 limit: data.limit
             },
@@ -1589,6 +1493,26 @@ export class EpisodesService {
             url: '/api/v1/episodes/tmdb-absent',
             body: data.requestBody,
             mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Get Episode Database Rows
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @returns EpisodeDatabaseOutput Successful Response
+     * @throws ApiError
+     */
+    public static adminGetEpisodeDatabaseRows(data: EpisodesAdminGetEpisodeDatabaseRowsData): CancelablePromise<EpisodesAdminGetEpisodeDatabaseRowsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/episodes/{episode_id}/database',
+            path: {
+                episode_id: data.episodeId
+            },
             errors: {
                 422: 'Validation Error'
             }
@@ -1660,20 +1584,20 @@ export class EpisodesService {
      *
      * Added to whatever the row already stands for rather than put in its place,
      * since a website running two episodes together in one listing is a thing
-     * websites do. Taking one off is `admin_unlink_episode_from_canonical`.
+     * websites do. Taking one off is `admin_unlink_episode_from_tmdb_episode`.
      * @param data The data for the request.
      * @param data.episodeId
-     * @param data.canonicalEpisodeId
+     * @param data.tmdbEpisodeId
      * @returns EpisodeOutput Successful Response
      * @throws ApiError
      */
     public static adminLinkEpisodeToTmdb(data: EpisodesAdminLinkEpisodeToTmdbData): CancelablePromise<EpisodesAdminLinkEpisodeToTmdbResponse> {
         return __request(OpenAPI, {
             method: 'PUT',
-            url: '/api/v1/episodes/{episode_id}/canonical/{canonical_episode_id}',
+            url: '/api/v1/episodes/{episode_id}/tmdb/{tmdb_episode_id}',
             path: {
                 episode_id: data.episodeId,
-                canonical_episode_id: data.canonicalEpisodeId
+                tmdb_episode_id: data.tmdbEpisodeId
             },
             errors: {
                 422: 'Validation Error'
@@ -1682,21 +1606,21 @@ export class EpisodesService {
     }
     
     /**
-     * Admin Unlink Episode From Canonical
+     * Admin Unlink Episode From Tmdb Episode
      * Take one episode off what an `Episode` stands for.
      * @param data The data for the request.
      * @param data.episodeId
-     * @param data.canonicalEpisodeId
+     * @param data.tmdbEpisodeId
      * @returns EpisodeOutput Successful Response
      * @throws ApiError
      */
-    public static adminUnlinkEpisodeFromCanonical(data: EpisodesAdminUnlinkEpisodeFromCanonicalData): CancelablePromise<EpisodesAdminUnlinkEpisodeFromCanonicalResponse> {
+    public static adminUnlinkEpisodeFromTmdbEpisode(data: EpisodesAdminUnlinkEpisodeFromTmdbEpisodeData): CancelablePromise<EpisodesAdminUnlinkEpisodeFromTmdbEpisodeResponse> {
         return __request(OpenAPI, {
             method: 'DELETE',
-            url: '/api/v1/episodes/{episode_id}/canonical/{canonical_episode_id}',
+            url: '/api/v1/episodes/{episode_id}/tmdb/{tmdb_episode_id}',
             path: {
                 episode_id: data.episodeId,
-                canonical_episode_id: data.canonicalEpisodeId
+                tmdb_episode_id: data.tmdbEpisodeId
             },
             errors: {
                 422: 'Validation Error'
@@ -1767,17 +1691,17 @@ export class EpisodesService {
     }
     
     /**
-     * Admin Verify Canonical Link
+     * Admin Verify Tmdb Link
      * Settle the canonical links an `Episode` already carries, and lock them.
      * @param data The data for the request.
      * @param data.episodeId
      * @returns EpisodeOutput Successful Response
      * @throws ApiError
      */
-    public static adminVerifyCanonicalLink(data: EpisodesAdminVerifyCanonicalLinkData): CancelablePromise<EpisodesAdminVerifyCanonicalLinkResponse> {
+    public static adminVerifyTmdbLink(data: EpisodesAdminVerifyTmdbLinkData): CancelablePromise<EpisodesAdminVerifyTmdbLinkResponse> {
         return __request(OpenAPI, {
             method: 'PUT',
-            url: '/api/v1/episodes/{episode_id}/verify-canonical-link',
+            url: '/api/v1/episodes/{episode_id}/verify-tmdb-link',
             path: {
                 episode_id: data.episodeId
             },
@@ -2783,16 +2707,16 @@ export class TitlesService {
     }
     
     /**
-     * Get Non Canonical Titles
+     * Get Linked Titles
      * @param data The data for the request.
      * @param data.titleId
      * @returns TitleListPublic Successful Response
      * @throws ApiError
      */
-    public static getNonCanonicalTitles(data: TitlesGetNonCanonicalTitlesData): CancelablePromise<TitlesGetNonCanonicalTitlesResponse> {
+    public static getLinkedTitles(data: TitlesGetLinkedTitlesData): CancelablePromise<TitlesGetLinkedTitlesResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/titles/{title_id}/non-canonical',
+            url: '/api/v1/titles/{title_id}/linked',
             path: {
                 title_id: data.titleId
             },
@@ -2803,7 +2727,7 @@ export class TitlesService {
     }
     
     /**
-     * Admin Link Title To Canonical
+     * Admin Link Title To Tmdb
      * Add the canonical title an admin chose to what a `Title` stands for.
      *
      * Its own endpoint rather than part of the update, because the link is a row of
@@ -2812,20 +2736,20 @@ export class TitlesService {
      *
      * Added to whatever the row already stands for rather than put in its place,
      * since one page holding two titles is a thing websites do. Taking one off is
-     * `admin_unlink_title_from_canonical`.
+     * `admin_unlink_title_from_tmdb`.
      * @param data The data for the request.
      * @param data.titleId
-     * @param data.canonicalTitleId
+     * @param data.tmdbTitleId
      * @returns TitlePublic Successful Response
      * @throws ApiError
      */
-    public static adminLinkTitleToCanonical(data: TitlesAdminLinkTitleToCanonicalData): CancelablePromise<TitlesAdminLinkTitleToCanonicalResponse> {
+    public static adminLinkTitleToTmdb(data: TitlesAdminLinkTitleToTmdbData): CancelablePromise<TitlesAdminLinkTitleToTmdbResponse> {
         return __request(OpenAPI, {
             method: 'PUT',
-            url: '/api/v1/titles/{title_id}/canonical/{canonical_title_id}',
+            url: '/api/v1/titles/{title_id}/tmdb/{tmdb_title_id}',
             path: {
                 title_id: data.titleId,
-                canonical_title_id: data.canonicalTitleId
+                tmdb_title_id: data.tmdbTitleId
             },
             errors: {
                 422: 'Validation Error'
@@ -2834,21 +2758,21 @@ export class TitlesService {
     }
     
     /**
-     * Admin Unlink Title From Canonical
+     * Admin Unlink Title From Tmdb
      * Take one canonical title off what a `Title` stands for.
      * @param data The data for the request.
      * @param data.titleId
-     * @param data.canonicalTitleId
+     * @param data.tmdbTitleId
      * @returns TitlePublic Successful Response
      * @throws ApiError
      */
-    public static adminUnlinkTitleFromCanonical(data: TitlesAdminUnlinkTitleFromCanonicalData): CancelablePromise<TitlesAdminUnlinkTitleFromCanonicalResponse> {
+    public static adminUnlinkTitleFromTmdb(data: TitlesAdminUnlinkTitleFromTmdbData): CancelablePromise<TitlesAdminUnlinkTitleFromTmdbResponse> {
         return __request(OpenAPI, {
             method: 'DELETE',
-            url: '/api/v1/titles/{title_id}/canonical/{canonical_title_id}',
+            url: '/api/v1/titles/{title_id}/tmdb/{tmdb_title_id}',
             path: {
                 title_id: data.titleId,
-                canonical_title_id: data.canonicalTitleId
+                tmdb_title_id: data.tmdbTitleId
             },
             errors: {
                 422: 'Validation Error'
@@ -2867,7 +2791,7 @@ export class TitlesService {
     public static adminLinkTitleByTmdbUrl(data: TitlesAdminLinkTitleByTmdbUrlData): CancelablePromise<TitlesAdminLinkTitleByTmdbUrlResponse> {
         return __request(OpenAPI, {
             method: 'PUT',
-            url: '/api/v1/titles/{title_id}/canonical-by-tmdb-url',
+            url: '/api/v1/titles/{title_id}/tmdb-by-url',
             path: {
                 title_id: data.titleId
             },
@@ -2880,17 +2804,17 @@ export class TitlesService {
     }
     
     /**
-     * Admin Link Non Canonical Title By Url
+     * Admin Link Linked Title By Url
      * @param data The data for the request.
      * @param data.titleId
      * @param data.requestBody
      * @returns TitlePublic Successful Response
      * @throws ApiError
      */
-    public static adminLinkNonCanonicalTitleByUrl(data: TitlesAdminLinkNonCanonicalTitleByUrlData): CancelablePromise<TitlesAdminLinkNonCanonicalTitleByUrlResponse> {
+    public static adminLinkLinkedTitleByUrl(data: TitlesAdminLinkLinkedTitleByUrlData): CancelablePromise<TitlesAdminLinkLinkedTitleByUrlResponse> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/v1/titles/{title_id}/non-canonical-by-url',
+            url: '/api/v1/titles/{title_id}/linked-by-url',
             path: {
                 title_id: data.titleId
             },
@@ -2903,16 +2827,16 @@ export class TitlesService {
     }
     
     /**
-     * Admin Canonicalize Title
+     * Admin Unlink Title
      * @param data The data for the request.
      * @param data.titleId
      * @returns TitlePublic Successful Response
      * @throws ApiError
      */
-    public static adminCanonicalizeTitle(data: TitlesAdminCanonicalizeTitleData): CancelablePromise<TitlesAdminCanonicalizeTitleResponse> {
+    public static adminUnlinkTitle(data: TitlesAdminUnlinkTitleData): CancelablePromise<TitlesAdminUnlinkTitleResponse> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/v1/titles/{title_id}/canonicalize',
+            url: '/api/v1/titles/{title_id}/unlink',
             path: {
                 title_id: data.titleId
             },
@@ -2998,6 +2922,106 @@ export class TitlesService {
             url: '/api/v1/titles/{title_id}/tmdb-episode-groups',
             path: {
                 title_id: data.titleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class TmdbEpisodesService {
+    /**
+     * Get Tmdb Episode By Id
+     * Get a `Episode`, with the season and title above it.
+     * @param data The data for the request.
+     * @param data.tmdbEpisodeId
+     * @returns TmdbEpisodeRecord Successful Response
+     * @throws ApiError
+     */
+    public static getTmdbEpisodeById(data: TmdbEpisodesGetTmdbEpisodeByIdData): CancelablePromise<TmdbEpisodesGetTmdbEpisodeByIdResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/episodes/tmdb/{tmdb_episode_id}',
+            path: {
+                tmdb_episode_id: data.tmdbEpisodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Tmdb Episodes
+     * Get every `Episode`.
+     * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @returns TmdbEpisodesPublic Successful Response
+     * @throws ApiError
+     */
+    public static getTmdbEpisodes(data: TmdbEpisodesGetTmdbEpisodesData = {}): CancelablePromise<TmdbEpisodesGetTmdbEpisodesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/episodes/tmdb',
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class TmdbTitlesService {
+    /**
+     * Get Tmdb Title By Id
+     * Get a `Title`.
+     * @param data The data for the request.
+     * @param data.tmdbTitleId
+     * @returns TmdbTitleOutput Successful Response
+     * @throws ApiError
+     */
+    public static getTmdbTitleById(data: TmdbTitlesGetTmdbTitleByIdData): CancelablePromise<TmdbTitlesGetTmdbTitleByIdResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/titles/tmdb/{tmdb_title_id}',
+            path: {
+                tmdb_title_id: data.tmdbTitleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Tmdb Titles
+     * Get every `Title`.
+     * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @returns TmdbTitlesPublic Successful Response
+     * @throws ApiError
+     */
+    public static getTmdbTitles(data: TmdbTitlesGetTmdbTitlesData = {}): CancelablePromise<TmdbTitlesGetTmdbTitlesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/titles/tmdb',
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit
             },
             errors: {
                 422: 'Validation Error'

@@ -19,7 +19,7 @@ export interface Title {
   url?: string | null
   media_type?: string | null
   tmdb_id?: number | null
-  canonical_title_id?: string | null
+  tmdb_title_id?: string | null
   image_url?: string | null
   thumbnail_url?: string | null
   year?: number | null
@@ -32,11 +32,11 @@ export interface Source {
 }
 
 // One card: the title, and every website's row standing for it. The title is
-// what a card's actions are about, so it is named by `canonicalTitleId` rather
+// what a card's actions are about, so it is named by `tmdbTitleId` rather
 // than by any of the rows, which a website that files two titles under one page
 // leaves standing for both.
 export interface TitleGroup {
-  canonicalTitleId: string
+  tmdbTitleId: string
   name: string
 }
 
@@ -126,7 +126,7 @@ function useSourceDisabled(): (source: Source | undefined) => boolean {
 /**
  * Group titles that are the same title, keeping the order they arrived in.
  *
- * `canonical_title_id` names the title itself rather than one service's
+ * `tmdb_title_id` names the title itself rather than one service's
  * non-canonical row of it, so it is the whole of the grouping. A non-canonical
  * row that has no title yet stands for itself under its own id, rather than
  * every such row reading as one title.
@@ -134,7 +134,7 @@ function useSourceDisabled(): (source: Source | undefined) => boolean {
 export function groupTitles(titles: Title[]): Title[][] {
   const groups = new Map<string, Title[]>()
   for (const title of titles) {
-    const key = title.canonical_title_id ?? title.id
+    const key = title.tmdb_title_id ?? title.id
     const group = groups.get(key)
     if (group) {
       group.push(title)
@@ -175,14 +175,14 @@ function useTitleGroups(titles: Title[], sources: Record<string, Source>) {
  * nothing to say here.
  */
 function titleFacts(
-  canonicalTitle: Title | undefined,
+  tmdbTitle: Title | undefined,
   stats: ChannelTitleStats | undefined,
 ): string[] {
-  const facts = [canonicalTitle?.media_type ?? "Not linked to TMDB"]
+  const facts = [tmdbTitle?.media_type ?? "Not linked to TMDB"]
   // A movie is one episode of one season by construction, so counting them says
   // nothing the "Movie" note has not already said.
   const countsAreImplied =
-    canonicalTitle?.media_type === "Movie" &&
+    tmdbTitle?.media_type === "Movie" &&
     stats?.season_count === 1 &&
     stats?.episode_count === 1
   if (countsAreImplied) {
@@ -212,8 +212,8 @@ function titleFacts(
 export function TitleCards({
   titles,
   sources,
-  canonicalTitles = {},
-  canonicalSources = {},
+  tmdbTitles = {},
+  tmdbSources = {},
   stats = {},
   renderActions,
   renderExpanded,
@@ -221,10 +221,10 @@ export function TitleCards({
 }: {
   titles: Title[]
   sources: Record<string, Source>
-  /** The title itself behind each row, keyed by `canonical_title_id`. */
-  canonicalTitles?: Record<string, Title>
-  /** The source each title itself was written by, keyed by `canonical_title_id`. */
-  canonicalSources?: Record<string, Source>
+  /** The title itself behind each row, keyed by `tmdb_title_id`. */
+  tmdbTitles?: Record<string, Title>
+  /** The source each title itself was written by, keyed by `tmdb_title_id`. */
+  tmdbSources?: Record<string, Source>
   stats?: Record<string, ChannelTitleStats>
   renderActions?: (group: TitleGroup) => ReactNode
   renderExpanded?: (group: TitleGroup) => ReactNode
@@ -236,18 +236,16 @@ export function TitleCards({
     <div className="grid items-start justify-start gap-3 grid-cols-[repeat(auto-fill,minmax(min(100%,320px),320px))]">
       {groups.map((group) => {
         const [firstTitle] = group
-        const canonicalTitleId = firstTitle.canonical_title_id ?? firstTitle.id
-        const canonicalTitle = canonicalTitles[canonicalTitleId]
+        const tmdbTitleId = firstTitle.tmdb_title_id ?? firstTitle.id
+        const tmdbTitle = tmdbTitles[tmdbTitleId]
         // The title's own name, falling back to a website's for a title nothing
         // catalogued, which is the only name there is to read it under.
-        const name =
-          (canonicalTitle ? canonicalTitle.name : firstTitle.name) ?? ""
-        const titleGroup: TitleGroup = { canonicalTitleId, name }
+        const name = (tmdbTitle ? tmdbTitle.name : firstTitle.name) ?? ""
+        const titleGroup: TitleGroup = { tmdbTitleId, name }
         // The title's own artwork, for the same reason as its name: a card is
         // one title, and a website's listing of it is only what is left when
         // nothing catalogued the title or the cataloguer held no image.
-        const artwork =
-          canonicalTitle?.thumbnail_url ?? canonicalTitle?.image_url
+        const artwork = tmdbTitle?.thumbnail_url ?? tmdbTitle?.image_url
         const expanded = renderExpanded?.(titleGroup)
         const actions = renderActions?.(titleGroup)
         // A favicon is how a card names a site, so a listing whose site has none
@@ -258,13 +256,13 @@ export function TitleCards({
         // Who wrote the title down, which is not one of the sites carrying it:
         // a card is one title, and the row of sites underneath is where it can
         // be watched.
-        const canonicalSource = canonicalSources[canonicalTitleId]
+        const tmdbSource = tmdbSources[tmdbTitleId]
 
         return (
           // A card is one title, and the same listing can be a card under each of
           // the titles it mixes, so the title names the card rather than the
           // non-canonical row.
-          <Fragment key={titleGroup.canonicalTitleId}>
+          <Fragment key={titleGroup.tmdbTitleId}>
             <Card className="relative gap-0 overflow-hidden py-0 hover:border-primary">
               {/* The whole card opens the title, since everything on it is about
                   that one title. */}
@@ -284,25 +282,23 @@ export function TitleCards({
                   />
                   {/* Who the title is catalogued by sits over the artwork, apart
                       from the row of sites it can be watched on. */}
-                  {canonicalSource?.favicon_url && (
+                  {tmdbSource?.favicon_url && (
                     <span className="absolute top-1 left-1 rounded bg-background/80 p-0.5">
-                      <SourceFavicon source={canonicalSource} />
+                      <SourceFavicon source={tmdbSource} />
                     </span>
                   )}
                 </div>
                 <div className="flex flex-col gap-2 p-3">
                   <span className="wrap-break-word text-sm">
                     <span className="font-bold">{name}</span>
-                    {canonicalTitle?.year ? ` (${canonicalTitle.year})` : ""}
+                    {tmdbTitle?.year ? ` (${tmdbTitle.year})` : ""}
                   </span>
                   <div className="flex flex-wrap items-center gap-1">
-                    {titleFacts(canonicalTitle, stats[canonicalTitleId]).map(
-                      (fact) => (
-                        <Badge key={fact} variant="secondary">
-                          {fact}
-                        </Badge>
-                      ),
-                    )}
+                    {titleFacts(tmdbTitle, stats[tmdbTitleId]).map((fact) => (
+                      <Badge key={fact} variant="secondary">
+                        {fact}
+                      </Badge>
+                    ))}
                   </div>
                   <div
                     className={`flex flex-wrap items-center gap-1${actions ? " pr-8" : ""}`}

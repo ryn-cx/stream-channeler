@@ -74,7 +74,7 @@ class BasePreloadMixin(AbstractPlugin, ABC):
             options.append(
                 selectinload(Title.seasons)  # type: ignore[arg-type]
                 .selectinload(Season.episodes)  # type: ignore[arg-type]
-                .selectinload(Episode.canonical_episode_links),  # type: ignore[arg-type]
+                .selectinload(Episode.tmdb_episode_links),  # type: ignore[arg-type]
             )
         elif preload_seasons:
             options.append(selectinload(Title.seasons))  # type: ignore[arg-type]

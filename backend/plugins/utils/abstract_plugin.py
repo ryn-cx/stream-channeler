@@ -188,19 +188,25 @@ class AbstractPlugin(ABC):
         )
 
     # TODO: Validate
+    def _next_plugin_update_at(self) -> datetime | None:
+        return None
+
+    # TODO: Validate
     def update_plugin(self, plugin: Plugin) -> None:
         """Update an existing plugin in the database.
 
         Called when `Plugin.update_at > datetime.now()`.
 
-        By default this will clear `Plugin.update_at`, override to implement `Plugin`
-        specific update logic.
-
         Args:
             plugin: The `Plugin` to update.
 
         """
-        plugin.update_at = None
+        self._update_plugin(plugin)
+        plugin.update_at = self._next_plugin_update_at()
+
+    # TODO: Validate
+    def _update_plugin(self, plugin: Plugin) -> None:  # noqa: ARG002
+        return
 
     # TODO: Validate
     def update_source(self, source: Source, update_at: datetime) -> None:  # noqa: ARG002

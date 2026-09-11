@@ -9,18 +9,18 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import col, func, or_, select
 
-from app.canonical_media.episodes import (
-    canonical_episode_id_column,
-    canonical_episode_link,
-    links_of,
-)
-from app.canonical_media.filters import (
-    is_canonical,
-    is_non_canonical,
-)
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.titles.models import Title
+from app.tmdb_media.episodes import (
+    links_of,
+    tmdb_episode_id_column,
+    tmdb_episode_link,
+)
+from app.tmdb_media.filters import (
+    is_linked,
+    is_not_linked,
+)
 from app.watches.models import Watch
 from app.watches.schemas import WatchExportEntry, WatchImportResult
 from plugins.utils.base_plugin.watch_history import (
@@ -76,7 +76,7 @@ class StreamChannelerWatchHistoryMixin(BaseWatchHistoryMixin):
         named by, so that is what it is exported as.
         """
         named_episode = aliased(Episode)
-        named_link = canonical_episode_link()
+        named_link = tmdb_episode_link()
         watched_episode = aliased(Episode)
         statement = (
             select(
@@ -96,7 +96,7 @@ class StreamChannelerWatchHistoryMixin(BaseWatchHistoryMixin):
             .outerjoin(
                 watched_episode,
                 col(watched_episode.id)
-                == canonical_episode_id_column(named_episode, named_link),
+                == tmdb_episode_id_column(named_episode, named_link),
             )
             .where(Watch.user_id == user.id)
             .distinct()
@@ -161,23 +161,23 @@ class StreamChannelerWatchHistoryMixin(BaseWatchHistoryMixin):
         wanted = set(episode_keys)
         # The episode a link is of is the same table reached again, so which of
         # the two each side means is said outright rather than left to the join.
-        canonical_episode = aliased(Episode)
-        canonical_link = canonical_episode_link()
+        tmdb_episode = aliased(Episode)
+        tmdb_link = tmdb_episode_link()
         links = self._by_named_episode(
             wanted,
             self.session.exec(
-                select(Episode, canonical_episode)  # type: ignore[call-overload]
+                select(Episode, tmdb_episode)  # type: ignore[call-overload]
                 .select_from(Episode)
-                .join(canonical_link, links_of(Episode, canonical_link))
+                .join(tmdb_link, links_of(Episode, tmdb_link))
                 .join(
-                    canonical_episode,
-                    col(canonical_link.canonical_episode_id)
-                    == col(canonical_episode.id),
+                    tmdb_episode,
+                    col(tmdb_link.tmdb_episode_id)
+                    == col(tmdb_episode.id),
                 )
                 .where(
-                    is_non_canonical(Episode),
-                    is_canonical(canonical_episode),
-                    self._names_clause(canonical_episode, wanted),
+                    is_linked(Episode),
+                    is_not_linked(tmdb_episode),
+                    self._names_clause(tmdb_episode, wanted),
                     col(Episode.deleted_at).is_(None),
                 ),
             ),
@@ -192,8 +192,8 @@ class StreamChannelerWatchHistoryMixin(BaseWatchHistoryMixin):
                     .join(Season, col(Episode.season_id) == col(Season.id))
                     .join(Title, col(Season.title_id) == col(Title.id))
                     .where(
-                        is_canonical(Episode),
-                        is_canonical(Title),
+                        is_not_linked(Episode),
+                        is_not_linked(Title),
                         self._names_clause(Episode, wanted),
                         col(Episode.deleted_at).is_(None),
                     ),
@@ -206,7 +206,7 @@ class StreamChannelerWatchHistoryMixin(BaseWatchHistoryMixin):
                 (episode, episode)
                 for episode in self.session.exec(
                     select(Episode).where(
-                        is_non_canonical(Episode),
+                        is_linked(Episode),
                         col(Episode.watch_identifier).in_(wanted),
                         col(Episode.deleted_at).is_(None),
                     ),
@@ -265,20 +265,20 @@ class StreamChannelerWatchHistoryMixin(BaseWatchHistoryMixin):
                 col(Season.title_id) == col(Title.id),
             )
             .where(
-                is_canonical(Episode),
-                is_canonical(Title),
+                is_not_linked(Episode),
+                is_not_linked(Title),
                 self._names_clause(Episode, set(watch_identifiers)),
             )
         )
         wanted = set(watch_identifiers)
         return {
             name: WatchImportResult(
-                title=canonical_title.name or canonical_episode.key,
-                title_url=canonical_title.url or "",
-                episode=canonical_episode.name or canonical_episode.key,
-                episode_url=canonical_episode.url or "",
+                title=tmdb_title.name or tmdb_episode.key,
+                title_url=tmdb_title.url or "",
+                episode=tmdb_episode.name or tmdb_episode.key,
+                episode_url=tmdb_episode.url or "",
             )
-            for canonical_episode, canonical_title in self.session.exec(statement)
-            for name in (canonical_episode.watch_identifier, canonical_episode.key)
+            for tmdb_episode, tmdb_title in self.session.exec(statement)
+            for name in (tmdb_episode.watch_identifier, tmdb_episode.key)
             if name in wanted
         }

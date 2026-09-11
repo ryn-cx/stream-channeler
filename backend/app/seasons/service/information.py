@@ -3,7 +3,6 @@
 
 from sqlmodel import Session
 
-from app.canonical_media.metadata import canonical_season_of
 from app.issue_reports.service.listing import list_season_issue_reports
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.seasons.models import Season
@@ -15,6 +14,7 @@ from app.seasons.schemas import (
 from app.sources.schemas import SourceListPublic
 from app.titles.models import Title
 from app.titles.schemas import TitlePublic
+from app.tmdb_media.metadata import tmdb_season_of
 
 
 # TODO: Validate
@@ -42,11 +42,11 @@ def season_information(session: Session, season: Season) -> SeasonInformationOut
     title = season.title
     source = title.source
 
-    counterpart = canonical_season_of(session, season.id)
+    counterpart = tmdb_season_of(session, season.id)
     tmdb: SeasonInformationSide | None = None
     if counterpart:
-        canonical_season, canonical_title = counterpart
-        tmdb = _information_side(TMDB_PLUGIN_KEY, canonical_season, canonical_title)
+        tmdb_season, tmdb_title = counterpart
+        tmdb = _information_side(TMDB_PLUGIN_KEY, tmdb_season, tmdb_title)
 
     return SeasonInformationOutput(
         issue_reports=list_season_issue_reports(session, season.id),

@@ -29,10 +29,10 @@ from tminidb.tv_series.watch_providers.models import FlatrateItem as TvFlatrateI
 from tminidb.tv_series.watch_providers.models import FreeItem as TvFreeItem
 from tminidb.tv_series.watch_providers.models import TvSeriesWatchProvidersModel
 
-from app.canonical_media.tmdb import (
+from app.media.media_type import TMDBMediaType
+from app.tmdb_media.tmdb import (
     tmdb_season_key,
 )
-from app.media.media_type import TMDBMediaType
 from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.manage_plugins import sorted_plugins
 

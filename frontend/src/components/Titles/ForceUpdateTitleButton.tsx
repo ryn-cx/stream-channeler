@@ -30,7 +30,7 @@ export function ForceUpdateTitleButton({
         queryKey: ["title-information", titleId],
       })
       queryClient.invalidateQueries({ queryKey: ["episode-information"] })
-      queryClient.invalidateQueries({ queryKey: ["canonical-title"] })
+      queryClient.invalidateQueries({ queryKey: ["tmdb-title"] })
       queryClient.invalidateQueries({ queryKey: ["channels"] })
     },
     onError: (error: unknown) =>

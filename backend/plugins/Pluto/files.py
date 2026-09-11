@@ -14,8 +14,8 @@ from notaplanet.seasons import Seasons as SeasonsEndpoint
 from notaplanet.seasons.models import SeasonsModel
 
 from plugins.utils.base_plugin.files import (
-    SingleArgEndpointFile,
     MultipleArgEndpointFile,
+    SingleArgEndpointFile,
 )
 from plugins.utils.get_around_client import get_around_client
 

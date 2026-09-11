@@ -15,37 +15,37 @@ from sqlalchemy.orm import contains_eager
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.canonical_media.filters import is_canonical
-from app.canonical_media.metadata import (
-    canonical_episode_of,
-)
-from app.canonical_media.tmdb import (
-    tmdb_episode_url,
-)
 from app.episodes.models import (
     Episode,
 )
 from app.episodes.schemas import (
-    CanonicalEpisodeRecord,
     EpisodeInformationOutput,
     EpisodeInformationSide,
     EpisodeListOutput,
+    TmdbEpisodeRecord,
 )
 from app.episodes.service.numbering import absolute_numbers_of
 from app.episodes.service.records import _record_fields, episode_record
 from app.episodes.user_urls import (
-    single_canonical_episode_id,
+    single_tmdb_episode_id,
     user_episode_url,
 )
 from app.issue_reports.service.listing import list_episode_issue_reports
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.seasons.models import Season
 from app.titles.models import Title
+from app.tmdb_media.filters import is_not_linked
+from app.tmdb_media.metadata import (
+    tmdb_episode_of,
+)
+from app.tmdb_media.tmdb import (
+    tmdb_episode_url,
+)
 from app.users.models import User
 
 
 # TODO: Validate
-def _select_with_canonical_season_and_title() -> SelectOfScalar[Episode]:
+def _select_with_tmdb_season_and_title() -> SelectOfScalar[Episode]:
     """Select episodes with the season and title above each one already loaded."""
     return (
         select(Episode)
@@ -57,7 +57,7 @@ def _select_with_canonical_season_and_title() -> SelectOfScalar[Episode]:
             Title,
             onclause=col(Season.title_id) == Title.id,
         )
-        .where(is_canonical(Episode), is_canonical(Title))
+        .where(is_not_linked(Episode), is_not_linked(Title))
         .options(
             contains_eager(Episode.season).contains_eager(  # type: ignore[arg-type]
                 Season.title,  # type: ignore[arg-type]
@@ -103,7 +103,7 @@ def episode_information(
     # that is where a canonical row's values come from when TMDB has a record; media it
     # has never heard of is described by its one non-canonical row, so the two sides
     # read alike and the comparison is empty rather than misleading.
-    counterpart = canonical_episode_of(session, episode.sole_canonical_episode_id)
+    counterpart = tmdb_episode_of(session, episode.sole_tmdb_episode_id)
     # Each side counts through its own title, so both titles are counted in one
     # go rather than a query apiece.
     numbers = absolute_numbers_of(
@@ -112,32 +112,32 @@ def episode_information(
     )
     tmdb: EpisodeInformationSide | None = None
     if counterpart:
-        canonical_episode, canonical_season, canonical_title = counterpart
+        tmdb_episode, tmdb_season, tmdb_title = counterpart
         tmdb = _information_side(
             TMDB_PLUGIN_KEY,
-            canonical_episode,
-            canonical_season,
-            canonical_title,
+            tmdb_episode,
+            tmdb_season,
+            tmdb_title,
             tmdb_episode_url(
-                canonical_title.key,
-                canonical_season.season_number,
-                canonical_episode.episode_number,
+                tmdb_title.key,
+                tmdb_season.season_number,
+                tmdb_episode.episode_number,
             ),
-            numbers.get(canonical_episode.id),
+            numbers.get(tmdb_episode.id),
         )
 
-    canonical_episode_id = single_canonical_episode_id(episode)
+    tmdb_episode_id = single_tmdb_episode_id(episode)
     stored_url = (
-        user_episode_url(session, user, canonical_episode_id)
-        if canonical_episode_id
+        user_episode_url(session, user, tmdb_episode_id)
+        if tmdb_episode_id
         else None
     )
 
     return EpisodeInformationOutput(
         episode_id=episode.id,
         user_url=stored_url.url if stored_url else None,
-        canonical_episode_validated_at=episode.canonical_episode_validated_at,
-        canonical_episode_note=episode.canonical_episode_note,
+        tmdb_episode_validated_at=episode.tmdb_episode_validated_at,
+        tmdb_episode_note=episode.tmdb_episode_note,
         issue_reports=list_episode_issue_reports(session, episode.id),
         source=_information_side(
             source.key,
@@ -152,7 +152,7 @@ def episode_information(
 
 
 # TODO: Validate
-def non_canonical_episodes(episode: Episode) -> list[EpisodeListOutput]:
+def linked_episodes(episode: Episode) -> list[EpisodeListOutput]:
     """Get every website's row standing for an `Episode`.
 
     The other end of the link the non-canonical rows are settled by, which only a
@@ -161,18 +161,18 @@ def non_canonical_episodes(episode: Episode) -> list[EpisodeListOutput]:
     """
     return [
         EpisodeListOutput.model_validate(link.episode)
-        for link in episode.non_canonical_episodes
+        for link in episode.linked_episodes
     ]
 
 
 # TODO: Validate
-def canonical_episode_record(
+def tmdb_episode_record(
     session: Session,
-    canonical_episode: Episode,
-) -> CanonicalEpisodeRecord:
+    tmdb_episode: Episode,
+) -> TmdbEpisodeRecord:
     """Read an `Episode` with the season and title above it."""
-    numbers = absolute_numbers_of(session, {canonical_episode.season.title_id})
-    return CanonicalEpisodeRecord(
-        absolute_number=numbers.get(canonical_episode.id),
-        **episode_record(canonical_episode).model_dump(),
+    numbers = absolute_numbers_of(session, {tmdb_episode.season.title_id})
+    return TmdbEpisodeRecord(
+        absolute_number=numbers.get(tmdb_episode.id),
+        **episode_record(tmdb_episode).model_dump(),
     )

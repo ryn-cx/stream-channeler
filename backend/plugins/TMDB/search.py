@@ -7,12 +7,12 @@ from typing import ClassVar, Literal, overload
 from pydantic import BaseModel, Field
 from tminidb.search.multi.models import Result as MultiResult
 
-from app.canonical_media.tmdb import tmdb_title_key
 from app.media.media_type import TMDBMediaType
 from app.plugins.schemas import (
     PluginSearchResult,
     PluginSearchResults,
 )
+from app.tmdb_media.tmdb import tmdb_title_key
 from plugins.TMDB.base_files import TMDBBaseFiles
 from plugins.TMDB.files import (
     SearchMovie,
@@ -139,6 +139,7 @@ class TMDBSearch(TMDBBaseFiles):
         If no initial match is found, the search is repeated without the year because
         the year is not always reliable."""
         search_file = self._fetch_search_file(media_type, query, year)
+        search_file.download_if_outdated()
         if search_file.parsed().results or not year:
             return search_file
         return self._fetch_search_file(media_type, query, None)

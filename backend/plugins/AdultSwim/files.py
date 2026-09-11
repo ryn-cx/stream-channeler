@@ -13,8 +13,7 @@ from pools_closed.show.models import ShowModel
 from pools_closed.shows import Shows as TitlesEndpoint
 from pools_closed.shows.models import ShowsModel
 
-from plugins.utils.base_plugin.files import SingleArgEndpointFile, NoArgsEndpointFile
-from plugins.utils.constants import INCOMPLETE_STATUS
+from plugins.utils.base_plugin.files import NoArgsEndpointFile, SingleArgEndpointFile
 from plugins.utils.get_around_client import get_around_client
 
 
@@ -45,8 +44,3 @@ class TitlesPage(NoArgsEndpointFile[ShowsModel]):
     @override
     def _endpoint(self) -> TitlesEndpoint:
         return pools_closed().shows
-
-    # TODO: Validate
-    @override
-    def _initial_status_after_downloading(self) -> str:
-        return INCOMPLETE_STATUS

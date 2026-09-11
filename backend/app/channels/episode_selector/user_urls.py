@@ -42,21 +42,21 @@ def apply_user_episode_urls(  # noqa: PLR0913 - Every part of the ranking is a s
         session,
         user,
         [
-            row.canonical_episode_id
+            row.tmdb_episode_id
             for row in rows
-            if row.canonical_episode_id is not None
+            if row.tmdb_episode_id is not None
         ],
     )
     if not stored:
         return None
 
-    custom_priority = source_config.priority_for(CUSTOM_MEDIA_SOURCE_KEY)
+    custom_priority = source_config.priority_from(CUSTOM_MEDIA_SOURCE_KEY)
     used = False
     for row in rows:
-        url = stored.get(row.canonical_episode_id)
+        url = stored.get(row.tmdb_episode_id)
         if url is None:
             continue
-        if custom_priority <= source_config.priority_for(source_keys.get(row.id)):
+        if custom_priority <= source_config.priority_from(source_keys.get(row.id)):
             row.url = url
             row.source_id = custom_source.id
             used = True

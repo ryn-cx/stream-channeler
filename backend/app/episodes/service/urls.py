@@ -20,9 +20,9 @@ from app.episodes.schemas import (
     UserEpisodeUrlOutput,
 )
 from app.episodes.user_urls import (
-    canonical_episode_for_url,
     clear_user_episode_url,
     set_user_episode_url,
+    tmdb_episode_from_url,
 )
 from app.users.models import User
 
@@ -35,10 +35,10 @@ def set_episode_url_for_user(
     url: str,
 ) -> UserEpisodeUrlOutput:
     """Point a `User`'s own copy of an `Episode` at a URL of their choosing."""
-    canonical_episode_id = canonical_episode_for_url(episode)
-    record = set_user_episode_url(session, current_user, canonical_episode_id, url)
+    tmdb_episode_id = tmdb_episode_from_url(episode)
+    record = set_user_episode_url(session, current_user, tmdb_episode_id, url)
     return UserEpisodeUrlOutput(
-        canonical_episode_id=canonical_episode_id,
+        tmdb_episode_id=tmdb_episode_id,
         url=record.url,
     )
 
@@ -50,6 +50,6 @@ def clear_episode_url_for_user(
     current_user: User,
 ) -> UserEpisodeUrlOutput:
     """Drop the URL a `User` gave for an `Episode`."""
-    canonical_episode_id = canonical_episode_for_url(episode)
-    clear_user_episode_url(session, current_user, canonical_episode_id)
-    return UserEpisodeUrlOutput(canonical_episode_id=canonical_episode_id, url=None)
+    tmdb_episode_id = tmdb_episode_from_url(episode)
+    clear_user_episode_url(session, current_user, tmdb_episode_id)
+    return UserEpisodeUrlOutput(tmdb_episode_id=tmdb_episode_id, url=None)

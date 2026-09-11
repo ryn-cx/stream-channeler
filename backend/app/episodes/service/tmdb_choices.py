@@ -17,12 +17,6 @@ from collections import defaultdict
 from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, select
 
-from app.canonical_media.episodes import canonical_episode_link, links_of
-from app.canonical_media.filters import is_canonical
-from app.canonical_media.tmdb import (
-    get_tmdb_id,
-    tmdb_key_clause,
-)
 from app.episodes.models import (
     Episode,
 )
@@ -45,6 +39,12 @@ from app.episodes.service.records import _record_fields
 from app.episodes.text_matching import TextMatcher
 from app.seasons.models import Season
 from app.titles.models import Title
+from app.tmdb_media.episodes import links_of, tmdb_episode_link
+from app.tmdb_media.filters import is_not_linked
+from app.tmdb_media.tmdb import (
+    get_tmdb_id,
+    tmdb_key_clause,
+)
 
 
 # TODO: Validate
@@ -68,19 +68,19 @@ def _tmdb_ids_used_by_titles(
         return {}
 
     tmdb_episode = aliased(Episode)
-    tmdb_link = canonical_episode_link()
+    tmdb_link = tmdb_episode_link()
     statement = (
         select(Season.title_id, tmdb_episode.key, Episode, Season, Title)  # type: ignore[call-overload]
         .select_from(Episode)
         .join(tmdb_link, links_of(Episode, tmdb_link))
         .join(
             tmdb_episode,
-            onclause=col(tmdb_link.canonical_episode_id) == tmdb_episode.id,
+            onclause=col(tmdb_link.tmdb_episode_id) == tmdb_episode.id,
         )
         .join(Season, onclause=col(Episode.season_id) == Season.id)
         .join(Title, onclause=col(Season.title_id) == Title.id)
         .where(
-            is_canonical(tmdb_episode),
+            is_not_linked(tmdb_episode),
             col(Season.title_id).in_(title_ids),
             tmdb_key_clause(col(tmdb_episode.key)),
             col(Episode.deleted_at).is_(None),
@@ -141,7 +141,7 @@ def list_tmdb_episode_choices(
             limit,
         )
 
-    tmdb_title_ids = episode_to_link.season.title.canonical_title_ids
+    tmdb_title_ids = episode_to_link.season.title.tmdb_title_ids
     if not tmdb_title_ids:
         return []
     unique_tmdb_title_ids = set(tmdb_title_ids)
@@ -179,8 +179,8 @@ def _named_tmdb_episodes(
         .join(Season, onclause=col(Episode.season_id) == Season.id)
         .join(Title, onclause=col(Season.title_id) == Title.id)
         .where(
-            is_canonical(Episode),
-            is_canonical(Title),
+            is_not_linked(Episode),
+            is_not_linked(Title),
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
             col(Title.deleted_at).is_(None),
@@ -210,8 +210,8 @@ def _similar_tmdb_episodes(
         .join(Season, onclause=col(Episode.season_id) == Season.id)
         .join(Title, onclause=col(Season.title_id) == Title.id)
         .where(
-            is_canonical(Episode),
-            is_canonical(Title),
+            is_not_linked(Episode),
+            is_not_linked(Title),
             col(Episode.deleted_at).is_(None),
             col(Season.deleted_at).is_(None),
             col(Title.deleted_at).is_(None),
@@ -312,7 +312,7 @@ def _named_tmdb_episode_choices(
             session=session,
             episode=episode_to_link,
             tmdb_matches=_named_tmdb_episodes(session, search_string, limit),
-            tmdb_title_ids=set(episode_to_link.season.title.canonical_title_ids),
+            tmdb_title_ids=set(episode_to_link.season.title.tmdb_title_ids),
         ),
     )
     return sorted(choices, key=lambda choice: -choice.similarity)

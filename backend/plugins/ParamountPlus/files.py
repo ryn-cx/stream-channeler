@@ -15,7 +15,10 @@ from trivial_minus.movie.models import MovieModel
 from trivial_minus.show import Show as TitleEndpoint
 from trivial_minus.show.models import ShowModel
 
-from plugins.utils.base_plugin.files import SingleArgEndpointFile, MultipleArgEndpointFile
+from plugins.utils.base_plugin.files import (
+    MultipleArgEndpointFile,
+    SingleArgEndpointFile,
+)
 from plugins.utils.get_around_client import get_around_client
 
 if TYPE_CHECKING:

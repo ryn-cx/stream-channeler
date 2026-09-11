@@ -8,10 +8,10 @@ from abc import ABC
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, override
 
-from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.titles.models import Title
+from app.tmdb_media.keys import watch_identifier
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.Roku.constants import DETAILS_URL_REGEX, WATCH_URL_REGEX
 from plugins.Roku.shared import RokuShared

@@ -8,16 +8,13 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import instance_state, set_committed_value
 from sqlmodel import Session, col, select
 
-from app.canonical_media.tmdb import (
-    is_tmdb_key,
-)
 from app.episodes.linking.rules import (
     season_and_episode_number_key,
     single,
     unambiguous_lookup,
 )
 from app.episodes.linking.tmdb_facts import TmdbEpisodeFacts
-from app.episodes.models import Episode, EpisodeCanonicalEpisode
+from app.episodes.models import Episode, EpisodeTmdbEpisode
 from app.episodes.name_matching import (
     is_only_numbered_name,
     is_untitled_name,
@@ -29,6 +26,9 @@ from app.episodes.preload import DEPRECATED_preload_episodes
 from app.episodes.service.numbering import absolute_numbers
 from app.episodes.text_matching import TextMatcher
 from app.titles.models import Title
+from app.tmdb_media.tmdb import (
+    is_tmdb_key,
+)
 
 
 # TODO: Validate
@@ -37,7 +37,7 @@ class EpisodeLinker:
     def __init__(self, session: Session, title: Title) -> None:
         self.session = session
         self.title = title
-        DEPRECATED_preload_episodes(session, [title, *title.canonical_titles])
+        DEPRECATED_preload_episodes(session, [title, *title.tmdb_titles])
         episodes = [
             episode
             for season in title.active_children
@@ -49,28 +49,28 @@ class EpisodeLinker:
         self.unnamed_episodes = [
             episode for episode in episodes if self._has_blacklisted_name(episode)
         ]
-        self.canonical_episodes = [
+        self.tmdb_episodes = [
             episode
-            for canonical_title in title.canonical_titles
-            for season in canonical_title.active_children
+            for tmdb_title in title.tmdb_titles
+            for season in tmdb_title.active_children
             for episode in season.active_children
             if is_tmdb_key(episode.key)
         ]
         self.season_numbers = {
             episode.id: season.season_number
-            for parent in (title, *title.canonical_titles)
+            for parent in (title, *title.tmdb_titles)
             for season in parent.active_children
             for episode in season.active_children
         }
         self.facts = TmdbEpisodeFacts(
             session,
-            title.canonical_titles,
-            self.canonical_episodes,
+            title.tmdb_titles,
+            self.tmdb_episodes,
         )
         self.facts.preload()
-        DEPRECATED_preload_episodes(session, [title, *title.canonical_titles])
+        DEPRECATED_preload_episodes(session, [title, *title.tmdb_titles])
         self.absolute_numbers: dict[uuid.UUID, int] = {}
-        for parent in (title, *title.canonical_titles):
+        for parent in (title, *title.tmdb_titles):
             self.absolute_numbers |= absolute_numbers(
                 [
                     (episode.id, season.season_number, episode.episode_number)
@@ -79,47 +79,47 @@ class EpisodeLinker:
                 ],
             )
         self._load_existing_links(
-            [*self.episodes, *self.unnamed_episodes, *self.canonical_episodes],
+            [*self.episodes, *self.unnamed_episodes, *self.tmdb_episodes],
         )
 
     # TODO: Validate
-    def _load_canonical_flags(self, episodes: Sequence[Episode]) -> None:
+    def _load_linked_flags(self, episodes: Sequence[Episode]) -> None:
         expired = {
             episode.id: episode
             for episode in episodes
-            if "is_canonical" in instance_state(episode).unloaded
+            if "is_linked" in instance_state(episode).unloaded
         }
         if not expired:
             return
         rows = self.session.exec(
-            select(Episode.id, Episode.is_canonical).where(
+            select(Episode.id, Episode.is_linked).where(
                 col(Episode.id).in_(list(expired)),
             ),
         ).all()
-        for episode_id, is_canonical in rows:
-            set_committed_value(expired[episode_id], "is_canonical", is_canonical)
+        for episode_id, is_linked in rows:
+            set_committed_value(expired[episode_id], "is_linked", is_linked)
 
     # TODO: Validate
     def _load_existing_links(self, episodes: Sequence[Episode]) -> None:
-        self._load_canonical_flags(episodes)
+        self._load_linked_flags(episodes)
         unread = [
             episode
             for episode in episodes
-            if "canonical_episode_links" in instance_state(episode).unloaded
+            if "tmdb_episode_links" in instance_state(episode).unloaded
         ]
         for episode in unread:
-            if episode.is_canonical:
-                set_committed_value(episode, "canonical_episode_links", [])
+            if not episode.is_linked:
+                set_committed_value(episode, "tmdb_episode_links", [])
 
-        linked = [episode.id for episode in unread if not episode.is_canonical]
+        linked = [episode.id for episode in unread if episode.is_linked]
         if not linked:
             return
         self.session.exec(
             select(Episode)
             .where(col(Episode.id).in_(linked))
             .options(
-                selectinload(Episode.canonical_episode_links).selectinload(  # type: ignore[arg-type]
-                    EpisodeCanonicalEpisode.canonical_episode,  # type: ignore[arg-type]
+                selectinload(Episode.tmdb_episode_links).selectinload(  # type: ignore[arg-type]
+                    EpisodeTmdbEpisode.tmdb_episode,  # type: ignore[arg-type]
                 ),
             ),
         ).all()
@@ -187,7 +187,7 @@ class EpisodeLinker:
         texts_of: Callable[[Episode], Collection[str]],
     ) -> dict[str, set[Episode]]:
         index: dict[str, set[Episode]] = {}
-        for tmdb_episode in self.canonical_episodes:
+        for tmdb_episode in self.tmdb_episodes:
             for candidate_text in texts_of(tmdb_episode):
                 if key := plaintext(candidate_text):
                     index.setdefault(key, set()).add(tmdb_episode)
@@ -208,7 +208,7 @@ class EpisodeLinker:
         texts_of: Callable[[Episode], Collection[str]],
     ) -> dict[str, set[Episode]]:
         index: dict[str, set[Episode]] = {}
-        for tmdb_episode in self.canonical_episodes:
+        for tmdb_episode in self.tmdb_episodes:
             for candidate_text in texts_of(tmdb_episode):
                 if key := loose_plaintext(candidate_text):
                     index.setdefault(key, set()).add(tmdb_episode)
@@ -402,18 +402,18 @@ class EpisodeLinker:
     # TODO: Validate
     @staticmethod
     def _unlinked(episodes: list[Episode]) -> list[Episode]:
-        return [episode for episode in episodes if not episode.canonical_episode_links]
+        return [episode for episode in episodes if not episode.tmdb_episode_links]
 
     # TODO: Validate
     def _claim(self, episode: Episode, tmdb_episode: Episode, note: str) -> None:
-        link = EpisodeCanonicalEpisode(
+        link = EpisodeTmdbEpisode(
             episode_id=episode.id,
-            canonical_episode_id=tmdb_episode.id,
+            tmdb_episode_id=tmdb_episode.id,
             note=note,
         )
         link.episode = episode
-        link.canonical_episode = tmdb_episode
-        episode.canonical_episode_links.append(link)
+        link.tmdb_episode = tmdb_episode
+        episode.tmdb_episode_links.append(link)
         self.session.add(link)
 
     # TODO: Validate
@@ -425,7 +425,7 @@ class EpisodeLinker:
     ) -> Callable[[list[Episode]], list[Episode]]:
         # TODO: Validate
         def step(episodes: list[Episode]) -> list[Episode]:
-            index = unambiguous_lookup(self.canonical_episodes, keys_of)
+            index = unambiguous_lookup(self.tmdb_episodes, keys_of)
             for episode in episodes:
                 key = key_of(episode)
                 if key is None:
@@ -458,16 +458,16 @@ class EpisodeLinker:
             and episode.episode_number == tmdb_episode.episode_number
         ):
             return True
-        canonical_absolute = self._absolute_number_of(tmdb_episode)
-        if canonical_absolute is not None and (
-            episode.episode_number == canonical_absolute
+        tmdb_absolute = self._absolute_number_of(tmdb_episode)
+        if tmdb_absolute is not None and (
+            episode.episode_number == tmdb_absolute
         ):
             return True
         absolute_number = self._absolute_number_of(episode)
         if absolute_number is None:
             return False
         return (
-            absolute_number == canonical_absolute
+            absolute_number == tmdb_absolute
             or absolute_number in self.facts.alternate_numbers_of(tmdb_episode)
         )
 
@@ -561,7 +561,7 @@ class EpisodeLinker:
     ]:
         entries = [
             (tmdb_episode, text)
-            for tmdb_episode in self.canonical_episodes
+            for tmdb_episode in self.tmdb_episodes
             for text in texts_of(tmdb_episode)
         ]
         if not entries:

@@ -18,9 +18,6 @@ from sqlmodel import (
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.canonical_media.tmdb import (
-    get_tmdb_id,
-)
 from app.models import (
     BaseMediaMixin,
     ChildMediaMixin,
@@ -30,6 +27,9 @@ from app.models import (
 )
 from app.plugins.models import Plugin
 from app.sources.models import Source
+from app.tmdb_media.tmdb import (
+    get_tmdb_id,
+)
 
 if TYPE_CHECKING:
     from app.channels.models import ChannelSourceFilter
@@ -39,11 +39,11 @@ if TYPE_CHECKING:
 # The canonical row is the one a channel sorts on, so these name its columns and no
 # non-canonical row's. Those are only ever ordered by the admin tables, which order by
 # any column they show and so are no reason to index these two.
-CANONICAL_SORTABLE_FIELDS = ["media_type", "name"]
+TMDB_SORTABLE_FIELDS = ["media_type", "name"]
 
 
 # TODO: Validate
-class BaseCanonicalTitle(BaseMediaMixin):
+class BaseTmdbTitle(BaseMediaMixin):
     """The columns a canonical title carries, and so a non-canonical one too."""
 
     name: str | None = Field(default=None)
@@ -59,10 +59,10 @@ class BaseCanonicalTitle(BaseMediaMixin):
 
 
 # TODO: Validate
-class BaseTitle(BaseCanonicalTitle):
+class BaseTitle(BaseTmdbTitle):
     """Base model for a `Title`."""
 
-    canonical_title_validated_at: datetime | None = DateTimeField(default=None)
+    tmdb_title_validated_at: datetime | None = DateTimeField(default=None)
 
 
 # TODO: Validate
@@ -70,7 +70,7 @@ class Title(BaseTitle, ChildMediaMixin[Source, "Season"], table=True):
     """Model representing a title."""
 
     PARENT_ID_FIELD: ClassVar[str] = "source_id"
-    CANONICAL_FLAG_FIELD: ClassVar[str] = "is_canonical"
+    LINKED_FLAG_FIELD: ClassVar[str] = "is_linked"
 
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
         "episode_count",
@@ -78,7 +78,7 @@ class Title(BaseTitle, ChildMediaMixin[Source, "Season"], table=True):
         "started",
     ]
     SORTABLE_FIELDS: ClassVar[list[str]] = (
-        CANONICAL_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS
+        TMDB_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS
     )
 
     __table_args__ = (
@@ -96,12 +96,12 @@ class Title(BaseTitle, ChildMediaMixin[Source, "Season"], table=True):
         # offers one title through several sources writes a row per source under
         # the same key, and every one of them is canonical until TMDB matches it.
         Index(
-            "Title-canonical-key-index",
+            "Title-unlinked-key-index",
             "key",
-            postgresql_where=text("is_canonical IS TRUE"),
+            postgresql_where=text("is_linked IS FALSE"),
         ),
         Index("Title-deleted_at-index", "deleted_at"),
-        Index("Title-is_canonical-index", "is_canonical"),
+        Index("Title-is_linked-index", "is_linked"),
         Index(
             "Title-link_status-index",
             "link_status",
@@ -109,85 +109,79 @@ class Title(BaseTitle, ChildMediaMixin[Source, "Season"], table=True):
         ),
         *sortable_field_indexes(
             "Title",
-            CANONICAL_SORTABLE_FIELDS,
-            where=text("is_canonical IS TRUE"),
+            TMDB_SORTABLE_FIELDS,
+            where=text("is_linked IS FALSE"),
         ),
     )
 
     link_status: str | None = Field(default=None)
 
-    # Whether this row is the title itself rather than one website's row standing for it.
-    # Which canonical titles a non-canonical row stands for is stored in
-    # `TitleCanonicalTitle` and nowhere else, since a website that files two titles under
-    # one page - a YouTube channel whose uploads are two series, a service that sells a
-    # sequel as another season - stands for each of them equally, and a column could
-    # only hold one.
-    is_canonical: bool = Field(default=True)
+    is_linked: bool = Field(default=False)
 
     # Every canonical title this stands for. Nothing about a non-canonical row says which
     # of them a caller with room for one means, so nothing here puts one ahead of
     # another.
-    canonical_title_links: list[TitleCanonicalTitle] = Relationship(
-        back_populates="non_canonical_title",
+    tmdb_title_links: list[TitleTmdbTitle] = Relationship(
+        back_populates="linked_title",
         cascade_delete=True,
-        sa_relationship_kwargs={"foreign_keys": "TitleCanonicalTitle.title_id"},
+        sa_relationship_kwargs={"foreign_keys": "TitleTmdbTitle.title_id"},
     )
 
     # The other end of the same table: every non-canonical row standing for this one,
     # which only a canonical title ever has. A row with both stands for something and is
     # stood for by something, which is the one shape the levels never take.
-    non_canonical_title_links: list[TitleCanonicalTitle] = Relationship(
-        back_populates="canonical_title",
+    linked_title_links: list[TitleTmdbTitle] = Relationship(
+        back_populates="tmdb_title",
         cascade_delete=True,
         sa_relationship_kwargs={
-            "foreign_keys": "TitleCanonicalTitle.canonical_title_id",
+            "foreign_keys": "TitleTmdbTitle.tmdb_title_id",
         },
     )
 
     # TODO: Validate
     @property
-    def canonical_titles(self) -> list[Title]:
+    def tmdb_titles(self) -> list[Title]:
         """Every canonical title this stands for, in the order they were linked."""
-        return [link.canonical_title for link in self.canonical_title_links]
+        return [link.tmdb_title for link in self.tmdb_title_links]
 
     # TODO: Validate
     @property
-    def canonical_title_ids(self) -> list[uuid.UUID]:
+    def tmdb_title_ids(self) -> list[uuid.UUID]:
         """The id of every canonical title this stands for.
 
         Read off the links rather than off the titles they point at, since the id
         is a column of the link itself and reading the titles to ask them their
         own ids is a query per link for something already in hand.
         """
-        return [link.canonical_title_id for link in self.canonical_title_links]
+        return [link.tmdb_title_id for link in self.tmdb_title_links]
 
     # TODO: Validate
     @property
-    def sole_canonical_title(self) -> Title | None:
+    def sole_tmdb_title(self) -> Title | None:
         """The canonical title this stands for, where it stands for exactly one.
 
         A row that mixes titles stands for each of them as much as for any other,
         so there is no answer to give a caller with room for one and it is told
         there is none rather than handed whichever came first.
         """
-        canonical_titles = self.canonical_titles
-        if len(canonical_titles) != 1:
+        tmdb_titles = self.tmdb_titles
+        if len(tmdb_titles) != 1:
             return None
-        return canonical_titles[0]
+        return tmdb_titles[0]
 
     # TODO: Validate
     @property
-    def sole_canonical_title_id(self) -> uuid.UUID | None:
+    def sole_tmdb_title_id(self) -> uuid.UUID | None:
         """The id of the canonical title this stands for, where there is one."""
-        canonical_title = self.sole_canonical_title
-        return canonical_title.id if canonical_title else None
+        tmdb_title = self.sole_tmdb_title
+        return tmdb_title.id if tmdb_title else None
 
     # TODO: Validate
     @property
     def tmdb_ids(self) -> list[int]:
         return [
-            get_tmdb_id(canonical_title.key)
-            for canonical_title in self.canonical_titles
+            get_tmdb_id(tmdb_title.key)
+            for tmdb_title in self.tmdb_titles
         ]
 
     # TODO: Validate
@@ -199,10 +193,10 @@ class Title(BaseTitle, ChildMediaMixin[Source, "Season"], table=True):
         non-canonical row and the row it stands for can never disagree about which TMDB
         record that is.
         """
-        canonical_title = self.sole_canonical_title
-        if canonical_title is None:
+        tmdb_title = self.sole_tmdb_title
+        if tmdb_title is None:
             return None
-        return get_tmdb_id(canonical_title.key)
+        return get_tmdb_id(tmdb_title.key)
 
     # What wrote this row. A non-canonical row has the website it was read off, and a
     # canonical title has the plugin that minted it, which is TMDB wherever TMDB has a
@@ -233,10 +227,6 @@ class Title(BaseTitle, ChildMediaMixin[Source, "Season"], table=True):
     @classmethod
     @override
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
-        # Every row has a source and is listed under it, whether it is the record of the
-        # media or a non-canonical row of one. A row is not hidden for being the record:
-        # that is what a title nothing else catalogued looks like, and it is where the
-        # media is watched.
         return select(cls).join(Source).join(Plugin)
 
     # TODO: Validate
@@ -248,7 +238,7 @@ class Title(BaseTitle, ChildMediaMixin[Source, "Season"], table=True):
             # that is served, and it is a table away now rather than a column
             # of the row, so it is fetched with them rather than one at a
             # time.
-            selectinload(cls.canonical_title_links),  # type: ignore[arg-type]
+            selectinload(cls.tmdb_title_links),  # type: ignore[arg-type]
         )
 
     # TODO: Validate
@@ -273,56 +263,49 @@ class Title(BaseTitle, ChildMediaMixin[Source, "Season"], table=True):
     ) -> Self:
         """Upsert the `Title`, keeping the canonical title a `User` chose intact.
 
-        `canonical_title_locked` is only ever set by a `User`, so it is always
-        protected. The canonical titles themselves are rows of `TitleCanonicalTitle`
+        `tmdb_title_locked` is only ever set by a `User`, so it is always
+        protected. The canonical titles themselves are rows of `TitleTmdbTitle`
         rather than a column of this one, so an upsert cannot write them away and
-        what honours the lock is whatever would go on to link them. `is_canonical`
-        is protected with them: a record built fresh off a website's files knows
-        nothing of the links the stored row already carries, and a row that kept
-        its links while being called canonical again would be stood for by other
-        rows and standing for some itself.
+        what honours the lock is whatever would go on to link them.
         """
         protected_keys = set(protected_keys or ()) | {
-            "canonical_title_validated_at",
-            "is_canonical",
+            "tmdb_title_validated_at",
+            "is_linked",
         }
         return super().upsert(parent, existing_record, protected_keys)
 
     # TODO: Validate
     def __str__(self) -> str:
         """Return a string representation of the `Title`."""
-        return stringify_title(self, self.source)
+        base_title = f"{type(self).__name__}:"
+        if self.name:
+            base_title += f" {self.name}"
+        if self.key:
+            base_title += f" ({self.key})"
+        if self.id:
+            base_title += f" ({self.id})"
+        if self.source is None:
+            return base_title
+        return f"{self.source}\n{base_title}"
 
 
 # TODO: Validate
-def stringify_title(title: Title, parent: Source | None) -> str:
-    """Return a string representation."""
-    base_title = f"{type(title).__name__}:"
-    if title.name:
-        base_title += f" {title.name}"
-    if title.key:
-        base_title += f" ({title.key})"
-    if title.id:
-        base_title += f" ({title.id})"
-    if parent is None:
-        return base_title
-    return f"{parent}\n{base_title}"
-
-
-# TODO: Validate
-class BaseTitleCanonicalTitle(SQLModel):
+class BaseTitleTmdbTitle(SQLModel):
     """Base model for one of the canonical titles a `Title` stands for."""
 
     title_id: uuid.UUID = Field(foreign_key="title.id", ondelete="CASCADE")
-    canonical_title_id: uuid.UUID = Field(
+    tmdb_title_id: uuid.UUID = Field(
         foreign_key="title.id",
         ondelete="CASCADE",
     )
     note: str | None = Field(default=None)
+    manual_tmdb_link: bool = Field(default=False)
+    """Whether a `User` settled this link themselves. An automatic process never
+    deletes or rewrites a link that carries it."""
 
 
 # TODO: Validate
-class TitleCanonicalTitle(BaseTitleCanonicalTitle, TimestampIdAndHashMixin, table=True):
+class TitleTmdbTitle(BaseTitleTmdbTitle, TimestampIdAndHashMixin, table=True):
     """Model representing one of the canonical titles a `Title` stands for.
 
     A website's row stands for one canonical title in the ordinary case and for
@@ -337,20 +320,20 @@ class TitleCanonicalTitle(BaseTitleCanonicalTitle, TimestampIdAndHashMixin, tabl
         # Each canonical title is linked to a non-canonical row at most once; the leading
         # column also serves lookups of a row's canonical titles and cascade deletion
         # with it.
-        PrimaryKeyConstraint("title_id", "canonical_title_id"),
+        PrimaryKeyConstraint("title_id", "tmdb_title_id"),
         # Used to find every non-canonical row standing for a canonical title.
-        Index("TitleCanonicalTitle-canonical_title_id-index", "canonical_title_id"),
+        Index("TitleTmdbTitle-tmdb_title_id-index", "tmdb_title_id"),
     )
 
     # Both ends are a `Title`, so which foreign key each relationship follows has
     # to be named; nothing about the columns says which of them is which.
-    non_canonical_title: Title = Relationship(
-        back_populates="canonical_title_links",
-        sa_relationship_kwargs={"foreign_keys": "TitleCanonicalTitle.title_id"},
+    linked_title: Title = Relationship(
+        back_populates="tmdb_title_links",
+        sa_relationship_kwargs={"foreign_keys": "TitleTmdbTitle.title_id"},
     )
-    canonical_title: Title = Relationship(
-        back_populates="non_canonical_title_links",
+    tmdb_title: Title = Relationship(
+        back_populates="linked_title_links",
         sa_relationship_kwargs={
-            "foreign_keys": "TitleCanonicalTitle.canonical_title_id",
+            "foreign_keys": "TitleTmdbTitle.tmdb_title_id",
         },
     )

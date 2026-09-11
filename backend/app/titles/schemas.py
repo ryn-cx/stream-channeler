@@ -14,11 +14,6 @@ from pydantic import (
     model_validator,
 )
 
-from app.canonical_media.tmdb import (
-    get_tmdb_id,
-    is_tmdb_key,
-    tmdb_title_url,
-)
 from app.issue_reports.schemas import IssueReportOutput
 from app.schemas import (
     BaseCreateWithParentAndKey,
@@ -27,7 +22,12 @@ from app.schemas import (
 )
 from app.sources.models import Source
 from app.sources.schemas import SourceListPublic
-from app.titles.models import BaseCanonicalTitle, BaseTitle, Title
+from app.titles.models import BaseTitle, BaseTmdbTitle, Title
+from app.tmdb_media.tmdb import (
+    get_tmdb_id,
+    is_tmdb_key,
+    tmdb_title_url,
+)
 
 
 # TODO: Validate
@@ -73,17 +73,17 @@ class TitlePublic(BaseTitle):
     # mixes titles stands for each of them as much as for any other and so has none
     # to be read under here; where a channel is what is being served, the
     # canonical title it holds the row under is handed in instead.
-    canonical_title_id: uuid.UUID | None = Field(
+    tmdb_title_id: uuid.UUID | None = Field(
         default=None,
         validation_alias=AliasChoices(
-            "canonical_title_id",
-            "sole_canonical_title_id",
+            "tmdb_title_id",
+            "sole_tmdb_title_id",
         ),
     )
     # Every canonical title it stands for, which is what the screens that settle
     # the links by hand work on: one of them is what the field above reads as,
     # and a row standing for two has none to read there at all.
-    canonical_title_ids: list[uuid.UUID] = Field(default_factory=list)
+    tmdb_title_ids: list[uuid.UUID] = Field(default_factory=list)
     # The TMDB id behind that, when TMDB has a record of it.
     tmdb_id: int | None = None
     # The row's own page on themoviedb.org, read back out of its own key, so a
@@ -166,7 +166,7 @@ class TitlesPublic(BaseModel):
 
 
 # TODO: Validate
-class CanonicalTitleOutput(BaseCanonicalTitle):
+class TmdbTitleOutput(BaseTmdbTitle):
     """Schema for returning a `Title`.
 
     `tmdb_id` and `tmdb_url` are read back out of `key` rather than stored, since
@@ -192,10 +192,10 @@ class CanonicalTitleOutput(BaseCanonicalTitle):
 
 
 # TODO: Validate
-class CanonicalTitlesPublic(BaseModel):
+class TmdbTitlesPublic(BaseModel):
     """Schema for returning a list of `Title`s."""
 
-    data: list[CanonicalTitleOutput]
+    data: list[TmdbTitleOutput]
     total_count: int
     filtered_count: int
     is_server_side: bool

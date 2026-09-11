@@ -9,3 +9,4 @@ htmlcov
 .cache
 .venv
 /tests/plugins/results/**/stats/
+/tests/plugins/results/**/_files/

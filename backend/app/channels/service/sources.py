@@ -8,7 +8,7 @@ from sqlmodel import Session
 from app.channels.models import (
     Channel,
 )
-from app.channels.service.titles import titles_by_canonical_id
+from app.channels.service.titles import titles_by_tmdb_record_id
 from app.sources.schemas import SourcePublic
 from app.sources.service.lookup import get_or_create_custom_media_source
 
@@ -20,12 +20,12 @@ def channel_sources_output(
 ) -> list[SourcePublic]:
     """Read all unique sources for a channel."""
     sources: dict[uuid.UUID, SourcePublic] = {}
-    non_canonical_titles = titles_by_canonical_id(
+    linked_titles = titles_by_tmdb_record_id(
         session,
-        {channel_title.canonical_title_id for channel_title in channel.titles},
+        {channel_title.tmdb_title_id for channel_title in channel.titles},
     )
     for channel_title in channel.titles:
-        for title in non_canonical_titles[channel_title.canonical_title_id]:
+        for title in linked_titles[channel_title.tmdb_title_id]:
             source = title.source
             if source.id not in sources:
                 sources[source.id] = SourcePublic.model_validate(source)

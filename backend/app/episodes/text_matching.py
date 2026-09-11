@@ -120,10 +120,19 @@ class TextMatcher:
         )
 
     # TODO: Validate
+    def blended_and_embedding_scores_of(
+        self,
+        descriptions: list[str],
+    ) -> tuple[numpy.ndarray, numpy.ndarray]:
+        embedding_scores = self.embedding_scores_of(descriptions)
+        blended_scores: numpy.ndarray = (
+            0.6 * self._tfidf_scores_of(descriptions) + 0.4 * embedding_scores
+        )
+        return blended_scores, embedding_scores
+
+    # TODO: Validate
     def blended_scores_of(self, descriptions: list[str]) -> numpy.ndarray:
-        return 0.6 * self._tfidf_scores_of(
-            descriptions,
-        ) + 0.4 * self.embedding_scores_of(descriptions)
+        return self.blended_and_embedding_scores_of(descriptions)[0]
 
     # TODO: Validate
     def embedding_scores(self, description: str) -> list[float]:

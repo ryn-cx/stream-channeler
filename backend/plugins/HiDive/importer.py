@@ -7,10 +7,10 @@ import re
 from abc import ABC
 from typing import TYPE_CHECKING, Any, override
 
-from app.canonical_media.keys import watch_identifier
 from app.episodes.models import Episode
 from app.seasons.models import Season as SeasonModel
 from app.titles.models import Title
+from app.tmdb_media.keys import watch_identifier
 from plugins.HiDive.constants import (
     MOVIE_MEDIA_TYPE,
     MOVIE_URL_REGEX,

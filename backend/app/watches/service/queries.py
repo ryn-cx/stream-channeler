@@ -7,12 +7,6 @@ from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.canonical_media.episodes import (
-    canonical_episode_id_column,
-    canonical_episode_link,
-    canonical_id_of,
-    links_of,
-)
 from app.episodes.models import Episode
 from app.episodes.schemas import EpisodeOutput
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
@@ -26,11 +20,17 @@ from app.sources.models import Source
 from app.sources.schemas import SourcePublic
 from app.titles.models import Title
 from app.titles.schemas import TitlePublic
+from app.tmdb_media.episodes import (
+    links_of,
+    tmdb_episode_id_column,
+    tmdb_episode_link,
+    tmdb_record_id_of,
+)
 from app.users.models import User
 from app.watches.identifiers import (
-    canonical_id_by_watch,
+    tmdb_record_id_by_watch,
     watch_names,
-    watched_canonical_ids,
+    watched_tmdb_record_ids,
 )
 from app.watches.models import Watch
 from app.watches.schemas import (
@@ -51,43 +51,43 @@ IdentifiedEpisode = aliased(Episode)
 
 
 # TODO: Validate
-def _watched_canonical_subquery(user_id: uuid.UUID) -> SelectOfScalar[uuid.UUID]:
+def _watched_tmdb_subquery(user_id: uuid.UUID) -> SelectOfScalar[uuid.UUID]:
     """Return the canonical episodes the `User` has watched anything of."""
-    return watched_canonical_ids(user_id)
+    return watched_tmdb_record_ids(user_id)
 
 
 # TODO: Validate
 def _representative_episode_subquery(
-    canonical_ids: SelectOfScalar[uuid.UUID],
+    tmdb_record_ids: SelectOfScalar[uuid.UUID],
 ) -> Subquery:
     """One representative visible non-canonical row per canonical episode.
 
     A watch names the episode itself, which every website carrying it has a
     non-canonical row of. This picks a single visible non-canonical row per episode so a
     watch can be joined to concrete media for display and visibility filtering.
-    Restricted to `canonical_ids` so it only resolves the episodes actually in play
+    Restricted to `tmdb_record_ids` so it only resolves the episodes actually in play
     instead of the whole episode catalog.
 
     TMDB is what a website's media is filled in from rather than a website an episode
     can be watched on, so its own non-canonical row is never what a watch is shown as,
     however the episodes happen to be ordered.
     """
-    canonical_link = canonical_episode_link()
+    tmdb_link = tmdb_episode_link()
     return (
         select(
-            col(canonical_link.canonical_episode_id).label("canonical_episode_id"),
+            col(tmdb_link.tmdb_episode_id).label("tmdb_episode_id"),
             col(Episode.id).label("episode_id"),
         )
-        .join(canonical_link, links_of(Episode, canonical_link))
+        .join(tmdb_link, links_of(Episode, tmdb_link))
         .join(Season, col(Season.id) == col(Episode.season_id))
         .join(Title, col(Title.id) == col(Season.title_id))
         .join(Source, col(Source.id) == col(Title.source_id))
         .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
         .where(col(Episode.deleted_at).is_(None))
         .where(col(Plugin.key) != TMDB_PLUGIN_KEY)
-        .where(col(canonical_link.canonical_episode_id).in_(canonical_ids))
-        .distinct(col(canonical_link.canonical_episode_id))
-        .order_by(col(canonical_link.canonical_episode_id), col(Episode.id))
+        .where(col(tmdb_link.tmdb_episode_id).in_(tmdb_record_ids))
+        .distinct(col(tmdb_link.tmdb_episode_id))
+        .order_by(col(tmdb_link.tmdb_episode_id), col(Episode.id))
         .subquery()
     )
 
@@ -117,9 +117,9 @@ def _own_visible_episode_subquery() -> ScalarSelect[uuid.UUID]:
 # TODO: Validate
 def _episode_watch_base_statement(user_id: uuid.UUID) -> SelectOfScalar[Watch]:
     representative = _representative_episode_subquery(
-        _watched_canonical_subquery(user_id),
+        _watched_tmdb_subquery(user_id),
     )
-    identified_link = canonical_episode_link()
+    identified_link = tmdb_episode_link()
     # Joined on the identifier the watch carries rather than through the link it was
     # recorded against, so a watch whose link has since been deleted is still listed
     # under another website's link to the same episode. The identifier is a link's own,
@@ -131,8 +131,8 @@ def _episode_watch_base_statement(user_id: uuid.UUID) -> SelectOfScalar[Watch]:
         .outerjoin(identified_link, links_of(IdentifiedEpisode, identified_link))
         .join(
             representative,
-            representative.c.canonical_episode_id
-            == canonical_episode_id_column(IdentifiedEpisode, identified_link),
+            representative.c.tmdb_episode_id
+            == tmdb_episode_id_column(IdentifiedEpisode, identified_link),
         )
         .join(
             Episode,
@@ -217,25 +217,25 @@ def _representative_episodes_by_watch(
     identifier; they are links to one episode either way.
     """
     episodes = _own_visible_episodes_by_watch(session, watches)
-    canonical_ids_by_watch = canonical_id_by_watch(
+    tmdb_record_ids_by_watch = tmdb_record_id_by_watch(
         session,
         [watch for watch in watches if watch.id not in episodes],
     )
-    if not canonical_ids_by_watch:
+    if not tmdb_record_ids_by_watch:
         return episodes
     representative = _representative_episode_subquery(
         select(col(Episode.id)).where(
-            col(Episode.id).in_(set(canonical_ids_by_watch.values())),
+            col(Episode.id).in_(set(tmdb_record_ids_by_watch.values())),
         ),
     )
     rows = session.exec(
-        select(representative.c.canonical_episode_id, Episode)
+        select(representative.c.tmdb_episode_id, Episode)
         .select_from(Episode)
         .join(representative, col(Episode.id) == representative.c.episode_id),
     ).all()
-    episode_by_canonical_id = dict(rows)
-    for watch_id, canonical_id in canonical_ids_by_watch.items():
-        episode = episode_by_canonical_id.get(canonical_id)
+    episode_by_tmdb_record_id = dict(rows)
+    for watch_id, tmdb_record_id in tmdb_record_ids_by_watch.items():
+        episode = episode_by_tmdb_record_id.get(tmdb_record_id)
         if episode is not None:
             episodes[watch_id] = episode
     return episodes
@@ -264,9 +264,9 @@ def _format_watched_episodes_data(
         source = title.source
         plugin = source.plugin
 
-        canonical_episode_id = canonical_id_of(episode)
-        if canonical_episode_id not in episodes_dict:
-            episodes_dict[canonical_episode_id] = EpisodeOutput.model_validate(
+        tmdb_episode_id = tmdb_record_id_of(episode)
+        if tmdb_episode_id not in episodes_dict:
+            episodes_dict[tmdb_episode_id] = EpisodeOutput.model_validate(
                 episode,
             )
         if season.id not in seasons_dict:
@@ -282,7 +282,7 @@ def _format_watched_episodes_data(
             WatchItem(
                 id=episode_watch.id,
                 episode_id=episode_watch.episode_id,
-                canonical_episode_id=canonical_episode_id,
+                tmdb_episode_id=tmdb_episode_id,
                 watch_identifier=episode_watch.watch_identifier,
                 watch_date=episode_watch.watch_date,
                 verified=episode_watch.verified,

@@ -141,6 +141,18 @@ class TMDBBaseFiles(BasePlugin):
         )
 
     # TODO: Validate
+    def _cached_latest_tv_series_changes_files(self) -> dict[int, TVSeriesChanges]:
+        cached: dict[int, TVSeriesChanges] = self.session.info.setdefault(
+            "tmdb_latest_tv_series_changes_files",
+            {},
+        )
+        return cached
+
+    # TODO: Validate
+    def forget_latest_tv_series_changes_file(self, tmdb_tv_title_id: int) -> None:
+        self._cached_latest_tv_series_changes_files().pop(tmdb_tv_title_id, None)
+
+    # TODO: Validate
     def get_or_create_latest_tv_series_changes_file(
         self,
         tmdb_tv_title_id: int,
@@ -148,17 +160,25 @@ class TMDBBaseFiles(BasePlugin):
         """Return the latest TV Series Changes file for a title.
 
         If the file does not exist an initial one will be created."""
+        cached = self._cached_latest_tv_series_changes_files()
+        if tmdb_tv_title_id in cached:
+            return cached[tmdb_tv_title_id]
+
         existing_record = self.latest_file_record(
             file_class=TVSeriesChanges,
             file_prefix=tmdb_tv_title_id,
         )
+        changes_file: TVSeriesChanges
         if existing_record:
-            return self.tv_series_changes_file(existing_record)
+            changes_file = self.tv_series_changes_file(existing_record)
+        else:
+            changes_file = self.tv_series_changes_file(
+                tmdb_tv_title_id,
+                tz_datetime.now().date(),
+            )
 
-        return self.tv_series_changes_file(
-            tmdb_tv_title_id,
-            tz_datetime.now().date(),
-        )
+        cached[tmdb_tv_title_id] = changes_file
+        return changes_file
 
     # TODO: Validate
     def movies_watch_providers_file(

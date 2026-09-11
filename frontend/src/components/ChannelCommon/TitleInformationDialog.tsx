@@ -109,7 +109,7 @@ function showHero(
  * What the title is, without whether it reached TMDB.
  *
  * Read where the title itself is what is open rather than the match between two
- * accounts of it, and where the row being read may be TMDB's own: a canonical
+ * accounts of it, and where the row being read may be TMDB's own: a tmdb
  * row is linked to nothing, which the linked/not-linked fact would report as
  * having failed to reach the very record it is.
  */
@@ -234,9 +234,7 @@ export function TitleInformationPanel({
         <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
           <dt className="text-muted-foreground">Link validated at</dt>
           <dd>
-            {formatInformationDate(
-              data.source.title.canonical_title_validated_at,
-            )}
+            {formatInformationDate(data.source.title.tmdb_title_validated_at)}
           </dd>
         </dl>
 

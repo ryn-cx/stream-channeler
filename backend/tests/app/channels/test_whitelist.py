@@ -199,7 +199,7 @@ def test_the_filtered_episodes_are_the_ones_marked(
         channel_title,
     )
 
-    assert {episode.canonical_episode_id for episode in filtered} == {marked.id}
+    assert {episode.tmdb_episode_id for episode in filtered} == {marked.id}
 
 
 # TODO: Validate

@@ -163,10 +163,10 @@ function AdminIndex() {
                 Unvalidated Titles
               </CardTitle>
               <CardDescription>
-                Every title whose canonical titles nobody has validated. A row
-                linked to a title is here so the link can be confirmed, and one
-                that is its own record is here so that TMDB having no
-                counterpart for it can be confirmed too.
+                Every title whose tmdb titles nobody has validated. A row linked
+                to a title is here so the link can be confirmed, and one that is
+                its own record is here so that TMDB having no counterpart for it
+                can be confirmed too.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -186,17 +186,17 @@ function AdminIndex() {
             </CardHeader>
           </Card>
         </Link>
-        <Link to="/admin/duplicated-canonical-episodes" className="block">
+        <Link to="/admin/duplicated-tmdb-episodes" className="block">
           <Card className="h-full transition-colors hover:border-primary">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CopyX className="size-5" />
-                Duplicated Canonical Episodes
+                Duplicated TMDB Episodes
               </CardTitle>
               <CardDescription>
-                Every canonical episode that more than one episode of a single
-                source is linked to, which is a link made wrongly rather than a
-                title carried twice.
+                Every tmdb episode that more than one episode of a single source
+                is linked to, which is a link made wrongly rather than a title
+                carried twice.
               </CardDescription>
             </CardHeader>
           </Card>

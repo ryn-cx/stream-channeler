@@ -15,7 +15,7 @@ import { handleError } from "@/utils"
 
 interface BlacklistedEpisodesDialogProps {
   channelId: string
-  canonicalTitleId: string
+  tmdbTitleId: string
   titleName: string
   isOpen: boolean
   onClose: () => void
@@ -28,7 +28,7 @@ interface BlacklistedEpisodesDialogProps {
 // TODO: Validate
 export function BlacklistedEpisodesDialog({
   channelId,
-  canonicalTitleId,
+  tmdbTitleId,
   titleName,
   isOpen,
   onClose,
@@ -37,20 +37,20 @@ export function BlacklistedEpisodesDialog({
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const { data: whitelistData, isLoading } = useQuery({
-    queryKey: ["channelTitleWhitelist", channelId, canonicalTitleId],
+    queryKey: ["channelTitleWhitelist", channelId, tmdbTitleId],
     queryFn: () =>
-      ChannelsService.getChannelWhitelist({ channelId, canonicalTitleId }),
+      ChannelsService.getChannelWhitelist({ channelId, tmdbTitleId }),
     enabled: isOpen,
   })
 
   // Only the episodes an entry names, rather than the title's whole catalogue,
   // since a blacklist is read by its entries and nothing else here is shown.
   const { data: filteredEpisodes, isLoading: isLoadingEpisodes } = useQuery({
-    queryKey: ["channelTitleFilteredEpisodes", channelId, canonicalTitleId],
+    queryKey: ["channelTitleFilteredEpisodes", channelId, tmdbTitleId],
     queryFn: () =>
       ChannelsService.getChannelWhitelistFilteredEpisodes({
         channelId,
-        canonicalTitleId,
+        tmdbTitleId,
       }),
     enabled: isOpen,
   })
@@ -59,15 +59,15 @@ export function BlacklistedEpisodesDialog({
     mutationFn: (episodeId: string) =>
       ChannelsService.updateChannelWhitelist({
         channelId,
-        canonicalTitleId,
+        tmdbTitleId,
         requestBody: { episodes: [{ id: episodeId, marked: false }] },
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["channelTitleWhitelist", channelId, canonicalTitleId],
+        queryKey: ["channelTitleWhitelist", channelId, tmdbTitleId],
       })
       queryClient.invalidateQueries({
-        queryKey: ["channelTitleFilteredEpisodes", channelId, canonicalTitleId],
+        queryKey: ["channelTitleFilteredEpisodes", channelId, tmdbTitleId],
       })
       queryClient.invalidateQueries({ queryKey: ["episodes", channelId] })
       // The title drops off the filter-only list once its last entry is removed.

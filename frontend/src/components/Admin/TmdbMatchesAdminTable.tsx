@@ -53,7 +53,7 @@ export function TmdbMatchesAdminTable() {
     { id: "summary", desc: false },
   ])
   const [filterOptions, setFilterOptions] = useState<ColumnFiltersState>([])
-  const [nonCanonicalTitlesOnly, setNonCanonicalTitlesOnly] = useState(true)
+  const [linkedTitlesOnly, setLinkedTitlesOnly] = useState(true)
   const [editing, setEditing] = useState<TmdbMatchRow | null>(null)
 
   const params = {
@@ -61,7 +61,7 @@ export function TmdbMatchesAdminTable() {
     limit: pagination.pageSize,
     sortOptions,
     filterOptions,
-    nonCanonicalTitlesOnly,
+    linkedTitlesOnly,
   }
 
   const query = useQuery({
@@ -70,7 +70,7 @@ export function TmdbMatchesAdminTable() {
       EpisodesService.adminGetUnmatchedEpisodes({
         offset: params.offset,
         limit: params.limit,
-        nonCanonicalTitlesOnly: params.nonCanonicalTitlesOnly,
+        linkedTitlesOnly: params.linkedTitlesOnly,
         ...serializeTableQuery(params, tmdbMatchColumns),
       }),
     // The page already on screen is kept while the next one is read, so paging
@@ -107,15 +107,15 @@ export function TmdbMatchesAdminTable() {
         >
           <PageHeader title="TMDB Matches">
             <Button
-              variant={nonCanonicalTitlesOnly ? "default" : "outline"}
+              variant={linkedTitlesOnly ? "default" : "outline"}
               onClick={() => {
-                setNonCanonicalTitlesOnly(!nonCanonicalTitlesOnly)
+                setLinkedTitlesOnly(!linkedTitlesOnly)
                 setPagination({ ...pagination, pageIndex: 0 })
               }}
               title="Title only the episodes of titles linked to a title"
             >
-              {nonCanonicalTitlesOnly ? <Link2 /> : <Link2Off />}
-              {nonCanonicalTitlesOnly ? "Linked titles only" : "Every title"}
+              {linkedTitlesOnly ? <Link2 /> : <Link2Off />}
+              {linkedTitlesOnly ? "Linked titles only" : "Every title"}
             </Button>
             <TmdbLinkMultipleButton />
             <ColumnVisibilityButton table={table} />

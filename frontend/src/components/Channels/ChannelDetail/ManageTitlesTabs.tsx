@@ -28,6 +28,7 @@ import {
 } from "@/components/Channels/TitleCards"
 import {
   CHANNEL_TITLE_PAGE,
+  channelTitlesQueryKey,
   useChannelTitleStats,
   useChannelTitlesPage,
 } from "@/components/Channels/useChannelTitles"
@@ -44,6 +45,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -124,6 +126,10 @@ export function ManageTitlesTabs({
   const [searchQuery, setSearchQuery] = useState<string | undefined>(undefined)
   const [bulkMode, setBulkMode] = useState<"url" | "name">("url")
   const [pageIndex, setPageIndex] = useState(0)
+  // What the user has typed, and what the listing is actually being read by,
+  // which follows it once they have stopped typing.
+  const [titleFilter, setTitleFilter] = useState("")
+  const [titleQuery, setTitleQuery] = useState("")
 
   // region Queries
 
@@ -133,23 +139,38 @@ export function ManageTitlesTabs({
     refetchInterval: queueRefetchInterval,
   })
 
-  const { data: titlesPage } = useChannelTitlesPage(channelId, pageIndex)
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setTitleQuery(titleFilter)
+      setPageIndex(0)
+    }, 300)
+    return () => clearTimeout(timeout)
+  }, [titleFilter])
+
+  const { data: titlesPage } = useChannelTitlesPage(
+    channelId,
+    pageIndex,
+    titleQuery,
+  )
   const titlesData = titlesPage as unknown as
     | {
         titles: Title[]
         filter_only_titles: Title[]
         sources: Record<string, Source>
-        canonical_titles: Record<string, Title>
-        canonical_sources: Record<string, Source>
+        tmdb_titles: Record<string, Title>
+        tmdb_sources: Record<string, Source>
         total: number
       }
     | undefined
   const titleCount = titlesData?.total ?? 0
   const pageCount = Math.max(1, Math.ceil(titleCount / CHANNEL_TITLE_PAGE))
 
+  // A search that leaves fewer pages than the one being read pulls the listing
+  // back to the last page it has. Only what the server has answered with counts,
+  // since a page still being fetched knows no total to be past the end of.
   useEffect(() => {
-    if (pageIndex >= pageCount) setPageIndex(pageCount - 1)
-  }, [pageIndex, pageCount])
+    if (titlesData && pageIndex >= pageCount) setPageIndex(pageCount - 1)
+  }, [titlesData, pageIndex, pageCount])
 
   const queueEntries = queueData ?? []
   const pendingQueueCount = queueEntries.filter(
@@ -157,16 +178,14 @@ export function ManageTitlesTabs({
       entry.status !== "Imported" && entry.status !== "Failed",
   ).length
   const sources: Record<string, Source> = titlesData?.sources || {}
-  const canonicalTitles: Record<string, Title> =
-    titlesData?.canonical_titles || {}
-  const canonicalSources: Record<string, Source> =
-    titlesData?.canonical_sources || {}
+  const tmdbTitles: Record<string, Title> = titlesData?.tmdb_titles || {}
+  const tmdbSources: Record<string, Source> = titlesData?.tmdb_sources || {}
   // A card is read under the title's own name, so that is the name the list is
   // in the order of.
   // TODO: Validate
   const titleName = (title: Title) =>
-    (title.canonical_title_id
-      ? canonicalTitles[title.canonical_title_id]?.name
+    (title.tmdb_title_id
+      ? tmdbTitles[title.tmdb_title_id]?.name
       : title.name) ?? ""
   // TODO: Validate
   const byTitleName = (first: Title, second: Title) =>
@@ -176,13 +195,10 @@ export function ManageTitlesTabs({
     byTitleName,
   )
 
-  const listedCanonicalTitleIds = [
-    ...new Set(titlesList.map((title) => title.canonical_title_id ?? title.id)),
+  const listedTmdbTitleIds = [
+    ...new Set(titlesList.map((title) => title.tmdb_title_id ?? title.id)),
   ]
-  const { data: stats } = useChannelTitleStats(
-    channelId,
-    listedCanonicalTitleIds,
-  )
+  const { data: stats } = useChannelTitleStats(channelId, listedTmdbTitleIds)
 
   // endregion Queries
 
@@ -250,39 +266,37 @@ export function ManageTitlesTabs({
   })
 
   const removeTitleMutation = useMutation({
-    mutationFn: (canonicalTitleId: string) =>
-      ChannelsService.deleteChannelTitle({ channelId, canonicalTitleId }),
-    onMutate: async (canonicalTitleId) => {
+    mutationFn: (tmdbTitleId: string) =>
+      ChannelsService.deleteChannelTitle({ channelId, tmdbTitleId }),
+    onMutate: async (tmdbTitleId) => {
       await queryClient.cancelQueries({
         queryKey: ["channel-titles", channelId],
       })
       const previousEpisodesEntries = queryClient.getQueriesData({
         queryKey: ["episodes", channelId],
       })
-      const previousTitlesData = queryClient.getQueryData([
-        "channel-titles",
-        channelId,
-        pageIndex,
-      ])
+      const previousTitlesData = queryClient.getQueryData(
+        channelTitlesQueryKey(channelId, pageIndex, titleQuery),
+      )
       queryClient.setQueryData(
-        ["channel-titles", channelId, pageIndex],
+        channelTitlesQueryKey(channelId, pageIndex, titleQuery),
         (oldData: any) => ({
           ...oldData,
           titles: oldData.titles.filter(
-            (title: Title) => title.canonical_title_id !== canonicalTitleId,
+            (title: Title) => title.tmdb_title_id !== tmdbTitleId,
           ),
         }),
       )
       showSuccessToast("Title removed successfully")
       return { previousEpisodesEntries, previousTitlesData }
     },
-    onError: (error, _canonicalTitleId, context) => {
+    onError: (error, _tmdbTitleId, context) => {
       for (const [queryKey, data] of context?.previousEpisodesEntries ?? []) {
         queryClient.setQueryData(queryKey as any, data)
       }
       if (context?.previousTitlesData) {
         queryClient.setQueryData(
-          ["channel-titles", channelId, pageIndex],
+          channelTitlesQueryKey(channelId, pageIndex, titleQuery),
           context.previousTitlesData,
         )
       }
@@ -323,8 +337,11 @@ export function ManageTitlesTabs({
       >
         <TabsList
           className={cn(
-            "h-auto w-auto self-stretch flex-nowrap justify-start gap-1",
-            "overflow-x-auto no-scrollbar *:flex-none",
+            "h-auto w-auto self-stretch flex-wrap justify-start gap-1",
+            // A tab is as wide as its own name. Too many for one row wrap onto
+            // the next rather than being squeezed together or scrolled out of
+            // sight.
+            "*:flex-none *:shrink-0",
             tabsListClassName,
           )}
         >
@@ -384,20 +401,43 @@ export function ManageTitlesTabs({
         </TabsContent>
 
         <TabsContent value="titles" className={`${contentClassName} space-y-6`}>
+          <div className="flex items-center gap-2">
+            <Input
+              value={titleFilter}
+              onChange={(event) => setTitleFilter(event.target.value)}
+              placeholder="Search titles in this channel"
+              className="max-w-xs"
+            />
+            {titleFilter && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setTitleFilter("")}
+              >
+                Clear
+              </Button>
+            )}
+            <span className="text-sm text-muted-foreground">
+              {titleCount} {titleCount === 1 ? "title" : "titles"}
+            </span>
+          </div>
+
           {titlesList.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
-              No titles in this channel
+              {titleQuery
+                ? `No titles matching "${titleQuery}"`
+                : "No titles in this channel"}
             </p>
           ) : (
             <TitleCards
               titles={titlesList}
               sources={sources}
-              canonicalTitles={canonicalTitles}
-              canonicalSources={canonicalSources}
+              tmdbTitles={tmdbTitles}
+              tmdbSources={tmdbSources}
               stats={stats ?? {}}
               onSelect={(group) =>
                 setSelectedTitle(
-                  selectedTitle?.canonicalTitleId === group.canonicalTitleId
+                  selectedTitle?.tmdbTitleId === group.tmdbTitleId
                     ? null
                     : group,
                 )
@@ -456,7 +496,7 @@ export function ManageTitlesTabs({
             }}
           >
             <ModalContent
-              size={isTitleFullScreen ? "full" : "4xl"}
+              size={isTitleFullScreen ? "full" : "6xl"}
               className={
                 isTitleFullScreen
                   ? "max-h-none h-[calc(100dvh-2rem)] flex flex-col overflow-hidden"
@@ -472,7 +512,7 @@ export function ManageTitlesTabs({
                 <div className="no-scrollbar flex-1 min-h-0 overflow-y-auto px-8 py-4">
                   <WhitelistManager
                     channelId={channelId}
-                    canonicalTitleId={selectedTitle.canonicalTitleId}
+                    tmdbTitleId={selectedTitle.tmdbTitleId}
                     titleName={selectedTitle.name || "Unknown Title"}
                     onClose={() => setSelectedTitle(null)}
                   />
@@ -503,8 +543,8 @@ export function ManageTitlesTabs({
               <TitleCards
                 titles={filterOnlyTitlesList}
                 sources={sources}
-                canonicalTitles={canonicalTitles}
-                canonicalSources={canonicalSources}
+                tmdbTitles={tmdbTitles}
+                tmdbSources={tmdbSources}
                 renderActions={(group) => (
                   <div className="flex items-center justify-center gap-1">
                     <Button
@@ -656,9 +696,7 @@ export function ManageTitlesTabs({
           title="Remove Title"
           description={`Are you sure you want to remove "${removeTitle.name || "this title"}" from the channel? This will remove all episodes from this title.`}
           confirmLabel="Remove"
-          onConfirm={() =>
-            removeTitleMutation.mutate(removeTitle.canonicalTitleId)
-          }
+          onConfirm={() => removeTitleMutation.mutate(removeTitle.tmdbTitleId)}
         />
       )}
 
@@ -666,7 +704,7 @@ export function ManageTitlesTabs({
       {blacklistTitle && (
         <BlacklistedEpisodesDialog
           channelId={channelId}
-          canonicalTitleId={blacklistTitle.canonicalTitleId}
+          tmdbTitleId={blacklistTitle.tmdbTitleId}
           titleName={blacklistTitle.name || "Unknown Title"}
           isOpen={!!blacklistTitle}
           onClose={() => setBlacklistTitle(null)}

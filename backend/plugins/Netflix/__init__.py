@@ -17,7 +17,8 @@ if TYPE_CHECKING:
     from app.titles.models import Title
 
 
-class Netflix(NetflixShared, AbstractPlugin, register=False):
+# TODO: Validate
+class Netflix(NetflixShared, AbstractPlugin, register=True):
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:

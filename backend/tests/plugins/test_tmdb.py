@@ -7,7 +7,10 @@ from typing import override
 from sqlmodel import Session
 
 from app.titles.models import Title
-from app.titles.service.linking import link_title_to_tmdb
+from app.titles.service.linking import (
+    old_link_title_by_tmdb_lookups,
+    old_link_title_to_tmdb,
+)
 from plugins.TMDB import TMDB
 from plugins.Tubi import Tubi
 from tests.plugins.frozen_clock import frozen_clock
@@ -17,7 +20,6 @@ from tests.plugins.plugin_validator import (
     UpdateTests,
     URLTests,
 )
-from tests.plugins.plugin_validator.database import match_imported_titles_to_tmdb
 from tests.plugins.plugin_validator.log_stats import log_stats
 from tests.plugins.plugin_validator.stored_files import (
     mock_update,
@@ -165,11 +167,13 @@ class TestSupermanRelinkedTubi(TMDBValidator):
     def _initialize_extra_files(self, session: Session) -> None:
         tubi = Tubi(session)
         results = tubi.validate_and_import_url(self.relinked_url)
-        match_imported_titles_to_tmdb(
-            session,
-            tubi,
-            [result.title for result in results],
-        )
+        for result in results:
+            if not result.title.is_linked:
+                old_link_title_by_tmdb_lookups(
+                    session,
+                    result.title,
+                    tubi.tmdb_lookup_info(result.title),
+                )
 
     # TODO: Validate
     def titles_of(self, session: Session, plugin_key: str) -> list[Title]:
@@ -198,7 +202,7 @@ class TestSupermanRelinkedTubi(TMDBValidator):
             tubi = Tubi(session_with_files)
             results = tubi.validate_and_import_url(self.relinked_url)
             for result in results:
-                link_title_to_tmdb(
+                old_link_title_to_tmdb(
                     session_with_files,
                     result.title,
                     tmdb_title,
@@ -305,7 +309,7 @@ class TestSupermanRelinkedTubi(TMDBValidator):
 #     """
 
 #     # TODO: Validate
-#     def _canonical_episode_keys(self, session: Session) -> dict[str, str | None]:
+#     def _tmdb_episode_keys(self, session: Session) -> dict[str, str | None]:
 #         """Name the TMDB episode each stored episode points at, by key.
 
 #         By key because the id of a canonical row says nothing on its own, and
@@ -327,25 +331,25 @@ class TestSupermanRelinkedTubi(TMDBValidator):
 #                                     episode.key,
 #                                 ),
 #                             )
-#                             canonical = episode.canonical_episode
+#                             canonical = episode.tmdb_episode
 #                             keys[path] = canonical.key if canonical else None
 #         return keys
 
 #     # TODO: Validate
 #     @staticmethod
-#     def _unlink_canonical_episodes(session: Session) -> int:
+#     def _unlink_tmdb_episodes(session: Session) -> int:
 #         """Make every episode stand for itself again, and return how many were changed."""
 #         copies = session.exec(
-#             select(Episode).where(col(Episode.canonical_episode_id).is_not(None)),
+#             select(Episode).where(col(Episode.tmdb_episode_id).is_not(None)),
 #         ).all()
 #         for episode in copies:
-#             episode.canonical_episode = None
+#             episode.tmdb_episode = None
 #         session.flush()
 #         session.expire_all()
 #         return len(copies)
 
 #     # TODO: Validate
-#     def test_forced_reimport_relinks_canonical_episodes(
+#     def test_forced_reimport_relinks_tmdb_episodes(
 #         self,
 #         session_with_files: Session,
 #     ) -> None:
@@ -353,15 +357,15 @@ class TestSupermanRelinkedTubi(TMDBValidator):
 #         assert url
 
 #         self.import_url(session_with_files)
-#         original_links = self._canonical_episode_keys(session_with_files)
+#         original_links = self._tmdb_episode_keys(session_with_files)
 
-#         unlinked = self._unlink_canonical_episodes(session_with_files)
+#         unlinked = self._unlink_tmdb_episodes(session_with_files)
 #         assert unlinked, "The import pointed no episode at a TMDB episode."
 
 #         with log_stats(self):
 #             self.import_url(session_with_files, url, force=True)
 
-#         assert self._canonical_episode_keys(session_with_files) == original_links
+#         assert self._tmdb_episode_keys(session_with_files) == original_links
 #         self.assert_state(session_with_files, "forced_reimport")
 
 # # TODO: Validate

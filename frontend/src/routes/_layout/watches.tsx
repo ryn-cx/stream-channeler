@@ -125,8 +125,8 @@ function WatchesTableContent() {
   // episode has no non-canonical row the viewer can see has no row to show.
   const watchesWithDetails: WatchWithDetails[] = watches
     ? watches.watches.flatMap((watch) => {
-        const episode = watch.canonical_episode_id
-          ? watches.episodes[watch.canonical_episode_id]
+        const episode = watch.tmdb_episode_id
+          ? watches.episodes[watch.tmdb_episode_id]
           : undefined
         if (!episode) return []
         const season = watches.seasons[episode.season_id]

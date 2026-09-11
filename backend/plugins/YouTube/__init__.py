@@ -34,7 +34,7 @@ class YouTube(
     YouTubeURLParserMixin,
     YouTubeShared,
     AbstractPlugin,
-    register=False,
+    register=True,
 ):
     # TODO: Validate
     @classmethod

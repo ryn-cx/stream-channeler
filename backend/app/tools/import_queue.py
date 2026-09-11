@@ -11,12 +11,6 @@ from loguru import logger
 from sqlmodel import Session, col, or_, select
 from tqdm import tqdm
 
-from app.canonical_media.filters import is_canonical
-from app.canonical_media.seasons import season_ids_by_key
-from app.canonical_media.service.identifiers import (
-    canonical_ids_by_key,
-    canonical_title_ids_by_key,
-)
 from app.channels.models import (
     Channel,
     ChannelEpisodeFilter,
@@ -29,7 +23,13 @@ from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.log import configure_logging
 from app.seasons.models import Season
-from app.titles.models import Title, TitleCanonicalTitle
+from app.titles.models import Title, TitleTmdbTitle
+from app.tmdb_media.filters import is_not_linked
+from app.tmdb_media.seasons import season_ids_by_key
+from app.tmdb_media.service.identifiers import (
+    tmdb_record_ids_by_key,
+    tmdb_title_ids_by_key,
+)
 from app.users.models import User
 from app.users.plugin_user import is_plugin_user
 from app.utils import tz_datetime
@@ -202,29 +202,29 @@ def add_results_to_channel(
     when the result is a whitelist, since a whitelist naming none of a title's
     episodes is a title with nothing to offer.
     """
-    canonical = _canonical_ids_for_results(session, results)
+    canonical = _tmdb_record_ids_from_results(session, results)
     existing_channel_titles = {
-        title.canonical_title_id: title for title in channel.titles
+        title.tmdb_title_id: title for title in channel.titles
     }
     for result in results:
-        canonical_title_ids = canonical.titles.get(result.title.key, set())
-        if not canonical_title_ids:
+        tmdb_title_ids = canonical.titles.get(result.title.key, set())
+        if not tmdb_title_ids:
             logger.warning(
                 "No canonical title for {}, leaving it off the channel",
                 result.title.key,
             )
             continue
-        for canonical_title_id in canonical_title_ids:
-            seasons = canonical.seasons_under(result.season_keys, canonical_title_id)
-            episodes = canonical.episodes_under(result.episode_keys, canonical_title_id)
+        for tmdb_title_id in tmdb_title_ids:
+            seasons = canonical.seasons_under(result.season_keys, tmdb_title_id)
+            episodes = canonical.episodes_under(result.episode_keys, tmdb_title_id)
             if result.is_whitelist and not seasons and not episodes:
                 continue
-            existing_channel_title = existing_channel_titles.get(canonical_title_id)
+            existing_channel_title = existing_channel_titles.get(tmdb_title_id)
             if existing_channel_title is None:
-                existing_channel_titles[canonical_title_id] = _create_channel_title(
+                existing_channel_titles[tmdb_title_id] = _create_channel_title(
                     channel,
                     result,
-                    canonical_title_id,
+                    tmdb_title_id,
                     seasons,
                     episodes,
                 )
@@ -248,7 +248,7 @@ def add_results_to_channel(
 
 # TODO: Validate
 @dataclass
-class _CanonicalIds:
+class _TmdbRecordIds:
     """What each record key in a batch of results resolves to, at every level.
 
     A title key resolves to every title that listing is linked to, since a listing
@@ -267,47 +267,47 @@ class _CanonicalIds:
     def seasons_under(
         self,
         season_keys: Collection[str],
-        canonical_title_id: UUID,
+        tmdb_title_id: UUID,
     ) -> set[UUID]:
-        """Return the seasons `season_keys` name that belong to `canonical_title_id`."""
+        """Return the seasons `season_keys` name that belong to `tmdb_title_id`."""
         return {
-            canonical_id
+            tmdb_record_id
             for key in season_keys
-            if (canonical_id := self.seasons.get(key)) is not None
-            and canonical_title_id in self.title_by_season.get(canonical_id, set())
+            if (tmdb_record_id := self.seasons.get(key)) is not None
+            and tmdb_title_id in self.title_by_season.get(tmdb_record_id, set())
         }
 
     # TODO: Validate
     def episodes_under(
         self,
         episode_keys: Collection[str],
-        canonical_title_id: UUID,
+        tmdb_title_id: UUID,
     ) -> set[UUID]:
-        """Return the episodes `episode_keys` name that belong to `canonical_title_id`."""
+        """Return the episodes `episode_keys` name that belong to `tmdb_title_id`."""
         return {
-            canonical_id
+            tmdb_record_id
             for key in episode_keys
-            if (canonical_id := self.episodes.get(key)) is not None
-            and canonical_title_id in self.title_by_episode.get(canonical_id, set())
+            if (tmdb_record_id := self.episodes.get(key)) is not None
+            and tmdb_title_id in self.title_by_episode.get(tmdb_record_id, set())
         }
 
 
 # TODO: Validate
-def _canonical_ids_for_results(
+def _tmdb_record_ids_from_results(
     session: Session,
     results: list[URLImportResult],
-) -> _CanonicalIds:
+) -> _TmdbRecordIds:
     """Resolve every record key the results name, in one query per level."""
     seasons = season_ids_by_key(
         session,
         {key for result in results for key in result.season_keys},
     )
-    episodes = canonical_ids_by_key(
+    episodes = tmdb_record_ids_by_key(
         session,
         {key for result in results for key in result.episode_keys},
     )
-    return _CanonicalIds(
-        titles=canonical_title_ids_by_key(
+    return _TmdbRecordIds(
+        titles=tmdb_title_ids_by_key(
             session,
             {result.title.key for result in results},
         ),
@@ -338,28 +338,28 @@ def _titles_by_season(
             Title.id,
         )
         .join(Title, col(Season.title_id) == col(Title.id))
-        .where(col(Season.id).in_(season_ids), is_canonical(Title)),
+        .where(col(Season.id).in_(season_ids), is_not_linked(Title)),
     ).all()
-    for season_id, canonical_title_id in own_rows:
-        titles[season_id].add(canonical_title_id)
+    for season_id, tmdb_title_id in own_rows:
+        titles[season_id].add(tmdb_title_id)
     linked_rows = session.exec(
         select(  # type: ignore[call-overload]
             Season.id,
-            TitleCanonicalTitle.canonical_title_id,
+            TitleTmdbTitle.tmdb_title_id,
         )
         .join(Title, col(Season.title_id) == col(Title.id))
-        .join(TitleCanonicalTitle, col(TitleCanonicalTitle.title_id) == col(Title.id))
+        .join(TitleTmdbTitle, col(TitleTmdbTitle.title_id) == col(Title.id))
         .where(col(Season.id).in_(season_ids)),
     ).all()
-    for season_id, canonical_title_id in linked_rows:
-        titles[season_id].add(canonical_title_id)
+    for season_id, tmdb_title_id in linked_rows:
+        titles[season_id].add(tmdb_title_id)
     return titles
 
 
 # TODO: Validate
 def _titles_by_episode(
     session: Session,
-    canonical_episode_ids: set[UUID],
+    tmdb_episode_ids: set[UUID],
 ) -> dict[UUID, set[UUID]]:
     """Map each canonical episode to the titles holding it.
 
@@ -367,7 +367,7 @@ def _titles_by_episode(
     under its own listing is held by every title the listing is linked to, since
     a listing that mixes titles is as much each of them as any other.
     """
-    if not canonical_episode_ids:
+    if not tmdb_episode_ids:
         return {}
     titles: dict[UUID, set[UUID]] = defaultdict(set)
     own_rows = session.exec(
@@ -377,22 +377,22 @@ def _titles_by_episode(
         )
         .join(Season, col(Episode.season_id) == col(Season.id))
         .join(Title, col(Season.title_id) == col(Title.id))
-        .where(col(Episode.id).in_(canonical_episode_ids), is_canonical(Title)),
+        .where(col(Episode.id).in_(tmdb_episode_ids), is_not_linked(Title)),
     ).all()
-    for canonical_episode_id, canonical_title_id in own_rows:
-        titles[canonical_episode_id].add(canonical_title_id)
+    for tmdb_episode_id, tmdb_title_id in own_rows:
+        titles[tmdb_episode_id].add(tmdb_title_id)
     linked_rows = session.exec(
         select(  # type: ignore[call-overload]
             Episode.id,
-            TitleCanonicalTitle.canonical_title_id,
+            TitleTmdbTitle.tmdb_title_id,
         )
         .join(Season, col(Episode.season_id) == col(Season.id))
         .join(Title, col(Season.title_id) == col(Title.id))
-        .join(TitleCanonicalTitle, col(TitleCanonicalTitle.title_id) == col(Title.id))
-        .where(col(Episode.id).in_(canonical_episode_ids)),
+        .join(TitleTmdbTitle, col(TitleTmdbTitle.title_id) == col(Title.id))
+        .where(col(Episode.id).in_(tmdb_episode_ids)),
     ).all()
-    for canonical_episode_id, canonical_title_id in linked_rows:
-        titles[canonical_episode_id].add(canonical_title_id)
+    for tmdb_episode_id, tmdb_title_id in linked_rows:
+        titles[tmdb_episode_id].add(tmdb_title_id)
     return titles
 
 
@@ -400,19 +400,19 @@ def _titles_by_episode(
 def _create_channel_title(
     channel: Channel,
     result: URLImportResult,
-    canonical_title_id: UUID,
+    tmdb_title_id: UUID,
     season_ids: set[UUID],
-    canonical_episode_ids: set[UUID],
+    tmdb_episode_ids: set[UUID],
 ) -> ChannelTitle:
     """Put the title on the channel, with the filters the result asked for."""
     channel_title = ChannelTitle(
         channel_id=channel.id,
-        canonical_title_id=canonical_title_id,
+        tmdb_title_id=tmdb_title_id,
         is_whitelist=result.is_whitelist,
         is_blacklist_only=False,
     )
     channel.titles.append(channel_title)
-    _merge_filters(channel_title, season_ids, canonical_episode_ids)
+    _merge_filters(channel_title, season_ids, tmdb_episode_ids)
     return channel_title
 
 
@@ -422,12 +422,12 @@ def _reset_channel_title(
     channel_title: ChannelTitle,
     result: URLImportResult,
     season_ids: set[UUID],
-    canonical_episode_ids: set[UUID],
+    tmdb_episode_ids: set[UUID],
 ) -> None:
     channel_title.is_blacklist_only = False
     channel_title.is_whitelist = result.is_whitelist
-    _drop_filters(session, channel_title, season_ids, canonical_episode_ids)
-    _merge_filters(channel_title, season_ids, canonical_episode_ids)
+    _drop_filters(session, channel_title, season_ids, tmdb_episode_ids)
+    _merge_filters(channel_title, season_ids, tmdb_episode_ids)
 
 
 # TODO: Validate
@@ -436,7 +436,7 @@ def _grant_on_channel_title(
     channel_title: ChannelTitle,
     result: URLImportResult,
     season_ids: set[UUID],
-    canonical_episode_ids: set[UUID],
+    tmdb_episode_ids: set[UUID],
 ) -> None:
     channel_title.is_blacklist_only = False
 
@@ -450,12 +450,12 @@ def _grant_on_channel_title(
         season_filter.season_id for season_filter in channel_title.season_filters
     }
     filtered_episodes = {
-        episode_filter.canonical_episode_id
+        episode_filter.tmdb_episode_id
         for episode_filter in channel_title.episode_filters
     }
-    season_by_episode = _seasons_for_episodes(
+    season_by_episode = _seasons_from_episodes(
         session,
-        filtered_episodes | canonical_episode_ids,
+        filtered_episodes | tmdb_episode_ids,
     )
 
     if channel_title.is_whitelist:
@@ -463,40 +463,40 @@ def _grant_on_channel_title(
     else:
         filtered_seasons -= season_ids
     filtered_episodes -= {
-        canonical_episode_id
-        for canonical_episode_id in filtered_episodes
-        if season_by_episode.get(canonical_episode_id) in season_ids
+        tmdb_episode_id
+        for tmdb_episode_id in filtered_episodes
+        if season_by_episode.get(tmdb_episode_id) in season_ids
     }
 
-    for canonical_episode_id in canonical_episode_ids:
+    for tmdb_episode_id in tmdb_episode_ids:
         season_is_filtered = (
-            season_by_episode.get(canonical_episode_id) in filtered_seasons
+            season_by_episode.get(tmdb_episode_id) in filtered_seasons
         )
         if season_is_filtered != channel_title.is_whitelist:
-            filtered_episodes.add(canonical_episode_id)
+            filtered_episodes.add(tmdb_episode_id)
         else:
-            filtered_episodes.discard(canonical_episode_id)
+            filtered_episodes.discard(tmdb_episode_id)
 
     _drop_filters(session, channel_title, filtered_seasons, filtered_episodes)
     _merge_filters(channel_title, filtered_seasons, filtered_episodes)
     for episode_filter in channel_title.episode_filters:
-        if episode_filter.canonical_episode_id in filtered_episodes:
+        if episode_filter.tmdb_episode_id in filtered_episodes:
             episode_filter.expires_at = None
 
 
 # TODO: Validate
-def _seasons_for_episodes(
+def _seasons_from_episodes(
     session: Session,
-    canonical_episode_ids: set[UUID],
+    tmdb_episode_ids: set[UUID],
 ) -> dict[UUID, UUID]:
     """Map each canonical episode to the season holding it."""
-    if not canonical_episode_ids:
+    if not tmdb_episode_ids:
         return {}
     rows = session.exec(
         select(  # type: ignore[call-overload]
             Episode.id,
             Episode.season_id,
-        ).where(col(Episode.id).in_(canonical_episode_ids)),
+        ).where(col(Episode.id).in_(tmdb_episode_ids)),
     ).all()
     return dict(rows)
 
@@ -506,13 +506,13 @@ def _drop_filters(
     session: Session,
     channel_title: ChannelTitle,
     season_ids: set[UUID],
-    canonical_episode_ids: set[UUID],
+    tmdb_episode_ids: set[UUID],
 ) -> None:
     for season_filter in channel_title.season_filters:
         if season_filter.season_id not in season_ids:
             session.delete(season_filter)
     for episode_filter in channel_title.episode_filters:
-        if episode_filter.canonical_episode_id not in canonical_episode_ids:
+        if episode_filter.tmdb_episode_id not in tmdb_episode_ids:
             session.delete(episode_filter)
 
 
@@ -520,7 +520,7 @@ def _drop_filters(
 def _merge_filters(
     channel_title: ChannelTitle,
     season_ids: set[UUID],
-    canonical_episode_ids: set[UUID],
+    tmdb_episode_ids: set[UUID],
 ) -> None:
     """Merge the given season/episode filters into the channel title's existing ones.
 
@@ -531,7 +531,7 @@ def _merge_filters(
         season_filter.season_id for season_filter in channel_title.season_filters
     }
     existing_episodes = {
-        episode_filter.canonical_episode_id
+        episode_filter.tmdb_episode_id
         for episode_filter in channel_title.episode_filters
     }
     for season_id in season_ids - existing_seasons:
@@ -541,11 +541,11 @@ def _merge_filters(
                 season_id=season_id,
             ),
         )
-    for canonical_episode_id in canonical_episode_ids - existing_episodes:
+    for tmdb_episode_id in tmdb_episode_ids - existing_episodes:
         channel_title.episode_filters.append(
             ChannelEpisodeFilter(
                 channel_title_id=channel_title.id,
-                canonical_episode_id=canonical_episode_id,
+                tmdb_episode_id=tmdb_episode_id,
             ),
         )
 

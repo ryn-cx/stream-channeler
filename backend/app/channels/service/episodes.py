@@ -10,24 +10,12 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from loguru import logger
-from sqlalchemy import and_, exists, or_
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import aliased, selectinload
 from sqlalchemy.orm.attributes import set_committed_value
 from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.canonical_media.episodes import (
-    canonical_episode_id_column,
-    canonical_episode_link,
-    canonical_id_of,
-    links_of,
-    links_to,
-)
-from app.canonical_media.filters import (
-    is_canonical,
-)
-from app.canonical_media.keys import same_issuer_clause
-from app.canonical_media.metadata import serve_as_canonical_episodes
 from app.channels.episode_selector import (
     EpisodeQueryBuilder,
     apply_user_episode_urls,
@@ -48,28 +36,40 @@ from app.channels.schemas import (
     WhitelistEpisodeLinkOutput,
 )
 from app.channels.service.titles import (
-    titles_for_channel_title,
-    tmdb_titles_for_channel_title,
+    titles_from_channel_title,
+    tmdb_titles_from_channel_title,
 )
-from app.episodes.models import Episode, EpisodeCanonicalEpisode
+from app.episodes.models import Episode, EpisodeTmdbEpisode
 from app.seasons.models import Season
-from app.titles.models import Title, TitleCanonicalTitle
+from app.titles.models import Title, TitleTmdbTitle
+from app.tmdb_media.episodes import (
+    links_of,
+    links_to,
+    tmdb_episode_id_column,
+    tmdb_episode_link,
+    tmdb_record_id_of,
+)
+from app.tmdb_media.filters import (
+    is_not_linked,
+)
+from app.tmdb_media.keys import same_issuer_clause
+from app.tmdb_media.metadata import serve_as_tmdb_episodes
 from app.users.models import User
 
 
 # TODO: Validate
-def _canonical_episode_id(session: Session, episode_id: UUID) -> UUID | None:
+def _tmdb_episode_id(session: Session, episode_id: UUID) -> UUID | None:
     """Return the canonical episode `episode_id` stands for, which a filter names.
 
     A row standing for nothing is the episode itself, so it names itself. A row
     standing for more than one names none of them, since a filter holds one
     episode and there is no saying which of them was meant.
     """
-    canonical_link = canonical_episode_link()
+    tmdb_link = tmdb_episode_link()
     named = session.exec(
-        select(canonical_episode_id_column(Episode, canonical_link))  # type: ignore[call-overload]
+        select(tmdb_episode_id_column(Episode, tmdb_link))  # type: ignore[call-overload]
         .select_from(Episode)
-        .outerjoin(canonical_link, links_of(Episode, canonical_link))
+        .outerjoin(tmdb_link, links_of(Episode, tmdb_link))
         .where(Episode.id == episode_id),
     ).all()
     if len(named) != 1:
@@ -78,37 +78,37 @@ def _canonical_episode_id(session: Session, episode_id: UUID) -> UUID | None:
 
 
 # TODO: Validate
-def _canonical_title_ids_of_episode(
+def _tmdb_title_ids_of_episode(
     session: Session,
-    canonical_episode_id: UUID | None,
+    tmdb_episode_id: UUID | None,
 ) -> set[UUID]:
-    """Return the canonical titles `canonical_episode_id` belongs to.
+    """Return the canonical titles `tmdb_episode_id` belongs to.
 
     An episode of a canonical title belongs to that title alone. An episode that
     stands for nothing hangs off a website's own row rather than off a canonical
     title, and that row stands for each of its canonical titles alike, so it belongs
     to every one of them.
     """
-    if canonical_episode_id is None:
+    if tmdb_episode_id is None:
         return set()
     own = session.exec(
         select(Title.id)
         .select_from(Episode)
         .join(Season, col(Episode.season_id) == col(Season.id))
         .join(Title, col(Season.title_id) == col(Title.id))
-        .where(Episode.id == canonical_episode_id, is_canonical(Title)),
+        .where(Episode.id == tmdb_episode_id, is_not_linked(Title)),
     ).all()
     if own:
         return set(own)
     linked = session.exec(
-        select(TitleCanonicalTitle.canonical_title_id)
+        select(TitleTmdbTitle.tmdb_title_id)
         .select_from(Episode)
         .join(Season, col(Episode.season_id) == col(Season.id))
         .join(
-            TitleCanonicalTitle,
-            col(TitleCanonicalTitle.title_id) == col(Season.title_id),
+            TitleTmdbTitle,
+            col(TitleTmdbTitle.title_id) == col(Season.title_id),
         )
-        .where(Episode.id == canonical_episode_id),
+        .where(Episode.id == tmdb_episode_id),
     ).all()
     return set(linked)
 
@@ -116,8 +116,8 @@ def _canonical_title_ids_of_episode(
 # TODO: Validate
 class _EpisodeListingColumns(NamedTuple):
     link: Any
-    canonical_episode: Any
-    canonical_episode_id: Any
+    tmdb_episode: Any
+    tmdb_episode_id: Any
     listed_season_id: Any
     unlinked: Any
 
@@ -130,17 +130,17 @@ def _episode_listing_columns() -> _EpisodeListingColumns:
     the season holding it; a row standing for none or for several answers for
     itself, since neither of the others is an episode it can be folded into.
     """
-    link = canonical_episode_link()
-    canonical_episode = aliased(Episode)
+    link = tmdb_episode_link()
+    tmdb_episode = aliased(Episode)
     return _EpisodeListingColumns(
         link=link,
-        canonical_episode=canonical_episode,
-        canonical_episode_id=canonical_episode_id_column(Episode, link),
+        tmdb_episode=tmdb_episode,
+        tmdb_episode_id=tmdb_episode_id_column(Episode, link),
         listed_season_id=func.coalesce(
-            col(canonical_episode.season_id),
+            col(tmdb_episode.season_id),
             col(Episode.season_id),
         ),
-        unlinked=col(link.canonical_episode_id).is_(None),
+        unlinked=col(link.tmdb_episode_id).is_(None),
     )
 
 
@@ -152,9 +152,6 @@ def _listed_season_title_ids(
     tmdb_titles: Sequence[Title],
 ) -> dict[uuid.UUID, list[uuid.UUID]]:
     """Map each season to the websites' rows carrying it.
-
-    A season a website announced and never filled is named by that website
-    alone, since there is no episode under it to say who carries it.
 
     Which seasons a title has is a question about seasons rather than about
     episodes, so it is asked of the database as one: the rows come back a season
@@ -173,16 +170,16 @@ def _listed_season_title_ids(
         .join(Season, col(Episode.season_id) == col(Season.id))
         .outerjoin(columns.link, links_of(Episode, columns.link))
         .outerjoin(
-            columns.canonical_episode,
-            links_to(columns.canonical_episode, columns.link),
+            columns.tmdb_episode,
+            links_to(columns.tmdb_episode, columns.link),
         )
         .where(
             col(Season.title_id).in_(title_order),
             col(Season.deleted_at).is_(None),
             col(Episode.deleted_at).is_(None),
             or_(
-                columns.canonical_episode_id.in_(
-                    _title_episode_id_query(channel_title.canonical_title_id),
+                columns.tmdb_episode_id.in_(
+                    _title_episode_id_query(channel_title.tmdb_title_id),
                 ),
                 and_(
                     columns.unlinked,
@@ -193,24 +190,9 @@ def _listed_season_title_ids(
         .distinct(),
     ).all()
 
-    announced = session.exec(
-        select(Season.id, Season.title_id).where(
-            col(Season.title_id).in_(title_order),
-            col(Season.deleted_at).is_(None),
-            ~exists(
-                select(Episode.id)
-                .where(
-                    col(Episode.season_id) == col(Season.id),
-                    col(Episode.deleted_at).is_(None),
-                )
-                .correlate(Season),
-            ),
-        ),
-    ).all()
-
     season_title_ids: dict[uuid.UUID, list[uuid.UUID]] = defaultdict(list)
     for season_id, title_id in sorted(
-        [*carried, *announced],
+        carried,
         key=lambda pair: title_order[pair[1]],
     ):
         if title_id not in season_title_ids[season_id]:
@@ -219,7 +201,7 @@ def _listed_season_title_ids(
 
 
 # TODO: Validate
-def _episode_links_by_canonical_id(
+def _episode_links_by_tmdb_record_id(
     titles: Sequence[Title],
     listed_episode_ids: Collection[uuid.UUID],
     episode_source_filters: Mapping[
@@ -239,7 +221,7 @@ def _episode_links_by_canonical_id(
             for episode in season.active_children:
                 if episode.id not in listed_episode_ids:
                     continue
-                episode_id = canonical_id_of(episode)
+                episode_id = tmdb_record_id_of(episode)
                 if episode_id not in wanted_episode_ids:
                     continue
                 if title.id not in episode_title_ids[episode_id]:
@@ -269,7 +251,7 @@ def _episode_links_by_canonical_id(
 # TODO: Validate
 def _title_episode_ids(
     session: Session,
-    canonical_title_id: uuid.UUID,
+    tmdb_title_id: uuid.UUID,
 ) -> set[uuid.UUID]:
     """Return the episodes the title itself holds, as against a website's own.
 
@@ -279,17 +261,17 @@ def _title_episode_ids(
     told apart by who issued the season, the way `EpisodeQueryBuilder` tells
     them apart.
     """
-    return set(session.exec(_title_episode_id_query(canonical_title_id)).all())
+    return set(session.exec(_title_episode_id_query(tmdb_title_id)).all())
 
 
 # TODO: Validate
-def _title_episode_id_query(canonical_title_id: uuid.UUID) -> SelectOfScalar[uuid.UUID]:
+def _title_episode_id_query(tmdb_title_id: uuid.UUID) -> SelectOfScalar[uuid.UUID]:
     return (
         select(Episode.id)
         .join(Season, col(Episode.season_id) == col(Season.id))
         .join(Title, col(Season.title_id) == col(Title.id))
         .where(
-            Title.id == canonical_title_id,
+            Title.id == tmdb_title_id,
             same_issuer_clause(col(Title.key), col(Season.key)),
             col(Season.deleted_at).is_(None),
             col(Episode.deleted_at).is_(None),
@@ -328,10 +310,10 @@ def _preload_episode_links(
     if not season_ids:
         return
 
-    links_by_episode: dict[uuid.UUID, list[EpisodeCanonicalEpisode]] = defaultdict(list)
+    links_by_episode: dict[uuid.UUID, list[EpisodeTmdbEpisode]] = defaultdict(list)
     for link in session.exec(
-        select(EpisodeCanonicalEpisode)
-        .join(Episode, col(EpisodeCanonicalEpisode.episode_id) == col(Episode.id))
+        select(EpisodeTmdbEpisode)
+        .join(Episode, col(EpisodeTmdbEpisode.episode_id) == col(Episode.id))
         .where(col(Episode.season_id).in_(season_ids)),
     ).all():
         links_by_episode[link.episode_id].append(link)
@@ -339,7 +321,7 @@ def _preload_episode_links(
     for episode in episodes:
         set_committed_value(
             episode,
-            "canonical_episode_links",
+            "tmdb_episode_links",
             links_by_episode[episode.id],
         )
 
@@ -355,7 +337,7 @@ def _episode_source_filters(
     """
     return {
         (
-            episode_source_filter.canonical_episode_id,
+            episode_source_filter.tmdb_episode_id,
             episode_source_filter.title_id,
         ): episode_source_filter
         for episode_source_filter in channel_title.episode_source_filters
@@ -363,7 +345,7 @@ def _episode_source_filters(
 
 
 # TODO: Validate
-def _preload_canonical_episodes(session: Session, episodes: Sequence[Episode]) -> None:
+def _preload_tmdb_episodes(session: Session, episodes: Sequence[Episode]) -> None:
     """Read in the episode each of `episodes` is linked to, in one query.
 
     `Episode.tmdb_id` walks from a row to the episode it is linked to, which is a
@@ -378,8 +360,8 @@ def _preload_canonical_episodes(session: Session, episodes: Sequence[Episode]) -
         select(Episode)
         .where(col(Episode.id).in_(episode_ids))
         .options(
-            selectinload(Episode.canonical_episode_links).selectinload(  # type: ignore[arg-type]
-                EpisodeCanonicalEpisode.canonical_episode,  # type: ignore[arg-type]
+            selectinload(Episode.tmdb_episode_links).selectinload(  # type: ignore[arg-type]
+                EpisodeTmdbEpisode.tmdb_episode,  # type: ignore[arg-type]
             ),
         ),
     ).all()
@@ -388,7 +370,7 @@ def _preload_canonical_episodes(session: Session, episodes: Sequence[Episode]) -
 # TODO: Validate
 class _SeasonEpisodeRow(NamedTuple):
     id: uuid.UUID
-    canonical_episode_id: uuid.UUID
+    tmdb_episode_id: uuid.UUID
     title_id: uuid.UUID
     sort_order: int | None
 
@@ -399,8 +381,8 @@ def _season_episode_rows(
     channel_title: ChannelTitle,
     season_id: uuid.UUID,
 ) -> list[_SeasonEpisodeRow]:
-    titles = titles_for_channel_title(session, channel_title)
-    tmdb_titles = tmdb_titles_for_channel_title(session, channel_title)
+    titles = titles_from_channel_title(session, channel_title)
+    tmdb_titles = tmdb_titles_from_channel_title(session, channel_title)
     if not titles and not tmdb_titles:
         raise HTTPException(status_code=404, detail="Title was not found on channel")
 
@@ -416,15 +398,15 @@ def _season_episode_rows(
             Episode.id,
             Episode.sort_order,
             Season.title_id,
-            columns.canonical_episode_id,
+            columns.tmdb_episode_id,
             columns.unlinked,
         )
         .select_from(Episode)
         .join(Season, col(Episode.season_id) == col(Season.id))
         .outerjoin(columns.link, links_of(Episode, columns.link))
         .outerjoin(
-            columns.canonical_episode,
-            links_to(columns.canonical_episode, columns.link),
+            columns.tmdb_episode,
+            links_to(columns.tmdb_episode, columns.link),
         )
         .where(
             col(Season.title_id).in_(title_order),
@@ -434,18 +416,18 @@ def _season_episode_rows(
         ),
     ).all()
 
-    title_episode_ids = _title_episode_ids(session, channel_title.canonical_title_id)
+    title_episode_ids = _title_episode_ids(session, channel_title.tmdb_title_id)
     listed = [
-        _SeasonEpisodeRow(episode_id, canonical_id, title_id, sort_order)
-        for episode_id, sort_order, title_id, canonical_id, unlinked in rows
-        if canonical_id in title_episode_ids
+        _SeasonEpisodeRow(episode_id, tmdb_record_id, title_id, sort_order)
+        for episode_id, sort_order, title_id, tmdb_record_id, unlinked in rows
+        if tmdb_record_id in title_episode_ids
         or (unlinked and title_id in site_title_ids)
     ]
     listed.sort(
         key=lambda row: (
             title_order[row.title_id],
             str(row.id),
-            str(row.canonical_episode_id),
+            str(row.tmdb_episode_id),
         ),
     )
     return listed
@@ -462,8 +444,8 @@ def _episodes_by_id(
         select(Episode)
         .where(col(Episode.id).in_(episode_ids))
         .options(
-            selectinload(Episode.canonical_episode_links).selectinload(  # type: ignore[arg-type]
-                EpisodeCanonicalEpisode.canonical_episode,  # type: ignore[arg-type]
+            selectinload(Episode.tmdb_episode_links).selectinload(  # type: ignore[arg-type]
+                EpisodeTmdbEpisode.tmdb_episode,  # type: ignore[arg-type]
             ),
         ),
     ).all()
@@ -507,7 +489,7 @@ def channel_episodes_output(
         # An episode nothing was minted for it to be linked to is the episode
         # itself, so it is served under its own id rather than under nothing.
         fields = episode.model_dump()
-        fields["canonical_episode_id"] = canonical_id_of(episode)
+        fields["tmdb_episode_id"] = tmdb_record_id_of(episode)
         if result.latest_watch:
             extras["watch_date"] = result.latest_watch.watch_date
             extras["verified"] = result.latest_watch.verified
@@ -533,7 +515,7 @@ def channel_episodes_output(
                 plugin,
             )
 
-    serve_as_canonical_episodes(session, output.episodes)
+    serve_as_tmdb_episodes(session, output.episodes)
     custom_source = apply_user_episode_urls(
         session,
         user,

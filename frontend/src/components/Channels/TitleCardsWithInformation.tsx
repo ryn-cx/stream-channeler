@@ -48,7 +48,7 @@ export function TitleCardsWithInformation({
             <DialogBody>
               <WhitelistManager
                 channelId={channelId}
-                canonicalTitleId={selected.canonicalTitleId}
+                tmdbTitleId={selected.tmdbTitleId}
                 titleName={selected.name || "Unknown Title"}
                 onClose={() => setSelected(null)}
                 readOnly

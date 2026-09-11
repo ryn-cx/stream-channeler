@@ -145,11 +145,11 @@ export const titleColumns: ColumnDef<TitleTableData>[] = [
     ),
   },
   {
-    accessorKey: "canonical_title_validated_at",
+    accessorKey: "tmdb_title_validated_at",
     header: "Link Validated At",
     meta: { filterVariant: "dateRange" },
     cell: ({ row }) => (
-      <DateCell value={row.original.canonical_title_validated_at} />
+      <DateCell value={row.original.tmdb_title_validated_at} />
     ),
   },
   {
@@ -163,21 +163,19 @@ export const titleColumns: ColumnDef<TitleTableData>[] = [
     cell: ({ row }) => <TruncatedCell value={row.original.key} />,
   },
   {
-    accessorKey: "canonical_title_id",
-    header: "Canonical Title ID",
+    accessorKey: "tmdb_title_id",
+    header: "TMDB Title ID",
     enableSorting: false,
     enableColumnFilter: false,
-    cell: ({ row }) => (
-      <TruncatedCell value={row.original.canonical_title_id} />
-    ),
+    cell: ({ row }) => <TruncatedCell value={row.original.tmdb_title_id} />,
   },
   {
-    accessorKey: "canonical_title_ids",
-    header: "Canonical Title IDs",
+    accessorKey: "tmdb_title_ids",
+    header: "TMDB Title IDs",
     enableSorting: false,
     enableColumnFilter: false,
     cell: ({ row }) => (
-      <TruncatedCell value={row.original.canonical_title_ids?.join(", ")} />
+      <TruncatedCell value={row.original.tmdb_title_ids?.join(", ")} />
     ),
   },
   {

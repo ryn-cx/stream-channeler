@@ -147,7 +147,7 @@ class YouTubeChannelImporter(
                 # checking for new playlists and changes to the channel information.
                 update_at=channel_file.record_data_timestamp + timedelta(days=365),
                 data_timestamp=self._title_files_data_timestamp(title_key),
-                canonical_title_validated_at=tz_datetime.now(),
+                tmdb_title_validated_at=tz_datetime.now(),
                 source_id=source.id,
                 image_url=image_url(channel_item.snippet.thumbnails),
                 thumbnail_url=thumbnail_url(channel_item.snippet.thumbnails),

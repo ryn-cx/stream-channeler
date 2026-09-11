@@ -888,11 +888,11 @@ export function MediaTablePage<TData extends { id: string }>({
   )
 }
 
-export const CANONICAL_TAB = "canonical"
+export const TMDB_TAB = "tmdb"
 
 export const MEDIA_TAB = "media"
 
-export type MediaTab = typeof MEDIA_TAB | typeof CANONICAL_TAB
+export type MediaTab = typeof MEDIA_TAB | typeof TMDB_TAB
 
 export type MediaScope = {
   plugin_id?: string
@@ -902,7 +902,7 @@ export type MediaScope = {
 }
 
 export type MediaSearch = MediaScope & {
-  view?: typeof CANONICAL_TAB
+  view?: typeof TMDB_TAB
 }
 
 export type ScopeColumn = keyof MediaScope
@@ -953,7 +953,7 @@ export type MediaPath =
 export const validateMediaSearch = (
   search: Record<string, unknown>,
 ): MediaSearch => ({
-  view: search.view === CANONICAL_TAB ? search.view : undefined,
+  view: search.view === TMDB_TAB ? search.view : undefined,
   plugin_id:
     typeof search.plugin_id === "string" ? search.plugin_id : undefined,
   source_id:
@@ -965,21 +965,21 @@ export const validateMediaSearch = (
 
 const SCOPE_TABS: { value: MediaTab; label: string }[] = [
   { value: MEDIA_TAB, label: "Media" },
-  { value: CANONICAL_TAB, label: "Canonical" },
+  { value: TMDB_TAB, label: "TMDB" },
 ]
 
-// The canonical tab of a media list: the same page, reading the canonical rows
+// The tmdb tab of a media list: the same page, reading the tmdb rows
 // of the table instead of the non-canonical rows, so it needs its own columns
 // and fetcher.
-interface CanonicalTab<TCanonical extends { id: string }> {
-  columns: ColumnDef<TCanonical>[]
+interface TmdbTab<TTmdb extends { id: string }> {
+  columns: ColumnDef<TTmdb>[]
   defaultHidden?: VisibilityState
-  fetchTable: (params: MediaPageParams) => Promise<MediaTableResult<TCanonical>>
+  fetchTable: (params: MediaPageParams) => Promise<MediaTableResult<TTmdb>>
 }
 
 interface MediaListPageProps<
   TData extends { id: string },
-  TCanonical extends { id: string },
+  TTmdb extends { id: string },
 > {
   title: string
   path: MediaPath
@@ -989,8 +989,8 @@ interface MediaListPageProps<
   emptyIcon: LucideIcon
   headerActions?: ReactNode
   fetchTable: (params: MediaPageParams) => Promise<MediaTableResult<TData>>
-  // Left off by the lists that have no canonical counterpart, which drops the tab.
-  canonical?: CanonicalTab<TCanonical>
+  // Left off by the lists that have no tmdb counterpart, which drops the tab.
+  tmdb?: TmdbTab<TTmdb>
 }
 
 // TODO: Validate
@@ -1032,7 +1032,7 @@ function ScopedHeader({
 // TODO: Validate
 export function MediaListPage<
   TData extends { id: string },
-  TCanonical extends { id: string } = TData,
+  TTmdb extends { id: string } = TData,
 >({
   title,
   path,
@@ -1042,8 +1042,8 @@ export function MediaListPage<
   emptyIcon,
   headerActions,
   fetchTable,
-  canonical,
-}: MediaListPageProps<TData, TCanonical>) {
+  tmdb,
+}: MediaListPageProps<TData, TTmdb>) {
   const search = useSearch({ strict: false }) as MediaSearch
   const navigate = useNavigate()
   const scope = childmostScope(search)
@@ -1053,9 +1053,7 @@ export function MediaListPage<
   )
   const requestedTab: MediaTab = search.view ?? rememberedTab
   const activeTab: MediaTab =
-    requestedTab === CANONICAL_TAB && (!canonical || scope)
-      ? MEDIA_TAB
-      : requestedTab
+    requestedTab === TMDB_TAB && (!tmdb || scope) ? MEDIA_TAB : requestedTab
 
   // TODO: Validate
   const scopedParams = (params: MediaPageParams): MediaPageParams =>
@@ -1091,7 +1089,7 @@ export function MediaListPage<
   ) : (
     <div className="flex flex-wrap items-center gap-3">
       <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-      {canonical && (
+      {tmdb && (
         <Tabs
           value={activeTab}
           onValueChange={(value) => setTab(value as MediaTab)}
@@ -1115,15 +1113,15 @@ export function MediaListPage<
     />
   )
 
-  if (canonical && activeTab === CANONICAL_TAB) {
+  if (tmdb && activeTab === TMDB_TAB) {
     return (
       <MediaTablePage
-        columns={canonical.columns}
-        queryKey={["media-table", title, CANONICAL_TAB]}
-        fetchTable={canonical.fetchTable}
-        columnVisibilityKey={`${columnVisibilityKey}-canonical`}
-        defaultHidden={canonical.defaultHidden ?? {}}
-        resetKey={CANONICAL_TAB}
+        columns={tmdb.columns}
+        queryKey={["media-table", title, TMDB_TAB]}
+        fetchTable={tmdb.fetchTable}
+        columnVisibilityKey={`${columnVisibilityKey}-tmdb`}
+        defaultHidden={tmdb.defaultHidden ?? {}}
+        resetKey={TMDB_TAB}
         header={header}
         emptyState={emptyState}
       />

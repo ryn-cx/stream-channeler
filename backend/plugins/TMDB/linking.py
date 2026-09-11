@@ -2,11 +2,20 @@
 
 from __future__ import annotations
 
+from typing import override
+
+from plugins.TMDB.constants import MOVIE_URL_REGEX, TV_URL_REGEX
 from plugins.TMDB.shared import TMDBShared
 
 
 # TODO: Validate
 class TMDBLinking(TMDBShared):
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_regexes(cls) -> tuple[str, ...]:
+        return (MOVIE_URL_REGEX, TV_URL_REGEX)
+
     # TODO: Validate
     def alternate_episode_numbers(
         self,
