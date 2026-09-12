@@ -29,7 +29,6 @@ import { Route as LayoutDashboardRouteImport } from './routes/_layout/dashboard'
 import { Route as LayoutCreditsRouteImport } from './routes/_layout/credits'
 import { Route as LayoutChannelOrdersRouteImport } from './routes/_layout/channel-orders'
 import { Route as LayoutChannelCommentsRouteImport } from './routes/_layout/channel-comments'
-import { Route as LayoutAllTitlesRouteImport } from './routes/_layout/all-titles'
 import { Route as LayoutAdminV2RouteImport } from './routes/_layout/admin-v2'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as LayoutOnboardingIndexRouteImport } from './routes/_layout/onboarding.index'
@@ -157,11 +156,6 @@ const LayoutChannelOrdersRoute = LayoutChannelOrdersRouteImport.update({
 const LayoutChannelCommentsRoute = LayoutChannelCommentsRouteImport.update({
   id: '/channel-comments',
   path: '/channel-comments',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutAllTitlesRoute = LayoutAllTitlesRouteImport.update({
-  id: '/all-titles',
-  path: '/all-titles',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutAdminV2Route = LayoutAdminV2RouteImport.update({
@@ -332,7 +326,6 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRouteWithChildren
   '/admin-v2': typeof LayoutAdminV2RouteWithChildren
-  '/all-titles': typeof LayoutAllTitlesRoute
   '/channel-comments': typeof LayoutChannelCommentsRoute
   '/channel-orders': typeof LayoutChannelOrdersRoute
   '/credits': typeof LayoutCreditsRoute
@@ -380,7 +373,6 @@ export interface FileRoutesByTo {
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
-  '/all-titles': typeof LayoutAllTitlesRoute
   '/channel-comments': typeof LayoutChannelCommentsRoute
   '/channel-orders': typeof LayoutChannelOrdersRoute
   '/credits': typeof LayoutCreditsRoute
@@ -432,7 +424,6 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_layout/admin': typeof LayoutAdminRouteWithChildren
   '/_layout/admin-v2': typeof LayoutAdminV2RouteWithChildren
-  '/_layout/all-titles': typeof LayoutAllTitlesRoute
   '/_layout/channel-comments': typeof LayoutChannelCommentsRoute
   '/_layout/channel-orders': typeof LayoutChannelOrdersRoute
   '/_layout/credits': typeof LayoutCreditsRoute
@@ -486,7 +477,6 @@ export interface FileRouteTypes {
     | '/signup'
     | '/admin'
     | '/admin-v2'
-    | '/all-titles'
     | '/channel-comments'
     | '/channel-orders'
     | '/credits'
@@ -534,7 +524,6 @@ export interface FileRouteTypes {
     | '/recover-password'
     | '/reset-password'
     | '/signup'
-    | '/all-titles'
     | '/channel-comments'
     | '/channel-orders'
     | '/credits'
@@ -585,7 +574,6 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_layout/admin'
     | '/_layout/admin-v2'
-    | '/_layout/all-titles'
     | '/_layout/channel-comments'
     | '/_layout/channel-orders'
     | '/_layout/credits'
@@ -778,13 +766,6 @@ declare module '@tanstack/react-router' {
       path: '/channel-comments'
       fullPath: '/channel-comments'
       preLoaderRoute: typeof LayoutChannelCommentsRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/all-titles': {
-      id: '/_layout/all-titles'
-      path: '/all-titles'
-      fullPath: '/all-titles'
-      preLoaderRoute: typeof LayoutAllTitlesRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/admin-v2': {
@@ -1070,7 +1051,6 @@ const LayoutOnboardingRouteWithChildren =
 interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRouteWithChildren
   LayoutAdminV2Route: typeof LayoutAdminV2RouteWithChildren
-  LayoutAllTitlesRoute: typeof LayoutAllTitlesRoute
   LayoutChannelCommentsRoute: typeof LayoutChannelCommentsRoute
   LayoutChannelOrdersRoute: typeof LayoutChannelOrdersRoute
   LayoutCreditsRoute: typeof LayoutCreditsRoute
@@ -1096,7 +1076,6 @@ interface LayoutRouteChildren {
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRouteWithChildren,
   LayoutAdminV2Route: LayoutAdminV2RouteWithChildren,
-  LayoutAllTitlesRoute: LayoutAllTitlesRoute,
   LayoutChannelCommentsRoute: LayoutChannelCommentsRoute,
   LayoutChannelOrdersRoute: LayoutChannelOrdersRoute,
   LayoutCreditsRoute: LayoutCreditsRoute,

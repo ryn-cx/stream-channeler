@@ -5,6 +5,16 @@ import WinBox from "winbox/src/js/winbox.js"
 import "winbox/dist/css/winbox.min.css"
 import { cn } from "@/lib/utils"
 
+// TODO: Validate
+const nextWinBoxIndex = () => {
+  const open = Array.from(document.querySelectorAll<HTMLElement>(".winbox"))
+  const highest = open.reduce(
+    (top, element) => Math.max(top, Number(element.style.zIndex) || 0),
+    49,
+  )
+  return highest + 1
+}
+
 interface WinBoxModalProps {
   open: boolean
   title: string
@@ -55,7 +65,7 @@ export function WinBoxModal({
       x: "center",
       y: "center",
       background: "var(--primary)",
-      index: 50,
+      index: nextWinBoxIndex(),
       onclose: () => {
         closed = true
         winBoxRef.current = null

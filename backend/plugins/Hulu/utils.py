@@ -23,6 +23,7 @@ from plugins.Hulu.constants import (
     RECOMMENDATIONS_TOPIC,
     HuluMediaType,
 )
+from plugins.utils.base_plugin.channels import ChannelKeyURL
 
 
 # TODO: Validate
@@ -165,12 +166,12 @@ def watch_component(
 # TODO: Validate
 def collection_channel_key_urls(
     components: Sequence[SeriesComponent | MovieComponent],
-) -> list[tuple[str, str]]:
-    channel_key_urls: dict[tuple[str, str], None] = {}
+) -> list[ChannelKeyURL]:
+    channel_key_urls: dict[ChannelKeyURL, None] = {}
     for component in components:
         if component.id in EPISODES_COLLECTION_IDS:
             continue
         for item in component.items:
             if url := title_item_url(item):
-                channel_key_urls[(RECOMMENDATIONS_TOPIC, url)] = None
+                channel_key_urls[ChannelKeyURL(RECOMMENDATIONS_TOPIC, url)] = None
     return list(channel_key_urls)

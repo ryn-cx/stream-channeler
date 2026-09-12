@@ -116,24 +116,6 @@ class TitleListPublic(TitlePublic):
 
 
 # TODO: Validate
-class TitleBrowseOutput(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: uuid.UUID
-    name: str | None
-    year: int | None
-    media_type: str | None
-    image_url: str | None
-    thumbnail_url: str | None
-
-
-# TODO: Validate
-class TitlesBrowsePublic(BaseModel):
-    data: list[TitleBrowseOutput]
-    total_count: int
-
-
-# TODO: Validate
 class TitleRecord(BaseModel):
     """A `Title` and what holds it, each served as the record it already is."""
 

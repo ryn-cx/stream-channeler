@@ -2,7 +2,7 @@ import re
 from abc import abstractmethod
 from typing import NamedTuple, override
 
-from plugins.utils.abstract_plugin import AbstractPlugin
+from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 
 
 class ParsedURL(NamedTuple):
@@ -31,14 +31,28 @@ class BaseURLMixin(AbstractPlugin):
     def _url_regexes(cls) -> tuple[str, ...]:
         """Return a tuple of URL regex patterns that the plugin supports."""
 
+    # TODO: Validate
     @classmethod
     def _url_regex(cls) -> str:
         """Return the regex string to check if a URL is supported by the plugin."""
         domain_regex = cls._domains_regex()
         alternatives = "|".join(
-            domain_regex + url_regex for url_regex in cls._url_regexes()
+            domain_regex + re.sub(r"\(\?P<[^>]+>", "(?:", url_regex)
+            for url_regex in cls._url_regexes()
         )
         return f"(?:{alternatives})"
+
+    # TODO: Validate
+    @override
+    def title_key_from_url(self, url: str) -> str:
+        domain_regex = self._domains_regex()
+        for url_regex in self._url_regexes():
+            match = re.match(domain_regex + url_regex, url)
+            if match and (title_key := match.groupdict().get("title_key")):
+                return title_key
+
+        msg = f"No title key in {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)
 
     @classmethod
     def _domains(cls) -> list[str]:

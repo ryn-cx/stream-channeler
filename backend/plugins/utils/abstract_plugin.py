@@ -67,11 +67,6 @@ class AbstractPlugin(ABC):
 
     # TODO: Validate
     @classmethod
-    def browsable_titles(cls) -> bool:
-        return True
-
-    # TODO: Validate
-    @classmethod
     @abstractmethod
     def plugin_name(cls) -> str:
         """Return the unique identifier for the plugin.
@@ -391,6 +386,11 @@ class AbstractPlugin(ABC):
 
         """
         msg = "import_watch_history is not supported by this plugin."
+        raise NotImplementedError(msg)
+
+    # TODO: Validate
+    def title_key_from_url(self, url: str) -> str:
+        msg = f"title_key_from_url is not supported by this plugin: {url}"
         raise NotImplementedError(msg)
 
     # TODO: Validate

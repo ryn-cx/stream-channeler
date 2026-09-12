@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, override
 
 from app.utils.strict_re import strict_search
@@ -13,6 +14,7 @@ from plugins.Hulu.constants import (
     HuluMediaType,
 )
 from plugins.Hulu.utils import title_url, title_urls
+from plugins.utils.base_plugin.channels import ChannelKeyURL
 
 if TYPE_CHECKING:
     from wholoo.all_movies.models import AllMoviesModel
@@ -43,7 +45,10 @@ class HuluShared(HuluBaseFiles):
     # TODO: Validate
     def _create_initial_channel_records(self) -> None:
         self.add_new_urls_to_channel(
-            [("All Titles", url) for url in self._title_urls_from_plugin_files()],
+            [
+                ChannelKeyURL("All Titles", url)
+                for url in self._title_urls_from_plugin_files()
+            ],
         )
 
     # TODO: Validate
@@ -57,19 +62,21 @@ class HuluShared(HuluBaseFiles):
         urls: dict[str, None] = {}
         for page in pages:
             for url in title_urls(page):
-                match = strict_search(f"{SERIES_URL_REGEX}|{MOVIE_URL_REGEX}", url)
-                if series_key := match.group("series_key"):
+                if match := re.search(SERIES_URL_REGEX, url):
+                    series_key = match.group("title_key")
                     urls[title_url(series_key, HuluMediaType.SERIES)] = None
                 else:
-                    urls[title_url(match.group("movie_key"), HuluMediaType.MOVIE)] = (
-                        None
-                    )
+                    movie_key = strict_search(MOVIE_URL_REGEX, url).group("title_key")
+                    urls[title_url(movie_key, HuluMediaType.MOVIE)] = None
         return list(urls)
 
     # TODO: Validate
     def _title_keys_from_plugin_files(self) -> set[str]:
         title_keys: set[str] = set()
         for url in self._title_urls_from_plugin_files():
-            match = strict_search(f"{SERIES_URL_REGEX}|{MOVIE_URL_REGEX}", url)
-            title_keys.add(match.group("series_key") or match.group("movie_key"))
+            match = re.search(SERIES_URL_REGEX, url) or strict_search(
+                MOVIE_URL_REGEX,
+                url,
+            )
+            title_keys.add(match.group("title_key"))
         return title_keys

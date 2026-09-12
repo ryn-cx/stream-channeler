@@ -12,9 +12,6 @@ from loguru import logger
 from not_yt_dlapi.exceptions import APIError
 
 from plugins.YouTube.files import (
-    Browse,
-    ChannelByChannelId,
-    Topic,
     Videos,
     not_yt_dlapi,
 )
@@ -40,22 +37,22 @@ def playlist_url(playlist_key: str) -> str:
     return build_url(f"playlist?list={playlist_key}")
 
 
-# TODO: Validate
-def title_url(title_key: str) -> str:
-    return build_url(f"show/{title_key}")
+# # TODO: Validate
+# def title_url(title_key: str) -> str:
+#     return build_url(f"show/{title_key}")
 
 
-# TODO: Validate
-def title_season_url(title_key: str, season_number: str) -> str:
-    return build_url(f"show/{title_key}?season={season_number}")
+# # # TODO: Validate
+# def title_season_url(title_key: str, season_number: str) -> str:
+#     return build_url(f"show/{title_key}?season={season_number}")
 
 
-# TODO: Validate
+# # TODO: Validate
 def is_an_album(key: str) -> bool:
-    return key.startswith("OLAK5uy_")
+    return key.startswith("OLAK")
 
 
-# TODO: Validate
+# # TODO: Validate
 def is_user_playlist(key: str) -> bool:
     return key.startswith("PL")
 
@@ -70,18 +67,18 @@ def is_video_key(key: str) -> bool:
     return len(key) == 11  # noqa: PLR2004
 
 
-# TODO: Validate
-def is_title_key(key: str) -> bool:
-    """Report whether a key belongs to a title page."""
-    return key.startswith("SC")
+# # TODO: Validate
+# def is_title_key(key: str) -> bool:
+#     """Report whether a key belongs to a title page."""
+#     return key.startswith("SC")
 
 
-# TODO: Validate
+# # TODO: Validate
 def is_channel_key(key: str) -> bool:
     """Report whether a key belongs to a channel rather than to what one holds."""
     return not (
         is_video_key(key)
-        or is_title_key(key)
+        # or is_title_key(key)
         or is_an_album(key)
         or is_user_playlist(key)
     )
@@ -108,26 +105,26 @@ def channel_uploads_playlist_key(title_key: str) -> str:
     return title_key[:1] + "U" + title_key[2:]
 
 
-# TODO: Validate
-def title_season_key(title_key: str, season_number: str) -> str:
-    """Return the season key for one season of a title."""
-    return f"{title_key}/{season_number}"
+# # TODO: Validate
+# def title_season_key(title_key: str, season_number: str) -> str:
+#     """Return the season key for one season of a title."""
+#     return f"{title_key}/{season_number}"
 
 
-# TODO: Validate
-def is_title_season_key(key: str) -> bool:
-    """Report whether a key belongs to one season of a title."""
-    return is_title_key(key) and "/" in key
+# # # TODO: Validate
+# def is_title_season_key(key: str) -> bool:
+#     """Report whether a key belongs to one season of a title."""
+#     return is_title_key(key) and "/" in key
 
 
-# TODO: Validate
-def split_title_season_key(season_key: str) -> tuple[str, str]:
-    """Split a season key back into its title key and season number."""
-    title_key, _, season_number = season_key.partition("/")
-    return title_key, season_number
+# # # TODO: Validate
+# def split_title_season_key(season_key: str) -> tuple[str, str]:
+#     """Split a season key back into its title key and season number."""
+#     title_key, _, season_number = season_key.partition("/")
+#     return title_key, season_number
 
 
-# TODO: Validate
+# # TODO: Validate
 def get_first_item[T](items: Sequence[T] | None) -> T:
     if not items:
         msg = "Expected at least one item, got none"
@@ -135,18 +132,18 @@ def get_first_item[T](items: Sequence[T] | None) -> T:
     return items[0]
 
 
-# TODO: Validate
-def is_free_movies_channel(channel_key: str) -> bool:
-    """Report whether a channel is the one YouTube's free catalogue is published on.
+# # TODO: Validate
+# def is_free_movies_channel(channel_key: str) -> bool:
+#     """Report whether a channel is the one YouTube's free catalogue is published on.
 
-    Everything YouTube serves free with ads is owned by this one channel, and a
-    title that has to be bought or rented is owned by a channel generated for
-    that title alone, so who owns a video is what says which of the two it is.
-    """
-    return channel_key == "UCuVPpxrm2VAgpH3Ktln4HXg"
+#     Everything YouTube serves free with ads is owned by this one channel, and a
+#     title that has to be bought or rented is owned by a channel generated for
+#     that title alone, so who owns a video is what says which of the two it is.
+#     """
+#     return channel_key == "UCuVPpxrm2VAgpH3Ktln4HXg"
 
 
-# TODO: Validate
+# # TODO: Validate
 def is_quota_error(error: BaseException) -> bool:
     if not isinstance(error, APIError):
         return False
@@ -178,70 +175,70 @@ def thumbnail_url(thumbnails: Any) -> str | None:  # noqa: ANN401 - TODO: Add a 
     return None
 
 
-# TODO: Validate
-def is_topic_channel(channel_file: ChannelByChannelId) -> bool:
-    """Report whether a channel key belongs to a musician's Topic channel.
+# # TODO: Validate
+# def is_topic_channel(channel_file: ChannelByChannelId) -> bool:
+#     """Report whether a channel key belongs to a musician's Topic channel.
 
-    Only the channel says so, and this reads what has been downloaded rather
-    than downloading it, so a channel that has not been read yet is answered
-    for as the plain channel it is taken for until it has been.
-    """
-    if not is_channel_key(channel_file.unique_identifier):
-        return False
+#     Only the channel says so, and this reads what has been downloaded rather
+#     than downloading it, so a channel that has not been read yet is answered
+#     for as the plain channel it is taken for until it has been.
+#     """
+#     if not is_channel_key(channel_file.unique_identifier):
+#         return False
 
-    if channel_file.is_outdated() or not channel_file.record_content:
-        return False
-    items = channel_file.parsed().items
-    if not items:
-        return False
-    return items[0].snippet.title.endswith(" - Topic")
-
-
-# TODO: Validate
-def is_movies_channel(channel_file: ChannelByChannelId) -> bool:
-    if not is_channel_key(channel_file.unique_identifier):
-        return False
-
-    if channel_file.is_outdated() or not channel_file.record_content:
-        return False
-    items = channel_file.parsed().items
-    if not items:
-        return False
-    return items[0].snippet.title == "YouTube Movies"
+#     if channel_file.is_outdated() or not channel_file.record_content:
+#         return False
+#     items = channel_file.parsed().items
+#     if not items:
+#         return False
+#     return items[0].snippet.title.endswith(" - Topic")
 
 
-# TODO: Validate
-def is_usa_video(videos_file: Videos) -> bool:
-    # A video that has not been read yet is taken to be one, since what says
-    # otherwise is the video itself and reading it is what this decides.
-    if videos_file.is_outdated() or not videos_file.record_content:
-        return True
+# # # TODO: Validate
+# def is_movies_channel(channel_file: ChannelByChannelId) -> bool:
+#     if not is_channel_key(channel_file.unique_identifier):
+#         return False
 
-    items = videos_file.parsed().items
-    if not items:
-        return False
-    restriction = items[0].content_details.region_restriction
-    if restriction is None or restriction.allowed is None:
-        return False
-    return "US" in restriction.allowed
+#     if channel_file.is_outdated() or not channel_file.record_content:
+#         return False
+#     items = channel_file.parsed().items
+#     if not items:
+#         return False
+#     return items[0].snippet.title == "YouTube Movies"
 
 
-# TODO: Validate
-def topic_release_keys_from_file(topic_file: Topic) -> list[str]:
-    """Return the playlist key of every release a Topic channel lists."""
-    return [
-        release_key
-        for release_key in topic_file.release_keys()
-        if is_an_album(release_key)
-    ]
+# # # TODO: Validate
+# def is_usa_video(videos_file: Videos) -> bool:
+#     # A video that has not been read yet is taken to be one, since what says
+#     # otherwise is the video itself and reading it is what this decides.
+#     if videos_file.is_outdated() or not videos_file.record_content:
+#         return True
+
+#     items = videos_file.parsed().items
+#     if not items:
+#         return False
+#     restriction = items[0].content_details.region_restriction
+#     if restriction is None or restriction.allowed is None:
+#         return False
+#     return "US" in restriction.allowed
 
 
-# TODO: Validate
-def title_season_numbers_from_file(show_file: Browse) -> list[str]:
-    return [str(number) for number in show_file.season_numbers()]
+# # # TODO: Validate
+# def topic_release_keys_from_file(topic_file: Topic) -> list[str]:
+#     """Return the playlist key of every release a Topic channel lists."""
+#     return [
+#         release_key
+#         for release_key in topic_file.release_keys()
+#         if is_an_album(release_key)
+#     ]
 
 
-# TODO: Validate
+# # # TODO: Validate
+# def title_season_numbers_from_file(show_file: Browse) -> list[str]:
+#     return [str(number) for number in show_file.season_numbers()]
+
+
+# # TODO: Validate
 def batch_download_missing_videos(videos_files: Sequence[Videos]) -> None:
     outdated_files = [
         videos_file for videos_file in videos_files if videos_file.is_outdated()

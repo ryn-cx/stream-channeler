@@ -24,9 +24,6 @@ from plugins.YouTube.utils import (
     get_first_item,
     image_url,
     is_channel_key,
-    is_title_key,
-    is_title_season_key,
-    is_topic_channel,
     is_video_key,
     thumbnail_url,
     video_url,
@@ -118,16 +115,16 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
     def _playlist_is_missing(self, title: Title, playlist_key: str) -> bool:
         # A URL for a whole title asks for every season it has, so nothing is missing
         # as long as it has been imported with seasons.
-        if is_title_key(playlist_key) and not is_title_season_key(playlist_key):
-            return not title.active_children
+        # if is_title_key(playlist_key) and not is_title_season_key(playlist_key):
+        #     return not title.active_children
 
         # A URL for a Topic channel asks for every release the musician has, which
         # is the whole title, so nothing is missing once it has been imported with
         # seasons.
-        if playlist_key == title.key and is_topic_channel(
-            self.channel_by_channel_id_file(title.key),
-        ):
-            return not title.active_children
+        # if playlist_key == title.key and is_topic_channel(
+        #     self.channel_by_channel_id_file(title.key),
+        # ):
+        #     return not title.active_children
 
         # If the playlist being checked is the channel uploads playlist it should only
         # be considered missing if the channel has at least one upload.
@@ -239,6 +236,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
         ).one_or_none()
 
         if not existing_title:
+            self._preload_and_download_files(title_key)
             existing_title = self._upsert_title(self.source, title_key)
 
         # If a channel is imported but a new playlist is added and that playlist is the

@@ -16,6 +16,7 @@ from app.utils.update_at import staggered_monthly_update_at
 from plugins.Netflix.constants import TITLE_URL_REGEX
 from plugins.Netflix.shared import NetflixShared
 from plugins.utils.abstract_plugin import InvalidURLError
+from plugins.utils.base_plugin.channels import ChannelKeyURL
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import ParsedURL
 
@@ -55,7 +56,9 @@ class NetflixImporter(NetflixShared, BaseImporter, ABC):
 
         title_data = self.title_file(title.key).parsed()
         channel_keys = ["All Titles", *self._title_channel_keys(title_data)]
-        channel_key_urls = [(channel_key, title.url) for channel_key in channel_keys]
+        channel_key_urls = [
+            ChannelKeyURL(channel_key, title.url) for channel_key in channel_keys
+        ]
         self.remove_urls_from_other_channels(channel_key_urls)
         self.add_new_urls_to_channel(channel_key_urls)
         self.add_new_urls_to_channel(self._related_channel_key_urls(title_data))
@@ -82,9 +85,9 @@ class NetflixImporter(NetflixShared, BaseImporter, ABC):
     def _related_channel_key_urls(
         self,
         title_data: DetailModalModel,
-    ) -> list[tuple[str, str]]:
+    ) -> list[ChannelKeyURL]:
         channel_key_urls = [
-            ("All Titles", self.title_url(str(similar.video_id)))
+            ChannelKeyURL("All Titles", self.title_url(str(similar.video_id)))
             for similar in title_data.similars or []
             if similar.video_id
         ]
@@ -93,9 +96,9 @@ class NetflixImporter(NetflixShared, BaseImporter, ABC):
                 if not sibling.video_id:
                     continue
                 url = self.title_url(str(sibling.video_id))
-                channel_key_urls.append(("All Titles", url))
+                channel_key_urls.append(ChannelKeyURL("All Titles", url))
                 if membership.title:
-                    channel_key_urls.append((membership.title, url))
+                    channel_key_urls.append(ChannelKeyURL(membership.title, url))
         return list(dict.fromkeys(channel_key_urls))
 
 

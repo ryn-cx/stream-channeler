@@ -38,6 +38,7 @@ from plugins.Crunchyroll.utils import (
     title_thumbnail,
 )
 from plugins.utils.abstract_plugin import InvalidURLError
+from plugins.utils.base_plugin.channels import ChannelKeyURL
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import ParsedURL
 
@@ -130,7 +131,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
 
             # Episodes for different regions have different keys. The title is always
             # imported using the original region for consistency.
-            for version in objects_file.parsed().data[0].episode_metadata.versions:
+            for version in objects_file.parsed().episode_metadata.versions:
                 if version.original:
                     episode_key = version.guid
                     break
@@ -138,7 +139,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
             original_file = self.objects_file(episode_key)
             self.raise_invalid_url_if_no_content(original_file, url)
             return ParsedURL(
-                original_file.parsed().data[0].episode_metadata.series_id,
+                original_file.parsed().episode_metadata.series_id,
                 episode_key=episode_key,
             )
 
@@ -154,6 +155,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
             # Required to detect changes to the title.
             self.series_file(title_key),
             self.categories_file(title_key),
+            self.similar_to_file(title_key),
         ]
 
     # TODO: Validate
@@ -214,7 +216,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
     ) -> Title:
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            series_data = self.series_file(title_key).parsed().data[0]
+            series_data = self.series_file(title_key).parsed()
             title = Title(
                 key=series_data.id,
                 name=series_data.title,
@@ -340,9 +342,19 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
             datum.localization.title
             for datum in self.categories_file(title.key).parsed().data
         )
-        channel_key_urls = [(channel_key, title.url) for channel_key in channel_keys]
+        channel_key_urls = [
+            ChannelKeyURL(channel_key, title.url) for channel_key in channel_keys
+        ]
         self.remove_urls_from_other_channels(channel_key_urls)
         self.add_new_urls_to_channel(channel_key_urls)
+        self.add_new_urls_to_channel(self._similar_channel_key_urls(title.key))
+
+    # TODO: Validate
+    def _similar_channel_key_urls(self, title_key: str) -> list[ChannelKeyURL]:
+        return [
+            ChannelKeyURL("All Titles", self.title_url(datum.id))
+            for datum in self.similar_to_file(title_key).parsed().data
+        ]
 
     # TODO: Validate
     def create_channel_records(self) -> None:
@@ -359,7 +371,10 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
         releases: list[BrowseSeriesDatum],
     ) -> None:
         self.add_new_urls_to_channel(
-            [("All Titles", self.title_url(release.id)) for release in releases],
+            [
+                ChannelKeyURL("All Titles", self.title_url(release.id))
+                for release in releases
+            ],
         )
 
     # TODO: Validate
@@ -447,12 +462,12 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
                 music_file = self.concert_or_music_video_file(episode_key)
                 self.raise_invalid_url_if_no_content(music_file, url)
                 return ParsedURL(
-                    music_file.parsed().data[0].artist.id,
+                    music_file.parsed().artist.id,
                     episode_key=episode_key,
                 )
 
         if match := re.match(domain_regex + ARTIST_URL_REGEX, url):
-            title_key = match.group("artist_key")
+            title_key = match.group("title_key")
             self.raise_invalid_url_if_no_content(self.artist_file(title_key), url)
             return ParsedURL(title_key)
 
@@ -530,7 +545,7 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
     ) -> Title:
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
-            artist_data = self.artist_file(title_key).parsed().data[0]
+            artist_data = self.artist_file(title_key).parsed()
             title = Title(
                 key=title_key,
                 name=artist_data.name,
@@ -600,7 +615,7 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
                 title_key,
                 force=force,
             ):
-                details = self.concert_or_music_video_file(episode_key).parsed().data[0]
+                details = self.concert_or_music_video_file(episode_key).parsed()
                 episode = Episode(
                     key=episode_key,
                     watch_identifier=watch_identifier(self.plugin_name(), episode_key),
@@ -639,10 +654,11 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
 
         channel_keys = ["All Music"]
         channel_keys.extend(
-            genre.display_value
-            for genre in self.artist_file(title.key).parsed().data[0].genres
+            genre.display_value for genre in self.artist_file(title.key).parsed().genres
         )
-        channel_key_urls = [(channel_key, title.url) for channel_key in channel_keys]
+        channel_key_urls = [
+            ChannelKeyURL(channel_key, title.url) for channel_key in channel_keys
+        ]
         self.remove_urls_from_other_channels(channel_key_urls)
         self.add_new_urls_to_channel(channel_key_urls)
 
@@ -652,7 +668,7 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
         browse_file.download_if_outdated()
         self.add_new_urls_to_channel(
             [
-                ("All Music", self.title_url(artist.id))
+                ChannelKeyURL("All Music", self.title_url(artist.id))
                 for artist in browse_file.datums()
             ],
         )

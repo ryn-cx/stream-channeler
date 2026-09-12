@@ -5,8 +5,8 @@ from collections.abc import Sequence
 from typing import Protocol
 
 from chirashi.season_episodes.models import Images as EpisodeImages
-from chirashi.series.models import Datum as SeriesDatum
 from chirashi.series.models import Images as SeriesImages
+from chirashi.series.models import SeriesModel
 
 from plugins.Crunchyroll.constants import CrunchyrollMusicCategory
 
@@ -114,5 +114,5 @@ def episode_thumbnail(images: EpisodeImages) -> str | None:
 
 
 # TODO: Validate
-def is_movie(series: SeriesDatum) -> bool:
+def is_movie(series: SeriesModel) -> bool:
     return "type:movie" in series.keywords

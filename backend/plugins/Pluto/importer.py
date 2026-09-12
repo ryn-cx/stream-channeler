@@ -63,7 +63,7 @@ class PlutoSeriesImporter(PlutoImporter):
     @override
     def parse_url(self, url: str) -> ParsedURL:
         if match := re.match(self._domains_regex() + SERIES_URL_REGEX, url):
-            title_key = match.group("series_key")
+            title_key = match.group("title_key")
             self.raise_invalid_url_if_no_content(self.seasons_file(title_key), url)
             return ParsedURL(title_key, episode_key=match.group("episode_key"))
 
@@ -250,7 +250,7 @@ class PlutoMovieImporter(PlutoImporter):
     @override
     def parse_url(self, url: str) -> ParsedURL:
         if match := re.match(self._domains_regex() + MOVIE_URL_REGEX, url):
-            title_key = match.group("movie_key")
+            title_key = match.group("title_key")
             self.raise_invalid_url_if_no_content(self.items_file(title_key), url)
             return ParsedURL(title_key)
 

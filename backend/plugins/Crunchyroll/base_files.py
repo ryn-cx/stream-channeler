@@ -15,6 +15,7 @@ from plugins.Crunchyroll.files import (
     SeasonEpisodes,
     Seasons,
     Series,
+    SimilarTo,
 )
 from plugins.Crunchyroll.utils import music_episode_category
 from plugins.utils.base_plugin.base import BasePlugin
@@ -33,6 +34,10 @@ class CrunchyrollBaseFiles(BasePlugin):
     # TODO: Validate
     def categories_file(self, title_key: str) -> Categories:
         return self._cached_file(Categories, title_key)
+
+    # TODO: Validate
+    def similar_to_file(self, title_key: str) -> SimilarTo:
+        return self._cached_file(SimilarTo, title_key)
 
     # TODO: Validate
     def objects_file(self, episode_key: str) -> Objects:

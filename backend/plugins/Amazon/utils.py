@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
@@ -82,6 +83,16 @@ def pick_raw_image(images: dict[str, Any]) -> str | None:
         if url := images.get(name):
             return str(url)
     return None
+
+
+# TODO: Validate
+def entity_benefit_id(entity: dict[str, Any]) -> str | None:
+    cues = entity.get("entitlementCues") or {}
+    logo = (cues.get("providerLogo") or {}).get("imageUrl")
+    if not logo:
+        return None
+    found = re.search(r"/benefit-id/[^/]+/([^/]+)/logos/", logo)
+    return found[1] if found else None
 
 
 # TODO: Validate

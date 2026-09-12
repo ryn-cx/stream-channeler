@@ -31,7 +31,7 @@ class DisneyPlus(DisneyPlusShared, AbstractPlugin, register=False):
         if not (match := re.match(self._domains_regex() + ENTITY_URL_REGEX, url)):
             msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
-        return match.group("entity_key")
+        return match.group("title_key")
 
     # TODO: Validate
     @override

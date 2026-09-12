@@ -23,6 +23,7 @@ from plugins.Amazon.constants import (
 from plugins.Amazon.shared import AmazonShared
 from plugins.Amazon.utils import AmazonSeason, detail_url, parse_date
 from plugins.utils.abstract_plugin import InvalidURLError
+from plugins.utils.base_plugin.channels import ChannelKeyURL
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import ParsedURL
 
@@ -56,12 +57,12 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
             # Amazon answers a share link by pointing at the page its own ids key,
             # so the id is read off where the link lands rather than out of the link.
             title_key = self.title_key_from_share_key(
-                match.group("watch_amazon_title_key"),
+                match.group("title_key"),
             )
         elif match := re.match(domain_regex + PRIME_VIDEO_URL_REGEX, url):
-            title_key = match.group("prime_video_title_key")
+            title_key = match.group("title_key")
         elif match := re.match(domain_regex + AMAZON_URL_REGEX, url):
-            title_key = match.group("amazon_title_key")
+            title_key = match.group("title_key")
         else:
             title_key = None
 
@@ -150,7 +151,39 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
                 season_number=page.season_number() or 1,
             ),
         ]
+        season_pages = [self.detail_file(season.key) for season in seasons]
+        self._preload_files(season_pages)
+        self._download_if_outdated(season_pages)
         return [season for season in seasons if self._season_available(season.key)]
+
+    # TODO: Validate
+    def add_title_to_plugin_channels(self, title: Title) -> None:
+        if not title.url:  # Should be impossible.
+            msg = "Title.url is not set."
+            raise AttributeError(msg)
+
+        page = self.detail_file(title.key)
+        channel_keys: list[str] = []
+        if page.included_with_prime():
+            channel_keys.append("All Titles")
+        if page.purchasable():
+            channel_keys.append(PURCHASE_SOURCE_SUFFIX)
+        channel_keys.extend(page.genres())
+
+        channel_key_urls = [
+            ChannelKeyURL(channel_key, title.url)
+            for channel_key in dict.fromkeys(channel_keys)
+        ]
+        self.remove_urls_from_other_channels(channel_key_urls)
+        self.add_new_urls_to_channel(channel_key_urls)
+        self.add_new_urls_to_channel(self._related_channel_key_urls(title.key))
+
+    # TODO: Validate
+    def _related_channel_key_urls(self, title_key: str) -> list[ChannelKeyURL]:
+        return [
+            ChannelKeyURL("All Titles", detail_url(compact_key))
+            for compact_key in self.detail_file(title_key).related_prime_keys()
+        ]
 
     # TODO: Validate
     def title_sources(self, title_key: str) -> list[Source]:
@@ -244,6 +277,7 @@ class AmazonSeriesImporter(AmazonImporter):
                 min(data_timestamps) + timedelta(days=7),
             )
 
+        self.add_title_to_plugin_channels(title)
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
 
@@ -353,6 +387,7 @@ class AmazonMovieImporter(AmazonImporter):
                 staggered_monthly_update_at(title_key, min(data_timestamps)),
             )
 
+        self.add_title_to_plugin_channels(title)
         self._upsert_season(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
 

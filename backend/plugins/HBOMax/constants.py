@@ -4,7 +4,7 @@ SLUG_REGEX = r"(?:[a-z0-9-]+\/)?"
 
 # The title slug HBO Max puts in front of the id is decorative, such as in
 # https://www.hbomax.com/movies/the-batman/4ee4f57e-19bd-493f-96f9-ad3e753af981
-MOVIE_URL_REGEX = rf"\/movies?\/{SLUG_REGEX}(?P<movie_key>{UUID_REGEX})"
+MOVIE_URL_REGEX = rf"\/movies?\/{SLUG_REGEX}(?P<title_key>{UUID_REGEX})"
 # Any non-movie media-type prefix maps to a series, such as mini-series in
 # https://play.hbomax.com/mini-series/396999a6-3fff-4af3-802b-10c46d10deff
 # or shows in

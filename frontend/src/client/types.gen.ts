@@ -888,11 +888,6 @@ export type NewPassword = {
     new_password: string;
 };
 
-export type PluginBrowseInformation = {
-    name: string;
-    favicon_url?: (string | null);
-};
-
 export type PluginImportURLInformation = {
     name: string;
     instructions: string;
@@ -1160,15 +1155,6 @@ export type SourcesPublic = {
     is_server_side: boolean;
 };
 
-export type TitleBrowseOutput = {
-    id: string;
-    name: (string | null);
-    year: (number | null);
-    media_type: (string | null);
-    image_url: (string | null);
-    thumbnail_url: (string | null);
-};
-
 export type TitleImportUrlInput = {
     url: string;
 };
@@ -1254,11 +1240,6 @@ export type TitlePublic = {
     tmdb_id?: (number | null);
     tmdb_url?: (string | null);
     plugin_name?: (string | null);
-};
-
-export type TitlesBrowsePublic = {
-    data: Array<TitleBrowseOutput>;
-    total_count: number;
 };
 
 /**
@@ -3129,8 +3110,6 @@ export type PluginsImportWatchHistoryInformationResponse = (Array<PluginImportWa
 
 export type PluginsImportUrlInformationResponse = (Array<PluginImportURLInformation>);
 
-export type PluginsBrowsablePluginsResponse = (Array<PluginBrowseInformation>);
-
 export type PluginsMatchUrlData = {
     url: string;
 };
@@ -3206,15 +3185,6 @@ export type SourcesGetSourceData = {
 };
 
 export type SourcesGetSourceResponse = (SourcePublic);
-
-export type TitlesBrowseTitlesData = {
-    limit?: number;
-    offset?: number;
-    pluginKey: string;
-    search?: (string | null);
-};
-
-export type TitlesBrowseTitlesResponse = (TitlesBrowsePublic);
 
 export type TitlesGetTitleInformationData = {
     titleId: string;

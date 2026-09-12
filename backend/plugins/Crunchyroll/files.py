@@ -41,6 +41,8 @@ from chirashi.seasons import Seasons as SeasonsEndpoint
 from chirashi.seasons.models import SeasonsModel
 from chirashi.series import Series as SeriesEndpoint
 from chirashi.series.models import SeriesModel
+from chirashi.similar_to import SimilarTo as SimilarToEndpoint
+from chirashi.similar_to.models import SimilarToModel
 from get_around import GetAround
 
 from app.config import settings
@@ -84,6 +86,14 @@ class Categories(SingleArgEndpointFile[CategoriesModel]):
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, SeriesNotFoundError)
+
+
+# TODO: Validate
+class SimilarTo(SingleArgEndpointFile[SimilarToModel]):
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> SimilarToEndpoint:
+        return chirashi().similar_to
 
 
 # TODO: Validate

@@ -1,7 +1,6 @@
 # TODO: Validate
 
 from app.plugins.schemas import (
-    PluginBrowseInformation,
     PluginImportURLInformation,
     PluginImportWatchHistoryInformation,
     PluginURLMatch,
@@ -51,15 +50,3 @@ def match_url(url: str) -> PluginURLMatch:
         ) and plugin_cls.is_valid_url_format(url):
             return PluginURLMatch(matched=True, plugin_key=plugin_cls.plugin_name())
     return PluginURLMatch(matched=False)
-
-
-# TODO: Validate
-def browsable_plugins() -> list[PluginBrowseInformation]:
-    return [
-        PluginBrowseInformation(
-            name=plugin_cls.plugin_name(),
-            favicon_url=plugin_cls.favicon_url(),
-        )
-        for plugin_cls in sorted_plugins()
-        if plugin_cls.browsable_titles()
-    ]

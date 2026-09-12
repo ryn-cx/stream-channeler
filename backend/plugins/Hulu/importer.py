@@ -35,6 +35,7 @@ from plugins.Hulu.utils import (
     watch_components,
 )
 from plugins.utils.abstract_plugin import InvalidURLError
+from plugins.utils.base_plugin.channels import ChannelKeyURL
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import ParsedURL
 
@@ -141,7 +142,7 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
                 season = Season(
                     key=season_key,
                     name=component.name,
-                    season_number=2147483647,
+                    season_number=0,
                     sort_order=2147483647,
                     data_timestamp=self._season_files_data_timestamp(
                         season_key,
@@ -230,7 +231,9 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
             network, _ = plan
             channel_keys.append(network)
         channel_keys.extend(details.entity.genre_names)
-        channel_key_urls = [(channel_key, title.url) for channel_key in channel_keys]
+        channel_key_urls = [
+            ChannelKeyURL(channel_key, title.url) for channel_key in channel_keys
+        ]
         self.remove_urls_from_other_channels(channel_key_urls)
         self.add_new_urls_to_channel(channel_key_urls)
         self.add_new_urls_to_channel(
@@ -256,7 +259,7 @@ class HuluSeriesImporter(HuluImporter):
     def parse_url(self, url: str) -> ParsedURL:
         domain_regex = self._domains_regex()
         if match := re.match(domain_regex + SERIES_URL_REGEX, url):
-            title_key = match.group("series_key")
+            title_key = match.group("title_key")
             self.raise_invalid_url_if_no_content(self.series_file(title_key), url)
             return ParsedURL(title_key)
 
@@ -438,7 +441,7 @@ class HuluMovieImporter(HuluImporter):
     def parse_url(self, url: str) -> ParsedURL:
         domain_regex = self._domains_regex()
         if match := re.match(domain_regex + MOVIE_URL_REGEX, url):
-            title_key = match.group("movie_key")
+            title_key = match.group("title_key")
         elif match := re.match(domain_regex + VIDEO_URL_REGEX, url):
             # The episode.key for a movie is the same as the title.key so this is
             # actually returning a title.key.

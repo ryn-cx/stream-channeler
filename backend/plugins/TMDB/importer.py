@@ -587,7 +587,7 @@ class TMDBSeries(TMDBImporter):
             msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
 
-        tmdb_tv_title_id = int(regex_match.group(f"{TMDBMediaType.tv}_tmdb_id"))
+        tmdb_tv_title_id = int(regex_match.group("title_key"))
         self.raise_invalid_url_if_no_content(
             self.tv_series_details_file(tmdb_tv_title_id),
             url,
@@ -817,7 +817,7 @@ class TMDBMovie(TMDBImporter):
             msg = f"Invalid {self.plugin_name()} URL: {url}"
             raise InvalidURLError(msg)
 
-        tmdb_movie_id = int(regex_match.group(f"{TMDBMediaType.movie}_tmdb_id"))
+        tmdb_movie_id = int(regex_match.group("title_key"))
         self.raise_invalid_url_if_no_content(
             self.movies_details_file(tmdb_movie_id),
             url,

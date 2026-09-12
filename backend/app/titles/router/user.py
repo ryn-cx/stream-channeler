@@ -1,18 +1,10 @@
 # TODO: Validate
 
 
-from typing import Annotated
+from fastapi import APIRouter
 
-from fastapi import APIRouter, Query
-
-from app.auth.dependencies import CurrentUser, SessionDep
-from app.constants import SERVER_SIDE_THRESHOLD_MAXIMUM
 from app.titles.dependencies import AdminTmdbTitle
-from app.titles.schemas import (
-    TitlesBrowsePublic,
-    TmdbTitleOutput,
-)
-from app.titles.service.browse import browse_plugin_titles
+from app.titles.schemas import TmdbTitleOutput
 
 """Title router."""
 
@@ -33,22 +25,6 @@ def get_tmdb_title_by_id(
 
 
 titles_router = APIRouter(prefix="/titles", tags=["titles"])
-
-
-# TODO: Validate
-@titles_router.get("/browse")
-def browse_titles(
-    session: SessionDep,
-    _current_user: CurrentUser,
-    plugin_key: str,
-    search: str | None = None,
-    offset: Annotated[int, Query(ge=0)] = 0,
-    limit: Annotated[
-        int,
-        Query(ge=1, le=SERVER_SIDE_THRESHOLD_MAXIMUM),
-    ] = 24,
-) -> TitlesBrowsePublic:
-    return browse_plugin_titles(session, plugin_key, search, offset, limit)
 
 
 router = APIRouter()

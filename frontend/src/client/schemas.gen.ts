@@ -4226,29 +4226,6 @@ export const NewPasswordSchema = {
     title: 'NewPassword'
 } as const;
 
-export const PluginBrowseInformationSchema = {
-    properties: {
-        name: {
-            type: 'string',
-            title: 'Name'
-        },
-        favicon_url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Favicon Url'
-        }
-    },
-    type: 'object',
-    required: ['name'],
-    title: 'PluginBrowseInformation'
-} as const;
-
 export const PluginImportURLInformationSchema = {
     properties: {
         name: {
@@ -5509,74 +5486,6 @@ export const TMDBMediaInfoSchema = {
     title: 'TMDBMediaInfo'
 } as const;
 
-export const TitleBrowseOutputSchema = {
-    properties: {
-        id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Id'
-        },
-        name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
-        },
-        year: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Year'
-        },
-        media_type: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Media Type'
-        },
-        image_url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Image Url'
-        },
-        thumbnail_url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Thumbnail Url'
-        }
-    },
-    type: 'object',
-    required: ['id', 'name', 'year', 'media_type', 'image_url', 'thumbnail_url'],
-    title: 'TitleBrowseOutput'
-} as const;
-
 export const TitleImportUrlInputSchema = {
     properties: {
         url: {
@@ -6262,25 +6171,6 @@ export const TitleUpdateSchema = {
     type: 'object',
     title: 'TitleUpdate',
     description: 'Schema for updating a `Title`.'
-} as const;
-
-export const TitlesBrowsePublicSchema = {
-    properties: {
-        data: {
-            items: {
-                '$ref': '#/components/schemas/TitleBrowseOutput'
-            },
-            type: 'array',
-            title: 'Data'
-        },
-        total_count: {
-            type: 'integer',
-            title: 'Total Count'
-        }
-    },
-    type: 'object',
-    required: ['data', 'total_count'],
-    title: 'TitlesBrowsePublic'
 } as const;
 
 export const TitlesPublicSchema = {

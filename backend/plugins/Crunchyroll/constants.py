@@ -37,7 +37,7 @@ MUSIC_VIDEO_URL_REGEX = build_url_regex(
 # https://www.crunchyroll.com/watch/concert/MC413F1C5C
 CONCERT_URL_REGEX = build_url_regex("watch", "concert", group="concert_key")
 # https://www.crunchyroll.com/artist/MA899F54A4
-ARTIST_URL_REGEX = build_url_regex("artist", group="artist_key")
+ARTIST_URL_REGEX = build_url_regex("artist", group="title_key")
 # https://www.crunchyroll.com/series/GEXH3W29Z
 SERIES_URL_REGEX = build_url_regex("series", group="title_key")
 # https://www.crunchyroll.com/watch/GVWU8XW1Z

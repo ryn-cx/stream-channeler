@@ -237,7 +237,7 @@ class HBOMaxMovieImporter(HBOMaxImporter):
     @override
     def parse_url(self, url: str) -> ParsedURL:
         if match := re.match(self._domains_regex() + MOVIE_URL_REGEX, url):
-            title_key = match.group("movie_key")
+            title_key = match.group("title_key")
             self.raise_invalid_url_if_no_content(self.movie_file(title_key), url)
             return ParsedURL(title_key)
 

@@ -39,11 +39,16 @@ export function AddByUrlPanel({ channelId }: { channelId: string }) {
   })
 
   const addUrlsMutation = useMutation({
-    mutationFn: (urls: string[]) =>
-      ChannelsService.createChannelQueueUrls({
-        channelId,
-        requestBody: urls,
-      }),
+    mutationFn: async (urls: string[]) => {
+      let queue: ChannelQueueOutput[] = []
+      for (let start = 0; start < urls.length; start += 100) {
+        queue = await ChannelsService.createChannelQueueUrls({
+          channelId,
+          requestBody: urls.slice(start, start + 100),
+        })
+      }
+      return queue
+    },
     onMutate: async (urls, context) => {
       await context.client.cancelQueries({
         queryKey: ["channelQueue", channelId],

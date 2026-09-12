@@ -8,7 +8,6 @@ from app.auth.dependencies import (
     SessionDep,
 )
 from app.plugins.schemas import (
-    PluginBrowseInformation,
     PluginImportURLInformation,
     PluginImportWatchHistoryInformation,
     PluginSearchResults,
@@ -36,14 +35,6 @@ def import_url_information(
 ) -> list[PluginImportURLInformation]:
     """Return information about the plugins offered as ways to add by URL."""
     return imports.import_url_information()
-
-
-# TODO: Validate
-@plugins_router.get("/browsable")
-def browsable_plugins(
-    _current_user: CurrentUser,
-) -> list[PluginBrowseInformation]:
-    return imports.browsable_plugins()
 
 
 # TODO: Validate

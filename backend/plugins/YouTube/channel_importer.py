@@ -6,21 +6,20 @@ from typing import TYPE_CHECKING, Any, override
 
 from app.titles.models import Title
 from app.utils import tz_datetime
-from plugins.YouTube.music_importer import YouTubeMusicSeasons
+
+# from plugins.YouTube.music_importer import YouTubeMusicSeasons
 from plugins.YouTube.user_importer import YouTubeUserImporter
 from plugins.YouTube.utils import (
     channel_uploads_playlist_key,
     channel_url,
     get_first_item,
     image_url,
-    is_an_album,
     thumbnail_url,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from app.seasons.models import Season
     from app.sources.models import Source
     from plugins.utils.base_plugin.files import BaseFile
 
@@ -28,7 +27,7 @@ if TYPE_CHECKING:
 # TODO: Validate
 class YouTubeChannelImporter(
     YouTubeUserImporter,
-    YouTubeMusicSeasons,
+    # YouTubeMusicSeasons,
 ):
     # TODO: Validate
     def _channel_has_only_uploads(self, title_key: str) -> bool:
@@ -58,8 +57,8 @@ class YouTubeChannelImporter(
         season_key: str,
         title_key: str,
     ) -> Sequence[BaseFile[Any]]:
-        if is_an_album(season_key):
-            return [self.music_playlist_file(season_key)]
+        # if is_an_album(season_key):
+        #     return [self.music_playlist_file(season_key)]
         return [
             self.playlist_items_file(season_key),
             # Required to detect changes to the season (playlist).
@@ -90,40 +89,41 @@ class YouTubeChannelImporter(
                 if item.content_details.item_count > 0
             )
 
-        return self._with_album_seasons(season_keys, title_key)
+        # return self._with_album_seasons(season_keys, title_key)
+        return season_keys
 
-    # TODO: Validate
-    @override
-    def _season_episode_keys_from_file(self, season_key: str) -> list[str]:
-        if is_an_album(season_key):
-            return self.music_playlist_file(season_key).track_keys()
-        return self._playlist_items_episode_keys(season_key)
+    # # TODO: Validate
+    # @override
+    # def _season_episode_keys_from_file(self, season_key: str) -> list[str]:
+    #     if is_an_album(season_key):
+    #         return self.music_playlist_file(season_key).track_keys()
+    #     return self._playlist_items_episode_keys(season_key)
 
-    # TODO: Validate
-    @override
-    def _get_episode_number(
-        self,
-        episode_key: str,
-        season_key: str,
-        title_key: str,
-    ) -> int | None:
-        if not is_an_album(season_key):
-            return None
-        return self._episode_number_from_file_order(episode_key, season_key)
+    # # TODO: Validate
+    # @override
+    # def _get_episode_number(
+    #     self,
+    #     episode_key: str,
+    #     season_key: str,
+    #     title_key: str,
+    # ) -> int | None:
+    #     if not is_an_album(season_key):
+    #         return None
+    #     return self._episode_number_from_file_order(episode_key, season_key)
 
-    # TODO: Validate
-    @override
-    def _upsert_episodes(
-        self,
-        season: Season,
-        title_key: str,
-        *,
-        force: bool = False,
-    ) -> None:
-        if is_an_album(season.key):
-            self._upsert_episodes_in_file_order(season, title_key, force=force)
-            return
-        self._upsert_episodes_from_playlist_items(season, title_key, force=force)
+    # # TODO: Validate
+    # @override
+    # def _upsert_episodes(
+    #     self,
+    #     season: Season,
+    #     title_key: str,
+    #     *,
+    #     force: bool = False,
+    # ) -> None:
+    #     if is_an_album(season.key):
+    #         self._upsert_episodes_in_file_order(season, title_key, force=force)
+    #         return
+    #     self._upsert_episodes_from_playlist_items(season, title_key, force=force)
 
     # TODO: Validate
     @override
@@ -169,7 +169,7 @@ class YouTubeChannelImporter(
     ) -> None:
         self._upsert_season_uploads(title, title_key, force=force)
         self._upsert_seasons_playlist(title, title_key, force=force)
-        self._upsert_seasons_album(title, title_key, force=force)
+        # self._upsert_seasons_album(title, title_key, force=force)
 
     # TODO: Validate
     def _upsert_season_uploads(

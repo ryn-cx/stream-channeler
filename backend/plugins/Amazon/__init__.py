@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class Amazon(AmazonShared, AbstractPlugin, register=False):
+class Amazon(AmazonShared, AbstractPlugin, register=True):
     # TODO: Validate
     @classmethod
     @override
@@ -64,12 +64,12 @@ class Amazon(AmazonShared, AbstractPlugin, register=False):
         domain_regex = self._domains_regex()
         if match := re.match(domain_regex + SHARE_URL_REGEX, url):
             return self.title_key_from_share_key(
-                match.group("watch_amazon_title_key"),
+                match.group("title_key"),
             )
         if match := re.match(domain_regex + PRIME_VIDEO_URL_REGEX, url):
-            return match.group("prime_video_title_key")
+            return match.group("title_key")
         if match := re.match(domain_regex + AMAZON_URL_REGEX, url):
-            return match.group("amazon_title_key")
+            return match.group("title_key")
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)

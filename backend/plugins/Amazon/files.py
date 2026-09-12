@@ -31,6 +31,7 @@ from plugins.Amazon.utils import (
     card_channel_name,
     channel_name,
     compact_key_from_link,
+    entity_benefit_id,
     episode_from_detail,
     episode_from_widget,
     pick_raw_image,
@@ -440,6 +441,20 @@ class Detail(APIClientFile[dict[str, Any]]):
                 name = card_channel_name(card) or channel_name(subscription["label"])
                 channels.append(AmazonChannel(benefit_id, name))
         return channels
+
+    # TODO: Validate
+    def related_prime_keys(self) -> list[str]:
+        containers = self._btf_state().get("containers") or {}
+        keys: list[str] = []
+        for container in containers.get(self.page_key()) or []:
+            if container.get("title") != "Customers also watched":
+                continue
+            for entity in container.get("entities") or []:
+                link = (entity.get("link") or {}).get("url")
+                if not link or entity_benefit_id(entity) != PRIME_BENEFIT_ID:
+                    continue
+                keys.append(compact_key_from_link(link))
+        return list(dict.fromkeys(keys))
 
     # TODO: Validate
     def included_with_prime(self) -> bool:

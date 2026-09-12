@@ -33,6 +33,18 @@ class StreamChannelerShared(StreamChannelerWatchHistoryMixin, BasePlugin):
     # TODO: Validate
     @classmethod
     @override
+    def _domains(cls) -> list[str]:
+        return []
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def is_valid_url_format(cls, url: str) -> bool:
+        return False
+
+    # TODO: Validate
+    @classmethod
+    @override
     def _source_keys(cls) -> tuple[str, ...]:
         return ()
 

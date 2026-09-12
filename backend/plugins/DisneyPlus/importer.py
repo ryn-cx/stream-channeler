@@ -54,7 +54,7 @@ class DisneyPlusImporter(DisneyPlusShared, BaseImporter, ABC):
     @override
     def parse_url(self, url: str) -> ParsedURL:
         if match := re.match(self._domains_regex() + ENTITY_URL_REGEX, url):
-            title_key = match.group("entity_key")
+            title_key = match.group("title_key")
             self.raise_invalid_url_if_no_content(self.entity_file(title_key), url)
             return ParsedURL(title_key)
 

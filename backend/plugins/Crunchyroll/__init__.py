@@ -35,15 +35,14 @@ class Crunchyroll(
     CrunchyrollWatchHistoryMixin,
     CrunchyrollShared,
     AbstractPlugin,
-    register=False,
+    register=True,
 ):
     # TODO: Validate
     @override
     def _create_initial_source_records(self) -> None:
-        # Default implementation calls self.upsert_source (Crunchyroll.upsert_source)
-        # which would then call self.browse_file() (Crunchyroll.browse_file) which does
-        # not work because .browse_file() has a different implementation in
-        # CrunchyrollSeries and CrunchyrollArtist.
+        # Default implementation calls Crunchyroll.upsert_source which would then call
+        # Crunchyroll.browse_file which does not work because .browse_file() has a
+        # different implementation in CrunchyrollSeries and CrunchyrollArtist.
         if Source.get(self.session, self.plugin, VIDEO_SOURCE) is None:
             CrunchyrollAnimeImporter(
                 self.session,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from datetime import timedelta
 from functools import cached_property
 from typing import TYPE_CHECKING
@@ -25,6 +26,13 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from app.plugins.models import Plugin
+
+
+# TODO: Validate
+@dataclass(frozen=True)
+class ChannelKeyURL:
+    channel_key: str
+    url: str
 
 
 class BaseChannelMixin(AbstractPlugin, ABC):
@@ -86,12 +94,12 @@ class BaseChannelMixin(AbstractPlugin, ABC):
     # TODO: Validate
     def remove_urls_from_other_channels(
         self,
-        channel_key_urls: Sequence[tuple[str, str]],
+        channel_key_urls: Sequence[ChannelKeyURL],
     ) -> None:
         channel_names_by_url: dict[str, set[str]] = {}
-        for channel_key, url in channel_key_urls:
-            channel_names_by_url.setdefault(url, set()).add(
-                self._channel_name(channel_key),
+        for channel_key_url in channel_key_urls:
+            channel_names_by_url.setdefault(channel_key_url.url, set()).add(
+                self._channel_name(channel_key_url.channel_key),
             )
 
         stale_entries = [
@@ -128,24 +136,36 @@ class BaseChannelMixin(AbstractPlugin, ABC):
         self.session.commit()
 
     # TODO: Validate
-    def _tmdb_title_ids_by_url(
-        self,
-        urls: set[str],
-    ) -> dict[str, set[uuid.UUID]]:
+    def _titles_by_url(self, urls: set[str]) -> dict[str, list[Title]]:
+        title_keys_by_url = {url: self.title_key_from_url(url) for url in urls}
         titles = self.session.exec(
             select(Title)
             .join(Source)
             .where(
                 Source.plugin_id == self.plugin.id,
-                col(Title.url).in_(urls),
+                col(Title.key).in_(set(title_keys_by_url.values())),
             )
             .options(selectinload(Title.tmdb_title_links)),  # type: ignore[arg-type]
         ).all()
 
-        tmdb_title_ids_by_url: dict[str, set[uuid.UUID]] = {}
+        titles_by_key: dict[str, list[Title]] = {}
         for title in titles:
-            if title.url:
-                tmdb_title_ids_by_url.setdefault(title.url, set()).update(
+            titles_by_key.setdefault(title.key, []).append(title)
+        return {
+            url: titles_by_key[title_key]
+            for url, title_key in title_keys_by_url.items()
+            if title_key in titles_by_key
+        }
+
+    # TODO: Validate
+    def _tmdb_title_ids_by_url(
+        self,
+        urls: set[str],
+    ) -> dict[str, set[uuid.UUID]]:
+        tmdb_title_ids_by_url: dict[str, set[uuid.UUID]] = {}
+        for url, titles in self._titles_by_url(urls).items():
+            for title in titles:
+                tmdb_title_ids_by_url.setdefault(url, set()).update(
                     set(title.tmdb_title_ids) or {title.id},
                 )
         return tmdb_title_ids_by_url
@@ -153,11 +173,13 @@ class BaseChannelMixin(AbstractPlugin, ABC):
     # TODO: Validate
     def add_new_urls_to_channel(
         self,
-        channel_key_urls: Sequence[tuple[str, str]],
+        channel_key_urls: Sequence[ChannelKeyURL],
     ) -> None:
         urls_by_channel_key: dict[str, list[str]] = {}
-        for channel_key, url in channel_key_urls:
-            urls_by_channel_key.setdefault(channel_key, []).append(url)
+        for channel_key_url in channel_key_urls:
+            urls_by_channel_key.setdefault(channel_key_url.channel_key, []).append(
+                channel_key_url.url,
+            )
 
         for channel_key, urls in urls_by_channel_key.items():
             channel = self.get_or_create_channel(
@@ -201,22 +223,9 @@ class BaseChannelMixin(AbstractPlugin, ABC):
         self,
         queue_entries: Sequence[ChannelQueue],
     ) -> list[ChannelQueue]:
-        title_in_queue = self.session.exec(
-            select(Title)
-            .join(Source)
-            .where(
-                Source.plugin_id == self.plugin.id,
-                col(Title.url).in_(
-                    {queue_entry.url for queue_entry in queue_entries},
-                ),
-            )
-            .options(selectinload(Title.tmdb_title_links)),  # type: ignore[arg-type]
-        ).all()
-
-        titles_by_queued_url: dict[str, list[Title]] = {}
-        for title in title_in_queue:
-            if title.url:
-                titles_by_queued_url.setdefault(title.url, []).append(title)
+        titles_by_queued_url = self._titles_by_url(
+            {queue_entry.url for queue_entry in queue_entries},
+        )
 
         tmdb_record_ids_by_queued_url = {
             queued_url: {
