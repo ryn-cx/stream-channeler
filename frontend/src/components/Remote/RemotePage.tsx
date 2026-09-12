@@ -1,5 +1,6 @@
 // TODO: Validate
-import { Download, Github, ListPlus, Play } from "lucide-react"
+import { Download, ListPlus, Play } from "lucide-react"
+import { FaGithub } from "react-icons/fa"
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -32,7 +33,7 @@ export function RemotePage() {
           </Button>
           <Button asChild size="lg" variant="outline">
             <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer">
-              <Github className="mr-2" />
+              <FaGithub className="mr-2" />
               Source Code
             </a>
           </Button>
