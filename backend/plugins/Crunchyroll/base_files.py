@@ -11,7 +11,6 @@ from plugins.Crunchyroll.files import (
     Concert,
     MusicVideo,
     Objects,
-    Search,
     SeasonEpisodes,
     Seasons,
     Series,
@@ -23,10 +22,6 @@ from plugins.utils.base_plugin.base import BasePlugin
 
 # TODO: Validate
 class CrunchyrollBaseFiles(BasePlugin):
-    # TODO: Validate
-    def search_file(self, query: str) -> Search:
-        return self._cached_file(Search, query)
-
     # TODO: Validate
     def series_file(self, title_key: str) -> Series:
         return self._cached_file(Series, title_key)

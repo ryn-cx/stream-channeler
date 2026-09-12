@@ -26,14 +26,9 @@ from meshfilm.preview_modal_episode_selector_season_episodes.models import (
 from meshfilm.preview_modal_episode_selector_season_episodes.models import (
     PreviewModalEpisodeSelectorSeasonEpisodesModel,
 )
-from meshfilm.search_page_query_results import (
-    SearchPageQueryResults as SearchPageQueryResultsEndpoint,
-)
-from meshfilm.search_page_query_results.models import SearchPageQueryResultsModel
 
 from plugins.utils.base_plugin.files import (
     IntegerArgEndpointFile,
-    SingleArgEndpointFile,
 )
 from plugins.utils.get_around_client import get_around_client
 
@@ -102,11 +97,3 @@ class PreviewModalEpisodeSelectorSeasonEpisodes(
     # TODO: Validate
     def episodes(self) -> list[EpisodeNode]:
         return [edge.node for edge in self.parsed().episodes.edges]
-
-
-# TODO: Validate
-class SearchPageQueryResults(SingleArgEndpointFile[SearchPageQueryResultsModel]):
-    # TODO: Validate
-    @override
-    def _endpoint(self) -> SearchPageQueryResultsEndpoint:
-        return meshfilm().search_page_query_results

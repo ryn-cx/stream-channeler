@@ -40,11 +40,9 @@ from plugins.TMDB.files import (
 )
 from plugins.TMDB.shared import TMDBShared
 from plugins.TMDB.utils import (
-    Provider,
     TMDBSeasonInfo,
     image_url,
     parse_release_year,
-    streaming_providers,
     thumbnail_url,
     tmdb_url,
 )
@@ -85,12 +83,6 @@ class TMDBImporter(TMDBShared, BaseImporter, ABC):
         self,
         title_key: str,
     ) -> MoviesWatchProviders | TVSeriesWatchProviders: ...
-
-    # TODO: Validate
-    def streaming_providers(self, title_key: str) -> list[Provider]:
-        provider_file = self._provider_file(title_key)
-        provider_file.download_if_outdated()
-        return streaming_providers(provider_file.parsed())
 
     # TODO: Validate
     @abstractmethod
@@ -485,7 +477,7 @@ class TMDBSeries(TMDBImporter):
     ) -> None:
         _, tmdb_tv_title_id = get_media_type_and_tmdb_id(title_key)
 
-        for change in changes_file.parsed().changes:
+        for change in changes_file.changes():
             for item in change.items:
                 changed_at = tz_datetime.fromisoformat(
                     item.time.replace(" UTC", "+00:00"),

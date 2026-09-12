@@ -1312,7 +1312,7 @@ dependencies = [
 [[package]]
 name = "naphki"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/naphki#639f13b187ec1805506aa427d6ca8d8c4a179b4d" }
+source = { git = "https://github.com/ryn-cx/naphki#cf32d016cc5dd5bf3d69e426cbc575324cf5b402" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },

@@ -9,7 +9,6 @@ from plugins.Hulu.files import (
     Genre,
     Genres,
     Movie,
-    Search,
     Season,
     Series,
 )
@@ -21,9 +20,6 @@ if TYPE_CHECKING:
 
 
 class HuluBaseFiles(BasePlugin):
-    def search_file(self, query: str) -> Search:
-        return self._cached_file(Search, query)
-
     # TODO: Validate
     def episode_file(self, episode_key: str) -> Episode:
         return self._cached_file(Episode, episode_key)

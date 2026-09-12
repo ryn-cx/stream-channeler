@@ -23,8 +23,6 @@ from wholoo.movies import Movies as MoviesEndpoint
 from wholoo.movies.models import Component as MovieComponent
 from wholoo.movies.models import Details as MovieDetails
 from wholoo.movies.models import MoviesModel
-from wholoo.search import Search as SearchEndpoint
-from wholoo.search.models import SearchModel
 from wholoo.season import Season as SeasonEndpoint
 from wholoo.season.models import SeasonModel
 from wholoo.tv import TV
@@ -130,12 +128,6 @@ class Season(MultipleArgEndpointFile[SeasonModel]):
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(self.series_id, self.season_number)
-
-
-class Search(SingleArgEndpointFile[SearchModel]):
-    @override
-    def _endpoint(self) -> SearchEndpoint:
-        return wholoo().search
 
 
 class AllSeries(NoArgsEndpointFile[AllSeriesModel]):

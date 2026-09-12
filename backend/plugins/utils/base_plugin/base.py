@@ -86,9 +86,13 @@ class BasePlugin(
         msg = f"{self.plugin_name()} does not upsert titles."
         raise NotImplementedError(msg)
 
-    # TODO: Validate
     @override
     def _update_plugin(self, plugin: Plugin) -> None:
+        """Update the plugin with the latest data.
+
+        The default implementation assumes that the plugin files contain all of the
+        titles available on the website available from the
+        `_plugin_files_data_timestamps` function."""
         self._download_if_outdated(self._plugin_files(), plugin.update_at)
         self._create_initial_channel_records()
         data_timestamps = self._plugin_files_data_timestamps()

@@ -83,11 +83,6 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
     ) -> None: ...
 
     # TODO: Validate
-    @override
-    def soft_delete_missing_seasons(self, title_key: str) -> None:
-        return
-
-    # TODO: Validate
     def tmdb_media_type(self, title_key: str) -> TMDBMediaType:
         return TMDBMediaType.movie if is_video_key(title_key) else TMDBMediaType.tv
 

@@ -26,7 +26,6 @@ from plugins.utils.abstract_plugin import AbstractPlugin
 if TYPE_CHECKING:
     from datetime import datetime
 
-    from app.media.media_type import TMDBMediaType
     from app.titles.models import Title
 
 
@@ -124,23 +123,3 @@ class Crunchyroll(
                 source,
                 update_at,
             )
-
-    # TODO: Validate
-    @override
-    def search_for_title_url(
-        self,
-        name: str,
-        media_type: TMDBMediaType,
-        year: int | None = None,
-    ) -> str | None:
-        search_file = self.search_file(name)
-        search_file.download_if_outdated()
-        for datum in search_file.parsed().data:
-            for item in datum.items:
-                # Series doesn't actually differentiate between movies and series as all
-                # movies are also labeled as series here.
-                if item.type == "series":
-                    # search_for_url is used for TMDB cross-referencing so music entries
-                    # are ignored because TMDB does not have music entries.
-                    return CrunchyrollAnimeImporter.title_url(item.id)
-        return None

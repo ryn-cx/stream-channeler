@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from pathlib import Path
 from typing import TYPE_CHECKING, override
 
 from loguru import logger
@@ -15,11 +14,13 @@ from app.sources.models import Source
 from app.utils import tz_datetime
 from plugins.HiDive.base_files import HiDiveBaseFiles
 from plugins.HiDive.files import Schedule
+from plugins.HiDive.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
 from plugins.HiDive.utils import (
     card_title_name,
     element_release_date,
     element_text,
     schedule_group_list,
+    title_url,
 )
 
 if TYPE_CHECKING:
@@ -109,6 +110,24 @@ class HiDiveShared(HiDiveBaseFiles):
             schedule_file.clear_status()
 
     # TODO: Validate
+    def search_for_title_url(
+        self,
+        name: str,
+        media_type: TMDBMediaType,
+        year: int | None = None,
+    ) -> str | None:
+        search_file = self.search_file(name)
+        search_file.download_if_outdated()
+        for element in search_file.parsed().elements:
+            for card in element.attributes.cards or []:
+                card_identifier = card.attributes.action.data.id
+                type_prefix, _, title_key = card_identifier.partition("#")
+                if type_prefix == "VOD":
+                    return title_url(title_key, MOVIE_MEDIA_TYPE)
+                return title_url(title_key, SERIES_MEDIA_TYPE)
+        return None
+
+    # TODO: Validate
     def _queue_new_titles(self, title_names: list[str]) -> None:
         """Queue the titles a schedule file named that are not imported yet.
 
@@ -138,7 +157,5 @@ class HiDiveShared(HiDiveBaseFiles):
         """
         return self.get_or_create_channel(
             self.plugin_name(),
-            (Path(__file__).parent / "channel_description.md").read_text(
-                encoding="utf-8",
-            ),
+            self._channel_description("All Titles"),
         )

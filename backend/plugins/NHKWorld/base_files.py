@@ -2,27 +2,33 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, Any, override
 
 from app.files.models import File
 from plugins.NHKWorld.files import (
     NewVideoEpisodes,
-    TitlesSearch,
     VideoEpisodes,
     VideoProgram,
+    VideoPrograms,
 )
 from plugins.utils.base_plugin.base import BasePlugin
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from plugins.utils.base_plugin.files import BaseFile
+
 
 # TODO: Validate
 class NHKWorldBaseFiles(BasePlugin):
     # TODO: Validate
-    def titles_search_file(self, query: str, offset: int) -> TitlesSearch:
-        """Contains one page of results for a search query."""
-        return self._cached_file(TitlesSearch, query, offset)
+    def video_programs_file(self) -> VideoPrograms:
+        return self._cached_file(VideoPrograms)
+
+    # TODO: Validate
+    @override
+    def _plugin_files(self) -> Sequence[VideoPrograms]:
+        return [self.video_programs_file()]
 
     # TODO: Validate
     def video_program_file(self, title_key: str) -> VideoProgram:
@@ -61,3 +67,47 @@ class NHKWorldBaseFiles(BasePlugin):
         if file := self.latest_new_video_episodes_file():
             return [file]
         return []
+
+    @override
+    def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
+        # Detects changes to the title.
+        return [self.video_program_file(title_key)]
+
+    @override
+    def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
+        return [
+            # Detects changes to the season.
+            self.video_program_file(title_key),
+            # Detects new episodes.
+            self.video_episodes_file(title_key),
+        ]
+
+    @override
+    def _episode_files(
+        self,
+        episode_key: str,
+        season_key: str,
+        title_key: str,
+    ) -> Sequence[BaseFile[Any]]:
+        # Detects changes to the episode.
+        return [self.video_episodes_file(title_key)]
+
+    @override
+    def _season_keys_from_title_files(self, title_key: str) -> list[str]:
+        # NHK World has no seasons,
+        return [title_key]
+
+    # TODO: Validate
+    @override
+    def _episode_keys_from_season_files(
+        self,
+        season_keys: str | list[str],
+        title_key: str,
+    ) -> list[str]:
+        if isinstance(season_keys, str):
+            season_keys = [season_keys]
+        return [
+            item.id
+            for season_key in season_keys
+            for item in self.video_episodes_file(season_key).items()
+        ]

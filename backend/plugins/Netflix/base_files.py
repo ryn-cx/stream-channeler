@@ -4,7 +4,6 @@ from plugins.Netflix.files import (
     DetailModal,
     PreviewModalEpisodeSelector,
     PreviewModalEpisodeSelectorSeasonEpisodes,
-    SearchPageQueryResults,
 )
 from plugins.utils.base_plugin.base import BasePlugin
 
@@ -24,6 +23,3 @@ class NetflixBaseFiles(BasePlugin):
             PreviewModalEpisodeSelectorSeasonEpisodes,
             str(season_video_key),
         )
-
-    def search_file(self, query: str) -> SearchPageQueryResults:
-        return self._cached_file(SearchPageQueryResults, query)

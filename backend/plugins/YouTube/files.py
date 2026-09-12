@@ -23,6 +23,7 @@ from not_yt_dlapi.playlist_feed.models import PlaylistFeedModel
 from not_yt_dlapi.playlist_items import PlaylistItems as PlaylistItemsEndpoint
 from not_yt_dlapi.playlist_items.models import Item, PlaylistItemsModel
 from not_yt_dlapi.playlists import Playlists as PlaylistsEndpoint
+from not_yt_dlapi.playlists.models import Item as PlaylistItem
 from not_yt_dlapi.playlists.models import PlaylistsModel
 
 # from not_yt_dlapi.shows import Shows as TitlesEndpoint
@@ -93,16 +94,22 @@ class ChannelByUsername(ChannelFile):
 
 
 # TODO: Validate
-class ChannelPlaylists(MultipleArgEndpointFile[PlaylistsModel]):
+class ChannelPlaylists(PagedEndpointFile[PlaylistsModel]):
     # TODO: Validate
     @override
-    def _endpoint(self) -> PlaylistsEndpoint:
+    def _endpoint(self) -> PlaylistsEndpoint:  # type: ignore[override]
         return not_yt_dlapi().playlists
 
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self._endpoint().download_merged(channel_id=self.unique_identifier)
+        return json.dumps(
+            self._endpoint().download_all(channel_id=self.unique_identifier),
+        )
+
+    # TODO: Validate
+    def items(self) -> list[PlaylistItem]:
+        return [item for page in self.parsed() for item in page.items]
 
 
 # TODO: Validate

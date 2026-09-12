@@ -16,6 +16,7 @@ from app.utils import tz_datetime
 from plugins.NHKWorld.base_files import NHKWorldBaseFiles
 from plugins.NHKWorld.files import NewVideoEpisodes
 from plugins.NHKWorld.utils import title_url
+from plugins.utils.base_plugin.channels import ChannelKeyURL
 
 if TYPE_CHECKING:
     from app.channels.models import Channel
@@ -23,21 +24,16 @@ if TYPE_CHECKING:
 
 # TODO: Validate
 class NHKWorldShared(NHKWorldBaseFiles):
-    # TODO: Add support for single episodes
-    # TODO: Don't hardcode the favicon URL
-    # TODO: Validate
     @classmethod
     @override
     def favicon_url(cls) -> str:
         return "https://www3.nhk.or.jp/nhkworld/common/site_images/nw_webapp.ico"
 
-    # TODO: Validate
     @classmethod
     @override
     def _domain(cls) -> str:
         return "www3.nhk.or.jp"
 
-    # TODO: Validate
     @classmethod
     @override
     def plugin_name(cls) -> str:
@@ -60,6 +56,29 @@ class NHKWorldShared(NHKWorldBaseFiles):
         ).upsert(self.plugin, existing_source)
         source.set_update_at(data_timestamp + timedelta(days=1))
         return source
+
+    # TODO: Validate
+    def _title_keys_from_plugin_files(self) -> list[str]:
+        self._download_if_outdated(self._plugin_files())
+        return [item.id for item in self.video_programs_file().items()]
+
+    # TODO: Validate
+    def _title_urls_from_plugin_files(self) -> list[str]:
+        return [
+            title_url(title_key) for title_key in self._title_keys_from_plugin_files()
+        ]
+
+    # TODO: Validate
+    @override
+    def _create_initial_channel_records(self) -> None:
+        self.add_new_urls_to_channel(
+            [
+                ChannelKeyURL("All Titles", url)
+                for url in self._title_urls_from_plugin_files()
+            ],
+        )
+        self._feed_channel()
+        self._process_new_episodes_files(self._sources[self.plugin_name()])
 
     # TODO: Validate
     def _process_new_episodes_files(self, source: Source) -> None:

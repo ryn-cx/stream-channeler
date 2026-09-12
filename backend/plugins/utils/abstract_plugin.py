@@ -394,26 +394,6 @@ class AbstractPlugin(ABC):
         raise NotImplementedError(msg)
 
     # TODO: Validate
-    def search_for_title_url(
-        self,
-        name: str,
-        media_type: TMDBMediaType,
-        year: int | None = None,
-    ) -> str | None:
-        msg = "search_for_url is not supported by this plugin."
-        raise NotImplementedError(msg)
-
-    # TODO: Validate
-    def import_search(
-        self,
-        name: str,
-        media_type: TMDBMediaType,
-        year: int | None = None,
-    ) -> list[URLImportResult]:
-        msg = "import_search is not supported by this plugin."
-        raise NotImplementedError(msg)
-
-    # TODO: Validate
     def tmdb_lookup_info(
         self,
         title: Title,

@@ -1,4 +1,5 @@
 # TODO: Validate
+import json
 from abc import ABC
 from datetime import date, datetime, timedelta
 from functools import cache
@@ -34,7 +35,7 @@ from tminidb.tv_season.watch_providers import (
 )
 from tminidb.tv_season.watch_providers.models import TvSeasonWatchProvidersModel
 from tminidb.tv_series.changes import TvSeriesChanges as TvSeriesChangesEndpoint
-from tminidb.tv_series.changes.models import TvSeriesChangesModel
+from tminidb.tv_series.changes.models import Change, TvSeriesChangesModel
 from tminidb.tv_series.details import TvSeriesDetails as TvSeriesEndpoint
 from tminidb.tv_series.details.models import TvSeriesDetailsModel
 from tminidb.tv_series.episode_groups import (
@@ -54,6 +55,7 @@ from app.utils import tz_datetime
 from plugins.utils.base_plugin.files import (
     IntegerArgEndpointFile,
     MultipleArgEndpointFile,
+    PagedEndpointFile,
     SingleArgEndpointFile,
 )
 from plugins.utils.constants import INCOMPLETE_STATUS
@@ -268,7 +270,7 @@ class TVSeasonsDetails(MultipleArgEndpointFile[TvSeasonDetailsModel]):
 
 
 # TODO: Validate
-class TVSeriesChanges(MultipleArgEndpointFile[TvSeriesChangesModel]):
+class TVSeriesChanges(PagedEndpointFile[TvSeriesChangesModel]):
     custom_class_key = "TV Series/Changes"
 
     # TODO: Validate
@@ -278,7 +280,7 @@ class TVSeriesChanges(MultipleArgEndpointFile[TvSeriesChangesModel]):
 
     # TODO: Validate
     @override
-    def _endpoint(self) -> TvSeriesChangesEndpoint:
+    def _endpoint(self) -> TvSeriesChangesEndpoint:  # type: ignore[override]
         return tminidb().tv_series.changes
 
     # TODO: Validate
@@ -301,11 +303,17 @@ class TVSeriesChanges(MultipleArgEndpointFile[TvSeriesChangesModel]):
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self._endpoint().download_merged(
-            series_id=self.tmdb_tv_title_id,
-            start_date=self.since,
-            end_date=tz_datetime.now().date(),
+        return json.dumps(
+            self._endpoint().download_all(
+                series_id=self.tmdb_tv_title_id,
+                start_date=self.since,
+                end_date=tz_datetime.now().date(),
+            ),
         )
+
+    # TODO: Validate
+    def changes(self) -> list[Change]:
+        return [change for page in self.parsed() for change in page.changes]
 
 
 # TODO: Validate

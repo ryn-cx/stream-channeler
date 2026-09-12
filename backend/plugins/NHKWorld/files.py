@@ -3,21 +3,22 @@
 
 from __future__ import annotations
 
+import json
 from functools import cache
 from typing import TYPE_CHECKING, override
 
 from naphki import Naphki
 from naphki.exceptions import ProgramNotFoundError
-from naphki.shows_search import ShowsSearch as TitlesSearchEndpoint
-from naphki.shows_search.models import ShowsSearchModel
 from naphki.video_episodes import VideoEpisodes as VideoEpisodesEndpoint
 from naphki.video_episodes.models import VideoEpisodesModel
 from naphki.video_program import VideoProgram as VideoProgramEndpoint
 from naphki.video_program.models import VideoProgramModel
+from naphki.video_programs import VideoPrograms as VideoProgramsEndpoint
+from naphki.video_programs.models import VideoProgramsModel
 
 from app.utils import tz_datetime
 from plugins.utils.base_plugin.files import (
-    MultipleArgEndpointFile,
+    PagedEndpointFile,
     SingleArgEndpointFile,
 )
 from plugins.utils.constants import INCOMPLETE_STATUS
@@ -25,6 +26,7 @@ from plugins.utils.get_around_client import get_around_client
 
 if TYPE_CHECKING:
     from naphki.video_episodes.models import Item
+    from naphki.video_programs.models import Item as ProgramItem
     from sqlmodel import Session
 
     from app.plugins.models import Plugin
@@ -51,24 +53,26 @@ class VideoProgram(SingleArgEndpointFile[VideoProgramModel]):
 
 
 # TODO: Validate
-class VideoEpisodes(MultipleArgEndpointFile[VideoEpisodesModel]):
+class VideoEpisodes(PagedEndpointFile[VideoEpisodesModel]):
     # TODO: Validate
     @override
-    def _endpoint(self) -> VideoEpisodesEndpoint:
+    def _endpoint(self) -> VideoEpisodesEndpoint:  # type: ignore[override]
         return naphki().video_episodes
 
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self._endpoint().download_merged_until_datetime(self.unique_identifier)
+        return json.dumps(
+            self._endpoint().download_until_datetime(self.unique_identifier),
+        )
 
     # TODO: Validate
     def items(self) -> list[Item]:
-        return self.parsed().items
+        return [item for page in self.parsed() for item in page.items]
 
 
 # TODO: Validate
-class NewVideoEpisodes(MultipleArgEndpointFile[VideoEpisodesModel]):
+class NewVideoEpisodes(PagedEndpointFile[VideoEpisodesModel]):
     # TODO: Validate
     @override
     def _initial_status_after_downloading(self) -> str:
@@ -76,7 +80,7 @@ class NewVideoEpisodes(MultipleArgEndpointFile[VideoEpisodesModel]):
 
     # TODO: Validate
     @override
-    def _endpoint(self) -> VideoEpisodesEndpoint:
+    def _endpoint(self) -> VideoEpisodesEndpoint:  # type: ignore[override]
         return naphki().video_episodes
 
     # TODO: Consider moving this login into naphki
@@ -87,37 +91,35 @@ class NewVideoEpisodes(MultipleArgEndpointFile[VideoEpisodesModel]):
         # get_all() uses. The initial baseline (to_datetime == now) stops after
         # the first page, and day-to-day there are rarely more than a handful of
         # new episodes, so a single page almost always covers the gap.
-        return self._endpoint().download_merged_until_datetime(
-            end_datetime=tz_datetime.fromisoformat(self.unique_identifier),
+        return json.dumps(
+            self._endpoint().download_until_datetime(
+                end_datetime=tz_datetime.fromisoformat(self.unique_identifier),
+            ),
         )
 
     # TODO: Validate
     def items(self) -> list[Item]:
-        return self.parsed().items
+        return [item for page in self.parsed() for item in page.items]
 
 
 # TODO: Validate
-class TitlesSearch(MultipleArgEndpointFile[ShowsSearchModel]):
+class VideoPrograms(PagedEndpointFile[VideoProgramsModel]):
+    unique_identifier = "VideoPrograms"
+
     # TODO: Validate
-    def __init__(
-        self,
-        session: Session,
-        plugin: Plugin,
-        query: str,
-        offset: int,
-    ) -> None:
-        self.query = query
-        self.offset = offset
-        super().__init__(session, plugin, f"{query}/{offset}")
+    def __init__(self, session: Session, plugin: Plugin) -> None:
+        super().__init__(session, plugin, self.unique_identifier)
 
     # TODO: Validate
     @override
-    def _endpoint(self) -> TitlesSearchEndpoint:
-        return naphki().shows_search
+    def _endpoint(self) -> VideoProgramsEndpoint:  # type: ignore[override]
+        return naphki().video_programs
 
-    # `size` keeps its default so a page request looks exactly like the one the
-    # website makes.
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self._endpoint().download(self.query, from_=self.offset)
+        return json.dumps(self._endpoint().download_all(unclosed=False))
+
+    # TODO: Validate
+    def items(self) -> list[ProgramItem]:
+        return [item for page in self.parsed() for item in page.items]

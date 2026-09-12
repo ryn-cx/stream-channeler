@@ -36,7 +36,7 @@ class YouTubeChannelImporter(
             return True
         return not any(
             item.content_details.item_count > 0
-            for item in channel_playlists_file.parsed().items
+            for item in channel_playlists_file.items()
         )
 
     # TODO: Validate
@@ -85,7 +85,7 @@ class YouTubeChannelImporter(
         if channel_playlists_file.record_content:
             season_keys.extend(
                 item.id
-                for item in channel_playlists_file.parsed().items
+                for item in channel_playlists_file.items()
                 if item.content_details.item_count > 0
             )
 
@@ -207,7 +207,7 @@ class YouTubeChannelImporter(
             return
         playlists_by_key = {
             parsed_playlist.id: parsed_playlist
-            for parsed_playlist in channel_playlists_file.parsed().items
+            for parsed_playlist in channel_playlists_file.items()
         }
         uploads_key = channel_uploads_playlist_key(title.key)
         for season_key in self._season_keys_from_title_files(title_key):

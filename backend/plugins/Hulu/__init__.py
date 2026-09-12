@@ -4,16 +4,13 @@ import re
 from datetime import timedelta
 from typing import TYPE_CHECKING, override
 
-from app.media.media_type import TMDBMediaType
 from plugins.Hulu.constants import (
     MOVIE_URL_REGEX,
     SERIES_URL_REGEX,
     VIDEO_URL_REGEX,
-    HuluMediaType,
 )
 from plugins.Hulu.importer import HuluImporter, HuluMovieImporter, HuluSeriesImporter
 from plugins.Hulu.shared import HuluShared
-from plugins.Hulu.utils import title_url
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 
 if TYPE_CHECKING:
@@ -69,22 +66,3 @@ class Hulu(
         if title.media_type == "Movie":
             return HuluMovieImporter(self.session, self.plugin, self._file_cache)
         return HuluSeriesImporter(self.session, self.plugin, self._file_cache)
-
-    @override
-    def search_for_title_url(
-        self,
-        name: str,
-        media_type: TMDBMediaType,
-        year: int | None = None,
-    ) -> str | None:
-        hulu_media_type = (
-            HuluMediaType.MOVIE
-            if media_type == TMDBMediaType.movie
-            else HuluMediaType.SERIES
-        )
-        search_file = self.search_file(name)
-        search_file.download_if_outdated()
-        for result in search_file.parsed().results:
-            if result.metrics_info.target_type == hulu_media_type:
-                return title_url(result.metrics_info.target_id, hulu_media_type)
-        return None

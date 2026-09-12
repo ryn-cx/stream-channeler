@@ -3,72 +3,25 @@ from __future__ import annotations
 from abc import ABC
 from typing import TYPE_CHECKING, override
 
-from sqlmodel import col, select
-
-from app.media.media_type import TMDBMediaType
-from app.titles.models import Title
 from plugins.utils.abstract_plugin import AbstractPlugin, URLImportResult
 from plugins.utils.base_plugin.url import BaseURLMixin
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-    from sqlalchemy.sql.elements import ColumnElement
-
     from app.episodes.models import Episode
     from app.plugins.models import Plugin
     from app.seasons.models import Season
+    from app.titles.models import Title
     from plugins.utils.base_plugin.importer import BaseImporter
 
 
 class BaseMediaImporterMixin(BaseURLMixin, AbstractPlugin, ABC):
     plugin: Plugin
 
-    # TODO: Validate
     @override
     def validate_and_import_url(self, url: str) -> list[URLImportResult]:
         media_importer = self._media_importer(url)
         media_importer.validate_url(url)
         return media_importer.import_url(url)
-
-    # TODO: Validate
-    @override
-    def import_search(
-        self,
-        name: str,
-        media_type: TMDBMediaType,
-        year: int | None = None,
-    ) -> list[URLImportResult]:
-        if imported := self._imported_titles(name, media_type, year):
-            return [URLImportResult.title_import_results(title) for title in imported]
-        if url := self.search_for_title_url(name, media_type, year):
-            return self.validate_and_import_url(url)
-        return []
-
-    # TODO: Validate
-    def _imported_titles(
-        self,
-        name: str,
-        media_type: TMDBMediaType,
-        year: int | None,
-    ) -> Sequence[Title]:
-        year_clause: ColumnElement[bool]
-        if year is None:
-            year_clause = col(Title.year).is_(None)
-        else:
-            year_clause = col(Title.year) == year
-        stored_media_type = "Movie" if media_type == TMDBMediaType.movie else "Series"
-        return self.session.exec(
-            select(Title).where(
-                col(Title.source_id).in_(
-                    [source.id for source in self.plugin.sources],
-                ),
-                col(Title.name) == name,
-                col(Title.media_type) == stored_media_type,
-                year_clause,
-                col(Title.deleted_at).is_(None),
-            ),
-        ).all()
 
     @override
     def update_title(self, title: Title, *, force: bool = False) -> None:

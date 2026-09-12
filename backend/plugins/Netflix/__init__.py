@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, override
 
-from app.media.media_type import TMDBMediaType
 from plugins.Netflix.constants import TITLE_URL_REGEX
 from plugins.Netflix.importer import (
     NetflixImporter,
@@ -47,19 +46,3 @@ class Netflix(NetflixShared, AbstractPlugin, register=True):
         if title.media_type == "Movie":
             return NetflixMovieImporter(self.session, self.plugin, self._file_cache)
         return NetflixSeriesImporter(self.session, self.plugin, self._file_cache)
-
-    @override
-    def search_for_title_url(
-        self,
-        name: str,
-        media_type: TMDBMediaType,
-        year: int | None = None,
-    ) -> str | None:
-        search_file = self.search_file(name)
-        search_file.download_if_outdated()
-        for section in search_file.parsed().sections.edges:
-            for entity in section.node.entities.edges:
-                unified_entity = entity.node.unified_entity
-                if unified_entity.field__typename in {"Title", "Movie"}:
-                    return self.title_url(str(unified_entity.video_id))
-        return None

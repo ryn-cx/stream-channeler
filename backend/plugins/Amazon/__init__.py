@@ -4,7 +4,6 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, override
 
-from app.media.media_type import TMDBMediaType
 from plugins.Amazon.constants import (
     AMAZON_URL_REGEX,
     PRIME_VIDEO_URL_REGEX,
@@ -16,7 +15,6 @@ from plugins.Amazon.importer import (
     AmazonSeriesImporter,
 )
 from plugins.Amazon.shared import AmazonShared
-from plugins.Amazon.utils import detail_url
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 
 if TYPE_CHECKING:
@@ -73,19 +71,6 @@ class Amazon(AmazonShared, AbstractPlugin, register=True):
 
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
-
-    # TODO: Validate
-    @override
-    def search_for_title_url(
-        self,
-        name: str,
-        media_type: TMDBMediaType,
-        year: int | None = None,
-    ) -> str | None:
-        search_file = self.search_file(name)
-        search_file.download_if_outdated()
-        results = search_file.results()
-        return detail_url(results[0]) if results else None
 
     # TODO: Validate
     def _is_movie(self, title_key: str) -> bool:

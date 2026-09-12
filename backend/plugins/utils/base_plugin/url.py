@@ -31,18 +31,18 @@ class BaseURLMixin(AbstractPlugin):
     def _url_regexes(cls) -> tuple[str, ...]:
         """Return a tuple of URL regex patterns that the plugin supports."""
 
-    # TODO: Validate
     @classmethod
     def _url_regex(cls) -> str:
         """Return the regex string to check if a URL is supported by the plugin."""
         domain_regex = cls._domains_regex()
-        alternatives = "|".join(
+        url_regex = "|".join(
+            # Replace all named captures to avoid accidently making illegal regex
+            # patterns that contain multiple captures for the same name.
             domain_regex + re.sub(r"\(\?P<[^>]+>", "(?:", url_regex)
             for url_regex in cls._url_regexes()
         )
-        return f"(?:{alternatives})"
+        return f"(?:{url_regex})"
 
-    # TODO: Validate
     @override
     def title_key_from_url(self, url: str) -> str:
         domain_regex = self._domains_regex()
@@ -106,7 +106,6 @@ class BaseURLMixin(AbstractPlugin):
 
         return cls._regex_escape_domain(domains[0])
 
-    # TODO: Validate
     @classmethod
     def _regex_escape_domain(cls, domain: str) -> str:
         """Escapes a plain text domain.

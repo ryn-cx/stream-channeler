@@ -12,7 +12,7 @@ from app.tmdb_media.tmdb import (
 from plugins.TMDB.constants import MOVIE_URL_REGEX, TV_URL_REGEX
 from plugins.TMDB.importer import TMDBImporter, TMDBMovie, TMDBSeries
 from plugins.TMDB.shared import TMDBShared
-from plugins.TMDB.utils import Provider, tmdb_url
+from plugins.TMDB.utils import tmdb_url
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
     InvalidURLError,
@@ -67,11 +67,6 @@ class TMDB(TMDBShared, AbstractPlugin, register=True):
         return self._get_media_importer_from_media_type(media_type)
 
     # TODO: Validate
-    def streaming_providers(self, title: Title) -> list[Provider]:
-        return self._media_importer_from_title(title).streaming_providers(title.key)
-
-    # TODO: Validate
-    @override
     def import_search(
         self,
         name: str,

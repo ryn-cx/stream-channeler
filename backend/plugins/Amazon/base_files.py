@@ -1,17 +1,12 @@
 # TODO: Validate
 from __future__ import annotations
 
-from plugins.Amazon.files import Detail, Search, ShareLinkRedirect
+from plugins.Amazon.files import Detail, ShareLinkRedirect
 from plugins.utils.base_plugin.base import BasePlugin
 
 
 # TODO: Validate
 class AmazonBaseFiles(BasePlugin):
-    # TODO: Validate
-    def search_file(self, query: str) -> Search:
-        """Return data for search results."""
-        return self._cached_file(Search, query)
-
     # TODO: Validate
     def detail_file(self, title_key: str) -> Detail:
         """Return data for a title."""

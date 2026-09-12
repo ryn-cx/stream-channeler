@@ -33,8 +33,6 @@ from chirashi.music_video import MusicVideo as MusicVideoEndpoint
 from chirashi.music_video.models import MusicVideoModel
 from chirashi.objects import Objects as ObjectsEndpoint
 from chirashi.objects.models import ObjectsModel
-from chirashi.search import Search as SearchEndpoint
-from chirashi.search.models import SearchModel
 from chirashi.season_episodes import SeasonEpisodes as SeasonEpisodesEndpoint
 from chirashi.season_episodes.models import SeasonEpisodesModel
 from chirashi.seasons import Seasons as SeasonsEndpoint
@@ -252,11 +250,3 @@ class BrowseMusic(PagedEndpointFile[BrowseMusicModel]):
     # TODO: Validate
     def datums(self) -> list[BrowseMusicDatum]:
         return self._endpoint().extract_data(self.parsed())
-
-
-# TODO: Validate
-class Search(SingleArgEndpointFile[SearchModel]):
-    # TODO: Validate
-    @override
-    def _endpoint(self) -> SearchEndpoint:
-        return chirashi().search
