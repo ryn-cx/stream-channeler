@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class DisneyPlus(DisneyPlusShared, AbstractPlugin, register=True):
+class DisneyPlus(DisneyPlusShared, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override

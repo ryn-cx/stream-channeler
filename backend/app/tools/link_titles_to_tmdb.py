@@ -30,8 +30,15 @@ def link_titles_to_tmdb(session: Session) -> None:
 
     progress = tqdm(unlinked_titles, unit="title")
     for title in progress:
-        progress.set_description(title.__str__())
-        link_new_title_to_tmdb(session, title)
+        progress.set_description(f"{title.source.key}: {title.name or title.key}")
+        try:
+            link_new_title_to_tmdb(session, title)
+        except Exception:  # noqa: BLE001
+            logger.exception(f"Failed to link {title.key} to TMDB")
+            session.rollback()
+            title.link_status = "Failed"
+            session.add(title)
+            session.commit()
 
 
 if __name__ == "__main__":

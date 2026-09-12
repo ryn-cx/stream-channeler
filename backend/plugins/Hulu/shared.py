@@ -7,7 +7,11 @@ from typing import TYPE_CHECKING, override
 
 from app.utils.strict_re import strict_search
 from plugins.Hulu.base_files import HuluBaseFiles
-from plugins.Hulu.constants import MOVIE_URL_REGEX, SERIES_URL_REGEX, HuluMediaType
+from plugins.Hulu.constants import (
+    MOVIE_URL_REGEX,
+    SERIES_URL_REGEX,
+    HuluMediaType,
+)
 from plugins.Hulu.utils import title_url, title_urls
 
 if TYPE_CHECKING:

@@ -14,6 +14,7 @@ from app.channels.models import (
     ChannelFavorite,
 )
 from app.channels.schemas import (
+    AutomaticChannelUserOutput,
     ChannelAdminCreate,
     ChannelAdminUpdate,
     ChannelCreate,
@@ -23,9 +24,10 @@ from app.channels.schemas import (
     ChannelsPublic,
 )
 from app.models import Visibility
-from app.schemas import RecordScope, ScopedReadOptions
+from app.schemas import Message, RecordScope, ScopedReadOptions
 from app.service.responses import scoped_list_response
 from app.users.models import User
+from app.users.plugin_user import is_plugin_user
 
 
 # TODO: Validate
@@ -260,4 +262,50 @@ def admin_update_channel_output(
             "username": username,
             "favorite_count": favorite_counts.get(channel.id, 0),
         },
+    )
+
+
+# TODO: Validate
+def automatic_channel_users(session: Session) -> list[AutomaticChannelUserOutput]:
+    rows = session.exec(
+        select(User, func.count(col(Channel.id)))
+        .join(Channel, col(Channel.user_id) == col(User.id))
+        .where(is_plugin_user(User.email), col(User.is_superuser).is_(False))
+        .group_by(col(User.id))
+        .order_by(col(User.email)),
+    ).all()
+    return [
+        AutomaticChannelUserOutput(
+            id=user.id,
+            username=user.username,
+            email=user.email,
+            channel_count=channel_count,
+        )
+        for user, channel_count in rows
+    ]
+
+
+# TODO: Validate
+def _automatic_channel_user(session: Session, user_id: uuid.UUID) -> User:
+    user = session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if "@" in user.email or user.is_superuser:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{user.email} is not an automatic channel user.",
+        )
+    return user
+
+
+# TODO: Validate
+def delete_automatic_channels(session: Session, user_id: uuid.UUID) -> Message:
+    """Delete every `Channel` an automatic channel `User` owns."""
+    user = _automatic_channel_user(session, user_id)
+    channels = session.exec(select(Channel).where(Channel.user_id == user.id)).all()
+    for channel in channels:
+        session.delete(channel)
+    session.commit()
+    return Message(
+        message=f"Deleted {len(channels)} channels owned by {user.email}",
     )

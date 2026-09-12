@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from app.episodes.models import EpisodeTmdbEpisode
+from app.episodes.service.numbering import absolute_numbers
 from app.episodes.text_matching import TextMatcher
 
 if TYPE_CHECKING:
@@ -29,6 +30,7 @@ class EpisodeRecord:
     description: str | None
     episode_number: int | None
     season_number: int | None
+    absolute_number: int | None = None
     linked_episode: EpisodeRecord | None = None
     link_note: str | None = None
     tfidf_name_match: EpisodeMatch | None = None
@@ -162,7 +164,12 @@ def assign_best_matches(
 
 # TODO: Validate
 def episode_name(episode: EpisodeRecord) -> str:
-    return (episode.name or "").strip()
+    return re.sub(
+        r"\((?:sub|dub)\)",
+        "",
+        episode.name or "",
+        flags=re.IGNORECASE,
+    ).strip()
 
 
 # TODO: Validate
@@ -217,14 +224,52 @@ def episodes_by_key(
 
 
 # TODO: Validate
+def season_episode_number(episode: EpisodeRecord) -> tuple[int, ...] | None:
+    if episode.season_number is None or episode.episode_number is None:
+        return None
+    return (episode.season_number, episode.episode_number)
+
+
+# TODO: Validate
+def absolute_episode_number(episode: EpisodeRecord) -> tuple[int, ...] | None:
+    if episode.absolute_number is None:
+        return None
+    return (episode.absolute_number,)
+
+
+# TODO: Validate
+def same_number(episode: EpisodeRecord, tmdb_episode: EpisodeRecord) -> bool:
+    numbered = season_episode_number(episode)
+    if numbered is not None and numbered == season_episode_number(tmdb_episode):
+        return True
+    absolute = absolute_episode_number(episode)
+    return absolute is not None and absolute == absolute_episode_number(tmdb_episode)
+
+
+# TODO: Validate
+def set_absolute_numbers(episodes: list[EpisodeRecord]) -> None:
+    numbers = absolute_numbers(
+        [
+            (episode.model.id, episode.season_number, episode.episode_number)
+            for episode in episodes
+        ],
+    )
+    for episode in episodes:
+        episode.absolute_number = numbers.get(episode.model.id)
+
+
+# TODO: Validate
 def episodes_by_number(
     episodes: list[EpisodeRecord],
-) -> defaultdict[tuple[int, int], list[EpisodeRecord]]:
-    grouped: defaultdict[tuple[int, int], list[EpisodeRecord]] = defaultdict(list)
+    number_of: Callable[[EpisodeRecord], tuple[int, ...] | None],
+) -> defaultdict[tuple[int, ...], list[EpisodeRecord]]:
+    grouped: defaultdict[tuple[int, ...], list[EpisodeRecord]] = defaultdict(list)
     for episode in episodes:
-        if episode.season_number is None or episode.episode_number is None:
+        if episode.linked_episode is not None:
             continue
-        grouped[episode.season_number, episode.episode_number].append(episode)
+        number = number_of(episode)
+        if number is not None:
+            grouped[number].append(episode)
     return grouped
 
 
@@ -245,12 +290,14 @@ class EpisodeLinkerV2:
             for season in tmdb_title.active_children
             for episode in season.active_children
         ]
+        set_absolute_numbers(self.episodes)
+        set_absolute_numbers(self.tmdb_episodes)
 
     # TODO: Validate
     def link_titles(self) -> None:
         # Link identical titles first because it is fast and can reduce the number of
         # episodes for the slower more complex matching methods.
-        self._link_matching_keys(episode_name_key, "Exact name")
+        self._link_matching_keys(episode_name_key, "Exact name", shared=True)
         self._link_matching_keys(fuzzy_episode_name_key, "Fuzzy name")
         self._link_matching_keys(episode_description_key, "Exact description")
         self._link_matching_keys(fuzzy_episode_description_key, "Fuzzy description")
@@ -283,14 +330,17 @@ class EpisodeLinkerV2:
         self,
         key_of: Callable[[EpisodeRecord], str],
         label: str,
+        *,
+        shared: bool = False,
     ) -> None:
         tmdb_episodes_by_key = episodes_by_key(self.tmdb_episodes, key_of)
         for key, episodes in episodes_by_key(self.episodes, key_of).items():
             tmdb_episodes = tmdb_episodes_by_key[key]
             if not tmdb_episodes:
                 continue
-            if len(episodes) == 1 and len(tmdb_episodes) == 1:
-                self.link(episodes[0], tmdb_episodes[0], f"Automatic: {label} match")
+            if len(tmdb_episodes) == 1 and (shared or len(episodes) == 1):
+                for episode in episodes:
+                    self.link(episode, tmdb_episodes[0], f"Automatic: {label} match")
                 continue
             self._link_matching_keys_by_number(episodes, tmdb_episodes, label)
 
@@ -301,16 +351,40 @@ class EpisodeLinkerV2:
         tmdb_episodes: list[EpisodeRecord],
         label: str,
     ) -> None:
-        numbered_tmdb_episodes = episodes_by_number(tmdb_episodes)
-        for number, numbered_episodes in episodes_by_number(episodes).items():
+        self._link_unique_numbers(
+            episodes,
+            tmdb_episodes,
+            season_episode_number,
+            f"Automatic: {label} and episode number match",
+        )
+        self._link_unique_numbers(
+            episodes,
+            tmdb_episodes,
+            absolute_episode_number,
+            f"Automatic: {label} and absolute number match",
+        )
+
+    # TODO: Validate
+    def _link_unique_numbers(
+        self,
+        episodes: list[EpisodeRecord],
+        tmdb_episodes: list[EpisodeRecord],
+        number_of: Callable[[EpisodeRecord], tuple[int, ...] | None],
+        note: str,
+    ) -> None:
+        numbered_tmdb_episodes = episodes_by_number(tmdb_episodes, number_of)
+        for number, numbered_episodes in episodes_by_number(
+            episodes,
+            number_of,
+        ).items():
             candidates = numbered_tmdb_episodes[number]
             if len(numbered_episodes) != 1 or len(candidates) != 1:
                 continue
-            self.link(
-                numbered_episodes[0],
-                candidates[0],
-                f"Automatic: {label} and episode number match",
-            )
+            if candidates[0].linked_episode is not None:
+                continue
+            if numbered_episodes[0].linked_episode is not None:
+                continue
+            self.link(numbered_episodes[0], candidates[0], note)
 
     # TODO: Validate
     def save_links(self) -> None:
@@ -361,20 +435,18 @@ class EpisodeLinkerV2:
         for episode in self.episodes:
             if episode.linked_episode is not None:
                 continue
-            if episode.episode_number is None or episode.season_number is None:
-                continue
             match = match_of(episode)
             if match is None or not match.valid or match.score < 0.8:  # noqa: PLR2004
                 continue
             tmdb_episode = match.episode
             if tmdb_episode.linked_episode is not None:
                 continue
-            if tmdb_episode.episode_number != episode.episode_number:
-                continue
-            if tmdb_episode.season_number != episode.season_number:
+            if not same_number(episode, tmdb_episode):
                 continue
             mutual = match_of(tmdb_episode)
             if mutual is None or not mutual.valid or mutual.episode is not episode:
+                continue
+            if self._agreed_match(episode, 0.8) is not tmdb_episode:
                 continue
             self.link(
                 episode,
@@ -388,7 +460,7 @@ class EpisodeLinkerV2:
         for episode in self.episodes:
             if episode.linked_episode is not None:
                 continue
-            tmdb_episode = self._agreed_high_score_match(episode)
+            tmdb_episode = self._agreed_match(episode, 0.9)
             if tmdb_episode is None or tmdb_episode.linked_episode is not None:
                 continue
             self.link(
@@ -398,13 +470,14 @@ class EpisodeLinkerV2:
             )
 
     # TODO: Validate
-    def _agreed_high_score_match(
+    def _agreed_match(
         self,
         episode: EpisodeRecord,
+        minimum_score: float,
     ) -> EpisodeRecord | None:
         agreed: EpisodeRecord | None = None
         for index, (_label, best) in enumerate(match_categories(episode)):
-            if best is None or best.score < 0.9:  # noqa: PLR2004
+            if best is None or best.score < minimum_score:
                 continue
             if not best.valid:
                 return None

@@ -31,6 +31,13 @@ class TestLargeTVShow(StandardTests[Netflix], NetflixValidator):
     urls = ("/title/{title_key}",)
 
 
+# TODO: Do I want to do some complex support for trailers?
+class TestTVShowWithTrailers(StandardTests[Netflix], NetflixValidator):
+    import_time = datetime(2026, 9, 10, tzinfo=UTC)
+    title_key = "80095697"
+    urls = ("/title/{title_key}",)
+
+
 # TODO: Validate
 class TestInvalidTitleID(InvalidURLValidator[Netflix], NetflixValidator):
     import_time = datetime(2026, 9, 9, tzinfo=UTC)

@@ -1,6 +1,7 @@
 # TODO: Validate
 """What every other part of the plugin reads a title by."""
 
+from collections.abc import Sequence
 from urllib.parse import quote
 from uuid import UUID
 
@@ -8,12 +9,20 @@ from wholoo.all_movies.models import AllMoviesModel
 from wholoo.all_series.models import AllSeriesModel
 from wholoo.genre.models import GenreModel
 from wholoo.genres.models import GenresModel
-from wholoo.movies.models import MoviesModel
+from wholoo.movies.models import Component as MovieComponent
+from wholoo.movies.models import Details as MovieDetails
+from wholoo.movies.models import Item as MovieCollectionItem
 from wholoo.season.models import Item, SeasonModel
+from wholoo.tv.models import Component as SeriesComponent
 from wholoo.tv.models import Details as TVDetails
+from wholoo.tv.models import Item as SeriesCollectionItem
 from wholoo.tv.models import TVModel
 
-from plugins.Hulu.constants import HuluMediaType
+from plugins.Hulu.constants import (
+    EPISODES_COLLECTION_IDS,
+    RECOMMENDATIONS_TOPIC,
+    HuluMediaType,
+)
 
 
 # TODO: Validate
@@ -89,7 +98,7 @@ def genre_ids(page: GenresModel) -> list[str]:
 
 
 # TODO: Validate
-def title_plan(details: TVDetails | MoviesModel) -> tuple[str, bool] | None:
+def title_plan(details: TVDetails | MovieDetails) -> tuple[str, bool] | None:
     vod_items = details.vod_items
     if vod_items is None:
         return None
@@ -99,3 +108,69 @@ def title_plan(details: TVDetails | MoviesModel) -> tuple[str, bool] | None:
         bundle.network_name != "Sony"
     )
     return bundle.network_name, is_subscription
+
+
+# TODO: Validate
+def collection_season_key(title_key: str, component_id: str) -> str:
+    return f"{title_key}:collection-{component_id}"
+
+
+# TODO: Validate
+def is_collection_season_key(season_key: str) -> bool:
+    return ":collection-" in season_key
+
+
+# TODO: Validate
+def split_collection_season_key(season_key: str) -> tuple[str, str]:
+    title_key, _, component_id = season_key.partition(":collection-")
+    return title_key, component_id
+
+
+# TODO: Validate
+def title_item_url(
+    item: SeriesCollectionItem | MovieCollectionItem,
+) -> str | None:
+    if item.field_type == HuluMediaType.SERIES:
+        return title_url(item.id, HuluMediaType.SERIES)
+    if item.field_type == HuluMediaType.MOVIE:
+        return title_url(item.id, HuluMediaType.MOVIE)
+    return None
+
+
+# TODO: Validate
+def watch_components(
+    components: Sequence[SeriesComponent | MovieComponent],
+) -> list[SeriesComponent | MovieComponent]:
+    return [
+        component
+        for component in components
+        if component.id not in EPISODES_COLLECTION_IDS
+        and component.items
+        and component.items[0].field_type in ("episode", "extra")
+    ]
+
+
+# TODO: Validate
+def watch_component(
+    components: Sequence[SeriesComponent | MovieComponent],
+    component_id: str,
+) -> SeriesComponent | MovieComponent:
+    return next(
+        component
+        for component in watch_components(components)
+        if component.id == component_id
+    )
+
+
+# TODO: Validate
+def collection_channel_key_urls(
+    components: Sequence[SeriesComponent | MovieComponent],
+) -> list[tuple[str, str]]:
+    channel_key_urls: dict[tuple[str, str], None] = {}
+    for component in components:
+        if component.id in EPISODES_COLLECTION_IDS:
+            continue
+        for item in component.items:
+            if url := title_item_url(item):
+                channel_key_urls[(RECOMMENDATIONS_TOPIC, url)] = None
+    return list(channel_key_urls)

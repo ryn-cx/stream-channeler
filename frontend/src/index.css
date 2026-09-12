@@ -136,3 +136,9 @@
     display: none;
   }
 }
+
+.winbox .wb-body {
+  contain: layout style;
+  will-change: auto;
+  background: var(--background);
+}

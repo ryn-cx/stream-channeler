@@ -48,14 +48,65 @@ class NetflixImporter(NetflixShared, BaseImporter, ABC):
         raise InvalidURLError(msg)
 
     # TODO: Validate
+    def add_title_to_plugin_channels(self, title: Title) -> None:
+        if not title.url:  # Should be impossible.
+            msg = "Title.url is not set."
+            raise AttributeError(msg)
+
+        title_data = self.title_file(title.key).parsed()
+        channel_keys = ["All Titles", *self._title_channel_keys(title_data)]
+        channel_key_urls = [(channel_key, title.url) for channel_key in channel_keys]
+        self.remove_urls_from_other_channels(channel_key_urls)
+        self.add_new_urls_to_channel(channel_key_urls)
+        self.add_new_urls_to_channel(self._related_channel_key_urls(title_data))
+
+    # TODO: Validate
+    def _title_channel_keys(self, title_data: DetailModalModel) -> list[str]:
+        genre_tags = title_data.genre_tags.edges if title_data.genre_tags else None
+        channel_keys = [
+            mood_tag.display_name
+            for mood_tag in title_data.mood_tags or []
+            if mood_tag.display_name
+        ]
+        channel_keys.extend(
+            edge.node.name for edge in genre_tags or [] if edge.node and edge.node.name
+        )
+        channel_keys.extend(
+            membership.title
+            for membership in title_data.title_group_memberships or []
+            if membership.title
+        )
+        return list(dict.fromkeys(channel_keys))
+
+    # TODO: Validate
+    def _related_channel_key_urls(
+        self,
+        title_data: DetailModalModel,
+    ) -> list[tuple[str, str]]:
+        channel_key_urls = [
+            ("All Titles", self.title_url(str(similar.video_id)))
+            for similar in title_data.similars or []
+            if similar.video_id
+        ]
+        for membership in title_data.title_group_memberships or []:
+            for sibling in membership.siblings or []:
+                if not sibling.video_id:
+                    continue
+                url = self.title_url(str(sibling.video_id))
+                channel_key_urls.append(("All Titles", url))
+                if membership.title:
+                    channel_key_urls.append((membership.title, url))
+        return list(dict.fromkeys(channel_key_urls))
+
+
+# TODO: Validate
+class NetflixSeriesImporter(NetflixImporter):
+    # TODO: Validate
     @override
     def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
         # Required to detect changes to the title and new seasons.
         return [self.title_file(title_key), self.seasons_file(title_key)]
 
-
-# TODO: Validate
-class NetflixSeriesImporter(NetflixImporter):
     # TODO: Validate
     @override
     def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
@@ -146,10 +197,16 @@ class NetflixSeriesImporter(NetflixImporter):
                 data_timestamp=self._title_files_data_timestamp(title_key),
                 source_id=source.id,
             ).upsert(source, title)
-            title.set_update_at(None)
+            title.set_update_at(
+                staggered_monthly_update_at(
+                    title_key,
+                    min(self._title_files_data_timestamps(title_key)),
+                ),
+            )
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
+        self.add_title_to_plugin_channels(title)
 
         return title
 
@@ -231,6 +288,11 @@ class NetflixSeriesImporter(NetflixImporter):
 class NetflixMovieImporter(NetflixImporter):
     # TODO: Validate
     @override
+    def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
+        return [self.title_file(title_key)]
+
+    # TODO: Validate
+    @override
     def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
         return [self.title_file(title_key)]
 
@@ -281,10 +343,16 @@ class NetflixMovieImporter(NetflixImporter):
                 data_timestamp=self._title_files_data_timestamp(title_key),
                 source_id=source.id,
             ).upsert(source, title)
-            title.set_update_at(None)
+            title.set_update_at(
+                staggered_monthly_update_at(
+                    title_key,
+                    min(self._title_files_data_timestamps(title_key)),
+                ),
+            )
 
         self._upsert_season(title, movie_data, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
+        self.add_title_to_plugin_channels(title)
 
         return title
 

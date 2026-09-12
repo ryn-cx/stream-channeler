@@ -20,12 +20,15 @@ from wholoo.genre.models import GenreModel
 from wholoo.genres import Genres as GenresEndpoint
 from wholoo.genres.models import GenresModel
 from wholoo.movies import Movies as MoviesEndpoint
+from wholoo.movies.models import Component as MovieComponent
+from wholoo.movies.models import Details as MovieDetails
 from wholoo.movies.models import MoviesModel
 from wholoo.search import Search as SearchEndpoint
 from wholoo.search.models import SearchModel
 from wholoo.season import Season as SeasonEndpoint
 from wholoo.season.models import SeasonModel
 from wholoo.tv import TV
+from wholoo.tv.models import Component as SeriesComponent
 from wholoo.tv.models import Details as TVDetails
 from wholoo.tv.models import TVModel
 
@@ -40,7 +43,7 @@ from plugins.utils.get_around_client import get_around_client
 
 @cache
 def wholoo() -> Wholoo:
-    return Wholoo(get_around_client=get_around_client())
+    return Wholoo(get_around_client=get_around_client(proxy=True))
 
 
 # TODO: Update the model name in wholoo to match this.
@@ -60,6 +63,10 @@ class Series(SingleArgEndpointFile[TVModel]):
     def details(self) -> TVDetails:
         return self.parsed().details
 
+    # TODO: Validate
+    def components(self) -> list[SeriesComponent]:
+        return self.parsed().components
+
 
 # TODO: Validate
 class Movie(SingleArgEndpointFile[MoviesModel]):
@@ -75,8 +82,12 @@ class Movie(SingleArgEndpointFile[MoviesModel]):
         return isinstance(error, MovieNotFoundError)
 
     # TODO: Validate
-    def details(self) -> MoviesModel:
-        return self.parsed()
+    def details(self) -> MovieDetails:
+        return self.parsed().details
+
+    # TODO: Validate
+    def components(self) -> list[MovieComponent]:
+        return self.parsed().components
 
 
 # TODO: Validate

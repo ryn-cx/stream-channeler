@@ -673,8 +673,7 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
   },
   {
     id: "title_tfidf_match_summary",
-    accessorFn: (row) =>
-      row.title_tfidf_matches?.[0]?.title.name ?? "No match",
+    accessorFn: (row) => row.title_tfidf_matches?.[0]?.title.name ?? "No match",
     header: "Title → Title (tf-idf)",
     meta: { serverBacked: false, cellClassName: "align-top" },
     cell: ({ row }) => {

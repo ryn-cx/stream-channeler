@@ -6,12 +6,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from plugins.AdultSwim.base_files import AdultSwimBaseFiles
-from plugins.AdultSwim.constants import CLIPS, FREE, SUBSCRIPTION
-from plugins.AdultSwim.utils import is_clips_source, title_url
+from plugins.AdultSwim.constants import FREE, SUBSCRIPTION
+from plugins.AdultSwim.utils import title_url
 
 if TYPE_CHECKING:
     from app.channels.models import Channel
-    from app.sources.models import Source
 
 
 # TODO: Validate
@@ -38,15 +37,7 @@ class AdultSwimShared(AdultSwimBaseFiles):
     @classmethod
     @override
     def _source_keys(cls) -> tuple[str, ...]:
-        return (FREE, SUBSCRIPTION, CLIPS)
-
-    # TODO: Validate
-    @override
-    def _upsert_source(self, source_key: str) -> Source:
-        source = super()._upsert_source(source_key)
-        if is_clips_source(source_key):
-            source.link_to_tmdb = False
-        return source
+        return (FREE, SUBSCRIPTION)
 
     # TODO: Validate
     def _create_initial_channel_records(self) -> None:
@@ -56,7 +47,9 @@ class AdultSwimShared(AdultSwimBaseFiles):
 
     # TODO: Validate
     def _title_urls_from_plugin_files(self) -> list[str]:
-        return [title_url(title_key) for title_key in self._title_keys_from_plugin_files()]
+        return [
+            title_url(title_key) for title_key in self._title_keys_from_plugin_files()
+        ]
 
     # TODO: Validate
     def _title_keys_from_plugin_files(self) -> list[str]:

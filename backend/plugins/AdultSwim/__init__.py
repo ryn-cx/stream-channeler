@@ -9,16 +9,17 @@ from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.titles.models import Title
 from app.tmdb_media.keys import watch_identifier
+from app.utils.update_at import staggered_monthly_update_at
 from plugins.AdultSwim.constants import EPISODE_URL_REGEX, TITLE_URL_REGEX
 from plugins.AdultSwim.shared import AdultSwimShared
 from plugins.AdultSwim.utils import (
     episode_air_date,
     episode_key_from_slug,
     episode_url,
+    is_clip_season,
     season_key,
     season_name,
     source_episodes,
-    source_seasons,
     title_url,
 )
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
@@ -130,7 +131,12 @@ class AdultSwim(
                 data_timestamp=self._title_files_data_timestamp(title_key),
                 source_id=source.id,
             ).upsert(source, title)
-            title.set_update_at(None)
+            title.set_update_at(
+                staggered_monthly_update_at(
+                    title_key,
+                    min(self._title_files_data_timestamps(title_key)),
+                ),
+            )
 
         self._upsert_seasons(
             title,
@@ -155,7 +161,7 @@ class AdultSwim(
                 episode_data.id
                 for episode_data in source_episodes(season_data, source_key)
             ]
-            for season_data in source_seasons(title_data, source_key)
+            for season_data in title_data.seasons
         }
         title.soft_delete_missing_children(episode_keys_by_season)
         for season in title.seasons:
@@ -171,17 +177,21 @@ class AdultSwim(
         source_key: str,
         force: bool = False,
     ) -> None:
-        for sort_order, season_data in enumerate(
-            source_seasons(title_data, source_key),
-        ):
+        for sort_order, season_data in enumerate(title_data.seasons):
             key = season_key(season_data)
             season = Season.get_from_memory(self.session, title, key)
             if self._season_is_outdated(season, title.key, force=force):
                 season = Season(
                     key=key,
                     name=season_name(season_data),
-                    season_number=season_data.number,
-                    sort_order=sort_order,
+                    season_number=(
+                        2147483647
+                        if is_clip_season(season_data)
+                        else season_data.number
+                    ),
+                    sort_order=(
+                        2147483647 if is_clip_season(season_data) else sort_order
+                    ),
                     data_timestamp=self._season_files_data_timestamp(
                         key,
                         title.key,

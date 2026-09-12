@@ -48,6 +48,14 @@ class AdminReadOptions(ReadOptions):
 
 
 # TODO: Validate
+class AutomaticChannelUserOutput(BaseModel):
+    id: uuid.UUID
+    username: str | None
+    email: str
+    channel_count: int
+
+
+# TODO: Validate
 class ChannelCreate(BaseInput, BaseChannel):
     """Schema for creating a `Channel`."""
 

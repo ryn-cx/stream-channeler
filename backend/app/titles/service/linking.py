@@ -27,7 +27,6 @@ from app.seasons.models import Season
 from app.titles.models import Title, TitleTmdbTitle
 from app.tmdb_media.filters import is_not_linked
 from app.utils import tz_datetime
-from plugins.utils.abstract_plugin import MediaNotFoundError
 from plugins.utils.manage_plugins import plugins
 
 if TYPE_CHECKING:
@@ -63,7 +62,8 @@ def tmdb_titles_from_title(session: Session, title: Title) -> set[Title]:
     plugin_class = plugin_classes_by_key[plugin_key]
     plugin_instance = plugin_class(session, title.source.plugin)
     return tmdb_titles_from_lookup_info(
-        session, plugin_instance.tmdb_lookup_info(title)
+        session,
+        plugin_instance.tmdb_lookup_info(title),
     )
 
 
@@ -76,16 +76,12 @@ def link_new_title_to_tmdb(session: Session, title: Title) -> None:
         msg = "link_new_title_to_tmdb should not be called on TMDB titles."
         raise ValueError(msg)
 
-    plugin_key = title.source.plugin.key
-    logger.info(f"[{plugin_key}] Linking to TMDB: {title}")
     for tmdb_title in tmdb_titles_from_title(session, title):
         note = "Automatic: Found match on TMDB"
         link_unlinked_title_to_tmdb(session, title, tmdb_title, note)
     if title.tmdb_title_links:
-        logger.info(f"[{plugin_key}] Linked to TMDB: {title}")
         title.link_status = "Linked"
     else:
-        logger.info(f"[{plugin_key}] No Match Found on TMDB: {title}")
         title.link_status = "No Match Found"
     session.add(title)
     session.commit()

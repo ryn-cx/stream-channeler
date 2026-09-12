@@ -9,6 +9,7 @@ from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.titles.models import Title
 from app.tmdb_media.keys import watch_identifier
+from app.utils.update_at import staggered_monthly_update_at
 from plugins.Hulu.constants import (
     MOVIE_URL_REGEX,
     SERIES_URL_REGEX,
@@ -18,14 +19,20 @@ from plugins.Hulu.constants import (
 from plugins.Hulu.shared import HuluShared
 from plugins.Hulu.utils import (
     build_season_key,
+    collection_channel_key_urls,
+    collection_season_key,
     episode_url,
     image_url,
+    is_collection_season_key,
     season_items,
     season_numbers,
+    split_collection_season_key,
     split_season_key,
     thumbnail_url,
     title_plan,
     title_url,
+    watch_component,
+    watch_components,
 )
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
@@ -33,6 +40,11 @@ from plugins.utils.base_plugin.url import ParsedURL
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+
+    from wholoo.movies.models import Component as MovieComponent
+    from wholoo.movies.models import Item as MovieCollectionItem
+    from wholoo.tv.models import Component as SeriesComponent
+    from wholoo.tv.models import Item as SeriesCollectionItem
 
     from app.sources.models import Source
     from plugins.Hulu.files import Movie, Series
@@ -52,6 +64,21 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
     def _title_files(self, title_key: str) -> Sequence[Series | Movie]: ...
 
     # TODO: Validate
+    @abstractmethod
+    def _title_components(
+        self,
+        title_key: str,
+    ) -> Sequence[SeriesComponent | MovieComponent]: ...
+
+    # TODO: Validate
+    @abstractmethod
+    def _title_record(self, source: Source, title_key: str) -> Title: ...
+
+    # TODO: Validate
+    @abstractmethod
+    def _upsert_title_seasons(self, title: Title, *, force: bool = False) -> None: ...
+
+    # TODO: Validate
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
         parsed_url = self.parse_url(url)
@@ -60,7 +87,6 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
             title_source = self.get_title_source(parsed_url.title_key)
             title = self._upsert_title(title_source, parsed_url.title_key)
         return self._import_results(title, parsed_url)
-
 
     # TODO: Validate
     def get_title_source(self, title_key: str) -> Source:
@@ -81,6 +107,117 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
         return self._sources[source_key]
 
     # TODO: Validate
+    @override
+    def _upsert_title(
+        self,
+        source: Source,
+        title_key: str,
+        *,
+        force: bool = False,
+    ) -> Title:
+        title = Title.get_from_memory(self.session, source, title_key)
+        if self._title_is_outdated(title, force=force):
+            title = self._title_record(source, title_key).upsert(source, title)
+            title.set_update_at(
+                staggered_monthly_update_at(
+                    title_key,
+                    min(self._title_files_data_timestamps(title_key)),
+                ),
+            )
+
+        self._upsert_title_seasons(title, force=force)
+        self._upsert_collection_seasons(title, force=force)
+        self._soft_delete_missing_seasons_and_episodes(title_key)
+        self.add_title_to_plugin_channels(title)
+
+        return title
+
+    # TODO: Validate
+    def _upsert_collection_seasons(self, title: Title, *, force: bool = False) -> None:
+        for component in watch_components(self._title_components(title.key)):
+            season_key = collection_season_key(title.key, component.id)
+            season = Season.get_from_memory(self.session, title, season_key)
+            if self._season_is_outdated(season, title.key, force=force):
+                season = Season(
+                    key=season_key,
+                    name=component.name,
+                    season_number=2147483647,
+                    sort_order=2147483647,
+                    data_timestamp=self._season_files_data_timestamp(
+                        season_key,
+                        title.key,
+                    ),
+                    title_id=title.id,
+                ).upsert(title, season)
+                season.set_update_at(None)
+
+            self._upsert_collection_episodes(season, title.key, force=force)
+
+    # TODO: Validate
+    def _upsert_collection_episodes(
+        self,
+        season: Season,
+        title_key: str,
+        *,
+        force: bool = False,
+    ) -> None:
+        for sort_order, item in enumerate(
+            self._collection_items(season.key, title_key),
+        ):
+            episode_key = str(item.id)
+            episode = Episode.get_from_memory(self.session, season, episode_key)
+            if self._episode_is_outdated(
+                episode,
+                season.key,
+                title_key,
+                force=force,
+            ):
+                hero_artwork = item.artwork.video_horizontal_hero
+                hero_path = hero_artwork.path if hero_artwork else None
+                episode = Episode(
+                    key=episode_key,
+                    watch_identifier=watch_identifier(self.plugin_name(), episode_key),
+                    name=item.name,
+                    description=item.description,
+                    url=episode_url(episode_key),
+                    image_url=image_url(hero_path),
+                    thumbnail_url=thumbnail_url(hero_path),
+                    duration=item.bundle.duration if item.bundle else None,
+                    air_date=item.premiere_date,
+                    episode_number=sort_order + 1,
+                    sort_order=sort_order,
+                    data_timestamp=self._episode_files_data_timestamp(
+                        episode_key,
+                        season.key,
+                        title_key,
+                    ),
+                    season_id=season.id,
+                ).upsert(season, episode)
+                episode.set_update_at(None)
+
+    # TODO: Validate
+    def _collection_season_keys(self, title_key: str) -> list[str]:
+        return [
+            collection_season_key(title_key, component.id)
+            for component in watch_components(self._title_components(title_key))
+        ]
+
+    # TODO: Validate
+    def _collection_items(
+        self,
+        season_key: str,
+        title_key: str,
+    ) -> list[SeriesCollectionItem | MovieCollectionItem]:
+        _, component_id = split_collection_season_key(season_key)
+        return list(
+            watch_component(self._title_components(title_key), component_id).items,
+        )
+
+    # TODO: Validate
+    def _collection_episode_keys(self, season_key: str, title_key: str) -> list[str]:
+        return [str(item.id) for item in self._collection_items(season_key, title_key)]
+
+    # TODO: Validate
     def add_title_to_plugin_channels(self, title: Title) -> None:
         if not title.url:  # Should be impossible.
             msg = "Title.url is not set."
@@ -96,6 +233,9 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
         channel_key_urls = [(channel_key, title.url) for channel_key in channel_keys]
         self.remove_urls_from_other_channels(channel_key_urls)
         self.add_new_urls_to_channel(channel_key_urls)
+        self.add_new_urls_to_channel(
+            collection_channel_key_urls(self._title_components(title.key)),
+        )
 
 
 # TODO: Validate
@@ -136,7 +276,14 @@ class HuluSeriesImporter(HuluImporter):
 
     # TODO: Validate
     @override
+    def _title_components(self, title_key: str) -> Sequence[SeriesComponent]:
+        return self.series_file(title_key).components()
+
+    # TODO: Validate
+    @override
     def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
+        if is_collection_season_key(season_key):
+            return [self.series_file(title_key)]
         _, season_number = split_season_key(season_key)
         # Includes season information and the list of episodes.
         return [self.season_file(title_key, season_number)]
@@ -149,6 +296,8 @@ class HuluSeriesImporter(HuluImporter):
         season_key: str,
         title_key: str,
     ) -> Sequence[BaseFile[Any]]:
+        if is_collection_season_key(season_key):
+            return [self.series_file(title_key)]
         _, season_number = split_season_key(season_key)
         # Includes episode information.
         return [self.season_file(title_key, season_number)]
@@ -159,7 +308,7 @@ class HuluSeriesImporter(HuluImporter):
         return [
             build_season_key(title_key, season_number)
             for season_number in season_numbers(self.series_file(title_key).parsed())
-        ]
+        ] + self._collection_season_keys(title_key)
 
     # TODO: Validate
     @override
@@ -172,6 +321,9 @@ class HuluSeriesImporter(HuluImporter):
             season_keys = [season_keys]
         episode_keys: list[str] = []
         for key in season_keys:
+            if is_collection_season_key(key):
+                episode_keys += self._collection_episode_keys(key, title_key)
+                continue
             title_key, season_number = split_season_key(key)
             episode_keys += [
                 str(item.id)
@@ -183,41 +335,27 @@ class HuluSeriesImporter(HuluImporter):
 
     # TODO: Validate
     @override
-    def _upsert_title(
-        self,
-        source: Source,
-        title_key: str,
-        *,
-        force: bool = False,
-    ) -> Title:
-        existing_title = Title.get_from_memory(self.session, source, title_key)
-        if self._title_is_outdated(existing_title, force=force):
-            parsed_series = self.series_file(title_key).parsed()
-            entity = parsed_series.details.entity
-            existing_title = Title(
-                key=title_key,
-                name=parsed_series.name,
-                description=entity.description,
-                year=entity.premiere_date.year if entity.premiere_date else None,
-                # TODO: There are mini series or documentary labels as well that could
-                # be intermixed here?
-                media_type=self._media_type_name(),
-                url=title_url(title_key, HuluMediaType.SERIES),
-                image_url=image_url(parsed_series.artwork.program_tile.path),
-                thumbnail_url=thumbnail_url(parsed_series.artwork.program_tile.path),
-                data_timestamp=self._title_files_data_timestamp(title_key),
-                source_id=source.id,
-            ).upsert(source, existing_title)
-            existing_title.set_update_at(None)
-
-        self._upsert_seasons(existing_title, force=force)
-        self._soft_delete_missing_seasons_and_episodes(title_key)
-        self.add_title_to_plugin_channels(existing_title)
-
-        return existing_title
+    def _title_record(self, source: Source, title_key: str) -> Title:
+        parsed_series = self.series_file(title_key).parsed()
+        entity = parsed_series.details.entity
+        return Title(
+            key=title_key,
+            name=parsed_series.name,
+            description=entity.description,
+            year=entity.premiere_date.year if entity.premiere_date else None,
+            # TODO: There are mini series or documentary labels as well that could
+            # be intermixed here?
+            media_type=self._media_type_name(),
+            url=title_url(title_key, HuluMediaType.SERIES),
+            image_url=image_url(parsed_series.artwork.program_tile.path),
+            thumbnail_url=thumbnail_url(parsed_series.artwork.program_tile.path),
+            data_timestamp=self._title_files_data_timestamp(title_key),
+            source_id=source.id,
+        )
 
     # TODO: Validate
-    def _upsert_seasons(self, title: Title, *, force: bool = False) -> None:
+    @override
+    def _upsert_title_seasons(self, title: Title, *, force: bool = False) -> None:
         for sort_order, season_number in enumerate(
             season_numbers(self.series_file(title.key).parsed()),
         ):
@@ -318,6 +456,11 @@ class HuluMovieImporter(HuluImporter):
 
     # TODO: Validate
     @override
+    def _title_components(self, title_key: str) -> Sequence[MovieComponent]:
+        return self.movie_file(title_key).components()
+
+    # TODO: Validate
+    @override
     def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
         return [self.movie_file(title_key)]
 
@@ -334,7 +477,7 @@ class HuluMovieImporter(HuluImporter):
     # TODO: Validate
     @override
     def _season_keys_from_title_files(self, title_key: str) -> list[str]:
-        return [title_key]
+        return [title_key, *self._collection_season_keys(title_key)]
 
     # TODO: Validate
     @override
@@ -345,44 +488,36 @@ class HuluMovieImporter(HuluImporter):
     ) -> list[str]:
         if isinstance(season_keys, str):
             season_keys = [season_keys]
-        return list(season_keys)
+        episode_keys: list[str] = []
+        for season_key in season_keys:
+            if is_collection_season_key(season_key):
+                episode_keys += self._collection_episode_keys(season_key, title_key)
+            else:
+                episode_keys.append(season_key)
+        return episode_keys
 
     # TODO: Validate
     @override
-    def _upsert_title(
-        self,
-        source: Source,
-        title_key: str,
-        *,
-        force: bool = False,
-    ) -> Title:
-        parsed_movie = self.movie_file(title_key).parsed()
-        title = Title.get_from_memory(self.session, source, title_key)
-        if self._title_is_outdated(title, force=force):
-            title = Title(
-                key=title_key,
-                name=parsed_movie.entity.name,
-                description=parsed_movie.entity.description,
-                year=parsed_movie.entity.premiere_date.year,
-                url=title_url(title_key, HuluMediaType.MOVIE),
-                image_url=image_url(parsed_movie.entity.artwork.program_tile.path),
-                thumbnail_url=thumbnail_url(
-                    parsed_movie.entity.artwork.program_tile.path,
-                ),
-                media_type="Movie",
-                data_timestamp=self._title_files_data_timestamp(title_key),
-                source_id=source.id,
-            ).upsert(source, title)
-            title.set_update_at(None)
-
-        self._upsert_season(title, force=force)
-        self._soft_delete_missing_seasons_and_episodes(title_key)
-        self.add_title_to_plugin_channels(title)
-
-        return title
+    def _title_record(self, source: Source, title_key: str) -> Title:
+        parsed_movie = self.movie_file(title_key).details()
+        return Title(
+            key=title_key,
+            name=parsed_movie.entity.name,
+            description=parsed_movie.entity.description,
+            year=parsed_movie.entity.premiere_date.year,
+            url=title_url(title_key, HuluMediaType.MOVIE),
+            image_url=image_url(parsed_movie.entity.artwork.program_tile.path),
+            thumbnail_url=thumbnail_url(
+                parsed_movie.entity.artwork.program_tile.path,
+            ),
+            media_type="Movie",
+            data_timestamp=self._title_files_data_timestamp(title_key),
+            source_id=source.id,
+        )
 
     # TODO: Validate
-    def _upsert_season(self, title: Title, *, force: bool = False) -> None:
+    @override
+    def _upsert_title_seasons(self, title: Title, *, force: bool = False) -> None:
         season = Season.get_from_memory(self.session, title, title.key)
         if self._season_is_outdated(season, title.key, force=force):
             season = Season(
@@ -399,7 +534,7 @@ class HuluMovieImporter(HuluImporter):
 
     # TODO: Validate
     def _upsert_episode(self, season: Season, *, force: bool = False) -> None:
-        parsed_movie = self.movie_file(season.key).parsed()
+        parsed_movie = self.movie_file(season.key).details()
         episode = Episode.get_from_memory(self.session, season, season.key)
         if self._episode_is_outdated(
             episode,

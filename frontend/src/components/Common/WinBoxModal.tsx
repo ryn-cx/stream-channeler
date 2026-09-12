@@ -44,6 +44,7 @@ export function WinBoxModal({
       return
     }
     const host = document.createElement("div")
+    host.style.height = "100%"
     let unmounting = false
     let closed = false
     const winBox = new WinBox({

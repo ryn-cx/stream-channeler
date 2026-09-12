@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 class HiDive(
     HiDiveShared,
     AbstractPlugin,
-    register=True,
+    register=False,
 ):
     # TODO: Validate
     @override

@@ -15,6 +15,7 @@ from app.sources.models import Source
 from app.titles.models import Title
 from app.tmdb_media.keys import watch_identifier
 from app.utils import tz_datetime
+from app.utils.update_at import staggered_monthly_update_at
 from plugins.Crunchyroll.constants import (
     ARTIST_URL_REGEX,
     CONCERT_URL_REGEX,
@@ -226,7 +227,12 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
                 data_timestamp=self._title_files_data_timestamp(title_key),
                 source_id=source.id,
             ).upsert(source, title)
-            title.set_update_at(None)
+            title.set_update_at(
+                staggered_monthly_update_at(
+                    title_key,
+                    min(self._title_files_data_timestamps(title_key)),
+                ),
+            )
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
@@ -537,8 +543,12 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
                 tmdb_title_validated_at=tz_datetime.now(),
                 source_id=source.id,
             ).upsert(source, title)
-            # All updates are set by update_source.
-            title.set_update_at(None)
+            title.set_update_at(
+                staggered_monthly_update_at(
+                    title_key,
+                    min(self._title_files_data_timestamps(title_key)),
+                ),
+            )
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
@@ -641,7 +651,10 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
         browse_file = self.browse_file()
         browse_file.download_if_outdated()
         self.add_new_urls_to_channel(
-            [("All Music", self.title_url(artist.id)) for artist in browse_file.datums()],
+            [
+                ("All Music", self.title_url(artist.id))
+                for artist in browse_file.datums()
+            ],
         )
 
     # TODO: Validate

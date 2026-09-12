@@ -6,7 +6,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from plugins.AdultSwim.constants import CLIPS, SUBSCRIPTION
+from plugins.AdultSwim.constants import SUBSCRIPTION
 
 if TYPE_CHECKING:
     from pools_closed.show.models import Episode as EpisodeData
@@ -32,11 +32,6 @@ def episode_url(title_key: str, episode_slug: str) -> str:
 # TODO: Validate
 def source_requires_auth(source_key: str) -> bool:
     return source_key == SUBSCRIPTION
-
-
-# TODO: Validate
-def is_clips_source(source_key: str) -> bool:
-    return source_key == CLIPS
 
 
 # TODO: Validate
@@ -74,18 +69,7 @@ def episode_keys(title: ShowModel, wanted_season_keys: list[str]) -> list[str]:
 
 
 # TODO: Validate
-def source_seasons(title: ShowModel, source_key: str) -> list[SeasonData]:
-    return [
-        season
-        for season in title.seasons
-        if is_clip_season(season) == is_clips_source(source_key)
-    ]
-
-
-# TODO: Validate
 def source_episodes(season: SeasonData, source_key: str) -> list[EpisodeData]:
-    if is_clips_source(source_key):
-        return list(season.episodes)
     return [
         episode_data
         for episode_data in season.episodes

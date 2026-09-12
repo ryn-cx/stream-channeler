@@ -35,7 +35,7 @@ class Crunchyroll(
     CrunchyrollWatchHistoryMixin,
     CrunchyrollShared,
     AbstractPlugin,
-    register=True,
+    register=False,
 ):
     # TODO: Validate
     @override

@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class HBOMax(HBOMaxShared, AbstractPlugin, register=True):
+class HBOMax(HBOMaxShared, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override

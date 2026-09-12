@@ -1,7 +1,7 @@
 // TODO: Validate
 import type { PaginationState } from "@tanstack/react-table"
 import { Search } from "lucide-react"
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 
 import type { ChannelListOutput } from "@/client"
 import {
@@ -20,6 +20,8 @@ function channelSearchName(channel: BrowseChannel): string {
 
 interface ChannelsBrowseSectionProps {
   rows: BrowseChannel[]
+  search: string
+  onSearchChange: (search: string) => void
   isServer: boolean
   serverRowCount: number
   pagination: PaginationState
@@ -31,13 +33,11 @@ interface ChannelsBrowseSectionProps {
   showChannelNumber?: boolean
 }
 
-// The browse (visual) view for a channel list: an optional name search, the
-// channel rows, and pagination. Sort, search, and paging run client-side, so the
-// name filter and the channel-number sort are only applied when the whole list is
-// loaded (not server-paginated).
 // TODO: Validate
 export function ChannelsBrowseSection({
   rows,
+  search,
+  onSearchChange,
   isServer,
   serverRowCount,
   pagination,
@@ -48,8 +48,6 @@ export function ChannelsBrowseSection({
   showCreatedBy,
   showChannelNumber,
 }: ChannelsBrowseSectionProps) {
-  const [search, setSearch] = useState("")
-
   const visibleRows = useMemo(() => {
     if (isServer) return rows
     const ordered = sortByNumber ? sortChannelsByNumber(rows) : rows
@@ -68,25 +66,23 @@ export function ChannelsBrowseSection({
 
   // TODO: Validate
   const changeSearch = (value: string) => {
-    setSearch(value)
+    onSearchChange(value)
     onPaginationChange({ ...pagination, pageIndex: 0 })
   }
 
   return (
     <>
-      {!isServer && (
-        <div className="px-[4%] pb-4">
-          <div className="relative max-w-sm">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(event) => changeSearch(event.target.value)}
-              placeholder="Search channels"
-              className="pl-8"
-            />
-          </div>
+      <div className="px-[4%] pb-4">
+        <div className="relative max-w-sm">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(event) => changeSearch(event.target.value)}
+            placeholder="Search channels"
+            className="pl-8"
+          />
         </div>
-      )}
+      </div>
 
       <ChannelsBrowse
         channels={pageRows}

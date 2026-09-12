@@ -7,6 +7,10 @@ SERIES_URL_REGEX = rf"\/series\/{SLUG_REGEX}(?P<series_key>{UUID_REGEX})"
 MOVIE_URL_REGEX = rf"\/movie\/{SLUG_REGEX}(?P<movie_key>{UUID_REGEX})"
 VIDEO_URL_REGEX = rf"\/watch\/(?P<episode_key>{UUID_REGEX})"
 
+RECOMMENDATIONS_TOPIC = "All Titles"
+
+EPISODES_COLLECTION_IDS = ("94",)
+
 
 # TODO: Validate
 class HuluMediaType(StrEnum):

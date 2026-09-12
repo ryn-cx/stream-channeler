@@ -29,6 +29,7 @@ import { Route as LayoutDashboardRouteImport } from './routes/_layout/dashboard'
 import { Route as LayoutCreditsRouteImport } from './routes/_layout/credits'
 import { Route as LayoutChannelOrdersRouteImport } from './routes/_layout/channel-orders'
 import { Route as LayoutChannelCommentsRouteImport } from './routes/_layout/channel-comments'
+import { Route as LayoutAllTitlesRouteImport } from './routes/_layout/all-titles'
 import { Route as LayoutAdminV2RouteImport } from './routes/_layout/admin-v2'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
 import { Route as LayoutOnboardingIndexRouteImport } from './routes/_layout/onboarding.index'
@@ -52,6 +53,7 @@ import { Route as LayoutAdminDuplicatedTmdbEpisodesRouteImport } from './routes/
 import { Route as LayoutAdminChannelsRouteImport } from './routes/_layout/admin.channels'
 import { Route as LayoutAdminChannelQueuesRouteImport } from './routes/_layout/admin.channel-queues'
 import { Route as LayoutAdminV2LinkEpisodeRouteImport } from './routes/_layout/admin-v2.link-episode'
+import { Route as LayoutAdminV2AutomaticChannelsRouteImport } from './routes/_layout/admin-v2.automatic-channels'
 import { Route as LayoutUsersUserIdChannelsRouteImport } from './routes/_layout/users.$userId.channels'
 import { Route as LayoutOnboardingChannelIdTitlesRouteImport } from './routes/_layout/onboarding.$channelId.titles'
 import { Route as LayoutOnboardingChannelIdSortRouteImport } from './routes/_layout/onboarding.$channelId.sort'
@@ -155,6 +157,11 @@ const LayoutChannelOrdersRoute = LayoutChannelOrdersRouteImport.update({
 const LayoutChannelCommentsRoute = LayoutChannelCommentsRouteImport.update({
   id: '/channel-comments',
   path: '/channel-comments',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutAllTitlesRoute = LayoutAllTitlesRouteImport.update({
+  id: '/all-titles',
+  path: '/all-titles',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutAdminV2Route = LayoutAdminV2RouteImport.update({
@@ -280,6 +287,12 @@ const LayoutAdminV2LinkEpisodeRoute =
     path: '/link-episode',
     getParentRoute: () => LayoutAdminV2Route,
   } as any)
+const LayoutAdminV2AutomaticChannelsRoute =
+  LayoutAdminV2AutomaticChannelsRouteImport.update({
+    id: '/automatic-channels',
+    path: '/automatic-channels',
+    getParentRoute: () => LayoutAdminV2Route,
+  } as any)
 const LayoutUsersUserIdChannelsRoute =
   LayoutUsersUserIdChannelsRouteImport.update({
     id: '/users/$userId/channels',
@@ -319,6 +332,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRouteWithChildren
   '/admin-v2': typeof LayoutAdminV2RouteWithChildren
+  '/all-titles': typeof LayoutAllTitlesRoute
   '/channel-comments': typeof LayoutChannelCommentsRoute
   '/channel-orders': typeof LayoutChannelOrdersRoute
   '/credits': typeof LayoutCreditsRoute
@@ -333,6 +347,7 @@ export interface FileRoutesByFullPath {
   '/sources': typeof LayoutSourcesRoute
   '/titles': typeof LayoutTitlesRoute
   '/watches': typeof LayoutWatchesRoute
+  '/admin-v2/automatic-channels': typeof LayoutAdminV2AutomaticChannelsRoute
   '/admin-v2/link-episode': typeof LayoutAdminV2LinkEpisodeRoute
   '/admin/channel-queues': typeof LayoutAdminChannelQueuesRoute
   '/admin/channels': typeof LayoutAdminChannelsRoute
@@ -365,6 +380,7 @@ export interface FileRoutesByTo {
   '/recover-password': typeof RecoverPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
+  '/all-titles': typeof LayoutAllTitlesRoute
   '/channel-comments': typeof LayoutChannelCommentsRoute
   '/channel-orders': typeof LayoutChannelOrdersRoute
   '/credits': typeof LayoutCreditsRoute
@@ -379,6 +395,7 @@ export interface FileRoutesByTo {
   '/titles': typeof LayoutTitlesRoute
   '/watches': typeof LayoutWatchesRoute
   '/': typeof LayoutIndexRoute
+  '/admin-v2/automatic-channels': typeof LayoutAdminV2AutomaticChannelsRoute
   '/admin-v2/link-episode': typeof LayoutAdminV2LinkEpisodeRoute
   '/admin/channel-queues': typeof LayoutAdminChannelQueuesRoute
   '/admin/channels': typeof LayoutAdminChannelsRoute
@@ -415,6 +432,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_layout/admin': typeof LayoutAdminRouteWithChildren
   '/_layout/admin-v2': typeof LayoutAdminV2RouteWithChildren
+  '/_layout/all-titles': typeof LayoutAllTitlesRoute
   '/_layout/channel-comments': typeof LayoutChannelCommentsRoute
   '/_layout/channel-orders': typeof LayoutChannelOrdersRoute
   '/_layout/credits': typeof LayoutCreditsRoute
@@ -430,6 +448,7 @@ export interface FileRoutesById {
   '/_layout/titles': typeof LayoutTitlesRoute
   '/_layout/watches': typeof LayoutWatchesRoute
   '/_layout/': typeof LayoutIndexRoute
+  '/_layout/admin-v2/automatic-channels': typeof LayoutAdminV2AutomaticChannelsRoute
   '/_layout/admin-v2/link-episode': typeof LayoutAdminV2LinkEpisodeRoute
   '/_layout/admin/channel-queues': typeof LayoutAdminChannelQueuesRoute
   '/_layout/admin/channels': typeof LayoutAdminChannelsRoute
@@ -467,6 +486,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/admin'
     | '/admin-v2'
+    | '/all-titles'
     | '/channel-comments'
     | '/channel-orders'
     | '/credits'
@@ -481,6 +501,7 @@ export interface FileRouteTypes {
     | '/sources'
     | '/titles'
     | '/watches'
+    | '/admin-v2/automatic-channels'
     | '/admin-v2/link-episode'
     | '/admin/channel-queues'
     | '/admin/channels'
@@ -513,6 +534,7 @@ export interface FileRouteTypes {
     | '/recover-password'
     | '/reset-password'
     | '/signup'
+    | '/all-titles'
     | '/channel-comments'
     | '/channel-orders'
     | '/credits'
@@ -527,6 +549,7 @@ export interface FileRouteTypes {
     | '/titles'
     | '/watches'
     | '/'
+    | '/admin-v2/automatic-channels'
     | '/admin-v2/link-episode'
     | '/admin/channel-queues'
     | '/admin/channels'
@@ -562,6 +585,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_layout/admin'
     | '/_layout/admin-v2'
+    | '/_layout/all-titles'
     | '/_layout/channel-comments'
     | '/_layout/channel-orders'
     | '/_layout/credits'
@@ -577,6 +601,7 @@ export interface FileRouteTypes {
     | '/_layout/titles'
     | '/_layout/watches'
     | '/_layout/'
+    | '/_layout/admin-v2/automatic-channels'
     | '/_layout/admin-v2/link-episode'
     | '/_layout/admin/channel-queues'
     | '/_layout/admin/channels'
@@ -755,6 +780,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutChannelCommentsRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/all-titles': {
+      id: '/_layout/all-titles'
+      path: '/all-titles'
+      fullPath: '/all-titles'
+      preLoaderRoute: typeof LayoutAllTitlesRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/admin-v2': {
       id: '/_layout/admin-v2'
       path: '/admin-v2'
@@ -916,6 +948,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminV2LinkEpisodeRouteImport
       parentRoute: typeof LayoutAdminV2Route
     }
+    '/_layout/admin-v2/automatic-channels': {
+      id: '/_layout/admin-v2/automatic-channels'
+      path: '/automatic-channels'
+      fullPath: '/admin-v2/automatic-channels'
+      preLoaderRoute: typeof LayoutAdminV2AutomaticChannelsRouteImport
+      parentRoute: typeof LayoutAdminV2Route
+    }
     '/_layout/users/$userId/channels': {
       id: '/_layout/users/$userId/channels'
       path: '/users/$userId/channels'
@@ -994,11 +1033,13 @@ const LayoutAdminRouteWithChildren = LayoutAdminRoute._addFileChildren(
 )
 
 interface LayoutAdminV2RouteChildren {
+  LayoutAdminV2AutomaticChannelsRoute: typeof LayoutAdminV2AutomaticChannelsRoute
   LayoutAdminV2LinkEpisodeRoute: typeof LayoutAdminV2LinkEpisodeRoute
   LayoutAdminV2IndexRoute: typeof LayoutAdminV2IndexRoute
 }
 
 const LayoutAdminV2RouteChildren: LayoutAdminV2RouteChildren = {
+  LayoutAdminV2AutomaticChannelsRoute: LayoutAdminV2AutomaticChannelsRoute,
   LayoutAdminV2LinkEpisodeRoute: LayoutAdminV2LinkEpisodeRoute,
   LayoutAdminV2IndexRoute: LayoutAdminV2IndexRoute,
 }
@@ -1029,6 +1070,7 @@ const LayoutOnboardingRouteWithChildren =
 interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRouteWithChildren
   LayoutAdminV2Route: typeof LayoutAdminV2RouteWithChildren
+  LayoutAllTitlesRoute: typeof LayoutAllTitlesRoute
   LayoutChannelCommentsRoute: typeof LayoutChannelCommentsRoute
   LayoutChannelOrdersRoute: typeof LayoutChannelOrdersRoute
   LayoutCreditsRoute: typeof LayoutCreditsRoute
@@ -1054,6 +1096,7 @@ interface LayoutRouteChildren {
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRouteWithChildren,
   LayoutAdminV2Route: LayoutAdminV2RouteWithChildren,
+  LayoutAllTitlesRoute: LayoutAllTitlesRoute,
   LayoutChannelCommentsRoute: LayoutChannelCommentsRoute,
   LayoutChannelOrdersRoute: LayoutChannelOrdersRoute,
   LayoutCreditsRoute: LayoutCreditsRoute,

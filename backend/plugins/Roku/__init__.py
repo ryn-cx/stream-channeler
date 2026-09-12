@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class Roku(RokuShared, AbstractPlugin, register=True):
+class Roku(RokuShared, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override

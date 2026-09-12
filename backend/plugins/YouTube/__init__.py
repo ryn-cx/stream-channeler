@@ -34,8 +34,14 @@ class YouTube(
     YouTubeURLParserMixin,
     YouTubeShared,
     AbstractPlugin,
-    register=True,
+    register=False,
 ):
+    # TODO: Validate
+    @classmethod
+    @override
+    def browsable_titles(cls) -> bool:
+        return False
+
     # TODO: Validate
     @classmethod
     @override

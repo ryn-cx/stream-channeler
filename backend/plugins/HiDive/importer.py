@@ -11,6 +11,7 @@ from app.episodes.models import Episode
 from app.seasons.models import Season as SeasonModel
 from app.titles.models import Title
 from app.tmdb_media.keys import watch_identifier
+from app.utils.update_at import staggered_monthly_update_at
 from plugins.HiDive.constants import (
     MOVIE_MEDIA_TYPE,
     MOVIE_URL_REGEX,
@@ -147,7 +148,12 @@ class HiDiveSeriesImporter(HiDiveImporter):
                 data_timestamp=self._title_files_data_timestamp(title_key),
                 source_id=source.id,
             ).upsert(source, title)
-            title.set_update_at(None)
+            title.set_update_at(
+                staggered_monthly_update_at(
+                    title_key,
+                    min(self._title_files_data_timestamps(title_key)),
+                ),
+            )
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
@@ -303,7 +309,12 @@ class HiDiveMovieImporter(HiDiveImporter):
                 data_timestamp=self._title_files_data_timestamp(title_key),
                 source_id=source.id,
             ).upsert(source, title)
-            title.set_update_at(None)
+            title.set_update_at(
+                staggered_monthly_update_at(
+                    title_key,
+                    min(self._title_files_data_timestamps(title_key)),
+                ),
+            )
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)

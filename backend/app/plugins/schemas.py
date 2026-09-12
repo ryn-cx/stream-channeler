@@ -107,6 +107,12 @@ class PluginImportURLInformation(BaseModel):
 
 
 # TODO: Validate
+class PluginBrowseInformation(BaseModel):
+    name: str
+    favicon_url: str | None = None
+
+
+# TODO: Validate
 class PluginURLMatch(BaseModel):
     matched: bool
     plugin_key: str | None = None

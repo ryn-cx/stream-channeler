@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class Amazon(AmazonShared, AbstractPlugin, register=True):
+class Amazon(AmazonShared, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override

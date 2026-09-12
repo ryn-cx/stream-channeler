@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class ParamountPlus(ParamountPlusShared, AbstractPlugin, register=True):
+class ParamountPlus(ParamountPlusShared, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override

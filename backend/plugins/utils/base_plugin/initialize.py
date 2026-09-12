@@ -62,6 +62,7 @@ class BaseInitializeMixin(BaseFileAccessMixin, AbstractPlugin, ABC):
         source.set_update_at(None)
         return source
 
+    # TODO: Validate
     @classmethod
     def initialize_plugin(cls, session: Session) -> None:
         """Initialize the plugin by creating it's base database records.
@@ -69,7 +70,7 @@ class BaseInitializeMixin(BaseFileAccessMixin, AbstractPlugin, ABC):
         Calls `_create_initial_plugin_record`, `_create_initial_source_records` and
         `_create_initial_channel_records`."""
         plugin = Plugin.get(session, cls.plugin_name())
-        if plugin and plugin.status != INCOMPLETE_STATUS:
+        if plugin and plugin.status != INCOMPLETE_STATUS and cls._sources_exist(plugin):
             return
 
         if not plugin:
@@ -81,6 +82,15 @@ class BaseInitializeMixin(BaseFileAccessMixin, AbstractPlugin, ABC):
             plugin_initializator._next_plugin_update_at()
         )
         plugin_initializator.plugin.status = None
+
+    # TODO: Validate
+    @classmethod
+    def _sources_exist(cls, plugin: Plugin) -> bool:
+        """Return whether every source the plugin declares has a database record."""
+        existing_source_keys = {source.key for source in plugin.sources}
+        return all(
+            source_key in existing_source_keys for source_key in cls._source_keys()
+        )
 
     @classmethod
     def _create_initial_plugin_record(cls, session: Session) -> Plugin:

@@ -67,6 +67,11 @@ class AbstractPlugin(ABC):
 
     # TODO: Validate
     @classmethod
+    def browsable_titles(cls) -> bool:
+        return True
+
+    # TODO: Validate
+    @classmethod
     @abstractmethod
     def plugin_name(cls) -> str:
         """Return the unique identifier for the plugin.

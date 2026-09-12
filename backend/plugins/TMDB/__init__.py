@@ -27,6 +27,12 @@ class TMDB(TMDBShared, AbstractPlugin, register=True):
     # TODO: Validate
     @classmethod
     @override
+    def browsable_titles(cls) -> bool:
+        return False
+
+    # TODO: Validate
+    @classmethod
+    @override
     def _url_regexes(cls) -> tuple[str, ...]:
         return (MOVIE_URL_REGEX, TV_URL_REGEX)
 

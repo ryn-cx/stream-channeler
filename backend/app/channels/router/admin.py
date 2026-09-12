@@ -1,6 +1,8 @@
 # TODO: Validate
 
 
+import uuid
+
 from fastapi import APIRouter, Depends
 
 from app.auth.dependencies import (
@@ -16,6 +18,7 @@ from app.channels.models import (
     Channel,
 )
 from app.channels.schemas import (
+    AutomaticChannelUserOutput,
     ChannelAdminCreate,
     ChannelAdminUpdate,
     ChannelListOutput,
@@ -55,6 +58,25 @@ def admin_update_channel(
 ) -> ChannelListOutput:
     """Update any field on any `Channel` as an admin, including `score`."""
     return channels.admin_update_channel_output(session, channel, channel_in)
+
+
+# TODO: Validate
+@admin_router.get("/automatic-users")
+def get_automatic_channel_users(
+    session: SessionDep,
+) -> list[AutomaticChannelUserOutput]:
+    """List the `User`s whose channels a source writes, and how many they hold."""
+    return channels.automatic_channel_users(session)
+
+
+# TODO: Validate
+@admin_router.delete("/automatic-users/{user_id}")
+def delete_automatic_channels(
+    session: SessionDep,
+    user_id: uuid.UUID,
+) -> Message:
+    """Delete every `Channel` an automatic channel `User` owns."""
+    return channels.delete_automatic_channels(session, user_id)
 
 
 # TODO: Validate

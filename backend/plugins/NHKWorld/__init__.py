@@ -9,6 +9,7 @@ from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.titles.models import Title
 from app.tmdb_media.keys import watch_identifier
+from app.utils.update_at import staggered_monthly_update_at
 from plugins.NHKWorld.constants import TITLE_URL_REGEX
 from plugins.NHKWorld.shared import NHKWorldShared
 from plugins.NHKWorld.utils import build_url, image_url, thumbnail_url
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class NHKWorld(NHKWorldShared, BaseImporter, AbstractPlugin, register=True):
+class NHKWorld(NHKWorldShared, BaseImporter, AbstractPlugin, register=False):
     # TODO: Validate
     @override
     def _create_initial_channel_records(self) -> None:
@@ -148,7 +149,12 @@ class NHKWorld(NHKWorldShared, BaseImporter, AbstractPlugin, register=True):
                 data_timestamp=self._title_files_data_timestamp(title_key),
                 source_id=source.id,
             ).upsert(source, title)
-            title.set_update_at(None)
+            title.set_update_at(
+                staggered_monthly_update_at(
+                    title_key,
+                    min(self._title_files_data_timestamps(title_key)),
+                ),
+            )
 
         self._upsert_season(title, title_key, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)

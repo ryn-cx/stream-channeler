@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class Pluto(PlutoShared, AbstractPlugin, register=True):
+class Pluto(PlutoShared, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override
