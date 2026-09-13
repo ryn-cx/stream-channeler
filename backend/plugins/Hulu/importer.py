@@ -219,6 +219,7 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
         return [str(item.id) for item in self._collection_items(season_key, title_key)]
 
     # TODO: Validate
+    @override
     def add_title_to_plugin_channels(self, title: Title) -> None:
         if not title.url:  # Should be impossible.
             msg = "Title.url is not set."
@@ -234,7 +235,6 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
         channel_key_urls = [
             ChannelKeyURL(channel_key, title.url) for channel_key in channel_keys
         ]
-        self.remove_urls_from_other_channels(channel_key_urls)
         self.add_new_urls_to_channel(channel_key_urls)
         self.add_new_urls_to_channel(
             collection_channel_key_urls(self._title_components(title.key)),

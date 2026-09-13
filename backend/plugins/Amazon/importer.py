@@ -157,6 +157,7 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
         return [season for season in seasons if self._season_available(season.key)]
 
     # TODO: Validate
+    @override
     def add_title_to_plugin_channels(self, title: Title) -> None:
         if not title.url:  # Should be impossible.
             msg = "Title.url is not set."
@@ -174,7 +175,6 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
             ChannelKeyURL(channel_key, title.url)
             for channel_key in dict.fromkeys(channel_keys)
         ]
-        self.remove_urls_from_other_channels(channel_key_urls)
         self.add_new_urls_to_channel(channel_key_urls)
         self.add_new_urls_to_channel(self._related_channel_key_urls(title.key))
 

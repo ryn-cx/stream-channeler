@@ -1,5 +1,10 @@
 // TODO: Validate
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 import {
   Antenna,
   Bot,
@@ -10,13 +15,14 @@ import {
   Link2,
   List,
   ListX,
+  RefreshCw,
   Search,
   Sparkles,
   Trash2,
   Upload,
 } from "lucide-react"
 import { useEffect, useState } from "react"
-import type { ChannelQueueOutput } from "@/client"
+import type { ChannelQueueOutput, ChannelTitleStats } from "@/client"
 import { ChannelsService } from "@/client"
 import {
   type Source,
@@ -27,7 +33,6 @@ import {
 import {
   CHANNEL_TITLE_PAGE,
   channelTitlesQueryKey,
-  useChannelTitleStats,
   useChannelTitlesPage,
 } from "@/components/Channels/useChannelTitles"
 import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
@@ -62,6 +67,8 @@ import { FeelingLuckyPanel } from "./FeelingLuckyPanel"
 import { AdditionalChannelsPanel } from "./ManageSubChannels"
 import { TitleSearch } from "./Search"
 import { WhitelistManager } from "./WhitelistManager"
+
+const CHANNEL_QUEUE_PAGE = 25
 
 // TODO: Validate
 function getStatusBadgeVariant(status: string) {
@@ -126,14 +133,34 @@ export function ManageTitlesTabs({
   // which follows it once they have stopped typing.
   const [titleFilter, setTitleFilter] = useState("")
   const [titleQuery, setTitleQuery] = useState("")
+  const [queuePageIndex, setQueuePageIndex] = useState(0)
+  const [queueFilter, setQueueFilter] = useState("")
+  const [queueQuery, setQueueQuery] = useState("")
 
   // region Queries
 
   const { data: queueData, isLoading: isLoadingQueue } = useQuery({
-    queryKey: ["channelQueue", channelId],
-    queryFn: () => ChannelsService.getChannelQueue({ channelId }),
+    queryKey: ["channelQueue", channelId, queuePageIndex, queueQuery],
+    queryFn: () =>
+      ChannelsService.getChannelQueue({
+        channelId,
+        offset: queuePageIndex * CHANNEL_QUEUE_PAGE,
+        limit: CHANNEL_QUEUE_PAGE,
+        query: queueQuery || undefined,
+      }),
     refetchInterval: queueRefetchInterval,
+    // The page a queue is on is read from the total it comes back with, so a
+    // page being fetched must not read as a queue of nothing.
+    placeholderData: keepPreviousData,
   })
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setQueueQuery(queueFilter)
+      setQueuePageIndex(0)
+    }, 300)
+    return () => clearTimeout(timeout)
+  }, [queueFilter])
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -155,6 +182,7 @@ export function ManageTitlesTabs({
         sources: Record<string, Source>
         tmdb_titles: Record<string, Title>
         tmdb_sources: Record<string, Source>
+        stats: Record<string, ChannelTitleStats>
         total: number
       }
     | undefined
@@ -168,11 +196,15 @@ export function ManageTitlesTabs({
     if (titlesData && pageIndex >= pageCount) setPageIndex(pageCount - 1)
   }, [titlesData, pageIndex, pageCount])
 
-  const queueEntries = queueData ?? []
-  const pendingQueueCount = queueEntries.filter(
-    (entry: ChannelQueueOutput) =>
-      entry.status !== "Imported" && entry.status !== "Failed",
-  ).length
+  const queueEntries = queueData?.data ?? []
+  const queueCount = queueData?.total ?? 0
+  const queuePageCount = Math.max(1, Math.ceil(queueCount / CHANNEL_QUEUE_PAGE))
+  const pendingQueueCount = queueData?.pending_count ?? 0
+
+  useEffect(() => {
+    if (queueData && queuePageIndex >= queuePageCount)
+      setQueuePageIndex(queuePageCount - 1)
+  }, [queueData, queuePageIndex, queuePageCount])
   const sources: Record<string, Source> = titlesData?.sources || {}
   const tmdbTitles: Record<string, Title> = titlesData?.tmdb_titles || {}
   const tmdbSources: Record<string, Source> = titlesData?.tmdb_sources || {}
@@ -191,10 +223,7 @@ export function ManageTitlesTabs({
     byTitleName,
   )
 
-  const listedTmdbTitleIds = [
-    ...new Set(titlesList.map((title) => title.tmdb_title_id ?? title.id)),
-  ]
-  const { data: stats } = useChannelTitleStats(channelId, listedTmdbTitleIds)
+  const stats = titlesData?.stats ?? {}
 
   // endregion Queries
 
@@ -203,27 +232,19 @@ export function ManageTitlesTabs({
   const deleteUrlMutation = useMutation({
     mutationFn: (urlId: string) =>
       ChannelsService.deleteChannelQueueUrl({ channelId, urlId }),
-    onMutate: async (urlId, context) => {
-      await context.client.cancelQueries({
+    onSuccess: () => showSuccessToast("URL removed from queue"),
+    onError: () => showErrorToast("Failed to remove URL from queue"),
+    onSettled: (_data, _error, _variables, _onMutateResult, context) =>
+      context.client.invalidateQueries({
         queryKey: ["channelQueue", channelId],
-      })
-      const previousQueue = context.client.getQueryData([
-        "channelQueue",
-        channelId,
-      ])
-      context.client.setQueryData(["channelQueue", channelId], (oldData: any) =>
-        oldData.filter((entry: ChannelQueueOutput) => entry.id !== urlId),
-      )
-      showSuccessToast("URL removed from queue")
-      return { previousQueue }
-    },
-    onError: (_error, _urlId, onMutateResult, context) => {
-      context.client.setQueryData(
-        ["channelQueue", channelId],
-        onMutateResult?.previousQueue,
-      )
-      showErrorToast("Failed to remove URL from queue")
-    },
+      }),
+  })
+
+  const retryUrlMutation = useMutation({
+    mutationFn: (urlId: string) =>
+      ChannelsService.retryChannelQueueUrl({ channelId, urlId }),
+    onSuccess: () => showSuccessToast("URL queued for import again"),
+    onError: () => showErrorToast("Failed to queue URL for import again"),
     onSettled: (_data, _error, _variables, _onMutateResult, context) =>
       context.client.invalidateQueries({
         queryKey: ["channelQueue", channelId],
@@ -232,29 +253,8 @@ export function ManageTitlesTabs({
 
   const clearQueueMutation = useMutation({
     mutationFn: () => ChannelsService.clearChannelCompletedQueue({ channelId }),
-    onMutate: async (_variables, context) => {
-      await context.client.cancelQueries({
-        queryKey: ["channelQueue", channelId],
-      })
-      const previousQueue = context.client.getQueryData([
-        "channelQueue",
-        channelId,
-      ])
-      context.client.setQueryData(["channelQueue", channelId], (oldData: any) =>
-        oldData.filter(
-          (entry: ChannelQueueOutput) => entry.status !== "Imported",
-        ),
-      )
-      showSuccessToast("Completed queue entries cleared")
-      return { previousQueue }
-    },
-    onError: (_error, _variables, onMutateResult, context) => {
-      context.client.setQueryData(
-        ["channelQueue", channelId],
-        onMutateResult?.previousQueue,
-      )
-      showErrorToast("Failed to clear queue")
-    },
+    onSuccess: () => showSuccessToast("Completed queue entries cleared"),
+    onError: () => showErrorToast("Failed to clear queue"),
     onSettled: (_data, _error, _variables, _onMutateResult, context) =>
       context.client.invalidateQueries({
         queryKey: ["channelQueue", channelId],
@@ -542,14 +542,14 @@ export function ManageTitlesTabs({
 
         <TabsContent value="queue" className={`${contentClassName} space-y-4`}>
           <div className="flex justify-between">
-            <h3>Queue ({queueEntries.length} items)</h3>
+            <h3>
+              Queue ({queueCount} {queueCount === 1 ? "item" : "items"})
+            </h3>
             <Button
               variant="outline"
               size="sm"
               onClick={() => clearQueueMutation.mutate()}
-              disabled={
-                clearQueueMutation.isPending || queueEntries.length === 0
-              }
+              disabled={clearQueueMutation.isPending || queueCount === 0}
             >
               {clearQueueMutation.isPending
                 ? "Clearing Completed Entries..."
@@ -557,10 +557,32 @@ export function ManageTitlesTabs({
             </Button>
           </div>
 
+          <div className="flex items-center gap-2">
+            <Input
+              value={queueFilter}
+              onChange={(event) => setQueueFilter(event.target.value)}
+              placeholder="Search URLs in this queue"
+              className="max-w-xs"
+            />
+            {queueFilter && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setQueueFilter("")}
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+
           {isLoadingQueue ? (
             <p className="text-sm text-muted-foreground">Loading queue...</p>
           ) : queueEntries.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No items in queue</p>
+            <p className="text-sm text-muted-foreground">
+              {queueQuery
+                ? `No URLs matching "${queueQuery}"`
+                : "No items in queue"}
+            </p>
           ) : (
             <div className="border rounded-lg">
               <Table className="table-fixed">
@@ -595,6 +617,19 @@ export function ManageTitlesTabs({
                           <Button
                             variant="ghost"
                             size="icon-sm"
+                            onClick={() => retryUrlMutation.mutate(entry.id)}
+                            disabled={
+                              retryUrlMutation.isPending ||
+                              entry.status === "Pending" ||
+                              entry.status === "Importing"
+                            }
+                            title="Import again"
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
                             onClick={() => deleteUrlMutation.mutate(entry.id)}
                             disabled={deleteUrlMutation.isPending}
                             title="Delete URL"
@@ -607,6 +642,32 @@ export function ManageTitlesTabs({
                   ))}
                 </TableBody>
               </Table>
+            </div>
+          )}
+
+          {queuePageCount > 1 && (
+            <div className="flex items-center justify-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setQueuePageIndex(queuePageIndex - 1)}
+                disabled={queuePageIndex === 0}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Page {queuePageIndex + 1} of {queuePageCount}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setQueuePageIndex(queuePageIndex + 1)}
+                disabled={queuePageIndex >= queuePageCount - 1}
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           )}
         </TabsContent>

@@ -35,8 +35,6 @@ export const channelQueueColumns: ColumnDef<ChannelQueueAdminOutput>[] = [
     id: "username",
     accessorFn: (row) => row.username ?? "Anonymous",
     header: "Owner",
-    meta: { filterVariant: "select" },
-    filterFn: "equalsString",
   },
   {
     accessorKey: "url",
@@ -56,7 +54,15 @@ export const channelQueueColumns: ColumnDef<ChannelQueueAdminOutput>[] = [
   {
     accessorKey: "status",
     header: "Status",
-    meta: { filterVariant: "select" },
+    meta: {
+      filterVariant: "select",
+      filterOptions: [
+        { label: "Pending", value: "Pending" },
+        { label: "Importing", value: "Importing" },
+        { label: "Imported", value: "Imported" },
+        { label: "Failed", value: "Failed" },
+      ],
+    },
     filterFn: "equalsString",
   },
   {

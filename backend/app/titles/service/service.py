@@ -7,20 +7,25 @@ from loguru import logger
 from sqlalchemy import func
 from sqlmodel import Session, col, select
 
+from app.channels.models import ChannelTitle
 from app.episodes.models import Episode
 from app.issue_reports.service.listing import list_title_issue_reports
 from app.media.media_type import TMDBMediaType
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
+from app.plugins.models import Plugin
 from app.seasons.models import Season
+from app.sources.models import Source
 from app.sources.schemas import SourceListPublic
-from app.titles.models import Title
+from app.titles.models import Title, TitleTmdbTitle
 from app.titles.schemas import (
+    MissingSourceTitleOutput,
     TitleInformationOutput,
     TitleInformationSide,
     TitleListPublic,
     TitlePublic,
     TitleUpdate,
     TmdbEpisodeGroupOption,
+    TmdbTitleOutput,
     UnvalidatedLinkedTitleOutput,
     UnvalidatedTitleOutput,
 )
@@ -28,6 +33,7 @@ from app.titles.service.linking import (
     _old_relink_episodes,
     _old_reread_in_new_order,
 )
+from app.tmdb_media.filters import is_not_linked
 from app.tmdb_media.metadata import tmdb_title_of
 from app.tmdb_media.tmdb import (
     chosen_group_id,
@@ -313,4 +319,66 @@ def list_unvalidated_titles(
             ],
         )
         for title in titles
+    ]
+
+
+# TODO: Validate
+def list_titles_missing_sources(
+    session: Session,
+    limit: int,
+) -> list[MissingSourceTitleOutput]:
+    """Return every canonical TMDB title that no website's row stands for.
+
+    Ordered by how many channels already hold the title, so the gaps that stop
+    something playing are the ones a page of this holds.
+    """
+    channel_count = (
+        select(func.count())
+        .select_from(ChannelTitle)
+        .where(col(ChannelTitle.tmdb_title_id) == Title.id)
+        .correlate(Title)
+        .scalar_subquery()
+        .label("channel_count")
+    )
+    stands_for_something = (
+        select(TitleTmdbTitle)
+        .where(col(TitleTmdbTitle.tmdb_title_id) == Title.id)
+        .correlate(Title)
+        .exists()
+    )
+    rows = session.exec(
+        select(Title, channel_count)
+        .join(Source)
+        .join(Plugin)
+        .where(
+            Plugin.key == TMDB_PLUGIN_KEY,
+            is_not_linked(Title),
+            col(Title.deleted_at).is_(None),
+            ~stands_for_something,
+        )
+        .order_by(channel_count.desc(), col(Title.name))
+        .limit(limit),
+    ).all()
+
+    title_ids = [title.id for title, _ in rows]
+    episode_counts = dict(
+        session.exec(
+            select(Season.title_id, func.count(col(Episode.id)))
+            .join(Episode, onclause=col(Episode.season_id) == Season.id)
+            .where(
+                col(Season.title_id).in_(title_ids),
+                col(Season.deleted_at).is_(None),
+                col(Episode.deleted_at).is_(None),
+            )
+            .group_by(col(Season.title_id)),
+        ).all(),
+    )
+
+    return [
+        MissingSourceTitleOutput(
+            **TmdbTitleOutput.model_validate(title).model_dump(),
+            channel_count=channel_count_of_title,
+            episode_count=episode_counts.get(title.id, 0),
+        )
+        for title, channel_count_of_title in rows
     ]

@@ -16,6 +16,7 @@ import {
   type OnChangeFn,
   type PaginationState,
   type RowData,
+  type Row as RowInstance,
   type SortingState as SortOptionsState,
   type Table as TableInstance,
   useReactTable,
@@ -32,6 +33,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import {
+  memo,
   type ReactNode,
   useCallback,
   useEffect,
@@ -187,6 +189,38 @@ function useTableState(
 }
 
 // TODO: Validate
+function TableBodyRow<TData>({
+  row,
+  className,
+}: {
+  row: RowInstance<TData>
+  className?: string
+  shownColumns: string
+}) {
+  return (
+    <TableRow className={className}>
+      {row.getVisibleCells().map((cell) => (
+        <TableCell
+          key={cell.id}
+          className={cell.column.columnDef.meta?.cellClassName}
+        >
+          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+        </TableCell>
+      ))}
+    </TableRow>
+  )
+}
+
+// TODO: Validate
+const DataTableRow = memo(
+  TableBodyRow,
+  (previous, next) =>
+    previous.row.original === next.row.original &&
+    previous.className === next.className &&
+    previous.shownColumns === next.shownColumns,
+) as typeof TableBodyRow
+
+// TODO: Validate
 export function DataTable<TData extends { id: string }, TValue>({
   columns,
   data,
@@ -265,6 +299,11 @@ export function DataTable<TData extends { id: string }, TValue>({
     autoResetPageIndex: false,
   })
 
+  const shownColumns = table
+    .getVisibleLeafColumns()
+    .map((column) => column.id)
+    .join(",")
+
   const filteredRows = serverSide
     ? serverSide.rowCount
     : table.getFilteredRowModel().rows.length
@@ -331,18 +370,16 @@ export function DataTable<TData extends { id: string }, TValue>({
         </TableHeader>
         <TableBody>
           {table.getRowModel().rows.length ? (
-            table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id} className={rowClassName?.(row.original)}>
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell
-                    key={cell.id}
-                    className={cell.column.columnDef.meta?.cellClassName}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
+            table
+              .getRowModel()
+              .rows.map((row) => (
+                <DataTableRow
+                  key={row.id}
+                  row={row}
+                  className={rowClassName?.(row.original)}
+                  shownColumns={shownColumns}
+                />
+              ))
           ) : (
             <TableRow className="hover:bg-transparent">
               <TableCell

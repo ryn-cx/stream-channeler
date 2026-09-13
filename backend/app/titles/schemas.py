@@ -231,3 +231,16 @@ class UnvalidatedTitleOutput(TitleListPublic):
     linked_titles: list[UnvalidatedLinkedTitleOutput]
     episode_count: int
     created_at: datetime
+
+
+# TODO: Validate
+class MissingSourceTitleOutput(TmdbTitleOutput):
+    """A canonical TMDB title that no website's row stands for.
+
+    `channel_count` and `episode_count` are what say whether the gap matters: a
+    title a channel already holds cannot play until something carries it, and one
+    TMDB knows episodes for is a series rather than a record with nothing to it.
+    """
+
+    channel_count: int
+    episode_count: int

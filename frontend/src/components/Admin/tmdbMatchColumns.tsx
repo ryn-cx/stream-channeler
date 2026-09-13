@@ -6,7 +6,6 @@ import type { ReactNode } from "react"
 
 import type { UnlockedEpisodeOutput, UnmatchedEpisodeOutput } from "@/client"
 import { ClampedContent } from "@/components/ChannelCommon/ClampedContent"
-import { TmdbLink } from "@/components/ChannelCommon/TmdbLink"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import { EditEpisodeById } from "@/components/Episodes/EditEpisodeById"
 import { EditTitleById } from "@/components/Titles/EditTitleById"
@@ -147,32 +146,6 @@ function EpisodeEditButton({ episode }: { episode: TmdbMatchRow }) {
 }
 
 // TODO: Validate
-/** Text that opens its own page, or plain text where there is no page to open. */
-function SummaryLink({
-  href,
-  className,
-  children,
-}: {
-  href: string | null | undefined
-  className?: string
-  children: ReactNode
-}) {
-  if (!href) {
-    return <span className={className}>{children}</span>
-  }
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={cn("hover:underline", className)}
-    >
-      {children}
-    </a>
-  )
-}
-
-// TODO: Validate
 /**
  * One side of a row, read as the title, the season and the episode within it.
  *
@@ -196,7 +169,7 @@ function MatchSummary({
   guaranteed,
 }: {
   record: Summarised
-  counterpart: Numbered | null
+  counterpart?: Numbered | null
   note?: ReactNode
   action?: ReactNode
   editEpisode?: ReactNode
@@ -326,7 +299,7 @@ function MatchSummary({
 function AlreadyUsedNote({
   match,
 }: {
-  match: NonNullable<TmdbMatchRow["best_match"]>
+  match: NonNullable<TmdbMatchRow["season_episode_match"]>
 }) {
   if (!match.already_used || !match.used_by?.length) {
     return null
@@ -354,7 +327,7 @@ function AlreadyUsedNote({
 // TODO: Validate
 /** The TMDB side of a row, in the shape the summary reads. */
 function choiceSummarised(
-  match: TmdbMatchRow["best_match"],
+  match: TmdbMatchRow["season_episode_match"],
 ): Summarised | null {
   if (!match) return null
   return {
@@ -408,7 +381,6 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
     cell: ({ row }) => (
       <MatchSummary
         record={episodeSummarised(row.original)}
-        counterpart={choiceSummarised(row.original.best_match)}
         editEpisode={<EpisodeEditButton episode={row.original} />}
       />
     ),
@@ -832,102 +804,6 @@ export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
     ),
   },
   {
-    id: "match_title_name",
-    accessorFn: (row) => row.best_match?.title.name ?? "",
-    header: "Match title",
-    meta: { serverBacked: false },
-    cell: ({ row }) => (
-      <WrappingCell className="max-w-48">
-        <SummaryLink href={row.original.best_match?.title.tmdb_url ?? null}>
-          {row.original.best_match?.title.name ?? ""}
-        </SummaryLink>
-      </WrappingCell>
-    ),
-  },
-  {
-    id: "match_title_year",
-    accessorFn: (row) => row.best_match?.title.year ?? "",
-    header: "Match year",
-    meta: { serverBacked: false },
-    cell: ({ row }) => (
-      <span className="tabular-nums">
-        {row.original.best_match?.title.year ?? ""}
-      </span>
-    ),
-  },
-  {
-    id: "match_season_number",
-    accessorFn: (row) => row.best_match?.season.season_number ?? "",
-    header: "Match season #",
-    meta: { serverBacked: false },
-    cell: ({ row }) => (
-      <span className="tabular-nums">
-        {row.original.best_match?.season.season_number ?? ""}
-      </span>
-    ),
-  },
-  {
-    id: "match_episode_number",
-    accessorFn: (row) => row.best_match?.episode.episode_number ?? "",
-    header: "Match episode #",
-    meta: { serverBacked: false },
-    cell: ({ row }) => (
-      <span className="tabular-nums">
-        {row.original.best_match?.episode.episode_number ?? ""}
-      </span>
-    ),
-  },
-  {
-    id: "match_absolute_number",
-    accessorFn: (row) => row.best_match?.absolute_number ?? "",
-    header: "Match absolute number",
-    meta: { serverBacked: false },
-    cell: ({ row }) => (
-      <span className="tabular-nums">
-        {row.original.best_match?.absolute_number ?? ""}
-      </span>
-    ),
-  },
-  {
-    id: "match_name",
-    accessorFn: (row) => row.best_match?.episode.name ?? "No match",
-    header: "Match episode name",
-    meta: { serverBacked: false },
-    cell: ({ row }) => {
-      const match = row.original.best_match
-      if (!match) {
-        return (
-          <WrappingCell className="max-w-64 text-muted-foreground">
-            No match
-          </WrappingCell>
-        )
-      }
-      return (
-        <WrappingCell className="max-w-64">
-          {match.episode.name ?? "Unnamed"}
-          <span className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span className="tabular-nums">id {match.episode.tmdb_id}</span>
-            <TmdbLink url={match.episode.tmdb_url ?? null} />
-          </span>
-        </WrappingCell>
-      )
-    },
-  },
-  {
-    id: "similarity",
-    accessorFn: (row) => row.best_match?.similarity ?? 0,
-    header: "Match %",
-    meta: { filterVariant: "range", serverBacked: false },
-    cell: ({ row }) => {
-      const match = row.original.best_match
-      return (
-        <span className="tabular-nums">
-          {match ? `${Math.round(match.similarity * 100)}%` : ""}
-        </span>
-      )
-    },
-  },
-  {
     id: "identifier_note",
     accessorFn: (row) => row.episode.tmdb_episode_note ?? "",
     header: "Note",
@@ -963,10 +839,4 @@ export const TMDB_MATCH_DEFAULT_VISIBILITY = {
   episode_number: false,
   absolute_number: false,
   episode_name: false,
-  match_title_name: false,
-  match_title_year: false,
-  match_season_number: false,
-  match_episode_number: false,
-  match_absolute_number: false,
-  match_name: false,
 }

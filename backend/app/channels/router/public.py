@@ -20,7 +20,6 @@ from app.channels.schemas import (
     ChannelReadOptions,
     ChannelsPublic,
     ChannelTitlesOutput,
-    ChannelTitleStats,
     CombinedChannelOutput,
     SortOptionOutput,
     WhitelistEpisodesOutput,
@@ -98,16 +97,6 @@ def get_channel_titles(  # noqa: PLR0913 - the listing is paged and searched
 ) -> ChannelTitlesOutput:
     """Read all titles for a channel, including those from its child channels."""
     return titles.channel_titles_output(channel, user, session, offset, limit, query)
-
-
-# TODO: Validate
-@channels_router.get("/{channel_id}/titles/stats")  # noqa: FAST003
-def get_channel_title_stats(
-    channel: ReadableChannel,  # noqa: ARG001
-    session: SessionDep,
-    tmdb_title_ids: Annotated[list[uuid.UUID], Query()],
-) -> dict[uuid.UUID, ChannelTitleStats]:
-    return titles.channel_title_stats_output(session, tmdb_title_ids)
 
 
 # FAST003 - Parameter is used by ReadableChannel.

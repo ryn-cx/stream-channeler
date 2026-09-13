@@ -5,7 +5,6 @@ import { useState } from "react"
 import Markdown from "react-markdown"
 import { remarkAlert } from "remark-github-blockquote-alert"
 import "remark-github-blockquote-alert/alert.css"
-import type { ChannelQueueOutput } from "@/client"
 import { ChannelsService, PluginsService } from "@/client"
 import { SourceOptionLabel } from "@/components/Common/SourceOptionLabel"
 import { Button } from "@/components/ui/button"
@@ -40,54 +39,28 @@ export function AddByUrlPanel({ channelId }: { channelId: string }) {
 
   const addUrlsMutation = useMutation({
     mutationFn: async (urls: string[]) => {
-      let queue: ChannelQueueOutput[] = []
       for (let start = 0; start < urls.length; start += 100) {
-        queue = await ChannelsService.createChannelQueueUrls({
+        await ChannelsService.createChannelQueueUrls({
           channelId,
           requestBody: urls.slice(start, start + 100),
         })
       }
-      return queue
     },
-    onMutate: async (urls, context) => {
-      await context.client.cancelQueries({
-        queryKey: ["channelQueue", channelId],
-      })
-      const previousQueue = context.client.getQueryData([
-        "channelQueue",
-        channelId,
-      ])
-      context.client.setQueryData(
-        ["channelQueue", channelId],
-        (oldData: ChannelQueueOutput[] | undefined) => [
-          ...(oldData ?? []),
-          ...urls.map((url, index) => ({
-            id: `placeholder_${index}`,
-            url,
-            status: "Pending",
-            note: null,
-            created_at: new Date().toISOString(),
-          })),
-        ],
-      )
+    onMutate: (urls) => {
       showSuccessToast(
         `${urls.length} URL${urls.length !== 1 ? "s" : ""} added to import queue`,
       )
       setUrlsInput("")
-      return { previousQueue }
     },
-    onSuccess: (queue, _urls, _onMutateResult, context) =>
-      context.client.setQueryData(["channelQueue", channelId], queue),
-    onError: (error, _urls, onMutateResult, context) => {
-      context.client.setQueryData(
-        ["channelQueue", channelId],
-        onMutateResult?.previousQueue,
-      )
+    onSettled: (_data, _error, _urls, _onMutateResult, context) =>
+      context.client.invalidateQueries({
+        queryKey: ["channelQueue", channelId],
+      }),
+    onError: (error) =>
       handleError.call(
         showErrorToast,
         error as Parameters<typeof handleError>[0],
-      )
-    },
+      ),
   })
 
   // TODO: Validate

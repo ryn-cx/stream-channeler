@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, select
 
-from app.channels.models import Channel, ChannelQueue, ChannelTitle
+from app.channels.models import Channel, ChannelQueue
 from app.channels.service.import_queue import add_urls_to_channel_import_queue
 from app.channels.service.ordering import order_preset_options
 from app.models import Visibility
@@ -92,48 +92,13 @@ class BaseChannelMixin(AbstractPlugin, ABC):
         )
 
     # TODO: Validate
-    def remove_urls_from_other_channels(
-        self,
-        channel_key_urls: Sequence[ChannelKeyURL],
-    ) -> None:
-        channel_names_by_url: dict[str, set[str]] = {}
-        for channel_key_url in channel_key_urls:
-            channel_names_by_url.setdefault(channel_key_url.url, set()).add(
-                self._channel_name(channel_key_url.channel_key),
-            )
+    def add_title_to_plugin_channels(self, title: Title) -> None:
+        """Put a title onto every automatic channel it belongs on.
 
-        stale_entries = [
-            (queue_entry, channel)
-            for queue_entry, channel in self.session.exec(
-                select(ChannelQueue, Channel)
-                .join(Channel, col(Channel.id) == col(ChannelQueue.channel_id))
-                .where(
-                    Channel.user_id == self.automatic_channel_user.id,
-                    col(ChannelQueue.url).in_(channel_names_by_url),
-                ),
-            ).all()
-            if channel.name not in channel_names_by_url[queue_entry.url]
-        ]
-        if not stale_entries:
-            return
-
-        tmdb_title_ids_by_url = self._tmdb_title_ids_by_url(
-            {queue_entry.url for queue_entry, _ in stale_entries},
-        )
-        for queue_entry, channel in stale_entries:
-            for tmdb_title_id in tmdb_title_ids_by_url.get(
-                queue_entry.url,
-                set(),
-            ):
-                channel_title = ChannelTitle.get(
-                    self.session,
-                    channel,
-                    tmdb_title_id,
-                )
-                if channel_title:
-                    self.session.delete(channel_title)
-            self.session.delete(queue_entry)
-        self.session.commit()
+        A plugin that sorts its titles into channels overrides this. It is public
+        so a tool can walk every title a plugin holds and sort them again, which
+        is how a channel is restructured without reimporting anything.
+        """
 
     # TODO: Validate
     def _titles_by_url(self, urls: set[str]) -> dict[str, list[Title]]:
@@ -156,19 +121,6 @@ class BaseChannelMixin(AbstractPlugin, ABC):
             for url, title_key in title_keys_by_url.items()
             if title_key in titles_by_key
         }
-
-    # TODO: Validate
-    def _tmdb_title_ids_by_url(
-        self,
-        urls: set[str],
-    ) -> dict[str, set[uuid.UUID]]:
-        tmdb_title_ids_by_url: dict[str, set[uuid.UUID]] = {}
-        for url, titles in self._titles_by_url(urls).items():
-            for title in titles:
-                tmdb_title_ids_by_url.setdefault(url, set()).update(
-                    set(title.tmdb_title_ids) or {title.id},
-                )
-        return tmdb_title_ids_by_url
 
     # TODO: Validate
     def add_new_urls_to_channel(

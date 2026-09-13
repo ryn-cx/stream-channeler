@@ -47,9 +47,9 @@ function useAddToQueue(channelId: string) {
         channelId,
         requestBody: [url],
       }),
-    onSuccess: (queue) => {
+    onSuccess: () => {
       showSuccessToast("Title added to import queue")
-      queryClient.setQueryData(["channelQueue", channelId], queue)
+      queryClient.invalidateQueries({ queryKey: ["channelQueue", channelId] })
     },
     onError: handleError.bind(showErrorToast),
   })

@@ -15,6 +15,12 @@ from app.database import engine, load_models
 from app.plugins.models import Plugin
 from app.sources.models import Source
 from app.titles.models import Title
+from app.tools.selection import (
+    PluginSelection,
+    parse_selection,
+    selection_clauses,
+    selection_description,
+)
 from plugins.utils.manage_plugins import (
     import_plugins,
     plugins,
@@ -57,14 +63,16 @@ def _reimport_worker(
 
 
 # TODO: Validate
-def reimport_all_titles() -> None:
+def reimport_all_titles(selection: PluginSelection | None = None) -> None:
+    selection = selection or PluginSelection()
     plugin_classes_by_key = {plugin.plugin_name(): plugin for plugin in plugins}
     with Session(engine) as session:
         listed = session.exec(
             select(Title.source_id, Title.key, Title.name, Plugin.key)
             .select_from(Title)
             .join(Source)
-            .join(Plugin),
+            .join(Plugin)
+            .where(*selection_clauses(selection)),
         ).all()
 
     pending: queue.SimpleQueue[tuple[uuid.UUID, str, str | None, str]] = (
@@ -98,9 +106,12 @@ def reimport_all_titles() -> None:
 
 
 if __name__ == "__main__":
+    selected = parse_selection("Read every title again from the website it came from.")
+
     logger.remove()
     logger.add(lambda message: tqdm.write(message, end=""))
+    logger.info(f"Reimporting {selection_description(selected)}")
 
-    reimport_all_titles()
+    reimport_all_titles(selected)
 
     logger.info("Reimport completed")

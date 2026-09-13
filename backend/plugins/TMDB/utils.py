@@ -5,90 +5,15 @@ from collections.abc import Sequence
 from datetime import date
 from typing import NamedTuple
 
-from tminidb.movie.watch_providers.models import Ad as MovieAd
-from tminidb.movie.watch_providers.models import BuyItem as MovieBuyItem
-from tminidb.movie.watch_providers.models import FlatrateItem as MovieFlatrateItem
-from tminidb.movie.watch_providers.models import FreeItem as MovieFreeItem
-from tminidb.movie.watch_providers.models import MovieWatchProvidersModel
-from tminidb.movie.watch_providers.models import RentItem as MovieRentItem
-from tminidb.movie.watch_providers.models import Us as MovieUs
 from tminidb.tv_episode_group.details.models import Episode as TvEpisodeGroupEpisode
 from tminidb.tv_episode_group.details.models import Group as TvEpisodeGroup
 from tminidb.tv_season.details.models import Episode as TvSeasonEpisode
 from tminidb.tv_season.details.models import TvSeasonDetailsModel
-from tminidb.tv_season.watch_providers.models import Ad1 as TvSeasonAd
-from tminidb.tv_season.watch_providers.models import BuyItem as TvSeasonBuyItem
-from tminidb.tv_season.watch_providers.models import (
-    FlatrateItem as TvSeasonFlatrateItem,
-)
-from tminidb.tv_season.watch_providers.models import FreeItem as TvSeasonFreeItem
-from tminidb.tv_season.watch_providers.models import TvSeasonWatchProvidersModel
-from tminidb.tv_series.watch_providers.models import Ad as TvAd
-from tminidb.tv_series.watch_providers.models import BuyItem as TvBuyItem
-from tminidb.tv_series.watch_providers.models import FlatrateItem as TvFlatrateItem
-from tminidb.tv_series.watch_providers.models import FreeItem as TvFreeItem
-from tminidb.tv_series.watch_providers.models import TvSeriesWatchProvidersModel
 
 from app.media.media_type import TMDBMediaType
 from app.tmdb_media.tmdb import (
     tmdb_season_key,
 )
-from plugins.utils.abstract_plugin import AbstractPlugin
-from plugins.utils.manage_plugins import sorted_plugins
-
-type WatchProviders = (
-    MovieWatchProvidersModel | TvSeriesWatchProvidersModel | TvSeasonWatchProvidersModel
-)
-
-
-type Provider = (
-    MovieAd
-    | MovieFlatrateItem
-    | MovieFreeItem
-    | MovieRentItem
-    | MovieBuyItem
-    | TvAd
-    | TvFlatrateItem
-    | TvFreeItem
-    | TvBuyItem
-    | TvSeasonAd
-    | TvSeasonFlatrateItem
-    | TvSeasonFreeItem
-    | TvSeasonBuyItem
-)
-
-
-# TODO: Validate
-def streaming_providers(
-    watch_providers: WatchProviders,
-) -> list[Provider]:
-    if not (us_results := watch_providers.results.us):
-        return []
-
-    providers: list[Provider] = [
-        *(us_results.flatrate or []),
-        *(us_results.ads or []),
-        *(us_results.free or []),
-        *(us_results.buy or []),
-    ]
-    # Only movies have the rent option.
-    if isinstance(us_results, MovieUs):
-        providers += us_results.rent or []
-
-    # Dedupe the list while maintaining order because some webistes allow you to both
-    # rent and buy movies.
-    providers_by_id: dict[int, Provider] = {}
-    for provider in providers:
-        providers_by_id.setdefault(provider.provider_id, provider)
-    return list(providers_by_id.values())
-
-
-# TODO: Validate
-def get_media_plugin(provider_name: str) -> type[AbstractPlugin] | None:
-    for plugin_class in sorted_plugins():
-        if plugin_class.matches_tmdb_provider(provider_name):
-            return plugin_class
-    return None
 
 
 # TODO: Validate

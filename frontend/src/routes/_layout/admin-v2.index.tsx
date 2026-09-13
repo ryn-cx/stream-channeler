@@ -1,6 +1,6 @@
 // TODO: Validate
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { Bot, Link2 } from "lucide-react"
+import { Bot, Link2, Tv } from "lucide-react"
 import { PageHeader } from "@/components/Common/PageHeader"
 import {
   Card,
@@ -36,6 +36,20 @@ function AdminV2Index() {
               <CardDescription>
                 Every episode still waiting on a TMDB episode, either across the
                 whole library or only the ones a user's channel holds.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin-v2/link-title" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Tv className="size-5" />
+                Link Title
+              </CardTitle>
+              <CardDescription>
+                Every title TMDB holds that no website's row stands for, with
+                the address of a page carrying it to be given by hand.
               </CardDescription>
             </CardHeader>
           </Card>

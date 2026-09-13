@@ -237,10 +237,6 @@ class UnmatchedEpisodeOutput(EpisodeRecord):
     """An episode no TMDB record was found for, beside the closest TMDB episode."""
 
     absolute_number: int | None = None
-    best_match: TmdbEpisodeChoice | None
-    # The episode TMDB numbers the same way, which is a different question to
-    # the one the name asks and often a different episode. Both are offered so
-    # a row can be settled on whichever of the two is the one to trust.
     season_episode_match: TmdbEpisodeChoice | None
     absolute_number_match: TmdbEpisodeChoice | None
     episode_number_absolute_match: TmdbEpisodeChoice | None
@@ -275,6 +271,7 @@ class UnlockedEpisodeOutput(UnmatchedEpisodeOutput):
     a wrong link is only visible next to the TMDB episode it was made against.
     """
 
+    best_match: TmdbEpisodeChoice | None
     name_matches: bool
     """Whether the website and TMDB give the episode the very same name.
 

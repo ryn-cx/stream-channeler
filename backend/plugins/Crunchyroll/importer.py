@@ -332,6 +332,7 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
         return [self.newest_browse_file()]
 
     # TODO: Validate
+    @override
     def add_title_to_plugin_channels(self, title: Title) -> None:
         if not title.url:  # This should not be possible.
             msg = "Title.url is not set."
@@ -345,7 +346,6 @@ class CrunchyrollAnimeImporter(CrunchyrollImporter):
         channel_key_urls = [
             ChannelKeyURL(channel_key, title.url) for channel_key in channel_keys
         ]
-        self.remove_urls_from_other_channels(channel_key_urls)
         self.add_new_urls_to_channel(channel_key_urls)
         self.add_new_urls_to_channel(self._similar_channel_key_urls(title.key))
 
@@ -647,6 +647,7 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
         return [self.browse_file()]
 
     # TODO: Validate
+    @override
     def add_title_to_plugin_channels(self, title: Title) -> None:
         if not title.url:  # Should be impossible
             msg = "Title.url is not set."
@@ -659,7 +660,6 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
         channel_key_urls = [
             ChannelKeyURL(channel_key, title.url) for channel_key in channel_keys
         ]
-        self.remove_urls_from_other_channels(channel_key_urls)
         self.add_new_urls_to_channel(channel_key_urls)
 
     # TODO: Validate

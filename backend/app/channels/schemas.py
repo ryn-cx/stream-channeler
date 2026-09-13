@@ -196,6 +196,13 @@ class ChannelQueueOutput(BaseChannelQueue):
 
 
 # TODO: Validate
+class ChannelQueuePage(BaseModel):
+    data: list[ChannelQueueOutput] = Field(default_factory=list)
+    total: int = Field(default=0)
+    pending_count: int = Field(default=0)
+
+
+# TODO: Validate
 class ChannelQueueAdminOutput(ChannelQueueOutput):
     """Schema for returning a queue entry to an admin, with channel and owner info."""
 
@@ -213,6 +220,19 @@ class ChannelQueueAdminUpdate(BaseInput):
     status: URLStatus | None = Field(default=None)
     note: str | None = Field(default=None)
     import_at: datetime | None = Field(default=None)
+
+
+# TODO: Validate
+class ChannelQueueAdminReadOptions(ReadOptions):
+    owner: MediaOwner | None = None
+
+
+# TODO: Validate
+class ChannelQueuesAdminPublic(BaseModel):
+    data: list[ChannelQueueAdminOutput]
+    total_count: int
+    filtered_count: int
+    is_server_side: bool
 
 
 # TODO: Validate
@@ -338,6 +358,7 @@ class ChannelTitlesOutput(BaseModel):
     # The regular titles grouped by the channel they come from, with the channel this
     # endpoint was called on first and combined channels after it, sorted by name.
     groups: list[ChannelTitleGroup] = Field(default_factory=list)
+    stats: dict[uuid.UUID, ChannelTitleStats] = Field(default_factory=dict)
     total: int = Field(default=0)
 
 

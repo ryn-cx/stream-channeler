@@ -3,7 +3,6 @@ import { useMutation } from "@tanstack/react-query"
 import {
   ArrowRightLeft,
   Blend,
-  Check,
   CircleSlash,
   Combine,
   Hash,
@@ -43,9 +42,8 @@ export function TmdbMatchConfirmButton({
   kind,
 }: {
   episodeId: string
-  match: NonNullable<TmdbMatchRow["best_match"]>
+  match: NonNullable<TmdbMatchRow["season_episode_match"]>
   kind:
-    | "name"
     | "season_episode"
     | "absolute"
     | "episode_absolute"
@@ -77,7 +75,6 @@ export function TmdbMatchConfirmButton({
   })
 
   const icons = {
-    name: Check,
     season_episode: Hash,
     absolute: ListOrdered,
     episode_absolute: ArrowRightLeft,
@@ -87,7 +84,6 @@ export function TmdbMatchConfirmButton({
     title_tfidf: Combine,
   }
   const labels = {
-    name: "Name Match",
     season_episode: "Number Match",
     absolute: "Absolute Match",
     episode_absolute: "Episode as Absolute Match",

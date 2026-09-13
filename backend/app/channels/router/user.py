@@ -2,8 +2,9 @@
 
 
 import uuid
+from typing import Annotated
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
 from app.auth.dependencies import (
     CurrentUser,
@@ -15,7 +16,7 @@ from app.channels.dependencies import (
     EditableChannelTmdbTitle,
     ReadableChannel,
 )
-from app.channels.models import Channel, ChannelQueue
+from app.channels.models import Channel
 from app.channels.schemas import (
     BlacklistEpisodeInput,
     ChannelCreate,
@@ -23,7 +24,7 @@ from app.channels.schemas import (
     ChannelOptions,
     ChannelOrderInput,
     ChannelOutput,
-    ChannelQueueOutput,
+    ChannelQueuePage,
     ChannelTitleMembership,
     ChannelUpdate,
     CombinedChannelInput,
@@ -40,6 +41,7 @@ from app.channels.service import (
     titles,
     whitelist,
 )
+from app.channels.service.import_queue import CHANNEL_QUEUE_PAGE
 from app.media.service.deletion import delete_record
 from app.schemas import Message
 from app.titles.dependencies import ExistingTitle
@@ -244,31 +246,38 @@ def delete_channel_title(
 
 
 # TODO: Validate
-@channels_router.get(
-    "/{channel_id}/import-queue",  # noqa: FAST003
-    response_model=list[ChannelQueueOutput],
-)
+@channels_router.get("/{channel_id}/import-queue")  # noqa: FAST003
 def get_channel_queue(
     session: SessionDep,
     channel: EditableChannel,
-) -> list[ChannelQueue]:
+    offset: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=CHANNEL_QUEUE_PAGE)] = CHANNEL_QUEUE_PAGE,
+    query: Annotated[str | None, Query()] = None,
+) -> ChannelQueuePage:
     """Read the URLs in a channel's import queue."""
-    return import_queue.channel_queue(session, channel)
+    return import_queue.channel_queue(session, channel, offset, limit, query)
 
 
 # TODO: Validate
-@channels_router.post(
-    "/{channel_id}/import-queue",  # noqa: FAST003
-    response_model=list[ChannelQueueOutput],
-)
+@channels_router.post("/{channel_id}/import-queue")  # noqa: FAST003
 def create_channel_queue_urls(
     session: SessionDep,
     channel: EditableChannel,
     urls: list[str],
-) -> list[ChannelQueue]:
-    """Add URLs to a channel's import queue and read the whole queue back."""
+) -> Message:
+    """Add URLs to a channel's import queue."""
     import_queue.add_urls_to_channel_import_queue(session, channel, urls)
-    return import_queue.channel_queue(session, channel)
+    return Message(message=f"{len(urls)} URLs added to the import queue")
+
+
+# TODO: Validate
+@channels_router.post("/{channel_id}/import-queue/{url_id}/retry")  # noqa: FAST003
+def retry_channel_queue_url(
+    session: SessionDep,
+    queue_entry: EditableChannelQueueEntry,
+) -> Message:
+    """Put one URL back into a channel's import queue to be imported again."""
+    return import_queue.retry_queue_entry(session, queue_entry)
 
 
 # TODO: Validate

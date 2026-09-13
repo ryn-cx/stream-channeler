@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import re
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections.abc import Sequence
 from datetime import date, datetime
 from random import Random
@@ -20,7 +20,6 @@ from app.tmdb_media.keys import (
     watch_identifier,
 )
 from app.tmdb_media.tmdb import (
-    chosen_group_id,
     dump_episode_extra,
     get_media_type_and_episode_id,
     get_media_type_and_season_id,
@@ -32,12 +31,6 @@ from app.tmdb_media.tmdb import (
 from app.utils import tz_datetime
 from app.utils.update_at import title_update_at
 from plugins.TMDB.constants import MOVIE_URL_REGEX, TV_URL_REGEX
-from plugins.TMDB.files import (
-    MoviesWatchProviders,
-    TVSeasonsChanges,
-    TVSeriesChanges,
-    TVSeriesWatchProviders,
-)
 from plugins.TMDB.shared import TMDBShared
 from plugins.TMDB.utils import (
     TMDBSeasonInfo,
@@ -78,21 +71,6 @@ def runtime_in_seconds(runtime: int | None) -> int | None:
 # TODO: Validate
 class TMDBImporter(TMDBShared, BaseImporter, ABC):
     # TODO: Validate
-    @abstractmethod
-    def _provider_file(
-        self,
-        title_key: str,
-    ) -> MoviesWatchProviders | TVSeriesWatchProviders: ...
-
-    # TODO: Validate
-    @abstractmethod
-    def download_new_watch_providers_file(self, title: Title) -> None: ...
-
-    # TODO: Validate
-    @abstractmethod
-    def sync_title_watch_providers(self, title_key: str) -> None: ...
-
-    # TODO: Validate
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
         media_info = self.parse_url(url)
@@ -111,52 +89,6 @@ class TMDBImporter(TMDBShared, BaseImporter, ABC):
 # TODO: Validate
 class TMDBSeries(TMDBImporter):
     """Reads a TMDB series into records of TMDB's own."""
-
-    # TODO: Validate
-    @override
-    def download_new_watch_providers_file(self, title: Title) -> None:
-        if not self._watch_providers_due(title):
-            return
-        _, tmdb_tv_title_id = get_media_type_and_tmdb_id(title.key)
-        self.tv_series_watch_providers_file(
-            tmdb_tv_title_id,
-            tz_datetime.now().date(),
-        ).download_if_outdated()
-
-    # TODO: Validate
-    @override
-    def sync_title_watch_providers(self, title_key: str) -> None:
-        _, tmdb_tv_title_id = get_media_type_and_tmdb_id(title_key)
-        self._get_or_create_latest_tv_series_watch_providers_file(
-            tmdb_tv_title_id,
-        ).download_if_outdated()
-        self._process_watch_providers(
-            title_key=title_key,
-            files=self.incomplete_tv_series_watch_providers_files(tmdb_tv_title_id),
-        )
-
-    # TODO: Validate
-    def sync_season_watch_providers(self, title_key: str, season_number: int) -> None:
-        _, tmdb_tv_title_id = get_media_type_and_tmdb_id(title_key)
-        self._get_or_create_latest_tv_seasons_watch_providers_file(
-            tmdb_tv_title_id=tmdb_tv_title_id,
-            season_number=season_number,
-        ).download_if_outdated()
-        self._process_watch_providers(
-            title_key,
-            self.incomplete_tv_seasons_watch_providers_files(
-                tmdb_tv_title_id,
-                season_number,
-            ),
-        )
-
-    # TODO: Validate
-    @override
-    def _provider_file(self, title_key: str) -> TVSeriesWatchProviders:
-        _, tmdb_tv_title_id = get_media_type_and_tmdb_id(title_key)
-        return self._get_or_create_latest_tv_series_watch_providers_file(
-            tmdb_tv_title_id,
-        )
 
     # TODO: Validate
     @override
@@ -188,14 +120,13 @@ class TMDBSeries(TMDBImporter):
         groups_file = self.tv_series_episode_groups_file(tmdb_tv_title_id)
         groups_file.download_if_outdated()
         return [
-            self.get_or_create_latest_tv_series_changes_file(tmdb_tv_title_id),
             self.tv_series_details_file(tmdb_tv_title_id),
             groups_file,
             *(
                 self.tv_episode_groups_details_file(option.id)
                 for option in groups_file.parsed().results
             ),
-            self._get_or_create_latest_tv_series_watch_providers_file(tmdb_tv_title_id),
+            self.tv_series_watch_providers_file(tmdb_tv_title_id),
         ]
 
     # TODO: Validate
@@ -204,7 +135,6 @@ class TMDBSeries(TMDBImporter):
         _, tmdb_tv_title_id = get_media_type_and_tmdb_id(title_key)
         season_numbers = self.native_season_numbers(season_key, title_key)
         return [
-            self.get_or_create_latest_tv_series_changes_file(tmdb_tv_title_id),
             *(
                 self.tv_seasons_details_file(
                     tmdb_tv_title_id=tmdb_tv_title_id,
@@ -213,7 +143,7 @@ class TMDBSeries(TMDBImporter):
                 for season_number in season_numbers
             ),
             *(
-                self._get_or_create_latest_tv_seasons_watch_providers_file(
+                self.tv_seasons_watch_providers_file(
                     tmdb_tv_title_id=tmdb_tv_title_id,
                     season_number=season_number,
                 )
@@ -231,9 +161,7 @@ class TMDBSeries(TMDBImporter):
     ) -> Sequence[BaseFile[Any]]:
         _, tmdb_tv_title_id = get_media_type_and_tmdb_id(title_key)
         _, tmdb_tv_episode_id = get_media_type_and_episode_id(episode_key)
-        files: list[BaseFile[Any]] = [
-            self.get_or_create_latest_tv_series_changes_file(tmdb_tv_title_id),
-        ]
+        files: list[BaseFile[Any]] = []
         for season in self.chosen_seasons(title_key):
             if season.key != season_key:
                 continue
@@ -434,138 +362,6 @@ class TMDBSeries(TMDBImporter):
         return Random(tmdb_tv_episode_id).choice(backdrop_paths)  # noqa: S311
 
     # TODO: Validate
-    @override
-    def update_title(self, title: Title, *, force: bool = False) -> None:
-        # Individual files are updated based on what data has changed instead of
-        # updating all of the files like most plugins.
-        self._download_changes_file(title)
-        self._import_all_title_changes(title)
-        self._import_all_season_changes(title)
-        self._preload_title(title.id, preload_episodes=True).one()
-        self._upsert_title(title.source, title.key, force=force)
-        self.download_new_watch_providers_file(title)
-        self.sync_title_watch_providers(title.key)
-
-    # TODO: Validate
-    @override
-    def update_season(self, season: Season) -> None:
-        super().update_season(season)
-        for season_number in self.native_season_numbers(season.key, season.title.key):
-            self.sync_season_watch_providers(season.title.key, season_number)
-
-    # TODO: Validate
-    def _download_changes_file(self, title: Title) -> None:
-        if title.update_at and title.update_at <= tz_datetime.now():
-            _, tmdb_tv_title_id = get_media_type_and_tmdb_id(title.key)
-            self.tv_series_changes_file(
-                tmdb_tv_title_id,
-                tz_datetime.now().date(),
-            ).download_if_outdated()
-            self.forget_latest_tv_series_changes_file(tmdb_tv_title_id)
-
-    # TODO: Validate
-    def _import_all_title_changes(self, title: Title) -> None:
-        _, tmdb_tv_title_id = get_media_type_and_tmdb_id(title.key)
-        for changes_file in self.incomplete_tv_series_changes_files(tmdb_tv_title_id):
-            self._import_single_title_changes(title.key, changes_file)
-
-    # TODO: Validate
-    def _import_single_title_changes(
-        self,
-        title_key: str,
-        changes_file: TVSeriesChanges,
-    ) -> None:
-        _, tmdb_tv_title_id = get_media_type_and_tmdb_id(title_key)
-
-        for change in changes_file.changes():
-            for item in change.items:
-                changed_at = tz_datetime.fromisoformat(
-                    item.time.replace(" UTC", "+00:00"),
-                )
-                # The details file lists the seasons, so it is read again before the
-                # seasons are, otherwise a season added since the last read is named
-                # by a change and found in nothing.
-                self.tv_series_details_file(tmdb_tv_title_id).download_if_outdated(
-                    changed_at,
-                )
-                # There are no episode specific files so they are grouped with the
-                # seasons as they can be used to detect new episodes.
-                if change.key in {"season", "episode"}:
-                    season_keys: list[str]
-                    # If the title uses altrernative episode ordering the only way to
-                    # properly update it is to update all of the seasons.
-                    title = Title.get(self.session, self.source, title_key)
-                    if title and chosen_group_id(title.extra):
-                        season_keys = self._season_keys_from_title_files(title_key)
-                    else:
-                        # Ignore the errors because these should always have a value.
-                        # The type error occurs because different keys have different
-                        # data structures but this is not easily added to the model
-                        # because the keys are just a string.
-                        season_keys = [
-                            tmdb_season_key(TMDBMediaType.tv, item.value.season_id),  # type: ignore[union-attr, arg-type]
-                        ]
-                    for season_key in season_keys:
-                        self._download_if_outdated(
-                            files=self._season_files(season_key, title_key),
-                            update_at=changed_at,
-                        )
-                        _, tmdb_tv_season_id = get_media_type_and_season_id(season_key)
-                        self.tv_seasons_changes_file(
-                            tmdb_tv_season_id,
-                            changed_at.date(),
-                        ).download_if_outdated()
-
-        changes_file.clear_status()
-
-    # TODO: Validate
-    def _import_all_season_changes(self, title: Title) -> None:
-        for season_key in self._season_keys_from_title_files(title.key):
-            _, tmdb_tv_season_id = get_media_type_and_season_id(season_key)
-            for changes_file in self.incomplete_tv_seasons_changes_files(
-                tmdb_tv_season_id,
-            ):
-                self._import_single_season_changes(
-                    season_key=season_key,
-                    title_key=title.key,
-                    changes_file=changes_file,
-                )
-
-    # TODO: Validate
-    def _import_single_season_changes(
-        self,
-        season_key: str,
-        title_key: str,
-        changes_file: TVSeasonsChanges,
-    ) -> None:
-        for change in changes_file.parsed().changes:
-            if change.key != "episode":
-                continue
-            for item in change.items:
-                changed_at = tz_datetime.fromisoformat(
-                    item.time.replace(" UTC", "+00:00"),
-                )
-                # The season file lists the episodes and the numbering the API asks
-                # for them by, so it is read again before the episode's files are
-                # named, otherwise an episode added since the last read is named by
-                # a change and numbered off nothing.
-                self._download_if_outdated(
-                    files=self._season_files(season_key, title_key),
-                    update_at=changed_at,
-                )
-                # Ignore the errors because these should always have a value. The
-                # type error occurs because different keys have different data
-                # structures but this is not easily added to the model because the
-                # keys are just a string.
-                episode_key = tmdb_episode_key(TMDBMediaType.tv, item.value.episode_id)  # type: ignore[union-attr, arg-type]
-                self._download_if_outdated(
-                    files=self._episode_files(episode_key, season_key, title_key),
-                    update_at=changed_at,
-                )
-
-        changes_file.clear_status()
-
-    # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
@@ -593,42 +389,6 @@ class TMDBMovie(TMDBImporter):
 
     # TODO: Validate
     @override
-    def download_new_watch_providers_file(self, title: Title) -> None:
-        if not self._watch_providers_due(title):
-            return
-        _, tmdb_movie_id = get_media_type_and_tmdb_id(title.key)
-        self.movies_watch_providers_file(
-            tmdb_movie_id,
-            tz_datetime.now().date(),
-        ).download_if_outdated()
-
-    # TODO: Validate
-    @override
-    def sync_title_watch_providers(self, title_key: str) -> None:
-        _, tmdb_movie_id = get_media_type_and_tmdb_id(title_key)
-        self._get_or_create_latest_movies_watch_providers_file(
-            tmdb_movie_id,
-        ).download_if_outdated()
-        self._process_watch_providers(
-            title_key=title_key,
-            files=self.incomplete_movies_watch_providers_files(tmdb_movie_id),
-        )
-
-    # TODO: Validate
-    @override
-    def _provider_file(self, title_key: str) -> MoviesWatchProviders:
-        _, tmdb_movie_id = get_media_type_and_tmdb_id(title_key)
-        return self._get_or_create_latest_movies_watch_providers_file(tmdb_movie_id)
-
-    # TODO: Validate
-    @override
-    def update_title(self, title: Title, *, force: bool = False) -> None:
-        super().update_title(title, force=force)
-        self.download_new_watch_providers_file(title)
-        self.sync_title_watch_providers(title.key)
-
-    # TODO: Validate
-    @override
     def _season_keys_from_title_files(self, title_key: str) -> list[str]:
         media_type, tmdb_movie_id = get_media_type_and_tmdb_id(title_key)
         return [tmdb_season_key(media_type, tmdb_movie_id)]
@@ -649,7 +409,7 @@ class TMDBMovie(TMDBImporter):
         _, tmdb_movie_id = get_media_type_and_tmdb_id(title_key)
         return [
             self.movies_details_file(tmdb_movie_id),
-            self._get_or_create_latest_movies_watch_providers_file(tmdb_movie_id),
+            self.movies_watch_providers_file(tmdb_movie_id),
         ]
 
     # TODO: Validate

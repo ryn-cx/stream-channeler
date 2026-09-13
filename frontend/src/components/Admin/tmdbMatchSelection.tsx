@@ -12,7 +12,6 @@ import {
 import type { TmdbMatchRow } from "./tmdbMatchColumns"
 
 export const MATCH_KINDS = [
-  { kind: "name", label: "Best name match", field: "best_match" },
   {
     kind: "season_episode",
     label: "Episode Number → Episode Number",

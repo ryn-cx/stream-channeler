@@ -355,6 +355,19 @@ export type ChannelQueueOutput = {
     channel_id: string;
 };
 
+export type ChannelQueuePage = {
+    data?: Array<ChannelQueueOutput>;
+    total?: number;
+    pending_count?: number;
+};
+
+export type ChannelQueuesAdminPublic = {
+    data: Array<ChannelQueueAdminOutput>;
+    total_count: number;
+    filtered_count: number;
+    is_server_side: boolean;
+};
+
 /**
  * Schema for returning a page of `Channel`s.
  */
@@ -401,6 +414,9 @@ export type ChannelTitlesOutput = {
         [key: string]: SourcePublic;
     };
     groups?: Array<ChannelTitleGroup>;
+    stats?: {
+        [key: string]: ChannelTitleStats;
+    };
     total?: number;
 };
 
@@ -881,6 +897,38 @@ export type MediaOwner = 'official' | 'others';
  */
 export type Message = {
     message: string;
+};
+
+/**
+ * A canonical TMDB title that no website's row stands for.
+ *
+ * `channel_count` and `episode_count` are what say whether the gap matters: a
+ * title a channel already holds cannot play until something carries it, and one
+ * TMDB knows episodes for is a series rather than a record with nothing to it.
+ */
+export type MissingSourceTitleOutput = {
+    key: string;
+    data_timestamp?: (string | null);
+    update_at?: (string | null);
+    deleted_at?: (string | null);
+    status?: (string | null);
+    extra?: {
+        [key: string]: unknown;
+    };
+    name?: (string | null);
+    media_type?: (string | null);
+    description?: (string | null);
+    url?: (string | null);
+    image_url?: (string | null);
+    thumbnail_url?: (string | null);
+    year?: (number | null);
+    id: string;
+    created_at: string;
+    modified_at: string;
+    tmdb_id?: (number | null);
+    tmdb_url?: (string | null);
+    channel_count: number;
+    episode_count: number;
 };
 
 export type NewPassword = {
@@ -1949,7 +1997,6 @@ export type UnlockedEpisodeOutput = {
     title: TitlePublic;
     source: SourceListPublic;
     absolute_number?: (number | null);
-    best_match: (TmdbEpisodeChoice | null);
     season_episode_match: (TmdbEpisodeChoice | null);
     absolute_number_match: (TmdbEpisodeChoice | null);
     episode_number_absolute_match: (TmdbEpisodeChoice | null);
@@ -1957,6 +2004,7 @@ export type UnlockedEpisodeOutput = {
     description_tfidf_matches?: Array<TmdbEpisodeChoice>;
     title_embedding_matches?: Array<TmdbEpisodeChoice>;
     title_tfidf_matches?: Array<TmdbEpisodeChoice>;
+    best_match: (TmdbEpisodeChoice | null);
     name_matches: boolean;
 };
 
@@ -1969,7 +2017,6 @@ export type UnmatchedEpisodeOutput = {
     title: TitlePublic;
     source: SourceListPublic;
     absolute_number?: (number | null);
-    best_match: (TmdbEpisodeChoice | null);
     season_episode_match: (TmdbEpisodeChoice | null);
     absolute_number_match: (TmdbEpisodeChoice | null);
     episode_number_absolute_match: (TmdbEpisodeChoice | null);
@@ -2629,16 +2676,26 @@ export type ChannelsDeleteChannelTitleResponse = (Message);
 
 export type ChannelsGetChannelQueueData = {
     channelId: string;
+    limit?: number;
+    offset?: number;
+    query?: (string | null);
 };
 
-export type ChannelsGetChannelQueueResponse = (Array<ChannelQueueOutput>);
+export type ChannelsGetChannelQueueResponse = (ChannelQueuePage);
 
 export type ChannelsCreateChannelQueueUrlsData = {
     channelId: string;
     requestBody: Array<(string)>;
 };
 
-export type ChannelsCreateChannelQueueUrlsResponse = (Array<ChannelQueueOutput>);
+export type ChannelsCreateChannelQueueUrlsResponse = (Message);
+
+export type ChannelsRetryChannelQueueUrlData = {
+    channelId: string;
+    urlId: string;
+};
+
+export type ChannelsRetryChannelQueueUrlResponse = (Message);
 
 export type ChannelsDeleteChannelQueueUrlData = {
     channelId: string;
@@ -2690,15 +2747,6 @@ export type ChannelsGetChannelTitlesData = {
 
 export type ChannelsGetChannelTitlesResponse = (ChannelTitlesOutput);
 
-export type ChannelsGetChannelTitleStatsData = {
-    channelId: string;
-    tmdbTitleIds: Array<(string)>;
-};
-
-export type ChannelsGetChannelTitleStatsResponse = ({
-    [key: string]: ChannelTitleStats;
-});
-
 export type ChannelsGetChannelSourcesData = {
     channelId: string;
 };
@@ -2730,17 +2778,21 @@ export type ChannelsAdminUpdateChannelResponse = (ChannelListOutput);
 
 export type ChannelsGetAutomaticChannelUsersResponse = (Array<AutomaticChannelUserOutput>);
 
-export type ChannelsDeleteAutomaticChannelsData = {
+export type ChannelsClearAutomaticChannelsData = {
     userId: string;
 };
 
-export type ChannelsDeleteAutomaticChannelsResponse = (Message);
+export type ChannelsClearAutomaticChannelsResponse = (Message);
 
 export type ChannelsGetAllChannelQueuesData = {
+    filterOptions?: string;
+    limit?: number;
+    offset?: number;
     owner?: (MediaOwner | null);
+    sortOptions?: string;
 };
 
-export type ChannelsGetAllChannelQueuesResponse = (Array<ChannelQueueAdminOutput>);
+export type ChannelsGetAllChannelQueuesResponse = (ChannelQueuesAdminPublic);
 
 export type ChannelsAdminUpdateChannelQueueData = {
     queueId: string;
@@ -3206,6 +3258,12 @@ export type TitlesAdminGetUnvalidatedTitlesData = {
 };
 
 export type TitlesAdminGetUnvalidatedTitlesResponse = (Array<UnvalidatedTitleOutput>);
+
+export type TitlesAdminGetTitlesMissingSourcesData = {
+    limit?: number;
+};
+
+export type TitlesAdminGetTitlesMissingSourcesResponse = (Array<MissingSourceTitleOutput>);
 
 export type TitlesGetTitleData = {
     titleId: string;

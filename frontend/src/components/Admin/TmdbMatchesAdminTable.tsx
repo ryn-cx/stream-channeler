@@ -8,7 +8,7 @@ import type {
 } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { Link2, Link2Off } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
 import { EpisodesService } from "@/client"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
@@ -79,12 +79,15 @@ export function TmdbMatchesAdminTable() {
     refetchOnWindowFocus: false,
   })
 
-  const settlingIds = useSettlingTmdbMatchIds()
-  const episodes = query.data
-    ? asTmdbMatchRows(query.data.data).filter(
-        (row) => !settlingIds.has(row.episode.id),
-      )
-    : undefined
+  const settlingIds = useSettlingTmdbMatchIds(query.dataUpdatedAt)
+  const rows = useMemo(
+    () => (query.data ? asTmdbMatchRows(query.data.data) : undefined),
+    [query.data],
+  )
+  const episodes = useMemo(
+    () => rows?.filter((row) => !settlingIds.has(row.episode.id)),
+    [rows, settlingIds],
+  )
   const settledHere = (query.data?.data.length ?? 0) - (episodes?.length ?? 0)
 
   const table = useReactTable({

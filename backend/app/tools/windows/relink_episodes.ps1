@@ -8,8 +8,19 @@
 # links they settled by hand where they are.
 
 [CmdletBinding()]
-param()
+param(
+    [string]$Plugin,
+    [string]$Source
+)
 
 $ErrorActionPreference = "Stop"
 
-& (Join-Path $PSScriptRoot "_run_tool.ps1") -Module "app.tools.relink_episodes"
+$toolArguments = @()
+if ($Plugin) {
+    $toolArguments += @("--plugin", $Plugin)
+}
+if ($Source) {
+    $toolArguments += @("--source", $Source)
+}
+
+& (Join-Path $PSScriptRoot "_run_tool.ps1") -Module "app.tools.relink_episodes" -ToolArguments $toolArguments

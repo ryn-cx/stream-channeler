@@ -1,7 +1,4 @@
 # TODO: Validate
-import json
-from abc import ABC
-from datetime import date, datetime, timedelta
 from functools import cache
 from typing import (
     override,
@@ -26,16 +23,12 @@ from tminidb.tv_episode_group.details import (
     TvEpisodeGroupDetails as TvEpisodeGroupEndpoint,
 )
 from tminidb.tv_episode_group.details.models import TvEpisodeGroupDetailsModel
-from tminidb.tv_season.changes import TvSeasonChanges as TvSeasonChangesEndpoint
-from tminidb.tv_season.changes.models import TvSeasonChangesModel
 from tminidb.tv_season.details import TvSeasonDetails as TvSeasonEndpoint
 from tminidb.tv_season.details.models import TvSeasonDetailsModel
 from tminidb.tv_season.watch_providers import (
     TvSeasonWatchProviders as TvSeasonWatchProvidersEndpoint,
 )
 from tminidb.tv_season.watch_providers.models import TvSeasonWatchProvidersModel
-from tminidb.tv_series.changes import TvSeriesChanges as TvSeriesChangesEndpoint
-from tminidb.tv_series.changes.models import Change, TvSeriesChangesModel
 from tminidb.tv_series.details import TvSeriesDetails as TvSeriesEndpoint
 from tminidb.tv_series.details.models import TvSeriesDetailsModel
 from tminidb.tv_series.episode_groups import (
@@ -51,14 +44,11 @@ from tminidb.tv_series.watch_providers.models import TvSeriesWatchProvidersModel
 
 from app.config import settings
 from app.plugins.models import Plugin
-from app.utils import tz_datetime
 from plugins.utils.base_plugin.files import (
     IntegerArgEndpointFile,
     MultipleArgEndpointFile,
-    PagedEndpointFile,
     SingleArgEndpointFile,
 )
-from plugins.utils.constants import INCOMPLETE_STATUS
 
 
 # TODO: Validate
@@ -84,15 +74,7 @@ class MoviesDetails(IntegerArgEndpointFile[MovieDetailsModel]):
 
 
 # TODO: Validate
-class WatchProviders[T](MultipleArgEndpointFile[T], ABC):
-    # TODO: Validate
-    @override
-    def _initial_status_after_downloading(self) -> str:
-        return INCOMPLETE_STATUS
-
-
-# TODO: Validate
-class MoviesWatchProviders(WatchProviders[MovieWatchProvidersModel]):
+class MoviesWatchProviders(IntegerArgEndpointFile[MovieWatchProvidersModel]):
     custom_class_key = "Movies/Watch Providers"
 
     # TODO: Validate
@@ -100,29 +82,9 @@ class MoviesWatchProviders(WatchProviders[MovieWatchProvidersModel]):
     def _endpoint(self) -> MovieWatchProvidersEndpoint:
         return tminidb().movie.watch_providers
 
-    # TODO: Validate
-    def __init__(
-        self,
-        session: Session,
-        plugin: Plugin,
-        tmdb_movie_id: int,
-        downloaded_at: date,
-    ) -> None:
-        self.tmdb_movie_id = tmdb_movie_id
-        super().__init__(
-            session=session,
-            plugin=plugin,
-            unique_identifier=f"{tmdb_movie_id}/{downloaded_at.isoformat()}",
-        )
-
-    # TODO: Validate
-    @override
-    def _download_file(self) -> str:
-        return self._endpoint().download(self.tmdb_movie_id)
-
 
 # TODO: Validate
-class TVSeriesWatchProviders(WatchProviders[TvSeriesWatchProvidersModel]):
+class TVSeriesWatchProviders(IntegerArgEndpointFile[TvSeriesWatchProvidersModel]):
     custom_class_key = "TV Series/Watch Providers"
 
     # TODO: Validate
@@ -130,29 +92,9 @@ class TVSeriesWatchProviders(WatchProviders[TvSeriesWatchProvidersModel]):
     def _endpoint(self) -> TvSeriesWatchProvidersEndpoint:
         return tminidb().tv_series.watch_providers
 
-    # TODO: Validate
-    def __init__(
-        self,
-        session: Session,
-        plugin: Plugin,
-        tmdb_tv_title_id: int,
-        downloaded_at: date,
-    ) -> None:
-        self.tmdb_tv_title_id = tmdb_tv_title_id
-        super().__init__(
-            session=session,
-            plugin=plugin,
-            unique_identifier=f"{tmdb_tv_title_id}/{downloaded_at.isoformat()}",
-        )
-
-    # TODO: Validate
-    @override
-    def _download_file(self) -> str:
-        return self._endpoint().download(self.tmdb_tv_title_id)
-
 
 # TODO: Validate
-class TVSeasonsWatchProviders(WatchProviders[TvSeasonWatchProvidersModel]):
+class TVSeasonsWatchProviders(MultipleArgEndpointFile[TvSeasonWatchProvidersModel]):
     custom_class_key = "TV Seasons/Watch Providers"
 
     # TODO: Validate
@@ -167,25 +109,15 @@ class TVSeasonsWatchProviders(WatchProviders[TvSeasonWatchProvidersModel]):
         plugin: Plugin,
         tmdb_tv_title_id: int,
         season_number: int,
-        downloaded_at: date,
     ) -> None:
         self.tmdb_tv_title_id = tmdb_tv_title_id
         self.season_number = season_number
-        super().__init__(
-            session,
-            plugin,
-            f"{tmdb_tv_title_id}/{season_number}/{downloaded_at.isoformat()}",
-        )
+        super().__init__(session, plugin, f"{tmdb_tv_title_id}/{season_number}")
 
     # TODO: Validate
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(self.tmdb_tv_title_id, self.season_number)
-
-
-type WatchProvidersFile = (
-    MoviesWatchProviders | TVSeriesWatchProviders | TVSeasonsWatchProviders
-)
 
 
 # TODO: Validate
@@ -267,108 +199,6 @@ class TVSeasonsDetails(MultipleArgEndpointFile[TvSeasonDetailsModel]):
     @override
     def _download_file(self) -> str:
         return self._endpoint().download(self.tmdb_tv_title_id, self.season_number)
-
-
-# TODO: Validate
-class TVSeriesChanges(PagedEndpointFile[TvSeriesChangesModel]):
-    custom_class_key = "TV Series/Changes"
-
-    # TODO: Validate
-    @override
-    def _initial_status_after_downloading(self) -> str:
-        return INCOMPLETE_STATUS
-
-    # TODO: Validate
-    @override
-    def _endpoint(self) -> TvSeriesChangesEndpoint:  # type: ignore[override]
-        return tminidb().tv_series.changes
-
-    # TODO: Validate
-    def __init__(
-        self,
-        session: Session,
-        plugin: Plugin,
-        tmdb_tv_title_id: int,
-        since: date,
-        downloaded_to: date,
-    ) -> None:
-        self.tmdb_tv_title_id = tmdb_tv_title_id
-        self.since = since
-        super().__init__(
-            session=session,
-            plugin=plugin,
-            unique_identifier=f"{tmdb_tv_title_id}/{downloaded_to.isoformat()}",
-        )
-
-    # TODO: Validate
-    @override
-    def _download_file(self) -> str:
-        return json.dumps(
-            self._endpoint().download_all(
-                series_id=self.tmdb_tv_title_id,
-                start_date=self.since,
-                end_date=tz_datetime.now().date(),
-            ),
-        )
-
-    # TODO: Validate
-    def changes(self) -> list[Change]:
-        return [change for page in self.parsed() for change in page.changes]
-
-
-# TODO: Validate
-class TVSeasonsChanges(MultipleArgEndpointFile[TvSeasonChangesModel]):
-    custom_class_key = "TV Seasons/Changes"
-
-    # TODO: Validate
-    @override
-    def _initial_status_after_downloading(self) -> str:
-        return INCOMPLETE_STATUS
-
-    # TODO: Validate
-    @override
-    def _endpoint(self) -> TvSeasonChangesEndpoint:
-        return tminidb().tv_season.changes
-
-    # TODO: Validate
-    def __init__(
-        self,
-        session: Session,
-        plugin: Plugin,
-        tmdb_tv_season_id: int,
-        changed_on: date,
-    ) -> None:
-        self.tmdb_tv_season_id = tmdb_tv_season_id
-        self.changed_on = changed_on
-        super().__init__(
-            session=session,
-            plugin=plugin,
-            unique_identifier=f"{tmdb_tv_season_id}/{changed_on.isoformat()}",
-        )
-
-    # TODO: Validate
-    @override
-    def _download_file(self) -> str:
-        # TVSeasonChanges is only downloaded when TVShowChanges includes a change for a
-        # specific date. The specific date that includes the change is downloaded and
-        # all other dates are ignored because they have no changes.
-        return self._endpoint().download(
-            season_id=self.tmdb_tv_season_id,
-            start_date=self.changed_on,
-            end_date=self.changed_on,
-        )
-
-    # TODO: Validate
-    @override
-    def _next_update_at(self) -> datetime | None:
-        # If a file is downloaded data for the current day it should be downloaded again
-        # when the day is complete to make sure no data is missing.
-        if self.changed_on < tz_datetime.now().date():
-            return None
-        return tz_datetime.combine(
-            self.changed_on + timedelta(days=1),
-            datetime.min.time(),
-        )
 
 
 # TODO: Validate

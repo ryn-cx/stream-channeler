@@ -568,14 +568,6 @@ def _filter_only_tmdb_title_ids(
 
 
 # TODO: Validate
-def channel_title_stats_output(
-    session: Session,
-    tmdb_title_ids: Collection[uuid.UUID],
-) -> dict[uuid.UUID, ChannelTitleStats]:
-    return _channel_title_stats(session, set(tmdb_title_ids))
-
-
-# TODO: Validate
 def channel_titles_output(  # noqa: PLR0913 - the listing is paged and searched
     channel: Channel,
     user: User | None,
@@ -709,6 +701,7 @@ def channel_titles_output(  # noqa: PLR0913 - the listing is paged and searched
     # the channel was told to hold.
     output.tmdb_sources = _tmdb_sources(session, tmdb_title_ids)
     output.tmdb_titles = _tmdb_titles(session, tmdb_title_ids)
+    output.stats = _channel_title_stats(session, tmdb_title_ids)
 
     return output
 

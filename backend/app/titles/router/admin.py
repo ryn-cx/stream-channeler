@@ -19,6 +19,7 @@ from app.sources.models import Source
 from app.titles.dependencies import AdminTmdbTitle, ExistingTitle
 from app.titles.models import Title
 from app.titles.schemas import (
+    MissingSourceTitleOutput,
     TitleImportUrlInput,
     TitleListPublic,
     TitlePublic,
@@ -41,6 +42,7 @@ from app.titles.service.linking import (
 from app.titles.service.service import (
     _title_output,
     force_update_title,
+    list_titles_missing_sources,
     list_tmdb_episode_groups,
     list_unvalidated_titles,
     update_title_record,
@@ -101,6 +103,18 @@ def admin_get_unvalidated_titles(
 ) -> list[UnvalidatedTitleOutput]:
     """Get every `Title` whose canonical titles no `User` has validated."""
     return list_unvalidated_titles(session, limit)
+
+
+# TODO: Validate
+@titles_router.get(
+    "/missing-sources",
+)
+def admin_get_titles_missing_sources(
+    session: SessionDep,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 200,
+) -> list[MissingSourceTitleOutput]:
+    """Get every canonical TMDB title that no website's row stands for."""
+    return list_titles_missing_sources(session, limit)
 
 
 # TODO: Validate

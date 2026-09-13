@@ -7,11 +7,14 @@ from random import shuffle
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlmodel import Session, col, func, select
+from sqlmodel import Session, col, delete, func, select
 
 from app.channels.models import (
     Channel,
     ChannelFavorite,
+    ChannelQueue,
+    ChannelSavedEpisodeOrder,
+    ChannelTitle,
 )
 from app.channels.schemas import (
     AutomaticChannelUserOutput,
@@ -299,13 +302,24 @@ def _automatic_channel_user(session: Session, user_id: uuid.UUID) -> User:
 
 
 # TODO: Validate
-def delete_automatic_channels(session: Session, user_id: uuid.UUID) -> Message:
-    """Delete every `Channel` an automatic channel `User` owns."""
+def clear_automatic_channels(session: Session, user_id: uuid.UUID) -> Message:
+    """Empty every `Channel` an automatic channel `User` owns.
+
+    The channels themselves are kept, so what a viewer subscribed to or combined
+    is still there to be filled in again. A source writes its channels from the
+    queue, so the queued URLs go with the titles: a URL left behind as already
+    imported would never be imported into the emptied channel again.
+    """
     user = _automatic_channel_user(session, user_id)
-    channels = session.exec(select(Channel).where(Channel.user_id == user.id)).all()
-    for channel in channels:
-        session.delete(channel)
-    session.commit()
+    channel_ids = session.exec(
+        select(Channel.id).where(Channel.user_id == user.id),
+    ).all()
+    if channel_ids:
+        for model in (ChannelTitle, ChannelQueue, ChannelSavedEpisodeOrder):
+            session.exec(  # type: ignore[call-overload]
+                delete(model).where(col(model.channel_id).in_(channel_ids)),
+            )
+        session.commit()
     return Message(
-        message=f"Deleted {len(channels)} channels owned by {user.email}",
+        message=f"Emptied {len(channel_ids)} channels owned by {user.email}",
     )

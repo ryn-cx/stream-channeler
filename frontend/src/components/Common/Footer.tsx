@@ -24,7 +24,7 @@ export function Footer() {
           to="/credits"
           className="text-muted-foreground hover:text-foreground text-xs transition-colors"
         >
-          Data from TMDB/JustWatch/WatchMode
+          Data from TMDB/JustWatch
         </Link>
         <div className="flex items-center gap-4">
           {socialLinks.map(({ icon: Icon, href, label }) => (

@@ -1,6 +1,6 @@
 // TODO: Validate
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { Bot, Trash2 } from "lucide-react"
+import { Bot, Eraser } from "lucide-react"
 import { useState } from "react"
 import type { AutomaticChannelUserOutput } from "@/client"
 import { ChannelsService } from "@/client"
@@ -30,9 +30,9 @@ export function AutomaticChannelUsersTable() {
     queryFn: () => ChannelsService.getAutomaticChannelUsers(),
   })
 
-  const deleteChannels = useMutation({
+  const clearChannels = useMutation({
     mutationFn: (userId: string) =>
-      ChannelsService.deleteAutomaticChannels({ userId }),
+      ChannelsService.clearAutomaticChannels({ userId }),
     onSuccess: (message, _userId, _onMutateResult, context) => {
       showSuccessToast(message.message)
       context.client.invalidateQueries({
@@ -76,10 +76,10 @@ export function AutomaticChannelUsersTable() {
                       variant="destructive"
                       size="sm"
                       onClick={() => setPendingUser(user)}
-                      disabled={deleteChannels.isPending}
+                      disabled={clearChannels.isPending}
                     >
-                      <Trash2 />
-                      Delete channels
+                      <Eraser />
+                      Empty channels
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -100,15 +100,15 @@ export function AutomaticChannelUsersTable() {
         onOpenChange={(open) => {
           if (!open) setPendingUser(null)
         }}
-        title="Delete every channel this user owns?"
+        title="Empty every channel this user owns?"
         description={
           pendingUser
-            ? `${pendingUser.channel_count} channel${pendingUser.channel_count === 1 ? "" : "s"} owned by ${pendingUser.email} will be deleted, along with the titles and queued URLs they hold. A source writes its channels again the next time it runs.`
+            ? `The titles and queued URLs in ${pendingUser.channel_count} channel${pendingUser.channel_count === 1 ? "" : "s"} owned by ${pendingUser.email} will be removed. The channels themselves are kept, and a source fills them in again the next time it runs.`
             : ""
         }
-        confirmLabel="Delete channels"
+        confirmLabel="Empty channels"
         onConfirm={() => {
-          if (pendingUser) deleteChannels.mutate(pendingUser.id)
+          if (pendingUser) clearChannels.mutate(pendingUser.id)
         }}
       />
     </div>

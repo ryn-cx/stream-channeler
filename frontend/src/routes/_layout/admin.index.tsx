@@ -149,8 +149,8 @@ function AdminIndex() {
                 Unmatched Sources
               </CardTitle>
               <CardDescription>
-                Every service TMDB lists a title on that neither Watchmode nor a
-                plugin search reached, to be given a URL by hand.
+                Every service TMDB lists a title on that no plugin search
+                reached, to be given a URL by hand.
               </CardDescription>
             </CardHeader>
           </Card>

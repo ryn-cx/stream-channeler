@@ -17,6 +17,7 @@ function mergeChannelTitlePages(
     tmdb_titles: {},
     tmdb_sources: {},
     groups: [],
+    stats: {},
     total: pages[0]?.total ?? 0,
   }
 
@@ -25,6 +26,7 @@ function mergeChannelTitlePages(
     Object.assign(merged.sources ?? {}, page.sources)
     Object.assign(merged.tmdb_titles ?? {}, page.tmdb_titles)
     Object.assign(merged.tmdb_sources ?? {}, page.tmdb_sources)
+    Object.assign(merged.stats ?? {}, page.stats)
     for (const group of page.groups ?? []) {
       const merging = groups.get(group.channel_id)
       if (merging) {
@@ -97,18 +99,5 @@ export function useAllChannelTitles(
     },
     enabled: options?.enabled,
     refetchOnWindowFocus: options?.refetchOnWindowFocus,
-  })
-}
-
-// TODO: Validate
-export function useChannelTitleStats(
-  channelId: string,
-  tmdbTitleIds: string[],
-) {
-  return useQuery({
-    queryKey: ["channel-title-stats", channelId, tmdbTitleIds],
-    queryFn: () =>
-      ChannelsService.getChannelTitleStats({ channelId, tmdbTitleIds }),
-    enabled: tmdbTitleIds.length > 0,
   })
 }

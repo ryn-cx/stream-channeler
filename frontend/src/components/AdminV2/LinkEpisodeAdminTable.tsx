@@ -8,7 +8,7 @@ import type {
 } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { Globe, Users } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
 import { EpisodesService } from "@/client"
 import { TmdbLinkMultipleButton } from "@/components/Admin/TmdbLinkMultipleButton"
@@ -77,12 +77,15 @@ export function LinkEpisodeAdminTable() {
     refetchOnWindowFocus: false,
   })
 
-  const settlingIds = useSettlingTmdbMatchIds()
-  const episodes = query.data
-    ? asTmdbMatchRows(query.data.data).filter(
-        (row) => !settlingIds.has(row.episode.id),
-      )
-    : undefined
+  const settlingIds = useSettlingTmdbMatchIds(query.dataUpdatedAt)
+  const rows = useMemo(
+    () => (query.data ? asTmdbMatchRows(query.data.data) : undefined),
+    [query.data],
+  )
+  const episodes = useMemo(
+    () => rows?.filter((row) => !settlingIds.has(row.episode.id)),
+    [rows, settlingIds],
+  )
   const settledHere = (query.data?.data.length ?? 0) - (episodes?.length ?? 0)
 
   const table = useReactTable({

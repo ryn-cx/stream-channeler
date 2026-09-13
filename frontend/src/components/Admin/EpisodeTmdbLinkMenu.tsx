@@ -1,10 +1,5 @@
 // TODO: Validate
-import {
-  type QueryKey,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Eye, EyeOff, Search } from "lucide-react"
 import { useState } from "react"
 
@@ -28,9 +23,6 @@ import {
 import { type Numbered, numberingAgreement, numberingOf } from "./tmdbNumbering"
 
 type ChoiceOrder = "sequential" | "similarity" | "other"
-
-/** Every list of choices as it read before one of them was linked. */
-type DroppedChoices = Array<[QueryKey, TmdbEpisodeChoice[] | undefined]>
 
 interface EpisodeTmdbLinkMenuProps {
   episodeId: string
@@ -164,42 +156,18 @@ export function TmdbLinkPicker({
       }),
   })
 
-  // TODO: Validate
-  const dropChoice = async (tmdbEpisodeId: string) => {
-    const choicesKey = ["admin-tmdb-choices", episodeId]
-    await queryClient.cancelQueries({ queryKey: choicesKey })
-    const previous = queryClient.getQueriesData<TmdbEpisodeChoice[]>({
-      queryKey: choicesKey,
-    })
-    queryClient.setQueriesData<TmdbEpisodeChoice[]>(
-      { queryKey: choicesKey },
-      (offered) =>
-        offered?.filter((choice) => choice.episode.id !== tmdbEpisodeId),
-    )
-    return previous
-  }
-
-  // TODO: Validate
-  const restoreChoices = (previous: DroppedChoices | undefined) => {
-    for (const [queryKey, offered] of previous ?? []) {
-      queryClient.setQueryData(queryKey, offered)
-    }
-  }
-
   const linkMutation = useMutation({
     mutationKey: SETTLE_TMDB_MATCH_MUTATION_KEY,
     mutationFn: ({
       tmdbEpisodeId,
     }: SettleTmdbMatchVariables & { tmdbEpisodeId: string }) =>
       EpisodesService.adminLinkEpisodeToTmdb({ episodeId, tmdbEpisodeId }),
-    onMutate: ({ tmdbEpisodeId }) => dropChoice(tmdbEpisodeId),
     onSuccess: (linked) => {
       showSuccessToast("Episode linked to TMDB")
       queryClient.invalidateQueries({ queryKey: informationQueryKey })
       onLinksChanged?.(linked)
     },
-    onError: (error: unknown, _variables, previous) => {
-      restoreChoices(previous)
+    onError: (error: unknown) => {
       handleError.call(showErrorToast, error as any)
     },
     onSettled: reread,

@@ -7,7 +7,7 @@ from datetime import timedelta
 
 from fastapi import HTTPException
 from sqlalchemy.dialects.postgresql import insert as postgres_insert
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, func, select
 
 from app.channels.models import (
     Channel,
@@ -16,13 +16,20 @@ from app.channels.models import (
 )
 from app.channels.schemas import (
     ChannelQueueAdminOutput,
+    ChannelQueueAdminReadOptions,
     ChannelQueueAdminUpdate,
+    ChannelQueueOutput,
+    ChannelQueuePage,
+    ChannelQueuesAdminPublic,
     MediaOwner,
 )
 from app.schemas import Message
+from app.service.responses import get_read_results
 from app.users.models import User
 from app.users.plugin_user import is_plugin_user
 from app.utils import tz_datetime
+
+CHANNEL_QUEUE_PAGE = 25
 
 
 # TODO: Validate
@@ -116,20 +123,60 @@ def bulk_import_queue_urls(
 def channel_queue(
     session: Session,
     channel: Channel,
-) -> list[ChannelQueue]:
+    offset: int = 0,
+    limit: int = CHANNEL_QUEUE_PAGE,
+    query: str | None = None,
+) -> ChannelQueuePage:
     """Read the URLs in a channel's import queue."""
+    matching = select(ChannelQueue).where(ChannelQueue.channel_id == channel.id)
+    if query:
+        matching = matching.where(col(ChannelQueue.url).icontains(query))
+
     statement = (
-        select(ChannelQueue)
-        .where(ChannelQueue.channel_id == channel.id)
+        matching
         # Descending order works better on the frontend because new URLs are appended to the
         # top of the list making it possible to immediately see the new URLs after adding
         # them without having to scroll down.
         .order_by(col(ChannelQueue.created_at).desc())
+        .offset(offset)
+        .limit(limit)
     )
 
-    channels = session.exec(statement).all()
+    total = session.scalar(
+        select(func.count()).select_from(matching.subquery()),
+    )
+    # The tab's badge counts what the queue still has to do, which is every
+    # unfinished entry rather than only the ones the page being read shows.
+    pending_count = session.scalar(
+        select(func.count())
+        .select_from(ChannelQueue)
+        .where(
+            ChannelQueue.channel_id == channel.id,
+            col(ChannelQueue.status).in_([URLStatus.PENDING, URLStatus.IMPORTING]),
+        ),
+    )
 
-    return list(channels)
+    return ChannelQueuePage(
+        data=[
+            ChannelQueueOutput.model_validate(queue_entry)
+            for queue_entry in session.exec(statement).all()
+        ],
+        total=total or 0,
+        pending_count=pending_count or 0,
+    )
+
+
+# TODO: Validate
+def retry_queue_entry(session: Session, queue_entry: ChannelQueue) -> Message:
+    """Put one entry back into a channel's import queue to be imported again."""
+    queue_entry.status = URLStatus.PENDING
+    queue_entry.note = None
+    # A plugin that pushed the import out to a later time was answering the failure
+    # this retry is discarding, so the entry goes back to being importable now.
+    queue_entry.import_at = None
+    session.add(queue_entry)
+    session.commit()
+    return Message(message=f"{queue_entry.url} queued for import again")
 
 
 # TODO: Validate
@@ -176,28 +223,52 @@ def _channel_queue_admin_output(
 def all_channel_queues(
     session: Session,
     current_user: User,
-    owner: MediaOwner | None = None,
-) -> list[ChannelQueueAdminOutput]:
+    read_options: ChannelQueueAdminReadOptions,
+) -> ChannelQueuesAdminPublic:
     """List every `Channel`'s import queue entries, scoped by owner."""
     selector = (
-        select(ChannelQueue, Channel, User.username)
+        select(ChannelQueue)
         .join(Channel, col(Channel.id) == ChannelQueue.channel_id)
         .join(User, col(User.id) == Channel.user_id)
-        .order_by(col(ChannelQueue.created_at).desc())
     )
-    if not owner:
-        selector = selector.where(Channel.user_id == current_user.id)
-    elif owner == MediaOwner.official:
+    if read_options.owner == MediaOwner.official:
         selector = selector.where(is_plugin_user(User.email))
-    else:
+    elif read_options.owner == MediaOwner.others:
         selector = selector.where(
             ~is_plugin_user(User.email),
             col(Channel.user_id) != current_user.id,
         )
-    return [
-        _channel_queue_admin_output(channel, username, queue_entry)
-        for queue_entry, channel, username in session.exec(selector).all()
-    ]
+    rows, total_count, filtered_count, is_server_side = get_read_results(
+        session,
+        selector,
+        schema=ChannelQueueAdminOutput,
+        default_sorts=[ChannelQueue.created_at],
+        tiebreaker=ChannelQueue.id,
+        params=read_options,
+        current_user=current_user,
+        extra_columns={
+            "channel_name": Channel.name,
+            "channel_number": Channel.channel_number,
+            "user_id": Channel.user_id,
+            "username": User.username,
+        },
+    )
+    owners = {
+        channel.id: (channel, username)
+        for channel, username in session.exec(
+            select(Channel, User.username)
+            .join(User, col(User.id) == Channel.user_id)
+            .where(col(Channel.id).in_({row.channel_id for row in rows})),
+        ).all()
+    }
+    return ChannelQueuesAdminPublic(
+        data=[
+            _channel_queue_admin_output(*owners[row.channel_id], row) for row in rows
+        ],
+        total_count=total_count,
+        filtered_count=filtered_count,
+        is_server_side=is_server_side,
+    )
 
 
 # TODO: Validate

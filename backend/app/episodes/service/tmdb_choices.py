@@ -124,22 +124,20 @@ def list_tmdb_episode_choices(
     search_string: str | None = None,
     limit: int = 100,
 ) -> list[TmdbEpisodeChoice]:
-    """Return every TMDB episode of a title, in the order the title runs.
-
-    They are ordered as the title runs rather than as TMDB returns them, so the
-    one an episode is meant to be is found by counting through the title the same
-    way the website that holds it does. Each carries how much of its name it
-    shares with `episode`, which is the other order they are worth reading in.
-    """
+    already_linked = set(episode_to_link.tmdb_episode_ids)
     # If a search string is included the user is searching for an episode that can
     # belong to anny title.
     if search_string and search_string.strip():
-        return _named_tmdb_episode_choices(
-            session,
-            episode_to_link,
-            search_string.strip(),
-            limit,
-        )
+        return [
+            choice
+            for choice in _named_tmdb_episode_choices(
+                session,
+                episode_to_link,
+                search_string.strip(),
+                limit,
+            )
+            if choice.episode.id not in already_linked
+        ]
 
     tmdb_title_ids = episode_to_link.season.title.tmdb_title_ids
     if not tmdb_title_ids:
@@ -160,7 +158,7 @@ def list_tmdb_episode_choices(
         if choice.episode.id not in named
     ]
     return sorted(
-        choices,
+        (choice for choice in choices if choice.episode.id not in already_linked),
         key=lambda choice: _order(
             choice.season.season_number,
             choice.episode.episode_number,

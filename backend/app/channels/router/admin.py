@@ -2,8 +2,9 @@
 
 
 import uuid
+from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.auth.dependencies import (
     SessionDep,
@@ -24,8 +25,9 @@ from app.channels.schemas import (
     ChannelListOutput,
     ChannelOutput,
     ChannelQueueAdminOutput,
+    ChannelQueueAdminReadOptions,
     ChannelQueueAdminUpdate,
-    MediaOwner,
+    ChannelQueuesAdminPublic,
 )
 from app.channels.service import channels, import_queue
 from app.schemas import Message
@@ -71,12 +73,12 @@ def get_automatic_channel_users(
 
 # TODO: Validate
 @admin_router.delete("/automatic-users/{user_id}")
-def delete_automatic_channels(
+def clear_automatic_channels(
     session: SessionDep,
     user_id: uuid.UUID,
 ) -> Message:
-    """Delete every `Channel` an automatic channel `User` owns."""
-    return channels.delete_automatic_channels(session, user_id)
+    """Empty every `Channel` an automatic channel `User` owns."""
+    return channels.clear_automatic_channels(session, user_id)
 
 
 # TODO: Validate
@@ -84,10 +86,10 @@ def delete_automatic_channels(
 def get_all_channel_queues(
     session: SessionDep,
     current_user: SuperUser,
-    owner: MediaOwner | None = None,
-) -> list[ChannelQueueAdminOutput]:
+    read_options: Annotated[ChannelQueueAdminReadOptions, Query()],
+) -> ChannelQueuesAdminPublic:
     """List every `Channel`'s import queue entries, scoped by owner."""
-    return import_queue.all_channel_queues(session, current_user, owner)
+    return import_queue.all_channel_queues(session, current_user, read_options)
 
 
 # TODO: Validate

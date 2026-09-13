@@ -32,7 +32,6 @@ from app.episodes.schemas import (
 )
 from app.episodes.service.numbering import (
     _absolute_number_match,
-    _best_match,
     _candidates_from_titles,
     _episode_number_absolute_match,
     _season_and_episode_match,
@@ -212,16 +211,6 @@ def _unmatched_outputs(
         UnmatchedEpisodeOutput(
             **_record_fields(episode, season, title),
             absolute_number=source_numbers.get(episode.id),
-            best_match=_marked_used(
-                _best_match(
-                    episode,
-                    season,
-                    candidates.get(title.id, []),
-                    candidate_numbers.get(title.id, {}),
-                ),
-                episode.id,
-                used.get(title.id, {}),
-            ),
             season_episode_match=_marked_used(
                 _season_and_episode_match(
                     episode,

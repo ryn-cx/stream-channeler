@@ -4,10 +4,7 @@ import { Info } from "lucide-react"
 import { useState } from "react"
 import { ChannelDescriptionMarkdown } from "@/components/Channels/ChannelDetail/ChannelDescription"
 import { TitleCardsWithInformation } from "@/components/Channels/TitleCardsWithInformation"
-import {
-  useAllChannelTitles,
-  useChannelTitleStats,
-} from "@/components/Channels/useChannelTitles"
+import { useAllChannelTitles } from "@/components/Channels/useChannelTitles"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import {
   type TriggerVariant,
@@ -45,14 +42,7 @@ export function ChannelDetailsButton({
     }))
     .filter((group) => group.titles.length > 0)
 
-  const listedTmdbTitleIds = [
-    ...new Set(
-      groups.flatMap((group) =>
-        group.titles.map((title) => title.tmdb_title_id ?? title.id),
-      ),
-    ),
-  ]
-  const { data: stats } = useChannelTitleStats(channel.id, listedTmdbTitleIds)
+  const stats = data?.stats ?? {}
 
   return (
     <>

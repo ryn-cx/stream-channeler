@@ -8,8 +8,19 @@
 # as the whole library does.
 
 [CmdletBinding()]
-param()
+param(
+    [string]$Plugin,
+    [string]$Source
+)
 
 $ErrorActionPreference = "Stop"
 
-& (Join-Path $PSScriptRoot "_run_tool.ps1") -Module "app.tools.reimport_all"
+$toolArguments = @()
+if ($Plugin) {
+    $toolArguments += @("--plugin", $Plugin)
+}
+if ($Source) {
+    $toolArguments += @("--source", $Source)
+}
+
+& (Join-Path $PSScriptRoot "_run_tool.ps1") -Module "app.tools.reimport_all" -ToolArguments $toolArguments

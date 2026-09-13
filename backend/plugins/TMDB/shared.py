@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from datetime import datetime
-from itertools import pairwise
 from typing import override
 
 from tminidb.tv_episode_group.details.models import TvEpisodeGroupDetailsModel
@@ -17,20 +14,8 @@ from app.tmdb_media.tmdb import (
     get_media_type_and_season_id,
     get_media_type_and_tmdb_id,
 )
-from app.utils import tz_datetime
-from plugins.TMDB.files import WatchProvidersFile
 from plugins.TMDB.search import TMDBSearch
-from plugins.TMDB.utils import (
-    TMDBSeasonInfo,
-    get_media_plugin,
-    streaming_providers,
-)
-
-
-# TODO: Validate
-def provider_names(file: WatchProvidersFile) -> set[str]:
-    """Return the names of all providers in a WatchProviders file."""
-    return {provider.provider_name for provider in streaming_providers(file.parsed())}
+from plugins.TMDB.utils import TMDBSeasonInfo
 
 
 # TODO: Validate
@@ -51,20 +36,11 @@ class TMDBShared(TMDBSearch):
         return False
 
     # TODO: Validate
-    @staticmethod
-    def _watch_providers_due(record: Title) -> bool:
-        if record.update_at is None:
-            return False
-        return record.update_at <= tz_datetime.now()
-
-    # TODO: Validate
     def media_info(self, media_identifier: str) -> TMDBMediaInfo:
         media_type, tmdb_media_id = get_media_type_and_tmdb_id(media_identifier)
         if media_type == TMDBMediaType.movie:
             movie_details_file = self.movies_details_file(tmdb_media_id)
-            movie_providers_file = (
-                self._get_or_create_latest_movies_watch_providers_file(tmdb_media_id)
-            )
+            movie_providers_file = self.movies_watch_providers_file(tmdb_media_id)
             self._download_if_outdated([movie_details_file, movie_providers_file])
             return TMDBMediaInfo(
                 detail=movie_details_file.parsed(),
@@ -72,9 +48,7 @@ class TMDBShared(TMDBSearch):
             )
 
         series_details_file = self.tv_series_details_file(tmdb_media_id)
-        series_providers_file = (
-            self._get_or_create_latest_tv_series_watch_providers_file(tmdb_media_id)
-        )
+        series_providers_file = self.tv_series_watch_providers_file(tmdb_media_id)
         self._download_if_outdated([series_details_file, series_providers_file])
         return TMDBMediaInfo(
             detail=series_details_file.parsed(),
@@ -136,51 +110,6 @@ class TMDBShared(TMDBSearch):
                 return season.season_number
         message = f"{title_key} has no season {season_key}"
         raise ValueError(message)
-
-    # TODO: Validate
-    def _process_watch_providers(
-        self,
-        title_key: str,
-        files: Sequence[WatchProvidersFile],
-    ) -> None:
-        """Process all of the supplied WatchProvider files for a single title."""
-        for old_watch_providers_files, new_watch_providers_file in pairwise(files):
-            changed_watch_providers = provider_names(
-                file=old_watch_providers_files,
-            ) ^ provider_names(
-                file=new_watch_providers_file,
-            )
-            for changed_watch_provider in changed_watch_providers:
-                self._process_changed_provider(
-                    title_key=title_key,
-                    changed_provider=changed_watch_provider,
-                    update_at=new_watch_providers_file.record_data_timestamp,
-                )
-            old_watch_providers_files.clear_status()
-            old_watch_providers_files.clear_update_at()
-
-    # TODO: Validate
-    def _process_changed_provider(
-        self,
-        title_key: str,
-        changed_provider: str,
-        update_at: datetime,
-    ) -> None:
-        """Process a single changed provider.
-
-        Sets the title.updated_at and season.updated_at values."""
-        if plugin := get_media_plugin(changed_provider):
-            tmdb_title = Title.get_one(self.session, self.source, title_key)
-            for tmdb_link in tmdb_title.linked_title_links:
-                if (
-                    tmdb_link.linked_title.source.plugin.key
-                    == plugin.plugin_name()
-                ):
-                    # Watch provider status changing warrants a complete updates of both
-                    # the title and season files for simplicity.
-                    tmdb_link.linked_title.set_update_at(update_at)
-                    for season in tmdb_link.linked_title.active_children:
-                        season.set_update_at(update_at)
 
     # TODO: Validate
     @classmethod

@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 
 import { TitlesService } from "@/client"
+import { TITLES_MISSING_SOURCES_QUERY_KEY } from "@/components/AdminV2/titlesMissingSourcesQuery"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -35,6 +36,9 @@ export function LinkedTitleField({ titleId }: LinkedTitleFieldProps) {
       })
       queryClient.invalidateQueries({ queryKey: ["tmdb-title"] })
       queryClient.invalidateQueries({ queryKey: ["channels"] })
+      queryClient.invalidateQueries({
+        queryKey: TITLES_MISSING_SOURCES_QUERY_KEY,
+      })
     },
     onError: (error: unknown) =>
       handleError.call(
