@@ -12,14 +12,13 @@ from app.channels.service.import_queue import add_urls_to_channel_import_queue
 from app.media.media_type import TMDBMediaType
 from app.sources.models import Source
 from plugins.HiDive.base_files import HiDiveBaseFiles
-from plugins.HiDive.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
 from plugins.HiDive.files import Schedule
 from plugins.HiDive.utils import (
+    build_url,
     card_title_name,
     element_release_date,
     element_text,
     schedule_group_list,
-    title_url,
 )
 
 if TYPE_CHECKING:
@@ -109,8 +108,8 @@ class HiDiveShared(HiDiveBaseFiles):
                 card_identifier = card.attributes.action.data.id
                 type_prefix, _, title_key = card_identifier.partition("#")
                 if type_prefix == "VOD":
-                    return title_url(title_key, MOVIE_MEDIA_TYPE)
-                return title_url(title_key, SERIES_MEDIA_TYPE)
+                    return build_url(f"video/{title_key}")
+                return build_url(f"series/{title_key}")
         return None
 
     # TODO: Validate

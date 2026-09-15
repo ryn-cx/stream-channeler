@@ -20,6 +20,7 @@ from plugins.Hulu.constants import (
 from plugins.Hulu.shared import HuluShared
 from plugins.Hulu.utils import (
     build_season_key,
+    build_url,
     collection_season_key,
     collection_urls,
     episode_url,
@@ -31,7 +32,6 @@ from plugins.Hulu.utils import (
     split_season_key,
     thumbnail_url,
     title_plan,
-    title_url,
     watch_component,
     watch_components,
 )
@@ -243,6 +243,12 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
 # TODO: Validate
 class HuluSeriesImporter(HuluImporter):
     # TODO: Validate
+    @classmethod
+    @override
+    def title_url(cls, title_key: str) -> str:
+        return build_url(f"{HuluMediaType.SERIES}/{title_key}")
+
+    # TODO: Validate
     @override
     def _media_type_name(self) -> str:
         return "Series"
@@ -348,7 +354,7 @@ class HuluSeriesImporter(HuluImporter):
             # TODO: There are mini series or documentary labels as well that could
             # be intermixed here?
             media_type=self._media_type_name(),
-            url=title_url(title_key, HuluMediaType.SERIES),
+            url=self.title_url(title_key),
             image_url=image_url(parsed_series.artwork.program_tile.path),
             thumbnail_url=thumbnail_url(parsed_series.artwork.program_tile.path),
             data_timestamp=self._title_files_data_timestamp(title_key),
@@ -424,6 +430,12 @@ class HuluSeriesImporter(HuluImporter):
 
 # TODO: Validate
 class HuluMovieImporter(HuluImporter):
+    # TODO: Validate
+    @classmethod
+    @override
+    def title_url(cls, title_key: str) -> str:
+        return build_url(f"{HuluMediaType.MOVIE}/{title_key}")
+
     # TODO: Validate
     @override
     def _media_type_name(self) -> str:
@@ -507,7 +519,7 @@ class HuluMovieImporter(HuluImporter):
             name=parsed_movie.entity.name,
             description=parsed_movie.entity.description,
             year=parsed_movie.entity.premiere_date.year,
-            url=title_url(title_key, HuluMediaType.MOVIE),
+            url=self.title_url(title_key),
             image_url=image_url(parsed_movie.entity.artwork.program_tile.path),
             thumbnail_url=thumbnail_url(
                 parsed_movie.entity.artwork.program_tile.path,

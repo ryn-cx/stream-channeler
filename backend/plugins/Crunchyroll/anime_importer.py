@@ -19,7 +19,7 @@ from plugins.Crunchyroll.constants import (
     SERIES_URL_REGEX,
 )
 from plugins.Crunchyroll.files import BrowseSeries
-from plugins.Crunchyroll.importer import CrunchyrollImporter
+from plugins.Crunchyroll.shared import CrunchyrollShared
 from plugins.Crunchyroll.utils import (
     build_url,
     episode_image,
@@ -29,6 +29,7 @@ from plugins.Crunchyroll.utils import (
     title_thumbnail,
 )
 from plugins.utils.abstract_plugin import InvalidURLError
+from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import ParsedURL
 
 if TYPE_CHECKING:
@@ -40,7 +41,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class CrunchyrollAnimeFiles(CrunchyrollImporter, ABC):
+class CrunchyrollAnimeFiles(CrunchyrollShared, BaseImporter, ABC):
     # TODO: Validate
     @override
     def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
@@ -128,11 +129,18 @@ class CrunchyrollAnimeFiles(CrunchyrollImporter, ABC):
 
 
 class CrunchyrollAnimeChannels(CrunchyrollAnimeFiles, ABC):
+    @classmethod
+    @override
+    def title_url(cls, title_key: str) -> str:
+        return build_url(f"series/{title_key}")
+
     @override
     def create_initial_channel_records(self) -> None:
         catalogue_file = self.catalogue_file()
         catalogue_file.download_if_outdated()
-        self._add_titles_to_all_titles_channel(catalogue_file.datums())
+        self._add_titles_to_all_titles_channel(
+            release.id for release in catalogue_file.datums()
+        )
 
     @override
     def add_title_to_plugin_channels(self, title: Title) -> None:
@@ -146,27 +154,22 @@ class CrunchyrollAnimeChannels(CrunchyrollAnimeFiles, ABC):
         for channel_key in category_titles:
             self.add_new_urls_to_channel(channel_key, [title.url])
 
+    # TODO: Validate
     def _add_similar_titles_to_all_titles_channel(self, title_key: str) -> None:
         data = self.similar_to_file(title_key).parsed().data
-        urls = [self.title_url(datum.id) for datum in data]
-        self.add_new_urls_to_channel("All Titles", urls)
+        self._add_titles_to_all_titles_channel(datum.id for datum in data)
 
+    # TODO: Validate
     def _create_channel_records_from_incomplete_browse_files(self) -> None:
         for browse_json in self._incomplete_files(BrowseSeries, self.browse_file):
-            self._add_titles_to_all_titles_channel(browse_json.datums())
+            self._add_titles_to_all_titles_channel(
+                release.id for release in browse_json.datums()
+            )
             browse_json.clear_status()
-
-    def _add_titles_to_all_titles_channel(
-        self,
-        releases: list[BrowseSeriesDatum],
-    ) -> None:
-        urls = [self.title_url(release.id) for release in releases]
-        self.add_new_urls_to_channel("All Titles", urls)
 
 
 # TODO: Validate
 class CrunchyrollAnimeUpsert(CrunchyrollAnimeChannels, ABC):
-    # TODO: Validate
     @staticmethod
     def episode_url(episode_key: str) -> str:
         return build_url(f"watch/{episode_key}")
@@ -282,12 +285,11 @@ class CrunchyrollAnimeImporter(CrunchyrollAnimeUpsert):
     """
 
     # TODO: Validate
-    @classmethod
     @override
-    def _source_update_interval(cls) -> timedelta:
+    def _next_source_update_at(self) -> datetime:
         # The page lists episodes from newest to oldest, daily checks work best for
         # this.
-        return timedelta(days=1)
+        return min(self._source_files_data_timestamps()) + timedelta(days=1)
 
     # TODO: Validate
     @classmethod

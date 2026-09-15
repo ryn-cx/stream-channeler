@@ -22,7 +22,7 @@ from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 
 if TYPE_CHECKING:
     import uuid
-    from collections.abc import Sequence
+    from collections.abc import Iterable, Sequence
 
     from app.plugins.models import Plugin
 
@@ -104,6 +104,16 @@ class BaseChannelMixin(AbstractPlugin, ABC):
             for url, title_key in title_keys_by_url.items()
             if title_key in titles_by_key
         }
+
+    # TODO: Validate
+    @classmethod
+    def title_url(cls, title_key: str) -> str:
+        raise NotImplementedError
+
+    # TODO: Validate
+    def _add_titles_to_all_titles_channel(self, title_keys: Iterable[str]) -> None:
+        urls = [self.title_url(title_key) for title_key in title_keys]
+        self.add_new_urls_to_channel("All Titles", urls)
 
     # TODO: Validate
     def add_new_urls_to_channel(

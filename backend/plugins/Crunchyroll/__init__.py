@@ -15,7 +15,6 @@ from plugins.Crunchyroll.constants import (
     SERIES_URL_REGEX,
     VIDEO_SOURCE,
 )
-from plugins.Crunchyroll.importer import CrunchyrollImporter
 from plugins.Crunchyroll.music_importer import CrunchyrollMusicImporter
 from plugins.Crunchyroll.shared import CrunchyrollShared
 from plugins.Crunchyroll.watch_history import CrunchyrollWatchHistoryMixin
@@ -66,14 +65,14 @@ class Crunchyroll(
             self.session,
             self.plugin,
             self._file_cache,
-        ).create_channel_records()
+        ).create_initial_channel_records()
 
     # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
         return (
-            MUSIC_VIDEO_URL_REGEX,  # Must be listed first due to URL overlap.
+            MUSIC_VIDEO_URL_REGEX,  # Must be listed first due to regex overlap.
             CONCERT_URL_REGEX,
             ARTIST_URL_REGEX,
             SERIES_URL_REGEX,
@@ -82,7 +81,10 @@ class Crunchyroll(
 
     # TODO: Validate
     @override
-    def _media_importer_from_url(self, url: str) -> CrunchyrollImporter:
+    def _media_importer_from_url(
+        self,
+        url: str,
+    ) -> CrunchyrollAnimeImporter | CrunchyrollMusicImporter:
         domain_regex = self._domains_regex()
         for url_regex in (MUSIC_VIDEO_URL_REGEX, CONCERT_URL_REGEX, ARTIST_URL_REGEX):
             if re.match(domain_regex + url_regex, url):
@@ -95,7 +97,10 @@ class Crunchyroll(
 
     # TODO: Validate
     @override
-    def _media_importer_from_title(self, title: Title) -> CrunchyrollImporter:
+    def _media_importer_from_title(
+        self,
+        title: Title,
+    ) -> CrunchyrollAnimeImporter | CrunchyrollMusicImporter:
         if title.source.key == MUSIC_SOURCE:
             return CrunchyrollMusicImporter(self.session, self.plugin, self._file_cache)
         return CrunchyrollAnimeImporter(self.session, self.plugin, self._file_cache)

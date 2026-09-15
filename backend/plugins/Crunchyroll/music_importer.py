@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+from abc import ABC
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, override
 
@@ -22,13 +23,14 @@ from plugins.Crunchyroll.constants import (
     CrunchyrollMusicCategory,
 )
 from plugins.Crunchyroll.files import BrowseMusic
-from plugins.Crunchyroll.importer import CrunchyrollImporter
+from plugins.Crunchyroll.shared import CrunchyrollShared
 from plugins.Crunchyroll.utils import (
     build_url,
     largest_image,
     nearest_thumbnail,
 )
 from plugins.utils.abstract_plugin import InvalidURLError
+from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import ParsedURL
 
 if TYPE_CHECKING:
@@ -47,67 +49,7 @@ MUSIC_CATEGORY_NAMES = {
 
 
 # TODO: Validate
-class CrunchyrollMusicImporter(CrunchyrollImporter):
-    # TODO: Validate
-    @classmethod
-    @override
-    def _source_update_interval(cls) -> timedelta:
-        # Music isn't that important to be up to date so weekly checks are adequate.
-        return timedelta(days=7)
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def source_name(cls) -> str:
-        return MUSIC_SOURCE
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _link_to_tmdb(cls) -> bool:
-        return False
-
-    # TODO: Validate
-    @staticmethod
-    def title_url(title_key: str) -> str:
-        return build_url(f"artist/{title_key}")
-
-    # TODO: Validate
-    @staticmethod
-    def episode_url(category: CrunchyrollMusicCategory, episode_key: str) -> str:
-        return build_url(f"watch/{category}/{episode_key}")
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _url_regexes(cls) -> tuple[str, ...]:
-        return (MUSIC_VIDEO_URL_REGEX, CONCERT_URL_REGEX, ARTIST_URL_REGEX)
-
-    # TODO: Validate
-    @override
-    def parse_url(self, url: str) -> ParsedURL:
-        domain_regex = self._domains_regex()
-        for url_regex, group in (
-            (MUSIC_VIDEO_URL_REGEX, "music_video_key"),
-            (CONCERT_URL_REGEX, "concert_key"),
-        ):
-            if match := re.match(domain_regex + url_regex, url):
-                episode_key = match.group(group)
-                music_file = self.concert_or_music_video_file(episode_key)
-                self.raise_invalid_url_if_no_content(music_file, url)
-                return ParsedURL(
-                    music_file.parsed().artist.id,
-                    episode_key=episode_key,
-                )
-
-        if match := re.match(domain_regex + ARTIST_URL_REGEX, url):
-            title_key = match.group("title_key")
-            self.raise_invalid_url_if_no_content(self.artist_file(title_key), url)
-            return ParsedURL(title_key)
-
-        msg = f"Invalid {self.plugin_name()} URL: {url}"
-        raise InvalidURLError(msg)
-
+class CrunchyrollMusicFiles(CrunchyrollShared, BaseImporter, ABC):
     # TODO: Validate
     @override
     def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:
@@ -167,6 +109,52 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
             .parsed()
             .data
         ]
+
+    # TODO: Validate
+    def browse_file(self) -> BrowseMusic:
+        """BrowseMusic contains data for all of the music."""
+        return self._cached_file(BrowseMusic, "artists")
+
+    # TODO: Validate
+    @override
+    def _source_files(self) -> Sequence[BrowseMusic]:
+        return [self.browse_file()]
+
+
+class CrunchyrollMusicChannels(CrunchyrollMusicFiles, ABC):
+    @classmethod
+    @override
+    def title_url(cls, title_key: str) -> str:
+        return build_url(f"artist/{title_key}")
+
+    @override
+    def add_title_to_plugin_channels(self, title: Title) -> None:
+        if not title.url:  # Should be impossible
+            msg = "Title.url is not set."
+            raise AttributeError(msg)
+
+        channel_keys = ["All Music"]
+        genres = self.artist_file(title.key).parsed().genres
+        channel_keys.extend(genre.display_value for genre in genres)
+        for channel_key in channel_keys:
+            self.add_new_urls_to_channel(channel_key, [title.url])
+
+    def create_initial_channel_records(self) -> None:
+        browse_file = self.browse_file()
+        browse_file.download_if_outdated()
+        self._add_artists_to_all_music_channel(browse_file)
+
+    def _add_artists_to_all_music_channel(self, browse_file: BrowseMusic) -> None:
+        urls = [self.title_url(artist.id) for artist in browse_file.datums()]
+        self.add_new_urls_to_channel("All Music", urls)
+
+
+# TODO: Validate
+class CrunchyrollMusicUpsert(CrunchyrollMusicChannels, ABC):
+    # TODO: Validate
+    @staticmethod
+    def episode_url(category: CrunchyrollMusicCategory, episode_key: str) -> str:
+        return build_url(f"watch/{category}/{episode_key}")
 
     # TODO: Validate
     @override
@@ -270,38 +258,57 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
                 ).upsert(season, episode)
                 episode.set_update_at(None)
 
+
+# TODO: Validate
+class CrunchyrollMusicImporter(CrunchyrollMusicUpsert):
     # TODO: Validate
-    def browse_file(self) -> BrowseMusic:
-        """BrowseMusic contains data for all of the music."""
-        return self._cached_file(BrowseMusic, "artists")
+    @override
+    def _next_source_update_at(self) -> datetime:
+        # Music isn't that important to be up to date so weekly checks are adequate.
+        return min(self._source_files_data_timestamps()) + timedelta(days=7)
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def source_name(cls) -> str:
+        return MUSIC_SOURCE
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def _link_to_tmdb(cls) -> bool:
+        return False
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def _url_regexes(cls) -> tuple[str, ...]:
+        return (MUSIC_VIDEO_URL_REGEX, CONCERT_URL_REGEX, ARTIST_URL_REGEX)
 
     # TODO: Validate
     @override
-    def _source_files(self) -> Sequence[BrowseMusic]:
-        return [self.browse_file()]
+    def parse_url(self, url: str) -> ParsedURL:
+        domain_regex = self._domains_regex()
+        for url_regex, group in (
+            (MUSIC_VIDEO_URL_REGEX, "music_video_key"),
+            (CONCERT_URL_REGEX, "concert_key"),
+        ):
+            if match := re.match(domain_regex + url_regex, url):
+                episode_key = match.group(group)
+                music_file = self.concert_or_music_video_file(episode_key)
+                self.raise_invalid_url_if_no_content(music_file, url)
+                return ParsedURL(
+                    music_file.parsed().artist.id,
+                    episode_key=episode_key,
+                )
 
-    # TODO: Validate
-    @override
-    def add_title_to_plugin_channels(self, title: Title) -> None:
-        if not title.url:  # Should be impossible
-            msg = "Title.url is not set."
-            raise AttributeError(msg)
+        if match := re.match(domain_regex + ARTIST_URL_REGEX, url):
+            title_key = match.group("title_key")
+            self.raise_invalid_url_if_no_content(self.artist_file(title_key), url)
+            return ParsedURL(title_key)
 
-        channel_keys = ["All Music"]
-        channel_keys.extend(
-            genre.display_value for genre in self.artist_file(title.key).parsed().genres
-        )
-        for channel_key in channel_keys:
-            self.add_new_urls_to_channel(channel_key, [title.url])
-
-    # TODO: Validate
-    def create_channel_records(self) -> None:
-        browse_file = self.browse_file()
-        browse_file.download_if_outdated()
-        self.add_new_urls_to_channel(
-            "All Music",
-            [self.title_url(artist.id) for artist in browse_file.datums()],
-        )
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)
 
     # TODO: Validate
     def _mark_artists_as_outdated(self, artists: list[BrowseMusicDatum]) -> None:
@@ -322,8 +329,9 @@ class CrunchyrollMusicImporter(CrunchyrollImporter):
     def update_source(self, source: Source, update_at: datetime) -> None:
         logger.info("Updating Source: {}", source.key)
         self._download_if_outdated(self._source_files(), update_at)
-        artists = self.browse_file().datums()
-        self.create_channel_records()
+        browse_file = self.browse_file()
+        artists = browse_file.datums()
+        self._add_artists_to_all_music_channel(browse_file)
         self._mark_artists_as_outdated(artists)
         new_title_keys = {artist.id for artist in artists}
         self._mark_mismatched_titles_as_outdated(

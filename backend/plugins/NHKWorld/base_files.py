@@ -12,6 +12,7 @@ from plugins.NHKWorld.files import (
     VideoProgram,
     VideoPrograms,
 )
+from plugins.NHKWorld.utils import build_url
 from plugins.utils.base_plugin.base import BasePlugin
 
 if TYPE_CHECKING:
@@ -23,13 +24,14 @@ if TYPE_CHECKING:
 # TODO: Validate
 class NHKWorldBaseFiles(BasePlugin):
     # TODO: Validate
-    def video_programs_file(self) -> VideoPrograms:
-        return self._cached_file(VideoPrograms)
+    @classmethod
+    @override
+    def title_url(cls, title_key: str) -> str:
+        return build_url(f"nhkworld/en/shows/{title_key}/")
 
     # TODO: Validate
-    @override
-    def _plugin_files(self) -> Sequence[VideoPrograms]:
-        return [self.video_programs_file()]
+    def video_programs_file(self) -> VideoPrograms:
+        return self._cached_file(VideoPrograms)
 
     # TODO: Validate
     def video_program_file(self, title_key: str) -> VideoProgram:

@@ -20,11 +20,6 @@ def build_url(path: str) -> str:
 
 
 # TODO: Validate
-def title_url(title_key: str) -> str:
-    return build_url(f"nhkworld/en/shows/{title_key}/")
-
-
-# TODO: Validate
 def image_url(images: Sequence[LandscapeItem | PortraitItem | EpisodeImage]) -> str:
     largest = max(images, key=lambda image: image.width)
     return build_url(largest.url)

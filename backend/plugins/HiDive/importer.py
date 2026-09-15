@@ -21,6 +21,7 @@ from plugins.HiDive.constants import (
 )
 from plugins.HiDive.shared import HiDiveShared
 from plugins.HiDive.utils import (
+    build_url,
     episode_number,
     episode_url,
     hero_image_url,
@@ -33,7 +34,6 @@ from plugins.HiDive.utils import (
     season_url,
     series_image_url,
     series_season_items,
-    title_url,
     vod_hero,
 )
 from plugins.utils.abstract_plugin import InvalidURLError
@@ -56,6 +56,12 @@ class HiDiveImporter(HiDiveShared, BaseImporter, ABC):
 
 # TODO: Validate
 class HiDiveSeriesImporter(HiDiveImporter):
+    # TODO: Validate
+    @classmethod
+    @override
+    def title_url(cls, title_key: str) -> str:
+        return build_url(f"series/{title_key}")
+
     # TODO: Validate
     @classmethod
     @override
@@ -142,7 +148,7 @@ class HiDiveSeriesImporter(HiDiveImporter):
                 key=title_key,
                 name=series_data.metadata.series.title,
                 media_type=SERIES_MEDIA_TYPE,
-                url=title_url(title_key),
+                url=self.title_url(title_key),
                 image_url=series_image_url(series_data),
                 thumbnail_url=series_image_url(series_data),
                 data_timestamp=self._title_files_data_timestamp(title_key),
@@ -234,6 +240,12 @@ class HiDiveMovieImporter(HiDiveImporter):
     # TODO: Validate
     @classmethod
     @override
+    def title_url(cls, title_key: str) -> str:
+        return build_url(f"video/{title_key}")
+
+    # TODO: Validate
+    @classmethod
+    @override
     def _url_regexes(cls) -> tuple[str, ...]:
         return (MOVIE_URL_REGEX,)
 
@@ -302,7 +314,7 @@ class HiDiveMovieImporter(HiDiveImporter):
                 name=movie_title(hero),
                 description=movie_description(hero),
                 year=premiere.year if premiere else None,
-                url=title_url(title_key, MOVIE_MEDIA_TYPE),
+                url=self.title_url(title_key),
                 image_url=hero_image_url(hero),
                 thumbnail_url=hero_image_url(hero),
                 media_type=MOVIE_MEDIA_TYPE,
@@ -335,7 +347,7 @@ class HiDiveMovieImporter(HiDiveImporter):
                     name=movie_title(hero),
                     season_number=0,
                     sort_order=sort_order,
-                    url=title_url(title.key, MOVIE_MEDIA_TYPE),
+                    url=self.title_url(title.key),
                     image_url=hero_image_url(hero),
                     thumbnail_url=hero_image_url(hero),
                     data_timestamp=self._season_files_data_timestamp(

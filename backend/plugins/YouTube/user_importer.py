@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from contextlib import suppress
+from datetime import timedelta
 from typing import TYPE_CHECKING, override
 
 from not_yt_dlapi.exceptions import (
@@ -76,16 +77,17 @@ class YouTubeUserImporter(YouTubeImporter):
     ) -> None:
         season = Season.get_from_memory(self.session, title, season_key)
         if self._season_is_outdated(season, title_key, force=force):
+            data_timestamp = self._season_files_data_timestamp(season_key, title_key)
             season = Season(
                 key=season_key,
                 name=name,
                 url=playlist_url(season_key),
                 image_url=image_url(playlist.snippet.thumbnails),
                 thumbnail_url=thumbnail_url(playlist.snippet.thumbnails),
-                data_timestamp=self._season_files_data_timestamp(season_key, title_key),
+                data_timestamp=data_timestamp,
                 title_id=title.id,
             ).upsert(title, season)
-            season.set_update_at(None)
+            season.set_update_at(data_timestamp + timedelta(hours=6))
         self._create_missing_season_feed(season)
         self._upsert_episodes(season, title_key, force=force)
 

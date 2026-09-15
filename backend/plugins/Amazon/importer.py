@@ -273,9 +273,9 @@ class AmazonSeriesImporter(AmazonImporter):
                 min(data_timestamps) + timedelta(days=7),
             )
 
-        self.add_title_to_plugin_channels(title)
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
+        self.add_title_to_plugin_channels(title)
 
         return title
 
@@ -383,9 +383,9 @@ class AmazonMovieImporter(AmazonImporter):
                 staggered_monthly_update_at(title_key, min(data_timestamps)),
             )
 
-        self.add_title_to_plugin_channels(title)
         self._upsert_season(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
+        self.add_title_to_plugin_channels(title)
 
         return title
 

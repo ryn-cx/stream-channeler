@@ -2,22 +2,23 @@
 from __future__ import annotations
 
 import re
+from abc import ABC
 from datetime import timedelta
 from typing import TYPE_CHECKING, override
 
 from loguru import logger
 
-from app.channels.service.import_queue import add_urls_to_channel_import_queue
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.sources.models import Source
 from app.titles.models import Title
 from app.tmdb_media.keys import watch_identifier
+from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.NHKWorld.base_files import NHKWorldBaseFiles
 from plugins.NHKWorld.constants import TITLE_URL_REGEX
 from plugins.NHKWorld.files import NewVideoEpisodes
-from plugins.NHKWorld.utils import build_url, image_url, thumbnail_url, title_url
+from plugins.NHKWorld.utils import build_url, image_url, thumbnail_url
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import ParsedURL
@@ -25,136 +26,40 @@ from plugins.utils.base_plugin.url import ParsedURL
 if TYPE_CHECKING:
     from datetime import datetime
 
-    from app.channels.models import Channel
+    from naphki.video_episodes.models import Item
+
+
+class NHKWorldChannels(NHKWorldBaseFiles, BaseImporter, ABC):
+    @override
+    def add_title_to_plugin_channels(self, title: Title) -> None:
+        if not title.url:  # Should be impossible.
+            msg = "Title.url is not set."
+            raise AttributeError(msg)
+
+        program = self.video_program_file(title.key).parsed()
+        channel_keys = ["All Titles"]
+        channel_keys.extend(category.name for category in program.categories)
+        for channel_key in channel_keys:
+            self.add_new_urls_to_channel(channel_key, [title.url])
+
+    @override
+    def create_initial_channel_records(self) -> None:
+        self.video_programs_file().download_if_outdated()
+        title_keys = [item.id for item in self.video_programs_file().items()]
+        self._add_titles_to_all_titles_channel(title_keys)
+
+    def _create_channel_records_from_incomplete_feed_files(self) -> None:
+        for feed_file in self._incomplete_files(
+            NewVideoEpisodes,
+            self.new_video_episodes_file,
+        ):
+            title_keys = [item.video_program.id for item in feed_file.items()]
+            self._add_titles_to_all_titles_channel(title_keys)
+            feed_file.clear_status()
 
 
 # TODO: Validate
-class NHKWorld(NHKWorldBaseFiles, BaseImporter, AbstractPlugin, register=False):
-    # TODO: Add support for single episodes
-    # TODO: Don't hardcode the favicon URL
-    # TODO: Validate
-    @classmethod
-    @override
-    def favicon_url(cls) -> str:
-        return "https://www3.nhk.or.jp/nhkworld/common/site_images/nw_webapp.ico"
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _domain(cls) -> str:
-        return "www3.nhk.or.jp"
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def plugin_name(cls) -> str:
-        return "NHK World"
-
-    # TODO: Validate
-    @override
-    def _next_plugin_update_at(self) -> datetime:
-        return max(self._plugin_files_data_timestamps()) + timedelta(days=7)
-
-    @classmethod
-    @override
-    def _url_regexes(cls) -> tuple[str, ...]:
-        return (TITLE_URL_REGEX,)
-
-    # TODO: Validate
-    @override
-    def _next_source_update_at(self) -> datetime:
-        return self._source_files_data_timestamp() + timedelta(days=1)
-
-    # TODO: Validate
-    @override
-    def update_source(self, source: Source, update_at: datetime) -> None:
-        if source.data_timestamp is None:
-            msg = "Cannot update source without a data timestamp."
-            raise ValueError(msg)
-        new_feed_file = self.new_video_episodes_file(source.data_timestamp)
-        new_feed_file.download_if_outdated(update_at)
-        self._process_new_episodes_files(source)
-        self.upsert_source(source.key)
-
-    # TODO: Validate
-    def _title_keys_from_plugin_files(self) -> list[str]:
-        self._download_if_outdated(self._plugin_files())
-        return [item.id for item in self.video_programs_file().items()]
-
-    # TODO: Validate
-    def _title_urls_from_plugin_files(self) -> list[str]:
-        return [
-            title_url(title_key) for title_key in self._title_keys_from_plugin_files()
-        ]
-
-    # TODO: Validate
-    @override
-    def create_initial_channel_records(self) -> None:
-        self.add_new_urls_to_channel(
-            "All Titles",
-            self._title_urls_from_plugin_files(),
-        )
-        self._feed_channel()
-        self._process_new_episodes_files(self._sources[self.plugin_name()])
-
-    # TODO: Validate
-    def _process_new_episodes_files(self, source: Source) -> None:
-        new_files = self._incomplete_files(
-            NewVideoEpisodes,
-            self.new_video_episodes_file,
-        )
-        for feed_file in new_files:
-            # Queueing the titles a file found commits, which lets go of every
-            # matched. Read back per file rather than once, so that a file after
-            # the first still recognises the titles already imported.
-            _cache = self._preload_sources(preload_titles=True).all()
-            logger.info(
-                "Processing new episodes file: {}",
-                feed_file.record_key,
-            )
-            new_title_ids: list[str] = []
-            for item in feed_file.items():
-                title_id = item.video_program.id
-                if title := Title.get_from_memory(self.session, source, title_id):
-                    logger.info("Matched title: {}", title.name or title_id)
-                    title.set_update_at(item.video.published_at)
-                else:
-                    new_title_ids.append(title_id)
-
-            self._queue_new_titles(new_title_ids)
-            feed_file.clear_status()
-
-    # TODO: Validate
-    def _queue_new_titles(self, title_ids: list[str]) -> None:
-        """Queue the titles a feed file named that are not imported yet."""
-        new_title_urls: list[str] = []
-        for title_id in dict.fromkeys(title_ids):
-            logger.info("Queueing new title: {}", title_id)
-            new_title_urls.append(title_url(title_id))
-
-        # Queued in one call so the whole feed file costs a single commit.
-        if new_title_urls:
-            channel = self._feed_channel()
-            add_urls_to_channel_import_queue(self.session, channel, new_title_urls)
-
-    # TODO: Validate
-    def _feed_channel(self) -> Channel:
-        return self.get_or_create_channel(
-            self.plugin_name(),
-            self._channel_description("All Titles"),
-        )
-
-    @override
-    def parse_url(self, url: str) -> ParsedURL:
-        if match := re.match(self._domains_regex() + TITLE_URL_REGEX, url):
-            title_key = match.group("title_key")
-            video_program_file = self.video_program_file(title_key)
-            self.raise_invalid_url_if_no_content(video_program_file, url)
-            return ParsedURL(title_key)
-
-        msg = f"Invalid {self.plugin_name()} URL: {url}"
-        raise InvalidURLError(msg)
-
+class NHKWorldUpsert(NHKWorldChannels, ABC):
     # TODO: Validate
     @override
     def _upsert_title(
@@ -187,6 +92,7 @@ class NHKWorld(NHKWorldBaseFiles, BaseImporter, AbstractPlugin, register=False):
 
         self._upsert_season(title, title_key, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
+        self.add_title_to_plugin_channels(title)
 
         return title
 
@@ -251,3 +157,71 @@ class NHKWorld(NHKWorldBaseFiles, BaseImporter, AbstractPlugin, register=False):
                     season_id=season.id,
                 ).upsert(season, episode)
                 episode.set_update_at(None)
+
+
+# TODO: Validate
+class NHKWorld(NHKWorldUpsert, AbstractPlugin, register=False):
+    # TODO: Add support for single episodes
+    # TODO: Don't hardcode the favicon URL
+    # TODO: Validate
+    @classmethod
+    @override
+    def favicon_url(cls) -> str:
+        return "https://www3.nhk.or.jp/nhkworld/common/site_images/nw_webapp.ico"
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def _domain(cls) -> str:
+        return "www3.nhk.or.jp"
+
+    # TODO: Validate
+    @classmethod
+    @override
+    def plugin_name(cls) -> str:
+        return "NHK World"
+
+    @classmethod
+    @override
+    def _url_regexes(cls) -> tuple[str, ...]:
+        return (TITLE_URL_REGEX,)
+
+    # TODO: Validate
+    @override
+    def _next_source_update_at(self) -> datetime:
+        return self._source_files_data_timestamp() + timedelta(days=1)
+
+    # TODO: Validate
+    @override
+    def update_source(self, source: Source, update_at: datetime) -> None:
+        latest_feed_file = self.latest_new_video_episodes_file()
+        feed_datetime = (
+            latest_feed_file.record_data_timestamp
+            if latest_feed_file
+            else tz_datetime.now()
+        )
+        feed_file = self.new_video_episodes_file(feed_datetime)
+        feed_file.download_if_outdated(update_at)
+        self._create_channel_records_from_incomplete_feed_files()
+        self._mark_new_titles_as_outdated(source, feed_file.items())
+        self.upsert_source(source.key)
+
+    # TODO: Validate
+    def _mark_new_titles_as_outdated(self, source: Source, items: list[Item]) -> None:
+        _cache = self._preload_sources(preload_titles=True).all()
+        for item in items:
+            title_id = item.video_program.id
+            if title := Title.get_from_memory(self.session, source, title_id):
+                logger.info("Matched title: {}", title.name or title_id)
+                title.set_update_at(item.video.published_at)
+
+    @override
+    def parse_url(self, url: str) -> ParsedURL:
+        if match := re.match(self._domains_regex() + TITLE_URL_REGEX, url):
+            title_key = match.group("title_key")
+            video_program_file = self.video_program_file(title_key)
+            self.raise_invalid_url_if_no_content(video_program_file, url)
+            return ParsedURL(title_key)
+
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)

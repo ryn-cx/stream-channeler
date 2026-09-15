@@ -8,9 +8,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from plugins.HiDive.constants import (
-    MOVIE_MEDIA_TYPE,
     RELEASE_DATE_PREFIX,
-    SERIES_MEDIA_TYPE,
 )
 
 if TYPE_CHECKING:
@@ -23,13 +21,6 @@ if TYPE_CHECKING:
 # TODO: Validate
 def build_url(path: str) -> str:
     return f"https://hidive.com/{path.lstrip('/')}"
-
-
-# TODO: Validate
-def title_url(key: str | int, media_type: str = SERIES_MEDIA_TYPE) -> str:
-    if media_type == MOVIE_MEDIA_TYPE:
-        return build_url(f"video/{key}")
-    return build_url(f"series/{key}")
 
 
 # TODO: Validate

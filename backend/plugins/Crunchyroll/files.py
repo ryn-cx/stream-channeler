@@ -41,9 +41,7 @@ from chirashi.series import Series as SeriesEndpoint
 from chirashi.series.models import SeriesModel
 from chirashi.similar_to import SimilarTo as SimilarToEndpoint
 from chirashi.similar_to.models import SimilarToModel
-from get_around import GetAround
 
-from app.config import settings
 from app.utils import tz_datetime
 from plugins.utils.base_plugin.files import (
     PagedEndpointFile,

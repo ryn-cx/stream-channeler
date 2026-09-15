@@ -83,14 +83,9 @@ class NewVideoEpisodes(PagedEndpointFile[VideoEpisodesModel]):
     def _endpoint(self) -> VideoEpisodesEndpoint:  # type: ignore[override]
         return naphki().video_episodes
 
-    # TODO: Consider moving this login into naphki
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        # Page 20 at a time (the API default) rather than the 100-entry pages
-        # get_all() uses. The initial baseline (to_datetime == now) stops after
-        # the first page, and day-to-day there are rarely more than a handful of
-        # new episodes, so a single page almost always covers the gap.
         return json.dumps(
             self._endpoint().download_until_datetime(
                 end_datetime=tz_datetime.fromisoformat(self.unique_identifier),

@@ -13,7 +13,7 @@ from plugins.Hulu.constants import (
     SERIES_URL_REGEX,
     HuluMediaType,
 )
-from plugins.Hulu.utils import title_url, title_urls
+from plugins.Hulu.utils import build_url, title_urls
 
 if TYPE_CHECKING:
     from wholoo.all_movies.models import AllMoviesModel
@@ -61,10 +61,10 @@ class HuluShared(HuluBaseFiles):
             for url in title_urls(page):
                 if match := re.search(SERIES_URL_REGEX, url):
                     series_key = match.group("title_key")
-                    urls[title_url(series_key, HuluMediaType.SERIES)] = None
+                    urls[build_url(f"{HuluMediaType.SERIES}/{series_key}")] = None
                 else:
                     movie_key = strict_search(MOVIE_URL_REGEX, url).group("title_key")
-                    urls[title_url(movie_key, HuluMediaType.MOVIE)] = None
+                    urls[build_url(f"{HuluMediaType.MOVIE}/{movie_key}")] = None
         return list(urls)
 
     # TODO: Validate

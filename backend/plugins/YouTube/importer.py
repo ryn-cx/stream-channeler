@@ -180,6 +180,7 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
         else:
             title_key = title.key
             title_update_at = title.update_at
+            self._preload_title(title.id, preload_episodes=True).all()
             season_update_ats = {
                 season.key: season.update_at for season in title.seasons
             }

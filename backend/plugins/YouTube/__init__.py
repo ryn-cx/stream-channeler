@@ -34,6 +34,13 @@ class YouTube(
     AbstractPlugin,
     register=True,
 ):
+    # TODO: Validate
+    @classmethod
+    @override
+    def specialized_updater(cls) -> bool:
+        return True
+
+    # TODO: Validate
     @override
     def _media_importer_from_title(self, title: Title) -> YouTubeImporter:
         if title.media_type == "YouTube Artist":
