@@ -1,8 +1,8 @@
 # TODO: Validate
 [dependency-groups]
 dev = [
-    "prek>=0.2.24,<1.0.0",
-    "zizmor>=1.25.2",
+    "prek>=0.5.2,<1.0.0",
+    "zizmor>=1.30.0",
 ]
 
 github-actions = [
