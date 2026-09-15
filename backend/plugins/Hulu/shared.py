@@ -14,7 +14,6 @@ from plugins.Hulu.constants import (
     HuluMediaType,
 )
 from plugins.Hulu.utils import title_url, title_urls
-from plugins.utils.base_plugin.channels import ChannelKeyURL
 
 if TYPE_CHECKING:
     from wholoo.all_movies.models import AllMoviesModel
@@ -43,12 +42,10 @@ class HuluShared(HuluBaseFiles):
         return "hulu.com"
 
     # TODO: Validate
-    def _create_initial_channel_records(self) -> None:
+    def create_initial_channel_records(self) -> None:
         self.add_new_urls_to_channel(
-            [
-                ChannelKeyURL("All Titles", url)
-                for url in self._title_urls_from_plugin_files()
-            ],
+            "All Titles",
+            self._title_urls_from_plugin_files(),
         )
 
     # TODO: Validate

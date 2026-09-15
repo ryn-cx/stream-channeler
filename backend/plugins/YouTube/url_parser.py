@@ -47,7 +47,6 @@ class YouTubeParsedURL(NamedTuple):
         if self.video_key is None:
             return ParsedURL(self.title_key, season_key=self.playlist_key)
         # The track is looked for in every release of the musician, since the URL
-        # named no release and the title holds one season for each of them.
         if self.musician_track:
             return ParsedURL(self.title_key, episode_key=self.video_key)
         return ParsedURL(

@@ -46,12 +46,6 @@ from app.tmdb_media.tmdb import (
 
 # TODO: Validate
 def _has_tmdb_title() -> ColumnElement[bool]:
-    """Whether TMDB holds any of the titles the outer `Title` is linked to.
-
-    Any of them rather than one picked out of them, since a listing that mixes
-    titles is as much linked to the second as of the first and an episode of
-    either is one there are TMDB episodes to match it against.
-    """
     tmdb_title = aliased(Title)
     return (
         select(TitleTmdbTitle.title_id)

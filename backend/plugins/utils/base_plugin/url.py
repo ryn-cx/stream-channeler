@@ -6,8 +6,6 @@ from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 
 
 class ParsedURL(NamedTuple):
-    """Holds the information that could be extracted from a URL."""
-
     title_key: str
     season_key: str | None = None
     episode_key: str | None = None

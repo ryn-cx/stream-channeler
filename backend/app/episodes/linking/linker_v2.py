@@ -6,11 +6,14 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from sqlalchemy.orm.attributes import set_committed_value
+
 from app.episodes.models import EpisodeTmdbEpisode
 from app.episodes.service.numbering import absolute_numbers
 from app.episodes.text_matching import TextMatcher
 
 if TYPE_CHECKING:
+    import uuid
     from collections.abc import Callable
 
     import numpy  # noqa: ICN001
@@ -276,9 +279,16 @@ def episodes_by_number(
 # TODO: Validate
 class EpisodeLinkerV2:
     # TODO: Validate
-    def __init__(self, session: Session, linked_title: Title) -> None:
+    def __init__(
+        self,
+        session: Session,
+        linked_title: Title,
+        reusable_links: dict[tuple[uuid.UUID, uuid.UUID], EpisodeTmdbEpisode]
+        | None = None,
+    ) -> None:
         self.session = session
         self.linked_title = linked_title
+        self.reusable_links = reusable_links if reusable_links is not None else {}
         self.episodes = [
             episode_record(episode, season)
             for season in linked_title.active_children
@@ -395,6 +405,19 @@ class EpisodeLinkerV2:
             if episode.model.tmdb_episode_validated_at is not None:
                 continue
             if episode.model.tmdb_episode_links:
+                continue
+            reused_link = self.reusable_links.pop(
+                (episode.model.id, tmdb_episode.model.id),
+                None,
+            )
+            if reused_link is not None:
+                if reused_link.note != episode.link_note:
+                    reused_link.note = episode.link_note
+                set_committed_value(
+                    episode.model,
+                    "tmdb_episode_links",
+                    [*episode.model.tmdb_episode_links, reused_link],
+                )
                 continue
             link = EpisodeTmdbEpisode(
                 episode_id=episode.model.id,

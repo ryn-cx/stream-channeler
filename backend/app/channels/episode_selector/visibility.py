@@ -61,7 +61,6 @@ def _either_but_not_both(
     first: ColumnElement[bool],
     second: ColumnElement[bool],
 ) -> ColumnElement[bool]:
-    """Whether exactly one of the two holds."""
     return or_(and_(first, ~second), and_(~first, second))
 
 
@@ -101,12 +100,6 @@ def blacklisted_on_channels_condition(
     channel_ids: Collection[UUID],
     now: datetime,
 ) -> ColumnElement[bool]:
-    """Whether one of the channels hides this episode without holding its title.
-
-    A title that is on the channel only to carry filters (`is_blacklist_only`)
-    contributes no episodes of its own; its entries exist to hide episodes that
-    another channel pulled in. An entry that has expired no longer hides anything.
-    """
     filter_only_title = aliased(ChannelTitle)
     filter_only_filter = aliased(ChannelEpisodeFilter)
     return (

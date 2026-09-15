@@ -13,7 +13,7 @@ import {
   type TmdbTitleOutput,
   TmdbTitlesService,
 } from "@/client"
-import { TITLES_MISSING_SOURCES_QUERY_KEY } from "@/components/AdminV2/titlesMissingSourcesQuery"
+import { UNMATCHED_TITLES_QUERY_KEY } from "@/components/AdminV2/unmatchedTitlesQuery"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -110,7 +110,7 @@ export function TmdbTitleField({
     queryClient.invalidateQueries({ queryKey: ["title-information", titleId] })
     queryClient.invalidateQueries({ queryKey: ["tmdb-title"] })
     queryClient.invalidateQueries({
-      queryKey: TITLES_MISSING_SOURCES_QUERY_KEY,
+      queryKey: UNMATCHED_TITLES_QUERY_KEY,
     })
   }
 

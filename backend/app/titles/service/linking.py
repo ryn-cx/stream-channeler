@@ -10,9 +10,9 @@ from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
 from loguru import logger
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import aliased, selectinload
 from sqlalchemy.orm.attributes import instance_state, set_committed_value
-from sqlmodel import Session, col, delete, select
+from sqlmodel import Session, col, delete, or_, select
 
 from app.channels.models import ChannelTitle
 from app.episodes.linking import EpisodeLinkerV2
@@ -88,6 +88,19 @@ def link_new_title_to_tmdb(session: Session, title: Title) -> None:
 
 
 # TODO: Validate
+def _remove_unmatched_for_plugin(
+    session: Session,
+    title: Title,
+    tmdb_title: Title,
+) -> None:
+    from app.titles.service.unmatched import (  # noqa: PLC0415
+        remove_plugin_unmatched_titles,
+    )
+
+    remove_plugin_unmatched_titles(session, tmdb_title.id, title.source.plugin.key)
+
+
+# TODO: Validate
 def link_unlinked_title_to_tmdb(
     session: Session,
     title: Title,
@@ -143,6 +156,7 @@ def link_unlinked_title_to_tmdb(
     )
     session.add(link)
     session.flush()
+    _remove_unmatched_for_plugin(session, title, tmdb_title)
     session.expire(title, ["tmdb_title_links", "is_linked"])
     _old_relink_episode(session, title)
     return link
@@ -160,17 +174,17 @@ def _old_relink_episode(
     session: Session,
     linked_title: Title,
 ) -> None:
-    _old_clear_tmdb_episode_links(
-        session,
-        _old_relinkable_episodes(session, linked_title),
-    )
-    linker = EpisodeLinkerV2(session, linked_title)
+    episodes = _old_relinkable_episodes(session, linked_title)
+    dropped_links = _old_clear_tmdb_episode_links(session, episodes)
+    linker = EpisodeLinkerV2(session, linked_title, dropped_links)
     with session.no_autoflush:
         linker.link_titles()
+    for link in dropped_links.values():
+        session.delete(link)
 
 
 # TODO: Validate
-def _old_relinkable_episodes(session: Session, title: Title) -> list[Episode]:
+def _title_episodes(session: Session, title: Title) -> list[Episode]:
     if "seasons" in instance_state(title).unloaded or any(
         "episodes" in instance_state(season).unloaded for season in title.seasons
     ):
@@ -185,6 +199,14 @@ def _old_relinkable_episodes(session: Session, title: Title) -> list[Episode]:
         episode
         for season in title.active_children
         for episode in season.active_children
+    ]
+
+
+# TODO: Validate
+def _old_relinkable_episodes(session: Session, title: Title) -> list[Episode]:
+    return [
+        episode
+        for episode in _title_episodes(session, title)
         if episode.tmdb_episode_validated_at is None
     ]
 
@@ -193,42 +215,22 @@ def _old_relinkable_episodes(session: Session, title: Title) -> list[Episode]:
 def _old_clear_tmdb_episode_links(
     session: Session,
     episodes: Sequence[Episode],
-) -> None:
+) -> dict[tuple[uuid.UUID, uuid.UUID], EpisodeTmdbEpisode]:
     _old_preload_tmdb_episode_links(session, episodes)
     # A link a `User` settled themselves is left where it is, so what is cleared
     # is only ever a guess an automatic match made.
-    kept_links = {
-        episode.id: [
+    dropped_links: dict[tuple[uuid.UUID, uuid.UUID], EpisodeTmdbEpisode] = {}
+    for episode in episodes:
+        kept_links = [
             link for link in episode.tmdb_episode_links if link.manual_tmdb_link
         ]
-        for episode in episodes
-    }
-    dropped_links = [
-        link
-        for episode in episodes
-        for link in episode.tmdb_episode_links
-        if not link.manual_tmdb_link
-    ]
-    if not dropped_links:
-        return
-
-    session.exec(
-        delete(EpisodeTmdbEpisode).where(
-            col(EpisodeTmdbEpisode.episode_id).in_(
-                [episode.id for episode in episodes],
-            ),
-            col(EpisodeTmdbEpisode.manual_tmdb_link).is_(False),
-        ),
-    )
-    for link in dropped_links:
-        if link in session:
-            session.expunge(link)
-    for episode in episodes:
-        set_committed_value(
-            episode,
-            "tmdb_episode_links",
-            kept_links[episode.id],
-        )
+        if len(kept_links) == len(episode.tmdb_episode_links):
+            continue
+        for link in episode.tmdb_episode_links:
+            if not link.manual_tmdb_link:
+                dropped_links[link.episode_id, link.tmdb_episode_id] = link
+        set_committed_value(episode, "tmdb_episode_links", kept_links)
+    return dropped_links
 
 
 # TODO: Validate
@@ -298,25 +300,6 @@ def _old_validate_titles(title: Title, tmdb_title: Title) -> None:
 
 
 # TODO: Validate
-def _old_link_linked_title(
-    title: Title,
-    tmdb_title: Title,
-    note: str,
-) -> TitleTmdbTitle:
-    # If the link already exists nothing needs to be done.
-    for tmdb_link in title.tmdb_title_links:
-        if tmdb_link.tmdb_title_id == tmdb_title.id:
-            return tmdb_link
-
-    return TitleTmdbTitle(
-        title_id=title.id,
-        tmdb_title_id=tmdb_title.id,
-        note=note,
-        manual_tmdb_link=is_manual_note(note),
-    )
-
-
-# TODO: Validate
 def old_link_title_by_tmdb_lookups(
     session: Session,
     unlinked_title: Title,
@@ -338,13 +321,22 @@ def old_link_title_to_tmdb(
 ) -> TitleTmdbTitle:
     """Link a title to TMDB then links the title's episodes to TMDB.
 
-    Will not remove any existing title links.
-    Will relink existing titles to try to find better matches."""
+    Will not remove any existing title links."""
     _old_validate_titles(title, tmdb_title)
     if not title.is_linked:
         return link_unlinked_title_to_tmdb(session, title, tmdb_title, note)
 
-    link = _old_link_linked_title(title, tmdb_title, note)
+    _remove_unmatched_for_plugin(session, title, tmdb_title)
+    for tmdb_link in title.tmdb_title_links:
+        if tmdb_link.tmdb_title_id == tmdb_title.id:
+            return tmdb_link
+
+    link = TitleTmdbTitle(
+        title_id=title.id,
+        tmdb_title_id=tmdb_title.id,
+        note=note,
+        manual_tmdb_link=is_manual_note(note),
+    )
     session.add(link)
     session.flush()
     session.expire(title, ["tmdb_title_links", "is_linked"])
@@ -358,30 +350,15 @@ def old_link_title_to_tmdb_title(
     website_title: Title,
     tmdb_title: Title,
 ) -> Title:
-    """Add an admin's chosen `tmdb_title` to what `website_title` stands for.
-
-    Added alongside any existing links rather than replacing them, since one page
-    can hold several titles. Removing one is `old_unlink_title_from_tmdb_title`.
-    The choice is locked so the next import cannot overrule it.
-    """
     if website_title.linked_title_links:
         message = "A title other titles are linked to cannot be linked to one itself."
         raise HTTPException(status_code=409, detail=message)
-
-    from app.sources.service.unmatched import (  # noqa: PLC0415
-        remove_plugin_unmatched_sources,
-    )
 
     old_link_title_to_tmdb(
         session,
         website_title,
         tmdb_title,
         note=f"{MANUAL_NOTE_PREFIX}Selection",
-    )
-    remove_plugin_unmatched_sources(
-        session,
-        tmdb_title.id,
-        website_title.source.plugin.key,
     )
     website_title.tmdb_title_validated_at = tz_datetime.now()
     session.add(website_title)
@@ -424,9 +401,6 @@ def old_import_linked_title_from_url(
     title_url: str,
 ) -> Title:
     """Import the title at `title_url` and link it to `tmdb_title`."""
-    from app.sources.service.unmatched import (  # noqa: PLC0415
-        remove_plugin_unmatched_sources,
-    )
     from plugins.utils.abstract_plugin import InvalidURLError  # noqa: PLC0415
     from plugins.utils.manage_plugins import get_plugin_from_url  # noqa: PLC0415
 
@@ -453,11 +427,6 @@ def old_import_linked_title_from_url(
             "Automatic: Import match",
         )
 
-    remove_plugin_unmatched_sources(
-        session,
-        tmdb_title.id,
-        plugin_class.plugin_name(),
-    )
     session.flush()
     session.expire(tmdb_title, ["linked_title_links"])
     imported_title_keys = {import_result.title.key for import_result in import_results}
@@ -568,19 +537,102 @@ def _old_unlink_episodes_from_dropped_tmdb_titles(
     session: Session,
     website_title: Title,
 ) -> None:
-    """Take every episode of `website_title` off a record no linked title holds."""
-    tmdb_title_ids = {tmdb_title.id for tmdb_title in website_title.tmdb_titles}
-    for season in website_title.active_children:
-        for episode in season.active_children:
-            for tmdb_episode_link in list(episode.tmdb_episode_links):
-                tmdb_episode = tmdb_episode_link.tmdb_episode
-                if tmdb_episode.season.title_id in tmdb_title_ids:
-                    continue
-                session.delete(tmdb_episode_link)
-            session.flush()
-            session.expire(episode, ["tmdb_episode_links", "is_linked"])
+    episodes = _title_episodes(session, website_title)
+    if not episodes:
+        return
 
-            if not episode.tmdb_episode_links:
-                episode.tmdb_episode_validated_at = None
-                session.add(episode)
+    tmdb_title_ids = {tmdb_title.id for tmdb_title in website_title.tmdb_titles}
+    episode_ids = [episode.id for episode in episodes]
+    kept_tmdb_episode_ids = (
+        select(col(Episode.id))
+        .join(Season, col(Season.id) == col(Episode.season_id))
+        .where(col(Season.title_id).in_(tmdb_title_ids))
+    )
+    session.exec(
+        delete(EpisodeTmdbEpisode)
+        .where(
+            col(EpisodeTmdbEpisode.episode_id).in_(episode_ids),
+            col(EpisodeTmdbEpisode.tmdb_episode_id).not_in(kept_tmdb_episode_ids),
+        )
+        .execution_options(synchronize_session=False),
+    )
+    still_linked_episode_ids = set(
+        session.exec(
+            select(col(EpisodeTmdbEpisode.episode_id)).where(
+                col(EpisodeTmdbEpisode.episode_id).in_(episode_ids),
+            ),
+        ).all(),
+    )
+    for episode in episodes:
+        session.expire(episode, ["tmdb_episode_links", "is_linked"])
+        if (
+            episode.id not in still_linked_episode_ids
+            and episode.tmdb_episode_validated_at is not None
+        ):
+            episode.tmdb_episode_validated_at = None
+            session.add(episode)
     session.flush()
+
+
+# TODO: Validate
+def _hand_settled_tmdb_title_ids(session: Session, title: Title) -> set[uuid.UUID]:
+    episode_ids = [episode.id for episode in _title_episodes(session, title)]
+    if not episode_ids:
+        return set()
+
+    tmdb_episode = aliased(Episode)
+    return set(
+        session.exec(
+            select(Season.title_id)
+            .join(tmdb_episode, col(Season.id) == col(tmdb_episode.season_id))
+            .join(
+                EpisodeTmdbEpisode,
+                col(tmdb_episode.id) == col(EpisodeTmdbEpisode.tmdb_episode_id),
+            )
+            .join(Episode, col(Episode.id) == col(EpisodeTmdbEpisode.episode_id))
+            .where(
+                col(EpisodeTmdbEpisode.episode_id).in_(episode_ids),
+                or_(
+                    col(EpisodeTmdbEpisode.manual_tmdb_link).is_(True),
+                    col(Episode.tmdb_episode_validated_at).is_not(None),
+                ),
+            ),
+        ).all(),
+    )
+
+
+# TODO: Validate
+def relink_title(session: Session, title: Title) -> None:
+    if title.tmdb_title_validated_at is not None:
+        return
+
+    matched_tmdb_titles = tmdb_titles_from_title(session, title)
+    if not matched_tmdb_titles:
+        return
+
+    matched_ids = {tmdb_title.id for tmdb_title in matched_tmdb_titles}
+    kept_ids = _hand_settled_tmdb_title_ids(session, title)
+    for tmdb_title_link in list(title.tmdb_title_links):
+        if tmdb_title_link.tmdb_title_id in matched_ids:
+            continue
+        if tmdb_title_link.manual_tmdb_link:
+            continue
+        if tmdb_title_link.tmdb_title_id in kept_ids:
+            continue
+        session.delete(tmdb_title_link)
+    session.flush()
+    session.expire(title, ["tmdb_title_links", "is_linked"])
+
+    linked_ids = {link.tmdb_title_id for link in title.tmdb_title_links}
+    for tmdb_title in matched_tmdb_titles:
+        if tmdb_title.id in linked_ids:
+            continue
+        old_link_title_to_tmdb(
+            session,
+            title,
+            tmdb_title,
+            "Automatic: Found match on TMDB",
+        )
+
+    _old_unlink_episodes_from_dropped_tmdb_titles(session, title)
+    _old_relink_episode(session, title)

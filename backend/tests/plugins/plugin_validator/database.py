@@ -73,11 +73,7 @@ def no_channel_initialization(
     with ExitStack() as stack:
         for plugin_class in plugin_classes:
             stack.enter_context(
-                patch.object(
-                    plugin_class,
-                    "_create_initial_channel_records",
-                    lambda _self: None,
-                ),
+                patch.object(plugin_class, "create_initial_channel_records"),
             )
         yield
 
@@ -214,12 +210,10 @@ class DatabaseMixin[PluginT: AbstractPlugin]:
 
     # TODO: Validate
     def stats_file_path(self) -> Path:
-        """Path to the file holding the stats of every test of the test class."""
         return self.files_directory_path() / "stats.json"
 
     # TODO: Validate
     def slow_stats_file_path(self) -> Path:
-        """Path to the file holding the stats of every test that got worse."""
         return self.files_directory_path() / "slow.json"
 
     # TODO: Validate

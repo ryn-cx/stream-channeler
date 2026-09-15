@@ -30,6 +30,11 @@ from app.tmdb_media.service.identifiers import (
     tmdb_record_ids_by_key,
     tmdb_title_ids_by_key,
 )
+from app.tools.selection import (
+    PluginSelection,
+    parse_selection,
+    selection_description,
+)
 from app.users.models import User
 from app.users.plugin_user import is_plugin_user
 from app.utils import tz_datetime
@@ -52,21 +57,32 @@ def run_forever(
     stop_event: threading.Event | None = None,
     *,
     skip_plugin_user_channels: bool = False,
+    selection: PluginSelection | None = None,
 ) -> None:
     stop_event = stop_event or threading.Event()
     while not stop_event.is_set():
         with Session(engine) as session:
-            import_queue(session, skip_plugin_user_channels=skip_plugin_user_channels)
+            import_queue(
+                session,
+                skip_plugin_user_channels=skip_plugin_user_channels,
+                selection=selection,
+            )
         if stop_event.wait(timeout=60):
             break
 
 
 # TODO: Validate
-def import_queue(session: Session, *, skip_plugin_user_channels: bool = False) -> None:
+def import_queue(
+    session: Session,
+    *,
+    skip_plugin_user_channels: bool = False,
+    selection: PluginSelection | None = None,
+) -> None:
     """Actually import the queue in separate threads for each plugin."""
     grouped = _group_pending_urls_by_plugin(
         session,
         skip_plugin_user_channels=skip_plugin_user_channels,
+        selection=selection or PluginSelection(),
     )
     total = sum(len(items) for _, items in grouped)
     if not total:
@@ -82,7 +98,10 @@ def import_queue(session: Session, *, skip_plugin_user_channels: bool = False) -
 
 
 # TODO: Validate
-def _get_plugin(url: str) -> type[AbstractPlugin] | None:
+def _get_plugin(
+    url: str,
+    plugin_key: str | None = None,
+) -> type[AbstractPlugin] | None:
     # `sorted_plugins` rather than the registry itself, which is only filled in
     # once something has imported the plugins. Nothing here can count on that
     # having happened: the queue is worked by a job that need never have served a
@@ -90,6 +109,8 @@ def _get_plugin(url: str) -> type[AbstractPlugin] | None:
     for plugin_class in sorted_plugins():
         # A plugin that imports no URL carries no pattern to match one against.
         if not plugin_class.implements("validate_and_import_url"):
+            continue
+        if plugin_key is not None and plugin_class.plugin_name() != plugin_key:
             continue
         if plugin_class.is_valid_url_format(url):
             return plugin_class
@@ -101,6 +122,7 @@ def _group_pending_urls_by_plugin(
     session: Session,
     *,
     skip_plugin_user_channels: bool = False,
+    selection: PluginSelection | None = None,
 ) -> list[tuple[type[AbstractPlugin], list[ChannelQueue]]]:
     by_plugin: list[tuple[type[AbstractPlugin], list[ChannelQueue]]] = []
     unmatched: list[ChannelQueue] = []
@@ -124,13 +146,14 @@ def _group_pending_urls_by_plugin(
             col(ChannelQueue.created_at).asc(),
         ),
     ).all()
+    plugin_key = (selection or PluginSelection()).plugin_key
     for item in pending:
-        if plugin_class := _get_plugin(item.url):
+        if plugin_class := _get_plugin(item.url, plugin_key):
             if by_plugin and by_plugin[-1][0] is plugin_class:
                 by_plugin[-1][1].append(item)
             else:
                 by_plugin.append((plugin_class, [item]))
-        elif item.status == URLStatus.PENDING:
+        elif plugin_key is None and item.status == URLStatus.PENDING:
             logger.warning(f"No valid plugin found for URL: {item.url}")
             item.status = URLStatus.FAILED
             item.note = "No valid plugin found."
@@ -189,23 +212,8 @@ def add_results_to_channel(
     results: list[URLImportResult],
     channel: Channel,
 ) -> None:
-    """Add the given import results to the channel.
-
-    A plugin says what a URL imported by the keys of the records it just wrote.
-    A channel holds the media itself, so each key is resolved to the row that
-    record is linked to first, and a result naming a record that reached no
-    canonical row is left for a later run.
-
-    A listing that mixes titles is linked to each of them, so it goes on the
-    channel as every title it brought in, each holding only the seasons and
-    episodes that belong to it. A title the result names nothing of is left off
-    when the result is a whitelist, since a whitelist naming none of a title's
-    episodes is a title with nothing to offer.
-    """
     canonical = _tmdb_record_ids_from_results(session, results)
-    existing_channel_titles = {
-        title.tmdb_title_id: title for title in channel.titles
-    }
+    existing_channel_titles = {title.tmdb_title_id: title for title in channel.titles}
     for result in results:
         tmdb_title_ids = canonical.titles.get(result.title.key, set())
         if not tmdb_title_ids:
@@ -323,12 +331,6 @@ def _titles_by_season(
     session: Session,
     season_ids: set[UUID],
 ) -> dict[UUID, set[UUID]]:
-    """Map each season to the titles holding it.
-
-    A season of a title is held by that title alone. A season a website filed
-    under its own listing is held by every title the listing is linked to, since
-    a listing that mixes titles is as much each of them as any other.
-    """
     if not season_ids:
         return {}
     titles: dict[UUID, set[UUID]] = defaultdict(set)
@@ -361,12 +363,6 @@ def _titles_by_episode(
     session: Session,
     tmdb_episode_ids: set[UUID],
 ) -> dict[UUID, set[UUID]]:
-    """Map each canonical episode to the titles holding it.
-
-    An episode of a title is held by that title alone. An episode a website filed
-    under its own listing is held by every title the listing is linked to, since
-    a listing that mixes titles is as much each of them as any other.
-    """
     if not tmdb_episode_ids:
         return {}
     titles: dict[UUID, set[UUID]] = defaultdict(set)
@@ -469,9 +465,7 @@ def _grant_on_channel_title(
     }
 
     for tmdb_episode_id in tmdb_episode_ids:
-        season_is_filtered = (
-            season_by_episode.get(tmdb_episode_id) in filtered_seasons
-        )
+        season_is_filtered = season_by_episode.get(tmdb_episode_id) in filtered_seasons
         if season_is_filtered != channel_title.is_whitelist:
             filtered_episodes.add(tmdb_episode_id)
         else:
@@ -489,7 +483,6 @@ def _seasons_from_episodes(
     session: Session,
     tmdb_episode_ids: set[UUID],
 ) -> dict[UUID, UUID]:
-    """Map each canonical episode to the season holding it."""
     if not tmdb_episode_ids:
         return {}
     rows = session.exec(
@@ -551,7 +544,12 @@ def _merge_filters(
 
 
 if __name__ == "__main__":
+    selected = parse_selection(
+        "Import the queued URLs as they come in.",
+        include_source=False,
+    )
     configure_logging(lambda message: tqdm.write(message, end=""))
     load_models()
-    run_forever()
+    logger.info(f"Importing the queue for {selection_description(selected)}")
+    run_forever(selection=selected)
     logger.info("Import queue process stopped")

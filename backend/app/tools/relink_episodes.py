@@ -32,7 +32,8 @@ def relink_episodes(session: Session, selection: PluginSelection | None = None) 
 
     progress = tqdm(linked_titles, unit="title")
     for title in progress:
-        progress.set_description(title.__str__())
+        plugin_key = title.source.plugin.key
+        progress.set_description(f"[{plugin_key}] {title.name or title.key}")
         _old_relink_episode(session, title)
         session.commit()
 

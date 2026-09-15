@@ -1,5 +1,4 @@
 # TODO: Validate
-"""What the channel service says a channel's title list holds."""
 
 import pytest
 from sqlmodel import Session

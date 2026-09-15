@@ -275,16 +275,6 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
 
     # TODO: Validate
     def selected_sources(self, session: Session) -> list[Source]:
-        """Return every source a test that works on one takes.
-
-        The existing validator picks one at random, which a test comparing
-        against a recorded dump cannot do, so the ones the class names are taken
-        instead and the first of each source is what it names unless it says
-        otherwise. Every source is covered rather than only the first, because a
-        plugin that splits its catalogue across sources - a free listing beside
-        a subscription one - holds different media in each, so a dump of one of
-        them says nothing about the other.
-        """
         return self.plugin_sources(session)[self.source_index :]
 
     # TODO: Validate
@@ -471,13 +461,6 @@ class ImportExistingURLTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
 
 # TODO: Validate
 class UpdatePluginTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
-    """Tests that updating the plugin refreshes what the plugin itself holds.
-
-    Kept out of `UpdateTests` because most plugins hold their media under a
-    `Source` and have nothing of their own for this to reach. It is for a plugin
-    whose records hang off the plugin row rather than off a source.
-    """
-
     # TODO: Validate
     def test_update_plugin(self, session_with_files: Session) -> None:
         self.import_url(session_with_files)

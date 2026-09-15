@@ -69,9 +69,3 @@ class SeasonEntity(MultipleArgEndpointFile[EntityModel]):
             UUID(self.entity_id),
             season_id=UUID(self.season_id),
         )
-
-    # Occurs when importing an invalid entity URL.
-    # TODO: Validate
-    @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, EntityNotFoundError)

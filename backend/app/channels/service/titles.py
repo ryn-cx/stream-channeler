@@ -61,20 +61,6 @@ def titles_by_tmdb_record_id(
     session: Session,
     tmdb_title_ids: Collection[UUID],
 ) -> dict[UUID, list[Title]]:
-    """Return every website's row for each canonical title in `tmdb_title_ids`.
-
-    A `ChannelTitle` names a canonical title rather than one website's row, so the
-    rows it stands for have to be looked up by the title they all stand for. A row
-    carrying one of that title's episodes is one of them whatever it is linked to,
-    since the episodes are the canonical title's own and carrying them is what
-    being a place to watch it means.
-
-    Every row linked to the canonical title is one of them as well. A row says
-    which canonical titles it stands for before anything of it has been imported,
-    and the episodes it does hold may be ones nothing was minted for them to
-    stand for, so the link is the only word there is on either count. A row that
-    mixes titles is linked to each of them alike and stands for every one.
-    """
     grouped: dict[UUID, list[Title]] = defaultdict(list)
     if not tmdb_title_ids:
         return grouped
@@ -126,7 +112,6 @@ def titles_by_tmdb_record_id(
         .distinct(),
     ).all()
 
-    # A title nothing else holds a record of is the row that is the record, and
     # that row is where it is watched, so it stands for itself and no link points
     # at it. TMDB's own rows are gathered by `tmdb_titles_by_id`, since
     # TMDB is not somewhere anything is watched.
@@ -245,17 +230,6 @@ def channels_with_title_membership(
     user: User,
     title: Title,
 ) -> list[ChannelTitleMembership]:
-    """Every `Channel` `user` owns, and whether it already holds `title`'s title.
-
-    The title is what a channel holds rather than the one website's row asked
-    about, so the row is read to the canonical titles it stands for first and a
-    channel holding any of them is holding the title. A row that stands for
-    nothing is the title itself, under its own id.
-
-    One query rather than one per channel: the picker only needs a yes or no of
-    each, which reading every channel's catalogue back answers the long way
-    round.
-    """
     tmdb_title_ids = set(title.tmdb_title_ids) or {title.id}
 
     carrying_channel_ids = set(
@@ -309,12 +283,6 @@ def _tmdb_titles(
     session: Session,
     tmdb_title_ids: set[uuid.UUID],
 ) -> dict[uuid.UUID, TitlePublic]:
-    """Return the title itself for each title the channel holds, keyed by it.
-
-    A title is named by whoever catalogued it, which is TMDB wherever TMDB has a
-    record of it, and that is the name it is read under rather than whatever any
-    one website called its own row for it.
-    """
     if not tmdb_title_ids:
         return {}
 
@@ -359,16 +327,6 @@ def _channel_title_stats(
     session: Session,
     tmdb_title_ids: set[uuid.UUID],
 ) -> dict[uuid.UUID, ChannelTitleStats]:
-    """Return what each title's seasons and episodes add up to.
-
-    The same season and episode are carried by every website holding the title,
-    so they are counted as the seasons and episodes they are rather than as the
-    records holding them. Which title an episode counts towards is the episode's
-    own answer, so a listing that mixes titles counts each of its episodes only
-    towards the title that episode belongs to. An episode nothing was minted for
-    it to be linked to has no such answer and counts towards the title its
-    website's listing is linked to, under that website's own season.
-    """
     if not tmdb_title_ids:
         return {}
 
@@ -429,13 +387,6 @@ def _standalone_title_stats(
     session: Session,
     tmdb_title_ids: set[uuid.UUID],
 ) -> Sequence[tuple[uuid.UUID, int, int]]:
-    """Return what a title that is its own listing holds.
-
-    A title nothing else has a record of is the row that is the record, and that row is
-    where it is watched, so its seasons and episodes are its own rather than
-    non-canonical rows of anything and no link reaches them. TMDB's rows are left out: a
-    title TMDB wrote is counted by what the websites carrying it hold.
-    """
     return session.exec(
         select(
             Season.title_id,
@@ -555,8 +506,7 @@ def _filter_only_tmdb_title_ids(
                     select(regular.tmdb_title_id)
                     .where(
                         col(regular.channel_id).in_(channel_ids),
-                        col(regular.tmdb_title_id)
-                        == col(ChannelTitle.tmdb_title_id),
+                        col(regular.tmdb_title_id) == col(ChannelTitle.tmdb_title_id),
                         col(regular.is_blacklist_only).is_(False),
                     )
                     .correlate(ChannelTitle),
@@ -605,9 +555,7 @@ def channel_titles_output(  # noqa: PLR0913 - the listing is paged and searched
     ).all()
     # A `ChannelTitle` is a title, so each one stands for every website's non-canonical
     # row of it.
-    tmdb_title_ids = {
-        channel_title.tmdb_title_id for channel_title in channel_titles
-    }
+    tmdb_title_ids = {channel_title.tmdb_title_id for channel_title in channel_titles}
     linked_titles = titles_by_tmdb_record_id(session, tmdb_title_ids)
 
     # A title no website carries has only TMDB's own non-canonical row of it, and
@@ -635,7 +583,6 @@ def channel_titles_output(  # noqa: PLR0913 - the listing is paged and searched
             source = title.source
             plugin = source.plugin
 
-            # A non-canonical row is read as the title the channel holds rather than as
             # any other title it is of, since a listing that mixes titles is on a
             # channel under whichever of them was added. That is what gathers the
             # non-canonical rows of one title into the one row, and what the row's own
@@ -696,9 +643,7 @@ def channel_titles_output(  # noqa: PLR0913 - the listing is paged and searched
         for group_channel_id in sorted(titles_by_channel, key=group_sort_key)
     ]
 
-    # Every title the channel holds rather than every title its non-canonical rows are
     # of, since a non-canonical row that mixes titles is listed under whichever of them
-    # the channel was told to hold.
     output.tmdb_sources = _tmdb_sources(session, tmdb_title_ids)
     output.tmdb_titles = _tmdb_titles(session, tmdb_title_ids)
     output.stats = _channel_title_stats(session, tmdb_title_ids)

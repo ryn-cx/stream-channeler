@@ -15,22 +15,6 @@ from sqlalchemy import select as sqlalchemy_select
 from sqlmodel import Session, SQLModel
 
 EXCLUDED_TABLES = frozenset({"file", "user"})
-"""The tables the dump leaves out.
-
-The stored test files are put into `file` before a test runs, so the table says
-what the store holds rather than what the run did, and topping the store up for
-one test would leave every other test's recording out of date.
-
-`user` is the account every plugin runs as and nothing a run produces. What is
-stored of it is a password hash, which is salted afresh every time it is written
-and so is a different value on every run no matter that the password never
-changed.
-
-An excluded table is still read, since a row that is dumped can point at one of
-its rows and what an id points at is written as that row's key. Only the columns
-that name a row are read, the content of a stored file being no use to anybody
-and a great deal of it.
-"""
 
 _ID_COLUMN = "id"
 
@@ -45,12 +29,6 @@ _MEDIA_TREE = (
     ("title", "season", "title_id", "seasons"),
     ("source", "title", "source_id", _TITLES_FIELD),
 )
-"""What holds what, from the bottom up, and the column that says which one.
-
-Read in this order so that a row is written inside its parent with its own
-children already inside it. The sources are left until after the empty ones have
-been dropped, which cannot be told until the titles are in place.
-"""
 
 _NESTED_TABLES = frozenset({"source", "title", "season", "episode"})
 """The tables written inside their parent rather than as a list of their own."""
@@ -73,7 +51,6 @@ type KeyById = dict[uuid.UUID, str]
 
 # TODO: Validate
 def _dump_value(value: object, rows_by_id: RowsById, keys: KeyById) -> object:
-    """Return `value` as something JSON holds and two runs write the same way."""
     if isinstance(value, uuid.UUID):
         return _key_from(value, rows_by_id, keys)
     if isinstance(value, datetime):
@@ -215,13 +192,6 @@ def _has_titles(dumped_source: RowValues) -> bool:
 
 # TODO: Validate
 def database_json(session: Session) -> str:
-    """Return the whole database, bar the excluded tables, as its stored text.
-
-    The media is written as the tree it is - a plugin holding its sources, each
-    holding its titles, and so on down to the episodes - rather than as one list
-    per table, so what a run produced is read where it belongs rather than looked
-    up by the key it points at.
-    """
     tables = _read_tables(session)
     rows_by_id = _rows_by_id(tables)
     keys: KeyById = {}

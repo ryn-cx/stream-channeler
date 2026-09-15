@@ -59,12 +59,6 @@ from app.users.models import User
 
 # TODO: Validate
 def _tmdb_episode_id(session: Session, episode_id: UUID) -> UUID | None:
-    """Return the canonical episode `episode_id` stands for, which a filter names.
-
-    A row standing for nothing is the episode itself, so it names itself. A row
-    standing for more than one names none of them, since a filter holds one
-    episode and there is no saying which of them was meant.
-    """
     tmdb_link = tmdb_episode_link()
     named = session.exec(
         select(tmdb_episode_id_column(Episode, tmdb_link))  # type: ignore[call-overload]
@@ -124,12 +118,6 @@ class _EpisodeListingColumns(NamedTuple):
 
 # TODO: Validate
 def _episode_listing_columns() -> _EpisodeListingColumns:
-    """Return what an `Episode` row is listed as, as columns to select or filter on.
-
-    A row standing for exactly one episode is listed as that episode and under
-    the season holding it; a row standing for none or for several answers for
-    itself, since neither of the others is an episode it can be folded into.
-    """
     link = tmdb_episode_link()
     tmdb_episode = aliased(Episode)
     return _EpisodeListingColumns(
@@ -253,14 +241,6 @@ def _title_episode_ids(
     session: Session,
     tmdb_title_id: uuid.UUID,
 ) -> set[uuid.UUID]:
-    """Return the episodes the title itself holds, as against a website's own.
-
-    A website files seasons under a title the title has no record of, and a
-    canonical season is minted for each so its episodes have somewhere to hang,
-    which leaves rows under the title that the title does not hold. They are
-    told apart by who issued the season, the way `EpisodeQueryBuilder` tells
-    them apart.
-    """
     return set(session.exec(_title_episode_id_query(tmdb_title_id)).all())
 
 

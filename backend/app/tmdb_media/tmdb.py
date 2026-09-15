@@ -79,17 +79,11 @@ def get_tmdb_id(key: str) -> int:
 
 # TODO: Validate
 def is_tmdb_key(key: str | None) -> bool:
-    """Return whether `key` names a record TMDB holds.
-
-    The level is not checked, since a canonical table only ever holds rows of
-    its own level.
-    """
     return bool(key) and key.startswith(f"{TMDB_KEY_PREFIX} ")
 
 
 # TODO: Validate
 def tmdb_key_clause(key_column: ColumnElement[str | None]) -> ColumnElement[bool]:
-    """Return the filter matching the rows TMDB holds."""
     return key_column.like(TMDB_KEY_LIKE)
 
 

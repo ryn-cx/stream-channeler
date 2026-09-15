@@ -38,6 +38,7 @@ from plugins.TMDB.utils import (
     parse_release_year,
     thumbnail_url,
     tmdb_url,
+    watch_provider_names,
 )
 from plugins.utils.abstract_plugin import (
     InvalidURLError,
@@ -71,6 +72,30 @@ def runtime_in_seconds(runtime: int | None) -> int | None:
 # TODO: Validate
 class TMDBImporter(TMDBShared, BaseImporter, ABC):
     # TODO: Validate
+    def _record_unmatched_providers(
+        self,
+        title: Title,
+        watch_providers: Any,  # noqa: ANN401 - One of the watch providers models.
+    ) -> None:
+        """Write down the services carrying `title` that nothing here carries.
+
+        Read on every import rather than once, since which services carry a
+        title is the half of this that changes, and the file it is read from is
+        downloaded with the rest of the title's either way.
+        """
+        # Imported here because the service reaches every plugin to ask which of
+        # them carries a provider, and this is one of them.
+        from app.titles.service.unmatched import (  # noqa: PLC0415
+            record_unmatched_providers,
+        )
+
+        record_unmatched_providers(
+            self.session,
+            title,
+            watch_provider_names(watch_providers),
+        )
+
+    # TODO: Validate
     @override
     def import_url(self, url: str) -> list[URLImportResult]:
         media_info = self.parse_url(url)
@@ -88,8 +113,6 @@ class TMDBImporter(TMDBShared, BaseImporter, ABC):
 
 # TODO: Validate
 class TMDBSeries(TMDBImporter):
-    """Reads a TMDB series into records of TMDB's own."""
-
     # TODO: Validate
     @override
     def _season_keys_from_title_files(self, title_key: str) -> list[str]:
@@ -219,6 +242,10 @@ class TMDBSeries(TMDBImporter):
         self._upsert_seasons(title, title_key, tmdb_tv_title_id, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
         self._set_title_update_frequency(title)
+        self._record_unmatched_providers(
+            title,
+            self.tv_series_watch_providers_file(tmdb_tv_title_id).parsed(),
+        )
         return title
 
     # TODO: Validate
@@ -464,6 +491,10 @@ class TMDBMovie(TMDBImporter):
             title.set_update_at(None)
 
         self._upsert_season(title, title_key, tmdb_movie_id, force=force)
+        self._record_unmatched_providers(
+            title,
+            self.movies_watch_providers_file(tmdb_movie_id).parsed(),
+        )
         return title
 
     # TODO: Validate

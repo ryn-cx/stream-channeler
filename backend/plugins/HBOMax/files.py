@@ -68,11 +68,6 @@ class SeasonFile(MultipleArgEndpointFile[ShowModel]):
     def _download_file(self) -> str:
         return self._endpoint().download(self.title_id, self.season_number)
 
-    # TODO: Validate
-    @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, ShowNotFoundError)
-
 
 # TODO: Validate
 class MovieFile(SingleArgEndpointFile[MovieModel]):

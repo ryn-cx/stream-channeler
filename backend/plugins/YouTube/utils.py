@@ -75,7 +75,6 @@ def is_video_key(key: str) -> bool:
 
 # # TODO: Validate
 def is_channel_key(key: str) -> bool:
-    """Report whether a key belongs to a channel rather than to what one holds."""
     return not (
         is_video_key(key)
         # or is_title_key(key)

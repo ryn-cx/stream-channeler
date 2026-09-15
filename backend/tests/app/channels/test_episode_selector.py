@@ -33,7 +33,6 @@ def owner(session_scoped_session: Session) -> User:
 # TODO: Validate
 @pytest.fixture
 def channel(session_scoped_session: Session, owner: User) -> Channel:
-    """Build a channel holding one episode, which each test watches or does not."""
     channel = create_random_channel(session_scoped_session, user=owner.id)
     channel_title = create_random_channel_title(
         session_scoped_session,

@@ -538,7 +538,6 @@ class EpisodeList(MultipleArgEndpointFile[DetailWidgetsModel]):
 
     # TODO: Validate
     def episodes(self) -> list[AmazonEpisode]:
-        """Return the episodes this page holds."""
         episode_list = self.parsed().widgets.episode_list
         return [
             episode_from_widget(episode)

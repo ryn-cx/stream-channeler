@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, override
 
 from app.files.models import File
+from app.utils import tz_datetime
 from plugins.HiDive.files import (
     Schedule,
     Search,
@@ -58,4 +59,4 @@ class HiDiveBaseFiles(BasePlugin):
     def _source_files(self) -> Sequence[Schedule]:
         if file := self.get_latest_schedule_file():
             return [file]
-        return []
+        return [self.schedule_file(tz_datetime.now())]

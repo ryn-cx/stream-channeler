@@ -52,13 +52,6 @@ def channel_attribution(
     user: User | None,
     main_channel: Channel,
 ) -> dict[UUID, UUID]:
-    """Map every channel a read covers to the channel it was added through.
-
-    A combined channel can combine further ones, and an episode from a channel
-    that deep reads as belonging to whichever channel was added here rather than
-    to the one holding it, so a grandchild's episodes are its parent's. A channel
-    reachable through two of them belongs to the first that reaches it.
-    """
     attribution = {main_channel.id: main_channel.id}
     # The whole level is read at once rather than a walk per child, so the depth of
     # the tree rather than its width is what this costs.
@@ -110,12 +103,6 @@ def resolve_channel_ids(
 
 # TODO: Validate
 def in_a_user_channel() -> ColumnElement[bool]:
-    """EXISTS clause requiring the outer `Title` to be on a `User`'s channel.
-
-    A channel a plugin owns holds everything that plugin carries, so it says
-    nothing about whether anybody wants the title; only a channel somebody made
-    does.
-    """
     channel_owner = aliased(User)
     return (
         select(ChannelTitle.channel_id)

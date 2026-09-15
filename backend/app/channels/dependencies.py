@@ -12,7 +12,6 @@ from app.channels.models import Channel, ChannelQueue, ChannelTitle
 from app.media.service.records import editable_record, existing_record, readable_record
 
 
-# A channel holds a canonical title rather than any one website's row for it, so
 # the row on the channel is named by the canonical title and nothing else. A row a
 # website filed two titles under stands for each of them, and naming the channel's
 # entry by it would leave the two entries indistinguishable.

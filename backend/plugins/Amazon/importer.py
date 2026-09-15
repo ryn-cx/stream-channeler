@@ -23,7 +23,6 @@ from plugins.Amazon.constants import (
 from plugins.Amazon.shared import AmazonShared
 from plugins.Amazon.utils import AmazonSeason, detail_url, parse_date
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin.channels import ChannelKeyURL
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import ParsedURL
 
@@ -171,17 +170,14 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
             channel_keys.append(PURCHASE_SOURCE_SUFFIX)
         channel_keys.extend(page.genres())
 
-        channel_key_urls = [
-            ChannelKeyURL(channel_key, title.url)
-            for channel_key in dict.fromkeys(channel_keys)
-        ]
-        self.add_new_urls_to_channel(channel_key_urls)
-        self.add_new_urls_to_channel(self._related_channel_key_urls(title.key))
+        for channel_key in dict.fromkeys(channel_keys):
+            self.add_new_urls_to_channel(channel_key, [title.url])
+        self.add_new_urls_to_channel("All Titles", self._related_urls(title.key))
 
     # TODO: Validate
-    def _related_channel_key_urls(self, title_key: str) -> list[ChannelKeyURL]:
+    def _related_urls(self, title_key: str) -> list[str]:
         return [
-            ChannelKeyURL("All Titles", detail_url(compact_key))
+            detail_url(compact_key)
             for compact_key in self.detail_file(title_key).related_prime_keys()
         ]
 

@@ -116,7 +116,6 @@ def test_deleting_the_episode_leaves_the_watch_behind(
 
     function_scoped_session.delete(episode)
     function_scoped_session.flush()
-    # The column is cleared by the database, so what the session is holding is
     # stale until it goes back for it.
     function_scoped_session.expire_all()
 

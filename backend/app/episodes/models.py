@@ -300,13 +300,6 @@ class Episode(BaseEpisode, ChildMediaMixin[Season, Never], table=True):
         existing_record: Self | None,
         protected_keys: set[str] | None = None,
     ) -> Self:
-        """Upsert the `Episode`, keeping a locked the episode a `User` chose intact.
-
-        `tmdb_episode_locked` says who settled the links, and is always
-        protected so that a later import never unsettles them. The links
-        themselves are rows of their own and are no part of what an upsert
-        writes, so nothing here has to hold them off.
-        """
         protected_keys = set(protected_keys or ()) | {
             "tmdb_episode_validated_at",
             "tmdb_note",

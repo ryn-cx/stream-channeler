@@ -2,7 +2,6 @@
 """Source schemas."""
 
 import uuid
-from datetime import datetime
 
 from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
@@ -54,19 +53,3 @@ class SourcesPublic(BaseModel):
     total_count: int
     filtered_count: int
     is_server_side: bool
-
-
-# TODO: Validate
-class UnmatchedSourceOutput(BaseModel):
-    id: uuid.UUID
-    provider_name: str
-    plugin_key: str | None
-    created_at: datetime
-    modified_at: datetime
-    title_id: uuid.UUID
-    title_name: str | None
-
-
-# TODO: Validate
-class UnmatchedSourceImport(BaseModel):
-    url: str = Field(min_length=1)

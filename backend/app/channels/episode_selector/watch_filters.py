@@ -48,7 +48,6 @@ EPISODE_LAST_WATCHED_SUBQUERY = "episode_last_watched"
 EPISODE_LAST_WATCH_COMPLETED_COLUMN = "episode_last_watch_completed_date"
 EPISODE_LAST_WATCH_INCOMPLETE_COLUMN = "episode_last_watch_incomplete_date"
 
-# Maps each last-watched sort field to the subquery column holding its latest
 # watch date. Aggregated per episode (not per title) so an episode is ranked by
 # its own watch history. Completed = verified watches; incomplete = unverified
 # (partial) watches.

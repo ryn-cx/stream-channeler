@@ -11,10 +11,9 @@ from loguru import logger
 from app.channels.service.import_queue import add_urls_to_channel_import_queue
 from app.media.media_type import TMDBMediaType
 from app.sources.models import Source
-from app.utils import tz_datetime
 from plugins.HiDive.base_files import HiDiveBaseFiles
-from plugins.HiDive.files import Schedule
 from plugins.HiDive.constants import MOVIE_MEDIA_TYPE, SERIES_MEDIA_TYPE
+from plugins.HiDive.files import Schedule
 from plugins.HiDive.utils import (
     card_title_name,
     element_release_date,
@@ -24,6 +23,8 @@ from plugins.HiDive.utils import (
 )
 
 if TYPE_CHECKING:
+    from datetime import datetime
+
     from app.channels.models import Channel
 
 
@@ -53,22 +54,8 @@ class HiDiveShared(HiDiveBaseFiles):
 
     # TODO: Validate
     @override
-    def _upsert_source(self, source_key: str) -> Source:
-        if not (latest_schedule_file := self.get_latest_schedule_file()):
-            latest_schedule_file = self.schedule_file(tz_datetime.now())
-        latest_schedule_file.download_if_outdated()
-        data_timestamp = latest_schedule_file.record_data_timestamp
-
-        existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
-        source = Source(
-            key=source_key,
-            favicon_url=self.favicon_url(),
-            link_to_tmdb=self._link_to_tmdb(),
-            data_timestamp=data_timestamp,
-            plugin_id=self.plugin.id,
-        ).upsert(self.plugin, existing_source)
-        source.set_update_at(data_timestamp + timedelta(days=1))
-        return source
+    def _next_source_update_at(self) -> datetime:
+        return self._source_files_data_timestamp() + timedelta(days=1)
 
     # TODO: Validate
     def _process_new_schedule_files(self, source: Source) -> None:
@@ -77,7 +64,6 @@ class HiDiveShared(HiDiveBaseFiles):
             self.schedule_file,
         ):
             # Queueing the titles a file found commits, which lets go of every
-            # title read for it, and a title nothing holds is not in memory to be
             # matched. Read back per file rather than once, so that a file after
             # the first still recognises the titles already imported.
             _cache = self._preload_sources(preload_seasons=True).all()
@@ -149,12 +135,6 @@ class HiDiveShared(HiDiveBaseFiles):
 
     # TODO: Validate
     def _schedule_channel(self) -> Channel:
-        """Return the plugin owned channel every HiDive title is queued into.
-
-        HiDive's schedule only reaches forward, so a title drops off it once it
-        has aired and the channel is what keeps hold of the whole run. It is
-        created the first time a title is found rather than by hand.
-        """
         return self.get_or_create_channel(
             self.plugin_name(),
             self._channel_description("All Titles"),

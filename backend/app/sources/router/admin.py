@@ -13,34 +13,19 @@ from app.auth.dependencies import (
     get_current_active_superuser,
 )
 from app.plugins.models import Plugin
-from app.schemas import Message, ReadOptions
+from app.schemas import ReadOptions
 from app.service.responses import list_response
-from app.sources.dependencies import ExistingSource, ExistingUnmatchedSource
+from app.sources.dependencies import ExistingSource
 from app.sources.models import Source
 from app.sources.schemas import (
     SourceListPublic,
     SourcePublic,
     SourcesPublic,
-    UnmatchedSourceImport,
-    UnmatchedSourceOutput,
-)
-from app.sources.service.unmatched import (
-    delete_unmatched_source,
-    ignore_unmatched_source,
-    import_unmatched_source,
-    list_unmatched_sources,
 )
 
 sources_router = APIRouter(
     prefix="/sources",
     tags=["sources"],
-    dependencies=[Depends(get_current_active_superuser)],
-)
-
-
-unmatched_sources_router = APIRouter(
-    prefix="/unmatched-sources",
-    tags=["unmatched sources"],
     dependencies=[Depends(get_current_active_superuser)],
 )
 
@@ -75,42 +60,5 @@ def get_source(source: ExistingSource) -> Source:
     return source
 
 
-# TODO: Validate
-@unmatched_sources_router.get("")
-def admin_get_unmatched_sources(
-    session: SessionDep,
-) -> list[UnmatchedSourceOutput]:
-    return list_unmatched_sources(session)
-
-
-# TODO: Validate
-@unmatched_sources_router.post("/{unmatched_source_id}/import")  # noqa: FAST003 - Used by ExistingUnmatchedSource.
-def admin_import_unmatched_source(
-    session: SessionDep,
-    unmatched_source: ExistingUnmatchedSource,
-    import_input: UnmatchedSourceImport,
-) -> Message:
-    return import_unmatched_source(session, unmatched_source, import_input)
-
-
-# TODO: Validate
-@unmatched_sources_router.post("/{unmatched_source_id}/ignore")  # noqa: FAST003 - Used by ExistingUnmatchedSource.
-def admin_ignore_unmatched_source(
-    session: SessionDep,
-    unmatched_source: ExistingUnmatchedSource,
-) -> Message:
-    return ignore_unmatched_source(session, unmatched_source)
-
-
-# TODO: Validate
-@unmatched_sources_router.delete("/{unmatched_source_id}")  # noqa: FAST003 - Used by ExistingUnmatchedSource.
-def admin_delete_unmatched_source(
-    session: SessionDep,
-    unmatched_source: ExistingUnmatchedSource,
-) -> Message:
-    return delete_unmatched_source(session, unmatched_source)
-
-
 router = APIRouter()
 router.include_router(sources_router)
-router.include_router(unmatched_sources_router)

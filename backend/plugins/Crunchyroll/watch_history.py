@@ -6,7 +6,7 @@ from typing import override
 
 from app.utils import tz_datetime
 from app.watches.schemas import WatchImportResult
-from plugins.Crunchyroll.importer import CrunchyrollAnimeImporter
+from plugins.Crunchyroll.anime_importer import CrunchyrollAnimeImporter
 from plugins.Crunchyroll.shared import CrunchyrollShared
 from plugins.utils.base_plugin.watch_history import (
     BaseWatchHistoryMixin,

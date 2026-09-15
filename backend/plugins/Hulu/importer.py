@@ -12,6 +12,7 @@ from app.tmdb_media.keys import watch_identifier
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.Hulu.constants import (
     MOVIE_URL_REGEX,
+    RECOMMENDATIONS_TOPIC,
     SERIES_URL_REGEX,
     VIDEO_URL_REGEX,
     HuluMediaType,
@@ -19,8 +20,8 @@ from plugins.Hulu.constants import (
 from plugins.Hulu.shared import HuluShared
 from plugins.Hulu.utils import (
     build_season_key,
-    collection_channel_key_urls,
     collection_season_key,
+    collection_urls,
     episode_url,
     image_url,
     is_collection_season_key,
@@ -35,7 +36,6 @@ from plugins.Hulu.utils import (
     watch_components,
 )
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin.channels import ChannelKeyURL
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import ParsedURL
 
@@ -103,7 +103,7 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
                 source_key = self._channel_name(network)
 
         if source_key not in self._sources:
-            self._sources[source_key] = self._upsert_source(source_key)
+            self._sources[source_key] = self.upsert_source(source_key)
 
         return self._sources[source_key]
 
@@ -232,12 +232,11 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
             network, _ = plan
             channel_keys.append(network)
         channel_keys.extend(details.entity.genre_names)
-        channel_key_urls = [
-            ChannelKeyURL(channel_key, title.url) for channel_key in channel_keys
-        ]
-        self.add_new_urls_to_channel(channel_key_urls)
+        for channel_key in channel_keys:
+            self.add_new_urls_to_channel(channel_key, [title.url])
         self.add_new_urls_to_channel(
-            collection_channel_key_urls(self._title_components(title.key)),
+            RECOMMENDATIONS_TOPIC,
+            collection_urls(self._title_components(title.key)),
         )
 
 

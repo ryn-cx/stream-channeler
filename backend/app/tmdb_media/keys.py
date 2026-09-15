@@ -1,11 +1,4 @@
 # TODO: Validate
-"""What a canonical row's `key` says, and how to read it back.
-
-A canonical row is named by one namespaced string rather than by columns of its
-own. "YouTube dQw4w9WgXcQ" is a video only YouTube knows about; "TMDB tv 1399" is
-a record TMDB holds. The first word says who issued the key, so no two sources
-can collide on one.
-"""
 
 from sqlalchemy import ColumnElement, func
 
@@ -33,14 +26,4 @@ def same_issuer_clause(
     first: ColumnElement[str],
     second: ColumnElement[str],
 ) -> ColumnElement[bool]:
-    """Return the filter matching two keys that were issued by the same source.
-
-    A canonical title's own catalogue is the run of records whoever issued the
-    title issued, so a row a website minted under a title TMDB issued is a record
-    of the website's rather than one of the title's own. A website carries an
-    episode the title has no record of - an extra it filed under the season, a
-    film it sells as part of the series - and a canonical row is minted for it
-    so the row has something to hang off, but the title it was filed under
-    still does not hold it.
-    """
     return key_issuer(first) == key_issuer(second)

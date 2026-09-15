@@ -2,19 +2,19 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 
-import type { UnmatchedSourceOutput } from "@/client"
-import { UnmatchedSourcesService } from "@/client"
+import type { UnmatchedTitleOutput } from "@/client"
+import { UnmatchedTitlesService } from "@/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
-import { UNMATCHED_SOURCES_QUERY_KEY } from "./unmatchedSourcesQuery"
+import { UNMATCHED_TITLES_QUERY_KEY } from "./unmatchedTitlesQuery"
 
 // TODO: Validate
-export function UnmatchedSourceImportForm({
-  unmatchedSource,
+export function UnmatchedTitleImportForm({
+  unmatchedTitle,
 }: {
-  unmatchedSource: UnmatchedSourceOutput
+  unmatchedTitle: UnmatchedTitleOutput
 }) {
   const [url, setUrl] = useState("")
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -22,12 +22,12 @@ export function UnmatchedSourceImportForm({
 
   const importMutation = useMutation({
     mutationFn: () =>
-      UnmatchedSourcesService.adminImportUnmatchedSource({
-        unmatchedSourceId: unmatchedSource.id,
+      UnmatchedTitlesService.adminImportUnmatchedTitle({
+        unmatchedTitleId: unmatchedTitle.id,
         requestBody: { url },
       }),
     onSuccess: () => {
-      showSuccessToast(`Imported from ${unmatchedSource.provider_name}`)
+      showSuccessToast(`Imported from ${unmatchedTitle.provider_name}`)
       setUrl("")
     },
     onError: (error: unknown) =>
@@ -35,8 +35,11 @@ export function UnmatchedSourceImportForm({
         showErrorToast,
         error as Parameters<typeof handleError>[0],
       ),
-    onSettled: () =>
-      queryClient.invalidateQueries({ queryKey: UNMATCHED_SOURCES_QUERY_KEY }),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: UNMATCHED_TITLES_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: ["titles"] })
+      queryClient.invalidateQueries({ queryKey: ["episodes"] })
+    },
   })
 
   return (
@@ -52,7 +55,7 @@ export function UnmatchedSourceImportForm({
       <Input
         value={url}
         onChange={(event) => setUrl(event.target.value)}
-        placeholder={`${unmatchedSource.provider_name} URL`}
+        placeholder={`${unmatchedTitle.provider_name} URL`}
         className="h-8 w-64"
       />
       <Button

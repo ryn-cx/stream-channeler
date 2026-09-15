@@ -40,10 +40,8 @@ from app.watches.schemas import (
 )
 
 # The episode a watch was recorded against, reached through the id the watch
-# holds.
 WatchedEpisode = aliased(Episode)
 
-# The row carrying the identifier a watch holds, which is the non-canonical row that
 # played it. Reads read it back to the episode that non-canonical row is of, so a watch
 # counts across every source carrying that episode and goes on counting once the
 # non-canonical row it was made against is gone.

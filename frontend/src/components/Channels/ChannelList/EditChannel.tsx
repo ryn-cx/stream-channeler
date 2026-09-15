@@ -27,6 +27,7 @@ const EditChannel = ({ channel, showLabel }: EditChannelProps) => {
           channel={channel}
           open={open}
           onOpenChange={setOpen}
+          showDelete
         />
       )}
     </>

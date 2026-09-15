@@ -12,14 +12,18 @@ from app.auth.dependencies import (
     SuperUser,
     get_current_active_superuser,
 )
+from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
-from app.schemas import ReadOptions
+from app.schemas import Message, ReadOptions
 from app.service.responses import list_response
 from app.sources.models import Source
-from app.titles.dependencies import AdminTmdbTitle, ExistingTitle
+from app.titles.dependencies import (
+    AdminTmdbTitle,
+    ExistingTitle,
+    ExistingUnmatchedTitle,
+)
 from app.titles.models import Title
 from app.titles.schemas import (
-    MissingSourceTitleOutput,
     TitleImportUrlInput,
     TitleListPublic,
     TitlePublic,
@@ -29,6 +33,9 @@ from app.titles.schemas import (
     TmdbEpisodeGroupOption,
     TmdbTitleOutput,
     TmdbTitlesPublic,
+    UnmatchedTitleImport,
+    UnmatchedTitleReadOptions,
+    UnmatchedTitlesPublic,
     UnvalidatedTitleOutput,
 )
 from app.titles.service.linking import (
@@ -42,11 +49,16 @@ from app.titles.service.linking import (
 from app.titles.service.service import (
     _title_output,
     force_update_title,
-    list_titles_missing_sources,
     list_tmdb_episode_groups,
     list_unvalidated_titles,
     update_title_record,
     validate_title,
+)
+from app.titles.service.unmatched import (
+    delete_unmatched_title,
+    ignore_unmatched_title,
+    import_unmatched_title,
+    list_unmatched_titles,
 )
 from app.tmdb_media.filters import is_not_linked
 from app.tmdb_media.read import tmdb_list_response
@@ -63,6 +75,13 @@ tmdb_titles_router = APIRouter(
 titles_router = APIRouter(
     prefix="/titles",
     tags=["titles"],
+    dependencies=[Depends(get_current_active_superuser)],
+)
+
+
+unmatched_titles_router = APIRouter(
+    prefix="/unmatched-titles",
+    tags=["unmatched titles"],
     dependencies=[Depends(get_current_active_superuser)],
 )
 
@@ -107,18 +126,6 @@ def admin_get_unvalidated_titles(
 
 # TODO: Validate
 @titles_router.get(
-    "/missing-sources",
-)
-def admin_get_titles_missing_sources(
-    session: SessionDep,
-    limit: Annotated[int, Query(ge=1, le=1000)] = 200,
-) -> list[MissingSourceTitleOutput]:
-    """Get every canonical TMDB title that no website's row stands for."""
-    return list_titles_missing_sources(session, limit)
-
-
-# TODO: Validate
-@titles_router.get(
     "/{title_id}",
 )
 def get_title(title: ExistingTitle) -> TitlePublic:
@@ -158,16 +165,6 @@ def admin_link_title_to_tmdb(
     title: ExistingTitle,
     tmdb_title: AdminTmdbTitle,
 ) -> TitlePublic:
-    """Add the canonical title an admin chose to what a `Title` stands for.
-
-    Its own endpoint rather than part of the update, because the link is a row of
-    its own and what it drags along - the episodes being read again against the
-    title chosen - is not something a write of the title's own columns does.
-
-    Added to whatever the row already stands for rather than put in its place,
-    since one page holding two titles is a thing websites do. Taking one off is
-    `admin_unlink_title_from_tmdb`.
-    """
     return _title_output(
         old_link_title_to_tmdb_title(session, title, tmdb_title),
     )
@@ -261,7 +258,6 @@ def get_title_tmdb_episode_groups(
     session: SessionDep,
     title: ExistingTitle,
 ) -> list[TmdbEpisodeGroupOption]:
-    """Get the episode orders TMDB holds for a `Title`, for one to be chosen."""
     return list_tmdb_episode_groups(session, title)
 
 
@@ -279,12 +275,53 @@ def get_tmdb_titles(
     """Get every `Title`."""
     return tmdb_list_response(
         session=session,
-        base=select(Title).where(is_not_linked(Title)),
+        base=select(Title)
+        .join(Source)
+        .join(Plugin)
+        .where(is_not_linked(Title), Plugin.key == TMDB_PLUGIN_KEY),
         response_model=TmdbTitlesPublic,
         schema=TmdbTitleOutput,
         read_options=read_options,
         current_user=current_user,
     )
+
+
+# TODO: Validate
+@unmatched_titles_router.get("")
+def admin_get_unmatched_titles(
+    session: SessionDep,
+    read_options: Annotated[UnmatchedTitleReadOptions, Query()],
+) -> UnmatchedTitlesPublic:
+    """Get a page of the services carrying a title that nothing here carries."""
+    return list_unmatched_titles(session, read_options)
+
+
+# TODO: Validate
+@unmatched_titles_router.post("/{unmatched_title_id}/import")  # noqa: FAST003 - Used by ExistingUnmatchedTitle.
+def admin_import_unmatched_title(
+    session: SessionDep,
+    unmatched_title: ExistingUnmatchedTitle,
+    import_input: UnmatchedTitleImport,
+) -> Message:
+    return import_unmatched_title(session, unmatched_title, import_input)
+
+
+# TODO: Validate
+@unmatched_titles_router.post("/{unmatched_title_id}/ignore")  # noqa: FAST003 - Used by ExistingUnmatchedTitle.
+def admin_ignore_unmatched_title(
+    session: SessionDep,
+    unmatched_title: ExistingUnmatchedTitle,
+) -> Message:
+    return ignore_unmatched_title(session, unmatched_title)
+
+
+# TODO: Validate
+@unmatched_titles_router.delete("/{unmatched_title_id}")  # noqa: FAST003 - Used by ExistingUnmatchedTitle.
+def admin_delete_unmatched_title(
+    session: SessionDep,
+    unmatched_title: ExistingUnmatchedTitle,
+) -> Message:
+    return delete_unmatched_title(session, unmatched_title)
 
 
 router = APIRouter()
@@ -294,3 +331,6 @@ router.include_router(tmdb_titles_router)
 
 
 router.include_router(titles_router)
+
+
+router.include_router(unmatched_titles_router)

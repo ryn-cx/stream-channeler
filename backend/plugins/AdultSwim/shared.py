@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, override
 from plugins.AdultSwim.base_files import AdultSwimBaseFiles
 from plugins.AdultSwim.constants import FREE, SUBSCRIPTION
 from plugins.AdultSwim.utils import title_url
-from plugins.utils.base_plugin.channels import ChannelKeyURL
 
 if TYPE_CHECKING:
     from app.channels.models import Channel
@@ -41,12 +40,10 @@ class AdultSwimShared(AdultSwimBaseFiles):
         return (FREE, SUBSCRIPTION)
 
     # TODO: Validate
-    def _create_initial_channel_records(self) -> None:
+    def create_initial_channel_records(self) -> None:
         self.add_new_urls_to_channel(
-            [
-                ChannelKeyURL("All Titles", url)
-                for url in self._title_urls_from_plugin_files()
-            ],
+            "All Titles",
+            self._title_urls_from_plugin_files(),
         )
 
     # TODO: Validate

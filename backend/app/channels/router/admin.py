@@ -67,7 +67,6 @@ def admin_update_channel(
 def get_automatic_channel_users(
     session: SessionDep,
 ) -> list[AutomaticChannelUserOutput]:
-    """List the `User`s whose channels a source writes, and how many they hold."""
     return channels.automatic_channel_users(session)
 
 
@@ -79,6 +78,15 @@ def clear_automatic_channels(
 ) -> Message:
     """Empty every `Channel` an automatic channel `User` owns."""
     return channels.clear_automatic_channels(session, user_id)
+
+
+# TODO: Validate
+@admin_router.post("/automatic-users/{user_id}/channels")
+def create_automatic_channels(
+    session: SessionDep,
+    user_id: uuid.UUID,
+) -> Message:
+    return channels.create_automatic_channels(session, user_id)
 
 
 # TODO: Validate

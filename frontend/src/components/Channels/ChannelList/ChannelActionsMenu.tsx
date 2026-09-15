@@ -2,7 +2,6 @@
 import { ActionsMenu } from "@/components/Common/ActionsMenu"
 import { ManageTitlesButton } from "../ChannelDetail/AddUrlsToQueueButton"
 import type { ChannelTableData } from "./columns"
-import DeleteChannel from "./DeleteChannel"
 import EditChannel from "./EditChannel"
 
 interface ChannelActionsMenuProps {
@@ -19,7 +18,6 @@ export const ChannelActionsMenu = ({ channel }: ChannelActionsMenuProps) => {
         channelName={channel.name}
         variant="icon"
       />
-      <DeleteChannel id={channel.id} />
     </ActionsMenu>
   )
 }

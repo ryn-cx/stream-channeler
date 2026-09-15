@@ -179,10 +179,7 @@ class Title(BaseTitle, ChildMediaMixin[Source, "Season"], table=True):
     # TODO: Validate
     @property
     def tmdb_ids(self) -> list[int]:
-        return [
-            get_tmdb_id(tmdb_title.key)
-            for tmdb_title in self.tmdb_titles
-        ]
+        return [get_tmdb_id(tmdb_title.key) for tmdb_title in self.tmdb_titles]
 
     # TODO: Validate
     @property
@@ -337,3 +334,35 @@ class TitleTmdbTitle(BaseTitleTmdbTitle, TimestampIdAndHashMixin, table=True):
             "foreign_keys": "TitleTmdbTitle.tmdb_title_id",
         },
     )
+
+
+# TODO: Validate
+class BaseUnmatchedTitle(SQLModel):
+    provider_name: str = Field(min_length=1)
+    plugin_key: str | None = Field(default=None)
+    ignored_at: datetime | None = DateTimeField(default=None)
+
+
+# TODO: Validate
+class UnmatchedTitle(BaseUnmatchedTitle, TimestampIdAndHashMixin, table=True):
+    """A service TMDB says carries a canonical title that nothing here does.
+
+    TMDB names every service a title streams on, and an import that reads one of
+    those names finds either a plugin already carrying the title, a plugin that
+    carries the service but not this title, or no plugin at all. The last two are
+    what is written here, so the titles waiting on a source URL are a table to be
+    worked through rather than something to be noticed by hand.
+    """
+
+    __table_args__ = (
+        PrimaryKeyConstraint("id"),
+        UniqueConstraint(
+            "title_id",
+            "provider_name",
+            name="UnmatchedTitle-title_id-provider_name-unique",
+        ),
+        Index("UnmatchedTitle-title_id-index", "title_id"),
+    )
+
+    title_id: uuid.UUID = Field(foreign_key="title.id", ondelete="CASCADE")
+    title: Title = Relationship()

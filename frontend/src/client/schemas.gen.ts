@@ -25,10 +25,25 @@ export const AutomaticChannelUserOutputSchema = {
         channel_count: {
             type: 'integer',
             title: 'Channel Count'
+        },
+        plugin_key: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Plugin Key'
+        },
+        can_create_channels: {
+            type: 'boolean',
+            title: 'Can Create Channels'
         }
     },
     type: 'object',
-    required: ['id', 'username', 'email', 'channel_count'],
+    required: ['id', 'username', 'email', 'channel_count', 'plugin_key', 'can_create_channels'],
     title: 'AutomaticChannelUserOutput'
 } as const;
 
@@ -4269,198 +4284,6 @@ export const MessageSchema = {
     description: 'Generic message.'
 } as const;
 
-export const MissingSourceTitleOutputSchema = {
-    properties: {
-        key: {
-            type: 'string',
-            minLength: 1,
-            title: 'Key'
-        },
-        data_timestamp: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Data Timestamp'
-        },
-        update_at: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Update At'
-        },
-        deleted_at: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Deleted At'
-        },
-        status: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Status'
-        },
-        extra: {
-            additionalProperties: true,
-            type: 'object',
-            title: 'Extra'
-        },
-        name: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Name'
-        },
-        media_type: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Media Type'
-        },
-        description: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Description'
-        },
-        url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Url'
-        },
-        image_url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Image Url'
-        },
-        thumbnail_url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Thumbnail Url'
-        },
-        year: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Year'
-        },
-        id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Id'
-        },
-        created_at: {
-            type: 'string',
-            format: 'date-time',
-            title: 'Created At'
-        },
-        modified_at: {
-            type: 'string',
-            format: 'date-time',
-            title: 'Modified At'
-        },
-        tmdb_id: {
-            anyOf: [
-                {
-                    type: 'integer'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Id'
-        },
-        tmdb_url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Tmdb Url'
-        },
-        channel_count: {
-            type: 'integer',
-            title: 'Channel Count'
-        },
-        episode_count: {
-            type: 'integer',
-            title: 'Episode Count'
-        }
-    },
-    type: 'object',
-    required: ['key', 'id', 'created_at', 'modified_at', 'channel_count', 'episode_count'],
-    title: 'MissingSourceTitleOutput',
-    description: `A canonical TMDB title that no website's row stands for.
-
-\`channel_count\` and \`episode_count\` are what say whether the gap matters: a
-title a channel already holds cannot play until something carries it, and one
-TMDB knows episodes for is a series rather than a record with nothing to it.`
-} as const;
-
 export const NewPasswordSchema = {
     properties: {
         token: {
@@ -7326,7 +7149,7 @@ export const UnmatchedEpisodesPublicSchema = {
     description: 'Schema for returning a page of episodes waiting on a TMDB match.'
 } as const;
 
-export const UnmatchedSourceImportSchema = {
+export const UnmatchedTitleImportSchema = {
     properties: {
         url: {
             type: 'string',
@@ -7336,10 +7159,10 @@ export const UnmatchedSourceImportSchema = {
     },
     type: 'object',
     required: ['url'],
-    title: 'UnmatchedSourceImport'
+    title: 'UnmatchedTitleImport'
 } as const;
 
-export const UnmatchedSourceOutputSchema = {
+export const UnmatchedTitleOutputSchema = {
     properties: {
         id: {
             type: 'string',
@@ -7386,11 +7209,86 @@ export const UnmatchedSourceOutputSchema = {
                 }
             ],
             title: 'Title Name'
+        },
+        title_year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Title Year'
+        },
+        media_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Media Type'
+        },
+        tmdb_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Url'
+        },
+        channel_count: {
+            type: 'integer',
+            title: 'Channel Count'
+        },
+        episode_count: {
+            type: 'integer',
+            title: 'Episode Count'
         }
     },
     type: 'object',
-    required: ['id', 'provider_name', 'plugin_key', 'created_at', 'modified_at', 'title_id', 'title_name'],
-    title: 'UnmatchedSourceOutput'
+    required: ['id', 'provider_name', 'plugin_key', 'created_at', 'modified_at', 'title_id', 'title_name', 'title_year', 'media_type', 'tmdb_url', 'channel_count', 'episode_count'],
+    title: 'UnmatchedTitleOutput',
+    description: `One service TMDB says carries a title that nothing here carries.
+
+The title is described alongside the provider rather than pointed at, since
+the whole of the page is deciding whether a title is worth chasing down, and
+a name, a year and how many channels already hold it is what that is decided
+on.`
+} as const;
+
+export const UnmatchedTitlesPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/UnmatchedTitleOutput'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        total_count: {
+            type: 'integer',
+            title: 'Total Count'
+        },
+        filtered_count: {
+            type: 'integer',
+            title: 'Filtered Count'
+        },
+        is_server_side: {
+            type: 'boolean',
+            title: 'Is Server Side'
+        }
+    },
+    type: 'object',
+    required: ['data', 'total_count', 'filtered_count', 'is_server_side'],
+    title: 'UnmatchedTitlesPublic',
+    description: 'Schema for returning a page of titles waiting on a source.'
 } as const;
 
 export const UnvalidatedLinkedTitleOutputSchema = {

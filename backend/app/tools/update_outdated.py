@@ -68,16 +68,6 @@ def _channel_season_exists(
     outer: Any,  # noqa: ANN401 - The model the clause is asked about.
     condition: Callable[[Any], ColumnElement[bool]] | None = None,
 ) -> ColumnElement[bool]:
-    """EXISTS clause requiring `season` to be included in some channel.
-
-    A channel holds a title rather than one website's non-canonical row of it, and which
-    title an episode belongs to is its canonical episode's answer, since a listing that
-    mixes titles holds seasons of each of them. An episode that is linked to nothing
-    sits where its own listing filed it, under that listing's title.
-
-    `condition` is handed the listing the season is on, which is what ties the
-    clause to the row it is being asked about.
-    """
     copy_episode = aliased(Episode)
     tmdb_episode = aliased(Episode)
     copy_link = tmdb_episode_link()
@@ -113,7 +103,6 @@ def _channel_season_exists(
         .join(copy_title, col(copy_title.id) == col(season.title_id))
         # An episode with no canonical row of its own belongs to every title its listing
         # is linked to, since a listing is no more a non-canonical row of one than of
-        # another, so the clause holds where any of them is on a channel.
         .outerjoin(
             copy_title_link,
             col(copy_title_link.title_id) == col(copy_title.id),
@@ -225,23 +214,11 @@ def _plugin_has_season_in_channel_exists() -> ColumnElement[bool]:
 
 # TODO: Validate
 def _plugin_holds_no_media_exists() -> ColumnElement[bool]:
-    """EXISTS clause matching a Plugin with no Source of its own.
-
-    Every other clause here asks whether anything below a row is in a channel,
-    which a plugin holding no media of its own can never answer: it has no
-    `Source` for the question to be asked through.
-    """
     return ~(select(Source.id).where(col(Source.plugin_id) == col(Plugin.id)).exists())
 
 
 # TODO: Validate
 def _any_channel_holds_a_title_exists() -> ColumnElement[bool]:
-    """EXISTS clause requiring some channel to hold some title.
-
-    The stand-in, for a plugin holding no media of its own, for the question the
-    other clauses ask. Its rows are what every channel reads a title out of, so
-    a channel holding anything at all is a channel its rows are behind.
-    """
     channel_owner = aliased(User)
     return (
         select(ChannelTitle.id)

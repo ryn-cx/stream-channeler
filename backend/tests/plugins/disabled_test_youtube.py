@@ -148,7 +148,6 @@ class VideoValidator(YouTubeValidator):
 
 # A title of YouTube's catalogue that has to be bought or rented. Every one of
 # them is published on a channel generated for that title alone and named after
-# the catalogue rather than after the title, holding the title once per language
 # it was published in and nothing else.
 # TODO: Validate
 class TestPaidMovie(StandardTests[YouTube], VideoValidator):

@@ -1,16 +1,8 @@
 // TODO: Validate
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
-import {
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  Pencil,
-  Star,
-  Trash2,
-} from "lucide-react"
+import { ChevronLeft, ChevronRight, Loader2, Pencil, Star } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
-import { createPortal } from "react-dom"
 
 import { getChannelEpisodes } from "@/api/channels"
 import {
@@ -28,7 +20,6 @@ import { Skeleton } from "@/components/ui/skeleton"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 import { ManageTitlesButton } from "../ChannelDetail/AddUrlsToQueueButton"
 import { ChannelDetailsButton } from "./ChannelDetailsButton"
-import DeleteChannel from "./DeleteChannel"
 import EditChannel from "./EditChannel"
 import EditFavoriteChannel from "./EditFavoriteChannel"
 import {
@@ -48,7 +39,6 @@ const SHOW_BUTTON_LABELS = true
 
 interface ChannelRowProps {
   channel: BrowseChannel
-  onDelete: (channel: BrowseChannel) => void
   readOnly?: boolean
   showCreatedBy?: boolean
   showChannelNumber?: boolean
@@ -94,7 +84,6 @@ function AdminEditChannel({
 // TODO: Validate
 function ChannelRow({
   channel,
-  onDelete,
   readOnly = false,
   showCreatedBy = true,
   showChannelNumber = true,
@@ -299,12 +288,6 @@ function ChannelRow({
               channel={channel as ChannelOutput}
               showLabel={SHOW_BUTTON_LABELS}
             />
-            <TooltipIconButton
-              label="Delete channel"
-              icon={<Trash2 className="size-4 text-destructive" />}
-              onClick={() => onDelete(channel)}
-              showLabel={SHOW_BUTTON_LABELS}
-            />
           </>
         )}
       </div>
@@ -413,15 +396,12 @@ export function ChannelsBrowse({
   showChannelNumber = true,
   personalizable = false,
 }: ChannelsBrowseProps) {
-  const [deleteChannel, setDeleteChannel] = useState<BrowseChannel | null>(null)
-
   return (
     <div className="flex flex-col gap-8 pb-8">
       {channels.map((channel) => (
         <ChannelRow
           key={channel.id}
           channel={channel}
-          onDelete={setDeleteChannel}
           readOnly={readOnly}
           showCreatedBy={showCreatedBy}
           showChannelNumber={showChannelNumber}
@@ -433,18 +413,6 @@ export function ChannelsBrowse({
           No channels yet. Create one to get started.
         </p>
       )}
-
-      {/* Render dialogs in a portal to avoid Radix ref conflicts with episode cards */}
-      {deleteChannel &&
-        createPortal(
-          <DeleteChannel
-            key={deleteChannel.id}
-            id={deleteChannel.id}
-            externalOpen
-            onExternalClose={() => setDeleteChannel(null)}
-          />,
-          document.body,
-        )}
     </div>
   )
 }

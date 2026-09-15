@@ -261,20 +261,6 @@ def blacklist_episode_on_channel(
     episode_id: UUID,
     expires_at: datetime | None = None,
 ) -> list[ChannelTitle]:
-    """Blacklist a single episode for `channel`.
-
-    Gets or creates the `ChannelTitle` for the canonical title the episode belongs
-    to, which is the episode's own answer rather than its row's: a row that mixes
-    titles holds episodes of each of them, and hiding one of its episodes is about
-    the canonical title that episode belongs to. An episode nothing was minted for
-    it to stand for has no canonical title of its own to answer with, and its row
-    stands for each of its canonical titles alike, so the episode is hidden under
-    every one of them. A newly created `ChannelTitle` is a filter-only title
-    (`is_blacklist_only=True`) in blacklist mode, so the canonical title's other
-    episodes are not pulled into the channel. Adds (or updates the expiry of) a
-    `ChannelEpisodeFilter` for the episode, which covers that episode on every
-    website the canonical title is on.
-    """
     tmdb_episode_id = _tmdb_episode_id(session, episode_id)
     tmdb_title_ids = _tmdb_title_ids_of_episode(
         session,
@@ -379,9 +365,7 @@ def _whitelist_media(
         episode.id
         for episode in all_episodes
         if tmdb_record_id_of(episode) in title_episode_ids
-        or (
-            not episode.tmdb_episode_links and episode.season_id in site_season_ids
-        )
+        or (not episode.tmdb_episode_links and episode.season_id in site_season_ids)
     }
     return _WhitelistMedia(
         titles=titles,
@@ -642,9 +626,7 @@ def filtered_whitelist_episodes(
         enabled_episodes,
     )
     for episode_output in episodes:
-        episode_output.title_ids = episode_title_ids[
-            episode_output.tmdb_episode_id
-        ]
+        episode_output.title_ids = episode_title_ids[episode_output.tmdb_episode_id]
         episode_output.links = episode_links[episode_output.tmdb_episode_id]
 
     serve_as_tmdb_episodes(session, episodes)

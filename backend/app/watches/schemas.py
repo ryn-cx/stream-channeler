@@ -52,7 +52,6 @@ class WatchItem(BaseWatch):
     id: uuid.UUID
     episode_id: uuid.UUID | None
     # The episode itself, which is what the watch counts for. The identifier is
-    # what the watch holds, which is the link that played it; the id is the
     # episode that identifier resolved to here, and is what keys `episodes` on
     # the list output.
     watch_identifier: str
@@ -112,21 +111,6 @@ class WatchRelinkResults(BaseModel):
 
 # TODO: Validate
 class WatchExportEntry(BaseModel):
-    """Schema for a single exported `Watch`.
-
-    Holds only what re-importing needs: which episode the watch is of, when it
-    happened, and whether it was verified. Everything else is read back out of
-    the database the file is imported into.
-
-    `verified` is None in a file exported before it was carried, which leaves
-    the import's own setting to say what those watches are.
-
-    A file exported before the identifier was named as such holds it under
-    `tmdb_episode_key`, and holds the same string: the old key was the
-    plugin's name in front of its own id, which is what the identifier is. So
-    the old name is still read, and a backup taken then still imports.
-    """
-
     watch_identifier: str = PydanticField(
         validation_alias=AliasChoices("watch_identifier", "tmdb_episode_key"),
     )

@@ -16,7 +16,6 @@ from app.utils.update_at import staggered_monthly_update_at
 from plugins.Netflix.constants import TITLE_URL_REGEX
 from plugins.Netflix.shared import NetflixShared
 from plugins.utils.abstract_plugin import InvalidURLError
-from plugins.utils.base_plugin.channels import ChannelKeyURL
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import ParsedURL
 
@@ -57,11 +56,10 @@ class NetflixImporter(NetflixShared, BaseImporter, ABC):
 
         title_data = self.title_file(title.key).parsed()
         channel_keys = ["All Titles", *self._title_channel_keys(title_data)]
-        channel_key_urls = [
-            ChannelKeyURL(channel_key, title.url) for channel_key in channel_keys
-        ]
-        self.add_new_urls_to_channel(channel_key_urls)
-        self.add_new_urls_to_channel(self._related_channel_key_urls(title_data))
+        for channel_key in channel_keys:
+            self.add_new_urls_to_channel(channel_key, [title.url])
+        for channel_key, urls in self._related_urls(title_data).items():
+            self.add_new_urls_to_channel(channel_key, urls)
 
     # TODO: Validate
     def _title_channel_keys(self, title_data: DetailModalModel) -> list[str]:
@@ -82,24 +80,29 @@ class NetflixImporter(NetflixShared, BaseImporter, ABC):
         return list(dict.fromkeys(channel_keys))
 
     # TODO: Validate
-    def _related_channel_key_urls(
+    def _related_urls(
         self,
         title_data: DetailModalModel,
-    ) -> list[ChannelKeyURL]:
-        channel_key_urls = [
-            ChannelKeyURL("All Titles", self.title_url(str(similar.video_id)))
-            for similar in title_data.similars or []
-            if similar.video_id
-        ]
+    ) -> dict[str, list[str]]:
+        urls_by_channel_key: dict[str, dict[str, None]] = {
+            "All Titles": {
+                self.title_url(str(similar.video_id)): None
+                for similar in title_data.similars or []
+                if similar.video_id
+            },
+        }
         for membership in title_data.title_group_memberships or []:
             for sibling in membership.siblings or []:
-                if not sibling.video_id:
+                video_id = sibling.video_id
+                if not video_id:
                     continue
-                url = self.title_url(str(sibling.video_id))
-                channel_key_urls.append(ChannelKeyURL("All Titles", url))
+                url = self.title_url(str(video_id))
+                urls_by_channel_key["All Titles"][url] = None
                 if membership.title:
-                    channel_key_urls.append(ChannelKeyURL(membership.title, url))
-        return list(dict.fromkeys(channel_key_urls))
+                    urls_by_channel_key.setdefault(membership.title, {})[url] = None
+        return {
+            channel_key: list(urls) for channel_key, urls in urls_by_channel_key.items()
+        }
 
 
 # TODO: Validate
@@ -129,6 +132,15 @@ class NetflixSeriesImporter(NetflixImporter):
         return self._season_files(season_key, title_key)
 
     # TODO: Validate
+    def _available_at(self, messaging: str, data_timestamp: datetime) -> datetime:
+        date_text = " ".join(messaging.removeprefix("Available").split())
+        if "," not in date_text:
+            date_text = f"{date_text}, {data_timestamp.year}"
+        return datetime.strptime(date_text, "%B %d, %Y").replace(
+            tzinfo=data_timestamp.tzinfo,
+        )
+
+    # TODO: Validate
     def _set_season_update_at(
         self,
         season: Season,
@@ -141,10 +153,10 @@ class NetflixSeriesImporter(NetflixImporter):
         )
         for episode in self.season_episodes_file(season_video_key).episodes():
             if episode.availability_date_messaging:
-                available_at = datetime.strptime(
-                    f"{episode.availability_date_messaging} {data_timestamp.year}",
-                    "Available %B %d %Y",
-                ).replace(tzinfo=data_timestamp.tzinfo)
+                available_at = self._available_at(
+                    episode.availability_date_messaging,
+                    data_timestamp,
+                )
                 # The date listed doesn't have a specific time so check it once on the
                 # date, again halway through the day and one more time at the end of the
                 # day.

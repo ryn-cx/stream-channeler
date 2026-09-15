@@ -1,13 +1,4 @@
 # TODO: Validate
-"""Serve a page of canonical rows.
-
-The media list helpers decide who may see a record by walking it up to the
-`Plugin` that holds it, and hide the owner's name where that `Plugin` is
-anonymous. A canonical row has neither: it is the media itself rather than one
-website's listing of it, so there is no owner to hide and nothing to scope by.
-What is left is the paging, sorting and filtering, used on their own, behind the
-admin-only endpoints that are the only way in.
-"""
 
 from typing import Any
 

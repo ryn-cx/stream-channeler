@@ -72,7 +72,6 @@ def _channel_with_episodes(
     durations: list[int],
     channel_id: uuid.UUID | None = None,
 ) -> tuple[Channel, list[Episode]]:
-    """Build a channel holding one title whose episodes run for `durations`."""
     channel = (
         create_random_channel(session, user=user.id, id=channel_id)
         if channel_id is not None

@@ -88,7 +88,6 @@ class SortExpressionBuilder:
 
     # TODO: Validate
     def random_hash(self, expr: ColumnElement[Any]) -> ColumnElement[Any]:
-        """Shuffle `expr` into an order that holds for this channel's seed."""
         return func.hashtext(
             func.concat(
                 func.cast(expr, String),

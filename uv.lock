@@ -376,7 +376,7 @@ wheels = [
 [[package]]
 name = "chirashi"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/chirashi#9efdb4fa45cdb5156172c3466c403cbbaa9cf0de" }
+source = { git = "https://github.com/ryn-cx/chirashi#e0ca8d44862c5f6207507c2ec28892446537128c" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
@@ -1229,7 +1229,7 @@ wheels = [
 [[package]]
 name = "meshfilm"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/meshfilm#d5636fbebc573232cedd83ea5c12e725b71b0cc1" }
+source = { git = "https://github.com/ryn-cx/meshfilm#fbb38fd72ed59190d5e625d054d0d86446607554" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },

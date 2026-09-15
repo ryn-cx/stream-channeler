@@ -73,14 +73,6 @@ def _titles_by_tmdb_episode(
     session: Session,
     episodes: list[Episode],
 ) -> dict[UUID, set[UUID]]:
-    """Map each episode in `episodes` to the canonical titles it belongs to.
-
-    Read off the episode's own canonical row rather than off the row holding it,
-    since a row that mixes titles holds episodes of each of them. An episode
-    nothing was minted for it to stand for sits under a website's own row, so
-    there the canonical titles are the ones that row stands for - all of them,
-    since a row stands for one no more than for another.
-    """
     tmdb_episode_ids = {tmdb_record_id_of(episode) for episode in episodes}
     counted_episode = aliased(Episode)
     counted_season = aliased(Season)

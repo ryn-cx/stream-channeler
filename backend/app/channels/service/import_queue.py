@@ -7,7 +7,7 @@ from datetime import timedelta
 
 from fastapi import HTTPException
 from sqlalchemy.dialects.postgresql import insert as postgres_insert
-from sqlmodel import Session, col, func, select
+from sqlmodel import Session, col, func, select, update
 
 from app.channels.models import (
     Channel,
@@ -177,6 +177,28 @@ def retry_queue_entry(session: Session, queue_entry: ChannelQueue) -> Message:
     session.add(queue_entry)
     session.commit()
     return Message(message=f"{queue_entry.url} queued for import again")
+
+
+# TODO: Validate
+def retry_failed_queue_entries(session: Session, channel: Channel) -> Message:
+    result = session.exec(
+        update(ChannelQueue)
+        .where(
+            col(ChannelQueue.channel_id) == channel.id,
+            col(ChannelQueue.status) == URLStatus.FAILED,
+        )
+        .values(
+            status=URLStatus.PENDING,
+            note=None,
+            # A plugin that pushed the import out to a later time was answering the
+            # failure this retry is discarding, so the entry goes back to being
+            # importable now.
+            import_at=None,
+            modified_at=tz_datetime.current_time(),
+        ),
+    )
+    session.commit()
+    return Message(message=f"{result.rowcount} URLs queued for import again")
 
 
 # TODO: Validate

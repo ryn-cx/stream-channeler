@@ -18,6 +18,7 @@ from app.issue_reports.schemas import IssueReportOutput
 from app.schemas import (
     BaseCreateWithParentAndKey,
     BaseUpdateWithKey,
+    ReadOptions,
     make_model_with_all_fields_optional,
 )
 from app.sources.models import Source
@@ -45,13 +46,6 @@ class TitleUpdate(
 
 # TODO: Validate
 class TmdbEpisodeGroupOption(BaseModel):
-    """One of the episode orders TMDB holds for a title.
-
-    What the order is and how big it is, which is all that choosing between them
-    needs. The episodes each order puts where is a file of its own and is only
-    read once an order has been chosen.
-    """
-
     id: str
     name: str
     description: str | None
@@ -72,7 +66,6 @@ class TitlePublic(BaseTitle):
     # into one card and what the channel's per-title stats are keyed by. A row that
     # mixes titles stands for each of them as much as for any other and so has none
     # to be read under here; where a channel is what is being served, the
-    # canonical title it holds the row under is handed in instead.
     tmdb_title_id: uuid.UUID | None = Field(
         default=None,
         validation_alias=AliasChoices(
@@ -117,16 +110,12 @@ class TitleListPublic(TitlePublic):
 
 # TODO: Validate
 class TitleRecord(BaseModel):
-    """A `Title` and what holds it, each served as the record it already is."""
-
     title: TitlePublic
     source: SourceListPublic
 
 
 # TODO: Validate
 class TitleInformationSide(TitleRecord):
-    """One record's own account of a title, as the website holding it has it."""
-
     label: str
 
 
@@ -167,14 +156,6 @@ class TitlesPublic(BaseModel):
 
 # TODO: Validate
 class TmdbTitleOutput(BaseTmdbTitle):
-    """Schema for returning a `Title`.
-
-    `tmdb_id` and `tmdb_url` are read back out of `key` rather than stored, since
-    the key is the whole of what says which TMDB record a title is. They are
-    served for reading only: nothing can be sorted or filtered by a value the
-    database does not hold a column for.
-    """
-
     id: uuid.UUID
     created_at: datetime
     modified_at: datetime
@@ -234,13 +215,37 @@ class UnvalidatedTitleOutput(TitleListPublic):
 
 
 # TODO: Validate
-class MissingSourceTitleOutput(TmdbTitleOutput):
-    """A canonical TMDB title that no website's row stands for.
-
-    `channel_count` and `episode_count` are what say whether the gap matters: a
-    title a channel already holds cannot play until something carries it, and one
-    TMDB knows episodes for is a series rather than a record with nothing to it.
-    """
-
+class UnmatchedTitleOutput(BaseModel):
+    id: uuid.UUID
+    provider_name: str
+    plugin_key: str | None
+    created_at: datetime
+    modified_at: datetime
+    title_id: uuid.UUID
+    title_name: str | None
+    title_year: int | None
+    media_type: str | None
+    tmdb_url: str | None
     channel_count: int
     episode_count: int
+
+
+# TODO: Validate
+class UnmatchedTitlesPublic(BaseModel):
+    """Schema for returning a page of titles waiting on a source."""
+
+    data: list[UnmatchedTitleOutput]
+    total_count: int
+    filtered_count: int
+    is_server_side: bool
+
+
+# TODO: Validate
+class UnmatchedTitleReadOptions(ReadOptions):
+    in_user_channels_only: bool = True
+    include_ignored: bool = False
+
+
+# TODO: Validate
+class UnmatchedTitleImport(BaseModel):
+    url: str = Field(min_length=1)

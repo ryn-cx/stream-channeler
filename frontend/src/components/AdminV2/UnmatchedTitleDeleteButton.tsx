@@ -1,36 +1,36 @@
 // TODO: Validate
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
-import type { UnmatchedSourceOutput } from "@/client"
-import { UnmatchedSourcesService } from "@/client"
+import type { UnmatchedTitleOutput } from "@/client"
+import { UnmatchedTitlesService } from "@/client"
 import { Button } from "@/components/ui/button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
-import { UNMATCHED_SOURCES_QUERY_KEY } from "./unmatchedSourcesQuery"
+import { UNMATCHED_TITLES_QUERY_KEY } from "./unmatchedTitlesQuery"
 
 // TODO: Validate
-export function UnmatchedSourceDeleteButton({
-  unmatchedSource,
+export function UnmatchedTitleDeleteButton({
+  unmatchedTitle,
 }: {
-  unmatchedSource: UnmatchedSourceOutput
+  unmatchedTitle: UnmatchedTitleOutput
 }) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
 
   const deleteMutation = useMutation({
     mutationFn: () =>
-      UnmatchedSourcesService.adminDeleteUnmatchedSource({
-        unmatchedSourceId: unmatchedSource.id,
+      UnmatchedTitlesService.adminDeleteUnmatchedTitle({
+        unmatchedTitleId: unmatchedTitle.id,
       }),
     onSuccess: () =>
-      showSuccessToast(`Deleted ${unmatchedSource.provider_name}`),
+      showSuccessToast(`Deleted ${unmatchedTitle.provider_name}`),
     onError: (error: unknown) =>
       handleError.call(
         showErrorToast,
         error as Parameters<typeof handleError>[0],
       ),
     onSettled: () =>
-      queryClient.invalidateQueries({ queryKey: UNMATCHED_SOURCES_QUERY_KEY }),
+      queryClient.invalidateQueries({ queryKey: UNMATCHED_TITLES_QUERY_KEY }),
   })
 
   return (

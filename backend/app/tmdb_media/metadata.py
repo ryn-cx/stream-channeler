@@ -93,7 +93,6 @@ def _seasons_of(
     session: Session,
     tmdb_episodes: Any,  # noqa: ANN401 - Any iterable of `Episode`.
 ) -> dict[UUID, Season]:
-    """Load the canonical season holding each of `tmdb_episodes`."""
     ids = {episode.season_id for episode in tmdb_episodes}
     if not ids:
         return {}
@@ -110,7 +109,6 @@ def _titles_of(
     session: Session,
     tmdb_seasons: Any,  # noqa: ANN401 - Any iterable of `Season`.
 ) -> dict[UUID, Title]:
-    """Load the canonical title holding each of `tmdb_seasons`."""
     ids = {season.title_id for season in tmdb_seasons}
     if not ids:
         return {}
@@ -127,12 +125,6 @@ def serve_as_tmdb_episodes[RowT](
     session: Session,
     rows: Sequence[RowT],
 ) -> Sequence[RowT]:
-    """Serve each `Episode` row as the canonical episode it stands for.
-
-    Every value a reader is shown comes off the canonical row, with nothing of the
-    website's own standing in where that row has nothing to say. The row keeps its own
-    id and address, which is what points back at the website holding it.
-    """
     tmdb_rows = _tmdb_rows(session, rows, EPISODE_ID_FIELD, Episode)
     seasons = _seasons_of(session, tmdb_rows.values())
     titles = _titles_of(session, seasons.values())

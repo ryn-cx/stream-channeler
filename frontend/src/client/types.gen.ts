@@ -5,6 +5,8 @@ export type AutomaticChannelUserOutput = {
     username: (string | null);
     email: string;
     channel_count: number;
+    plugin_key: (string | null);
+    can_create_channels: boolean;
 };
 
 export type BlacklistEpisodeInput = {
@@ -897,38 +899,6 @@ export type MediaOwner = 'official' | 'others';
  */
 export type Message = {
     message: string;
-};
-
-/**
- * A canonical TMDB title that no website's row stands for.
- *
- * `channel_count` and `episode_count` are what say whether the gap matters: a
- * title a channel already holds cannot play until something carries it, and one
- * TMDB knows episodes for is a series rather than a record with nothing to it.
- */
-export type MissingSourceTitleOutput = {
-    key: string;
-    data_timestamp?: (string | null);
-    update_at?: (string | null);
-    deleted_at?: (string | null);
-    status?: (string | null);
-    extra?: {
-        [key: string]: unknown;
-    };
-    name?: (string | null);
-    media_type?: (string | null);
-    description?: (string | null);
-    url?: (string | null);
-    image_url?: (string | null);
-    thumbnail_url?: (string | null);
-    year?: (number | null);
-    id: string;
-    created_at: string;
-    modified_at: string;
-    tmdb_id?: (number | null);
-    tmdb_url?: (string | null);
-    channel_count: number;
-    episode_count: number;
 };
 
 export type NewPassword = {
@@ -2036,11 +2006,19 @@ export type UnmatchedEpisodesPublic = {
     is_server_side: boolean;
 };
 
-export type UnmatchedSourceImport = {
+export type UnmatchedTitleImport = {
     url: string;
 };
 
-export type UnmatchedSourceOutput = {
+/**
+ * One service TMDB says carries a title that nothing here carries.
+ *
+ * The title is described alongside the provider rather than pointed at, since
+ * the whole of the page is deciding whether a title is worth chasing down, and
+ * a name, a year and how many channels already hold it is what that is decided
+ * on.
+ */
+export type UnmatchedTitleOutput = {
     id: string;
     provider_name: string;
     plugin_key: (string | null);
@@ -2048,6 +2026,21 @@ export type UnmatchedSourceOutput = {
     modified_at: string;
     title_id: string;
     title_name: (string | null);
+    title_year: (number | null);
+    media_type: (string | null);
+    tmdb_url: (string | null);
+    channel_count: number;
+    episode_count: number;
+};
+
+/**
+ * Schema for returning a page of titles waiting on a source.
+ */
+export type UnmatchedTitlesPublic = {
+    data: Array<UnmatchedTitleOutput>;
+    total_count: number;
+    filtered_count: number;
+    is_server_side: boolean;
 };
 
 /**
@@ -2697,6 +2690,12 @@ export type ChannelsRetryChannelQueueUrlData = {
 
 export type ChannelsRetryChannelQueueUrlResponse = (Message);
 
+export type ChannelsRetryFailedChannelQueueUrlsData = {
+    channelId: string;
+};
+
+export type ChannelsRetryFailedChannelQueueUrlsResponse = (Message);
+
 export type ChannelsDeleteChannelQueueUrlData = {
     channelId: string;
     urlId: string;
@@ -2783,6 +2782,12 @@ export type ChannelsClearAutomaticChannelsData = {
 };
 
 export type ChannelsClearAutomaticChannelsResponse = (Message);
+
+export type ChannelsCreateAutomaticChannelsData = {
+    userId: string;
+};
+
+export type ChannelsCreateAutomaticChannelsResponse = (Message);
 
 export type ChannelsGetAllChannelQueuesData = {
     filterOptions?: string;
@@ -3259,12 +3264,6 @@ export type TitlesAdminGetUnvalidatedTitlesData = {
 
 export type TitlesAdminGetUnvalidatedTitlesResponse = (Array<UnvalidatedTitleOutput>);
 
-export type TitlesAdminGetTitlesMissingSourcesData = {
-    limit?: number;
-};
-
-export type TitlesAdminGetTitlesMissingSourcesResponse = (Array<MissingSourceTitleOutput>);
-
 export type TitlesGetTitleData = {
     titleId: string;
 };
@@ -3372,26 +3371,35 @@ export type TmdbTitlesGetTmdbTitlesData = {
 
 export type TmdbTitlesGetTmdbTitlesResponse = (TmdbTitlesPublic);
 
-export type UnmatchedSourcesAdminGetUnmatchedSourcesResponse = (Array<UnmatchedSourceOutput>);
-
-export type UnmatchedSourcesAdminImportUnmatchedSourceData = {
-    requestBody: UnmatchedSourceImport;
-    unmatchedSourceId: string;
+export type UnmatchedTitlesAdminGetUnmatchedTitlesData = {
+    filterOptions?: string;
+    includeIgnored?: boolean;
+    inUserChannelsOnly?: boolean;
+    limit?: number;
+    offset?: number;
+    sortOptions?: string;
 };
 
-export type UnmatchedSourcesAdminImportUnmatchedSourceResponse = (Message);
+export type UnmatchedTitlesAdminGetUnmatchedTitlesResponse = (UnmatchedTitlesPublic);
 
-export type UnmatchedSourcesAdminIgnoreUnmatchedSourceData = {
-    unmatchedSourceId: string;
+export type UnmatchedTitlesAdminImportUnmatchedTitleData = {
+    requestBody: UnmatchedTitleImport;
+    unmatchedTitleId: string;
 };
 
-export type UnmatchedSourcesAdminIgnoreUnmatchedSourceResponse = (Message);
+export type UnmatchedTitlesAdminImportUnmatchedTitleResponse = (Message);
 
-export type UnmatchedSourcesAdminDeleteUnmatchedSourceData = {
-    unmatchedSourceId: string;
+export type UnmatchedTitlesAdminIgnoreUnmatchedTitleData = {
+    unmatchedTitleId: string;
 };
 
-export type UnmatchedSourcesAdminDeleteUnmatchedSourceResponse = (Message);
+export type UnmatchedTitlesAdminIgnoreUnmatchedTitleResponse = (Message);
+
+export type UnmatchedTitlesAdminDeleteUnmatchedTitleData = {
+    unmatchedTitleId: string;
+};
+
+export type UnmatchedTitlesAdminDeleteUnmatchedTitleResponse = (Message);
 
 export type UsersReadUserMeResponse = (UserPublic);
 

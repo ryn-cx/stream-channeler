@@ -142,20 +142,11 @@ class EpisodeRecord(BaseModel):
 
 # TODO: Validate
 class TmdbEpisodeRecord(EpisodeRecord):
-    """A canonical episode, with how far into its title the episode is.
-
-    The count is not a column of the episode: it is where the episode falls among
-    the ones the title holds, so it is worked out against the title each time
-    rather than stored and left to go stale as the title grows.
-    """
-
     absolute_number: int | None
 
 
 # TODO: Validate
 class EpisodeInformationSide(EpisodeRecord):
-    """One record's own account of an episode, as the website that holds it has it."""
-
     label: str
     url: str | None
     # How far into its own title this side puts the episode, which is a question
@@ -215,12 +206,6 @@ class UserEpisodeUrlOutput(BaseModel):
 
 # TODO: Validate
 class TmdbEpisodeChoice(EpisodeRecord):
-    """A TMDB episode, as one of the episodes an `Episode` can be linked to.
-
-    A canonical record, so the season and the title handed over with it are the
-    very rows TMDB holds rather than non-canonical rows of them.
-    """
-
     absolute_number: int | None
     similarity: float
     from_title: bool = True
@@ -349,8 +334,6 @@ class TmdbEpisodeOutput(BaseTmdbEpisode):
 
 # TODO: Validate
 class TmdbEpisodeListOutput(TmdbEpisodeOutput):
-    """Schema for returning a list of `Episode`s, with what holds them."""
-
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
     tmdb_season_name: str | None = Field(

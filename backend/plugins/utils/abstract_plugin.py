@@ -240,6 +240,10 @@ class AbstractPlugin(ABC):
         title.update_at = None
 
     # TODO: Validate
+    def add_title_to_plugin_channels(self, title: Title) -> None:  # noqa: ARG002
+        return
+
+    # TODO: Validate
     def update_channel(self, channel: Channel) -> None:
         """Update an existing channel in the database.
 
@@ -422,32 +426,6 @@ class MediaNotFoundError(Exception):
 
 # TODO: Validate
 class URLImportResult(BaseModel):
-    """What a channel takes on from importing a single URL.
-
-    A channel holds the media itself rather than one website's records, so a result
-    names what was imported by the keys of the records the plugin just wrote, and
-    `add_results_to_channel` resolves each one to the canonical row that record is
-    linked to.
-
-    Example outputs:
-
-      If a user adds a URL for a title it is assumed the user wants every season/episode
-      of that title and all future episodes as well:
-          title_key - Always required.
-          is_whitelist=False - New seasons/episodes are added automatically.
-
-      If the user adds a URL for a season it is assumed the user wants just the episodes
-      from that season and all other seasons excluded:
-          season_keys - Just the imported season.
-          is_whitelist=True - New seasons need to be whitelisted by hand.
-
-      If the user adds a URL for an episode it is assumed the user wants just that
-      episode and all other episodes excluded:
-          episode_keys - Just the imported episode.
-          is_whitelist=True - New episodes need to be whitelisted by hand.
-
-    """
-
     title: Title
     """The title that was imported from the URL."""
 

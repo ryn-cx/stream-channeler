@@ -180,19 +180,6 @@ class EpisodeQueryBuilder:
 
     # TODO: Validate
     def _fetch_holds_copied_titles(self) -> bool:
-        """Whether the channel can hold a title as more than one non-canonical row.
-
-        Collapsing the non-canonical rows of an episode means reading every episode the
-        channel offers before any of them can be returned, since a non-canonical row the
-        row limit never reached may be the one that wins. A channel with no title to
-        collapse skips the ranking and lets the limit stop it early instead.
-
-        Asked of the titles rather than of their episodes, which is what keeps it cheap:
-        a channel holds tens of titles where it offers thousands of episodes. One
-        website carrying a title twice counts as much as two websites carrying it once,
-        since either leaves an episode with a non-canonical row to be ranked against.
-        """
-        # A title nothing else holds a record of is watched on the row that is the
         # record, so it is its own non-canonical row and there is no link to reach it
         # by. Outer-joined so those titles are still counted, as the one non-canonical
         # row they are.
@@ -205,8 +192,7 @@ class EpisodeQueryBuilder:
             .select_from(ChannelTitle)
             .outerjoin(
                 TitleTmdbTitle,
-                col(TitleTmdbTitle.tmdb_title_id)
-                == col(ChannelTitle.tmdb_title_id),
+                col(TitleTmdbTitle.tmdb_title_id) == col(ChannelTitle.tmdb_title_id),
             )
             .join(
                 Title,
@@ -517,13 +503,9 @@ class EpisodeQueryBuilder:
 
     # TODO: Validate
     def _base_query_from_episodes(self) -> Select[tuple[Episode, UUID]]:
-        # A channel holds titles rather than one website's non-canonical row of them, so
-        # every non-canonical row of a title the channel holds is joined to the same
         # `ChannelTitle`.
         #
         # Which title an episode belongs to is read off the episode rather than
-        # off the listing holding it, because a listing can hold more than one:
-        # a channel that was told to hold one of the titles a listing mixes gets
         # that title's episodes and not the listing's other ones.
         #
         # Every join here is now the same table reached again, so each side says
@@ -536,7 +518,6 @@ class EpisodeQueryBuilder:
             .join(Title, col(Season.title_id) == col(Title.id))
             # A listing stands for every episode it was linked to, so one that
             # runs two episodes together is read once under each of them: the
-            # channel holds episodes rather than listings, and a listing standing
             # for two of them answers for both.
             .outerjoin(
                 TMDB_EPISODE_LINK,
@@ -548,8 +529,7 @@ class EpisodeQueryBuilder:
             query.outerjoin(
                 TMDB_EPISODE,
                 and_(
-                    col(TMDB_EPISODE_LINK.tmdb_episode_id)
-                    == col(TMDB_EPISODE.id),
+                    col(TMDB_EPISODE_LINK.tmdb_episode_id) == col(TMDB_EPISODE.id),
                     is_not_linked(TMDB_EPISODE),
                 ),
             )
@@ -569,7 +549,6 @@ class EpisodeQueryBuilder:
                     is_not_linked(Episode),
                 ),
             )
-            # A row nothing else holds a record of is the record, and it is also
             # where the media is watched, so it is its own title and answers for
             # itself when neither the episode nor a link has an answer. TMDB's own
             # rows are titles that are watched nowhere and are left out by
@@ -585,7 +564,6 @@ class EpisodeQueryBuilder:
                     ),
                     col(ChannelTitle.channel_id).in_(self._channel_ids),
                     # Only member titles contribute their episodes; filter-only titles
-                    # (is_blacklist_only=True) exist solely to hold blacklist and
                     # whitelist entries.
                     col(ChannelTitle.is_blacklist_only).is_(False),
                 ),
@@ -654,8 +632,7 @@ class EpisodeQueryBuilder:
                 ChannelEpisodeSourceFilter,
                 and_(
                     ChannelEpisodeSourceFilter.channel_title_id == ChannelTitle.id,
-                    col(ChannelEpisodeSourceFilter.tmdb_episode_id)
-                    == episode_id(),
+                    col(ChannelEpisodeSourceFilter.tmdb_episode_id) == episode_id(),
                     ChannelEpisodeSourceFilter.title_id == Title.id,
                     or_(
                         col(ChannelEpisodeSourceFilter.expires_at).is_(None),
@@ -714,11 +691,6 @@ class EpisodeQueryBuilder:
 
     # TODO: Validate
     def _fetch_sources(self) -> list[tuple[UUID, str, str]]:
-        """Read every website once so the query can name them without joining them.
-
-        Both tables are small enough to hold, and joining them costs the planner the
-        row estimate it needs to keep the rest of the query on hash joins.
-        """
         query = select(col(Source.id), col(Source.key), col(Plugin.key)).join(
             Plugin,
             col(Source.plugin_id) == col(Plugin.id),
@@ -974,7 +946,6 @@ class EpisodeQueryBuilder:
         fuzzy_labels: dict[int, str],
         directeds: list[UnaryExpression[Any] | ColumnElement[Any]],
     ) -> Subquery:
-        """Order the sort values a fuzzy key holds so its jitter has ranks to move."""
         extra_columns: list[ColumnElement[Any]] = [
             func.dense_rank().over(order_by=directeds[index]).label(label)
             for index, label in fuzzy_labels.items()

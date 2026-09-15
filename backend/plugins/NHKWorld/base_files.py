@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, override
 
 from app.files.models import File
+from app.utils import tz_datetime
 from plugins.NHKWorld.files import (
     NewVideoEpisodes,
     VideoEpisodes,
@@ -66,7 +67,7 @@ class NHKWorldBaseFiles(BasePlugin):
     def _source_files(self) -> Sequence[NewVideoEpisodes]:
         if file := self.latest_new_video_episodes_file():
             return [file]
-        return []
+        return [self.new_video_episodes_file(tz_datetime.now())]
 
     @override
     def _title_files(self, title_key: str) -> Sequence[BaseFile[Any]]:

@@ -57,6 +57,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
@@ -115,6 +116,8 @@ export function ManageTitlesTabs({
 }: ManageTitlesTabsProps) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
+  const { user } = useAuth()
+  const isAdmin = user?.is_superuser ?? false
   const [noteDialogOpen, setNoteDialogOpen] = useState(false)
   const [selectedNote, setSelectedNote] = useState<string | null>(null)
   const [selectedTitle, setSelectedTitle] = useState<TitleGroup | null>(null)
@@ -245,6 +248,17 @@ export function ManageTitlesTabs({
       ChannelsService.retryChannelQueueUrl({ channelId, urlId }),
     onSuccess: () => showSuccessToast("URL queued for import again"),
     onError: () => showErrorToast("Failed to queue URL for import again"),
+    onSettled: (_data, _error, _variables, _onMutateResult, context) =>
+      context.client.invalidateQueries({
+        queryKey: ["channelQueue", channelId],
+      }),
+  })
+
+  const retryFailedUrlsMutation = useMutation({
+    mutationFn: () =>
+      ChannelsService.retryFailedChannelQueueUrls({ channelId }),
+    onSuccess: (message) => showSuccessToast(message.message),
+    onError: () => showErrorToast("Failed to queue the failed URLs again"),
     onSettled: (_data, _error, _variables, _onMutateResult, context) =>
       context.client.invalidateQueries({
         queryKey: ["channelQueue", channelId],
@@ -545,16 +559,31 @@ export function ManageTitlesTabs({
             <h3>
               Queue ({queueCount} {queueCount === 1 ? "item" : "items"})
             </h3>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => clearQueueMutation.mutate()}
-              disabled={clearQueueMutation.isPending || queueCount === 0}
-            >
-              {clearQueueMutation.isPending
-                ? "Clearing Completed Entries..."
-                : "Clear Completed Entries"}
-            </Button>
+            <div className="flex items-center gap-2">
+              {isAdmin && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => retryFailedUrlsMutation.mutate()}
+                  disabled={retryFailedUrlsMutation.isPending}
+                  title="Put every URL this queue gave up on back into it"
+                >
+                  {retryFailedUrlsMutation.isPending
+                    ? "Retrying All..."
+                    : "Retry All"}
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => clearQueueMutation.mutate()}
+                disabled={clearQueueMutation.isPending || queueCount === 0}
+              >
+                {clearQueueMutation.isPending
+                  ? "Clearing Completed Entries..."
+                  : "Clear Completed Entries"}
+              </Button>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">

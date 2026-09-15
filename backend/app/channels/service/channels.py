@@ -1,6 +1,7 @@
 # TODO: Validate
 
 
+import inspect
 import uuid
 from collections.abc import Collection
 from random import shuffle
@@ -27,10 +28,15 @@ from app.channels.schemas import (
     ChannelsPublic,
 )
 from app.models import Visibility
+from app.plugins.models import Plugin
 from app.schemas import Message, RecordScope, ScopedReadOptions
 from app.service.responses import scoped_list_response
+from app.sources.models import Source
 from app.users.models import User
 from app.users.plugin_user import is_plugin_user
+from plugins.utils.abstract_plugin import AbstractPlugin
+from plugins.utils.base_plugin.initialize import BaseInitializeMixin
+from plugins.utils.manage_plugins import sorted_plugins
 
 
 # TODO: Validate
@@ -277,15 +283,75 @@ def automatic_channel_users(session: Session) -> list[AutomaticChannelUserOutput
         .group_by(col(User.id))
         .order_by(col(User.email)),
     ).all()
+    plugin_keys_by_source_key = _plugin_keys_by_source_key(session)
     return [
         AutomaticChannelUserOutput(
             id=user.id,
             username=user.username,
             email=user.email,
             channel_count=channel_count,
+            plugin_key=(plugin_key := plugin_keys_by_source_key.get(user.email)),
+            can_create_channels=_creates_initial_channels(
+                _plugin_class(plugin_key),
+            ),
         )
         for user, channel_count in rows
     ]
+
+
+# TODO: Validate
+def _plugin_keys_by_source_key(session: Session) -> dict[str, str]:
+    rows = session.exec(
+        select(Source.key, Plugin.key).join(  # type: ignore[call-overload]
+            Plugin,
+            col(Source.plugin_id) == col(Plugin.id),
+        ),
+    ).all()
+    return dict(rows)
+
+
+# TODO: Validate
+def _plugin_class(plugin_key: str | None) -> type[AbstractPlugin] | None:
+    if plugin_key is None:
+        return None
+    for plugin_class in sorted_plugins():
+        if plugin_class.plugin_name() == plugin_key:
+            return plugin_class
+    return None
+
+
+# TODO: Validate
+def _creates_initial_channels(plugin_class: type[AbstractPlugin] | None) -> bool:
+    if plugin_class is None:
+        return False
+    return inspect.getattr_static(
+        plugin_class,
+        "create_initial_channel_records",
+    ) is not inspect.getattr_static(
+        BaseInitializeMixin,
+        "create_initial_channel_records",
+    )
+
+
+# TODO: Validate
+def create_automatic_channels(session: Session, user_id: uuid.UUID) -> Message:
+    user = _automatic_channel_user(session, user_id)
+    plugin_key = _plugin_keys_by_source_key(session).get(user.email)
+    plugin_class = _plugin_class(plugin_key)
+    if not _creates_initial_channels(plugin_class) or plugin_class is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{user.email} does not create its own channels.",
+        )
+    plugin = Plugin.get_one(session, plugin_class.plugin_name())
+    plugin_class(session, plugin).create_initial_channel_records()  # noqa: SLF001 - The plugin's own hook, run on demand.
+    session.commit()
+    channel_count = session.exec(
+        select(func.count(col(Channel.id))).where(Channel.user_id == user.id),
+    ).one()
+    return Message(
+        message=f"{user.email} now owns {channel_count} channels",
+    )
 
 
 # TODO: Validate

@@ -53,6 +53,8 @@ class AutomaticChannelUserOutput(BaseModel):
     username: str | None
     email: str
     channel_count: int
+    plugin_key: str | None
+    can_create_channels: bool
 
 
 # TODO: Validate
@@ -125,17 +127,9 @@ class ChannelPublicListOutput(BaseModel):
 
 # TODO: Validate
 class ChannelTitleMembership(BaseModel):
-    """One of the `User`'s `Channel`s, and whether it already holds a title.
-
-    What a channel picker needs and nothing else. Reading it off the channels'
-    title lists means a request and a whole catalogue per channel, when the only
-    question being asked of each is yes or no.
-    """
-
     id: uuid.UUID
     name: str | None
     channel_number: float | None
-    # A row the channel holds only to filter episodes out is not carrying the
     # title, so it reads as false: adding is what turns that row into one the
     # channel carries.
     carries_title: bool
@@ -330,12 +324,6 @@ class ChannelTitleGroup(BaseModel):
 
 # TODO: Validate
 class ChannelTitleStats(BaseModel):
-    """What a channel's rows for one canonical title add up to.
-
-    A canonical title is counted by what its seasons and episodes are rather than by the
-    records holding them, so the same season on three websites is one season.
-    """
-
     season_count: int
     episode_count: int
 
@@ -480,8 +468,6 @@ class WhitelistTitleOutput(TitlePublic):
 
 # TODO: Validate
 class WhitelistEpisodesOutput(BaseModel):
-    """One page of a season's episodes, and how many the season holds in all."""
-
     episodes: list[WhitelistEpisodeOutput]
     total_count: int
 

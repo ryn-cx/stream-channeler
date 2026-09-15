@@ -8,6 +8,7 @@ import {
   ChannelsService,
   type Visibility,
 } from "@/client"
+import DeleteChannel from "@/components/Channels/ChannelList/DeleteChannel"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -43,6 +44,7 @@ interface EditChannelDialogProps {
   channel: ChannelOutput | ChannelListOutput
   open: boolean
   onOpenChange: (open: boolean) => void
+  showDelete?: boolean
 }
 
 // TODO: Validate
@@ -50,6 +52,7 @@ export function EditChannelDialog({
   channel,
   open,
   onOpenChange,
+  showDelete = false,
 }: EditChannelDialogProps) {
   const queryClient = useQueryClient()
   const { user } = useAuth()
@@ -64,6 +67,7 @@ export function EditChannelDialog({
   const [visibility, setVisibility] = useState<Visibility>(channel.visibility)
   const [description, setDescription] = useState(channel.description ?? "")
   const [anonymous, setAnonymous] = useState(channel.anonymous ?? false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   // The admin endpoint returns the owner's username on the channel; for an owner
   // editing their own channel it falls back to the logged-in user.
   const creatorName = "username" in channel ? channel.username : user?.username
@@ -100,96 +104,115 @@ export function EditChannelDialog({
   })
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Edit Channel</DialogTitle>
-          <DialogDescription>
-            Update this channel's details. Manage its titles and sort order from
-            the channel itself.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Channel</DialogTitle>
+            <DialogDescription>
+              Update this channel's details. Manage its titles and sort order
+              from the channel itself.
+            </DialogDescription>
+          </DialogHeader>
 
-        <DialogBody className="flex flex-col gap-4 py-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-channel-name">Name</Label>
-            <Input
-              id="edit-channel-name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-channel-number">Channel Number</Label>
-            <Input
-              id="edit-channel-number"
-              type="number"
-              value={channelNumber}
-              onChange={(event) => setChannelNumber(event.target.value)}
-              placeholder="Optional"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-channel-description">Description</Label>
-            <Textarea
-              id="edit-channel-description"
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              placeholder="Optional"
-              className="max-h-40 overflow-y-auto"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-channel-visibility">Visibility</Label>
-            <Select
-              value={visibility}
-              onValueChange={(value) => setVisibility(value as Visibility)}
-            >
-              <SelectTrigger id="edit-channel-visibility">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {VISIBILITY_OPTIONS.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {visibilityLabel(option)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-sm text-muted-foreground">
-              {visibilityDescription(visibility)}
-            </p>
-          </div>
-          <div className="flex items-start gap-3">
-            <Checkbox
-              id="edit-channel-anonymous"
-              checked={anonymous}
-              onCheckedChange={(checked) => setAnonymous(checked === true)}
-            />
-            <div className="space-y-1 leading-none">
-              <Label htmlFor="edit-channel-anonymous" className="font-normal">
-                Publish anonymously
-              </Label>
+          <DialogBody className="flex flex-col gap-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-channel-name">Name</Label>
+              <Input
+                id="edit-channel-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-channel-number">Channel Number</Label>
+              <Input
+                id="edit-channel-number"
+                type="number"
+                value={channelNumber}
+                onChange={(event) => setChannelNumber(event.target.value)}
+                placeholder="Optional"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-channel-description">Description</Label>
+              <Textarea
+                id="edit-channel-description"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="Optional"
+                className="max-h-40 overflow-y-auto"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-channel-visibility">Visibility</Label>
+              <Select
+                value={visibility}
+                onValueChange={(value) => setVisibility(value as Visibility)}
+              >
+                <SelectTrigger id="edit-channel-visibility">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {VISIBILITY_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {visibilityLabel(option)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="text-sm text-muted-foreground">
-                The creator of the channel will be listed as{" "}
-                {anonymous ? "anonymous" : creatorName}.
+                {visibilityDescription(visibility)}
               </p>
             </div>
-          </div>
-        </DialogBody>
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="edit-channel-anonymous"
+                checked={anonymous}
+                onCheckedChange={(checked) => setAnonymous(checked === true)}
+              />
+              <div className="space-y-1 leading-none">
+                <Label htmlFor="edit-channel-anonymous" className="font-normal">
+                  Publish anonymously
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  The creator of the channel will be listed as{" "}
+                  {anonymous ? "anonymous" : creatorName}.
+                </p>
+              </div>
+            </div>
+          </DialogBody>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <LoadingButton
-            onClick={() => mutation.mutate()}
-            loading={mutation.isPending}
-          >
-            Save Changes
-          </LoadingButton>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter>
+            {showDelete && (
+              <Button
+                variant="destructive"
+                className="sm:mr-auto"
+                onClick={() => setConfirmingDelete(true)}
+              >
+                Delete Channel
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <LoadingButton
+              onClick={() => mutation.mutate()}
+              loading={mutation.isPending}
+            >
+              Save Changes
+            </LoadingButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {showDelete && (
+        <DeleteChannel
+          id={channel.id}
+          externalOpen={confirmingDelete}
+          onExternalClose={() => setConfirmingDelete(false)}
+          onSuccess={() => onOpenChange(false)}
+        />
+      )}
+    </>
   )
 }

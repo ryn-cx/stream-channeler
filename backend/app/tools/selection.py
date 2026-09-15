@@ -26,25 +26,35 @@ class PluginSelection:
 
 
 # TODO: Validate
-def add_selection_arguments(parser: ArgumentParser) -> None:
+def add_selection_arguments(
+    parser: ArgumentParser,
+    *,
+    include_source: bool = True,
+) -> None:
     parser.add_argument(
         "--plugin",
         default=None,
         help="Only act on records from the plugin with this key.",
     )
-    parser.add_argument(
-        "--source",
-        default=None,
-        help="Only act on records from the source with this key.",
-    )
+    if include_source:
+        parser.add_argument(
+            "--source",
+            default=None,
+            help="Only act on records from the source with this key.",
+        )
 
 
 # TODO: Validate
-def parse_selection(description: str) -> PluginSelection:
+def parse_selection(
+    description: str,
+    *,
+    include_source: bool = True,
+) -> PluginSelection:
     parser = ArgumentParser(description=description)
-    add_selection_arguments(parser)
+    add_selection_arguments(parser, include_source=include_source)
     arguments = parser.parse_args()
-    return PluginSelection(arguments.plugin, arguments.source)
+    source_key = arguments.source if include_source else None
+    return PluginSelection(arguments.plugin, source_key)
 
 
 # TODO: Validate

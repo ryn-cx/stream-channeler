@@ -9,6 +9,7 @@ from fastapi import APIRouter, Query
 from app.auth.dependencies import (
     CurrentUser,
     SessionDep,
+    SuperUser,
 )
 from app.channels.dependencies import (
     EditableChannel,
@@ -220,7 +221,6 @@ def get_channels_for_title(
     current_user: CurrentUser,
     title: ExistingTitle,
 ) -> list[ChannelTitleMembership]:
-    """List the `User`'s `Channel`s, saying which already hold a title."""
     return titles.channels_with_title_membership(session, current_user, title)
 
 
@@ -278,6 +278,22 @@ def retry_channel_queue_url(
 ) -> Message:
     """Put one URL back into a channel's import queue to be imported again."""
     return import_queue.retry_queue_entry(session, queue_entry)
+
+
+# TODO: Validate
+@channels_router.post("/{channel_id}/import-queue/retry-failed")  # noqa: FAST003
+def retry_failed_channel_queue_urls(
+    session: SessionDep,
+    _admin: SuperUser,
+    channel: EditableChannel,
+) -> Message:
+    """Put every URL a channel's queue gave up on back into it.
+
+    Admin-only, unlike the retry beside it: one press starts as many imports as
+    the queue has failures, which is a load on every website they are read from
+    rather than a load here.
+    """
+    return import_queue.retry_failed_queue_entries(session, channel)
 
 
 # TODO: Validate

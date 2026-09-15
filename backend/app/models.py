@@ -53,15 +53,6 @@ def sortable_field_indexes(
     already_indexed: Iterable[str] = (),
     where: TextClause | None = None,
 ) -> tuple[Index, ...]:
-    """Build an `Index` for each field that can be used for sorting by the user.
-
-    `id` is already indexed by the primary key, and `already_indexed` names the
-    fields the table indexes itself, which an index built here would collide with.
-
-    `where` narrows every index to the rows that are ordered by these fields,
-    which on a table holding both canonical and non-canonical rows is the
-    alone.
-    """
     skipped = {"id", *already_indexed}
     return tuple(
         Index(f"{model_name}-{field}-index", field, postgresql_where=where)
@@ -319,8 +310,6 @@ class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):
 
 # TODO: Validate
 class ChildMediaMixin(MediaMixin[ChildT], ABC, Generic[ParentT, ChildT]):  # noqa: UP046
-    # The column holding the parent's id. Named rather than found by looking for
-    # the first foreign key, since a model can hold more than one and which of
     # them is the parent is not something the columns say.
     PARENT_ID_FIELD: ClassVar[str]
 

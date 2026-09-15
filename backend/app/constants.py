@@ -18,7 +18,6 @@ ALL_TEST_FILES_FOLDER = TEST_FILES_FOLDER / "files"
 ALL_TEST_FILES_METADATA_FOLDER = TEST_FILES_FOLDER / "metadata"
 # What a plugin test class recorded rather than what it downloaded: the manifest
 # of the stored files it reads, the database dumps it is checked against, and
-# its profiling output. Kept apart from the files so the store holds only what
 # came off the network.
 TEST_RESULTS_FOLDER = BACKEND_FOLDER / "tests" / "plugins" / "results"
 

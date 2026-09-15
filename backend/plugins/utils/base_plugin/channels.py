@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from datetime import timedelta
 from functools import cached_property
 from typing import TYPE_CHECKING
@@ -9,7 +8,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, select
 
-from app.channels.models import Channel, ChannelQueue
+from app.channels.models import Channel, ChannelQueue, ChannelTitle
 from app.channels.service.import_queue import add_urls_to_channel_import_queue
 from app.channels.service.ordering import order_preset_options
 from app.models import Visibility
@@ -19,20 +18,13 @@ from app.users.models import User
 from app.users.plugin_user import is_plugin_user
 from app.users.service.accounts import get_or_create_automatic_channel_user
 from app.utils import tz_datetime
-from plugins.utils.abstract_plugin import AbstractPlugin
+from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 
 if TYPE_CHECKING:
     import uuid
     from collections.abc import Sequence
 
     from app.plugins.models import Plugin
-
-
-# TODO: Validate
-@dataclass(frozen=True)
-class ChannelKeyURL:
-    channel_key: str
-    url: str
 
 
 class BaseChannelMixin(AbstractPlugin, ABC):
@@ -92,15 +84,6 @@ class BaseChannelMixin(AbstractPlugin, ABC):
         )
 
     # TODO: Validate
-    def add_title_to_plugin_channels(self, title: Title) -> None:
-        """Put a title onto every automatic channel it belongs on.
-
-        A plugin that sorts its titles into channels overrides this. It is public
-        so a tool can walk every title a plugin holds and sort them again, which
-        is how a channel is restructured without reimporting anything.
-        """
-
-    # TODO: Validate
     def _titles_by_url(self, urls: set[str]) -> dict[str, list[Title]]:
         title_keys_by_url = {url: self.title_key_from_url(url) for url in urls}
         titles = self.session.exec(
@@ -125,25 +108,61 @@ class BaseChannelMixin(AbstractPlugin, ABC):
     # TODO: Validate
     def add_new_urls_to_channel(
         self,
-        channel_key_urls: Sequence[ChannelKeyURL],
+        channel_key: str,
+        urls: Sequence[str],
     ) -> None:
-        urls_by_channel_key: dict[str, list[str]] = {}
-        for channel_key_url in channel_key_urls:
-            urls_by_channel_key.setdefault(channel_key_url.channel_key, []).append(
-                channel_key_url.url,
+        if not urls:
+            return
+
+        channel = self.get_or_create_channel(
+            self._channel_name(channel_key),
+            self._channel_description(channel_key),
+        )
+        urls_not_in_queue = self._urls_not_in_queue(channel, urls)
+        if new_urls := self._urls_not_on_channel(channel, urls_not_in_queue):
+            add_urls_to_channel_import_queue(
+                self.session,
+                channel,
+                new_urls,
             )
 
-        for channel_key, urls in urls_by_channel_key.items():
-            channel = self.get_or_create_channel(
-                self._channel_name(channel_key),
-                self._channel_description(channel_key),
-            )
-            if urls_not_in_queue := self._urls_not_in_queue(channel, urls):
-                add_urls_to_channel_import_queue(
-                    self.session,
-                    channel,
-                    urls_not_in_queue,
-                )
+    # TODO: Validate
+    def _urls_not_on_channel(self, channel: Channel, urls: Sequence[str]) -> list[str]:
+        if not urls:
+            return []
+        titles_by_url = self._titles_by_url(
+            {url for url in urls if self._has_title_key(url)},
+        )
+        channel_tmdb_title_ids = set(
+            self.session.exec(
+                select(ChannelTitle.tmdb_title_id).where(
+                    ChannelTitle.channel_id == channel.id,
+                ),
+            ).all(),
+        )
+        return [
+            url
+            for url in urls
+            if not (tmdb_title_ids := self._tmdb_title_ids(titles_by_url.get(url, [])))
+            or not tmdb_title_ids <= channel_tmdb_title_ids
+        ]
+
+    # TODO: Validate
+    def _has_title_key(self, url: str) -> bool:
+        try:
+            self.title_key_from_url(url)
+        except InvalidURLError:
+            return False
+        return True
+
+    # TODO: Validate
+    @staticmethod
+    def _tmdb_title_ids(titles: Sequence[Title]) -> set[uuid.UUID]:
+        return {
+            tmdb_title_id
+            for title in titles
+            for tmdb_title_id in (title.tmdb_title_ids or [title.id])
+        }
 
     def _urls_not_in_queue(self, channel: Channel, urls: Sequence[str]) -> list[str]:
         """Return the URLs that are not currently in the channel's import queue."""

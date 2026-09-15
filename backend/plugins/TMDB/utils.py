@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from datetime import date
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 from tminidb.tv_episode_group.details.models import Episode as TvEpisodeGroupEpisode
 from tminidb.tv_episode_group.details.models import Group as TvEpisodeGroup
@@ -91,3 +91,15 @@ class TMDBSeasonInfo(NamedTuple):
             episodes=details.episodes,
             uses_episode_group=False,
         )
+
+
+# TODO: Validate
+def watch_provider_names(watch_providers: Any) -> set[str]:  # noqa: ANN401 - One of the strict and optional models of three media types.
+    us_results = watch_providers.results.us
+    if not us_results:
+        return set()
+    return {
+        provider.provider_name
+        for offering in ("flatrate", "ads", "free", "buy", "rent")
+        for provider in getattr(us_results, offering, None) or []
+    }

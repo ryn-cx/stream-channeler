@@ -27,6 +27,10 @@ ADMIN_ROUTES: list[tuple[Method, str]] = [
     ("post", f"/titles/{MISSING}/validate"),
     ("post", f"/titles/{MISSING}/relink"),
     ("post", f"/titles/{MISSING}/force-update"),
+    ("get", "/unmatched-titles"),
+    ("post", f"/unmatched-titles/{MISSING}/import"),
+    ("post", f"/unmatched-titles/{MISSING}/ignore"),
+    ("delete", f"/unmatched-titles/{MISSING}"),
 ]
 
 

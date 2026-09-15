@@ -68,8 +68,6 @@ class SeasonListOutput(SeasonOutput):
 
 # TODO: Validate
 class SeasonRecord(BaseModel):
-    """A `Season` and what holds it, each served as the record it already is."""
-
     season: SeasonOutput
     title: TitlePublic
     source: SourceListPublic
@@ -86,8 +84,6 @@ class SeasonRecord(BaseModel):
 
 # TODO: Validate
 class SeasonInformationSide(SeasonRecord):
-    """One record's own account of a season, as the website that holds it has it."""
-
     label: str
 
 

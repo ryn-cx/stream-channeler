@@ -17,17 +17,6 @@ def tmdb_record_ids_by_key(
     session: Session,
     keys: Collection[str],
 ) -> dict[str, uuid.UUID]:
-    """Map each episode key to the canonical episode that row stands for.
-
-    An episode nothing else holds a record of is the record, so it stands for itself and
-    answers with its own id. A non-canonical row answers with the episode it is linked
-    to, and is preferred where both are stored, since the non-canonical row is the one
-    the canonical row was minted for.
-
-    Only episodes answer this way. A non-canonical title stands for however many
-    canonical titles a website mixed into it and names none of them in a column, so a
-    title key is asked of `tmdb_title_ids_by_key` and answered with all of them.
-    """
     if not keys:
         return {}
     own_rows: dict[str, uuid.UUID] = dict(

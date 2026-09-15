@@ -46,7 +46,6 @@ import { Route as LayoutAdminSeasonReportsRouteImport } from './routes/_layout/a
 import { Route as LayoutAdminTitleReportsRouteImport } from './routes/_layout/admin.title-reports'
 import { Route as LayoutAdminTmdbMatchesRouteImport } from './routes/_layout/admin.tmdb-matches'
 import { Route as LayoutAdminUnlockedEpisodesRouteImport } from './routes/_layout/admin.unlocked-episodes'
-import { Route as LayoutAdminUnmatchedSourcesRouteImport } from './routes/_layout/admin.unmatched-sources'
 import { Route as LayoutAdminUnvalidatedTitlesRouteImport } from './routes/_layout/admin.unvalidated-titles'
 import { Route as LayoutAdminUsersRouteImport } from './routes/_layout/admin.users'
 import { Route as LayoutChannelsIndexRouteImport } from './routes/_layout/channels.index'
@@ -251,12 +250,6 @@ const LayoutAdminUnlockedEpisodesRoute =
     path: '/unlocked-episodes',
     getParentRoute: () => LayoutAdminRoute,
   } as any)
-const LayoutAdminUnmatchedSourcesRoute =
-  LayoutAdminUnmatchedSourcesRouteImport.update({
-    id: '/unmatched-sources',
-    path: '/unmatched-sources',
-    getParentRoute: () => LayoutAdminRoute,
-  } as any)
 const LayoutAdminUnvalidatedTitlesRoute =
   LayoutAdminUnvalidatedTitlesRouteImport.update({
     id: '/unvalidated-titles',
@@ -359,7 +352,6 @@ export interface FileRoutesByFullPath {
   '/admin/title-reports': typeof LayoutAdminTitleReportsRoute
   '/admin/tmdb-matches': typeof LayoutAdminTmdbMatchesRoute
   '/admin/unlocked-episodes': typeof LayoutAdminUnlockedEpisodesRoute
-  '/admin/unmatched-sources': typeof LayoutAdminUnmatchedSourcesRoute
   '/admin/unvalidated-titles': typeof LayoutAdminUnvalidatedTitlesRoute
   '/admin/users': typeof LayoutAdminUsersRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
@@ -407,7 +399,6 @@ export interface FileRoutesByTo {
   '/admin/title-reports': typeof LayoutAdminTitleReportsRoute
   '/admin/tmdb-matches': typeof LayoutAdminTmdbMatchesRoute
   '/admin/unlocked-episodes': typeof LayoutAdminUnlockedEpisodesRoute
-  '/admin/unmatched-sources': typeof LayoutAdminUnmatchedSourcesRoute
   '/admin/unvalidated-titles': typeof LayoutAdminUnvalidatedTitlesRoute
   '/admin/users': typeof LayoutAdminUsersRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
@@ -460,7 +451,6 @@ export interface FileRoutesById {
   '/_layout/admin/title-reports': typeof LayoutAdminTitleReportsRoute
   '/_layout/admin/tmdb-matches': typeof LayoutAdminTmdbMatchesRoute
   '/_layout/admin/unlocked-episodes': typeof LayoutAdminUnlockedEpisodesRoute
-  '/_layout/admin/unmatched-sources': typeof LayoutAdminUnmatchedSourcesRoute
   '/_layout/admin/unvalidated-titles': typeof LayoutAdminUnvalidatedTitlesRoute
   '/_layout/admin/users': typeof LayoutAdminUsersRoute
   '/_layout/channels/$channelId': typeof LayoutChannelsChannelIdRoute
@@ -513,7 +503,6 @@ export interface FileRouteTypes {
     | '/admin/title-reports'
     | '/admin/tmdb-matches'
     | '/admin/unlocked-episodes'
-    | '/admin/unmatched-sources'
     | '/admin/unvalidated-titles'
     | '/admin/users'
     | '/channels/$channelId'
@@ -561,7 +550,6 @@ export interface FileRouteTypes {
     | '/admin/title-reports'
     | '/admin/tmdb-matches'
     | '/admin/unlocked-episodes'
-    | '/admin/unmatched-sources'
     | '/admin/unvalidated-titles'
     | '/admin/users'
     | '/channels/$channelId'
@@ -613,7 +601,6 @@ export interface FileRouteTypes {
     | '/_layout/admin/title-reports'
     | '/_layout/admin/tmdb-matches'
     | '/_layout/admin/unlocked-episodes'
-    | '/_layout/admin/unmatched-sources'
     | '/_layout/admin/unvalidated-titles'
     | '/_layout/admin/users'
     | '/_layout/channels/$channelId'
@@ -899,13 +886,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminUnlockedEpisodesRouteImport
       parentRoute: typeof LayoutAdminRoute
     }
-    '/_layout/admin/unmatched-sources': {
-      id: '/_layout/admin/unmatched-sources'
-      path: '/unmatched-sources'
-      fullPath: '/admin/unmatched-sources'
-      preLoaderRoute: typeof LayoutAdminUnmatchedSourcesRouteImport
-      parentRoute: typeof LayoutAdminRoute
-    }
     '/_layout/admin/unvalidated-titles': {
       id: '/_layout/admin/unvalidated-titles'
       path: '/unvalidated-titles'
@@ -1004,7 +984,6 @@ interface LayoutAdminRouteChildren {
   LayoutAdminTitleReportsRoute: typeof LayoutAdminTitleReportsRoute
   LayoutAdminTmdbMatchesRoute: typeof LayoutAdminTmdbMatchesRoute
   LayoutAdminUnlockedEpisodesRoute: typeof LayoutAdminUnlockedEpisodesRoute
-  LayoutAdminUnmatchedSourcesRoute: typeof LayoutAdminUnmatchedSourcesRoute
   LayoutAdminUnvalidatedTitlesRoute: typeof LayoutAdminUnvalidatedTitlesRoute
   LayoutAdminUsersRoute: typeof LayoutAdminUsersRoute
   LayoutAdminIndexRoute: typeof LayoutAdminIndexRoute
@@ -1022,7 +1001,6 @@ const LayoutAdminRouteChildren: LayoutAdminRouteChildren = {
   LayoutAdminTitleReportsRoute: LayoutAdminTitleReportsRoute,
   LayoutAdminTmdbMatchesRoute: LayoutAdminTmdbMatchesRoute,
   LayoutAdminUnlockedEpisodesRoute: LayoutAdminUnlockedEpisodesRoute,
-  LayoutAdminUnmatchedSourcesRoute: LayoutAdminUnmatchedSourcesRoute,
   LayoutAdminUnvalidatedTitlesRoute: LayoutAdminUnvalidatedTitlesRoute,
   LayoutAdminUsersRoute: LayoutAdminUsersRoute,
   LayoutAdminIndexRoute: LayoutAdminIndexRoute,

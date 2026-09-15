@@ -94,7 +94,7 @@ class BasePlugin(
         titles available on the website available from the
         `_plugin_files_data_timestamps` function."""
         self._download_if_outdated(self._plugin_files(), plugin.update_at)
-        self._create_initial_channel_records()
+        self.create_initial_channel_records()
         data_timestamps = self._plugin_files_data_timestamps()
         new_title_keys = self._title_keys_from_plugin_files()
         self._mark_mismatched_titles_as_outdated(None, new_title_keys, data_timestamps)

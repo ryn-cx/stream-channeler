@@ -10,7 +10,6 @@ PRIME_BENEFIT_ID = "Prime"
 # longer id of its own.
 TITLE_KEY_REGEX = r"[A-Z0-9]{10,}"
 
-# Names the source that holds the titles that have to be bought or rented.
 PURCHASE_SOURCE_SUFFIX = "Purchase"
 
 # https://watch.amazon.com/detail?gti=amzn1.dv.gti.92ad2133-d35e-1cb1-5d8e-f7b122a68228

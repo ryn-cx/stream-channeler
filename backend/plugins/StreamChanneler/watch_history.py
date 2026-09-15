@@ -49,32 +49,10 @@ def _unknown_import_result(watch_identifier: str) -> WatchImportResult:
 
 # TODO: Validate
 class StreamChannelerWatchHistoryMixin(BaseWatchHistoryMixin):
-    """Export and import watches as Stream Channeler's own history file.
-
-    Every other plugin keys its export on the website's own episode ids, which
-    only that website's links carry. A Stream Channeler export is of watches that
-    were made here, so it is keyed on the episode itself, which is what a `Watch`
-    holds and what survives a link being deleted or swapped for another
-    website's.
-    """
-
     import_watch_history_file_extension = ".json"
 
     # TODO: Validate
     def export_watch_history(self, user: User) -> list[WatchExportEntry]:
-        """Return the `User`'s watches, holding only what re-importing them needs.
-
-        Names, urls and ids are all re-read from whatever database the file is
-        imported into, so a watch is nothing more than which episode it is of,
-        when it happened, and whether it was verified.
-
-        A watch carries the identifier of the link that played it, which only a
-        database holding that website's listing can make anything of. The file
-        names the episode itself instead, so a history exported from a library
-        built one way imports into a library built another. A watch whose link
-        this database no longer holds has only its own identifier left to be
-        named by, so that is what it is exported as.
-        """
         named_episode = aliased(Episode)
         named_link = tmdb_episode_link()
         watched_episode = aliased(Episode)
@@ -134,28 +112,6 @@ class StreamChannelerWatchHistoryMixin(BaseWatchHistoryMixin):
     # TODO: Validate
     @override
     def _get_episodes_by_key(self, episode_keys: list[str]) -> dict[str, Episode]:
-        """Load one row for each episode the exported identifiers name.
-
-        The identifiers are of the episodes themselves rather than of one
-        plugin's links to them, so the lookup runs across every plugin instead of
-        being held to this one's sources, which have no episodes of their own.
-
-        An episode nothing else holds a record of is the record, and is watched
-        where it stands, so it answers for its own identifier. A link is
-        preferred where both are stored, since the episode a link is of may be a
-        row TMDB wrote and nothing is watched there.
-
-        A watch whose link this database has since lost was exported under that
-        link's own identifier rather than the episode's, so links are looked up
-        by their own identifier too. By their identifier alone: a link's key is
-        a website's own id and matching a file's older key-only entries against
-        it would take two websites that happen to number alike for one episode.
-
-        A file exported before the identifier existed names an episode by the
-        key alone, so the key is looked up as well. The two part company only for
-        TMDB, whose keys already begin with its name and so are not the same
-        string once the name is put in front of them again.
-        """
         if not episode_keys:
             return {}
         wanted = set(episode_keys)
@@ -171,8 +127,7 @@ class StreamChannelerWatchHistoryMixin(BaseWatchHistoryMixin):
                 .join(tmdb_link, links_of(Episode, tmdb_link))
                 .join(
                     tmdb_episode,
-                    col(tmdb_link.tmdb_episode_id)
-                    == col(tmdb_episode.id),
+                    col(tmdb_link.tmdb_episode_id) == col(tmdb_episode.id),
                 )
                 .where(
                     is_linked(Episode),
@@ -246,11 +201,6 @@ class StreamChannelerWatchHistoryMixin(BaseWatchHistoryMixin):
         self,
         watch_identifiers: list[str],
     ) -> dict[str, WatchImportResult]:
-        """Describe each exported identifier for the import summary.
-
-        An export holds no titles, so they are read back out of the database it
-        is being imported into.
-        """
         if not watch_identifiers:
             return {}
         statement = (

@@ -29,7 +29,6 @@ UPDATE_TIME = datetime(2026, 1, 2, tzinfo=UTC)
 """When every update is taken to have happened, the day after the import."""
 
 ESCAPE_PREFIX = "%"
-"""What marks a character that a file name cannot hold as it is."""
 
 # The characters Windows will not put in a file name, along with the prefix
 # itself so that escaping can be undone, and the control characters no file

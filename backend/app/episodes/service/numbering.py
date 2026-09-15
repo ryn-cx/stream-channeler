@@ -43,7 +43,6 @@ from app.tmdb_media.tmdb import (
 _UNNUMBERED = float("inf")
 
 
-# What an `Episode` can be pointed at: the episode itself, the season holding
 # it, and the title above that, all as TMDB has them.
 type _Candidate = tuple[Episode, Season, Title]
 
@@ -333,18 +332,13 @@ def _candidates_from_titles(
     """
     by_title = _candidates_by_title(
         session,
-        {
-            tmdb_title_id
-            for title in titles
-            for tmdb_title_id in title.tmdb_title_ids
-        },
+        {tmdb_title_id for title in titles for tmdb_title_id in title.tmdb_title_ids},
     )
     candidates: dict[uuid.UUID, list[_Candidate]] = {}
     numbers: dict[uuid.UUID, dict[uuid.UUID, int]] = {}
     for title in titles:
         grouped = [
-            by_title.get(tmdb_title_id, [])
-            for tmdb_title_id in title.tmdb_title_ids
+            by_title.get(tmdb_title_id, []) for tmdb_title_id in title.tmdb_title_ids
         ]
         candidates[title.id] = [candidate for group in grouped for candidate in group]
         numbers[title.id] = {

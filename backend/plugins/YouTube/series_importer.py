@@ -55,7 +55,6 @@
 #     # TODO: Validate
 #     @override
 #     def _season_episode_keys_from_file(self, season_key: str) -> list[str]:
-#         # A season of a title holds the episodes listed on its page.
 #         title_key, season_number = split_title_season_key(season_key)
 #         episode_keys = self.browse_file(title_key).episode_keys_by_season()
 #         return episode_keys.get(int(season_number), [])

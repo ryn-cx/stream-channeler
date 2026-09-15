@@ -13,14 +13,12 @@ from app.seasons.models import Season
 from app.sources.models import Source
 from app.titles.models import Title
 from app.tmdb_media.keys import watch_identifier
-from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.NHKWorld.base_files import NHKWorldBaseFiles
 from plugins.NHKWorld.constants import TITLE_URL_REGEX
 from plugins.NHKWorld.files import NewVideoEpisodes
 from plugins.NHKWorld.utils import build_url, image_url, thumbnail_url, title_url
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
-from plugins.utils.base_plugin.channels import ChannelKeyURL
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import ParsedURL
 
@@ -64,21 +62,8 @@ class NHKWorld(NHKWorldBaseFiles, BaseImporter, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def _upsert_source(self, source_key: str) -> Source:
-        if not (latest_feed_file := self.latest_new_video_episodes_file()):
-            latest_feed_file = self.new_video_episodes_file(tz_datetime.now())
-        latest_feed_file.download_if_outdated()
-        data_timestamp = latest_feed_file.record_data_timestamp
-        existing_source = Source.get_from_memory(self.session, self.plugin, source_key)
-        source = Source(
-            key=source_key,
-            favicon_url=self.favicon_url(),
-            link_to_tmdb=self._link_to_tmdb(),
-            data_timestamp=data_timestamp,
-            plugin_id=self.plugin.id,
-        ).upsert(self.plugin, existing_source)
-        source.set_update_at(data_timestamp + timedelta(days=1))
-        return source
+    def _next_source_update_at(self) -> datetime:
+        return self._source_files_data_timestamp() + timedelta(days=1)
 
     # TODO: Validate
     @override
@@ -89,7 +74,7 @@ class NHKWorld(NHKWorldBaseFiles, BaseImporter, AbstractPlugin, register=False):
         new_feed_file = self.new_video_episodes_file(source.data_timestamp)
         new_feed_file.download_if_outdated(update_at)
         self._process_new_episodes_files(source)
-        self._upsert_source(source.key)
+        self.upsert_source(source.key)
 
     # TODO: Validate
     def _title_keys_from_plugin_files(self) -> list[str]:
@@ -104,12 +89,10 @@ class NHKWorld(NHKWorldBaseFiles, BaseImporter, AbstractPlugin, register=False):
 
     # TODO: Validate
     @override
-    def _create_initial_channel_records(self) -> None:
+    def create_initial_channel_records(self) -> None:
         self.add_new_urls_to_channel(
-            [
-                ChannelKeyURL("All Titles", url)
-                for url in self._title_urls_from_plugin_files()
-            ],
+            "All Titles",
+            self._title_urls_from_plugin_files(),
         )
         self._feed_channel()
         self._process_new_episodes_files(self._sources[self.plugin_name()])
@@ -122,7 +105,6 @@ class NHKWorld(NHKWorldBaseFiles, BaseImporter, AbstractPlugin, register=False):
         )
         for feed_file in new_files:
             # Queueing the titles a file found commits, which lets go of every
-            # title read for it, and a title nothing holds is not in memory to be
             # matched. Read back per file rather than once, so that a file after
             # the first still recognises the titles already imported.
             _cache = self._preload_sources(preload_titles=True).all()
@@ -157,13 +139,6 @@ class NHKWorld(NHKWorldBaseFiles, BaseImporter, AbstractPlugin, register=False):
 
     # TODO: Validate
     def _feed_channel(self) -> Channel:
-        """Return the plugin owned channel every NHK World title is queued into.
-
-        The new episodes feed only reaches back so far, so a title drops off it
-        once nothing new has aired and the channel is what keeps hold of the
-        whole library. It is created the first time a title is found rather than
-        by hand.
-        """
         return self.get_or_create_channel(
             self.plugin_name(),
             self._channel_description("All Titles"),

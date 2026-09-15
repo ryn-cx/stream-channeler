@@ -47,7 +47,6 @@
 #     # TODO: Validate
 #     @override
 #     def _season_episode_keys_from_file(self, season_key: str) -> list[str]:
-#         # A season that is a single video holds only that video.
 #         return [season_key]
 
 #     # TODO: Validate

@@ -32,7 +32,7 @@ class HiDive(
 ):
     # TODO: Validate
     @override
-    def _create_initial_channel_records(self) -> None:
+    def create_initial_channel_records(self) -> None:
         self._schedule_channel()
         self._process_new_schedule_files(self._sources[self.plugin_name()])
 
@@ -71,4 +71,4 @@ class HiDive(
         new_schedule_file = self.schedule_file(source.data_timestamp)
         new_schedule_file.download_if_outdated(update_at)
         self._process_new_schedule_files(source)
-        self._upsert_source(source.key)
+        self.upsert_source(source.key)

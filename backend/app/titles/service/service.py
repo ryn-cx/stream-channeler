@@ -7,25 +7,20 @@ from loguru import logger
 from sqlalchemy import func
 from sqlmodel import Session, col, select
 
-from app.channels.models import ChannelTitle
 from app.episodes.models import Episode
 from app.issue_reports.service.listing import list_title_issue_reports
 from app.media.media_type import TMDBMediaType
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
-from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.sources.models import Source
 from app.sources.schemas import SourceListPublic
-from app.titles.models import Title, TitleTmdbTitle
+from app.titles.models import Title
 from app.titles.schemas import (
-    MissingSourceTitleOutput,
     TitleInformationOutput,
     TitleInformationSide,
     TitleListPublic,
     TitlePublic,
     TitleUpdate,
     TmdbEpisodeGroupOption,
-    TmdbTitleOutput,
     UnvalidatedLinkedTitleOutput,
     UnvalidatedTitleOutput,
 )
@@ -33,7 +28,6 @@ from app.titles.service.linking import (
     _old_relink_episodes,
     _old_reread_in_new_order,
 )
-from app.tmdb_media.filters import is_not_linked
 from app.tmdb_media.metadata import tmdb_title_of
 from app.tmdb_media.tmdb import (
     chosen_group_id,
@@ -51,13 +45,6 @@ def list_tmdb_episode_groups(
     session: Session,
     title: Title,
 ) -> list[TmdbEpisodeGroupOption]:
-    """Return the episode orders TMDB holds for `title`, for one to be chosen from.
-
-    Its own endpoint rather than part of reading the title, because it is read off
-    a downloaded file and only ever wanted by somebody about to choose an order.
-    A row that is not a TMDB series has none, which reads as an empty list rather
-    than as an error: there is nothing wrong with a title having no other order.
-    """
     if title.source.plugin.key != TMDB_PLUGIN_KEY:
         return []
 
@@ -149,18 +136,6 @@ def validate_extra(
     title: Title,
     extra: dict[str, Any] | None,
 ) -> None:
-    """Raise where `extra` names an episode order TMDB has no record of.
-
-    Choosing an order replaces the title's own seasons with that order's groups,
-    so an id naming nothing would leave the title with no seasons at all. The
-    check is against the orders TMDB actually holds for this title rather than
-    against the shape of the id, since an id that reads right and names another
-    title's order is just as empty.
-
-    Only TMDB's own rows carry an order, so a row of any other plugin is left
-    alone: `extra` is each plugin's own scratch column and nothing here knows
-    what another plugin keeps in it.
-    """
     if title.source.plugin.key != TMDB_PLUGIN_KEY:
         return
 
@@ -186,7 +161,6 @@ def validate_extra(
 
 # TODO: Validate
 def _title_output(title: Title) -> TitlePublic:
-    """Return a `Title` as the website that holds it stored it."""
     return TitlePublic.model_validate(title)
 
 
@@ -256,13 +230,6 @@ def update_title_record(
 
 # TODO: Validate
 def validate_title(session: Session, title: Title) -> Title:
-    """Settle the canonical titles a `Title` already stands for as the right ones.
-
-    Nothing about what it stands for changes. A row linked to a title is being
-    said to really be that title, and a row that is its own record is being said
-    to be one TMDB holds no counterpart for, which is one decision about two
-    answers and so one column either way.
-    """
     title.tmdb_title_validated_at = tz_datetime.now()
     session.add(title)
     session.commit()
@@ -319,66 +286,4 @@ def list_unvalidated_titles(
             ],
         )
         for title in titles
-    ]
-
-
-# TODO: Validate
-def list_titles_missing_sources(
-    session: Session,
-    limit: int,
-) -> list[MissingSourceTitleOutput]:
-    """Return every canonical TMDB title that no website's row stands for.
-
-    Ordered by how many channels already hold the title, so the gaps that stop
-    something playing are the ones a page of this holds.
-    """
-    channel_count = (
-        select(func.count())
-        .select_from(ChannelTitle)
-        .where(col(ChannelTitle.tmdb_title_id) == Title.id)
-        .correlate(Title)
-        .scalar_subquery()
-        .label("channel_count")
-    )
-    stands_for_something = (
-        select(TitleTmdbTitle)
-        .where(col(TitleTmdbTitle.tmdb_title_id) == Title.id)
-        .correlate(Title)
-        .exists()
-    )
-    rows = session.exec(
-        select(Title, channel_count)
-        .join(Source)
-        .join(Plugin)
-        .where(
-            Plugin.key == TMDB_PLUGIN_KEY,
-            is_not_linked(Title),
-            col(Title.deleted_at).is_(None),
-            ~stands_for_something,
-        )
-        .order_by(channel_count.desc(), col(Title.name))
-        .limit(limit),
-    ).all()
-
-    title_ids = [title.id for title, _ in rows]
-    episode_counts = dict(
-        session.exec(
-            select(Season.title_id, func.count(col(Episode.id)))
-            .join(Episode, onclause=col(Episode.season_id) == Season.id)
-            .where(
-                col(Season.title_id).in_(title_ids),
-                col(Season.deleted_at).is_(None),
-                col(Episode.deleted_at).is_(None),
-            )
-            .group_by(col(Season.title_id)),
-        ).all(),
-    )
-
-    return [
-        MissingSourceTitleOutput(
-            **TmdbTitleOutput.model_validate(title).model_dump(),
-            channel_count=channel_count_of_title,
-            episode_count=episode_counts.get(title.id, 0),
-        )
-        for title, channel_count_of_title in rows
     ]

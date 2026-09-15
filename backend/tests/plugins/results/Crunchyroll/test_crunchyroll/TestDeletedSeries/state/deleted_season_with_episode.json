@@ -1,0 +1,67 @@
+{
+  "episodetmdbtitle": {
+    "plugin-validator-alt-fake-episode+GRVN31D5Y": {
+      "episode_id": "plugin-validator-alt-fake-episode",
+      "tmdb_title_id": "GRVN31D5Y"
+    }
+  },
+  "plugin": {
+    "Crunchyroll": {
+      "sources": {
+        "Crunchyroll": {
+          "titles": {
+            "GRVN31D5Y": {
+              "seasons": {
+                "plugin-validator-alt-fake-season": {
+                  "key": "plugin-validator-alt-fake-season",
+                  "data_timestamp": "2026-01-02T00:00:00+00:00",
+                  "update_at": null,
+                  "deleted_at": "2026-01-02T00:00:00+00:00",
+                  "status": null,
+                  "extra": {},
+                  "id": "plugin-validator-alt-fake-season",
+                  "created_at": "2026-01-02T00:00:00+00:00",
+                  "modified_at": "2026-01-02T00:00:00+00:00",
+                  "name": "Plugin Validator Alt Fake Season",
+                  "url": "https://example.com/fake-season",
+                  "season_number": 9999,
+                  "image_url": null,
+                  "thumbnail_url": null,
+                  "sort_order": 9999,
+                  "title_id": "GRVN31D5Y",
+                  "episodes": [
+                    {
+                      "key": "plugin-validator-alt-fake-episode",
+                      "data_timestamp": "2026-01-02T00:00:00+00:00",
+                      "update_at": null,
+                      "deleted_at": "2026-01-02T00:00:00+00:00",
+                      "status": null,
+                      "extra": {},
+                      "id": "plugin-validator-alt-fake-episode",
+                      "created_at": "2026-01-02T00:00:00+00:00",
+                      "modified_at": "2026-01-02T00:00:00+00:00",
+                      "url": "https://example.com/fake-episode",
+                      "name": "Plugin Validator Alt Fake Episode",
+                      "description": null,
+                      "image_url": null,
+                      "thumbnail_url": null,
+                      "air_date": null,
+                      "episode_number": 9999,
+                      "duration": 1,
+                      "sort_order": 9999,
+                      "tmdb_episode_validated_at": null,
+                      "tmdb_note": null,
+                      "is_linked": false,
+                      "watch_identifier": "Crunchyroll plugin-validator-alt-fake-episode",
+                      "season_id": "plugin-validator-alt-fake-season"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

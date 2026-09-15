@@ -9,7 +9,6 @@ import {
   Link2,
   ListOrdered,
   Radio,
-  SearchX,
   ShieldCheck,
   Tv,
   Unlock,
@@ -137,20 +136,6 @@ function AdminIndex() {
               <CardDescription>
                 Every episode no TMDB record was found for, beside the closest
                 TMDB episode, to be approved or replaced by hand.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </Link>
-        <Link to="/admin/unmatched-sources" className="block">
-          <Card className="h-full transition-colors hover:border-primary">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <SearchX className="size-5" />
-                Unmatched Sources
-              </CardTitle>
-              <CardDescription>
-                Every service TMDB lists a title on that no plugin search
-                reached, to be given a URL by hand.
               </CardDescription>
             </CardHeader>
           </Card>

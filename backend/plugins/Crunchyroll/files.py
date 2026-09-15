@@ -1,7 +1,7 @@
 # TODO: Validate
 import json
 from abc import ABC
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from functools import cache
 from typing import override
 
@@ -80,11 +80,6 @@ class Categories(SingleArgEndpointFile[CategoriesModel]):
     def _endpoint(self) -> CategoriesEndpoint:
         return chirashi().categories
 
-    # TODO: Validate
-    @override
-    def _is_acceptable_error(self, error: Exception) -> bool:
-        return isinstance(error, SeriesNotFoundError)
-
 
 # TODO: Validate
 class SimilarTo(SingleArgEndpointFile[SimilarToModel]):
@@ -158,11 +153,6 @@ class BrowseSeries(BaseBrowseSeries):
 # TODO: Validate
 class Catalogue(BaseBrowseSeries):
     """Special BrowseSeries that contains all of the titles on Crunchyroll."""
-
-    # TODO: Validate
-    @override
-    def _next_update_at(self) -> datetime:
-        return tz_datetime.now() + timedelta(days=7)
 
     # TODO: Validate
     @override

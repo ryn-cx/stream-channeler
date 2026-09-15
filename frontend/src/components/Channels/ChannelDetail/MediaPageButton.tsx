@@ -31,7 +31,13 @@ export function MediaPageButton({
   if (!user?.is_superuser) return null
 
   return (
-    <Button asChild variant="ghost" size="icon-sm" title={label}>
+    <Button
+      asChild
+      variant="ghost"
+      size="icon-sm"
+      title={label}
+      className="text-destructive hover:text-destructive"
+    >
       <Link {...page} target="_blank" rel="noopener noreferrer">
         <SquareArrowOutUpRight className="h-4 w-4" />
         <span className="sr-only">{label}</span>

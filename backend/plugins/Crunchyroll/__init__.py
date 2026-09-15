@@ -5,6 +5,7 @@ import re
 from typing import TYPE_CHECKING, override
 
 from app.sources.models import Source
+from plugins.Crunchyroll.anime_importer import CrunchyrollAnimeImporter
 from plugins.Crunchyroll.constants import (
     ARTIST_URL_REGEX,
     CONCERT_URL_REGEX,
@@ -14,11 +15,8 @@ from plugins.Crunchyroll.constants import (
     SERIES_URL_REGEX,
     VIDEO_SOURCE,
 )
-from plugins.Crunchyroll.importer import (
-    CrunchyrollAnimeImporter,
-    CrunchyrollImporter,
-    CrunchyrollMusicImporter,
-)
+from plugins.Crunchyroll.importer import CrunchyrollImporter
+from plugins.Crunchyroll.music_importer import CrunchyrollMusicImporter
 from plugins.Crunchyroll.shared import CrunchyrollShared
 from plugins.Crunchyroll.watch_history import CrunchyrollWatchHistoryMixin
 from plugins.utils.abstract_plugin import AbstractPlugin
@@ -38,7 +36,7 @@ class Crunchyroll(
 ):
     # TODO: Validate
     @override
-    def _create_initial_source_records(self) -> None:
+    def create_initial_source_records(self) -> None:
         # Default implementation calls Crunchyroll.upsert_source which would then call
         # Crunchyroll.browse_file which does not work because .browse_file() has a
         # different implementation in CrunchyrollSeries and CrunchyrollArtist.
@@ -47,23 +45,23 @@ class Crunchyroll(
                 self.session,
                 self.plugin,
                 self._file_cache,
-            )._upsert_source(VIDEO_SOURCE)
+            ).upsert_source(VIDEO_SOURCE)
         if Source.get(self.session, self.plugin, MUSIC_SOURCE) is None:
             CrunchyrollMusicImporter(
                 self.session,
                 self.plugin,
                 self._file_cache,
-            )._upsert_source(MUSIC_SOURCE)
+            ).upsert_source(MUSIC_SOURCE)
         self._sources = {source.key: source for source in self.plugin.sources}
 
     # TODO: Validate
     @override
-    def _create_initial_channel_records(self) -> None:
+    def create_initial_channel_records(self) -> None:
         CrunchyrollAnimeImporter(
             self.session,
             self.plugin,
             self._file_cache,
-        ).create_channel_records()
+        ).create_initial_channel_records()
         CrunchyrollMusicImporter(
             self.session,
             self.plugin,

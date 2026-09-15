@@ -1,6 +1,5 @@
 # TODO: Validate
 
-import os
 import queue
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -92,7 +91,7 @@ def reimport_all_titles(selection: PluginSelection | None = None) -> None:
         return
 
     progress_lock = Lock()
-    workers = os.cpu_count() or 1
+    workers = 1
     with (
         tqdm(total=total, unit="title") as progress,
         ThreadPoolExecutor(max_workers=workers) as executor,

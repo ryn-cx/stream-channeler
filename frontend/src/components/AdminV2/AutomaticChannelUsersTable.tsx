@@ -1,6 +1,6 @@
 // TODO: Validate
 import { useMutation, useQuery } from "@tanstack/react-query"
-import { Bot, Eraser } from "lucide-react"
+import { Bot, Eraser, Plus } from "lucide-react"
 import { useState } from "react"
 import type { AutomaticChannelUserOutput } from "@/client"
 import { ChannelsService } from "@/client"
@@ -28,6 +28,19 @@ export function AutomaticChannelUsersTable() {
   const { data: users, isPending } = useQuery({
     queryKey: ["automatic-channel-users"],
     queryFn: () => ChannelsService.getAutomaticChannelUsers(),
+  })
+
+  const createChannels = useMutation({
+    mutationFn: (userId: string) =>
+      ChannelsService.createAutomaticChannels({ userId }),
+    onSuccess: (message, _userId, _onMutateResult, context) => {
+      showSuccessToast(message.message)
+      context.client.invalidateQueries({
+        queryKey: ["automatic-channel-users"],
+      })
+      context.client.invalidateQueries({ queryKey: ["channels"] })
+    },
+    onError: handleError.bind(showErrorToast),
   })
 
   const clearChannels = useMutation({
@@ -72,15 +85,27 @@ export function AutomaticChannelUsersTable() {
                     {user.channel_count}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setPendingUser(user)}
-                      disabled={clearChannels.isPending}
-                    >
-                      <Eraser />
-                      Empty channels
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      {user.can_create_channels && (
+                        <Button
+                          size="sm"
+                          onClick={() => createChannels.mutate(user.id)}
+                          disabled={createChannels.isPending}
+                        >
+                          <Plus />
+                          Create channels
+                        </Button>
+                      )}
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setPendingUser(user)}
+                        disabled={clearChannels.isPending}
+                      >
+                        <Eraser />
+                        Empty channels
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
