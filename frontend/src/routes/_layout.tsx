@@ -23,5 +23,3 @@ function Layout() {
     </TooltipProvider>
   )
 }
-
-export default Layout

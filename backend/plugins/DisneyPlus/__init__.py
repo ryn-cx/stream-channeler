@@ -1,56 +1,56 @@
 # TODO: Validate
-"""Disney+ plugin.
-
-There is no obvious way to get information on episodes after episode 24, so a
-long running series is only read as far as that.
-"""
-
 from __future__ import annotations
 
-from typing import override
+import re
+from typing import TYPE_CHECKING, override
 
-from plugins.DisneyPlus.source import SourceMixin
-from plugins.DisneyPlus.upsert import UpsertMixin
-from plugins.DisneyPlus.url_handlers import DisneyPlusURLHandler, EntityURLHandler
-from plugins.utils.base_plugin.plugin import URLHandlerPlugin
+from plugins.DisneyPlus.constants import ENTITY_URL_REGEX
+from plugins.DisneyPlus.importer import (
+    DisneyPlusImporter,
+    DisneyPlusMovieImporter,
+    DisneyPlusSeriesImporter,
+)
+from plugins.DisneyPlus.shared import DisneyPlusShared
+from plugins.DisneyPlus.utils import is_movie
+from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
+
+if TYPE_CHECKING:
+    from app.titles.models import Title
 
 
 # TODO: Validate
-class DisneyPlus(
-    UpsertMixin,
-    SourceMixin,
-    URLHandlerPlugin[DisneyPlusURLHandler],
-    # Temporarily disabled until a solution is found to get episodes past episode 24
-    register=True,
-):
-    """Disney+ plugin."""
-
+class DisneyPlus(DisneyPlusShared, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override
-    def _url_handlers(cls) -> tuple[type[DisneyPlusURLHandler], ...]:
-        return (EntityURLHandler,)
+    def _url_regexes(cls) -> tuple[str, ...]:
+        return (ENTITY_URL_REGEX,)
 
     # TODO: Validate
-    @classmethod
-    @override
-    def tmdb_provider_names(cls) -> tuple[str, ...]:
-        return ("Disney+",)
+    def _url_title_key(self, url: str) -> str:
+        if not (match := re.match(self._domains_regex() + ENTITY_URL_REGEX, url)):
+            msg = f"Invalid {self.plugin_name()} URL: {url}"
+            raise InvalidURLError(msg)
+        return match.group("title_key")
 
     # TODO: Validate
-    @classmethod
     @override
-    def favicon_url(cls) -> str:
-        return "https://www.disneyplus.com/favicon.ico"
+    def _media_importer_from_url(self, url: str) -> DisneyPlusImporter:
+        # Movies and series are answered at the same address, so the page has
+        # to be read before it is known which of the two it is.
+        title_key = self._url_title_key(url)
+        entity_file = self.entity_file(title_key)
+        self.raise_invalid_url_if_no_content(entity_file, url)
+        if is_movie(entity_file.parsed()):
+            return DisneyPlusMovieImporter(self.session, self.plugin, self._file_cache)
+        return DisneyPlusSeriesImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
-    @classmethod
     @override
-    def _domain(cls) -> str:
-        return "disneyplus.com"
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def plugin_name(cls) -> str:
-        return "Disney+"
+    def _media_importer_from_title(self, title: Title) -> DisneyPlusImporter:
+        if not title.media_type:
+            msg = "Title.media_type is not set."
+            raise AttributeError(msg)
+        if title.media_type == "Movie":
+            return DisneyPlusMovieImporter(self.session, self.plugin, self._file_cache)
+        return DisneyPlusSeriesImporter(self.session, self.plugin, self._file_cache)

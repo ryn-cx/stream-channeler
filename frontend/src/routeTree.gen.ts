@@ -9,64 +9,58 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SignupRouteImport } from './routes/signup'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as RecoverPasswordRouteImport } from './routes/recover-password'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as RecoverPasswordRouteImport } from './routes/recover-password'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
-import { Route as LayoutWatchesRouteImport } from './routes/_layout/watches'
-import { Route as LayoutSourcesRouteImport } from './routes/_layout/sources'
-import { Route as LayoutShowsRouteImport } from './routes/_layout/shows'
-import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
-import { Route as LayoutSeasonsRouteImport } from './routes/_layout/seasons'
-import { Route as LayoutRemoteRouteImport } from './routes/_layout/remote'
-import { Route as LayoutPluginsRouteImport } from './routes/_layout/plugins'
-import { Route as LayoutOnboardingRouteImport } from './routes/_layout/onboarding'
-import { Route as LayoutFilesRouteImport } from './routes/_layout/files'
-import { Route as LayoutEpisodesRouteImport } from './routes/_layout/episodes'
-import { Route as LayoutDashboardRouteImport } from './routes/_layout/dashboard'
-import { Route as LayoutCreditsRouteImport } from './routes/_layout/credits'
-import { Route as LayoutChannelOrdersRouteImport } from './routes/_layout/channel-orders'
-import { Route as LayoutChannelCommentsRouteImport } from './routes/_layout/channel-comments'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
-import { Route as LayoutOnboardingIndexRouteImport } from './routes/_layout/onboarding.index'
-import { Route as LayoutChannelsIndexRouteImport } from './routes/_layout/channels.index'
+import { Route as LayoutAdminV2RouteImport } from './routes/_layout/admin-v2'
+import { Route as LayoutChannelCommentsRouteImport } from './routes/_layout/channel-comments'
+import { Route as LayoutChannelOrdersRouteImport } from './routes/_layout/channel-orders'
+import { Route as LayoutCreditsRouteImport } from './routes/_layout/credits'
+import { Route as LayoutDashboardRouteImport } from './routes/_layout/dashboard'
+import { Route as LayoutEpisodesRouteImport } from './routes/_layout/episodes'
+import { Route as LayoutFilesRouteImport } from './routes/_layout/files'
+import { Route as LayoutOnboardingRouteImport } from './routes/_layout/onboarding'
+import { Route as LayoutPluginsRouteImport } from './routes/_layout/plugins'
+import { Route as LayoutRemoteRouteImport } from './routes/_layout/remote'
+import { Route as LayoutSeasonsRouteImport } from './routes/_layout/seasons'
+import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
+import { Route as LayoutSourcesRouteImport } from './routes/_layout/sources'
+import { Route as LayoutTitlesRouteImport } from './routes/_layout/titles'
+import { Route as LayoutWatchesRouteImport } from './routes/_layout/watches'
+import { Route as LayoutAdminV2IndexRouteImport } from './routes/_layout/admin-v2.index'
+import { Route as LayoutAdminV2AutomaticChannelsRouteImport } from './routes/_layout/admin-v2.automatic-channels'
+import { Route as LayoutAdminV2LinkEpisodeRouteImport } from './routes/_layout/admin-v2.link-episode'
+import { Route as LayoutAdminV2LinkTitleRouteImport } from './routes/_layout/admin-v2.link-title'
 import { Route as LayoutAdminIndexRouteImport } from './routes/_layout/admin.index'
-import { Route as LayoutWatchesImportRouteImport } from './routes/_layout/watches_.import'
-import { Route as LayoutChannelsBrowseRouteImport } from './routes/_layout/channels.browse'
-import { Route as LayoutChannelsChannelIdRouteImport } from './routes/_layout/channels.$channelId'
-import { Route as LayoutAdminUsersRouteImport } from './routes/_layout/admin.users'
-import { Route as LayoutAdminUnvalidatedShowsRouteImport } from './routes/_layout/admin.unvalidated-shows'
-import { Route as LayoutAdminUnmatchedSourcesRouteImport } from './routes/_layout/admin.unmatched-sources'
-import { Route as LayoutAdminUnlockedEpisodesRouteImport } from './routes/_layout/admin.unlocked-episodes'
-import { Route as LayoutAdminTmdbMatchesRouteImport } from './routes/_layout/admin.tmdb-matches'
-import { Route as LayoutAdminShowReportsRouteImport } from './routes/_layout/admin.show-reports'
-import { Route as LayoutAdminSeasonReportsRouteImport } from './routes/_layout/admin.season-reports'
-import { Route as LayoutAdminReportsRouteImport } from './routes/_layout/admin.reports'
-import { Route as LayoutAdminEpisodeReportsRouteImport } from './routes/_layout/admin.episode-reports'
-import { Route as LayoutAdminDuplicatedCanonicalEpisodesRouteImport } from './routes/_layout/admin.duplicated-canonical-episodes'
-import { Route as LayoutAdminChannelsRouteImport } from './routes/_layout/admin.channels'
 import { Route as LayoutAdminChannelQueuesRouteImport } from './routes/_layout/admin.channel-queues'
-import { Route as LayoutUsersUserIdChannelsRouteImport } from './routes/_layout/users.$userId.channels'
-import { Route as LayoutOnboardingChannelIdSortRouteImport } from './routes/_layout/onboarding.$channelId.sort'
-import { Route as LayoutOnboardingChannelIdShowsRouteImport } from './routes/_layout/onboarding.$channelId.shows'
-import { Route as LayoutOnboardingChannelIdNameRouteImport } from './routes/_layout/onboarding.$channelId.name'
+import { Route as LayoutAdminChannelsRouteImport } from './routes/_layout/admin.channels'
+import { Route as LayoutAdminDuplicatedTmdbEpisodesRouteImport } from './routes/_layout/admin.duplicated-tmdb-episodes'
+import { Route as LayoutAdminEpisodeReportsRouteImport } from './routes/_layout/admin.episode-reports'
+import { Route as LayoutAdminManageFilesRouteImport } from './routes/_layout/admin.manage-files'
+import { Route as LayoutAdminReportsRouteImport } from './routes/_layout/admin.reports'
+import { Route as LayoutAdminSeasonReportsRouteImport } from './routes/_layout/admin.season-reports'
+import { Route as LayoutAdminTitleReportsRouteImport } from './routes/_layout/admin.title-reports'
+import { Route as LayoutAdminTmdbMatchesRouteImport } from './routes/_layout/admin.tmdb-matches'
+import { Route as LayoutAdminUnlockedEpisodesRouteImport } from './routes/_layout/admin.unlocked-episodes'
+import { Route as LayoutAdminUnvalidatedTitlesRouteImport } from './routes/_layout/admin.unvalidated-titles'
+import { Route as LayoutAdminUsersRouteImport } from './routes/_layout/admin.users'
+import { Route as LayoutChannelsIndexRouteImport } from './routes/_layout/channels.index'
+import { Route as LayoutChannelsChannelIdRouteImport } from './routes/_layout/channels.$channelId'
+import { Route as LayoutChannelsBrowseRouteImport } from './routes/_layout/channels.browse'
+import { Route as LayoutOnboardingIndexRouteImport } from './routes/_layout/onboarding.index'
+import { Route as LayoutWatchesImportRouteImport } from './routes/_layout/watches_.import'
 import { Route as LayoutOnboardingChannelIdDoneRouteImport } from './routes/_layout/onboarding.$channelId.done'
+import { Route as LayoutOnboardingChannelIdNameRouteImport } from './routes/_layout/onboarding.$channelId.name'
+import { Route as LayoutOnboardingChannelIdSortRouteImport } from './routes/_layout/onboarding.$channelId.sort'
+import { Route as LayoutOnboardingChannelIdTitlesRouteImport } from './routes/_layout/onboarding.$channelId.titles'
+import { Route as LayoutUsersUserIdChannelsRouteImport } from './routes/_layout/users.$userId.channels'
 
-const SignupRoute = SignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RecoverPasswordRoute = RecoverPasswordRouteImport.update({
-  id: '/recover-password',
-  path: '/recover-password',
+const LayoutRoute = LayoutRouteImport.update({
+  id: '/_layout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -74,8 +68,19 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LayoutRoute = LayoutRouteImport.update({
-  id: '/_layout',
+const RecoverPasswordRoute = RecoverPasswordRouteImport.update({
+  id: '/recover-password',
+  path: '/recover-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LayoutIndexRoute = LayoutIndexRouteImport.update({
@@ -83,69 +88,14 @@ const LayoutIndexRoute = LayoutIndexRouteImport.update({
   path: '/',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutWatchesRoute = LayoutWatchesRouteImport.update({
-  id: '/watches',
-  path: '/watches',
+const LayoutAdminRoute = LayoutAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutSourcesRoute = LayoutSourcesRouteImport.update({
-  id: '/sources',
-  path: '/sources',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutShowsRoute = LayoutShowsRouteImport.update({
-  id: '/shows',
-  path: '/shows',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutSeasonsRoute = LayoutSeasonsRouteImport.update({
-  id: '/seasons',
-  path: '/seasons',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutRemoteRoute = LayoutRemoteRouteImport.update({
-  id: '/remote',
-  path: '/remote',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutPluginsRoute = LayoutPluginsRouteImport.update({
-  id: '/plugins',
-  path: '/plugins',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutOnboardingRoute = LayoutOnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutFilesRoute = LayoutFilesRouteImport.update({
-  id: '/files',
-  path: '/files',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutEpisodesRoute = LayoutEpisodesRouteImport.update({
-  id: '/episodes',
-  path: '/episodes',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutDashboardRoute = LayoutDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutCreditsRoute = LayoutCreditsRouteImport.update({
-  id: '/credits',
-  path: '/credits',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutChannelOrdersRoute = LayoutChannelOrdersRouteImport.update({
-  id: '/channel-orders',
-  path: '/channel-orders',
+const LayoutAdminV2Route = LayoutAdminV2RouteImport.update({
+  id: '/admin-v2',
+  path: '/admin-v2',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutChannelCommentsRoute = LayoutChannelCommentsRouteImport.update({
@@ -153,100 +103,96 @@ const LayoutChannelCommentsRoute = LayoutChannelCommentsRouteImport.update({
   path: '/channel-comments',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutAdminRoute = LayoutAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const LayoutChannelOrdersRoute = LayoutChannelOrdersRouteImport.update({
+  id: '/channel-orders',
+  path: '/channel-orders',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutOnboardingIndexRoute = LayoutOnboardingIndexRouteImport.update({
+const LayoutCreditsRoute = LayoutCreditsRouteImport.update({
+  id: '/credits',
+  path: '/credits',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutDashboardRoute = LayoutDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutEpisodesRoute = LayoutEpisodesRouteImport.update({
+  id: '/episodes',
+  path: '/episodes',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutFilesRoute = LayoutFilesRouteImport.update({
+  id: '/files',
+  path: '/files',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutOnboardingRoute = LayoutOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutPluginsRoute = LayoutPluginsRouteImport.update({
+  id: '/plugins',
+  path: '/plugins',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutRemoteRoute = LayoutRemoteRouteImport.update({
+  id: '/remote',
+  path: '/remote',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutSeasonsRoute = LayoutSeasonsRouteImport.update({
+  id: '/seasons',
+  path: '/seasons',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutSourcesRoute = LayoutSourcesRouteImport.update({
+  id: '/sources',
+  path: '/sources',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutTitlesRoute = LayoutTitlesRouteImport.update({
+  id: '/titles',
+  path: '/titles',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutWatchesRoute = LayoutWatchesRouteImport.update({
+  id: '/watches',
+  path: '/watches',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutAdminV2IndexRoute = LayoutAdminV2IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => LayoutOnboardingRoute,
+  getParentRoute: () => LayoutAdminV2Route,
 } as any)
-const LayoutChannelsIndexRoute = LayoutChannelsIndexRouteImport.update({
-  id: '/channels/',
-  path: '/channels/',
-  getParentRoute: () => LayoutRoute,
+const LayoutAdminV2AutomaticChannelsRoute =
+  LayoutAdminV2AutomaticChannelsRouteImport.update({
+    id: '/automatic-channels',
+    path: '/automatic-channels',
+    getParentRoute: () => LayoutAdminV2Route,
+  } as any)
+const LayoutAdminV2LinkEpisodeRoute =
+  LayoutAdminV2LinkEpisodeRouteImport.update({
+    id: '/link-episode',
+    path: '/link-episode',
+    getParentRoute: () => LayoutAdminV2Route,
+  } as any)
+const LayoutAdminV2LinkTitleRoute = LayoutAdminV2LinkTitleRouteImport.update({
+  id: '/link-title',
+  path: '/link-title',
+  getParentRoute: () => LayoutAdminV2Route,
 } as any)
 const LayoutAdminIndexRoute = LayoutAdminIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => LayoutAdminRoute,
-} as any)
-const LayoutWatchesImportRoute = LayoutWatchesImportRouteImport.update({
-  id: '/watches_/import',
-  path: '/watches/import',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutChannelsBrowseRoute = LayoutChannelsBrowseRouteImport.update({
-  id: '/channels/browse',
-  path: '/channels/browse',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutChannelsChannelIdRoute = LayoutChannelsChannelIdRouteImport.update({
-  id: '/channels/$channelId',
-  path: '/channels/$channelId',
-  getParentRoute: () => LayoutRoute,
-} as any)
-const LayoutAdminUsersRoute = LayoutAdminUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => LayoutAdminRoute,
-} as any)
-const LayoutAdminUnvalidatedShowsRoute =
-  LayoutAdminUnvalidatedShowsRouteImport.update({
-    id: '/unvalidated-shows',
-    path: '/unvalidated-shows',
-    getParentRoute: () => LayoutAdminRoute,
-  } as any)
-const LayoutAdminUnmatchedSourcesRoute =
-  LayoutAdminUnmatchedSourcesRouteImport.update({
-    id: '/unmatched-sources',
-    path: '/unmatched-sources',
-    getParentRoute: () => LayoutAdminRoute,
-  } as any)
-const LayoutAdminUnlockedEpisodesRoute =
-  LayoutAdminUnlockedEpisodesRouteImport.update({
-    id: '/unlocked-episodes',
-    path: '/unlocked-episodes',
-    getParentRoute: () => LayoutAdminRoute,
-  } as any)
-const LayoutAdminTmdbMatchesRoute = LayoutAdminTmdbMatchesRouteImport.update({
-  id: '/tmdb-matches',
-  path: '/tmdb-matches',
-  getParentRoute: () => LayoutAdminRoute,
-} as any)
-const LayoutAdminShowReportsRoute = LayoutAdminShowReportsRouteImport.update({
-  id: '/show-reports',
-  path: '/show-reports',
-  getParentRoute: () => LayoutAdminRoute,
-} as any)
-const LayoutAdminSeasonReportsRoute =
-  LayoutAdminSeasonReportsRouteImport.update({
-    id: '/season-reports',
-    path: '/season-reports',
-    getParentRoute: () => LayoutAdminRoute,
-  } as any)
-const LayoutAdminReportsRoute = LayoutAdminReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
-  getParentRoute: () => LayoutAdminRoute,
-} as any)
-const LayoutAdminEpisodeReportsRoute =
-  LayoutAdminEpisodeReportsRouteImport.update({
-    id: '/episode-reports',
-    path: '/episode-reports',
-    getParentRoute: () => LayoutAdminRoute,
-  } as any)
-const LayoutAdminDuplicatedCanonicalEpisodesRoute =
-  LayoutAdminDuplicatedCanonicalEpisodesRouteImport.update({
-    id: '/duplicated-canonical-episodes',
-    path: '/duplicated-canonical-episodes',
-    getParentRoute: () => LayoutAdminRoute,
-  } as any)
-const LayoutAdminChannelsRoute = LayoutAdminChannelsRouteImport.update({
-  id: '/channels',
-  path: '/channels',
   getParentRoute: () => LayoutAdminRoute,
 } as any)
 const LayoutAdminChannelQueuesRoute =
@@ -255,22 +201,95 @@ const LayoutAdminChannelQueuesRoute =
     path: '/channel-queues',
     getParentRoute: () => LayoutAdminRoute,
   } as any)
-const LayoutUsersUserIdChannelsRoute =
-  LayoutUsersUserIdChannelsRouteImport.update({
-    id: '/users/$userId/channels',
-    path: '/users/$userId/channels',
-    getParentRoute: () => LayoutRoute,
+const LayoutAdminChannelsRoute = LayoutAdminChannelsRouteImport.update({
+  id: '/channels',
+  path: '/channels',
+  getParentRoute: () => LayoutAdminRoute,
+} as any)
+const LayoutAdminDuplicatedTmdbEpisodesRoute =
+  LayoutAdminDuplicatedTmdbEpisodesRouteImport.update({
+    id: '/duplicated-tmdb-episodes',
+    path: '/duplicated-tmdb-episodes',
+    getParentRoute: () => LayoutAdminRoute,
   } as any)
-const LayoutOnboardingChannelIdSortRoute =
-  LayoutOnboardingChannelIdSortRouteImport.update({
-    id: '/$channelId/sort',
-    path: '/$channelId/sort',
-    getParentRoute: () => LayoutOnboardingRoute,
+const LayoutAdminEpisodeReportsRoute =
+  LayoutAdminEpisodeReportsRouteImport.update({
+    id: '/episode-reports',
+    path: '/episode-reports',
+    getParentRoute: () => LayoutAdminRoute,
   } as any)
-const LayoutOnboardingChannelIdShowsRoute =
-  LayoutOnboardingChannelIdShowsRouteImport.update({
-    id: '/$channelId/shows',
-    path: '/$channelId/shows',
+const LayoutAdminManageFilesRoute = LayoutAdminManageFilesRouteImport.update({
+  id: '/manage-files',
+  path: '/manage-files',
+  getParentRoute: () => LayoutAdminRoute,
+} as any)
+const LayoutAdminReportsRoute = LayoutAdminReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => LayoutAdminRoute,
+} as any)
+const LayoutAdminSeasonReportsRoute =
+  LayoutAdminSeasonReportsRouteImport.update({
+    id: '/season-reports',
+    path: '/season-reports',
+    getParentRoute: () => LayoutAdminRoute,
+  } as any)
+const LayoutAdminTitleReportsRoute = LayoutAdminTitleReportsRouteImport.update({
+  id: '/title-reports',
+  path: '/title-reports',
+  getParentRoute: () => LayoutAdminRoute,
+} as any)
+const LayoutAdminTmdbMatchesRoute = LayoutAdminTmdbMatchesRouteImport.update({
+  id: '/tmdb-matches',
+  path: '/tmdb-matches',
+  getParentRoute: () => LayoutAdminRoute,
+} as any)
+const LayoutAdminUnlockedEpisodesRoute =
+  LayoutAdminUnlockedEpisodesRouteImport.update({
+    id: '/unlocked-episodes',
+    path: '/unlocked-episodes',
+    getParentRoute: () => LayoutAdminRoute,
+  } as any)
+const LayoutAdminUnvalidatedTitlesRoute =
+  LayoutAdminUnvalidatedTitlesRouteImport.update({
+    id: '/unvalidated-titles',
+    path: '/unvalidated-titles',
+    getParentRoute: () => LayoutAdminRoute,
+  } as any)
+const LayoutAdminUsersRoute = LayoutAdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => LayoutAdminRoute,
+} as any)
+const LayoutChannelsIndexRoute = LayoutChannelsIndexRouteImport.update({
+  id: '/channels/',
+  path: '/channels/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutChannelsChannelIdRoute = LayoutChannelsChannelIdRouteImport.update({
+  id: '/channels/$channelId',
+  path: '/channels/$channelId',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutChannelsBrowseRoute = LayoutChannelsBrowseRouteImport.update({
+  id: '/channels/browse',
+  path: '/channels/browse',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutOnboardingIndexRoute = LayoutOnboardingIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => LayoutOnboardingRoute,
+} as any)
+const LayoutWatchesImportRoute = LayoutWatchesImportRouteImport.update({
+  id: '/watches_/import',
+  path: '/watches/import',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutOnboardingChannelIdDoneRoute =
+  LayoutOnboardingChannelIdDoneRouteImport.update({
+    id: '/$channelId/done',
+    path: '/$channelId/done',
     getParentRoute: () => LayoutOnboardingRoute,
   } as any)
 const LayoutOnboardingChannelIdNameRoute =
@@ -279,11 +298,23 @@ const LayoutOnboardingChannelIdNameRoute =
     path: '/$channelId/name',
     getParentRoute: () => LayoutOnboardingRoute,
   } as any)
-const LayoutOnboardingChannelIdDoneRoute =
-  LayoutOnboardingChannelIdDoneRouteImport.update({
-    id: '/$channelId/done',
-    path: '/$channelId/done',
+const LayoutOnboardingChannelIdSortRoute =
+  LayoutOnboardingChannelIdSortRouteImport.update({
+    id: '/$channelId/sort',
+    path: '/$channelId/sort',
     getParentRoute: () => LayoutOnboardingRoute,
+  } as any)
+const LayoutOnboardingChannelIdTitlesRoute =
+  LayoutOnboardingChannelIdTitlesRouteImport.update({
+    id: '/$channelId/titles',
+    path: '/$channelId/titles',
+    getParentRoute: () => LayoutOnboardingRoute,
+  } as any)
+const LayoutUsersUserIdChannelsRoute =
+  LayoutUsersUserIdChannelsRouteImport.update({
+    id: '/users/$userId/channels',
+    path: '/users/$userId/channels',
+    getParentRoute: () => LayoutRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -293,6 +324,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/admin': typeof LayoutAdminRouteWithChildren
+  '/admin-v2': typeof LayoutAdminV2RouteWithChildren
   '/channel-comments': typeof LayoutChannelCommentsRoute
   '/channel-orders': typeof LayoutChannelOrdersRoute
   '/credits': typeof LayoutCreditsRoute
@@ -304,31 +336,35 @@ export interface FileRoutesByFullPath {
   '/remote': typeof LayoutRemoteRoute
   '/seasons': typeof LayoutSeasonsRoute
   '/settings': typeof LayoutSettingsRoute
-  '/shows': typeof LayoutShowsRoute
   '/sources': typeof LayoutSourcesRoute
+  '/titles': typeof LayoutTitlesRoute
   '/watches': typeof LayoutWatchesRoute
+  '/admin-v2/automatic-channels': typeof LayoutAdminV2AutomaticChannelsRoute
+  '/admin-v2/link-episode': typeof LayoutAdminV2LinkEpisodeRoute
+  '/admin-v2/link-title': typeof LayoutAdminV2LinkTitleRoute
   '/admin/channel-queues': typeof LayoutAdminChannelQueuesRoute
   '/admin/channels': typeof LayoutAdminChannelsRoute
-  '/admin/duplicated-canonical-episodes': typeof LayoutAdminDuplicatedCanonicalEpisodesRoute
+  '/admin/duplicated-tmdb-episodes': typeof LayoutAdminDuplicatedTmdbEpisodesRoute
   '/admin/episode-reports': typeof LayoutAdminEpisodeReportsRoute
+  '/admin/manage-files': typeof LayoutAdminManageFilesRoute
   '/admin/reports': typeof LayoutAdminReportsRoute
   '/admin/season-reports': typeof LayoutAdminSeasonReportsRoute
-  '/admin/show-reports': typeof LayoutAdminShowReportsRoute
+  '/admin/title-reports': typeof LayoutAdminTitleReportsRoute
   '/admin/tmdb-matches': typeof LayoutAdminTmdbMatchesRoute
   '/admin/unlocked-episodes': typeof LayoutAdminUnlockedEpisodesRoute
-  '/admin/unmatched-sources': typeof LayoutAdminUnmatchedSourcesRoute
-  '/admin/unvalidated-shows': typeof LayoutAdminUnvalidatedShowsRoute
+  '/admin/unvalidated-titles': typeof LayoutAdminUnvalidatedTitlesRoute
   '/admin/users': typeof LayoutAdminUsersRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/channels/browse': typeof LayoutChannelsBrowseRoute
   '/watches/import': typeof LayoutWatchesImportRoute
+  '/admin-v2/': typeof LayoutAdminV2IndexRoute
   '/admin/': typeof LayoutAdminIndexRoute
   '/channels/': typeof LayoutChannelsIndexRoute
   '/onboarding/': typeof LayoutOnboardingIndexRoute
   '/onboarding/$channelId/done': typeof LayoutOnboardingChannelIdDoneRoute
   '/onboarding/$channelId/name': typeof LayoutOnboardingChannelIdNameRoute
-  '/onboarding/$channelId/shows': typeof LayoutOnboardingChannelIdShowsRoute
   '/onboarding/$channelId/sort': typeof LayoutOnboardingChannelIdSortRoute
+  '/onboarding/$channelId/titles': typeof LayoutOnboardingChannelIdTitlesRoute
   '/users/$userId/channels': typeof LayoutUsersUserIdChannelsRoute
 }
 export interface FileRoutesByTo {
@@ -346,32 +382,36 @@ export interface FileRoutesByTo {
   '/remote': typeof LayoutRemoteRoute
   '/seasons': typeof LayoutSeasonsRoute
   '/settings': typeof LayoutSettingsRoute
-  '/shows': typeof LayoutShowsRoute
   '/sources': typeof LayoutSourcesRoute
+  '/titles': typeof LayoutTitlesRoute
   '/watches': typeof LayoutWatchesRoute
   '/': typeof LayoutIndexRoute
+  '/admin-v2/automatic-channels': typeof LayoutAdminV2AutomaticChannelsRoute
+  '/admin-v2/link-episode': typeof LayoutAdminV2LinkEpisodeRoute
+  '/admin-v2/link-title': typeof LayoutAdminV2LinkTitleRoute
   '/admin/channel-queues': typeof LayoutAdminChannelQueuesRoute
   '/admin/channels': typeof LayoutAdminChannelsRoute
-  '/admin/duplicated-canonical-episodes': typeof LayoutAdminDuplicatedCanonicalEpisodesRoute
+  '/admin/duplicated-tmdb-episodes': typeof LayoutAdminDuplicatedTmdbEpisodesRoute
   '/admin/episode-reports': typeof LayoutAdminEpisodeReportsRoute
+  '/admin/manage-files': typeof LayoutAdminManageFilesRoute
   '/admin/reports': typeof LayoutAdminReportsRoute
   '/admin/season-reports': typeof LayoutAdminSeasonReportsRoute
-  '/admin/show-reports': typeof LayoutAdminShowReportsRoute
+  '/admin/title-reports': typeof LayoutAdminTitleReportsRoute
   '/admin/tmdb-matches': typeof LayoutAdminTmdbMatchesRoute
   '/admin/unlocked-episodes': typeof LayoutAdminUnlockedEpisodesRoute
-  '/admin/unmatched-sources': typeof LayoutAdminUnmatchedSourcesRoute
-  '/admin/unvalidated-shows': typeof LayoutAdminUnvalidatedShowsRoute
+  '/admin/unvalidated-titles': typeof LayoutAdminUnvalidatedTitlesRoute
   '/admin/users': typeof LayoutAdminUsersRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/channels/browse': typeof LayoutChannelsBrowseRoute
   '/watches/import': typeof LayoutWatchesImportRoute
+  '/admin-v2': typeof LayoutAdminV2IndexRoute
   '/admin': typeof LayoutAdminIndexRoute
   '/channels': typeof LayoutChannelsIndexRoute
   '/onboarding': typeof LayoutOnboardingIndexRoute
   '/onboarding/$channelId/done': typeof LayoutOnboardingChannelIdDoneRoute
   '/onboarding/$channelId/name': typeof LayoutOnboardingChannelIdNameRoute
-  '/onboarding/$channelId/shows': typeof LayoutOnboardingChannelIdShowsRoute
   '/onboarding/$channelId/sort': typeof LayoutOnboardingChannelIdSortRoute
+  '/onboarding/$channelId/titles': typeof LayoutOnboardingChannelIdTitlesRoute
   '/users/$userId/channels': typeof LayoutUsersUserIdChannelsRoute
 }
 export interface FileRoutesById {
@@ -382,6 +422,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/signup': typeof SignupRoute
   '/_layout/admin': typeof LayoutAdminRouteWithChildren
+  '/_layout/admin-v2': typeof LayoutAdminV2RouteWithChildren
   '/_layout/channel-comments': typeof LayoutChannelCommentsRoute
   '/_layout/channel-orders': typeof LayoutChannelOrdersRoute
   '/_layout/credits': typeof LayoutCreditsRoute
@@ -393,32 +434,36 @@ export interface FileRoutesById {
   '/_layout/remote': typeof LayoutRemoteRoute
   '/_layout/seasons': typeof LayoutSeasonsRoute
   '/_layout/settings': typeof LayoutSettingsRoute
-  '/_layout/shows': typeof LayoutShowsRoute
   '/_layout/sources': typeof LayoutSourcesRoute
+  '/_layout/titles': typeof LayoutTitlesRoute
   '/_layout/watches': typeof LayoutWatchesRoute
   '/_layout/': typeof LayoutIndexRoute
+  '/_layout/admin-v2/automatic-channels': typeof LayoutAdminV2AutomaticChannelsRoute
+  '/_layout/admin-v2/link-episode': typeof LayoutAdminV2LinkEpisodeRoute
+  '/_layout/admin-v2/link-title': typeof LayoutAdminV2LinkTitleRoute
   '/_layout/admin/channel-queues': typeof LayoutAdminChannelQueuesRoute
   '/_layout/admin/channels': typeof LayoutAdminChannelsRoute
-  '/_layout/admin/duplicated-canonical-episodes': typeof LayoutAdminDuplicatedCanonicalEpisodesRoute
+  '/_layout/admin/duplicated-tmdb-episodes': typeof LayoutAdminDuplicatedTmdbEpisodesRoute
   '/_layout/admin/episode-reports': typeof LayoutAdminEpisodeReportsRoute
+  '/_layout/admin/manage-files': typeof LayoutAdminManageFilesRoute
   '/_layout/admin/reports': typeof LayoutAdminReportsRoute
   '/_layout/admin/season-reports': typeof LayoutAdminSeasonReportsRoute
-  '/_layout/admin/show-reports': typeof LayoutAdminShowReportsRoute
+  '/_layout/admin/title-reports': typeof LayoutAdminTitleReportsRoute
   '/_layout/admin/tmdb-matches': typeof LayoutAdminTmdbMatchesRoute
   '/_layout/admin/unlocked-episodes': typeof LayoutAdminUnlockedEpisodesRoute
-  '/_layout/admin/unmatched-sources': typeof LayoutAdminUnmatchedSourcesRoute
-  '/_layout/admin/unvalidated-shows': typeof LayoutAdminUnvalidatedShowsRoute
+  '/_layout/admin/unvalidated-titles': typeof LayoutAdminUnvalidatedTitlesRoute
   '/_layout/admin/users': typeof LayoutAdminUsersRoute
   '/_layout/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/_layout/channels/browse': typeof LayoutChannelsBrowseRoute
   '/_layout/watches_/import': typeof LayoutWatchesImportRoute
+  '/_layout/admin-v2/': typeof LayoutAdminV2IndexRoute
   '/_layout/admin/': typeof LayoutAdminIndexRoute
   '/_layout/channels/': typeof LayoutChannelsIndexRoute
   '/_layout/onboarding/': typeof LayoutOnboardingIndexRoute
   '/_layout/onboarding/$channelId/done': typeof LayoutOnboardingChannelIdDoneRoute
   '/_layout/onboarding/$channelId/name': typeof LayoutOnboardingChannelIdNameRoute
-  '/_layout/onboarding/$channelId/shows': typeof LayoutOnboardingChannelIdShowsRoute
   '/_layout/onboarding/$channelId/sort': typeof LayoutOnboardingChannelIdSortRoute
+  '/_layout/onboarding/$channelId/titles': typeof LayoutOnboardingChannelIdTitlesRoute
   '/_layout/users/$userId/channels': typeof LayoutUsersUserIdChannelsRoute
 }
 export interface FileRouteTypes {
@@ -430,6 +475,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/admin'
+    | '/admin-v2'
     | '/channel-comments'
     | '/channel-orders'
     | '/credits'
@@ -441,31 +487,35 @@ export interface FileRouteTypes {
     | '/remote'
     | '/seasons'
     | '/settings'
-    | '/shows'
     | '/sources'
+    | '/titles'
     | '/watches'
+    | '/admin-v2/automatic-channels'
+    | '/admin-v2/link-episode'
+    | '/admin-v2/link-title'
     | '/admin/channel-queues'
     | '/admin/channels'
-    | '/admin/duplicated-canonical-episodes'
+    | '/admin/duplicated-tmdb-episodes'
     | '/admin/episode-reports'
+    | '/admin/manage-files'
     | '/admin/reports'
     | '/admin/season-reports'
-    | '/admin/show-reports'
+    | '/admin/title-reports'
     | '/admin/tmdb-matches'
     | '/admin/unlocked-episodes'
-    | '/admin/unmatched-sources'
-    | '/admin/unvalidated-shows'
+    | '/admin/unvalidated-titles'
     | '/admin/users'
     | '/channels/$channelId'
     | '/channels/browse'
     | '/watches/import'
+    | '/admin-v2/'
     | '/admin/'
     | '/channels/'
     | '/onboarding/'
     | '/onboarding/$channelId/done'
     | '/onboarding/$channelId/name'
-    | '/onboarding/$channelId/shows'
     | '/onboarding/$channelId/sort'
+    | '/onboarding/$channelId/titles'
     | '/users/$userId/channels'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -483,32 +533,36 @@ export interface FileRouteTypes {
     | '/remote'
     | '/seasons'
     | '/settings'
-    | '/shows'
     | '/sources'
+    | '/titles'
     | '/watches'
     | '/'
+    | '/admin-v2/automatic-channels'
+    | '/admin-v2/link-episode'
+    | '/admin-v2/link-title'
     | '/admin/channel-queues'
     | '/admin/channels'
-    | '/admin/duplicated-canonical-episodes'
+    | '/admin/duplicated-tmdb-episodes'
     | '/admin/episode-reports'
+    | '/admin/manage-files'
     | '/admin/reports'
     | '/admin/season-reports'
-    | '/admin/show-reports'
+    | '/admin/title-reports'
     | '/admin/tmdb-matches'
     | '/admin/unlocked-episodes'
-    | '/admin/unmatched-sources'
-    | '/admin/unvalidated-shows'
+    | '/admin/unvalidated-titles'
     | '/admin/users'
     | '/channels/$channelId'
     | '/channels/browse'
     | '/watches/import'
+    | '/admin-v2'
     | '/admin'
     | '/channels'
     | '/onboarding'
     | '/onboarding/$channelId/done'
     | '/onboarding/$channelId/name'
-    | '/onboarding/$channelId/shows'
     | '/onboarding/$channelId/sort'
+    | '/onboarding/$channelId/titles'
     | '/users/$userId/channels'
   id:
     | '__root__'
@@ -518,6 +572,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/signup'
     | '/_layout/admin'
+    | '/_layout/admin-v2'
     | '/_layout/channel-comments'
     | '/_layout/channel-orders'
     | '/_layout/credits'
@@ -529,32 +584,36 @@ export interface FileRouteTypes {
     | '/_layout/remote'
     | '/_layout/seasons'
     | '/_layout/settings'
-    | '/_layout/shows'
     | '/_layout/sources'
+    | '/_layout/titles'
     | '/_layout/watches'
     | '/_layout/'
+    | '/_layout/admin-v2/automatic-channels'
+    | '/_layout/admin-v2/link-episode'
+    | '/_layout/admin-v2/link-title'
     | '/_layout/admin/channel-queues'
     | '/_layout/admin/channels'
-    | '/_layout/admin/duplicated-canonical-episodes'
+    | '/_layout/admin/duplicated-tmdb-episodes'
     | '/_layout/admin/episode-reports'
+    | '/_layout/admin/manage-files'
     | '/_layout/admin/reports'
     | '/_layout/admin/season-reports'
-    | '/_layout/admin/show-reports'
+    | '/_layout/admin/title-reports'
     | '/_layout/admin/tmdb-matches'
     | '/_layout/admin/unlocked-episodes'
-    | '/_layout/admin/unmatched-sources'
-    | '/_layout/admin/unvalidated-shows'
+    | '/_layout/admin/unvalidated-titles'
     | '/_layout/admin/users'
     | '/_layout/channels/$channelId'
     | '/_layout/channels/browse'
     | '/_layout/watches_/import'
+    | '/_layout/admin-v2/'
     | '/_layout/admin/'
     | '/_layout/channels/'
     | '/_layout/onboarding/'
     | '/_layout/onboarding/$channelId/done'
     | '/_layout/onboarding/$channelId/name'
-    | '/_layout/onboarding/$channelId/shows'
     | '/_layout/onboarding/$channelId/sort'
+    | '/_layout/onboarding/$channelId/titles'
     | '/_layout/users/$userId/channels'
   fileRoutesById: FileRoutesById
 }
@@ -568,25 +627,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/signup': {
-      id: '/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/recover-password': {
-      id: '/recover-password'
-      path: '/recover-password'
-      fullPath: '/recover-password'
-      preLoaderRoute: typeof RecoverPasswordRouteImport
+    '/_layout': {
+      id: '/_layout'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof LayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -596,11 +641,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_layout': {
-      id: '/_layout'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof LayoutRouteImport
+    '/recover-password': {
+      id: '/recover-password'
+      path: '/recover-password'
+      fullPath: '/recover-password'
+      preLoaderRoute: typeof RecoverPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_layout/': {
@@ -610,95 +669,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/watches': {
-      id: '/_layout/watches'
-      path: '/watches'
-      fullPath: '/watches'
-      preLoaderRoute: typeof LayoutWatchesRouteImport
+    '/_layout/admin': {
+      id: '/_layout/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof LayoutAdminRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/sources': {
-      id: '/_layout/sources'
-      path: '/sources'
-      fullPath: '/sources'
-      preLoaderRoute: typeof LayoutSourcesRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/shows': {
-      id: '/_layout/shows'
-      path: '/shows'
-      fullPath: '/shows'
-      preLoaderRoute: typeof LayoutShowsRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/settings': {
-      id: '/_layout/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof LayoutSettingsRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/seasons': {
-      id: '/_layout/seasons'
-      path: '/seasons'
-      fullPath: '/seasons'
-      preLoaderRoute: typeof LayoutSeasonsRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/remote': {
-      id: '/_layout/remote'
-      path: '/remote'
-      fullPath: '/remote'
-      preLoaderRoute: typeof LayoutRemoteRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/plugins': {
-      id: '/_layout/plugins'
-      path: '/plugins'
-      fullPath: '/plugins'
-      preLoaderRoute: typeof LayoutPluginsRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/onboarding': {
-      id: '/_layout/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof LayoutOnboardingRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/files': {
-      id: '/_layout/files'
-      path: '/files'
-      fullPath: '/files'
-      preLoaderRoute: typeof LayoutFilesRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/episodes': {
-      id: '/_layout/episodes'
-      path: '/episodes'
-      fullPath: '/episodes'
-      preLoaderRoute: typeof LayoutEpisodesRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/dashboard': {
-      id: '/_layout/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof LayoutDashboardRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/credits': {
-      id: '/_layout/credits'
-      path: '/credits'
-      fullPath: '/credits'
-      preLoaderRoute: typeof LayoutCreditsRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/channel-orders': {
-      id: '/_layout/channel-orders'
-      path: '/channel-orders'
-      fullPath: '/channel-orders'
-      preLoaderRoute: typeof LayoutChannelOrdersRouteImport
+    '/_layout/admin-v2': {
+      id: '/_layout/admin-v2'
+      path: '/admin-v2'
+      fullPath: '/admin-v2'
+      preLoaderRoute: typeof LayoutAdminV2RouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/channel-comments': {
@@ -708,130 +690,130 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutChannelCommentsRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/admin': {
-      id: '/_layout/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof LayoutAdminRouteImport
+    '/_layout/channel-orders': {
+      id: '/_layout/channel-orders'
+      path: '/channel-orders'
+      fullPath: '/channel-orders'
+      preLoaderRoute: typeof LayoutChannelOrdersRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/onboarding/': {
-      id: '/_layout/onboarding/'
+    '/_layout/credits': {
+      id: '/_layout/credits'
+      path: '/credits'
+      fullPath: '/credits'
+      preLoaderRoute: typeof LayoutCreditsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/dashboard': {
+      id: '/_layout/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof LayoutDashboardRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/episodes': {
+      id: '/_layout/episodes'
+      path: '/episodes'
+      fullPath: '/episodes'
+      preLoaderRoute: typeof LayoutEpisodesRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/files': {
+      id: '/_layout/files'
+      path: '/files'
+      fullPath: '/files'
+      preLoaderRoute: typeof LayoutFilesRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/onboarding': {
+      id: '/_layout/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof LayoutOnboardingRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/plugins': {
+      id: '/_layout/plugins'
+      path: '/plugins'
+      fullPath: '/plugins'
+      preLoaderRoute: typeof LayoutPluginsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/remote': {
+      id: '/_layout/remote'
+      path: '/remote'
+      fullPath: '/remote'
+      preLoaderRoute: typeof LayoutRemoteRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/seasons': {
+      id: '/_layout/seasons'
+      path: '/seasons'
+      fullPath: '/seasons'
+      preLoaderRoute: typeof LayoutSeasonsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/settings': {
+      id: '/_layout/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof LayoutSettingsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/sources': {
+      id: '/_layout/sources'
+      path: '/sources'
+      fullPath: '/sources'
+      preLoaderRoute: typeof LayoutSourcesRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/titles': {
+      id: '/_layout/titles'
+      path: '/titles'
+      fullPath: '/titles'
+      preLoaderRoute: typeof LayoutTitlesRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/watches': {
+      id: '/_layout/watches'
+      path: '/watches'
+      fullPath: '/watches'
+      preLoaderRoute: typeof LayoutWatchesRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/admin-v2/': {
+      id: '/_layout/admin-v2/'
       path: '/'
-      fullPath: '/onboarding/'
-      preLoaderRoute: typeof LayoutOnboardingIndexRouteImport
-      parentRoute: typeof LayoutOnboardingRoute
+      fullPath: '/admin-v2/'
+      preLoaderRoute: typeof LayoutAdminV2IndexRouteImport
+      parentRoute: typeof LayoutAdminV2Route
     }
-    '/_layout/channels/': {
-      id: '/_layout/channels/'
-      path: '/channels'
-      fullPath: '/channels/'
-      preLoaderRoute: typeof LayoutChannelsIndexRouteImport
-      parentRoute: typeof LayoutRoute
+    '/_layout/admin-v2/automatic-channels': {
+      id: '/_layout/admin-v2/automatic-channels'
+      path: '/automatic-channels'
+      fullPath: '/admin-v2/automatic-channels'
+      preLoaderRoute: typeof LayoutAdminV2AutomaticChannelsRouteImport
+      parentRoute: typeof LayoutAdminV2Route
+    }
+    '/_layout/admin-v2/link-episode': {
+      id: '/_layout/admin-v2/link-episode'
+      path: '/link-episode'
+      fullPath: '/admin-v2/link-episode'
+      preLoaderRoute: typeof LayoutAdminV2LinkEpisodeRouteImport
+      parentRoute: typeof LayoutAdminV2Route
+    }
+    '/_layout/admin-v2/link-title': {
+      id: '/_layout/admin-v2/link-title'
+      path: '/link-title'
+      fullPath: '/admin-v2/link-title'
+      preLoaderRoute: typeof LayoutAdminV2LinkTitleRouteImport
+      parentRoute: typeof LayoutAdminV2Route
     }
     '/_layout/admin/': {
       id: '/_layout/admin/'
       path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof LayoutAdminIndexRouteImport
-      parentRoute: typeof LayoutAdminRoute
-    }
-    '/_layout/watches_/import': {
-      id: '/_layout/watches_/import'
-      path: '/watches/import'
-      fullPath: '/watches/import'
-      preLoaderRoute: typeof LayoutWatchesImportRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/channels/browse': {
-      id: '/_layout/channels/browse'
-      path: '/channels/browse'
-      fullPath: '/channels/browse'
-      preLoaderRoute: typeof LayoutChannelsBrowseRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/channels/$channelId': {
-      id: '/_layout/channels/$channelId'
-      path: '/channels/$channelId'
-      fullPath: '/channels/$channelId'
-      preLoaderRoute: typeof LayoutChannelsChannelIdRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/admin/users': {
-      id: '/_layout/admin/users'
-      path: '/users'
-      fullPath: '/admin/users'
-      preLoaderRoute: typeof LayoutAdminUsersRouteImport
-      parentRoute: typeof LayoutAdminRoute
-    }
-    '/_layout/admin/unvalidated-shows': {
-      id: '/_layout/admin/unvalidated-shows'
-      path: '/unvalidated-shows'
-      fullPath: '/admin/unvalidated-shows'
-      preLoaderRoute: typeof LayoutAdminUnvalidatedShowsRouteImport
-      parentRoute: typeof LayoutAdminRoute
-    }
-    '/_layout/admin/unmatched-sources': {
-      id: '/_layout/admin/unmatched-sources'
-      path: '/unmatched-sources'
-      fullPath: '/admin/unmatched-sources'
-      preLoaderRoute: typeof LayoutAdminUnmatchedSourcesRouteImport
-      parentRoute: typeof LayoutAdminRoute
-    }
-    '/_layout/admin/unlocked-episodes': {
-      id: '/_layout/admin/unlocked-episodes'
-      path: '/unlocked-episodes'
-      fullPath: '/admin/unlocked-episodes'
-      preLoaderRoute: typeof LayoutAdminUnlockedEpisodesRouteImport
-      parentRoute: typeof LayoutAdminRoute
-    }
-    '/_layout/admin/tmdb-matches': {
-      id: '/_layout/admin/tmdb-matches'
-      path: '/tmdb-matches'
-      fullPath: '/admin/tmdb-matches'
-      preLoaderRoute: typeof LayoutAdminTmdbMatchesRouteImport
-      parentRoute: typeof LayoutAdminRoute
-    }
-    '/_layout/admin/show-reports': {
-      id: '/_layout/admin/show-reports'
-      path: '/show-reports'
-      fullPath: '/admin/show-reports'
-      preLoaderRoute: typeof LayoutAdminShowReportsRouteImport
-      parentRoute: typeof LayoutAdminRoute
-    }
-    '/_layout/admin/season-reports': {
-      id: '/_layout/admin/season-reports'
-      path: '/season-reports'
-      fullPath: '/admin/season-reports'
-      preLoaderRoute: typeof LayoutAdminSeasonReportsRouteImport
-      parentRoute: typeof LayoutAdminRoute
-    }
-    '/_layout/admin/reports': {
-      id: '/_layout/admin/reports'
-      path: '/reports'
-      fullPath: '/admin/reports'
-      preLoaderRoute: typeof LayoutAdminReportsRouteImport
-      parentRoute: typeof LayoutAdminRoute
-    }
-    '/_layout/admin/episode-reports': {
-      id: '/_layout/admin/episode-reports'
-      path: '/episode-reports'
-      fullPath: '/admin/episode-reports'
-      preLoaderRoute: typeof LayoutAdminEpisodeReportsRouteImport
-      parentRoute: typeof LayoutAdminRoute
-    }
-    '/_layout/admin/duplicated-canonical-episodes': {
-      id: '/_layout/admin/duplicated-canonical-episodes'
-      path: '/duplicated-canonical-episodes'
-      fullPath: '/admin/duplicated-canonical-episodes'
-      preLoaderRoute: typeof LayoutAdminDuplicatedCanonicalEpisodesRouteImport
-      parentRoute: typeof LayoutAdminRoute
-    }
-    '/_layout/admin/channels': {
-      id: '/_layout/admin/channels'
-      path: '/channels'
-      fullPath: '/admin/channels'
-      preLoaderRoute: typeof LayoutAdminChannelsRouteImport
       parentRoute: typeof LayoutAdminRoute
     }
     '/_layout/admin/channel-queues': {
@@ -841,25 +823,123 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAdminChannelQueuesRouteImport
       parentRoute: typeof LayoutAdminRoute
     }
-    '/_layout/users/$userId/channels': {
-      id: '/_layout/users/$userId/channels'
-      path: '/users/$userId/channels'
-      fullPath: '/users/$userId/channels'
-      preLoaderRoute: typeof LayoutUsersUserIdChannelsRouteImport
+    '/_layout/admin/channels': {
+      id: '/_layout/admin/channels'
+      path: '/channels'
+      fullPath: '/admin/channels'
+      preLoaderRoute: typeof LayoutAdminChannelsRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
+    '/_layout/admin/duplicated-tmdb-episodes': {
+      id: '/_layout/admin/duplicated-tmdb-episodes'
+      path: '/duplicated-tmdb-episodes'
+      fullPath: '/admin/duplicated-tmdb-episodes'
+      preLoaderRoute: typeof LayoutAdminDuplicatedTmdbEpisodesRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
+    '/_layout/admin/episode-reports': {
+      id: '/_layout/admin/episode-reports'
+      path: '/episode-reports'
+      fullPath: '/admin/episode-reports'
+      preLoaderRoute: typeof LayoutAdminEpisodeReportsRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
+    '/_layout/admin/manage-files': {
+      id: '/_layout/admin/manage-files'
+      path: '/manage-files'
+      fullPath: '/admin/manage-files'
+      preLoaderRoute: typeof LayoutAdminManageFilesRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
+    '/_layout/admin/reports': {
+      id: '/_layout/admin/reports'
+      path: '/reports'
+      fullPath: '/admin/reports'
+      preLoaderRoute: typeof LayoutAdminReportsRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
+    '/_layout/admin/season-reports': {
+      id: '/_layout/admin/season-reports'
+      path: '/season-reports'
+      fullPath: '/admin/season-reports'
+      preLoaderRoute: typeof LayoutAdminSeasonReportsRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
+    '/_layout/admin/title-reports': {
+      id: '/_layout/admin/title-reports'
+      path: '/title-reports'
+      fullPath: '/admin/title-reports'
+      preLoaderRoute: typeof LayoutAdminTitleReportsRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
+    '/_layout/admin/tmdb-matches': {
+      id: '/_layout/admin/tmdb-matches'
+      path: '/tmdb-matches'
+      fullPath: '/admin/tmdb-matches'
+      preLoaderRoute: typeof LayoutAdminTmdbMatchesRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
+    '/_layout/admin/unlocked-episodes': {
+      id: '/_layout/admin/unlocked-episodes'
+      path: '/unlocked-episodes'
+      fullPath: '/admin/unlocked-episodes'
+      preLoaderRoute: typeof LayoutAdminUnlockedEpisodesRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
+    '/_layout/admin/unvalidated-titles': {
+      id: '/_layout/admin/unvalidated-titles'
+      path: '/unvalidated-titles'
+      fullPath: '/admin/unvalidated-titles'
+      preLoaderRoute: typeof LayoutAdminUnvalidatedTitlesRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
+    '/_layout/admin/users': {
+      id: '/_layout/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof LayoutAdminUsersRouteImport
+      parentRoute: typeof LayoutAdminRoute
+    }
+    '/_layout/channels/': {
+      id: '/_layout/channels/'
+      path: '/channels'
+      fullPath: '/channels/'
+      preLoaderRoute: typeof LayoutChannelsIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/onboarding/$channelId/sort': {
-      id: '/_layout/onboarding/$channelId/sort'
-      path: '/$channelId/sort'
-      fullPath: '/onboarding/$channelId/sort'
-      preLoaderRoute: typeof LayoutOnboardingChannelIdSortRouteImport
+    '/_layout/channels/$channelId': {
+      id: '/_layout/channels/$channelId'
+      path: '/channels/$channelId'
+      fullPath: '/channels/$channelId'
+      preLoaderRoute: typeof LayoutChannelsChannelIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/channels/browse': {
+      id: '/_layout/channels/browse'
+      path: '/channels/browse'
+      fullPath: '/channels/browse'
+      preLoaderRoute: typeof LayoutChannelsBrowseRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/onboarding/': {
+      id: '/_layout/onboarding/'
+      path: '/'
+      fullPath: '/onboarding/'
+      preLoaderRoute: typeof LayoutOnboardingIndexRouteImport
       parentRoute: typeof LayoutOnboardingRoute
     }
-    '/_layout/onboarding/$channelId/shows': {
-      id: '/_layout/onboarding/$channelId/shows'
-      path: '/$channelId/shows'
-      fullPath: '/onboarding/$channelId/shows'
-      preLoaderRoute: typeof LayoutOnboardingChannelIdShowsRouteImport
+    '/_layout/watches_/import': {
+      id: '/_layout/watches_/import'
+      path: '/watches/import'
+      fullPath: '/watches/import'
+      preLoaderRoute: typeof LayoutWatchesImportRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/onboarding/$channelId/done': {
+      id: '/_layout/onboarding/$channelId/done'
+      path: '/$channelId/done'
+      fullPath: '/onboarding/$channelId/done'
+      preLoaderRoute: typeof LayoutOnboardingChannelIdDoneRouteImport
       parentRoute: typeof LayoutOnboardingRoute
     }
     '/_layout/onboarding/$channelId/name': {
@@ -869,12 +949,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutOnboardingChannelIdNameRouteImport
       parentRoute: typeof LayoutOnboardingRoute
     }
-    '/_layout/onboarding/$channelId/done': {
-      id: '/_layout/onboarding/$channelId/done'
-      path: '/$channelId/done'
-      fullPath: '/onboarding/$channelId/done'
-      preLoaderRoute: typeof LayoutOnboardingChannelIdDoneRouteImport
+    '/_layout/onboarding/$channelId/sort': {
+      id: '/_layout/onboarding/$channelId/sort'
+      path: '/$channelId/sort'
+      fullPath: '/onboarding/$channelId/sort'
+      preLoaderRoute: typeof LayoutOnboardingChannelIdSortRouteImport
       parentRoute: typeof LayoutOnboardingRoute
+    }
+    '/_layout/onboarding/$channelId/titles': {
+      id: '/_layout/onboarding/$channelId/titles'
+      path: '/$channelId/titles'
+      fullPath: '/onboarding/$channelId/titles'
+      preLoaderRoute: typeof LayoutOnboardingChannelIdTitlesRouteImport
+      parentRoute: typeof LayoutOnboardingRoute
+    }
+    '/_layout/users/$userId/channels': {
+      id: '/_layout/users/$userId/channels'
+      path: '/users/$userId/channels'
+      fullPath: '/users/$userId/channels'
+      preLoaderRoute: typeof LayoutUsersUserIdChannelsRouteImport
+      parentRoute: typeof LayoutRoute
     }
   }
 }
@@ -882,15 +976,15 @@ declare module '@tanstack/react-router' {
 interface LayoutAdminRouteChildren {
   LayoutAdminChannelQueuesRoute: typeof LayoutAdminChannelQueuesRoute
   LayoutAdminChannelsRoute: typeof LayoutAdminChannelsRoute
-  LayoutAdminDuplicatedCanonicalEpisodesRoute: typeof LayoutAdminDuplicatedCanonicalEpisodesRoute
+  LayoutAdminDuplicatedTmdbEpisodesRoute: typeof LayoutAdminDuplicatedTmdbEpisodesRoute
   LayoutAdminEpisodeReportsRoute: typeof LayoutAdminEpisodeReportsRoute
+  LayoutAdminManageFilesRoute: typeof LayoutAdminManageFilesRoute
   LayoutAdminReportsRoute: typeof LayoutAdminReportsRoute
   LayoutAdminSeasonReportsRoute: typeof LayoutAdminSeasonReportsRoute
-  LayoutAdminShowReportsRoute: typeof LayoutAdminShowReportsRoute
+  LayoutAdminTitleReportsRoute: typeof LayoutAdminTitleReportsRoute
   LayoutAdminTmdbMatchesRoute: typeof LayoutAdminTmdbMatchesRoute
   LayoutAdminUnlockedEpisodesRoute: typeof LayoutAdminUnlockedEpisodesRoute
-  LayoutAdminUnmatchedSourcesRoute: typeof LayoutAdminUnmatchedSourcesRoute
-  LayoutAdminUnvalidatedShowsRoute: typeof LayoutAdminUnvalidatedShowsRoute
+  LayoutAdminUnvalidatedTitlesRoute: typeof LayoutAdminUnvalidatedTitlesRoute
   LayoutAdminUsersRoute: typeof LayoutAdminUsersRoute
   LayoutAdminIndexRoute: typeof LayoutAdminIndexRoute
 }
@@ -898,16 +992,16 @@ interface LayoutAdminRouteChildren {
 const LayoutAdminRouteChildren: LayoutAdminRouteChildren = {
   LayoutAdminChannelQueuesRoute: LayoutAdminChannelQueuesRoute,
   LayoutAdminChannelsRoute: LayoutAdminChannelsRoute,
-  LayoutAdminDuplicatedCanonicalEpisodesRoute:
-    LayoutAdminDuplicatedCanonicalEpisodesRoute,
+  LayoutAdminDuplicatedTmdbEpisodesRoute:
+    LayoutAdminDuplicatedTmdbEpisodesRoute,
   LayoutAdminEpisodeReportsRoute: LayoutAdminEpisodeReportsRoute,
+  LayoutAdminManageFilesRoute: LayoutAdminManageFilesRoute,
   LayoutAdminReportsRoute: LayoutAdminReportsRoute,
   LayoutAdminSeasonReportsRoute: LayoutAdminSeasonReportsRoute,
-  LayoutAdminShowReportsRoute: LayoutAdminShowReportsRoute,
+  LayoutAdminTitleReportsRoute: LayoutAdminTitleReportsRoute,
   LayoutAdminTmdbMatchesRoute: LayoutAdminTmdbMatchesRoute,
   LayoutAdminUnlockedEpisodesRoute: LayoutAdminUnlockedEpisodesRoute,
-  LayoutAdminUnmatchedSourcesRoute: LayoutAdminUnmatchedSourcesRoute,
-  LayoutAdminUnvalidatedShowsRoute: LayoutAdminUnvalidatedShowsRoute,
+  LayoutAdminUnvalidatedTitlesRoute: LayoutAdminUnvalidatedTitlesRoute,
   LayoutAdminUsersRoute: LayoutAdminUsersRoute,
   LayoutAdminIndexRoute: LayoutAdminIndexRoute,
 }
@@ -916,20 +1010,38 @@ const LayoutAdminRouteWithChildren = LayoutAdminRoute._addFileChildren(
   LayoutAdminRouteChildren,
 )
 
+interface LayoutAdminV2RouteChildren {
+  LayoutAdminV2AutomaticChannelsRoute: typeof LayoutAdminV2AutomaticChannelsRoute
+  LayoutAdminV2LinkEpisodeRoute: typeof LayoutAdminV2LinkEpisodeRoute
+  LayoutAdminV2LinkTitleRoute: typeof LayoutAdminV2LinkTitleRoute
+  LayoutAdminV2IndexRoute: typeof LayoutAdminV2IndexRoute
+}
+
+const LayoutAdminV2RouteChildren: LayoutAdminV2RouteChildren = {
+  LayoutAdminV2AutomaticChannelsRoute: LayoutAdminV2AutomaticChannelsRoute,
+  LayoutAdminV2LinkEpisodeRoute: LayoutAdminV2LinkEpisodeRoute,
+  LayoutAdminV2LinkTitleRoute: LayoutAdminV2LinkTitleRoute,
+  LayoutAdminV2IndexRoute: LayoutAdminV2IndexRoute,
+}
+
+const LayoutAdminV2RouteWithChildren = LayoutAdminV2Route._addFileChildren(
+  LayoutAdminV2RouteChildren,
+)
+
 interface LayoutOnboardingRouteChildren {
   LayoutOnboardingIndexRoute: typeof LayoutOnboardingIndexRoute
   LayoutOnboardingChannelIdDoneRoute: typeof LayoutOnboardingChannelIdDoneRoute
   LayoutOnboardingChannelIdNameRoute: typeof LayoutOnboardingChannelIdNameRoute
-  LayoutOnboardingChannelIdShowsRoute: typeof LayoutOnboardingChannelIdShowsRoute
   LayoutOnboardingChannelIdSortRoute: typeof LayoutOnboardingChannelIdSortRoute
+  LayoutOnboardingChannelIdTitlesRoute: typeof LayoutOnboardingChannelIdTitlesRoute
 }
 
 const LayoutOnboardingRouteChildren: LayoutOnboardingRouteChildren = {
   LayoutOnboardingIndexRoute: LayoutOnboardingIndexRoute,
   LayoutOnboardingChannelIdDoneRoute: LayoutOnboardingChannelIdDoneRoute,
   LayoutOnboardingChannelIdNameRoute: LayoutOnboardingChannelIdNameRoute,
-  LayoutOnboardingChannelIdShowsRoute: LayoutOnboardingChannelIdShowsRoute,
   LayoutOnboardingChannelIdSortRoute: LayoutOnboardingChannelIdSortRoute,
+  LayoutOnboardingChannelIdTitlesRoute: LayoutOnboardingChannelIdTitlesRoute,
 }
 
 const LayoutOnboardingRouteWithChildren =
@@ -937,6 +1049,7 @@ const LayoutOnboardingRouteWithChildren =
 
 interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRouteWithChildren
+  LayoutAdminV2Route: typeof LayoutAdminV2RouteWithChildren
   LayoutChannelCommentsRoute: typeof LayoutChannelCommentsRoute
   LayoutChannelOrdersRoute: typeof LayoutChannelOrdersRoute
   LayoutCreditsRoute: typeof LayoutCreditsRoute
@@ -948,8 +1061,8 @@ interface LayoutRouteChildren {
   LayoutRemoteRoute: typeof LayoutRemoteRoute
   LayoutSeasonsRoute: typeof LayoutSeasonsRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
-  LayoutShowsRoute: typeof LayoutShowsRoute
   LayoutSourcesRoute: typeof LayoutSourcesRoute
+  LayoutTitlesRoute: typeof LayoutTitlesRoute
   LayoutWatchesRoute: typeof LayoutWatchesRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutChannelsChannelIdRoute: typeof LayoutChannelsChannelIdRoute
@@ -961,6 +1074,7 @@ interface LayoutRouteChildren {
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRouteWithChildren,
+  LayoutAdminV2Route: LayoutAdminV2RouteWithChildren,
   LayoutChannelCommentsRoute: LayoutChannelCommentsRoute,
   LayoutChannelOrdersRoute: LayoutChannelOrdersRoute,
   LayoutCreditsRoute: LayoutCreditsRoute,
@@ -972,8 +1086,8 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutRemoteRoute: LayoutRemoteRoute,
   LayoutSeasonsRoute: LayoutSeasonsRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
-  LayoutShowsRoute: LayoutShowsRoute,
   LayoutSourcesRoute: LayoutSourcesRoute,
+  LayoutTitlesRoute: LayoutTitlesRoute,
   LayoutWatchesRoute: LayoutWatchesRoute,
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutChannelsChannelIdRoute: LayoutChannelsChannelIdRoute,

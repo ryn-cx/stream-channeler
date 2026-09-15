@@ -6,7 +6,7 @@ from collections.abc import Generator
 
 import pytest
 
-from tests.plugins.plugin_validator_alt.stored_files import (
+from tests.plugins.plugin_validator.stored_files import (
     check_episodes_before_grouped_download,
     serve_downloads_from_disk,
 )

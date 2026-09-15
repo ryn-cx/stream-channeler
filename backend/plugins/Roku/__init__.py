@@ -1,58 +1,60 @@
 # TODO: Validate
-"""The Roku Channel plugin."""
-
 from __future__ import annotations
 
-from typing import override
+import re
+from typing import TYPE_CHECKING, override
 
-from plugins.Roku.source import SourceMixin
-from plugins.Roku.upsert import UpsertMixin
-from plugins.Roku.url_handlers import (
-    DetailsURLHandler,
-    RokuURLHandler,
-    WatchURLHandler,
-)
-from plugins.utils.base_plugin.plugin import URLHandlerPlugin
+from plugins.Roku.constants import DETAILS_URL_REGEX, WATCH_URL_REGEX
+from plugins.Roku.importer import RokuImporter, RokuMovieImporter, RokuSeriesImporter
+from plugins.Roku.shared import RokuShared
+from plugins.Roku.utils import is_movie
+from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
+
+if TYPE_CHECKING:
+    from app.titles.models import Title
 
 
 # TODO: Validate
-class Roku(
-    UpsertMixin,
-    SourceMixin,
-    URLHandlerPlugin[RokuURLHandler],
-    register=True,
-):
-    """The Roku Channel plugin."""
-
+class Roku(RokuShared, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override
-    def _url_handlers(cls) -> tuple[type[RokuURLHandler], ...]:
-        return (
-            DetailsURLHandler,
-            WatchURLHandler,
-        )
+    def _url_regexes(cls) -> tuple[str, ...]:
+        return (DETAILS_URL_REGEX, WATCH_URL_REGEX)
 
     # TODO: Validate
-    @classmethod
-    @override
-    def tmdb_provider_names(cls) -> tuple[str, ...]:
-        return ("The Roku Channel",)
+    def _url_content_key(self, url: str) -> str:
+        domain_regex = self._domains_regex()
+        for url_regex in self._url_regexes():
+            if match := re.match(domain_regex + url_regex, url):
+                return match.group(1)
+
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)
 
     # TODO: Validate
-    @classmethod
     @override
-    def favicon_url(cls) -> str:
-        return "https://therokuchannel.roku.com/favicon.ico"
+    def _media_importer_from_url(self, url: str) -> RokuImporter:
+        # Every kind of content is answered at the same address, so
+        # the content has to be read before it is known which of them
+        # this one is.
+        content_file = self.content_file(self._url_content_key(url))
+        self.raise_invalid_url_if_no_content(content_file, url)
+        content = content_file.parsed()
+        # A season or an episode belongs to a series, which is what
+        # is read and written.
+        if content.series is not None:
+            return RokuSeriesImporter(self.session, self.plugin, self._file_cache)
+        if is_movie(content):
+            return RokuMovieImporter(self.session, self.plugin, self._file_cache)
+        return RokuSeriesImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
-    @classmethod
     @override
-    def _domain(cls) -> str:
-        return "therokuchannel.roku.com"
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def plugin_name(cls) -> str:
-        return "The Roku Channel"
+    def _media_importer_from_title(self, title: Title) -> RokuImporter:
+        if not title.media_type:
+            msg = "Title.media_type is not set."
+            raise AttributeError(msg)
+        if title.media_type == "Movie":
+            return RokuMovieImporter(self.session, self.plugin, self._file_cache)
+        return RokuSeriesImporter(self.session, self.plugin, self._file_cache)

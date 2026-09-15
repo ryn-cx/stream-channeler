@@ -1,0 +1,64 @@
+# TODO: Validate
+
+
+"""Source router."""
+
+from typing import Annotated, Any
+
+from fastapi import APIRouter, Depends, Query
+
+from app.auth.dependencies import (
+    CurrentUser,
+    SessionDep,
+    get_current_active_superuser,
+)
+from app.plugins.models import Plugin
+from app.schemas import ReadOptions
+from app.service.responses import list_response
+from app.sources.dependencies import ExistingSource
+from app.sources.models import Source
+from app.sources.schemas import (
+    SourceListPublic,
+    SourcePublic,
+    SourcesPublic,
+)
+
+sources_router = APIRouter(
+    prefix="/sources",
+    tags=["sources"],
+    dependencies=[Depends(get_current_active_superuser)],
+)
+
+
+SOURCE_EXTRA_COLUMNS: dict[str, Any] = {
+    "plugin_name": Plugin.key,
+}
+
+
+# TODO: Validate
+@sources_router.get("")
+def get_sources(
+    session: SessionDep,
+    current_user: CurrentUser,
+    read_options: Annotated[ReadOptions, Query()],
+) -> SourcesPublic:
+    """Get `Source`s."""
+    return list_response(
+        session=session,
+        base=Source.select_with_plugin_eager(),
+        response_model=SourcesPublic,
+        schema=SourceListPublic,
+        params=read_options,
+        current_user=current_user,
+        extra_columns=SOURCE_EXTRA_COLUMNS,
+    )
+
+
+# TODO: Validate
+@sources_router.get("/{source_id}", response_model=SourcePublic)  # noqa: FAST003 - Used by ExistingSource.
+def get_source(source: ExistingSource) -> Source:
+    return source
+
+
+router = APIRouter()
+router.include_router(sources_router)

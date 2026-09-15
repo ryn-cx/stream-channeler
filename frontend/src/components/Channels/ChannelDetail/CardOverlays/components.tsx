@@ -12,7 +12,7 @@ export function CardTextArea({ children }: { children: React.ReactNode }) {
 
 // TODO: Validate
 /**
- * Displays the favicon + show name on the left and a list of detail strings on the right.
+ * Displays the favicon + title name on the left and a list of detail strings on the right.
  * Null values in `details` are filtered out.
  */
 // TODO: Validate
@@ -30,18 +30,18 @@ export function CardSourceRow({
       {/* items-center - Vertically center the text so it is not butted up against the image */}
       {/* gap-2 - Small gap between the favicon and the source name */}
       {/* flex-1 - Make the favicon and source name take up as much space as possible so the date and duration will be as far right as possible */}
-      {/* min-w-0 - Make sure all columns are always visible. Without this the show name can push the date and duration off of the card */}
+      {/* min-w-0 - Make sure all columns are always visible. Without this the title name can push the date and duration off of the card */}
       <div className="flex items-center gap-2 flex-1 min-w-0">
         {episode.source.favicon_url && (
           <img
             referrerPolicy="no-referrer"
             src={episode.source.favicon_url}
-            alt={episode.source.name ?? undefined}
+            alt={episode.source.key}
             className="size-6"
           />
         )}
         <span className="font-bold text-base truncate group-hover:whitespace-normal group-hover:overflow-visible">
-          {episode.show.name}
+          {episode.title.name}
         </span>
       </div>
       {/* This div contains the date and duration */}

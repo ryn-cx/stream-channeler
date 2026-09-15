@@ -21,5 +21,5 @@ def create_random_source(
         parent = create_random_plugin(session)
     source = build_random_model(Source, plugin_id=parent.id, deleted_at=None, **kwargs)
     session.add(source)
-    session.flush()  # Allows source.plugin and source.shows to be accessed.
+    session.flush()  # Allows source.plugin and source.titles to be accessed.
     return source

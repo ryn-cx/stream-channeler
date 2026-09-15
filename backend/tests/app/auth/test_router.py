@@ -7,11 +7,11 @@ from pwdlib.hashers.bcrypt import BcryptHasher
 from sqlmodel import Session
 
 from app.auth.security import get_password_hash, verify_password
-from app.auth.service import generate_password_reset_token
+from app.auth.service.password_reset import generate_password_reset_token
 from app.config import settings
-from app.users import service as user_service
 from app.users.models import User
 from app.users.schemas import UserCreate
+from app.users.service import accounts
 from tests.app.helpers.utils import random_email, random_lower_string
 from tests.app.users.utils import user_authentication_headers
 
@@ -112,7 +112,7 @@ def test_reset_password(
         is_active=True,
         is_superuser=False,
     )
-    user = user_service.create_user(
+    user = accounts.create_user(
         session=session_scoped_session,
         user_create=user_create,
     )

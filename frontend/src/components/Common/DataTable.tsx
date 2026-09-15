@@ -16,6 +16,7 @@ import {
   type OnChangeFn,
   type PaginationState,
   type RowData,
+  type Row as RowInstance,
   type SortingState as SortOptionsState,
   type Table as TableInstance,
   useReactTable,
@@ -32,6 +33,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import {
+  memo,
   type ReactNode,
   useCallback,
   useEffect,
@@ -65,7 +67,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { usePlugin, useSeason, useShow, useSource } from "@/hooks/useEntities"
+import { usePlugin, useSeason, useSource, useTitle } from "@/hooks/useEntities"
 import {
   usePersistedJsonState,
   usePersistedState,
@@ -187,6 +189,38 @@ function useTableState(
 }
 
 // TODO: Validate
+function TableBodyRow<TData>({
+  row,
+  className,
+}: {
+  row: RowInstance<TData>
+  className?: string
+  shownColumns: string
+}) {
+  return (
+    <TableRow className={className}>
+      {row.getVisibleCells().map((cell) => (
+        <TableCell
+          key={cell.id}
+          className={cell.column.columnDef.meta?.cellClassName}
+        >
+          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+        </TableCell>
+      ))}
+    </TableRow>
+  )
+}
+
+// TODO: Validate
+const DataTableRow = memo(
+  TableBodyRow,
+  (previous, next) =>
+    previous.row.original === next.row.original &&
+    previous.className === next.className &&
+    previous.shownColumns === next.shownColumns,
+) as typeof TableBodyRow
+
+// TODO: Validate
 export function DataTable<TData extends { id: string }, TValue>({
   columns,
   data,
@@ -265,6 +299,11 @@ export function DataTable<TData extends { id: string }, TValue>({
     autoResetPageIndex: false,
   })
 
+  const shownColumns = table
+    .getVisibleLeafColumns()
+    .map((column) => column.id)
+    .join(",")
+
   const filteredRows = serverSide
     ? serverSide.rowCount
     : table.getFilteredRowModel().rows.length
@@ -331,18 +370,16 @@ export function DataTable<TData extends { id: string }, TValue>({
         </TableHeader>
         <TableBody>
           {table.getRowModel().rows.length ? (
-            table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id} className={rowClassName?.(row.original)}>
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell
-                    key={cell.id}
-                    className={cell.column.columnDef.meta?.cellClassName}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
+            table
+              .getRowModel()
+              .rows.map((row) => (
+                <DataTableRow
+                  key={row.id}
+                  row={row}
+                  className={rowClassName?.(row.original)}
+                  shownColumns={shownColumns}
+                />
+              ))
           ) : (
             <TableRow className="hover:bg-transparent">
               <TableCell
@@ -888,43 +925,43 @@ export function MediaTablePage<TData extends { id: string }>({
   )
 }
 
-export const CANONICAL_TAB = "canonical"
+export const TMDB_TAB = "tmdb"
 
 export const MEDIA_TAB = "media"
 
-export type MediaTab = typeof MEDIA_TAB | typeof CANONICAL_TAB
+export type MediaTab = typeof MEDIA_TAB | typeof TMDB_TAB
 
 export type MediaScope = {
   plugin_id?: string
   source_id?: string
-  show_id?: string
+  title_id?: string
   season_id?: string
 }
 
 export type MediaSearch = MediaScope & {
-  view?: typeof CANONICAL_TAB
+  view?: typeof TMDB_TAB
 }
 
 export type ScopeColumn = keyof MediaScope
 
 const SCOPE_COLUMNS: ScopeColumn[] = [
   "season_id",
-  "show_id",
+  "title_id",
   "source_id",
   "plugin_id",
 ]
 
 const SCOPE_ENTITIES: Record<ScopeColumn, EntityKey> = {
   season_id: "season",
-  show_id: "show",
+  title_id: "title",
   source_id: "source",
   plugin_id: "plugin",
 }
 
 const SCOPE_PATHS: Record<EntityKey, MediaPath> = {
   season: "/episodes",
-  show: "/seasons",
-  source: "/shows",
+  title: "/seasons",
+  source: "/titles",
   plugin: "/sources",
 }
 
@@ -944,7 +981,7 @@ export const childmostScope = (
 export type MediaPath =
   | "/plugins"
   | "/sources"
-  | "/shows"
+  | "/titles"
   | "/seasons"
   | "/episodes"
   | "/files"
@@ -953,33 +990,33 @@ export type MediaPath =
 export const validateMediaSearch = (
   search: Record<string, unknown>,
 ): MediaSearch => ({
-  view: search.view === CANONICAL_TAB ? search.view : undefined,
+  view: search.view === TMDB_TAB ? search.view : undefined,
   plugin_id:
     typeof search.plugin_id === "string" ? search.plugin_id : undefined,
   source_id:
     typeof search.source_id === "string" ? search.source_id : undefined,
-  show_id: typeof search.show_id === "string" ? search.show_id : undefined,
+  title_id: typeof search.title_id === "string" ? search.title_id : undefined,
   season_id:
     typeof search.season_id === "string" ? search.season_id : undefined,
 })
 
 const SCOPE_TABS: { value: MediaTab; label: string }[] = [
   { value: MEDIA_TAB, label: "Media" },
-  { value: CANONICAL_TAB, label: "Canonical" },
+  { value: TMDB_TAB, label: "TMDB" },
 ]
 
-// The canonical tab of a media list: the same page, reading the canonical rows
+// The tmdb tab of a media list: the same page, reading the tmdb rows
 // of the table instead of the non-canonical rows, so it needs its own columns
 // and fetcher.
-interface CanonicalTab<TCanonical extends { id: string }> {
-  columns: ColumnDef<TCanonical>[]
+interface TmdbTab<TTmdb extends { id: string }> {
+  columns: ColumnDef<TTmdb>[]
   defaultHidden?: VisibilityState
-  fetchTable: (params: MediaPageParams) => Promise<MediaTableResult<TCanonical>>
+  fetchTable: (params: MediaPageParams) => Promise<MediaTableResult<TTmdb>>
 }
 
 interface MediaListPageProps<
   TData extends { id: string },
-  TCanonical extends { id: string },
+  TTmdb extends { id: string },
 > {
   title: string
   path: MediaPath
@@ -989,8 +1026,8 @@ interface MediaListPageProps<
   emptyIcon: LucideIcon
   headerActions?: ReactNode
   fetchTable: (params: MediaPageParams) => Promise<MediaTableResult<TData>>
-  // Left off by the lists that have no canonical counterpart, which drops the tab.
-  canonical?: CanonicalTab<TCanonical>
+  // Left off by the lists that have no tmdb counterpart, which drops the tab.
+  tmdb?: TmdbTab<TTmdb>
 }
 
 // TODO: Validate
@@ -1007,11 +1044,11 @@ function ScopedHeader({
   const { data: season } = useSeason(
     entity === "season" ? scope.value : undefined,
   )
-  const { data: show } = useShow(
-    entity === "show" ? scope.value : season?.show_id,
+  const { data: titleRecord } = useTitle(
+    entity === "title" ? scope.value : season?.title_id,
   )
   const { data: source } = useSource(
-    entity === "source" ? scope.value : show?.source_id,
+    entity === "source" ? scope.value : titleRecord?.source_id,
   )
   const { data: plugin } = usePlugin(
     entity === "plugin" ? scope.value : source?.plugin_id,
@@ -1021,7 +1058,7 @@ function ScopedHeader({
     <DetailBreadcrumb
       plugin={plugin}
       source={source}
-      show={show}
+      title={titleRecord}
       season={season}
       trailing={title}
       current={SCOPE_PATHS[entity] === path ? entity : undefined}
@@ -1032,7 +1069,7 @@ function ScopedHeader({
 // TODO: Validate
 export function MediaListPage<
   TData extends { id: string },
-  TCanonical extends { id: string } = TData,
+  TTmdb extends { id: string } = TData,
 >({
   title,
   path,
@@ -1042,8 +1079,8 @@ export function MediaListPage<
   emptyIcon,
   headerActions,
   fetchTable,
-  canonical,
-}: MediaListPageProps<TData, TCanonical>) {
+  tmdb,
+}: MediaListPageProps<TData, TTmdb>) {
   const search = useSearch({ strict: false }) as MediaSearch
   const navigate = useNavigate()
   const scope = childmostScope(search)
@@ -1053,9 +1090,7 @@ export function MediaListPage<
   )
   const requestedTab: MediaTab = search.view ?? rememberedTab
   const activeTab: MediaTab =
-    requestedTab === CANONICAL_TAB && (!canonical || scope)
-      ? MEDIA_TAB
-      : requestedTab
+    requestedTab === TMDB_TAB && (!tmdb || scope) ? MEDIA_TAB : requestedTab
 
   // TODO: Validate
   const scopedParams = (params: MediaPageParams): MediaPageParams =>
@@ -1091,7 +1126,7 @@ export function MediaListPage<
   ) : (
     <div className="flex flex-wrap items-center gap-3">
       <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-      {canonical && (
+      {tmdb && (
         <Tabs
           value={activeTab}
           onValueChange={(value) => setTab(value as MediaTab)}
@@ -1115,15 +1150,15 @@ export function MediaListPage<
     />
   )
 
-  if (canonical && activeTab === CANONICAL_TAB) {
+  if (tmdb && activeTab === TMDB_TAB) {
     return (
       <MediaTablePage
-        columns={canonical.columns}
-        queryKey={["media-table", title, CANONICAL_TAB]}
-        fetchTable={canonical.fetchTable}
-        columnVisibilityKey={`${columnVisibilityKey}-canonical`}
-        defaultHidden={canonical.defaultHidden ?? {}}
-        resetKey={CANONICAL_TAB}
+        columns={tmdb.columns}
+        queryKey={["media-table", title, TMDB_TAB]}
+        fetchTable={tmdb.fetchTable}
+        columnVisibilityKey={`${columnVisibilityKey}-tmdb`}
+        defaultHidden={tmdb.defaultHidden ?? {}}
+        resetKey={TMDB_TAB}
         header={header}
         emptyState={emptyState}
       />

@@ -15,17 +15,17 @@ from uuid import UUID
 from loguru import logger
 from sqlmodel import Session, col, select
 
-from app.canonical_media.episodes import (
-    canonical_episode_id_column,
-    canonical_episode_link,
-    links_of,
-)
-from app.canonical_media.filters import is_non_canonical
 from app.database import engine, load_models
 from app.episodes.models import Episode
 from app.seasons.models import Season
-from app.shows.models import Show
 from app.sources.models import Source
+from app.titles.models import Title
+from app.tmdb_media.episodes import (
+    links_of,
+    tmdb_episode_id_column,
+    tmdb_episode_link,
+)
+from app.tmdb_media.filters import is_linked
 from app.users.models import User
 from app.watches.models import Watch
 
@@ -49,12 +49,12 @@ def _detached_watches(session: Session) -> list[Watch]:
 # TODO: Validate
 def _named_episodes(watch_identifiers: set[str]) -> Any:  # noqa: ANN401 - A subquery of the episodes the watches name.
     """Return each named episode paired with the episode it answers to."""
-    named_link = canonical_episode_link()
+    named_link = tmdb_episode_link()
     return (
         select(
             col(Episode.watch_identifier).label("watch_identifier"),
-            canonical_episode_id_column(Episode, named_link).label(
-                "canonical_episode_id",
+            tmdb_episode_id_column(Episode, named_link).label(
+                "tmdb_episode_id",
             ),
         )
         .select_from(Episode)
@@ -78,21 +78,21 @@ def _candidates_by_watch_identifier(
     if not watch_identifiers:
         return {}
 
-    canonical_link = canonical_episode_link()
+    tmdb_link = tmdb_episode_link()
     named = _named_episodes(watch_identifiers)
     rows = session.exec(
         select(named.c.watch_identifier, Episode, Source.key)  # type: ignore[call-overload]
         .select_from(Episode)
         .join(Season, col(Season.id) == col(Episode.season_id))
-        .join(Show, col(Show.id) == col(Season.show_id))
-        .join(Source, col(Source.id) == col(Show.source_id))
-        .join(canonical_link, links_of(Episode, canonical_link))
+        .join(Title, col(Title.id) == col(Season.title_id))
+        .join(Source, col(Source.id) == col(Title.source_id))
+        .join(tmdb_link, links_of(Episode, tmdb_link))
         .join(
             named,
-            named.c.canonical_episode_id == col(canonical_link.canonical_episode_id),
+            named.c.tmdb_episode_id == col(tmdb_link.tmdb_episode_id),
         )
         .where(
-            is_non_canonical(Episode),
+            is_linked(Episode),
             col(Episode.deleted_at).is_(None),
         ),
     ).all()
@@ -115,13 +115,13 @@ def _preferred_episode(
     """
     episode, _ = min(
         candidates,
-        key=lambda candidate: (config.priority_for(candidate[1]), str(candidate[0].id)),
+        key=lambda candidate: (config.priority_from(candidate[1]), str(candidate[0].id)),
     )
     return episode
 
 
 # TODO: Validate
-def _config_for_user(
+def _config_from_user(
     session: Session,
     user_id: UUID,
     cache: dict[UUID, SourceDedupConfig],
@@ -146,19 +146,19 @@ def _report_unresolvable(session: Session, watch_identifiers: set[str]) -> None:
     if not watch_identifiers:
         return
 
-    canonical_link = canonical_episode_link()
+    tmdb_link = tmdb_episode_link()
     named = _named_episodes(watch_identifiers)
     soft_deleted = set(
         session.exec(
             select(named.c.watch_identifier)
             .select_from(Episode)
-            .join(canonical_link, links_of(Episode, canonical_link))
+            .join(tmdb_link, links_of(Episode, tmdb_link))
             .join(
                 named,
-                col(canonical_link.canonical_episode_id)
-                == named.c.canonical_episode_id,
+                col(tmdb_link.tmdb_episode_id)
+                == named.c.tmdb_episode_id,
             )
-            .where(is_non_canonical(Episode)),
+            .where(is_linked(Episode)),
         ).all(),
     )
     unknown = watch_identifiers - soft_deleted
@@ -194,7 +194,7 @@ def relink_watches(session: Session) -> int:
         if not matches:
             continue
 
-        config = _config_for_user(session, watch.user_id, configs)
+        config = _config_from_user(session, watch.user_id, configs)
         episode = _preferred_episode(matches, config)
         watch.episode_id = episode.id
         relinked += 1

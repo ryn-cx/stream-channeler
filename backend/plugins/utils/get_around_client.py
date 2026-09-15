@@ -8,9 +8,10 @@ from app.config import settings
 
 # TODO: Validate
 @cache
-def get_around_client() -> GetAround:
+def get_around_client(*, proxy: bool = False) -> GetAround:
     return GetAround(
         server=settings.GET_AROUND_SERVER,
         client_id=settings.CF_ACCESS_CLIENT_ID,
         client_secret=settings.CF_ACCESS_CLIENT_SECRET,
+        proxy=settings.PROXY if proxy else None,
     )

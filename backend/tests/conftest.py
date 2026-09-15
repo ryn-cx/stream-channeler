@@ -1,7 +1,11 @@
 # TODO: Validate
 # TODO: Compare this to the upstream implemenation
+import os
 import sys
 from collections.abc import Generator
+from unittest import mock
+
+os.environ["HF_HUB_OFFLINE"] = "1"
 
 import pytest
 from alembic import command
@@ -23,11 +27,14 @@ from tests.app.helpers.utils import get_superuser_token_headers
 from tests.app.users.utils import (
     authentication_token_from_email,
 )
+from tests.plugins.frozen_clock import frozen_clock
 
 # Remove the uncolorized logger and replace it with a colorized one that captures debug
 # logs.
 logger.remove()
 logger.add(sys.stdout, level="TRACE", colorize=True)
+
+mock.patch("app.main.initialize_plugins").start()
 
 TEST_DB_NAME = f"{settings.POSTGRES_DB}_backend_test"
 TEST_DATABASE_URI = MultiHostUrl.build(
@@ -140,7 +147,7 @@ def _init_connection() -> Generator[Connection]:
     """Create a connection and initialize the database."""
     connection = test_engine.connect()
     try:
-        with Session(bind=connection) as session:
+        with Session(bind=connection) as session, frozen_clock():
             init_db(session)
         yield connection
     finally:

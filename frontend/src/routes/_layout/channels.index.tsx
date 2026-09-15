@@ -7,7 +7,7 @@ import type {
 } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { Globe, type LucideIcon, Star, Tv } from "lucide-react"
-import { type ComponentProps, type ReactNode, useState } from "react"
+import { type ComponentProps, type ReactNode, useEffect, useState } from "react"
 import { channelColumns } from "@/components/Admin/channelColumns"
 import AddChannel from "@/components/Channels/ChannelList/AddChannel"
 import { BulkImport } from "@/components/Channels/ChannelList/BulkImport"
@@ -147,6 +147,17 @@ function ChannelsView({
   )
   const [sortOptions, setSortOptions] = useState<SortingState>([])
   const [filterOptions, setFilterOptions] = useState<ColumnFiltersState>([])
+  const [browseSearch, setBrowseSearch] = useState("")
+  const [browseSearchFilter, setBrowseSearchFilter] = useState("")
+  const [serverSide, setServerSide] = useState(false)
+
+  useEffect(() => {
+    const timeout = setTimeout(
+      () => setBrowseSearchFilter(browseSearch.trim()),
+      300,
+    )
+    return () => clearTimeout(timeout)
+  }, [browseSearch])
 
   // The table view lets the page size grow past what browse offers, so clamp it
   // back down to browse's maximum on the way in.
@@ -162,6 +173,10 @@ function ChannelsView({
   }
 
   const columns = view.columns(isAdmin)
+  const browseFilterOptions: ColumnFiltersState =
+    serverSide && browseSearchFilter
+      ? [{ id: "name", value: browseSearchFilter }]
+      : []
   const query = useScopedChannels(
     scope,
     view.queryAsAdmin(isAdmin),
@@ -169,13 +184,19 @@ function ChannelsView({
       offset: pagination.pageIndex * pagination.pageSize,
       limit: pagination.pageSize,
       sortOptions,
-      filterOptions,
+      filterOptions:
+        viewMode === "browse" ? browseFilterOptions : filterOptions,
     },
     columns,
   )
 
   const isServer = query.data?.is_server_side ?? false
   const tableData = query.data?.data ?? []
+
+  useEffect(() => {
+    setServerSide(isServer)
+  }, [isServer])
+
   const rowCount = isServer
     ? (query.data?.filtered_count ?? 0)
     : tableData.length
@@ -249,6 +270,8 @@ function ChannelsView({
       ) : (
         <ChannelsBrowseSection
           rows={tableData}
+          search={browseSearch}
+          onSearchChange={setBrowseSearch}
           isServer={isServer}
           serverRowCount={rowCount}
           pagination={pagination}

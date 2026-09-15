@@ -6,7 +6,6 @@ import type { PluginListOutput } from "@/client"
 import { DateCell, TruncatedCell } from "@/components/Common/TableCells"
 import { TooltipIconLink } from "@/components/Common/TooltipIconLink"
 import { extraText } from "@/lib/extra"
-import { PluginActionsMenu } from "./ActionsMenu"
 
 export type PluginTableData = PluginListOutput & { pending?: boolean }
 
@@ -14,10 +13,10 @@ export type PluginTableData = PluginListOutput & { pending?: boolean }
 export function pluginColumns(isAdmin = false): ColumnDef<PluginTableData>[] {
   return [
     {
-      accessorKey: "name",
-      header: "Name",
+      accessorKey: "key",
+      header: "Key",
       cell: ({ row }) => {
-        const label = row.original.name || `No Name (${row.original.key})`
+        const label = row.original.key
         if (row.original.pending) {
           return (
             <span className="font-medium text-muted-foreground">{label}</span>
@@ -44,12 +43,12 @@ export function pluginColumns(isAdmin = false): ColumnDef<PluginTableData>[] {
                 </Link>
               </TooltipIconLink>
             )}
-            <TooltipIconLink label="Shows">
+            <TooltipIconLink label="Titles">
               <Link
-                to="/shows"
+                to="/titles"
                 search={{ plugin_id: row.original.id }}
                 className="text-muted-foreground hover:text-foreground"
-                aria-label="Shows"
+                aria-label="Titles"
               >
                 <Clapperboard className="size-4" />
               </Link>
@@ -79,6 +78,16 @@ export function pluginColumns(isAdmin = false): ColumnDef<PluginTableData>[] {
       },
     },
     {
+      accessorKey: "version",
+      header: "Version",
+      cell: ({ row }) => <TruncatedCell value={row.original.version} />,
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => <TruncatedCell value={row.original.status} />,
+    },
+    {
       accessorKey: "data_timestamp",
       header: "Data Timestamp",
       meta: { filterVariant: "dateRange" },
@@ -104,27 +113,9 @@ export function pluginColumns(isAdmin = false): ColumnDef<PluginTableData>[] {
       ),
     },
     {
-      accessorKey: "key",
-      header: "Key",
-      cell: ({ row }) => <TruncatedCell value={row.original.key} />,
-    },
-    {
       accessorKey: "id",
       header: "ID",
       cell: ({ row }) => <TruncatedCell value={row.original.id} />,
-    },
-    {
-      id: "actions",
-      enableSorting: false,
-      enableColumnFilter: false,
-      header: () => <span className="sr-only">Actions</span>,
-      cell: ({ row }) => (
-        <div className="flex justify-end">
-          {row.original.pending ? null : (
-            <PluginActionsMenu plugin={row.original} />
-          )}
-        </div>
-      ),
     },
   ]
 }

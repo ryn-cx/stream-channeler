@@ -8,9 +8,9 @@ import useAuth from "@/hooks/useAuth"
 
 /** A page this site holds a row on, and what names the row on it. */
 type MediaPage =
-  | { to: "/seasons"; search: { show_id: string } }
+  | { to: "/seasons"; search: { title_id: string } }
   | { to: "/episodes"; search: { season_id: string } }
-  | { to: "/shows"; search: { source_id: string } }
+  | { to: "/titles"; search: { source_id: string } }
 
 // TODO: Validate
 /**
@@ -31,7 +31,13 @@ export function MediaPageButton({
   if (!user?.is_superuser) return null
 
   return (
-    <Button asChild variant="ghost" size="icon-sm" title={label}>
+    <Button
+      asChild
+      variant="ghost"
+      size="icon-sm"
+      title={label}
+      className="text-destructive hover:text-destructive"
+    >
       <Link {...page} target="_blank" rel="noopener noreferrer">
         <SquareArrowOutUpRight className="h-4 w-4" />
         <span className="sr-only">{label}</span>

@@ -1,5 +1,6 @@
 // TODO: Validate
-import { Download, Github, ListPlus, Play } from "lucide-react"
+import { Download, ListPlus, Play } from "lucide-react"
+import { FaGithub } from "react-icons/fa"
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -20,7 +21,7 @@ export function RemotePage() {
         </h1>
         <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
           A companion userscript that lets Stream Channeler play episodes back
-          to back across streaming sites and queue shows for bulk import while
+          to back across streaming sites and queue titles for bulk import while
           you browse.
         </p>
         <div className="flex flex-wrap gap-3 justify-center pt-2">
@@ -32,7 +33,7 @@ export function RemotePage() {
           </Button>
           <Button asChild size="lg" variant="outline">
             <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer">
-              <Github className="mr-2" />
+              <FaGithub className="mr-2" />
               Source Code
             </a>
           </Button>
@@ -66,7 +67,7 @@ export function RemotePage() {
             <h2 className="text-xl font-semibold">Manage</h2>
           </div>
           <p className="text-muted-foreground">
-            Build channels faster. Queue shows straight from content discovery
+            Build channels faster. Queue titles straight from content discovery
             sites with an "Add to Channel" button, then bulk import them into
             Stream Channeler.
           </p>
@@ -118,7 +119,7 @@ export function RemotePage() {
           </p>
           <p>
             <strong>Manage:</strong> open the Bulk Import modal on the channels
-            page, load your channel list, browse shows on a supported site and
+            page, load your channel list, browse titles on a supported site and
             queue them with the <strong>Add to Channel</strong> button, then
             return to import the collected URLs.
           </p>

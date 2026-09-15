@@ -2,6 +2,7 @@
 import { Link } from "@tanstack/react-router"
 import {
   Eye,
+  FlaskConical,
   Home,
   LayoutDashboard,
   LogIn,
@@ -42,6 +43,7 @@ const adminItems: Item[] = [
   ...baseItems,
   { icon: Plug, title: "Custom Media", path: "/plugins" },
   { icon: Users, title: "Admin", path: "/admin" },
+  { icon: FlaskConical, title: "Admin V2", path: "/admin-v2" },
 ]
 
 // TODO: Validate

@@ -1,64 +1,74 @@
 # TODO: Validate
-"""HiDive plugin."""
-
 from __future__ import annotations
 
-from typing import override
+import re
+from typing import TYPE_CHECKING, override
 
-from plugins.HiDive.source import SourceMixin
-from plugins.HiDive.upsert import UpsertMixin
-from plugins.HiDive.url_handlers import (
-    HiDiveURLHandler,
-    MovieURLHandler,
-    SeasonURLHandler,
-    SeriesURLHandler,
+from plugins.HiDive.constants import (
+    MOVIE_URL_REGEX,
+    SEASON_URL_REGEX,
+    SERIES_URL_REGEX,
 )
-from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
-from plugins.utils.base_plugin.search import CatalogueSearchMixin
+from plugins.HiDive.importer import (
+    HiDiveImporter,
+    HiDiveMovieImporter,
+    HiDiveSeriesImporter,
+)
+from plugins.HiDive.shared import HiDiveShared
+from plugins.utils.abstract_plugin import AbstractPlugin
 
-# TODO: Add support for individual episodes of a series.
+if TYPE_CHECKING:
+    from datetime import datetime
+
+    from app.sources.models import Source
+    from app.titles.models import Title
 
 
 # TODO: Validate
 class HiDive(
-    UpsertMixin,
-    SourceMixin,
-    CatalogueSearchMixin,
-    MediaTypeImportMixin[HiDiveURLHandler],
-    register=True,
+    HiDiveShared,
+    AbstractPlugin,
+    register=False,
 ):
-    """HiDive plugin."""
+    # TODO: Validate
+    @override
+    def create_initial_channel_records(self) -> None:
+        self._schedule_channel()
+        self._process_new_schedule_files(self._sources[self.plugin_name()])
 
     # TODO: Validate
     @classmethod
     @override
-    def _url_handlers(cls) -> tuple[type[HiDiveURLHandler], ...]:
-        return (SeriesURLHandler, SeasonURLHandler, MovieURLHandler)
+    def _url_regexes(cls) -> tuple[str, ...]:
+        return (SERIES_URL_REGEX, SEASON_URL_REGEX, MOVIE_URL_REGEX)
 
     # TODO: Validate
-    @classmethod
     @override
-    def tmdb_provider_names(cls) -> tuple[str, ...]:
-        return ("HIDIVE",)
-
-    # TODO: Don't hardcode the favicon URL
-    # TODO: Validate
-    @classmethod
-    @override
-    def favicon_url(cls) -> str:
-        return (
-            "https://static.diceplatform.com/prod/original/dce.hidive/settings/"
-            "HIDIVE_Logo_iOS_1024x1024_281_29.Y3YMf.vMQ59.png?ts=1727963356"
-        )
+    def _media_importer_from_url(self, url: str) -> HiDiveImporter:
+        domain_regex = self._domains_regex()
+        if re.match(domain_regex + SERIES_URL_REGEX, url):
+            return HiDiveSeriesImporter(self.session, self.plugin, self._file_cache)
+        if re.match(domain_regex + SEASON_URL_REGEX, url):
+            return HiDiveSeriesImporter(self.session, self.plugin, self._file_cache)
+        return HiDiveMovieImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
-    @classmethod
     @override
-    def _domain(cls) -> str:
-        return "hidive.com"
+    def _media_importer_from_title(self, title: Title) -> HiDiveImporter:
+        if not title.media_type:
+            msg = "Title.media_type is not set."
+            raise AttributeError(msg)
+        if title.media_type == "Movie":
+            return HiDiveMovieImporter(self.session, self.plugin, self._file_cache)
+        return HiDiveSeriesImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
-    @classmethod
     @override
-    def plugin_name(cls) -> str:
-        return "HIDIVE"
+    def update_source(self, source: Source, update_at: datetime) -> None:
+        if source.data_timestamp is None:
+            msg = "Cannot update source without a data timestamp."
+            raise ValueError(msg)
+        new_schedule_file = self.schedule_file(source.data_timestamp)
+        new_schedule_file.download_if_outdated(update_at)
+        self._process_new_schedule_files(source)
+        self.upsert_source(source.key)

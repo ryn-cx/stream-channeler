@@ -11,13 +11,13 @@ import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
-export type IssueReportTarget = "episode" | "season" | "show"
+export type IssueReportTarget = "episode" | "season" | "title"
 
 /**
  * What each kind of record is usually reported for, and what it is called.
  *
  * The box is mostly filled in by whoever is watching rather than by whoever
- * imports, so the example is the thing that actually gets reported here: a show
+ * imports, so the example is the thing that actually gets reported here: a title
  * is reported for being on a website nothing lists it under, and an episode for
  * being paired with the wrong one. Said in the words somebody watching would use
  * rather than in the ones the database uses.
@@ -26,9 +26,9 @@ const TARGET_WORDING: Record<
   IssueReportTarget,
   { noun: string; placeholder: string }
 > = {
-  show: {
-    noun: "show",
-    placeholder: "This show is also on another website…",
+  title: {
+    noun: "title",
+    placeholder: "This title is also on another website…",
   },
   season: {
     noun: "season",
@@ -67,8 +67,8 @@ function createReport(
       requestBody,
     })
   }
-  return IssueReportsService.createShowIssueReport({
-    showId: mediaId,
+  return IssueReportsService.createTitleIssueReport({
+    titleId: mediaId,
     requestBody,
   })
 }
@@ -92,7 +92,7 @@ function updateReport(
       requestBody,
     })
   }
-  return IssueReportsService.updateShowIssueReport({
+  return IssueReportsService.updateTitleIssueReport({
     issueReportId,
     requestBody,
   })
@@ -106,7 +106,7 @@ function deleteReport(target: IssueReportTarget, issueReportId: string) {
   if (target === "season") {
     return IssueReportsService.deleteSeasonIssueReport({ issueReportId })
   }
-  return IssueReportsService.deleteShowIssueReport({ issueReportId })
+  return IssueReportsService.deleteTitleIssueReport({ issueReportId })
 }
 
 // TODO: Validate

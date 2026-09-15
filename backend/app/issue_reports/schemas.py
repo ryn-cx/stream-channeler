@@ -14,7 +14,7 @@ class IssueReportMediaType(StrEnum):
 
     episode = "episode"
     season = "season"
-    show = "show"
+    title = "title"
 
 
 # TODO: Validate
@@ -60,8 +60,8 @@ class IssueReportListOutput(IssueReportOutput):
     media_id: uuid.UUID
     media_name: str | None
     season_name: str | None
-    show_name: str | None
-    source_name: str | None
+    title_name: str | None
+    source_key: str
 
 
 # TODO: Validate

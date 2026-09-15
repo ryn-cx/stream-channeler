@@ -6,7 +6,7 @@ import { randomUsername } from "./random"
 // TODO: Validate
 /**
  * Helpers that build the parent chain through the UI. Sources live under a
- * plugin, shows under a source, seasons under a show and episodes under a
+ * plugin, titles under a source, seasons under a title and episodes under a
  * season, so each level's tests first need the level above it to exist and be
  * open. Every helper leaves the page on the freshly created parent's (empty)
  * child list.
@@ -50,25 +50,25 @@ export async function openPluginSources(page: Page) {
 }
 
 // TODO: Validate
-/** Create a plugin and source, then open the source's Shows page. */
-export async function openSourceShows(page: Page) {
+/** Create a plugin and source, then open the source's Titles page. */
+export async function openSourceTitles(page: Page) {
   await openPluginSources(page)
   await createAndOpen(page, {
     addButton: "Add Source",
     name: randomUsername("Source"),
     createdToast: "Source created successfully",
-    heading: "Shows",
+    heading: "Titles",
   })
 }
 
 // TODO: Validate
-/** Create the plugin/source/show chain, then open the show's Seasons page. */
-export async function openShowSeasons(page: Page) {
-  await openSourceShows(page)
+/** Create the plugin/source/title chain, then open the title's Seasons page. */
+export async function openTitleSeasons(page: Page) {
+  await openSourceTitles(page)
   await createAndOpen(page, {
-    addButton: "Add Show",
-    name: randomUsername("Show"),
-    createdToast: "Show created successfully",
+    addButton: "Add Title",
+    name: randomUsername("Title"),
+    createdToast: "Title created successfully",
     heading: "Seasons",
   })
 }
@@ -76,7 +76,7 @@ export async function openShowSeasons(page: Page) {
 // TODO: Validate
 /** Create the full chain down to a season, then open its Episodes page. */
 export async function openSeasonEpisodes(page: Page) {
-  await openShowSeasons(page)
+  await openTitleSeasons(page)
   await createAndOpen(page, {
     addButton: "Add Season",
     name: randomUsername("Season"),

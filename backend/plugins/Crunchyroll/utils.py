@@ -1,71 +1,118 @@
 # TODO: Validate
+"""What every other part of the plugin reads a Crunchyroll listing by."""
 
-from typing import override
-from urllib.parse import quote_plus
+from collections.abc import Sequence
+from typing import Protocol
 
-from chirashi.series.models import Datum as SeriesDatum
+from chirashi.season_episodes.models import Images as EpisodeImages
+from chirashi.series.models import Images as SeriesImages
+from chirashi.series.models import SeriesModel
 
-from app.media.media_type import MediaType
-from app.sources.models import Source
-from plugins.Crunchyroll.constants import (
-    MUSIC_SOURCE,
-    VIDEO_SOURCE,
-    episode_is_music,
-    music_episode_category,
-)
-from plugins.Crunchyroll.files import FileMixin
+from plugins.Crunchyroll.constants import CrunchyrollMusicCategory
+
+# The prefix Crunchyroll issues ids under, which is what a key is recognised by.
+CATEGORY_ID_PREFIXES = {
+    "MV": CrunchyrollMusicCategory.MUSIC_VIDEO,
+    "MC": CrunchyrollMusicCategory.CONCERT,
+}
 
 
 # TODO: Validate
-class HelperMixin(FileMixin, register=False):
-    @property
-    def video_source(self) -> Source:
-        """Return the plugin's video `Source`.
+def title_is_a_series(title_key: str) -> bool:
+    """Report whether a `Title` key belongs to a series rather than an artist."""
+    return title_key.startswith("G")
 
-        This is a property so the `Source` will be cached."""
-        return self._source_db_entry(VIDEO_SOURCE)
 
-    @property
-    def music_source(self) -> Source:
-        """Return the plugin's music `Source`.
+# TODO: Validate
+def season_is_music(season_key: str) -> bool:
+    """Report whether a `Season` key is for music."""
+    return season_key in set(CrunchyrollMusicCategory)
 
-        This is a property so the `Source` will be cached."""
-        return self._source_db_entry(MUSIC_SOURCE)
 
-    # TODO: Validate
-    def _series_datum(self, show_key: str) -> SeriesDatum:
-        return self.series_file(show_key).parsed().data[0]
+# TODO: Validate
+def music_episode_category(episode_key: str) -> CrunchyrollMusicCategory:
+    """Return the listing an episode is a video or a concert of."""
+    return CATEGORY_ID_PREFIXES[episode_key[:2]]
 
-    # TODO: Validate
-    def _is_movie(self, show_key: str) -> bool:
-        return "type:movie" in self._series_datum(show_key).keywords
 
-    # TODO: Validate
-    def tmdb_media_type(self, show_key: str) -> MediaType:
-        return MediaType.movie if self._is_movie(show_key) else MediaType.tv
+# TODO: Validate
+def build_url(path: str) -> str:
+    return f"https://crunchyroll.com/{path.lstrip('/')}"
 
-    # TODO: Validate
-    @classmethod
-    def _series_url(cls, show_key: str) -> str:
-        return cls.build_url(f"series/{show_key}")
 
-    # TODO: Validate
-    @classmethod
-    def _artist_url(cls, show_key: str) -> str:
-        return cls.build_url(f"artist/{show_key}")
+# TODO: Validate
+class CrunchyrollSizedImage(Protocol):
+    width: int
+    source: str
 
-    # TODO: Validate
-    @classmethod
-    def _episode_url(cls, episode_key: str) -> str:
-        # Crunchyroll files a music video or a concert under the listing it
-        # belongs to, which its id says but the url still has to be told.
-        if episode_is_music(episode_key):
-            category = music_episode_category(episode_key)
-            return cls.build_url(f"watch/{category}/{episode_key}")
-        return cls.build_url(f"watch/{episode_key}")
 
-    # TODO: Validate
-    @classmethod
-    @override
-    def manual_search(cls, query: str) -> str:
-        return cls.build_url(f"search?q={quote_plus(query)}")
+# TODO: Validate
+def largest_image(images: Sequence[CrunchyrollSizedImage]) -> str | None:
+    """Return the source of the widest size Crunchyroll offers an image in."""
+    if not images:
+        return None
+    return max(images, key=lambda image: image.width).source
+
+
+# TODO: Validate
+def nearest_thumbnail(images: Sequence[CrunchyrollSizedImage]) -> str | None:
+    if not images:
+        return None
+    wide_enough = [image for image in images if image.width >= 480]  # noqa: PLR2004
+    if wide_enough:
+        return min(wide_enough, key=lambda image: image.width).source
+    return max(images, key=lambda image: image.width).source
+
+
+# TODO: Validate
+def title_image(images: SeriesImages) -> str | None:
+    """Return the widest poster a listing carries, where it carries one.
+
+    The wide one first because that is the shape the artwork is shown in, the
+    tall one being what is left for a listing Crunchyroll has only a portrait
+    poster of.
+    """
+    wide = images.poster_wide
+    if wide and wide[0]:
+        return max(wide[0], key=lambda image: image.width).source
+    tall = images.poster_tall
+    if tall and tall[0]:
+        return max(tall[0], key=lambda image: image.width).source
+    return None
+
+
+# TODO: Validate
+def title_thumbnail(images: SeriesImages) -> str | None:
+    wide = images.poster_wide
+    if wide and wide[0]:
+        return nearest_thumbnail(wide[0])
+    tall = images.poster_tall
+    if tall and tall[0]:
+        return nearest_thumbnail(tall[0])
+    return None
+
+
+# TODO: Validate
+def episode_image(images: EpisodeImages) -> str | None:
+    """Return the largest thumbnail an episode has, where it has one at all.
+
+    An episode Crunchyroll has no thumbnail for carries no sizes to pick from,
+    and older ones carry none of the field at all.
+    """
+    thumbnails = images.thumbnail
+    if not thumbnails or not thumbnails[0]:
+        return None
+    return thumbnails[0][-1].source
+
+
+# TODO: Validate
+def episode_thumbnail(images: EpisodeImages) -> str | None:
+    thumbnails = images.thumbnail
+    if not thumbnails or not thumbnails[0]:
+        return None
+    return nearest_thumbnail(thumbnails[0])
+
+
+# TODO: Validate
+def is_movie(series: SeriesModel) -> bool:
+    return "type:movie" in series.keywords

@@ -6,7 +6,7 @@ import { type ReactNode, useEffect, useState } from "react"
 import "remark-github-blockquote-alert/alert.css"
 import type { ChannelOutput, Visibility } from "@/client"
 import { ChannelOrdersService, ChannelsService, UsersService } from "@/client"
-import { ManageShowsTabs } from "@/components/Channels/ChannelDetail/ManageShowsTabs"
+import { ManageTitlesTabs } from "@/components/Channels/ChannelDetail/ManageTitlesTabs"
 import {
   Accordion,
   AccordionContent,
@@ -343,7 +343,7 @@ export function OnboardingCreateName() {
     onSuccess: (channel: ChannelOutput) => {
       queryClient.invalidateQueries({ queryKey: ["channels"] })
       navigate({
-        to: "/onboarding/$channelId/shows",
+        to: "/onboarding/$channelId/titles",
         params: { channelId: channel.id },
       })
     },
@@ -363,7 +363,7 @@ export function OnboardingCreateName() {
       <div className="space-y-6 text-center">
         <h1 className="text-3xl font-bold">Create A Channel</h1>
         <p className="text-muted-foreground">
-          A channel is an automatically updated curated playlist of shows and
+          A channel is an automatically updated curated playlist of titles and
           movies that you pick. Give it a name to get started.
         </p>
         <ChannelFormFields
@@ -442,7 +442,7 @@ export function OnboardingEditName({ channelId }: { channelId: string }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["channels"] })
       navigate({
-        to: "/onboarding/$channelId/shows",
+        to: "/onboarding/$channelId/titles",
         params: { channelId },
       })
     },
@@ -477,20 +477,20 @@ export function OnboardingEditName({ channelId }: { channelId: string }) {
 }
 
 // TODO: Validate
-export function OnboardingShows({ channelId }: { channelId: string }) {
+export function OnboardingTitles({ channelId }: { channelId: string }) {
   const navigate = useNavigate()
 
   return (
     <OnboardingShell currentStep={1}>
       <div className="space-y-6">
         <div className="text-center space-y-3">
-          <h1 className="text-3xl font-bold">Add Shows</h1>
+          <h1 className="text-3xl font-bold">Add Titles</h1>
           <p className="text-muted-foreground">
-            Search, import, and manage shows in your channel.
+            Search, import, and manage titles in your channel.
           </p>
         </div>
 
-        <ManageShowsTabs channelId={channelId} queueRefetchInterval={5000} />
+        <ManageTitlesTabs channelId={channelId} queueRefetchInterval={5000} />
 
         <div className="flex flex-wrap justify-between gap-3">
           <Button
@@ -620,7 +620,7 @@ export function OnboardingSort({ channelId }: { channelId: string }) {
             size="lg"
             onClick={() =>
               navigate({
-                to: "/onboarding/$channelId/shows",
+                to: "/onboarding/$channelId/titles",
                 params: { channelId },
               })
             }
@@ -661,7 +661,7 @@ export function OnboardingDone({
           Your channel is set up and ready to go.
         </p>
         <p className="text-sm text-muted-foreground">
-          It may take a couple of minutes for your shows to be imported.
+          It may take a couple of minutes for your titles to be imported.
         </p>
         <div className="flex justify-between">
           <Button

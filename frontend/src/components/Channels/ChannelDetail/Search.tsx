@@ -2,46 +2,32 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Check, ChevronLeft, ChevronRight, Plus, Search } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
-import type {
-  PluginMediaInfo,
-  PluginSearchResult,
-  PluginWatchProviderItem,
-} from "@/client"
+import type { PluginSearchResult, TMDBMediaInfo } from "@/client"
 import { ChannelsService, PluginsService } from "@/client"
-import { SourceOptionLabel } from "@/components/Common/SourceOptionLabel"
+import { useAllChannelTitles } from "@/components/Channels/useChannelTitles"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import useCustomToast from "@/hooks/useCustomToast"
-import { useSearchablePlugins } from "@/hooks/useEntities"
 import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
 
 // TODO: Validate
-function mediaTypeLabel(mediaType: string): string {
-  return mediaType === "movie" ? "Movie" : "TV Show"
+function imageUrl(
+  size: string,
+  path: string | null | undefined,
+): string | null {
+  return path ? `https://image.tmdb.org/t/p/${size}${path}` : null
 }
 
-// TMDB covers every service rather than one, so it is the source a search starts
-// on. Falls back to the first searchable plugin when TMDB is not available.
-const DEFAULT_PLUGIN_KEY = "TMDB"
+// TODO: Validate
+function releaseYear(value: string | null | undefined): number | null {
+  return value ? Number(value.slice(0, 4)) : null
+}
 
-// The title a details modal is open for, built from the plugin result that was
-// clicked and the id the plugin issued it under.
+// The title a details modal is open for, built from the TMDB result that was
+// clicked and the id TMDB issued it under.
 export type SelectedTitle = {
-  // Who issued the identifier, and the identifier. A title's detail is asked of
-  // the plugin the result came from, under that plugin's own id for it, rather
-  // than of whatever a search of some other service turns up.
-  plugin_key: string
   media_identifier: string
   title: string
   // The result's own URL, so the modal queues exactly what its card would.
@@ -62,17 +48,15 @@ function useAddToQueue(channelId: string) {
         requestBody: [url],
       }),
     onSuccess: () => {
-      showSuccessToast("Show added to import queue")
-      queryClient.invalidateQueries({
-        queryKey: ["channelQueue", channelId],
-      })
+      showSuccessToast("Title added to import queue")
+      queryClient.invalidateQueries({ queryKey: ["channelQueue", channelId] })
     },
     onError: handleError.bind(showErrorToast),
   })
 }
 
 // A TMDB result's URL is the title's own TMDB page, so it names the same title
-// as a channel show's `TMDB tv 123` identifier even when the channel holds that
+// as a channel title's `TMDB tv 123` identifier even when the channel holds that
 // title from some other service.
 const TMDB_TITLE_URL_PATTERN = /themoviedb\.org\/(tv|movie)\/(\d+)/
 
@@ -80,15 +64,12 @@ const TMDB_TITLE_URL_PATTERN = /themoviedb\.org\/(tv|movie)\/(\d+)/
 // a service is matched on its own URL, and a TMDB result on the title it names.
 // TODO: Validate
 function useIsInChannel(channelId: string) {
-  const { data: showsData } = useQuery({
-    queryKey: ["channel-shows", channelId],
-    queryFn: () => ChannelsService.getChannelShows({ channelId }),
-  })
+  const { data: titlesData } = useAllChannelTitles(channelId)
 
-  const shows = showsData?.shows ?? []
-  const urls = new Set(shows.map((show) => show.url))
+  const titles = titlesData?.titles ?? []
+  const urls = new Set(titles.map((title) => title.url))
   const tmdbIds = new Set(
-    shows.map((show) => show.tmdb_id).filter((id) => id != null),
+    titles.map((title) => title.tmdb_id).filter((id) => id != null),
   )
 
   return (url: string) => {
@@ -328,42 +309,55 @@ function SearchPager({
 
 // Builds the "Movie • 2023 • 8.8★" style metadata line for a media detail.
 // TODO: Validate
-function metaLine(result: SelectedTitle, info: PluginMediaInfo): string[] {
+function metaLine(
+  result: SelectedTitle,
+  detail: TMDBMediaInfo["detail"],
+): string[] {
   const parts: string[] = []
+  const movie = "title" in detail ? detail : null
+  const series = "name" in detail ? detail : null
 
-  const year = info.year ?? result.year
+  const year =
+    releaseYear(movie ? movie.release_date : series?.first_air_date) ??
+    result.year
   if (year) {
-    parts.push(
-      info.end_year && info.end_year !== year
-        ? `${year}–${info.end_year}`
-        : `${year}`,
-    )
+    const endYear = releaseYear(series?.last_air_date)
+    parts.push(endYear && endYear !== year ? `${year}–${endYear}` : `${year}`)
   }
-  if (info.status) parts.push(info.status)
-  if (info.number_of_seasons != null) {
-    const seasons = `${info.number_of_seasons} season${
-      info.number_of_seasons === 1 ? "" : "s"
+  if (detail.status) parts.push(detail.status)
+  if (series?.number_of_seasons != null) {
+    const seasons = `${series.number_of_seasons} season${
+      series.number_of_seasons === 1 ? "" : "s"
     }`
     parts.push(
-      info.number_of_episodes != null
-        ? `${seasons} · ${info.number_of_episodes} episodes`
+      series.number_of_episodes != null
+        ? `${seasons} · ${series.number_of_episodes} episodes`
         : seasons,
     )
-  } else if (info.runtime != null) {
-    parts.push(`${info.runtime} min`)
+  } else if (movie?.runtime != null) {
+    parts.push(`${movie.runtime} min`)
   }
   return parts
 }
 
-// The services streaming a title, as TMDB reports them for the US. A provider
-// the app has a plugin for carries a link to that site's search for the title,
-// which is how a user gets to it when the import cannot reach it on its own.
 // TODO: Validate
 function WatchProviders({
-  providers,
+  watchProviders,
 }: {
-  providers: PluginWatchProviderItem[]
+  watchProviders: TMDBMediaInfo["watch_providers"]
 }) {
+  const streaming = [
+    ...(watchProviders?.flatrate ?? []),
+    ...(watchProviders?.ads ?? []),
+    ...(watchProviders?.free ?? []),
+  ]
+  const providersByKey = new Map<number | string, (typeof streaming)[number]>()
+  for (const provider of streaming) {
+    const key = provider.provider_id ?? provider.provider_name ?? ""
+    if (!providersByKey.has(key)) providersByKey.set(key, provider)
+  }
+  const providers = [...providersByKey.values()]
+
   return (
     <div className="flex flex-col gap-2">
       <h3 className="text-sm font-semibold">Where to watch</h3>
@@ -374,40 +368,22 @@ function WatchProviders({
       ) : (
         <div className="flex flex-wrap gap-2">
           {providers.map((provider) => {
-            const content = (
-              <>
-                {provider.icon_url && (
+            const iconUrl = imageUrl("original", provider.logo_path)
+            return (
+              <span
+                key={provider.provider_id ?? provider.provider_name}
+                className="flex items-center gap-2 rounded-full border px-2 py-1 text-xs"
+              >
+                {iconUrl && (
                   <img
                     referrerPolicy="no-referrer"
-                    src={provider.icon_url}
+                    src={iconUrl}
                     alt=""
                     className="size-5 rounded"
                   />
                 )}
-                {provider.name}
-              </>
-            )
-            const className =
-              "flex items-center gap-2 rounded-full border px-2 py-1 text-xs"
-
-            if (!provider.search_url) {
-              return (
-                <span key={provider.name} className={className}>
-                  {content}
-                </span>
-              )
-            }
-
-            return (
-              <a
-                key={provider.name}
-                href={provider.search_url}
-                target="_blank"
-                rel="noreferrer"
-                className={cn(className, "hover:bg-accent")}
-              >
-                {content}
-              </a>
+                {provider.provider_name}
+              </span>
             )
           })}
         </div>
@@ -429,29 +405,32 @@ export function MediaInfoModal({
   onOpenChange: (open: boolean) => void
 }) {
   const { data: info, isLoading } = useQuery({
-    queryKey: [
-      "plugin-media-info",
-      result?.plugin_key,
-      result?.media_identifier,
-    ],
+    queryKey: ["plugin-media-info", result?.media_identifier],
     queryFn: () =>
       PluginsService.mediaInfo({
-        pluginKey: result!.plugin_key,
         mediaIdentifier: result!.media_identifier,
       }),
     enabled: result != null,
   })
 
-  const title = info?.title ?? result?.title ?? ""
+  const detail = info?.detail
+  const movie = detail && "title" in detail ? detail : null
+  const series = detail && "name" in detail ? detail : null
+  const title = movie?.title ?? series?.name ?? result?.title ?? ""
+  const posterPath =
+    detail?.poster_path ??
+    series?.seasons?.find((season) => season.poster_path)?.poster_path
+  const backdropUrl = imageUrl("original", detail?.backdrop_path ?? posterPath)
+  const posterUrl = imageUrl("w500", posterPath ?? detail?.backdrop_path)
 
   return (
     <Dialog open={result != null} onOpenChange={onOpenChange}>
       <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-2xl">
         <div className="relative">
-          {info?.backdrop_url ? (
+          {backdropUrl ? (
             <img
               referrerPolicy="no-referrer"
-              src={info.backdrop_url}
+              src={backdropUrl}
               alt=""
               className="h-44 w-full object-cover"
             />
@@ -460,10 +439,10 @@ export function MediaInfoModal({
           )}
           <div className="absolute inset-0 bg-linear-to-t from-background via-background/70 to-transparent" />
           <div className="absolute inset-x-0 bottom-0 flex items-end gap-4 p-4">
-            {info?.poster_url && (
+            {posterUrl && (
               <img
                 referrerPolicy="no-referrer"
-                src={info.poster_url}
+                src={posterUrl}
                 alt={title}
                 className="h-32 w-22 shrink-0 rounded object-cover shadow-lg"
               />
@@ -472,9 +451,9 @@ export function MediaInfoModal({
               <DialogTitle className="text-xl font-bold leading-tight">
                 {title}
               </DialogTitle>
-              {info?.tagline && (
+              {detail?.tagline && (
                 <p className="mt-1 text-sm italic text-muted-foreground">
-                  {info.tagline}
+                  {detail.tagline}
                 </p>
               )}
             </div>
@@ -484,46 +463,44 @@ export function MediaInfoModal({
         <div className="flex flex-col gap-4 p-6">
           {isLoading ? (
             <p className="text-sm text-muted-foreground">Loading details…</p>
-          ) : info ? (
+          ) : info && detail ? (
             <>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-                <span>
-                  {info.media_type ? mediaTypeLabel(info.media_type) : null}
-                </span>
-                {metaLine(result!, info).map((part) => (
+                <span>{movie ? "Movie" : "TV Title"}</span>
+                {metaLine(result!, detail).map((part) => (
                   <span key={part} className="flex items-center gap-2">
                     <span className="text-muted-foreground/50">•</span>
                     {part}
                   </span>
                 ))}
-                {info.rating != null && info.vote_count ? (
+                {detail.vote_average != null && detail.vote_count ? (
                   <span className="flex items-center gap-2">
                     <span className="text-muted-foreground/50">•</span>
                     <span className="font-medium text-foreground">
-                      ★ {info.rating.toFixed(1)}
+                      ★ {detail.vote_average.toFixed(1)}
                     </span>
                   </span>
                 ) : null}
               </div>
 
-              {info.genres && info.genres.length > 0 && (
+              {detail.genres && detail.genres.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
-                  {info.genres.map((genre) => (
+                  {detail.genres.map((genre) => (
                     <span
-                      key={genre}
+                      key={genre.id}
                       className="rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground"
                     >
-                      {genre}
+                      {genre.name}
                     </span>
                   ))}
                 </div>
               )}
 
-              {info.overview && (
-                <p className="text-sm leading-relaxed">{info.overview}</p>
+              {detail.overview && (
+                <p className="text-sm leading-relaxed">{detail.overview}</p>
               )}
 
-              <WatchProviders providers={info.providers ?? []} />
+              <WatchProviders watchProviders={info.watch_providers ?? null} />
             </>
           ) : (
             <p className="text-sm text-muted-foreground">
@@ -546,13 +523,13 @@ export function MediaInfoModal({
   )
 }
 
-interface ShowSearchProps {
+interface TitleSearchProps {
   channelId: string
   initialQuery?: string
 }
 
 // TODO: Validate
-export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
+export function TitleSearch({ channelId, initialQuery }: TitleSearchProps) {
   const [searchQuery, setSearchQuery] = useState(initialQuery ?? "")
 
   useEffect(() => {
@@ -564,32 +541,22 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
   // The search that results are currently shown for, which is only set once a
   // search has actually been run — the plugin and text in the controls above can
   // be changed without disturbing them.
-  const [activeSearch, setActiveSearch] = useState<{
-    pluginKey: string
-    query: string
-  } | null>(null)
+  const [activeSearch, setActiveSearch] = useState<string | null>(null)
   const [isCheckingUrl, setIsCheckingUrl] = useState(false)
   const [selectedResult, setSelectedResult] = useState<SelectedTitle | null>(
     null,
   )
-  const [pluginKey, setPluginKey] = useState("")
   const { showErrorToast } = useCustomToast()
   const addUrlMutation = useAddToQueue(channelId)
   const { pageIndex, cursor, reset, goToNextPage, goToPreviousPage } =
     useSearchCursors()
 
   const { data: searchPage, isFetching } = useQuery({
-    queryKey: [
-      "plugin-search",
-      activeSearch?.pluginKey,
-      activeSearch?.query,
-      cursor,
-    ],
+    queryKey: ["plugin-search", activeSearch, cursor],
     queryFn: async () => {
       try {
         return await PluginsService.inAppSearch({
-          pluginKey: activeSearch!.pluginKey,
-          query: activeSearch!.query,
+          query: activeSearch!,
           cursor,
         })
       } catch (error) {
@@ -601,17 +568,15 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
   })
   const pluginResults = activeSearch ? (searchPage?.results ?? null) : null
 
-  // A result already says which plugin issued it and under what id, so opening a
-  // card names the title outright instead of searching another service for it.
   // A result the plugin gave no id for is one nothing can be asked about.
+  // TODO: Validate
   const openResult = useCallback(
     (result: PluginSearchResult) => {
-      if (!result.media_identifier || !activeSearch) {
+      if (!result.media_identifier) {
         showErrorToast(`No details found for “${result.title}”`)
         return
       }
       setSelectedResult({
-        plugin_key: activeSearch.pluginKey,
         media_identifier: result.media_identifier,
         title: result.title,
         url: result.url,
@@ -619,58 +584,13 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
         image_url: result.image_url,
       })
     },
-    [activeSearch, showErrorToast],
+    [showErrorToast],
   )
-
-  const { data: searchablePlugins } = useSearchablePlugins()
-
-  const plugins = searchablePlugins ?? []
-  // Plugins that search in-app vs. plugins that only expose a website search
-  // page. The latter are offered under a "Manual Search Only" header and open
-  // their search page in a new tab instead of showing in-app results.
-  const inAppPlugins = plugins.filter((plugin) => !plugin.manual_search_only)
-  const manualPlugins = plugins.filter((plugin) => plugin.manual_search_only)
-  const manualPluginKeys = new Set(
-    manualPlugins.map((plugin) => plugin.plugin_key),
-  )
-
-  useEffect(() => {
-    if (!pluginKey && inAppPlugins.length > 0) {
-      const preferred = inAppPlugins.find(
-        (plugin) => plugin.plugin_key === DEFAULT_PLUGIN_KEY,
-      )
-      setPluginKey((preferred ?? inAppPlugins[0]).plugin_key)
-    }
-  }, [pluginKey, inAppPlugins])
 
   // TODO: Validate
-  const runSearch = async (key: string, rawQuery: string) => {
+  const runSearch = async (rawQuery: string) => {
     const trimmed = rawQuery.trim()
-    if (!key || !trimmed) return
-
-    // Manual-search-only plugins have no in-app search; open their website's
-    // search page in a new tab. The tab is opened synchronously so the browser
-    // keeps it tied to the click and doesn't block it as a popup.
-    if (manualPluginKeys.has(key)) {
-      const newTab = window.open("", "_blank")
-      if (newTab) newTab.opener = null
-      try {
-        const { url } = await PluginsService.manualSearch({
-          pluginKey: key,
-          query: trimmed,
-        })
-        if (url) {
-          if (newTab) newTab.location.href = url
-        } else {
-          newTab?.close()
-          showErrorToast("No search page available")
-        }
-      } catch {
-        newTab?.close()
-        showErrorToast("Search failed")
-      }
-      return
-    }
+    if (!trimmed) return
 
     setIsCheckingUrl(true)
     setActiveSearch(null)
@@ -691,7 +611,7 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
 
       // A new search always starts from the first page.
       reset()
-      setActiveSearch({ pluginKey: key, query: trimmed })
+      setActiveSearch(trimmed)
     } catch {
       showErrorToast("Search failed")
     } finally {
@@ -700,7 +620,7 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
   }
 
   // TODO: Validate
-  const handleSearch = () => runSearch(pluginKey, searchQuery)
+  const handleSearch = () => runSearch(searchQuery)
   const isSearching = isCheckingUrl || isFetching
 
   return (
@@ -709,7 +629,7 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
         <Input
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Search for a show or movie..."
+          placeholder="Search for a title or movie..."
           onKeyDown={(event) => {
             if (event.key === "Enter") handleSearch()
           }}
@@ -722,38 +642,6 @@ export function ShowSearch({ channelId, initialQuery }: ShowSearchProps) {
           {isSearching ? "Searching..." : "Search"}
         </Button>
       </div>
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Search:</span>
-        <Select value={pluginKey} onValueChange={setPluginKey}>
-          <SelectTrigger className="w-50">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {inAppPlugins.map((plugin) => (
-              <SelectItem key={plugin.plugin_key} value={plugin.plugin_key}>
-                <SourceOptionLabel
-                  name={plugin.name}
-                  faviconUrl={plugin.favicon_url}
-                />
-              </SelectItem>
-            ))}
-            {manualPlugins.length > 0 && (
-              <SelectGroup>
-                <SelectLabel>External Search Only</SelectLabel>
-                {manualPlugins.map((plugin) => (
-                  <SelectItem key={plugin.plugin_key} value={plugin.plugin_key}>
-                    <SourceOptionLabel
-                      name={plugin.name}
-                      faviconUrl={plugin.favicon_url}
-                    />
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            )}
-          </SelectContent>
-        </Select>
-      </div>
-
       {pluginResults && pluginResults.length > 0 && (
         <div className="flex flex-wrap gap-3">
           {pluginResults.map((result, index) => (

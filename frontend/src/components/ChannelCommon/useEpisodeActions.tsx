@@ -250,7 +250,7 @@ export function useEpisodeActions({
       */}
       {showInformation && (
         <EditEpisodeById
-          episodeId={episode.canonical_episode_id ?? episode.id}
+          episodeId={episode.tmdb_episode_id ?? episode.id}
           open={showInformation}
           onOpenChange={setShowInformation}
         />

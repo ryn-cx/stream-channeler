@@ -6,6 +6,20 @@ import uuid
 from fastapi import HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session
+from tminidb.movie.details.optional_models import (
+    MovieDetailsModel as OptionalMovieDetails,
+)
+from tminidb.movie.details.strict_models import MovieDetailsModel as StrictMovieDetails
+from tminidb.movie.watch_providers.optional_models import Us as OptionalMovieUs
+from tminidb.movie.watch_providers.strict_models import Us as StrictMovieUs
+from tminidb.tv_series.details.optional_models import (
+    TvSeriesDetailsModel as OptionalTvSeriesDetails,
+)
+from tminidb.tv_series.details.strict_models import (
+    TvSeriesDetailsModel as StrictTvSeriesDetails,
+)
+from tminidb.tv_series.watch_providers.optional_models import Us as OptionalTvSeriesUs
+from tminidb.tv_series.watch_providers.strict_models import Us as StrictTvSeriesUs
 
 from app.plugins.models import BasePlugin, Plugin
 from app.schemas import (
@@ -93,19 +107,55 @@ class PluginImportURLInformation(BaseModel):
 
 
 # TODO: Validate
-class PluginSearchInformation(BaseModel):
-    plugin_key: str
-    name: str
-    manual_search_only: bool = False
-    favicon_url: str | None = None
-
-
-# TODO: Validate
 class PluginURLMatch(BaseModel):
     matched: bool
     plugin_key: str | None = None
 
 
 # TODO: Validate
-class PluginSearchUrl(BaseModel):
-    url: str | None = None
+class PluginSearchResult(BaseModel):
+    """Search result from a plugin."""
+
+    title: str
+    """Title of the search result."""
+    url: str
+    """URL of the search result."""
+    year: int | None = None
+    """Release year of the search result."""
+    image_url: str | None = None
+    """URL of the image representing the search result."""
+    media_type: str | None = None
+    """Media type of the search result."""
+    media_identifier: str | None = None
+    """What the plugin that produced the result knows the title by.
+
+    Passed back to that same plugin's `media_info` to open the result. Its format is the
+    plugin's own — TMDB writes `tv 1399` and `movie 27205`. None when the plugin has no
+    details to offer beyond the result itself.
+    """
+
+
+# TODO: Validate
+class PluginSearchResults(BaseModel):
+    """A single page of results from a search query."""
+
+    results: list[PluginSearchResult]
+
+    next_cursor: str | None = None
+    """Cursor to pass back to `search` for the next page.
+
+    None on the last page. Only ever interpreted by the plugin that produced it.
+    """
+
+
+# TODO: Validate
+class TMDBMediaInfo(BaseModel):
+    detail: (
+        StrictMovieDetails
+        | OptionalMovieDetails
+        | StrictTvSeriesDetails
+        | OptionalTvSeriesDetails
+    )
+    watch_providers: (
+        StrictMovieUs | OptionalMovieUs | StrictTvSeriesUs | OptionalTvSeriesUs | None
+    ) = None

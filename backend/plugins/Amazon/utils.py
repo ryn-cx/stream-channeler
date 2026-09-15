@@ -1,88 +1,184 @@
 # TODO: Validate
-"""What every other part of the plugin reads a title by."""
+"""What every other part of the plugin reads a Prime Video title by."""
 
 from __future__ import annotations
 
-from datetime import timedelta
-from typing import override
-from urllib.parse import quote_plus
+import re
+from dataclasses import dataclass
+from datetime import datetime
+from typing import TYPE_CHECKING, Any
 
-from app.shows.models import Show
 from app.utils import tz_datetime
-from plugins.Amazon.files import FileMixin
-from plugins.Amazon.keys import title_key_from_location
-from plugins.utils.abstract_plugin import InvalidURLError, PluginShowIdentity
+from plugins.Amazon.constants import IMAGE_PREFERENCE
+
+if TYPE_CHECKING:
+    from deforestation.detail_widgets.models import Episode as WidgetEpisode
+    from pydantic import BaseModel
 
 
 # TODO: Validate
-class HelperMixin(FileMixin, register=False):
-    """The URLs of a title and the key it is stored under."""
+@dataclass
+class AmazonChannel:
+    """A subscription other than Prime that a title can be watched with."""
 
-    # TODO: Validate
-    @classmethod
-    def _detail_url(cls, compact_key: str) -> str:
-        return cls.build_url(f"detail/{compact_key}")
-
-    # TODO: Validate
-    def _title_url(self, title_key: str) -> str:
-        return self._detail_url(self.detail_file(title_key).compact_key())
-
-    # TODO: Validate
-    def title_key_from_share_key(self, share_key: str) -> str:
-        """Return the id of the title the share link `share_key` names.
-
-        A share link carries an id of Amazon's own that none of Prime Video's
-        pages are keyed by, so the id is read off the address the link points
-        at rather than out of the link itself.
-        """
-        redirect_file = self.share_link_file(share_key)
-        redirect_file.download_if_outdated()
-        location = redirect_file.location() or ""
-        landing_key = title_key_from_location(location)
-        if landing_key is None:
-            msg = f"Amazon share link {share_key} points at no title: {location!r}"
-            raise InvalidURLError(msg)
-        return landing_key
-
-    # TODO: Validate
-    def show_key_from_title_key(self, title_key: str) -> str:
-        """Return the key the title `title_key` names is stored under.
-
-        A title can be reached by more than one id, so the key is the id the
-        page it opens is addressed by rather than the one the link carried, and
-        a title pasted in either way is the one show.
-
-        A series has no page of its own, so every one of its seasons carries the
-        whole series and any of them would do as the series. The first is picked
-        so that a series pasted in as one season and again as another is the one
-        show either way, rather than a show for each way in.
-        """
-        seasons = self.detail_file(title_key).seasons()
-        if not seasons:
-            return self.detail_file(title_key).compact_key()
-        return min(seasons, key=lambda season: season.season_number).key
-
-    # TODO: Validate
-    @override
-    @classmethod
-    def manual_search(cls, query: str) -> str | None:
-        return cls.build_url(f"region/na/search?phrase={quote_plus(query)}")
-
-    # TODO: Validate
-    @override
-    def show_identity(self, show_key: str) -> PluginShowIdentity:
-        detail_file = self.detail_file(show_key)
-        detail_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        return PluginShowIdentity(
-            title=detail_file.series_title(),
-            media_type=detail_file.entity_type(),
-            year=detail_file.release_year(),
-        )
+    benefit_id: str
+    name: str
 
 
 # TODO: Validate
-def canonical_show_of(show: Show) -> Show | None:
-    """Return the title `show` was found to be linked to, where there is one."""
-    if show.canonical_shows:
-        return show.canonical_shows[0]
+@dataclass
+class AmazonSeason:
+    """One season of a series, as its series' page lists it."""
+
+    key: str
+    name: str
+    season_number: int
+
+
+# TODO: Validate
+@dataclass
+class AmazonEpisode:
+    """One episode of a season, as the season's episode list gives it."""
+
+    key: str
+    compact_key: str
+    title: str
+    episode_number: int | None
+    synopsis: str | None
+    duration: int | None
+    release_date: str | None
+    image_url: str | None
+
+
+# TODO: Validate
+def build_url(path: str) -> str:
+    return f"https://primevideo.com/{path.lstrip('/')}"
+
+
+# TODO: Validate
+def detail_url(compact_key: str) -> str:
+    return build_url(f"detail/{compact_key}")
+
+
+# TODO: Validate
+def parse_date(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    # DTZ007 - Amazon release dates carry no timezone; localized below.
+    parsed = datetime.strptime(value, "%b %d, %Y").date()  # noqa: DTZ007
+    return tz_datetime.combine(parsed, datetime.min.time())
+
+
+# TODO: Validate
+def pick_image(images: BaseModel) -> str | None:
+    for name in IMAGE_PREFERENCE:
+        if url := getattr(images, name, None):
+            return str(url)
     return None
+
+
+# TODO: Validate
+def pick_raw_image(images: dict[str, Any]) -> str | None:
+    for name in IMAGE_PREFERENCE:
+        if url := images.get(name):
+            return str(url)
+    return None
+
+
+# TODO: Validate
+def entity_benefit_id(entity: dict[str, Any]) -> str | None:
+    cues = entity.get("entitlementCues") or {}
+    logo = (cues.get("providerLogo") or {}).get("imageUrl")
+    if not logo:
+        return None
+    found = re.search(r"/benefit-id/[^/]+/([^/]+)/logos/", logo)
+    return found[1] if found else None
+
+
+# TODO: Validate
+def compact_key_from_link(link: str) -> str:
+    """Return the id a link to a title carries, which is how its URL names it."""
+    return link.split("?", 1)[0].rsplit("/", 1)[-1]
+
+
+# TODO: Validate
+def card_texts(card: dict[str, Any]) -> list[dict[str, Any]]:
+    texts: list[dict[str, Any]] = []
+    for component in (card.get("components") or {}).values():
+        payload = component["componentPayload"]
+        if collection := payload.get("textComponentCollection"):
+            texts += collection["textList"]
+        if text := payload.get("textComponent"):
+            texts.append(text)
+    return texts
+
+
+# TODO: Validate
+def card_channel_name(card: dict[str, Any]) -> str | None:
+    """Return the channel's own name as the card it is offered on heads it.
+
+    The button on the card is labelled with what pressing it does rather than
+    with the channel, so more than one channel is offered under the same label.
+    """
+    for text in card_texts(card):
+        # What a card writes the name of what it offers as.
+        if text["textType"] == "HEADING":
+            return text["text"].strip()
+    return None
+
+
+# TODO: Validate
+def channel_name(label: str) -> str:
+    # What splits the two lines of an offer's label.
+    name = label.split("{lineBreak}", 1)[0].strip()
+    # What a channel's own name is written after in the label it is offered
+    # under.
+    for prefix in ("Watch with ", "Start your free trial to ", "Subscribe to "):
+        name = name.removeprefix(prefix)
+    if not name:
+        msg = f"No channel name in {label!r}"
+        raise ValueError(msg)
+    return name
+
+
+# TODO: Validate
+def episode_from_detail(
+    title_id: str,
+    item: dict[str, Any],
+    compact_key: str,
+) -> AmazonEpisode:
+    """Return an episode read off the page of the season it belongs to."""
+    return AmazonEpisode(
+        key=title_id,
+        compact_key=compact_key,
+        title=item["title"],
+        episode_number=item.get("episodeNumber"),
+        synopsis=item["synopsis"],
+        duration=item.get("duration"),
+        release_date=item["releaseDate"],
+        image_url=pick_raw_image(item["images"]),
+    )
+
+
+# TODO: Validate
+def widget_episode_available(episode: WidgetEpisode) -> bool:
+    return any(
+        primary_action.payload.expanding_card or primary_action.payload.card_options
+        for primary_action in episode.action.primary_actions
+    )
+
+
+# TODO: Validate
+def episode_from_widget(episode: WidgetEpisode) -> AmazonEpisode:
+    """Return an episode read off a page of the season's episode list."""
+    detail = episode.detail
+    return AmazonEpisode(
+        key=episode.title_id,
+        compact_key=episode.self.compact_gti,  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+        title=detail.title,
+        episode_number=detail.episode_number,
+        synopsis=detail.synopsis,
+        duration=detail.duration,
+        release_date=detail.release_date,
+        image_url=pick_image(detail.images),
+    )

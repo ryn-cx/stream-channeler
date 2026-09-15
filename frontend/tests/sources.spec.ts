@@ -113,7 +113,7 @@ test.describe("Sources management", () => {
 test.describe("Sources empty state", () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
-  test("Shows empty state message when no sources exist", async ({ page }) => {
+  test("Titles empty state message when no sources exist", async ({ page }) => {
     const email = randomEmail()
     const password = randomPassword()
     await createUser({ email, password })

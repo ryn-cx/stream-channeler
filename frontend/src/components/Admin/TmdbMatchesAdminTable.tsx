@@ -8,7 +8,7 @@ import type {
 } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { Link2, Link2Off } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 
 import { EpisodesService } from "@/client"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
@@ -26,7 +26,10 @@ import {
   tmdbMatchColumns,
 } from "./tmdbMatchColumns"
 import { OpenEpisodeEditorProvider } from "./tmdbMatchEditing"
-import { TMDB_MATCHES_QUERY_KEY } from "./tmdbMatchesQuery"
+import {
+  TMDB_MATCHES_QUERY_KEY,
+  useSettlingTmdbMatchIds,
+} from "./tmdbMatchesQuery"
 import { TmdbMatchSelectionProvider } from "./tmdbMatchSelection"
 
 const STORAGE_KEY = "admin-tmdb-matches"
@@ -50,7 +53,7 @@ export function TmdbMatchesAdminTable() {
     { id: "summary", desc: false },
   ])
   const [filterOptions, setFilterOptions] = useState<ColumnFiltersState>([])
-  const [nonCanonicalShowsOnly, setNonCanonicalShowsOnly] = useState(true)
+  const [linkedTitlesOnly, setLinkedTitlesOnly] = useState(true)
   const [editing, setEditing] = useState<TmdbMatchRow | null>(null)
 
   const params = {
@@ -58,7 +61,7 @@ export function TmdbMatchesAdminTable() {
     limit: pagination.pageSize,
     sortOptions,
     filterOptions,
-    nonCanonicalShowsOnly,
+    linkedTitlesOnly,
   }
 
   const query = useQuery({
@@ -67,7 +70,7 @@ export function TmdbMatchesAdminTable() {
       EpisodesService.adminGetUnmatchedEpisodes({
         offset: params.offset,
         limit: params.limit,
-        nonCanonicalShowsOnly: params.nonCanonicalShowsOnly,
+        linkedTitlesOnly: params.linkedTitlesOnly,
         ...serializeTableQuery(params, tmdbMatchColumns),
       }),
     // The page already on screen is kept while the next one is read, so paging
@@ -76,7 +79,16 @@ export function TmdbMatchesAdminTable() {
     refetchOnWindowFocus: false,
   })
 
-  const episodes = query.data ? asTmdbMatchRows(query.data.data) : undefined
+  const settlingIds = useSettlingTmdbMatchIds(query.dataUpdatedAt)
+  const rows = useMemo(
+    () => (query.data ? asTmdbMatchRows(query.data.data) : undefined),
+    [query.data],
+  )
+  const episodes = useMemo(
+    () => rows?.filter((row) => !settlingIds.has(row.episode.id)),
+    [rows, settlingIds],
+  )
+  const settledHere = (query.data?.data.length ?? 0) - (episodes?.length ?? 0)
 
   const table = useReactTable({
     data: episodes ?? [],
@@ -98,15 +110,15 @@ export function TmdbMatchesAdminTable() {
         >
           <PageHeader title="TMDB Matches">
             <Button
-              variant={nonCanonicalShowsOnly ? "default" : "outline"}
+              variant={linkedTitlesOnly ? "default" : "outline"}
               onClick={() => {
-                setNonCanonicalShowsOnly(!nonCanonicalShowsOnly)
+                setLinkedTitlesOnly(!linkedTitlesOnly)
                 setPagination({ ...pagination, pageIndex: 0 })
               }}
-              title="Show only the episodes of shows linked to a title"
+              title="Title only the episodes of titles linked to a title"
             >
-              {nonCanonicalShowsOnly ? <Link2 /> : <Link2Off />}
-              {nonCanonicalShowsOnly ? "Linked shows only" : "Every show"}
+              {linkedTitlesOnly ? <Link2 /> : <Link2Off />}
+              {linkedTitlesOnly ? "Linked titles only" : "Every title"}
             </Button>
             <TmdbLinkMultipleButton />
             <ColumnVisibilityButton table={table} />
@@ -128,8 +140,8 @@ export function TmdbMatchesAdminTable() {
                   onPaginationChange: setPagination,
                   onSortOptionsChange: setSortOptions,
                   onFilterOptionsChange: setFilterOptions,
-                  rowCount: query.data?.filtered_count ?? 0,
-                  totalRowCount: query.data?.total_count ?? 0,
+                  rowCount: (query.data?.filtered_count ?? 0) - settledHere,
+                  totalRowCount: (query.data?.total_count ?? 0) - settledHere,
                 }}
               />
             )}

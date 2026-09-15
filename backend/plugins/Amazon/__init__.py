@@ -1,110 +1,77 @@
 # TODO: Validate
-"""Amazon Prime Video plugin."""
-
 from __future__ import annotations
 
-from typing import override
+import re
+from typing import TYPE_CHECKING, override
 
-from app.shows.models import Show
-from plugins.Amazon.search import SearchMixin
-from plugins.Amazon.source import SourceMixin
-from plugins.Amazon.upsert import UpsertMixin
-from plugins.Amazon.url_handlers import (
-    AmazonDetailURLHandler,
-    AmazonURLHandler,
-    PrimeVideoDetailURLHandler,
-    WatchAmazonDetailURLHandler,
+from plugins.Amazon.constants import (
+    AMAZON_URL_REGEX,
+    PRIME_VIDEO_URL_REGEX,
+    SHARE_URL_REGEX,
 )
-from plugins.Amazon.utils import canonical_show_of
-from plugins.utils.abstract_plugin import URLImportResult
-from plugins.utils.base_plugin.plugin import URLHandlerPlugin
+from plugins.Amazon.importer import (
+    AmazonImporter,
+    AmazonMovieImporter,
+    AmazonSeriesImporter,
+)
+from plugins.Amazon.shared import AmazonShared
+from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
+
+if TYPE_CHECKING:
+    from app.titles.models import Title
 
 
 # TODO: Validate
-class Amazon(
-    UpsertMixin,
-    SearchMixin,
-    SourceMixin,
-    URLHandlerPlugin[AmazonURLHandler],
-    register=True,
-):
-    """Amazon Prime Video plugin."""
-
+class Amazon(AmazonShared, AbstractPlugin, register=True):
     # TODO: Validate
     @classmethod
     @override
-    def _url_handlers(cls) -> tuple[type[AmazonURLHandler], ...]:
+    def _url_regexes(cls) -> tuple[str, ...]:
         return (
             # Must be listed first: a share link's path is also a detail path, and
             # only this one carries the id in the query rather than the path.
-            WatchAmazonDetailURLHandler,
-            PrimeVideoDetailURLHandler,
-            AmazonDetailURLHandler,
+            SHARE_URL_REGEX,
+            PRIME_VIDEO_URL_REGEX,
+            AMAZON_URL_REGEX,
         )
 
     # TODO: Validate
-    @classmethod
     @override
-    def tmdb_provider_names(cls) -> tuple[str, ...]:
-        return ("Amazon Prime Video", "Amazon Video", "Prime Video")
+    def _media_importer_from_url(self, url: str) -> AmazonImporter:
+        # A film and a season of a series are answered at the same address,
+        # so the page has to be read before it is known which of the two it
+        # is.
+        title_key = self._url_title_key(url)
+        self.raise_invalid_url_if_no_content(self.detail_file(title_key), url)
+        if self._is_movie(title_key):
+            return AmazonMovieImporter(self.session, self.plugin, self._file_cache)
+        return AmazonSeriesImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
-    @classmethod
     @override
-    def favicon_url(cls) -> str:
-        return "https://www.primevideo.com/favicon.ico"
+    def _media_importer_from_title(self, title: Title) -> AmazonImporter:
+        if not title.media_type:
+            msg = "Title.media_type is not set."
+            raise AttributeError(msg)
+        if title.media_type == "Movie":
+            return AmazonMovieImporter(self.session, self.plugin, self._file_cache)
+        return AmazonSeriesImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
-    @classmethod
-    @override
-    def domains(cls) -> list[str]:
-        # Prime Video is read out of its own website, and Amazon's is listed as
-        # well because a link to a title on it is a link to the same title.
-        # watch.amazon.com is the domain Amazon writes a share link under, and
-        # is its own entry because only an optional `www.` is read off a domain.
-        return ["primevideo.com", "amazon.com", "watch.amazon.com"]
+    def _url_title_key(self, url: str) -> str:
+        domain_regex = self._domains_regex()
+        if match := re.match(domain_regex + SHARE_URL_REGEX, url):
+            return self.title_key_from_share_key(
+                match.group("title_key"),
+            )
+        if match := re.match(domain_regex + PRIME_VIDEO_URL_REGEX, url):
+            return match.group("title_key")
+        if match := re.match(domain_regex + AMAZON_URL_REGEX, url):
+            return match.group("title_key")
+
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)
 
     # TODO: Validate
-    @classmethod
-    @override
-    def matches_tmdb_provider(cls, provider_name: str) -> bool:
-        if super().matches_tmdb_provider(provider_name):
-            return True
-        return provider_name.casefold().endswith(" amazon channel")
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def plugin_name(cls) -> str:
-        return "Amazon Prime Video"
-
-    # TODO: Validate
-    @override  # Writes the title into every source it can be watched through.
-    def _import_handler(
-        self,
-        handler: AmazonURLHandler,
-        canonical_show: Show | None = None,
-        *,
-        force: bool = False,
-    ) -> list[URLImportResult]:
-        show_key = handler.show_key
-        if not force and (shows := self._preload_show(show_key).all()):
-            return [result for show in shows for result in handler.import_results(show)]
-
-        _cache = self._download_show_files_and_children(show_key)
-        if canonical_show is None:
-            canonical_show = self._tmdb_show(show_key, force=force)
-            if not force and (shows := self._preload_show(show_key).all()):
-                return [
-                    result for show in shows for result in handler.import_results(show)
-                ]
-
-        results: list[URLImportResult] = []
-        for source in self.title_sources(show_key):
-            show = self.upsert_show(source, show_key, canonical_show, force=force)
-            # The title the first listing was found to be linked to is the title
-            # the rest of them are linked to too, so it is handed to them rather
-            # than searched for once for each way of watching the same title.
-            canonical_show = canonical_show or canonical_show_of(show)
-            results += handler.import_results(show)
-        return results
+    def _is_movie(self, title_key: str) -> bool:
+        return self.detail_file(title_key).entity_type() == "Movie"

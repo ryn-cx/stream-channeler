@@ -115,7 +115,9 @@ test.describe("Episodes management", () => {
 test.describe("Episodes empty state", () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
-  test("Shows empty state message when no episodes exist", async ({ page }) => {
+  test("Titles empty state message when no episodes exist", async ({
+    page,
+  }) => {
     const email = randomEmail()
     const password = randomPassword()
     await createUser({ email, password })

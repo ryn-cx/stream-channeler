@@ -9,11 +9,16 @@ allowed to see.
 from collections.abc import Collection, Sequence
 from uuid import UUID
 
-from sqlmodel import Session, col, or_, select
+from sqlalchemy.orm import aliased
+from sqlalchemy.sql.expression import ColumnElement
+from sqlmodel import Session, and_, col, or_, select
 
-from app.channels.models import Channel
+from app.channels.models import Channel, ChannelTitle
 from app.models import Visibility
+from app.titles.models import Title, TitleTmdbTitle
+from app.tmdb_media.filters import is_not_linked
 from app.users.models import User
+from app.users.plugin_user import is_plugin_user
 
 
 # TODO: Validate
@@ -47,13 +52,6 @@ def channel_attribution(
     user: User | None,
     main_channel: Channel,
 ) -> dict[UUID, UUID]:
-    """Map every channel a read covers to the channel it was added through.
-
-    A combined channel can combine further ones, and an episode from a channel
-    that deep reads as belonging to whichever channel was added here rather than
-    to the one holding it, so a grandchild's episodes are its parent's. A channel
-    reachable through two of them belongs to the first that reaches it.
-    """
     attribution = {main_channel.id: main_channel.id}
     # The whole level is read at once rather than a walk per child, so the depth of
     # the tree rather than its width is what this costs.
@@ -101,3 +99,31 @@ def resolve_channel_ids(
         to_expand = children - queued_channel_ids
 
     return all_channel_ids
+
+
+# TODO: Validate
+def in_a_user_channel() -> ColumnElement[bool]:
+    channel_owner = aliased(User)
+    return (
+        select(ChannelTitle.channel_id)
+        .select_from(ChannelTitle)
+        .join(Channel, onclause=col(ChannelTitle.channel_id) == Channel.id)
+        .join(channel_owner, onclause=col(Channel.user_id) == channel_owner.id)
+        .where(
+            col(ChannelTitle.is_blacklist_only).is_(False),
+            ~is_plugin_user(channel_owner.email),
+            or_(
+                col(ChannelTitle.tmdb_title_id).in_(
+                    select(TitleTmdbTitle.tmdb_title_id)
+                    .where(col(TitleTmdbTitle.title_id) == col(Title.id))
+                    .correlate(Title),
+                ),
+                and_(
+                    is_not_linked(Title),
+                    col(ChannelTitle.tmdb_title_id) == col(Title.id),
+                ),
+            ),
+        )
+        .correlate(Title)
+        .exists()
+    )

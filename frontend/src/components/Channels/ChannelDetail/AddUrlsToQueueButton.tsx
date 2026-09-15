@@ -1,5 +1,5 @@
 // TODO: Validate
-import { Maximize2, Minimize2, MonitorCog } from "lucide-react"
+import { MonitorCog } from "lucide-react"
 import { useState } from "react"
 import { ModalContent } from "@/components/Common/ModalContent"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
@@ -13,10 +13,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { useSearchablePlugins } from "@/hooks/useEntities"
-import { ManageShowsTabs } from "./ManageShowsTabs"
+import { ManageTitlesTabs } from "./ManageTitlesTabs"
 
-interface ManageShowsButtonProps {
+interface ManageTitlesButtonProps {
   channelId: string
   channelName?: string | null
   variant?: "button" | "menu" | "icon"
@@ -28,25 +27,20 @@ interface ManageShowsButtonProps {
 }
 
 // TODO: Validate
-export function ManageShowsButton({
+export function ManageTitlesButton({
   channelId,
   channelName,
   variant = "button",
   showLabel,
   combinedChannels,
-}: ManageShowsButtonProps) {
+}: ManageTitlesButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [isFullScreen, setIsFullScreen] = useState(false)
-  // Warm the searchable-plugins cache only once the modal is open, so the
-  // channel list doesn't fetch it for every card just by rendering.
-  useSearchablePlugins(isOpen)
-
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         {variant === "icon" ? (
           <TooltipIconButton
-            label="Manage shows"
+            label="Manage titles"
             icon={<MonitorCog className="size-4" />}
             showLabel={showLabel}
           />
@@ -54,29 +48,22 @@ export function ManageShowsButton({
           <VariantTrigger
             variant={variant}
             icon={MonitorCog}
-            label="Manage shows"
-            iconTitle="Manage shows"
+            label="Manage titles"
+            iconTitle="Manage titles"
           />
         )}
       </DialogTrigger>
-      <ModalContent
-        size={isFullScreen ? "full" : "3xl"}
-        className={
-          isFullScreen
-            ? "max-h-none h-[calc(100dvh-2rem)] flex flex-col"
-            : "max-h-[85vh] flex flex-col"
-        }
-      >
-        <DialogHeader className="px-8">
+      <ModalContent size="3xl">
+        <DialogHeader>
           <DialogTitle>
-            {channelName ? `Manage ${channelName} Shows` : "Manage Shows"}
+            {channelName ? `Manage ${channelName} Titles` : "Manage Titles"}
           </DialogTitle>
           <DialogDescription>
-            Search, import, and manage shows in your channel.
+            Search, import, and manage titles in your channel.
           </DialogDescription>
         </DialogHeader>
 
-        <ManageShowsTabs
+        <ManageTitlesTabs
           channelId={channelId}
           contentClassName="no-scrollbar flex-1 min-h-0 overflow-y-auto px-8 py-4"
           tabsListClassName="mx-4 h-auto"
@@ -89,20 +76,6 @@ export function ManageShowsButton({
             Close
           </Button>
         </DialogFooter>
-
-        {/*
-          Opposite the close, since the two do the same kind of thing to the
-          window rather than to what is in it. Last of the children rather than
-          first: an opening window puts the cursor on whatever it finds first,
-          and a tooltip taken as read on the way in says nothing to anybody.
-        */}
-        <TooltipIconButton
-          label={isFullScreen ? "Shrink to a window" : "Fill the screen"}
-          icon={isFullScreen ? <Minimize2 /> : <Maximize2 />}
-          size="icon-sm"
-          className="absolute left-4 top-4 z-10"
-          onClick={() => setIsFullScreen(!isFullScreen)}
-        />
       </ModalContent>
     </Dialog>
   )

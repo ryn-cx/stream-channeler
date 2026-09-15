@@ -1,0 +1,701 @@
+# TODO: Validate
+"""Plugin tests whose clock is fixed and whose check is one recorded dump.
+
+The same tests the existing validator runs, checked a different way. Rules about
+how a value should move are what a test needs when it cannot say what the value
+will be. Fixing the clock takes that away: an import happens on the 1st of
+January and an update the day after, every file is served from the same store
+the existing validator keeps and is read as though it arrived with the import,
+and the only thing left that a run generates afresh is a record's id, which the
+dump writes as the row it points at. What a test compares is then the whole
+database, bar the files table, against the dump recorded the first time it ran.
+"""
+
+import json
+import os
+from datetime import datetime, timedelta
+
+import pytest
+from sqlmodel import Session
+
+from app.episodes.models import Episode
+from app.plugins.models import Plugin
+from app.seasons.models import Season
+from app.sources.models import Source
+from app.titles.models import Title
+from app.tmdb_media.keys import watch_identifier
+from app.utils import tz_datetime
+from plugins.utils.abstract_plugin import (
+    AbstractPlugin,
+    InvalidURLError,
+    URLImportResult,
+)
+from tests.plugins.frozen_clock import frozen_clock
+from tests.plugins.plugin_validator.database import DatabaseMixin
+from tests.plugins.plugin_validator.log_stats import log_stats
+from tests.plugins.plugin_validator.state import (
+    database_json,
+    state_delta_json,
+    state_diff,
+)
+from tests.plugins.plugin_validator.stored_files import (
+    encode_name,
+    mock_update,
+)
+
+FAKE_SEASON_KEY = "plugin-validator-alt-fake-season"
+"""The key of the season a deletion test adds for the update to soft delete."""
+
+FAKE_EPISODE_KEY = "plugin-validator-alt-fake-episode"
+"""The key of the episode a deletion test adds for the update to soft delete."""
+
+
+# TODO: Validate
+class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
+    """A plugin test whose clock is fixed and whose check is one recorded dump."""
+
+    parse_url_response: object | None = None
+
+    imported_state: str | None = None
+
+    source_index: int = 0
+    title_index: int = 0
+    season_index: int = 0
+    episode_index: int = 0
+
+    # TODO: Validate
+    def pytest_generate_tests(self, metafunc: pytest.Metafunc) -> None:
+        """Run a test once per URL the test class declares."""
+        if "url_variant" in metafunc.fixturenames:
+            metafunc.parametrize("url_variant", self._url_variants())
+
+    # TODO: Validate
+    @pytest.fixture
+    def url_variant(self) -> str:
+        pytest.skip("No URL variants defined")
+
+    # TODO: Validate
+    def assert_state(self, session: Session, label: str) -> None:
+        session.flush()
+        actual = database_json(session)
+        if label != "import_url" and self.imported_state is not None:
+            actual = state_delta_json(self.imported_state, actual)
+        self.assert_recorded(label, actual)
+
+    # TODO: Validate
+    def assert_import_url_results(
+        self,
+        results: list[URLImportResult],
+        label: str,
+    ) -> None:
+        """Compare what an import said it produced against what `label` recorded."""
+        self.assert_recorded(
+            label,
+            json.dumps(self.simplify_import_url_results(results), indent=2),
+        )
+
+    # TODO: Validate
+    def assert_recorded(self, label: str, actual: str) -> None:
+        """Compare `actual` against what `label` recorded, recording it if it has not.
+
+        A run that does not match writes what it produced beside what was
+        expected, so the two can be read against each other with whatever tool
+        reads a file rather than only as the diff in the failure. The written
+        dump is removed once a run matches again, since a file left behind from
+        a failure that has been fixed only says the test is still failing.
+        """
+        path = self.expected_state_path(label)
+        incorrect_path = self.incorrect_state_path(label)
+
+        if not path.exists():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(actual, encoding="utf-8")
+            incorrect_path.unlink(missing_ok=True)
+            return
+
+        expected = path.read_text(encoding="utf-8")
+        if expected == actual:
+            incorrect_path.unlink(missing_ok=True)
+            return
+
+        incorrect_path.parent.mkdir(parents=True, exist_ok=True)
+        incorrect_path.write_text(actual, encoding="utf-8")
+        pytest.fail(
+            f"This run is not what {path} recorded.\n"
+            f"What this run produced is at {incorrect_path}.\n"
+            f"{state_diff(expected, actual)}",
+        )
+
+    # TODO: Validate
+    def import_url(
+        self,
+        session: Session,
+        url: str | None = None,
+    ) -> list[URLImportResult]:
+        """Import the test's URL as of `IMPORT_TIME`."""
+        with frozen_clock(self.import_time):
+            results = self._import_url(session, url)
+        session.flush()
+        self.imported_state = database_json(session)
+        return results
+
+    # TODO: Validate
+    def update(
+        self,
+        session: Session,
+        entity: Plugin | Source | Title | Season | Episode,
+    ) -> None:
+        """Update `entity` as of `UPDATE_TIME`."""
+        with frozen_clock(self.update_time), mock_update():
+            self._update(session, entity)
+            session.flush()
+
+    # TODO: Validate
+    def _update(
+        self,
+        session: Session,
+        entity: Plugin | Source | Title | Season | Episode,
+    ) -> None:
+        """Run the update the plugin that owns `entity` has for it."""
+        assert entity.data_timestamp
+        entity.update_at = entity.data_timestamp + timedelta(seconds=1)
+        owner = self.owning_plugin(session, entity)
+        match entity:
+            case Plugin() as plugin:
+                owner.update_plugin(plugin=plugin)
+            case Source() as source:
+                owner.update_source(source=source)
+            case Title() as title:
+                owner.update_title(title)
+            case Season() as season:
+                owner.update_season(season)
+            case Episode() as episode:
+                owner.update_episode(episode)
+
+    # TODO: Validate
+    def all_sources(self, session: Session) -> list[Source]:
+        """Every live source of every plugin, in the order their keys put them in."""
+        return [
+            source
+            for plugin in self.select_plugins_with_children(session)
+            for source in sorted(plugin.sources, key=lambda source: source.key)
+            if source.deleted_at is None
+        ]
+
+    # TODO: Validate
+    def source_titles(self, source: Source) -> list[Title]:
+        """Every live title of one source, in the order their keys put them in."""
+        return [
+            title
+            for title in sorted(source.titles, key=lambda title: title.key)
+            if title.deleted_at is None
+        ]
+
+    # TODO: Validate
+    def source_seasons(self, source: Source) -> list[Season]:
+        """Every live season of one source, in the order their keys put them in."""
+        return [
+            season
+            for title in self.source_titles(source)
+            for season in sorted(title.seasons, key=lambda season: season.key)
+            if season.deleted_at is None
+        ]
+
+    # TODO: Validate
+    def source_episodes(self, source: Source) -> list[Episode]:
+        """Every live episode of one source, in the order their keys put them in."""
+        return [
+            episode
+            for season in self.source_seasons(source)
+            for episode in sorted(season.episodes, key=lambda episode: episode.key)
+            if episode.deleted_at is None
+        ]
+
+    # TODO: Validate
+    def all_titles(self, session: Session) -> list[Title]:
+        """Every live title of every plugin, in the order their keys put them in."""
+        return [
+            title
+            for source in self.all_sources(session)
+            for title in self.source_titles(source)
+        ]
+
+    # TODO: Validate
+    def all_seasons(self, session: Session) -> list[Season]:
+        """Every live season of every plugin, in the order their keys put them in."""
+        return [
+            season
+            for source in self.all_sources(session)
+            for season in self.source_seasons(source)
+        ]
+
+    # TODO: Validate
+    def all_episodes(self, session: Session) -> list[Episode]:
+        """Every live episode of every plugin, in the order their keys put them in."""
+        return [
+            episode
+            for source in self.all_sources(session)
+            for episode in self.source_episodes(source)
+        ]
+
+    # TODO: Validate
+    def plugin_sources(self, session: Session) -> list[Source]:
+        return [
+            source
+            for source in sorted(
+                self.select_plugin_with_children(session).sources,
+                key=lambda source: source.key,
+            )
+            if source.deleted_at is None
+        ]
+
+    # TODO: Validate
+    def plugin_titles(self, session: Session) -> list[Title]:
+        return [
+            title
+            for source in self.plugin_sources(session)
+            for title in self.source_titles(source)
+        ]
+
+    # TODO: Validate
+    def plugin_seasons(self, session: Session) -> list[Season]:
+        return [
+            season
+            for source in self.plugin_sources(session)
+            for season in self.source_seasons(source)
+        ]
+
+    # TODO: Validate
+    def plugin_episodes(self, session: Session) -> list[Episode]:
+        return [
+            episode
+            for source in self.plugin_sources(session)
+            for episode in self.source_episodes(source)
+        ]
+
+    # TODO: Validate
+    def selected_sources(self, session: Session) -> list[Source]:
+        return self.plugin_sources(session)[self.source_index :]
+
+    # TODO: Validate
+    def selected_titles(self, session: Session) -> list[Title]:
+        """Return the title each source contributes to a test that works on one."""
+        return [
+            titles[self.title_index]
+            for source in self.selected_sources(session)
+            if (titles := self.source_titles(source))
+        ]
+
+    # TODO: Validate
+    def selected_seasons(self, session: Session) -> list[Season]:
+        """Return the season each source contributes to a test that works on one."""
+        return [
+            seasons[self.season_index]
+            for source in self.selected_sources(session)
+            if (seasons := self.source_seasons(source))
+        ]
+
+    # TODO: Validate
+    def selected_episodes(self, session: Session) -> list[Episode]:
+        """Return the episode each source contributes to a test that works on one."""
+        return [
+            episodes[self.episode_index]
+            for source in self.selected_sources(session)
+            if (episodes := self.source_episodes(source))
+        ]
+
+    # TODO: Validate
+    def fake_season(self, title: Title) -> Season:
+        """Build a season `title` does not have, for an update to soft delete.
+
+        Written out in full rather than generated, because a randomly built
+        record is a different record on every run and so a different dump.
+        """
+        return Season(
+            key=FAKE_SEASON_KEY,
+            name="Plugin Validator Alt Fake Season",
+            url="https://example.com/fake-season",
+            season_number=9999,
+            sort_order=9999,
+            title_id=title.id,
+            data_timestamp=tz_datetime.now(),
+            deleted_at=tz_datetime.now(),
+        )
+
+    # TODO: Validate
+    def fake_episode(self, season: Season) -> Episode:
+        """Build an episode `season` does not have, for an update to soft delete.
+
+        `plugin_key` is set here because an import is what usually writes it and
+        nothing imported this row.
+        """
+        return Episode(
+            key=FAKE_EPISODE_KEY,
+            name="Plugin Validator Alt Fake Episode",
+            url="https://example.com/fake-episode",
+            episode_number=9999,
+            sort_order=9999,
+            duration=1,
+            season_id=season.id,
+            plugin_key=season.title.source.plugin.key,
+            watch_identifier=watch_identifier(
+                season.title.source.plugin.key,
+                FAKE_EPISODE_KEY,
+            ),
+            data_timestamp=tz_datetime.now(),
+            deleted_at=tz_datetime.now(),
+        )
+
+    # TODO: Validate
+    def _initialize_import_data(self, session: Session) -> None:
+        """Import the URL so every file it reaches for is stored."""
+        if self.invalid_url:
+            with pytest.raises(InvalidURLError):
+                self._import_url(session)
+            return
+        self._import_url(session)
+
+    # TODO: Validate
+    def _initialize_extra_files(self, session: Session) -> None:
+        """Store the files that only an update reaches for.
+
+        A test's data is recorded by importing a URL, which never asks for the
+        files a plugin only reads when checking an existing record for changes.
+        Left unstored, those are what an update test has to reach the network
+        for, which it is not allowed to do.
+        """
+
+    # TODO: Validate
+    @pytest.mark.enable_socket
+    @pytest.mark.skipif(
+        "GITHUB_ACTIONS" in os.environ,
+        reason="Records/refreshes test data locally; never runs on CI.",
+    )
+    def test__initialize_test_data(self, session_with_files: Session) -> None:
+        """Download and store every file the test class needs.
+
+        Nothing is recorded here but the files. What the other tests compare
+        against is written by those tests the first time they run.
+        """
+        try:
+            if self.url:
+                with frozen_clock(self.import_time):
+                    self._initialize_import_data(session_with_files)
+                    self._initialize_extra_files(session_with_files)
+        finally:
+            # Written even when the run failed, so the files it did reach are
+            # recorded rather than downloaded again by the next run.
+            self._export_files_manifest(session_with_files)
+            self._export_files(session_with_files)
+
+
+# TODO: Validate
+class ImportURLTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
+    """Tests that importing a URL leaves the database as it was recorded."""
+
+    # TODO: Validate
+    def test_import_url(self, session_with_files: Session) -> None:
+        if not self.url or self.invalid_url:
+            pytest.skip()
+
+        with log_stats(self):
+            results = self.import_url(session_with_files)
+        self.assert_import_url_results(results, "import_url_results")
+        self.assert_state(session_with_files, "import_url")
+
+
+# TODO: Validate
+class ImportURLVariantTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
+    """Tests that every domain and path a URL can be written as imports the same.
+
+    Checked against what the import itself said it produced rather than against
+    the whole database, because what a variant can get wrong is which records
+    the URL names, and the records themselves are what the import test covers.
+    Every variant is compared against the one recording, that being what says
+    the variants agree rather than only that each is what it was last time.
+    """
+
+    # TODO: Validate
+    def test_import_url_variants(
+        self,
+        session_with_files: Session,
+        url_variant: str,
+    ) -> None:
+        with log_stats(self):
+            results = self.import_url(session_with_files, url_variant)
+        self.assert_import_url_results(results, "import_url_results")
+
+
+# TODO: Validate
+class InvalidImportURLTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
+    """Tests that importing an invalid URL raises InvalidURLError."""
+
+    # TODO: Validate
+    def test_import_url(self, session_with_files: Session) -> None:
+        if not self.url:
+            pytest.skip()
+
+        with log_stats(self), pytest.raises(InvalidURLError):
+            self.import_url(session_with_files)
+
+
+# TODO: Validate
+class ImportExistingURLTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
+    """Tests that re-importing a URL leaves the database where the first import put it.
+
+    Compared against the dump the import test recorded rather than against one
+    of its own, because what a second import must leave behind is what the first
+    one did and nothing else.
+    """
+
+    # TODO: Validate
+    def test_import_existing_url(self, session_with_files: Session) -> None:
+        if not self.url or self.invalid_url:
+            pytest.skip()
+
+        self.import_url(session_with_files)
+        with log_stats(self):
+            self.import_url(session_with_files)
+        self.assert_state(session_with_files, "import_url")
+
+
+# TODO: Validate
+class UpdatePluginTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
+    # TODO: Validate
+    def test_update_plugin(self, session_with_files: Session) -> None:
+        self.import_url(session_with_files)
+        plugin = self.select_plugin_with_children(session_with_files)
+        with log_stats(self):
+            self.update(session_with_files, plugin)
+        self.assert_state(session_with_files, "update_plugin")
+
+
+# TODO: Validate
+class UpdateSourceTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
+    """Tests that updating a source propagates upstream changes."""
+
+    # TODO: Validate
+    def _create_source_update_entry(
+        self,
+        plugin_instance: PluginT,
+        source: Source,
+        timestamp: datetime,
+    ) -> None:
+        """Fabricate an upstream update signal for `source` at `timestamp`.
+
+        Each plugin writes whatever fake file(s) make `update_source` see a
+        pending refresh for the given source keyed at the given timestamp.
+        """
+        raise NotImplementedError
+
+    # TODO: Validate
+    def test_update_source(self, session_with_files: Session) -> None:
+        if self.invalid_url or not self.url:
+            pytest.skip()
+
+        self.import_url(session_with_files)
+        sources = self.selected_sources(session_with_files)
+        timestamp = self.update_time + timedelta(minutes=1)
+        with frozen_clock(self.update_time):
+            for source in sources:
+                self._create_source_update_entry(
+                    self.imported_plugin,
+                    source,
+                    timestamp,
+                )
+                # Seed update_at later than the pending air_date so set_update_at
+                # overwrites it with the earlier value.
+                for title in source.titles:
+                    title.update_at = timestamp + timedelta(minutes=1)
+                    for season in title.seasons:
+                        if season.update_at:
+                            season.update_at = timestamp + timedelta(minutes=1)
+
+        with log_stats(self):
+            for source in sources:
+                self.update(session_with_files, source)
+        self.assert_state(session_with_files, "update_source")
+
+
+# TODO: Validate
+class UpdateTitleTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
+    """Tests that updating a title leaves the database as it was recorded."""
+
+    # TODO: Validate
+    def test_update_title(self, session_with_files: Session) -> None:
+        self.import_url(session_with_files)
+        with log_stats(self):
+            for title in self.selected_titles(session_with_files):
+                self.update(session_with_files, title)
+        self.assert_state(session_with_files, "update_title")
+
+
+# TODO: Validate
+class UpdateSeasonTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
+    """Tests that updating a season leaves the database as it was recorded."""
+
+    # TODO: Validate
+    def test_update_season(self, session_with_files: Session) -> None:
+        self.import_url(session_with_files)
+        with log_stats(self):
+            for season in self.selected_seasons(session_with_files):
+                self.update(session_with_files, season)
+        self.assert_state(session_with_files, "update_season")
+
+
+# TODO: Validate
+class UpdateEpisodeTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
+    """Tests that updating an episode leaves the database as it was recorded."""
+
+    # TODO: Validate
+    def test_update_episode(self, session_with_files: Session) -> None:
+        self.import_url(session_with_files)
+        with log_stats(self):
+            for episode in self.selected_episodes(session_with_files):
+                self.update(session_with_files, episode)
+        self.assert_state(session_with_files, "update_episode")
+
+
+# TODO: Validate
+class DeletedSeasonTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
+    """Tests that a fake season gets soft deleted during update_title."""
+
+    # TODO: Validate
+    def test_deleted_season(self, session_with_files: Session) -> None:
+        self.import_url(session_with_files)
+        titles = self.selected_titles(session_with_files)
+
+        with frozen_clock(self.update_time):
+            for title in titles:
+                fake_season = self.fake_season(title)
+                title.seasons.append(fake_season)
+                fake_season.soft_undelete()
+            session_with_files.flush()
+
+        with log_stats(self), frozen_clock(self.update_time):
+            for title in titles:
+                self.owning_plugin(session_with_files, title).update_title(title)
+            session_with_files.flush()
+
+        self.assert_state(session_with_files, "deleted_season")
+
+
+# TODO: Validate
+class DeletedEpisodeUpdateTitleTests[PluginT: AbstractPlugin](
+    PluginValidator[PluginT],
+):
+    """Tests that a fake episode in an existing season is soft deleted by update_title."""
+
+    # TODO: Validate
+    def test_deleted_episode_update_title(self, session_with_files: Session) -> None:
+        self.import_url(session_with_files)
+        seasons = self.selected_seasons(session_with_files)
+
+        with frozen_clock(self.update_time):
+            for season in seasons:
+                fake_episode = self.fake_episode(season)
+                season.episodes.append(fake_episode)
+                fake_episode.soft_undelete()
+            session_with_files.flush()
+
+        with log_stats(self), frozen_clock(self.update_time):
+            for season in seasons:
+                title = season.title
+                self.owning_plugin(session_with_files, title).update_title(title)
+            session_with_files.flush()
+
+        self.assert_state(session_with_files, "deleted_episode_update_title")
+
+
+# TODO: Validate
+class DeletedSeasonWithEpisodeTests[PluginT: AbstractPlugin](
+    PluginValidator[PluginT],
+):
+    """Tests that a fake season and its fake episode are soft deleted by update_title."""
+
+    # TODO: Validate
+    def test_deleted_season_with_episode(self, session_with_files: Session) -> None:
+        self.import_url(session_with_files)
+        titles = self.selected_titles(session_with_files)
+
+        with frozen_clock(self.update_time):
+            for title in titles:
+                fake_season = self.fake_season(title)
+                title.seasons.append(fake_season)
+                fake_season.episodes.append(self.fake_episode(fake_season))
+                fake_season.soft_undelete()
+            session_with_files.flush()
+
+        with log_stats(self), frozen_clock(self.update_time):
+            for title in titles:
+                self.owning_plugin(session_with_files, title).update_title(title)
+            session_with_files.flush()
+
+        self.assert_state(session_with_files, "deleted_season_with_episode")
+
+
+# TODO: Validate
+class AllUpdatesTests[PluginT: AbstractPlugin](PluginValidator[PluginT]):
+    """Exhaustive test that updates every entity on its own."""
+
+    # TODO: Validate
+    @pytest.mark.skip(reason="Exhaustive test - run manually")
+    def test_all_updates(self, session_with_files: Session) -> None:
+        self.import_url(session_with_files)
+        entities: list[Title | Season | Episode] = [
+            *self.all_titles(session_with_files),
+            *self.all_seasons(session_with_files),
+            *self.all_episodes(session_with_files),
+        ]
+        for entity in entities:
+            label = f"all_updates_{type(entity).__name__}_{encode_name(entity.key)}"
+            self.update(session_with_files, entity)
+            self.assert_state(session_with_files, label)
+            session_with_files.rollback()
+
+
+# TODO: Validate
+class URLTests[PluginT: AbstractPlugin](
+    ImportURLVariantTests[PluginT],
+    ImportURLTests[PluginT],
+    ImportExistingURLTests[PluginT],
+):
+    """All URL-related tests: importing and re-importing."""
+
+
+# TODO: Validate
+class UpdateTests[PluginT: AbstractPlugin](
+    UpdateTitleTests[PluginT],
+    UpdateSeasonTests[PluginT],
+    UpdateEpisodeTests[PluginT],
+):
+    """All entity update tests."""
+
+
+# TODO: Validate
+class DeletionTests[PluginT: AbstractPlugin](
+    DeletedSeasonTests[PluginT],
+    DeletedEpisodeUpdateTitleTests[PluginT],
+    DeletedSeasonWithEpisodeTests[PluginT],
+):
+    """All soft-deletion tests."""
+
+
+# TODO: Validate
+class StandardTests[PluginT: AbstractPlugin](
+    URLTests[PluginT],
+    UpdateTests[PluginT],
+    DeletionTests[PluginT],
+    AllUpdatesTests[PluginT],
+):
+    """The standard set of tests for a plugin with URL import support."""
+
+
+# TODO: Validate
+class InvalidURLValidator[PluginT: AbstractPlugin](
+    InvalidImportURLTests[PluginT],
+    PluginValidator[PluginT],
+):
+    """Validator for plugins with invalid URLs that should raise errors."""
+
+    invalid_url = True

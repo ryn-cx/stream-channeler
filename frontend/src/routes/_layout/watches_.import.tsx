@@ -56,17 +56,17 @@ export const Route = createFileRoute("/_layout/watches_/import")({
 })
 
 // TODO: Validate
-function groupByShow(entries: Array<WatchImportResult>) {
+function groupByTitle(entries: Array<WatchImportResult>) {
   const groups = new Map<
     string,
-    { show_url: string; episodes: Array<WatchImportResult> }
+    { title_url: string; episodes: Array<WatchImportResult> }
   >()
   for (const entry of entries) {
-    const existing = groups.get(entry.show)
+    const existing = groups.get(entry.title)
     if (existing) {
       existing.episodes.push(entry)
     } else {
-      groups.set(entry.show, { show_url: entry.show_url, episodes: [entry] })
+      groups.set(entry.title, { title_url: entry.title_url, episodes: [entry] })
     }
   }
   return groups
@@ -76,27 +76,27 @@ function groupByShow(entries: Array<WatchImportResult>) {
 function EntryList({ entries }: { entries: Array<WatchImportResult> }) {
   if (entries.length === 0) return null
 
-  const groups = [...groupByShow(entries).entries()].sort(
+  const groups = [...groupByTitle(entries).entries()].sort(
     (a, b) => b[1].episodes.length - a[1].episodes.length,
   )
 
   return (
     <Accordion type="multiple">
-      {groups.map(([show, { show_url, episodes }]) => (
-        <AccordionItem key={show} value={show}>
+      {groups.map(([title, { title_url, episodes }]) => (
+        <AccordionItem key={title} value={title}>
           <AccordionTrigger className="py-2 text-sm justify-start gap-1 flex-initial">
-            {show_url ? (
+            {title_url ? (
               <a
-                href={show_url}
+                href={title_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:underline text-primary"
                 onClick={(e) => e.stopPropagation()}
               >
-                {show}
+                {title}
               </a>
             ) : (
-              show
+              title
             )}
             <span className="text-muted-foreground">({episodes.length})</span>
           </AccordionTrigger>
@@ -132,7 +132,7 @@ function ImportResults({ result }: { result: WatchImportResults }) {
     { title: "Added", entries: result.added },
     { title: "Existing", entries: result.existing },
     {
-      title: "Skipped (Add the show to a channel first)",
+      title: "Skipped (Add the title to a channel first)",
       entries: result.skipped,
     },
   ].filter((c) => c.entries.length > 0)

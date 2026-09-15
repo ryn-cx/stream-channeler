@@ -1,19 +1,45 @@
 # TODO: Validate
+from datetime import UTC, datetime
+
 from plugins.Netflix import Netflix
-from tests.plugins.plugin_validator_alt import PluginValidatorAlt, StandardTestsAlt
+from tests.plugins.plugin_validator import (
+    InvalidURLValidator,
+    PluginValidator,
+    StandardTests,
+)
 
 
 # TODO: Validate
-class NetflixValidatorAlt(PluginValidatorAlt[Netflix]):
+class NetflixValidator(PluginValidator[Netflix]):
     plugin_class = Netflix
 
 
 # TODO: Validate
-class TestDrStone(StandardTestsAlt[Netflix], NetflixValidatorAlt):
-    """Test a show with more than 10 episodes in a season."""
-
-    show_id = "81046193"
+class TestAiringShow(StandardTests[Netflix], NetflixValidator):
+    import_time = datetime(2026, 9, 7, tzinfo=UTC)
+    title_key = "82760630"
     urls = (
-        "/title/{show_id}",
-        "/title/{show_id}/",
+        "/title/{title_key}",
+        "/title/{title_key}/",
     )
+
+
+# TODO: Validate
+class TestLargeTVShow(StandardTests[Netflix], NetflixValidator):
+    import_time = datetime(2026, 9, 8, tzinfo=UTC)
+    title_key = "80107103"
+    urls = ("/title/{title_key}",)
+
+
+# TODO: Do I want to do some complex support for trailers?
+class TestTVShowWithTrailers(StandardTests[Netflix], NetflixValidator):
+    import_time = datetime(2026, 9, 10, tzinfo=UTC)
+    title_key = "80095697"
+    urls = ("/title/{title_key}",)
+
+
+# TODO: Validate
+class TestInvalidTitleID(InvalidURLValidator[Netflix], NetflixValidator):
+    import_time = datetime(2026, 9, 9, tzinfo=UTC)
+    title_key = "99999999"
+    urls = ("/title/{title_key}",)

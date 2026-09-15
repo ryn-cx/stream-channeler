@@ -15,13 +15,12 @@ from tests.app.helpers.permissions import (
 from tests.app.users.utils import auth_headers, create_random_user
 
 ADMIN_ROUTES: list[tuple[Method, str]] = [
-    ("post", f"/seasons/{MISSING}/episodes"),
     ("get", "/episodes"),
     ("get", "/episodes/tmdb-matches"),
     ("get", "/episodes/unlocked"),
-    ("get", "/episodes/duplicated-canonical-episodes"),
-    ("get", "/episodes/canonical"),
-    ("get", f"/episodes/canonical/{MISSING}"),
+    ("get", "/episodes/duplicated-tmdb-episodes"),
+    ("get", "/episodes/tmdb"),
+    ("get", f"/episodes/tmdb/{MISSING}"),
     ("get", f"/episodes/{MISSING}"),
     ("get", f"/episodes/{MISSING}/tmdb-choices"),
     ("put", f"/episodes/{MISSING}/tmdb-url"),
@@ -29,9 +28,8 @@ ADMIN_ROUTES: list[tuple[Method, str]] = [
     ("delete", f"/episodes/{MISSING}/canonical/{MISSING}"),
     ("put", f"/episodes/{MISSING}/tmdb-unlink"),
     ("put", f"/episodes/{MISSING}/tmdb-absent"),
-    ("put", f"/episodes/{MISSING}/verify-canonical-link"),
+    ("put", f"/episodes/{MISSING}/verify-tmdb-link"),
     ("patch", f"/episodes/{MISSING}"),
-    ("delete", f"/episodes/{MISSING}"),
 ]
 
 
@@ -47,7 +45,7 @@ def test_episode_admin_routes_are_admin_only(
 
 
 # TODO: Validate
-@pytest.mark.parametrize("suffix", ["information", "non-canonical"])
+@pytest.mark.parametrize("suffix", ["information", "linked"])
 def test_episode_reads_are_open_to_anybody(
     session_scoped_client: TestClient,
     session_scoped_session: Session,

@@ -1,54 +1,44 @@
 # TODO: Validate
 from enum import StrEnum
 
-# Music is its own `Source` so a channel can take an artist without the video
-# catalogue coming with it, and so the two can be scheduled apart. Each source is
-# keyed by the name it is shown under, and the plugin owned channel every artist
-# is queued into is named after the music source it collects.
 VIDEO_SOURCE = "Crunchyroll"
 MUSIC_SOURCE = "Crunchyroll Music"
 
 
 # TODO: Validate
-class MusicCategory(StrEnum):
-    """One of the two listings an artist's releases are split into."""
-
+class CrunchyrollMusicCategory(StrEnum):
     MUSIC_VIDEO = "musicvideo"
     CONCERT = "concert"
 
 
-# The prefix Crunchyroll issues ids under, which is what a key is recognised by.
-CATEGORY_ID_PREFIXES = {
-    "MV": MusicCategory.MUSIC_VIDEO,
-    "MC": MusicCategory.CONCERT,
-}
-
-
 # TODO: Validate
-def show_is_an_artist(show_key: str) -> bool:
-    """Report whether a `Show` key belongs to an artist rather than a series."""
-    return show_key.startswith("MA")
+def build_url_regex(*path: str, group: str) -> str:
+    """Return the regex for a Crunchyroll url."""
+    return (
+        "(?x:"
+        # The sometimes present local prefix like de, pt-br, etc.
+        r"(?:\/[a-z]{2}(?:-[a-z]{2})?)?"
+        # The media type identifier, series, watch, artist, etc.
+        + "".join(rf"\/{segment}" for segment in path)
+        # The Crunchyroll key.
+        + rf"\/(?P<{group}>[A-Z0-9]{{9,}})"
+        # The URL suffix, usually a slug but other options are also valid.
+        r"(?:[\/?#]|$)"
+        ")"
+    )
 
 
-# TODO: Validate
-def show_is_a_series(show_key: str) -> bool:
-    """Report whether a `Show` key belongs to a series rather than an artist."""
-    return show_key.startswith("G")
-
-
-# TODO: Validate
-def season_is_music(season_key: str) -> bool:
-    """Report whether a `Season` key is for music."""
-    return season_key in set(MusicCategory)
-
-
-# TODO: Validate
-def episode_is_music(episode_key: str) -> bool:
-    """Report whether an `Episode` key belongs to a music video or a concert."""
-    return episode_key.startswith(tuple(CATEGORY_ID_PREFIXES))
-
-
-# TODO: Validate
-def music_episode_category(episode_key: str) -> MusicCategory:
-    """Return the listing an episode is a video or a concert of."""
-    return CATEGORY_ID_PREFIXES[episode_key[:2]]
+# https://www.crunchyroll.com/watch/musicvideo/MV5CD8B009
+MUSIC_VIDEO_URL_REGEX = build_url_regex(
+    "watch",
+    "musicvideo",
+    group="music_video_key",
+)
+# https://www.crunchyroll.com/watch/concert/MC413F1C5C
+CONCERT_URL_REGEX = build_url_regex("watch", "concert", group="concert_key")
+# https://www.crunchyroll.com/artist/MA899F54A4
+ARTIST_URL_REGEX = build_url_regex("artist", group="title_key")
+# https://www.crunchyroll.com/series/GEXH3W29Z
+SERIES_URL_REGEX = build_url_regex("series", group="title_key")
+# https://www.crunchyroll.com/watch/GVWU8XW1Z
+EPISODE_URL_REGEX = build_url_regex("watch", group="episode_key")

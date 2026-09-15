@@ -3,7 +3,6 @@ import { useMutation } from "@tanstack/react-query"
 import {
   ArrowRightLeft,
   Blend,
-  Check,
   CircleSlash,
   Combine,
   Hash,
@@ -20,7 +19,11 @@ import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import type { TmdbMatchRow } from "./tmdbMatchColumns"
 import { useOpenEpisodeEditor } from "./tmdbMatchEditing"
-import { useSettleTmdbMatch } from "./tmdbMatchesQuery"
+import {
+  SETTLE_TMDB_MATCH_MUTATION_KEY,
+  type SettleTmdbMatchVariables,
+  useRereadTmdbMatches,
+} from "./tmdbMatchesQuery"
 import { useTmdbMatchSelection } from "./tmdbMatchSelection"
 
 // TODO: Validate
@@ -39,60 +42,55 @@ export function TmdbMatchConfirmButton({
   kind,
 }: {
   episodeId: string
-  match: NonNullable<TmdbMatchRow["best_match"]>
+  match: NonNullable<TmdbMatchRow["season_episode_match"]>
   kind:
-    | "name"
     | "season_episode"
     | "absolute"
     | "episode_absolute"
     | "description_embedding"
-    | "description_blended"
+    | "description_tfidf"
     | "title_embedding"
-    | "title_blended"
+    | "title_tfidf"
 }) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
-  const { settle, restore, reread } = useSettleTmdbMatch()
+  const reread = useRereadTmdbMatches()
 
   const confirmMutation = useMutation({
-    mutationFn: () =>
+    mutationKey: SETTLE_TMDB_MATCH_MUTATION_KEY,
+    mutationFn: ({ episodeIds }: SettleTmdbMatchVariables) =>
       EpisodesService.adminLinkEpisodeToTmdb({
-        episodeId,
-        canonicalEpisodeId: match.episode.id,
+        episodeId: episodeIds[0],
+        tmdbEpisodeId: match.episode.id,
       }),
-    onMutate: () => settle(episodeId),
     onSuccess: () =>
       showSuccessToast(
         `Linked to ${match.episode.name ?? "the suggested episode"}`,
       ),
-    onError: (error: unknown, _variables, previous) => {
-      restore(previous)
+    onError: (error: unknown) =>
       handleError.call(
         showErrorToast,
         error as Parameters<typeof handleError>[0],
-      )
-    },
+      ),
     onSettled: reread,
   })
 
   const icons = {
-    name: Check,
     season_episode: Hash,
     absolute: ListOrdered,
     episode_absolute: ArrowRightLeft,
     description_embedding: Sparkles,
-    description_blended: Blend,
+    description_tfidf: Blend,
     title_embedding: Type,
-    title_blended: Combine,
+    title_tfidf: Combine,
   }
   const labels = {
-    name: "Name Match",
     season_episode: "Number Match",
     absolute: "Absolute Match",
     episode_absolute: "Episode as Absolute Match",
     description_embedding: "Description Match",
-    description_blended: "Blended Description Match",
+    description_tfidf: "TF-IDF Description Match",
     title_embedding: "Title Match",
-    title_blended: "Blended Title Match",
+    title_tfidf: "TF-IDF Title Match",
   }
   const Icon = icons[kind]
   const label = labels[kind]
@@ -105,7 +103,7 @@ export function TmdbMatchConfirmButton({
         size="sm"
         disabled={confirmMutation.isPending}
         title={`Link to ${match.episode.name ?? `the episode this ${label} offers`}`}
-        onClick={() => confirmMutation.mutate()}
+        onClick={() => confirmMutation.mutate({ episodeIds: [episodeId] })}
         style={{ color: matchColor, borderColor: matchColor }}
       >
         <Icon className="h-4 w-4" />
@@ -135,24 +133,22 @@ export function TmdbMatchConfirmButton({
  */
 export function TmdbMatchActions({ episode }: { episode: TmdbMatchRow }) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
-  const { settle, restore, reread } = useSettleTmdbMatch()
+  const reread = useRereadTmdbMatches()
   const openEditor = useOpenEpisodeEditor()
   const selection = useTmdbMatchSelection()
 
   const absentMutation = useMutation({
-    mutationFn: () =>
+    mutationKey: SETTLE_TMDB_MATCH_MUTATION_KEY,
+    mutationFn: ({ episodeIds }: SettleTmdbMatchVariables) =>
       EpisodesService.adminMarkEpisodeAbsentFromTmdb({
-        episodeId: episode.episode.id,
+        episodeId: episodeIds[0],
       }),
-    onMutate: () => settle(episode.episode.id),
     onSuccess: () => showSuccessToast("Marked as not on TMDB"),
-    onError: (error: unknown, _variables, previous) => {
-      restore(previous)
+    onError: (error: unknown) =>
       handleError.call(
         showErrorToast,
         error as Parameters<typeof handleError>[0],
-      )
-    },
+      ),
     onSettled: reread,
   })
 
@@ -182,7 +178,9 @@ export function TmdbMatchActions({ episode }: { episode: TmdbMatchRow }) {
         size="sm"
         disabled={absentMutation.isPending}
         title="Settle this as an episode TMDB has no record of"
-        onClick={() => absentMutation.mutate()}
+        onClick={() =>
+          absentMutation.mutate({ episodeIds: [episode.episode.id] })
+        }
       >
         <CircleSlash className="h-4 w-4" />
         Not on TMDB

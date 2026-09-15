@@ -15,6 +15,9 @@ import {
   type MediaTableResult,
   serializeTableQuery,
 } from "@/components/Common/DataTable"
+import { generateSeed } from "@/randomSeed"
+
+const LIST_RANDOM_SEED = generateSeed()
 
 // One row shape now serves every scope and viewer.
 export type ChannelRow = ChannelListOutput
@@ -48,12 +51,14 @@ export function useScopedChannels<TData extends ChannelRow = ChannelRow>(
       params.limit,
       params.sortOptions,
       params.filterOptions,
+      LIST_RANDOM_SEED,
     ],
     queryFn: async (): Promise<MediaTableResult<TData>> =>
       (await ChannelsService.getChannels({
         scope,
         offset: params.offset,
         limit: params.limit,
+        randomSeed: LIST_RANDOM_SEED,
         ...serializeTableQuery(params, columns),
       })) as MediaTableResult<TData>,
     placeholderData: keepPreviousData,

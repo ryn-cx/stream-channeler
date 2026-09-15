@@ -12,16 +12,16 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import SelectOfScalar
+from tqdm import tqdm
 
-from app.canonical_media.episodes import canonical_episode_link, links_of
 from app.channels.episode_selector.visibility import channel_access_condition
 from app.channels.models import (
     Channel,
     ChannelEpisodeFilter,
     ChannelEpisodeSourceFilter,
     ChannelSeasonFilter,
-    ChannelShow,
     ChannelSourceFilter,
+    ChannelTitle,
 )
 from app.database import engine, load_models
 from app.episodes.models import Episode
@@ -29,13 +29,17 @@ from app.log import configure_logging
 from app.models import MediaMixin
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show, ShowCanonicalShow
 from app.sources.models import Source
-from app.users.constants import PLUGIN_USER_EMAIL
+from app.titles.models import Title, TitleTmdbTitle
+from app.tmdb_media.episodes import links_of, tmdb_episode_link
 from app.users.models import User
+from app.users.plugin_user import is_plugin_user
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin
-from plugins.utils.manage_plugins import import_plugins, plugins
+from plugins.utils.manage_plugins import (
+    import_plugins,
+    plugins,
+)
 
 logger = logger.bind(source="updater")
 
@@ -52,9 +56,9 @@ def _channel_inclusion_clause(
     channel_owner: Any,  # noqa: ANN401 - The `User` alias the channel is joined to.
 ) -> ColumnElement[bool]:
     return (
-        col(ChannelShow.is_blacklist_only).is_(False)
+        col(ChannelTitle.is_blacklist_only).is_(False)
         & channel_access_condition()
-        & (col(channel_owner.email) != PLUGIN_USER_EMAIL)
+        & ~is_plugin_user(channel_owner.email)
     )
 
 
@@ -64,33 +68,23 @@ def _channel_season_exists(
     outer: Any,  # noqa: ANN401 - The model the clause is asked about.
     condition: Callable[[Any], ColumnElement[bool]] | None = None,
 ) -> ColumnElement[bool]:
-    """EXISTS clause requiring `season` to be included in some channel.
-
-    A channel holds a title rather than one website's non-canonical row of it, and which
-    title an episode belongs to is its canonical episode's answer, since a listing that
-    mixes titles holds seasons of each of them. An episode that is linked to nothing
-    sits where its own listing filed it, under that listing's title.
-
-    `condition` is handed the listing the season is on, which is what ties the
-    clause to the row it is being asked about.
-    """
     copy_episode = aliased(Episode)
-    canonical_episode = aliased(Episode)
-    copy_link = canonical_episode_link()
-    canonical_season = aliased(Season)
-    copy_show = aliased(Show)
-    copy_show_link = aliased(ShowCanonicalShow)
+    tmdb_episode = aliased(Episode)
+    copy_link = tmdb_episode_link()
+    tmdb_season = aliased(Season)
+    copy_title = aliased(Title)
+    copy_title_link = aliased(TitleTmdbTitle)
     channel_owner = aliased(User)
     season_id = func.coalesce(
-        col(canonical_episode.season_id),
+        col(tmdb_episode.season_id),
         col(copy_episode.season_id),
     )
     episode_id = func.coalesce(
-        col(copy_link.canonical_episode_id),
+        col(copy_link.tmdb_episode_id),
         col(copy_episode.id),
     )
-    conditions = [condition(copy_show)] if condition else []
-    statement = select(ChannelShow.id).select_from(copy_episode)
+    conditions = [condition(copy_title)] if condition else []
+    statement = select(ChannelTitle.id).select_from(copy_episode)
     if season is not outer:
         statement = statement.join(
             season,
@@ -99,53 +93,52 @@ def _channel_season_exists(
     return (
         statement.outerjoin(copy_link, links_of(copy_episode, copy_link))
         .outerjoin(
-            canonical_episode,
-            col(copy_link.canonical_episode_id) == col(canonical_episode.id),
+            tmdb_episode,
+            col(copy_link.tmdb_episode_id) == col(tmdb_episode.id),
         )
         .outerjoin(
-            canonical_season,
-            col(canonical_episode.season_id) == col(canonical_season.id),
+            tmdb_season,
+            col(tmdb_episode.season_id) == col(tmdb_season.id),
         )
-        .join(copy_show, col(copy_show.id) == col(season.show_id))
+        .join(copy_title, col(copy_title.id) == col(season.title_id))
         # An episode with no canonical row of its own belongs to every title its listing
         # is linked to, since a listing is no more a non-canonical row of one than of
-        # another, so the clause holds where any of them is on a channel.
         .outerjoin(
-            copy_show_link,
-            col(copy_show_link.show_id) == col(copy_show.id),
+            copy_title_link,
+            col(copy_title_link.title_id) == col(copy_title.id),
         )
         # A listing that is linked to nothing is the title itself and answers for
         # itself, the same way an episode standing for nothing is the episode, so
         # a channel naming it names it by its own id and the last fallback is what
         # reaches those rows.
         .join(
-            ChannelShow,
-            col(ChannelShow.canonical_show_id)
+            ChannelTitle,
+            col(ChannelTitle.tmdb_title_id)
             == func.coalesce(
-                col(canonical_season.show_id),
-                col(copy_show_link.canonical_show_id),
-                col(copy_show.id),
+                col(tmdb_season.title_id),
+                col(copy_title_link.tmdb_title_id),
+                col(copy_title.id),
             ),
         )
-        .join(Channel, col(Channel.id) == col(ChannelShow.channel_id))
+        .join(Channel, col(Channel.id) == col(ChannelTitle.channel_id))
         .join(channel_owner, col(Channel.user_id) == col(channel_owner.id))
         .outerjoin(
             ChannelSeasonFilter,
-            (col(ChannelSeasonFilter.channel_show_id) == col(ChannelShow.id))
+            (col(ChannelSeasonFilter.channel_title_id) == col(ChannelTitle.id))
             & (col(ChannelSeasonFilter.season_id) == season_id),
         )
         .outerjoin(
             ChannelSourceFilter,
             and_(
-                col(ChannelSourceFilter.channel_show_id) == col(ChannelShow.id),
-                col(ChannelSourceFilter.show_id) == col(copy_show.id),
+                col(ChannelSourceFilter.channel_title_id) == col(ChannelTitle.id),
+                col(ChannelSourceFilter.title_id) == col(copy_title.id),
             ),
         )
         .outerjoin(
             ChannelEpisodeFilter,
             and_(
-                col(ChannelEpisodeFilter.channel_show_id) == col(ChannelShow.id),
-                col(ChannelEpisodeFilter.canonical_episode_id) == episode_id,
+                col(ChannelEpisodeFilter.channel_title_id) == col(ChannelTitle.id),
+                col(ChannelEpisodeFilter.tmdb_episode_id) == episode_id,
                 or_(
                     col(ChannelEpisodeFilter.expires_at).is_(None),
                     col(ChannelEpisodeFilter.expires_at) > tz_datetime.now(),
@@ -155,9 +148,10 @@ def _channel_season_exists(
         .outerjoin(
             ChannelEpisodeSourceFilter,
             and_(
-                col(ChannelEpisodeSourceFilter.channel_show_id) == col(ChannelShow.id),
-                col(ChannelEpisodeSourceFilter.canonical_episode_id) == episode_id,
-                col(ChannelEpisodeSourceFilter.show_id) == col(copy_show.id),
+                col(ChannelEpisodeSourceFilter.channel_title_id)
+                == col(ChannelTitle.id),
+                col(ChannelEpisodeSourceFilter.tmdb_episode_id) == episode_id,
+                col(ChannelEpisodeSourceFilter.title_id) == col(copy_title.id),
                 or_(
                     col(ChannelEpisodeSourceFilter.expires_at).is_(None),
                     col(ChannelEpisodeSourceFilter.expires_at) > tz_datetime.now(),
@@ -181,13 +175,13 @@ def _season_in_channel_exists() -> ColumnElement[bool]:
 
 
 # TODO: Validate
-def _show_has_season_in_channel_exists() -> ColumnElement[bool]:
-    """EXISTS clause requiring the outer Show to have a Season included in a channel."""
+def _title_has_season_in_channel_exists() -> ColumnElement[bool]:
+    """EXISTS clause requiring the outer Title to have a Season included in a channel."""
     season = aliased(Season)
     return _channel_season_exists(
         season,
-        Show,
-        lambda copy_show: col(copy_show.id) == col(Show.id),
+        Title,
+        lambda copy_title: col(copy_title.id) == col(Title.id),
     )
 
 
@@ -198,7 +192,7 @@ def _source_has_season_in_channel_exists() -> ColumnElement[bool]:
     return _channel_season_exists(
         season,
         Source,
-        lambda copy_show: col(copy_show.source_id) == col(Source.id),
+        lambda copy_title: col(copy_title.source_id) == col(Source.id),
     )
 
 
@@ -210,7 +204,7 @@ def _plugin_has_season_in_channel_exists() -> ColumnElement[bool]:
     return _channel_season_exists(
         season,
         Plugin,
-        lambda copy_show: col(copy_show.source_id).in_(
+        lambda copy_title: col(copy_title.source_id).in_(
             select(plugin_source.id)
             .where(col(plugin_source.plugin_id) == col(Plugin.id))
             .correlate(Plugin),
@@ -220,42 +214,30 @@ def _plugin_has_season_in_channel_exists() -> ColumnElement[bool]:
 
 # TODO: Validate
 def _plugin_holds_no_media_exists() -> ColumnElement[bool]:
-    """EXISTS clause matching a Plugin with no Source of its own.
-
-    Every other clause here asks whether anything below a row is in a channel,
-    which a plugin holding no media of its own can never answer: it has no
-    `Source` for the question to be asked through.
-    """
     return ~(select(Source.id).where(col(Source.plugin_id) == col(Plugin.id)).exists())
 
 
 # TODO: Validate
 def _any_channel_holds_a_title_exists() -> ColumnElement[bool]:
-    """EXISTS clause requiring some channel to hold some title.
-
-    The stand-in, for a plugin holding no media of its own, for the question the
-    other clauses ask. Its rows are what every channel reads a title out of, so
-    a channel holding anything at all is a channel its rows are behind.
-    """
     channel_owner = aliased(User)
     return (
-        select(ChannelShow.id)
-        .select_from(ChannelShow)
-        .join(Channel, col(Channel.id) == col(ChannelShow.channel_id))
+        select(ChannelTitle.id)
+        .select_from(ChannelTitle)
+        .join(Channel, col(Channel.id) == col(ChannelTitle.channel_id))
         .join(channel_owner, col(Channel.user_id) == col(channel_owner.id))
-        .where(col(channel_owner.email) != PLUGIN_USER_EMAIL)
+        .where(~is_plugin_user(channel_owner.email))
         .exists()
     )
 
 
 # Media classes are updated in this order per plugin because updating a plugin can mark
 # its own sources outdated, which the Source pass then picks up in
-# the same run; the same cascade applies down the Source -> Show -> Season -> Episode
+# the same run; the same cascade applies down the Source -> Title -> Season -> Episode
 # chain.
 MEDIA_CLASSES_IN_ORDER: tuple[MediaClass, ...] = (
     Plugin,
     Source,
-    Show,
+    Title,
     Season,
     Episode,
 )
@@ -267,7 +249,7 @@ def _restrict_to_media_in_channel[ResultT](
     media_class: MediaClass,
 ) -> SelectOfScalar[ResultT]:
     # Skip items that have no Season included in any channel anywhere below them
-    # in the Plugin -> Source -> Show -> Season tree, so unused media is not updated.
+    # in the Plugin -> Source -> Title -> Season tree, so unused media is not updated.
     if media_class is Plugin:
         return statement.where(
             _plugin_has_season_in_channel_exists()
@@ -275,46 +257,46 @@ def _restrict_to_media_in_channel[ResultT](
         )
     if media_class is Source:
         return statement.where(_source_has_season_in_channel_exists())
-    if media_class is Show:
-        return statement.where(_show_has_season_in_channel_exists())
+    if media_class is Title:
+        return statement.where(_title_has_season_in_channel_exists())
     if media_class in (Season, Episode):
         return statement.where(_season_in_channel_exists())
     return statement
 
 
 # TODO: Validate
-def _show_key(item: MediaMixin[Any]) -> str | None:
-    """Return the key of the show `item` belongs to, where it belongs to one."""
-    if isinstance(item, Show):
+def _title_key(item: MediaMixin[Any]) -> str | None:
+    """Return the key of the title `item` belongs to, where it belongs to one."""
+    if isinstance(item, Title):
         return item.key
     if isinstance(item, Season):
-        return item.show.key
+        return item.title.key
     if isinstance(item, Episode):
-        return item.season.show.key
+        return item.season.title.key
     return None
 
 
 # TODO: Validate
-def _grouped_by_show[ItemT: MediaMixin[Any]](
+def _grouped_by_title[ItemT: MediaMixin[Any]](
     items: Sequence[ItemT],
 ) -> list[list[ItemT]]:
-    """Gather `items` into runs of one show, in the order the shows first appear.
+    """Gather `items` into runs of one title, in the order the titles first appear.
 
-    A plugin reads a show's files once and answers every item of that show out of
-    what it read, so the items of one show are handed to one view of the plugin
-    rather than to one view each. Ordering is only permuted within a show, never
-    across them, so the oldest show is still updated first.
+    A plugin reads a title's files once and answers every item of that title out of
+    what it read, so the items of one title are handed to one view of the plugin
+    rather than to one view each. Ordering is only permuted within a title, never
+    across them, so the oldest title is still updated first.
     """
     groups: list[list[ItemT]] = []
-    group_by_show_key: dict[str, list[ItemT]] = {}
+    group_by_title_key: dict[str, list[ItemT]] = {}
     for item in items:
-        show_key = _show_key(item)
-        if show_key is None:
+        title_key = _title_key(item)
+        if title_key is None:
             groups.append([item])
             continue
-        if (group := group_by_show_key.get(show_key)) is None:
+        if (group := group_by_title_key.get(title_key)) is None:
             group = []
-            group_by_show_key[show_key] = group
+            group_by_title_key[title_key] = group
             groups.append(group)
         group.append(item)
     return groups
@@ -351,15 +333,23 @@ def _process_outdated_items(
     logger.info(log_msg)
 
     updated_count = 0
-    for group in _grouped_by_show(outdated_items):
-        # One view of the plugin per show, so what it read for the show answers
-        # every item of it and is let go when the show is done with.
-        plugin_instance = plugin_class(session)
+    plugin_record = Plugin.get_one(session, plugin_key)
+    progress = tqdm(total=len(outdated_items), unit=media_type_name)
+    for group in _grouped_by_title(outdated_items):
+        # One view of the plugin per title, so what it read for the title answers
+        # every item of it and is let go when the title is done with.
+        plugin_instance = plugin_class(session, plugin_record)
         for item in group:
             log_msg = f"[{plugin_key}] Updating {media_type_name}: {item.key}"
             logger.info(log_msg)
+            progress.set_description(f"[{plugin_key}] {item.key}")
+            progress.update()
             try:
-                getattr(plugin_instance, update_method_name)(item)
+                update = getattr(plugin_instance, update_method_name)
+                if media_class is Source:
+                    update(item, item.update_at)
+                else:
+                    update(item)
 
                 log_msg = (
                     f"[{plugin_key}] Successfully updated {media_type_name}: {item.key}"
@@ -385,6 +375,7 @@ def _process_outdated_items(
                     # the update until the issue is resolved.
                     item.update_at = tz_datetime.max()
                 session.commit()
+    progress.close()
 
     log_msg = (
         f"[{plugin_key}] Updated {updated_count} out of {len(outdated_items)} "
@@ -423,7 +414,7 @@ def _installed_plugin_keys() -> list[str]:
 # TODO: Validate
 def _specialized_plugin_keys() -> set[str]:
     """Return the keys of the plugins that have an update run of their own."""
-    return {plugin.plugin_key() for plugin in plugins if plugin.specialized_updater()}
+    return {plugin.plugin_name() for plugin in plugins if plugin.specialized_updater()}
 
 
 # TODO: Validate
@@ -478,7 +469,7 @@ def _seconds_until_next_update() -> float:
 # TODO: Validate
 def update_outdated() -> None:
     """Update all outdated entries."""
-    plugin_classes_by_key = {plugin.plugin_key(): plugin for plugin in plugins}
+    plugin_classes_by_key = {plugin.plugin_name(): plugin for plugin in plugins}
     specialized_keys = _specialized_plugin_keys()
 
     for plugin_key in _installed_plugin_keys():
@@ -509,5 +500,5 @@ def _update_outdated_forever() -> None:
 
 
 if __name__ == "__main__":
-    configure_logging()
+    configure_logging(lambda message: tqdm.write(message, end=""))
     _update_outdated_forever()

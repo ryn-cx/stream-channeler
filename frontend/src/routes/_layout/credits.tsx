@@ -16,8 +16,8 @@ function Credits() {
       <h1 className="text-4xl font-bold tracking-tight">Credits</h1>
 
       <p className="mt-4 max-w-xl text-sm text-muted-foreground">
-        Media information from TMDB, JustWatch, Watchmode, and the Stream
-        Channeler Community.
+        Media information from TMDB, JustWatch, and the Stream Channeler
+        Community.
       </p>
 
       <section className="mt-8 rounded-lg border p-6">
@@ -44,15 +44,6 @@ function Credits() {
           be watched - is provided by{" "}
           <CreditLink href="https://www.justwatch.com">JustWatch</CreditLink>.
           This product is not endorsed or certified by JustWatch.
-        </p>
-      </section>
-
-      <section className="mt-4 rounded-lg border p-6">
-        <h2 className="text-lg font-semibold">Watchmode</h2>
-        <p className="mt-4 max-w-xl text-sm text-muted-foreground">
-          Streaming availability is also provided by{" "}
-          <CreditLink href="https://www.watchmode.com">Watchmode</CreditLink>.
-          This product is not endorsed or certified by Watchmode.
         </p>
       </section>
 

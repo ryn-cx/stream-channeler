@@ -30,7 +30,6 @@ def parse_cors(v: str | list[str] | None) -> list[str] | str:
 # TODO: Validate
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        # Top level env files (one level above ./backend/). `.env` holds committed
         # `changethis` placeholders; `.env.local` (gitignored) overrides them with
         # real secrets for local dev. Later files win.
         env_file=("../.env", "../.env.local"),

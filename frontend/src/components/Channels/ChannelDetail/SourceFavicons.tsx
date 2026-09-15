@@ -10,30 +10,28 @@ import {
 /** The favicons of the websites' links a season or episode was found on. */
 // TODO: Validate
 export function SourceFavicons({
-  showIds,
-  sourcesByShowId,
+  titleIds,
+  sourcesByTitleId,
 }: {
-  showIds: string[]
-  sourcesByShowId: Map<string, WhitelistSourceOutput>
+  titleIds: string[]
+  sourcesByTitleId: Map<string, WhitelistSourceOutput>
 }) {
   return (
     <span className="flex items-center gap-1 shrink-0">
-      {showIds.map((showId) => {
-        const source = sourcesByShowId.get(showId)
+      {titleIds.map((titleId) => {
+        const source = sourcesByTitleId.get(titleId)
         if (!source?.favicon_url) return null
         return (
-          <Tooltip key={showId}>
+          <Tooltip key={titleId}>
             <TooltipTrigger asChild>
               <img
                 referrerPolicy="no-referrer"
                 src={source.favicon_url}
-                alt={`${source.source_name} favicon`}
+                alt={`${source.source_key} favicon`}
                 className="size-6 shrink-0"
               />
             </TooltipTrigger>
-            <TooltipContent>
-              {source.source_name ?? "Unknown source"}
-            </TooltipContent>
+            <TooltipContent>{source.source_key}</TooltipContent>
           </Tooltip>
         )
       })}

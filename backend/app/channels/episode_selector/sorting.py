@@ -9,17 +9,17 @@ from sqlalchemy import String, case, literal, literal_column
 from sqlalchemy.sql.expression import ColumnElement, UnaryExpression
 from sqlmodel import and_, col, desc, func
 
-from app.channels.episode_selector.canonical_columns import CanonicalColumns
-from app.channels.episode_selector.canonical_entities import (
-    CANONICAL_EPISODE,
-    CANONICAL_SEASON,
+from app.channels.episode_selector.tmdb_columns import TmdbColumns
+from app.channels.episode_selector.tmdb_entities import (
+    TMDB_EPISODE,
+    TMDB_SEASON,
     episode_id,
 )
 from app.channels.episode_selector.watch_filters import (
     EPISODE_LAST_WATCHED_SUBQUERY,
     LAST_WATCHED_COLUMNS,
 )
-from app.channels.models import ChannelSavedEpisodeOrder, ChannelShow
+from app.channels.models import ChannelSavedEpisodeOrder, ChannelTitle
 from app.channels.schemas import SortKeyInput
 from app.models import ZERO_LAST_SUFFIX
 from app.plugins.models import Plugin
@@ -52,16 +52,16 @@ class SortExpressionBuilder:
         self,
         random_seed: int,
         user: User | None,
-        fallbacks: CanonicalColumns,
+        fallbacks: TmdbColumns,
         channel_attribution: dict[UUID, UUID] | None = None,
-        started_shows: set[UUID] | None = None,
+        started_titles: set[UUID] | None = None,
     ) -> None:
         """Build the sort expressions for one read of one channel."""
         self._random_seed = random_seed
         self._user = user
         self._fallbacks = fallbacks
         self._channel_attribution = channel_attribution or {}
-        self._started_shows = started_shows or set()
+        self._started_titles = started_titles or set()
 
     # TODO: Validate
     def expression(self, sort_key: SortKeyInput) -> ColumnElement[Any]:
@@ -88,7 +88,6 @@ class SortExpressionBuilder:
 
     # TODO: Validate
     def random_hash(self, expr: ColumnElement[Any]) -> ColumnElement[Any]:
-        """Shuffle `expr` into an order that holds for this channel's seed."""
         return func.hashtext(
             func.concat(
                 func.cast(expr, String),
@@ -104,7 +103,7 @@ class SortExpressionBuilder:
         which is not the channel it was added through, so the channels combined
         into this one stand for everything they reach.
         """
-        source_channel = col(ChannelShow.channel_id)
+        source_channel = col(ChannelTitle.channel_id)
         if not self._channel_attribution:
             return source_channel
         return case(
@@ -131,7 +130,7 @@ class SortExpressionBuilder:
             random_ids: dict[str, Any] = {
                 "episode": episode_id(),
                 "season": self._fallbacks.episode_season_id(),
-                "show": self._fallbacks.show_id(),
+                "title": self._fallbacks.title_id(),
                 "source": Source.id,
                 "plugin": Plugin.id,
             }
@@ -149,10 +148,10 @@ class SortExpressionBuilder:
             )
         if field == "episode_count":
             return func.count(episode_id()).over(
-                partition_by=self._fallbacks.show_id(),
+                partition_by=self._fallbacks.title_id(),
             )
-        if field == "started" and sort_key.model == "show":
-            return self._started_show_expr()
+        if field == "started" and sort_key.model == "title":
+            return self._started_title_expr()
 
         return self._stored_column(sort_key.model, field, sort_key.model_class)
 
@@ -182,7 +181,7 @@ class SortExpressionBuilder:
 
         if sort_key.field == "random":
             episode_field: ColumnElement[Any] = self.random_hash(
-                self._fallbacks.show_id(),
+                self._fallbacks.title_id(),
             )
         elif sort_key.field == "recently_aired":
             episode_field = self._recently_aired_expr(sort_key)
@@ -192,7 +191,7 @@ class SortExpressionBuilder:
             episode_field = self._stored_column(
                 "episode",
                 sort_key.field,
-                CANONICAL_EPISODE,
+                TMDB_EPISODE,
             )
 
         agg_funcs: dict[str, Any] = {
@@ -206,7 +205,7 @@ class SortExpressionBuilder:
             raise ValueError(msg)
         # Aggregated over the title rather than over one website's non-canonical row of
         # it, so a channel carrying a title twice reads one number for it either way.
-        return agg_func(episode_field).over(partition_by=self._fallbacks.show_id())
+        return agg_func(episode_field).over(partition_by=self._fallbacks.title_id())
 
     # TODO: Validate
     def _sequential_rank(
@@ -244,23 +243,23 @@ class SortExpressionBuilder:
             return zero_last(number) if zero_last_numbers else number
 
         if model == "episode":
-            canonical_number = numbered(self._fallbacks.number("episode"))
+            tmdb_number = numbered(self._fallbacks.number("episode"))
             return func.dense_rank().over(
                 partition_by=self._fallbacks.episode_season_id(),
                 order_by=(
-                    case((canonical_number.is_(None), 1), else_=0),
-                    canonical_number,
-                    self._fallbacks.column("episode", "sort_order", CANONICAL_EPISODE),
+                    case((tmdb_number.is_(None), 1), else_=0),
+                    tmdb_number,
+                    self._fallbacks.column("episode", "sort_order", TMDB_EPISODE),
                 ),
             )
         if model == "season":
-            canonical_number = numbered(self._fallbacks.number("season"))
+            tmdb_number = numbered(self._fallbacks.number("season"))
             return func.dense_rank().over(
-                partition_by=self._fallbacks.show_id(),
+                partition_by=self._fallbacks.title_id(),
                 order_by=(
-                    case((canonical_number.is_(None), 1), else_=0),
-                    canonical_number,
-                    self._fallbacks.column("season", "sort_order", CANONICAL_SEASON),
+                    case((tmdb_number.is_(None), 1), else_=0),
+                    tmdb_number,
+                    self._fallbacks.column("season", "sort_order", TMDB_SEASON),
                 ),
             )
         msg = f"sequential is not supported for model '{model}'"
@@ -271,14 +270,14 @@ class SortExpressionBuilder:
         cutoff = sort_key.recently_aired_date or (
             tz_datetime.now() - timedelta(days=sort_key.days or 7)
         )
-        air_date = self._fallbacks.column("episode", "air_date", CANONICAL_EPISODE)
+        air_date = self._fallbacks.column("episode", "air_date", TMDB_EPISODE)
         return case(
             (and_(air_date.is_not(None), air_date >= cutoff), 1),
             else_=0,
         )
 
     # TODO: Validate
-    def _started_show_expr(self) -> ColumnElement[Any]:
+    def _started_title_expr(self) -> ColumnElement[Any]:
         """Whether the `User` has watched anything of the title this episode is of.
 
         A watch names the non-canonical row that played it, which is read back to the
@@ -288,9 +287,9 @@ class SortExpressionBuilder:
         that listing is linked to - all of them, since a listing is no more
         linked to one title than to another.
         """
-        if not self._user or not self._started_shows:
+        if not self._user or not self._started_titles:
             return literal_column("0")
         return case(
-            (self._fallbacks.show_id().in_(self._started_shows), 1),
+            (self._fallbacks.title_id().in_(self._started_titles), 1),
             else_=0,
         )

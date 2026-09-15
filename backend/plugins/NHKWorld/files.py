@@ -1,27 +1,35 @@
 # TODO: Validate
-from collections.abc import Sequence
-from datetime import datetime, timedelta
+"""The files NHK World is read out of."""
+
+from __future__ import annotations
+
+import json
 from functools import cache
-from typing import Any, override
+from typing import TYPE_CHECKING, override
 
 from naphki import Naphki
 from naphki.exceptions import ProgramNotFoundError
-from naphki.shows_search import ShowsSearch as ShowsSearchEndpoint
-from naphki.shows_search.models import ShowsSearchModel
 from naphki.video_episodes import VideoEpisodes as VideoEpisodesEndpoint
-from naphki.video_episodes.models import Image as EpisodeImage
-from naphki.video_episodes.models import Item, VideoEpisodesModel
+from naphki.video_episodes.models import VideoEpisodesModel
 from naphki.video_program import VideoProgram as VideoProgramEndpoint
-from naphki.video_program.models import LandscapeItem, PortraitItem, VideoProgramModel
-from sqlmodel import Session
+from naphki.video_program.models import VideoProgramModel
+from naphki.video_programs import VideoPrograms as VideoProgramsEndpoint
+from naphki.video_programs.models import VideoProgramsModel
 
-from app.files.models import File
-from app.plugins.models import Plugin
 from app.utils import tz_datetime
-from plugins.utils.abstract_plugin import PluginShowIdentity
-from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import BaseFile, EndpointFile
+from plugins.utils.base_plugin.files import (
+    PagedEndpointFile,
+    SingleArgEndpointFile,
+)
+from plugins.utils.constants import INCOMPLETE_STATUS
 from plugins.utils.get_around_client import get_around_client
+
+if TYPE_CHECKING:
+    from naphki.video_episodes.models import Item
+    from naphki.video_programs.models import Item as ProgramItem
+    from sqlmodel import Session
+
+    from app.plugins.models import Plugin
 
 
 # TODO: Validate
@@ -31,9 +39,7 @@ def naphki() -> Naphki:
 
 
 # TODO: Validate
-class VideoProgram(EndpointFile[VideoProgramModel]):
-    """Video program file."""
-
+class VideoProgram(SingleArgEndpointFile[VideoProgramModel]):
     # TODO: Validate
     @override
     def _endpoint(self) -> VideoProgramEndpoint:
@@ -47,222 +53,68 @@ class VideoProgram(EndpointFile[VideoProgramModel]):
 
 
 # TODO: Validate
-class VideoEpisodes(EndpointFile[VideoEpisodesModel]):
-    """Video episodes file."""
-
+class VideoEpisodes(PagedEndpointFile[VideoEpisodesModel]):
     # TODO: Validate
     @override
-    def _endpoint(self) -> VideoEpisodesEndpoint:
+    def _endpoint(self) -> VideoEpisodesEndpoint:  # type: ignore[override]
         return naphki().video_episodes
 
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self._endpoint().download_merged_until_datetime(self.unique_identifier)
+        return json.dumps(
+            self._endpoint().download_until_datetime(self.unique_identifier),
+        )
 
     # TODO: Validate
     def items(self) -> list[Item]:
-        return self.parsed().items
+        return [item for page in self.parsed() for item in page.items]
 
 
 # TODO: Validate
-class NewVideoEpisodes(EndpointFile[VideoEpisodesModel]):
-    """New video episodes file."""
+class NewVideoEpisodes(PagedEndpointFile[VideoEpisodesModel]):
+    # TODO: Validate
+    @override
+    def _initial_status_after_downloading(self) -> str:
+        return INCOMPLETE_STATUS
 
     # TODO: Validate
     @override
-    def _endpoint(self) -> VideoEpisodesEndpoint:
+    def _endpoint(self) -> VideoEpisodesEndpoint:  # type: ignore[override]
         return naphki().video_episodes
 
-    # TODO: Consider moving this login into naphki
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        # Page 20 at a time (the API default) rather than the 100-entry pages
-        # get_all() uses. The initial baseline (to_datetime == now) stops after
-        # the first page, and day-to-day there are rarely more than a handful of
-        # new episodes, so a single page almost always covers the gap.
-        return self._endpoint().download_merged_until_datetime(
-            end_datetime=self.identifier_datetime(),
+        return json.dumps(
+            self._endpoint().download_until_datetime(
+                end_datetime=tz_datetime.fromisoformat(self.unique_identifier),
+            ),
         )
 
     # TODO: Validate
     def items(self) -> list[Item]:
-        return self.parsed().items
+        return [item for page in self.parsed() for item in page.items]
 
 
 # TODO: Validate
-class ShowsSearch(EndpointFile[ShowsSearchModel]):
-    """Shows search file."""
+class VideoPrograms(PagedEndpointFile[VideoProgramsModel]):
+    unique_identifier = "VideoPrograms"
+
+    # TODO: Validate
+    def __init__(self, session: Session, plugin: Plugin) -> None:
+        super().__init__(session, plugin, self.unique_identifier)
 
     # TODO: Validate
     @override
-    def _endpoint(self) -> ShowsSearchEndpoint:
-        return naphki().shows_search
+    def _endpoint(self) -> VideoProgramsEndpoint:  # type: ignore[override]
+        return naphki().video_programs
 
-    # TODO: Validate
-    def __init__(
-        self,
-        session: Session,
-        plugin: Plugin,
-        query: str,
-        offset: int,
-    ) -> None:
-        self.query = query
-        self.offset = offset
-        super().__init__(session, plugin, f"{query}/{offset}")
-
-    # `size` keeps its default so a page request looks exactly like the one the
-    # website makes.
     # TODO: Validate
     @override
     def _download_file(self) -> str:
-        return self._endpoint().download(self.query, from_=self.offset)
+        return json.dumps(self._endpoint().download_all(unclosed=False))
 
     # TODO: Validate
-    @override
-    def _next_update_at(self) -> datetime:
-        return tz_datetime.now() + timedelta(days=30)
-
-
-# TODO: Validate
-class FileMixin(BasePlugin, register=False):
-    # The new episodes feed belongs to the source, so every show reads the same one.
-    # TODO: Validate
-    @classmethod
-    @override
-    def _plugin_wide_files(cls) -> tuple[type[BaseFile[Any]], ...]:
-        return (NewVideoEpisodes,)
-
-    # TODO: Validate
-    @classmethod
-    def show_url(cls, show_key: str) -> str:
-        return cls.build_url(f"nhkworld/en/shows/{show_key}/")
-
-    # TODO: Validate
-    def shows_search_file(self, query: str, offset: int) -> ShowsSearch:
-        """Contains one page of results for a search query."""
-        return self._file(ShowsSearch, query, offset)
-
-    # TODO: Validate
-    def video_program_file(self, show_key: str) -> VideoProgram:
-        """Contains a single show's information."""
-        return self._file(VideoProgram, show_key)
-
-    # TODO: Validate
-    def video_episodes_file(self, program_id: str) -> VideoEpisodes:
-        """Contains a show's episodes."""
-        return self._file(VideoEpisodes, program_id)
-
-    # TODO: Consider making this a generic function
-    # TODO: Validate
-    def new_video_episodes_file(
-        self,
-        feed_datetime: datetime | File,
-    ) -> NewVideoEpisodes:
-        """Contains the newest videos on the website."""
-        if isinstance(feed_datetime, File):
-            str_datetime = NewVideoEpisodes.file_key_to_unique_identifier(
-                feed_datetime.key,
-            )
-        else:
-            str_datetime = str(feed_datetime)
-        return self._file(NewVideoEpisodes, str_datetime)
-
-    # TODO: Validate
-    def latest_new_video_episodes_file(self) -> NewVideoEpisodes | None:
-        """Return the latest new video episodes file, or None if none exists."""
-        if file := self.preload_latest_file(NewVideoEpisodes):
-            return self.new_video_episodes_file(file)
-        return None
-
-    # TODO: Validate
-    @override
-    def _source_files(self) -> Sequence[NewVideoEpisodes]:
-        if file := self.latest_new_video_episodes_file():
-            return [file]
-        return []
-
-    # TODO: Validate
-    @override
-    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
-        # Required to detect changes to the show.
-        return [self.video_program_file(show_key)]
-
-    # TODO: Validate
-    @override
-    def _season_files(
-        self,
-        season_key: str,
-        show_key: str,
-    ) -> Sequence[BaseFile[Any]]:
-        return [
-            # Required to detect changes to the season.
-            self.video_program_file(show_key),
-            # Required to detect new episodes.
-            self.video_episodes_file(show_key),
-        ]
-
-    # TODO: Validate
-    @override
-    def _episode_files(
-        self,
-        episode_key: str,
-        season_key: str,
-        show_key: str,
-    ) -> Sequence[BaseFile[Any]]:
-        # Required to detect changes to the episode.
-        return [self.video_episodes_file(show_key)]
-
-    # TODO: Validate
-    @override
-    def _season_keys_from_file(self, show_key: str) -> list[str]:
-        # There are no seasons on NHK World, but the value returned should still match
-        # the value used for Season.key.
-        return [show_key]
-
-    # TODO: Validate
-    @override
-    def _episode_keys_from_file(
-        self,
-        season_keys: str | list[str],
-        show_key: str,
-    ) -> list[str]:
-        if isinstance(season_keys, str):
-            season_keys = [season_keys]
-        return [
-            item.id
-            for season_key in season_keys
-            for item in self.video_episodes_file(season_key).items()
-        ]
-
-    # TODO: Validate
-    def _get_image_url(
-        self,
-        images: Sequence[LandscapeItem | PortraitItem | EpisodeImage],
-    ) -> str:
-        largest = max(images, key=lambda image: image.width)
-        return self.build_url(largest.url)
-
-    # TODO: Validate
-    def _get_thumbnail_url(
-        self,
-        images: Sequence[LandscapeItem | PortraitItem | EpisodeImage],
-    ) -> str:
-        wide_enough = [image for image in images if image.width >= 480]  # noqa: PLR2004
-        chosen = (
-            min(wide_enough, key=lambda image: image.width)
-            if wide_enough
-            else max(images, key=lambda image: image.width)
-        )
-        return self.build_url(chosen.url)
-
-    # TODO: Validate
-    @override
-    def show_identity(self, show_key: str) -> PluginShowIdentity:
-        program_file = self.video_program_file(show_key)
-        program_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        return PluginShowIdentity(
-            title=program_file.parsed().title,
-            media_type="TV Show",
-        )
+    def items(self) -> list[ProgramItem]:
+        return [item for page in self.parsed() for item in page.items]

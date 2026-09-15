@@ -3,11 +3,11 @@ import uuid
 
 from sqlmodel import Session
 
-from app.episodes.models import Episode, EpisodeCanonicalEpisode
+from app.episodes.models import Episode, EpisodeTmdbEpisode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show
 from app.sources.models import Source
+from app.titles.models import Title
 from app.users.models import User
 from tests.app.helpers.utils import build_random_model
 from tests.app.seasons.utils import create_random_season
@@ -18,7 +18,7 @@ from tests.app.users.utils import CreatedUser
 def create_random_episode(
     session: Session,
     parent: Season
-    | Show
+    | Title
     | Source
     | Plugin
     | User
@@ -29,7 +29,7 @@ def create_random_episode(
 ) -> Episode:
     if not isinstance(parent, Season):
         parent = create_random_season(session, parent)
-    kwargs.setdefault("is_canonical", True)
+    kwargs.setdefault("is_linked", False)
     episode = build_random_model(
         Episode,
         season_id=parent.id,
@@ -55,16 +55,16 @@ def create_linked_episode(
     row standing for itself.
     """
     canonical = create_random_episode(session, parent, **kwargs)
-    non_canonical = create_random_episode(
+    linked = create_random_episode(
         session,
         canonical.season,
-        **{**kwargs, "is_canonical": False},
+        **{**kwargs, "is_linked": True},
     )
     session.add(
-        EpisodeCanonicalEpisode(
-            episode_id=non_canonical.id,
-            canonical_episode_id=canonical.id,
+        EpisodeTmdbEpisode(
+            episode_id=linked.id,
+            tmdb_episode_id=canonical.id,
         ),
     )
     session.flush()
-    return non_canonical
+    return linked

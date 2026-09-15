@@ -21,12 +21,12 @@ from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, and_, col, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.canonical_media.episodes import (
-    canonical_episode_id_column,
-    canonical_episode_link,
-    links_of,
-)
 from app.episodes.models import Episode
+from app.tmdb_media.episodes import (
+    links_of,
+    tmdb_episode_id_column,
+    tmdb_episode_link,
+)
 from app.watches.models import Watch
 
 
@@ -44,12 +44,12 @@ def watch_names(
 
 
 # TODO: Validate
-def watched_canonical_ids(user_id: uuid.UUID) -> SelectOfScalar[uuid.UUID]:
+def watched_tmdb_record_ids(user_id: uuid.UUID) -> SelectOfScalar[uuid.UUID]:
     """Return the canonical episodes the `User` has any watch of."""
     watched_episode = aliased(Episode)
-    watched_link = canonical_episode_link()
+    watched_link = tmdb_episode_link()
     return (
-        select(canonical_episode_id_column(watched_episode, watched_link))
+        select(tmdb_episode_id_column(watched_episode, watched_link))
         .select_from(watched_episode)
         .outerjoin(watched_link, links_of(watched_episode, watched_link))
         .join(
@@ -61,34 +61,34 @@ def watched_canonical_ids(user_id: uuid.UUID) -> SelectOfScalar[uuid.UUID]:
 
 
 # TODO: Validate
-def canonical_id_by_watch(
+def tmdb_record_id_by_watch(
     session: Session,
     watches: Collection[Watch],
 ) -> dict[uuid.UUID, uuid.UUID]:
     if not watches:
         return {}
     named_episode = aliased(Episode)
-    named_link = canonical_episode_link()
-    canonical_id = canonical_episode_id_column(named_episode, named_link)
+    named_link = tmdb_episode_link()
+    tmdb_record_id = tmdb_episode_id_column(named_episode, named_link)
     rows = session.exec(
-        select(col(Watch.id), canonical_id)
+        select(col(Watch.id), tmdb_record_id)
         .select_from(Watch)
         .join(named_episode, watch_names(named_episode))
         .outerjoin(named_link, links_of(named_episode, named_link))
         .where(col(Watch.id).in_({watch.id for watch in watches}))
-        .order_by(col(Watch.id), canonical_id)
+        .order_by(col(Watch.id), tmdb_record_id)
         .distinct(col(Watch.id)),
     ).all()
     return dict(rows)
 
 
 # TODO: Validate
-def watches_of_canonical_ids(
+def watches_of_tmdb_record_ids(
     user_id: uuid.UUID,
-    canonical_ids: Collection[uuid.UUID],
+    tmdb_record_ids: Collection[uuid.UUID],
 ) -> SelectOfScalar[Watch]:
     named_episode = aliased(Episode)
-    named_link = canonical_episode_link()
+    named_link = tmdb_episode_link()
     return (
         select(Watch)
         .join(
@@ -98,32 +98,32 @@ def watches_of_canonical_ids(
         .outerjoin(named_link, links_of(named_episode, named_link))
         .where(
             col(Watch.user_id) == user_id,
-            canonical_episode_id_column(named_episode, named_link).in_(
-                set(canonical_ids),
+            tmdb_episode_id_column(named_episode, named_link).in_(
+                set(tmdb_record_ids),
             ),
         )
     )
 
 
 # TODO: Validate
-def watched_dates_by_canonical_id(
+def watched_dates_by_tmdb_record_id(
     session: Session,
     user_id: uuid.UUID,
-    canonical_ids: Collection[uuid.UUID],
+    tmdb_record_ids: Collection[uuid.UUID],
 ) -> dict[uuid.UUID, list[datetime]]:
-    """Return the `User`'s watch dates for each of `canonical_ids`.
+    """Return the `User`'s watch dates for each of `tmdb_record_ids`.
 
     Every link to the episode answers for it, so a date recorded against one
     website's link is a date the episode was watched on wherever it is asked
     about.
     """
-    if not canonical_ids:
+    if not tmdb_record_ids:
         return {}
     watched_episode = aliased(Episode)
-    watched_link = canonical_episode_link()
-    canonical_id = canonical_episode_id_column(watched_episode, watched_link)
+    watched_link = tmdb_episode_link()
+    tmdb_record_id = tmdb_episode_id_column(watched_episode, watched_link)
     rows = session.exec(
-        select(canonical_id, Watch.watch_date)
+        select(tmdb_record_id, Watch.watch_date)
         .select_from(watched_episode)
         .outerjoin(watched_link, links_of(watched_episode, watched_link))
         .join(
@@ -132,10 +132,10 @@ def watched_dates_by_canonical_id(
         )
         .where(
             col(Watch.user_id) == user_id,
-            canonical_id.in_(set(canonical_ids)),
+            tmdb_record_id.in_(set(tmdb_record_ids)),
         ),
     ).all()
     watched_dates: dict[uuid.UUID, list[datetime]] = defaultdict(list)
-    for canonical_id, watch_date in rows:
-        watched_dates[canonical_id].append(watch_date)
+    for tmdb_record_id, watch_date in rows:
+        watched_dates[tmdb_record_id].append(watch_date)
     return watched_dates

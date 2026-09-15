@@ -1,7 +1,8 @@
 # TODO: Validate
 """Stream Channeler application."""
 
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable
+from contextlib import asynccontextmanager
 from importlib import import_module
 
 import sentry_sdk
@@ -21,6 +22,7 @@ from app.watches.exceptions import (
     WatchAlreadyExistsError,
     handle_watch_already_exists,
 )
+from plugins.utils.manage_plugins import initialize_plugins
 
 configure_logging()
 
@@ -39,10 +41,19 @@ def _custom_generate_unique_id(route: APIRoute) -> str:
 if settings.SENTRY_DSN and settings.ENVIRONMENT != "local":
     sentry_sdk.init(dsn=str(settings.SENTRY_DSN), enable_tracing=True)
 
+
+# TODO: Validate
+@asynccontextmanager
+async def _lifespan(_app: FastAPI) -> AsyncGenerator[None]:
+    initialize_plugins()
+    yield
+
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     generate_unique_id_function=_custom_generate_unique_id,
+    lifespan=_lifespan,
 )
 
 app.add_exception_handler(WatchAlreadyExistsError, handle_watch_already_exists)
@@ -78,10 +89,9 @@ app.add_middleware(GZipMiddleware)
 # TODO: Implement this improved function upstream.
 # TODO: Validate
 def automatically_import_routers() -> APIRouter:
-    """Automatically import `router` from app/*/router.py."""
     api_router = APIRouter()
-    for router_file in sorted(APP_PATH.glob("*/router.py")):
-        module_name = router_file.parent.name
+    for router_file in sorted(APP_PATH.glob("*/router/__init__.py")):
+        module_name = router_file.parent.parent.name
 
         if module_name == "private" and settings.ENVIRONMENT != "local":
             continue

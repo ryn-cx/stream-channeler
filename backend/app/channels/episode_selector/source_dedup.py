@@ -1,19 +1,15 @@
 # TODO: Validate
-"""Which website's row for an episode a `User` watches.
-
-Every website's row for the same episode points at the same canonical row, so
-a channel that holds a show on several sites would otherwise offer the same
-episode once per site. The `User`'s source preferences rank the sites, and the
-highest-ranked row is the one that stands for the episode.
-"""
 
 from dataclasses import dataclass
 
 from sqlmodel import Session
 
-from app.sources.service import OTHER_SOURCE_KEY
+from app.sources.service.lookup import OTHER_SOURCE_KEY
 from app.users.models import User
-from app.users.service import effective_source_preferences, stored_preferences
+from app.users.service.preferences import (
+    effective_source_preferences,
+    stored_preferences,
+)
 
 
 # TODO: Validate
@@ -28,7 +24,7 @@ class SourceDedupConfig:
     other_enabled: bool
 
     # TODO: Validate
-    def priority_for(self, source_key: str | None) -> int:
+    def priority_from(self, source_key: str | None) -> int:
         """Return the priority of a source key, falling back to `Other`."""
         if source_key is None:
             return self.other_priority

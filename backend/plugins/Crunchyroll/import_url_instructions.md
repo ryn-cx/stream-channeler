@@ -18,4 +18,3 @@
 > [!TIP/Concert]
 > `https://www.crunchyroll.com/watch/concert/MC413F1C5C`
 > `https://www.crunchyroll.com/watch/concert/MC413F1C5C/lisa-ladybug`
-

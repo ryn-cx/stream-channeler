@@ -16,9 +16,15 @@
 
 [CmdletBinding()]
 param(
-    [int]$IntervalSeconds = 60
+    [int]$IntervalSeconds = 60,
+    [string]$Plugin
 )
 
 $ErrorActionPreference = "Stop"
 
-& (Join-Path $PSScriptRoot "_run_tool.ps1") -Module "app.tools.import_queue" -IntervalSeconds $IntervalSeconds
+$toolArguments = @()
+if ($Plugin) {
+    $toolArguments += @("--plugin", $Plugin)
+}
+
+& (Join-Path $PSScriptRoot "_run_tool.ps1") -Module "app.tools.import_queue" -IntervalSeconds $IntervalSeconds -ToolArguments $toolArguments

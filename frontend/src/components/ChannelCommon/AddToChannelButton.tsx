@@ -29,11 +29,11 @@ import { handleError } from "@/utils"
 const LAST_CHANNEL_KEY = "add-to-channel:last-channel-id"
 
 interface AddToChannelButtonProps {
-  showId: string
+  titleId: string
 }
 
 // TODO: Validate
-export function AddToChannelButton({ showId }: AddToChannelButtonProps) {
+export function AddToChannelButton({ titleId }: AddToChannelButtonProps) {
   const [open, setOpen] = useState(false)
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -44,19 +44,19 @@ export function AddToChannelButton({ showId }: AddToChannelButtonProps) {
   )
 
   const { data: channels = [], isLoading: isLoadingChannels } = useQuery({
-    queryKey: ["channels-for-show", showId],
-    queryFn: () => ChannelsService.getChannelsForShow({ showId }),
+    queryKey: ["channels-for-title", titleId],
+    queryFn: () => ChannelsService.getChannelsForTitle({ titleId }),
     enabled: loggedIn,
     refetchOnWindowFocus: false,
   })
 
   const addMutation = useMutation({
     mutationFn: (channelId: string) =>
-      ChannelsService.addChannelShow({ channelId, showId }),
+      ChannelsService.addChannelTitle({ channelId, titleId }),
     onSuccess: (result, channelId) => {
       showSuccessToast(result.message)
-      queryClient.invalidateQueries({ queryKey: ["channels-for-show"] })
-      queryClient.invalidateQueries({ queryKey: ["channel-shows", channelId] })
+      queryClient.invalidateQueries({ queryKey: ["channels-for-title"] })
+      queryClient.invalidateQueries({ queryKey: ["channel-titles", channelId] })
       queryClient.invalidateQueries({ queryKey: ["episodes", channelId] })
     },
     onError: handleError.bind(showErrorToast),
@@ -70,7 +70,7 @@ export function AddToChannelButton({ showId }: AddToChannelButtonProps) {
   // A channel the title is already on is still selectable, so the pick that was
   // remembered is not silently dropped; it is the button that says there is
   // nothing left to do.
-  const selectedCarries = selected?.carries_show === true
+  const selectedCarries = selected?.carries_title === true
   // TODO: Validate
   const channelLabel = (channel: { name?: string | null; id: string }) =>
     channel.name ?? channel.id
@@ -128,7 +128,7 @@ export function AddToChannelButton({ showId }: AddToChannelButtonProps) {
                     <span className="flex-1 truncate">
                       {channelLabel(channel)}
                     </span>
-                    {channel.carries_show && (
+                    {channel.carries_title && (
                       <span className="ml-2 shrink-0 text-xs text-muted-foreground">
                         Already added
                       </span>

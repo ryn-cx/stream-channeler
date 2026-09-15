@@ -5,10 +5,10 @@ from sqlmodel import Session, create_engine, select
 
 from app.config import settings
 from app.constants import APP_PATH
-from app.sources.service import get_or_create_custom_media_source
-from app.users import service as user_service
+from app.sources.service.lookup import get_or_create_custom_media_source
 from app.users.models import User
 from app.users.schemas import UserCreate
+from app.users.service import accounts
 
 engine = create_engine(
     str(settings.SQLALCHEMY_DATABASE_URI),
@@ -48,6 +48,6 @@ def init_db(session: Session) -> None:
             password=settings.FIRST_SUPERUSER_PASSWORD,
             is_superuser=True,
         )
-        user = user_service.create_user(session=session, user_create=user_in)
+        user = accounts.create_user(session=session, user_create=user_in)
 
     get_or_create_custom_media_source(session)

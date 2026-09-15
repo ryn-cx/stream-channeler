@@ -22,14 +22,14 @@ from app.models import (
     sortable_field_indexes,
 )
 from app.plugins.models import Plugin
-from app.shows.models import Show
 from app.sources.models import Source
+from app.titles.models import Title
 
 if TYPE_CHECKING:
     from app.episodes.models import Episode
     from app.issue_reports.models import SeasonIssueReport
 
-CANONICAL_SORTABLE_FIELDS = [
+TMDB_SORTABLE_FIELDS = [
     "name",
     "season_number",
     "sort_order",
@@ -52,15 +52,15 @@ class BaseSeason(BaseMediaMixin):
 
 
 # TODO: Validate
-class Season(BaseSeason, ChildMediaMixin[Show, "Episode"], table=True):
+class Season(BaseSeason, ChildMediaMixin[Title, "Episode"], table=True):
     """Model representing a season, and a website's non-canonical row of one.
 
     The season itself hangs off the title the way a non-canonical row hangs off the
-    listing, by the same `show_id`, so one primary key covers both: a `show_id` names
+    listing, by the same `title_id`, so one primary key covers both: a `title_id` names
     either a title or a listing and never both at once.
     """
 
-    PARENT_ID_FIELD: ClassVar[str] = "show_id"
+    PARENT_ID_FIELD: ClassVar[str] = "title_id"
 
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
         "random",
@@ -69,18 +69,18 @@ class Season(BaseSeason, ChildMediaMixin[Show, "Episode"], table=True):
         "sequential_zero_last",
     ]
     SORTABLE_FIELDS: ClassVar[list[str]] = (
-        CANONICAL_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS
+        TMDB_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS
     )
 
     __table_args__ = (
-        PrimaryKeyConstraint("show_id", "key"),
+        PrimaryKeyConstraint("title_id", "key"),
         UniqueConstraint("id"),
         Index("Season-deleted_at-index", "deleted_at"),
-        *sortable_field_indexes("Season", CANONICAL_SORTABLE_FIELDS),
+        *sortable_field_indexes("Season", TMDB_SORTABLE_FIELDS),
     )
 
-    show_id: uuid.UUID = Field(foreign_key="show.id", ondelete="CASCADE")
-    show: Show = Relationship(back_populates="seasons")
+    title_id: uuid.UUID = Field(foreign_key="title.id", ondelete="CASCADE")
+    title: Title = Relationship(back_populates="seasons")
 
     episodes: list[Episode] = Relationship(back_populates="season", cascade_delete=True)
 
@@ -92,8 +92,8 @@ class Season(BaseSeason, ChildMediaMixin[Show, "Episode"], table=True):
     # TODO: Validate
     @property
     @override
-    def parent(self) -> Show:
-        return self.show
+    def parent(self) -> Title:
+        return self.title
 
     # TODO: Validate
     @property
@@ -107,7 +107,7 @@ class Season(BaseSeason, ChildMediaMixin[Show, "Episode"], table=True):
     def select_with_plugin(cls) -> SelectOfScalar[Self]:
         return (
             select(cls)
-            .join(Show, col(cls.show_id) == col(Show.id))
+            .join(Title, col(cls.title_id) == col(Title.id))
             .join(Source)
             .join(Plugin)
         )
@@ -116,21 +116,21 @@ class Season(BaseSeason, ChildMediaMixin[Show, "Episode"], table=True):
     @classmethod
     def select_with_plugin_eager(cls) -> SelectOfScalar[Self]:
         return cls.select_with_plugin().options(
-            contains_eager(cls.show)  # type: ignore[arg-type]
-            .contains_eager(Show.source)  # type: ignore[arg-type]
+            contains_eager(cls.title)  # type: ignore[arg-type]
+            .contains_eager(Title.source)  # type: ignore[arg-type]
             .contains_eager(Source.plugin),  # type: ignore[arg-type]
         )
 
     # TODO: Validate
     def __str__(self) -> str:
         """Return a string representation of the `Season`."""
-        return stringify_season(self, self.show)
+        return stringify_season(self, self.title)
 
 
 # TODO: Validate
 def stringify_season(
     season: Season,
-    parent: Show,
+    parent: Title,
 ) -> str:
     """Return a string representation."""
     base_season = f"{type(season).__name__}:"

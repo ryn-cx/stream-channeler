@@ -1,8 +1,9 @@
 # TODO: Validate
-from collections.abc import Sequence
-from datetime import datetime, timedelta
+import json
+from abc import ABC
+from datetime import UTC, datetime
 from functools import cache
-from typing import Any, Literal, override
+from typing import override
 
 from chirashi import Chirashi
 from chirashi.artist import Artist as ArtistEndpoint
@@ -13,8 +14,12 @@ from chirashi.artist_music_videos import ArtistMusicVideos as ArtistMusicVideosE
 from chirashi.artist_music_videos.models import ArtistMusicVideosModel
 from chirashi.browse_music import BrowseMusic as BrowseMusicEndpoint
 from chirashi.browse_music.models import BrowseMusicModel
+from chirashi.browse_music.models import Datum as BrowseMusicDatum
 from chirashi.browse_series import Browse as BrowseSeriesEndpoint
 from chirashi.browse_series.models import BrowseSeriesModel
+from chirashi.browse_series.models import Datum as BrowseSeriesDatum
+from chirashi.categories import Categories as CategoriesEndpoint
+from chirashi.categories.models import CategoriesModel
 from chirashi.concert import Concert as ConcertEndpoint
 from chirashi.concert.models import ConcertModel
 from chirashi.exceptions import (
@@ -28,369 +33,208 @@ from chirashi.music_video import MusicVideo as MusicVideoEndpoint
 from chirashi.music_video.models import MusicVideoModel
 from chirashi.objects import Objects as ObjectsEndpoint
 from chirashi.objects.models import ObjectsModel
-from chirashi.search import Search as SearchEndpoint
-from chirashi.search.models import SearchModel
 from chirashi.season_episodes import SeasonEpisodes as SeasonEpisodesEndpoint
 from chirashi.season_episodes.models import SeasonEpisodesModel
 from chirashi.seasons import Seasons as SeasonsEndpoint
 from chirashi.seasons.models import SeasonsModel
 from chirashi.series import Series as SeriesEndpoint
 from chirashi.series.models import SeriesModel
+from chirashi.similar_to import SimilarTo as SimilarToEndpoint
+from chirashi.similar_to.models import SimilarToModel
 
-from app.files.models import File
 from app.utils import tz_datetime
-from plugins.Crunchyroll.constants import (
-    MusicCategory,
-    episode_is_music,
-    music_episode_category,
-    season_is_music,
-    show_is_an_artist,
+from plugins.utils.base_plugin.files import (
+    PagedEndpointFile,
+    SingleArgEndpointFile,
 )
-from plugins.utils.base_plugin import BasePlugin
-from plugins.utils.base_plugin.files import BaseFile, EndpointFile, PagedEndpointFile
+from plugins.utils.constants import INCOMPLETE_STATUS
 from plugins.utils.get_around_client import get_around_client
 
 
+# TODO: Validate
 @cache
 def chirashi() -> Chirashi:
     return Chirashi(get_around_client=get_around_client())
 
 
-class Series(EndpointFile[SeriesModel]):
+# TODO: Validate
+class Series(SingleArgEndpointFile[SeriesModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> SeriesEndpoint:
         return chirashi().series
 
-    # Occurs when a user puts in an invalid show URL.
+    # Occurs when a user puts in an invalid series URL.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, SeriesNotFoundError)
 
 
-class Objects(EndpointFile[ObjectsModel]):
+# TODO: Validate
+class Categories(SingleArgEndpointFile[CategoriesModel]):
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> CategoriesEndpoint:
+        return chirashi().categories
+
+
+# TODO: Validate
+class SimilarTo(SingleArgEndpointFile[SimilarToModel]):
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> SimilarToEndpoint:
+        return chirashi().similar_to
+
+
+# TODO: Validate
+class Objects(SingleArgEndpointFile[ObjectsModel]):
     """Episode information."""
 
+    # TODO: Validate
     @override
     def _endpoint(self) -> ObjectsEndpoint:
         return chirashi().objects
 
     # Occurs when a user puts in an invalid episode URL.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, EpisodeNotFoundError)
 
 
-class Seasons(EndpointFile[SeasonsModel]):
+# TODO: Validate
+class Seasons(SingleArgEndpointFile[SeasonsModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> SeasonsEndpoint:
         return chirashi().seasons
 
 
-class SeasonEpisodes(EndpointFile[SeasonEpisodesModel]):
+# TODO: Validate
+class SeasonEpisodes(SingleArgEndpointFile[SeasonEpisodesModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> SeasonEpisodesEndpoint:
         return chirashi().season_episodes
 
 
-class BrowseSeries(PagedEndpointFile[BrowseSeriesModel]):
+# TODO: Validate
+class BaseBrowseSeries(PagedEndpointFile[BrowseSeriesModel], ABC):
+    # TODO: Validate
     @override
-    def _endpoint(self) -> BrowseSeriesEndpoint:
+    def _endpoint(self) -> BrowseSeriesEndpoint:  # type: ignore[override]
         return chirashi().browse_series
 
+    # TODO: Validate
+    def datums(self) -> list[BrowseSeriesDatum]:
+        return self._endpoint().extract_data(self.parsed())
+
+
+# TODO: Validate
+class BrowseSeries(BaseBrowseSeries):
+    # TODO: Validate
     @override
-    def _download_pages(self) -> list[str]:
-        return self._endpoint().download_until_datetime(
-            end_datetime=self.identifier_datetime(),
+    def _initial_status_after_downloading(self) -> str:
+        return INCOMPLETE_STATUS
+
+    # TODO: Validate
+    @override
+    def _download_file(self) -> str:
+        return json.dumps(
+            self._endpoint().download_until_datetime(
+                end_datetime=tz_datetime.fromisoformat(self.unique_identifier),
+            ),
         )
 
 
-class Artist(EndpointFile[ArtistModel]):
+# TODO: Validate
+class Catalogue(BaseBrowseSeries):
+    """Special BrowseSeries that contains all of the titles on Crunchyroll."""
+
+    # TODO: Validate
+    @override
+    def _download_file(self) -> str:
+        return json.dumps(
+            self._endpoint().download_until_datetime(
+                end_datetime=datetime.min.replace(tzinfo=UTC),
+                n=50,
+                sort_by="alphabetical",
+                referer="https://www.crunchyroll.com/videos/alphabetical",
+            ),
+        )
+
+
+# TODO: Validate
+class Artist(SingleArgEndpointFile[ArtistModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> ArtistEndpoint:
         return chirashi().artist
 
     # Occurs when a user puts in an invalid artist URL.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ArtistNotFoundError)
 
 
-class ArtistMusicVideos(EndpointFile[ArtistMusicVideosModel]):
+# TODO: Validate
+class ArtistMusicVideos(SingleArgEndpointFile[ArtistMusicVideosModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> ArtistMusicVideosEndpoint:
         return chirashi().artist_music_videos
 
 
-class ArtistConcerts(EndpointFile[ArtistConcertsModel]):
+# TODO: Validate
+class ArtistConcerts(SingleArgEndpointFile[ArtistConcertsModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> ArtistConcertsEndpoint:
         return chirashi().artist_concerts
 
 
-class MusicVideo(EndpointFile[MusicVideoModel]):
+# TODO: Validate
+class MusicVideo(SingleArgEndpointFile[MusicVideoModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> MusicVideoEndpoint:
         return chirashi().music_video
 
     # Occurs when a user puts in an invalid music video URL.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, MusicVideoNotFoundError)
 
 
-class Concert(EndpointFile[ConcertModel]):
+# TODO: Validate
+class Concert(SingleArgEndpointFile[ConcertModel]):
+    # TODO: Validate
     @override
     def _endpoint(self) -> ConcertEndpoint:
         return chirashi().concert
 
     # Occurs when a user puts in an invalid concert URL.
+    # TODO: Validate
     @override
     def _is_acceptable_error(self, error: Exception) -> bool:
         return isinstance(error, ConcertNotFoundError)
 
 
+# TODO: Validate
 class BrowseMusic(PagedEndpointFile[BrowseMusicModel]):
+    # TODO: Validate
     @override
-    def _endpoint(self) -> BrowseMusicEndpoint:
+    def _endpoint(self) -> BrowseMusicEndpoint:  # type: ignore[override]
         return chirashi().browse_music
 
-    @override
-    def _download_pages(self) -> list[str]:
-        return self._endpoint().download_all()
-
-
-class Search(EndpointFile[SearchModel]):
-    @override
-    def _endpoint(self) -> SearchEndpoint:
-        return chirashi().search
-
-    @override
-    def _next_update_at(self) -> datetime:
-        return tz_datetime.now() + timedelta(days=30)
-
-
-# TODO: Validate
-class FileMixin(BasePlugin, register=False):
-    @classmethod
-    @override
-    def _plugin_wide_files(cls) -> tuple[type[BaseFile[Any]], ...]:
-        return (BrowseSeries, BrowseMusic)
-
-    def search_file(self, query: str) -> Search:
-        return self._file(Search, query)
-
-    def series_file(self, show_key: str) -> Series:
-        return self._file(Series, show_key)
-
-    def objects_file(self, episode_key: str) -> Objects:
-        return self._file(Objects, episode_key)
-
-    def seasons_file(self, show_key: str) -> Seasons:
-        return self._file(Seasons, show_key)
-
-    def season_episodes_file(self, season_key: str) -> SeasonEpisodes:
-        return self._file(SeasonEpisodes, season_key)
-
-    def artist_file(self, artist_id: str) -> Artist:
-        return self._file(Artist, artist_id)
-
-    def artist_music_videos_file(self, artist_id: str) -> ArtistMusicVideos:
-        return self._file(ArtistMusicVideos, artist_id)
-
-    def artist_concerts_file(self, artist_id: str) -> ArtistConcerts:
-        return self._file(ArtistConcerts, artist_id)
-
-    def music_video_file(self, music_video_id: str) -> MusicVideo:
-        return self._file(MusicVideo, music_video_id)
-
-    def concert_file(self, concert_id: str) -> Concert:
-        return self._file(Concert, concert_id)
-
-    # TODO: Validate
-    def browse_series_file(
-        self,
-        browse: datetime | File | Literal["Initial"],
-    ) -> BrowseSeries:
-        """Return data for recently aired shows."""
-        if isinstance(browse, File):
-            browse = BrowseSeries.file_key_to_unique_identifier(browse.key)
-        return self._file(BrowseSeries, str(browse))
-
-    # TODO: Validate
-    def artist_concerts_or_artist_music_videos_file(
-        self,
-        artist_id: str,
-        category: MusicCategory,
-    ) -> ArtistMusicVideos | ArtistConcerts:
-        """Return either data for an artist's concerts or music videos.
-
-        Concerts and Music Videos are saved in the database as separate seasons. This
-        function makes it easier to share code between importing them by dynamically
-        getting the correct file for the situation.
-        """
-        if category is MusicCategory.CONCERT:
-            return self.artist_concerts_file(artist_id)
-        return self.artist_music_videos_file(artist_id)
-
-    # TODO: Validate
-    def concert_or_music_video_file(self, episode_key: str) -> MusicVideo | Concert:
-        """Return either data for a concert or a music video.
-
-        Concerts and Music Videos are saved in the database as separate seasons. This
-        function makes it easier to share code between importing them by dynamically
-        getting the correct file for the situation.
-        """
-        if music_episode_category(episode_key) is MusicCategory.CONCERT:
-            return self.concert_file(episode_key)
-        return self.music_video_file(episode_key)
-
-    # TODO: Validate
-    def browse_music_file(
-        self,
-        browse: datetime | File | Literal["Initial"],
-    ) -> BrowseMusic:
-        """Return data for all of the music."""
-        if isinstance(browse, File):
-            browse = BrowseMusic.file_key_to_unique_identifier(browse.key)
-        return self._file(BrowseMusic, str(browse))
-
-    # TODO: Validate
-    def find_newest_browse_music_file(self) -> BrowseMusic | None:
-        """Return newest data for all of the music, or None when there is none."""
-        if file := self.preload_latest_file(BrowseMusic):
-            return self.browse_music_file(file)
-        return None
-
-    # TODO: Validate
-    def get_newest_music_browse_file(self) -> BrowseMusic:
-        """Return the newest music browse file. Raises if one does not exist."""
-        if file := self.find_newest_browse_music_file():
-            return file
-
-        msg = "No music browse file found."
-        raise FileNotFoundError(msg)
-
-    # TODO: Validate
-    def _music_source_files(self) -> Sequence[BrowseMusic]:
-        """Return the `Source` files for Crunchyroll music."""
-        return [self.get_newest_music_browse_file()]
-
     # TODO: Validate
     @override
-    def _source_files(self) -> Sequence[BrowseSeries]:
-        """Return the `Source` files for Crunchyroll video."""
-        return [self.get_newest_browse_series_file()]
+    def _download_file(self) -> str:
+        return json.dumps(self._endpoint().download_all())
 
     # TODO: Validate
-    @override
-    def _show_files(self, show_key: str) -> Sequence[BaseFile[Any]]:
-        if show_is_an_artist(show_key):
-            return [
-                # Required to detect changes to the artist.
-                self.artist_file(show_key),
-                # Required to detect new music videos and concerts.
-                self.artist_music_videos_file(show_key),
-                self.artist_concerts_file(show_key),
-            ]
-        return [
-            # Required to detect new seasons.
-            self.seasons_file(show_key),
-            # Required to detect changes to the show.
-            self.series_file(show_key),
-        ]
-
-    # TODO: Validate
-    @override
-    def _season_files(
-        self,
-        season_key: str,
-        show_key: str,
-    ) -> Sequence[BaseFile[Any]]:
-        if season_is_music(season_key):
-            category = MusicCategory(season_key)
-            return [
-                # Required to detect new music videos or concerts.
-                self.artist_concerts_or_artist_music_videos_file(show_key, category),
-                # Required to detect changes to the artist.
-                self.artist_file(show_key),
-            ]
-        return [
-            # Required to detect new episodes.
-            self.season_episodes_file(season_key),
-            # Required to detect changes to the season.
-            self.seasons_file(show_key),
-        ]
-
-    # TODO: Validate
-    @override
-    def _episode_files(
-        self,
-        episode_key: str,
-        season_key: str,
-        show_key: str,
-    ) -> Sequence[BaseFile[Any]]:
-        if episode_is_music(episode_key):
-            # A music video or concert carries its own details, unlike a series
-            # episode which is read out of its season's listing.
-            return [self.concert_or_music_video_file(episode_key)]
-        return [self.season_episodes_file(season_key)]
-
-    # TODO: Validate
-    @override
-    def _season_keys_from_file(self, show_key: str) -> list[str]:
-        if show_is_an_artist(show_key):
-            # Both categories are always seasons of the artist, even while one is
-            # empty, so a first release into it is a new episode rather than a
-            # new season the show has to notice.
-            return [category.value for category in MusicCategory]
-        return [
-            season_data.id for season_data in self.seasons_file(show_key).parsed().data
-        ]
-
-    # TODO: Validate
-    @override
-    def _episode_keys_from_file(
-        self,
-        season_keys: str | list[str],
-        show_key: str,
-    ) -> list[str]:
-        if isinstance(season_keys, str):
-            season_keys = [season_keys]
-        episode_keys: list[str] = []
-        for season_key in season_keys:
-            if season_is_music(season_key):
-                episode_keys += self._music_episode_keys(season_key, show_key)
-                continue
-            episode_keys += [
-                episode.id
-                for episode in self.season_episodes_file(season_key).parsed().data
-            ]
-        return episode_keys
-
-    # TODO: Validate
-    def _music_episode_keys(self, season_key: str, show_key: str) -> list[str]:
-        listing = self.artist_concerts_or_artist_music_videos_file(
-            show_key,
-            MusicCategory(season_key),
-        ).parsed()
-        return [datum.id for datum in listing.data]
-
-    # TODO: Validate
-    def find_newest_browse_series_file(self) -> BrowseSeries | None:
-        """Return newest browse series file or None if one does not exist."""
-        if file := self.preload_latest_file(BrowseSeries):
-            return self.browse_series_file(file)
-        return None
-
-    # TODO: Validate
-    def get_newest_browse_series_file(self) -> BrowseSeries:
-        """Return newest browse series file or raises if no browse series file exists.
-
-        Raise:
-            FileNotFoundError: If no browse file exists.
-        """
-        if file := self.find_newest_browse_series_file():
-            return file
-
-        msg = "No browse file found."
-        raise FileNotFoundError(msg)
+    def datums(self) -> list[BrowseMusicDatum]:
+        return self._endpoint().extract_data(self.parsed())

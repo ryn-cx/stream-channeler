@@ -14,11 +14,8 @@ from tests.app.helpers.permissions import (
 from tests.app.users.utils import auth_headers, create_random_user
 
 ADMIN_ROUTES: list[tuple[Method, str]] = [
-    ("post", "/plugins"),
     ("get", "/plugins"),
     ("get", f"/plugins/{MISSING}"),
-    ("patch", f"/plugins/{MISSING}"),
-    ("delete", f"/plugins/{MISSING}"),
 ]
 
 # What a plugin can do is the same question for every `User`, so these need an

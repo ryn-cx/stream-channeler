@@ -4,11 +4,11 @@ import {
   Clapperboard,
   CopyX,
   Flag,
+  FolderSync,
   Layers,
   Link2,
   ListOrdered,
   Radio,
-  SearchX,
   ShieldCheck,
   Tv,
   Unlock,
@@ -78,7 +78,7 @@ function AdminIndex() {
                 All Issue Reports
               </CardTitle>
               <CardDescription>
-                Every issue reported against an episode, season or show, newest
+                Every issue reported against an episode, season or title, newest
                 first.
               </CardDescription>
             </CardHeader>
@@ -112,12 +112,12 @@ function AdminIndex() {
             </CardHeader>
           </Card>
         </Link>
-        <Link to="/admin/show-reports" className="block">
+        <Link to="/admin/title-reports" className="block">
           <Card className="h-full transition-colors hover:border-primary">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Tv className="size-5" />
-                Show Issue Reports
+                Title Issue Reports
               </CardTitle>
               <CardDescription>
                 Each reported title once, with how many issues were reported
@@ -140,32 +140,18 @@ function AdminIndex() {
             </CardHeader>
           </Card>
         </Link>
-        <Link to="/admin/unmatched-sources" className="block">
-          <Card className="h-full transition-colors hover:border-primary">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <SearchX className="size-5" />
-                Unmatched Sources
-              </CardTitle>
-              <CardDescription>
-                Every service TMDB lists a title on that neither Watchmode nor a
-                plugin search reached, to be given a URL by hand.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </Link>
-        <Link to="/admin/unvalidated-shows" className="block">
+        <Link to="/admin/unvalidated-titles" className="block">
           <Card className="h-full transition-colors hover:border-primary">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ShieldCheck className="size-5" />
-                Unvalidated Shows
+                Unvalidated Titles
               </CardTitle>
               <CardDescription>
-                Every show whose canonical shows nobody has validated. A row
-                linked to a title is here so the link can be confirmed, and one
-                that is its own record is here so that TMDB having no
-                counterpart for it can be confirmed too.
+                Every title whose tmdb titles nobody has validated. A row linked
+                to a title is here so the link can be confirmed, and one that is
+                its own record is here so that TMDB having no counterpart for it
+                can be confirmed too.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -185,17 +171,31 @@ function AdminIndex() {
             </CardHeader>
           </Card>
         </Link>
-        <Link to="/admin/duplicated-canonical-episodes" className="block">
+        <Link to="/admin/duplicated-tmdb-episodes" className="block">
           <Card className="h-full transition-colors hover:border-primary">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CopyX className="size-5" />
-                Duplicated Canonical Episodes
+                Duplicated TMDB Episodes
               </CardTitle>
               <CardDescription>
-                Every canonical episode that more than one episode of a single
-                source is linked to, which is a link made wrongly rather than a
-                title carried twice.
+                Every tmdb episode that more than one episode of a single source
+                is linked to, which is a link made wrongly rather than a title
+                carried twice.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/manage-files" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FolderSync className="size-5" />
+                Manage Files
+              </CardTitle>
+              <CardDescription>
+                Export the list of files this database holds, dump the files
+                another database is missing, and import a dump back in.
               </CardDescription>
             </CardHeader>
           </Card>

@@ -6,7 +6,7 @@ import { handleError } from "@/utils"
 
 interface BlacklistEpisodeParams {
   targetChannelId: string
-  showId: string
+  titleId: string
   episodeId: string
   expiresAt: string | null
 }
@@ -22,14 +22,14 @@ export function useBlacklistEpisode(currentChannelId: string) {
   return useMutation({
     mutationFn: ({
       targetChannelId,
-      showId,
+      titleId,
       episodeId,
       expiresAt,
     }: BlacklistEpisodeParams) =>
       ChannelsService.blacklistChannelEpisode({
         channelId: targetChannelId,
         requestBody: {
-          show_id: showId,
+          title_id: titleId,
           episode_id: episodeId,
           expires_at: expiresAt,
         },

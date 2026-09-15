@@ -3,12 +3,11 @@ import { useParams, useSearch } from "@tanstack/react-router"
 import type { ColumnDef } from "@tanstack/react-table"
 
 import type {
-  ChannelOutput,
+  ChannelEpisodePlugin,
+  ChannelEpisodeSeason,
+  ChannelEpisodeSource,
+  ChannelEpisodeTitle,
   EpisodeWithDetails as EpisodeWithDetailsOutput,
-  PluginOutput,
-  SeasonOutput,
-  ShowPublic,
-  SourcePublic,
 } from "@/client"
 import { CopyId } from "@/components/Common/CopyId"
 import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"
@@ -16,11 +15,10 @@ import { cn } from "@/lib/utils"
 import type { WatchFilters } from "@/lib/watchFilters"
 
 export type EpisodeWithDetails = EpisodeWithDetailsOutput & {
-  season: SeasonOutput
-  show: ShowPublic
-  source: SourcePublic
-  plugin: PluginOutput
-  channel: ChannelOutput
+  season: ChannelEpisodeSeason
+  title: ChannelEpisodeTitle
+  source: ChannelEpisodeSource
+  plugin: ChannelEpisodePlugin
 }
 
 // TODO: Validate
@@ -67,13 +65,13 @@ export const columns: ColumnDef<EpisodeWithDetails>[] = [
   },
 
   {
-    accessorKey: "plugin.name",
+    accessorKey: "plugin.key",
     header: "Plugin",
     id: "plugin",
   },
 
   {
-    accessorKey: "source.name",
+    accessorKey: "source.key",
     header: "Source",
     cell: ({ row }) => {
       const { source } = row.original
@@ -86,19 +84,19 @@ export const columns: ColumnDef<EpisodeWithDetails>[] = [
             <img
               referrerPolicy="no-referrer"
               src={source.favicon_url}
-              alt={`${source.name} favicon`}
+              alt={`${source.key} favicon`}
               className="size-4"
             />
           )}
-          <span className="text-muted-foreground">{source.name ?? ""}</span>
+          <span className="text-muted-foreground">{source.key}</span>
         </div>
       )
     },
   },
 
   {
-    accessorKey: "show.name",
-    header: "Show",
+    accessorKey: "title.name",
+    header: "Title",
   },
 
   {

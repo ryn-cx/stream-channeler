@@ -1,60 +1,68 @@
-# TODO: Validate
-"""Hulu plugin."""
-
 from __future__ import annotations
 
-from typing import override
+import re
+from datetime import timedelta
+from typing import TYPE_CHECKING, override
 
-from plugins.Hulu.search import SearchMixin
-from plugins.Hulu.source import SourceMixin
-from plugins.Hulu.upsert import UpsertMixin
-from plugins.Hulu.url_handlers import (
-    HuluURLHandler,
-    MovieURLHandler,
-    SeriesURLHandler,
-    WatchURLHandler,
+from plugins.Hulu.constants import (
+    MOVIE_URL_REGEX,
+    SERIES_URL_REGEX,
+    VIDEO_URL_REGEX,
 )
-from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
+from plugins.Hulu.importer import HuluImporter, HuluMovieImporter, HuluSeriesImporter
+from plugins.Hulu.shared import HuluShared
+from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
+
+if TYPE_CHECKING:
+    from datetime import datetime
+
+    from app.titles.models import Title
 
 
 # TODO: Validate
 class Hulu(
-    UpsertMixin,
-    SearchMixin,
-    SourceMixin,
-    MediaTypeImportMixin[HuluURLHandler],
+    HuluShared,
+    AbstractPlugin,
     register=True,
 ):
-    """Hulu plugin."""
-
     # TODO: Validate
+    @override
+    def _next_plugin_update_at(self) -> datetime:
+        return max(self._plugin_files_data_timestamps()) + timedelta(days=7)
+
     @classmethod
     @override
-    def _url_handlers(cls) -> tuple[type[HuluURLHandler], ...]:
-        return (SeriesURLHandler, MovieURLHandler, WatchURLHandler)
+    def _url_regexes(cls) -> tuple[str, ...]:
+        return (SERIES_URL_REGEX, MOVIE_URL_REGEX, VIDEO_URL_REGEX)
 
-    # TODO: Validate
     @override
-    def get_url_handler(self, url: str) -> HuluURLHandler:
-        handler = super().get_url_handler(url)
-        if isinstance(handler, WatchURLHandler) and not handler.is_episode():
-            return MovieURLHandler(self, url, handler.key)
-        return handler
+    def _media_importer_from_url(self, url: str) -> HuluImporter:
+        domain_regex = self._domains_regex()
+        if re.match(domain_regex + SERIES_URL_REGEX, url):
+            return HuluSeriesImporter(self.session, self.plugin, self._file_cache)
+        if re.match(domain_regex + MOVIE_URL_REGEX, url):
+            return HuluMovieImporter(self.session, self.plugin, self._file_cache)
 
-    # TODO: Validate
-    @classmethod
-    @override
-    def tmdb_provider_names(cls) -> tuple[str, ...]:
-        return ("Hulu",)
+        if match := re.match(domain_regex + VIDEO_URL_REGEX, url):
+            # Movies and series use the same URL format for individual episodes. Only a
+            # series episode is served by the episode endpoint, so a movie is what is
+            # left when that endpoint has nothing for the key.
+            episode_file = self.episode_file(match.group("episode_key"))
+            episode_file.download_if_outdated()
+            if episode_file.record_content:
+                return HuluSeriesImporter(self.session, self.plugin, self._file_cache)
+            return HuluMovieImporter(self.session, self.plugin, self._file_cache)
 
-    # TODO: Validate
-    @classmethod
-    @override
-    def favicon_url(cls) -> str:
-        return "https://www.hulu.com/favicon.ico"
+        # Should only occur on invalid episode URLs.
+        msg = f"Invalid {self.plugin_name()} URL: {url}"
+        raise InvalidURLError(msg)
 
-    # TODO: Validate
-    @classmethod
     @override
-    def _domain(cls) -> str:
-        return "hulu.com"
+    def _media_importer_from_title(self, title: Title) -> HuluImporter:
+        if not title.media_type:  #  Should be impossible.
+            msg = "Title.media_type is not set."
+            raise AttributeError(msg)
+
+        if title.media_type == "Movie":
+            return HuluMovieImporter(self.session, self.plugin, self._file_cache)
+        return HuluSeriesImporter(self.session, self.plugin, self._file_cache)

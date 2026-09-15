@@ -45,7 +45,7 @@ export function FileContentCell({ fileId, fileName }: FileContentCellProps) {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
-          Show content
+          Title content
         </Button>
       </DialogTrigger>
       <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-5xl lg:max-w-6xl">

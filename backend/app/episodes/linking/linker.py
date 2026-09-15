@@ -3,18 +3,18 @@
 import uuid
 from collections.abc import Callable, Collection, Hashable, Iterable, Sequence
 
+import numpy  # noqa: ICN001 - Spelled out, as abbreviated names are not used here.
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import instance_state, set_committed_value
 from sqlmodel import Session, col, select
 
-from app.canonical_media.keys import is_tmdb_key
 from app.episodes.linking.rules import (
     season_and_episode_number_key,
     single,
     unambiguous_lookup,
 )
 from app.episodes.linking.tmdb_facts import TmdbEpisodeFacts
-from app.episodes.models import Episode, EpisodeCanonicalEpisode
+from app.episodes.models import Episode, EpisodeTmdbEpisode
 from app.episodes.name_matching import (
     is_only_numbered_name,
     is_untitled_name,
@@ -22,22 +22,25 @@ from app.episodes.name_matching import (
     name_parts,
     plaintext,
 )
-from app.episodes.preload import preload_episodes
-from app.episodes.service import absolute_numbers
+from app.episodes.preload import DEPRECATED_preload_episodes
+from app.episodes.service.numbering import absolute_numbers
 from app.episodes.text_matching import TextMatcher
-from app.shows.models import Show
+from app.titles.models import Title
+from app.tmdb_media.tmdb import (
+    is_tmdb_key,
+)
 
 
 # TODO: Validate
 class EpisodeLinker:
     # TODO: Validate
-    def __init__(self, session: Session, show: Show) -> None:
+    def __init__(self, session: Session, title: Title) -> None:
         self.session = session
-        self.show = show
-        preload_episodes(session, [show, *show.canonical_shows])
+        self.title = title
+        DEPRECATED_preload_episodes(session, [title, *title.tmdb_titles])
         episodes = [
             episode
-            for season in show.active_children
+            for season in title.active_children
             for episode in season.active_children
         ]
         self.episodes = [
@@ -46,21 +49,28 @@ class EpisodeLinker:
         self.unnamed_episodes = [
             episode for episode in episodes if self._has_blacklisted_name(episode)
         ]
-        self.canonical_episodes = [
+        self.tmdb_episodes = [
             episode
-            for canonical_show in show.canonical_shows
-            for season in canonical_show.active_children
+            for tmdb_title in title.tmdb_titles
+            for season in tmdb_title.active_children
             for episode in season.active_children
             if is_tmdb_key(episode.key)
         ]
         self.season_numbers = {
             episode.id: season.season_number
-            for parent in (show, *show.canonical_shows)
+            for parent in (title, *title.tmdb_titles)
             for season in parent.active_children
             for episode in season.active_children
         }
+        self.facts = TmdbEpisodeFacts(
+            session,
+            title.tmdb_titles,
+            self.tmdb_episodes,
+        )
+        self.facts.preload()
+        DEPRECATED_preload_episodes(session, [title, *title.tmdb_titles])
         self.absolute_numbers: dict[uuid.UUID, int] = {}
-        for parent in (show, *show.canonical_shows):
+        for parent in (title, *title.tmdb_titles):
             self.absolute_numbers |= absolute_numbers(
                 [
                     (episode.id, season.season_number, episode.episode_number)
@@ -69,40 +79,53 @@ class EpisodeLinker:
                 ],
             )
         self._load_existing_links(
-            [*self.episodes, *self.unnamed_episodes, *self.canonical_episodes],
-        )
-        self.facts = TmdbEpisodeFacts(
-            session,
-            show.canonical_shows,
-            self.canonical_episodes,
+            [*self.episodes, *self.unnamed_episodes, *self.tmdb_episodes],
         )
 
     # TODO: Validate
+    def _load_linked_flags(self, episodes: Sequence[Episode]) -> None:
+        expired = {
+            episode.id: episode
+            for episode in episodes
+            if "is_linked" in instance_state(episode).unloaded
+        }
+        if not expired:
+            return
+        rows = self.session.exec(
+            select(Episode.id, Episode.is_linked).where(
+                col(Episode.id).in_(list(expired)),
+            ),
+        ).all()
+        for episode_id, is_linked in rows:
+            set_committed_value(expired[episode_id], "is_linked", is_linked)
+
+    # TODO: Validate
     def _load_existing_links(self, episodes: Sequence[Episode]) -> None:
+        self._load_linked_flags(episodes)
         unread = [
             episode
             for episode in episodes
-            if "canonical_episode_links" in instance_state(episode).unloaded
+            if "tmdb_episode_links" in instance_state(episode).unloaded
         ]
         for episode in unread:
-            if episode.is_canonical:
-                set_committed_value(episode, "canonical_episode_links", [])
+            if not episode.is_linked:
+                set_committed_value(episode, "tmdb_episode_links", [])
 
-        linked = [episode.id for episode in unread if not episode.is_canonical]
+        linked = [episode.id for episode in unread if episode.is_linked]
         if not linked:
             return
         self.session.exec(
             select(Episode)
             .where(col(Episode.id).in_(linked))
             .options(
-                selectinload(Episode.canonical_episode_links).selectinload(  # type: ignore[arg-type]
-                    EpisodeCanonicalEpisode.canonical_episode,  # type: ignore[arg-type]
+                selectinload(Episode.tmdb_episode_links).selectinload(  # type: ignore[arg-type]
+                    EpisodeTmdbEpisode.tmdb_episode,  # type: ignore[arg-type]
                 ),
             ),
         ).all()
 
     # TODO: Validate
-    def link_show(self) -> None:
+    def link_title(self) -> None:
         self.link_named_episodes(self.episodes)
         self.link_unnamed_episodes(self.unnamed_episodes)
 
@@ -164,7 +187,7 @@ class EpisodeLinker:
         texts_of: Callable[[Episode], Collection[str]],
     ) -> dict[str, set[Episode]]:
         index: dict[str, set[Episode]] = {}
-        for tmdb_episode in self.canonical_episodes:
+        for tmdb_episode in self.tmdb_episodes:
             for candidate_text in texts_of(tmdb_episode):
                 if key := plaintext(candidate_text):
                     index.setdefault(key, set()).add(tmdb_episode)
@@ -185,7 +208,7 @@ class EpisodeLinker:
         texts_of: Callable[[Episode], Collection[str]],
     ) -> dict[str, set[Episode]]:
         index: dict[str, set[Episode]] = {}
-        for tmdb_episode in self.canonical_episodes:
+        for tmdb_episode in self.tmdb_episodes:
             for candidate_text in texts_of(tmdb_episode):
                 if key := loose_plaintext(candidate_text):
                     index.setdefault(key, set()).add(tmdb_episode)
@@ -209,10 +232,23 @@ class EpisodeLinker:
         return next(iter(found)) if len(found) == 1 else None
 
     # TODO: Validate
+    @staticmethod
+    def _batched(
+        test: Callable[[Episode], list[tuple[float, Episode]]],
+    ) -> Callable[[Sequence[Episode]], list[list[tuple[float, Episode]]]]:
+        # TODO: Validate
+        def batched(
+            episodes: Sequence[Episode],
+        ) -> list[list[tuple[float, Episode]]]:
+            return [test(episode) for episode in episodes]
+
+        return batched
+
+    # TODO: Validate
     def _split_test(
         self,
         label: str,
-    ) -> tuple[str, Callable[[Episode], list[tuple[float, Episode]]]]:
+    ) -> tuple[str, Callable[[Sequence[Episode]], list[list[tuple[float, Episode]]]]]:
         index = self._exact_index(self.facts.names_of)
         loose_index = self._loose_index(self.facts.names_of)
 
@@ -232,7 +268,7 @@ class EpisodeLinker:
                 matched.append(found)
             return [(1.0, tmdb_episode) for tmdb_episode in matched]
 
-        return (label, test)
+        return (label, self._batched(test))
 
     # TODO: Validate
     def _exact_test(
@@ -240,7 +276,7 @@ class EpisodeLinker:
         texts_of: Callable[[Episode], Collection[str]],
         own_text_of: Callable[[Episode], str | None],
         label: str,
-    ) -> tuple[str, Callable[[Episode], list[tuple[float, Episode]]]]:
+    ) -> tuple[str, Callable[[Sequence[Episode]], list[list[tuple[float, Episode]]]]]:
         index = self._exact_index(texts_of)
 
         # TODO: Validate
@@ -248,59 +284,80 @@ class EpisodeLinker:
             found = self._sole_match(index, own_text_of(episode))
             return [(1.0, found)] if found else []
 
-        return (label, test)
+        return (label, self._batched(test))
 
     # TODO: Validate
     def _link_by_single_test(
         self,
         episodes: list[Episode],
-        test: tuple[str, Callable[[Episode], list[tuple[float, Episode]]]],
+        test: tuple[
+            str,
+            Callable[[Sequence[Episode]], list[list[tuple[float, Episode]]]],
+        ],
     ) -> list[Episode]:
         label, run = test
-        for episode in episodes:
-            for score, tmdb_episode in run(episode):
-                self._claim(
-                    episode,
-                    tmdb_episode,
-                    f"Automatic: {label} match ({round(score * 100)}%)",
-                )
+        for start in range(0, len(episodes), 256):
+            batch = episodes[start : start + 256]
+            for episode, found in zip(batch, run(batch), strict=True):
+                for score, tmdb_episode in found:
+                    self._claim(
+                        episode,
+                        tmdb_episode,
+                        f"Automatic: {label} match ({round(score * 100)}%)",
+                    )
         return self._unlinked(episodes)
 
     # TODO: Validate
     def _link_by_tests(
         self,
         episodes: list[Episode],
-        tests: list[tuple[str, Callable[[Episode], list[tuple[float, Episode]]]]],
+        tests: list[
+            tuple[str, Callable[[Sequence[Episode]], list[list[tuple[float, Episode]]]]]
+        ],
     ) -> list[Episode]:
-        for episode in episodes:
-            results = [
-                (label, found) for label, test in tests if (found := test(episode))
-            ]
-            if not results:
-                continue
-
-            matched = {
-                frozenset(tmdb_episode.id for _score, tmdb_episode in found)
-                for _label, found in results
-            }
-            widest = max(matched, key=len)
-            if any(not found <= widest for found in matched):
-                continue
-
-            results = [
-                (label, found)
-                for label, found in results
-                if frozenset(tmdb_episode.id for _score, tmdb_episode in found)
-                == widest
-            ]
-            labels = ", ".join(label for label, _found in results)
-            for score, tmdb_episode in results[0][1]:
-                self._claim(
+        for start in range(0, len(episodes), 256):
+            batch = episodes[start : start + 256]
+            found_by_test = [(label, test(batch)) for label, test in tests]
+            for position, episode in enumerate(batch):
+                self._link_one_by_tests(
                     episode,
-                    tmdb_episode,
-                    f"Automatic: {labels} match ({round(score * 100)}%)",
+                    [
+                        (label, found[position])
+                        for label, found in found_by_test
+                        if found[position]
+                    ],
                 )
         return self._unlinked(episodes)
+
+    # TODO: Validate
+    def _link_one_by_tests(
+        self,
+        episode: Episode,
+        results: list[tuple[str, list[tuple[float, Episode]]]],
+    ) -> None:
+        if not results:
+            return
+
+        matched = {
+            frozenset(tmdb_episode.id for _score, tmdb_episode in found)
+            for _label, found in results
+        }
+        widest = max(matched, key=len)
+        if any(not found <= widest for found in matched):
+            return
+
+        results = [
+            (label, found)
+            for label, found in results
+            if frozenset(tmdb_episode.id for _score, tmdb_episode in found) == widest
+        ]
+        labels = ", ".join(label for label, _found in results)
+        for score, tmdb_episode in results[0][1]:
+            self._claim(
+                episode,
+                tmdb_episode,
+                f"Automatic: {labels} match ({round(score * 100)}%)",
+            )
 
     # TODO: Validate
     @staticmethod
@@ -345,19 +402,18 @@ class EpisodeLinker:
     # TODO: Validate
     @staticmethod
     def _unlinked(episodes: list[Episode]) -> list[Episode]:
-        return [episode for episode in episodes if not episode.canonical_episode_links]
+        return [episode for episode in episodes if not episode.tmdb_episode_links]
 
     # TODO: Validate
     def _claim(self, episode: Episode, tmdb_episode: Episode, note: str) -> None:
-        link = EpisodeCanonicalEpisode(
+        link = EpisodeTmdbEpisode(
             episode_id=episode.id,
-            canonical_episode_id=tmdb_episode.id,
-            sort_order=episode.sort_order,
+            tmdb_episode_id=tmdb_episode.id,
+            note=note,
         )
         link.episode = episode
-        link.canonical_episode = tmdb_episode
-        episode.canonical_episode_links.append(link)
-        episode.canonical_episode_note = note
+        link.tmdb_episode = tmdb_episode
+        episode.tmdb_episode_links.append(link)
         self.session.add(link)
 
     # TODO: Validate
@@ -369,7 +425,7 @@ class EpisodeLinker:
     ) -> Callable[[list[Episode]], list[Episode]]:
         # TODO: Validate
         def step(episodes: list[Episode]) -> list[Episode]:
-            index = unambiguous_lookup(self.canonical_episodes, keys_of)
+            index = unambiguous_lookup(self.tmdb_episodes, keys_of)
             for episode in episodes:
                 key = key_of(episode)
                 if key is None:
@@ -402,16 +458,16 @@ class EpisodeLinker:
             and episode.episode_number == tmdb_episode.episode_number
         ):
             return True
-        canonical_absolute = self._absolute_number_of(tmdb_episode)
-        if canonical_absolute is not None and (
-            episode.episode_number == canonical_absolute
+        tmdb_absolute = self._absolute_number_of(tmdb_episode)
+        if tmdb_absolute is not None and (
+            episode.episode_number == tmdb_absolute
         ):
             return True
         absolute_number = self._absolute_number_of(episode)
         if absolute_number is None:
             return False
         return (
-            absolute_number == canonical_absolute
+            absolute_number == tmdb_absolute
             or absolute_number in self.facts.alternate_numbers_of(tmdb_episode)
         )
 
@@ -439,19 +495,57 @@ class EpisodeLinker:
 
     # TODO: Validate
     @staticmethod
-    def _ranked(
+    def _candidates_of(
         entries: list[tuple[Episode, str]],
-        scores: list[float],
+    ) -> tuple[list[Episode], numpy.ndarray]:
+        candidates: list[Episode] = []
+        positions: dict[uuid.UUID, int] = {}
+        entry_candidates: list[int] = []
+        for tmdb_episode, _text in entries:
+            position = positions.get(tmdb_episode.id)
+            if position is None:
+                position = len(candidates)
+                positions[tmdb_episode.id] = position
+                candidates.append(tmdb_episode)
+            entry_candidates.append(position)
+        return candidates, numpy.asarray(entry_candidates, dtype=numpy.intp)
+
+    # TODO: Validate
+    @staticmethod
+    def _runner_up(best: numpy.ndarray, first: int) -> int | None:
+        before = best[:first]
+        after = best[first + 1 :]
+        if not before.size and not after.size:
+            return None
+        if not after.size or (before.size and before.max() >= after.max()):
+            return int(numpy.argmax(before))
+        return first + 1 + int(numpy.argmax(after))
+
+    # TODO: Validate
+    @staticmethod
+    def _ranked(
+        candidates: list[Episode],
+        entry_candidates: numpy.ndarray,
+        scores: numpy.ndarray,
     ) -> list[tuple[float, Episode]]:
-        best: dict[Episode, float] = {}
-        for (tmdb_episode, _text), score in zip(entries, scores, strict=True):
-            if score > best.get(tmdb_episode, -1.0):
-                best[tmdb_episode] = score
-        return sorted(
-            ((score, tmdb_episode) for tmdb_episode, score in best.items()),
-            key=lambda scoring: scoring[0],
-            reverse=True,
-        )
+        best: numpy.ndarray
+        if len(candidates) == len(scores):
+            best = scores
+        else:
+            best = numpy.full(len(candidates), -1.0)
+            numpy.maximum.at(best, entry_candidates, scores)
+        if not best.size:
+            return []
+
+        first = int(numpy.argmax(best))
+        if best[first] <= -1.0:
+            return []
+        ranked = [(float(best[first]), candidates[first])]
+
+        second = EpisodeLinker._runner_up(best, first)
+        if second is not None and best[second] > -1.0:
+            ranked.append((float(best[second]), candidates[second]))
+        return ranked
 
     # TODO: Validate
     def _scored_tests(
@@ -462,38 +556,58 @@ class EpisodeLinker:
         *,
         blended: tuple[float, float],
         embedding: tuple[float, float],
-    ) -> list[tuple[str, Callable[[Episode], list[tuple[float, Episode]]]]]:
+    ) -> list[
+        tuple[str, Callable[[Sequence[Episode]], list[list[tuple[float, Episode]]]]]
+    ]:
         entries = [
             (tmdb_episode, text)
-            for tmdb_episode in self.canonical_episodes
+            for tmdb_episode in self.tmdb_episodes
             for text in texts_of(tmdb_episode)
         ]
         if not entries:
             return []
         matcher = TextMatcher([text for _tmdb_episode, text in entries])
+        candidates, entry_candidates = self._candidates_of(entries)
 
         # TODO: Validate
         def scored(
-            scores_of: Callable[[str], list[float]],
+            scores_of: Callable[[list[str]], numpy.ndarray],
             floor: float,
             margin: float,
-        ) -> Callable[[Episode], list[tuple[float, Episode]]]:
+        ) -> Callable[[Sequence[Episode]], list[list[tuple[float, Episode]]]]:
             # TODO: Validate
-            def test(episode: Episode) -> list[tuple[float, Episode]]:
-                own_text = (own_text_of(episode) or "").strip()
-                if not own_text:
+            def test(
+                episodes: Sequence[Episode],
+            ) -> list[list[tuple[float, Episode]]]:
+                own_texts = [
+                    (own_text_of(episode) or "").strip() for episode in episodes
+                ]
+                if not own_texts:
                     return []
-                found = self._confident_match(
-                    episode,
-                    self._ranked(entries, scores_of(own_text)),
-                    floor,
-                    margin,
-                )
-                return [found] if found else []
+                score_rows = scores_of(own_texts)
+                results: list[list[tuple[float, Episode]]] = []
+                for episode, own_text, scores in zip(
+                    episodes,
+                    own_texts,
+                    score_rows,
+                    strict=True,
+                ):
+                    found = (
+                        self._confident_match(
+                            episode,
+                            self._ranked(candidates, entry_candidates, scores),
+                            floor,
+                            margin,
+                        )
+                        if own_text
+                        else None
+                    )
+                    results.append([found] if found else [])
+                return results
 
             return test
 
         return [
-            (f"Blended {label}", scored(matcher.blended_scores, *blended)),
-            (f"Embedding {label}", scored(matcher.embedding_scores, *embedding)),
+            (f"Blended {label}", scored(matcher.blended_scores_of, *blended)),
+            (f"Embedding {label}", scored(matcher.embedding_scores_of, *embedding)),
         ]

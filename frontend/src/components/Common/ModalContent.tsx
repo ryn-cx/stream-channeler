@@ -1,25 +1,21 @@
 // TODO: Validate
 import { DialogContent } from "@/components/ui/dialog"
-import { cn } from "@/lib/utils"
 
-/**
- * Tailwind can't build class names dynamically, so the allowed widths are
- * mapped explicitly. Add an entry here to expose a new modal width.
- */
-const widthClasses = {
-  sm: "sm:max-w-sm",
-  md: "sm:max-w-md",
-  lg: "sm:max-w-lg",
-  xl: "sm:max-w-xl",
-  "2xl": "sm:max-w-2xl",
-  "3xl": "sm:max-w-3xl",
-  "4xl": "sm:max-w-4xl",
-  "5xl": "sm:max-w-5xl",
+const widths = {
+  sm: "40%",
+  md: "45%",
+  lg: "50%",
+  xl: "55%",
+  "2xl": "60%",
+  "3xl": "65%",
+  "4xl": "70%",
+  "5xl": "75%",
+  "6xl": "80%",
   // As wide as the page leaves room for, for modals holding a full layout.
-  full: "sm:max-w-[calc(100%-2rem)]",
+  full: "95%",
 } as const
 
-export type ModalSize = keyof typeof widthClasses
+export type ModalSize = keyof typeof widths
 
 interface ModalContentProps extends React.ComponentProps<typeof DialogContent> {
   /** Width of the modal. Defaults to `lg`; override for wider dialogs. */
@@ -32,15 +28,6 @@ interface ModalContentProps extends React.ComponentProps<typeof DialogContent> {
  * behavior. The `size` prop tweaks the width when a specific modal needs to be
  * wider or narrower than the default.
  */
-export function ModalContent({
-  size = "lg",
-  className,
-  ...props
-}: ModalContentProps) {
-  return (
-    <DialogContent
-      className={cn(widthClasses[size], "max-h-[80vh]", className)}
-      {...props}
-    />
-  )
+export function ModalContent({ size = "lg", ...props }: ModalContentProps) {
+  return <DialogContent width={widths[size]} {...props} />
 }

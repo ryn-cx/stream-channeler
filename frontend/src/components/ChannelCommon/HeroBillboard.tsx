@@ -20,7 +20,7 @@ interface HeroBillboardProps {
   hasPrev: boolean
   /** Same actions the episode cards offer, shown in the top-right menu. */
   menuItems?: ActionMenuItem[]
-  /** Top-left overlay, e.g. the "Last Watched" badge the cards show. */
+  /** Top-left overlay, e.g. the "Last Watched" badge the cards title. */
   topLeftBadge?: React.ReactNode
 }
 
@@ -80,7 +80,7 @@ export function HeroBillboard({
         <div className="p-4 md:p-12 lg:p-16 flex flex-col gap-3 md:gap-4 max-w-full md:max-w-[66%]">
           <div className="flex flex-col gap-2">
             <p className="text-sm md:text-lg font-medium text-zinc-300 line-clamp-1">
-              {episode.show.name}
+              {episode.title.name}
               {episode.tmdb_season_name ? ` - ${episode.tmdb_season_name}` : ""}
             </p>
             <h2 className="text-2xl md:text-5xl lg:text-6xl font-bold text-white leading-tight line-clamp-2">
@@ -95,7 +95,7 @@ export function HeroBillboard({
             {episode.air_date && (
               <span>{new Date(episode.air_date).toLocaleDateString()}</span>
             )}
-            {episode.source.name && <span>{episode.source.name}</span>}
+            {episode.source.key && <span>{episode.source.key}</span>}
           </div>
 
           <div className="flex flex-wrap items-center gap-2 md:gap-3 mt-1 md:mt-2">

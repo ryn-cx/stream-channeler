@@ -22,7 +22,7 @@ interface FormTextFieldProps<TFieldValues extends FieldValues>
   name?: FieldPath<TFieldValues>
   label: string
   required?: boolean
-  /** Show a "Now" button that fills the field with the current local datetime. */
+  /** Title a "Now" button that fills the field with the current local datetime. */
   showNowButton?: boolean
   // Allow data-* attributes (e.g. data-testid) to flow through to the input.
   [dataAttribute: `data-${string}`]: string | undefined

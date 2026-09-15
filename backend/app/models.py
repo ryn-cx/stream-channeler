@@ -1,15 +1,13 @@
 # TODO: Validate
 """Shared models."""
 
-
-import hashlib
 import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import StrEnum
 from functools import partial
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, Self, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Self, TypeVar
 
 from sqlalchemy import util
 from sqlalchemy.dialects.postgresql import JSONB
@@ -30,8 +28,8 @@ if TYPE_CHECKING:
     from app.files.models import File
     from app.plugins.models import Plugin
     from app.seasons.models import Season
-    from app.shows.models import Show
     from app.sources.models import Source
+    from app.titles.models import Title
     from app.users.models import User
 
 
@@ -40,13 +38,6 @@ if TYPE_CHECKING:
 # because the official example for implementing a DateTime field also ignore the error:
 # https://github.com/fastapi/full-stack-fastapi-template/blob/master/backend/app/models.py
 DateTimeField = partial(Field, sa_type=DateTime(timezone=True))  # type: ignore[call-overload]
-
-
-# TODO: Validate
-class SupportsDataTimestamp(Protocol):
-    # TODO: Validate
-    @property
-    def data_timestamp(self) -> datetime: ...
 
 
 # A sortable field ending in this is the same sort with the number 0 pushed past
@@ -62,15 +53,6 @@ def sortable_field_indexes(
     already_indexed: Iterable[str] = (),
     where: TextClause | None = None,
 ) -> tuple[Index, ...]:
-    """Build an `Index` for each field that can be used for sorting by the user.
-
-    `id` is already indexed by the primary key, and `already_indexed` names the
-    fields the table indexes itself, which an index built here would collide with.
-
-    `where` narrows every index to the rows that are ordered by these fields,
-    which on a table holding both canonical and non-canonical rows is the
-    alone.
-    """
     skipped = {"id", *already_indexed}
     return tuple(
         Index(f"{model_name}-{field}-index", field, postgresql_where=where)
@@ -146,7 +128,11 @@ class TimestampIdAndHashMixin(SQLModel):
     # TODO: Validate
     def __hash__(self) -> int:
         """Return a hash representation of the record based on the `id`."""
-        return hash(self.id)
+        cached = self.__dict__.get("_record_hash")
+        if cached is None:
+            cached = hash(self.id)
+            self.__dict__["_record_hash"] = cached
+        return cached
 
     # TODO: Validate
     def __eq__(self, other: object) -> bool:
@@ -156,17 +142,13 @@ class TimestampIdAndHashMixin(SQLModel):
 
 # TODO: Validate
 class BaseMediaMixin(SQLModel):
-    """Mixin for base media models.
-
-    Fields: `key`, `data_timestamp`, `update_at`, `deleted_at`, and `extra`.
-    """
-
     # key is a surrogate key so the name key makes it easier to differentiate between
     # the key field and the id field.
     key: str = Field(min_length=1)
     data_timestamp: datetime | None = DateTimeField(default=None)
     update_at: datetime | None = DateTimeField(default=None)
     deleted_at: datetime | None = DateTimeField(default=None)
+    status: str | None = Field(default=None)
 
     # Allows plugins to store custom information beyond the database's structure.
     # Always an object, so a plugin keeping two things here does not have to
@@ -181,24 +163,13 @@ class BaseMediaMixin(SQLModel):
     )
 
 
-# TODO: Validate
-def staggered_update_at(key: str, data_timestamp: datetime) -> datetime:
-    seed = hashlib.sha256(key.encode()).digest()
-    slot = int.from_bytes(seed) % 28
-    days_ahead = (slot - data_timestamp.toordinal()) % 28 or 28
-    return data_timestamp + timedelta(days=days_ahead)
-
-
-ChildT = TypeVar("ChildT", bound="Plugin | Source | Show | Season | Episode | File")
-ParentT = TypeVar("ParentT", bound="Plugin | Source | Show | Season")
+ChildT = TypeVar("ChildT", bound="Plugin | Source | Title | Season | Episode | File")
+ParentT = TypeVar("ParentT", bound="Plugin | Source | Title | Season")
 
 
 # TODO: Validate
 class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):  # noqa: UP046
-    # The column saying outright whether this row is the media itself, for the
-    # models that hold both kinds of row in one table. Those models carry
-    # `is_canonical` as a column of their own; the rest leave this unset.
-    CANONICAL_FLAG_FIELD: ClassVar[str | None] = None
+    LINKED_FLAG_FIELD: ClassVar[str | None] = None
 
     # TODO: Validate
     @property
@@ -207,8 +178,8 @@ class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):
         """Return the direct children of the record.
 
         - `Plugin` -> `Source | Files`
-        - `Source` -> `Show`
-        - `Show` -> `Season`
+        - `Source` -> `Title`
+        - `Title` -> `Season`
         - `Season` -> `Episode`
         - `Episode` -> `[]`
         """
@@ -219,8 +190,8 @@ class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):
         """Return the direct children of the record that are not deleted.
 
         - `Plugin` -> `Source | Files`
-        - `Source` -> `Show`
-        - `Show` -> `Season`
+        - `Source` -> `Title`
+        - `Title` -> `Season`
         - `Season` -> `Episode`
         - `Episode` -> `[]`
         """
@@ -233,28 +204,16 @@ class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):
         """Return a select joined to `Plugin`."""
 
     # TODO: Validate
-    def set_update_at(
-        self,
-        new_update_at_value: datetime | None,
-        files: Sequence[SupportsDataTimestamp] | None = None,
-    ) -> None:
+    def set_update_at(self, new_update_at_value: datetime | None) -> None:
         """Set `update_at` based its current value and `new_update_at_value`."""
-        files = files or []
+        oldest_data_timestamp = self.data_timestamp
+
         # If the existing update_at is older than data_timestamp the update has
         # been completed and update_at can be cleared.
         if (
             self.update_at
-            and self.data_timestamp
-            and self.update_at < self.data_timestamp
-        ):
-            self.update_at = None
-
-        # If every file is newer than the existing update_at the update has been
-        # completed and update_at can be cleared.
-        if (
-            self.update_at
-            and files
-            and all(file.data_timestamp > self.update_at for file in files)
+            and oldest_data_timestamp
+            and self.update_at < oldest_data_timestamp
         ):
             self.update_at = None
 
@@ -263,12 +222,7 @@ class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):
 
         # If the existing data_timestamp is newer than the new update_at value update_at
         # can be ignored because the data is already up to date.
-        if self.data_timestamp and self.data_timestamp >= new_update_at_value:
-            return
-
-        # If every file is newer than the new update_at value the data is already up to
-        # date and the new value can be ignored.
-        if files and all(file.data_timestamp > new_update_at_value for file in files):
+        if oldest_data_timestamp and oldest_data_timestamp >= new_update_at_value:
             return
 
         # If the new update_at is before the existing update_at the existing update_at
@@ -288,7 +242,19 @@ class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):
         # preserved.
         # created_at: set by the database.
         # modified_at: set by the database.
-        protected_keys = protected_keys | {"id", "created_at", "modified_at"}
+        # Fields the caller never passed: a record built to say three things about
+        # a title says nothing about the rest, and the defaults SQLModel filled in
+        # are not an account of them to write over what is stored.
+        unset_keys = set(type(self).model_fields) - self.model_fields_set
+        protected_keys = (
+            protected_keys
+            | unset_keys
+            | {
+                "id",
+                "created_at",
+                "modified_at",
+            }
+        )
         dumped = self.model_dump(exclude=protected_keys)
         existing_record.sqlmodel_update(dumped)
         return existing_record
@@ -344,8 +310,6 @@ class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):
 
 # TODO: Validate
 class ChildMediaMixin(MediaMixin[ChildT], ABC, Generic[ParentT, ChildT]):  # noqa: UP046
-    # The column holding the parent's id. Named rather than found by looking for
-    # the first foreign key, since a model can hold more than one and which of
     # them is the parent is not something the columns say.
     PARENT_ID_FIELD: ClassVar[str]
 
@@ -356,8 +320,8 @@ class ChildMediaMixin(MediaMixin[ChildT], ABC, Generic[ParentT, ChildT]):  # noq
         """Return the parent of the record.
 
         - `Source` -> `Plugin`
-        - `Show` -> `Source`
-        - `Season` -> `Show`
+        - `Title` -> `Source`
+        - `Season` -> `Title`
         - `Episode` -> `Season`
         """
 
@@ -503,26 +467,9 @@ class ChildMediaMixin(MediaMixin[ChildT], ABC, Generic[ParentT, ChildT]):  # noq
         if protected_keys is None:
             protected_keys = set()
         if existing_record:
+            if existing_record.deleted_at is not None:
+                existing_record.soft_undelete()
             return self._update_existing(existing_record, protected_keys)
         # self will always be a child of parent
         parent.add_child(self)  # type: ignore[arg-type]
         return self
-
-    # TODO: Validate
-    def upsert_and_set_update_at(
-        self,
-        parent: ParentT,
-        existing_record: Self | None,
-        files: Sequence[SupportsDataTimestamp] | None = None,
-        protected_keys: set[str] | None = None,
-    ) -> Self:
-        """Upsert and automatically set the `update_at` timestamp."""
-        if protected_keys is None:
-            protected_keys = {"update_at"}
-        else:
-            protected_keys.add("update_at")
-
-        record = self.upsert(parent, existing_record, protected_keys)
-        if existing_record:
-            record.set_update_at(self.update_at, files)
-        return record

@@ -14,17 +14,17 @@ from app.models import Visibility
 from app.seasons.models import Season
 from app.users.models import User
 from app.watches.models import Watch
-from tests.app.channels.utils import create_random_channel, create_random_channel_show
+from tests.app.channels.utils import create_random_channel, create_random_channel_title
 from tests.app.helpers.utils import build_random_model, random_past_timestamp
 from tests.app.plugins.utils import create_random_plugin
-from tests.app.shows.utils import create_random_show
 from tests.app.sources.utils import create_random_source
+from tests.app.titles.utils import create_random_title
 from tests.app.users.utils import create_random_user
 
-SHOW_COUNT = 100
-SEASONS_PER_SHOW = 5
+TITLE_COUNT = 100
+SEASONS_PER_TITLE = 5
 EPISODES_PER_SEASON = 100
-EPISODE_COUNT = SHOW_COUNT * SEASONS_PER_SHOW * EPISODES_PER_SEASON
+EPISODE_COUNT = TITLE_COUNT * SEASONS_PER_TITLE * EPISODES_PER_SEASON
 WATCH_COUNT = 500
 MINIMUM_DURATION = 300
 MAXIMUM_DURATION = 3600
@@ -37,13 +37,13 @@ def _build_channel(session: Session, user: User) -> tuple[Channel, list[Episode]
     channel = create_random_channel(session, user=user.id, visibility=Visibility.public)
 
     episodes: list[Episode] = []
-    for _ in range(SHOW_COUNT):
-        show = create_random_show(session, source)
-        create_random_channel_show(session, channel, show, is_whitelist=False)
-        for season_number in range(1, SEASONS_PER_SHOW + 1):
+    for _ in range(TITLE_COUNT):
+        title = create_random_title(session, source)
+        create_random_channel_title(session, channel, title, is_whitelist=False)
+        for season_number in range(1, SEASONS_PER_TITLE + 1):
             season = build_random_model(
                 Season,
-                show_id=show.id,
+                title_id=title.id,
                 deleted_at=None,
                 season_number=season_number,
             )
@@ -87,7 +87,7 @@ def _complex_options() -> ChannelOptions:
     return ChannelOptions(
         sort_by=[
             {
-                "model": "show",
+                "model": "title",
                 "field": "random",
                 "direction": "ascending",
                 "order": "interleave",
@@ -118,9 +118,9 @@ def _complex_options() -> ChannelOptions:
         minimum_duration=600,
         maximum_duration=3000,
         minimum_air_date_relative=3650,
-        total_shows_count=10,
-        started_shows_count=5,
-        new_shows_count=5,
+        total_titles_count=10,
+        started_titles_count=5,
+        new_titles_count=5,
         limit=1000,
     )
 
@@ -144,7 +144,7 @@ def test_complex_read_of_ten_thousand_episodes(
     read_seconds = time.perf_counter() - read_start
 
     logger.info(
-        f"Benchmark: {EPISODE_COUNT} episodes over {SHOW_COUNT} shows, "
+        f"Benchmark: {EPISODE_COUNT} episodes over {TITLE_COUNT} titles, "
         f"setup {setup_seconds:.2f}s, "
         f"read {read_seconds:.2f}s, "
         f"{len(results)} episodes returned",

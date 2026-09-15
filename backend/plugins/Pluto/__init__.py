@@ -1,56 +1,43 @@
 # TODO: Validate
-"""Pluto TV plugin."""
-
 from __future__ import annotations
 
-from typing import override
+import re
+from typing import TYPE_CHECKING, override
 
-from plugins.Pluto.upsert import UpsertMixin
-from plugins.Pluto.url_handlers import (
-    MovieURLHandler,
-    PlutoURLHandler,
-    SeriesURLHandler,
+from plugins.Pluto.constants import MOVIE_URL_REGEX, SERIES_URL_REGEX
+from plugins.Pluto.importer import (
+    PlutoImporter,
+    PlutoMovieImporter,
+    PlutoSeriesImporter,
 )
-from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
+from plugins.Pluto.shared import PlutoShared
+from plugins.utils.abstract_plugin import AbstractPlugin
+
+if TYPE_CHECKING:
+    from app.titles.models import Title
 
 
 # TODO: Validate
-class Pluto(
-    UpsertMixin,
-    MediaTypeImportMixin[PlutoURLHandler],
-    register=True,
-):
-    """Pluto TV plugin."""
-
+class Pluto(PlutoShared, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override
-    def _url_handlers(cls) -> tuple[type[PlutoURLHandler], ...]:
-        return (
-            MovieURLHandler,
-            SeriesURLHandler,
-        )
+    def _url_regexes(cls) -> tuple[str, ...]:
+        return (MOVIE_URL_REGEX, SERIES_URL_REGEX)
 
     # TODO: Validate
-    @classmethod
     @override
-    def tmdb_provider_names(cls) -> tuple[str, ...]:
-        return ("Pluto TV",)
+    def _media_importer_from_url(self, url: str) -> PlutoImporter:
+        if re.match(self._domains_regex() + MOVIE_URL_REGEX, url):
+            return PlutoMovieImporter(self.session, self.plugin, self._file_cache)
+        return PlutoSeriesImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
-    @classmethod
     @override
-    def favicon_url(cls) -> str:
-        return "https://pluto.tv/favicon.ico"
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _domain(cls) -> str:
-        return "pluto.tv"
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def plugin_name(cls) -> str:
-        return "Pluto TV"
+    def _media_importer_from_title(self, title: Title) -> PlutoImporter:
+        if not title.media_type:
+            msg = "Title.media_type is not set."
+            raise AttributeError(msg)
+        if title.media_type == "Movie":
+            return PlutoMovieImporter(self.session, self.plugin, self._file_cache)
+        return PlutoSeriesImporter(self.session, self.plugin, self._file_cache)

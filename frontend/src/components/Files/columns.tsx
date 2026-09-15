@@ -12,6 +12,7 @@ import { FileContentCell } from "./ContentCell"
 
 export type FileTableData = FileListPublic & { pending?: boolean }
 
+// TODO: Validate
 export const fileColumns: ColumnDef<FileTableData>[] = [
   {
     accessorKey: "plugin_name",
@@ -51,6 +52,11 @@ export const fileColumns: ColumnDef<FileTableData>[] = [
       ),
   },
   {
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) => <TruncatedCell value={row.original.status} />,
+  },
+  {
     accessorKey: "data_timestamp",
     header: "Data Timestamp",
     meta: { filterVariant: "dateRange" },
@@ -72,6 +78,11 @@ export const fileColumns: ColumnDef<FileTableData>[] = [
     accessorKey: "extra",
     header: "Extra",
     cell: ({ row }) => <TruncatedCell value={extraText(row.original.extra)} />,
+  },
+  {
+    accessorKey: "plugin_id",
+    header: "Plugin ID",
+    cell: ({ row }) => <TruncatedCell value={row.original.plugin_id} />,
   },
   {
     accessorKey: "id",

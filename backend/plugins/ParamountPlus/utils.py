@@ -1,36 +1,30 @@
 # TODO: Validate
-"""What every other part of the plugin reads a title by."""
+"""What every other part of the plugin reads a Paramount+ title by."""
 
-from typing import override
-
-from app.shows.models import Show
-from plugins.ParamountPlus.files import FileMixin
+from __future__ import annotations
 
 
 # TODO: Validate
-class HelperMixin(FileMixin, register=False):
-    """The URLs of a title and whether it is a film or a series."""
+def build_url(path: str) -> str:
+    return f"https://paramountplus.com/{path.lstrip('/')}"
 
-    # TODO: Validate
-    @override
-    def _set_media_type_from_show(self, show: Show) -> None:
-        if not show.media_type:
-            msg = "Show.media_type is not set."
-            raise AttributeError(msg)
-        self._media_type_value = "movie" if show.media_type == "Movie" else "series"
 
-    # TODO: Validate
-    @classmethod
-    def _show_url(cls, show_key: str) -> str:
-        return cls.build_url(f"shows/{show_key}/")
+# TODO: Validate
+def title_url(title_key: str) -> str:
+    return build_url(f"shows/{title_key}/")
 
-    # TODO: Validate
-    @classmethod
-    def _movie_url(cls, movie_key: str) -> str:
-        return cls.build_url(f"movies/video/{movie_key}/")
 
-    # TODO: Validate
-    @override
-    @classmethod
-    def manual_search(cls, query: str) -> str | None:
-        return cls.build_url("search/")
+# TODO: Validate
+def movie_url(movie_key: str) -> str:
+    return build_url(f"movies/video/{movie_key}/")
+
+
+# TODO: Validate
+def build_season_key(title_key: str, season_number: int) -> str:
+    return f"{title_key}:{season_number}"
+
+
+# TODO: Validate
+def split_season_key(season_key: str) -> tuple[str, int]:
+    title_key, _, season_number = season_key.rpartition(":")
+    return title_key, int(season_number)

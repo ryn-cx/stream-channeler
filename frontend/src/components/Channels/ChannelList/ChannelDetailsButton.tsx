@@ -1,25 +1,16 @@
 // TODO: Validate
-import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { Info } from "lucide-react"
 import { useState } from "react"
-import { ChannelsService } from "@/client"
 import { ChannelDescriptionMarkdown } from "@/components/Channels/ChannelDetail/ChannelDescription"
-import { ShowCardsWithInformation } from "@/components/Channels/ShowCardsWithInformation"
+import { TitleCardsWithInformation } from "@/components/Channels/TitleCardsWithInformation"
+import { useAllChannelTitles } from "@/components/Channels/useChannelTitles"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import {
   type TriggerVariant,
   VariantTrigger,
 } from "@/components/Common/VariantTrigger"
-import {
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+import { WinBoxModal } from "@/components/Common/WinBoxModal"
 
 interface ChannelDetailsButtonProps {
   channel: { id: string; name?: string | null; description?: string | null }
@@ -35,59 +26,61 @@ export function ChannelDetailsButton({
 }: ChannelDetailsButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["channelShows", channel.id],
-    queryFn: () => ChannelsService.getChannelShows({ channelId: channel.id }),
+  const { data, isLoading } = useAllChannelTitles(channel.id, {
     enabled: isOpen,
   })
 
-  const canonicalShows = data?.canonical_shows ?? {}
+  const tmdbTitles = data?.tmdb_titles ?? {}
   const groups = (data?.groups ?? [])
     .map((group) => ({
       ...group,
-      shows: (group.shows ?? []).filter((show) =>
-        show.canonical_show_id
-          ? !!canonicalShows[show.canonical_show_id]?.name
-          : !!show.name,
+      titles: (group.titles ?? []).filter((title) =>
+        title.tmdb_title_id
+          ? !!tmdbTitles[title.tmdb_title_id]?.name
+          : !!title.name,
       ),
     }))
-    .filter((group) => group.shows.length > 0)
+    .filter((group) => group.titles.length > 0)
+
+  const stats = data?.stats ?? {}
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        {variant === "icon" ? (
-          <TooltipIconButton
-            label="Details"
-            icon={<Info className="size-4" />}
-            showLabel={showLabel}
-          />
-        ) : (
-          <VariantTrigger
-            variant={variant}
-            icon={Info}
-            label="Details"
-            iconTitle="Details"
-          />
-        )}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[calc(100%-2rem)] max-h-[80vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>{channel.name ?? "Channel"}</DialogTitle>
-          <DialogDescription>
-            The channel's description and every show it includes.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogBody className="space-y-4 py-2">
+    <>
+      {variant === "icon" ? (
+        <TooltipIconButton
+          label="Details"
+          icon={<Info className="size-4" />}
+          showLabel={showLabel}
+          onClick={() => setIsOpen(true)}
+        />
+      ) : (
+        <VariantTrigger
+          variant={variant}
+          icon={Info}
+          label="Details"
+          iconTitle="Details"
+          onClick={() => setIsOpen(true)}
+        />
+      )}
+
+      <WinBoxModal
+        open={isOpen}
+        title={channel.name ?? "Channel"}
+        onClose={() => setIsOpen(false)}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            The channel's description and every title it includes.
+          </p>
           {channel.description && (
             <ChannelDescriptionMarkdown description={channel.description} />
           )}
 
           {isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading shows...</p>
+            <p className="text-sm text-muted-foreground">Loading titles...</p>
           ) : groups.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No shows in this channel yet.
+              No titles in this channel yet.
             </p>
           ) : (
             groups.map((group) => (
@@ -101,19 +94,19 @@ export function ChannelDetailsButton({
                     {group.channel_name || "Unnamed Channel"}
                   </Link>
                 </h3>
-                <ShowCardsWithInformation
+                <TitleCardsWithInformation
                   channelId={group.channel_id}
-                  shows={group.shows}
+                  titles={group.titles}
                   sources={data?.sources ?? {}}
-                  canonicalShows={data?.canonical_shows ?? {}}
-                  canonicalSources={data?.canonical_sources ?? {}}
-                  stats={data?.stats ?? {}}
+                  tmdbTitles={data?.tmdb_titles ?? {}}
+                  tmdbSources={data?.tmdb_sources ?? {}}
+                  stats={stats ?? {}}
                 />
               </div>
             ))
           )}
-        </DialogBody>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </WinBoxModal>
+    </>
   )
 }

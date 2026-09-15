@@ -189,12 +189,6 @@ def _random_field_value(inner_type: type, info: FieldInfo) -> object:
 
 # TODO: Validate
 def request_payload(model: BaseModel, *, exclude_unset: bool = True) -> dict[str, Any]:
-    """Return `model` as a request body would carry it.
-
-    A computed field is derived from what the record already holds, so it is
-    never something a request sets; `model_dump` includes it all the same, and an
-    endpoint that forbids unknown fields rejects the request over it.
-    """
     return model.model_dump(
         mode="json",
         exclude_unset=exclude_unset,

@@ -1,5 +1,5 @@
 <!-- TODO: Validate -->
-> [!TIP/Show]
+> [!TIP/Title]
 > `https://www.adultswim.com/videos/metalocalypse`
 > `https://www.adultswim.com/rick-and-morty`
 

@@ -51,7 +51,7 @@ class Watch(TimestampIdAndHashMixin, BaseWatch, table=True):
             unique=True,
         ),
         # Used in episode_selector._apply_hide_watched and
-        # episode_selector._filter_show_counts to filter by verified watch status.
+        # episode_selector._filter_title_counts to filter by verified watch status.
         Index("Watch-user_id-verified-index", "user_id", "verified"),
         # Used in episode_selector._build_last_watched to aggregate the latest watch
         # date per episode and in episode_selector._apply_recently_aired_sort.

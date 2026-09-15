@@ -1,9 +1,12 @@
 <!-- TODO: Validate -->
 > [!TIP/Series]
-> `https://www.hulu.com/series/fdeb1018-4472-442f-ba94-fb087cdea069`
-> `https://www.hulu.com/series/rick-and-morty-4e0f6374-fc81-4da2-b7a9-f7f8c29e7acc`
-> `https://www.hulu.com/watch/60da223c-d2a0-411a-95c9-665a839371f9`
+> `https://www.hulu.com/series/7117a15d-128c-4c2b-a5b9-98adfa0f4505`
+> `https://www.hulu.com/series/chad-powers-7117a15d-128c-4c2b-a5b9-98adfa0f4505`
 
 > [!TIP/Movie]
-> `https://www.hulu.com/movie/4ee4f57e-19bd-493f-96f9-ad3e753af981`
-> `https://www.hulu.com/movie/the-wolf-of-wallstreet-4ee4f57e-19bd-493f-96f9-ad3e753af981`
+> `https://www.hulu.com/movie/34bc6b99-813f-4d5d-bbe7-f3099b45879b`
+> `https://www.hulu.com/movie/the-devil-wears-prada-2-34bc6b99-813f-4d5d-bbe7-f3099b45879b`
+
+> [!TIP/Episode]
+> `https://www.hulu.com/watch/c282fbd1-d649-4a69-8733-ad9e52222858`
+> `https://www.hulu.com/watch/34bc6b99-813f-4d5d-bbe7-f3099b45879b`

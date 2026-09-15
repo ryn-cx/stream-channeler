@@ -5,13 +5,10 @@ import { Fragment, type ReactNode } from "react"
 import type {
   PluginOutput,
   SeasonOutput,
-  ShowPublic,
   SourcePublic,
+  TitlePublic,
 } from "@/client"
-import EditPlugin from "@/components/Plugins/Edit"
-import EditSeason from "@/components/Seasons/Edit"
-import EditShow from "@/components/Shows/Edit"
-import EditSource from "@/components/Sources/Edit"
+import EditTitle from "@/components/Titles/Edit"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -21,12 +18,12 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 
-export type EntityKey = "plugin" | "source" | "show" | "season"
+export type EntityKey = "plugin" | "source" | "title" | "season"
 
 interface DetailBreadcrumbProps {
   plugin?: PluginOutput
   source?: SourcePublic
-  show?: ShowPublic
+  title?: TitlePublic
   season?: SeasonOutput
   trailing: string
   current?: EntityKey
@@ -36,7 +33,7 @@ interface DetailBreadcrumbProps {
 export function DetailBreadcrumb({
   plugin,
   source,
-  show,
+  title,
   season,
   trailing,
   current,
@@ -45,44 +42,42 @@ export function DetailBreadcrumb({
     key: EntityKey
     label: string
     link: ReactNode
-    edit: ReactNode
+    edit?: ReactNode
   }[] = []
   if (plugin) {
     crumbs.push({
       key: "plugin",
-      label: plugin.name || plugin.key,
+      label: plugin.key,
       link: (
         <Link to="/sources" search={{ plugin_id: plugin.id }}>
-          {plugin.name || plugin.key}
+          {plugin.key}
         </Link>
       ),
-      edit: <EditPlugin plugin={plugin} size="icon-sm" />,
     })
   }
   if (source) {
     crumbs.push({
       key: "source",
-      label: source.name || source.key,
+      label: source.key,
       link: (
-        <Link to="/shows" search={{ source_id: source.id }}>
-          {source.name || source.key}
+        <Link to="/titles" search={{ source_id: source.id }}>
+          {source.key}
         </Link>
       ),
-      edit: <EditSource source={source} size="icon-sm" />,
     })
   }
-  if (show) {
+  if (title) {
     crumbs.push({
-      key: "show",
-      label: show.name || show.key,
+      key: "title",
+      label: title.name || title.key,
       link: (
-        <Link to="/seasons" search={{ show_id: show.id }}>
-          {show.name || show.key}
+        <Link to="/seasons" search={{ title_id: title.id }}>
+          {title.name || title.key}
         </Link>
       ),
       edit: (
-        <EditShow
-          show={{ ...show, plugin_name: plugin?.name ?? null }}
+        <EditTitle
+          title={{ ...title, plugin_name: plugin?.key ?? null }}
           size="icon-sm"
         />
       ),
@@ -97,7 +92,6 @@ export function DetailBreadcrumb({
           {season.name || season.key}
         </Link>
       ),
-      edit: <EditSeason season={season} size="icon-sm" />,
     })
   }
   return (

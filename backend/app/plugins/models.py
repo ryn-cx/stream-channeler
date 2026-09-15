@@ -19,7 +19,6 @@ from sqlmodel.sql.expression import SelectOfScalar
 from app.models import (
     BaseMediaMixin,
     MediaMixin,
-    SupportsDataTimestamp,
     sortable_field_indexes,
 )
 
@@ -33,14 +32,13 @@ if TYPE_CHECKING:
     from app.files.models import File
     from app.sources.models import Source
 
-DIRECT_SORTABLE_FIELDS = ["id", "name"]
+DIRECT_SORTABLE_FIELDS = ["id", "key"]
 
 
 # TODO: Validate
 class BasePlugin(BaseMediaMixin):
     """Base model for a `Plugin`."""
 
-    name: str | None = Field(default=None)
     version: str | None = Field(default=None)
 
 
@@ -56,7 +54,7 @@ class Plugin(BasePlugin, MediaMixin["Source | File"], table=True):
     __table_args__ = (
         PrimaryKeyConstraint("key"),
         UniqueConstraint("id"),
-        *sortable_field_indexes("Plugin", DIRECT_SORTABLE_FIELDS),
+        *sortable_field_indexes("Plugin", DIRECT_SORTABLE_FIELDS, ["key"]),
         Index("Plugin-deleted_at-index", "deleted_at"),
     )
 
@@ -157,25 +155,6 @@ class Plugin(BasePlugin, MediaMixin["Source | File"], table=True):
             return self._update_existing(existing_record, protected_keys)
         session.add(self)
         return self
-
-    # TODO: Validate
-    def upsert_and_set_update_at(
-        self,
-        session: Session,
-        existing_record: Self | None,
-        files: Sequence[SupportsDataTimestamp] | None = None,
-        protected_keys: set[str] | None = None,
-    ) -> Self:
-        """Upsert and automatically set the `update_at` timestamp."""
-        if protected_keys is None:
-            protected_keys = {"update_at"}
-        else:
-            protected_keys.add("update_at")
-
-        record = self.upsert(session, existing_record, protected_keys)
-        if existing_record:
-            record.set_update_at(self.update_at, files)
-        return record
 
     # TODO: Validate
     def __str__(self) -> str:

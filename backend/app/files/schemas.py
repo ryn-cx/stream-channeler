@@ -3,6 +3,7 @@
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from pydantic import AliasPath, BaseModel, ConfigDict, Field
 
@@ -51,7 +52,7 @@ class FileListPublic(BaseMediaMixin):
     data_timestamp: datetime = DateTimeField()  # pyright: ignore[reportIncompatibleVariableOverride]
     plugin_id: uuid.UUID
     id: uuid.UUID
-    plugin_name: str | None = Field(validation_alias=AliasPath("plugin", "name"))
+    plugin_name: str | None = Field(validation_alias=AliasPath("plugin", "key"))
 
 
 # TODO: Validate
@@ -62,3 +63,27 @@ class FilesPublic(BaseModel):
     total_count: int
     filtered_count: int
     is_server_side: bool
+
+
+# TODO: Validate
+class FileManifestEntry(BaseModel):
+    plugin_key: str
+    key: str
+
+
+# TODO: Validate
+class FileExport(BaseModel):
+    plugin_key: str
+    key: str
+    data_timestamp: datetime
+    content: str | None = None
+    update_at: datetime | None = None
+    deleted_at: datetime | None = None
+    status: str | None = None
+    extra: dict[str, Any] | None = None
+
+
+# TODO: Validate
+class FileImportResult(BaseModel):
+    imported: int
+    skipped: int

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 const items = [
   { title: "Plugins", path: "/plugins" },
   { title: "Sources", path: "/sources" },
-  { title: "Shows", path: "/shows" },
+  { title: "Titles", path: "/titles" },
   { title: "Seasons", path: "/seasons" },
   { title: "Episodes", path: "/episodes" },
   { title: "Files", path: "/files" },

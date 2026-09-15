@@ -10,11 +10,11 @@ import {
 import { lazy, Suspense } from "react"
 
 import type {
+  ChannelEpisodePlugin,
+  ChannelEpisodeSeason,
+  ChannelEpisodeSource,
+  ChannelEpisodeTitle,
   EpisodeWithDetails,
-  PluginOutput,
-  SeasonOutput,
-  ShowPublic,
-  SourcePublic,
 } from "@/client"
 import {
   type ActionMenuItem,
@@ -24,10 +24,10 @@ import { Card } from "@/components/ui/card"
 
 /** Episode shape required by the shared card layout and overlays. */
 export type BaseEpisodeWithDetails = EpisodeWithDetails & {
-  season: SeasonOutput
-  show: ShowPublic
-  source: SourcePublic
-  plugin: PluginOutput
+  season: ChannelEpisodeSeason
+  title: ChannelEpisodeTitle
+  source: ChannelEpisodeSource
+  plugin: ChannelEpisodePlugin
 }
 
 export type MoveDirection = "up" | "down" | "left" | "right" | "first" | "last"
@@ -72,7 +72,7 @@ for (const path in allModules) {
 
 // TODO: Validate
 function EpisodeCardOverlay({ episode }: { episode: BaseEpisodeWithDetails }) {
-  const mediaType = episode.show.media_type || ""
+  const mediaType = episode.title.media_type || ""
   const pluginKey = episode.plugin.key
 
   let OverlayComponent: React.LazyExoticComponent<
@@ -104,7 +104,7 @@ interface EpisodeCardProps {
   topLeftBadge?: React.ReactNode
   /** Click handler for the card itself. Ignored when in edit-order mode. */
   onClick?: () => void
-  /** Fades the card out to show it has already been clicked. */
+  /** Fades the card out to title it has already been clicked. */
   dimmed?: boolean
   /** Whether the card is currently in reorder mode. */
   editOrder?: boolean

@@ -1,0 +1,334 @@
+# TODO: Validate
+"""The whole database written down as the text two runs compare."""
+
+import difflib
+import json
+import uuid
+from collections import defaultdict
+from collections.abc import Mapping
+from datetime import UTC, datetime
+from enum import Enum
+from typing import Any
+
+from sqlalchemy import Column, Table
+from sqlalchemy import select as sqlalchemy_select
+from sqlmodel import Session, SQLModel
+
+EXCLUDED_TABLES = frozenset({"file", "user"})
+
+_ID_COLUMN = "id"
+
+_PLUGIN_TABLE = "plugin"
+_SOURCE_TABLE = "source"
+_PLUGIN_ID_COLUMN = "plugin_id"
+_SOURCES_FIELD = "sources"
+_TITLES_FIELD = "titles"
+
+_MEDIA_TREE = (
+    ("season", "episode", "season_id", "episodes"),
+    ("title", "season", "title_id", "seasons"),
+    ("source", "title", "source_id", _TITLES_FIELD),
+)
+
+_NESTED_TABLES = frozenset({"source", "title", "season", "episode"})
+"""The tables written inside their parent rather than as a list of their own."""
+
+_KEY_COLUMNS = ("key", "email", "name")
+"""What a row is named by, in the order they are looked for.
+
+The key is what every media row is named by. `email` is the user's key by
+another name, and `name` is what is left for a row the user named themselves.
+"""
+
+_LINK_SEPARATOR = "+"
+"""What joins the keys of the rows a link row is the link between."""
+
+type RowValues = dict[str, Any]
+type TableRows = dict[str, list[RowValues]]
+type RowsById = dict[uuid.UUID, tuple[Table, RowValues]]
+type KeyById = dict[uuid.UUID, str]
+
+
+# TODO: Validate
+def _dump_value(value: object, rows_by_id: RowsById, keys: KeyById) -> object:
+    if isinstance(value, uuid.UUID):
+        return _key_from(value, rows_by_id, keys)
+    if isinstance(value, datetime):
+        return value.astimezone(UTC).isoformat()
+    if isinstance(value, Enum):
+        return value.value
+    return value
+
+
+# TODO: Validate
+def _key_from(row_id: uuid.UUID, rows_by_id: RowsById, keys: KeyById) -> str:
+    """Return the key of the row `row_id` points at.
+
+    An id is generated afresh on every run, so an id written down as it is says
+    nothing two runs can compare. Every row has a key that says the same thing
+    and stays put, so what an id points at is written as that row's key, which
+    leaves an id pointing at the wrong row readable as the wrong name rather
+    than as one meaningless value against another.
+    """
+    if row_id in keys:
+        return keys[row_id]
+    table, row = rows_by_id[row_id]
+    keys[row_id] = _row_key(table, row, rows_by_id, keys)
+    return keys[row_id]
+
+
+# TODO: Validate
+def _row_key(
+    table: Table,
+    row: RowValues,
+    rows_by_id: RowsById,
+    keys: KeyById,
+) -> str:
+    """Return what names one row of `table`."""
+    key_column = next((name for name in _KEY_COLUMNS if name in table.columns), None)
+    if key_column is not None:
+        return str(row[key_column])
+    # A row that is nothing but a link between two others carries no key of its
+    # own, so it is named by the keys of the rows it links.
+    return _LINK_SEPARATOR.join(
+        str(_dump_value(row[column.name], rows_by_id, keys))
+        for column in table.columns
+        if column.foreign_keys
+    )
+
+
+# TODO: Validate
+def _naming_columns(table: Table) -> list[Column[Any]]:
+    """Return the columns that a row of `table` is read back by its key from."""
+    key_column = next((name for name in _KEY_COLUMNS if name in table.columns), None)
+    named = (
+        [table.columns[key_column]]
+        if key_column is not None
+        else [column for column in table.columns if column.foreign_keys]
+    )
+    return [table.columns[_ID_COLUMN], *named]
+
+
+# TODO: Validate
+def _read_tables(session: Session) -> list[tuple[Table, list[RowValues]]]:
+    """Read every row of every table, an excluded one by its names alone."""
+    tables: list[tuple[Table, list[RowValues]]] = []
+    for table in SQLModel.metadata.sorted_tables:
+        columns = (
+            _naming_columns(table)
+            if table.name in EXCLUDED_TABLES
+            else [*table.columns]
+        )
+        tables.append(
+            (
+                table,
+                [
+                    dict(row._mapping)  # pyright: ignore[reportPrivateUsage] # noqa: SLF001
+                    for row in session.execute(sqlalchemy_select(*columns))
+                ],
+            ),
+        )
+    return tables
+
+
+# TODO: Validate
+def _rows_by_id(tables: list[tuple[Table, list[RowValues]]]) -> RowsById:
+    """Return every row an id in the dump can point at, by that id."""
+    return {
+        row[_ID_COLUMN]: (table, row)
+        for table, rows in tables
+        if _ID_COLUMN in table.columns
+        for row in rows
+    }
+
+
+# TODO: Validate
+def _sort_key(row: Mapping[str, Any]) -> str:
+    """Return what a row is ordered by.
+
+    Every list in the dump is ordered this way rather than left in the order the
+    database handed it over, because that order is the database's to change and a
+    run that read the same rows in another order would read as a run that found
+    different ones.
+    """
+    return json.dumps(row, sort_keys=True, default=str)
+
+
+# TODO: Validate
+def _nest(
+    dumped: dict[str, list[tuple[RowValues, RowValues]]],
+    parent_table: str,
+    child_table: str,
+    parent_id_column: str,
+    child_field: str,
+) -> None:
+    """Write each row of `child_table` inside the row it hangs off.
+
+    Read from the bottom up, so a season is written inside its title with its
+    episodes already inside it.
+    """
+    by_parent: dict[uuid.UUID, list[RowValues]] = defaultdict(list)
+    for row, dumped_row in dumped.get(child_table, []):
+        by_parent[row[parent_id_column]].append(dumped_row)
+    for row, dumped_row in dumped.get(parent_table, []):
+        dumped_row[child_field] = sorted(
+            by_parent.get(row[_ID_COLUMN], []),
+            key=_sort_key,
+        )
+
+
+# TODO: Validate
+def _has_titles(dumped_source: RowValues) -> bool:
+    """Report whether anything was imported into the source.
+
+    A plugin gives every provider it tracks a source whether or not anything was
+    imported from it - JustWatch alone tracks hundreds - and a source nothing was
+    imported into is the same empty row on every run. What it says about the run
+    is nothing, and what it does to the dump is bury the rows that do say
+    something.
+    """
+    return bool(dumped_source[_TITLES_FIELD])
+
+
+# TODO: Validate
+def database_json(session: Session) -> str:
+    tables = _read_tables(session)
+    rows_by_id = _rows_by_id(tables)
+    keys: KeyById = {}
+    dumped: dict[str, list[tuple[RowValues, RowValues]]] = {
+        table.name: [
+            (
+                row,
+                {
+                    name: _dump_value(value, rows_by_id, keys)
+                    for name, value in row.items()
+                },
+            )
+            for row in rows
+        ]
+        for table, rows in tables
+        if table.name not in EXCLUDED_TABLES
+    }
+
+    for parent_table, child_table, parent_id_column, child_field in _MEDIA_TREE:
+        _nest(dumped, parent_table, child_table, parent_id_column, child_field)
+    dumped[_SOURCE_TABLE] = [
+        (row, dumped_row)
+        for row, dumped_row in dumped[_SOURCE_TABLE]
+        if _has_titles(dumped_row)
+    ]
+    _nest(dumped, _PLUGIN_TABLE, _SOURCE_TABLE, _PLUGIN_ID_COLUMN, _SOURCES_FIELD)
+
+    dump: TableRows = {
+        name: sorted((dumped_row for _row, dumped_row in rows), key=_sort_key)
+        for name, rows in dumped.items()
+        if name not in _NESTED_TABLES
+    }
+    return json.dumps(dump, indent=2)
+
+
+# TODO: Validate
+def state_diff(expected: str, actual: str) -> str:
+    """Return what changed between the recorded dump and the one a run produced."""
+    expected_lines = expected.splitlines()
+    actual_lines = actual.splitlines()
+
+    matching_prefix = 0
+    while (
+        matching_prefix < len(expected_lines)
+        and matching_prefix < len(actual_lines)
+        and expected_lines[matching_prefix] == actual_lines[matching_prefix]
+    ):
+        matching_prefix += 1
+
+    start = max(matching_prefix - 5, 0)
+    return "\n".join(
+        difflib.unified_diff(
+            expected_lines[start : start + 2000],
+            actual_lines[start : start + 2000],
+            fromfile="recorded",
+            tofile="actual",
+            lineterm="",
+        ),
+    )
+
+
+_UNCHANGED = object()
+
+
+# TODO: Validate
+def _row_identity(row: object) -> str:
+    if isinstance(row, dict):
+        for name in _KEY_COLUMNS:
+            if name in row:
+                return str(row[name])
+        return _LINK_SEPARATOR.join(str(value) for value in row.values())
+    return json.dumps(row, sort_keys=True, default=str)
+
+
+# TODO: Validate
+def _rows_by_identity(rows: list[Any]) -> dict[str, Any] | None:
+    by_identity: dict[str, Any] = {}
+    for row in rows:
+        identity = _row_identity(row)
+        if identity in by_identity:
+            return None
+        by_identity[identity] = row
+    return by_identity
+
+
+# TODO: Validate
+def _list_delta(baseline: list[Any], actual: list[Any]) -> dict[str, Any]:
+    baseline_rows = _rows_by_identity(baseline)
+    actual_rows = _rows_by_identity(actual)
+    if baseline_rows is None or actual_rows is None:
+        return {
+            "removed": [row for row in baseline if row not in actual],
+            "added": [row for row in actual if row not in baseline],
+        }
+
+    delta: dict[str, Any] = {}
+    for identity, row in actual_rows.items():
+        if identity not in baseline_rows:
+            delta[identity] = row
+            continue
+        row_delta = _delta(baseline_rows[identity], row)
+        if row_delta is not _UNCHANGED:
+            delta[identity] = row_delta
+
+    for identity in baseline_rows:
+        if identity not in actual_rows:
+            delta[identity] = None
+    return delta
+
+
+# TODO: Validate
+def _dict_delta(baseline: dict[str, Any], actual: dict[str, Any]) -> dict[str, Any]:
+    delta: dict[str, Any] = {}
+    for name in sorted(baseline.keys() | actual.keys()):
+        if name not in actual:
+            delta[name] = None
+        elif name not in baseline:
+            delta[name] = actual[name]
+        else:
+            field_delta = _delta(baseline[name], actual[name])
+            if field_delta is not _UNCHANGED:
+                delta[name] = field_delta
+    return delta
+
+
+# TODO: Validate
+def _delta(baseline: object, actual: object) -> object:
+    if baseline == actual:
+        return _UNCHANGED
+    if isinstance(baseline, dict) and isinstance(actual, dict):
+        return _dict_delta(baseline, actual)
+    if isinstance(baseline, list) and isinstance(actual, list):
+        return _list_delta(baseline, actual)
+    return actual
+
+
+# TODO: Validate
+def state_delta_json(baseline: str, actual: str) -> str:
+    delta = _delta(json.loads(baseline), json.loads(actual))
+    return json.dumps({} if delta is _UNCHANGED else delta, indent=2)

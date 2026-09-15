@@ -6,8 +6,8 @@ from sqlmodel import Session
 from app.episodes.models import Episode
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show
 from app.sources.models import Source
+from app.titles.models import Title
 from app.users.models import User
 from app.watches.models import Watch
 from tests.app.episodes.utils import create_random_episode
@@ -20,7 +20,7 @@ def create_random_watch(
     session: Session,
     parent: Episode
     | Season
-    | Show
+    | Title
     | Source
     | Plugin
     | User

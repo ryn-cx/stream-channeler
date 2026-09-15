@@ -1,10 +1,5 @@
 // TODO: Validate
-import {
-  type QueryKey,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Eye, EyeOff, Search } from "lucide-react"
 import { useState } from "react"
 
@@ -19,18 +14,15 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
+import { numbering, TmdbEpisodeRow, TmdbPageLink } from "./TmdbEpisodeRow"
 import {
-  CanonicalEpisodeRow,
-  numbering,
-  TmdbPageLink,
-} from "./CanonicalEpisodeRow"
-import { useSettleTmdbMatch } from "./tmdbMatchesQuery"
+  SETTLE_TMDB_MATCH_MUTATION_KEY,
+  type SettleTmdbMatchVariables,
+  useRereadTmdbMatches,
+} from "./tmdbMatchesQuery"
 import { type Numbered, numberingAgreement, numberingOf } from "./tmdbNumbering"
 
 type ChoiceOrder = "sequential" | "similarity" | "other"
-
-/** Every list of choices as it read before one of them was linked. */
-type DroppedChoices = Array<[QueryKey, TmdbEpisodeChoice[] | undefined]>
 
 interface EpisodeTmdbLinkMenuProps {
   episodeId: string
@@ -43,7 +35,7 @@ interface EpisodeTmdbLinkMenuProps {
 
 // TODO: Validate
 /**
- * Which of the show's own episodes are on this TMDB episode already.
+ * Which of the title's own episodes are on this TMDB episode already.
  *
  * A choice being spoken for is the reason it is worth passing over, so which
  * episode spoke for it is the next thing anybody asks - most often because that
@@ -106,13 +98,13 @@ function compareNumbers(
 /**
  * The TMDB episode an `Episode` stands for, and the ones it could stand for instead.
  *
- * The choices are every episode of every title the show is linked to, which is
- * reached by going from the episode up to its show and back down through the
- * titles that show is linked to. They read in the order the title runs by
+ * The choices are every episode of every title the title is linked to, which is
+ * reached by going from the episode up to its title and back down through the
+ * titles that title is linked to. They read in the order the title runs by
  * default, since that is how a website numbers its own episodes, and by how
  * close the names are when the numbering is no help.
  *
- * A title TMDB files an episode under is not always one the show is linked to,
+ * A title TMDB files an episode under is not always one the title is linked to,
  * so an address can be pasted in as well. It is read by the backend rather than
  * here, which is what imports the title on the way and turns the numbering in
  * an episode's address into the id the episode is linked by.
@@ -147,7 +139,7 @@ export function TmdbLinkPicker({
 }: EpisodeTmdbLinkMenuProps) {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const queryClient = useQueryClient()
-  const { settle, restore, reread } = useSettleTmdbMatch()
+  const reread = useRereadTmdbMatches()
   const [order, setOrder] = useState<ChoiceOrder>("sequential")
   // The episodes still going spare are what a title is usually missing, so they
   // are what is offered until the whole title is asked for.
@@ -164,63 +156,37 @@ export function TmdbLinkPicker({
       }),
   })
 
-  // TODO: Validate
-  const dropChoice = async (canonicalEpisodeId: string) => {
-    const choicesKey = ["admin-tmdb-choices", episodeId]
-    await queryClient.cancelQueries({ queryKey: choicesKey })
-    const previous = queryClient.getQueriesData<TmdbEpisodeChoice[]>({
-      queryKey: choicesKey,
-    })
-    queryClient.setQueriesData<TmdbEpisodeChoice[]>(
-      { queryKey: choicesKey },
-      (offered) =>
-        offered?.filter((choice) => choice.episode.id !== canonicalEpisodeId),
-    )
-    return previous
-  }
-
-  // TODO: Validate
-  const restoreChoices = (previous: DroppedChoices | undefined) => {
-    for (const [queryKey, offered] of previous ?? []) {
-      queryClient.setQueryData(queryKey, offered)
-    }
-  }
-
   const linkMutation = useMutation({
-    mutationFn: (canonicalEpisodeId: string) =>
-      EpisodesService.adminLinkEpisodeToTmdb({ episodeId, canonicalEpisodeId }),
-    onMutate: async (canonicalEpisodeId: string) => ({
-      matches: await settle(episodeId),
-      choices: await dropChoice(canonicalEpisodeId),
-    }),
+    mutationKey: SETTLE_TMDB_MATCH_MUTATION_KEY,
+    mutationFn: ({
+      tmdbEpisodeId,
+    }: SettleTmdbMatchVariables & { tmdbEpisodeId: string }) =>
+      EpisodesService.adminLinkEpisodeToTmdb({ episodeId, tmdbEpisodeId }),
     onSuccess: (linked) => {
       showSuccessToast("Episode linked to TMDB")
       queryClient.invalidateQueries({ queryKey: informationQueryKey })
       onLinksChanged?.(linked)
     },
-    onError: (error: unknown, _variables, previous) => {
-      restore(previous?.matches)
-      restoreChoices(previous?.choices)
+    onError: (error: unknown) => {
       handleError.call(showErrorToast, error as any)
     },
     onSettled: reread,
   })
 
   const urlMutation = useMutation({
-    mutationFn: () =>
+    mutationKey: SETTLE_TMDB_MATCH_MUTATION_KEY,
+    mutationFn: ({ episodeIds }: SettleTmdbMatchVariables) =>
       EpisodesService.adminLinkEpisodeByTmdbUrl({
-        episodeId,
+        episodeId: episodeIds[0],
         requestBody: { url: urlDraft },
       }),
-    onMutate: () => settle(episodeId),
     onSuccess: (linked) => {
       showSuccessToast("Episode linked to TMDB")
       setUrlDraft("")
       queryClient.invalidateQueries({ queryKey: informationQueryKey })
       onLinksChanged?.(linked)
     },
-    onError: (error: unknown, _variables, previous) => {
-      restore(previous)
+    onError: (error: unknown) => {
       handleError.call(showErrorToast, error as any)
     },
     onSettled: reread,
@@ -242,12 +208,12 @@ export function TmdbLinkPicker({
   const offered = choices ?? []
   const inScope = offered.filter(
     (choice) =>
-      (isSearch || (choice.from_show === false) === (order === "other")) &&
+      (isSearch || (choice.from_title === false) === (order === "other")) &&
       (showUsed || !choice.already_used) &&
       (isSearch ||
         wanted.length === 0 ||
         (choice.episode.name ?? "").toLowerCase().includes(wanted) ||
-        (choice.show.name ?? "").toLowerCase().includes(wanted)),
+        (choice.title.name ?? "").toLowerCase().includes(wanted)),
   )
 
   // TODO: Validate
@@ -295,7 +261,7 @@ export function TmdbLinkPicker({
           onClick={searchEverything}
         >
           <Search />
-          Search every show
+          Search every title
         </Button>
         <Tabs
           value={order}
@@ -304,7 +270,7 @@ export function TmdbLinkPicker({
           <TabsList>
             <TabsTrigger value="sequential">Sequential</TabsTrigger>
             <TabsTrigger value="similarity">Closest name</TabsTrigger>
-            <TabsTrigger value="other">Other Show Name Matches</TabsTrigger>
+            <TabsTrigger value="other">Other Title Name Matches</TabsTrigger>
           </TabsList>
         </Tabs>
         <Button
@@ -313,15 +279,15 @@ export function TmdbLinkPicker({
           onClick={() => setShowUsed(!showUsed)}
         >
           {showUsed ? <EyeOff /> : <Eye />}
-          {showUsed ? "Hide already used" : "Show already used"}
+          {showUsed ? "Hide already used" : "Title already used"}
         </Button>
       </div>
 
       <div className="max-h-96 overflow-y-auto rounded-lg border">
         {isSearch ? (
           <p className="border-b px-3 py-2 text-xs text-muted-foreground">
-            Every TMDB episode named “{searchedName}”, whichever show it belongs
-            to.
+            Every TMDB episode named “{searchedName}”, whichever title it
+            belongs to.
           </p>
         ) : null}
         {isLoading ? (
@@ -331,18 +297,18 @@ export function TmdbLinkPicker({
             {isSearch
               ? offered.length === 0
                 ? "No TMDB episode anywhere in the database is named that."
-                : "Every TMDB episode named that is already used by another episode of this show."
+                : "Every TMDB episode named that is already used by another episode of this title."
               : order === "other"
-                ? "No TMDB episode of any other show reads close enough to this name."
+                ? "No TMDB episode of any other title reads close enough to this name."
                 : offered.length === 0
                   ? "No TMDB episodes to choose from. Paste the address of the episode on TMDB to link it and read its title in."
                   : wanted.length > 0
                     ? "No TMDB episode of this title is named that."
-                    : "Every TMDB episode of this title is already used by another episode of this show."}
+                    : "Every TMDB episode of this title is already used by another episode of this title."}
           </p>
         ) : (
           ordered.map((choice) => (
-            <CanonicalEpisodeRow
+            <TmdbEpisodeRow
               key={choice.episode.id}
               record={choice}
               absoluteNumber={choice.absolute_number}
@@ -351,7 +317,7 @@ export function TmdbLinkPicker({
                 choice.already_used ? <UsedByDetails choice={choice} /> : null
               }
               className={
-                choice.from_show === false
+                choice.from_title === false
                   ? "text-blue-600 dark:text-blue-400"
                   : undefined
               }
@@ -366,7 +332,12 @@ export function TmdbLinkPicker({
                     size="sm"
                     className="shrink-0"
                     disabled={linkMutation.isPending}
-                    onClick={() => linkMutation.mutate(choice.episode.id)}
+                    onClick={() =>
+                      linkMutation.mutate({
+                        episodeIds: [episodeId],
+                        tmdbEpisodeId: choice.episode.id,
+                      })
+                    }
                   >
                     Link
                   </Button>
@@ -385,7 +356,7 @@ export function TmdbLinkPicker({
             if (event.key !== "Enter") return
             event.preventDefault()
             if (urlDraft.trim().length === 0 || urlMutation.isPending) return
-            urlMutation.mutate()
+            urlMutation.mutate({ episodeIds: [episodeId] })
           }}
           placeholder="themoviedb.org address of a film or of one episode"
           aria-label="TMDB address"
@@ -395,7 +366,7 @@ export function TmdbLinkPicker({
           type="button"
           variant="outline"
           disabled={urlDraft.trim().length === 0 || urlMutation.isPending}
-          onClick={() => urlMutation.mutate()}
+          onClick={() => urlMutation.mutate({ episodeIds: [episodeId] })}
         >
           Link by address
         </Button>

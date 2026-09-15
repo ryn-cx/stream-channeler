@@ -1,43 +1,48 @@
-# TODO: Validate
-"""Netflix plugin."""
-
 from __future__ import annotations
 
-from typing import override
+import re
+from typing import TYPE_CHECKING, override
 
-from plugins.Netflix.upsert import UpsertMixin
-from plugins.Netflix.url_handlers import NetflixURLHandler, TitleURLHandler
-from plugins.utils.base_plugin.plugin import URLHandlerPlugin
+from plugins.Netflix.constants import TITLE_URL_REGEX
+from plugins.Netflix.importer import (
+    NetflixImporter,
+    NetflixMovieImporter,
+    NetflixSeriesImporter,
+)
+from plugins.Netflix.shared import NetflixShared
+from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
+
+if TYPE_CHECKING:
+    from app.titles.models import Title
 
 
 # TODO: Validate
-class Netflix(
-    UpsertMixin,
-    URLHandlerPlugin[NetflixURLHandler],
-    register=True,
-):
-    """Netflix plugin."""
-
-    # TODO: Validate
+class Netflix(NetflixShared, AbstractPlugin, register=True):
     @classmethod
     @override
-    def tmdb_provider_names(cls) -> tuple[str, ...]:
-        return ("Netflix", "Netflix Standard with Ads")
+    def _url_regexes(cls) -> tuple[str, ...]:
+        return (TITLE_URL_REGEX,)
 
-    # TODO: Validate
-    @classmethod
     @override
-    def favicon_url(cls) -> str:
-        return "https://www.netflix.com/favicon.ico"
+    def _media_importer_from_url(self, url: str) -> NetflixImporter:
+        # Movies and series use the same URL format and the same title_file, but the
+        # title_file contains the media type information.
+        if not (match := re.match(self._domains_regex() + TITLE_URL_REGEX, url)):
+            msg = f"Invalid {self.plugin_name()} URL: {url}"
+            raise InvalidURLError(msg)
 
-    # TODO: Validate
-    @classmethod
-    @override
-    def _url_handlers(cls) -> tuple[type[NetflixURLHandler], ...]:
-        return (TitleURLHandler,)
+        title_file = self.title_file(match.group("title_key"))
+        self.raise_invalid_url_if_no_content(title_file, url)
+        if title_file.parsed().field__typename == "Movie":
+            return NetflixMovieImporter(self.session, self.plugin, self._file_cache)
+        return NetflixSeriesImporter(self.session, self.plugin, self._file_cache)
 
-    # TODO: Validate
-    @classmethod
     @override
-    def _domain(cls) -> str:
-        return "netflix.com"
+    def _media_importer_from_title(self, title: Title) -> NetflixImporter:
+        if not title.media_type:  # Should be impossible.
+            msg = "Title.media_type is not set."
+            raise AttributeError(msg)
+
+        if title.media_type == "Movie":
+            return NetflixMovieImporter(self.session, self.plugin, self._file_cache)
+        return NetflixSeriesImporter(self.session, self.plugin, self._file_cache)

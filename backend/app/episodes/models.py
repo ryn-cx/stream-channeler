@@ -20,7 +20,6 @@ from sqlmodel import (
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.canonical_media.keys import EPISODE_LEVEL, tmdb_id_of, watch_identifier
 from app.models import (
     BaseMediaMixin,
     ChildMediaMixin,
@@ -30,8 +29,11 @@ from app.models import (
 )
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show
 from app.sources.models import Source
+from app.titles.models import Title
+from app.tmdb_media.tmdb import (
+    get_tmdb_id,
+)
 from app.users.models import User
 
 if TYPE_CHECKING:
@@ -48,11 +50,17 @@ if TYPE_CHECKING:
 MANUAL_NOTE_PREFIX = "Manual: "
 
 
+# TODO: Validate
+def is_manual_note(note: str | None) -> bool:
+    """Return whether `note` is one a `User` settling a link themselves writes."""
+    return bool(note and note.startswith(MANUAL_NOTE_PREFIX))
+
+
 # The canonical row is the one a channel sorts on, so these name its columns and no
 # non-canonical row's. A non-canonical row's own columns are only ever ordered by the
 # admin tables, which order by any column they show and so are no reason to index these
 # five.
-CANONICAL_SORTABLE_FIELDS = [
+TMDB_SORTABLE_FIELDS = [
     "air_date",
     "duration",
     "episode_number",
@@ -62,7 +70,7 @@ CANONICAL_SORTABLE_FIELDS = [
 
 
 # TODO: Validate
-class BaseCanonicalEpisode(BaseMediaMixin):
+class BaseTmdbEpisode(BaseMediaMixin):
     """The columns an episode carries, and so a non-canonical row of one carries too."""
 
     url: str | None = Field(default=None)
@@ -70,6 +78,7 @@ class BaseCanonicalEpisode(BaseMediaMixin):
     description: str | None = Field(default=None)
     image_url: str | None = Field(default=None)
     thumbnail_url: str | None = Field(default=None)
+    # TODO: Rename to release_date?
     air_date: datetime | None = DateTimeField(default=None)
     episode_number: int | None = Field(default=None)
     duration: int | None = Field(ge=0, default=None)
@@ -77,17 +86,17 @@ class BaseCanonicalEpisode(BaseMediaMixin):
 
 
 # TODO: Validate
-class BaseEpisode(BaseCanonicalEpisode):
+class BaseEpisode(BaseTmdbEpisode):
     """Base model for an `Episode`."""
 
-    canonical_episode_validated_at: datetime | None = DateTimeField(default=None)
-    canonical_episode_note: str | None = Field(default=None)
+    tmdb_episode_validated_at: datetime | None = DateTimeField(default=None)
+    tmdb_note: str | None = Field(default=None)
 
 
 # TODO: Validate
 class Episode(BaseEpisode, ChildMediaMixin[Season, Never], table=True):
     PARENT_ID_FIELD: ClassVar[str] = "season_id"
-    CANONICAL_FLAG_FIELD: ClassVar[str] = "is_canonical"
+    LINKED_FLAG_FIELD: ClassVar[str] = "is_linked"
 
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = [
         "episode_number_zero_last",
@@ -100,20 +109,20 @@ class Episode(BaseEpisode, ChildMediaMixin[Season, Never], table=True):
         "sequential_zero_last",
     ]
     SORTABLE_FIELDS: ClassVar[list[str]] = (
-        CANONICAL_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS
+        TMDB_SORTABLE_FIELDS + INDIRECT_SORTABLE_FIELDS
     )
 
     __table_args__ = (
         PrimaryKeyConstraint("season_id", "key"),
         UniqueConstraint("id"),
         Index("Episode-deleted_at-index", "deleted_at"),
-        Index("Episode-is_canonical-index", "is_canonical"),
+        Index("Episode-is_linked-index", "is_linked"),
         # An episode is looked up by key alone where a `User` names a TMDB id
         # by hand, which is across every season rather than within one.
         Index(
-            "Episode-canonical-key-index",
+            "Episode-unlinked-key-index",
             "key",
-            postgresql_where=text("is_canonical IS TRUE"),
+            postgresql_where=text("is_linked IS FALSE"),
         ),
         # What every read of a `Watch` joins on. Across every row rather than
         # the episodes alone, since a watch carries the identifier of the link
@@ -127,77 +136,86 @@ class Episode(BaseEpisode, ChildMediaMixin[Season, Never], table=True):
         ),
         *sortable_field_indexes(
             "Episode",
-            CANONICAL_SORTABLE_FIELDS,
-            where=text("is_canonical IS TRUE"),
+            TMDB_SORTABLE_FIELDS,
+            where=text("is_linked IS FALSE"),
         ),
     )
 
-    # Whether this row is the episode itself rather than one website's row standing for
-    # it. Which episodes a non-canonical row stands for is stored in
-    # `EpisodeCanonicalEpisode` and nowhere else, since a website that runs two episodes
-    # together - a double-length first airing, a recap paired with the episode it recaps
-    # - stands for each of them equally, and a column could only hold one.
-    is_canonical: bool = Field(default=True)
+    is_linked: bool = Field(default=False)
 
     # Every episode this stands for. Nothing about a non-canonical row says which of
     # them a caller with room for one means, so nothing here puts one ahead of another.
-    canonical_episode_links: list[EpisodeCanonicalEpisode] = Relationship(
+    tmdb_episode_links: list[EpisodeTmdbEpisode] = Relationship(
         back_populates="episode",
         cascade_delete=True,
         sa_relationship_kwargs={
-            "foreign_keys": "EpisodeCanonicalEpisode.episode_id",
+            "foreign_keys": "EpisodeTmdbEpisode.episode_id",
         },
     )
 
     # The other end of the same table: every non-canonical row standing for this one,
     # which only a canonical episode ever has.
-    non_canonical_episodes: list[EpisodeCanonicalEpisode] = Relationship(
-        back_populates="canonical_episode",
+    linked_episodes: list[EpisodeTmdbEpisode] = Relationship(
+        back_populates="tmdb_episode",
         cascade_delete=True,
         sa_relationship_kwargs={
-            "foreign_keys": "EpisodeCanonicalEpisode.canonical_episode_id",
+            "foreign_keys": "EpisodeTmdbEpisode.tmdb_episode_id",
         },
     )
 
     # TODO: Validate
     @property
-    def canonical_episodes(self) -> list[Episode]:
+    def tmdb_episodes(self) -> list[Episode]:
         """Every episode this stands for, in the order they were linked."""
-        return [link.canonical_episode for link in self.canonical_episode_links]
+        return [link.tmdb_episode for link in self.tmdb_episode_links]
 
     # TODO: Validate
     @property
-    def canonical_episode_ids(self) -> list[uuid.UUID]:
+    def tmdb_episode_ids(self) -> list[uuid.UUID]:
         """The id of every episode this stands for.
 
         Read off the links rather than off the episodes they point at, since the
         id is a column of the link itself and reading the episodes to ask them
         their own ids is a query per link for something already in hand.
         """
-        return [link.canonical_episode_id for link in self.canonical_episode_links]
+        return [link.tmdb_episode_id for link in self.tmdb_episode_links]
 
     # TODO: Validate
     @property
-    def sole_canonical_episode(self) -> Episode | None:
+    def tmdb_episode_note(self) -> str | None:
+        notes = [link.note for link in self.tmdb_episode_links if link.note]
+        if not notes:
+            return None
+        return ", ".join(dict.fromkeys(notes))
+
+    # TODO: Validate
+    @tmdb_episode_note.setter
+    def tmdb_episode_note(self, note: str | None) -> None:
+        for link in self.tmdb_episode_links:
+            link.note = note
+
+    # TODO: Validate
+    @property
+    def sole_tmdb_episode(self) -> Episode | None:
         """The episode this stands for, where it stands for exactly one.
 
         A row that runs two episodes together stands for each of them as much as
         for any other, so there is no answer to give a caller with room for one
         and it is told there is none rather than handed whichever came first.
         """
-        canonical_episodes = self.canonical_episodes
-        if len(canonical_episodes) != 1:
+        tmdb_episodes = self.tmdb_episodes
+        if len(tmdb_episodes) != 1:
             return None
-        return canonical_episodes[0]
+        return tmdb_episodes[0]
 
     # TODO: Validate
     @property
-    def sole_canonical_episode_id(self) -> uuid.UUID | None:
+    def sole_tmdb_episode_id(self) -> uuid.UUID | None:
         """The id of the episode this stands for, where there is one."""
-        canonical_episode_ids = self.canonical_episode_ids
-        if len(canonical_episode_ids) != 1:
+        tmdb_episode_ids = self.tmdb_episode_ids
+        if len(tmdb_episode_ids) != 1:
             return None
-        return canonical_episode_ids[0]
+        return tmdb_episode_ids[0]
 
     # TODO: Validate
     def own_episode_numbers(self) -> Collection[int]:
@@ -209,27 +227,12 @@ class Episode(BaseEpisode, ChildMediaMixin[Season, Never], table=True):
 
     # TODO: Validate
     @property
-    def linked_sort_order(self) -> int | None:
-        """Where this sits, as the link that was made for it says.
-
-        A non-canonical row's place is the link's rather than the row's: the same row
-        stands in a different place under each episode it was linked to, and only the
-        link knows which of them is being read. A row with no link, and the episode
-        itself, are ordered by the column they carry.
-        """
-        links = self.canonical_episode_links
-        if len(links) != 1 or links[0].sort_order is None:
-            return self.sort_order
-        return links[0].sort_order
-
-    # TODO: Validate
-    @property
     def tmdb_id(self) -> int | None:
         """The TMDB episode this is linked to, if TMDB has a record of it."""
-        canonical_episode = self.sole_canonical_episode
-        if canonical_episode is None:
+        tmdb_episode = self.sole_tmdb_episode
+        if tmdb_episode is None:
             return None
-        return tmdb_id_of(canonical_episode.key, EPISODE_LEVEL)
+        return get_tmdb_id(tmdb_episode.key)
 
     # What a `Watch` is of. A plugin's own key names the media rather than one
     # row for it - a YouTube video is the same video under every playlist
@@ -262,7 +265,7 @@ class Episode(BaseEpisode, ChildMediaMixin[Season, Never], table=True):
         return (
             select(cls)
             .join(Season, col(cls.season_id) == col(Season.id))
-            .join(Show, col(Season.show_id) == col(Show.id))
+            .join(Title, col(Season.title_id) == col(Title.id))
             .join(Source)
             .join(Plugin)
         )
@@ -272,8 +275,8 @@ class Episode(BaseEpisode, ChildMediaMixin[Season, Never], table=True):
     def select_with_plugin_eager(cls) -> SelectOfScalar[Self]:
         return cls.select_with_plugin().options(
             contains_eager(cls.season)  # type: ignore[arg-type]
-            .contains_eager(Season.show)  # type: ignore[arg-type]
-            .contains_eager(Show.source)  # type: ignore[arg-type]
+            .contains_eager(Season.title)  # type: ignore[arg-type]
+            .contains_eager(Title.source)  # type: ignore[arg-type]
             .contains_eager(Source.plugin),  # type: ignore[arg-type]
         )
 
@@ -297,28 +300,10 @@ class Episode(BaseEpisode, ChildMediaMixin[Season, Never], table=True):
         existing_record: Self | None,
         protected_keys: set[str] | None = None,
     ) -> Self:
-        """Upsert the `Episode`, keeping a locked the episode a `User` chose intact.
-
-        `canonical_episode_locked` says who settled the links, and is always
-        protected so that a later import never unsettles them. The links
-        themselves are rows of their own and are no part of what an upsert
-        writes, so nothing here has to hold them off.
-
-        `is_canonical` is protected for the same reason a link is: a row that has been
-        made a non-canonical row of something stays one, and an import writing the row
-        again says nothing about that either way.
-
-        `watch_identifier` is set here rather than by each plugin that builds an
-        `Episode`, since the season being upserted onto is what says which plugin
-        the row belongs to and every import arrives through this.
-        """
-        self.watch_identifier = watch_identifier(
-            parent.show.source.plugin.key,
-            self.key,
-        )
         protected_keys = set(protected_keys or ()) | {
-            "canonical_episode_validated_at",
-            "is_canonical",
+            "tmdb_episode_validated_at",
+            "tmdb_note",
+            "is_linked",
         }
         return super().upsert(parent, existing_record, protected_keys)
 
@@ -329,25 +314,23 @@ class Episode(BaseEpisode, ChildMediaMixin[Season, Never], table=True):
 
 
 # TODO: Validate
-class BaseEpisodeCanonicalEpisode(SQLModel):
+class BaseEpisodeTmdbEpisode(SQLModel):
     """Base model for one of the episodes an `Episode` stands for."""
 
     episode_id: uuid.UUID = Field(foreign_key="episode.id", ondelete="CASCADE")
-    canonical_episode_id: uuid.UUID = Field(
+    tmdb_episode_id: uuid.UUID = Field(
         foreign_key="episode.id",
         ondelete="CASCADE",
     )
-    # Where the non-canonical row sits under the episode this link names. The
-    # non-canonical row's own column says where the website filed the row, which is one
-    # answer for a row that stands in a different place under each episode it was linked
-    # to, so the place is the link's and the column is only what a row with no link
-    # falls back on.
-    sort_order: int | None = Field(default=None)
+    note: str | None = Field(default=None)
+    manual_tmdb_link: bool = Field(default=False)
+    """Whether a `User` settled this link themselves. An automatic process never
+    deletes or rewrites a link that carries it."""
 
 
 # TODO: Validate
-class EpisodeCanonicalEpisode(
-    BaseEpisodeCanonicalEpisode,
+class EpisodeTmdbEpisode(
+    BaseEpisodeTmdbEpisode,
     TimestampIdAndHashMixin,
     table=True,
 ):
@@ -364,27 +347,45 @@ class EpisodeCanonicalEpisode(
     __table_args__ = (
         # Each episode is linked to a non-canonical row at most once; the leading column
         # also serves lookups of a row's episodes and cascade deletion with it.
-        PrimaryKeyConstraint("episode_id", "canonical_episode_id"),
+        PrimaryKeyConstraint("episode_id", "tmdb_episode_id"),
         # Used to find every non-canonical row standing for an episode.
         Index(
-            "EpisodeCanonicalEpisode-canonical_episode_id-index",
-            "canonical_episode_id",
+            "EpisodeTmdbEpisode-tmdb_episode_id-index",
+            "tmdb_episode_id",
         ),
     )
 
     # Both ends are an `Episode`, so which foreign key each relationship follows
     # has to be named; nothing about the columns says which of them is which.
     episode: Episode = Relationship(
-        back_populates="canonical_episode_links",
+        back_populates="tmdb_episode_links",
         sa_relationship_kwargs={
-            "foreign_keys": "EpisodeCanonicalEpisode.episode_id",
+            "foreign_keys": "EpisodeTmdbEpisode.episode_id",
         },
     )
-    canonical_episode: Episode = Relationship(
-        back_populates="non_canonical_episodes",
+    tmdb_episode: Episode = Relationship(
+        back_populates="linked_episodes",
         sa_relationship_kwargs={
-            "foreign_keys": "EpisodeCanonicalEpisode.canonical_episode_id",
+            "foreign_keys": "EpisodeTmdbEpisode.tmdb_episode_id",
         },
+    )
+
+
+# TODO: Validate
+class BaseEpisodeTmdbTitle(SQLModel):
+    episode_id: uuid.UUID = Field(foreign_key="episode.id", ondelete="CASCADE")
+    tmdb_title_id: uuid.UUID = Field(foreign_key="title.id", ondelete="CASCADE")
+
+
+# TODO: Validate
+class EpisodeTmdbTitle(BaseEpisodeTmdbTitle, table=True):
+    __table_args__ = (
+        PrimaryKeyConstraint("episode_id", "tmdb_title_id"),
+        Index(
+            "EpisodeTmdbTitle-tmdb_title_id-index",
+            "tmdb_title_id",
+            "episode_id",
+        ),
     )
 
 
@@ -414,12 +415,12 @@ class BaseUserEpisodeUrl(SQLModel):
 # TODO: Validate
 class UserEpisodeUrl(BaseUserEpisodeUrl, TimestampIdAndHashMixin, table=True):
     __table_args__ = (
-        PrimaryKeyConstraint("user_id", "canonical_episode_id"),
-        Index("UserEpisodeUrl-canonical_episode_id-index", "canonical_episode_id"),
+        PrimaryKeyConstraint("user_id", "tmdb_episode_id"),
+        Index("UserEpisodeUrl-tmdb_episode_id-index", "tmdb_episode_id"),
     )
 
     user_id: uuid.UUID = Field(foreign_key="user.id", ondelete="CASCADE")
-    canonical_episode_id: uuid.UUID = Field(
+    tmdb_episode_id: uuid.UUID = Field(
         foreign_key="episode.id",
         ondelete="CASCADE",
     )

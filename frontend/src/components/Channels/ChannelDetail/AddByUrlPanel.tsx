@@ -5,7 +5,6 @@ import { useState } from "react"
 import Markdown from "react-markdown"
 import { remarkAlert } from "remark-github-blockquote-alert"
 import "remark-github-blockquote-alert/alert.css"
-import type { ChannelQueueOutput } from "@/client"
 import { ChannelsService, PluginsService } from "@/client"
 import { SourceOptionLabel } from "@/components/Common/SourceOptionLabel"
 import { Button } from "@/components/ui/button"
@@ -24,7 +23,7 @@ import { handleError } from "@/utils"
  * Queue a list of addresses for import, one per line.
  *
  * A site can be picked to read its own URL formats, since what counts as an
- * address for a show is the site's own business and there is no guessing it from
+ * address for a title is the site's own business and there is no guessing it from
  * the box. Nothing is imported here: the addresses go on the channel's queue and
  * are read from there.
  */
@@ -39,52 +38,29 @@ export function AddByUrlPanel({ channelId }: { channelId: string }) {
   })
 
   const addUrlsMutation = useMutation({
-    mutationFn: (urls: string[]) =>
-      ChannelsService.createChannelQueueUrls({
-        channelId,
-        requestBody: urls,
-      }),
-    onMutate: async (urls, context) => {
-      await context.client.cancelQueries({
-        queryKey: ["channelQueue", channelId],
-      })
-      const previousQueue = context.client.getQueryData([
-        "channelQueue",
-        channelId,
-      ])
-      context.client.setQueryData(
-        ["channelQueue", channelId],
-        (oldData: ChannelQueueOutput[] | undefined) => [
-          ...(oldData ?? []),
-          ...urls.map((url, index) => ({
-            id: `placeholder_${index}`,
-            url,
-            status: "Pending",
-            note: null,
-            created_at: new Date().toISOString(),
-          })),
-        ],
-      )
+    mutationFn: async (urls: string[]) => {
+      for (let start = 0; start < urls.length; start += 100) {
+        await ChannelsService.createChannelQueueUrls({
+          channelId,
+          requestBody: urls.slice(start, start + 100),
+        })
+      }
+    },
+    onMutate: (urls) => {
       showSuccessToast(
         `${urls.length} URL${urls.length !== 1 ? "s" : ""} added to import queue`,
       )
       setUrlsInput("")
-      return { previousQueue }
     },
-    onError: (error, _urls, onMutateResult, context) => {
-      context.client.setQueryData(
-        ["channelQueue", channelId],
-        onMutateResult?.previousQueue,
-      )
-      handleError.call(
-        showErrorToast,
-        error as Parameters<typeof handleError>[0],
-      )
-    },
-    onSettled: (_data, _error, _variables, _onMutateResult, context) =>
+    onSettled: (_data, _error, _urls, _onMutateResult, context) =>
       context.client.invalidateQueries({
         queryKey: ["channelQueue", channelId],
       }),
+    onError: (error) =>
+      handleError.call(
+        showErrorToast,
+        error as Parameters<typeof handleError>[0],
+      ),
   })
 
   // TODO: Validate
@@ -139,7 +115,7 @@ export function AddByUrlPanel({ channelId }: { channelId: string }) {
       <textarea
         value={urlsInput}
         onChange={(e) => setUrlsInput(e.target.value)}
-        placeholder={"https://example.com/show-1\nhttps://example.com/show-2"}
+        placeholder={"https://example.com/title-1\nhttps://example.com/title-2"}
         rows={6}
         className="w-full rounded-md border border-input px-3 py-2 text-sm outline-none"
         disabled={addUrlsMutation.isPending}

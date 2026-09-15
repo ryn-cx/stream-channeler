@@ -8,7 +8,7 @@ import { LoadingButton } from "@/components/ui/loading-button"
 import { cn } from "@/lib/utils"
 
 interface ModalFooterProps {
-  /** Disables both buttons and shows a spinner on submit while a request runs. */
+  /** Disables both buttons and titles a spinner on submit while a request runs. */
   isPending?: boolean
   cancelLabel?: string
   submitLabel?: string

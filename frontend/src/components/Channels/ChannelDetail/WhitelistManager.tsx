@@ -5,26 +5,21 @@ import { useEffect, useState } from "react"
 import type {
   WhitelistEpisodeOutput,
   WhitelistSeasonOutput,
-  WhitelistShowInput,
+  WhitelistTitleInput,
 } from "@/client"
 import { ChannelsService } from "@/client"
 import { AddToChannelButton } from "@/components/ChannelCommon/AddToChannelButton"
 import {
-  ShowInformationSummary,
-  ShowIssueReports,
-} from "@/components/ChannelCommon/ShowInformationDialog"
-import EditSeason from "@/components/Seasons/Edit"
+  TitleInformationSummary,
+  TitleIssueReports,
+} from "@/components/ChannelCommon/TitleInformationDialog"
 import { Button } from "@/components/ui/button"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 import { EpisodeExpiryDialog } from "./EpisodeExpiryDialog"
 import { isExpired, isoToLocalInput, localInputToIso } from "./expiry"
-import {
-  AdminOnly,
-  ExternalMediaLink,
-  MediaPageButton,
-} from "./MediaPageButton"
+import { ExternalMediaLink, MediaPageButton } from "./MediaPageButton"
 import { episodeLabel, SeasonEpisodes } from "./SeasonEpisodes"
 import { SourceFavicons } from "./SourceFavicons"
 import { groupBySource, SourceGroupRow } from "./SourceGroupRow"
@@ -48,8 +43,8 @@ interface EpisodeChange {
 
 interface WhitelistManagerProps {
   channelId: string
-  canonicalShowId: string
-  showName: string
+  tmdbTitleId: string
+  titleName: string
   onClose: () => void
   /**
    * Whether the filters are only being read, which is what somebody who does not
@@ -61,27 +56,23 @@ interface WhitelistManagerProps {
 }
 
 // TODO: Validate
-function seasonLabel(
-  season: WhitelistSeasonOutput,
-  anySeasonHasNumber: boolean,
-) {
-  if (!anySeasonHasNumber) {
-    return season.name ?? ""
+function seasonLabel(season: WhitelistSeasonOutput) {
+  if (season.name) {
+    return season.name
   }
-  const seasonName = season.name ? ` - ${season.name}` : ""
-  return `Season ${season.season_number ?? "?"}${seasonName}`
+  return `Season ${season.season_number ?? "?"}`
 }
 
 // TODO: Validate
 export function WhitelistManager({
   channelId,
-  canonicalShowId,
-  showName,
+  tmdbTitleId,
+  titleName,
   onClose,
   readOnly = false,
 }: WhitelistManagerProps) {
   const [isWhitelist, setIsWhitelist] = useState(false)
-  // The `Show` ids of the websites' links that carry a filter entry.
+  // The `Title` ids of the websites' links that carry a filter entry.
   const [enabledSourceIds, setEnabledSourceIds] = useState<Set<string>>(
     new Set(),
   )
@@ -102,7 +93,7 @@ export function WhitelistManager({
     episode: WhitelistEpisodeOutput
     seasonEnabled: boolean
   } | null>(null)
-  const [informationShowId, setInformationShowId] = useState<string | null>(
+  const [informationTitleId, setInformationTitleId] = useState<string | null>(
     null,
   )
 
@@ -110,9 +101,9 @@ export function WhitelistManager({
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
   const { data: whitelistData, isLoading } = useQuery({
-    queryKey: ["channelShowWhitelist", channelId, canonicalShowId],
+    queryKey: ["channelTitleWhitelist", channelId, tmdbTitleId],
     queryFn: () =>
-      ChannelsService.getChannelWhitelist({ channelId, canonicalShowId }),
+      ChannelsService.getChannelWhitelist({ channelId, tmdbTitleId }),
   })
 
   useEffect(() => {
@@ -122,7 +113,7 @@ export function WhitelistManager({
         new Set(
           whitelistData.sources
             .filter((source) => source.filtered)
-            .map((source) => source.show_id),
+            .map((source) => source.title_id),
         ),
       )
       setEnabledSeasonIds(
@@ -137,21 +128,21 @@ export function WhitelistManager({
   }, [whitelistData])
 
   const saveMutation = useMutation({
-    mutationFn: (input: WhitelistShowInput) =>
+    mutationFn: (input: WhitelistTitleInput) =>
       ChannelsService.updateChannelWhitelist({
         channelId,
-        canonicalShowId,
+        tmdbTitleId,
         requestBody: input,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["channelShowWhitelist", channelId, canonicalShowId],
+        queryKey: ["channelTitleWhitelist", channelId, tmdbTitleId],
       })
       queryClient.invalidateQueries({
-        queryKey: ["channelShowSeasonEpisodes", channelId, canonicalShowId],
+        queryKey: ["channelTitleSeasonEpisodes", channelId, tmdbTitleId],
       })
       queryClient.invalidateQueries({
-        queryKey: ["channelShowFilteredEpisodes", channelId, canonicalShowId],
+        queryKey: ["channelTitleFilteredEpisodes", channelId, tmdbTitleId],
       })
       queryClient.invalidateQueries({ queryKey: ["episodes", channelId] })
       showSuccessToast("Whitelist settings saved successfully")
@@ -177,19 +168,19 @@ export function WhitelistManager({
   }
 
   // TODO: Validate
-  const toggleShowInformation = (sourceShowId: string) => {
-    setInformationShowId(
-      informationShowId === sourceShowId ? null : sourceShowId,
+  const toggleShowInformation = (sourceTitleId: string) => {
+    setInformationTitleId(
+      informationTitleId === sourceTitleId ? null : sourceTitleId,
     )
   }
 
   // TODO: Validate
-  const toggleSourceEnabled = (showId: string) => {
+  const toggleSourceEnabled = (titleId: string) => {
     const newEnabled = new Set(enabledSourceIds)
-    if (newEnabled.has(showId)) {
-      newEnabled.delete(showId)
+    if (newEnabled.has(titleId)) {
+      newEnabled.delete(titleId)
     } else {
-      newEnabled.add(showId)
+      newEnabled.add(titleId)
     }
     setEnabledSourceIds(newEnabled)
   }
@@ -209,14 +200,14 @@ export function WhitelistManager({
   // server has it everywhere else.
   // TODO: Validate
   const isEpisodeMarked = (episode: WhitelistEpisodeOutput) => {
-    const change = episodeChanges.get(episode.canonical_episode_id)
+    const change = episodeChanges.get(episode.tmdb_episode_id)
     if (change) return change.marked
     return episode.filtered && !isExpired(episode.expires_at)
   }
 
   // TODO: Validate
   const episodeExpiry = (episode: WhitelistEpisodeOutput) => {
-    const change = episodeChanges.get(episode.canonical_episode_id)
+    const change = episodeChanges.get(episode.tmdb_episode_id)
     if (change) return change.expiry
     if (!episode.expires_at || isExpired(episode.expires_at)) return ""
     return isoToLocalInput(episode.expires_at)
@@ -230,8 +221,8 @@ export function WhitelistManager({
   ) => {
     setEpisodeChanges((previous) => {
       const next = new Map(previous)
-      next.set(episode.canonical_episode_id, {
-        episodeId: episode.canonical_episode_id,
+      next.set(episode.tmdb_episode_id, {
+        episodeId: episode.tmdb_episode_id,
         marked,
         expiry,
       })
@@ -264,13 +255,13 @@ export function WhitelistManager({
   const handleSave = () => {
     if (!whitelistData) return
 
-    const input: WhitelistShowInput = {
+    const input: WhitelistTitleInput = {
       is_whitelist: isWhitelist,
       sources: whitelistData.sources
         .filter((source) => !source.is_tmdb)
         .map((source) => ({
-          id: source.show_id,
-          marked: enabledSourceIds.has(source.show_id),
+          id: source.title_id,
+          marked: enabledSourceIds.has(source.title_id),
         })),
       seasons: whitelistData.seasons.map((season) => ({
         id: season.id,
@@ -317,15 +308,15 @@ export function WhitelistManager({
   }
 
   if (!whitelistData) return
-  const sourcesByShowId = new Map(
-    whitelistData.sources.map((source) => [source.show_id, source]),
+  const sourcesByTitleId = new Map(
+    whitelistData.sources.map((source) => [source.title_id, source]),
   )
   // TMDB catalogues the media rather than carrying it, so it never stands for a
   // site an episode can be watched on.
-  const tmdbShowIds = new Set(
+  const tmdbTitleIds = new Set(
     whitelistData.sources
       .filter((source) => source.is_tmdb)
-      .map((source) => source.show_id),
+      .map((source) => source.title_id),
   )
   // TMDB is listed with the sites rather than left out, so the title it was
   // catalogued under can be seen and opened from here. It carries nothing to
@@ -335,9 +326,6 @@ export function WhitelistManager({
   // where it splits the title up, so the rows are gathered under the site and
   // a site with one of them is read without a level in between.
   const sourceGroups = groupBySource(listedSources)
-  const anySeasonHasNumber = whitelistData.seasons.some(
-    (season) => season.season_number != null,
-  )
 
   return (
     <>
@@ -345,7 +333,7 @@ export function WhitelistManager({
         <div className="flex items-start justify-between gap-2">
           <div>
             <h2 className="text-lg font-semibold">
-              {readOnly ? showName : `Manage Whitelist - ${showName}`}
+              {readOnly ? titleName : `Manage Whitelist - ${titleName}`}
             </h2>
             <p className="text-sm text-muted-foreground">
               {isWhitelist
@@ -355,11 +343,11 @@ export function WhitelistManager({
           </div>
         </div>
 
-        <ShowInformationSummary showId={canonicalShowId}>
-          <AddToChannelButton showId={canonicalShowId} />
-        </ShowInformationSummary>
+        <TitleInformationSummary titleId={tmdbTitleId}>
+          <AddToChannelButton titleId={tmdbTitleId} />
+        </TitleInformationSummary>
 
-        <ShowIssueReports showId={canonicalShowId} />
+        <TitleIssueReports titleId={tmdbTitleId} />
 
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
@@ -369,7 +357,7 @@ export function WhitelistManager({
           <>
             <div className="flex flex-col gap-4">
               <div className="flex flex-wrap items-center justify-between gap-2 p-4 border rounded bg-muted/50 shrink-0">
-                <div>
+                <div className="min-w-0">
                   <h3 className="font-semibold">
                     Current Mode:{" "}
                     {isWhitelist ? "Whitelist Mode" : "Blacklist Mode"}
@@ -380,7 +368,7 @@ export function WhitelistManager({
                       : "All episodes except blacklisted ones will be shown"}
                   </p>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex shrink-0 items-center gap-1">
                   {!readOnly && (
                     <Button onClick={toggleIsWhitelist} variant="outline">
                       Switch to {isWhitelist ? "Blacklist" : "Whitelist"} Mode
@@ -388,8 +376,8 @@ export function WhitelistManager({
                   )}
                   <MediaPageButton
                     to="/seasons"
-                    search={{ show_id: canonicalShowId }}
-                    label="Edit this show"
+                    search={{ title_id: tmdbTitleId }}
+                    label="Edit this title"
                   />
                 </div>
               </div>
@@ -411,7 +399,7 @@ export function WhitelistManager({
                     <h3 className="font-medium">Sources</h3>
                     <p className="text-sm text-muted-foreground">
                       {isWhitelist
-                        ? "Only whitelisted sites are watched for this show. Whitelisting none watches them all."
+                        ? "Only whitelisted sites are watched for this title. Whitelisting none watches them all."
                         : "All sites are watched except blacklisted ones"}
                     </p>
                   </div>
@@ -420,7 +408,7 @@ export function WhitelistManager({
                   <div className="p-2 space-y-1 border-t">
                     {listedSources.length === 0 ? (
                       <p className="text-sm text-muted-foreground text-center py-4">
-                        No sources found for this show
+                        No sources found for this title
                       </p>
                     ) : (
                       sourceGroups.map((group) => (
@@ -429,7 +417,7 @@ export function WhitelistManager({
                           group={group}
                           isWhitelist={isWhitelist}
                           enabledSourceIds={enabledSourceIds}
-                          informationShowId={informationShowId}
+                          informationTitleId={informationTitleId}
                           onToggleInformation={toggleShowInformation}
                           onToggleEnabled={toggleSourceEnabled}
                         />
@@ -465,25 +453,25 @@ export function WhitelistManager({
                   <div className="p-2 space-y-1 border-t">
                     {whitelistData.seasons.length === 0 ? (
                       <p className="text-sm text-muted-foreground text-center py-4">
-                        No seasons found for this show
+                        No seasons found for this title
                       </p>
                     ) : (
                       whitelistData.seasons.map((season) => {
                         const seasonEnabled = enabledSeasonIds.has(season.id)
-                        const rowShowIds = season.show_ids
-                        const tmdbRowShowIds = rowShowIds.filter((showId) =>
-                          tmdbShowIds.has(showId),
+                        const rowTitleIds = season.title_ids
+                        const tmdbRowTitleIds = rowTitleIds.filter((titleId) =>
+                          tmdbTitleIds.has(titleId),
                         )
                         // TMDB leads the row, and the sites stand in front of the
                         // name only when TMDB has no record of the season to lead it.
-                        const leadingShowIds =
-                          tmdbRowShowIds.length > 0
-                            ? tmdbRowShowIds
-                            : rowShowIds
-                        const trailingShowIds =
-                          tmdbRowShowIds.length > 0
-                            ? rowShowIds.filter(
-                                (showId) => !tmdbShowIds.has(showId),
+                        const leadingTitleIds =
+                          tmdbRowTitleIds.length > 0
+                            ? tmdbRowTitleIds
+                            : rowTitleIds
+                        const trailingTitleIds =
+                          tmdbRowTitleIds.length > 0
+                            ? rowTitleIds.filter(
+                                (titleId) => !tmdbTitleIds.has(titleId),
                               )
                             : []
                         return (
@@ -500,27 +488,28 @@ export function WhitelistManager({
                                   <ChevronRight className="h-4 w-4" />
                                 )}
                               </Button>
-                              {leadingShowIds.length > 0 && (
+                              {leadingTitleIds.length > 0 && (
                                 <SourceFavicons
-                                  showIds={leadingShowIds}
-                                  sourcesByShowId={sourcesByShowId}
+                                  titleIds={leadingTitleIds}
+                                  sourcesByTitleId={sourcesByTitleId}
                                 />
                               )}
                               <button
                                 type="button"
-                                className="flex-1 text-left text-sm hover:underline"
+                                className="min-w-0 flex-1 truncate text-left text-sm hover:underline"
                                 onClick={() => toggleSeasonExpanded(season.id)}
                               >
-                                {seasonLabel(season, anySeasonHasNumber)}
+                                {seasonLabel(season)}
                               </button>
-                              {trailingShowIds.length > 0 && (
+                              {trailingTitleIds.length > 0 && (
                                 <SourceFavicons
-                                  showIds={trailingShowIds}
-                                  sourcesByShowId={sourcesByShowId}
+                                  titleIds={trailingTitleIds}
+                                  sourcesByTitleId={sourcesByTitleId}
                                 />
                               )}
                               {!readOnly && (
                                 <Button
+                                  className="shrink-0"
                                   variant={
                                     seasonEnabled ? "default" : "outline"
                                   }
@@ -539,9 +528,6 @@ export function WhitelistManager({
                                 url={season.url}
                                 label="Open this season on its site"
                               />
-                              <AdminOnly>
-                                <EditSeason season={season} />
-                              </AdminOnly>
                               <MediaPageButton
                                 to="/episodes"
                                 search={{ season_id: season.id }}
@@ -552,11 +538,11 @@ export function WhitelistManager({
                             {expandedSeasons.has(season.id) && (
                               <SeasonEpisodes
                                 channelId={channelId}
-                                canonicalShowId={canonicalShowId}
+                                tmdbTitleId={tmdbTitleId}
                                 seasonId={season.id}
                                 seasonEnabled={seasonEnabled}
-                                sourcesByShowId={sourcesByShowId}
-                                tmdbShowIds={tmdbShowIds}
+                                sourcesByTitleId={sourcesByTitleId}
+                                tmdbTitleIds={tmdbTitleIds}
                                 isEpisodeMarked={isEpisodeMarked}
                                 episodeExpiry={episodeExpiry}
                                 onEpisodeClick={(episode) =>

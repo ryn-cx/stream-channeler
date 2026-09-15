@@ -18,13 +18,13 @@ from app.files.models import File
 from app.models import ChildMediaMixin
 from app.plugins.models import Plugin
 from app.seasons.models import Season
-from app.shows.models import Show
 from app.sources.models import Source
+from app.titles.models import Title
 from app.watches.models import Watch
 
 USER_OWNED_MODELS = Channel | Watch | ChannelOrder | Comment
 
-DELETABLE_MODELS = USER_OWNED_MODELS | Episode | Season | Show | Source | Plugin | File
+DELETABLE_MODELS = USER_OWNED_MODELS | Episode | Season | Title | Source | Plugin | File
 
 
 # TODO: This can be improved upstream, this one changes return to Any as a workaround.
@@ -127,6 +127,7 @@ class ScopedReadOptions(ReadOptions):
     """
 
     scope: RecordScope = RecordScope.all
+    random_seed: int | None = None
 
 
 # TODO: Validate
@@ -139,7 +140,7 @@ class BaseInput(SQLModel):
 # TODO: Validate
 class BaseCreateWithParentAndKey[
     ModelT: ChildMediaMixin[Any, Any],
-    ParentT: Plugin | Source | Show | Season,
+    ParentT: Plugin | Source | Title | Season,
 ](BaseInput):
     """Base create schemas for models with a parent and a key field."""
 

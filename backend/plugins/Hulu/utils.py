@@ -1,98 +1,170 @@
 # TODO: Validate
 """What every other part of the plugin reads a title by."""
 
-from typing import override
-from urllib.parse import quote, quote_plus
+from collections.abc import Sequence
+from urllib.parse import quote
+from uuid import UUID
 
-from wholoo.movies.models import MoviesModel
+from wholoo.all_movies.models import AllMoviesModel
+from wholoo.all_series.models import AllSeriesModel
+from wholoo.genre.models import GenreModel
+from wholoo.genres.models import GenresModel
+from wholoo.movies.models import Component as MovieComponent
+from wholoo.movies.models import Details as MovieDetails
+from wholoo.movies.models import Item as MovieCollectionItem
+from wholoo.season.models import Item, SeasonModel
+from wholoo.tv.models import Component as SeriesComponent
+from wholoo.tv.models import Details as TVDetails
+from wholoo.tv.models import Item as SeriesCollectionItem
+from wholoo.tv.models import TVModel
 
-from app.shows.models import Show
-from app.utils import tz_datetime
 from plugins.Hulu.constants import (
-    DETAIL_MAX_AGE,
-    MOVIE_MEDIA_TYPE,
-    SERIES_MEDIA_TYPE,
+    EPISODES_COLLECTION_IDS,
+    HuluMediaType,
 )
-from plugins.Hulu.files import FileMixin
-from plugins.utils.abstract_plugin import PluginShowIdentity
 
 
 # TODO: Validate
-class HelperMixin(FileMixin, register=False):
-    """The URLs of a title and what a search result of it is asked for by."""
+def build_url(path: str) -> str:
+    return f"https://hulu.com/{path.lstrip('/')}"
 
-    # TODO: Validate
-    @override
-    def _set_media_type_from_show(self, show: Show) -> None:
-        if not show.media_type:
-            msg = "Show.media_type is not set."
-            raise AttributeError(msg)
-        self._media_type_value = (
-            MOVIE_MEDIA_TYPE if show.media_type == "Movie" else SERIES_MEDIA_TYPE
-        )
 
-    # TODO: Validate
-    def _movie_model(self, movie_id: str) -> MoviesModel:
-        return self.movie_file(movie_id).parsed()
+# TODO: Validate
+def episode_url(episode_key: str) -> str:
+    return build_url(f"watch/{episode_key}")
 
-    # TODO: Validate
-    def _season_name(self, series_id: str, season_number: int) -> str:
-        parsed = self.season_file(series_id, season_number).parsed()
-        return parsed.series_grouping_metadata.grouping_name
 
-    # TODO: Validate
-    @classmethod
-    def _show_url(cls, show_key: str, media_type: str) -> str:
-        return cls.build_url(f"{media_type}/{show_key}")
+# TODO: Validate
+def image_url(path: str | None) -> str | None:
+    if path is None:
+        return None
+    operations = quote('[{"resize":"1920x1920|max"},{"format":"webp"}]', safe=":,")
+    return f"{path}&operations={operations}"
 
-    # TODO: Validate
-    @classmethod
-    def _episode_url(cls, episode_key: str) -> str:
-        return cls.build_url(f"watch/{episode_key}")
 
-    # TODO: Validate
-    @override
-    @classmethod
-    def manual_search(cls, query: str) -> str | None:
-        return cls.build_url(f"search?q={quote_plus(query)}")
+# TODO: Validate
+def thumbnail_url(path: str | None) -> str | None:
+    if path is None:
+        return None
+    operations = quote('[{"resize":"600x600|max"},{"format":"webp"}]', safe=":,")
+    return f"{path}&operations={operations}"
 
-    # TODO: Validate
-    @staticmethod
-    def _image_url(path: str) -> str:
-        operations = quote('[{"resize":"1920x1920|max"},{"format":"webp"}]', safe=":,")
-        return f"{path}&operations={operations}"
 
-    # TODO: Validate
-    @staticmethod
-    def _thumbnail_url(path: str) -> str:
-        operations = quote('[{"resize":"480x480|max"},{"format":"webp"}]', safe=":,")
-        return f"{path}&operations={operations}"
+# TODO: Validate
+def build_season_key(title_key: str, season_number: int) -> str:
+    return f"{title_key}:{season_number}"
 
-    # TODO: Validate
-    @override
-    def show_identity(self, show_key: str) -> PluginShowIdentity:
-        if self._is_movie():
-            return self._movie_identity(show_key)
-        return self._series_identity(show_key)
 
-    # TODO: Validate
-    def _movie_identity(self, movie_id: str) -> PluginShowIdentity:
-        movie_file = self.movie_file(movie_id)
-        movie_file.download_if_outdated(tz_datetime.now() - DETAIL_MAX_AGE)
-        model = movie_file.parsed()
-        return PluginShowIdentity(
-            title=model.name,
-            media_type="Movie",
-            year=model.details.entity.premiere_date.year,
-        )
+# TODO: Validate
+def split_season_key(key: str) -> tuple[str, int]:
+    title_key, _, season_number = key.rpartition(":")
+    return title_key, int(season_number)
 
-    # TODO: Validate
-    def _series_identity(self, series_id: str) -> PluginShowIdentity:
-        series_file = self.series_file(series_id)
-        series_file.download_if_outdated(tz_datetime.now() - DETAIL_MAX_AGE)
-        model = series_file.parsed()
-        return PluginShowIdentity(
-            title=model.name,
-            media_type="Series",
-            year=model.details.entity.premiere_date.year,
-        )
+
+# TODO: Validate
+def season_numbers(series: TVModel) -> list[int]:
+    numbers: dict[int, None] = {}
+    for component in series.components:
+        for item in component.items:
+            grouping = item.series_grouping_metadata
+            if grouping is not None:
+                numbers[grouping.season_number] = None
+    return list(numbers)
+
+
+# TODO: Validate
+def season_items(season: SeasonModel) -> list[Item]:
+    items: dict[UUID, Item] = {}
+    for item in season.items:
+        items.setdefault(item.id, item)
+    return list(items.values())
+
+
+# TODO: Validate
+def title_urls(page: AllSeriesModel | AllMoviesModel | GenreModel) -> list[str]:
+    """Return all title URLs from the given page."""
+    return [build_url(item.href) for item in page.items]
+
+
+# TODO: Validate
+def genre_ids(page: GenresModel) -> list[str]:
+    return [item.href.removeprefix("/hub/") for item in page.items]
+
+
+# TODO: Validate
+def title_plan(details: TVDetails | MovieDetails) -> tuple[str, bool] | None:
+    vod_items = details.vod_items
+    if vod_items is None:
+        return None
+    bundle = vod_items.focus.entity.bundle
+    # I have no idea why but these specifically need whitelisting.
+    is_subscription = bundle.package_id not in (1, 2, 33) and (
+        bundle.network_name != "Sony"
+    )
+    return bundle.network_name, is_subscription
+
+
+# TODO: Validate
+def collection_season_key(title_key: str, component_id: str) -> str:
+    return f"{title_key}:collection-{component_id}"
+
+
+# TODO: Validate
+def is_collection_season_key(season_key: str) -> bool:
+    return ":collection-" in season_key
+
+
+# TODO: Validate
+def split_collection_season_key(season_key: str) -> tuple[str, str]:
+    title_key, _, component_id = season_key.partition(":collection-")
+    return title_key, component_id
+
+
+# TODO: Validate
+def title_item_url(
+    item: SeriesCollectionItem | MovieCollectionItem,
+) -> str | None:
+    if item.field_type == HuluMediaType.SERIES:
+        return build_url(f"{HuluMediaType.SERIES}/{item.id}")
+    if item.field_type == HuluMediaType.MOVIE:
+        return build_url(f"{HuluMediaType.MOVIE}/{item.id}")
+    return None
+
+
+# TODO: Validate
+def watch_components(
+    components: Sequence[SeriesComponent | MovieComponent],
+) -> list[SeriesComponent | MovieComponent]:
+    return [
+        component
+        for component in components
+        if component.id not in EPISODES_COLLECTION_IDS
+        and component.items
+        and component.items[0].field_type in ("episode", "extra")
+    ]
+
+
+# TODO: Validate
+def watch_component(
+    components: Sequence[SeriesComponent | MovieComponent],
+    component_id: str,
+) -> SeriesComponent | MovieComponent:
+    return next(
+        component
+        for component in watch_components(components)
+        if component.id == component_id
+    )
+
+
+# TODO: Validate
+def collection_urls(
+    components: Sequence[SeriesComponent | MovieComponent],
+) -> list[str]:
+    urls: dict[str, None] = {}
+    for component in components:
+        if component.id in EPISODES_COLLECTION_IDS:
+            continue
+        for item in component.items:
+            if url := title_item_url(item):
+                urls[url] = None
+    return list(urls)

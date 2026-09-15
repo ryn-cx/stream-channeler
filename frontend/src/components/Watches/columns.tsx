@@ -7,8 +7,8 @@ import type {
   EpisodeOutput,
   PluginOutput,
   SeasonOutput,
-  ShowPublic,
   SourcePublic,
+  TitlePublic,
   WatchItem,
 } from "@/client"
 import { CopyId } from "@/components/Common/CopyId"
@@ -19,7 +19,7 @@ import { WatchActionsMenu } from "./WatchActionsMenu"
 export interface WatchWithDetails extends WatchItem {
   episode: EpisodeOutput
   season: SeasonOutput
-  show: ShowPublic
+  title: TitlePublic
   source: SourcePublic
   plugin: PluginOutput
   pending?: boolean
@@ -41,7 +41,7 @@ function SourceAdminLink({ sourceId }: { sourceId: string }) {
   if (!isAdmin) return null
   return (
     <Link
-      to="/shows"
+      to="/titles"
       search={{ source_id: sourceId }}
       aria-label="Open source admin page"
       className={adminLinkClassName}
@@ -52,14 +52,14 @@ function SourceAdminLink({ sourceId }: { sourceId: string }) {
 }
 
 // TODO: Validate
-function ShowAdminLink({ showId }: { showId: string }) {
+function TitleAdminLink({ titleId }: { titleId: string }) {
   const isAdmin = useIsAdmin()
   if (!isAdmin) return null
   return (
     <Link
       to="/seasons"
-      search={{ show_id: showId }}
-      aria-label="Open show admin page"
+      search={{ title_id: titleId }}
+      aria-label="Open title admin page"
       className={adminLinkClassName}
     >
       <Settings2 className={adminIconClassName} />
@@ -92,16 +92,16 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
   },
 
   {
-    accessorFn: (row) => row.plugin.name,
+    accessorFn: (row) => row.plugin.key,
     id: "plugin",
     header: "Plugin",
     cell: ({ row }) => (
-      <span className="font-medium">{row.original.plugin.name ?? ""}</span>
+      <span className="font-medium">{row.original.plugin.key}</span>
     ),
   },
 
   {
-    accessorFn: (row) => row.source.name,
+    accessorFn: (row) => row.source.key,
     id: "source",
     header: "Source",
     cell: ({ row }) => {
@@ -115,11 +115,11 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
             <img
               referrerPolicy="no-referrer"
               src={source.favicon_url}
-              alt={`${source.name} favicon`}
+              alt={`${source.key} favicon`}
               className="size-4"
             />
           )}
-          <span className="text-muted-foreground">{source.name ?? ""}</span>
+          <span className="text-muted-foreground">{source.key}</span>
           <SourceAdminLink sourceId={source.id} />
         </div>
       )
@@ -127,15 +127,15 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
   },
 
   {
-    accessorFn: (row) => row.show.name,
-    id: "show",
-    header: "Show",
+    accessorFn: (row) => row.title.name,
+    id: "title",
+    header: "Title",
     cell: ({ row }) => {
-      const { show } = row.original
-      const name = show.name ?? ""
-      const nameElement = show.url ? (
+      const { title } = row.original
+      const name = title.name ?? ""
+      const nameElement = title.url ? (
         <a
-          href={show.url}
+          href={title.url}
           target="_blank"
           rel="noopener noreferrer"
           className="font-medium text-primary hover:underline"
@@ -148,7 +148,7 @@ export const columns: ColumnDef<WatchWithDetails>[] = [
       return (
         <span className="inline-flex items-center gap-1.5">
           {nameElement}
-          <ShowAdminLink showId={show.id} />
+          <TitleAdminLink titleId={title.id} />
         </span>
       )
     },

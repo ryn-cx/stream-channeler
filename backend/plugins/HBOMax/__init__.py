@@ -1,55 +1,43 @@
 # TODO: Validate
-"""HBO Max plugin."""
-
 from __future__ import annotations
 
-from typing import override
+import re
+from typing import TYPE_CHECKING, override
 
-from plugins.HBOMax.source import SourceMixin
-from plugins.HBOMax.upsert import UpsertMixin
-from plugins.HBOMax.url_handlers import (
-    HBOMaxURLHandler,
-    MovieURLHandler,
-    ShowURLHandler,
+from plugins.HBOMax.constants import MOVIE_URL_REGEX, TITLE_URL_REGEX
+from plugins.HBOMax.importer import (
+    HBOMaxImporter,
+    HBOMaxMovieImporter,
+    HBOMaxSeriesImporter,
 )
-from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
+from plugins.HBOMax.shared import HBOMaxShared
+from plugins.utils.abstract_plugin import AbstractPlugin
+
+if TYPE_CHECKING:
+    from app.titles.models import Title
 
 
 # TODO: Validate
-class HBOMax(
-    UpsertMixin,
-    SourceMixin,
-    MediaTypeImportMixin[HBOMaxURLHandler],
-    register=True,
-):
-    """HBO Max plugin."""
-
+class HBOMax(HBOMaxShared, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override
-    def _url_handlers(cls) -> tuple[type[HBOMaxURLHandler], ...]:
-        return (MovieURLHandler, ShowURLHandler)
+    def _url_regexes(cls) -> tuple[str, ...]:
+        return (MOVIE_URL_REGEX, TITLE_URL_REGEX)
 
     # TODO: Validate
-    @classmethod
     @override
-    def tmdb_provider_names(cls) -> tuple[str, ...]:
-        return ("HBO Max", "Max")
+    def _media_importer_from_url(self, url: str) -> HBOMaxImporter:
+        if re.match(self._domains_regex() + MOVIE_URL_REGEX, url):
+            return HBOMaxMovieImporter(self.session, self.plugin, self._file_cache)
+        return HBOMaxSeriesImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
-    @classmethod
     @override
-    def favicon_url(cls) -> str:
-        return "https://www.hbomax.com/favicon.ico"
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def domains(cls) -> list[str]:
-        return ["play.hbomax.com", "hbomax.com"]
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def plugin_name(cls) -> str:
-        return "HBO Max"
+    def _media_importer_from_title(self, title: Title) -> HBOMaxImporter:
+        if not title.media_type:
+            msg = "Title.media_type is not set."
+            raise AttributeError(msg)
+        if title.media_type == "Movie":
+            return HBOMaxMovieImporter(self.session, self.plugin, self._file_cache)
+        return HBOMaxSeriesImporter(self.session, self.plugin, self._file_cache)

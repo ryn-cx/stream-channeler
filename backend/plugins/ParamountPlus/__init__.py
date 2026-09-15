@@ -1,64 +1,51 @@
 # TODO: Validate
-"""Paramount+ plugin."""
-
 from __future__ import annotations
 
-from typing import override
+import re
+from typing import TYPE_CHECKING, override
 
-from plugins.ParamountPlus.source import SourceMixin
-from plugins.ParamountPlus.upsert import UpsertMixin
-from plugins.ParamountPlus.url_handlers import (
-    MovieURLHandler,
-    ParamountPlusURLHandler,
-    ShowURLHandler,
+from plugins.ParamountPlus.constants import MOVIE_URL_REGEX, TITLE_URL_REGEX
+from plugins.ParamountPlus.importer import (
+    ParamountPlusImporter,
+    ParamountPlusMovieImporter,
+    ParamountPlusSeriesImporter,
 )
-from plugins.utils.base_plugin.media_type import MediaTypeImportMixin
+from plugins.ParamountPlus.shared import ParamountPlusShared
+from plugins.utils.abstract_plugin import AbstractPlugin
+
+if TYPE_CHECKING:
+    from app.titles.models import Title
 
 
 # TODO: Validate
-class ParamountPlus(
-    UpsertMixin,
-    SourceMixin,
-    MediaTypeImportMixin[ParamountPlusURLHandler],
-    register=True,
-):
-    """Paramount+ plugin."""
-
+class ParamountPlus(ParamountPlusShared, AbstractPlugin, register=False):
     # TODO: Validate
     @classmethod
     @override
-    def _url_handlers(cls) -> tuple[type[ParamountPlusURLHandler], ...]:
-        return (
-            MovieURLHandler,
-            ShowURLHandler,
-        )
+    def _url_regexes(cls) -> tuple[str, ...]:
+        return (MOVIE_URL_REGEX, TITLE_URL_REGEX)
 
     # TODO: Validate
-    @classmethod
     @override
-    def tmdb_provider_names(cls) -> tuple[str, ...]:
-        return (
-            "Paramount Plus",
-            "Paramount+",
-            "Paramount+ Amazon Channel",
-            "Paramount Plus Essential",
-            "Paramount Plus Premium",
-        )
+    def _media_importer_from_url(self, url: str) -> ParamountPlusImporter:
+        if re.match(self._domains_regex() + MOVIE_URL_REGEX, url):
+            return ParamountPlusMovieImporter(
+                self.session,
+                self.plugin,
+                self._file_cache,
+            )
+        return ParamountPlusSeriesImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
-    @classmethod
     @override
-    def favicon_url(cls) -> str:
-        return "https://www.paramountplus.com/favicon.ico"
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _domain(cls) -> str:
-        return "paramountplus.com"
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def plugin_name(cls) -> str:
-        return "Paramount+"
+    def _media_importer_from_title(self, title: Title) -> ParamountPlusImporter:
+        if not title.media_type:
+            msg = "Title.media_type is not set."
+            raise AttributeError(msg)
+        if title.media_type == "Movie":
+            return ParamountPlusMovieImporter(
+                self.session,
+                self.plugin,
+                self._file_cache,
+            )
+        return ParamountPlusSeriesImporter(self.session, self.plugin, self._file_cache)

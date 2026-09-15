@@ -1,8 +1,9 @@
 // TODO: Validate
 import type { ColumnDef } from "@tanstack/react-table"
 
+import { dateRangeFilter } from "@/components/Common/tableFilters"
 import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
+import { cn, formatDateTime } from "@/lib/utils"
 import type { UserTableData } from "./types"
 import { UserActionsMenu } from "./UserActionsMenu"
 
@@ -73,6 +74,19 @@ export const columns: ColumnDef<UserTableData>[] = [
           </span>
         </div>
       ),
+  },
+  {
+    accessorKey: "created_at",
+    header: "Created",
+    meta: {
+      filterVariant: "dateRange",
+    },
+    filterFn: dateRangeFilter,
+    cell: ({ row }) => (
+      <span className="text-muted-foreground text-sm whitespace-nowrap">
+        {formatDateTime(row.original.created_at)}
+      </span>
+    ),
   },
   {
     id: "actions",

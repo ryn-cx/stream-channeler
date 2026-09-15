@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from loguru import logger
+from sqlmodel import Session
 
 if TYPE_CHECKING:
     from plugins.utils.abstract_plugin import AbstractPlugin
@@ -66,11 +67,34 @@ def register_plugins(plugin: type[AbstractPlugin]) -> None:
 def sorted_plugins() -> list[type[AbstractPlugin]]:
     """Return the registered plugins sorted by their plugin_key."""
     import_plugins()
-    return sorted(plugins, key=lambda plugin: plugin.plugin_key())
+    return sorted(plugins, key=lambda plugin: plugin.plugin_name())
+
+
+_plugins_initialized = False
 
 
 # TODO: Validate
-def plugin_for_url(
+def initialize_plugins() -> None:
+    global _plugins_initialized  # noqa: PLW0603
+    if _plugins_initialized:
+        return
+    _plugins_initialized = True
+
+    from app.database import engine  # noqa: PLC0415
+    from plugins.StreamChanneler import StreamChanneler  # noqa: PLC0415
+
+    plugin_classes: tuple[type[AbstractPlugin], ...] = (
+        *sorted_plugins(),
+        StreamChanneler,
+    )
+    for plugin_class in plugin_classes:
+        with Session(engine) as session:
+            plugin_class.initialize_plugin(session)
+            session.commit()
+
+
+# TODO: Validate
+def get_plugin_from_url(
     url: str,
     exclude: type[AbstractPlugin] | None = None,
 ) -> type[AbstractPlugin] | None:
@@ -78,7 +102,7 @@ def plugin_for_url(
     for plugin_class in sorted_plugins():
         if (
             plugin_class is not exclude
-            and plugin_class.implements("import_url")
+            and plugin_class.implements("validate_and_import_url")
             and plugin_class.is_valid_url_format(url)
         ):
             return plugin_class

@@ -19,11 +19,11 @@ import { handleError } from "@/utils"
 
 const PLACEHOLDER = `{
   "channel-id-here": [
-    "https://example.com/show-1",
-    "https://example.com/show-2"
+    "https://example.com/title-1",
+    "https://example.com/title-2"
   ],
   "another-channel-id": [
-    "https://example.com/show-3"
+    "https://example.com/title-3"
   ]
 }`
 

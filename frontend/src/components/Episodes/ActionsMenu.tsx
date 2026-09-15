@@ -1,7 +1,6 @@
 // TODO: Validate
 import { ActionsMenu } from "@/components/Common/ActionsMenu"
 import type { EpisodeTableData } from "./columns"
-import DeleteEpisode from "./Delete"
 import EditEpisode from "./Edit"
 import QuickUnlinkEpisode from "./QuickUnlink"
 
@@ -15,7 +14,6 @@ export const EpisodeActionsMenu = ({ episode }: EpisodeActionsMenuProps) => {
     <ActionsMenu>
       <EditEpisode episode={episode} />
       <QuickUnlinkEpisode episode={episode} />
-      <DeleteEpisode episode={episode} />
     </ActionsMenu>
   )
 }

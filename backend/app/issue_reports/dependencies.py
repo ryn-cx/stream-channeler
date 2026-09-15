@@ -11,10 +11,10 @@ from app.auth.dependencies import CurrentUser, SessionDep
 from app.issue_reports.models import (
     EpisodeIssueReport,
     SeasonIssueReport,
-    ShowIssueReport,
+    TitleIssueReport,
 )
 
-type AnyIssueReport = EpisodeIssueReport | SeasonIssueReport | ShowIssueReport
+type AnyIssueReport = EpisodeIssueReport | SeasonIssueReport | TitleIssueReport
 
 
 # TODO: Validate
@@ -56,7 +56,7 @@ EditableSeasonIssueReport = Annotated[
     SeasonIssueReport,
     Depends(editable_issue_report(SeasonIssueReport)),
 ]
-EditableShowIssueReport = Annotated[
-    ShowIssueReport,
-    Depends(editable_issue_report(ShowIssueReport)),
+EditableTitleIssueReport = Annotated[
+    TitleIssueReport,
+    Depends(editable_issue_report(TitleIssueReport)),
 ]

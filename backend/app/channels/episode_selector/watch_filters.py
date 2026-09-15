@@ -28,16 +28,16 @@ from sqlalchemy.sql.expression import ColumnElement
 from sqlmodel import Session, col, desc, func, or_, select
 from sqlmodel.sql.expression import Select, SelectOfScalar
 
-from app.canonical_media.episodes import (
-    canonical_episode_id_column,
-    canonical_episode_link,
-    canonical_id_of,
-    links_of,
-)
-from app.channels.episode_selector.canonical_entities import episode_id
+from app.channels.episode_selector.tmdb_entities import episode_id
 from app.episodes.models import Episode
 from app.seasons.models import Season
-from app.shows.models import Show, ShowCanonicalShow
+from app.titles.models import Title, TitleTmdbTitle
+from app.tmdb_media.episodes import (
+    links_of,
+    tmdb_episode_id_column,
+    tmdb_episode_link,
+    tmdb_record_id_of,
+)
 from app.users.models import User
 from app.watches.models import Watch
 
@@ -48,8 +48,7 @@ EPISODE_LAST_WATCHED_SUBQUERY = "episode_last_watched"
 EPISODE_LAST_WATCH_COMPLETED_COLUMN = "episode_last_watch_completed_date"
 EPISODE_LAST_WATCH_INCOMPLETE_COLUMN = "episode_last_watch_incomplete_date"
 
-# Maps each last-watched sort field to the subquery column holding its latest
-# watch date. Aggregated per episode (not per show) so an episode is ranked by
+# watch date. Aggregated per episode (not per title) so an episode is ranked by
 # its own watch history. Completed = verified watches; incomplete = unverified
 # (partial) watches.
 LAST_WATCHED_COLUMNS = {
@@ -59,7 +58,7 @@ LAST_WATCHED_COLUMNS = {
 
 
 # TODO: Validate
-def watched_canonical_episodes(user: User) -> SelectOfScalar[UUID]:
+def watched_tmdb_episodes(user: User) -> SelectOfScalar[UUID]:
     """Return the canonical episodes the `User` has watched, however they were watched.
 
     Every row carrying the watched identifier is matched, the canonical episode
@@ -68,9 +67,9 @@ def watched_canonical_episodes(user: User) -> SelectOfScalar[UUID]:
     other website carrying it.
     """
     watched_episode = aliased(Episode)
-    watched_link = canonical_episode_link()
+    watched_link = tmdb_episode_link()
     return (
-        select(canonical_episode_id_column(watched_episode, watched_link))
+        select(tmdb_episode_id_column(watched_episode, watched_link))
         .select_from(watched_episode)
         .outerjoin(watched_link, links_of(watched_episode, watched_link))
         .join(
@@ -84,13 +83,13 @@ def watched_canonical_episodes(user: User) -> SelectOfScalar[UUID]:
 # TODO: Validate
 def verified_watch_identifiers(user: User) -> SelectOfScalar[UUID]:
     """Return the canonical episodes the `User` has a verified watch of."""
-    return watched_canonical_episodes(user).where(col(Watch.verified).is_(True))
+    return watched_tmdb_episodes(user).where(col(Watch.verified).is_(True))
 
 
 # TODO: Validate
 def any_watch_identifiers(user: User) -> SelectOfScalar[UUID]:
     """Return the canonical episodes with any watch (verified or not) for the user."""
-    return watched_canonical_episodes(user)
+    return watched_tmdb_episodes(user)
 
 
 # TODO: Validate
@@ -134,7 +133,7 @@ def hide_partially_watched_condition(user: User) -> ColumnElement[bool]:
 
 
 # TODO: Validate
-def started_show_ids(user: User) -> SelectOfScalar[UUID]:
+def started_title_ids(user: User) -> SelectOfScalar[UUID]:
     """Return the titles the `User` has watched anything of.
 
     The titles themselves rather than the websites' listings of them, since a watch is
@@ -145,16 +144,16 @@ def started_show_ids(user: User) -> SelectOfScalar[UUID]:
     listing is no more linked to one title than to another.
     """
     named_episode = aliased(Episode)
-    named_link = canonical_episode_link()
+    named_link = tmdb_episode_link()
     watched_episode = aliased(Episode)
     watched_season = aliased(Season)
-    watched_show = aliased(Show)
-    watched_link = aliased(ShowCanonicalShow)
+    watched_title = aliased(Title)
+    watched_link = aliased(TitleTmdbTitle)
     return (
         select(
             func.coalesce(
-                col(watched_link.canonical_show_id),
-                col(watched_show.id),
+                col(watched_link.tmdb_title_id),
+                col(watched_title.id),
             ),
         )
         .select_from(Watch)
@@ -168,16 +167,16 @@ def started_show_ids(user: User) -> SelectOfScalar[UUID]:
         .join(
             watched_episode,
             col(watched_episode.id)
-            == canonical_episode_id_column(named_episode, named_link),
+            == tmdb_episode_id_column(named_episode, named_link),
         )
         .join(
             watched_season,
             col(watched_episode.season_id) == col(watched_season.id),
         )
-        .join(watched_show, col(watched_season.show_id) == col(watched_show.id))
+        .join(watched_title, col(watched_season.title_id) == col(watched_title.id))
         # A title has no links and stands for itself; a listing has one row per
         # title it is linked to and stands for each.
-        .outerjoin(watched_link, col(watched_link.show_id) == col(watched_show.id))
+        .outerjoin(watched_link, col(watched_link.title_id) == col(watched_title.id))
         .where(Watch.user_id == user.id)
         .distinct()
     )
@@ -194,11 +193,11 @@ def join_last_watched(
     reach these columns as raw SQL rather than through the subquery object.
     """
     watched_episode = aliased(Episode)
-    watched_link = canonical_episode_link()
+    watched_link = tmdb_episode_link()
     last_watched = (
         select(
-            canonical_episode_id_column(watched_episode, watched_link).label(
-                "canonical_episode_id",
+            tmdb_episode_id_column(watched_episode, watched_link).label(
+                "tmdb_episode_id",
             ),
             func.max(
                 case((col(Watch.verified).is_(True), Watch.watch_date)),
@@ -214,13 +213,13 @@ def join_last_watched(
         )
         .outerjoin(watched_link, links_of(watched_episode, watched_link))
         .where(col(Watch.user_id) == user.id)
-        .group_by(canonical_episode_id_column(watched_episode, watched_link))
+        .group_by(tmdb_episode_id_column(watched_episode, watched_link))
         .subquery(EPISODE_LAST_WATCHED_SUBQUERY)
     )
 
     return query.outerjoin(
         last_watched,
-        episode_id() == last_watched.c.canonical_episode_id,
+        episode_id() == last_watched.c.tmdb_episode_id,
     )
 
 
@@ -234,12 +233,12 @@ def latest_watch_by_identifier(
     if not episodes:
         return {}
 
-    identifiers = [canonical_id_of(episode) for episode in episodes]
+    identifiers = [tmdb_record_id_of(episode) for episode in episodes]
     watched_episode = aliased(Episode)
-    watched_link = canonical_episode_link()
-    canonical_id = canonical_episode_id_column(watched_episode, watched_link)
+    watched_link = tmdb_episode_link()
+    tmdb_record_id = tmdb_episode_id_column(watched_episode, watched_link)
     rows = session.exec(
-        select(canonical_id, Watch)  # type: ignore[call-overload]
+        select(tmdb_record_id, Watch)  # type: ignore[call-overload]
         .select_from(Watch)
         .join(
             watched_episode,
@@ -247,15 +246,15 @@ def latest_watch_by_identifier(
         )
         .outerjoin(watched_link, links_of(watched_episode, watched_link))
         .where(
-            canonical_id.in_(identifiers),
+            tmdb_record_id.in_(identifiers),
             Watch.user_id == user.id,
         )
         .order_by(
-            canonical_id,
+            tmdb_record_id,
             desc(Watch.watch_date),
             desc(Watch.id),
         )
-        .distinct(canonical_id),
+        .distinct(tmdb_record_id),
     ).all()
 
     return dict(rows)

@@ -8,10 +8,10 @@ import {
   TruncatedCell,
 } from "@/components/Common/TableCells"
 import { extraText } from "@/lib/extra"
-import { SeasonActionsMenu } from "./ActionsMenu"
 
 export type SeasonTableData = SeasonListOutput & { pending?: boolean }
 
+// TODO: Validate
 export const seasonColumns: ColumnDef<SeasonTableData>[] = [
   {
     accessorKey: "plugin_name",
@@ -25,24 +25,24 @@ export const seasonColumns: ColumnDef<SeasonTableData>[] = [
     ),
   },
   {
-    accessorKey: "source_name",
+    accessorKey: "source_key",
     header: "Source",
     cell: ({ row }) => (
       <ParentLinkCell
-        to="/shows"
+        to="/titles"
         search={{ source_id: row.original.source_id }}
-        name={row.original.source_name}
+        name={row.original.source_key}
       />
     ),
   },
   {
-    accessorKey: "show_name",
-    header: "Show",
+    accessorKey: "title_name",
+    header: "Title",
     cell: ({ row }) => (
       <ParentLinkCell
         to="/seasons"
-        search={{ show_id: row.original.show_id }}
-        name={row.original.show_name}
+        search={{ title_id: row.original.title_id }}
+        name={row.original.title_name}
       />
     ),
   },
@@ -95,6 +95,23 @@ export const seasonColumns: ColumnDef<SeasonTableData>[] = [
     cell: ({ row }) => <TruncatedCell value={row.original.image_url} />,
   },
   {
+    accessorKey: "thumbnail_url",
+    header: "Thumbnail URL",
+    cell: ({ row }) => <TruncatedCell value={row.original.thumbnail_url} />,
+  },
+  {
+    accessorKey: "tmdb_url",
+    header: "TMDB URL",
+    enableSorting: false,
+    enableColumnFilter: false,
+    cell: ({ row }) => <TruncatedCell value={row.original.tmdb_url} />,
+  },
+  {
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) => <TruncatedCell value={row.original.status} />,
+  },
+  {
     accessorKey: "data_timestamp",
     header: "Data Timestamp",
     meta: { filterVariant: "dateRange" },
@@ -123,21 +140,23 @@ export const seasonColumns: ColumnDef<SeasonTableData>[] = [
     cell: ({ row }) => <TruncatedCell value={row.original.key} />,
   },
   {
+    accessorKey: "plugin_id",
+    header: "Plugin ID",
+    cell: ({ row }) => <TruncatedCell value={row.original.plugin_id} />,
+  },
+  {
+    accessorKey: "source_id",
+    header: "Source ID",
+    cell: ({ row }) => <TruncatedCell value={row.original.source_id} />,
+  },
+  {
+    accessorKey: "title_id",
+    header: "Title ID",
+    cell: ({ row }) => <TruncatedCell value={row.original.title_id} />,
+  },
+  {
     accessorKey: "id",
     header: "ID",
     cell: ({ row }) => <TruncatedCell value={row.original.id} />,
-  },
-  {
-    id: "actions",
-    enableSorting: false,
-    enableColumnFilter: false,
-    header: () => <span className="sr-only">Actions</span>,
-    cell: ({ row }) => (
-      <div className="flex justify-end">
-        {row.original.pending ? null : (
-          <SeasonActionsMenu season={row.original} />
-        )}
-      </div>
-    ),
   },
 ]

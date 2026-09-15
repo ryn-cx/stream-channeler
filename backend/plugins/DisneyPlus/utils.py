@@ -1,13 +1,15 @@
 # TODO: Validate
-"""What every other part of the plugin reads a title by."""
+"""What every other part of the plugin reads a Disney+ title by."""
+
+from __future__ import annotations
 
 import re
-from datetime import timedelta
-from typing import override
+from typing import TYPE_CHECKING
 
-from app.utils import tz_datetime
-from plugins.DisneyPlus.files import FileMixin
-from plugins.utils.abstract_plugin import PluginShowIdentity
+if TYPE_CHECKING:
+    from kneeminus.entity.models import EntityModel, MainContentItem
+    from kneeminus.entity.models import Episode as EntityEpisode
+    from kneeminus.entity.models import Season as EntitySeason
 
 
 # TODO: Validate
@@ -20,61 +22,110 @@ def required_value[ValueT](value: ValueT | None, description: str) -> ValueT:
 
 
 # TODO: Validate
-class HelperMixin(FileMixin, register=False):
-    """The URLs of a title and the numbers Disney+ only writes into names."""
+def build_url(path: str) -> str:
+    return f"https://disneyplus.com/{path.lstrip('/')}"
 
-    # TODO: Validate
-    @staticmethod
-    def _season_number_from_name(name: str, fallback: int) -> int:
-        # Season names are the only place the real season number appears, the
-        # position of a season in the list is not reliable because shows can
-        # start at a season other than 1.
-        if number := re.search(r"\d+", name):
-            return int(number.group())
-        return fallback
 
-    # TODO: Validate
-    def _release_year(self, show_key: str) -> int | None:
-        release_year = self._hero(show_key).release_year
-        if release_year is None:
-            return None
-        # Disney+ writes a release year as a year on its own or as a range of
-        # them, and the year the title came out is the first one either way.
-        if year := re.search(r"\d{4}", release_year):
-            return int(year.group())
+# TODO: Validate
+def title_url(entity_id: str) -> str:
+    return build_url(f"browse/entity-{entity_id}")
+
+
+# TODO: Validate
+def video_url(episode_id: str) -> str:
+    return build_url(f"play/{episode_id}")
+
+
+# TODO: Validate
+def build_season_key(title_key: str, season_id: str) -> str:
+    return f"{title_key}:{season_id}"
+
+
+# TODO: Validate
+def split_season_key(season_key: str) -> tuple[str, str]:
+    title_key, _, season_id = season_key.partition(":")
+    return title_key, season_id
+
+
+# TODO: Validate
+def season_number_from_name(name: str, fallback: int) -> int:
+    # Season names are the only place the real season number appears, the
+    # position of a season in the list is not reliable because titles can
+    # start at a season other than 1.
+    if number := re.search(r"\d+", name):
+        return int(number.group())
+    return fallback
+
+
+# TODO: Validate
+def main_content_item(entity: EntityModel, content_type: str) -> MainContentItem | None:
+    """Return the block of the page named by `content_type`, if the page has one."""
+    for item in entity.props.page_props.stitch_document.main_content:
+        if item.field_type == content_type:
+            return item
+    return None
+
+
+# TODO: Validate
+def required_main_content_item(
+    entity: EntityModel,
+    content_type: str,
+) -> MainContentItem:
+    """Return the block of the page named by `content_type`."""
+    item = main_content_item(entity, content_type)
+    if item is None:
+        msg = f"The page carries no {content_type} block."
+        raise ValueError(msg)
+    return item
+
+
+# TODO: Validate
+def media_details(entity: EntityModel) -> MainContentItem:
+    return required_main_content_item(entity, "MediaDetails")
+
+
+# TODO: Validate
+def hero(entity: EntityModel) -> MainContentItem:
+    return required_main_content_item(entity, "DetailEntityHero")
+
+
+# TODO: Validate
+def is_movie(entity: EntityModel) -> bool:
+    return main_content_item(entity, "Episodes") is None
+
+
+# TODO: Validate
+def release_year(entity: EntityModel) -> int | None:
+    year = hero(entity).release_year
+    if year is None:
         return None
+    # Disney+ writes a release year as a year on its own or as a range of
+    # them, and the year the title came out is the first one either way.
+    if match := re.search(r"\d{4}", year):
+        return int(match.group())
+    return None
 
-    # TODO: Validate
-    def _background_image_url(self, show_key: str) -> str:
-        background_image = required_value(
-            self._hero(show_key).background_image,
-            "background image",
-        )
-        return background_image.default_image.source
 
-    # TODO: Validate
-    @classmethod
-    def _show_url(cls, entity_id: str) -> str:
-        return cls.build_url(f"browse/entity-{entity_id}")
+# TODO: Validate
+def background_image_url(entity: EntityModel) -> str:
+    background_image = required_value(
+        hero(entity).background_image,
+        "background image",
+    )
+    return background_image.default_image.source
 
-    # TODO: Validate
-    @classmethod
-    def _video_url(cls, episode_id: str) -> str:
-        return cls.build_url(f"play/{episode_id}")
 
-    # TODO: Validate
-    @override
-    @classmethod
-    def manual_search(cls, query: str) -> str | None:
-        return cls.build_url("browse/search")
+# TODO: Validate
+def seasons(entity: EntityModel) -> list[EntitySeason]:
+    episodes = main_content_item(entity, "Episodes")
+    if episodes is None:
+        return []
+    return episodes.seasons or []
 
-    # TODO: Validate
-    @override
-    def show_identity(self, show_key: str) -> PluginShowIdentity:
-        entity_file = self.entity_file(show_key)
-        entity_file.download_if_outdated(tz_datetime.now() - timedelta(days=7))
-        return PluginShowIdentity(
-            title=required_value(self._media_details(show_key).title, "title"),
-            media_type="Movie" if self._is_movie(show_key) else "Series",
-            year=self._release_year(show_key),
-        )
+
+# TODO: Validate
+def season_episodes(season_entity: EntityModel) -> list[EntityEpisode]:
+    episodes = main_content_item(season_entity, "Episodes")
+    if episodes is None:
+        return []
+    return episodes.episodes or []

@@ -1,58 +1,76 @@
 # TODO: Validate
-"""The URLs of a title and what kind of title it is."""
+"""What every other part of the plugin reads a Pluto TV title by."""
 
-from typing import override
-from urllib.parse import quote
+from __future__ import annotations
 
-from app.shows.models import Show
+from typing import TYPE_CHECKING
+
 from plugins.Pluto.constants import LOCALE
-from plugins.Pluto.files import FileMixin
+
+if TYPE_CHECKING:
+    from notaplanet.seasons.models import Episode, Season, SeasonsModel
 
 
 # TODO: Validate
-class HelperMixin(FileMixin, register=False):
-    """The URLs Pluto TV writes a title under."""
+def build_url(path: str) -> str:
+    return f"https://pluto.tv/{path.lstrip('/')}"
 
-    # TODO: Validate
-    @override
-    def _set_media_type_from_show(self, show: Show) -> None:
-        if not show.media_type:
-            msg = "Show.media_type is not set."
-            raise AttributeError(msg)
-        self._media_type_value = "movie" if show.media_type == "Movie" else "series"
 
-    # TODO: Validate
-    @classmethod
-    def _series_url(cls, show_key: str) -> str:
-        return cls.build_url(f"{LOCALE}/on-demand/series/{show_key}/details")
+# TODO: Validate
+def series_url(title_key: str) -> str:
+    return build_url(f"{LOCALE}/on-demand/series/{title_key}/details")
 
-    # TODO: Validate
-    @classmethod
-    def _movie_url(cls, show_key: str) -> str:
-        return cls.build_url(f"{LOCALE}/on-demand/movies/{show_key}/details")
 
-    # TODO: Validate
-    @classmethod
-    def _season_url(cls, show_key: str, season_number: int) -> str:
-        return cls.build_url(
-            f"{LOCALE}/on-demand/series/{show_key}/season/{season_number}",
-        )
+# TODO: Validate
+def movie_url(title_key: str) -> str:
+    return build_url(f"{LOCALE}/on-demand/movies/{title_key}/details")
 
-    # TODO: Validate
-    @classmethod
-    def _episode_url(
-        cls,
-        show_key: str,
-        season_number: int,
-        episode_key: str,
-    ) -> str:
-        return cls.build_url(
-            f"{LOCALE}/on-demand/series/{show_key}/season/{season_number}"
-            f"/episode/{episode_key}",
-        )
 
-    # TODO: Validate
-    @override
-    @classmethod
-    def manual_search(cls, query: str) -> str | None:
-        return cls.build_url(f"{LOCALE}/search?query={quote(query)}")
+# TODO: Validate
+def season_url(title_key: str, season_number: int) -> str:
+    return build_url(f"{LOCALE}/on-demand/series/{title_key}/season/{season_number}")
+
+
+# TODO: Validate
+def episode_url(title_key: str, season_number: int, episode_key: str) -> str:
+    return build_url(
+        f"{LOCALE}/on-demand/series/{title_key}/season/{season_number}"
+        f"/episode/{episode_key}",
+    )
+
+
+# TODO: Validate
+def build_season_key(title_key: str, season_number: int) -> str:
+    """Encode the title key into the season key.
+
+    Every entity's data comes from the single file keyed by the title, but the
+    base plugin resolves episode files from a season key alone, so the title
+    key is carried inside it.
+    """
+    return f"{title_key}:{season_number}"
+
+
+# TODO: Validate
+def movie_season_key(title_key: str) -> str:
+    # A movie has no seasons of its own so its single season is given a
+    # fixed number.
+    return build_season_key(title_key, 0)
+
+
+# TODO: Validate
+def split_season_key(season_key: str) -> tuple[str, int]:
+    title_key, _, season_number = season_key.partition(":")
+    return title_key, int(season_number)
+
+
+# TODO: Validate
+def season_episodes(series: SeasonsModel, season_number: int) -> list[Episode]:
+    for season in series.seasons:
+        if season.number == season_number:
+            return season.episodes
+    return []
+
+
+# TODO: Validate
+def seasons(series: SeasonsModel) -> list[Season]:
+    return series.seasons

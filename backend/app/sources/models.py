@@ -13,24 +13,28 @@ from sqlmodel import (
 )
 from sqlmodel.sql.expression import SelectOfScalar
 
-from app.models import BaseMediaMixin, ChildMediaMixin, sortable_field_indexes
+from app.models import (
+    BaseMediaMixin,
+    ChildMediaMixin,
+    sortable_field_indexes,
+)
 from app.plugins.models import Plugin
 
 if TYPE_CHECKING:
-    from app.shows.models import Show
+    from app.titles.models import Title
 
-DIRECT_SORTABLE_FIELDS = ["id", "name"]
+DIRECT_SORTABLE_FIELDS = ["id", "key"]
 
 
 # TODO: Validate
 class BaseSource(BaseMediaMixin):
-    name: str | None = Field(default=None)
+    link_to_tmdb: bool = Field(default=True)
     favicon_url: str | None = Field(default=None)
     image_url: str | None = Field(default=None)
 
 
 # TODO: Validate
-class Source(BaseSource, ChildMediaMixin[Plugin, "Show"], table=True):
+class Source(BaseSource, ChildMediaMixin[Plugin, "Title"], table=True):
     PARENT_ID_FIELD: ClassVar[str] = "plugin_id"
 
     INDIRECT_SORTABLE_FIELDS: ClassVar[list[str]] = []
@@ -47,7 +51,7 @@ class Source(BaseSource, ChildMediaMixin[Plugin, "Show"], table=True):
 
     plugin_id: uuid.UUID = Field(foreign_key="plugin.id", ondelete="CASCADE")
     plugin: Plugin = Relationship(back_populates="sources")
-    shows: list[Show] = Relationship(back_populates="source", cascade_delete=True)
+    titles: list[Title] = Relationship(back_populates="source", cascade_delete=True)
 
     # TODO: Validate
     @classmethod
@@ -71,17 +75,15 @@ class Source(BaseSource, ChildMediaMixin[Plugin, "Show"], table=True):
     # TODO: Validate
     @property
     @override
-    def children(self) -> list[Show]:
-        return self.shows
+    def children(self) -> list[Title]:
+        return self.titles
 
     # TODO: Validate
     def __str__(self) -> str:
         """Return a string representation of the Source."""
         base_source = "Source:"
-        if self.name:
-            base_source += f" {self.name}"
         if self.key:
-            base_source += f" ({self.key})"
+            base_source += f" {self.key}"
         if self.id:
             base_source += f" ({self.id})"
         return f"{self.plugin}\n{base_source}"

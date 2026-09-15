@@ -13,7 +13,8 @@ from app.schemas import ReadOptions
 from app.watches.exceptions import WatchAlreadyExistsError
 from app.watches.models import Watch
 from app.watches.schemas import WatchCreate
-from app.watches.services import create_watch, get_watched_episodes
+from app.watches.service.management import create_watch
+from app.watches.service.queries import get_watched_episodes
 from tests.app.episodes.utils import create_linked_episode, create_random_episode
 from tests.app.users.utils import create_random_user
 from tests.app.watches.utils import create_random_watch
@@ -115,7 +116,6 @@ def test_deleting_the_episode_leaves_the_watch_behind(
 
     function_scoped_session.delete(episode)
     function_scoped_session.flush()
-    # The column is cleared by the database, so what the session is holding is
     # stale until it goes back for it.
     function_scoped_session.expire_all()
 

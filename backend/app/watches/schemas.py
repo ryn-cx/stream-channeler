@@ -14,8 +14,8 @@ from app.schemas import (
     make_model_with_all_fields_optional,
 )
 from app.seasons.schemas import SeasonOutput
-from app.shows.schemas import ShowPublic
 from app.sources.schemas import SourcePublic
+from app.titles.schemas import TitlePublic
 from app.watches.models import BaseWatch, Watch
 
 
@@ -52,11 +52,10 @@ class WatchItem(BaseWatch):
     id: uuid.UUID
     episode_id: uuid.UUID | None
     # The episode itself, which is what the watch counts for. The identifier is
-    # what the watch holds, which is the link that played it; the id is the
     # episode that identifier resolved to here, and is what keys `episodes` on
     # the list output.
     watch_identifier: str
-    canonical_episode_id: uuid.UUID
+    tmdb_episode_id: uuid.UUID
 
     # TODO: Validate
     def __hash__(self) -> int:
@@ -74,7 +73,7 @@ class WatchesListOutput(SQLModel):
     watches: list[WatchItem] = Field()
     episodes: dict[uuid.UUID, EpisodeOutput] = Field()
     seasons: dict[uuid.UUID, SeasonOutput] = Field()
-    shows: dict[uuid.UUID, ShowPublic] = Field()
+    titles: dict[uuid.UUID, TitlePublic] = Field()
     sources: dict[uuid.UUID, SourcePublic] = Field()
     plugins: dict[uuid.UUID, PluginOutput] = Field()
     total_count: int = Field(default=0)
@@ -84,8 +83,8 @@ class WatchesListOutput(SQLModel):
 
 # TODO: Validate
 class WatchImportResult(BaseModel):
-    show: str
-    show_url: str
+    title: str
+    title_url: str
     episode: str
     episode_url: str
 
@@ -112,23 +111,8 @@ class WatchRelinkResults(BaseModel):
 
 # TODO: Validate
 class WatchExportEntry(BaseModel):
-    """Schema for a single exported `Watch`.
-
-    Holds only what re-importing needs: which episode the watch is of, when it
-    happened, and whether it was verified. Everything else is read back out of
-    the database the file is imported into.
-
-    `verified` is None in a file exported before it was carried, which leaves
-    the import's own setting to say what those watches are.
-
-    A file exported before the identifier was named as such holds it under
-    `canonical_episode_key`, and holds the same string: the old key was the
-    plugin's name in front of its own id, which is what the identifier is. So
-    the old name is still read, and a backup taken then still imports.
-    """
-
     watch_identifier: str = PydanticField(
-        validation_alias=AliasChoices("watch_identifier", "canonical_episode_key"),
+        validation_alias=AliasChoices("watch_identifier", "tmdb_episode_key"),
     )
     watch_date: datetime
     verified: bool | None = None

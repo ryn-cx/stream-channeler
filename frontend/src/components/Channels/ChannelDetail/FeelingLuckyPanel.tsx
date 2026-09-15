@@ -24,13 +24,6 @@ interface LuckyOutcome {
   approved: boolean
 }
 
-// TMDB covers every service rather than one, so a title is looked for there and
-// nowhere else. Feeling lucky is taking the first result of a search on trust,
-// and a catalogue of everything is the only one where the first result standing
-// for the title is a fair bet - one service's search answers only for what that
-// service carries, so its first result is whatever it holds that reads closest.
-const PLUGIN_KEY = "TMDB"
-
 // TODO: Validate
 function parseTitles(text: string): string[] {
   return text
@@ -67,9 +60,7 @@ export function FeelingLuckyPanel({ channelId }: { channelId: string }) {
   const unmatched = outcomes.filter((outcome) => outcome.result === null)
   const approved = matched.filter((outcome) => outcome.approved)
 
-  // A result already says which plugin issued it and under what id, so opening a
-  // title names it outright instead of searching another service for it. A
-  // result the plugin gave no id for is one nothing can be asked about.
+  // A result the plugin gave no id for is one nothing can be asked about.
   // TODO: Validate
   const openTitle = (result: PluginSearchResult) => {
     if (!result.media_identifier) {
@@ -77,7 +68,6 @@ export function FeelingLuckyPanel({ channelId }: { channelId: string }) {
       return
     }
     setOpenedTitle({
-      plugin_key: PLUGIN_KEY,
       media_identifier: result.media_identifier,
       title: result.title,
       url: result.url,
@@ -115,7 +105,6 @@ export function FeelingLuckyPanel({ channelId }: { channelId: string }) {
     for (const title of titles) {
       try {
         const page = await PluginsService.inAppSearch({
-          pluginKey: PLUGIN_KEY,
           query: title,
         })
         const first = page.results[0] ?? null
@@ -167,7 +156,7 @@ export function FeelingLuckyPanel({ channelId }: { channelId: string }) {
       <Textarea
         value={titlesText}
         onChange={(event) => setTitlesText(event.target.value)}
-        placeholder={"Show Name 1\nShow Name 2\nShow Name 3"}
+        placeholder={"Title Name 1\nTitle Name 2\nTitle Name 3"}
         rows={6}
         aria-label="Titles to search"
         disabled={isRunning}

@@ -9,7 +9,7 @@ from app.database import engine, load_models
 from app.files.models import File
 from app.plugins.models import Plugin
 from plugins.utils.manage_plugins import import_plugins, plugins
-from tests.plugins.plugin_validator_alt.stored_files import (
+from tests.plugins.plugin_validator.stored_files import (
     stored_file_record,
     stored_key,
 )
@@ -24,9 +24,15 @@ COMMIT_EVERY = 500
 def _plugin_records_by_owner_key(session: Session) -> dict[str, Plugin]:
     records: dict[str, Plugin] = {}
     for plugin_class in plugins:
-        plugin_class(session)
         owner_key = plugin_class.__module__.split(".")[1]
-        records[owner_key] = Plugin.get_one(session, plugin_class.plugin_key())
+        plugin = Plugin(
+            key=plugin_class.plugin_name(),
+        ).upsert(
+            session,
+            Plugin.get(session, plugin_class.plugin_name()),
+        )
+        plugin.set_update_at(None)
+        records[owner_key] = plugin
     return records
 
 
@@ -48,7 +54,7 @@ def sync_test_files(session: Session) -> None:
 
         record = stored_file_record(owner_key, file_key, path)
         record.plugin_id = plugin.id
-        record.upsert_and_set_update_at(plugin, File.get(session, plugin, file_key))
+        record.upsert(plugin, File.get(session, plugin, file_key)).set_update_at(None)
         imported += 1
         if imported % COMMIT_EVERY == 0:
             session.commit()

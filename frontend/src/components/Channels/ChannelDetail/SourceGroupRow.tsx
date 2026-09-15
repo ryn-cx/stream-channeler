@@ -3,8 +3,8 @@ import { ChevronDown, ChevronRight } from "lucide-react"
 import { useState } from "react"
 
 import type { WhitelistSourceOutput } from "@/client"
-import { ShowInformationPanel } from "@/components/ChannelCommon/ShowInformationDialog"
-import EditShow from "@/components/Shows/Edit"
+import { TitleInformationPanel } from "@/components/ChannelCommon/TitleInformationDialog"
+import EditTitle from "@/components/Titles/Edit"
 import { Button } from "@/components/ui/button"
 import {
   AdminOnly,
@@ -28,7 +28,7 @@ export function groupBySource(sources: WhitelistSourceOutput[]): SourceGroup[] {
   for (const source of sources) {
     const group = groups.get(source.source_id) ?? {
       sourceId: source.source_id,
-      sourceName: source.source_name,
+      sourceName: source.source_key,
       faviconUrl: source.favicon_url,
       isTmdb: source.is_tmdb ?? false,
       rows: [],
@@ -45,11 +45,11 @@ function RowControls({ row }: { row: WhitelistSourceOutput }) {
   return (
     <>
       <ExternalMediaLink
-        url={row.show.url}
-        label="Open this show on its site"
+        url={row.title.url}
+        label="Open this title on its site"
       />
       <AdminOnly>
-        <EditShow show={row.show} />
+        <EditTitle title={row.title} />
       </AdminOnly>
     </>
   )
@@ -59,9 +59,9 @@ interface SourceGroupRowProps {
   group: SourceGroup
   isWhitelist: boolean
   enabledSourceIds: Set<string>
-  informationShowId: string | null
-  onToggleInformation: (showId: string) => void
-  onToggleEnabled: (showId: string) => void
+  informationTitleId: string | null
+  onToggleInformation: (titleId: string) => void
+  onToggleEnabled: (titleId: string) => void
 }
 
 // TODO: Validate
@@ -79,7 +79,7 @@ export function SourceGroupRow({
   group,
   isWhitelist,
   enabledSourceIds,
-  informationShowId,
+  informationTitleId,
   onToggleInformation,
   onToggleEnabled,
 }: SourceGroupRowProps) {
@@ -87,8 +87,8 @@ export function SourceGroupRow({
   const single = group.rows.length === 1 ? group.rows[0] : null
 
   // TODO: Validate
-  const actionLabel = (showId: string) => {
-    const enabled = enabledSourceIds.has(showId)
+  const actionLabel = (titleId: string) => {
+    const enabled = enabledSourceIds.has(titleId)
     if (isWhitelist)
       return enabled ? "Remove from Whitelist" : "Add to Whitelist"
     return enabled ? "Remove from Blacklist" : "Add to Blacklist"
@@ -100,18 +100,18 @@ export function SourceGroupRow({
       <span className="text-xs text-muted-foreground">Catalogue only</span>
     ) : (
       <Button
-        variant={enabledSourceIds.has(row.show_id) ? "default" : "outline"}
+        variant={enabledSourceIds.has(row.title_id) ? "default" : "outline"}
         size="sm"
-        onClick={() => onToggleEnabled(row.show_id)}
+        onClick={() => onToggleEnabled(row.title_id)}
       >
-        {actionLabel(row.show_id)}
+        {actionLabel(row.title_id)}
       </Button>
     )
 
-  const isOpen = single ? informationShowId === single.show_id : expanded
+  const isOpen = single ? informationTitleId === single.title_id : expanded
   // TODO: Validate
   const toggleOpen = () =>
-    single ? onToggleInformation(single.show_id) : setExpanded(!expanded)
+    single ? onToggleInformation(single.title_id) : setExpanded(!expanded)
 
   return (
     <div>
@@ -139,14 +139,14 @@ export function SourceGroupRow({
           {group.sourceName ?? "Unknown source"}
           {single ? null : (
             <span className="ml-2 text-xs text-muted-foreground">
-              {group.rows.length} shows
+              {group.rows.length} titles
             </span>
           )}
         </button>
         {single ? markButton(single) : null}
         {single ? <RowControls row={single} /> : null}
         <MediaPageButton
-          to="/shows"
+          to="/titles"
           search={{ source_id: group.sourceId }}
           label="Open this source here"
         />
@@ -154,21 +154,21 @@ export function SourceGroupRow({
 
       {single && isOpen && (
         <div className="rounded border bg-muted/30 p-4">
-          <ShowInformationPanel showId={single.show_id} />
+          <TitleInformationPanel titleId={single.title_id} />
         </div>
       )}
 
       {!single && expanded && (
         <div className="ml-8 space-y-1 border-l pl-2">
           {group.rows.map((row) => (
-            <div key={row.show_id}>
+            <div key={row.title_id}>
               <div className="flex items-center gap-2 p-2 hover:bg-accent/30 rounded">
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  onClick={() => onToggleInformation(row.show_id)}
+                  onClick={() => onToggleInformation(row.title_id)}
                 >
-                  {informationShowId === row.show_id ? (
+                  {informationTitleId === row.title_id ? (
                     <ChevronDown className="h-4 w-4" />
                   ) : (
                     <ChevronRight className="h-4 w-4" />
@@ -177,16 +177,16 @@ export function SourceGroupRow({
                 <button
                   type="button"
                   className="flex-1 text-left text-sm hover:underline"
-                  onClick={() => onToggleInformation(row.show_id)}
+                  onClick={() => onToggleInformation(row.title_id)}
                 >
-                  {row.show.name ?? row.show.key}
+                  {row.title.name ?? row.title.key}
                 </button>
                 {markButton(row)}
                 <RowControls row={row} />
               </div>
-              {informationShowId === row.show_id && (
+              {informationTitleId === row.title_id && (
                 <div className="rounded border bg-muted/30 p-4">
-                  <ShowInformationPanel showId={row.show_id} />
+                  <TitleInformationPanel titleId={row.title_id} />
                 </div>
               )}
             </div>

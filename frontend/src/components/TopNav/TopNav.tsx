@@ -2,6 +2,7 @@
 import { Link, useRouterState } from "@tanstack/react-router"
 import {
   Eye,
+  FlaskConical,
   LayoutDashboard,
   ListOrdered,
   LogIn,
@@ -56,6 +57,7 @@ const adminItems: NavItem[] = [
   ...baseItems,
   { icon: Plug, title: "Custom Media", path: "/plugins" },
   { icon: Users, title: "Admin", path: "/admin" },
+  { icon: FlaskConical, title: "Admin V2", path: "/admin-v2" },
 ]
 
 const publicItems: NavItem[] = [
