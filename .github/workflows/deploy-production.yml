@@ -36,7 +36,7 @@ jobs:
       CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
       TMDB_API_READ_TOKEN: ${{ secrets.TMDB_API_READ_TOKEN }}
       CLOUDFLARE_TUNNEL_TOKEN: ${{ secrets.CLOUDFLARE_TUNNEL_TOKEN }}
-      COMPOSE_PROFILES: ${{ vars.COMPOSE_PROFILES }}
+      COMPOSE_PROFILES: ${{ secrets.COMPOSE_PROFILES }}
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
