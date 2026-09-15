@@ -160,7 +160,7 @@ class NHKWorldUpsert(NHKWorldChannels, ABC):
 
 
 # TODO: Validate
-class NHKWorld(NHKWorldUpsert, AbstractPlugin, register=False):
+class NHKWorld(NHKWorldUpsert, AbstractPlugin, register=True):
     # TODO: Add support for single episodes
     # TODO: Don't hardcode the favicon URL
     # TODO: Validate
