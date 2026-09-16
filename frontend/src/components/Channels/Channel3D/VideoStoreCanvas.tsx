@@ -6,10 +6,12 @@ import { VideoStore } from "./videoStore"
 // TODO: Validate
 export function VideoStoreCanvas({
   titles,
+  capacity,
   channelName,
   onActivate,
 }: {
   titles: StoreTitle[]
+  capacity: number
   channelName: string
   onActivate: (title: StoreTitle) => void
 }) {
@@ -24,7 +26,7 @@ export function VideoStoreCanvas({
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
-    const store = new VideoStore(container, titles, channelName, {
+    const store = new VideoStore(container, capacity, channelName, {
       onFocus: setFocused,
       onActivate: (title) => activateRef.current(title),
       onLockChange: setLocked,
@@ -34,7 +36,11 @@ export function VideoStoreCanvas({
       storeRef.current = null
       store.dispose()
     }
-  }, [titles, channelName])
+  }, [capacity, channelName])
+
+  useEffect(() => {
+    storeRef.current?.addTitles(titles)
+  }, [titles])
 
   return (
     <div className="absolute inset-0 overflow-hidden bg-black">
@@ -80,8 +86,9 @@ export function VideoStoreCanvas({
             {channelName}
           </span>
           <span className="text-sm text-white/60">
-            {titles.length} {titles.length === 1 ? "title" : "titles"} on the
-            shelves
+            {titles.length < capacity
+              ? `${titles.length} of ${capacity} titles on the shelves…`
+              : `${titles.length} ${titles.length === 1 ? "title" : "titles"} on the shelves`}
           </span>
           <span className="mt-3 rounded-full border border-white/25 px-5 py-2 text-sm font-medium">
             Click to walk in

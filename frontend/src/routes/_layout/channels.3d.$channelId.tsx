@@ -2,10 +2,13 @@
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, Link, redirect } from "@tanstack/react-router"
 import { ArrowLeft, Loader2 } from "lucide-react"
-import { useRef } from "react"
+import { useEffect, useState } from "react"
 import { ChannelsService } from "@/client"
 import type { StoreTitle } from "@/components/Channels/Channel3D/caseTexture"
-import { fetchStoreTitles } from "@/components/Channels/Channel3D/storeTitles"
+import {
+  fetchTitlePage,
+  TITLE_PAGE,
+} from "@/components/Channels/Channel3D/storeTitles"
 import { VideoStoreCanvas } from "@/components/Channels/Channel3D/VideoStoreCanvas"
 
 export const Route = createFileRoute("/_layout/channels/3d/$channelId")({
@@ -29,6 +32,10 @@ export const Route = createFileRoute("/_layout/channels/3d/$channelId")({
 // TODO: Validate
 function Channel3D() {
   const { channelId } = Route.useParams()
+  const [stock, setStock] = useState<{
+    capacity: number
+    titles: StoreTitle[]
+  } | null>(null)
 
   const { data: channel } = useQuery({
     queryKey: ["channels", channelId],
@@ -36,14 +43,47 @@ function Channel3D() {
     refetchOnWindowFocus: false,
   })
 
-  const { data: titles } = useQuery({
-    queryKey: ["channel-store-titles", channelId],
-    queryFn: () => fetchStoreTitles(channelId),
-    refetchOnWindowFocus: false,
-  })
+  useEffect(() => {
+    let cancelled = false
+    const shelved = new Map<string, StoreTitle>()
 
-  const shelved = useRef<StoreTitle[] | null>(null)
-  if (titles && !shelved.current) shelved.current = titles
+    // TODO: Validate
+    const shelve = (page: { titles: StoreTitle[]; total: number }) => {
+      for (const title of page.titles) {
+        if (!shelved.has(title.id)) shelved.set(title.id, title)
+      }
+      setStock({ capacity: page.total, titles: [...shelved.values()] })
+    }
+
+    // TODO: Validate
+    const stockShelves = async () => {
+      const first = await fetchTitlePage(channelId, 0)
+      if (cancelled) return
+      shelve(first)
+
+      const offsets: number[] = []
+      for (
+        let offset = TITLE_PAGE;
+        offset < first.total;
+        offset += TITLE_PAGE
+      ) {
+        offsets.push(offset)
+      }
+      while (offsets.length > 0 && !cancelled) {
+        const batch = offsets.splice(0, 4)
+        const pages = await Promise.all(
+          batch.map((offset) => fetchTitlePage(channelId, offset)),
+        )
+        if (cancelled) return
+        for (const page of pages) shelve(page)
+      }
+    }
+
+    stockShelves()
+    return () => {
+      cancelled = true
+    }
+  }, [channelId])
 
   // TODO: Validate
   const onActivate = (title: StoreTitle) => {
@@ -52,20 +92,21 @@ function Channel3D() {
 
   return (
     <div className="fixed inset-0 z-50 bg-black">
-      {shelved.current && shelved.current.length > 0 ? (
+      {stock && stock.titles.length > 0 ? (
         <VideoStoreCanvas
-          titles={shelved.current}
+          titles={stock.titles}
+          capacity={stock.capacity}
           channelName={channel?.name || "Video Store"}
           onActivate={onActivate}
         />
       ) : (
         <div className="flex size-full flex-col items-center justify-center gap-3 text-white/70">
-          {shelved.current ? (
+          {stock ? (
             <span>This channel has nothing on the shelves right now.</span>
           ) : (
             <>
               <Loader2 className="size-6 animate-spin" />
-              <span className="text-sm">Stocking the shelves…</span>
+              <span className="text-sm">Unlocking the store…</span>
             </>
           )}
         </div>

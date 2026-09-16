@@ -60,12 +60,15 @@ export class VideoStore {
   private disposed = false
   private pendingImages: Array<{ position: THREE.Vector3; run: () => void }> =
     []
+  private activeImages = 0
+  private slots: Slot[] = []
+  private caseGeometry = buildCaseGeometry()
   private resizeObserver: ResizeObserver
 
   // TODO: Validate
   constructor(
     container: HTMLElement,
-    titles: StoreTitle[],
+    capacity: number,
     channelName: string,
     callbacks: VideoStoreCallbacks,
   ) {
@@ -89,7 +92,7 @@ export class VideoStore {
     this.controls = new PointerLockControls(this.camera, container)
     this.scene.add(this.camera)
 
-    this.buildStore(titles, channelName)
+    this.buildStore(capacity, channelName)
 
     this.controls.addEventListener("lock", this.handleLock)
     this.controls.addEventListener("unlock", this.handleUnlock)
@@ -102,14 +105,14 @@ export class VideoStore {
   }
 
   // TODO: Validate
-  private buildStore(titles: StoreTitle[], channelName: string) {
+  private buildStore(capacity: number, channelName: string) {
     const levels = [0.32, 0.68, 1.04, 1.4, 1.76]
     const slotWidth = 0.172
-    const unitCount = Math.min(6, Math.max(1, Math.ceil(titles.length / 420)))
+    const unitCount = Math.min(6, Math.max(1, Math.ceil(capacity / 420)))
     const slotsPerMeter = (levels.length * 2) / slotWidth
     const gondolaLength = Math.min(
       16,
-      Math.max(4, (titles.length * 1.35) / (unitCount * slotsPerMeter)),
+      Math.max(4, (capacity * 1.35) / (unitCount * slotsPerMeter)),
     )
     const width = unitCount * 3.3 + 3.4
     const depth = gondolaLength + 6
@@ -295,11 +298,15 @@ export class VideoStore {
     this.scene.add(counter)
     this.colliders.push(new THREE.Box3().setFromObject(counter))
 
-    const geometry = buildCaseGeometry()
-    const placed = Math.min(titles.length, slots.length)
-    for (let index = 0; index < placed; index++) {
+    this.slots = slots
+  }
+
+  // TODO: Validate
+  addTitles(titles: StoreTitle[]) {
+    const placed = Math.min(titles.length, this.slots.length)
+    for (let index = this.caseMeshes.length; index < placed; index++) {
       const title = titles[index]
-      const slot = slots[index]
+      const slot = this.slots[index]
       const texture = createCaseTexture(title, null)
       const material = new THREE.MeshStandardMaterial({
         map: texture,
@@ -309,7 +316,7 @@ export class VideoStore {
         roughness: 0.42,
         metalness: 0.06,
       })
-      const mesh = new THREE.Mesh(geometry, material)
+      const mesh = new THREE.Mesh(this.caseGeometry, material)
       mesh.position.copy(slot.position)
       mesh.rotation.y = Math.atan2(slot.facing.x, slot.facing.z)
       mesh.rotation.z = (Math.random() - 0.5) * 0.05
@@ -323,7 +330,7 @@ export class VideoStore {
       if (title.imageUrl) this.queueImage(title, material, slot.position)
     }
 
-    for (let slot = 0; slot < 6; slot++) this.nextImage()
+    for (let concurrent = 0; concurrent < 6; concurrent++) this.nextImage()
   }
 
   // TODO: Validate
@@ -334,6 +341,7 @@ export class VideoStore {
   ) {
     // TODO: Validate
     const run = () => {
+      this.activeImages++
       const image = new Image()
       image.crossOrigin = "anonymous"
       // TODO: Validate
@@ -346,6 +354,7 @@ export class VideoStore {
           material.needsUpdate = true
           previous?.dispose()
         }
+        this.activeImages--
         this.nextImage()
       }
       image.onload = () => finish(image)
@@ -357,7 +366,8 @@ export class VideoStore {
 
   // TODO: Validate
   private nextImage() {
-    if (this.disposed || this.pendingImages.length === 0) return
+    if (this.disposed || this.activeImages >= 6) return
+    if (this.pendingImages.length === 0) return
     let nearest = 0
     let shortest = Number.POSITIVE_INFINITY
     for (let index = 0; index < this.pendingImages.length; index++) {
@@ -547,6 +557,7 @@ export class VideoStore {
         material.dispose()
       }
     })
+    this.caseGeometry.dispose()
     this.renderer.dispose()
     this.renderer.domElement.remove()
   }
