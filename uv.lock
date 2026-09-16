@@ -1238,7 +1238,7 @@ dependencies = [
 [[package]]
 name = "minbo"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/minbo#ca9fffe0e60c436a008c16bd10f8aefce0b5fcfa" }
+source = { git = "https://github.com/ryn-cx/minbo#0fdcd4e9bce58532e7ef2c29c97c8fcf0fd76f6d" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
