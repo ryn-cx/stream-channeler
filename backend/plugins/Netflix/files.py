@@ -8,6 +8,10 @@ from meshfilm import Meshfilm
 from meshfilm.detail_modal import DetailModal as DetailModalEndpoint
 from meshfilm.detail_modal.models import DetailModalModel
 from meshfilm.exceptions import TitleNotFoundError
+from meshfilm.lodp_title_and_plans_page import (
+    LodpTitleAndPlansPage as LodpTitleAndPlansPageEndpoint,
+)
+from meshfilm.lodp_title_and_plans_page.models import LodpTitleAndPlansPageModel
 from meshfilm.preview_modal_episode_selector import (
     PreviewModalEpisodeSelector as PreviewModalEpisodeSelectorEndpoint,
 )
@@ -39,6 +43,22 @@ def meshfilm() -> Meshfilm:
     # Netflix needs to use the proxy because get-around sometimes routes to an IP in
     # another country which causes incorrect results.
     return Meshfilm(get_around_client=get_around_client(proxy=True))
+
+
+# TODO: Validate
+class LodpTitleAndPlansPage(IntegerArgEndpointFile[LodpTitleAndPlansPageModel]):
+    """Title information including the titles Netflix considers similar."""
+
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> LodpTitleAndPlansPageEndpoint:
+        return meshfilm().lodp_title_and_plans_page
+
+    # Occurs if the user tries to add an invalid URL.
+    # TODO: Validate
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, TitleNotFoundError)
 
 
 # TODO: Validate

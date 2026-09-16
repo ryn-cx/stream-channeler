@@ -569,3 +569,9 @@ class ChannelOptions(BaseInput):
     minimum_duration: int | None = Field(default=None)
     maximum_duration: int | None = Field(default=None)
     limit: int | None = Field(default=1000, ge=1, le=1000)
+
+
+# TODO: Validate
+class ChannelBuildPlugin(BaseModel):
+    key: str
+    favicon_url: str | None = None

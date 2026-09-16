@@ -10,6 +10,7 @@ from app.tmdb_media.tmdb import (
     tmdb_title_key,
 )
 from plugins.TMDB.constants import MOVIE_URL_REGEX, TV_URL_REGEX
+from plugins.TMDB.files import MoviesRecommendations, TVSeriesRecommendations
 from plugins.TMDB.importer import TMDBImporter, TMDBMovie, TMDBSeries
 from plugins.TMDB.shared import TMDBShared
 from plugins.TMDB.utils import tmdb_url
@@ -65,6 +66,22 @@ class TMDB(TMDBShared, AbstractPlugin, register=True):
     def _media_importer_from_title(self, title: Title) -> TMDBImporter:
         media_type, _ = get_media_type_and_tmdb_id(title.key)
         return self._get_media_importer_from_media_type(media_type)
+
+    # TODO: Validate
+    @override
+    def similar_title_urls(self, title: Title) -> list[str]:
+        media_type, tmdb_media_id = get_media_type_and_tmdb_id(title.key)
+        recommendations_file: MoviesRecommendations | TVSeriesRecommendations
+        if media_type == TMDBMediaType.movie:
+            recommendations_file = self.movies_recommendations_file(tmdb_media_id)
+        else:
+            recommendations_file = self.tv_series_recommendations_file(tmdb_media_id)
+        # TODO: This is temporary until all files are downloaded
+        recommendations_file.download_if_outdated()
+        return [
+            tmdb_url(media_type, result.id)
+            for result in recommendations_file.parsed().results
+        ]
 
     # TODO: Validate
     def import_search(

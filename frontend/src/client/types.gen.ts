@@ -67,6 +67,11 @@ export type ChannelAdminUpdate = {
     user_id?: (string | null);
 };
 
+export type ChannelBuildPlugin = {
+    key: string;
+    favicon_url?: (string | null);
+};
+
 /**
  * Schema for a `Comment` shown outside of its own channel's page.
  */
@@ -944,6 +949,7 @@ export type PluginSearchResult = {
     image_url?: (string | null);
     media_type?: (string | null);
     media_identifier?: (string | null);
+    tmdb_title_id?: (string | null);
 };
 
 /**
@@ -1443,7 +1449,7 @@ export type tminidb__movie__details__optional_models__SpokenLanguage = {
 export type tminidb__movie__details__strict_models__BelongsToCollection = {
     id: number;
     name: string;
-    poster_path: string;
+    poster_path: (string | null);
     backdrop_path: (string | null);
 };
 
@@ -1466,7 +1472,7 @@ export type tminidb__movie__details__strict_models__MovieDetailsModel = {
     original_title: string;
     overview: string;
     popularity: number;
-    poster_path: string;
+    poster_path: (string | null);
     production_companies: Array<tminidb__movie__details__strict_models__ProductionCompany>;
     production_countries: Array<tminidb__movie__details__strict_models__ProductionCountry>;
     release_date: (string);
@@ -1638,7 +1644,7 @@ export type tminidb__tv_series__details__optional_models__NextEpisodeToAir = {
     runtime?: (number | null);
     season_number?: (number | null);
     show_id?: (number | null);
-    still_path?: (unknown | null);
+    still_path?: (string | null);
 };
 
 export type tminidb__tv_series__details__optional_models__ProductionCompany = {
@@ -1681,8 +1687,8 @@ export type tminidb__tv_series__details__optional_models__TvSeriesDetailsModel =
     id?: (number | null);
     in_production?: (boolean | null);
     languages?: (Array<(string)> | null);
-    last_air_date?: (string | null);
-    last_episode_to_air?: (tminidb__tv_series__details__optional_models__LastEpisodeToAir | null);
+    last_air_date?: (unknown | string | null);
+    last_episode_to_air?: (unknown | tminidb__tv_series__details__optional_models__LastEpisodeToAir | null);
     name?: (string | null);
     next_episode_to_air?: (unknown | tminidb__tv_series__details__optional_models__NextEpisodeToAir | null);
     networks?: (Array<tminidb__tv_series__details__optional_models__Network> | null);
@@ -1756,7 +1762,7 @@ export type tminidb__tv_series__details__strict_models__NextEpisodeToAir = {
     runtime: (number | null);
     season_number: number;
     show_id: number;
-    still_path: null;
+    still_path: (string | null);
 };
 
 export type tminidb__tv_series__details__strict_models__ProductionCompany = {
@@ -1799,8 +1805,8 @@ export type tminidb__tv_series__details__strict_models__TvSeriesDetailsModel = {
     id: number;
     in_production: boolean;
     languages: Array<(string)>;
-    last_air_date: string;
-    last_episode_to_air: tminidb__tv_series__details__strict_models__LastEpisodeToAir;
+    last_air_date: (string | null);
+    last_episode_to_air: (tminidb__tv_series__details__strict_models__LastEpisodeToAir | null);
     name: string;
     next_episode_to_air: (tminidb__tv_series__details__strict_models__NextEpisodeToAir | null);
     networks: Array<tminidb__tv_series__details__strict_models__Network>;
@@ -1811,7 +1817,7 @@ export type tminidb__tv_series__details__strict_models__TvSeriesDetailsModel = {
     original_name: string;
     overview: string;
     popularity: number;
-    poster_path: string;
+    poster_path: (string | null);
     production_companies: Array<tminidb__tv_series__details__strict_models__ProductionCompany>;
     production_countries: Array<tminidb__tv_series__details__strict_models__ProductionCountry>;
     seasons: Array<tminidb__tv_series__details__strict_models__Season>;
@@ -2580,6 +2586,21 @@ export type ChannelsAddChannelTitleData = {
 };
 
 export type ChannelsAddChannelTitleResponse = (Message);
+
+export type ChannelsGetChannelBuildPluginsData = {
+    channelId: string;
+    titleId: string;
+};
+
+export type ChannelsGetChannelBuildPluginsResponse = (Array<ChannelBuildPlugin>);
+
+export type ChannelsBuildChannelFromTitleData = {
+    channelId: string;
+    requestBody?: (Array<(string)> | null);
+    titleId: string;
+};
+
+export type ChannelsBuildChannelFromTitleResponse = (Message);
 
 export type ChannelsDeleteChannelTitleData = {
     channelId: string;

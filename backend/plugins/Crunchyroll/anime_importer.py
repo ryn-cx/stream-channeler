@@ -155,6 +155,12 @@ class CrunchyrollAnimeChannels(CrunchyrollAnimeFiles, ABC):
             self.add_new_urls_to_channel(channel_key, [title.url])
 
     # TODO: Validate
+    @override
+    def similar_title_urls(self, title: Title) -> list[str]:
+        data = self.similar_to_file(title.key).parsed().data
+        return [self.title_url(datum.id) for datum in data]
+
+    # TODO: Validate
     def _add_similar_titles_to_all_titles_channel(self, title_key: str) -> None:
         data = self.similar_to_file(title_key).parsed().data
         self._add_titles_to_all_titles_channel(datum.id for datum in data)
@@ -349,8 +355,7 @@ class CrunchyrollAnimeImporter(CrunchyrollAnimeUpsert):
     # TODO: Validate
     @override
     def update_source(self, source: Source, update_at: datetime) -> None:
-        browse_file = self.newest_browse_file()
-        browse_file.download_if_outdated()
+        self._download_if_outdated(self._source_files(), update_at)
         self._create_channel_records_from_incomplete_browse_files()
-        self._mark_new_titles_as_outdated(browse_file.datums())
+        self._mark_new_titles_as_outdated(self.newest_browse_file().datums())
         self.upsert_source(self.source_name())

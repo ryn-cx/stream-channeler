@@ -21,8 +21,8 @@ function imageUrl(
 }
 
 // TODO: Validate
-function releaseYear(value: string | null | undefined): number | null {
-  return value ? Number(value.slice(0, 4)) : null
+function releaseYear(value: unknown): number | null {
+  return typeof value === "string" && value ? Number(value.slice(0, 4)) : null
 }
 
 // The title a details modal is open for, built from the TMDB result that was
@@ -34,7 +34,13 @@ export type SelectedTitle = {
   url: string
   year?: number | null
   image_url?: string | null
+  tmdb_title_id?: string | null
 }
+
+export type TitleAction = (title: {
+  url: string
+  tmdb_title_id?: string | null
+}) => React.ReactNode
 
 // TODO: Validate
 function useAddToQueue(channelId: string) {
@@ -53,6 +59,37 @@ function useAddToQueue(channelId: string) {
     },
     onError: handleError.bind(showErrorToast),
   })
+}
+
+// TODO: Validate
+export function useAddImportedTitle(channelId: string) {
+  const { showSuccessToast, showErrorToast } = useCustomToast()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (tmdbTitleId: string) =>
+      ChannelsService.addChannelTitle({ channelId, titleId: tmdbTitleId }),
+    onSuccess: (message) => {
+      showSuccessToast(message.message)
+      invalidateChannelTitles(queryClient, channelId)
+    },
+    onError: handleError.bind(showErrorToast),
+  })
+}
+
+// TODO: Validate
+export function invalidateChannelTitles(
+  queryClient: ReturnType<typeof useQueryClient>,
+  channelId: string,
+) {
+  for (const queryKey of [
+    ["channel-titles", channelId],
+    ["episodes", channelId],
+    ["channel-title-stats", channelId],
+    ["channelQueue", channelId],
+  ]) {
+    queryClient.invalidateQueries({ queryKey })
+  }
 }
 
 // A TMDB result's URL is the title's own TMDB page, so it names the same title
@@ -83,12 +120,16 @@ function useIsInChannel(channelId: string) {
 function AddToQueueButton({
   url,
   channelId,
+  tmdbTitleId,
 }: {
   url: string
   channelId: string
+  tmdbTitleId?: string | null
 }) {
   const addUrlMutation = useAddToQueue(channelId)
+  const addTitleMutation = useAddImportedTitle(channelId)
   const isInChannel = useIsInChannel(channelId)
+  const addMutation = tmdbTitleId ? addTitleMutation : addUrlMutation
 
   if (isInChannel(url)) {
     return (
@@ -99,7 +140,7 @@ function AddToQueueButton({
     )
   }
 
-  if (addUrlMutation.isSuccess) {
+  if (addMutation.isSuccess) {
     return (
       <Button size="sm" variant="secondary" className="mt-2 w-full" disabled>
         <Check className="h-3 w-3 mr-1" />
@@ -114,12 +155,16 @@ function AddToQueueButton({
       className="mt-2 w-full"
       onClick={(event) => {
         event.stopPropagation()
-        addUrlMutation.mutate(url)
+        if (tmdbTitleId) {
+          addTitleMutation.mutate(tmdbTitleId)
+        } else {
+          addUrlMutation.mutate(url)
+        }
       }}
-      disabled={addUrlMutation.isPending}
+      disabled={addMutation.isPending}
     >
       <Plus className="h-3 w-3 mr-1" />
-      {addUrlMutation.isPending ? "Adding..." : "Add"}
+      {addMutation.isPending ? "Adding..." : "Add"}
     </Button>
   )
 }
@@ -201,11 +246,13 @@ export function PluginResultCard({
   channelId,
   onSelect,
   extraFooter,
+  action,
 }: {
   result: PluginSearchResult
   channelId: string
   onSelect?: (result: PluginSearchResult) => void
   extraFooter?: React.ReactNode
+  action?: TitleAction
 }) {
   return (
     <ResultCard
@@ -222,7 +269,15 @@ export function PluginResultCard({
       onClick={onSelect ? () => onSelect(result) : undefined}
       footer={
         <>
-          <AddToQueueButton url={result.url} channelId={channelId} />
+          {action ? (
+            action(result)
+          ) : (
+            <AddToQueueButton
+              url={result.url}
+              channelId={channelId}
+              tmdbTitleId={result.tmdb_title_id}
+            />
+          )}
           {extraFooter}
         </>
       }
@@ -399,10 +454,12 @@ export function MediaInfoModal({
   result,
   channelId,
   onOpenChange,
+  action,
 }: {
   result: SelectedTitle | null
   channelId: string
   onOpenChange: (open: boolean) => void
+  action?: TitleAction
 }) {
   const { data: info, isLoading } = useQuery({
     queryKey: ["plugin-media-info", result?.media_identifier],
@@ -510,9 +567,16 @@ export function MediaInfoModal({
 
           {/* Importing works out where a title can be watched on its own, so
               there is nothing to pick here — one button queues the title. */}
-          {result && (
-            <AddToQueueButton url={result.url} channelId={channelId} />
-          )}
+          {result &&
+            (action ? (
+              action(result)
+            ) : (
+              <AddToQueueButton
+                url={result.url}
+                channelId={channelId}
+                tmdbTitleId={result.tmdb_title_id}
+              />
+            ))}
 
           <p className="text-xs text-muted-foreground">
             Streaming availability data provided by JustWatch.
@@ -526,10 +590,17 @@ export function MediaInfoModal({
 interface TitleSearchProps {
   channelId: string
   initialQuery?: string
+  placeholder?: string
+  action?: TitleAction
 }
 
 // TODO: Validate
-export function TitleSearch({ channelId, initialQuery }: TitleSearchProps) {
+export function TitleSearch({
+  channelId,
+  initialQuery,
+  placeholder = "Search for a title or movie...",
+  action,
+}: TitleSearchProps) {
   const [searchQuery, setSearchQuery] = useState(initialQuery ?? "")
 
   useEffect(() => {
@@ -582,6 +653,7 @@ export function TitleSearch({ channelId, initialQuery }: TitleSearchProps) {
         url: result.url,
         year: result.year,
         image_url: result.image_url,
+        tmdb_title_id: result.tmdb_title_id,
       })
     },
     [showErrorToast],
@@ -629,7 +701,7 @@ export function TitleSearch({ channelId, initialQuery }: TitleSearchProps) {
         <Input
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Search for a title or movie..."
+          placeholder={placeholder}
           onKeyDown={(event) => {
             if (event.key === "Enter") handleSearch()
           }}
@@ -650,6 +722,7 @@ export function TitleSearch({ channelId, initialQuery }: TitleSearchProps) {
               result={result}
               channelId={channelId}
               onSelect={openResult}
+              action={action}
             />
           ))}
         </div>
@@ -679,6 +752,7 @@ export function TitleSearch({ channelId, initialQuery }: TitleSearchProps) {
         onOpenChange={(open) => {
           if (!open) setSelectedResult(null)
         }}
+        action={action}
       />
     </div>
   )

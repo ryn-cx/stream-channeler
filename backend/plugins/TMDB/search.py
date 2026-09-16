@@ -12,6 +12,7 @@ from app.plugins.schemas import (
     PluginSearchResult,
     PluginSearchResults,
 )
+from app.tmdb_media.service.identifiers import tmdb_title_ids_by_key
 from app.tmdb_media.tmdb import tmdb_title_key
 from plugins.TMDB.base_files import TMDBBaseFiles
 from plugins.TMDB.files import (
@@ -215,7 +216,19 @@ class TMDBSearch(TMDBBaseFiles):
                 break
             next_cursor = encode_cursor(page, 0)
 
+        self._attach_tmdb_title_ids(results)
         return PluginSearchResults(results=results, next_cursor=next_cursor)
+
+    # TODO: Validate
+    def _attach_tmdb_title_ids(self, results: list[PluginSearchResult]) -> None:
+        ids_by_key = tmdb_title_ids_by_key(
+            self.session,
+            {result.media_identifier for result in results if result.media_identifier},
+        )
+        for result in results:
+            tmdb_title_ids = ids_by_key.get(result.media_identifier or "")
+            if tmdb_title_ids:
+                result.tmdb_title_id = sorted(tmdb_title_ids)[0]
 
     # TODO: Validate
     def _search_result(self, result: MultiResult) -> PluginSearchResult:

@@ -10,6 +10,7 @@ import {
   Bot,
   ChevronLeft,
   ChevronRight,
+  Hammer,
   Inbox,
   Info,
   Link2,
@@ -64,6 +65,7 @@ import { handleError } from "@/utils"
 import { AddByUrlPanel } from "./AddByUrlPanel"
 import { AISuggestions } from "./AISuggestions"
 import { BlacklistedEpisodesDialog } from "./BlacklistedEpisodesDialog"
+import { BuilderPanel } from "./BuilderPanel"
 import { FeelingLuckyPanel } from "./FeelingLuckyPanel"
 import { AdditionalChannelsPanel } from "./ManageSubChannels"
 import { TitleSearch } from "./Search"
@@ -358,6 +360,9 @@ export function ManageTitlesTabs({
           <TabsTrigger value="search" className="h-auto">
             <Search className="h-4 w-4" /> Search
           </TabsTrigger>
+          <TabsTrigger value="builder" className="h-auto">
+            <Hammer className="h-4 w-4" /> Automatic Builder
+          </TabsTrigger>
           <TabsTrigger value="bulk" className="h-auto">
             <Upload className="h-4 w-4" /> Import
           </TabsTrigger>
@@ -381,6 +386,10 @@ export function ManageTitlesTabs({
 
         <TabsContent value="search" className={contentClassName}>
           <TitleSearch channelId={channelId} initialQuery={searchQuery} />
+        </TabsContent>
+
+        <TabsContent value="builder" className={contentClassName}>
+          <BuilderPanel channelId={channelId} />
         </TabsContent>
 
         <TabsContent value="bulk" className={`${contentClassName} space-y-3`}>

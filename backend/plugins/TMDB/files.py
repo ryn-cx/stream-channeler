@@ -9,6 +9,12 @@ from tminidb import TMiniDB
 from tminidb.exceptions import ResourceNotFoundError
 from tminidb.movie.details import MovieDetails as MovieEndpoint
 from tminidb.movie.details.models import MovieDetailsModel
+from tminidb.movie.recommendations import (
+    MovieRecommendations as MovieRecommendationsEndpoint,
+)
+from tminidb.movie.recommendations.models import MovieRecommendationsModel
+from tminidb.movie.similar import MovieSimilar as MovieSimilarEndpoint
+from tminidb.movie.similar.models import MovieSimilarModel
 from tminidb.movie.watch_providers import (
     MovieWatchProviders as MovieWatchProvidersEndpoint,
 )
@@ -37,6 +43,12 @@ from tminidb.tv_series.episode_groups import (
 from tminidb.tv_series.episode_groups.models import TvSeriesEpisodeGroupsModel
 from tminidb.tv_series.images import TvSeriesImages as TvSeriesImagesEndpoint
 from tminidb.tv_series.images.models import TvSeriesImagesModel
+from tminidb.tv_series.recommendations import (
+    TvSeriesRecommendations as TvSeriesRecommendationsEndpoint,
+)
+from tminidb.tv_series.recommendations.models import TvSeriesRecommendationsModel
+from tminidb.tv_series.similar import TvSeriesSimilar as TvSeriesSimilarEndpoint
+from tminidb.tv_series.similar.models import TvSeriesSimilarModel
 from tminidb.tv_series.watch_providers import (
     TvSeriesWatchProviders as TvSeriesWatchProvidersEndpoint,
 )
@@ -81,6 +93,46 @@ class MoviesWatchProviders(IntegerArgEndpointFile[MovieWatchProvidersModel]):
     @override
     def _endpoint(self) -> MovieWatchProvidersEndpoint:
         return tminidb().movie.watch_providers
+
+
+# TODO: Validate
+class MoviesRecommendations(IntegerArgEndpointFile[MovieRecommendationsModel]):
+    custom_class_key = "Movies/Recommendations"
+
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> MovieRecommendationsEndpoint:
+        return tminidb().movie.recommendations
+
+
+# TODO: Validate
+class TVSeriesRecommendations(IntegerArgEndpointFile[TvSeriesRecommendationsModel]):
+    custom_class_key = "TV Series/Recommendations"
+
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> TvSeriesRecommendationsEndpoint:
+        return tminidb().tv_series.recommendations
+
+
+# TODO: Validate
+class MoviesSimilar(IntegerArgEndpointFile[MovieSimilarModel]):
+    custom_class_key = "Movies/Similar"
+
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> MovieSimilarEndpoint:
+        return tminidb().movie.similar
+
+
+# TODO: Validate
+class TVSeriesSimilar(IntegerArgEndpointFile[TvSeriesSimilarModel]):
+    custom_class_key = "TV Series/Similar"
+
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> TvSeriesSimilarEndpoint:
+        return tminidb().tv_series.similar
 
 
 # TODO: Validate

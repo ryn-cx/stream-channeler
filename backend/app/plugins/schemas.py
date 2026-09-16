@@ -133,6 +133,7 @@ class PluginSearchResult(BaseModel):
     plugin's own — TMDB writes `tv 1399` and `movie 27205`. None when the plugin has no
     details to offer beyond the result itself.
     """
+    tmdb_title_id: uuid.UUID | None = None
 
 
 # TODO: Validate

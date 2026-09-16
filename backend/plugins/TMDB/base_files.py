@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from plugins.TMDB.files import (
     MoviesDetails,
+    MoviesRecommendations,
+    MoviesSimilar,
     MoviesWatchProviders,
     SearchMovie,
     SearchMulti,
@@ -13,6 +15,8 @@ from plugins.TMDB.files import (
     TVSeriesDetails,
     TVSeriesEpisodeGroups,
     TVSeriesImages,
+    TVSeriesRecommendations,
+    TVSeriesSimilar,
     TVSeriesWatchProviders,
 )
 from plugins.utils.base_plugin.base import BasePlugin
@@ -65,6 +69,28 @@ class TMDBBaseFiles(BasePlugin):
         season_number: int,
     ) -> TVSeasonsDetails:
         return self._cached_file(TVSeasonsDetails, tmdb_tv_title_id, season_number)
+
+    # TODO: Validate
+    def movies_recommendations_file(
+        self,
+        tmdb_movie_id: int,
+    ) -> MoviesRecommendations:
+        return self._cached_file(MoviesRecommendations, tmdb_movie_id)
+
+    # TODO: Validate
+    def tv_series_recommendations_file(
+        self,
+        tmdb_tv_title_id: int,
+    ) -> TVSeriesRecommendations:
+        return self._cached_file(TVSeriesRecommendations, tmdb_tv_title_id)
+
+    # TODO: Validate
+    def movies_similar_file(self, tmdb_movie_id: int) -> MoviesSimilar:
+        return self._cached_file(MoviesSimilar, tmdb_movie_id)
+
+    # TODO: Validate
+    def tv_series_similar_file(self, tmdb_tv_title_id: int) -> TVSeriesSimilar:
+        return self._cached_file(TVSeriesSimilar, tmdb_tv_title_id)
 
     # TODO: Validate
     def movies_watch_providers_file(self, tmdb_movie_id: int) -> MoviesWatchProviders:

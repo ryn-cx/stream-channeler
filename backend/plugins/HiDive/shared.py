@@ -1,30 +1,20 @@
 # TODO: Validate
-"""What the plugin, its importers and its initializer all read HiDive by."""
-
 from __future__ import annotations
 
-from datetime import timedelta
-from typing import TYPE_CHECKING, override
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Protocol, override
 
-from loguru import logger
-
-from app.channels.service.import_queue import add_urls_to_channel_import_queue
-from app.media.media_type import TMDBMediaType
-from app.sources.models import Source
 from plugins.HiDive.base_files import HiDiveBaseFiles
-from plugins.HiDive.files import Schedule
-from plugins.HiDive.utils import (
-    build_url,
-    card_title_name,
-    element_release_date,
-    element_text,
-    schedule_group_list,
-)
+from plugins.HiDive.constants import RELEASE_DATE_PREFIX
 
 if TYPE_CHECKING:
-    from datetime import datetime
+    from diving_board.season import models as season_models
+    from diving_board.vod import models as vod_models
 
-    from app.channels.models import Channel
+
+# TODO: Validate
+class HiDiveElement(Protocol):
+    field_type: str
 
 
 # TODO: Validate
@@ -57,84 +47,59 @@ class HiDiveShared(HiDiveBaseFiles):
         return self._source_files_data_timestamp() + timedelta(days=1)
 
     # TODO: Validate
-    def _process_new_schedule_files(self, source: Source) -> None:
-        for schedule_file in self._incomplete_files(
-            Schedule,
-            self.schedule_file,
-        ):
-            # Queueing the titles a file found commits, which lets go of every
-            # matched. Read back per file rather than once, so that a file after
-            # the first still recognises the titles already imported.
-            _cache = self._preload_sources(preload_seasons=True).all()
-            # TODO: Is there a better way to lookup titles?
-            titles_by_name = {
-                title.name: title for title in source.titles if title.name
-            }
-            logger.info(
-                "Processing schedule file: {}",
-                schedule_file.record_key,
-            )
-            unmatched_names: list[str] = []
-            for page in schedule_file.parsed():
-                group_list = schedule_group_list(page)
-                for group in group_list.attributes.groups or []:
-                    for card in group.attributes.cards:
-                        # Layout: content[0].elements[0] is the ISO release date,
-                        # elements[1] is "S1 E2 - Title Name".
-                        elements = card.attributes.content[0].attributes.elements
-                        release_date = element_release_date(elements[0])
-                        title_name = card_title_name(element_text(elements[1]))
-                        if title := titles_by_name.get(title_name):
-                            title.set_update_at(release_date)
-                            for season in title.seasons:
-                                season.set_update_at(release_date)
-                        else:
-                            unmatched_names.append(title_name)
-
-            self._queue_new_titles(unmatched_names)
-            schedule_file.clear_status()
+    @classmethod
+    def build_url(cls, path: str) -> str:
+        return f"https://hidive.com/{path.lstrip('/')}"
 
     # TODO: Validate
-    def search_for_title_url(
-        self,
-        name: str,
-        media_type: TMDBMediaType,
-        year: int | None = None,
-    ) -> str | None:
-        search_file = self.search_file(name)
-        search_file.download_if_outdated()
-        for element in search_file.parsed().elements:
-            for card in element.attributes.cards or []:
-                card_identifier = card.attributes.action.data.id
-                type_prefix, _, title_key = card_identifier.partition("#")
-                if type_prefix == "VOD":
-                    return build_url(f"video/{title_key}")
-                return build_url(f"series/{title_key}")
+    @classmethod
+    def episode_url(cls, episode_key: str | int) -> str:
+        return cls.build_url(f"video/{episode_key}")
+
+    # TODO: Validate
+    @classmethod
+    def single_element[ElementT: HiDiveElement](
+        cls,
+        elements: list[ElementT],
+        field_type: str,
+    ) -> ElementT:
+        matches = [element for element in elements if element.field_type == field_type]
+        if len(matches) != 1:
+            msg = f"Expected one {field_type} element, found {len(matches)}"
+            raise ValueError(msg)
+        return matches[0]
+
+    # TODO: Validate
+    @classmethod
+    def vod_hero(cls, vod_data: vod_models.VodModel) -> vod_models.Element:
+        """Return the hero element of a parsed vod file."""
+        return cls.single_element(vod_data.elements, "hero")
+
+    # TODO: Validate
+    @classmethod
+    def hero_image_url(cls, hero: season_models.Element | vod_models.Element) -> str:
+        """Return the image URL a hero is illustrated with."""
+        if not hero.attributes.image:
+            msg = "No image found in hero element."
+            raise ValueError(msg)
+        return hero.attributes.image.attributes.source
+
+    # TODO: Validate
+    @classmethod
+    def tag_text(cls, tag: vod_models.Tag) -> str | None:
+        text = tag.attributes.text
+        if text is None or isinstance(text, str):
+            return text
+        return text.attributes.text
+
+    # TODO: Validate
+    @classmethod
+    def release_date(cls, hero: vod_models.Element) -> datetime | None:
+        """Return the day the title came out, as its hero's tags give it."""
+        for content in hero.attributes.content or []:
+            for tag in content.attributes.tags or []:
+                text = cls.tag_text(tag)
+                if text and text.startswith(RELEASE_DATE_PREFIX):
+                    date_string = text.removeprefix(RELEASE_DATE_PREFIX)
+                    return datetime.strptime(date_string, "%B %d, %Y").astimezone()
         return None
-
-    # TODO: Validate
-    def _queue_new_titles(self, title_names: list[str]) -> None:
-        """Queue the titles a schedule file named that are not imported yet.
-
-        A card gives the title's name but not its URL, so the name is matched
-        against the imported catalogue to find it.
-        """
-        new_title_urls: list[str] = []
-        for title_name in dict.fromkeys(title_names):
-            if title_url := self.search_for_title_url(title_name, TMDBMediaType.tv):
-                logger.info("Queueing new title: {}", title_name)
-                new_title_urls.append(title_url)
-            else:
-                logger.info("No search result for scheduled title: {}", title_name)
-
-        # Queued in one call so the whole schedule file costs a single commit.
-        if new_title_urls:
-            channel = self._schedule_channel()
-            add_urls_to_channel_import_queue(self.session, channel, new_title_urls)
-
-    # TODO: Validate
-    def _schedule_channel(self) -> Channel:
-        return self.get_or_create_channel(
-            self.plugin_name(),
-            self._channel_description("All Titles"),
-        )

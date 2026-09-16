@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, override
 from app.files.models import File
 from app.utils import tz_datetime
 from plugins.HiDive.files import (
+    ContentGrid,
     Schedule,
     Search,
     Season,
@@ -28,6 +29,10 @@ class HiDiveBaseFiles(BasePlugin):
     # TODO: Validate
     def vod_file(self, vod_key: str | int) -> Vod:
         return self._cached_file(Vod, str(vod_key))
+
+    # TODO: Validate
+    def content_grid_file(self, grid_view_config_id: str) -> ContentGrid:
+        return self._cached_file(ContentGrid, grid_view_config_id)
 
     # TODO: Validate
     def search_file(self, query: str) -> Search:

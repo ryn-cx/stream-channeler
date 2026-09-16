@@ -20,6 +20,7 @@ from app.channels.dependencies import (
 from app.channels.models import Channel
 from app.channels.schemas import (
     BlacklistEpisodeInput,
+    ChannelBuildPlugin,
     ChannelCreate,
     ChannelFavoriteUpdate,
     ChannelOptions,
@@ -34,6 +35,7 @@ from app.channels.schemas import (
     WhitelistTitleOutput,
 )
 from app.channels.service import (
+    builder,
     channels,
     combined,
     favorites,
@@ -233,6 +235,28 @@ def add_channel_title(
 ) -> Message:
     """Put a title, on every website it is on, onto a `Channel`."""
     return titles.add_title(session, channel, title)
+
+
+# TODO: Validate
+@channels_router.get("/{channel_id}/build-from-title/{title_id}/plugins")  # noqa: FAST003
+def get_channel_build_plugins(
+    session: SessionDep,
+    channel: EditableChannel,  # noqa: ARG001 - Checks the user may edit the channel.
+    title: ExistingTitle,
+) -> list[ChannelBuildPlugin]:
+    """Read the plugins that can be asked what is similar to a title."""
+    return builder.buildable_plugins(session, title)
+
+
+# TODO: Validate
+@channels_router.post("/{channel_id}/build-from-title/{title_id}")  # noqa: FAST003
+def build_channel_from_title(
+    session: SessionDep,
+    channel: EditableChannel,
+    title: ExistingTitle,
+    plugin_keys: list[str] | None = None,
+) -> Message:
+    return builder.build_from_title(session, channel, title, plugin_keys)
 
 
 # TODO: Validate

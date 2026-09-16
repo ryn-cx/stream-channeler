@@ -257,25 +257,38 @@ def channels_with_title_membership(
 
 
 # TODO: Validate
-def add_title_to_channel(session: Session, channel: Channel, title: Title) -> None:
-    tmdb_title_ids = set(title.tmdb_title_ids) or {title.id}
-
-    channel_titles: list[ChannelTitle] = []
+def add_tmdb_titles_to_channel(
+    session: Session,
+    channel: Channel,
+    tmdb_title_ids: Collection[UUID],
+) -> int:
+    added = 0
     for tmdb_title_id in tmdb_title_ids:
         channel_title = ChannelTitle.get(session, channel, tmdb_title_id)
         if channel_title is None:
-            channel_title = ChannelTitle(
-                channel_id=channel.id,
-                tmdb_title_id=tmdb_title_id,
-                is_whitelist=False,
-                is_blacklist_only=False,
+            session.add(
+                ChannelTitle(
+                    channel_id=channel.id,
+                    tmdb_title_id=tmdb_title_id,
+                    is_whitelist=False,
+                    is_blacklist_only=False,
+                ),
             )
-            session.add(channel_title)
+            added += 1
         else:
             channel_title.is_blacklist_only = False
-        channel_titles.append(channel_title)
 
     session.commit()
+    return added
+
+
+# TODO: Validate
+def add_title_to_channel(session: Session, channel: Channel, title: Title) -> None:
+    add_tmdb_titles_to_channel(
+        session,
+        channel,
+        set(title.tmdb_title_ids) or {title.id},
+    )
 
 
 # TODO: Validate

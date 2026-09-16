@@ -339,6 +339,29 @@ Every field an admin creates a \`Channel\` with can be changed afterwards,
 which includes the \`User\` it belongs to and its \`score\`.`
 } as const;
 
+export const ChannelBuildPluginSchema = {
+    properties: {
+        key: {
+            type: 'string',
+            title: 'Key'
+        },
+        favicon_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Favicon Url'
+        }
+    },
+    type: 'object',
+    required: ['key'],
+    title: 'ChannelBuildPlugin'
+} as const;
+
 export const ChannelCommentOutputSchema = {
     properties: {
         body: {
@@ -4556,6 +4579,18 @@ export const PluginSearchResultSchema = {
                 }
             ],
             title: 'Media Identifier'
+        },
+        tmdb_title_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Tmdb Title Id'
         }
     },
     type: 'object',
@@ -9961,7 +9996,14 @@ export const tminidb__movie__details__strict_models__BelongsToCollectionSchema =
             title: 'Name'
         },
         poster_path: {
-            type: 'string',
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Poster Path'
         },
         backdrop_path: {
@@ -10078,7 +10120,14 @@ export const tminidb__movie__details__strict_models__MovieDetailsModelSchema = {
             title: 'Popularity'
         },
         poster_path: {
-            type: 'string',
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Poster Path'
         },
         production_companies: {
@@ -11209,7 +11258,9 @@ export const tminidb__tv_series__details__optional_models__NextEpisodeToAirSchem
         },
         still_path: {
             anyOf: [
-                {},
+                {
+                    type: 'string'
+                },
                 {
                     type: 'null'
                 }
@@ -11568,6 +11619,7 @@ export const tminidb__tv_series__details__optional_models__TvSeriesDetailsModelS
         },
         last_air_date: {
             anyOf: [
+                {},
                 {
                     type: 'string',
                     format: 'date'
@@ -11580,13 +11632,15 @@ export const tminidb__tv_series__details__optional_models__TvSeriesDetailsModelS
         },
         last_episode_to_air: {
             anyOf: [
+                {},
                 {
                     '$ref': '#/components/schemas/tminidb__tv_series__details__optional_models__LastEpisodeToAir'
                 },
                 {
                     type: 'null'
                 }
-            ]
+            ],
+            title: 'Last Episode To Air'
         },
         name: {
             anyOf: [
@@ -12063,7 +12117,14 @@ export const tminidb__tv_series__details__strict_models__NextEpisodeToAirSchema 
             title: 'Show Id'
         },
         still_path: {
-            type: 'null',
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Still Path'
         }
     },
@@ -12264,12 +12325,26 @@ export const tminidb__tv_series__details__strict_models__TvSeriesDetailsModelSch
             title: 'Languages'
         },
         last_air_date: {
-            type: 'string',
-            format: 'date',
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Last Air Date'
         },
         last_episode_to_air: {
-            '$ref': '#/components/schemas/tminidb__tv_series__details__strict_models__LastEpisodeToAir'
+            anyOf: [
+                {
+                    '$ref': '#/components/schemas/tminidb__tv_series__details__strict_models__LastEpisodeToAir'
+                },
+                {
+                    type: 'null'
+                }
+            ]
         },
         name: {
             type: 'string',
@@ -12324,7 +12399,14 @@ export const tminidb__tv_series__details__strict_models__TvSeriesDetailsModelSch
             title: 'Popularity'
         },
         poster_path: {
-            type: 'string',
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Poster Path'
         },
         production_companies: {

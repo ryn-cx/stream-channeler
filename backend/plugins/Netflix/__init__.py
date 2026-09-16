@@ -37,6 +37,17 @@ class Netflix(NetflixShared, AbstractPlugin, register=True):
             return NetflixMovieImporter(self.session, self.plugin, self._file_cache)
         return NetflixSeriesImporter(self.session, self.plugin, self._file_cache)
 
+    # TODO: Validate
+    @override
+    def similar_title_urls(self, title: Title) -> list[str]:
+        similar_file = self.similar_file(title.key)
+        # TODO: This is temporary until all files are downloaded
+        similar_file.download_if_outdated()
+        return [
+            self.title_url(str(similar.video_id))
+            for similar in similar_file.parsed().similar_videos
+        ]
+
     @override
     def _media_importer_from_title(self, title: Title) -> NetflixImporter:
         if not title.media_type:  # Should be impossible.

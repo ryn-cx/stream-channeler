@@ -1,4 +1,4 @@
-s#! /usr/bin/env bash
+#! /usr/bin/env bash
 # TODO: Validate
 
 # Bring the local dev stack up with keyring secrets and watch for source changes.

@@ -244,6 +244,10 @@ class AbstractPlugin(ABC):
         return
 
     # TODO: Validate
+    def similar_title_urls(self, title: Title) -> list[str]:  # noqa: ARG002
+        return []
+
+    # TODO: Validate
     def update_channel(self, channel: Channel) -> None:
         """Update an existing channel in the database.
 

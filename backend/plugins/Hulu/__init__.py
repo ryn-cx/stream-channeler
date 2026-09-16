@@ -27,6 +27,18 @@ class Hulu(
 ):
     # TODO: Validate
     @override
+    def similar_title_urls(self, title: Title) -> list[str]:
+        if title.media_type == "Movie":
+            return []
+        return [
+            HuluSeriesImporter.title_url(str(item.id))
+            for component in self.series_file(title.key).components()
+            if component.theme == "collection_theme_related"
+            for item in component.items
+        ]
+
+    # TODO: Validate
+    @override
     def _next_plugin_update_at(self) -> datetime:
         return max(self._plugin_files_data_timestamps()) + timedelta(days=7)
 

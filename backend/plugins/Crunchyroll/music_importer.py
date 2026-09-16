@@ -6,8 +6,6 @@ from abc import ABC
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any, override
 
-from loguru import logger
-
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.sources.models import Source
@@ -327,7 +325,6 @@ class CrunchyrollMusicImporter(CrunchyrollMusicUpsert):
     # TODO: Validate
     @override
     def update_source(self, source: Source, update_at: datetime) -> None:
-        logger.info("Updating Source: {}", source.key)
         self._download_if_outdated(self._source_files(), update_at)
         browse_file = self.browse_file()
         artists = browse_file.datums()

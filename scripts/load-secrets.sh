@@ -17,6 +17,7 @@ for secret_name in \
   CF_ACCESS_CLIENT_ID \
   CF_ACCESS_CLIENT_SECRET \
   TMDB_API_READ_TOKEN \
-  WATCHMODE_API_KEY; do
+  WATCHMODE_API_KEY \
+  PROXY; do
   export "$secret_name=$("$keyring_bin" get get-around "$secret_name")"
 done

@@ -8,6 +8,8 @@ from functools import cache
 from typing import override
 
 from diving_board import DivingBoard
+from diving_board.content_grid import ContentGrid as ContentGridEndpoint
+from diving_board.content_grid import models as content_grid_models
 from diving_board.exceptions import (
     SeasonNotFoundError,
     SeriesNotFoundError,
@@ -105,6 +107,14 @@ class Schedule(PagedEndpointFile[schedule_models.ScheduleModel]):
             microsecond=0,
         )
         return json.dumps(self._endpoint().download_all(from_))
+
+
+# TODO: Validate
+class ContentGrid(PagedEndpointFile[content_grid_models.ContentGridModel]):
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> ContentGridEndpoint:
+        return diving_board().content_grid
 
 
 # TODO: Validate

@@ -58,9 +58,7 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
             title_key = self.title_key_from_share_key(
                 match.group("title_key"),
             )
-        elif match := re.match(domain_regex + PRIME_VIDEO_URL_REGEX, url):
-            title_key = match.group("title_key")
-        elif match := re.match(domain_regex + AMAZON_URL_REGEX, url):
+        elif (match := re.match(domain_regex + PRIME_VIDEO_URL_REGEX, url)) or (match := re.match(domain_regex + AMAZON_URL_REGEX, url)):
             title_key = match.group("title_key")
         else:
             title_key = None
