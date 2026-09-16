@@ -7,6 +7,7 @@ from loguru import logger
 from app.log import configure_logging
 from app.tools import (
     import_queue,
+    link_titles_to_tmdb,
     update_outdated,
     update_youtube,
 )
@@ -21,6 +22,7 @@ def run(stop_event: threading.Event) -> None:
             executor.submit(update_outdated._update_outdated_forever),
             executor.submit(import_queue.run_forever, stop_event),
             executor.submit(update_youtube.run_forever),
+            executor.submit(link_titles_to_tmdb.run_forever, stop_event),
         ]
         for future in as_completed(futures):
             future.result()

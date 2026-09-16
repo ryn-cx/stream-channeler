@@ -3,19 +3,45 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from uuid import UUID
 
     from minbo.movie.models import Idref14 as MovieContent
-    from minbo.movie.models import Item as MovieCarouselItem
-    from minbo.movie.models import Item1 as MovieSeoCarouselItem
     from minbo.movie.models import MovieModel
-    from minbo.show.models import Episode, Season, ShowModel
+    from minbo.show.models import Episode1 as Episode
     from minbo.show.models import Idref14 as TitleContent
-    from minbo.show.models import Item1 as TitleCarouselItem
-    from minbo.show.models import Item2 as TitleSeoCarouselItem
+    from minbo.show.models import Season1 as Season
+    from minbo.show.models import ShowModel
+
+
+# TODO: Validate
+@runtime_checkable
+class MappedContent(Protocol):
+    release_year: str
+    credits: object
+
+
+# TODO: Validate
+@runtime_checkable
+class MappedRelatedItem(Protocol):
+    hbomax_id: UUID
+    type: str
+
+
+# TODO: Validate
+@runtime_checkable
+class MappedCarousel(Protocol):
+    collection_id: str
+    items: list[object]
+
+
+# TODO: Validate
+@runtime_checkable
+class MappedCarouselItem(Protocol):
+    hbomax_id: UUID
+    category: str
 
 
 # TODO: Validate
@@ -51,12 +77,12 @@ def build_episode_key(season_key: str, episode_number: int) -> str:
 
 # TODO: Validate
 def title_content(title: ShowModel) -> TitleContent:
-    return title.props.page_props.mapped_data.idref14
+    return _mapped_content(title)  # type: ignore[return-value]
 
 
 # TODO: Validate
 def movie_content(movie: MovieModel) -> MovieContent:
-    return movie.props.page_props.mapped_data.idref14
+    return _mapped_content(movie)  # type: ignore[return-value]
 
 
 # TODO: Validate
@@ -83,30 +109,51 @@ def season_episodes(season: ShowModel, season_number: int) -> list[Episode]:
 
 
 # TODO: Validate
-def title_related_urls(title: ShowModel) -> list[str]:
-    mapped_data = title.props.page_props.mapped_data
-    return _carousel_urls([*mapped_data.idref64.items, *mapped_data.idref79.items])
+def related_urls(page: ShowModel | MovieModel) -> list[str]:
+    urls: dict[str, None] = {}
+    for _, value in page.props.page_props.mapped_data:
+        for item in value if isinstance(value, list) else []:
+            if isinstance(item, MappedRelatedItem):
+                key = str(item.hbomax_id)
+                url = title_url(key) if item.type == "series" else movie_url(key)
+                urls[url] = None
+    urls.update(_carousel_urls(page, site_wide=False))
+    return list(urls)
 
 
 # TODO: Validate
-def movie_related_urls(movie: MovieModel) -> list[str]:
-    mapped_data = movie.props.page_props.mapped_data
-    return _carousel_urls([*mapped_data.idref57.items, *mapped_data.idref71.items])
+def page_urls(page: ShowModel | MovieModel) -> list[str]:
+    urls: dict[str, None] = dict.fromkeys(related_urls(page))
+    urls.update(_carousel_urls(page, site_wide=True))
+    return list(urls)
 
 
 # TODO: Validate
 def _carousel_urls(
-    items: Sequence[
-        TitleCarouselItem
-        | TitleSeoCarouselItem
-        | MovieCarouselItem
-        | MovieSeoCarouselItem
-    ],
-) -> list[str]:
+    page: ShowModel | MovieModel,
+    *,
+    site_wide: bool,
+) -> dict[str, None]:
     urls: dict[str, None] = {}
-    for item in items:
-        if item.series_id:
-            urls[title_url(str(item.series_id))] = None
-        elif item.feature_id:
-            urls[movie_url(str(item.feature_id))] = None
-    return list(urls)
+    for _, value in page.props.page_props.mapped_data:
+        if not isinstance(value, MappedCarousel):
+            continue
+        is_site_wide = value.collection_id in ("13187", "14196")
+        if is_site_wide != site_wide:
+            continue
+        for item in value.items:
+            if isinstance(item, MappedCarouselItem):
+                key = str(item.hbomax_id)
+                url = title_url(key) if item.category == "Series" else movie_url(key)
+                urls[url] = None
+    return urls
+
+
+# TODO: Validate
+def _mapped_content(page: ShowModel | MovieModel) -> MappedContent:
+    for _, value in page.props.page_props.mapped_data:
+        if isinstance(value, MappedContent):
+            return value
+
+    msg = "No title is described by the page's mapped data."
+    raise ValueError(msg)

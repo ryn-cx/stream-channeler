@@ -34,6 +34,11 @@ class HBOMax(HBOMaxShared, AbstractPlugin, register=True):
 
     # TODO: Validate
     @override
+    def similar_title_urls(self, title: Title) -> list[str]:
+        return self._media_importer_from_title(title).similar_title_urls(title)
+
+    # TODO: Validate
+    @override
     def _media_importer_from_title(self, title: Title) -> HBOMaxImporter:
         if not title.media_type:
             msg = "Title.media_type is not set."

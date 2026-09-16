@@ -1,6 +1,8 @@
 # TODO: Validate
 
 
+import threading
+
 from loguru import logger
 from sqlmodel import Session, col
 from tqdm import tqdm
@@ -28,6 +30,9 @@ def link_titles_to_tmdb(session: Session) -> None:
         .order_by(in_a_user_channel().desc(), col(Title.modified_at).asc()),
     ).all()
 
+    if not unlinked_titles:
+        return
+
     progress = tqdm(unlinked_titles, unit="title")
     for title in progress:
         progress.set_description(f"{title.source.key}: {title.name or title.key}")
@@ -39,6 +44,16 @@ def link_titles_to_tmdb(session: Session) -> None:
             title.link_status = "Failed"
             session.add(title)
             session.commit()
+
+
+# TODO: Validate
+def run_forever(stop_event: threading.Event | None = None) -> None:
+    stop_event = stop_event or threading.Event()
+    while not stop_event.is_set():
+        with Session(engine) as session:
+            link_titles_to_tmdb(session)
+        if stop_event.wait(timeout=60):
+            break
 
 
 if __name__ == "__main__":
