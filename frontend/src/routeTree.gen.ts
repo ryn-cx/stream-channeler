@@ -53,6 +53,7 @@ import { Route as LayoutChannelsChannelIdRouteImport } from './routes/_layout/ch
 import { Route as LayoutChannelsBrowseRouteImport } from './routes/_layout/channels.browse'
 import { Route as LayoutOnboardingIndexRouteImport } from './routes/_layout/onboarding.index'
 import { Route as LayoutWatchesImportRouteImport } from './routes/_layout/watches_.import'
+import { Route as LayoutChannels3dChannelIdRouteImport } from './routes/_layout/channels.3d.$channelId'
 import { Route as LayoutOnboardingChannelIdDoneRouteImport } from './routes/_layout/onboarding.$channelId.done'
 import { Route as LayoutOnboardingChannelIdNameRouteImport } from './routes/_layout/onboarding.$channelId.name'
 import { Route as LayoutOnboardingChannelIdSortRouteImport } from './routes/_layout/onboarding.$channelId.sort'
@@ -286,6 +287,12 @@ const LayoutWatchesImportRoute = LayoutWatchesImportRouteImport.update({
   path: '/watches/import',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutChannels3dChannelIdRoute =
+  LayoutChannels3dChannelIdRouteImport.update({
+    id: '/channels/3d/$channelId',
+    path: '/channels/3d/$channelId',
+    getParentRoute: () => LayoutRoute,
+  } as any)
 const LayoutOnboardingChannelIdDoneRoute =
   LayoutOnboardingChannelIdDoneRouteImport.update({
     id: '/$channelId/done',
@@ -361,6 +368,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof LayoutAdminIndexRoute
   '/channels/': typeof LayoutChannelsIndexRoute
   '/onboarding/': typeof LayoutOnboardingIndexRoute
+  '/channels/3d/$channelId': typeof LayoutChannels3dChannelIdRoute
   '/onboarding/$channelId/done': typeof LayoutOnboardingChannelIdDoneRoute
   '/onboarding/$channelId/name': typeof LayoutOnboardingChannelIdNameRoute
   '/onboarding/$channelId/sort': typeof LayoutOnboardingChannelIdSortRoute
@@ -408,6 +416,7 @@ export interface FileRoutesByTo {
   '/admin': typeof LayoutAdminIndexRoute
   '/channels': typeof LayoutChannelsIndexRoute
   '/onboarding': typeof LayoutOnboardingIndexRoute
+  '/channels/3d/$channelId': typeof LayoutChannels3dChannelIdRoute
   '/onboarding/$channelId/done': typeof LayoutOnboardingChannelIdDoneRoute
   '/onboarding/$channelId/name': typeof LayoutOnboardingChannelIdNameRoute
   '/onboarding/$channelId/sort': typeof LayoutOnboardingChannelIdSortRoute
@@ -460,6 +469,7 @@ export interface FileRoutesById {
   '/_layout/admin/': typeof LayoutAdminIndexRoute
   '/_layout/channels/': typeof LayoutChannelsIndexRoute
   '/_layout/onboarding/': typeof LayoutOnboardingIndexRoute
+  '/_layout/channels/3d/$channelId': typeof LayoutChannels3dChannelIdRoute
   '/_layout/onboarding/$channelId/done': typeof LayoutOnboardingChannelIdDoneRoute
   '/_layout/onboarding/$channelId/name': typeof LayoutOnboardingChannelIdNameRoute
   '/_layout/onboarding/$channelId/sort': typeof LayoutOnboardingChannelIdSortRoute
@@ -512,6 +522,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/channels/'
     | '/onboarding/'
+    | '/channels/3d/$channelId'
     | '/onboarding/$channelId/done'
     | '/onboarding/$channelId/name'
     | '/onboarding/$channelId/sort'
@@ -559,6 +570,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/channels'
     | '/onboarding'
+    | '/channels/3d/$channelId'
     | '/onboarding/$channelId/done'
     | '/onboarding/$channelId/name'
     | '/onboarding/$channelId/sort'
@@ -610,6 +622,7 @@ export interface FileRouteTypes {
     | '/_layout/admin/'
     | '/_layout/channels/'
     | '/_layout/onboarding/'
+    | '/_layout/channels/3d/$channelId'
     | '/_layout/onboarding/$channelId/done'
     | '/_layout/onboarding/$channelId/name'
     | '/_layout/onboarding/$channelId/sort'
@@ -935,6 +948,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutWatchesImportRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/channels/3d/$channelId': {
+      id: '/_layout/channels/3d/$channelId'
+      path: '/channels/3d/$channelId'
+      fullPath: '/channels/3d/$channelId'
+      preLoaderRoute: typeof LayoutChannels3dChannelIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/onboarding/$channelId/done': {
       id: '/_layout/onboarding/$channelId/done'
       path: '/$channelId/done'
@@ -1069,6 +1089,7 @@ interface LayoutRouteChildren {
   LayoutChannelsBrowseRoute: typeof LayoutChannelsBrowseRoute
   LayoutWatchesImportRoute: typeof LayoutWatchesImportRoute
   LayoutChannelsIndexRoute: typeof LayoutChannelsIndexRoute
+  LayoutChannels3dChannelIdRoute: typeof LayoutChannels3dChannelIdRoute
   LayoutUsersUserIdChannelsRoute: typeof LayoutUsersUserIdChannelsRoute
 }
 
@@ -1094,6 +1115,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutChannelsBrowseRoute: LayoutChannelsBrowseRoute,
   LayoutWatchesImportRoute: LayoutWatchesImportRoute,
   LayoutChannelsIndexRoute: LayoutChannelsIndexRoute,
+  LayoutChannels3dChannelIdRoute: LayoutChannels3dChannelIdRoute,
   LayoutUsersUserIdChannelsRoute: LayoutUsersUserIdChannelsRoute,
 }
 

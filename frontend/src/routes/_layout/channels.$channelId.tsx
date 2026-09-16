@@ -109,7 +109,11 @@ const PAGE_CACHE_MILLISECONDS = 5 * 60 * 1000
 
 export const Route = createFileRoute("/_layout/channels/$channelId")({
   component: ChannelDetail,
-  beforeLoad: async ({ params }) => {
+  // TODO: Validate
+  beforeLoad: async ({ params, search }) => {
+    if (search.orderPresetId?.endsWith("/3d")) {
+      throw redirect({ to: "/channels/3d/$channelId", params })
+    }
     // Check if the user can access this channel
     try {
       await ChannelsService.getChannel({ channelId: params.channelId })
