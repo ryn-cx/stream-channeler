@@ -10,40 +10,17 @@ if [ -z "$TOOL" ]; then
 fi
 shift
 
-CRED_DIR="${STREAM_CHANNELER_CRED_DIR:-/etc/stream-channeler/creds}"
+SECRETS_FILE="${STREAM_CHANNELER_SECRETS:-$HOME/.config/stream-channeler/secrets.env}"
+if [ ! -r "$SECRETS_FILE" ]; then
+  echo "Missing secrets file $SECRETS_FILE." >&2
+  exit 1
+fi
 
-# TODO: Validate
-load_secret() {
-  local secret_name="$1"
-  local secret_file="$CRED_DIR/$secret_name.cred"
-  local secret_value
+set -a
+. "$SECRETS_FILE"
+set +a
 
-  if [ ! -r "$secret_file" ]; then
-    echo "Missing credential $secret_name ($secret_file)." >&2
-    exit 1
-  fi
-
-  secret_value="$(systemd-creds decrypt --name="$secret_name" "$secret_file" -)" || {
-    echo "Could not decrypt $secret_name. Is this running as root?" >&2
-    exit 1
-  }
-  export "$secret_name=$secret_value"
-}
-
-for secret_name in \
-  POSTGRES_USER \
-  POSTGRES_PASSWORD \
-  GET_AROUND_SERVER \
-  YOUTUBE_API_KEY \
-  WATCHMODE_API_KEY \
-  CF_ACCESS_CLIENT_ID \
-  CF_ACCESS_CLIENT_SECRET \
-  TMDB_API_READ_TOKEN \
-  PROXY; do
-  load_secret "$secret_name"
-done
-
-cd ~/stream-channeler || exit 1
+cd "$(dirname "$0")/../../../.." || exit 1
 
 git fetch --all
 git reset --hard origin/master
