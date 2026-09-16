@@ -8,7 +8,10 @@ from plugins.HiDive.base_files import HiDiveBaseFiles
 from plugins.HiDive.constants import RELEASE_DATE_PREFIX
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from diving_board.season import models as season_models
+    from diving_board.series import models as series_models
     from diving_board.vod import models as vod_models
 
 
@@ -55,6 +58,26 @@ class HiDiveShared(HiDiveBaseFiles):
     @classmethod
     def episode_url(cls, episode_key: str | int) -> str:
         return cls.build_url(f"video/{episode_key}")
+
+    # TODO: Validate
+    @classmethod
+    def series_title_url(cls, title_key: str | int) -> str:
+        return cls.build_url(f"series/{title_key}")
+
+    # TODO: Validate
+    @classmethod
+    def related_title_urls(
+        cls,
+        elements: Sequence[series_models.Element | vod_models.Element],
+    ) -> list[str]:
+        related = cls.single_element(
+            [element for element in elements if element.attributes.type == "related"],
+            "bucket",
+        )
+        return [
+            cls.series_title_url(str(item.id))
+            for item in related.attributes.items or []
+        ]
 
     # TODO: Validate
     @classmethod

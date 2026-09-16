@@ -91,14 +91,7 @@ class HiDive(HiDiveShared, AbstractPlugin, register=True):
             elements = self.vod_file(title.key).parsed().elements
         else:
             elements = self.series_file(title.key).parsed().elements
-        related = self.single_element(
-            [element for element in elements if element.attributes.type == "related"],
-            "bucket",
-        )
-        return [
-            HiDiveSeriesImporter.title_url(str(item.id))
-            for item in related.attributes.items or []
-        ]
+        return self.related_title_urls(elements)
 
     @override
     def update_source(self, source: Source, update_at: datetime) -> None:

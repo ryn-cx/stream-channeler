@@ -18,12 +18,14 @@ from plugins.HBOMax.utils import (
     build_episode_key,
     build_season_key,
     movie_content,
+    movie_related_urls,
     movie_url,
     season_entry,
     season_episodes,
     season_numbers,
     split_season_key,
     title_content,
+    title_related_urls,
     title_url,
 )
 from plugins.utils.abstract_plugin import InvalidURLError
@@ -157,8 +159,22 @@ class HBOMaxSeriesImporter(HBOMaxImporter):
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
+        self.add_title_to_plugin_channels(title)
 
         return title
+
+    # TODO: Validate
+    @override
+    def add_title_to_plugin_channels(self, title: Title) -> None:
+        if not title.url:  # Should be impossible.
+            msg = "Title.url is not set."
+            raise AttributeError(msg)
+
+        page = self.title_file(title.key).parsed()
+        urls = [title.url, *title_related_urls(page)]
+        self.add_new_urls_to_channel("All Titles", urls)
+        for channel_key in ["Series", *title_content(page).genres]:
+            self.add_new_urls_to_channel(channel_key, [title.url])
 
     # TODO: Validate
     def _upsert_seasons(self, title: Title, *, force: bool = False) -> None:
@@ -315,8 +331,22 @@ class HBOMaxMovieImporter(HBOMaxImporter):
 
         self._upsert_season(title, content, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
+        self.add_title_to_plugin_channels(title)
 
         return title
+
+    # TODO: Validate
+    @override
+    def add_title_to_plugin_channels(self, title: Title) -> None:
+        if not title.url:  # Should be impossible.
+            msg = "Title.url is not set."
+            raise AttributeError(msg)
+
+        page = self.movie_file(title.key).parsed()
+        urls = [title.url, *movie_related_urls(page)]
+        self.add_new_urls_to_channel("All Titles", urls)
+        for channel_key in ["Movie", *movie_content(page).genres]:
+            self.add_new_urls_to_channel(channel_key, [title.url])
 
     # TODO: Validate
     def _upsert_season(

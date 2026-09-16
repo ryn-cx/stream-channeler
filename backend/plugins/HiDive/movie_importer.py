@@ -72,6 +72,19 @@ class HiDiveMovieChannels(HiDiveMovieFiles, ABC):
     def title_url(cls, title_key: str) -> str:
         return cls.build_url(f"video/{title_key}")
 
+    # TODO: Validate
+    @override
+    def add_title_to_plugin_channels(self, title: Title) -> None:
+        if not title.url:  # Should be impossible.
+            msg = "Title.url is not set."
+            raise AttributeError(msg)
+
+        elements = self.vod_file(title.key).parsed().elements
+        self.add_new_urls_to_channel(
+            "All Titles",
+            [title.url, *self.related_title_urls(elements)],
+        )
+
 
 # TODO: Validate
 class HiDiveMovieUpsert(HiDiveMovieChannels, ABC):
@@ -109,6 +122,7 @@ class HiDiveMovieUpsert(HiDiveMovieChannels, ABC):
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
+        self.add_title_to_plugin_channels(title)
 
         return title
 

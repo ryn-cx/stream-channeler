@@ -113,7 +113,20 @@ class HiDiveSeriesChannels(HiDiveSeriesFiles, ABC):
     @classmethod
     @override
     def title_url(cls, title_key: str) -> str:
-        return cls.build_url(f"series/{title_key}")
+        return cls.series_title_url(title_key)
+
+    # TODO: Validate
+    @override
+    def add_title_to_plugin_channels(self, title: Title) -> None:
+        if not title.url:  # Should be impossible.
+            msg = "Title.url is not set."
+            raise AttributeError(msg)
+
+        elements = self.series_file(title.key).parsed().elements
+        self.add_new_urls_to_channel(
+            "All Titles",
+            [title.url, *self.related_title_urls(elements)],
+        )
 
 
 # TODO: Validate
@@ -149,6 +162,7 @@ class HiDiveSeriesUpsert(HiDiveSeriesChannels, ABC):
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
+        self.add_title_to_plugin_channels(title)
 
         return title
 

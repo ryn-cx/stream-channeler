@@ -6,10 +6,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from minbo.movie.models import Idref14 as MovieContent
+    from minbo.movie.models import Item as MovieCarouselItem
+    from minbo.movie.models import Item1 as MovieSeoCarouselItem
     from minbo.movie.models import MovieModel
     from minbo.show.models import Episode, Season, ShowModel
     from minbo.show.models import Idref14 as TitleContent
+    from minbo.show.models import Item1 as TitleCarouselItem
+    from minbo.show.models import Item2 as TitleSeoCarouselItem
 
 
 # TODO: Validate
@@ -74,3 +80,33 @@ def season_episodes(season: ShowModel, season_number: int) -> list[Episode]:
             return entry.episodes
     msg = f"Season {season_number} not found."
     raise ValueError(msg)
+
+
+# TODO: Validate
+def title_related_urls(title: ShowModel) -> list[str]:
+    mapped_data = title.props.page_props.mapped_data
+    return _carousel_urls([*mapped_data.idref64.items, *mapped_data.idref79.items])
+
+
+# TODO: Validate
+def movie_related_urls(movie: MovieModel) -> list[str]:
+    mapped_data = movie.props.page_props.mapped_data
+    return _carousel_urls([*mapped_data.idref57.items, *mapped_data.idref71.items])
+
+
+# TODO: Validate
+def _carousel_urls(
+    items: Sequence[
+        TitleCarouselItem
+        | TitleSeoCarouselItem
+        | MovieCarouselItem
+        | MovieSeoCarouselItem
+    ],
+) -> list[str]:
+    urls: dict[str, None] = {}
+    for item in items:
+        if item.series_id:
+            urls[title_url(str(item.series_id))] = None
+        elif item.feature_id:
+            urls[movie_url(str(item.feature_id))] = None
+    return list(urls)
