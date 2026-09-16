@@ -1,16 +1,20 @@
 // TODO: Validate
 import { Link } from "@tanstack/react-router"
-import { Info } from "lucide-react"
-import { useState } from "react"
+import { ChevronLeft, ChevronRight, Info } from "lucide-react"
+import { useEffect, useState } from "react"
 import { ChannelDescriptionMarkdown } from "@/components/Channels/ChannelDetail/ChannelDescription"
 import { TitleCardsWithInformation } from "@/components/Channels/TitleCardsWithInformation"
-import { useAllChannelTitles } from "@/components/Channels/useChannelTitles"
+import {
+  CHANNEL_TITLE_PAGE,
+  useChannelTitlesPage,
+} from "@/components/Channels/useChannelTitles"
 import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
 import {
   type TriggerVariant,
   VariantTrigger,
 } from "@/components/Common/VariantTrigger"
 import { WinBoxModal } from "@/components/Common/WinBoxModal"
+import { Button } from "@/components/ui/button"
 
 interface ChannelDetailsChannel {
   id: string
@@ -30,9 +34,21 @@ export function ChannelDetailsWinBox({
   open,
   onClose,
 }: ChannelDetailsWinBoxProps) {
-  const { data, isLoading } = useAllChannelTitles(channel.id, {
+  const [pageIndex, setPageIndex] = useState(0)
+  const { data, isLoading } = useChannelTitlesPage(channel.id, pageIndex, "", {
     enabled: open,
   })
+
+  const titleCount = data?.total ?? 0
+  const pageCount = Math.max(1, Math.ceil(titleCount / CHANNEL_TITLE_PAGE))
+
+  useEffect(() => {
+    if (!open) setPageIndex(0)
+  }, [open])
+
+  useEffect(() => {
+    if (data && pageIndex >= pageCount) setPageIndex(pageCount - 1)
+  }, [data, pageIndex, pageCount])
 
   const tmdbTitles = data?.tmdb_titles ?? {}
   const groups = (data?.groups ?? [])
@@ -90,6 +106,32 @@ export function ChannelDetailsWinBox({
               />
             </div>
           ))
+        )}
+
+        {pageCount > 1 && (
+          <div className="flex items-center justify-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPageIndex(pageIndex - 1)}
+              disabled={pageIndex === 0}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {pageIndex + 1} of {pageCount}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPageIndex(pageIndex + 1)}
+              disabled={pageIndex >= pageCount - 1}
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         )}
       </div>
     </WinBoxModal>

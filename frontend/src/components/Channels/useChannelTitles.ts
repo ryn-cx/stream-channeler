@@ -58,6 +58,7 @@ export function useChannelTitlesPage(
   channelId: string,
   pageIndex: number,
   query = "",
+  options?: { enabled?: boolean },
 ) {
   return useQuery({
     queryKey: channelTitlesQueryKey(channelId, pageIndex, query),
@@ -68,6 +69,7 @@ export function useChannelTitlesPage(
         limit: CHANNEL_TITLE_PAGE,
         query: query || undefined,
       }),
+    enabled: options?.enabled,
     // The page a listing is on is read from the total it comes back with, so a
     // page being fetched must not read as a listing of nothing.
     placeholderData: keepPreviousData,
