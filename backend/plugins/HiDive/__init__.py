@@ -13,6 +13,7 @@ from loguru import logger
 from plugins.HiDive.constants import (
     MOVIE_MEDIA_TYPE,
     MOVIE_URL_REGEX,
+    SEASON_SERIES_URL_REGEX,
     SEASON_URL_REGEX,
     SERIES_URL_REGEX,
 )
@@ -54,10 +55,16 @@ class HiDive(HiDiveShared, AbstractPlugin, register=True):
                 )
         self.add_new_urls_to_channel("All Titles", title_urls)
 
+    # TODO: Validate
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
-        return (SERIES_URL_REGEX, SEASON_URL_REGEX, MOVIE_URL_REGEX)
+        return (
+            SERIES_URL_REGEX,
+            SEASON_SERIES_URL_REGEX,
+            SEASON_URL_REGEX,
+            MOVIE_URL_REGEX,
+        )
 
     @override
     def _media_importer_from_url(

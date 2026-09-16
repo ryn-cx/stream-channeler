@@ -11,6 +11,7 @@ from app.titles.models import Title
 from app.tmdb_media.keys import watch_identifier
 from app.utils.update_at import staggered_monthly_update_at
 from plugins.HiDive.constants import (
+    SEASON_SERIES_URL_REGEX,
     SEASON_URL_REGEX,
     SERIES_MEDIA_TYPE,
     SERIES_URL_REGEX,
@@ -273,16 +274,17 @@ class HiDiveSeriesImporter(HiDiveSeriesUpsert):
     @classmethod
     @override
     def _url_regexes(cls) -> tuple[str, ...]:
-        return (SERIES_URL_REGEX, SEASON_URL_REGEX)
+        return (SERIES_URL_REGEX, SEASON_SERIES_URL_REGEX, SEASON_URL_REGEX)
 
     # TODO: Validate
     @override
     def parse_url(self, url: str) -> ParsedURL:
         domain_regex = self._domains_regex()
-        if match := re.match(domain_regex + SERIES_URL_REGEX, url):
-            title_key = match.group("title_key")
-            self.raise_invalid_url_if_no_content(self.series_file(title_key), url)
-            return ParsedURL(title_key)
+        for url_regex in (SERIES_URL_REGEX, SEASON_SERIES_URL_REGEX):
+            if match := re.match(domain_regex + url_regex, url):
+                title_key = match.group("title_key")
+                self.raise_invalid_url_if_no_content(self.series_file(title_key), url)
+                return ParsedURL(title_key)
 
         # HiDive's interface does not do a good job of seperating titles and seasons
         # and if a user uses a season URL it should be treated the same as a series
