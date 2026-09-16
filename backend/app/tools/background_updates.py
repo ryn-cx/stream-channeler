@@ -8,6 +8,7 @@ from app.log import configure_logging
 from app.tools import (
     import_queue,
     update_outdated,
+    update_youtube,
 )
 
 logger = logger.bind(source="updater")
@@ -19,6 +20,7 @@ def run(stop_event: threading.Event) -> None:
         futures = [
             executor.submit(update_outdated._update_outdated_forever),
             executor.submit(import_queue.run_forever, stop_event),
+            executor.submit(update_youtube.run_forever),
         ]
         for future in as_completed(futures):
             future.result()
