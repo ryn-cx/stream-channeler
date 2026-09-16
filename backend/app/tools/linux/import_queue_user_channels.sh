@@ -1,4 +1,4 @@
 #!/bin/bash
 # TODO: Validate
 
-exec "$(dirname "${BASH_SOURCE[0]}")/_run_tool.sh" import_queue_user_channels "$@"
+exec "$(dirname "$0")/_run_tool.sh" import_queue_user_channels "$@"

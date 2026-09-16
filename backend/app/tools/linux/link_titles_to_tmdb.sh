@@ -1,4 +1,4 @@
 #!/bin/bash
 # TODO: Validate
 
-exec "$(dirname "${BASH_SOURCE[0]}")/_run_tool.sh" link_titles_to_tmdb "$@"
+exec "$(dirname "$0")/_run_tool.sh" link_titles_to_tmdb "$@"
