@@ -5,11 +5,11 @@ from __future__ import annotations
 
 from typing import override
 
-from plugins.ParamountPlus.base_files import ParamountPlusBaseFiles
+from plugins.ParamountPlus.channels import ParamountPlusChannels
 
 
 # TODO: Validate
-class ParamountPlusShared(ParamountPlusBaseFiles):
+class ParamountPlusShared(ParamountPlusChannels):
     # TODO: Validate
     @classmethod
     @override

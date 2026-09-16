@@ -18,6 +18,7 @@ from plugins.ParamountPlus.shared import ParamountPlusShared
 from plugins.ParamountPlus.utils import (
     build_season_key,
     movie_url,
+    related_urls,
     split_season_key,
     title_url,
 )
@@ -30,8 +31,11 @@ if TYPE_CHECKING:
 
     from trivial_minus.episodes.models import Datum
     from trivial_minus.movie.models import MovieModel
+    from trivial_minus.section.models import Datum as SectionDatum
+    from trivial_minus.show.models import ShowModel
 
     from app.sources.models import Source
+    from plugins.ParamountPlus.files import SectionFile
     from plugins.utils.base_plugin.files import BaseFile
 
 
@@ -60,12 +64,43 @@ class ParamountPlusSeriesImporter(ParamountPlusImporter):
         raise InvalidURLError(msg)
 
     # TODO: Validate
+    def _show(self, title_key: str) -> ShowModel:
+        return self.title_page_file(title_key).parsed()
+
+    # TODO: Validate
     def _season_numbers(self, title_key: str) -> list[int]:
-        return self.title_page_file(title_key).parsed().seasons
+        return self._show(title_key).seasons
 
     # TODO: Validate
     def _season_episodes(self, title_key: str, season_number: int) -> list[Datum]:
-        return self.episodes_file(title_key, season_number).parsed().result.data
+        return self.episodes_file(title_key, season_number).parsed().data
+
+    # TODO: Validate
+    def _section_files(self, title_key: str) -> list[SectionFile]:
+        return [
+            self.section_file(title_key, section.id)
+            for section in self._show(title_key).sections
+        ]
+
+    # TODO: Validate
+    def _section_videos(self, title_key: str) -> list[SectionDatum]:
+        videos: dict[str, SectionDatum] = {}
+        for section_file in self._section_files(title_key):
+            for page in section_file.parsed():
+                for video in page.data:
+                    videos.setdefault(video.content_id, video)
+        return list(videos.values())
+
+    # TODO: Validate
+    def _genres(self, title_key: str) -> list[str]:
+        first_season = self._season_numbers(title_key)[0]
+        return list(
+            dict.fromkeys(
+                episode.genre
+                for episode in self._season_episodes(title_key, first_season)
+                if episode.genre
+            ),
+        )
 
     # TODO: Validate
     @override
@@ -77,6 +112,8 @@ class ParamountPlusSeriesImporter(ParamountPlusImporter):
     @override
     def _season_files(self, season_key: str, title_key: str) -> Sequence[BaseFile[Any]]:
         _title_key, season_number = split_season_key(season_key)
+        if season_number == 0:
+            return self._section_files(title_key)
         # Required to detect new episodes.
         return [self.episodes_file(title_key, season_number)]
 
@@ -93,10 +130,13 @@ class ParamountPlusSeriesImporter(ParamountPlusImporter):
     # TODO: Validate
     @override
     def _season_keys_from_title_files(self, title_key: str) -> list[str]:
-        return [
+        season_keys = [
             build_season_key(title_key, season_number)
             for season_number in self._season_numbers(title_key)
         ]
+        if self._show(title_key).sections:
+            season_keys.append(build_season_key(title_key, 0))
+        return season_keys
 
     # TODO: Validate
     @override
@@ -110,10 +150,15 @@ class ParamountPlusSeriesImporter(ParamountPlusImporter):
         episode_keys: list[str] = []
         for season_key in season_keys:
             _title_key, season_number = split_season_key(season_key)
-            episode_keys += [
-                episode.content_id
-                for episode in self._season_episodes(title_key, season_number)
-            ]
+            if season_number == 0:
+                episode_keys += [
+                    video.content_id for video in self._section_videos(title_key)
+                ]
+            else:
+                episode_keys += [
+                    episode.content_id
+                    for episode in self._season_episodes(title_key, season_number)
+                ]
         return episode_keys
 
     # TODO: Validate
@@ -144,12 +189,31 @@ class ParamountPlusSeriesImporter(ParamountPlusImporter):
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
+        self.add_title_to_plugin_channels(title)
 
         return title
 
     # TODO: Validate
+    @override
+    def add_title_to_plugin_channels(self, title: Title) -> None:
+        if not title.url:  # Should be impossible.
+            msg = "Title.url is not set."
+            raise AttributeError(msg)
+
+        urls = [title.url, *related_urls(self._show(title.key))]
+        self.add_new_urls_to_channel("All Titles", urls)
+        for genre in self._genres(title.key):
+            self.add_new_urls_to_channel(genre, [title.url])
+
+    # TODO: Validate
+    @override
+    def similar_title_urls(self, title: Title) -> list[str]:
+        return related_urls(self._show(title.key))
+
+    # TODO: Validate
     def _upsert_seasons(self, title: Title, *, force: bool = False) -> None:
-        for sort_order, season_number in enumerate(self._season_numbers(title.key)):
+        season_numbers = self._season_numbers(title.key)
+        for sort_order, season_number in enumerate(season_numbers):
             season_key = build_season_key(title.key, season_number)
             season = Season.get_from_memory(self.session, title, season_key)
             if self._season_is_outdated(season, title.key, force=force):
@@ -169,6 +233,76 @@ class ParamountPlusSeriesImporter(ParamountPlusImporter):
 
             self._upsert_episodes(season, title.key, season_number, force=force)
             self._set_season_update_at_based_on_last_episode(season)
+
+        self._upsert_section_season(title, len(season_numbers), force=force)
+
+    # TODO: Validate
+    def _upsert_section_season(
+        self,
+        title: Title,
+        sort_order: int,
+        *,
+        force: bool = False,
+    ) -> None:
+        videos = self._section_videos(title.key)
+        if not videos:
+            return
+
+        season_key = build_season_key(title.key, 0)
+        season = Season.get_from_memory(self.session, title, season_key)
+        if self._season_is_outdated(season, title.key, force=force):
+            season = Season(
+                key=season_key,
+                season_number=0,
+                sort_order=sort_order,
+                data_timestamp=self._season_files_data_timestamp(
+                    season_key,
+                    title.key,
+                ),
+                title_id=title.id,
+            ).upsert(title, season)
+            season.set_update_at(None)
+
+        self._upsert_section_episodes(season, title.key, videos, force=force)
+        self._set_season_update_at_based_on_last_episode(season)
+
+    # TODO: Validate
+    def _upsert_section_episodes(
+        self,
+        season: Season,
+        title_key: str,
+        videos: list[SectionDatum],
+        *,
+        force: bool = False,
+    ) -> None:
+        for sort_order, video in enumerate(videos):
+            episode_key = video.content_id
+            episode = Episode.get_from_memory(self.session, season, episode_key)
+            if self._episode_is_outdated(
+                episode,
+                season.key,
+                title_key,
+                force=force,
+            ):
+                episode = Episode(
+                    key=episode_key,
+                    watch_identifier=watch_identifier(self.plugin_name(), episode_key),
+                    name=video.title,
+                    episode_number=sort_order + 1,
+                    url=video.href.partition("?")[0],
+                    description=video.description,
+                    image_url=video.thumb,
+                    thumbnail_url=video.thumb,
+                    air_date=video.airdate_iso,
+                    sort_order=sort_order,
+                    data_timestamp=self._episode_files_data_timestamp(
+                        episode_key,
+                        season.key,
+                        title_key,
+                    ),
+                    season_id=season.id,
+                ).upsert(season, episode)
+                episode.set_update_at(None)
 
     # TODO: Validate
     def _upsert_episodes(
@@ -303,8 +437,20 @@ class ParamountPlusMovieImporter(ParamountPlusImporter):
 
         self._upsert_season(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
+        self.add_title_to_plugin_channels(title)
 
         return title
+
+    # TODO: Validate
+    @override
+    def add_title_to_plugin_channels(self, title: Title) -> None:
+        if not title.url:  # Should be impossible.
+            msg = "Title.url is not set."
+            raise AttributeError(msg)
+
+        self.add_new_urls_to_channel("All Titles", [title.url])
+        if genre := self._movie_data(title.key).genre:
+            self.add_new_urls_to_channel(genre, [title.url])
 
     # TODO: Validate
     def _upsert_season(self, title: Title, *, force: bool = False) -> None:

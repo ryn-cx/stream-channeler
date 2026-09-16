@@ -2216,7 +2216,7 @@ wheels = [
 [[package]]
 name = "trivial-minus"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/trivial-minus#dbbee8386dd36dde506676e3f95f69abfba28e5b" }
+source = { git = "https://github.com/ryn-cx/trivial-minus#74cd4b26b4b4c20384572a22c9b28a1d5ae02567" }
 dependencies = [
     { name = "get-around" },
     { name = "good-ass-pydantic-integrator" },
