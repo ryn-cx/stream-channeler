@@ -171,21 +171,22 @@ def _import_one(
 ) -> None:
     """Import a single queue item and commit its final status."""
     plugin_key = plugin_class.plugin_name()
-    logger.info(f"[{plugin_key}] Importing URL: {queue_item.url}")
+    url = queue_item.url
+    logger.info(f"[{plugin_key}] Importing URL: {url}")
     try:
         queue_item.status = URLStatus.IMPORTING
         plugin_instance = plugin_class(session)
-        import_results = plugin_instance.validate_and_import_url(queue_item.url)
+        import_results = plugin_instance.validate_and_import_url(url)
         add_results_to_channel(session, import_results, queue_item.channel)
     except InvalidURLError as error:
-        logger.warning(f"[{plugin_key}] Invalid URL: {queue_item.url}")
+        logger.warning(f"[{plugin_key}] Invalid URL: {url}")
         queue_item.status = URLStatus.FAILED
         # The plugin explains why the URL cannot be imported, which is the only place
         # the user is told what to do instead.
         queue_item.note = str(error) or "Invalid URL."
         session.commit()
     except Exception as error:
-        logger.exception(f"[{plugin_key}] Error importing: {queue_item.url}")
+        logger.exception(f"[{plugin_key}] Error importing: {url}")
         # Roll back partial changes, then let the plugin decide how to reschedule
         # the failed URL.
         session.rollback()

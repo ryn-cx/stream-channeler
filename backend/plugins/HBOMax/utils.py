@@ -103,7 +103,12 @@ def season_entry(title: ShowModel, season_number: int) -> Season:
 def season_episodes(season: ShowModel, season_number: int) -> list[Episode]:
     for entry in title_content(season).seasons:
         if entry.season_number == season_number:
-            return entry.episodes
+            # At one point in time this show had a duplicate episode.
+            # https://play.hbomax.com/show/3b65c971-18c9-4cbc-b940-63bc7db85a95?season=15
+            episodes: dict[int, Episode] = {}
+            for episode in entry.episodes:
+                episodes.setdefault(episode.episode_number, episode)
+            return list(episodes.values())
     msg = f"Season {season_number} not found."
     raise ValueError(msg)
 
