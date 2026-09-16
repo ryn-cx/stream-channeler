@@ -1,16 +1,8 @@
 // TODO: Validate
+import * as DialogPrimitive from "@radix-ui/react-dialog"
 import type { ReactNode } from "react"
 
-import { ModalContent } from "@/components/Common/ModalContent"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogBody,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 
 interface ConfirmDialogProps {
   open: boolean
@@ -35,29 +27,38 @@ export function ConfirmDialog({
   onConfirm,
 }: ConfirmDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <ModalContent>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        <DialogBody>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogBody>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {cancelLabel}
-          </Button>
-          <Button
-            variant={variant}
-            onClick={() => {
-              onConfirm()
-              onOpenChange(false)
-            }}
-          >
-            {confirmLabel}
-          </Button>
-        </DialogFooter>
-      </ModalContent>
-    </Dialog>
+    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay
+          data-slot="confirm-dialog-overlay"
+          className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-[10010] bg-black/50"
+        />
+        <DialogPrimitive.Content
+          data-slot="confirm-dialog-content"
+          className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 bg-background fixed top-1/2 left-1/2 z-[10020] flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-lg border p-6 shadow-lg"
+        >
+          <DialogPrimitive.Title className="text-lg font-semibold">
+            {title}
+          </DialogPrimitive.Title>
+          <DialogPrimitive.Description className="text-muted-foreground text-sm">
+            {description}
+          </DialogPrimitive.Description>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              {cancelLabel}
+            </Button>
+            <Button
+              variant={variant}
+              onClick={() => {
+                onConfirm()
+                onOpenChange(false)
+              }}
+            >
+              {confirmLabel}
+            </Button>
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   )
 }

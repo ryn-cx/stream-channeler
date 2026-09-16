@@ -1907,12 +1907,7 @@ export const ChannelTitleMembershipSchema = {
     },
     type: 'object',
     required: ['id', 'name', 'channel_number', 'carries_title'],
-    title: 'ChannelTitleMembership',
-    description: `One of the \`User\`'s \`Channel\`s, and whether it already holds a title.
-
-What a channel picker needs and nothing else. Reading it off the channels'
-title lists means a request and a whole catalogue per channel, when the only
-question being asked of each is yes or no.`
+    title: 'ChannelTitleMembership'
 } as const;
 
 export const ChannelTitleStatsSchema = {
@@ -1928,11 +1923,7 @@ export const ChannelTitleStatsSchema = {
     },
     type: 'object',
     required: ['season_count', 'episode_count'],
-    title: 'ChannelTitleStats',
-    description: `What a channel's rows for one canonical title add up to.
-
-A canonical title is counted by what its seasons and episodes are rather than by the
-records holding them, so the same season on three websites is one season.`
+    title: 'ChannelTitleStats'
 } as const;
 
 export const ChannelTitlesOutputSchema = {
@@ -2505,8 +2496,7 @@ export const EpisodeInformationSideSchema = {
     },
     type: 'object',
     required: ['episode', 'season', 'title', 'source', 'label', 'url', 'absolute_number'],
-    title: 'EpisodeInformationSide',
-    description: "One record's own account of an episode, as the website that holds it has it."
+    title: 'EpisodeInformationSide'
 } as const;
 
 export const EpisodeListOutputSchema = {
@@ -4735,8 +4725,7 @@ export const SeasonInformationSideSchema = {
     },
     type: 'object',
     required: ['season', 'title', 'source', 'label'],
-    title: 'SeasonInformationSide',
-    description: "One record's own account of a season, as the website that holds it has it."
+    title: 'SeasonInformationSide'
 } as const;
 
 export const SeasonListOutputSchema = {
@@ -5626,8 +5615,7 @@ export const TitleInformationSideSchema = {
     },
     type: 'object',
     required: ['title', 'source', 'label'],
-    title: 'TitleInformationSide',
-    description: "One record's own account of a title, as the website holding it has it."
+    title: 'TitleInformationSide'
 } as const;
 
 export const TitleListPublicSchema = {
@@ -6327,11 +6315,7 @@ export const TmdbEpisodeChoiceSchema = {
     },
     type: 'object',
     required: ['episode', 'season', 'title', 'source', 'absolute_number', 'similarity'],
-    title: 'TmdbEpisodeChoice',
-    description: `A TMDB episode, as one of the episodes an \`Episode\` can be linked to.
-
-A canonical record, so the season and the title handed over with it are the
-very rows TMDB holds rather than non-canonical rows of them.`
+    title: 'TmdbEpisodeChoice'
 } as const;
 
 export const TmdbEpisodeGroupOptionSchema = {
@@ -6370,12 +6354,7 @@ export const TmdbEpisodeGroupOptionSchema = {
     },
     type: 'object',
     required: ['id', 'name', 'description', 'group_count', 'episode_count', 'type'],
-    title: 'TmdbEpisodeGroupOption',
-    description: `One of the episode orders TMDB holds for a title.
-
-What the order is and how big it is, which is all that choosing between them
-needs. The episodes each order puts where is a file of its own and is only
-read once an order has been chosen.`
+    title: 'TmdbEpisodeGroupOption'
 } as const;
 
 export const TmdbEpisodeListOutputSchema = {
@@ -6610,8 +6589,7 @@ export const TmdbEpisodeListOutputSchema = {
     },
     type: 'object',
     required: ['key', 'tmdb_season_id', 'id', 'created_at', 'modified_at', 'tmdb_season_name', 'tmdb_title_id', 'tmdb_title_name', 'tmdb_title_key'],
-    title: 'TmdbEpisodeListOutput',
-    description: 'Schema for returning a list of `Episode`s, with what holds them.'
+    title: 'TmdbEpisodeListOutput'
 } as const;
 
 export const TmdbEpisodeRecordSchema = {
@@ -6642,12 +6620,7 @@ export const TmdbEpisodeRecordSchema = {
     },
     type: 'object',
     required: ['episode', 'season', 'title', 'source', 'absolute_number'],
-    title: 'TmdbEpisodeRecord',
-    description: `A canonical episode, with how far into its title the episode is.
-
-The count is not a column of the episode: it is where the episode falls among
-the ones the title holds, so it is worked out against the title each time
-rather than stored and left to go stale as the title grows.`
+    title: 'TmdbEpisodeRecord'
 } as const;
 
 export const TmdbEpisodesPublicSchema = {
@@ -6854,13 +6827,7 @@ export const TmdbTitleOutputSchema = {
     },
     type: 'object',
     required: ['key', 'id', 'created_at', 'modified_at'],
-    title: 'TmdbTitleOutput',
-    description: `Schema for returning a \`Title\`.
-
-\`tmdb_id\` and \`tmdb_url\` are read back out of \`key\` rather than stored, since
-the key is the whole of what says which TMDB record a title is. They are
-served for reading only: nothing can be sorted or filtered by a value the
-database does not hold a column for.`
+    title: 'TmdbTitleOutput'
 } as const;
 
 export const TmdbTitlesPublicSchema = {
@@ -7254,13 +7221,7 @@ export const UnmatchedTitleOutputSchema = {
     },
     type: 'object',
     required: ['id', 'provider_name', 'plugin_key', 'created_at', 'modified_at', 'title_id', 'title_name', 'title_year', 'media_type', 'tmdb_url', 'channel_count', 'episode_count'],
-    title: 'UnmatchedTitleOutput',
-    description: `One service TMDB says carries a title that nothing here carries.
-
-The title is described alongside the provider rather than pointed at, since
-the whole of the page is deciding whether a title is worth chasing down, and
-a name, a year and how many channels already hold it is what that is decided
-on.`
+    title: 'UnmatchedTitleOutput'
 } as const;
 
 export const UnmatchedTitlesPublicSchema = {
@@ -8018,20 +7979,7 @@ export const WatchExportEntrySchema = {
     },
     type: 'object',
     required: ['watch_identifier', 'watch_date'],
-    title: 'WatchExportEntry',
-    description: `Schema for a single exported \`Watch\`.
-
-Holds only what re-importing needs: which episode the watch is of, when it
-happened, and whether it was verified. Everything else is read back out of
-the database the file is imported into.
-
-\`verified\` is None in a file exported before it was carried, which leaves
-the import's own setting to say what those watches are.
-
-A file exported before the identifier was named as such holds it under
-\`tmdb_episode_key\`, and holds the same string: the old key was the
-plugin's name in front of its own id, which is what the identifier is. So
-the old name is still read, and a backup taken then still imports.`
+    title: 'WatchExportEntry'
 } as const;
 
 export const WatchImportResultSchema = {
@@ -8978,8 +8926,7 @@ export const WhitelistEpisodesOutputSchema = {
     },
     type: 'object',
     required: ['episodes', 'total_count'],
-    title: 'WhitelistEpisodesOutput',
-    description: "One page of a season's episodes, and how many the season holds in all."
+    title: 'WhitelistEpisodesOutput'
 } as const;
 
 export const WhitelistSeasonOutputSchema = {

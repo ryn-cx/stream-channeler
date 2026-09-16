@@ -347,7 +347,7 @@ export function ManageTitlesTabs({
       >
         <TabsList
           className={cn(
-            "h-auto w-auto self-stretch flex-wrap justify-start gap-1",
+            "h-auto w-fit max-w-full shrink-0 self-center flex-wrap justify-center gap-1",
             // A tab is as wide as its own name. Too many for one row wrap onto
             // the next rather than being squeezed together or scrolled out of
             // sight.
@@ -355,26 +355,26 @@ export function ManageTitlesTabs({
             tabsListClassName,
           )}
         >
-          <TabsTrigger value="search">
+          <TabsTrigger value="search" className="h-auto">
             <Search className="h-4 w-4" /> Search
           </TabsTrigger>
-          <TabsTrigger value="bulk">
+          <TabsTrigger value="bulk" className="h-auto">
             <Upload className="h-4 w-4" /> Import
           </TabsTrigger>
-          <TabsTrigger value="titles">
+          <TabsTrigger value="titles" className="h-auto">
             <List className="h-4 w-4" /> Edit
             {titleCount > 0 && ` (${titleCount})`}
           </TabsTrigger>
-          <TabsTrigger value="queue">
+          <TabsTrigger value="queue" className="h-auto">
             <Inbox className="h-4 w-4" /> Queue
             {pendingQueueCount > 0 && ` (${pendingQueueCount})`}
           </TabsTrigger>
           {combinedChannels && (
-            <TabsTrigger value="channels">
+            <TabsTrigger value="channels" className="h-auto">
               <Antenna className="h-4 w-4" /> Channels
             </TabsTrigger>
           )}
-          <TabsTrigger value="ai">
+          <TabsTrigger value="ai" className="h-auto">
             <Bot className="h-4 w-4" /> Suggestions
           </TabsTrigger>
         </TabsList>

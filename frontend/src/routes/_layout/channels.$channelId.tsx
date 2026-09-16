@@ -4,9 +4,14 @@ import { createFileRoute, redirect } from "@tanstack/react-router"
 import type { VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import {
+  Columns,
   EllipsisVertical,
+  Filter,
+  Info,
   LayoutGrid,
   Loader2,
+  MessageSquare,
+  MonitorCog,
   Table as TableIcon,
 } from "lucide-react"
 import { Suspense, useEffect, useMemo, useState } from "react"
@@ -32,7 +37,10 @@ import {
 import { EpisodeCards } from "@/components/Channels/ChannelDetail/EpisodeCards"
 import { EpisodeFilters } from "@/components/Channels/ChannelDetail/EpisodeFilters"
 import { SaveOrderButton } from "@/components/Channels/ChannelDetail/SaveOrderButton"
-import { ChannelDetailsButton } from "@/components/Channels/ChannelList/ChannelDetailsButton"
+import {
+  ChannelDetailsButton,
+  ChannelDetailsWinBox,
+} from "@/components/Channels/ChannelList/ChannelDetailsButton"
 import EditChannel from "@/components/Channels/ChannelList/EditChannel"
 import {
   readChannelDetails,
@@ -44,6 +52,7 @@ import { FavoriteChannel } from "@/components/Channels/ChannelList/FavoriteChann
 import { ChannelNumber } from "@/components/Channels/ChannelNumber"
 import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
 import { DataTable } from "@/components/Common/DataTable"
+import { VariantTrigger } from "@/components/Common/VariantTrigger"
 import PendingChannelDetails from "@/components/Pending/PendingChannelDetails"
 import { Button } from "@/components/ui/button"
 import {
@@ -308,6 +317,11 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
 
   const isOwner = user?.id === channel.user_id
   const canEdit = isOwner || Boolean(user?.is_superuser)
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [columnsOpen, setColumnsOpen] = useState(false)
+  const [manageTitlesOpen, setManageTitlesOpen] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [commentsOpen, setCommentsOpen] = useState(false)
   const showHero = viewMode === "cards" && episodesWithDetails.length > 0
   const [heroIndex, setHeroIndex] = useState(0)
 
@@ -374,31 +388,38 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
               {viewMode === "table" && (
                 <>
                   <DropdownMenuSeparator />
-                  <ColumnVisibilityButton table={table} variant="menu" />
+                  <VariantTrigger
+                    variant="menu"
+                    icon={Columns}
+                    label="Columns"
+                    onSelect={() => setColumnsOpen(true)}
+                  />
                 </>
               )}
 
               <DropdownMenuSeparator />
               {canEdit ? (
-                <ManageTitlesButton
-                  channelId={channelId}
-                  channelName={channel?.name}
+                <VariantTrigger
                   variant="menu"
-                  combinedChannels={{ isLoggedIn: !!user }}
+                  icon={MonitorCog}
+                  label="Manage titles"
+                  onSelect={() => setManageTitlesOpen(true)}
                 />
               ) : (
-                <ChannelDetailsButton channel={channel} variant="menu" />
+                <VariantTrigger
+                  variant="menu"
+                  icon={Info}
+                  label="Details"
+                  onSelect={() => setDetailsOpen(true)}
+                />
               )}
               <DropdownMenuSeparator />
 
-              <EpisodeFilters
-                key={orderPreset?.id ?? "channel"}
-                filterParams={filterParams}
-                routeFullPath={routeFullPath}
-                channelId={channelId}
-                randomSeed={filterParams.randomSeed}
+              <VariantTrigger
                 variant="menu"
-                canSaveDefault={canEdit}
+                icon={Filter}
+                label="Filters"
+                onSelect={() => setFiltersOpen(true)}
               />
 
               {viewMode === "cards" && (
@@ -418,14 +439,57 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
               )}
 
               <DropdownMenuSeparator />
-              <CommentsDialog
-                channelId={channelId}
-                channelName={channel?.name}
+              <VariantTrigger
                 variant="menu"
+                icon={MessageSquare}
+                label="Comments"
+                onSelect={() => setCommentsOpen(true)}
               />
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+
+        <ChannelDetailsWinBox
+          channel={channel}
+          open={detailsOpen}
+          onClose={() => setDetailsOpen(false)}
+        />
+
+        <ColumnVisibilityButton
+          table={table}
+          open={columnsOpen}
+          onOpenChange={setColumnsOpen}
+          hideTrigger
+        />
+
+        <ManageTitlesButton
+          channelId={channelId}
+          channelName={channel?.name}
+          combinedChannels={{ isLoggedIn: !!user }}
+          open={manageTitlesOpen}
+          onOpenChange={setManageTitlesOpen}
+          hideTrigger
+        />
+
+        <EpisodeFilters
+          key={orderPreset?.id ?? "channel"}
+          filterParams={filterParams}
+          routeFullPath={routeFullPath}
+          channelId={channelId}
+          randomSeed={filterParams.randomSeed}
+          canSaveDefault={canEdit}
+          open={filtersOpen}
+          onOpenChange={setFiltersOpen}
+          hideTrigger
+        />
+
+        <CommentsDialog
+          channelId={channelId}
+          channelName={channel?.name}
+          open={commentsOpen}
+          onOpenChange={setCommentsOpen}
+          hideTrigger
+        />
 
         {/* Larger screens: Title all buttons */}
         <div className="hidden xl:flex flex-wrap gap-2">

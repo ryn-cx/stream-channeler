@@ -4,6 +4,15 @@ import { Columns } from "lucide-react"
 import { useState } from "react"
 
 import { VariantTrigger } from "@/components/Common/VariantTrigger"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -12,18 +21,72 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Label } from "@/components/ui/label"
 
 interface ColumnVisibilityButtonProps<TData> {
   table: ReturnType<typeof useReactTable<TData>>
   variant?: "button" | "menu"
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  hideTrigger?: boolean
 }
 
 // TODO: Validate
 export function ColumnVisibilityButton<TData>({
   table,
   variant = "button",
+  open,
+  onOpenChange,
+  hideTrigger,
 }: ColumnVisibilityButtonProps<TData>) {
-  const [isOpen, setIsOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isOpen = open ?? internalOpen
+  const setIsOpen = onOpenChange ?? setInternalOpen
+
+  if (hideTrigger) {
+    return (
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Toggle columns</DialogTitle>
+            <DialogDescription>
+              Choose which columns the table shows.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="column-visibility-all"
+                checked={table.getIsAllColumnsVisible()}
+                onCheckedChange={() =>
+                  table.toggleAllColumnsVisible(!table.getIsAllColumnsVisible())
+                }
+              />
+              <Label htmlFor="column-visibility-all">Toggle All</Label>
+            </div>
+            {table.getAllLeafColumns().map((column) => {
+              const header = column.columnDef.header
+              const displayName =
+                typeof header === "string" ? header : column.id
+
+              return (
+                <div key={column.id} className="flex items-center gap-2">
+                  <Checkbox
+                    id={`column-visibility-${column.id}`}
+                    checked={column.getIsVisible()}
+                    onCheckedChange={() => column.toggleVisibility()}
+                  />
+                  <Label htmlFor={`column-visibility-${column.id}`}>
+                    {displayName}
+                  </Label>
+                </div>
+              )
+            })}
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
+    )
+  }
 
   return (
     // From: https://ui.shadcn.com/docs/components/dropdown-menu

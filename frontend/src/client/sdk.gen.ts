@@ -648,7 +648,6 @@ export class ChannelsService {
     
     /**
      * Get Channels For Title
-     * List the `User`'s `Channel`s, saying which already hold a title.
      * @param data The data for the request.
      * @param data.titleId
      * @returns ChannelTitleMembership Successful Response
@@ -1061,7 +1060,6 @@ export class ChannelsService {
     
     /**
      * Get Automatic Channel Users
-     * List the `User`s whose channels a source writes, and how many they hold.
      * @returns AutomaticChannelUserOutput Successful Response
      * @throws ApiError
      */
@@ -2822,15 +2820,6 @@ export class TitlesService {
     
     /**
      * Admin Link Title To Tmdb
-     * Add the canonical title an admin chose to what a `Title` stands for.
-     *
-     * Its own endpoint rather than part of the update, because the link is a row of
-     * its own and what it drags along - the episodes being read again against the
-     * title chosen - is not something a write of the title's own columns does.
-     *
-     * Added to whatever the row already stands for rather than put in its place,
-     * since one page holding two titles is a thing websites do. Taking one off is
-     * `admin_unlink_title_from_tmdb`.
      * @param data The data for the request.
      * @param data.titleId
      * @param data.tmdbTitleId
@@ -3004,7 +2993,6 @@ export class TitlesService {
     
     /**
      * Get Title Tmdb Episode Groups
-     * Get the episode orders TMDB holds for a `Title`, for one to be chosen.
      * @param data The data for the request.
      * @param data.titleId
      * @returns TmdbEpisodeGroupOption Successful Response

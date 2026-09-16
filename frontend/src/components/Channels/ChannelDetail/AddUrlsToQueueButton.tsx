@@ -24,6 +24,9 @@ interface ManageTitlesButtonProps {
   combinedChannels?: {
     isLoggedIn?: boolean
   }
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  hideTrigger?: boolean
 }
 
 // TODO: Validate
@@ -33,26 +36,33 @@ export function ManageTitlesButton({
   variant = "button",
   showLabel,
   combinedChannels,
+  open,
+  onOpenChange,
+  hideTrigger,
 }: ManageTitlesButtonProps) {
-  const [isOpen, setIsOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isOpen = open ?? internalOpen
+  const setIsOpen = onOpenChange ?? setInternalOpen
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        {variant === "icon" ? (
-          <TooltipIconButton
-            label="Manage titles"
-            icon={<MonitorCog className="size-4" />}
-            showLabel={showLabel}
-          />
-        ) : (
-          <VariantTrigger
-            variant={variant}
-            icon={MonitorCog}
-            label="Manage titles"
-            iconTitle="Manage titles"
-          />
-        )}
-      </DialogTrigger>
+      {!hideTrigger && (
+        <DialogTrigger asChild>
+          {variant === "icon" ? (
+            <TooltipIconButton
+              label="Manage titles"
+              icon={<MonitorCog className="size-4" />}
+              showLabel={showLabel}
+            />
+          ) : (
+            <VariantTrigger
+              variant={variant}
+              icon={MonitorCog}
+              label="Manage titles"
+              iconTitle="Manage titles"
+            />
+          )}
+        </DialogTrigger>
+      )}
       <ModalContent size="3xl">
         <DialogHeader>
           <DialogTitle>

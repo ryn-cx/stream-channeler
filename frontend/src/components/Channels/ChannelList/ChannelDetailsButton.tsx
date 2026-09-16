@@ -12,22 +12,26 @@ import {
 } from "@/components/Common/VariantTrigger"
 import { WinBoxModal } from "@/components/Common/WinBoxModal"
 
-interface ChannelDetailsButtonProps {
-  channel: { id: string; name?: string | null; description?: string | null }
-  variant?: TriggerVariant
-  showLabel?: boolean
+interface ChannelDetailsChannel {
+  id: string
+  name?: string | null
+  description?: string | null
+}
+
+interface ChannelDetailsWinBoxProps {
+  channel: ChannelDetailsChannel
+  open: boolean
+  onClose: () => void
 }
 
 // TODO: Validate
-export function ChannelDetailsButton({
+export function ChannelDetailsWinBox({
   channel,
-  variant = "icon",
-  showLabel,
-}: ChannelDetailsButtonProps) {
-  const [isOpen, setIsOpen] = useState(false)
-
+  open,
+  onClose,
+}: ChannelDetailsWinBoxProps) {
   const { data, isLoading } = useAllChannelTitles(channel.id, {
-    enabled: isOpen,
+    enabled: open,
   })
 
   const tmdbTitles = data?.tmdb_titles ?? {}
@@ -43,6 +47,68 @@ export function ChannelDetailsButton({
     .filter((group) => group.titles.length > 0)
 
   const stats = data?.stats ?? {}
+
+  return (
+    <WinBoxModal
+      open={open}
+      title={channel.name ?? "Channel"}
+      onClose={onClose}
+    >
+      <div className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          The channel's description and every title it includes.
+        </p>
+        {channel.description && (
+          <ChannelDescriptionMarkdown description={channel.description} />
+        )}
+
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading titles...</p>
+        ) : groups.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No titles in this channel yet.
+          </p>
+        ) : (
+          groups.map((group) => (
+            <div key={group.channel_id} className="space-y-1">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <Link
+                  to="/channels/$channelId"
+                  params={{ channelId: group.channel_id }}
+                  className="hover:text-foreground hover:underline"
+                >
+                  {group.channel_name || "Unnamed Channel"}
+                </Link>
+              </h3>
+              <TitleCardsWithInformation
+                channelId={group.channel_id}
+                titles={group.titles}
+                sources={data?.sources ?? {}}
+                tmdbTitles={data?.tmdb_titles ?? {}}
+                tmdbSources={data?.tmdb_sources ?? {}}
+                stats={stats ?? {}}
+              />
+            </div>
+          ))
+        )}
+      </div>
+    </WinBoxModal>
+  )
+}
+
+interface ChannelDetailsButtonProps {
+  channel: ChannelDetailsChannel
+  variant?: TriggerVariant
+  showLabel?: boolean
+}
+
+// TODO: Validate
+export function ChannelDetailsButton({
+  channel,
+  variant = "icon",
+  showLabel,
+}: ChannelDetailsButtonProps) {
+  const [isOpen, setIsOpen] = useState(false)
 
   return (
     <>
@@ -63,50 +129,11 @@ export function ChannelDetailsButton({
         />
       )}
 
-      <WinBoxModal
+      <ChannelDetailsWinBox
+        channel={channel}
         open={isOpen}
-        title={channel.name ?? "Channel"}
         onClose={() => setIsOpen(false)}
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            The channel's description and every title it includes.
-          </p>
-          {channel.description && (
-            <ChannelDescriptionMarkdown description={channel.description} />
-          )}
-
-          {isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading titles...</p>
-          ) : groups.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No titles in this channel yet.
-            </p>
-          ) : (
-            groups.map((group) => (
-              <div key={group.channel_id} className="space-y-1">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  <Link
-                    to="/channels/$channelId"
-                    params={{ channelId: group.channel_id }}
-                    className="hover:text-foreground hover:underline"
-                  >
-                    {group.channel_name || "Unnamed Channel"}
-                  </Link>
-                </h3>
-                <TitleCardsWithInformation
-                  channelId={group.channel_id}
-                  titles={group.titles}
-                  sources={data?.sources ?? {}}
-                  tmdbTitles={data?.tmdb_titles ?? {}}
-                  tmdbSources={data?.tmdb_sources ?? {}}
-                  stats={stats ?? {}}
-                />
-              </div>
-            ))
-          )}
-        </div>
-      </WinBoxModal>
+      />
     </>
   )
 }

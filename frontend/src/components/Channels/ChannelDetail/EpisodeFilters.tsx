@@ -261,6 +261,7 @@ interface EpisodeFiltersProps {
   /** Controlled open state (used in order-edit mode, where the table owns the trigger). */
   open?: boolean
   onOpenChange?: (open: boolean) => void
+  hideTrigger?: boolean
 }
 
 // TODO: Validate
@@ -274,6 +275,7 @@ export function EpisodeFilters({
   orderEdit,
   open,
   onOpenChange,
+  hideTrigger,
 }: EpisodeFiltersProps) {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -746,7 +748,7 @@ export function EpisodeFilters({
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      {!isOrderMode && (
+      {!isOrderMode && !hideTrigger && (
         <DialogTrigger asChild>
           <VariantTrigger
             variant={variant}

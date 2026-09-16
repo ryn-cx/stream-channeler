@@ -198,6 +198,9 @@ interface CommentsDialogProps {
   channelId: string
   channelName?: string | null
   variant?: TriggerVariant
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  hideTrigger?: boolean
 }
 
 // TODO: Validate
@@ -205,8 +208,13 @@ export function CommentsDialog({
   channelId,
   channelName,
   variant = "button",
+  open,
+  onOpenChange,
+  hideTrigger,
 }: CommentsDialogProps) {
-  const [isOpen, setIsOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isOpen = open ?? internalOpen
+  const setIsOpen = onOpenChange ?? setInternalOpen
   const [page, setPage] = useState(0)
   const queryClient = useQueryClient()
   const { user } = useAuth()
@@ -266,14 +274,16 @@ export function CommentsDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <VariantTrigger
-          variant={variant}
-          icon={MessageSquare}
-          label="Comments"
-          iconTitle="Comments"
-        />
-      </DialogTrigger>
+      {!hideTrigger && (
+        <DialogTrigger asChild>
+          <VariantTrigger
+            variant={variant}
+            icon={MessageSquare}
+            label="Comments"
+            iconTitle="Comments"
+          />
+        </DialogTrigger>
+      )}
       <ModalContent size="3xl">
         <DialogHeader>
           <DialogTitle>Comments</DialogTitle>

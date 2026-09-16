@@ -389,13 +389,6 @@ export type ChannelTitleGroup = {
     titles?: Array<TitlePublic>;
 };
 
-/**
- * One of the `User`'s `Channel`s, and whether it already holds a title.
- *
- * What a channel picker needs and nothing else. Reading it off the channels'
- * title lists means a request and a whole catalogue per channel, when the only
- * question being asked of each is yes or no.
- */
 export type ChannelTitleMembership = {
     id: string;
     name: (string | null);
@@ -422,12 +415,6 @@ export type ChannelTitlesOutput = {
     total?: number;
 };
 
-/**
- * What a channel's rows for one canonical title add up to.
- *
- * A canonical title is counted by what its seasons and episodes are rather than by the
- * records holding them, so the same season on three websites is one season.
- */
 export type ChannelTitleStats = {
     season_count: number;
     episode_count: number;
@@ -555,9 +542,6 @@ export type EpisodeInformationOutput = {
     user_url: (string | null);
 };
 
-/**
- * One record's own account of an episode, as the website that holds it has it.
- */
 export type EpisodeInformationSide = {
     episode: EpisodeOutput;
     season: SeasonOutput;
@@ -1010,9 +994,6 @@ export type SeasonInformationOutput = {
     tmdb: (SeasonInformationSide | null);
 };
 
-/**
- * One record's own account of a season, as the website that holds it has it.
- */
 export type SeasonInformationSide = {
     season: SeasonOutput;
     title: TitlePublic;
@@ -1191,9 +1172,6 @@ export type TitleInformationOutput = {
     tmdb: (TitleInformationSide | null);
 };
 
-/**
- * One record's own account of a title, as the website holding it has it.
- */
 export type TitleInformationSide = {
     title: TitlePublic;
     source: SourceListPublic;
@@ -1296,12 +1274,6 @@ export type TitleUpdate = {
     tmdb_title_validated_at?: (string | null);
 };
 
-/**
- * A TMDB episode, as one of the episodes an `Episode` can be linked to.
- *
- * A canonical record, so the season and the title handed over with it are the
- * very rows TMDB holds rather than non-canonical rows of them.
- */
 export type TmdbEpisodeChoice = {
     episode: EpisodeOutput;
     season: SeasonOutput;
@@ -1314,13 +1286,6 @@ export type TmdbEpisodeChoice = {
     used_by?: Array<EpisodeRecord>;
 };
 
-/**
- * One of the episode orders TMDB holds for a title.
- *
- * What the order is and how big it is, which is all that choosing between them
- * needs. The episodes each order puts where is a file of its own and is only
- * read once an order has been chosen.
- */
 export type TmdbEpisodeGroupOption = {
     id: string;
     name: string;
@@ -1330,9 +1295,6 @@ export type TmdbEpisodeGroupOption = {
     type: number;
 };
 
-/**
- * Schema for returning a list of `Episode`s, with what holds them.
- */
 export type TmdbEpisodeListOutput = {
     key: string;
     data_timestamp?: (string | null);
@@ -1362,13 +1324,6 @@ export type TmdbEpisodeListOutput = {
     tmdb_title_key: (string | null);
 };
 
-/**
- * A canonical episode, with how far into its title the episode is.
- *
- * The count is not a column of the episode: it is where the episode falls among
- * the ones the title holds, so it is worked out against the title each time
- * rather than stored and left to go stale as the title grows.
- */
 export type TmdbEpisodeRecord = {
     episode: EpisodeOutput;
     season: SeasonOutput;
@@ -1392,14 +1347,6 @@ export type TMDBMediaInfo = {
     watch_providers?: (tminidb__movie__watch_providers__strict_models__Us | tminidb__movie__watch_providers__optional_models__Us | tminidb__tv_series__watch_providers__strict_models__Us | tminidb__tv_series__watch_providers__optional_models__Us | null);
 };
 
-/**
- * Schema for returning a `Title`.
- *
- * `tmdb_id` and `tmdb_url` are read back out of `key` rather than stored, since
- * the key is the whole of what says which TMDB record a title is. They are
- * served for reading only: nothing can be sorted or filtered by a value the
- * database does not hold a column for.
- */
 export type TmdbTitleOutput = {
     key: string;
     data_timestamp?: (string | null);
@@ -2010,14 +1957,6 @@ export type UnmatchedTitleImport = {
     url: string;
 };
 
-/**
- * One service TMDB says carries a title that nothing here carries.
- *
- * The title is described alongside the provider rather than pointed at, since
- * the whole of the page is deciding whether a title is worth chasing down, and
- * a name, a year and how many channels already hold it is what that is decided
- * on.
- */
 export type UnmatchedTitleOutput = {
     id: string;
     provider_name: string;
@@ -2204,21 +2143,6 @@ export type WatchesListOutput = {
     is_server_side?: boolean;
 };
 
-/**
- * Schema for a single exported `Watch`.
- *
- * Holds only what re-importing needs: which episode the watch is of, when it
- * happened, and whether it was verified. Everything else is read back out of
- * the database the file is imported into.
- *
- * `verified` is None in a file exported before it was carried, which leaves
- * the import's own setting to say what those watches are.
- *
- * A file exported before the identifier was named as such holds it under
- * `tmdb_episode_key`, and holds the same string: the old key was the
- * plugin's name in front of its own id, which is what the identifier is. So
- * the old name is still read, and a backup taken then still imports.
- */
 export type WatchExportEntry = {
     watch_identifier: string;
     watch_date: string;
@@ -2373,9 +2297,6 @@ export type WhitelistEpisodeSourceEntryInput = {
     expires_at?: (string | null);
 };
 
-/**
- * One page of a season's episodes, and how many the season holds in all.
- */
 export type WhitelistEpisodesOutput = {
     episodes: Array<WhitelistEpisodeOutput>;
     total_count: number;
