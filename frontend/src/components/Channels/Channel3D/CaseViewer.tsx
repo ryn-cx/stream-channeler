@@ -44,11 +44,17 @@ const loadImage = (url: string | null) =>
 export function CaseViewer({
   title,
   vhs,
+  atCounter,
   onClose,
+  onTakeToCounter,
+  onRemoveFromCounter,
 }: {
   title: StoreTitle
   vhs: boolean
+  atCounter: boolean
   onClose: () => void
+  onTakeToCounter: () => void
+  onRemoveFromCounter: () => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
@@ -305,18 +311,37 @@ export function CaseViewer({
       <div className="flex flex-col items-center gap-2 pb-6 text-center">
         <div className="text-lg font-semibold text-white">{title.name}</div>
         <div className="text-xs text-white/50">
-          Drag to spin · Scroll or pinch to zoom · Esc to put it back
+          Drag to spin · Scroll or pinch to zoom · Esc to close
         </div>
-        {url && (
-          <a
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-1 rounded-full border border-emerald-300/40 px-5 py-2 text-sm font-medium text-emerald-200 hover:bg-emerald-300/10"
-          >
-            Take it to the counter
-          </a>
-        )}
+        <div className="mt-1 flex items-center gap-2">
+          {atCounter ? (
+            <button
+              type="button"
+              onClick={onRemoveFromCounter}
+              className="rounded-full border border-rose-300/40 px-5 py-2 text-sm font-medium text-rose-200 hover:bg-rose-300/10"
+            >
+              Remove from the counter
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onTakeToCounter}
+              className="rounded-full border border-emerald-300/40 px-5 py-2 text-sm font-medium text-emerald-200 hover:bg-emerald-300/10"
+            >
+              Take it to the counter
+            </button>
+          )}
+          {url && (
+            <a
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full border border-white/25 px-5 py-2 text-sm font-medium text-white/85 hover:bg-white/10"
+            >
+              Watch now
+            </a>
+          )}
+        </div>
       </div>
     </div>
   )

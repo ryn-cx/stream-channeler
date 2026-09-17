@@ -13,6 +13,7 @@ export function VideoStoreCanvas({
   onStore,
   onFilters,
   onActivate,
+  onChannelAction,
 }: {
   titles: StoreTitle[]
   slotCount: number
@@ -21,10 +22,12 @@ export function VideoStoreCanvas({
   onStore?: (store: VideoStore | null) => void
   onFilters: () => void
   onActivate: (title: StoreTitle) => void
+  onChannelAction: (action: "create" | "add") => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const activateRef = useRef(onActivate)
   const filtersRef = useRef(onFilters)
+  const channelRef = useRef(onChannelAction)
   const storeRef = useRef(onStore)
   const [store, setStore] = useState<VideoStore | null>(null)
   const [focused, setFocused] = useState<StoreTitle | null>(null)
@@ -34,6 +37,7 @@ export function VideoStoreCanvas({
 
   activateRef.current = onActivate
   filtersRef.current = onFilters
+  channelRef.current = onChannelAction
   storeRef.current = onStore
 
   useEffect(() => {
@@ -43,6 +47,7 @@ export function VideoStoreCanvas({
       onFocus: setFocused,
       onActivate: (title) => activateRef.current(title),
       onFilters: () => filtersRef.current(),
+      onChannelAction: (action) => channelRef.current(action),
       onLockChange: (value) => {
         setLocked(value)
         if (value) setEntered(true)

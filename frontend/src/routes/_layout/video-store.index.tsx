@@ -59,6 +59,12 @@ function VideoStoreIndex() {
         Pick a source and walk its shelves.
       </p>
 
+      <img
+        src="/video-store.jpg"
+        alt="Shelves of cases inside the 3D video store"
+        className="mt-4 w-full rounded-lg border"
+      />
+
       {isLoading && (
         <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {Array.from({ length: 12 }).map((_, index) => (

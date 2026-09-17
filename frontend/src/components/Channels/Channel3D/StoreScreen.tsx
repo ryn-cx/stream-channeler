@@ -1,7 +1,9 @@
 // TODO: Validate
 import { Loader2 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
+import { isLoggedIn } from "@/hooks/useAuth"
 import { CaseViewer } from "./CaseViewer"
+import { CounterChannels } from "./CounterChannels"
 import { type StoreTitle, shelfGenres } from "./caseTexture"
 import { defaultDesign, designSummary, type StoreDesign } from "./StoreDesign"
 import {
@@ -15,6 +17,70 @@ import { VideoStoreCanvas } from "./VideoStoreCanvas"
 import type { VideoStore } from "./videoStore"
 
 export type StoreStock = StoreTitle[]
+
+// TODO: Validate
+const counterKey = (storeKey: string) => `video-store-counter:${storeKey}`
+
+// TODO: Validate
+const readCounter = (storeKey: string): StoreTitle[] => {
+  const stored = localStorage.getItem(counterKey(storeKey))
+  return stored ? JSON.parse(stored) : []
+}
+
+// TODO: Validate
+const writeCounter = (storeKey: string, titles: StoreTitle[]) => {
+  localStorage.setItem(counterKey(storeKey), JSON.stringify(titles))
+}
+
+// TODO: Validate
+const designKeyFor = (storeKey: string) => `video-store-design:${storeKey}`
+
+// TODO: Validate
+const readDefaultDesign = (): Partial<StoreDesign> | null => {
+  const stored = localStorage.getItem("video-store-design-default")
+  return stored ? JSON.parse(stored) : null
+}
+
+// TODO: Validate
+const writeDefaultDesign = (design: StoreDesign) => {
+  localStorage.setItem("video-store-design-default", JSON.stringify(design))
+}
+
+// TODO: Validate
+const readDesign = (storeKey: string): Partial<StoreDesign> => {
+  const stored = localStorage.getItem(designKeyFor(storeKey))
+  return stored ? JSON.parse(stored) : (readDefaultDesign() ?? {})
+}
+
+// TODO: Validate
+const writeDesign = (storeKey: string, design: StoreDesign) => {
+  localStorage.setItem(designKeyFor(storeKey), JSON.stringify(design))
+}
+
+// TODO: Validate
+const filterKeyFor = (storeKey: string) => `video-store-filters:${storeKey}`
+
+// TODO: Validate
+const readDefaultFilters = (): Partial<StoreFilters> | null => {
+  const stored = localStorage.getItem("video-store-filters-default")
+  return stored ? JSON.parse(stored) : null
+}
+
+// TODO: Validate
+const writeDefaultFilters = (filters: StoreFilters) => {
+  localStorage.setItem("video-store-filters-default", JSON.stringify(filters))
+}
+
+// TODO: Validate
+const readFilters = (storeKey: string): Partial<StoreFilters> => {
+  const stored = localStorage.getItem(filterKeyFor(storeKey))
+  return stored ? JSON.parse(stored) : (readDefaultFilters() ?? {})
+}
+
+// TODO: Validate
+const writeFilters = (storeKey: string, filters: StoreFilters) => {
+  localStorage.setItem(filterKeyFor(storeKey), JSON.stringify(filters))
+}
 
 // TODO: Validate
 export function StoreScreen({
@@ -35,13 +101,23 @@ export function StoreScreen({
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [store, setStore] = useState<VideoStore | null>(null)
   const [design, setDesign] = useState<StoreDesign>(defaultDesign)
+  const [hasDesignDefault, setHasDesignDefault] = useState(
+    readDefaultDesign() !== null,
+  )
+  const [hasFilterDefault, setHasFilterDefault] = useState(
+    readDefaultFilters() !== null,
+  )
   const [inspecting, setInspecting] = useState<StoreTitle | null>(null)
   const [vhs, setVhs] = useState(false)
+  const [counter, setCounter] = useState<StoreTitle[]>([])
+  const [flash, setFlash] = useState<string | null>(null)
+  const [channelAction, setChannelAction] = useState<"create" | "add" | null>(
+    null,
+  )
   const fetchRef = useRef(fetchStock)
 
   fetchRef.current = fetchStock
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: restock from scratch whenever the store changes
   useEffect(() => {
     let cancelled = false
     setStock(null)
@@ -51,7 +127,10 @@ export function StoreScreen({
       const shelved = await fetchRef.current()
       if (cancelled) return
       setStock(shelved)
-      setFilters(defaultFilters(shelved))
+      setFilters({
+        ...defaultFilters(shelved),
+        ...readFilters(storeKey),
+      })
     }
 
     stockShelves()
@@ -66,12 +145,33 @@ export function StoreScreen({
   }, [store, stock, filters, design])
 
   useEffect(() => {
+    setCounter(readCounter(storeKey))
+    setDesign({ ...defaultDesign, ...readDesign(storeKey) })
+  }, [storeKey])
+
+  useEffect(() => {
+    if (!flash) return
+    const handle = setTimeout(() => setFlash(null), 2600)
+    return () => clearTimeout(handle)
+  }, [flash])
+
+  useEffect(() => {
+    store?.setCounter(counter)
+  }, [store, counter])
+
+  useEffect(() => {
+    store?.setChannelButtons(isLoggedIn())
+  }, [store])
+
+  useEffect(() => {
     if (!store) return
     store.setFloorColor(design.floor)
     store.setRoomColor(design.room)
     store.setReflections(design.shine)
+    store.setUnlit(design.unlit)
     store.setFormat(design.format)
     store.setLights(design.lights)
+    store.setAskew(design.askew)
   }, [store, design])
 
   // TODO: Validate
@@ -95,9 +195,10 @@ export function StoreScreen({
           titles={shelved}
           slotCount={slotCount}
           storeName={storeName}
-          paused={inspecting !== null || filtersOpen}
+          paused={inspecting !== null || filtersOpen || channelAction !== null}
           onStore={setStore}
           onFilters={() => setFiltersOpen(true)}
+          onChannelAction={setChannelAction}
           onActivate={onActivate}
         />
       ) : (
@@ -122,10 +223,56 @@ export function StoreScreen({
           titles={stock}
           filters={filters}
           design={design}
-          onDesign={setDesign}
+          onDesign={(next) => {
+            writeDesign(storeKey, next)
+            setDesign(next)
+          }}
           open={filtersOpen}
           onOpenChange={setFiltersOpen}
-          onApply={setFilters}
+          onApply={(next) => {
+            writeFilters(storeKey, next)
+            setFilters(next)
+          }}
+          hasDesignDefault={hasDesignDefault}
+          hasFilterDefault={hasFilterDefault}
+          onSaveDesignDefault={(next) => {
+            writeDefaultDesign(next)
+            setHasDesignDefault(true)
+          }}
+          onSaveFilterDefault={(next) => {
+            writeDefaultFilters(next)
+            setHasFilterDefault(true)
+          }}
+          onLoadDesignDefault={() => {
+            const stored = readDefaultDesign()
+            if (!stored) return
+            const next = { ...defaultDesign, ...stored }
+            writeDesign(storeKey, next)
+            setDesign(next)
+          }}
+          onLoadFilterDefault={() => {
+            const stored = readDefaultFilters()
+            if (!stored || !stock) return
+            const next = { ...defaultFilters(stock), ...stored }
+            writeFilters(storeKey, next)
+            setFilters(next)
+          }}
+        />
+      )}
+
+      {flash && (
+        <div className="pointer-events-none absolute inset-x-0 top-6 z-40 flex justify-center">
+          <div className="max-w-[90vw] truncate rounded-full border border-emerald-300/40 bg-black/80 px-5 py-2 text-sm text-emerald-100 backdrop-blur">
+            {flash}
+          </div>
+        </div>
+      )}
+
+      {channelAction && (
+        <CounterChannels
+          action={channelAction}
+          titles={counter}
+          onClose={() => setChannelAction(null)}
         />
       )}
 
@@ -134,6 +281,26 @@ export function StoreScreen({
           title={inspecting}
           vhs={vhs}
           onClose={() => setInspecting(null)}
+          atCounter={counter.some((entry) => entry.id === inspecting.id)}
+          onTakeToCounter={() => {
+            const next = [
+              ...counter.filter((entry) => entry.id !== inspecting.id),
+              inspecting,
+            ]
+            writeCounter(storeKey, next)
+            setCounter(next)
+            setFlash(
+              `${inspecting.name} is waiting at the counter · ${next.length} held`,
+            )
+            setInspecting(null)
+          }}
+          onRemoveFromCounter={() => {
+            const next = counter.filter((entry) => entry.id !== inspecting.id)
+            writeCounter(storeKey, next)
+            setCounter(next)
+            setFlash(`${inspecting.name} went back on the shelf`)
+            setInspecting(null)
+          }}
         />
       )}
 

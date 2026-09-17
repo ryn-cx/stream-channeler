@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { SlidersHorizontal, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import type { StoreTitle } from "./caseTexture"
-import { FORMATS, LIGHT_LEVELS, PALETTE, type StoreDesign } from "./StoreDesign"
+import { FORMATS, PALETTE, type StoreDesign } from "./StoreDesign"
 import { fetchOriginalLanguages, fetchSpokenLanguages } from "./storeLanguages"
 
 export type StoreFilters = {
@@ -440,6 +440,34 @@ const Choices = ({
 )
 
 // TODO: Validate
+const Slider = ({
+  value,
+  max,
+  step,
+  onChange,
+}: {
+  value: number
+  max: number
+  step: number
+  onChange: (value: number) => void
+}) => (
+  <div className="flex items-center gap-3">
+    <input
+      type="range"
+      min={0}
+      max={max}
+      step={step}
+      value={value}
+      onChange={(event) => onChange(Number(event.target.value))}
+      className="h-1 flex-1 accent-emerald-400"
+    />
+    <span className="w-8 text-right text-xs tabular-nums text-white/70">
+      {step < 1 ? value.toFixed(1) : value}
+    </span>
+  </div>
+)
+
+// TODO: Validate
 export function StoreFilterPanel({
   titles,
   filters,
@@ -448,6 +476,12 @@ export function StoreFilterPanel({
   onOpenChange,
   onApply,
   onDesign,
+  hasDesignDefault,
+  hasFilterDefault,
+  onSaveDesignDefault,
+  onSaveFilterDefault,
+  onLoadDesignDefault,
+  onLoadFilterDefault,
 }: {
   titles: StoreTitle[]
   filters: StoreFilters
@@ -456,6 +490,12 @@ export function StoreFilterPanel({
   onOpenChange: (open: boolean) => void
   onApply: (filters: StoreFilters) => void
   onDesign: (design: StoreDesign) => void
+  hasDesignDefault: boolean
+  hasFilterDefault: boolean
+  onSaveDesignDefault: (design: StoreDesign) => void
+  onSaveFilterDefault: (filters: StoreFilters) => void
+  onLoadDesignDefault: () => void
+  onLoadFilterDefault: () => void
 }) {
   const [draft, setDraft] = useState(filters)
   const [tab, setTab] = useState<"filters" | "design">("filters")
@@ -577,10 +617,22 @@ export function StoreFilterPanel({
             <span className="text-xs font-medium uppercase tracking-wide text-white/50">
               Lights
             </span>
-            <Choices
-              options={LIGHT_LEVELS}
+            <Slider
               value={design.lights}
+              max={5}
+              step={0.1}
               onChange={(lights) => onDesign({ ...design, lights })}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+              Askew
+            </span>
+            <Slider
+              value={design.askew}
+              max={100}
+              step={1}
+              onChange={(askew) => onDesign({ ...design, askew })}
             />
           </div>
           <Toggle
@@ -588,6 +640,29 @@ export function StoreFilterPanel({
             checked={design.shine}
             onChange={(shine) => onDesign({ ...design, shine })}
           />
+          <Toggle
+            label="Cases ignore lighting"
+            checked={design.unlit}
+            onChange={(unlit) => onDesign({ ...design, unlit })}
+          />
+          <div className="flex items-center gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => onSaveDesignDefault(design)}
+              className="rounded-full border border-white/20 px-3 py-1 text-white/70 hover:text-white"
+            >
+              Set default
+            </button>
+            {hasDesignDefault && (
+              <button
+                type="button"
+                onClick={onLoadDesignDefault}
+                className="rounded-full border border-white/20 px-3 py-1 text-white/70 hover:text-white"
+              >
+                Load default
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -739,6 +814,28 @@ export function StoreFilterPanel({
               setDraft({ ...draft, unknownGenre: checked })
             }
           />
+
+          <div className="mt-4 flex items-center gap-2 text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                onApply(draft)
+                onSaveFilterDefault(draft)
+              }}
+              className="rounded-full border border-white/20 px-3 py-1 text-white/70 hover:text-white"
+            >
+              Set default
+            </button>
+            {hasFilterDefault && (
+              <button
+                type="button"
+                onClick={onLoadFilterDefault}
+                className="rounded-full border border-white/20 px-3 py-1 text-white/70 hover:text-white"
+              >
+                Load default
+              </button>
+            )}
+          </div>
 
           <div className="mt-4 flex items-center justify-between gap-3 text-xs text-white/50">
             <span>

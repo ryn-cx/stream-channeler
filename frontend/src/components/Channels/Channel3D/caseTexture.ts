@@ -693,6 +693,34 @@ export const createGlowTexture = () => {
 }
 
 // TODO: Validate
+export const createCeilingTexture = () => {
+  const canvas = document.createElement("canvas")
+  canvas.width = 128
+  canvas.height = 256
+  const context = canvas.getContext("2d")
+  if (context) {
+    context.fillStyle = "#e8e4d8"
+    context.fillRect(0, 0, 128, 256)
+    context.fillStyle = "rgba(122, 118, 106, 0.16)"
+    for (let speck = 0; speck < 2800; speck++) {
+      context.fillRect(Math.random() * 128, Math.random() * 256, 1, 1)
+    }
+    context.strokeStyle = "#b9b5a6"
+    context.lineWidth = 6
+    context.strokeRect(3, 3, 122, 250)
+    context.strokeStyle = "rgba(255, 255, 255, 0.5)"
+    context.lineWidth = 1.5
+    context.strokeRect(6.5, 6.5, 115, 243)
+  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  texture.anisotropy = 4
+  return texture
+}
+
+// TODO: Validate
 export const createCarpetTexture = (hue = 214) => {
   const canvas = document.createElement("canvas")
   canvas.width = 128

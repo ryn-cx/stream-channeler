@@ -3,8 +3,10 @@ export type StoreDesign = {
   floor: number
   room: number
   shine: boolean
+  unlit: boolean
   format: number
   lights: number
+  askew: number
 }
 
 export const PALETTE = [
@@ -18,14 +20,14 @@ export const PALETTE = [
 
 export const FORMATS = ["DVD", "VHS", "Large DVD"]
 
-export const LIGHT_LEVELS = ["Low", "Normal", "Bright", "Max"]
-
 export const defaultDesign: StoreDesign = {
   floor: 0x1f3a8a,
   room: 0xd8b13a,
   shine: true,
+  unlit: true,
   format: 0,
-  lights: 1,
+  lights: 2,
+  askew: 20,
 }
 
 // TODO: Validate
@@ -37,6 +39,8 @@ export const designSummary = (design: StoreDesign) => [
   `Cases: ${FORMATS[design.format] ?? FORMATS[0]}`,
   `Floor: ${colorName(design.floor)}`,
   `Walls: ${colorName(design.room)}`,
-  `Lights: ${LIGHT_LEVELS[design.lights] ?? LIGHT_LEVELS[1]}`,
+  `Lights: ${design.lights.toFixed(1)}`,
+  `Askew: ${design.askew}`,
   `Shine: ${design.shine ? "on" : "off"}`,
+  `Unlit cases: ${design.unlit ? "on" : "off"}`,
 ]
