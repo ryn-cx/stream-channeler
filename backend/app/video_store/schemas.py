@@ -38,6 +38,14 @@ class VideoStoreWatchProviderOutput(BaseModel):
 
 
 # TODO: Validate
+class VideoStoreGenreOutput(BaseModel):
+    """Schema for returning one genre and the website it was filed under by."""
+
+    plugin_name: str
+    name: str
+
+
+# TODO: Validate
 class VideoStoreTitleOutput(BaseModel):
     """Schema for returning one shelved title, as its case on the shelf."""
 
@@ -51,7 +59,7 @@ class VideoStoreTitleOutput(BaseModel):
     languages: list[str]
     thumbnail_url: str | None
     is_poster: bool
-    genres: list[str]
+    genres: list[VideoStoreGenreOutput]
     season_count: int
     episode_count: int
 

@@ -11,6 +11,7 @@ export function VideoStoreCanvas({
   storeName,
   paused,
   onStore,
+  onFilters,
   onActivate,
 }: {
   titles: StoreTitle[]
@@ -18,10 +19,12 @@ export function VideoStoreCanvas({
   storeName: string
   paused: boolean
   onStore?: (store: VideoStore | null) => void
+  onFilters: () => void
   onActivate: (title: StoreTitle) => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const activateRef = useRef(onActivate)
+  const filtersRef = useRef(onFilters)
   const storeRef = useRef(onStore)
   const [store, setStore] = useState<VideoStore | null>(null)
   const [focused, setFocused] = useState<StoreTitle | null>(null)
@@ -30,14 +33,16 @@ export function VideoStoreCanvas({
   const [touch] = useState(isTouchDevice)
 
   activateRef.current = onActivate
+  filtersRef.current = onFilters
   storeRef.current = onStore
 
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
-    const created = new VideoStore(container, slotCount, {
+    const created = new VideoStore(container, slotCount, storeName, {
       onFocus: setFocused,
       onActivate: (title) => activateRef.current(title),
+      onFilters: () => filtersRef.current(),
       onLockChange: (value) => {
         setLocked(value)
         if (value) setEntered(true)
@@ -50,7 +55,7 @@ export function VideoStoreCanvas({
       storeRef.current?.(null)
       created.dispose()
     }
-  }, [slotCount])
+  }, [slotCount, storeName])
 
   useEffect(() => {
     store?.addTitles(titles)

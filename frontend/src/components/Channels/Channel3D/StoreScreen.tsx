@@ -2,7 +2,8 @@
 import { Loader2 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { CaseViewer } from "./CaseViewer"
-import type { StoreTitle } from "./caseTexture"
+import { type StoreTitle, shelfGenres } from "./caseTexture"
+import { defaultDesign, designSummary, type StoreDesign } from "./StoreDesign"
 import {
   applyFilters,
   defaultFilters,
@@ -33,7 +34,9 @@ export function StoreScreen({
   const [filters, setFilters] = useState<StoreFilters | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [store, setStore] = useState<VideoStore | null>(null)
+  const [design, setDesign] = useState<StoreDesign>(defaultDesign)
   const [inspecting, setInspecting] = useState<StoreTitle | null>(null)
+  const [vhs, setVhs] = useState(false)
   const fetchRef = useRef(fetchStock)
 
   fetchRef.current = fetchStock
@@ -59,17 +62,27 @@ export function StoreScreen({
 
   useEffect(() => {
     if (!store || !stock || !filters) return
-    store.setFilterSummary(filterSummary(stock, filters))
-  }, [store, stock, filters])
+    store.setBoard(filterSummary(stock, filters), designSummary(design))
+  }, [store, stock, filters, design])
+
+  useEffect(() => {
+    if (!store) return
+    store.setFloorColor(design.floor)
+    store.setRoomColor(design.room)
+    store.setReflections(design.shine)
+    store.setFormat(design.format)
+    store.setLights(design.lights)
+  }, [store, design])
 
   // TODO: Validate
   const onActivate = (title: StoreTitle) => {
+    setVhs(store?.isVhs() ?? false)
     setInspecting(title)
   }
 
   const shelved = stock && filters ? applyFilters(stock, filters) : []
   const slotCount = shelved.reduce(
-    (total, title) => total + Math.max(title.genres.length, 1),
+    (total, title) => total + Math.max(shelfGenres(title).length, 1),
     0,
   )
   const filterKey = filters ? JSON.stringify(filters) : ""
@@ -84,6 +97,7 @@ export function StoreScreen({
           storeName={storeName}
           paused={inspecting !== null || filtersOpen}
           onStore={setStore}
+          onFilters={() => setFiltersOpen(true)}
           onActivate={onActivate}
         />
       ) : (
@@ -107,6 +121,8 @@ export function StoreScreen({
         <StoreFilterPanel
           titles={stock}
           filters={filters}
+          design={design}
+          onDesign={setDesign}
           open={filtersOpen}
           onOpenChange={setFiltersOpen}
           onApply={setFilters}
@@ -114,7 +130,11 @@ export function StoreScreen({
       )}
 
       {inspecting && (
-        <CaseViewer title={inspecting} onClose={() => setInspecting(null)} />
+        <CaseViewer
+          title={inspecting}
+          vhs={vhs}
+          onClose={() => setInspecting(null)}
+        />
       )}
 
       {back}

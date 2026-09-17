@@ -22,7 +22,10 @@ export const fetchSourceTitles = async (sourceId: string) => {
     languages: title.languages,
     imageUrl: shrinkArtwork(title.thumbnail_url),
     isPoster: title.is_poster,
-    genres: title.genres,
+    genres: title.genres.map((genre) => ({
+      source: genre.plugin_name,
+      name: genre.name,
+    })),
     episodeCount: title.episode_count,
     seasonCount: title.season_count,
   }))

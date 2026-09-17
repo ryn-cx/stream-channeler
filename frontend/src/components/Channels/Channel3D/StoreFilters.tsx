@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { SlidersHorizontal, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import type { StoreTitle } from "./caseTexture"
+import { FORMATS, LIGHT_LEVELS, PALETTE, type StoreDesign } from "./StoreDesign"
 import { fetchOriginalLanguages, fetchSpokenLanguages } from "./storeLanguages"
 
 export type StoreFilters = {
@@ -21,6 +22,8 @@ export type StoreFilters = {
   unknownOriginalLanguage: boolean
   languages: string[] | null
   unknownLanguage: boolean
+  genreSources: string[] | null
+  unknownGenre: boolean
 }
 
 export const UNKNOWN_MEDIA_TYPE = "Unknown"
@@ -43,6 +46,11 @@ export const storeBounds = (titles: StoreTitle[]) => {
         .filter((mediaType) => mediaType !== null),
     ),
   ].sort((left, right) => left.localeCompare(right))
+  const genreSources = [
+    ...new Set(
+      titles.flatMap((title) => title.genres).map((genre) => genre.source),
+    ),
+  ].sort((left, right) => left.localeCompare(right))
   return {
     yearFrom: years.length > 0 ? Math.min(...years) : 0,
     yearTo: years.length > 0 ? Math.max(...years) : 0,
@@ -53,6 +61,7 @@ export const storeBounds = (titles: StoreTitle[]) => {
     popularityTo:
       popularity.length > 0 ? Math.ceil(Math.max(...popularity)) : 0,
     mediaTypes,
+    genreSources,
   }
 }
 
@@ -75,57 +84,77 @@ export const defaultFilters = (titles: StoreTitle[]): StoreFilters => {
     unknownOriginalLanguage: true,
     languages: null,
     unknownLanguage: true,
+    genreSources: bounds.genreSources.includes("TMDB")
+      ? ["TMDB"]
+      : bounds.genreSources,
+    unknownGenre: true,
   }
 }
 
 // TODO: Validate
-export const applyFilters = (titles: StoreTitle[], filters: StoreFilters) =>
-  titles.filter((title) => {
+export const applyFilters = (titles: StoreTitle[], filters: StoreFilters) => {
+  const chosenSources =
+    filters.genreSources === null ? null : new Set(filters.genreSources)
+
+  return titles.flatMap((title) => {
     if (title.year === null) {
-      if (!filters.unknownYear) return false
+      if (!filters.unknownYear) return []
     } else if (title.year < filters.yearFrom || title.year > filters.yearTo) {
-      return false
+      return []
     }
 
     if (title.score === null) {
-      if (!filters.unknownScore) return false
+      if (!filters.unknownScore) return []
     } else if (
       title.score < filters.scoreFrom ||
       title.score > filters.scoreTo
     ) {
-      return false
+      return []
     }
 
     if (title.popularity === null) {
-      if (!filters.unknownPopularity) return false
+      if (!filters.unknownPopularity) return []
     } else if (
       title.popularity < filters.popularityFrom ||
       title.popularity > filters.popularityTo
     ) {
-      return false
+      return []
     }
 
     if (title.mediaType === null) {
-      if (!filters.unknownMediaType) return false
+      if (!filters.unknownMediaType) return []
     } else if (!filters.mediaTypes.includes(title.mediaType)) {
-      return false
+      return []
     }
 
     if (title.originalLanguage === null) {
-      if (!filters.unknownOriginalLanguage) return false
+      if (!filters.unknownOriginalLanguage) return []
     } else if (
       filters.originalLanguages !== null &&
       !filters.originalLanguages.includes(title.originalLanguage)
     ) {
-      return false
+      return []
     }
 
-    if (title.languages.length === 0) return filters.unknownLanguage
-    return (
-      filters.languages === null ||
-      title.languages.some((code) => filters.languages?.includes(code))
-    )
+    if (title.languages.length === 0) {
+      if (!filters.unknownLanguage) return []
+    } else if (
+      filters.languages !== null &&
+      !title.languages.some((code) => filters.languages?.includes(code))
+    ) {
+      return []
+    }
+
+    const genres =
+      chosenSources === null
+        ? title.genres
+        : title.genres.filter((genre) => chosenSources.has(genre.source))
+    if (genres.length === 0) {
+      return filters.unknownGenre ? [{ ...title, genres }] : []
+    }
+    return [{ ...title, genres }]
   })
+}
 
 // TODO: Validate
 const NumberField = ({
@@ -257,6 +286,12 @@ export const filterSummary = (
       filters.languages ?? [],
       filters.unknownLanguage,
     ),
+    chosen(
+      "Genres",
+      filters.genreSources,
+      bounds.genreSources,
+      filters.unknownGenre,
+    ),
   ]
 }
 
@@ -308,20 +343,122 @@ const LanguageSection = ({
 )
 
 // TODO: Validate
+const GenreSection = ({
+  options,
+  selected,
+  unknownChecked,
+  onSelectedChange,
+  onUnknownChange,
+}: {
+  options: string[]
+  selected: string[] | null
+  unknownChecked: boolean
+  onSelectedChange: (selected: string[]) => void
+  onUnknownChange: (checked: boolean) => void
+}) => (
+  <div className="mt-4 flex flex-col gap-2">
+    <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+      Genres from
+    </span>
+    <div className="flex max-h-40 flex-col gap-2 overflow-y-auto pr-1">
+      {options.map((source) => (
+        <Toggle
+          key={source}
+          label={source}
+          checked={selected === null || selected.includes(source)}
+          onChange={(checked) => {
+            const current = selected ?? options
+            onSelectedChange(
+              checked
+                ? [...current, source]
+                : current.filter((entry) => entry !== source),
+            )
+          }}
+        />
+      ))}
+    </div>
+    <Toggle
+      label="Include titles with no genre"
+      checked={unknownChecked}
+      onChange={onUnknownChange}
+    />
+  </div>
+)
+
+// TODO: Validate
+const Swatches = ({
+  value,
+  onChange,
+}: {
+  value: number
+  onChange: (color: number) => void
+}) => (
+  <div className="flex flex-wrap gap-2">
+    {PALETTE.map((entry) => (
+      <button
+        key={entry.color}
+        type="button"
+        title={entry.name}
+        onClick={() => onChange(entry.color)}
+        style={{
+          backgroundColor: `#${entry.color.toString(16).padStart(6, "0")}`,
+        }}
+        className={`size-7 rounded-md border ${
+          value === entry.color ? "border-white" : "border-white/20"
+        }`}
+      />
+    ))}
+  </div>
+)
+
+// TODO: Validate
+const Choices = ({
+  options,
+  value,
+  onChange,
+}: {
+  options: string[]
+  value: number
+  onChange: (index: number) => void
+}) => (
+  <div className="flex flex-wrap gap-2">
+    {options.map((option, index) => (
+      <button
+        key={option}
+        type="button"
+        onClick={() => onChange(index)}
+        className={`rounded-full border px-3 py-1 text-xs ${
+          value === index
+            ? "border-white/70 bg-white/15 text-white"
+            : "border-white/20 text-white/70 hover:text-white"
+        }`}
+      >
+        {option}
+      </button>
+    ))}
+  </div>
+)
+
+// TODO: Validate
 export function StoreFilterPanel({
   titles,
   filters,
+  design,
   open,
   onOpenChange,
   onApply,
+  onDesign,
 }: {
   titles: StoreTitle[]
   filters: StoreFilters
+  design: StoreDesign
   open: boolean
   onOpenChange: (open: boolean) => void
   onApply: (filters: StoreFilters) => void
+  onDesign: (design: StoreDesign) => void
 }) {
   const [draft, setDraft] = useState(filters)
+  const [tab, setTab] = useState<"filters" | "design">("filters")
   const panelRef = useRef<HTMLDivElement>(null)
   const draftRef = useRef(draft)
   const bounds = storeBounds(titles)
@@ -370,7 +507,7 @@ export function StoreFilterPanel({
         className="absolute right-4 top-16 z-30 flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm text-white/80 backdrop-blur hover:text-white"
       >
         <SlidersHorizontal className="size-4" />
-        Filters
+        Settings
       </button>
     )
   }
@@ -381,7 +518,7 @@ export function StoreFilterPanel({
       className="absolute right-4 top-16 z-30 max-h-[80vh] w-[min(20rem,90vw)] overflow-y-auto rounded-xl border border-white/15 bg-black/85 p-4 text-white backdrop-blur"
     >
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold">Filters</span>
+        <span className="text-sm font-semibold">Settings</span>
         <button
           type="button"
           onClick={close}
@@ -391,154 +528,242 @@ export function StoreFilterPanel({
         </button>
       </div>
 
-      <div className="mt-4 flex flex-col gap-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-white/50">
-          Year
-        </span>
-        <div className="flex gap-2">
-          <NumberField
-            label="From"
-            value={draft.yearFrom}
-            onChange={(value) => setDraft({ ...draft, yearFrom: value })}
-          />
-          <NumberField
-            label="To"
-            value={draft.yearTo}
-            onChange={(value) => setDraft({ ...draft, yearTo: value })}
-          />
-        </div>
-        <Toggle
-          label="Include titles with no year"
-          checked={draft.unknownYear}
-          onChange={(checked) => setDraft({ ...draft, unknownYear: checked })}
-        />
+      <div className="mt-3 flex gap-1 rounded-lg bg-white/5 p-1">
+        {(["filters", "design"] as const).map((entry) => (
+          <button
+            key={entry}
+            type="button"
+            onClick={() => setTab(entry)}
+            className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium capitalize ${
+              tab === entry ? "bg-white/15 text-white" : "text-white/60"
+            }`}
+          >
+            {entry}
+          </button>
+        ))}
       </div>
 
-      <div className="mt-4 flex flex-col gap-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-white/50">
-          Score
-        </span>
-        <div className="flex gap-2">
-          <NumberField
-            label="From"
-            value={draft.scoreFrom}
-            onChange={(value) => setDraft({ ...draft, scoreFrom: value })}
-          />
-          <NumberField
-            label="To"
-            value={draft.scoreTo}
-            onChange={(value) => setDraft({ ...draft, scoreTo: value })}
-          />
-        </div>
-        <Toggle
-          label="Include titles with no score"
-          checked={draft.unknownScore}
-          onChange={(checked) => setDraft({ ...draft, unknownScore: checked })}
-        />
-      </div>
-
-      <div className="mt-4 flex flex-col gap-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-white/50">
-          Popularity
-        </span>
-        <div className="flex gap-2">
-          <NumberField
-            label="From"
-            value={draft.popularityFrom}
-            onChange={(value) => setDraft({ ...draft, popularityFrom: value })}
-          />
-          <NumberField
-            label="To"
-            value={draft.popularityTo}
-            onChange={(value) => setDraft({ ...draft, popularityTo: value })}
-          />
-        </div>
-        <Toggle
-          label="Include titles with no popularity"
-          checked={draft.unknownPopularity}
-          onChange={(checked) =>
-            setDraft({ ...draft, unknownPopularity: checked })
-          }
-        />
-      </div>
-
-      <div className="mt-4 flex flex-col gap-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-white/50">
-          Media type
-        </span>
-        {bounds.mediaTypes.map((mediaType) => (
+      {tab === "design" && (
+        <div className="flex flex-col gap-4 pt-4">
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+              Cases
+            </span>
+            <Choices
+              options={FORMATS}
+              value={design.format}
+              onChange={(format) => onDesign({ ...design, format })}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+              Floor
+            </span>
+            <Swatches
+              value={design.floor}
+              onChange={(floor) => onDesign({ ...design, floor })}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+              Walls and counter
+            </span>
+            <Swatches
+              value={design.room}
+              onChange={(room) => onDesign({ ...design, room })}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+              Lights
+            </span>
+            <Choices
+              options={LIGHT_LEVELS}
+              value={design.lights}
+              onChange={(lights) => onDesign({ ...design, lights })}
+            />
+          </div>
           <Toggle
-            key={mediaType}
-            label={mediaType}
-            checked={draft.mediaTypes.includes(mediaType)}
-            onChange={(checked) =>
-              setDraft({
-                ...filters,
-                mediaTypes: checked
-                  ? [...draft.mediaTypes, mediaType]
-                  : draft.mediaTypes.filter((entry) => entry !== mediaType),
-              })
+            label="Shine on cases"
+            checked={design.shine}
+            onChange={(shine) => onDesign({ ...design, shine })}
+          />
+        </div>
+      )}
+
+      {tab === "filters" && (
+        <>
+          <div className="mt-4 flex flex-col gap-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+              Year
+            </span>
+            <div className="flex gap-2">
+              <NumberField
+                label="From"
+                value={draft.yearFrom}
+                onChange={(value) => setDraft({ ...draft, yearFrom: value })}
+              />
+              <NumberField
+                label="To"
+                value={draft.yearTo}
+                onChange={(value) => setDraft({ ...draft, yearTo: value })}
+              />
+            </div>
+            <Toggle
+              label="Include titles with no year"
+              checked={draft.unknownYear}
+              onChange={(checked) =>
+                setDraft({ ...draft, unknownYear: checked })
+              }
+            />
+          </div>
+
+          <div className="mt-4 flex flex-col gap-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+              Score
+            </span>
+            <div className="flex gap-2">
+              <NumberField
+                label="From"
+                value={draft.scoreFrom}
+                onChange={(value) => setDraft({ ...draft, scoreFrom: value })}
+              />
+              <NumberField
+                label="To"
+                value={draft.scoreTo}
+                onChange={(value) => setDraft({ ...draft, scoreTo: value })}
+              />
+            </div>
+            <Toggle
+              label="Include titles with no score"
+              checked={draft.unknownScore}
+              onChange={(checked) =>
+                setDraft({ ...draft, unknownScore: checked })
+              }
+            />
+          </div>
+
+          <div className="mt-4 flex flex-col gap-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+              Popularity
+            </span>
+            <div className="flex gap-2">
+              <NumberField
+                label="From"
+                value={draft.popularityFrom}
+                onChange={(value) =>
+                  setDraft({ ...draft, popularityFrom: value })
+                }
+              />
+              <NumberField
+                label="To"
+                value={draft.popularityTo}
+                onChange={(value) =>
+                  setDraft({ ...draft, popularityTo: value })
+                }
+              />
+            </div>
+            <Toggle
+              label="Include titles with no popularity"
+              checked={draft.unknownPopularity}
+              onChange={(checked) =>
+                setDraft({ ...draft, unknownPopularity: checked })
+              }
+            />
+          </div>
+
+          <div className="mt-4 flex flex-col gap-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+              Media type
+            </span>
+            {bounds.mediaTypes.map((mediaType) => (
+              <Toggle
+                key={mediaType}
+                label={mediaType}
+                checked={draft.mediaTypes.includes(mediaType)}
+                onChange={(checked) =>
+                  setDraft({
+                    ...filters,
+                    mediaTypes: checked
+                      ? [...draft.mediaTypes, mediaType]
+                      : draft.mediaTypes.filter((entry) => entry !== mediaType),
+                  })
+                }
+              />
+            ))}
+            <Toggle
+              label={UNKNOWN_MEDIA_TYPE}
+              checked={draft.unknownMediaType}
+              onChange={(checked) =>
+                setDraft({ ...draft, unknownMediaType: checked })
+              }
+            />
+          </div>
+
+          <LanguageSection
+            label="Original language"
+            options={originalLanguages ?? []}
+            selected={draft.originalLanguages}
+            unknownLabel="Include titles with no original language"
+            unknownChecked={draft.unknownOriginalLanguage}
+            onSelectedChange={(selected) =>
+              setDraft({ ...draft, originalLanguages: selected })
+            }
+            onUnknownChange={(checked) =>
+              setDraft({ ...draft, unknownOriginalLanguage: checked })
             }
           />
-        ))}
-        <Toggle
-          label={UNKNOWN_MEDIA_TYPE}
-          checked={draft.unknownMediaType}
-          onChange={(checked) =>
-            setDraft({ ...draft, unknownMediaType: checked })
-          }
-        />
-      </div>
 
-      <LanguageSection
-        label="Original language"
-        options={originalLanguages ?? []}
-        selected={draft.originalLanguages}
-        unknownLabel="Include titles with no original language"
-        unknownChecked={draft.unknownOriginalLanguage}
-        onSelectedChange={(selected) =>
-          setDraft({ ...draft, originalLanguages: selected })
-        }
-        onUnknownChange={(checked) =>
-          setDraft({ ...draft, unknownOriginalLanguage: checked })
-        }
-      />
+          <LanguageSection
+            label="Title language"
+            options={spokenLanguages ?? []}
+            selected={draft.languages}
+            unknownLabel="Include titles with no language"
+            unknownChecked={draft.unknownLanguage}
+            onSelectedChange={(selected) =>
+              setDraft({ ...draft, languages: selected })
+            }
+            onUnknownChange={(checked) =>
+              setDraft({ ...draft, unknownLanguage: checked })
+            }
+          />
 
-      <LanguageSection
-        label="Title language"
-        options={spokenLanguages ?? []}
-        selected={draft.languages}
-        unknownLabel="Include titles with no language"
-        unknownChecked={draft.unknownLanguage}
-        onSelectedChange={(selected) =>
-          setDraft({ ...draft, languages: selected })
-        }
-        onUnknownChange={(checked) =>
-          setDraft({ ...draft, unknownLanguage: checked })
-        }
-      />
+          <GenreSection
+            options={bounds.genreSources}
+            selected={draft.genreSources}
+            unknownChecked={draft.unknownGenre}
+            onSelectedChange={(selected) =>
+              setDraft({ ...draft, genreSources: selected })
+            }
+            onUnknownChange={(checked) =>
+              setDraft({ ...draft, unknownGenre: checked })
+            }
+          />
 
-      <div className="mt-4 flex items-center justify-between gap-3 text-xs text-white/50">
-        <span>
-          {applyFilters(titles, draft).length.toLocaleString()} on the shelves
-        </span>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setDraft(defaultFilters(titles))}
-            className="rounded-full border border-white/20 px-3 py-1 text-white/70 hover:text-white"
-          >
-            Reset
-          </button>
-          <button
-            type="button"
-            onClick={close}
-            className="rounded-full border border-emerald-300/40 px-3 py-1 font-medium text-emerald-200 hover:bg-emerald-300/10"
-          >
-            Apply
-          </button>
-        </div>
-      </div>
+          <div className="mt-4 flex items-center justify-between gap-3 text-xs text-white/50">
+            <span>
+              {applyFilters(titles, draft).length.toLocaleString()} on the
+              shelves
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setDraft(defaultFilters(titles))}
+                className="rounded-full border border-white/20 px-3 py-1 text-white/70 hover:text-white"
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                onClick={close}
+                className="rounded-full border border-emerald-300/40 px-3 py-1 font-medium text-emerald-200 hover:bg-emerald-300/10"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

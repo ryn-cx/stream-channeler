@@ -1,6 +1,12 @@
 // TODO: Validate
 import * as THREE from "three"
 
+export type StoreGenre = {
+  source: string
+  name: string
+}
+
+// TODO: Validate
 export type StoreTitle = {
   id: string
   name: string
@@ -12,7 +18,7 @@ export type StoreTitle = {
   languages: string[]
   imageUrl: string | null
   isPoster: boolean
-  genres: string[]
+  genres: StoreGenre[]
   episodeCount: number
   seasonCount: number
 }
@@ -28,6 +34,12 @@ const hashHue = (value: string) => {
 
 // TODO: Validate
 export const genreHue = (genre: string) => hashHue(genre)
+
+// TODO: Validate
+export const shelfGenres = (title: StoreTitle) =>
+  [...new Set(title.genres.map((genre) => genre.name))].sort((left, right) =>
+    left.localeCompare(right),
+  )
 
 // TODO: Validate
 export const isMovie = (title: StoreTitle) => title.mediaType === "Movie"
@@ -92,10 +104,7 @@ const drawCover = (
     context.fillRect(0, 0, 168, 224)
     return
   }
-  const scale = Math.max(168 / image.naturalWidth, 224 / image.naturalHeight)
-  const width = image.naturalWidth * scale
-  const height = image.naturalHeight * scale
-  context.drawImage(image, (168 - width) / 2, (224 - height) / 2, width, height)
+  context.drawImage(image, 0, 0, 168, 224)
 }
 
 // TODO: Validate
@@ -306,10 +315,11 @@ export const createBackCanvas = (
   context.fillText(facts.join("  \u00b7  "), 36, textY + 8)
   textY += 52
 
-  if (title.genres.length > 0) {
+  const shelved = shelfGenres(title)
+  if (shelved.length > 0) {
     context.font = "22px 'Trebuchet MS', sans-serif"
     context.fillStyle = "rgba(235, 235, 240, 0.7)"
-    for (const line of wrapLines(context, title.genres.join(" / "), 600, 2)) {
+    for (const line of wrapLines(context, shelved.join(" / "), 600, 2)) {
       context.fillText(line, 36, textY + 8)
       textY += 30
     }
@@ -455,7 +465,38 @@ export const createAisleSignTexture = (left: string[], right: string[]) => {
 }
 
 // TODO: Validate
-export const createFilterBoardTexture = (lines: string[]) => {
+const drawBoardColumn = (
+  context: CanvasRenderingContext2D,
+  heading: string,
+  lines: string[],
+  x: number,
+  width: number,
+) => {
+  context.textAlign = "left"
+  context.textBaseline = "alphabetic"
+  context.fillStyle = "#7de9dc"
+  context.font = "bold 26px 'Trebuchet MS', sans-serif"
+  context.fillText(heading, x, 40)
+  context.fillStyle = "rgba(125, 233, 220, 0.3)"
+  context.fillRect(x, 50, width, 3)
+
+  let textY = 86
+  for (const [index, line] of lines.entries()) {
+    context.fillStyle = index === 0 ? "#f4f4f5" : "rgba(226, 226, 233, 0.78)"
+    context.font =
+      index === 0
+        ? "bold 25px 'Trebuchet MS', sans-serif"
+        : "22px 'Trebuchet MS', sans-serif"
+    context.fillText(line, x, textY)
+    textY += index === 0 ? 34 : 28
+  }
+}
+
+// TODO: Validate
+export const createFilterBoardTexture = (
+  filters: string[],
+  design: string[],
+) => {
   const canvas = document.createElement("canvas")
   canvas.width = 1024
   canvas.height = 276
@@ -467,24 +508,42 @@ export const createFilterBoardTexture = (lines: string[]) => {
     context.lineWidth = 5
     context.strokeRect(3, 3, 1018, 270)
 
-    context.textAlign = "left"
-    context.textBaseline = "alphabetic"
-    context.fillStyle = "#7de9dc"
-    context.font = "bold 26px 'Trebuchet MS', sans-serif"
-    context.fillText("NOW SHOWING", 26, 40)
-    context.fillStyle = "rgba(125, 233, 220, 0.3)"
-    context.fillRect(26, 50, 972, 3)
+    drawBoardColumn(context, "NOW SHOWING", filters, 26, 590)
+    context.fillStyle = "rgba(255, 255, 255, 0.12)"
+    context.fillRect(652, 26, 3, 224)
+    drawBoardColumn(context, "STYLE", design, 684, 314)
+  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.anisotropy = 4
+  return texture
+}
 
-    let textY = 86
-    for (const [index, line] of lines.entries()) {
-      context.fillStyle = index === 0 ? "#f4f4f5" : "rgba(226, 226, 233, 0.78)"
-      context.font =
-        index === 0
-          ? "bold 25px 'Trebuchet MS', sans-serif"
-          : "22px 'Trebuchet MS', sans-serif"
-      context.fillText(line, 26, textY)
-      textY += index === 0 ? 34 : 28
+// TODO: Validate
+export const createStoreSignTexture = (name: string) => {
+  const canvas = document.createElement("canvas")
+  canvas.width = 1024
+  canvas.height = 256
+  const context = canvas.getContext("2d")
+  if (context) {
+    context.fillStyle = "#0d1220"
+    context.fillRect(0, 0, 1024, 256)
+    context.strokeStyle = "#2dd4bf"
+    context.lineWidth = 8
+    context.strokeRect(14, 14, 996, 228)
+    context.textAlign = "center"
+    context.textBaseline = "middle"
+    context.fillStyle = "#e9fdf9"
+    context.shadowColor = "#2dd4bf"
+    context.shadowBlur = 26
+    let fontSize = 104
+    const label = name.toUpperCase()
+    context.font = `bold ${fontSize}px 'Trebuchet MS', sans-serif`
+    while (context.measureText(label).width > 900 && fontSize > 28) {
+      fontSize -= 4
+      context.font = `bold ${fontSize}px 'Trebuchet MS', sans-serif`
     }
+    context.fillText(label, 512, 132)
   }
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
@@ -570,6 +629,66 @@ export const createTagTexture = (genre: string) => {
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
   texture.anisotropy = 4
+  return texture
+}
+
+// TODO: Validate
+export const createDiffuserTexture = () => {
+  const canvas = document.createElement("canvas")
+  canvas.width = 64
+  canvas.height = 256
+  const context = canvas.getContext("2d")
+  if (context) {
+    context.fillStyle = "#efe7d2"
+    context.fillRect(0, 0, 64, 256)
+
+    for (const center of [20, 44]) {
+      const tube = context.createLinearGradient(center - 12, 0, center + 12, 0)
+      tube.addColorStop(0, "rgba(255, 249, 232, 0)")
+      tube.addColorStop(0.5, "rgba(255, 253, 244, 0.95)")
+      tube.addColorStop(1, "rgba(255, 249, 232, 0)")
+      context.fillStyle = tube
+      context.fillRect(center - 12, 6, 24, 244)
+    }
+
+    const ends = context.createLinearGradient(0, 0, 0, 256)
+    ends.addColorStop(0, "rgba(64, 62, 54, 0.85)")
+    ends.addColorStop(0.08, "rgba(120, 116, 104, 0)")
+    ends.addColorStop(0.92, "rgba(120, 116, 104, 0)")
+    ends.addColorStop(1, "rgba(64, 62, 54, 0.85)")
+    context.fillStyle = ends
+    context.fillRect(0, 0, 64, 256)
+
+    context.strokeStyle = "rgba(90, 88, 80, 0.25)"
+    context.lineWidth = 1
+    for (let line = 8; line < 256; line += 16) {
+      context.beginPath()
+      context.moveTo(0, line)
+      context.lineTo(64, line)
+      context.stroke()
+    }
+  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  return texture
+}
+
+// TODO: Validate
+export const createGlowTexture = () => {
+  const canvas = document.createElement("canvas")
+  canvas.width = 128
+  canvas.height = 128
+  const context = canvas.getContext("2d")
+  if (context) {
+    const glow = context.createRadialGradient(64, 64, 4, 64, 64, 64)
+    glow.addColorStop(0, "rgba(255, 244, 222, 0.22)")
+    glow.addColorStop(0.5, "rgba(255, 238, 205, 0.09)")
+    glow.addColorStop(1, "rgba(255, 236, 200, 0)")
+    context.fillStyle = glow
+    context.fillRect(0, 0, 128, 128)
+  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
   return texture
 }
 

@@ -2143,6 +2143,14 @@ export type ValidationError = {
 };
 
 /**
+ * Schema for returning one genre and the website it was filed under by.
+ */
+export type VideoStoreGenreOutput = {
+    plugin_name: string;
+    name: string;
+};
+
+/**
  * Schema for returning one language titles can be filtered by.
  */
 export type VideoStoreLanguageOutput = {
@@ -2200,7 +2208,7 @@ export type VideoStoreTitleOutput = {
     languages: Array<(string)>;
     thumbnail_url: (string | null);
     is_poster: boolean;
-    genres: Array<(string)>;
+    genres: Array<VideoStoreGenreOutput>;
     season_count: number;
     episode_count: number;
 };

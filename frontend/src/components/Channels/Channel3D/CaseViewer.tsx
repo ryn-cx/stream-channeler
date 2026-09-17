@@ -43,9 +43,11 @@ const loadImage = (url: string | null) =>
 // TODO: Validate
 export function CaseViewer({
   title,
+  vhs,
   onClose,
 }: {
   title: StoreTitle
+  vhs: boolean
   onClose: () => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -114,7 +116,9 @@ export function CaseViewer({
     const materials = [rightEdge, leftEdge, top, bottom, front, back]
 
     const mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(1.35, 1.9, 0.15),
+      vhs
+        ? new THREE.BoxGeometry(1.05, 1.9, 0.28)
+        : new THREE.BoxGeometry(1.35, 1.9, 0.15),
       materials,
     )
     mesh.rotation.set(0, -0.5, 0)
@@ -268,7 +272,7 @@ export function CaseViewer({
       renderer.dispose()
       renderer.domElement.remove()
     }
-  }, [title])
+  }, [title, vhs])
 
   useEffect(() => {
     // TODO: Validate

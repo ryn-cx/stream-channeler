@@ -24,6 +24,7 @@ from app.titles.models import (
 )
 from app.users.models import User
 from app.video_store.schemas import (
+    VideoStoreGenreOutput,
     VideoStoreLanguageOutput,
     VideoStoreRegionOutput,
     VideoStoreSourceOutput,
@@ -135,18 +136,21 @@ def _title_stats(
 def _title_genres(
     session: Session,
     title_ids: list[uuid.UUID],
-) -> dict[uuid.UUID, list[str]]:
+) -> dict[uuid.UUID, list[tuple[str, str]]]:
     if not title_ids:
         return {}
 
     rows = session.exec(
-        select(TitleGenre.title_id, TitleGenre.name)
+        select(TitleGenre.title_id, Plugin.key, TitleGenre.name)
+        .join(Title, col(Title.id) == col(TitleGenre.title_id))
+        .join(Source, col(Source.id) == col(Title.source_id))
+        .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
         .where(col(TitleGenre.title_id).in_(title_ids))
-        .order_by(col(TitleGenre.name)),
+        .order_by(col(Plugin.key), col(TitleGenre.name)),
     ).all()
-    genres: dict[uuid.UUID, list[str]] = {}
-    for title_id, name in rows:
-        genres.setdefault(title_id, []).append(name)
+    genres: dict[uuid.UUID, list[tuple[str, str]]] = {}
+    for title_id, plugin_key, name in rows:
+        genres.setdefault(title_id, []).append((plugin_key, name))
     return genres
 
 
@@ -218,6 +222,26 @@ def store_spoken_languages(session: Session) -> list[VideoStoreLanguageOutput]:
 
 
 # TODO: Validate
+def _sibling_title_ids(
+    session: Session,
+    tmdb_title_ids: list[uuid.UUID],
+) -> dict[uuid.UUID, list[uuid.UUID]]:
+    """Group every website's row of a canonical title under that title."""
+    if not tmdb_title_ids:
+        return {}
+
+    rows = session.exec(
+        select(TitleTmdbTitle.tmdb_title_id, TitleTmdbTitle.title_id).where(
+            col(TitleTmdbTitle.tmdb_title_id).in_(tmdb_title_ids),
+        ),
+    ).all()
+    siblings: dict[uuid.UUID, list[uuid.UUID]] = {}
+    for tmdb_title_id, title_id in rows:
+        siblings.setdefault(tmdb_title_id, []).append(title_id)
+    return siblings
+
+
+# TODO: Validate
 def _shelve_titles(
     session: Session,
     titles: Sequence[Title],
@@ -225,7 +249,13 @@ def _shelve_titles(
     title_ids = [title.id for title in titles]
     linked_titles = _linked_titles(session, title_ids)
     stats = _title_stats(session, title_ids)
-    related_ids = title_ids + [linked.id for linked in linked_titles.values()]
+    tmdb_ids = [linked.id for linked in linked_titles.values()]
+    siblings = _sibling_title_ids(session, tmdb_ids)
+    related_ids = [
+        *title_ids,
+        *tmdb_ids,
+        *{sibling for group in siblings.values() for sibling in group},
+    ]
     genres = _title_genres(session, related_ids)
     languages = _title_languages(session, related_ids)
 
@@ -260,7 +290,20 @@ def _shelve_titles(
                     poster or linked_title.thumbnail_url or title.thumbnail_url
                 ),
                 is_poster=poster is not None,
-                genres=genres.get(linked_title.id) or genres.get(title.id) or [],
+                genres=[
+                    VideoStoreGenreOutput(plugin_name=plugin_name, name=name)
+                    for plugin_name, name in sorted(
+                        {
+                            genre
+                            for related in (
+                                title.id,
+                                linked_title.id,
+                                *siblings.get(linked_title.id, []),
+                            )
+                            for genre in genres.get(related, [])
+                        },
+                    )
+                ],
                 season_count=season_count,
                 episode_count=episode_count,
             ),
