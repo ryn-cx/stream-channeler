@@ -22,13 +22,9 @@ export function TouchControls({
   store: VideoStore | null
   focused: StoreTitle | null
 }) {
-  const [stick, setStick] = useState<{
-    originX: number
-    originY: number
-    x: number
-    y: number
-  } | null>(null)
+  const [knob, setKnob] = useState({ x: 0, y: 0 })
   const [crouching, setCrouching] = useState(false)
+  const stickRef = useRef<HTMLDivElement>(null)
   const stickTouch = useRef<{ id: number; x: number; y: number } | null>(null)
   const lookTouch = useRef<{
     id: number
@@ -39,29 +35,16 @@ export function TouchControls({
   } | null>(null)
 
   // TODO: Validate
-  const onStickStart = (event: React.TouchEvent) => {
-    const touch = event.changedTouches[0]
-    stickTouch.current = {
-      id: touch.identifier,
-      x: touch.clientX,
-      y: touch.clientY,
-    }
-    setStick({ originX: touch.clientX, originY: touch.clientY, x: 0, y: 0 })
-  }
-
-  // TODO: Validate
-  const onStickMove = (event: React.TouchEvent) => {
-    const origin = stickTouch.current
-    if (!origin) return
-    const touch = findTouch(event.changedTouches, origin.id)
-    if (!touch) return
-    const deltaX = touch.clientX - origin.x
-    const deltaY = touch.clientY - origin.y
+  const steer = (touch: React.Touch) => {
+    const base = stickRef.current?.getBoundingClientRect()
+    if (!base) return
+    const deltaX = touch.clientX - (base.left + base.width / 2)
+    const deltaY = touch.clientY - (base.top + base.height / 2)
     const distance = Math.hypot(deltaX, deltaY)
     const scale = distance > STICK_RADIUS ? STICK_RADIUS / distance : 1
     const knobX = deltaX * scale
     const knobY = deltaY * scale
-    setStick({ originX: origin.x, originY: origin.y, x: knobX, y: knobY })
+    setKnob({ x: knobX, y: knobY })
     store?.setMove(
       knobX / STICK_RADIUS,
       -knobY / STICK_RADIUS,
@@ -70,9 +53,29 @@ export function TouchControls({
   }
 
   // TODO: Validate
+  const onStickStart = (event: React.TouchEvent) => {
+    const touch = event.changedTouches[0]
+    stickTouch.current = {
+      id: touch.identifier,
+      x: touch.clientX,
+      y: touch.clientY,
+    }
+    steer(touch)
+  }
+
+  // TODO: Validate
+  const onStickMove = (event: React.TouchEvent) => {
+    const origin = stickTouch.current
+    if (!origin) return
+    const touch = findTouch(event.changedTouches, origin.id)
+    if (!touch) return
+    steer(touch)
+  }
+
+  // TODO: Validate
   const onStickEnd = () => {
     stickTouch.current = null
-    setStick(null)
+    setKnob({ x: 0, y: 0 })
     store?.setMove(0, 0, false)
   }
 
@@ -123,33 +126,32 @@ export function TouchControls({
   return (
     <div className="absolute inset-0 touch-none">
       <div
-        className="absolute inset-y-0 right-0 w-1/2"
+        className="absolute inset-0"
         onTouchStart={onLookStart}
         onTouchMove={onLookMove}
         onTouchEnd={onLookEnd}
         onTouchCancel={onLookEnd}
       />
+
       <div
-        className="absolute inset-y-0 left-0 w-1/2"
+        className="absolute bottom-10 left-8 flex size-36 items-center justify-center rounded-full"
         onTouchStart={onStickStart}
         onTouchMove={onStickMove}
         onTouchEnd={onStickEnd}
         onTouchCancel={onStickEnd}
-      />
-
-      {stick && (
+      >
         <div
-          className="pointer-events-none absolute size-32 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-white/5"
-          style={{ left: stick.originX, top: stick.originY }}
+          ref={stickRef}
+          className="pointer-events-none relative size-32 rounded-full border border-white/25 bg-black/35 backdrop-blur"
         >
           <div
-            className="absolute left-1/2 top-1/2 size-14 rounded-full border border-white/40 bg-white/30"
+            className="absolute left-1/2 top-1/2 size-14 rounded-full border border-white/45 bg-white/30"
             style={{
-              transform: `translate(calc(-50% + ${stick.x * 0.55}px), calc(-50% + ${stick.y * 0.55}px))`,
+              transform: `translate(calc(-50% + ${knob.x * 0.55}px), calc(-50% + ${knob.y * 0.55}px))`,
             }}
           />
         </div>
-      )}
+      </div>
 
       <div className="absolute bottom-8 right-6 flex flex-col items-end gap-3">
         {focused?.url && (

@@ -362,39 +362,6 @@ export const createCaseTexture = (
 }
 
 // TODO: Validate
-export const createBannerTexture = (genre: string) => {
-  const canvas = document.createElement("canvas")
-  canvas.width = 1536
-  canvas.height = 128
-  const context = canvas.getContext("2d")
-  if (context) {
-    const hue = hashHue(genre)
-    context.fillStyle = `hsl(${hue}, 38%, 13%)`
-    context.fillRect(0, 0, 1536, 128)
-    context.fillStyle = `hsl(${hue}, 62%, 52%)`
-    context.fillRect(0, 0, 1536, 8)
-    context.fillRect(0, 120, 1536, 8)
-    context.textAlign = "center"
-    context.textBaseline = "middle"
-    context.fillStyle = "#f6f6f8"
-    context.shadowColor = "rgba(0, 0, 0, 0.8)"
-    context.shadowBlur = 8
-    let fontSize = 78
-    const label = genre.toUpperCase()
-    context.font = `bold ${fontSize}px 'Trebuchet MS', sans-serif`
-    while (context.measureText(label).width > 1380 && fontSize > 24) {
-      fontSize -= 4
-      context.font = `bold ${fontSize}px 'Trebuchet MS', sans-serif`
-    }
-    context.fillText(label, 768, 68)
-  }
-  const texture = new THREE.CanvasTexture(canvas)
-  texture.colorSpace = THREE.SRGBColorSpace
-  texture.anisotropy = 4
-  return texture
-}
-
-// TODO: Validate
 const drawSignHalf = (
   context: CanvasRenderingContext2D,
   genres: string[],
@@ -459,6 +426,36 @@ export const createAisleSignTexture = (left: string[], right: string[]) => {
 }
 
 // TODO: Validate
+export const createLoaderTexture = () => {
+  const canvas = document.createElement("canvas")
+  canvas.width = 512
+  canvas.height = 160
+  const context = canvas.getContext("2d")
+  if (context) {
+    context.fillStyle = "#0d1220"
+    context.fillRect(0, 0, 512, 160)
+    context.strokeStyle = "#2dd4bf"
+    context.lineWidth = 6
+    context.strokeRect(3, 3, 506, 154)
+    context.textAlign = "center"
+    context.textBaseline = "middle"
+    context.fillStyle = "#e9fdf9"
+    context.shadowColor = "#2dd4bf"
+    context.shadowBlur = 18
+    context.font = "bold 54px 'Trebuchet MS', sans-serif"
+    context.fillText("LOAD COVERS", 256, 66)
+    context.shadowBlur = 0
+    context.font = "26px 'Trebuchet MS', sans-serif"
+    context.fillStyle = "rgba(233, 253, 249, 0.62)"
+    context.fillText("this side of the aisle", 256, 116)
+  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.anisotropy = 4
+  return texture
+}
+
+// TODO: Validate
 export const createTagTexture = (genre: string) => {
   const canvas = document.createElement("canvas")
   canvas.width = 512
@@ -485,36 +482,6 @@ export const createTagTexture = (genre: string) => {
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
   texture.anisotropy = 4
-  return texture
-}
-
-// TODO: Validate
-export const createSignTexture = (text: string) => {
-  const canvas = document.createElement("canvas")
-  canvas.width = 1024
-  canvas.height = 256
-  const context = canvas.getContext("2d")
-  if (context) {
-    context.fillStyle = "#0d1220"
-    context.fillRect(0, 0, 1024, 256)
-    context.strokeStyle = "#2dd4bf"
-    context.lineWidth = 8
-    context.strokeRect(14, 14, 996, 228)
-    context.textAlign = "center"
-    context.textBaseline = "middle"
-    context.fillStyle = "#e9fdf9"
-    context.shadowColor = "#2dd4bf"
-    context.shadowBlur = 26
-    let fontSize = 104
-    context.font = `bold ${fontSize}px 'Trebuchet MS', sans-serif`
-    while (context.measureText(text).width > 920 && fontSize > 30) {
-      fontSize -= 4
-      context.font = `bold ${fontSize}px 'Trebuchet MS', sans-serif`
-    }
-    context.fillText(text, 512, 132)
-  }
-  const texture = new THREE.CanvasTexture(canvas)
-  texture.colorSpace = THREE.SRGBColorSpace
   return texture
 }
 

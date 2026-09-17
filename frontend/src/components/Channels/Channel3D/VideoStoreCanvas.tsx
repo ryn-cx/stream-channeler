@@ -33,7 +33,7 @@ export function VideoStoreCanvas({
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
-    const created = new VideoStore(container, slotCount, storeName, {
+    const created = new VideoStore(container, slotCount, {
       onFocus: setFocused,
       onActivate: (title) => activateRef.current(title),
       onLockChange: (value) => {
@@ -46,7 +46,7 @@ export function VideoStoreCanvas({
       setStore(null)
       created.dispose()
     }
-  }, [slotCount, storeName])
+  }, [slotCount])
 
   useEffect(() => {
     store?.addTitles(titles)
