@@ -1,8 +1,19 @@
 // TODO: Validate
 import * as THREE from "three"
+import {
+  CityGenerator,
+  createBuildingMaterial,
+} from "three/addons/generators/CityGenerator.js"
+import {
+  CarGenerator,
+  type CarGeneratorPlacement,
+} from "three/addons/generators/city/CarGenerator.js"
+import { SidewalkGenerator } from "three/addons/generators/city/SidewalkGenerator.js"
 import { PointerLockControls } from "three/examples/jsm/controls/PointerLockControls.js"
+import { WebGPURenderer } from "three/webgpu"
 import {
   createAisleSignTexture,
+  createBeamTexture,
   createCarpetTexture,
   createCaseCanvas,
   createCaseTexture,
@@ -10,8 +21,11 @@ import {
   createDiffuserTexture,
   createFilterBoardTexture,
   createGlowTexture,
+  createGrassTexture,
   createLabelTexture,
   createLoaderTexture,
+  createLotTexture,
+  createNightSkyTexture,
   createStoreSignTexture,
   createTagTexture,
   genreHue,
@@ -98,7 +112,10 @@ const buildRunOrder = (rows: Slot[][]) => {
 export class VideoStore {
   private container: HTMLElement
   private callbacks: VideoStoreCallbacks
-  private renderer: THREE.WebGLRenderer
+  private renderer: WebGPURenderer
+  private cities: CityGenerator[] = []
+  private cars: CarGenerator | null = null
+  private sidewalk: SidewalkGenerator | null = null
   private scene = new THREE.Scene()
   private camera: THREE.PerspectiveCamera
   private controls: PointerLockControls
@@ -110,7 +127,6 @@ export class VideoStore {
   private focused: THREE.Mesh | null = null
   private velocity = new THREE.Vector3()
   private eyeHeight = 1.65
-  private limit = new THREE.Vector2()
   private animationHandle = 0
   private disposed = false
   private pendingImages: Array<{ mesh: THREE.Mesh; run: () => void }> = []
@@ -126,6 +142,11 @@ export class VideoStore {
   private counterCapacity = 0
   private counterCases: THREE.Mesh[] = []
   private channelButtons: THREE.Mesh[] = []
+  private doorLeaves: Array<{
+    group: THREE.Group
+    swing: number
+    open: boolean
+  }> = []
   private filterBoard: THREE.Mesh | null = null
   private swatches: THREE.Mesh[] = []
   private caseMaterials = new Set<
@@ -192,7 +213,7 @@ export class VideoStore {
     this.container = container
     this.callbacks = callbacks
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true })
+    this.renderer = new WebGPURenderer({ antialias: true })
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     this.renderer.setSize(container.clientWidth, container.clientHeight)
     this.renderer.sortObjects = false
@@ -207,7 +228,7 @@ export class VideoStore {
       72,
       container.clientWidth / container.clientHeight,
       0.05,
-      120,
+      420,
     )
     this.controls = new PointerLockControls(this.camera, container)
     this.scene.add(this.camera)
@@ -222,7 +243,10 @@ export class VideoStore {
     this.resizeObserver = new ResizeObserver(this.handleResize)
     this.resizeObserver.observe(container)
 
-    this.animationHandle = requestAnimationFrame(this.tick)
+    this.renderer.init().then(() => {
+      if (this.disposed) return
+      this.animationHandle = requestAnimationFrame(this.tick)
+    })
   }
 
   // TODO: Validate
@@ -238,7 +262,6 @@ export class VideoStore {
     const unitCount = Math.min(400, Math.max(1, Math.ceil(sides / 2)))
     const width = unitCount * 2 + 2.9
     const depth = gondolaLength + 6
-    this.limit.set(width / 2 - 0.45, depth / 2 - 0.45)
     this.camera.position.set(width / 2 - 1.8, 1.65, depth / 2 - 1.05)
     this.camera.lookAt(-width / 2 + 1.2, 1.3, -depth / 2 + 1.2)
 
@@ -274,7 +297,6 @@ export class VideoStore {
     })
     const walls: Array<[number, number, number, number]> = [
       [0, -depth / 2, width, 0],
-      [0, depth / 2, width, Math.PI],
       [-width / 2, 0, depth, Math.PI / 2],
       [width / 2, 0, depth, -Math.PI / 2],
     ]
@@ -294,6 +316,423 @@ export class VideoStore {
     ]) {
       this.lights.push({ light, base: light.intensity })
       this.scene.add(light)
+    }
+
+    const bays = Math.max(4, Math.round(width / 1.3))
+    const bayWidth = width / bays
+    const doorBay = Math.min(
+      bays - 2,
+      Math.max(0, Math.round((width - 6.6) / bayWidth) - 1),
+    )
+    const doorCenter = -width / 2 + bayWidth * (doorBay + 1)
+    const glassMaterial = new THREE.MeshBasicMaterial({
+      color: 0x7d98ad,
+      transparent: true,
+      opacity: 0.16,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    })
+    const doorFrameMaterial = new THREE.MeshBasicMaterial({ color: 0x24262d })
+
+    const header = new THREE.Mesh(
+      new THREE.PlaneGeometry(width, 0.8),
+      wallMaterial,
+    )
+    header.position.set(0, 2.8, depth / 2)
+    header.rotation.y = Math.PI
+    this.scene.add(header)
+
+    for (const [side, span] of [
+      [-1, bayWidth * doorBay],
+      [1, bayWidth * (bays - doorBay - 2)],
+    ] as const) {
+      if (span < 0.02) continue
+      const x = side * (width / 2 - span / 2)
+      const bulkhead = new THREE.Mesh(
+        new THREE.PlaneGeometry(span, 0.35),
+        wallMaterial,
+      )
+      bulkhead.position.set(x, 0.175, depth / 2)
+      bulkhead.rotation.y = Math.PI
+      this.scene.add(bulkhead)
+
+      const glazing = new THREE.Mesh(
+        new THREE.PlaneGeometry(span, 2.05),
+        glassMaterial,
+      )
+      glazing.position.set(x, 1.375, depth / 2 - 0.04)
+      this.scene.add(glazing)
+
+      const sill = new THREE.Mesh(
+        new THREE.BoxGeometry(span, 0.08, 0.09),
+        doorFrameMaterial,
+      )
+      sill.position.set(x, 0.36, depth / 2 - 0.04)
+      this.scene.add(sill)
+    }
+
+    const head = new THREE.Mesh(
+      new THREE.BoxGeometry(width, 0.1, 0.09),
+      doorFrameMaterial,
+    )
+    head.position.set(0, 2.4, depth / 2 - 0.04)
+    this.scene.add(head)
+
+    for (let bay = 1; bay < bays; bay++) {
+      if (bay >= doorBay && bay <= doorBay + 2) continue
+      const x = -width / 2 + bayWidth * bay
+      const divider = new THREE.Mesh(
+        new THREE.BoxGeometry(0.07, 2.05, 0.09),
+        doorFrameMaterial,
+      )
+      divider.position.set(x, 1.375, depth / 2 - 0.04)
+      this.scene.add(divider)
+    }
+
+    for (const side of [-1, 1]) {
+      const jamb = new THREE.Mesh(
+        new THREE.BoxGeometry(0.07, 2.4, 0.1),
+        doorFrameMaterial,
+      )
+      jamb.position.set(doorCenter + side * bayWidth, 1.2, depth / 2 - 0.06)
+      this.scene.add(jamb)
+
+      const leaf = new THREE.Group()
+      leaf.position.set(doorCenter + side * bayWidth, 1.2, depth / 2 - 0.06)
+      this.scene.add(leaf)
+      const index = this.doorLeaves.length
+      this.doorLeaves.push({
+        group: leaf,
+        swing: (side * Math.PI) / 2,
+        open: false,
+      })
+
+      const pane = new THREE.Mesh(
+        new THREE.PlaneGeometry(bayWidth * 0.94, 2.4),
+        glassMaterial,
+      )
+      pane.position.set((-side * bayWidth) / 2, 0, 0)
+      pane.userData = { toggle: "door", leaf: index }
+      leaf.add(pane)
+      this.swatches.push(pane)
+
+      const edge = new THREE.Mesh(
+        new THREE.BoxGeometry(0.06, 2.4, 0.1),
+        doorFrameMaterial,
+      )
+      edge.position.set(-side * bayWidth * 0.97, 0, 0)
+      edge.userData = { toggle: "door", leaf: index }
+      leaf.add(edge)
+      this.swatches.push(edge)
+
+      const handle = new THREE.Mesh(
+        new THREE.BoxGeometry(0.05, 0.62, 0.05),
+        doorFrameMaterial,
+      )
+      handle.position.set(-side * bayWidth * 0.82, -0.15, -0.09)
+      handle.userData = { toggle: "door", leaf: index }
+      leaf.add(handle)
+      this.swatches.push(handle)
+    }
+
+    const lotUnits = Math.ceil(width / 19.9) + 2
+    const lotWidth = lotUnits * 19.9
+    const sky = new THREE.Mesh(
+      new THREE.PlaneGeometry(lotWidth + 320, 150),
+      new THREE.MeshBasicMaterial({
+        map: createNightSkyTexture(),
+        fog: false,
+      }),
+    )
+    sky.position.set(0, 50, depth / 2 + 190)
+    sky.rotation.y = Math.PI
+    this.scene.add(sky)
+
+    const apron = new THREE.Mesh(
+      new THREE.PlaneGeometry(lotWidth + 60, 84),
+      new THREE.MeshBasicMaterial({ color: 0x101016, fog: false }),
+    )
+    apron.position.set(0, -0.12, depth / 2 + 42)
+    apron.rotation.x = -Math.PI / 2
+    this.scene.add(apron)
+
+    const cityLamps: THREE.Vector3[] = []
+    for (const [cityX, cityZ, turn, blocksX] of [
+      [0, depth / 2 + 78, 0, Math.max(2, Math.ceil(lotWidth / 64))],
+      [-lotWidth / 2 - 44, depth / 2 + 26, Math.PI / 2, 2],
+      [lotWidth / 2 + 44, depth / 2 + 26, -Math.PI / 2, 2],
+    ] as const) {
+      const city = new CityGenerator({
+        seed: Math.floor(Math.random() * 1000),
+        street: 16,
+        lot: 24,
+        lotsX: 2,
+        lotsZ: 2,
+        blocksX,
+        blocksZ: 1,
+      })
+      const block = city.build({
+        building: createBuildingMaterial(city.layout, city.seedNode),
+      })
+      block.traverse((object) => {
+        const mesh = object as THREE.Mesh
+        if (!mesh.isMesh) return
+        const materials = Array.isArray(mesh.material)
+          ? mesh.material
+          : [mesh.material]
+        for (const material of materials) {
+          ;(material as THREE.Material & { fog: boolean }).fog = false
+        }
+      })
+      block.position.set(cityX, -0.12, cityZ)
+      block.rotation.y = turn
+      this.scene.add(block)
+      this.cities.push(city)
+
+      block.updateMatrixWorld(true)
+      const lamps = city.furniture.streetlight.mesh
+      if (lamps) {
+        const placement = new THREE.Matrix4()
+        const head = new THREE.Vector3(
+          0,
+          city.furniture.streetlight.parameters.height,
+          city.furniture.streetlight.parameters.reach,
+        )
+        for (let index = 0; index < lamps.count; index++) {
+          lamps.getMatrixAt(index, placement)
+          cityLamps.push(
+            head
+              .clone()
+              .applyMatrix4(placement)
+              .applyMatrix4(lamps.matrixWorld),
+          )
+        }
+      }
+    }
+
+    const moon = new THREE.DirectionalLight(0xc3d4ff, 0.7)
+    moon.position.set(-90, 120, depth / 2 + 170)
+    moon.target.position.set(0, 0, depth / 2 + 60)
+    this.scene.add(moon)
+    this.scene.add(moon.target)
+
+    this.sidewalk = new SidewalkGenerator({
+      width: Math.max(width, lotWidth),
+      depth: 2.3,
+      height: 0.15,
+      radius: 0.6,
+    })
+    const walk = this.sidewalk.build([
+      new THREE.Matrix4().makeTranslation(0, -0.12, depth / 2 + 1.15),
+    ])
+    walk.traverse((object) => {
+      const mesh = object as THREE.Mesh
+      if (!mesh.isMesh) return
+      const materials = Array.isArray(mesh.material)
+        ? mesh.material
+        : [mesh.material]
+      for (const material of materials) {
+        ;(material as THREE.Material & { fog: boolean }).fog = false
+      }
+    })
+    this.scene.add(walk)
+
+    const nearBays = createLotTexture(false)
+    nearBays.repeat.set(lotWidth / 2.6, 1)
+    const nearLot = new THREE.Mesh(
+      new THREE.PlaneGeometry(lotWidth, 5.2),
+      new THREE.MeshBasicMaterial({ map: nearBays, fog: false }),
+    )
+    nearLot.position.set(0, -0.1, depth / 2 + 4.9)
+    nearLot.rotation.x = -Math.PI / 2
+    this.scene.add(nearLot)
+
+    const parked: CarGeneratorPlacement[] = []
+    for (let spot = 0; spot < Math.floor(lotWidth / 2.6); spot++) {
+      if (Math.random() < 0.5) continue
+      const matrix = new THREE.Matrix4().makeRotationY(
+        (Math.random() < 0.7 ? Math.PI : 0) + (Math.random() - 0.5) * 0.08,
+      )
+      matrix.setPosition(
+        -lotWidth / 2 + 2.6 * (spot + 0.5) + (Math.random() - 0.5) * 0.3,
+        -0.1,
+        depth / 2 + 4.9 + (Math.random() - 0.5) * 0.5,
+      )
+      parked.push({
+        matrix,
+        color:
+          Math.random() < 0.15
+            ? CarGenerator.taxiColor
+            : [0x9aa3ad, 0x2f3a4a, 0x7d2b2b, 0xd7d9dc, 0x1d2126, 0x35543f][
+                Math.floor(Math.random() * 6)
+              ],
+      })
+    }
+    if (parked.length > 0) {
+      this.cars = new CarGenerator()
+      const fleet = this.cars.build(parked)
+      fleet.traverse((object) => {
+        const mesh = object as THREE.Mesh
+        if (!mesh.isMesh) return
+        const materials = Array.isArray(mesh.material)
+          ? mesh.material
+          : [mesh.material]
+        for (const material of materials) {
+          ;(material as THREE.Material & { fog: boolean }).fog = false
+        }
+      })
+      this.scene.add(fleet)
+    }
+
+    const farBays = createLotTexture(true)
+    farBays.repeat.set(1, 13)
+    const farBayMaterial = new THREE.MeshBasicMaterial({
+      map: farBays,
+      fog: false,
+    })
+    const farBayGeometry = new THREE.PlaneGeometry(5.2, 34)
+    const grassTexture = createGrassTexture()
+    grassTexture.repeat.set(1.5, 17)
+    const grassMaterial = new THREE.MeshBasicMaterial({
+      map: grassTexture,
+      fog: false,
+    })
+    const islandGeometry = new THREE.PlaneGeometry(3, 34)
+    const islandXs: number[] = []
+    let cursor = -lotWidth / 2
+    for (let unit = 0; unit < lotUnits; unit++) {
+      for (const [kind, span] of [
+        ["bay", 5.2],
+        ["aisle", 6.5],
+        ["bay", 5.2],
+        ["grass", 3],
+      ] as const) {
+        const x = cursor + span / 2
+        cursor += span
+        if (kind === "aisle") continue
+        const strip = new THREE.Mesh(
+          kind === "bay" ? farBayGeometry : islandGeometry,
+          kind === "bay" ? farBayMaterial : grassMaterial,
+        )
+        strip.position.set(x, kind === "bay" ? -0.1 : -0.06, depth / 2 + 31)
+        strip.rotation.x = -Math.PI / 2
+        this.scene.add(strip)
+        if (kind === "grass") islandXs.push(x)
+      }
+    }
+
+    const poleMaterial = new THREE.MeshBasicMaterial({
+      color: 0x2a2c34,
+      fog: false,
+    })
+    const lampMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffeec2,
+      fog: false,
+    })
+    const beamMaterial = new THREE.MeshBasicMaterial({
+      map: createBeamTexture(),
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      fog: false,
+    })
+    const poolMaterial = new THREE.MeshBasicMaterial({
+      map: createGlowTexture(),
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      fog: false,
+    })
+    const beamGeometry = new THREE.ConeGeometry(2.4, 5.2, 18, 1, true)
+    const poolGeometry = new THREE.CircleGeometry(2.6, 24)
+
+    if (cityLamps.length > 0) {
+      const drop = cityLamps[0].y + 0.12
+      const cityBeamGeometry = new THREE.ConeGeometry(
+        drop * 0.42,
+        drop,
+        18,
+        1,
+        true,
+      )
+      const cityPoolGeometry = new THREE.CircleGeometry(drop * 0.48, 24)
+      for (const lamp of cityLamps) {
+        const beam = new THREE.Mesh(cityBeamGeometry, beamMaterial)
+        beam.position.set(lamp.x, -0.12 + drop / 2, lamp.z)
+        beam.matrixAutoUpdate = false
+        beam.updateMatrix()
+        this.scene.add(beam)
+
+        const pool = new THREE.Mesh(cityPoolGeometry, poolMaterial)
+        pool.position.set(lamp.x, -0.08, lamp.z)
+        pool.rotation.x = -Math.PI / 2
+        pool.matrixAutoUpdate = false
+        pool.updateMatrix()
+        this.scene.add(pool)
+      }
+    }
+    const trunkGeometry = new THREE.CylinderGeometry(0.11, 0.17, 1.7, 6)
+    const canopyGeometry = new THREE.IcosahedronGeometry(0.95, 1)
+    const trunkMaterial = new THREE.MeshBasicMaterial({
+      color: 0x2b2118,
+      fog: false,
+    })
+    const canopyMaterial = new THREE.MeshBasicMaterial({
+      color: 0x1f3526,
+      fog: false,
+    })
+    for (const islandX of islandXs) {
+      for (const treeZ of [17.5, 24.5, 31, 37.5, 44.5]) {
+        const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial)
+        trunk.position.set(islandX, 0.79, depth / 2 + treeZ)
+        this.scene.add(trunk)
+        for (const [leafX, leafY, leafZ, size] of [
+          [0, 2.15, 0, 1],
+          [0.55, 1.68, 0.3, 0.68],
+          [-0.5, 1.75, -0.35, 0.6],
+        ] as const) {
+          const canopy = new THREE.Mesh(canopyGeometry, canopyMaterial)
+          canopy.position.set(islandX + leafX, leafY, depth / 2 + treeZ + leafZ)
+          canopy.scale.setScalar(size)
+          this.scene.add(canopy)
+        }
+      }
+    }
+    for (const poleX of islandXs) {
+      for (const poleZ of [20.5, 31, 41.5]) {
+        const mast = new THREE.Mesh(
+          new THREE.BoxGeometry(0.16, 5.4, 0.16),
+          poleMaterial,
+        )
+        mast.position.set(poleX, 2.58, depth / 2 + poleZ)
+        this.scene.add(mast)
+        const crossbar = new THREE.Mesh(
+          new THREE.BoxGeometry(3, 0.13, 0.13),
+          poleMaterial,
+        )
+        crossbar.position.set(poleX, 5.21, depth / 2 + poleZ)
+        this.scene.add(crossbar)
+
+        for (const side of [-1, 1]) {
+          const lampX = poleX + side * 1.42
+          const lamp = new THREE.Mesh(
+            new THREE.BoxGeometry(0.46, 0.11, 0.26),
+            lampMaterial,
+          )
+          lamp.position.set(lampX, 5.1, depth / 2 + poleZ)
+          this.scene.add(lamp)
+
+          const beam = new THREE.Mesh(beamGeometry, beamMaterial)
+          beam.position.set(lampX, 2.44, depth / 2 + poleZ)
+          this.scene.add(beam)
+
+          const pool = new THREE.Mesh(poolGeometry, poolMaterial)
+          pool.position.set(lampX, -0.08, depth / 2 + poleZ)
+          pool.rotation.x = -Math.PI / 2
+          this.scene.add(pool)
+        }
+      }
     }
 
     const housingMaterial = new THREE.MeshStandardMaterial({
@@ -486,17 +925,6 @@ export class VideoStore {
       )
     }
 
-    for (let index = 0; index < backCount; index++) {
-      const x = -width / 2 + backSpacing * (index + 0.5)
-      if (Math.abs(x - (width / 2 - 1.8)) < 2.4) continue
-      hangPoster(
-        index,
-        backSpacing,
-        () => new THREE.Vector3(x, 1.75, depth / 2 - 0.07),
-        Math.PI,
-      )
-    }
-
     const counterMaterial = new THREE.MeshStandardMaterial({
       color: 0xd8b13a,
       roughness: 0.6,
@@ -527,11 +955,23 @@ export class VideoStore {
         toneMapped: false,
       }),
     )
-    sign.position.set(width / 2 - 1.8, 2.16, depth / 2 - 0.06)
+    sign.position.set(width / 2 - 1.8, 2.8, depth / 2 - 0.09)
     sign.rotation.y = Math.PI
     sign.matrixAutoUpdate = false
     sign.updateMatrix()
     this.scene.add(sign)
+
+    const streetSign = new THREE.Mesh(
+      new THREE.PlaneGeometry(3.2, 0.8),
+      new THREE.MeshBasicMaterial({
+        map: createStoreSignTexture(storeName),
+        toneMapped: false,
+      }),
+    )
+    streetSign.position.set(doorCenter, 2.8, depth / 2 + 0.09)
+    streetSign.matrixAutoUpdate = false
+    streetSign.updateMatrix()
+    this.scene.add(streetSign)
 
     for (const level of [0.9, 1.22, 1.54]) {
       const holdBoard = new THREE.Mesh(
@@ -1048,6 +1488,11 @@ export class VideoStore {
       this.callbacks.onFilters()
       return
     }
+    if (mesh.userData.toggle === "door") {
+      const leaf = this.doorLeaves[mesh.userData.leaf as number]
+      leaf.open = !leaf.open
+      return
+    }
     if (mesh.userData.toggle === "counter-covers") {
       for (const held of this.counterCases) this.queueImage(held)
       for (let concurrent = 0; concurrent < 6; concurrent++) this.nextImage()
@@ -1468,17 +1913,9 @@ export class VideoStore {
     this.velocity.lerp(direction, Math.min(1, delta * 12))
 
     const position = this.camera.position
-    const nextX = THREE.MathUtils.clamp(
-      position.x + this.velocity.x * delta,
-      -this.limit.x,
-      this.limit.x,
-    )
+    const nextX = position.x + this.velocity.x * delta
     if (!this.blocked(nextX, position.z)) position.x = nextX
-    const nextZ = THREE.MathUtils.clamp(
-      position.z + this.velocity.z * delta,
-      -this.limit.y,
-      this.limit.y,
-    )
+    const nextZ = position.z + this.velocity.z * delta
     if (!this.blocked(position.x, nextZ)) position.z = nextZ
 
     this.eyeHeight = THREE.MathUtils.damp(
@@ -1570,6 +2007,13 @@ export class VideoStore {
         this.moveLights()
       }
       if (!this.touch) this.updateFocus()
+    }
+    for (const leaf of this.doorLeaves) {
+      const target = leaf.open ? leaf.swing : 0
+      const turn = leaf.group.rotation.y
+      if (Math.abs(target - turn) > 0.001) {
+        leaf.group.rotation.y = turn + (target - turn) * 0.16
+      }
     }
     this.renderer.render(this.scene, this.camera)
   }
@@ -1705,6 +2149,9 @@ export class VideoStore {
         material.dispose()
       }
     })
+    for (const city of this.cities) city.dispose()
+    this.cars?.dispose()
+    this.sidewalk?.dispose()
     this.caseGeometry.dispose()
     this.tagGeometry.dispose()
     this.blockMaterial.dispose()

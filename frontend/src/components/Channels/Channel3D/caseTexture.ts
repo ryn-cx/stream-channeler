@@ -721,6 +721,97 @@ export const createCeilingTexture = () => {
 }
 
 // TODO: Validate
+export const createLotTexture = (horizontal: boolean) => {
+  const canvas = document.createElement("canvas")
+  canvas.width = 128
+  canvas.height = 128
+  const context = canvas.getContext("2d")
+  if (context) {
+    context.fillStyle = "#17171c"
+    context.fillRect(0, 0, 128, 128)
+    context.fillStyle = "rgba(255, 255, 255, 0.05)"
+    for (let speck = 0; speck < 900; speck++) {
+      context.fillRect(Math.random() * 128, Math.random() * 128, 1, 1)
+    }
+    context.fillStyle = "#cdc7a6"
+    if (horizontal) context.fillRect(0, 0, 128, 5)
+    else context.fillRect(0, 0, 5, 128)
+  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  texture.anisotropy = 4
+  return texture
+}
+
+// TODO: Validate
+export const createBeamTexture = () => {
+  const canvas = document.createElement("canvas")
+  canvas.width = 32
+  canvas.height = 256
+  const context = canvas.getContext("2d")
+  if (context) {
+    const beam = context.createLinearGradient(0, 0, 0, 256)
+    beam.addColorStop(0, "rgba(255, 238, 198, 0.55)")
+    beam.addColorStop(0.45, "rgba(255, 232, 186, 0.2)")
+    beam.addColorStop(1, "rgba(255, 228, 178, 0)")
+    context.fillStyle = beam
+    context.fillRect(0, 0, 32, 256)
+  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  return texture
+}
+
+// TODO: Validate
+export const createGrassTexture = () => {
+  const canvas = document.createElement("canvas")
+  canvas.width = 128
+  canvas.height = 128
+  const context = canvas.getContext("2d")
+  if (context) {
+    context.fillStyle = "#1c2a1c"
+    context.fillRect(0, 0, 128, 128)
+    for (let blade = 0; blade < 2600; blade++) {
+      const shade = 18 + Math.floor(Math.random() * 26)
+      context.fillStyle = `rgb(${shade}, ${shade + 16}, ${shade})`
+      context.fillRect(Math.random() * 128, Math.random() * 128, 1, 2)
+    }
+  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  texture.anisotropy = 4
+  return texture
+}
+
+// TODO: Validate
+export const createNightSkyTexture = () => {
+  const canvas = document.createElement("canvas")
+  canvas.width = 512
+  canvas.height = 256
+  const context = canvas.getContext("2d")
+  if (context) {
+    const sky = context.createLinearGradient(0, 0, 0, 256)
+    sky.addColorStop(0, "#04050b")
+    sky.addColorStop(0.72, "#0a1020")
+    sky.addColorStop(1, "#1b2238")
+    context.fillStyle = sky
+    context.fillRect(0, 0, 512, 256)
+    for (let star = 0; star < 460; star++) {
+      const size = Math.random() < 0.86 ? 1 : 2
+      context.fillStyle = `rgba(255, 252, 238, ${0.2 + Math.random() * 0.7})`
+      context.fillRect(Math.random() * 512, Math.random() * 206, size, size)
+    }
+  }
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  return texture
+}
+
+// TODO: Validate
 export const createCarpetTexture = (hue = 214) => {
   const canvas = document.createElement("canvas")
   canvas.width = 128
