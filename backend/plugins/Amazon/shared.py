@@ -14,7 +14,7 @@ class AmazonShared(AmazonBaseFiles):
     @classmethod
     @override
     def plugin_name(cls) -> str:
-        return "Amazon Prime Video"
+        return "Amazon"
 
     # TODO: Validate
     @classmethod
