@@ -26,6 +26,7 @@ from plugins.Amazon.utils import (
     AmazonChannel,
     AmazonEpisode,
     AmazonSeason,
+    card_channel_logo,
     card_channel_name,
     channel_name,
     compact_key_from_link,
@@ -424,20 +425,22 @@ class Detail(APIClientFile[dict[str, Any]]):
         A channel is offered more than once when it offers the title in more than
         one way, and the offer the page leads with is the one that names it.
         """
-        channels: list[AmazonChannel] = []
-        seen: set[str] = set()
+        channels: dict[str, AmazonChannel] = {}
         for card in self._offer_cards():
             for option in card["actions"]:
                 subscription = option["payload"].get("subscription")
                 if not subscription:
                     continue
                 benefit_id = subscription["benefitId"]
-                if benefit_id == PRIME_BENEFIT_ID or benefit_id in seen:
+                if benefit_id == PRIME_BENEFIT_ID:
                     continue
-                seen.add(benefit_id)
+                logo_url = card_channel_logo(card)
+                if channel := channels.get(benefit_id):
+                    channel.logo_url = channel.logo_url or logo_url
+                    continue
                 name = card_channel_name(card) or channel_name(subscription["label"])
-                channels.append(AmazonChannel(benefit_id, name))
-        return channels
+                channels[benefit_id] = AmazonChannel(benefit_id, name, logo_url)
+        return list(channels.values())
 
     # TODO: Validate
     def related_prime_keys(self) -> list[str]:

@@ -23,6 +23,7 @@ class AmazonChannel:
 
     benefit_id: str
     name: str
+    logo_url: str | None
 
 
 # TODO: Validate
@@ -111,6 +112,14 @@ def card_texts(card: dict[str, Any]) -> list[dict[str, Any]]:
         if text := payload.get("textComponent"):
             texts.append(text)
     return texts
+
+
+# TODO: Validate
+def card_channel_logo(card: dict[str, Any]) -> str | None:
+    for component in (card.get("components") or {}).values():
+        if logo := component["componentPayload"].get("logoComponent"):
+            return str(logo["url"])
+    return None
 
 
 # TODO: Validate

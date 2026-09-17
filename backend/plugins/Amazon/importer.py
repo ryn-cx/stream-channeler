@@ -163,9 +163,7 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
             raise AttributeError(msg)
 
         page = self.detail_file(title.key)
-        channel_keys: list[str] = []
-        if page.included_with_prime():
-            channel_keys.append("All Titles")
+        channel_keys: list[str] = ["All Titles"]
         if page.purchasable():
             channel_keys.append(PURCHASE_SOURCE_SUFFIX)
         channel_keys.extend(page.genres())
@@ -193,8 +191,8 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
         detail_file = self.detail_file(title_key)
         sources = [
             self._extra_source(
-                f"{self.plugin_name()}:{channel.benefit_id}",
-                f"{self.plugin_name()} ({channel.name})",
+                f"{channel.name} on Amazon",
+                channel.logo_url or self.favicon_url(),
             )
             for channel in detail_file.channels()
         ]
@@ -203,15 +201,15 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
         if detail_file.purchasable():
             sources.append(
                 self._extra_source(
-                    f"{self.plugin_name()}:{PURCHASE_SOURCE_SUFFIX}",
-                    f"{self.plugin_name()} ({PURCHASE_SOURCE_SUFFIX})",
+                    f"{PURCHASE_SOURCE_SUFFIX} on Amazon",
+                    self.favicon_url(),
                 ),
             )
         # A title with no way to watch it listed still belongs somewhere.
         return sources or [self.source]
 
     # TODO: Validate
-    def _extra_source(self, source_key: str, name: str) -> Source:
+    def _extra_source(self, source_key: str, favicon_url: str) -> Source:
         """Return one of the plugin's `Source`s other than its default one."""
         # Looked up against the database rather than only the session, since a
         # source other than the default is made the first time a title needs it
@@ -219,8 +217,7 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
         existing_source = Source.get(self.session, self.plugin, source_key)
         source = Source(
             key=source_key,
-            name=name,
-            favicon_url=self.favicon_url(),
+            favicon_url=favicon_url,
             plugin_id=self.plugin.id,
         ).upsert(self.plugin, existing_source)
         source.set_update_at(None)

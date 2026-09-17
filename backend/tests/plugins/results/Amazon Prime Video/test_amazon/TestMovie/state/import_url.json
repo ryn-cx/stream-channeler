@@ -1,0 +1,676 @@
+{
+  "plugin": [
+    {
+      "key": "Amazon Prime Video",
+      "data_timestamp": null,
+      "update_at": null,
+      "deleted_at": null,
+      "status": "Incomplete",
+      "extra": {},
+      "id": "Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "version": null,
+      "sources": [
+        {
+          "key": "Amazon Prime Video",
+          "data_timestamp": "2026-09-17T00:00:00+00:00",
+          "update_at": null,
+          "deleted_at": null,
+          "status": null,
+          "extra": {},
+          "id": "Amazon Prime Video",
+          "created_at": "2026-09-17T00:00:00+00:00",
+          "modified_at": "2026-09-17T00:00:00+00:00",
+          "link_to_tmdb": true,
+          "favicon_url": "https://www.primevideo.com/favicon.ico",
+          "image_url": null,
+          "plugin_id": "Amazon Prime Video",
+          "titles": [
+            {
+              "key": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+              "data_timestamp": "2026-09-17T00:00:00+00:00",
+              "update_at": "2026-09-23T00:00:00+00:00",
+              "deleted_at": null,
+              "status": null,
+              "extra": {},
+              "id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+              "created_at": "2026-09-17T00:00:00+00:00",
+              "modified_at": "2026-09-17T00:00:00+00:00",
+              "name": "Kill the Jockey",
+              "media_type": "Movie",
+              "description": "Remo Manfredini is a legendary jockey, but his self-destructive behaviour is starting to outshine his talent. On the day of the most important race of his career-that will clear him of his debts from mob boss Sirena-he has a severe accident and disappears from the hospital, free from his identity.",
+              "url": "https://primevideo.com/detail/0T4FBS1H845HDEYTKZGP4Y4GTQ",
+              "image_url": "https://m.media-amazon.com/images/S/pv-target-images/11e8f6e5f9e608219f4297d4982c6407262cb159b7e2af2081c022bb7c41888b.jpg",
+              "thumbnail_url": "https://m.media-amazon.com/images/S/pv-target-images/11e8f6e5f9e608219f4297d4982c6407262cb159b7e2af2081c022bb7c41888b.jpg",
+              "poster_url": null,
+              "poster_thumbnail_url": null,
+              "year": 2024,
+              "score": null,
+              "popularity": null,
+              "original_language": null,
+              "tmdb_title_validated_at": null,
+              "link_status": null,
+              "is_linked": false,
+              "source_id": "Amazon Prime Video",
+              "seasons": [
+                {
+                  "key": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+                  "data_timestamp": "2026-09-17T00:00:00+00:00",
+                  "update_at": "2026-09-23T00:00:00+00:00",
+                  "deleted_at": null,
+                  "status": null,
+                  "extra": {},
+                  "id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+                  "created_at": "2026-09-17T00:00:00+00:00",
+                  "modified_at": "2026-09-17T00:00:00+00:00",
+                  "name": null,
+                  "url": null,
+                  "season_number": 0,
+                  "image_url": null,
+                  "thumbnail_url": null,
+                  "sort_order": 0,
+                  "title_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+                  "episodes": [
+                    {
+                      "key": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+                      "data_timestamp": "2026-09-17T00:00:00+00:00",
+                      "update_at": null,
+                      "deleted_at": null,
+                      "status": null,
+                      "extra": {},
+                      "id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+                      "created_at": "2026-09-17T00:00:00+00:00",
+                      "modified_at": "2026-09-17T00:00:00+00:00",
+                      "url": "https://primevideo.com/detail/0T4FBS1H845HDEYTKZGP4Y4GTQ",
+                      "name": "Kill the Jockey",
+                      "description": "Remo Manfredini is a legendary jockey, but his self-destructive behaviour is starting to outshine his talent. On the day of the most important race of his career-that will clear him of his debts from mob boss Sirena-he has a severe accident and disappears from the hospital, free from his identity.",
+                      "image_url": "https://m.media-amazon.com/images/S/pv-target-images/11e8f6e5f9e608219f4297d4982c6407262cb159b7e2af2081c022bb7c41888b.jpg",
+                      "thumbnail_url": "https://m.media-amazon.com/images/S/pv-target-images/11e8f6e5f9e608219f4297d4982c6407262cb159b7e2af2081c022bb7c41888b.jpg",
+                      "air_date": "2024-09-25T07:00:00+00:00",
+                      "episode_number": 0,
+                      "duration": 5808,
+                      "sort_order": 0,
+                      "tmdb_episode_validated_at": null,
+                      "tmdb_note": null,
+                      "is_linked": false,
+                      "watch_identifier": "Amazon Prime Video 0T4FBS1H845HDEYTKZGP4Y4GTQ",
+                      "season_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "Amazon Prime Video:Purchase",
+          "data_timestamp": null,
+          "update_at": null,
+          "deleted_at": null,
+          "status": null,
+          "extra": {},
+          "id": "Amazon Prime Video:Purchase",
+          "created_at": "2026-09-17T00:00:00+00:00",
+          "modified_at": "2026-09-17T00:00:00+00:00",
+          "link_to_tmdb": true,
+          "favicon_url": "https://www.primevideo.com/favicon.ico",
+          "image_url": null,
+          "plugin_id": "Amazon Prime Video",
+          "titles": [
+            {
+              "key": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+              "data_timestamp": "2026-09-17T00:00:00+00:00",
+              "update_at": "2026-09-23T00:00:00+00:00",
+              "deleted_at": null,
+              "status": null,
+              "extra": {},
+              "id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+              "created_at": "2026-09-17T00:00:00+00:00",
+              "modified_at": "2026-09-17T00:00:00+00:00",
+              "name": "Kill the Jockey",
+              "media_type": "Movie",
+              "description": "Remo Manfredini is a legendary jockey, but his self-destructive behaviour is starting to outshine his talent. On the day of the most important race of his career-that will clear him of his debts from mob boss Sirena-he has a severe accident and disappears from the hospital, free from his identity.",
+              "url": "https://primevideo.com/detail/0T4FBS1H845HDEYTKZGP4Y4GTQ",
+              "image_url": "https://m.media-amazon.com/images/S/pv-target-images/11e8f6e5f9e608219f4297d4982c6407262cb159b7e2af2081c022bb7c41888b.jpg",
+              "thumbnail_url": "https://m.media-amazon.com/images/S/pv-target-images/11e8f6e5f9e608219f4297d4982c6407262cb159b7e2af2081c022bb7c41888b.jpg",
+              "poster_url": null,
+              "poster_thumbnail_url": null,
+              "year": 2024,
+              "score": null,
+              "popularity": null,
+              "original_language": null,
+              "tmdb_title_validated_at": null,
+              "link_status": null,
+              "is_linked": false,
+              "source_id": "Amazon Prime Video:Purchase",
+              "seasons": [
+                {
+                  "key": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+                  "data_timestamp": "2026-09-17T00:00:00+00:00",
+                  "update_at": "2026-09-23T00:00:00+00:00",
+                  "deleted_at": null,
+                  "status": null,
+                  "extra": {},
+                  "id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+                  "created_at": "2026-09-17T00:00:00+00:00",
+                  "modified_at": "2026-09-17T00:00:00+00:00",
+                  "name": null,
+                  "url": null,
+                  "season_number": 0,
+                  "image_url": null,
+                  "thumbnail_url": null,
+                  "sort_order": 0,
+                  "title_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+                  "episodes": [
+                    {
+                      "key": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+                      "data_timestamp": "2026-09-17T00:00:00+00:00",
+                      "update_at": null,
+                      "deleted_at": null,
+                      "status": null,
+                      "extra": {},
+                      "id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+                      "created_at": "2026-09-17T00:00:00+00:00",
+                      "modified_at": "2026-09-17T00:00:00+00:00",
+                      "url": "https://primevideo.com/detail/0T4FBS1H845HDEYTKZGP4Y4GTQ",
+                      "name": "Kill the Jockey",
+                      "description": "Remo Manfredini is a legendary jockey, but his self-destructive behaviour is starting to outshine his talent. On the day of the most important race of his career-that will clear him of his debts from mob boss Sirena-he has a severe accident and disappears from the hospital, free from his identity.",
+                      "image_url": "https://m.media-amazon.com/images/S/pv-target-images/11e8f6e5f9e608219f4297d4982c6407262cb159b7e2af2081c022bb7c41888b.jpg",
+                      "thumbnail_url": "https://m.media-amazon.com/images/S/pv-target-images/11e8f6e5f9e608219f4297d4982c6407262cb159b7e2af2081c022bb7c41888b.jpg",
+                      "air_date": "2024-09-25T07:00:00+00:00",
+                      "episode_number": 0,
+                      "duration": 5808,
+                      "sort_order": 0,
+                      "tmdb_episode_validated_at": null,
+                      "tmdb_note": null,
+                      "is_linked": false,
+                      "watch_identifier": "Amazon Prime Video 0T4FBS1H845HDEYTKZGP4Y4GTQ",
+                      "season_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "key": "Amazon Prime Video:mubi",
+          "data_timestamp": null,
+          "update_at": null,
+          "deleted_at": null,
+          "status": null,
+          "extra": {},
+          "id": "Amazon Prime Video:mubi",
+          "created_at": "2026-09-17T00:00:00+00:00",
+          "modified_at": "2026-09-17T00:00:00+00:00",
+          "link_to_tmdb": true,
+          "favicon_url": "https://www.primevideo.com/favicon.ico",
+          "image_url": null,
+          "plugin_id": "Amazon Prime Video",
+          "titles": [
+            {
+              "key": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+              "data_timestamp": "2026-09-17T00:00:00+00:00",
+              "update_at": "2026-09-23T00:00:00+00:00",
+              "deleted_at": null,
+              "status": null,
+              "extra": {},
+              "id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+              "created_at": "2026-09-17T00:00:00+00:00",
+              "modified_at": "2026-09-17T00:00:00+00:00",
+              "name": "Kill the Jockey",
+              "media_type": "Movie",
+              "description": "Remo Manfredini is a legendary jockey, but his self-destructive behaviour is starting to outshine his talent. On the day of the most important race of his career-that will clear him of his debts from mob boss Sirena-he has a severe accident and disappears from the hospital, free from his identity.",
+              "url": "https://primevideo.com/detail/0T4FBS1H845HDEYTKZGP4Y4GTQ",
+              "image_url": "https://m.media-amazon.com/images/S/pv-target-images/11e8f6e5f9e608219f4297d4982c6407262cb159b7e2af2081c022bb7c41888b.jpg",
+              "thumbnail_url": "https://m.media-amazon.com/images/S/pv-target-images/11e8f6e5f9e608219f4297d4982c6407262cb159b7e2af2081c022bb7c41888b.jpg",
+              "poster_url": null,
+              "poster_thumbnail_url": null,
+              "year": 2024,
+              "score": null,
+              "popularity": null,
+              "original_language": null,
+              "tmdb_title_validated_at": null,
+              "link_status": null,
+              "is_linked": false,
+              "source_id": "Amazon Prime Video:mubi",
+              "seasons": [
+                {
+                  "key": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+                  "data_timestamp": "2026-09-17T00:00:00+00:00",
+                  "update_at": "2026-09-23T00:00:00+00:00",
+                  "deleted_at": null,
+                  "status": null,
+                  "extra": {},
+                  "id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+                  "created_at": "2026-09-17T00:00:00+00:00",
+                  "modified_at": "2026-09-17T00:00:00+00:00",
+                  "name": null,
+                  "url": null,
+                  "season_number": 0,
+                  "image_url": null,
+                  "thumbnail_url": null,
+                  "sort_order": 0,
+                  "title_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+                  "episodes": [
+                    {
+                      "key": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+                      "data_timestamp": "2026-09-17T00:00:00+00:00",
+                      "update_at": null,
+                      "deleted_at": null,
+                      "status": null,
+                      "extra": {},
+                      "id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+                      "created_at": "2026-09-17T00:00:00+00:00",
+                      "modified_at": "2026-09-17T00:00:00+00:00",
+                      "url": "https://primevideo.com/detail/0T4FBS1H845HDEYTKZGP4Y4GTQ",
+                      "name": "Kill the Jockey",
+                      "description": "Remo Manfredini is a legendary jockey, but his self-destructive behaviour is starting to outshine his talent. On the day of the most important race of his career-that will clear him of his debts from mob boss Sirena-he has a severe accident and disappears from the hospital, free from his identity.",
+                      "image_url": "https://m.media-amazon.com/images/S/pv-target-images/11e8f6e5f9e608219f4297d4982c6407262cb159b7e2af2081c022bb7c41888b.jpg",
+                      "thumbnail_url": "https://m.media-amazon.com/images/S/pv-target-images/11e8f6e5f9e608219f4297d4982c6407262cb159b7e2af2081c022bb7c41888b.jpg",
+                      "air_date": "2024-09-25T07:00:00+00:00",
+                      "episode_number": 0,
+                      "duration": 5808,
+                      "sort_order": 0,
+                      "tmdb_episode_validated_at": null,
+                      "tmdb_note": null,
+                      "is_linked": false,
+                      "watch_identifier": "Amazon Prime Video 0T4FBS1H845HDEYTKZGP4Y4GTQ",
+                      "season_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "Custom Media",
+      "data_timestamp": null,
+      "update_at": null,
+      "deleted_at": null,
+      "status": null,
+      "extra": {},
+      "id": "Custom Media",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "version": null,
+      "sources": []
+    }
+  ],
+  "watchprovider": [],
+  "channel": [
+    {
+      "id": "Arthouse on Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "name": "Arthouse on Amazon Prime Video",
+      "channel_number": null,
+      "visibility": "public",
+      "default_order": null,
+      "description": "All Arthouse titles on Amazon Prime Video.\n\nThis is an automatically generated channel based on the titles that have been imported by all of Stream Channeler's users.",
+      "anonymous": false,
+      "score": -1,
+      "user_id": "Amazon Prime Video",
+      "update_at": "2026-09-18T00:00:00+00:00"
+    },
+    {
+      "id": "Comedy on Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "name": "Comedy on Amazon Prime Video",
+      "channel_number": null,
+      "visibility": "public",
+      "default_order": null,
+      "description": "All Comedy titles on Amazon Prime Video.\n\nThis is an automatically generated channel based on the titles that have been imported by all of Stream Channeler's users.",
+      "anonymous": false,
+      "score": -1,
+      "user_id": "Amazon Prime Video",
+      "update_at": "2026-09-18T00:00:00+00:00"
+    },
+    {
+      "id": "Drama on Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "name": "Drama on Amazon Prime Video",
+      "channel_number": null,
+      "visibility": "public",
+      "default_order": null,
+      "description": "All Drama titles on Amazon Prime Video.\n\nThis is an automatically generated channel based on the titles that have been imported by all of Stream Channeler's users.",
+      "anonymous": false,
+      "score": -1,
+      "user_id": "Amazon Prime Video",
+      "update_at": "2026-09-18T00:00:00+00:00"
+    },
+    {
+      "id": "Purchase on Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "name": "Purchase on Amazon Prime Video",
+      "channel_number": null,
+      "visibility": "public",
+      "default_order": null,
+      "description": "All Purchase titles on Amazon Prime Video.\n\nThis is an automatically generated channel based on the titles that have been imported by all of Stream Channeler's users.",
+      "anonymous": false,
+      "score": -1,
+      "user_id": "Amazon Prime Video",
+      "update_at": "2026-09-18T00:00:00+00:00"
+    },
+    {
+      "id": "Sports on Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "name": "Sports on Amazon Prime Video",
+      "channel_number": null,
+      "visibility": "public",
+      "default_order": null,
+      "description": "All Sports titles on Amazon Prime Video.\n\nThis is an automatically generated channel based on the titles that have been imported by all of Stream Channeler's users.",
+      "anonymous": false,
+      "score": -1,
+      "user_id": "Amazon Prime Video",
+      "update_at": "2026-09-18T00:00:00+00:00"
+    },
+    {
+      "id": "All Titles on Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "name": "All Titles on Amazon Prime Video",
+      "channel_number": null,
+      "visibility": "public",
+      "default_order": null,
+      "description": "All Titles titles on Amazon Prime Video.\n\nThis is an automatically generated channel based on the titles that have been imported by all of Stream Channeler's users.",
+      "anonymous": false,
+      "score": -1,
+      "user_id": "Amazon Prime Video",
+      "update_at": "2026-09-18T00:00:00+00:00"
+    }
+  ],
+  "channelorder": [],
+  "usersourcepreference": [],
+  "channelcombinedchannel": [],
+  "channelfavorite": [],
+  "channelorderfavorite": [],
+  "channelqueue": [
+    {
+      "id": "All Titles on Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "url": "https://primevideo.com/detail/0T4FBS1H845HDEYTKZGP4Y4GTQ",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Amazon Prime Video"
+    },
+    {
+      "id": "All Titles on Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "url": "https://primevideo.com/detail/B0FXZHWS4X",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Amazon Prime Video"
+    },
+    {
+      "id": "All Titles on Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00.000001+00:00",
+      "modified_at": "2026-09-17T00:00:00.000001+00:00",
+      "url": "https://primevideo.com/detail/B0GJJ9LJMF",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Amazon Prime Video"
+    },
+    {
+      "id": "All Titles on Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00.000002+00:00",
+      "modified_at": "2026-09-17T00:00:00.000002+00:00",
+      "url": "https://primevideo.com/detail/B08NWPLPH4",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Amazon Prime Video"
+    },
+    {
+      "id": "All Titles on Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00.000003+00:00",
+      "modified_at": "2026-09-17T00:00:00.000003+00:00",
+      "url": "https://primevideo.com/detail/B0C53F3PKL",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Amazon Prime Video"
+    },
+    {
+      "id": "All Titles on Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00.000004+00:00",
+      "modified_at": "2026-09-17T00:00:00.000004+00:00",
+      "url": "https://primevideo.com/detail/B07ZHP8S2W",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Amazon Prime Video"
+    },
+    {
+      "id": "All Titles on Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00.000005+00:00",
+      "modified_at": "2026-09-17T00:00:00.000005+00:00",
+      "url": "https://primevideo.com/detail/B09CM5LT83",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Amazon Prime Video"
+    },
+    {
+      "id": "All Titles on Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00.000006+00:00",
+      "modified_at": "2026-09-17T00:00:00.000006+00:00",
+      "url": "https://primevideo.com/detail/B0CVGV65R4",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Amazon Prime Video"
+    },
+    {
+      "id": "All Titles on Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00.000007+00:00",
+      "modified_at": "2026-09-17T00:00:00.000007+00:00",
+      "url": "https://primevideo.com/detail/B0CHC7DT9D",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Amazon Prime Video"
+    },
+    {
+      "id": "All Titles on Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00.000008+00:00",
+      "modified_at": "2026-09-17T00:00:00.000008+00:00",
+      "url": "https://primevideo.com/detail/B0FG2SCN3H",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Amazon Prime Video"
+    },
+    {
+      "id": "All Titles on Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00.000009+00:00",
+      "modified_at": "2026-09-17T00:00:00.000009+00:00",
+      "url": "https://primevideo.com/detail/B0CVZKT5YT",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Amazon Prime Video"
+    },
+    {
+      "id": "Arthouse on Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "url": "https://primevideo.com/detail/0T4FBS1H845HDEYTKZGP4Y4GTQ",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "Arthouse on Amazon Prime Video"
+    },
+    {
+      "id": "Comedy on Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "url": "https://primevideo.com/detail/0T4FBS1H845HDEYTKZGP4Y4GTQ",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "Comedy on Amazon Prime Video"
+    },
+    {
+      "id": "Drama on Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "url": "https://primevideo.com/detail/0T4FBS1H845HDEYTKZGP4Y4GTQ",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "Drama on Amazon Prime Video"
+    },
+    {
+      "id": "Purchase on Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "url": "https://primevideo.com/detail/0T4FBS1H845HDEYTKZGP4Y4GTQ",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "Purchase on Amazon Prime Video"
+    },
+    {
+      "id": "Sports on Amazon Prime Video",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "url": "https://primevideo.com/detail/0T4FBS1H845HDEYTKZGP4Y4GTQ",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "Sports on Amazon Prime Video"
+    }
+  ],
+  "comment": [],
+  "channeltitle": [],
+  "commentnotification": [],
+  "titlegenre": [
+    {
+      "id": "Arthouse",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "title_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+      "name": "Arthouse"
+    },
+    {
+      "id": "Arthouse",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "title_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+      "name": "Arthouse"
+    },
+    {
+      "id": "Arthouse",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "title_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+      "name": "Arthouse"
+    },
+    {
+      "id": "Comedy",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "title_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+      "name": "Comedy"
+    },
+    {
+      "id": "Comedy",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "title_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+      "name": "Comedy"
+    },
+    {
+      "id": "Comedy",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "title_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+      "name": "Comedy"
+    },
+    {
+      "id": "Drama",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "title_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+      "name": "Drama"
+    },
+    {
+      "id": "Drama",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "title_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+      "name": "Drama"
+    },
+    {
+      "id": "Drama",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "title_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+      "name": "Drama"
+    },
+    {
+      "id": "Sports",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "title_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+      "name": "Sports"
+    },
+    {
+      "id": "Sports",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "title_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+      "name": "Sports"
+    },
+    {
+      "id": "Sports",
+      "created_at": "2026-09-17T00:00:00+00:00",
+      "modified_at": "2026-09-17T00:00:00+00:00",
+      "title_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+      "name": "Sports"
+    }
+  ],
+  "titleissuereport": [],
+  "titlespokenlanguage": [],
+  "titletmdbtitle": [],
+  "titlewatchprovider": [],
+  "unmatchedtitle": [],
+  "channelseasonfilter": [],
+  "channelsourcefilter": [],
+  "seasonissuereport": [],
+  "channelepisodefilter": [],
+  "channelepisodesourcefilter": [],
+  "channelsavedepisodeorder": [],
+  "episodeissuereport": [],
+  "episodetmdbepisode": [],
+  "episodetmdbtitle": [
+    {
+      "episode_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+      "tmdb_title_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ"
+    },
+    {
+      "episode_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+      "tmdb_title_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ"
+    },
+    {
+      "episode_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ",
+      "tmdb_title_id": "0T4FBS1H845HDEYTKZGP4Y4GTQ"
+    }
+  ],
+  "userepisodeurl": [],
+  "watch": []
+}
