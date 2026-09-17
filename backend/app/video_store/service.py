@@ -18,13 +18,16 @@ from app.sources.models import Source
 from app.titles.models import (
     Title,
     TitleGenre,
+    TitleSpokenLanguage,
     TitleTmdbTitle,
     TitleWatchProvider,
 )
 from app.users.models import User
 from app.video_store.schemas import (
+    VideoStoreLanguageOutput,
     VideoStoreRegionOutput,
     VideoStoreSourceOutput,
+    VideoStoreTitleDetailOutput,
     VideoStoreTitleOutput,
     VideoStoreTitlesOutput,
     VideoStoreWatchProviderOutput,
@@ -148,6 +151,73 @@ def _title_genres(
 
 
 # TODO: Validate
+def _title_languages(
+    session: Session,
+    title_ids: list[uuid.UUID],
+) -> dict[uuid.UUID, list[str]]:
+    if not title_ids:
+        return {}
+
+    rows = session.exec(
+        select(TitleSpokenLanguage.title_id, TitleSpokenLanguage.code)
+        .where(col(TitleSpokenLanguage.title_id).in_(title_ids))
+        .order_by(col(TitleSpokenLanguage.code)),
+    ).all()
+    languages: dict[uuid.UUID, list[str]] = {}
+    for title_id, code in rows:
+        languages.setdefault(title_id, []).append(code)
+    return languages
+
+
+# TODO: Validate
+def store_original_languages(session: Session) -> list[VideoStoreLanguageOutput]:
+    """Read every original language a title is filed under, largest first."""
+    names = dict(
+        session.exec(
+            select(TitleSpokenLanguage.code, TitleSpokenLanguage.name).distinct(),
+        ).all(),
+    )
+    rows = session.exec(
+        select(Title.original_language, func.count(col(Title.id)))
+        .where(
+            col(Title.original_language).is_not(None),
+            col(Title.deleted_at).is_(None),
+        )
+        .group_by(col(Title.original_language))
+        .order_by(func.count(col(Title.id)).desc()),
+    ).all()
+    return [
+        VideoStoreLanguageOutput(
+            code=code,
+            name=names.get(code),
+            title_count=title_count,
+        )
+        for code, title_count in rows
+        if code is not None
+    ]
+
+
+# TODO: Validate
+def store_spoken_languages(session: Session) -> list[VideoStoreLanguageOutput]:
+    """Read every language a title is spoken in, largest first."""
+    rows = session.exec(
+        select(
+            TitleSpokenLanguage.code,
+            func.min(col(TitleSpokenLanguage.name)),
+            func.count(distinct(col(TitleSpokenLanguage.title_id))),
+        )
+        .join(Title, col(Title.id) == col(TitleSpokenLanguage.title_id))
+        .where(col(Title.deleted_at).is_(None))
+        .group_by(col(TitleSpokenLanguage.code))
+        .order_by(func.count(distinct(col(TitleSpokenLanguage.title_id))).desc()),
+    ).all()
+    return [
+        VideoStoreLanguageOutput(code=code, name=name, title_count=title_count)
+        for code, name, title_count in rows
+    ]
+
+
+# TODO: Validate
 def _shelve_titles(
     session: Session,
     titles: Sequence[Title],
@@ -155,44 +225,42 @@ def _shelve_titles(
     title_ids = [title.id for title in titles]
     linked_titles = _linked_titles(session, title_ids)
     stats = _title_stats(session, title_ids)
-    genres = _title_genres(
-        session,
-        title_ids + [linked.id for linked in linked_titles.values()],
-    )
+    related_ids = title_ids + [linked.id for linked in linked_titles.values()]
+    genres = _title_genres(session, related_ids)
+    languages = _title_languages(session, related_ids)
 
     shelved: list[VideoStoreTitleOutput] = []
     for title in titles:
         linked_title = linked_titles.get(title.id) or title
         season_count, episode_count = stats.get(title.id, (0, 0))
+        poster = linked_title.poster_thumbnail_url or title.poster_thumbnail_url
         shelved.append(
             VideoStoreTitleOutput(
                 id=title.id,
                 name=linked_title.name or title.name,
                 year=linked_title.year or title.year,
-                poster_url=(
-                    linked_title.poster_url
-                    or title.poster_url
-                    or linked_title.image_url
-                    or title.image_url
+                score=(
+                    linked_title.score
+                    if linked_title.score is not None
+                    else title.score
                 ),
-                poster_thumbnail_url=(
-                    linked_title.poster_thumbnail_url or title.poster_thumbnail_url
+                popularity=(
+                    linked_title.popularity
+                    if linked_title.popularity is not None
+                    else title.popularity
+                ),
+                media_type=linked_title.media_type or title.media_type,
+                original_language=(
+                    linked_title.original_language or title.original_language
+                ),
+                languages=(
+                    languages.get(linked_title.id) or languages.get(title.id) or []
                 ),
                 thumbnail_url=(
-                    linked_title.poster_thumbnail_url
-                    or linked_title.thumbnail_url
-                    or title.poster_thumbnail_url
-                    or title.thumbnail_url
+                    poster or linked_title.thumbnail_url or title.thumbnail_url
                 ),
-                image_url=(
-                    linked_title.image_url
-                    or title.image_url
-                    or linked_title.thumbnail_url
-                    or title.thumbnail_url
-                ),
-                description=linked_title.description or title.description,
+                is_poster=poster is not None,
                 genres=genres.get(linked_title.id) or genres.get(title.id) or [],
-                url=title.url,
                 season_count=season_count,
                 episode_count=episode_count,
             ),
@@ -201,34 +269,54 @@ def _shelve_titles(
 
 
 # TODO: Validate
-def store_titles(
-    session: Session,
-    source: Source,
-    offset: int,
-    limit: int,
-) -> VideoStoreTitlesOutput:
-    """Read a page of the titles a `Source` carries, in shelf order."""
-    total = session.exec(
-        select(func.count(col(Title.id))).where(
-            col(Title.source_id) == source.id,
-            col(Title.deleted_at).is_(None),
+def title_detail(session: Session, title: Title) -> VideoStoreTitleDetailOutput:
+    """Read everything the case viewer shows for one shelved title."""
+    linked_title = _linked_titles(session, [title.id]).get(title.id) or title
+    spoken = session.exec(
+        select(TitleSpokenLanguage.code, TitleSpokenLanguage.name)
+        .where(col(TitleSpokenLanguage.title_id).in_([title.id, linked_title.id]))
+        .order_by(col(TitleSpokenLanguage.name)),
+    ).all()
+    names = dict(spoken)
+    original_code = linked_title.original_language or title.original_language
+    return VideoStoreTitleDetailOutput(
+        id=title.id,
+        name=linked_title.name or title.name,
+        year=linked_title.year or title.year,
+        poster_url=(
+            linked_title.poster_url
+            or title.poster_url
+            or linked_title.image_url
+            or title.image_url
         ),
-    ).one()
+        image_url=(
+            linked_title.image_url
+            or title.image_url
+            or linked_title.thumbnail_url
+            or title.thumbnail_url
+        ),
+        description=linked_title.description or title.description,
+        original_language=(
+            names.get(original_code, original_code) if original_code else None
+        ),
+        languages=sorted({name for name in names.values() if name}),
+        url=title.url,
+    )
 
+
+# TODO: Validate
+def store_titles(session: Session, source: Source) -> VideoStoreTitlesOutput:
+    """Read every title a `Source` carries, in shelf order."""
+    listed = [
+        col(Title.source_id) == source.id,
+        col(Title.deleted_at).is_(None),
+    ]
     titles = session.exec(
-        select(Title)
-        .where(
-            col(Title.source_id) == source.id,
-            col(Title.deleted_at).is_(None),
-        )
-        .order_by(col(Title.name), col(Title.id))
-        .offset(offset)
-        .limit(limit),
+        select(Title).where(*listed).order_by(col(Title.name), col(Title.id)),
     ).all()
 
     return VideoStoreTitlesOutput(
         titles=_shelve_titles(session, titles),
-        total=total,
     )
 
 
@@ -237,10 +325,8 @@ def channel_titles(
     session: Session,
     channel: Channel,
     user: User | None,
-    offset: int,
-    limit: int,
 ) -> VideoStoreTitlesOutput:
-    """Read a page of the titles a `Channel` shelves, canonical rows first."""
+    """Read every title a `Channel` shelves, canonical rows first."""
     channel_ids = resolve_channel_ids(
         session,
         user,
@@ -252,10 +338,6 @@ def channel_titles(
         col(ChannelTitle.is_blacklist_only).is_(False),
     ]
 
-    total = session.exec(
-        select(func.count(distinct(col(ChannelTitle.tmdb_title_id)))).where(*listed),
-    ).one()
-
     tmdb_title_ids = session.exec(
         select(ChannelTitle.tmdb_title_id)
         .join(
@@ -265,9 +347,7 @@ def channel_titles(
         )
         .where(*listed)
         .group_by(col(ChannelTitle.tmdb_title_id), col(Title.name))
-        .order_by(col(Title.name), col(ChannelTitle.tmdb_title_id))
-        .offset(offset)
-        .limit(limit),
+        .order_by(col(Title.name), col(ChannelTitle.tmdb_title_id)),
     ).all()
 
     canonical = {
@@ -298,7 +378,6 @@ def channel_titles(
 
     return VideoStoreTitlesOutput(
         titles=_shelve_titles(session, shelved),
-        total=total,
     )
 
 
@@ -383,21 +462,8 @@ def provider_titles(
     session: Session,
     watch_provider_id: uuid.UUID,
     region: str,
-    offset: int,
-    limit: int,
 ) -> VideoStoreTitlesOutput:
-    """Read a page of the titles a `WatchProvider` offers in `region`."""
-    total = session.exec(
-        select(func.count(distinct(col(Title.id))))
-        .select_from(Title)
-        .join(TitleWatchProvider, col(TitleWatchProvider.title_id) == col(Title.id))
-        .where(
-            TitleWatchProvider.watch_provider_id == watch_provider_id,
-            TitleWatchProvider.region == region,
-            col(Title.deleted_at).is_(None),
-        ),
-    ).one()
-
+    """Read every title a `WatchProvider` offers in `region`."""
     titles = session.exec(
         select(Title)
         .join(TitleWatchProvider, col(TitleWatchProvider.title_id) == col(Title.id))
@@ -407,12 +473,9 @@ def provider_titles(
             col(Title.deleted_at).is_(None),
         )
         .distinct()
-        .order_by(col(Title.name), col(Title.id))
-        .offset(offset)
-        .limit(limit),
+        .order_by(col(Title.name), col(Title.id)),
     ).all()
 
     return VideoStoreTitlesOutput(
         titles=_shelve_titles(session, titles),
-        total=total,
     )

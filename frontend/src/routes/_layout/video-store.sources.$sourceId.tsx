@@ -5,10 +5,7 @@ import { ArrowLeft } from "lucide-react"
 import { useCallback } from "react"
 import { VideoStoreService } from "@/client"
 import { StoreScreen } from "@/components/Channels/Channel3D/StoreScreen"
-import {
-  fetchSourceTitlePage,
-  SOURCE_TITLE_PAGE,
-} from "@/components/Channels/Channel3D/sourceTitles"
+import { fetchSourceTitles } from "@/components/Channels/Channel3D/sourceTitles"
 
 export const Route = createFileRoute("/_layout/video-store/sources/$sourceId")({
   component: SourceStore,
@@ -28,17 +25,13 @@ function SourceStore() {
   })
   const source = sources?.find((entry) => entry.id === sourceId)
 
-  const fetchPage = useCallback(
-    (offset: number) => fetchSourceTitlePage(sourceId, offset),
-    [sourceId],
-  )
+  const fetchStock = useCallback(() => fetchSourceTitles(sourceId), [sourceId])
 
   return (
     <StoreScreen
       storeKey={sourceId}
       storeName={source?.key || "Video Store"}
-      pageSize={SOURCE_TITLE_PAGE}
-      fetchPage={fetchPage}
+      fetchStock={fetchStock}
       emptyMessage="This source has nothing on the shelves right now."
       back={
         <Link

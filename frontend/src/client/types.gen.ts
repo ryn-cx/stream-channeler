@@ -1205,6 +1205,9 @@ export type TitleListPublic = {
     poster_url?: (string | null);
     poster_thumbnail_url?: (string | null);
     year?: (number | null);
+    score?: (number | null);
+    popularity?: (number | null);
+    original_language?: (string | null);
     tmdb_title_validated_at?: (string | null);
     source_id: string;
     id: string;
@@ -1238,6 +1241,9 @@ export type TitlePublic = {
     poster_url?: (string | null);
     poster_thumbnail_url?: (string | null);
     year?: (number | null);
+    score?: (number | null);
+    popularity?: (number | null);
+    original_language?: (string | null);
     tmdb_title_validated_at?: (string | null);
     source_id: string;
     id: string;
@@ -1283,6 +1289,9 @@ export type TitleUpdate = {
     poster_url?: (string | null);
     poster_thumbnail_url?: (string | null);
     year?: (number | null);
+    score?: (number | null);
+    popularity?: (number | null);
+    original_language?: (string | null);
     tmdb_title_validated_at?: (string | null);
 };
 
@@ -1377,6 +1386,9 @@ export type TmdbTitleOutput = {
     poster_url?: (string | null);
     poster_thumbnail_url?: (string | null);
     year?: (number | null);
+    score?: (number | null);
+    popularity?: (number | null);
+    original_language?: (string | null);
     id: string;
     created_at: string;
     modified_at: string;
@@ -2038,6 +2050,9 @@ export type UnvalidatedTitleOutput = {
     poster_url?: (string | null);
     poster_thumbnail_url?: (string | null);
     year?: (number | null);
+    score?: (number | null);
+    popularity?: (number | null);
+    original_language?: (string | null);
     tmdb_title_validated_at?: (string | null);
     source_id: string;
     id: string;
@@ -2128,6 +2143,15 @@ export type ValidationError = {
 };
 
 /**
+ * Schema for returning one language titles can be filtered by.
+ */
+export type VideoStoreLanguageOutput = {
+    code: string;
+    name: (string | null);
+    title_count: number;
+};
+
+/**
  * Schema for returning a region titles can be shelved by.
  */
 export type VideoStoreRegionOutput = {
@@ -2148,29 +2172,44 @@ export type VideoStoreSourceOutput = {
 };
 
 /**
- * Schema for returning one shelved title.
+ * Schema for returning everything a title's case viewer shows.
+ */
+export type VideoStoreTitleDetailOutput = {
+    id: string;
+    name: (string | null);
+    year: (number | null);
+    poster_url: (string | null);
+    image_url: (string | null);
+    description: (string | null);
+    original_language: (string | null);
+    languages: Array<(string)>;
+    url: (string | null);
+};
+
+/**
+ * Schema for returning one shelved title, as its case on the shelf.
  */
 export type VideoStoreTitleOutput = {
     id: string;
     name: (string | null);
     year: (number | null);
-    poster_url: (string | null);
-    poster_thumbnail_url: (string | null);
+    score: (number | null);
+    popularity: (number | null);
+    media_type: (string | null);
+    original_language: (string | null);
+    languages: Array<(string)>;
     thumbnail_url: (string | null);
-    image_url: (string | null);
-    description: (string | null);
+    is_poster: boolean;
     genres: Array<(string)>;
-    url: (string | null);
     season_count: number;
     episode_count: number;
 };
 
 /**
- * Schema for returning a page of a `Source`'s shelved titles.
+ * Schema for returning every title a store shelves.
  */
 export type VideoStoreTitlesOutput = {
     titles: Array<VideoStoreTitleOutput>;
-    total: number;
 };
 
 /**
@@ -2443,6 +2482,9 @@ export type WhitelistTitleOutput = {
     poster_url?: (string | null);
     poster_thumbnail_url?: (string | null);
     year?: (number | null);
+    score?: (number | null);
+    popularity?: (number | null);
+    original_language?: (string | null);
     tmdb_title_validated_at?: (string | null);
     source_id: string;
     id: string;
@@ -2750,8 +2792,6 @@ export type ChannelsGetChannelEpisodesResponse = (ChannelEpisodesOutput);
 
 export type ChannelsGetChannelStoreTitlesData = {
     channelId: string;
-    limit?: number;
-    offset?: number;
 };
 
 export type ChannelsGetChannelStoreTitlesResponse = (VideoStoreTitlesOutput);
@@ -3505,14 +3545,16 @@ export type UtilsTestEmailResponse = (Message);
 export type VideoStoreGetStoreSourcesResponse = (Array<VideoStoreSourceOutput>);
 
 export type VideoStoreGetStoreTitlesData = {
-    limit?: number;
-    offset?: number;
     sourceId: string;
 };
 
 export type VideoStoreGetStoreTitlesResponse = (VideoStoreTitlesOutput);
 
 export type VideoStoreGetStoreRegionsResponse = (Array<VideoStoreRegionOutput>);
+
+export type VideoStoreGetOriginalLanguagesResponse = (Array<VideoStoreLanguageOutput>);
+
+export type VideoStoreGetSpokenLanguagesResponse = (Array<VideoStoreLanguageOutput>);
 
 export type VideoStoreGetStoreWatchProvidersData = {
     region?: string;
@@ -3521,13 +3563,17 @@ export type VideoStoreGetStoreWatchProvidersData = {
 export type VideoStoreGetStoreWatchProvidersResponse = (Array<VideoStoreWatchProviderOutput>);
 
 export type VideoStoreGetProviderTitlesData = {
-    limit?: number;
-    offset?: number;
     region?: string;
     watchProviderId: string;
 };
 
 export type VideoStoreGetProviderTitlesResponse = (VideoStoreTitlesOutput);
+
+export type VideoStoreGetTitleDetailData = {
+    titleId: string;
+};
+
+export type VideoStoreGetTitleDetailResponse = (VideoStoreTitleDetailOutput);
 
 export type WatchesGetWatchesData = {
     filterOptions?: string;

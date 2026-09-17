@@ -4,10 +4,7 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router"
 import { ArrowLeft } from "lucide-react"
 import { useCallback } from "react"
 import { ChannelsService } from "@/client"
-import {
-  CHANNEL_STORE_PAGE,
-  fetchChannelStorePage,
-} from "@/components/Channels/Channel3D/channelTitles"
+import { fetchChannelStoreTitles } from "@/components/Channels/Channel3D/channelTitles"
 import { StoreScreen } from "@/components/Channels/Channel3D/StoreScreen"
 
 export const Route = createFileRoute(
@@ -40,8 +37,8 @@ function Channel3D() {
     refetchOnWindowFocus: false,
   })
 
-  const fetchPage = useCallback(
-    (offset: number) => fetchChannelStorePage(channelId, offset),
+  const fetchStock = useCallback(
+    () => fetchChannelStoreTitles(channelId),
     [channelId],
   )
 
@@ -49,8 +46,7 @@ function Channel3D() {
     <StoreScreen
       storeKey={channelId}
       storeName={channel?.name || "Video Store"}
-      pageSize={CHANNEL_STORE_PAGE}
-      fetchPage={fetchPage}
+      fetchStock={fetchStock}
       emptyMessage="This channel has nothing on the shelves right now."
       back={
         <Link

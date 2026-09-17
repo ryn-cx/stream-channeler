@@ -4,10 +4,7 @@ import { createFileRoute, Link } from "@tanstack/react-router"
 import { ArrowLeft } from "lucide-react"
 import { useCallback } from "react"
 import { VideoStoreService } from "@/client"
-import {
-  fetchProviderTitlePage,
-  PROVIDER_TITLE_PAGE,
-} from "@/components/Channels/Channel3D/providerTitles"
+import { fetchProviderTitles } from "@/components/Channels/Channel3D/providerTitles"
 import { StoreScreen } from "@/components/Channels/Channel3D/StoreScreen"
 
 type ProviderStoreSearch = { region?: string }
@@ -41,9 +38,8 @@ function ProviderStore() {
   })
   const provider = providers?.find((entry) => entry.id === watchProviderId)
 
-  const fetchPage = useCallback(
-    (offset: number) =>
-      fetchProviderTitlePage(watchProviderId, activeRegion, offset),
+  const fetchStock = useCallback(
+    () => fetchProviderTitles(watchProviderId, activeRegion),
     [watchProviderId, activeRegion],
   )
 
@@ -51,8 +47,7 @@ function ProviderStore() {
     <StoreScreen
       storeKey={`${watchProviderId}-${activeRegion}`}
       storeName={provider?.name || "Video Store"}
-      pageSize={PROVIDER_TITLE_PAGE}
-      fetchPage={fetchPage}
+      fetchStock={fetchStock}
       emptyMessage={`Nothing is streaming here in ${activeRegion} right now.`}
       back={
         <>

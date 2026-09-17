@@ -39,25 +39,49 @@ class VideoStoreWatchProviderOutput(BaseModel):
 
 # TODO: Validate
 class VideoStoreTitleOutput(BaseModel):
-    """Schema for returning one shelved title."""
+    """Schema for returning one shelved title, as its case on the shelf."""
 
     id: uuid.UUID
     name: str | None
     year: int | None
-    poster_url: str | None
-    poster_thumbnail_url: str | None
+    score: float | None
+    popularity: float | None
+    media_type: str | None
+    original_language: str | None
+    languages: list[str]
     thumbnail_url: str | None
-    image_url: str | None
-    description: str | None
+    is_poster: bool
     genres: list[str]
-    url: str | None
     season_count: int
     episode_count: int
 
 
 # TODO: Validate
+class VideoStoreLanguageOutput(BaseModel):
+    """Schema for returning one language titles can be filtered by."""
+
+    code: str
+    name: str | None
+    title_count: int
+
+
+# TODO: Validate
+class VideoStoreTitleDetailOutput(BaseModel):
+    """Schema for returning everything a title's case viewer shows."""
+
+    id: uuid.UUID
+    name: str | None
+    year: int | None
+    poster_url: str | None
+    image_url: str | None
+    description: str | None
+    original_language: str | None
+    languages: list[str]
+    url: str | None
+
+
+# TODO: Validate
 class VideoStoreTitlesOutput(BaseModel):
-    """Schema for returning a page of a `Source`'s shelved titles."""
+    """Schema for returning every title a store shelves."""
 
     titles: list[VideoStoreTitleOutput]
-    total: int

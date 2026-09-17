@@ -3,107 +3,97 @@ import { Loader2 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { CaseViewer } from "./CaseViewer"
 import type { StoreTitle } from "./caseTexture"
+import {
+  applyFilters,
+  defaultFilters,
+  filterSummary,
+  StoreFilterPanel,
+  type StoreFilters,
+} from "./StoreFilters"
 import { VideoStoreCanvas } from "./VideoStoreCanvas"
+import type { VideoStore } from "./videoStore"
 
-export type StorePage = { titles: StoreTitle[]; total: number }
+export type StoreStock = StoreTitle[]
 
 // TODO: Validate
 export function StoreScreen({
   storeKey,
   storeName,
-  pageSize,
-  fetchPage,
+  fetchStock,
   emptyMessage,
   back,
 }: {
   storeKey: string
   storeName: string
-  pageSize: number
-  fetchPage: (offset: number) => Promise<StorePage>
+  fetchStock: () => Promise<StoreStock>
   emptyMessage: string
   back: React.ReactNode
 }) {
-  const [stock, setStock] = useState<{
-    capacity: number
-    slotCount: number
-    titles: StoreTitle[]
-  } | null>(null)
+  const [stock, setStock] = useState<StoreStock | null>(null)
+  const [filters, setFilters] = useState<StoreFilters | null>(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [store, setStore] = useState<VideoStore | null>(null)
   const [inspecting, setInspecting] = useState<StoreTitle | null>(null)
-  const fetchRef = useRef(fetchPage)
+  const fetchRef = useRef(fetchStock)
 
-  fetchRef.current = fetchPage
+  fetchRef.current = fetchStock
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: restock from scratch whenever the store changes
   useEffect(() => {
     let cancelled = false
-    const shelved = new Map<string, StoreTitle>()
     setStock(null)
 
     // TODO: Validate
-    const shelve = (page: StorePage, slotCount: number) => {
-      for (const title of page.titles) {
-        if (!shelved.has(title.id)) shelved.set(title.id, title)
-      }
-      setStock({
-        capacity: page.total,
-        slotCount,
-        titles: [...shelved.values()],
-      })
-    }
-
-    // TODO: Validate
     const stockShelves = async () => {
-      const first = await fetchRef.current(0)
+      const shelved = await fetchRef.current()
       if (cancelled) return
-      const placements = first.titles.reduce(
-        (sum, title) => sum + Math.max(title.genres.length, 1),
-        0,
-      )
-      const slotCount = Math.ceil(
-        (first.total * placements * 1.2) / Math.max(first.titles.length, 1),
-      )
-      shelve(first, slotCount)
-
-      const offsets: number[] = []
-      for (let offset = pageSize; offset < first.total; offset += pageSize) {
-        offsets.push(offset)
-      }
-      while (offsets.length > 0 && !cancelled) {
-        const batch = offsets.splice(0, 4)
-        const pages = await Promise.all(
-          batch.map((offset) => fetchRef.current(offset)),
-        )
-        if (cancelled) return
-        for (const page of pages) shelve(page, slotCount)
-      }
+      setStock(shelved)
+      setFilters(defaultFilters(shelved))
     }
 
     stockShelves()
     return () => {
       cancelled = true
     }
-  }, [storeKey, pageSize])
+  }, [storeKey])
+
+  useEffect(() => {
+    if (!store || !stock || !filters) return
+    store.setFilterSummary(filterSummary(stock, filters))
+  }, [store, stock, filters])
 
   // TODO: Validate
   const onActivate = (title: StoreTitle) => {
     setInspecting(title)
   }
 
+  const shelved = stock && filters ? applyFilters(stock, filters) : []
+  const slotCount = shelved.reduce(
+    (total, title) => total + Math.max(title.genres.length, 1),
+    0,
+  )
+  const filterKey = filters ? JSON.stringify(filters) : ""
+
   return (
     <div className="fixed inset-0 z-50 bg-black">
-      {stock && stock.titles.length > 0 ? (
+      {shelved.length > 0 ? (
         <VideoStoreCanvas
-          titles={stock.titles}
-          capacity={stock.capacity}
-          slotCount={stock.slotCount}
+          key={filterKey}
+          titles={shelved}
+          slotCount={slotCount}
           storeName={storeName}
-          paused={inspecting !== null}
+          paused={inspecting !== null || filtersOpen}
+          onStore={setStore}
           onActivate={onActivate}
         />
       ) : (
         <div className="flex size-full flex-col items-center justify-center gap-3 px-6 text-center text-white/70">
           {stock ? (
-            <span>{emptyMessage}</span>
+            <span>
+              {stock.length > 0
+                ? "Nothing matches these filters."
+                : emptyMessage}
+            </span>
           ) : (
             <>
               <Loader2 className="size-6 animate-spin" />
@@ -111,6 +101,16 @@ export function StoreScreen({
             </>
           )}
         </div>
+      )}
+
+      {stock && filters && (
+        <StoreFilterPanel
+          titles={stock}
+          filters={filters}
+          open={filtersOpen}
+          onOpenChange={setFiltersOpen}
+          onApply={setFilters}
+        />
       )}
 
       {inspecting && (

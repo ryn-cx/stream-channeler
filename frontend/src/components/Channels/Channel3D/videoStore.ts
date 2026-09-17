@@ -6,11 +6,14 @@ import {
   createCarpetTexture,
   createCaseCanvas,
   createCaseTexture,
+  createFilterBoardTexture,
+  createLabelTexture,
   createLoaderTexture,
   createTagTexture,
   genreHue,
   type StoreTitle,
 } from "./caseTexture"
+import { fetchTitleDetail } from "./titleDetail"
 
 type Slot = { position: THREE.Vector3; facing: THREE.Vector3 }
 
@@ -102,6 +105,11 @@ export class VideoStore {
   private packOrder: number[] = []
   private aisleStarts: number[] = []
   private posters: THREE.Mesh[] = []
+  private counterTop = new THREE.Vector3()
+  private filterBoard: THREE.Mesh | null = null
+  private swatches: THREE.Mesh[] = []
+  private floorMaterial: THREE.MeshStandardMaterial | null = null
+  private roomMaterials: THREE.MeshStandardMaterial[] = []
   private runMeshes: THREE.Mesh[][] = []
   private loaderButtons: THREE.Mesh[] = []
   private revealedRuns = new Set<number>()
@@ -189,21 +197,22 @@ export class VideoStore {
     const gondolaLength = perLevel * slotWidth
     const sides = Math.max(
       2,
-      Math.ceil(slotCount / (levels.length * perLevel)) + 2,
+      Math.ceil(slotCount / (levels.length * perLevel)) + 4,
     )
-    const unitCount = Math.min(18, Math.max(1, Math.ceil(sides / 2)))
-    const width = unitCount * 3.3 + 3.4
+    const unitCount = Math.min(400, Math.max(1, Math.ceil(sides / 2)))
+    const width = unitCount * 2 + 2.9
     const depth = gondolaLength + 6
     this.limit.set(width / 2 - 0.45, depth / 2 - 0.45)
-    this.camera.position.set(width / 2 - 1.8, 1.65, depth / 2 - 2.35)
-    this.camera.lookAt(width / 2 - 1.8, 1.35, depth / 2 - 1.3)
+    this.camera.position.set(width / 2 - 1.8, 1.65, depth / 2 - 1.05)
+    this.camera.lookAt(-width / 2 + 1.2, 1.3, -depth / 2 + 1.2)
 
+    this.floorMaterial = new THREE.MeshStandardMaterial({
+      map: createCarpetTexture(),
+      roughness: 0.95,
+    })
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(width, depth),
-      new THREE.MeshStandardMaterial({
-        map: createCarpetTexture(),
-        roughness: 0.95,
-      }),
+      this.floorMaterial,
     )
     floor.rotation.x = -Math.PI / 2
     this.scene.add(floor)
@@ -217,7 +226,7 @@ export class VideoStore {
     this.scene.add(ceiling)
 
     const wallMaterial = new THREE.MeshStandardMaterial({
-      color: 0x24262f,
+      color: 0xd8b13a,
       roughness: 0.9,
       side: THREE.DoubleSide,
     })
@@ -243,7 +252,7 @@ export class VideoStore {
     const lightMaterial = new THREE.MeshBasicMaterial({ color: 0xfff6e2 })
     const lanes = unitCount + 1
     for (let lane = 0; lane < lanes; lane++) {
-      const x = (lane - (lanes - 1) / 2) * 3.3
+      const x = (lane - (lanes - 1) / 2) * 2
       const strip = new THREE.Mesh(
         new THREE.BoxGeometry(0.22, 0.06, gondolaLength * 0.9),
         lightMaterial,
@@ -272,7 +281,7 @@ export class VideoStore {
     const runs: ShelfRun[] = []
 
     for (let unit = 0; unit < unitCount; unit++) {
-      const x = (unit - (unitCount - 1) / 2) * 3.3
+      const x = (unit - (unitCount - 1) / 2) * 2
       const zStart = -0.5 - gondolaLength / 2
 
       const spine = new THREE.Mesh(
@@ -283,7 +292,7 @@ export class VideoStore {
       this.scene.add(spine)
 
       const base = new THREE.Mesh(
-        new THREE.BoxGeometry(0.6, 0.28, gondolaLength),
+        new THREE.BoxGeometry(0.35, 0.28, gondolaLength),
         frameMaterial,
       )
       base.position.set(x, 0.14, -0.5)
@@ -295,10 +304,10 @@ export class VideoStore {
         const boards: THREE.Mesh[] = []
         for (const level of levels) {
           const board = new THREE.Mesh(
-            new THREE.BoxGeometry(0.29, 0.03, gondolaLength),
+            new THREE.BoxGeometry(0.135, 0.03, gondolaLength),
             shelfMaterial,
           )
-          board.position.set(x + side * 0.145, level - 0.015, -0.5)
+          board.position.set(x + side * 0.0675, level - 0.015, -0.5)
           this.scene.add(board)
           boards.push(board)
 
@@ -306,8 +315,8 @@ export class VideoStore {
           for (let index = 0; index < perLevel; index++) {
             row.push({
               position: new THREE.Vector3(
-                x + side * 0.215,
-                level + 0.096,
+                x + side * 0.0954,
+                level + 0.092,
                 zStart + margin + slotWidth * (index + 0.5),
               ),
               facing: new THREE.Vector3(side, 0, 0),
@@ -326,8 +335,8 @@ export class VideoStore {
 
       this.colliders.push(
         new THREE.Box3(
-          new THREE.Vector3(x - 0.34, 0, zStart - 0.1),
-          new THREE.Vector3(x + 0.34, 2.1, zStart + gondolaLength + 0.1),
+          new THREE.Vector3(x - 0.22, 0, zStart - 0.1),
+          new THREE.Vector3(x + 0.22, 2.1, zStart + gondolaLength + 0.1),
         ),
       )
     }
@@ -353,25 +362,82 @@ export class VideoStore {
       this.posters.push(poster)
     }
 
+    const counterMaterial = new THREE.MeshStandardMaterial({
+      color: 0xd8b13a,
+      roughness: 0.6,
+    })
+    this.roomMaterials.push(wallMaterial, counterMaterial)
     const counter = new THREE.Mesh(
       new THREE.BoxGeometry(2.6, 1.05, 0.7),
-      new THREE.MeshStandardMaterial({ color: 0x3b2a44, roughness: 0.6 }),
+      counterMaterial,
     )
-    counter.position.set(width / 2 - 1.8, 0.525, depth / 2 - 1.3)
+    counter.position.set(width / 2 - 1.8, 0.525, depth / 2 - 1.95)
+    this.counterTop.set(width / 2 - 1.8, 1.09, depth / 2 - 2.27)
     this.scene.add(counter)
+
+    const board = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.6, 0.7),
+      new THREE.MeshBasicMaterial({ map: createFilterBoardTexture([]) }),
+    )
+    board.position.set(width / 2 - 1.8, 1.056, depth / 2 - 1.95)
+    board.rotation.x = -Math.PI / 2
+    board.matrixAutoUpdate = false
+    board.updateMatrix()
+    this.scene.add(board)
+    this.filterBoard = board
+
+    const rows: Array<{ label: string; target: "floor" | "room" }> = [
+      { label: "Floor", target: "floor" },
+      { label: "Walls", target: "room" },
+    ]
+    const palette = [0x1f3a8a, 0x8a1f2f, 0x1f6b3a, 0x5b2f7a, 0xd8b13a, 0x2b2f3a]
+    for (const [row, { label, target }] of rows.entries()) {
+      const rowY = 1.82 - row * 0.4
+      const labelPlane = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.44, 0.11),
+        new THREE.MeshBasicMaterial({ map: createLabelTexture(label) }),
+      )
+      labelPlane.position.set(
+        width / 2 - 1.8 - (palette.length / 2) * 0.26 - 0.32,
+        rowY,
+        depth / 2 - 0.06,
+      )
+      labelPlane.rotation.y = Math.PI
+      labelPlane.matrixAutoUpdate = false
+      labelPlane.updateMatrix()
+      this.scene.add(labelPlane)
+
+      for (const [index, color] of palette.entries()) {
+        const swatch = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.2, 0.2),
+          new THREE.MeshBasicMaterial({ color }),
+        )
+        swatch.position.set(
+          width / 2 - 1.8 + (index - (palette.length - 1) / 2) * 0.26,
+          rowY,
+          depth / 2 - 0.06,
+        )
+        swatch.rotation.y = Math.PI
+        swatch.userData = { swatch: { target, color } }
+        swatch.matrixAutoUpdate = false
+        swatch.updateMatrix()
+        this.scene.add(swatch)
+        this.swatches.push(swatch)
+      }
+    }
     this.colliders.push(new THREE.Box3().setFromObject(counter))
 
     for (let aisle = 0; aisle <= unitCount; aisle++) {
-      const signX = (aisle - unitCount / 2) * 3.3
+      const signX = (aisle - unitCount / 2) * 2
       const near = new THREE.Mesh(
-        new THREE.PlaneGeometry(2.4, 0.56),
+        new THREE.PlaneGeometry(1.8, 0.45),
         new THREE.MeshBasicMaterial({
           map: createAisleSignTexture([], []),
         }),
       )
       near.position.set(signX, 2.46, -0.5 + gondolaLength / 2 + 0.22)
       const far = new THREE.Mesh(
-        new THREE.PlaneGeometry(2.4, 0.56),
+        new THREE.PlaneGeometry(1.8, 0.45),
         new THREE.MeshBasicMaterial({
           map: createAisleSignTexture([], []),
         }),
@@ -439,7 +505,7 @@ export class VideoStore {
       this.scene.add(button)
       this.loaderButtons.push(button)
     }
-    this.pickTargets = [...this.loaderButtons]
+    this.pickTargets = [...this.loaderButtons, ...this.swatches]
   }
 
   // TODO: Validate
@@ -505,7 +571,11 @@ export class VideoStore {
 
   // TODO: Validate
   private applyLod() {
-    this.pickTargets = [...this.loaderButtons, ...this.posters]
+    this.pickTargets = [
+      ...this.loaderButtons,
+      ...this.posters,
+      ...this.swatches,
+    ]
     for (let index = 0; index < this.runs.length; index++) {
       const near = this.nearRuns.has(index)
       for (const block of this.runBlocks[index]) block.visible = !near
@@ -564,6 +634,7 @@ export class VideoStore {
   // TODO: Validate
   private layoutStore() {
     this.runMeshes = this.runs.map(() => [])
+    for (const mesh of this.realCases) mesh.visible = false
     const entries = this.runs.map(() => [] as string[])
     const sections: Array<{
       run: number
@@ -657,7 +728,7 @@ export class VideoStore {
     mesh.scale.z = Math.abs(near.position.z - far.position.z) + 0.172
     mesh.position
       .copy(near.position)
-      .addScaledVector(near.facing, 0.077)
+      .addScaledVector(near.facing, 0.042)
       .setY(near.position.y - 0.104)
       .setZ((near.position.z + far.position.z) / 2)
   }
@@ -713,7 +784,7 @@ export class VideoStore {
     mesh.visible = true
     mesh.position
       .copy(slot.position)
-      .addScaledVector(slot.facing, 0.077)
+      .addScaledVector(slot.facing, 0.042)
       .setY(slot.position.y - 0.117)
     mesh.rotation.y = Math.atan2(slot.facing.x, slot.facing.z)
   }
@@ -729,7 +800,7 @@ export class VideoStore {
         const candidate = this.realCases[
           Math.floor(Math.random() * this.realCases.length)
         ].userData.title as StoreTitle
-        if (candidate.fullImageUrl || candidate.imageUrl) title = candidate
+        if (candidate.imageUrl) title = candidate
       }
       if (!title) return
       poster.userData = {
@@ -743,8 +814,10 @@ export class VideoStore {
   }
 
   // TODO: Validate
-  private paintPoster(poster: THREE.Mesh, title: StoreTitle) {
-    const source = title.fullImageUrl ?? title.imageUrl
+  private async paintPoster(poster: THREE.Mesh, title: StoreTitle) {
+    const detail = await fetchTitleDetail(title.id)
+    if (this.disposed) return
+    const source = detail.poster_url ?? title.imageUrl
     if (!source) return
     const image = new Image()
     image.crossOrigin = "anonymous"
@@ -767,6 +840,18 @@ export class VideoStore {
     image.onload = () => finish(image)
     image.onerror = () => finish(null)
     image.src = source
+  }
+
+  // TODO: Validate
+  private trigger(mesh: THREE.Mesh) {
+    const swatch = mesh.userData.swatch as
+      | { target: "floor" | "room"; color: number }
+      | undefined
+    if (swatch) {
+      this.paint(swatch)
+      return
+    }
+    this.reveal(mesh.userData.run as number)
   }
 
   // TODO: Validate
@@ -814,6 +899,8 @@ export class VideoStore {
     )
     mesh.matrixAutoUpdate = false
     mesh.rotation.z = (Math.random() - 0.5) * 0.05
+    mesh.rotation.order = "YXZ"
+    mesh.rotation.x = -0.349
     mesh.userData = {
       title,
       basePosition: new THREE.Vector3(),
@@ -1081,6 +1168,33 @@ export class VideoStore {
   }
 
   // TODO: Validate
+  private paint(swatch: { target: "floor" | "room"; color: number }) {
+    if (swatch.target === "floor") {
+      if (!this.floorMaterial) return
+      const hue = Math.round(
+        new THREE.Color(swatch.color).getHSL({ h: 0, s: 0, l: 0 }).h * 360,
+      )
+      this.floorMaterial.map?.dispose()
+      this.floorMaterial.map = createCarpetTexture(hue)
+      this.floorMaterial.needsUpdate = true
+      return
+    }
+    for (const material of this.roomMaterials) {
+      material.color.set(swatch.color)
+      material.needsUpdate = true
+    }
+  }
+
+  // TODO: Validate
+  setFilterSummary(lines: string[]) {
+    if (!this.filterBoard) return
+    const material = this.filterBoard.material as THREE.MeshBasicMaterial
+    material.map?.dispose()
+    material.map = createFilterBoardTexture(lines)
+    material.needsUpdate = true
+  }
+
+  // TODO: Validate
   lock() {
     if (!this.touch) {
       if (performance.now() - this.lastExit < 900) return
@@ -1137,7 +1251,7 @@ export class VideoStore {
     )
     if (mesh && !mesh.userData.basePosition) {
       this.applyFocus(null)
-      this.reveal(mesh.userData.run as number)
+      this.trigger(mesh)
       return
     }
     this.applyFocus(mesh)
@@ -1148,13 +1262,14 @@ export class VideoStore {
   activateFocused() {
     if (!this.focused) return
     if (!this.focused.userData.basePosition) {
-      this.reveal(this.focused.userData.run as number)
+      const target = this.focused
       this.applyFocus(null)
+      this.trigger(target)
       return
     }
     const title = this.focused.userData.title as StoreTitle
     this.applyFocus(null)
-    this.exit()
+    if (!this.touch) this.exit()
     this.callbacks.onActivate(title)
   }
 

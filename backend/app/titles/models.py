@@ -2,7 +2,7 @@
 """Title models."""
 
 import uuid
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar, Self, override
 
@@ -60,6 +60,9 @@ class BaseTmdbTitle(BaseMediaMixin):
     # name with another is still told apart. A website that does not say when
     # its titles came out leaves this empty and is matched on the name alone.
     year: int | None = Field(default=None)
+    score: float | None = Field(default=None)
+    popularity: float | None = Field(default=None)
+    original_language: str | None = Field(default=None)
 
 
 # TODO: Validate
@@ -234,6 +237,36 @@ class Title(BaseTitle, ChildMediaMixin[Source, "Season"], table=True):
         cascade_delete=True,
     )
 
+    spoken_languages: list[TitleSpokenLanguage] = Relationship(
+        back_populates="title",
+        cascade_delete=True,
+    )
+
+    # TODO: Validate
+    @property
+    def spoken_language_codes(self) -> list[str]:
+        return [language.code for language in self.spoken_languages]
+
+    # TODO: Validate
+    def set_spoken_languages(self, names_by_code: Mapping[str, str]) -> None:
+        wanted = {
+            code.strip(): name.strip()
+            for code, name in names_by_code.items()
+            if code.strip()
+        }
+        stored = {language.code: language for language in self.spoken_languages}
+        for code, name in wanted.items():
+            language = stored.get(code)
+            if language is None:
+                self.spoken_languages.append(
+                    TitleSpokenLanguage(title_id=self.id, code=code, name=name),
+                )
+            elif language.name != name:
+                language.name = name
+        for code, language in stored.items():
+            if code not in wanted:
+                self.spoken_languages.remove(language)
+
     # TODO: Validate
     @property
     def genre_names(self) -> list[str]:
@@ -380,6 +413,23 @@ class TitleGenre(BaseTitleGenre, TimestampIdAndHashMixin, table=True):
     )
 
     title: Title = Relationship(back_populates="genres")
+
+
+# TODO: Validate
+class BaseTitleSpokenLanguage(SQLModel):
+    title_id: uuid.UUID = Field(foreign_key="title.id", ondelete="CASCADE")
+    code: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+
+
+# TODO: Validate
+class TitleSpokenLanguage(BaseTitleSpokenLanguage, TimestampIdAndHashMixin, table=True):
+    __table_args__ = (
+        PrimaryKeyConstraint("title_id", "code"),
+        Index("TitleSpokenLanguage-code-index", "code"),
+    )
+
+    title: Title = Relationship(back_populates="spoken_languages")
 
 
 # TODO: Validate

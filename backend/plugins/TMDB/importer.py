@@ -247,6 +247,9 @@ class TMDBSeries(TMDBImporter):
                 poster_url=image_url(series.poster_path),
                 poster_thumbnail_url=thumbnail_url(series.poster_path),
                 year=parse_release_year(series.first_air_date),
+                score=series.vote_average,
+                popularity=series.popularity,
+                original_language=series.original_language,
                 media_type="Series",
                 extra=title.extra if title else {},
                 data_timestamp=self._title_files_data_timestamp(title_key),
@@ -255,6 +258,12 @@ class TMDBSeries(TMDBImporter):
             ).upsert(source, title)
             title.set_update_at(None)
             title.set_genres(genre.name for genre in series.genres)
+            title.set_spoken_languages(
+                {
+                    language.iso_639_1: language.english_name
+                    for language in series.spoken_languages
+                },
+            )
 
         self._upsert_seasons(title, title_key, tmdb_tv_title_id, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
@@ -503,6 +512,9 @@ class TMDBMovie(TMDBImporter):
                 poster_url=image_url(parsed_movie_details.poster_path),
                 poster_thumbnail_url=thumbnail_url(parsed_movie_details.poster_path),
                 year=parse_release_year(parsed_movie_details.release_date),
+                score=parsed_movie_details.vote_average,
+                popularity=parsed_movie_details.popularity,
+                original_language=parsed_movie_details.original_language,
                 media_type="Movie",
                 data_timestamp=self._title_files_data_timestamp(title_key),
                 tmdb_title_validated_at=tz_datetime.now(),
@@ -510,6 +522,12 @@ class TMDBMovie(TMDBImporter):
             ).upsert(source, title)
             title.set_update_at(None)
             title.set_genres(genre.name for genre in parsed_movie_details.genres)
+            title.set_spoken_languages(
+                {
+                    language.iso_639_1: language.english_name
+                    for language in parsed_movie_details.spoken_languages
+                },
+            )
 
         self._upsert_season(title, title_key, tmdb_movie_id, force=force)
         movie_watch_providers = self.movies_watch_providers_file(tmdb_movie_id).parsed()

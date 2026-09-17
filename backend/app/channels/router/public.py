@@ -40,7 +40,6 @@ from app.sources.schemas import SourcePublic
 from app.users.dependencies import OptionalUser
 from app.video_store import service as video_store
 from app.video_store.schemas import VideoStoreTitlesOutput
-from app.video_store.service import STORE_TITLE_PAGE
 
 channels_router = APIRouter(prefix="/channels", tags=["channels"])
 
@@ -94,11 +93,9 @@ def get_channel_store_titles(
     channel: ReadableChannel,
     user: OptionalUser,
     session: SessionDep,
-    offset: Annotated[int, Query(ge=0)] = 0,
-    limit: Annotated[int, Query(ge=1, le=STORE_TITLE_PAGE)] = STORE_TITLE_PAGE,
 ) -> VideoStoreTitlesOutput:
-    """Read a page of the titles a channel shelves in the video store."""
-    return video_store.channel_titles(session, channel, user, offset, limit)
+    """Read every title a channel shelves in the video store."""
+    return video_store.channel_titles(session, channel, user)
 
 
 # FAST003 - Parameter is used by ReadableChannel.

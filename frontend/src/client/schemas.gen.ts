@@ -5811,6 +5811,39 @@ export const TitleListPublicSchema = {
             ],
             title: 'Year'
         },
+        score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Score'
+        },
+        popularity: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Popularity'
+        },
+        original_language: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Original Language'
+        },
         tmdb_title_validated_at: {
             anyOf: [
                 {
@@ -6059,6 +6092,39 @@ export const TitlePublicSchema = {
                 }
             ],
             title: 'Year'
+        },
+        score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Score'
+        },
+        popularity: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Popularity'
+        },
+        original_language: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Original Language'
         },
         tmdb_title_validated_at: {
             anyOf: [
@@ -6318,6 +6384,39 @@ export const TitleUpdateSchema = {
                 }
             ],
             title: 'Year'
+        },
+        score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Score'
+        },
+        popularity: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Popularity'
+        },
+        original_language: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Original Language'
         },
         tmdb_title_validated_at: {
             anyOf: [
@@ -6909,6 +7008,39 @@ export const TmdbTitleOutputSchema = {
                 }
             ],
             title: 'Year'
+        },
+        score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Score'
+        },
+        popularity: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Popularity'
+        },
+        original_language: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Original Language'
         },
         id: {
             type: 'string',
@@ -7616,6 +7748,39 @@ export const UnvalidatedTitleOutputSchema = {
             ],
             title: 'Year'
         },
+        score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Score'
+        },
+        popularity: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Popularity'
+        },
+        original_language: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Original Language'
+        },
         tmdb_title_validated_at: {
             anyOf: [
                 {
@@ -8074,6 +8239,34 @@ export const ValidationErrorSchema = {
     title: 'ValidationError'
 } as const;
 
+export const VideoStoreLanguageOutputSchema = {
+    properties: {
+        code: {
+            type: 'string',
+            title: 'Code'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        title_count: {
+            type: 'integer',
+            title: 'Title Count'
+        }
+    },
+    type: 'object',
+    required: ['code', 'name', 'title_count'],
+    title: 'VideoStoreLanguageOutput',
+    description: 'Schema for returning one language titles can be filtered by.'
+} as const;
+
 export const VideoStoreRegionOutputSchema = {
     properties: {
         region: {
@@ -8139,7 +8332,7 @@ export const VideoStoreSourceOutputSchema = {
     description: 'Schema for returning a `Source` a store can be built from.'
 } as const;
 
-export const VideoStoreTitleOutputSchema = {
+export const VideoStoreTitleDetailOutputSchema = {
     properties: {
         id: {
             type: 'string',
@@ -8179,28 +8372,6 @@ export const VideoStoreTitleOutputSchema = {
             ],
             title: 'Poster Url'
         },
-        poster_thumbnail_url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Poster Thumbnail Url'
-        },
-        thumbnail_url: {
-            anyOf: [
-                {
-                    type: 'string'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Thumbnail Url'
-        },
         image_url: {
             anyOf: [
                 {
@@ -8223,12 +8394,23 @@ export const VideoStoreTitleOutputSchema = {
             ],
             title: 'Description'
         },
-        genres: {
+        original_language: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Original Language'
+        },
+        languages: {
             items: {
                 type: 'string'
             },
             type: 'array',
-            title: 'Genres'
+            title: 'Languages'
         },
         url: {
             anyOf: [
@@ -8240,6 +8422,115 @@ export const VideoStoreTitleOutputSchema = {
                 }
             ],
             title: 'Url'
+        }
+    },
+    type: 'object',
+    required: ['id', 'name', 'year', 'poster_url', 'image_url', 'description', 'original_language', 'languages', 'url'],
+    title: 'VideoStoreTitleDetailOutput',
+    description: "Schema for returning everything a title's case viewer shows."
+} as const;
+
+export const VideoStoreTitleOutputSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Year'
+        },
+        score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Score'
+        },
+        popularity: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Popularity'
+        },
+        media_type: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Media Type'
+        },
+        original_language: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Original Language'
+        },
+        languages: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Languages'
+        },
+        thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Thumbnail Url'
+        },
+        is_poster: {
+            type: 'boolean',
+            title: 'Is Poster'
+        },
+        genres: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Genres'
         },
         season_count: {
             type: 'integer',
@@ -8251,9 +8542,9 @@ export const VideoStoreTitleOutputSchema = {
         }
     },
     type: 'object',
-    required: ['id', 'name', 'year', 'poster_url', 'poster_thumbnail_url', 'thumbnail_url', 'image_url', 'description', 'genres', 'url', 'season_count', 'episode_count'],
+    required: ['id', 'name', 'year', 'score', 'popularity', 'media_type', 'original_language', 'languages', 'thumbnail_url', 'is_poster', 'genres', 'season_count', 'episode_count'],
     title: 'VideoStoreTitleOutput',
-    description: 'Schema for returning one shelved title.'
+    description: 'Schema for returning one shelved title, as its case on the shelf.'
 } as const;
 
 export const VideoStoreTitlesOutputSchema = {
@@ -8264,16 +8555,12 @@ export const VideoStoreTitlesOutputSchema = {
             },
             type: 'array',
             title: 'Titles'
-        },
-        total: {
-            type: 'integer',
-            title: 'Total'
         }
     },
     type: 'object',
-    required: ['titles', 'total'],
+    required: ['titles'],
     title: 'VideoStoreTitlesOutput',
-    description: "Schema for returning a page of a `Source`'s shelved titles."
+    description: 'Schema for returning every title a store shelves.'
 } as const;
 
 export const VideoStoreWatchProviderOutputSchema = {
@@ -9727,6 +10014,39 @@ export const WhitelistTitleOutputSchema = {
                 }
             ],
             title: 'Year'
+        },
+        score: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Score'
+        },
+        popularity: {
+            anyOf: [
+                {
+                    type: 'number'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Popularity'
+        },
+        original_language: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Original Language'
         },
         tmdb_title_validated_at: {
             anyOf: [

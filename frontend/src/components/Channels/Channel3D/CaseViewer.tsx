@@ -1,12 +1,13 @@
 // TODO: Validate
 import { X } from "lucide-react"
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import * as THREE from "three"
 import {
   createBackTexture,
   createCaseCanvas,
   type StoreTitle,
 } from "./caseTexture"
+import { fetchTitleDetail } from "./titleDetail"
 
 // TODO: Validate
 const regionTexture = (
@@ -49,6 +50,7 @@ export function CaseViewer({
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
+  const [url, setUrl] = useState<string | null>(null)
 
   useEffect(() => {
     const overlay = overlayRef.current
@@ -89,11 +91,11 @@ export function CaseViewer({
     )
     camera.position.set(0, 0, 4.4)
 
-    scene.add(new THREE.AmbientLight(0xffffff, 1.5))
-    const key = new THREE.DirectionalLight(0xffffff, 2.2)
+    scene.add(new THREE.AmbientLight(0xffffff, 1.9))
+    const key = new THREE.DirectionalLight(0xffffff, 1.1)
     key.position.set(2.5, 3, 4)
     scene.add(key)
-    const rim = new THREE.DirectionalLight(0x9ad7ff, 1.4)
+    const rim = new THREE.DirectionalLight(0x9ad7ff, 0.7)
     rim.position.set(-3, -1, -4)
     scene.add(rim)
 
@@ -101,8 +103,14 @@ export function CaseViewer({
     const rightEdge = new THREE.MeshStandardMaterial({ roughness: 0.5 })
     const top = new THREE.MeshStandardMaterial({ roughness: 0.5 })
     const bottom = new THREE.MeshStandardMaterial({ roughness: 0.5 })
-    const front = new THREE.MeshStandardMaterial({ roughness: 0.42 })
-    const back = new THREE.MeshStandardMaterial({ roughness: 0.42 })
+    const front = new THREE.MeshStandardMaterial({
+      roughness: 0.85,
+      metalness: 0,
+    })
+    const back = new THREE.MeshStandardMaterial({
+      roughness: 0.85,
+      metalness: 0,
+    })
     const materials = [rightEdge, leftEdge, top, bottom, front, back]
 
     const mesh = new THREE.Mesh(
@@ -113,9 +121,12 @@ export function CaseViewer({
     scene.add(mesh)
 
     const paint = async () => {
+      const detail = await fetchTitleDetail(title.id)
+      if (disposed) return
+      setUrl(detail.url ?? null)
       const [cover, backdrop] = await Promise.all([
-        loadImage(title.fullImageUrl ?? title.imageUrl),
-        loadImage(title.backImageUrl),
+        loadImage(detail.poster_url ?? title.imageUrl),
+        loadImage(detail.image_url ?? null),
       ])
       if (disposed) return
       const caseCanvas = createCaseCanvas(title, cover, 5)
@@ -129,7 +140,16 @@ export function CaseViewer({
       top.needsUpdate = true
       bottom.map = regionTexture(caseCanvas, 0, 0, 168, 16)
       bottom.needsUpdate = true
-      back.map = createBackTexture(title, backdrop, cover)
+      back.map = createBackTexture(
+        title,
+        {
+          description: detail.description ?? null,
+          originalLanguage: detail.original_language ?? null,
+          languages: detail.languages,
+        },
+        backdrop,
+        cover,
+      )
       back.needsUpdate = true
     }
     paint()
@@ -283,9 +303,9 @@ export function CaseViewer({
         <div className="text-xs text-white/50">
           Drag to spin · Scroll or pinch to zoom · Esc to put it back
         </div>
-        {title.url && (
+        {url && (
           <a
-            href={title.url}
+            href={url}
             target="_blank"
             rel="noreferrer"
             className="mt-1 rounded-full border border-emerald-300/40 px-5 py-2 text-sm font-medium text-emerald-200 hover:bg-emerald-300/10"

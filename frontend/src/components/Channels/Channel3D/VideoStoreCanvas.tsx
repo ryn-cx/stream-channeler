@@ -1,27 +1,28 @@
 // TODO: Validate
 import { useEffect, useRef, useState } from "react"
-import type { StoreTitle } from "./caseTexture"
+import { type StoreTitle, titleFacts } from "./caseTexture"
 import { TouchControls } from "./TouchControls"
 import { isTouchDevice, VideoStore } from "./videoStore"
 
 // TODO: Validate
 export function VideoStoreCanvas({
   titles,
-  capacity,
   slotCount,
   storeName,
   paused,
+  onStore,
   onActivate,
 }: {
   titles: StoreTitle[]
-  capacity: number
   slotCount: number
   storeName: string
   paused: boolean
+  onStore?: (store: VideoStore | null) => void
   onActivate: (title: StoreTitle) => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const activateRef = useRef(onActivate)
+  const storeRef = useRef(onStore)
   const [store, setStore] = useState<VideoStore | null>(null)
   const [focused, setFocused] = useState<StoreTitle | null>(null)
   const [locked, setLocked] = useState(false)
@@ -29,6 +30,7 @@ export function VideoStoreCanvas({
   const [touch] = useState(isTouchDevice)
 
   activateRef.current = onActivate
+  storeRef.current = onStore
 
   useEffect(() => {
     const container = containerRef.current
@@ -42,8 +44,10 @@ export function VideoStoreCanvas({
       },
     })
     setStore(created)
+    storeRef.current?.(created)
     return () => {
       setStore(null)
+      storeRef.current?.(null)
       created.dispose()
     }
   }, [slotCount])
@@ -71,11 +75,9 @@ export function VideoStoreCanvas({
                   {focused.name}
                 </div>
                 <div className="mt-0.5 text-xs text-white/60">
-                  {focused.year && `${focused.year} · `}
-                  {focused.seasonCount > 0 &&
-                    `${focused.seasonCount} ${focused.seasonCount === 1 ? "season" : "seasons"} · `}
-                  {focused.episodeCount}{" "}
-                  {focused.episodeCount === 1 ? "episode" : "episodes"}
+                  {[focused.year, ...titleFacts(focused)]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </div>
               </div>
             )}
@@ -88,7 +90,7 @@ export function VideoStoreCanvas({
             )}
           </div>
 
-          {touch && <TouchControls store={store} />}
+          {touch && !paused && <TouchControls store={store} />}
         </>
       )}
 
@@ -111,9 +113,7 @@ export function VideoStoreCanvas({
         >
           <span className="text-3xl font-bold tracking-tight">{storeName}</span>
           <span className="text-sm text-white/60">
-            {titles.length < capacity
-              ? `${titles.length} of ${capacity} titles on the shelves…`
-              : `${titles.length} ${titles.length === 1 ? "title" : "titles"} on the shelves`}
+            {`${titles.length} ${titles.length === 1 ? "title" : "titles"} on the shelves`}
           </span>
           <span className="mt-3 rounded-full border border-white/25 px-5 py-2 text-sm font-medium">
             {touch ? "Tap to walk in" : "Click to walk in"}
