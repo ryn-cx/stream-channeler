@@ -88,7 +88,7 @@ export function VideoStoreCanvas({
             )}
           </div>
 
-          {touch && <TouchControls store={store} focused={focused} />}
+          {touch && <TouchControls store={store} />}
         </>
       )}
 

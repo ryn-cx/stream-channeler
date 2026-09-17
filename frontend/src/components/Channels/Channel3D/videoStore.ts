@@ -1130,13 +1130,18 @@ export class VideoStore {
   // TODO: Validate
   focusAt(clientX: number, clientY: number) {
     const rect = this.renderer.domElement.getBoundingClientRect()
-    this.applyFocus(
-      this.pick(
-        ((clientX - rect.left) / rect.width) * 2 - 1,
-        -((clientY - rect.top) / rect.height) * 2 + 1,
-        4.5,
-      ),
+    const mesh = this.pick(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1,
+      4.5,
     )
+    if (mesh && !mesh.userData.basePosition) {
+      this.applyFocus(null)
+      this.reveal(mesh.userData.run as number)
+      return
+    }
+    this.applyFocus(mesh)
+    if (mesh) this.activateFocused()
   }
 
   // TODO: Validate

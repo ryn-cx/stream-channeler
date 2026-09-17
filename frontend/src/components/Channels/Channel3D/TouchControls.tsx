@@ -1,7 +1,6 @@
 // TODO: Validate
-import { ChevronsDown, LogOut, Play } from "lucide-react"
+import { ChevronsDown, LogOut } from "lucide-react"
 import { useRef, useState } from "react"
-import type { StoreTitle } from "./caseTexture"
 import type { VideoStore } from "./videoStore"
 
 const STICK_RADIUS = 56
@@ -15,13 +14,7 @@ const findTouch = (touches: React.TouchList, id: number) => {
 }
 
 // TODO: Validate
-export function TouchControls({
-  store,
-  focused,
-}: {
-  store: VideoStore | null
-  focused: StoreTitle | null
-}) {
+export function TouchControls({ store }: { store: VideoStore | null }) {
   const [knob, setKnob] = useState({ x: 0, y: 0 })
   const [crouching, setCrouching] = useState(false)
   const stickRef = useRef<HTMLDivElement>(null)
@@ -154,16 +147,6 @@ export function TouchControls({
       </div>
 
       <div className="absolute bottom-8 right-6 flex flex-col items-end gap-3">
-        {focused?.url && (
-          <button
-            type="button"
-            onClick={() => store?.activateFocused()}
-            className="flex items-center gap-2 rounded-full bg-emerald-500/90 px-5 py-3 text-sm font-semibold text-black"
-          >
-            <Play className="size-4" />
-            Open
-          </button>
-        )}
         <button
           type="button"
           onClick={toggleCrouch}
