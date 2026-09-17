@@ -2748,6 +2748,14 @@ export type ChannelsGetChannelEpisodesData = {
 
 export type ChannelsGetChannelEpisodesResponse = (ChannelEpisodesOutput);
 
+export type ChannelsGetChannelStoreTitlesData = {
+    channelId: string;
+    limit?: number;
+    offset?: number;
+};
+
+export type ChannelsGetChannelStoreTitlesResponse = (VideoStoreTitlesOutput);
+
 export type ChannelsGetChannelTitlesData = {
     channelId: string;
     limit?: number;

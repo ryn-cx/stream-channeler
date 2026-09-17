@@ -13,7 +13,7 @@ import { StoreScreen } from "@/components/Channels/Channel3D/StoreScreen"
 type ProviderStoreSearch = { region?: string }
 
 export const Route = createFileRoute(
-  "/_layout/video-store/provider/$watchProviderId",
+  "/_layout/video-store/providers/$watchProviderId",
 )({
   component: ProviderStore,
   validateSearch: (search: Record<string, unknown>): ProviderStoreSearch => ({

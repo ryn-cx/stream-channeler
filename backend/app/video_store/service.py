@@ -7,6 +7,9 @@ from collections.abc import Sequence
 from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, distinct, func, select
 
+from app.channels.channel_scope import child_channel_ids, resolve_channel_ids
+from app.channels.models import Channel, ChannelTitle
+from app.channels.service.titles import titles_by_tmdb_record_id
 from app.episodes.models import Episode
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
 from app.plugins.models import Plugin
@@ -18,6 +21,7 @@ from app.titles.models import (
     TitleTmdbTitle,
     TitleWatchProvider,
 )
+from app.users.models import User
 from app.video_store.schemas import (
     VideoStoreRegionOutput,
     VideoStoreSourceOutput,
@@ -224,6 +228,76 @@ def store_titles(
 
     return VideoStoreTitlesOutput(
         titles=_shelve_titles(session, titles),
+        total=total,
+    )
+
+
+# TODO: Validate
+def channel_titles(
+    session: Session,
+    channel: Channel,
+    user: User | None,
+    offset: int,
+    limit: int,
+) -> VideoStoreTitlesOutput:
+    """Read a page of the titles a `Channel` shelves, canonical rows first."""
+    channel_ids = resolve_channel_ids(
+        session,
+        user,
+        channel,
+        child_channel_ids(channel),
+    )
+    listed = [
+        col(ChannelTitle.channel_id).in_(channel_ids),
+        col(ChannelTitle.is_blacklist_only).is_(False),
+    ]
+
+    total = session.exec(
+        select(func.count(distinct(col(ChannelTitle.tmdb_title_id)))).where(*listed),
+    ).one()
+
+    tmdb_title_ids = session.exec(
+        select(ChannelTitle.tmdb_title_id)
+        .join(
+            Title,
+            col(Title.id) == col(ChannelTitle.tmdb_title_id),
+            isouter=True,
+        )
+        .where(*listed)
+        .group_by(col(ChannelTitle.tmdb_title_id), col(Title.name))
+        .order_by(col(Title.name), col(ChannelTitle.tmdb_title_id))
+        .offset(offset)
+        .limit(limit),
+    ).all()
+
+    canonical = {
+        title.id: title
+        for title in session.exec(
+            select(Title).where(
+                col(Title.id).in_(tmdb_title_ids),
+                col(Title.deleted_at).is_(None),
+            ),
+        ).all()
+    }
+    unlinked = titles_by_tmdb_record_id(
+        session,
+        [
+            tmdb_title_id
+            for tmdb_title_id in tmdb_title_ids
+            if tmdb_title_id not in canonical
+        ],
+    )
+
+    shelved: list[Title] = []
+    for tmdb_title_id in tmdb_title_ids:
+        title = canonical.get(tmdb_title_id)
+        if title is not None:
+            shelved.append(title)
+            continue
+        shelved.extend(unlinked.get(tmdb_title_id, []))
+
+    return VideoStoreTitlesOutput(
+        titles=_shelve_titles(session, shelved),
         total=total,
     )
 

@@ -10,7 +10,7 @@ import {
   SOURCE_TITLE_PAGE,
 } from "@/components/Channels/Channel3D/sourceTitles"
 
-export const Route = createFileRoute("/_layout/video-store/$sourceId")({
+export const Route = createFileRoute("/_layout/video-store/sources/$sourceId")({
   component: SourceStore,
   head: () => ({
     meta: [{ title: "Video Store - Stream Channeler" }],

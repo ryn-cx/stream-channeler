@@ -1,6 +1,6 @@
 // TODO: Validate
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
-import { createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute, Link, redirect } from "@tanstack/react-router"
 import type { VisibilityState } from "@tanstack/react-table"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import {
@@ -12,6 +12,7 @@ import {
   Loader2,
   MessageSquare,
   MonitorCog,
+  Store,
   Table as TableIcon,
 } from "lucide-react"
 import { Suspense, useEffect, useMemo, useState } from "react"
@@ -112,7 +113,7 @@ export const Route = createFileRoute("/_layout/channels/$channelId")({
   // TODO: Validate
   beforeLoad: async ({ params, search }) => {
     if (search.orderPresetId?.endsWith("/3d")) {
-      throw redirect({ to: "/channels/3d/$channelId", params })
+      throw redirect({ to: "/video-store/channels/$channelId", params })
     }
     // Check if the user can access this channel
     try {
@@ -426,6 +427,17 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
                 onSelect={() => setFiltersOpen(true)}
               />
 
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link
+                  to="/video-store/channels/$channelId"
+                  params={{ channelId }}
+                >
+                  <Store className="mr-2 size-4" />
+                  Video Store
+                </Link>
+              </DropdownMenuItem>
+
               {viewMode === "cards" && (
                 <EditOrderButton
                   editOrder={editOrder}
@@ -547,6 +559,12 @@ function ChannelDetailContent({ channelId }: { channelId: string }) {
           )}
           {viewMode === "table" && <ColumnVisibilityButton table={table} />}
           <CommentsDialog channelId={channelId} channelName={channel?.name} />
+          <Button variant="outline" asChild title="Walk this channel's shelves">
+            <Link to="/video-store/channels/$channelId" params={{ channelId }}>
+              <Store />
+              Video Store
+            </Link>
+          </Button>
         </div>
       </div>
 

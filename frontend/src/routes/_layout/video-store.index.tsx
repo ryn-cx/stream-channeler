@@ -78,7 +78,7 @@ function VideoStoreIndex() {
         {sources?.map((source) => (
           <Link
             key={source.id}
-            to="/video-store/$sourceId"
+            to="/video-store/sources/$sourceId"
             params={{ sourceId: source.id }}
             className="flex items-center gap-3 rounded-lg border bg-card p-4 transition-colors hover:bg-accent"
           >
@@ -165,7 +165,7 @@ function VideoStoreIndex() {
         {providers?.map((provider) => (
           <Link
             key={provider.id}
-            to="/video-store/provider/$watchProviderId"
+            to="/video-store/providers/$watchProviderId"
             params={{ watchProviderId: provider.id }}
             search={{ region: activeRegion }}
             className="flex items-center gap-3 rounded-lg border bg-card p-4 transition-colors hover:bg-accent"
