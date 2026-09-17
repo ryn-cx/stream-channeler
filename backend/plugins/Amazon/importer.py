@@ -58,7 +58,9 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
             title_key = self.title_key_from_share_key(
                 match.group("title_key"),
             )
-        elif (match := re.match(domain_regex + PRIME_VIDEO_URL_REGEX, url)) or (match := re.match(domain_regex + AMAZON_URL_REGEX, url)):
+        elif (match := re.match(domain_regex + PRIME_VIDEO_URL_REGEX, url)) or (
+            match := re.match(domain_regex + AMAZON_URL_REGEX, url)
+        ):
             title_key = match.group("title_key")
         else:
             title_key = None
@@ -270,6 +272,7 @@ class AmazonSeriesImporter(AmazonImporter):
             title.set_update_at(
                 min(data_timestamps) + timedelta(days=7),
             )
+            title.set_genres(page.genres())
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
@@ -380,6 +383,7 @@ class AmazonMovieImporter(AmazonImporter):
             title.set_update_at(
                 staggered_monthly_update_at(title_key, min(data_timestamps)),
             )
+            title.set_genres(page.genres())
 
         self._upsert_season(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)

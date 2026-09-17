@@ -162,6 +162,7 @@ class DisneyPlusSeriesImporter(DisneyPlusImporter):
             title.set_update_at(
                 staggered_monthly_update_at(title_key, min(data_timestamps)),
             )
+            title.set_genres(details.genres or [])
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
@@ -294,6 +295,7 @@ class DisneyPlusMovieImporter(DisneyPlusImporter):
             title.set_update_at(
                 staggered_monthly_update_at(title_key, min(data_timestamps)),
             )
+            title.set_genres(details.genres or [])
 
         self._upsert_season(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)

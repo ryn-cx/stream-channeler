@@ -12,6 +12,7 @@ import {
   Plug,
   Radio,
   Settings,
+  Store,
   Users,
 } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -48,6 +49,7 @@ interface NavItem {
 const baseItems: NavItem[] = [
   { icon: LayoutDashboard, title: "Dashboard", path: "/dashboard" },
   { icon: Radio, title: "Channels", path: "/channels" },
+  { icon: Store, title: "Video Store", path: "/video-store" },
   { icon: Eye, title: "Watches", path: "/watches" },
   { icon: MessageSquare, title: "Comments", path: "/channel-comments" },
   { icon: ListOrdered, title: "Orders", path: "/channel-orders" },
@@ -62,6 +64,7 @@ const adminItems: NavItem[] = [
 
 const publicItems: NavItem[] = [
   { icon: Radio, title: "Channels", path: "/channels" },
+  { icon: Store, title: "Video Store", path: "/video-store" },
 ]
 
 // TODO: Validate

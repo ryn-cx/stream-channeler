@@ -5778,6 +5778,28 @@ export const TitleListPublicSchema = {
             ],
             title: 'Thumbnail Url'
         },
+        poster_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Poster Url'
+        },
+        poster_thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Poster Thumbnail Url'
+        },
         year: {
             anyOf: [
                 {
@@ -6004,6 +6026,28 @@ export const TitlePublicSchema = {
                 }
             ],
             title: 'Thumbnail Url'
+        },
+        poster_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Poster Url'
+        },
+        poster_thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Poster Thumbnail Url'
         },
         year: {
             anyOf: [
@@ -6241,6 +6285,28 @@ export const TitleUpdateSchema = {
                 }
             ],
             title: 'Thumbnail Url'
+        },
+        poster_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Poster Url'
+        },
+        poster_thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Poster Thumbnail Url'
         },
         year: {
             anyOf: [
@@ -6810,6 +6876,28 @@ export const TmdbTitleOutputSchema = {
                 }
             ],
             title: 'Thumbnail Url'
+        },
+        poster_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Poster Url'
+        },
+        poster_thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Poster Thumbnail Url'
         },
         year: {
             anyOf: [
@@ -7495,6 +7583,28 @@ export const UnvalidatedTitleOutputSchema = {
             ],
             title: 'Thumbnail Url'
         },
+        poster_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Poster Url'
+        },
+        poster_thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Poster Thumbnail Url'
+        },
         year: {
             anyOf: [
                 {
@@ -7962,6 +8072,245 @@ export const ValidationErrorSchema = {
     type: 'object',
     required: ['loc', 'msg', 'type'],
     title: 'ValidationError'
+} as const;
+
+export const VideoStoreRegionOutputSchema = {
+    properties: {
+        region: {
+            type: 'string',
+            title: 'Region'
+        },
+        title_count: {
+            type: 'integer',
+            title: 'Title Count'
+        }
+    },
+    type: 'object',
+    required: ['region', 'title_count'],
+    title: 'VideoStoreRegionOutput',
+    description: 'Schema for returning a region titles can be shelved by.'
+} as const;
+
+export const VideoStoreSourceOutputSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        key: {
+            type: 'string',
+            title: 'Key'
+        },
+        plugin_name: {
+            type: 'string',
+            title: 'Plugin Name'
+        },
+        favicon_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Favicon Url'
+        },
+        image_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Image Url'
+        },
+        title_count: {
+            type: 'integer',
+            title: 'Title Count'
+        }
+    },
+    type: 'object',
+    required: ['id', 'key', 'plugin_name', 'favicon_url', 'image_url', 'title_count'],
+    title: 'VideoStoreSourceOutput',
+    description: 'Schema for returning a `Source` a store can be built from.'
+} as const;
+
+export const VideoStoreTitleOutputSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        year: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Year'
+        },
+        poster_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Poster Url'
+        },
+        poster_thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Poster Thumbnail Url'
+        },
+        thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Thumbnail Url'
+        },
+        image_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Image Url'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        genres: {
+            items: {
+                type: 'string'
+            },
+            type: 'array',
+            title: 'Genres'
+        },
+        url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Url'
+        },
+        season_count: {
+            type: 'integer',
+            title: 'Season Count'
+        },
+        episode_count: {
+            type: 'integer',
+            title: 'Episode Count'
+        }
+    },
+    type: 'object',
+    required: ['id', 'name', 'year', 'poster_url', 'poster_thumbnail_url', 'thumbnail_url', 'image_url', 'description', 'genres', 'url', 'season_count', 'episode_count'],
+    title: 'VideoStoreTitleOutput',
+    description: 'Schema for returning one shelved title.'
+} as const;
+
+export const VideoStoreTitlesOutputSchema = {
+    properties: {
+        titles: {
+            items: {
+                '$ref': '#/components/schemas/VideoStoreTitleOutput'
+            },
+            type: 'array',
+            title: 'Titles'
+        },
+        total: {
+            type: 'integer',
+            title: 'Total'
+        }
+    },
+    type: 'object',
+    required: ['titles', 'total'],
+    title: 'VideoStoreTitlesOutput',
+    description: "Schema for returning a page of a `Source`'s shelved titles."
+} as const;
+
+export const VideoStoreWatchProviderOutputSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        tmdb_provider_id: {
+            type: 'integer',
+            title: 'Tmdb Provider Id'
+        },
+        name: {
+            type: 'string',
+            title: 'Name'
+        },
+        logo_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Logo Url'
+        },
+        title_count: {
+            type: 'integer',
+            title: 'Title Count'
+        }
+    },
+    type: 'object',
+    required: ['id', 'tmdb_provider_id', 'name', 'logo_url', 'title_count'],
+    title: 'VideoStoreWatchProviderOutput',
+    description: 'Schema for returning a `WatchProvider` a store can be built from.'
 } as const;
 
 export const VisibilitySchema = {
@@ -9345,6 +9694,28 @@ export const WhitelistTitleOutputSchema = {
                 }
             ],
             title: 'Thumbnail Url'
+        },
+        poster_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Poster Url'
+        },
+        poster_thumbnail_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Poster Thumbnail Url'
         },
         year: {
             anyOf: [

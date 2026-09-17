@@ -5,6 +5,10 @@ import type { StoreTitle } from "./caseTexture"
 export const TITLE_PAGE = 100
 
 // TODO: Validate
+const pickPoster = (linkedTitle: TitlePublic | undefined, title: TitlePublic) =>
+  linkedTitle?.poster_thumbnail_url || title.poster_thumbnail_url || null
+
+// TODO: Validate
 const pickArtwork = (
   linkedTitle: TitlePublic | undefined,
   title: TitlePublic,
@@ -28,11 +32,16 @@ export const fetchTitlePage = async (channelId: string, offset: number) => {
   const shelved = new Map<string, StoreTitle>()
   for (const title of page.titles ?? []) {
     const key = title.tmdb_title_id ?? title.id
-    const artwork = shrinkArtwork(pickArtwork(page.tmdb_titles?.[key], title))
+    const poster = shrinkArtwork(pickPoster(page.tmdb_titles?.[key], title))
+    const artwork =
+      poster ?? shrinkArtwork(pickArtwork(page.tmdb_titles?.[key], title))
     const existing = shelved.get(key)
     if (existing) {
       existing.url ??= title.url ?? null
-      existing.imageUrl ??= artwork
+      if (!existing.imageUrl && artwork) {
+        existing.imageUrl = artwork
+        existing.isPoster = Boolean(poster)
+      }
       continue
     }
     const stats = page.stats?.[key]
@@ -41,6 +50,11 @@ export const fetchTitlePage = async (channelId: string, offset: number) => {
       name: title.name || "Untitled",
       year: title.year ?? null,
       imageUrl: artwork,
+      isPoster: Boolean(poster),
+      genres: [],
+      fullImageUrl: title.poster_url ?? title.image_url ?? null,
+      backImageUrl: title.image_url ?? null,
+      description: title.description ?? null,
       episodeCount: stats?.episode_count ?? 0,
       seasonCount: stats?.season_count ?? 0,
       url: title.url ?? null,

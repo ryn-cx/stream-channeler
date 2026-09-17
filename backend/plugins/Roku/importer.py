@@ -164,6 +164,7 @@ class RokuSeriesImporter(RokuImporter):
                 source_id=source.id,
             ).upsert(source, title)
             title.set_update_at(min(data_timestamps) + timedelta(days=7))
+            title.set_genres(content.genres)
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
@@ -301,6 +302,7 @@ class RokuMovieImporter(RokuImporter):
             title.set_update_at(
                 staggered_monthly_update_at(title_key, min(data_timestamps)),
             )
+            title.set_genres(content.genres)
 
         self._upsert_season(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)

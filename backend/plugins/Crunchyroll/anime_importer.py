@@ -210,6 +210,10 @@ class CrunchyrollAnimeUpsert(CrunchyrollAnimeChannels, ABC):
                     min(self._title_files_data_timestamps(title_key)),
                 ),
             )
+            title.set_genres(
+                category.localization.title
+                for category in self.categories_file(title_key).parsed().data
+            )
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)

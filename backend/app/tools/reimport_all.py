@@ -20,6 +20,7 @@ from app.tools.selection import (
     selection_clauses,
     selection_description,
 )
+from plugins.utils.base_plugin.files import bypass_file_updates
 from plugins.utils.manage_plugins import (
     import_plugins,
     plugins,
@@ -36,7 +37,7 @@ def _reimport_worker(
     progress_lock: Lock,
 ) -> None:
     plugin_classes_by_key = {plugin.plugin_name(): plugin for plugin in plugins}
-    with Session(engine) as session:
+    with Session(engine) as session, bypass_file_updates():
         plugin_records: dict[str, Plugin] = {}
         while True:
             try:

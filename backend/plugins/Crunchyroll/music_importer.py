@@ -184,6 +184,7 @@ class CrunchyrollMusicUpsert(CrunchyrollMusicChannels, ABC):
                     min(self._title_files_data_timestamps(title_key)),
                 ),
             )
+            title.set_genres(genre.display_value for genre in artist_data.genres)
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)

@@ -3,6 +3,7 @@ import time
 from abc import ABC, abstractmethod
 from collections.abc import Generator
 from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import datetime
 from typing import (
     Any,
@@ -20,6 +21,27 @@ from app.utils import tz_datetime
 from app.utils.sentinels import Sentinel
 
 _UNLOADED = Sentinel("DATABASE_RECORD")
+
+_file_updates_bypassed: ContextVar[bool] = ContextVar(
+    "file_updates_bypassed",
+    default=False,
+)
+
+
+# TODO: Validate
+@contextmanager
+def bypass_file_updates() -> Generator[None]:
+    """Download only the files that are missing for the duration of the block.
+
+    A reimport reads what has already been downloaded again, so a file that is
+    merely due for its next update is left as it is and only a file with no
+    record at all is fetched.
+    """
+    token = _file_updates_bypassed.set(True)
+    try:
+        yield
+    finally:
+        _file_updates_bypassed.reset(token)
 
 
 class BaseFile[T](ABC):
@@ -165,9 +187,12 @@ class BaseFile[T](ABC):
             f"in {elapsed_time:.2f}s",
         )
 
+    # TODO: Validate
     @final  # _download_file should be overridden instead.
     def download_if_outdated(self, update_at: datetime | None = None) -> None:
         """Download the file if it is outdated."""
+        if _file_updates_bypassed.get() and self._database_record:
+            return
         if self.is_outdated(update_at):
             self._download_and_write()
 

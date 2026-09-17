@@ -1202,6 +1202,8 @@ export type TitleListPublic = {
     url?: (string | null);
     image_url?: (string | null);
     thumbnail_url?: (string | null);
+    poster_url?: (string | null);
+    poster_thumbnail_url?: (string | null);
     year?: (number | null);
     tmdb_title_validated_at?: (string | null);
     source_id: string;
@@ -1233,6 +1235,8 @@ export type TitlePublic = {
     url?: (string | null);
     image_url?: (string | null);
     thumbnail_url?: (string | null);
+    poster_url?: (string | null);
+    poster_thumbnail_url?: (string | null);
     year?: (number | null);
     tmdb_title_validated_at?: (string | null);
     source_id: string;
@@ -1276,6 +1280,8 @@ export type TitleUpdate = {
     url?: (string | null);
     image_url?: (string | null);
     thumbnail_url?: (string | null);
+    poster_url?: (string | null);
+    poster_thumbnail_url?: (string | null);
     year?: (number | null);
     tmdb_title_validated_at?: (string | null);
 };
@@ -1368,6 +1374,8 @@ export type TmdbTitleOutput = {
     url?: (string | null);
     image_url?: (string | null);
     thumbnail_url?: (string | null);
+    poster_url?: (string | null);
+    poster_thumbnail_url?: (string | null);
     year?: (number | null);
     id: string;
     created_at: string;
@@ -2027,6 +2035,8 @@ export type UnvalidatedTitleOutput = {
     url?: (string | null);
     image_url?: (string | null);
     thumbnail_url?: (string | null);
+    poster_url?: (string | null);
+    poster_thumbnail_url?: (string | null);
     year?: (number | null);
     tmdb_title_validated_at?: (string | null);
     source_id: string;
@@ -2115,6 +2125,63 @@ export type ValidationError = {
     ctx?: {
         [key: string]: unknown;
     };
+};
+
+/**
+ * Schema for returning a region titles can be shelved by.
+ */
+export type VideoStoreRegionOutput = {
+    region: string;
+    title_count: number;
+};
+
+/**
+ * Schema for returning a `Source` a store can be built from.
+ */
+export type VideoStoreSourceOutput = {
+    id: string;
+    key: string;
+    plugin_name: string;
+    favicon_url: (string | null);
+    image_url: (string | null);
+    title_count: number;
+};
+
+/**
+ * Schema for returning one shelved title.
+ */
+export type VideoStoreTitleOutput = {
+    id: string;
+    name: (string | null);
+    year: (number | null);
+    poster_url: (string | null);
+    poster_thumbnail_url: (string | null);
+    thumbnail_url: (string | null);
+    image_url: (string | null);
+    description: (string | null);
+    genres: Array<(string)>;
+    url: (string | null);
+    season_count: number;
+    episode_count: number;
+};
+
+/**
+ * Schema for returning a page of a `Source`'s shelved titles.
+ */
+export type VideoStoreTitlesOutput = {
+    titles: Array<VideoStoreTitleOutput>;
+    total: number;
+};
+
+/**
+ * Schema for returning a `WatchProvider` a store can be built from.
+ */
+export type VideoStoreWatchProviderOutput = {
+    id: string;
+    tmdb_provider_id: number;
+    name: string;
+    logo_url: (string | null);
+    title_count: number;
 };
 
 export type Visibility = 'public' | 'unlisted' | 'private';
@@ -2373,6 +2440,8 @@ export type WhitelistTitleOutput = {
     url?: (string | null);
     image_url?: (string | null);
     thumbnail_url?: (string | null);
+    poster_url?: (string | null);
+    poster_thumbnail_url?: (string | null);
     year?: (number | null);
     tmdb_title_validated_at?: (string | null);
     source_id: string;
@@ -3424,6 +3493,33 @@ export type UtilsTestEmailData = {
 };
 
 export type UtilsTestEmailResponse = (Message);
+
+export type VideoStoreGetStoreSourcesResponse = (Array<VideoStoreSourceOutput>);
+
+export type VideoStoreGetStoreTitlesData = {
+    limit?: number;
+    offset?: number;
+    sourceId: string;
+};
+
+export type VideoStoreGetStoreTitlesResponse = (VideoStoreTitlesOutput);
+
+export type VideoStoreGetStoreRegionsResponse = (Array<VideoStoreRegionOutput>);
+
+export type VideoStoreGetStoreWatchProvidersData = {
+    region?: string;
+};
+
+export type VideoStoreGetStoreWatchProvidersResponse = (Array<VideoStoreWatchProviderOutput>);
+
+export type VideoStoreGetProviderTitlesData = {
+    limit?: number;
+    offset?: number;
+    region?: string;
+    watchProviderId: string;
+};
+
+export type VideoStoreGetProviderTitlesResponse = (VideoStoreTitlesOutput);
 
 export type WatchesGetWatchesData = {
     filterOptions?: string;

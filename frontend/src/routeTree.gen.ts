@@ -52,6 +52,8 @@ import { Route as LayoutChannelsIndexRouteImport } from './routes/_layout/channe
 import { Route as LayoutChannelsChannelIdRouteImport } from './routes/_layout/channels.$channelId'
 import { Route as LayoutChannelsBrowseRouteImport } from './routes/_layout/channels.browse'
 import { Route as LayoutOnboardingIndexRouteImport } from './routes/_layout/onboarding.index'
+import { Route as LayoutVideoStoreIndexRouteImport } from './routes/_layout/video-store.index'
+import { Route as LayoutVideoStoreSourceIdRouteImport } from './routes/_layout/video-store.$sourceId'
 import { Route as LayoutWatchesImportRouteImport } from './routes/_layout/watches_.import'
 import { Route as LayoutChannels3dChannelIdRouteImport } from './routes/_layout/channels.3d.$channelId'
 import { Route as LayoutOnboardingChannelIdDoneRouteImport } from './routes/_layout/onboarding.$channelId.done'
@@ -59,6 +61,7 @@ import { Route as LayoutOnboardingChannelIdNameRouteImport } from './routes/_lay
 import { Route as LayoutOnboardingChannelIdSortRouteImport } from './routes/_layout/onboarding.$channelId.sort'
 import { Route as LayoutOnboardingChannelIdTitlesRouteImport } from './routes/_layout/onboarding.$channelId.titles'
 import { Route as LayoutUsersUserIdChannelsRouteImport } from './routes/_layout/users.$userId.channels'
+import { Route as LayoutVideoStoreProviderWatchProviderIdRouteImport } from './routes/_layout/video-store.provider.$watchProviderId'
 
 const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
@@ -282,6 +285,17 @@ const LayoutOnboardingIndexRoute = LayoutOnboardingIndexRouteImport.update({
   path: '/',
   getParentRoute: () => LayoutOnboardingRoute,
 } as any)
+const LayoutVideoStoreIndexRoute = LayoutVideoStoreIndexRouteImport.update({
+  id: '/video-store/',
+  path: '/video-store/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutVideoStoreSourceIdRoute =
+  LayoutVideoStoreSourceIdRouteImport.update({
+    id: '/video-store/$sourceId',
+    path: '/video-store/$sourceId',
+    getParentRoute: () => LayoutRoute,
+  } as any)
 const LayoutWatchesImportRoute = LayoutWatchesImportRouteImport.update({
   id: '/watches_/import',
   path: '/watches/import',
@@ -321,6 +335,12 @@ const LayoutUsersUserIdChannelsRoute =
   LayoutUsersUserIdChannelsRouteImport.update({
     id: '/users/$userId/channels',
     path: '/users/$userId/channels',
+    getParentRoute: () => LayoutRoute,
+  } as any)
+const LayoutVideoStoreProviderWatchProviderIdRoute =
+  LayoutVideoStoreProviderWatchProviderIdRouteImport.update({
+    id: '/video-store/provider/$watchProviderId',
+    path: '/video-store/provider/$watchProviderId',
     getParentRoute: () => LayoutRoute,
   } as any)
 
@@ -363,17 +383,20 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof LayoutAdminUsersRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/channels/browse': typeof LayoutChannelsBrowseRoute
+  '/video-store/$sourceId': typeof LayoutVideoStoreSourceIdRoute
   '/watches/import': typeof LayoutWatchesImportRoute
   '/admin-v2/': typeof LayoutAdminV2IndexRoute
   '/admin/': typeof LayoutAdminIndexRoute
   '/channels/': typeof LayoutChannelsIndexRoute
   '/onboarding/': typeof LayoutOnboardingIndexRoute
+  '/video-store/': typeof LayoutVideoStoreIndexRoute
   '/channels/3d/$channelId': typeof LayoutChannels3dChannelIdRoute
   '/onboarding/$channelId/done': typeof LayoutOnboardingChannelIdDoneRoute
   '/onboarding/$channelId/name': typeof LayoutOnboardingChannelIdNameRoute
   '/onboarding/$channelId/sort': typeof LayoutOnboardingChannelIdSortRoute
   '/onboarding/$channelId/titles': typeof LayoutOnboardingChannelIdTitlesRoute
   '/users/$userId/channels': typeof LayoutUsersUserIdChannelsRoute
+  '/video-store/provider/$watchProviderId': typeof LayoutVideoStoreProviderWatchProviderIdRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -411,17 +434,20 @@ export interface FileRoutesByTo {
   '/admin/users': typeof LayoutAdminUsersRoute
   '/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/channels/browse': typeof LayoutChannelsBrowseRoute
+  '/video-store/$sourceId': typeof LayoutVideoStoreSourceIdRoute
   '/watches/import': typeof LayoutWatchesImportRoute
   '/admin-v2': typeof LayoutAdminV2IndexRoute
   '/admin': typeof LayoutAdminIndexRoute
   '/channels': typeof LayoutChannelsIndexRoute
   '/onboarding': typeof LayoutOnboardingIndexRoute
+  '/video-store': typeof LayoutVideoStoreIndexRoute
   '/channels/3d/$channelId': typeof LayoutChannels3dChannelIdRoute
   '/onboarding/$channelId/done': typeof LayoutOnboardingChannelIdDoneRoute
   '/onboarding/$channelId/name': typeof LayoutOnboardingChannelIdNameRoute
   '/onboarding/$channelId/sort': typeof LayoutOnboardingChannelIdSortRoute
   '/onboarding/$channelId/titles': typeof LayoutOnboardingChannelIdTitlesRoute
   '/users/$userId/channels': typeof LayoutUsersUserIdChannelsRoute
+  '/video-store/provider/$watchProviderId': typeof LayoutVideoStoreProviderWatchProviderIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -464,17 +490,20 @@ export interface FileRoutesById {
   '/_layout/admin/users': typeof LayoutAdminUsersRoute
   '/_layout/channels/$channelId': typeof LayoutChannelsChannelIdRoute
   '/_layout/channels/browse': typeof LayoutChannelsBrowseRoute
+  '/_layout/video-store/$sourceId': typeof LayoutVideoStoreSourceIdRoute
   '/_layout/watches_/import': typeof LayoutWatchesImportRoute
   '/_layout/admin-v2/': typeof LayoutAdminV2IndexRoute
   '/_layout/admin/': typeof LayoutAdminIndexRoute
   '/_layout/channels/': typeof LayoutChannelsIndexRoute
   '/_layout/onboarding/': typeof LayoutOnboardingIndexRoute
+  '/_layout/video-store/': typeof LayoutVideoStoreIndexRoute
   '/_layout/channels/3d/$channelId': typeof LayoutChannels3dChannelIdRoute
   '/_layout/onboarding/$channelId/done': typeof LayoutOnboardingChannelIdDoneRoute
   '/_layout/onboarding/$channelId/name': typeof LayoutOnboardingChannelIdNameRoute
   '/_layout/onboarding/$channelId/sort': typeof LayoutOnboardingChannelIdSortRoute
   '/_layout/onboarding/$channelId/titles': typeof LayoutOnboardingChannelIdTitlesRoute
   '/_layout/users/$userId/channels': typeof LayoutUsersUserIdChannelsRoute
+  '/_layout/video-store/provider/$watchProviderId': typeof LayoutVideoStoreProviderWatchProviderIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -517,17 +546,20 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/channels/$channelId'
     | '/channels/browse'
+    | '/video-store/$sourceId'
     | '/watches/import'
     | '/admin-v2/'
     | '/admin/'
     | '/channels/'
     | '/onboarding/'
+    | '/video-store/'
     | '/channels/3d/$channelId'
     | '/onboarding/$channelId/done'
     | '/onboarding/$channelId/name'
     | '/onboarding/$channelId/sort'
     | '/onboarding/$channelId/titles'
     | '/users/$userId/channels'
+    | '/video-store/provider/$watchProviderId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -565,17 +597,20 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/channels/$channelId'
     | '/channels/browse'
+    | '/video-store/$sourceId'
     | '/watches/import'
     | '/admin-v2'
     | '/admin'
     | '/channels'
     | '/onboarding'
+    | '/video-store'
     | '/channels/3d/$channelId'
     | '/onboarding/$channelId/done'
     | '/onboarding/$channelId/name'
     | '/onboarding/$channelId/sort'
     | '/onboarding/$channelId/titles'
     | '/users/$userId/channels'
+    | '/video-store/provider/$watchProviderId'
   id:
     | '__root__'
     | '/_layout'
@@ -617,17 +652,20 @@ export interface FileRouteTypes {
     | '/_layout/admin/users'
     | '/_layout/channels/$channelId'
     | '/_layout/channels/browse'
+    | '/_layout/video-store/$sourceId'
     | '/_layout/watches_/import'
     | '/_layout/admin-v2/'
     | '/_layout/admin/'
     | '/_layout/channels/'
     | '/_layout/onboarding/'
+    | '/_layout/video-store/'
     | '/_layout/channels/3d/$channelId'
     | '/_layout/onboarding/$channelId/done'
     | '/_layout/onboarding/$channelId/name'
     | '/_layout/onboarding/$channelId/sort'
     | '/_layout/onboarding/$channelId/titles'
     | '/_layout/users/$userId/channels'
+    | '/_layout/video-store/provider/$watchProviderId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -941,6 +979,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutOnboardingIndexRouteImport
       parentRoute: typeof LayoutOnboardingRoute
     }
+    '/_layout/video-store/': {
+      id: '/_layout/video-store/'
+      path: '/video-store'
+      fullPath: '/video-store/'
+      preLoaderRoute: typeof LayoutVideoStoreIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/video-store/$sourceId': {
+      id: '/_layout/video-store/$sourceId'
+      path: '/video-store/$sourceId'
+      fullPath: '/video-store/$sourceId'
+      preLoaderRoute: typeof LayoutVideoStoreSourceIdRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/watches_/import': {
       id: '/_layout/watches_/import'
       path: '/watches/import'
@@ -988,6 +1040,13 @@ declare module '@tanstack/react-router' {
       path: '/users/$userId/channels'
       fullPath: '/users/$userId/channels'
       preLoaderRoute: typeof LayoutUsersUserIdChannelsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/video-store/provider/$watchProviderId': {
+      id: '/_layout/video-store/provider/$watchProviderId'
+      path: '/video-store/provider/$watchProviderId'
+      fullPath: '/video-store/provider/$watchProviderId'
+      preLoaderRoute: typeof LayoutVideoStoreProviderWatchProviderIdRouteImport
       parentRoute: typeof LayoutRoute
     }
   }
@@ -1087,10 +1146,13 @@ interface LayoutRouteChildren {
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutChannelsChannelIdRoute: typeof LayoutChannelsChannelIdRoute
   LayoutChannelsBrowseRoute: typeof LayoutChannelsBrowseRoute
+  LayoutVideoStoreSourceIdRoute: typeof LayoutVideoStoreSourceIdRoute
   LayoutWatchesImportRoute: typeof LayoutWatchesImportRoute
   LayoutChannelsIndexRoute: typeof LayoutChannelsIndexRoute
+  LayoutVideoStoreIndexRoute: typeof LayoutVideoStoreIndexRoute
   LayoutChannels3dChannelIdRoute: typeof LayoutChannels3dChannelIdRoute
   LayoutUsersUserIdChannelsRoute: typeof LayoutUsersUserIdChannelsRoute
+  LayoutVideoStoreProviderWatchProviderIdRoute: typeof LayoutVideoStoreProviderWatchProviderIdRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
@@ -1113,10 +1175,14 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutChannelsChannelIdRoute: LayoutChannelsChannelIdRoute,
   LayoutChannelsBrowseRoute: LayoutChannelsBrowseRoute,
+  LayoutVideoStoreSourceIdRoute: LayoutVideoStoreSourceIdRoute,
   LayoutWatchesImportRoute: LayoutWatchesImportRoute,
   LayoutChannelsIndexRoute: LayoutChannelsIndexRoute,
+  LayoutVideoStoreIndexRoute: LayoutVideoStoreIndexRoute,
   LayoutChannels3dChannelIdRoute: LayoutChannels3dChannelIdRoute,
   LayoutUsersUserIdChannelsRoute: LayoutUsersUserIdChannelsRoute,
+  LayoutVideoStoreProviderWatchProviderIdRoute:
+    LayoutVideoStoreProviderWatchProviderIdRoute,
 }
 
 const LayoutRouteWithChildren =

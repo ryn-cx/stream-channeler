@@ -45,6 +45,15 @@ class TitleUpdate(
 
 
 # TODO: Validate
+class WatchProviderOffering(BaseModel):
+    region: str
+    tmdb_provider_id: int
+    provider_name: str
+    logo_url: str | None
+    offering_type: str
+
+
+# TODO: Validate
 class TmdbEpisodeGroupOption(BaseModel):
     id: str
     name: str

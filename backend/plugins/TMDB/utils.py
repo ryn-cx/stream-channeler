@@ -11,6 +11,7 @@ from tminidb.tv_season.details.models import Episode as TvSeasonEpisode
 from tminidb.tv_season.details.models import TvSeasonDetailsModel
 
 from app.media.media_type import TMDBMediaType
+from app.titles.schemas import WatchProviderOffering
 from app.tmdb_media.tmdb import (
     tmdb_season_key,
 )
@@ -103,3 +104,27 @@ def watch_provider_names(watch_providers: Any) -> set[str]:  # noqa: ANN401 - On
         for offering in ("flatrate", "ads", "free", "buy", "rent")
         for provider in getattr(us_results, offering, None) or []
     }
+
+
+# TODO: Validate
+def watch_provider_offerings(watch_providers: Any) -> list[WatchProviderOffering]:  # noqa: ANN401 - One of the strict and optional models of three media types.
+    results = watch_providers.results
+    if not results:
+        return []
+    region_codes = {
+        field_name: field.alias or field_name.upper()
+        for field_name, field in type(results).model_fields.items()
+    }
+    return [
+        WatchProviderOffering(
+            region=region_codes[field_name],
+            tmdb_provider_id=provider.provider_id,
+            provider_name=provider.provider_name,
+            logo_url=image_url(provider.logo_path),
+            offering_type=offering_type,
+        )
+        for field_name, region_results in results
+        if region_results
+        for offering_type in ("flatrate", "ads", "free", "buy", "rent")
+        for provider in getattr(region_results, offering_type, None) or []
+    ]

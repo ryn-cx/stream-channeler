@@ -125,6 +125,9 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
                     min(self._title_files_data_timestamps(title_key)),
                 ),
             )
+            title.set_genres(
+                self._title_files(title_key)[0].details().entity.genre_names,
+            )
 
         self._upsert_title_seasons(title, force=force)
         self._upsert_collection_seasons(title, force=force)

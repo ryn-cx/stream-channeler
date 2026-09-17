@@ -186,6 +186,7 @@ class ParamountPlusSeriesImporter(ParamountPlusImporter):
                 source_id=source.id,
             ).upsert(source, title)
             title.set_update_at(min(data_timestamps) + timedelta(days=7))
+            title.set_genres(self._genres(title_key))
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
@@ -434,6 +435,7 @@ class ParamountPlusMovieImporter(ParamountPlusImporter):
             title.set_update_at(
                 staggered_monthly_update_at(title_key, min(data_timestamps)),
             )
+            title.set_genres([movie.genre] if movie.genre else [])
 
         self._upsert_season(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)

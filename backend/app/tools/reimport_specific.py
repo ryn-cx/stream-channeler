@@ -8,6 +8,7 @@ from sqlmodel import Session
 
 from app.database import engine, load_models
 from app.titles.models import Title
+from plugins.utils.base_plugin.files import bypass_file_updates
 from plugins.utils.manage_plugins import (
     import_plugins,
     plugins,
@@ -25,8 +26,9 @@ def reimport_single_title(session: Session, title_id: uuid.UUID) -> None:
     plugin_class = plugin_classes_by_key[title.source.plugin.key]
 
     logger.info(f"Reimporting {title.name or title.key} from {title.source.plugin.key}")
-    plugin_instance = plugin_class(session, title.source.plugin)
-    plugin_instance.update_title(title, force=True)
+    with bypass_file_updates():
+        plugin_instance = plugin_class(session, title.source.plugin)
+        plugin_instance.update_title(title, force=True)
     session.commit()
 
 

@@ -62,16 +62,20 @@ class NetflixImporter(NetflixShared, BaseImporter, ABC):
             self.add_new_urls_to_channel(channel_key, urls)
 
     # TODO: Validate
-    def _title_channel_keys(self, title_data: DetailModalModel) -> list[str]:
+    def _genre_names(self, title_data: DetailModalModel) -> list[str]:
         genre_tags = title_data.genre_tags.edges if title_data.genre_tags else None
+        return [
+            edge.node.name for edge in genre_tags or [] if edge.node and edge.node.name
+        ]
+
+    # TODO: Validate
+    def _title_channel_keys(self, title_data: DetailModalModel) -> list[str]:
         channel_keys = [
             mood_tag.display_name
             for mood_tag in title_data.mood_tags or []
             if mood_tag.display_name
         ]
-        channel_keys.extend(
-            edge.node.name for edge in genre_tags or [] if edge.node and edge.node.name
-        )
+        channel_keys.extend(self._genre_names(title_data))
         channel_keys.extend(
             membership.title
             for membership in title_data.title_group_memberships or []
@@ -207,8 +211,8 @@ class NetflixSeriesImporter(NetflixImporter):
                 media_type="Series",
                 year=title_data.latest_year,
                 url=self.title_url(title_key),
-                image_url=title_data.story_art.url,
-                thumbnail_url=title_data.story_art.url,
+                image_url=title_data.boxart_high_res.url,
+                thumbnail_url=title_data.boxart.url,
                 data_timestamp=self._title_files_data_timestamp(title_key),
                 source_id=source.id,
             ).upsert(source, title)
@@ -218,6 +222,7 @@ class NetflixSeriesImporter(NetflixImporter):
                     min(self._title_files_data_timestamps(title_key)),
                 ),
             )
+            title.set_genres(self._genre_names(title_data))
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
@@ -352,8 +357,8 @@ class NetflixMovieImporter(NetflixImporter):
                 name=movie_data.title,
                 url=self.title_url(title_key),
                 year=movie_data.latest_year,
-                image_url=movie_data.story_art.url,
-                thumbnail_url=movie_data.story_art.url,
+                image_url=movie_data.boxart_high_res.url,
+                thumbnail_url=movie_data.boxart.url,
                 media_type="Movie",
                 data_timestamp=self._title_files_data_timestamp(title_key),
                 source_id=source.id,
@@ -364,6 +369,7 @@ class NetflixMovieImporter(NetflixImporter):
                     min(self._title_files_data_timestamps(title_key)),
                 ),
             )
+            title.set_genres(self._genre_names(movie_data))
 
         self._upsert_season(title, movie_data, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
@@ -409,8 +415,8 @@ class NetflixMovieImporter(NetflixImporter):
                 watch_identifier=watch_identifier(self.plugin_name(), title_key),
                 name=movie_data.title,
                 url=self.episode_url(title_key),
-                image_url=movie_data.story_art.url,
-                thumbnail_url=movie_data.story_art.url,
+                image_url=movie_data.boxart_high_res.url,
+                thumbnail_url=movie_data.boxart.url,
                 episode_number=0,
                 sort_order=0,
                 data_timestamp=self._episode_files_data_timestamp(

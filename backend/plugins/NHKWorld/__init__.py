@@ -89,6 +89,7 @@ class NHKWorldUpsert(NHKWorldChannels, ABC):
                     min(self._title_files_data_timestamps(title_key)),
                 ),
             )
+            title.set_genres(category.name for category in program.categories)
 
         self._upsert_season(title, title_key, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)

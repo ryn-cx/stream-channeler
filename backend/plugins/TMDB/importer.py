@@ -16,6 +16,7 @@ from app.media.media_type import TMDBMediaType
 from app.seasons.models import Season
 from app.sources.models import Source
 from app.titles.models import Title
+from app.titles.service.watch_providers import record_watch_providers
 from app.tmdb_media.keys import (
     watch_identifier,
 )
@@ -39,6 +40,7 @@ from plugins.TMDB.utils import (
     thumbnail_url,
     tmdb_url,
     watch_provider_names,
+    watch_provider_offerings,
 )
 from plugins.utils.abstract_plugin import (
     InvalidURLError,
@@ -93,6 +95,18 @@ class TMDBImporter(TMDBShared, BaseImporter, ABC):
             self.session,
             title,
             watch_provider_names(watch_providers),
+        )
+
+    # TODO: Validate
+    def _record_watch_providers(
+        self,
+        title: Title,
+        watch_providers: Any,  # noqa: ANN401 - One of the watch providers models.
+    ) -> None:
+        record_watch_providers(
+            self.session,
+            title,
+            watch_provider_offerings(watch_providers),
         )
 
     # TODO: Validate
@@ -230,6 +244,8 @@ class TMDBSeries(TMDBImporter):
                 url=tmdb_url(TMDBMediaType.tv, tmdb_tv_title_id),
                 image_url=image_url(series.backdrop_path or series.poster_path),
                 thumbnail_url=thumbnail_url(series.backdrop_path or series.poster_path),
+                poster_url=image_url(series.poster_path),
+                poster_thumbnail_url=thumbnail_url(series.poster_path),
                 year=parse_release_year(series.first_air_date),
                 media_type="Series",
                 extra=title.extra if title else {},
@@ -238,14 +254,16 @@ class TMDBSeries(TMDBImporter):
                 source_id=source.id,
             ).upsert(source, title)
             title.set_update_at(None)
+            title.set_genres(genre.name for genre in series.genres)
 
         self._upsert_seasons(title, title_key, tmdb_tv_title_id, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
         self._set_title_update_frequency(title)
-        self._record_unmatched_providers(
-            title,
-            self.tv_series_watch_providers_file(tmdb_tv_title_id).parsed(),
-        )
+        series_watch_providers = self.tv_series_watch_providers_file(
+            tmdb_tv_title_id,
+        ).parsed()
+        self._record_unmatched_providers(title, series_watch_providers)
+        self._record_watch_providers(title, series_watch_providers)
         return title
 
     # TODO: Validate
@@ -482,6 +500,8 @@ class TMDBMovie(TMDBImporter):
                     parsed_movie_details.backdrop_path
                     or parsed_movie_details.poster_path,
                 ),
+                poster_url=image_url(parsed_movie_details.poster_path),
+                poster_thumbnail_url=thumbnail_url(parsed_movie_details.poster_path),
                 year=parse_release_year(parsed_movie_details.release_date),
                 media_type="Movie",
                 data_timestamp=self._title_files_data_timestamp(title_key),
@@ -489,12 +509,12 @@ class TMDBMovie(TMDBImporter):
                 source_id=source.id,
             ).upsert(source, title)
             title.set_update_at(None)
+            title.set_genres(genre.name for genre in parsed_movie_details.genres)
 
         self._upsert_season(title, title_key, tmdb_movie_id, force=force)
-        self._record_unmatched_providers(
-            title,
-            self.movies_watch_providers_file(tmdb_movie_id).parsed(),
-        )
+        movie_watch_providers = self.movies_watch_providers_file(tmdb_movie_id).parsed()
+        self._record_unmatched_providers(title, movie_watch_providers)
+        self._record_watch_providers(title, movie_watch_providers)
         return title
 
     # TODO: Validate

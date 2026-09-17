@@ -2,6 +2,7 @@
 """Title models."""
 
 import uuid
+from collections.abc import Iterable
 from datetime import datetime
 from typing import TYPE_CHECKING, ClassVar, Self, override
 
@@ -30,6 +31,7 @@ from app.sources.models import Source
 from app.tmdb_media.tmdb import (
     get_tmdb_id,
 )
+from app.watch_providers.models import WatchProvider
 
 if TYPE_CHECKING:
     from app.channels.models import ChannelSourceFilter
@@ -52,6 +54,8 @@ class BaseTmdbTitle(BaseMediaMixin):
     url: str | None = Field(default=None)
     image_url: str | None = Field(default=None)
     thumbnail_url: str | None = Field(default=None)
+    poster_url: str | None = Field(default=None)
+    poster_thumbnail_url: str | None = Field(default=None)
     # What TMDB is searched under along with the name, so a title sharing its
     # name with another is still told apart. A website that does not say when
     # its titles came out leaves this empty and is matched on the name alone.
@@ -220,6 +224,32 @@ class Title(BaseTitle, ChildMediaMixin[Source, "Season"], table=True):
         cascade_delete=True,
     )
 
+    genres: list[TitleGenre] = Relationship(
+        back_populates="title",
+        cascade_delete=True,
+    )
+
+    watch_providers: list[TitleWatchProvider] = Relationship(
+        back_populates="title",
+        cascade_delete=True,
+    )
+
+    # TODO: Validate
+    @property
+    def genre_names(self) -> list[str]:
+        return [genre.name for genre in self.genres]
+
+    # TODO: Validate
+    def set_genres(self, names: Iterable[str]) -> None:
+        wanted = list(dict.fromkeys(name.strip() for name in names if name.strip()))
+        stored = {genre.name: genre for genre in self.genres}
+        for name in wanted:
+            if name not in stored:
+                self.genres.append(TitleGenre(title_id=self.id, name=name))
+        for name, genre in stored.items():
+            if name not in wanted:
+                self.genres.remove(genre)
+
     # TODO: Validate
     @classmethod
     @override
@@ -334,6 +364,53 @@ class TitleTmdbTitle(BaseTitleTmdbTitle, TimestampIdAndHashMixin, table=True):
             "foreign_keys": "TitleTmdbTitle.tmdb_title_id",
         },
     )
+
+
+# TODO: Validate
+class BaseTitleGenre(SQLModel):
+    title_id: uuid.UUID = Field(foreign_key="title.id", ondelete="CASCADE")
+    name: str = Field(min_length=1)
+
+
+# TODO: Validate
+class TitleGenre(BaseTitleGenre, TimestampIdAndHashMixin, table=True):
+    __table_args__ = (
+        PrimaryKeyConstraint("title_id", "name"),
+        Index("TitleGenre-name-index", "name"),
+    )
+
+    title: Title = Relationship(back_populates="genres")
+
+
+# TODO: Validate
+class BaseTitleWatchProvider(SQLModel):
+    title_id: uuid.UUID = Field(foreign_key="title.id", ondelete="CASCADE")
+    watch_provider_id: uuid.UUID = Field(
+        foreign_key="watchprovider.id",
+        ondelete="CASCADE",
+    )
+    region: str = Field(min_length=2, max_length=2)
+    offering_type: str = Field(min_length=1)
+
+
+# TODO: Validate
+class TitleWatchProvider(BaseTitleWatchProvider, TimestampIdAndHashMixin, table=True):
+    __table_args__ = (
+        PrimaryKeyConstraint(
+            "title_id",
+            "region",
+            "watch_provider_id",
+            "offering_type",
+        ),
+        Index(
+            "TitleWatchProvider-region-watch_provider_id-index",
+            "region",
+            "watch_provider_id",
+        ),
+    )
+
+    title: Title = Relationship(back_populates="watch_providers")
+    watch_provider: WatchProvider = Relationship()
 
 
 # TODO: Validate
