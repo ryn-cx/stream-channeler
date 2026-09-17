@@ -2,6 +2,7 @@
 import { X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import * as THREE from "three"
+import type { VideoStoreWatchLinkOutput } from "@/client"
 import {
   createBackTexture,
   createCaseCanvas,
@@ -58,7 +59,7 @@ export function CaseViewer({
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
-  const [url, setUrl] = useState<string | null>(null)
+  const [links, setLinks] = useState<VideoStoreWatchLinkOutput[]>([])
 
   useEffect(() => {
     const overlay = overlayRef.current
@@ -130,10 +131,11 @@ export function CaseViewer({
     mesh.rotation.set(0, -0.5, 0)
     scene.add(mesh)
 
+    // TODO: Validate
     const paint = async () => {
       const detail = await fetchTitleDetail(title.id)
       if (disposed) return
-      setUrl(detail.url ?? null)
+      setLinks(detail.links)
       const [cover, backdrop] = await Promise.all([
         loadImage(detail.poster_url ?? title.imageUrl),
         loadImage(detail.image_url ?? null),
@@ -331,16 +333,17 @@ export function CaseViewer({
               Take it to the counter
             </button>
           )}
-          {url && (
+          {links.map((link) => (
             <a
-              href={url}
+              key={link.url}
+              href={link.url}
               target="_blank"
               rel="noreferrer"
               className="rounded-full border border-white/25 px-5 py-2 text-sm font-medium text-white/85 hover:bg-white/10"
             >
-              Watch now
+              {link.plugin_name}
             </a>
-          )}
+          ))}
         </div>
       </div>
     </div>

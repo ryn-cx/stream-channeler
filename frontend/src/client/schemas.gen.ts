@@ -8439,10 +8439,17 @@ export const VideoStoreTitleDetailOutputSchema = {
                 }
             ],
             title: 'Url'
+        },
+        links: {
+            items: {
+                '$ref': '#/components/schemas/VideoStoreWatchLinkOutput'
+            },
+            type: 'array',
+            title: 'Links'
         }
     },
     type: 'object',
-    required: ['id', 'name', 'year', 'poster_url', 'image_url', 'description', 'original_language', 'languages', 'url'],
+    required: ['id', 'name', 'year', 'poster_url', 'image_url', 'description', 'original_language', 'languages', 'url', 'links'],
     title: 'VideoStoreTitleDetailOutput',
     description: "Schema for returning everything a title's case viewer shows."
 } as const;
@@ -8578,6 +8585,23 @@ export const VideoStoreTitlesOutputSchema = {
     required: ['titles'],
     title: 'VideoStoreTitlesOutput',
     description: 'Schema for returning every title a store shelves.'
+} as const;
+
+export const VideoStoreWatchLinkOutputSchema = {
+    properties: {
+        plugin_name: {
+            type: 'string',
+            title: 'Plugin Name'
+        },
+        url: {
+            type: 'string',
+            title: 'Url'
+        }
+    },
+    type: 'object',
+    required: ['plugin_name', 'url'],
+    title: 'VideoStoreWatchLinkOutput',
+    description: 'Schema for returning one website a title can be watched on.'
 } as const;
 
 export const VideoStoreWatchProviderOutputSchema = {

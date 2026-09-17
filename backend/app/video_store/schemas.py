@@ -74,6 +74,14 @@ class VideoStoreLanguageOutput(BaseModel):
 
 
 # TODO: Validate
+class VideoStoreWatchLinkOutput(BaseModel):
+    """Schema for returning one website a title can be watched on."""
+
+    plugin_name: str
+    url: str
+
+
+# TODO: Validate
 class VideoStoreTitleDetailOutput(BaseModel):
     """Schema for returning everything a title's case viewer shows."""
 
@@ -86,6 +94,7 @@ class VideoStoreTitleDetailOutput(BaseModel):
     original_language: str | None
     languages: list[str]
     url: str | None
+    links: list[VideoStoreWatchLinkOutput]
 
 
 # TODO: Validate

@@ -2192,6 +2192,7 @@ export type VideoStoreTitleDetailOutput = {
     original_language: (string | null);
     languages: Array<(string)>;
     url: (string | null);
+    links: Array<VideoStoreWatchLinkOutput>;
 };
 
 /**
@@ -2218,6 +2219,14 @@ export type VideoStoreTitleOutput = {
  */
 export type VideoStoreTitlesOutput = {
     titles: Array<VideoStoreTitleOutput>;
+};
+
+/**
+ * Schema for returning one website a title can be watched on.
+ */
+export type VideoStoreWatchLinkOutput = {
+    plugin_name: string;
+    url: string;
 };
 
 /**

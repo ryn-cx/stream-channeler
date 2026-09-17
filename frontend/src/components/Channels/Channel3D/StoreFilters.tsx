@@ -461,8 +461,8 @@ const Slider = ({
       onChange={(event) => onChange(Number(event.target.value))}
       className="h-1 flex-1 accent-emerald-400"
     />
-    <span className="w-8 text-right text-xs tabular-nums text-white/70">
-      {step < 1 ? value.toFixed(1) : value}
+    <span className="w-12 text-right text-xs tabular-nums text-white/70">
+      {step < 1 ? value.toFixed(1) : value.toLocaleString()}
     </span>
   </div>
 )
@@ -482,6 +482,8 @@ export function StoreFilterPanel({
   onSaveFilterDefault,
   onLoadDesignDefault,
   onLoadFilterDefault,
+  audioPlaying,
+  onAudioPlaying,
 }: {
   titles: StoreTitle[]
   filters: StoreFilters
@@ -496,9 +498,11 @@ export function StoreFilterPanel({
   onSaveFilterDefault: (filters: StoreFilters) => void
   onLoadDesignDefault: () => void
   onLoadFilterDefault: () => void
+  audioPlaying: boolean
+  onAudioPlaying: (playing: boolean) => void
 }) {
   const [draft, setDraft] = useState(filters)
-  const [tab, setTab] = useState<"filters" | "design">("filters")
+  const [tab, setTab] = useState<"filters" | "design" | "audio">("filters")
   const panelRef = useRef<HTMLDivElement>(null)
   const draftRef = useRef(draft)
   const bounds = storeBounds(titles)
@@ -539,328 +543,399 @@ export function StoreFilterPanel({
     return () => window.removeEventListener("pointerdown", onPointerDown)
   }, [open, onApply, onOpenChange])
 
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => onOpenChange(true)}
-        className="absolute right-4 top-16 z-30 flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm text-white/80 backdrop-blur hover:text-white"
-      >
-        <SlidersHorizontal className="size-4" />
-        Settings
-      </button>
-    )
-  }
-
   return (
-    <div
-      ref={panelRef}
-      className="absolute right-4 top-16 z-30 max-h-[80vh] w-[min(20rem,90vw)] overflow-y-auto rounded-xl border border-white/15 bg-black/85 p-4 text-white backdrop-blur"
-    >
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold">Settings</span>
+    <>
+      {!open && (
         <button
           type="button"
-          onClick={close}
-          className="rounded-full p-1 text-white/60 hover:text-white"
+          onClick={() => onOpenChange(true)}
+          className="absolute right-4 top-16 z-30 flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm text-white/80 backdrop-blur hover:text-white"
         >
-          <X className="size-4" />
+          <SlidersHorizontal className="size-4" />
+          Settings
         </button>
-      </div>
-
-      <div className="mt-3 flex gap-1 rounded-lg bg-white/5 p-1">
-        {(["filters", "design"] as const).map((entry) => (
+      )}
+      <div
+        ref={panelRef}
+        className={`absolute z-30 max-h-[80vh] overflow-y-auto rounded-xl border border-white/15 bg-black/85 p-4 text-white backdrop-blur ${
+          open
+            ? `right-4 top-16 ${tab === "audio" ? "w-[min(38rem,92vw)]" : "w-[min(20rem,90vw)]"}`
+            : "pointer-events-none left-[-9999px] top-0 w-[38rem] opacity-0"
+        }`}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-semibold">Settings</span>
           <button
-            key={entry}
             type="button"
-            onClick={() => setTab(entry)}
-            className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium capitalize ${
-              tab === entry ? "bg-white/15 text-white" : "text-white/60"
-            }`}
+            onClick={close}
+            className="rounded-full p-1 text-white/60 hover:text-white"
           >
-            {entry}
+            <X className="size-4" />
           </button>
-        ))}
-      </div>
-
-      {tab === "design" && (
-        <div className="flex flex-col gap-4 pt-4">
-          <div className="flex flex-col gap-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-white/50">
-              Cases
-            </span>
-            <Choices
-              options={FORMATS}
-              value={design.format}
-              onChange={(format) => onDesign({ ...design, format })}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-white/50">
-              Floor
-            </span>
-            <Swatches
-              value={design.floor}
-              onChange={(floor) => onDesign({ ...design, floor })}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-white/50">
-              Walls and counter
-            </span>
-            <Swatches
-              value={design.room}
-              onChange={(room) => onDesign({ ...design, room })}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-white/50">
-              Lights
-            </span>
-            <Slider
-              value={design.lights}
-              max={5}
-              step={0.1}
-              onChange={(lights) => onDesign({ ...design, lights })}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-white/50">
-              Askew
-            </span>
-            <Slider
-              value={design.askew}
-              max={100}
-              step={1}
-              onChange={(askew) => onDesign({ ...design, askew })}
-            />
-          </div>
-          <Toggle
-            label="Shine on cases"
-            checked={design.shine}
-            onChange={(shine) => onDesign({ ...design, shine })}
-          />
-          <Toggle
-            label="Cases ignore lighting"
-            checked={design.unlit}
-            onChange={(unlit) => onDesign({ ...design, unlit })}
-          />
-          <div className="flex items-center gap-2 text-xs">
-            <button
-              type="button"
-              onClick={() => onSaveDesignDefault(design)}
-              className="rounded-full border border-white/20 px-3 py-1 text-white/70 hover:text-white"
-            >
-              Set default
-            </button>
-            {hasDesignDefault && (
-              <button
-                type="button"
-                onClick={onLoadDesignDefault}
-                className="rounded-full border border-white/20 px-3 py-1 text-white/70 hover:text-white"
-              >
-                Load default
-              </button>
-            )}
-          </div>
         </div>
-      )}
 
-      {tab === "filters" && (
-        <>
-          <div className="mt-4 flex flex-col gap-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-white/50">
-              Year
-            </span>
-            <div className="flex gap-2">
-              <NumberField
-                label="From"
-                value={draft.yearFrom}
-                onChange={(value) => setDraft({ ...draft, yearFrom: value })}
-              />
-              <NumberField
-                label="To"
-                value={draft.yearTo}
-                onChange={(value) => setDraft({ ...draft, yearTo: value })}
-              />
-            </div>
-            <Toggle
-              label="Include titles with no year"
-              checked={draft.unknownYear}
-              onChange={(checked) =>
-                setDraft({ ...draft, unknownYear: checked })
-              }
-            />
-          </div>
-
-          <div className="mt-4 flex flex-col gap-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-white/50">
-              Score
-            </span>
-            <div className="flex gap-2">
-              <NumberField
-                label="From"
-                value={draft.scoreFrom}
-                onChange={(value) => setDraft({ ...draft, scoreFrom: value })}
-              />
-              <NumberField
-                label="To"
-                value={draft.scoreTo}
-                onChange={(value) => setDraft({ ...draft, scoreTo: value })}
-              />
-            </div>
-            <Toggle
-              label="Include titles with no score"
-              checked={draft.unknownScore}
-              onChange={(checked) =>
-                setDraft({ ...draft, unknownScore: checked })
-              }
-            />
-          </div>
-
-          <div className="mt-4 flex flex-col gap-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-white/50">
-              Popularity
-            </span>
-            <div className="flex gap-2">
-              <NumberField
-                label="From"
-                value={draft.popularityFrom}
-                onChange={(value) =>
-                  setDraft({ ...draft, popularityFrom: value })
-                }
-              />
-              <NumberField
-                label="To"
-                value={draft.popularityTo}
-                onChange={(value) =>
-                  setDraft({ ...draft, popularityTo: value })
-                }
-              />
-            </div>
-            <Toggle
-              label="Include titles with no popularity"
-              checked={draft.unknownPopularity}
-              onChange={(checked) =>
-                setDraft({ ...draft, unknownPopularity: checked })
-              }
-            />
-          </div>
-
-          <div className="mt-4 flex flex-col gap-2">
-            <span className="text-xs font-medium uppercase tracking-wide text-white/50">
-              Media type
-            </span>
-            {bounds.mediaTypes.map((mediaType) => (
-              <Toggle
-                key={mediaType}
-                label={mediaType}
-                checked={draft.mediaTypes.includes(mediaType)}
-                onChange={(checked) =>
-                  setDraft({
-                    ...filters,
-                    mediaTypes: checked
-                      ? [...draft.mediaTypes, mediaType]
-                      : draft.mediaTypes.filter((entry) => entry !== mediaType),
-                  })
-                }
-              />
-            ))}
-            <Toggle
-              label={UNKNOWN_MEDIA_TYPE}
-              checked={draft.unknownMediaType}
-              onChange={(checked) =>
-                setDraft({ ...draft, unknownMediaType: checked })
-              }
-            />
-          </div>
-
-          <LanguageSection
-            label="Original language"
-            options={originalLanguages ?? []}
-            selected={draft.originalLanguages}
-            unknownLabel="Include titles with no original language"
-            unknownChecked={draft.unknownOriginalLanguage}
-            onSelectedChange={(selected) =>
-              setDraft({ ...draft, originalLanguages: selected })
-            }
-            onUnknownChange={(checked) =>
-              setDraft({ ...draft, unknownOriginalLanguage: checked })
-            }
-          />
-
-          <LanguageSection
-            label="Title language"
-            options={spokenLanguages ?? []}
-            selected={draft.languages}
-            unknownLabel="Include titles with no language"
-            unknownChecked={draft.unknownLanguage}
-            onSelectedChange={(selected) =>
-              setDraft({ ...draft, languages: selected })
-            }
-            onUnknownChange={(checked) =>
-              setDraft({ ...draft, unknownLanguage: checked })
-            }
-          />
-
-          <GenreSection
-            options={bounds.genreSources}
-            selected={draft.genreSources}
-            unknownChecked={draft.unknownGenre}
-            onSelectedChange={(selected) =>
-              setDraft({ ...draft, genreSources: selected })
-            }
-            onUnknownChange={(checked) =>
-              setDraft({ ...draft, unknownGenre: checked })
-            }
-          />
-
-          <div className="mt-4 flex items-center gap-2 text-xs">
+        <div className="mt-3 flex gap-1 rounded-lg bg-white/5 p-1">
+          {(["filters", "design", "audio"] as const).map((entry) => (
             <button
+              key={entry}
               type="button"
-              onClick={() => {
-                onApply(draft)
-                onSaveFilterDefault(draft)
-              }}
-              className="rounded-full border border-white/20 px-3 py-1 text-white/70 hover:text-white"
+              onClick={() => setTab(entry)}
+              className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium capitalize ${
+                tab === entry ? "bg-white/15 text-white" : "text-white/60"
+              }`}
             >
-              Set default
+              {entry}
             </button>
-            {hasFilterDefault && (
-              <button
-                type="button"
-                onClick={onLoadFilterDefault}
-                className="rounded-full border border-white/20 px-3 py-1 text-white/70 hover:text-white"
-              >
-                Load default
-              </button>
-            )}
-          </div>
+          ))}
+        </div>
 
-          <div className="mt-4 flex items-center justify-between gap-3 text-xs text-white/50">
-            <span>
-              {applyFilters(titles, draft).length.toLocaleString()} on the
-              shelves
-            </span>
-            <div className="flex items-center gap-2">
+        {tab === "design" && (
+          <div className="flex flex-col gap-4 pt-4">
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+                Cases
+              </span>
+              <Choices
+                options={FORMATS}
+                value={design.format}
+                onChange={(format) => onDesign({ ...design, format })}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+                Floor
+              </span>
+              <Swatches
+                value={design.floor}
+                onChange={(floor) => onDesign({ ...design, floor })}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+                Walls
+              </span>
+              <Swatches
+                value={design.room}
+                onChange={(room) => onDesign({ ...design, room })}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+                Indoor lights
+              </span>
+              <Slider
+                value={design.lights}
+                max={5}
+                step={0.1}
+                onChange={(lights) => onDesign({ ...design, lights })}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+                Outdoor lights
+              </span>
+              <Slider
+                value={design.outdoor}
+                max={5}
+                step={0.1}
+                onChange={(outdoor) => onDesign({ ...design, outdoor })}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+                Askew
+              </span>
+              <Slider
+                value={design.askew}
+                max={100}
+                step={1}
+                onChange={(askew) => onDesign({ ...design, askew })}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+                Rain drops
+              </span>
+              <Slider
+                value={design.rainDrops}
+                max={50000}
+                step={200}
+                onChange={(rainDrops) => onDesign({ ...design, rainDrops })}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+                Rain speed
+              </span>
+              <Slider
+                value={design.rainSpeed}
+                max={40}
+                step={1}
+                onChange={(rainSpeed) => onDesign({ ...design, rainSpeed })}
+              />
+            </div>
+            <Toggle
+              label="Shine on cases"
+              checked={design.shine}
+              onChange={(shine) => onDesign({ ...design, shine })}
+            />
+            <Toggle
+              label="Cases ignore lighting"
+              checked={design.unlit}
+              onChange={(unlit) => onDesign({ ...design, unlit })}
+            />
+            <div className="flex items-center gap-2 text-xs">
               <button
                 type="button"
-                onClick={() => setDraft(defaultFilters(titles))}
+                onClick={() => onSaveDesignDefault(design)}
                 className="rounded-full border border-white/20 px-3 py-1 text-white/70 hover:text-white"
               >
-                Reset
+                Set default
               </button>
-              <button
-                type="button"
-                onClick={close}
-                className="rounded-full border border-emerald-300/40 px-3 py-1 font-medium text-emerald-200 hover:bg-emerald-300/10"
-              >
-                Apply
-              </button>
+              {hasDesignDefault && (
+                <button
+                  type="button"
+                  onClick={onLoadDesignDefault}
+                  className="rounded-full border border-white/20 px-3 py-1 text-white/70 hover:text-white"
+                >
+                  Load default
+                </button>
+              )}
             </div>
           </div>
-        </>
-      )}
-    </div>
+        )}
+
+        <div
+          className={
+            tab === "audio"
+              ? "flex flex-col gap-4 pt-4"
+              : "pointer-events-none absolute left-[-9999px] top-0 flex w-[34rem] flex-col gap-4 opacity-0"
+          }
+        >
+          <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+            Store soundtrack
+          </span>
+          <iframe
+            title="Store soundtrack"
+            src={`https://www.youtube.com/embed/qX_XTr0rN2E?autoplay=${
+              audioPlaying ? 1 : 0
+            }`}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allowFullScreen
+            className="aspect-video w-full rounded-lg border border-white/15"
+          />
+          <Toggle
+            label="Start automatically"
+            checked={design.audioAutoplay}
+            onChange={(audioAutoplay) => {
+              onAudioPlaying(audioAutoplay)
+              onDesign({ ...design, audioAutoplay })
+            }}
+          />
+          <p className="text-[11px] text-white/40">
+            Keeps playing while you browse the shelves.
+          </p>
+        </div>
+
+        {tab === "filters" && (
+          <>
+            <div className="mt-4 flex flex-col gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+                Year
+              </span>
+              <div className="flex gap-2">
+                <NumberField
+                  label="From"
+                  value={draft.yearFrom}
+                  onChange={(value) => setDraft({ ...draft, yearFrom: value })}
+                />
+                <NumberField
+                  label="To"
+                  value={draft.yearTo}
+                  onChange={(value) => setDraft({ ...draft, yearTo: value })}
+                />
+              </div>
+              <Toggle
+                label="Include titles with no year"
+                checked={draft.unknownYear}
+                onChange={(checked) =>
+                  setDraft({ ...draft, unknownYear: checked })
+                }
+              />
+            </div>
+
+            <div className="mt-4 flex flex-col gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+                Score
+              </span>
+              <div className="flex gap-2">
+                <NumberField
+                  label="From"
+                  value={draft.scoreFrom}
+                  onChange={(value) => setDraft({ ...draft, scoreFrom: value })}
+                />
+                <NumberField
+                  label="To"
+                  value={draft.scoreTo}
+                  onChange={(value) => setDraft({ ...draft, scoreTo: value })}
+                />
+              </div>
+              <Toggle
+                label="Include titles with no score"
+                checked={draft.unknownScore}
+                onChange={(checked) =>
+                  setDraft({ ...draft, unknownScore: checked })
+                }
+              />
+            </div>
+
+            <div className="mt-4 flex flex-col gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+                Popularity
+              </span>
+              <div className="flex gap-2">
+                <NumberField
+                  label="From"
+                  value={draft.popularityFrom}
+                  onChange={(value) =>
+                    setDraft({ ...draft, popularityFrom: value })
+                  }
+                />
+                <NumberField
+                  label="To"
+                  value={draft.popularityTo}
+                  onChange={(value) =>
+                    setDraft({ ...draft, popularityTo: value })
+                  }
+                />
+              </div>
+              <Toggle
+                label="Include titles with no popularity"
+                checked={draft.unknownPopularity}
+                onChange={(checked) =>
+                  setDraft({ ...draft, unknownPopularity: checked })
+                }
+              />
+            </div>
+
+            <div className="mt-4 flex flex-col gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+                Media type
+              </span>
+              {bounds.mediaTypes.map((mediaType) => (
+                <Toggle
+                  key={mediaType}
+                  label={mediaType}
+                  checked={draft.mediaTypes.includes(mediaType)}
+                  onChange={(checked) =>
+                    setDraft({
+                      ...filters,
+                      mediaTypes: checked
+                        ? [...draft.mediaTypes, mediaType]
+                        : draft.mediaTypes.filter(
+                            (entry) => entry !== mediaType,
+                          ),
+                    })
+                  }
+                />
+              ))}
+              <Toggle
+                label={UNKNOWN_MEDIA_TYPE}
+                checked={draft.unknownMediaType}
+                onChange={(checked) =>
+                  setDraft({ ...draft, unknownMediaType: checked })
+                }
+              />
+            </div>
+
+            <LanguageSection
+              label="Original language"
+              options={originalLanguages ?? []}
+              selected={draft.originalLanguages}
+              unknownLabel="Include titles with no original language"
+              unknownChecked={draft.unknownOriginalLanguage}
+              onSelectedChange={(selected) =>
+                setDraft({ ...draft, originalLanguages: selected })
+              }
+              onUnknownChange={(checked) =>
+                setDraft({ ...draft, unknownOriginalLanguage: checked })
+              }
+            />
+
+            <LanguageSection
+              label="Title language"
+              options={spokenLanguages ?? []}
+              selected={draft.languages}
+              unknownLabel="Include titles with no language"
+              unknownChecked={draft.unknownLanguage}
+              onSelectedChange={(selected) =>
+                setDraft({ ...draft, languages: selected })
+              }
+              onUnknownChange={(checked) =>
+                setDraft({ ...draft, unknownLanguage: checked })
+              }
+            />
+
+            <GenreSection
+              options={bounds.genreSources}
+              selected={draft.genreSources}
+              unknownChecked={draft.unknownGenre}
+              onSelectedChange={(selected) =>
+                setDraft({ ...draft, genreSources: selected })
+              }
+              onUnknownChange={(checked) =>
+                setDraft({ ...draft, unknownGenre: checked })
+              }
+            />
+
+            <div className="mt-4 flex items-center gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  onApply(draft)
+                  onSaveFilterDefault(draft)
+                }}
+                className="rounded-full border border-white/20 px-3 py-1 text-white/70 hover:text-white"
+              >
+                Set default
+              </button>
+              {hasFilterDefault && (
+                <button
+                  type="button"
+                  onClick={onLoadFilterDefault}
+                  className="rounded-full border border-white/20 px-3 py-1 text-white/70 hover:text-white"
+                >
+                  Load default
+                </button>
+              )}
+            </div>
+
+            <div className="mt-4 flex items-center justify-between gap-3 text-xs text-white/50">
+              <span>
+                {applyFilters(titles, draft).length.toLocaleString()} on the
+                shelves
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDraft(defaultFilters(titles))}
+                  className="rounded-full border border-white/20 px-3 py-1 text-white/70 hover:text-white"
+                >
+                  Reset
+                </button>
+                <button
+                  type="button"
+                  onClick={close}
+                  className="rounded-full border border-emerald-300/40 px-3 py-1 font-medium text-emerald-200 hover:bg-emerald-300/10"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </>
   )
 }

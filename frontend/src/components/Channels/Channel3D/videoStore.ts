@@ -1,19 +1,16 @@
 // TODO: Validate
 import * as THREE from "three"
-import {
-  CityGenerator,
-  createBuildingMaterial,
-} from "three/addons/generators/CityGenerator.js"
-import {
-  CarGenerator,
-  type CarGeneratorPlacement,
-} from "three/addons/generators/city/CarGenerator.js"
+import { CarGenerator } from "three/addons/generators/city/CarGenerator.js"
 import { SidewalkGenerator } from "three/addons/generators/city/SidewalkGenerator.js"
+import { StreetlightGenerator } from "three/addons/generators/city/StreetlightGenerator.js"
+import { StreetTreeGenerator } from "three/addons/generators/city/StreetTreeGenerator.js"
+import { ForestGenerator } from "three/addons/generators/ForestGenerator.js"
+import { WoodNodeMaterial } from "three/addons/materials/WoodNodeMaterial.js"
 import { PointerLockControls } from "three/examples/jsm/controls/PointerLockControls.js"
+import { color, mix, mx_noise_float, positionLocal, vec3 } from "three/tsl"
 import { WebGPURenderer } from "three/webgpu"
 import {
   createAisleSignTexture,
-  createBeamTexture,
   createCarpetTexture,
   createCaseCanvas,
   createCaseTexture,
@@ -25,7 +22,7 @@ import {
   createLabelTexture,
   createLoaderTexture,
   createLotTexture,
-  createNightSkyTexture,
+  createRippleTexture,
   createStoreSignTexture,
   createTagTexture,
   genreHue,
@@ -69,6 +66,7 @@ export type VideoStoreCallbacks = {
   onChannelAction: (action: "create" | "add") => void
   onFilters: () => void
   onLockChange: (locked: boolean) => void
+  onReady: () => void
 }
 
 // TODO: Validate
@@ -113,9 +111,37 @@ export class VideoStore {
   private container: HTMLElement
   private callbacks: VideoStoreCallbacks
   private renderer: WebGPURenderer
-  private cities: CityGenerator[] = []
   private cars: CarGenerator | null = null
+  private litCars: CarGenerator | null = null
+  private carFleet: THREE.Group | null = null
+  private litFleet: THREE.Group | null = null
+  private parked: Array<{
+    x: number
+    z: number
+    turn: number
+    spin: THREE.Vector3
+    drift: THREE.Vector3
+    color: number
+    lit: boolean
+  }> = []
   private sidewalk: SidewalkGenerator | null = null
+  private dressed = new WeakSet<THREE.Material>()
+  private moonLight = new THREE.DirectionalLight(0xaebede, 0.55)
+  private skyLight = new THREE.HemisphereLight(0x33425f, 0x05060a, 0.5)
+  private poolMaterial: THREE.MeshBasicMaterial | null = null
+  private trees: StreetTreeGenerator | null = null
+  private forest: ForestGenerator | null = null
+  private lamps: StreetlightGenerator | null = null
+  private rain: THREE.LineSegments | null = null
+  private splashes: THREE.InstancedMesh | null = null
+  private ripples: Array<{ x: number; y: number; z: number; age: number }> = []
+  private rippleCursor = 0
+  private rainSpeed = 14
+  private rainSpanX = 0
+  private rainSpanZ = 0
+  private rainCenterZ = 0
+  private rainRoofX = 0
+  private rainRoofZ = 0
   private scene = new THREE.Scene()
   private camera: THREE.PerspectiveCamera
   private controls: PointerLockControls
@@ -159,8 +185,14 @@ export class VideoStore {
   private askew = 0.5
   private lights: Array<{ light: THREE.Light; base: number }> = []
   private laneAnchors: THREE.Vector3[] = []
+  private lampPool: THREE.PointLight[] = []
+  private lampAnchors: THREE.Vector3[] = []
   private laneGlows: THREE.Mesh[] = []
+  private glowMaterial: THREE.MeshBasicMaterial | null = null
+  private diffuserMaterial: THREE.MeshBasicMaterial | null = null
+  private ceilingMaterial: THREE.MeshStandardMaterial | null = null
   private floorMaterial: THREE.MeshStandardMaterial | null = null
+  private carpetRepeat = new THREE.Vector2(20, 20)
   private roomMaterials: THREE.MeshStandardMaterial[] = []
   private runMeshes: THREE.Mesh[][] = []
   private loaderButtons: THREE.Mesh[] = []
@@ -222,7 +254,6 @@ export class VideoStore {
     container.appendChild(this.renderer.domElement)
 
     this.scene.background = new THREE.Color(0x07070b)
-    this.scene.fog = new THREE.Fog(0x07070b, 12, 36)
 
     this.camera = new THREE.PerspectiveCamera(
       72,
@@ -246,6 +277,7 @@ export class VideoStore {
     this.renderer.init().then(() => {
       if (this.disposed) return
       this.animationHandle = requestAnimationFrame(this.tick)
+      this.callbacks.onReady()
     })
   }
 
@@ -265,10 +297,14 @@ export class VideoStore {
     this.camera.position.set(width / 2 - 1.8, 1.65, depth / 2 - 1.05)
     this.camera.lookAt(-width / 2 + 1.2, 1.3, -depth / 2 + 1.2)
 
+    this.carpetRepeat.set(width / 1.5, depth / 1.5)
     this.floorMaterial = new THREE.MeshStandardMaterial({
       map: createCarpetTexture(),
-      roughness: 0.95,
+      color: 0xbababa,
+      roughness: 1,
+      metalness: 0,
     })
+    this.floorMaterial.map?.repeat.copy(this.carpetRepeat)
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(width, depth),
       this.floorMaterial,
@@ -282,9 +318,15 @@ export class VideoStore {
     const tileZ = depth / rows
     const ceilingTexture = createCeilingTexture()
     ceilingTexture.repeat.set(columns, rows)
+    this.ceilingMaterial = new THREE.MeshStandardMaterial({
+      map: ceilingTexture,
+      emissiveMap: ceilingTexture,
+      color: 0x9a9a9a,
+      roughness: 1,
+    })
     const ceiling = new THREE.Mesh(
       new THREE.PlaneGeometry(width, depth),
-      new THREE.MeshStandardMaterial({ map: ceilingTexture, roughness: 0.92 }),
+      this.ceilingMaterial,
     )
     ceiling.rotation.x = Math.PI / 2
     ceiling.position.y = 3.2
@@ -310,13 +352,11 @@ export class VideoStore {
       this.scene.add(wall)
     }
 
-    for (const light of [
-      new THREE.AmbientLight(0xc6cfff, 0.38),
-      new THREE.HemisphereLight(0xe6ecff, 0x1a1626, 0.55),
-    ]) {
-      this.lights.push({ light, base: light.intensity })
-      this.scene.add(light)
-    }
+    this.moonLight.position.set(-70, 90, depth / 2 + 120)
+    this.moonLight.target.position.set(0, 0, depth / 2 + 30)
+    this.scene.add(this.moonLight)
+    this.scene.add(this.moonLight.target)
+    this.scene.add(this.skyLight)
 
     const bays = Math.max(4, Math.round(width / 1.3))
     const bayWidth = width / bays
@@ -325,6 +365,23 @@ export class VideoStore {
       Math.max(0, Math.round((width - 6.6) / bayWidth) - 1),
     )
     const doorCenter = -width / 2 + bayWidth * (doorBay + 1)
+
+    for (const [minX, minZ, maxX, maxZ] of [
+      [-width / 2 - 0.2, -depth / 2 - 0.2, width / 2 + 0.2, -depth / 2],
+      [-width / 2 - 0.2, -depth / 2, -width / 2, depth / 2],
+      [width / 2, -depth / 2, width / 2 + 0.2, depth / 2],
+      [-width / 2, depth / 2, doorCenter - bayWidth, depth / 2 + 0.2],
+      [doorCenter + bayWidth, depth / 2, width / 2, depth / 2 + 0.2],
+    ] as const) {
+      if (maxX - minX < 0.01) continue
+      this.colliders.push(
+        new THREE.Box3(
+          new THREE.Vector3(minX, 0, minZ),
+          new THREE.Vector3(maxX, 3.2, maxZ),
+        ),
+      )
+    }
+
     const glassMaterial = new THREE.MeshBasicMaterial({
       color: 0x7d98ad,
       transparent: true,
@@ -435,18 +492,87 @@ export class VideoStore {
       this.swatches.push(handle)
     }
 
-    const lotUnits = Math.ceil(width / 19.9) + 2
+    const lotUnits = Math.max(1, Math.round(width / 19.9))
     const lotWidth = lotUnits * 19.9
-    const sky = new THREE.Mesh(
-      new THREE.PlaneGeometry(lotWidth + 320, 150),
-      new THREE.MeshBasicMaterial({
-        map: createNightSkyTexture(),
+    this.rainSpanX = Math.max(width, lotWidth)
+    this.rainSpanZ = depth + 50
+    this.rainCenterZ = 25
+    this.rainRoofX = width / 2
+    this.rainRoofZ = depth / 2
+    const streaks = new Float32Array(20000 * 6)
+    for (let drop = 0; drop < 20000; drop++) {
+      this.seedDrop(streaks, drop * 6, Math.random() * 26)
+    }
+    const rainGeometry = new THREE.BufferGeometry()
+    rainGeometry.setAttribute("position", new THREE.BufferAttribute(streaks, 3))
+    rainGeometry.setDrawRange(0, 0)
+    this.rain = new THREE.LineSegments(
+      rainGeometry,
+      new THREE.LineBasicMaterial({
+        color: 0xc4dcff,
+        transparent: true,
+        opacity: 0.5,
+        depthWrite: false,
         fog: false,
       }),
     )
-    sky.position.set(0, 50, depth / 2 + 190)
-    sky.rotation.y = Math.PI
-    this.scene.add(sky)
+    this.rain.frustumCulled = false
+    this.scene.add(this.rain)
+
+    for (let ripple = 0; ripple < 500; ripple++) {
+      this.ripples.push({ x: 0, y: 0, z: 0, age: 1 })
+    }
+    this.splashes = new THREE.InstancedMesh(
+      new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({
+        map: createRippleTexture(),
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        fog: false,
+      }),
+      500,
+    )
+    const resting = new THREE.Matrix4()
+    const unlit = new THREE.Color(0, 0, 0)
+    for (let ripple = 0; ripple < 500; ripple++) {
+      this.splashes.setMatrixAt(ripple, resting)
+      this.splashes.setColorAt(ripple, unlit)
+    }
+    this.splashes.frustumCulled = false
+    this.splashes.count = 0
+    this.scene.add(this.splashes)
+
+    const domeMaterial = new THREE.MeshBasicMaterial({
+      side: THREE.BackSide,
+      depthWrite: false,
+      fog: false,
+    })
+    const skyDirection = positionLocal.normalize()
+    const clusters = mx_noise_float(
+      skyDirection.mul(3.2).add(vec3(13.7, 5.1, 21.3)),
+    )
+    const speckle = mx_noise_float(skyDirection.mul(210))
+    const starfield = clusters
+      .abs()
+      .pow(1 / 0.2)
+      .abs()
+      .add(speckle)
+      .abs()
+      .pow(1 / 0.042)
+      .abs()
+      .clamp(0, 1)
+    const horizon = skyDirection.y.mul(0.5).add(0.5)
+    domeMaterial.colorNode = mix(color(0x22324c), color(0x03040c), horizon).add(
+      color(0xeaf1ff).mul(starfield),
+    )
+    const dome = new THREE.Mesh(
+      new THREE.SphereGeometry(360, 64, 40),
+      domeMaterial,
+    )
+    dome.position.set(0, -12, depth / 2 + 20)
+    dome.renderOrder = -1
+    this.scene.add(dome)
 
     const apron = new THREE.Mesh(
       new THREE.PlaneGeometry(lotWidth + 60, 84),
@@ -455,66 +581,6 @@ export class VideoStore {
     apron.position.set(0, -0.12, depth / 2 + 42)
     apron.rotation.x = -Math.PI / 2
     this.scene.add(apron)
-
-    const cityLamps: THREE.Vector3[] = []
-    for (const [cityX, cityZ, turn, blocksX] of [
-      [0, depth / 2 + 78, 0, Math.max(2, Math.ceil(lotWidth / 64))],
-      [-lotWidth / 2 - 44, depth / 2 + 26, Math.PI / 2, 2],
-      [lotWidth / 2 + 44, depth / 2 + 26, -Math.PI / 2, 2],
-    ] as const) {
-      const city = new CityGenerator({
-        seed: Math.floor(Math.random() * 1000),
-        street: 16,
-        lot: 24,
-        lotsX: 2,
-        lotsZ: 2,
-        blocksX,
-        blocksZ: 1,
-      })
-      const block = city.build({
-        building: createBuildingMaterial(city.layout, city.seedNode),
-      })
-      block.traverse((object) => {
-        const mesh = object as THREE.Mesh
-        if (!mesh.isMesh) return
-        const materials = Array.isArray(mesh.material)
-          ? mesh.material
-          : [mesh.material]
-        for (const material of materials) {
-          ;(material as THREE.Material & { fog: boolean }).fog = false
-        }
-      })
-      block.position.set(cityX, -0.12, cityZ)
-      block.rotation.y = turn
-      this.scene.add(block)
-      this.cities.push(city)
-
-      block.updateMatrixWorld(true)
-      const lamps = city.furniture.streetlight.mesh
-      if (lamps) {
-        const placement = new THREE.Matrix4()
-        const head = new THREE.Vector3(
-          0,
-          city.furniture.streetlight.parameters.height,
-          city.furniture.streetlight.parameters.reach,
-        )
-        for (let index = 0; index < lamps.count; index++) {
-          lamps.getMatrixAt(index, placement)
-          cityLamps.push(
-            head
-              .clone()
-              .applyMatrix4(placement)
-              .applyMatrix4(lamps.matrixWorld),
-          )
-        }
-      }
-    }
-
-    const moon = new THREE.DirectionalLight(0xc3d4ff, 0.7)
-    moon.position.set(-90, 120, depth / 2 + 170)
-    moon.target.position.set(0, 0, depth / 2 + 60)
-    this.scene.add(moon)
-    this.scene.add(moon.target)
 
     this.sidewalk = new SidewalkGenerator({
       width: Math.max(width, lotWidth),
@@ -525,16 +591,7 @@ export class VideoStore {
     const walk = this.sidewalk.build([
       new THREE.Matrix4().makeTranslation(0, -0.12, depth / 2 + 1.15),
     ])
-    walk.traverse((object) => {
-      const mesh = object as THREE.Mesh
-      if (!mesh.isMesh) return
-      const materials = Array.isArray(mesh.material)
-        ? mesh.material
-        : [mesh.material]
-      for (const material of materials) {
-        ;(material as THREE.Material & { fog: boolean }).fog = false
-      }
-    })
+    this.dressOutdoors(walk)
     this.scene.add(walk)
 
     const nearBays = createLotTexture(false)
@@ -547,19 +604,15 @@ export class VideoStore {
     nearLot.rotation.x = -Math.PI / 2
     this.scene.add(nearLot)
 
-    const parked: CarGeneratorPlacement[] = []
     for (let spot = 0; spot < Math.floor(lotWidth / 2.6); spot++) {
       if (Math.random() < 0.5) continue
-      const matrix = new THREE.Matrix4().makeRotationY(
-        (Math.random() < 0.7 ? Math.PI : 0) + (Math.random() - 0.5) * 0.08,
-      )
-      matrix.setPosition(
-        -lotWidth / 2 + 2.6 * (spot + 0.5) + (Math.random() - 0.5) * 0.3,
-        -0.1,
-        depth / 2 + 4.9 + (Math.random() - 0.5) * 0.5,
-      )
-      parked.push({
-        matrix,
+      this.parked.push({
+        x: -lotWidth / 2 + 2.6 * (spot + 0.5),
+        z: depth / 2 + 4.9,
+        turn: Math.random() < 0.7 ? Math.PI : 0,
+        spin: randomOffset(),
+        drift: randomOffset(),
+        lit: Math.random() < 0.1,
         color:
           Math.random() < 0.15
             ? CarGenerator.taxiColor
@@ -567,21 +620,6 @@ export class VideoStore {
                 Math.floor(Math.random() * 6)
               ],
       })
-    }
-    if (parked.length > 0) {
-      this.cars = new CarGenerator()
-      const fleet = this.cars.build(parked)
-      fleet.traverse((object) => {
-        const mesh = object as THREE.Mesh
-        if (!mesh.isMesh) return
-        const materials = Array.isArray(mesh.material)
-          ? mesh.material
-          : [mesh.material]
-        for (const material of materials) {
-          ;(material as THREE.Material & { fog: boolean }).fog = false
-        }
-      })
-      this.scene.add(fleet)
     }
 
     const farBays = createLotTexture(true)
@@ -618,121 +656,107 @@ export class VideoStore {
         strip.rotation.x = -Math.PI / 2
         this.scene.add(strip)
         if (kind === "grass") islandXs.push(x)
+        if (kind !== "bay") continue
+        for (let stall = 0; stall < 12; stall++) {
+          if (Math.random() < 0.55) continue
+          this.parked.push({
+            x,
+            z: depth / 2 + 15.3 + stall * 2.6,
+            turn: (Math.random() < 0.5 ? 1 : -1) * (Math.PI / 2),
+            spin: randomOffset(),
+            drift: randomOffset(),
+            lit: Math.random() < 0.1,
+            color:
+              Math.random() < 0.12
+                ? CarGenerator.taxiColor
+                : [0x9aa3ad, 0x2f3a4a, 0x7d2b2b, 0xd7d9dc, 0x1d2126, 0x35543f][
+                    Math.floor(Math.random() * 6)
+                  ],
+          })
+        }
       }
     }
 
-    const poleMaterial = new THREE.MeshBasicMaterial({
-      color: 0x2a2c34,
-      fog: false,
-    })
-    const lampMaterial = new THREE.MeshBasicMaterial({
-      color: 0xffeec2,
-      fog: false,
-    })
-    const beamMaterial = new THREE.MeshBasicMaterial({
-      map: createBeamTexture(),
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-      fog: false,
-    })
-    const poolMaterial = new THREE.MeshBasicMaterial({
+    this.poolMaterial = new THREE.MeshBasicMaterial({
       map: createGlowTexture(),
       transparent: true,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
+      opacity: 0.25,
       fog: false,
     })
-    const beamGeometry = new THREE.ConeGeometry(2.4, 5.2, 18, 1, true)
-    const poolGeometry = new THREE.CircleGeometry(2.6, 24)
-
-    if (cityLamps.length > 0) {
-      const drop = cityLamps[0].y + 0.12
-      const cityBeamGeometry = new THREE.ConeGeometry(
-        drop * 0.42,
-        drop,
-        18,
-        1,
-        true,
-      )
-      const cityPoolGeometry = new THREE.CircleGeometry(drop * 0.48, 24)
-      for (const lamp of cityLamps) {
-        const beam = new THREE.Mesh(cityBeamGeometry, beamMaterial)
-        beam.position.set(lamp.x, -0.12 + drop / 2, lamp.z)
-        beam.matrixAutoUpdate = false
-        beam.updateMatrix()
-        this.scene.add(beam)
-
-        const pool = new THREE.Mesh(cityPoolGeometry, poolMaterial)
-        pool.position.set(lamp.x, -0.08, lamp.z)
-        pool.rotation.x = -Math.PI / 2
-        pool.matrixAutoUpdate = false
-        pool.updateMatrix()
-        this.scene.add(pool)
-      }
-    }
-    const trunkGeometry = new THREE.CylinderGeometry(0.11, 0.17, 1.7, 6)
-    const canopyGeometry = new THREE.IcosahedronGeometry(0.95, 1)
-    const trunkMaterial = new THREE.MeshBasicMaterial({
-      color: 0x2b2118,
-      fog: false,
-    })
-    const canopyMaterial = new THREE.MeshBasicMaterial({
-      color: 0x1f3526,
-      fog: false,
-    })
+    const poolMaterial = this.poolMaterial
+    const treePlacements: THREE.Matrix4[] = []
+    const lampPlacements: THREE.Matrix4[] = []
     for (const islandX of islandXs) {
       for (const treeZ of [17.5, 24.5, 31, 37.5, 44.5]) {
-        const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial)
-        trunk.position.set(islandX, 0.79, depth / 2 + treeZ)
-        this.scene.add(trunk)
-        for (const [leafX, leafY, leafZ, size] of [
-          [0, 2.15, 0, 1],
-          [0.55, 1.68, 0.3, 0.68],
-          [-0.5, 1.75, -0.35, 0.6],
-        ] as const) {
-          const canopy = new THREE.Mesh(canopyGeometry, canopyMaterial)
-          canopy.position.set(islandX + leafX, leafY, depth / 2 + treeZ + leafZ)
-          canopy.scale.setScalar(size)
-          this.scene.add(canopy)
-        }
+        treePlacements.push(
+          new THREE.Matrix4()
+            .makeRotationY(Math.random() * Math.PI * 2)
+            .setPosition(islandX, -0.06, depth / 2 + treeZ),
+        )
+      }
+      for (const poleZ of [20.5, 31, 41.5]) {
+        lampPlacements.push(
+          new THREE.Matrix4()
+            .makeRotationY(Math.PI / 2)
+            .setPosition(islandX, -0.06, depth / 2 + poleZ),
+        )
       }
     }
-    for (const poleX of islandXs) {
-      for (const poleZ of [20.5, 31, 41.5]) {
-        const mast = new THREE.Mesh(
-          new THREE.BoxGeometry(0.16, 5.4, 0.16),
-          poleMaterial,
-        )
-        mast.position.set(poleX, 2.58, depth / 2 + poleZ)
-        this.scene.add(mast)
-        const crossbar = new THREE.Mesh(
-          new THREE.BoxGeometry(3, 0.13, 0.13),
-          poleMaterial,
-        )
-        crossbar.position.set(poleX, 5.21, depth / 2 + poleZ)
-        this.scene.add(crossbar)
 
-        for (const side of [-1, 1]) {
-          const lampX = poleX + side * 1.42
-          const lamp = new THREE.Mesh(
-            new THREE.BoxGeometry(0.46, 0.11, 0.26),
-            lampMaterial,
-          )
-          lamp.position.set(lampX, 5.1, depth / 2 + poleZ)
-          this.scene.add(lamp)
+    if (this.parked.length > 0) {
+      this.cars = new CarGenerator()
+      this.litCars = new CarGenerator()
+      this.parkCars()
+    }
 
-          const beam = new THREE.Mesh(beamGeometry, beamMaterial)
-          beam.position.set(lampX, 2.44, depth / 2 + poleZ)
-          this.scene.add(beam)
+    const clearX = lotWidth / 2 + 12
+    const clearBack = -depth / 2 - 12
+    const clearFront = depth / 2 + 62
+    this.forest = new ForestGenerator({
+      seed: Math.floor(Math.random() * 1000),
+      count: 42000,
+      altitudeMin: 0.5,
+      altitudeMax: 1.2,
+      minSlope: 0,
+      densityFrequency: 0.02,
+      from: 190,
+      to: 380,
+    })
+    const woodland = this.forest.build({
+      parameters: { size: 760 },
+      minY: -1,
+      maxY: 0,
+      sampleHeight: (x: number, z: number) =>
+        Math.abs(x) < clearX && z > clearBack && z < clearFront ? -1 : 0,
+      sampleSlope: () => 1,
+    } as unknown as Parameters<ForestGenerator["build"]>[0])
+    woodland.position.y = -0.12
+    this.scene.add(woodland)
 
-          const pool = new THREE.Mesh(poolGeometry, poolMaterial)
-          pool.position.set(lampX, -0.08, depth / 2 + poleZ)
-          pool.rotation.x = -Math.PI / 2
-          this.scene.add(pool)
-        }
-      }
+    this.trees = new StreetTreeGenerator()
+    const grove = this.trees.build(treePlacements)
+    this.dressOutdoors(grove)
+    this.scene.add(grove)
+
+    this.lamps = new StreetlightGenerator({ height: 5.6, reach: 1.8 })
+    const posts = this.lamps.build(lampPlacements)
+    this.dressOutdoors(posts)
+    this.scene.add(posts)
+
+    const poolGeometry = new THREE.CircleGeometry(2.6, 24)
+    const lampHead = new THREE.Vector3(
+      0,
+      this.lamps.parameters.height,
+      this.lamps.parameters.reach,
+    )
+    for (const placement of lampPlacements) {
+      const lamp = lampHead.clone().applyMatrix4(placement)
+      const pool = new THREE.Mesh(poolGeometry, poolMaterial)
+      pool.position.set(lamp.x, -0.08, lamp.z)
+      pool.rotation.x = -Math.PI / 2
+      this.scene.add(pool)
     }
 
     const housingMaterial = new THREE.MeshStandardMaterial({
@@ -740,26 +764,35 @@ export class VideoStore {
       roughness: 0.55,
       metalness: 0.35,
     })
-    const diffuserMaterial = new THREE.MeshBasicMaterial({
+    this.diffuserMaterial = new THREE.MeshBasicMaterial({
       map: createDiffuserTexture(),
       toneMapped: false,
     })
-    const glowMaterial = new THREE.MeshBasicMaterial({
+    const diffuserMaterial = this.diffuserMaterial
+    this.glowMaterial = new THREE.MeshBasicMaterial({
       map: createGlowTexture(),
       transparent: true,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
+      opacity: 0,
     })
+    const glowMaterial = this.glowMaterial
     const housingGeometry = new THREE.BoxGeometry(
       tileX * 0.98,
       0.07,
       tileZ * 0.98,
     )
     const diffuserGeometry = new THREE.PlaneGeometry(tileX * 0.88, tileZ * 0.92)
+    let columnTick = 0
     for (let column = 1; column < columns; column += 3) {
       const x = -width / 2 + (column + 0.5) * tileX
+      let rowTick = 0
       for (let row = 1; row < rows; row += 2) {
         const z = -depth / 2 + (row + 0.5) * tileZ
+        if (columnTick % 2 === 0 && rowTick % 2 === 0) {
+          this.lampAnchors.push(new THREE.Vector3(x, 2.85, z))
+        }
+        rowTick++
         const housing = new THREE.Mesh(housingGeometry, housingMaterial)
         housing.position.set(x, 3.168, z)
         housing.matrixAutoUpdate = false
@@ -786,28 +819,19 @@ export class VideoStore {
         this.laneGlows.push(glow)
         this.laneAnchors.push(new THREE.Vector3(x, 2.95, z))
       }
+      columnTick++
     }
-    const lamps = 6
-    for (let index = 0; index < lamps; index++) {
-      const lamp = new THREE.PointLight(0xfff1d8, 3.6, 26, 1)
-      lamp.position.set(((index + 0.5) / lamps - 0.5) * width, 2.98, -0.5)
-      this.lights.push({ light: lamp, base: lamp.intensity })
-      this.scene.add(lamp)
-    }
-    const entranceLamp = new THREE.PointLight(0x9ad7ff, 2.6, 24, 1)
-    this.lights.push({ light: entranceLamp, base: entranceLamp.intensity })
-    entranceLamp.position.set(0, 2.9, depth / 2 - 1.6)
-    this.scene.add(entranceLamp)
 
-    const shelfMaterial = new THREE.MeshStandardMaterial({
-      color: 0x6a4a33,
-      roughness: 0.8,
-    })
-    const frameMaterial = new THREE.MeshStandardMaterial({
-      color: 0x2e3038,
-      roughness: 0.7,
-      metalness: 0.35,
-    })
+    for (let lamp = 0; lamp < Math.min(16, this.lampAnchors.length); lamp++) {
+      const bulb = new THREE.PointLight(0xfff3e0, 3.2, 11, 2)
+      bulb.position.copy(this.lampAnchors[lamp])
+      this.lights.push({ light: bulb, base: bulb.intensity })
+      this.lampPool.push(bulb)
+      this.scene.add(bulb)
+    }
+
+    const shelfMaterial = WoodNodeMaterial.fromPreset("walnut", "matte")
+    const frameMaterial = WoodNodeMaterial.fromPreset("walnut", "semigloss")
     const runs: ShelfRun[] = []
 
     for (let unit = 0; unit < unitCount; unit++) {
@@ -925,11 +949,8 @@ export class VideoStore {
       )
     }
 
-    const counterMaterial = new THREE.MeshStandardMaterial({
-      color: 0xd8b13a,
-      roughness: 0.6,
-    })
-    this.roomMaterials.push(wallMaterial, counterMaterial)
+    const counterMaterial = WoodNodeMaterial.fromPreset("teak", "semigloss")
+    this.roomMaterials.push(wallMaterial)
     const counter = new THREE.Mesh(
       new THREE.BoxGeometry(2.6, 1.05, 0.7),
       counterMaterial,
@@ -1183,9 +1204,20 @@ export class VideoStore {
 
   // TODO: Validate
   private moveLights() {
+    this.forest?.setCameraPosition(this.camera.position)
     for (const [index, glow] of this.laneGlows.entries()) {
       glow.visible =
         this.laneAnchors[index].distanceToSquared(this.camera.position) < 900
+    }
+    if (this.lampPool.length === 0) return
+    const nearest = this.lampAnchors
+      .map((anchor, index) => ({
+        index,
+        range: anchor.distanceToSquared(this.camera.position),
+      }))
+      .sort((left, right) => left.range - right.range)
+    for (const [slot, bulb] of this.lampPool.entries()) {
+      bulb.position.copy(this.lampAnchors[nearest[slot]?.index ?? 0])
     }
   }
 
@@ -1565,6 +1597,142 @@ export class VideoStore {
   }
 
   // TODO: Validate
+  private seedDrop(streaks: Float32Array, offset: number, top: number) {
+    const x = (Math.random() - 0.5) * this.rainSpanX
+    const z = (Math.random() - 0.5) * this.rainSpanZ + this.rainCenterZ
+    streaks[offset] = x
+    streaks[offset + 1] = top
+    streaks[offset + 2] = z
+    streaks[offset + 3] = x
+    streaks[offset + 4] = top - 0.7
+    streaks[offset + 5] = z
+  }
+
+  // TODO: Validate
+  setRain(drops: number, speed: number) {
+    this.rainSpeed = speed
+    this.rain?.geometry.setDrawRange(0, Math.round(drops) * 2)
+  }
+
+  // TODO: Validate
+  private fallRain(delta: number) {
+    if (!this.rain) return
+    const falling = this.rain.geometry.drawRange.count / 2
+    this.rain.visible = falling > 0
+    if (!this.rain.visible) return
+
+    const attribute = this.rain.geometry.getAttribute(
+      "position",
+    ) as THREE.BufferAttribute
+    const streaks = attribute.array as Float32Array
+    const drop = this.rainSpeed * delta
+    for (let index = 0; index < falling; index++) {
+      const offset = index * 6
+      streaks[offset + 1] -= drop
+      streaks[offset + 4] -= drop
+      const sheltered =
+        Math.abs(streaks[offset]) < this.rainRoofX &&
+        streaks[offset + 2] < this.rainRoofZ
+      if (streaks[offset + 4] > (sheltered ? 3.3 : 0)) continue
+      this.splash(streaks[offset], sheltered ? 3.3 : 0, streaks[offset + 2])
+      this.seedDrop(streaks, offset, 26)
+    }
+    attribute.needsUpdate = true
+    this.spreadSplashes(delta)
+  }
+
+  // TODO: Validate
+  private splash(x: number, y: number, z: number) {
+    const ripple = this.ripples[this.rippleCursor]
+    this.rippleCursor = (this.rippleCursor + 1) % this.ripples.length
+    ripple.x = x
+    ripple.y = y
+    ripple.z = z
+    ripple.age = 0
+  }
+
+  // TODO: Validate
+  private spreadSplashes(delta: number) {
+    if (!this.splashes) return
+    const placement = new THREE.Matrix4()
+    const fade = new THREE.Color()
+    let shown = 0
+    for (const ripple of this.ripples) {
+      if (ripple.age >= 1) continue
+      ripple.age = Math.min(1, ripple.age + delta * 2.6)
+      const spread = 0.12 + ripple.age * 0.75
+      placement.makeScale(spread, 1, spread)
+      placement.setPosition(ripple.x, ripple.y + 0.02, ripple.z)
+      this.splashes.setMatrixAt(shown, placement)
+      fade.setScalar((1 - ripple.age) * 0.7)
+      this.splashes.setColorAt(shown, fade)
+      shown++
+    }
+    this.splashes.count = shown
+    this.splashes.instanceMatrix.needsUpdate = true
+    if (this.splashes.instanceColor) {
+      this.splashes.instanceColor.needsUpdate = true
+    }
+  }
+
+  // TODO: Validate
+  private dressOutdoors(group: THREE.Object3D) {
+    group.traverse((object) => {
+      const mesh = object as THREE.Mesh
+      if (!mesh.isMesh) return
+      const materials = Array.isArray(mesh.material)
+        ? mesh.material
+        : [mesh.material]
+      for (const material of materials) {
+        if (this.dressed.has(material)) continue
+        this.dressed.add(material)
+        const lit = material as THREE.MeshStandardMaterial & { fog: boolean }
+        lit.fog = false
+        lit.emissive?.setHex(0x000000)
+      }
+    })
+  }
+
+  // TODO: Validate
+  private parkCars() {
+    if (!this.cars || !this.litCars || this.parked.length === 0) return
+    if (this.carFleet) this.scene.remove(this.carFleet)
+    if (this.litFleet) this.scene.remove(this.litFleet)
+    const strength = this.askew * this.askew
+    const place = (car: (typeof this.parked)[number]) => ({
+      color: car.color,
+      matrix: new THREE.Matrix4()
+        .makeRotationY(car.turn + car.spin.y * 0.5 * strength)
+        .setPosition(
+          car.x + car.drift.x * 1.6 * strength,
+          -0.1,
+          car.z + car.drift.z * 1.6 * strength,
+        ),
+    })
+
+    this.carFleet = this.cars.build(
+      this.parked.filter((car) => !car.lit).map(place),
+    )
+    for (const paint of this.cars.materials.values()) {
+      ;(paint as { emissiveNode: unknown }).emissiveNode = null
+    }
+    this.dressOutdoors(this.carFleet)
+    this.scene.add(this.carFleet)
+
+    this.litFleet = this.litCars.build(
+      this.parked.filter((car) => car.lit).map(place),
+    )
+    this.scene.add(this.litFleet)
+  }
+
+  // TODO: Validate
+  setOutdoorLights(level: number) {
+    this.moonLight.intensity = level * 0.55
+    this.skyLight.intensity = level * 0.5
+    if (this.poolMaterial) this.poolMaterial.opacity = level * 0.25
+  }
+
+  // TODO: Validate
   setAskew(value: number) {
     this.askew = value / 50
     for (const mesh of [...this.realCases, ...this.counterCases]) {
@@ -1575,6 +1743,7 @@ export class VideoStore {
         facing: mesh.userData.facing as THREE.Vector3,
       })
     }
+    this.parkCars()
   }
 
   // TODO: Validate
@@ -1583,6 +1752,13 @@ export class VideoStore {
     for (const { light, base } of this.lights) {
       light.intensity = base * strength
     }
+    if (this.glowMaterial) {
+      this.glowMaterial.opacity = Math.min(strength, 1) * 0.16
+    }
+    this.diffuserMaterial?.color.setScalar(Math.min(strength, 1))
+    this.ceilingMaterial?.emissive
+      .setHex(0x4a4b52)
+      .multiplyScalar(Math.min(strength, 1))
   }
 
   // TODO: Validate
@@ -2008,6 +2184,7 @@ export class VideoStore {
       }
       if (!this.touch) this.updateFocus()
     }
+    this.fallRain(delta)
     for (const leaf of this.doorLeaves) {
       const target = leaf.open ? leaf.swing : 0
       const turn = leaf.group.rotation.y
@@ -2022,10 +2199,12 @@ export class VideoStore {
   setFloorColor(color: number) {
     if (!this.floorMaterial) return
     const hue = Math.round(
-      new THREE.Color(color).getHSL({ h: 0, s: 0, l: 0 }).h * 360,
+      new THREE.Color(color).getHSL({ h: 0, s: 0, l: 0 }, THREE.SRGBColorSpace)
+        .h * 360,
     )
     this.floorMaterial.map?.dispose()
     this.floorMaterial.map = createCarpetTexture(hue)
+    this.floorMaterial.map.repeat.copy(this.carpetRepeat)
     this.floorMaterial.needsUpdate = true
   }
 
@@ -2149,9 +2328,12 @@ export class VideoStore {
         material.dispose()
       }
     })
-    for (const city of this.cities) city.dispose()
     this.cars?.dispose()
+    this.litCars?.dispose()
     this.sidewalk?.dispose()
+    this.trees?.dispose()
+    this.forest?.dispose()
+    this.lamps?.dispose()
     this.caseGeometry.dispose()
     this.tagGeometry.dispose()
     this.blockMaterial.dispose()

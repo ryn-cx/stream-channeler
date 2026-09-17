@@ -31,6 +31,7 @@ from app.video_store.schemas import (
     VideoStoreTitleDetailOutput,
     VideoStoreTitleOutput,
     VideoStoreTitlesOutput,
+    VideoStoreWatchLinkOutput,
     VideoStoreWatchProviderOutput,
 )
 from app.watch_providers.models import WatchProvider
@@ -312,6 +313,37 @@ def _shelve_titles(
 
 
 # TODO: Validate
+def _watch_links(
+    session: Session,
+    title_ids: list[uuid.UUID],
+) -> list[VideoStoreWatchLinkOutput]:
+    """Read every website one title, its canonical row and its siblings sit on."""
+    if not title_ids:
+        return []
+
+    rows = session.exec(
+        select(Plugin.key, Title.url)
+        .join(Source, col(Source.id) == col(Title.source_id))
+        .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
+        .where(
+            col(Title.id).in_(title_ids),
+            col(Title.url).is_not(None),
+            col(Title.deleted_at).is_(None),
+        )
+        .order_by(col(Plugin.key)),
+    ).all()
+
+    links: list[VideoStoreWatchLinkOutput] = []
+    seen: set[str] = set()
+    for plugin_key, url in rows:
+        if url is None or url in seen:
+            continue
+        seen.add(url)
+        links.append(VideoStoreWatchLinkOutput(plugin_name=plugin_key, url=url))
+    return links
+
+
+# TODO: Validate
 def title_detail(session: Session, title: Title) -> VideoStoreTitleDetailOutput:
     """Read everything the case viewer shows for one shelved title."""
     linked_title = _linked_titles(session, [title.id]).get(title.id) or title
@@ -344,6 +376,17 @@ def title_detail(session: Session, title: Title) -> VideoStoreTitleDetailOutput:
         ),
         languages=sorted({name for name in names.values() if name}),
         url=title.url,
+        links=_watch_links(
+            session,
+            [
+                title.id,
+                linked_title.id,
+                *_sibling_title_ids(session, [linked_title.id]).get(
+                    linked_title.id,
+                    [],
+                ),
+            ],
+        ),
     )
 
 

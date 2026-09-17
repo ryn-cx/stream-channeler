@@ -33,6 +33,7 @@ export function VideoStoreCanvas({
   const [focused, setFocused] = useState<StoreTitle | null>(null)
   const [locked, setLocked] = useState(false)
   const [entered, setEntered] = useState(false)
+  const [ready, setReady] = useState(false)
   const [touch] = useState(isTouchDevice)
 
   activateRef.current = onActivate
@@ -52,6 +53,7 @@ export function VideoStoreCanvas({
         setLocked(value)
         if (value) setEntered(true)
       },
+      onReady: () => setReady(true),
     })
     setStore(created)
     storeRef.current?.(created)
@@ -115,7 +117,7 @@ export function VideoStoreCanvas({
         />
       )}
 
-      {!locked && !entered && !paused && (
+      {!locked && !entered && !paused && ready && (
         <button
           type="button"
           onClick={() => store?.lock()}
@@ -134,6 +136,13 @@ export function VideoStoreCanvas({
               : "WASD to move, mouse to look, C to crouch, click a case to inspect it, Esc to step out"}
           </span>
         </button>
+      )}
+
+      {!ready && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black px-6 text-center text-white">
+          <span className="text-3xl font-bold tracking-tight">{storeName}</span>
+          <span className="text-sm text-white/50">Loading…</span>
+        </div>
       )}
     </div>
   )

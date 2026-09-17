@@ -111,6 +111,7 @@ export function StoreScreen({
   const [vhs, setVhs] = useState(false)
   const [counter, setCounter] = useState<StoreTitle[]>([])
   const [flash, setFlash] = useState<string | null>(null)
+  const [audioPlaying, setAudioPlaying] = useState(false)
   const [channelAction, setChannelAction] = useState<"create" | "add" | null>(
     null,
   )
@@ -145,8 +146,10 @@ export function StoreScreen({
   }, [store, stock, filters, design])
 
   useEffect(() => {
+    const restored = { ...defaultDesign, ...readDesign(storeKey) }
     setCounter(readCounter(storeKey))
-    setDesign({ ...defaultDesign, ...readDesign(storeKey) })
+    setDesign(restored)
+    setAudioPlaying(restored.audioAutoplay)
   }, [storeKey])
 
   useEffect(() => {
@@ -171,7 +174,9 @@ export function StoreScreen({
     store.setUnlit(design.unlit)
     store.setFormat(design.format)
     store.setLights(design.lights)
+    store.setOutdoorLights(design.outdoor)
     store.setAskew(design.askew)
+    store.setRain(design.rainDrops, design.rainSpeed)
   }, [store, design])
 
   // TODO: Validate
@@ -212,7 +217,7 @@ export function StoreScreen({
           ) : (
             <>
               <Loader2 className="size-6 animate-spin" />
-              <span className="text-sm">Unlocking the store…</span>
+              <span className="text-sm">Loading…</span>
             </>
           )}
         </div>
@@ -257,6 +262,8 @@ export function StoreScreen({
             writeFilters(storeKey, next)
             setFilters(next)
           }}
+          audioPlaying={audioPlaying}
+          onAudioPlaying={setAudioPlaying}
         />
       )}
 

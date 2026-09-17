@@ -6,7 +6,11 @@ export type StoreDesign = {
   unlit: boolean
   format: number
   lights: number
+  outdoor: number
   askew: number
+  rainDrops: number
+  rainSpeed: number
+  audioAutoplay: boolean
 }
 
 export const PALETTE = [
@@ -27,7 +31,11 @@ export const defaultDesign: StoreDesign = {
   unlit: true,
   format: 0,
   lights: 2,
+  outdoor: 2,
   askew: 20,
+  rainDrops: 12000,
+  rainSpeed: 14,
+  audioAutoplay: false,
 }
 
 // TODO: Validate
@@ -39,8 +47,10 @@ export const designSummary = (design: StoreDesign) => [
   `Cases: ${FORMATS[design.format] ?? FORMATS[0]}`,
   `Floor: ${colorName(design.floor)}`,
   `Walls: ${colorName(design.room)}`,
-  `Lights: ${design.lights.toFixed(1)}`,
+  `Indoor lights: ${design.lights.toFixed(1)}`,
+  `Outdoor lights: ${design.outdoor.toFixed(1)}`,
   `Askew: ${design.askew}`,
+  `Rain: ${design.rainDrops.toLocaleString()} drops`,
   `Shine: ${design.shine ? "on" : "off"}`,
   `Unlit cases: ${design.unlit ? "on" : "off"}`,
 ]
