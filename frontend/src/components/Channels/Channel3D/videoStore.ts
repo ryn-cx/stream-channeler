@@ -5,6 +5,7 @@ import { SidewalkGenerator } from "three/addons/generators/city/SidewalkGenerato
 import { StreetlightGenerator } from "three/addons/generators/city/StreetlightGenerator.js"
 import { StreetTreeGenerator } from "three/addons/generators/city/StreetTreeGenerator.js"
 import { ForestGenerator } from "three/addons/generators/ForestGenerator.js"
+import { TerrainGenerator } from "three/addons/generators/TerrainGenerator.js"
 import { WoodNodeMaterial } from "three/addons/materials/WoodNodeMaterial.js"
 import { PointerLockControls } from "three/examples/jsm/controls/PointerLockControls.js"
 import { color, mix, mx_noise_float, positionLocal, vec3 } from "three/tsl"
@@ -131,6 +132,7 @@ export class VideoStore {
   private poolMaterial: THREE.MeshBasicMaterial | null = null
   private trees: StreetTreeGenerator | null = null
   private forest: ForestGenerator | null = null
+  private terrain: TerrainGenerator | null = null
   private lamps: StreetlightGenerator | null = null
   private rain: THREE.LineSegments | null = null
   private splashes: THREE.InstancedMesh | null = null
@@ -711,28 +713,38 @@ export class VideoStore {
       this.parkCars()
     }
 
-    const clearX = lotWidth / 2 + 12
-    const clearBack = -depth / 2 - 12
-    const clearFront = depth / 2 + 62
+    this.terrain = new TerrainGenerator({
+      seed: Math.floor(Math.random() * 1000),
+      size: 900,
+      segments: 256,
+      heightScale: 34,
+      frequency: 0.004,
+      talusPasses: 8,
+    })
+    const ground = this.terrain.build()
+    this.levelTerrain(
+      this.terrain,
+      lotWidth / 2 + 42,
+      -depth / 2 - 30,
+      depth / 2 + 95,
+      90,
+    )
+    ground.position.y = -0.2
+    this.dressOutdoors(ground)
+    this.scene.add(ground)
+
     this.forest = new ForestGenerator({
       seed: Math.floor(Math.random() * 1000),
       count: 42000,
-      altitudeMin: 0.5,
-      altitudeMax: 1.2,
+      altitudeMin: 0.02,
+      altitudeMax: 1,
       minSlope: 0,
       densityFrequency: 0.02,
       from: 190,
       to: 380,
     })
-    const woodland = this.forest.build({
-      parameters: { size: 760 },
-      minY: -1,
-      maxY: 0,
-      sampleHeight: (x: number, z: number) =>
-        Math.abs(x) < clearX && z > clearBack && z < clearFront ? -1 : 0,
-      sampleSlope: () => 1,
-    } as unknown as Parameters<ForestGenerator["build"]>[0])
-    woodland.position.y = -0.12
+    const woodland = this.forest.build(this.terrain)
+    woodland.position.y = -0.2
     this.scene.add(woodland)
 
     this.trees = new StreetTreeGenerator()
@@ -1676,6 +1688,71 @@ export class VideoStore {
   }
 
   // TODO: Validate
+  private levelTerrain(
+    terrain: TerrainGenerator,
+    clearX: number,
+    clearBack: number,
+    clearFront: number,
+    blend: number,
+  ) {
+    const { heights, gridSize: grid, geometry, minY: base } = terrain
+    if (!heights || !grid || !geometry || base === undefined) return
+    const segments = grid - 1
+    const size = terrain.parameters.size
+    const half = size / 2
+    const cellSize = size / segments
+
+    for (let indexZ = 0; indexZ < grid; indexZ++) {
+      const worldZ = (indexZ / segments) * size - half
+      const outsideZ = Math.max(clearBack - worldZ, worldZ - clearFront)
+      for (let indexX = 0; indexX < grid; indexX++) {
+        const worldX = (indexX / segments) * size - half
+        const outsideX = Math.abs(worldX) - clearX
+        const ramp = Math.min(
+          1,
+          Math.max(0, Math.max(outsideX, outsideZ)) / blend,
+        )
+        const offset = indexZ * grid + indexX
+        heights[offset] =
+          (heights[offset] - base) * ramp * ramp * (3 - 2 * ramp)
+      }
+    }
+
+    const position = geometry.getAttribute("position")
+    const normal = geometry.getAttribute("normal")
+    let lowest = Infinity
+    let highest = -Infinity
+    for (let indexZ = 0; indexZ < grid; indexZ++) {
+      const back = Math.max(0, indexZ - 1)
+      const front = Math.min(grid - 1, indexZ + 1)
+      for (let indexX = 0; indexX < grid; indexX++) {
+        const offset = indexZ * grid + indexX
+        const height = heights[offset]
+        position.setY(offset, height)
+        const left = Math.max(0, indexX - 1)
+        const right = Math.min(grid - 1, indexX + 1)
+        const slopeX =
+          (heights[indexZ * grid + left] - heights[indexZ * grid + right]) /
+          ((right - left) * cellSize)
+        const slopeZ =
+          (heights[back * grid + indexX] - heights[front * grid + indexX]) /
+          ((front - back) * cellSize)
+        const length = Math.hypot(slopeX, 1, slopeZ)
+        normal.setXYZ(offset, slopeX / length, 1 / length, slopeZ / length)
+        if (height < lowest) lowest = height
+        if (height > highest) highest = height
+      }
+    }
+    position.needsUpdate = true
+    normal.needsUpdate = true
+    geometry.computeBoundingSphere()
+    terrain.minY = lowest
+    terrain.maxY = highest
+    terrain.minHeight.value = lowest
+    terrain.maxHeight.value = highest
+  }
+
+  // TODO: Validate
   private dressOutdoors(group: THREE.Object3D) {
     group.traverse((object) => {
       const mesh = object as THREE.Mesh
@@ -2333,6 +2410,7 @@ export class VideoStore {
     this.sidewalk?.dispose()
     this.trees?.dispose()
     this.forest?.dispose()
+    this.terrain?.dispose()
     this.lamps?.dispose()
     this.caseGeometry.dispose()
     this.tagGeometry.dispose()

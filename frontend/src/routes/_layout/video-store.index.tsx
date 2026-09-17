@@ -55,8 +55,12 @@ function VideoStoreIndex() {
   return (
     <div className="px-[4%] py-6">
       <h1 className="text-2xl font-bold tracking-tight">Video Store</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Pick a source and walk its shelves.
+      <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+        Pick a website and see everything you can stream from it, laid out like
+        an old school movie rental place from back in the day. Browse the
+        shelves, pick up the cases and build a collection of your favorites
+        before watching them. The whole store is a procedurally generated 3D
+        environment, and every part of it is yours to customize.
       </p>
 
       <img
