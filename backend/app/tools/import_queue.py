@@ -214,7 +214,20 @@ def add_results_to_channel(
     channel: Channel,
 ) -> None:
     canonical = _tmdb_record_ids_from_results(session, results)
-    existing_channel_titles = {title.tmdb_title_id: title for title in channel.titles}
+    candidate_tmdb_title_ids = {
+        tmdb_title_id
+        for tmdb_title_ids in canonical.titles.values()
+        for tmdb_title_id in tmdb_title_ids
+    }
+    existing_channel_titles = {
+        channel_title.tmdb_title_id: channel_title
+        for channel_title in session.exec(
+            select(ChannelTitle).where(
+                ChannelTitle.channel_id == channel.id,
+                col(ChannelTitle.tmdb_title_id).in_(candidate_tmdb_title_ids),
+            ),
+        ).all()
+    }
     for result in results:
         tmdb_title_ids = canonical.titles.get(result.title.key, set())
         if not tmdb_title_ids:
@@ -231,6 +244,7 @@ def add_results_to_channel(
             existing_channel_title = existing_channel_titles.get(tmdb_title_id)
             if existing_channel_title is None:
                 existing_channel_titles[tmdb_title_id] = _create_channel_title(
+                    session,
                     channel,
                     result,
                     tmdb_title_id,
@@ -394,7 +408,8 @@ def _titles_by_episode(
 
 
 # TODO: Validate
-def _create_channel_title(
+def _create_channel_title(  # noqa: PLR0913 - The channel title needs every level
+    session: Session,
     channel: Channel,
     result: URLImportResult,
     tmdb_title_id: UUID,
@@ -408,7 +423,7 @@ def _create_channel_title(
         is_whitelist=result.is_whitelist,
         is_blacklist_only=False,
     )
-    channel.titles.append(channel_title)
+    session.add(channel_title)
     _merge_filters(channel_title, season_ids, tmdb_episode_ids)
     return channel_title
 

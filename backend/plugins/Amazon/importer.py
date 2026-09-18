@@ -8,12 +8,16 @@ from abc import ABC
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, override
 
+from sqlalchemy import func
+from sqlmodel import col, select
+
 from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.sources.models import Source
 from app.titles.models import Title
 from app.tmdb_media.keys import watch_identifier
 from app.utils.update_at import staggered_monthly_update_at
+from app.watch_providers.models import WatchProvider
 from plugins.Amazon.constants import (
     AMAZON_URL_REGEX,
     PRIME_VIDEO_URL_REGEX,
@@ -82,6 +86,7 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
     def import_url(self, url: str) -> list[URLImportResult]:
         media_info = self.parse_url(url)
         if titles := self._preload_title(media_info.title_key).all():
+            self.title_sources(media_info.title_key)
             return [
                 result
                 for title in titles
@@ -190,9 +195,9 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
         """
         detail_file = self.detail_file(title_key)
         sources = [
-            self._extra_source(
+            self._upsert_extra_source(
                 f"{channel.name} on Amazon",
-                channel.logo_url or self.favicon_url(),
+                self._channel_favicon_url(channel.name),
             )
             for channel in detail_file.channels()
         ]
@@ -200,7 +205,7 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
             sources.append(self.source)
         if detail_file.purchasable():
             sources.append(
-                self._extra_source(
+                self._upsert_extra_source(
                     f"{PURCHASE_SOURCE_SUFFIX} on Amazon",
                     self.favicon_url(),
                 ),
@@ -209,7 +214,24 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
         return sources or [self.source]
 
     # TODO: Validate
-    def _extra_source(self, source_key: str, favicon_url: str) -> Source:
+    def _channel_favicon_url(self, channel_name: str) -> str:
+        stripped_name = func.regexp_replace(
+            func.lower(col(WatchProvider.name)),
+            "[^a-z0-9]",
+            "",
+            "g",
+        )
+        for name in (f"{channel_name} Amazon Channel", channel_name):
+            statement = select(WatchProvider.logo_url).where(
+                stripped_name == re.sub(r"[^a-z0-9]", "", name.lower()),
+                col(WatchProvider.logo_url).is_not(None),
+            )
+            if logo_url := self.session.exec(statement).first():
+                return logo_url
+        return self.favicon_url()
+
+    # TODO: Validate
+    def _upsert_extra_source(self, source_key: str, favicon_url: str) -> Source:
         """Return one of the plugin's `Source`s other than its default one."""
         # Looked up against the database rather than only the session, since a
         # source other than the default is made the first time a title needs it
