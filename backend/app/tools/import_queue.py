@@ -172,7 +172,6 @@ def _import_one(
     """Import a single queue item and commit its final status."""
     plugin_key = plugin_class.plugin_name()
     url = queue_item.url
-    logger.info(f"[{plugin_key}] Importing URL: {url}")
     try:
         queue_item.status = URLStatus.IMPORTING
         plugin_instance = plugin_class(session)
