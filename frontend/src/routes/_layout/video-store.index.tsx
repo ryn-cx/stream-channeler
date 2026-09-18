@@ -96,7 +96,7 @@ function VideoStoreIndex() {
               <img
                 src={source.favicon_url}
                 alt=""
-                className="h-8 w-auto shrink-0 rounded"
+                className="size-8 shrink-0 rounded object-contain"
                 onError={(event) => {
                   event.currentTarget.style.visibility = "hidden"
                 }}
@@ -184,7 +184,7 @@ function VideoStoreIndex() {
               <img
                 src={provider.logo_url}
                 alt=""
-                className="h-8 w-auto shrink-0 rounded"
+                className="size-8 shrink-0 rounded object-contain"
                 onError={(event) => {
                   event.currentTarget.style.visibility = "hidden"
                 }}
