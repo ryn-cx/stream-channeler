@@ -36,8 +36,6 @@ class DisneyPlus(DisneyPlusShared, AbstractPlugin, register=False):
     # TODO: Validate
     @override
     def _media_importer_from_url(self, url: str) -> DisneyPlusImporter:
-        # Movies and series are answered at the same address, so the page has
-        # to be read before it is known which of the two it is.
         title_key = self._url_title_key(url)
         entity_file = self.entity_file(title_key)
         self.raise_invalid_url_if_no_content(entity_file, url)

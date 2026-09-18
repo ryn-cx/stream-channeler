@@ -87,10 +87,6 @@ declare module "@tanstack/react-table" {
   interface ColumnMeta<TData extends RowData, TValue> {
     filterVariant?: "text" | "range" | "select" | "dateRange"
     filterOptions?: { label: string; value: string }[]
-    // Whether the API can sort and filter on this column. A column worked out
-    // after the rows are read has no column of the database behind it, so a
-    // server-side table offers neither on it rather than asking for a column
-    // the API will answer 422 to.
     serverBacked?: boolean
     cellClassName?: string
     serverFilter?: {

@@ -1,24 +1,4 @@
 # TODO: Validate
-"""Serve a non-canonical row of an episode as the episode itself.
-
-A plugin stores only what its own website reported, so anything that site had no value
-for stays unset on the stored record, and what it did report is one website's account of
-a thing every other website also has an account of. The canonical row is the single
-answer for all of them — TMDB's where TMDB has a record, and the one non-canonical row's
-own where it does not — so a record is served by reading the row it points at.
-
-Only episodes are served this way. A listing is linked to however many titles a
-website mixed into one page, and no one of them is the title its name and artwork
-belong to, so a listing is served as the website stored it.
-
-Nothing is written back. A non-canonical row follows the canonical row as it is served
-rather than being rewritten whenever that row changes.
-
-This is the whole of what `tmdb_fallback.py` did, without the identifier-string
-lookup or the special case for media TMDB has never heard of: a YouTube video
-reads its canonical row exactly as a linked episode does, and the only thing
-still asked about TMDB is whether there is a page on themoviedb.org to link to.
-"""
 
 from collections.abc import Sequence
 from typing import Any
@@ -42,12 +22,6 @@ from app.tmdb_media.tmdb import (
 # something to pass rather than something to branch on.
 type MediaModel = type[MediaMixin[Any]]
 
-# What each level's canonical row answers for. Anything else belongs to the
-# non-canonical row alone — `url` above all, which says where rather than what.
-#
-# There is no such list for a title. A listing is linked to however many titles a
-# website mixed into it, so there is no one row to read a listing's name or
-# artwork off, and a listing is served as the website stored it.
 EPISODE_FIELDS = (
     "name",
     "description",
@@ -211,12 +185,6 @@ def tmdb_season_of(
     session: Session,
     season_id: UUID,
 ) -> tuple[Season, Title] | None:
-    """Return the season a non-canonical row's episodes are of, with the title above it.
-
-    A season is not a non-canonical row of anything itself, so the answer is the season
-    its episodes' canonical episodes are under, which is nothing when none of them is
-    linked to anything.
-    """
     copy_episode = aliased(Episode)
     tmdb_episode = aliased(Episode)
     copy_link = tmdb_episode_link()
@@ -240,12 +208,6 @@ def tmdb_season_of(
 
 # TODO: Validate
 def tmdb_title_of(session: Session, title: Title) -> Title | None:
-    """Return the one title `title` is linked to, where it is linked to one.
-
-    A listing that mixes titles is as much linked to each of them as of any
-    other, so there is no one title to set beside it and it is answered for with
-    none.
-    """
     tmdb_title_id = title.sole_tmdb_title_id
     if tmdb_title_id is None:
         return None

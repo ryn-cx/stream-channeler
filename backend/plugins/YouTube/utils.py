@@ -178,12 +178,6 @@ def thumbnail_url(thumbnails: Any) -> str | None:  # noqa: ANN401 - TODO: Add a 
 # def is_topic_channel(channel_file: ChannelByChannelId) -> bool:
 #     """Report whether a channel key belongs to a musician's Topic channel.
 
-#     Only the channel says so, and this reads what has been downloaded rather
-#     than downloading it, so a channel that has not been read yet is answered
-#     for as the plain channel it is taken for until it has been.
-#     """
-#     if not is_channel_key(channel_file.unique_identifier):
-#         return False
 
 #     if channel_file.is_outdated() or not channel_file.record_content:
 #         return False
@@ -254,9 +248,6 @@ def batch_download_missing_videos(videos_files: Sequence[Videos]) -> None:
         f"Batch downloaded {len(outdated_ids)} YouTube videos in {elapsed_time:.2f}s",
     )
 
-    # A batch answers for fifty videos at once and every video is stored in a
-    # file of its own, so each item is written out as the response it would
-    # have arrived in had it been asked for on its own.
     responses_by_id: dict[str, str] = {}
     for response in responses:
         page: dict[str, Any] = json.loads(response)

@@ -89,14 +89,6 @@ class Title(BaseTitle, ChildMediaMixin[Source, "Season"], table=True):
     )
 
     __table_args__ = (
-        # A source names each of its rows once, of either kind: a canonical title is
-        # written by the plugin that minted it the same way a non-canonical row is
-        # written by the plugin that read it off a website, and the two never share a
-        # key under one source. A canonical title minted for a listing to point at
-        # carries the plugin's key ahead of the listing's, and TMDB writes canonical
-        # titles and nothing else. That pair is the identity `Season` and `Episode` carry
-        # too, so the identity map answers to it and `get_from_memory` needs nothing of
-        # its own.
         PrimaryKeyConstraint("source_id", "key"),
         UniqueConstraint("id"),
         # Looking a canonical title up by its key. Not unique: a plugin that
@@ -165,12 +157,6 @@ class Title(BaseTitle, ChildMediaMixin[Source, "Season"], table=True):
     # TODO: Validate
     @property
     def sole_tmdb_title(self) -> Title | None:
-        """The canonical title this stands for, where it stands for exactly one.
-
-        A row that mixes titles stands for each of them as much as for any other,
-        so there is no answer to give a caller with room for one and it is told
-        there is none rather than handed whichever came first.
-        """
         tmdb_titles = self.tmdb_titles
         if len(tmdb_titles) != 1:
             return None

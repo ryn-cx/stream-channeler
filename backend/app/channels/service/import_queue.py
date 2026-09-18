@@ -171,8 +171,6 @@ def retry_queue_entry(session: Session, queue_entry: ChannelQueue) -> Message:
     """Put one entry back into a channel's import queue to be imported again."""
     queue_entry.status = URLStatus.PENDING
     queue_entry.note = None
-    # A plugin that pushed the import out to a later time was answering the failure
-    # this retry is discarding, so the entry goes back to being importable now.
     queue_entry.import_at = None
     session.add(queue_entry)
     session.commit()
@@ -190,9 +188,6 @@ def retry_failed_queue_entries(session: Session, channel: Channel) -> Message:
         .values(
             status=URLStatus.PENDING,
             note=None,
-            # A plugin that pushed the import out to a later time was answering the
-            # failure this retry is discarding, so the entry goes back to being
-            # importable now.
             import_at=None,
             modified_at=tz_datetime.current_time(),
         ),

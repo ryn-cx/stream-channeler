@@ -53,17 +53,6 @@ def _tmdb_ids_used_by_titles(
     title_ids: set[uuid.UUID],
     /,
 ) -> dict[uuid.UUID, dict[int, list[EpisodeRecord]]]:
-    """Return the episodes of each title using each TMDB episode already.
-
-    Only the title an episode belongs to is read, since another website's non-canonical
-    row of the same title has its own episodes pointing at the same TMDB ones and says
-    nothing about which of them this title still has going spare.
-
-    Every title of a page at once, rather than one query per episode: a page of
-    episodes of the same title asks the same question twenty times over. The
-    episode doing the using is named, so a caller working on one of them can
-    leave it out of its own answer.
-    """
     if not title_ids:
         return {}
 

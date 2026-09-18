@@ -1423,8 +1423,9 @@ export class VideoStore {
       const run = this.runs[runIndex]
       if (run.aisle === null) continue
       const sign = this.aisleSigns[run.aisle]
-      if (run.side === "left") sign.left = entries[runIndex]
-      else sign.right = entries[runIndex]
+      const listed = [...entries[runIndex]].reverse()
+      if (run.side === "left") sign.left = listed
+      else sign.right = listed
     }
     for (const sign of this.aisleSigns) this.refreshSign(sign)
   }

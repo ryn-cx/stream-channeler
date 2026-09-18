@@ -75,8 +75,6 @@ def reset_password_with_token(
         )
     user = lookup.get_user_by_email(session=session, email=email)
     if not user:
-        # A token naming somebody who is gone is answered as an invalid token, so
-        # a caller cannot read who still has an account out of the difference.
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid token",

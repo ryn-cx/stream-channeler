@@ -326,13 +326,6 @@ def _episode_source_filters(
 
 # TODO: Validate
 def _preload_tmdb_episodes(session: Session, episodes: Sequence[Episode]) -> None:
-    """Read in the episode each of `episodes` is linked to, in one query.
-
-    `Episode.tmdb_id` walks from a row to the episode it is linked to, which is a
-    query apiece where the rows are read one at a time. An `Episode` is keyed on
-    its season and its own key rather than on `id`, so the walk cannot be
-    answered out of the session and has to be asked for together up front.
-    """
     episode_ids = [episode.id for episode in episodes]
     if not episode_ids:
         return

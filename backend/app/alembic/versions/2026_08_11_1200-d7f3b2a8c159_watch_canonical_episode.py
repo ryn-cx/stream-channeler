@@ -39,10 +39,6 @@ def upgrade():
         ondelete="RESTRICT",
     )
 
-    # Every episode sharing an identifier was given the same canonical row by the
-    # previous revision, so which of them answers for it does not matter; DISTINCT
-    # ON is only there to make the join one-to-one. Soft-deleted episodes count,
-    # since a watch outliving its episode is the case this most needs to resolve.
     op.execute(
         """
         UPDATE watch SET canonical_episode_id = resolved.canonical_episode_id

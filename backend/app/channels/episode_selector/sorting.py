@@ -214,29 +214,6 @@ class SortExpressionBuilder:
         *,
         zero_last_numbers: bool = False,
     ) -> ColumnElement[Any]:
-        """Dense rank computed inline so filters like hide_watched shrink it.
-
-        Emitted as a window function in the post-filter subquery rather than
-        a pre-aggregated sibling query, which means the rank reflects
-        position within the visible set rather than position within the
-        full table.
-
-        Two websites number the same media differently, so the order goes by the
-        numbering the canonical row carries and by nothing else. Ranking runs over the
-        whole title rather than one website's non-canonical row of it, since a website
-        that carries only a later season would otherwise have its first season rank
-        alongside another website's first. A canonical row with no number of its own
-        follows every row that has one, ordered by where the row itself says it sits.
-
-        Which season an episode belongs to is the canonical answer as well, taken
-        from the episode's own canonical row rather than from the season the
-        website filed it under. A website that files a special alongside a
-        season's episodes still has it sorted where the canonical hierarchy keeps
-        it.
-
-        `zero_last_numbers` ranks a season or an episode numbered 0 after the rest
-        of the run rather than ahead of it, which is where the specials belong.
-        """
 
         # TODO: Validate
         def numbered(number: ColumnElement[Any]) -> ColumnElement[Any]:

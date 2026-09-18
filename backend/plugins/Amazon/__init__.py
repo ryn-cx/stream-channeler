@@ -1,21 +1,15 @@
 # TODO: Validate
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING, override
 
-from plugins.Amazon.constants import (
-    AMAZON_URL_REGEX,
-    PRIME_VIDEO_URL_REGEX,
-    SHARE_URL_REGEX,
-)
 from plugins.Amazon.importer import (
     AmazonImporter,
     AmazonMovieImporter,
     AmazonSeriesImporter,
 )
 from plugins.Amazon.shared import AmazonShared
-from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
+from plugins.utils.abstract_plugin import AbstractPlugin
 
 if TYPE_CHECKING:
     from app.titles.models import Title
@@ -24,26 +18,11 @@ if TYPE_CHECKING:
 # TODO: Validate
 class Amazon(AmazonShared, AbstractPlugin, register=True):
     # TODO: Validate
-    @classmethod
-    @override
-    def _url_regexes(cls) -> tuple[str, ...]:
-        return (
-            # Must be listed first: a share link's path is also a detail path, and
-            # only this one carries the id in the query rather than the path.
-            SHARE_URL_REGEX,
-            PRIME_VIDEO_URL_REGEX,
-            AMAZON_URL_REGEX,
-        )
-
-    # TODO: Validate
     @override
     def _media_importer_from_url(self, url: str) -> AmazonImporter:
-        # A film and a season of a series are answered at the same address,
-        # so the page has to be read before it is known which of the two it
-        # is.
-        title_key = self._url_title_key(url)
-        self.raise_invalid_url_if_no_content(self.detail_file(title_key), url)
-        if self._is_movie(title_key):
+        link_id = self.link_id_from_url(url)
+        self.raise_invalid_url_if_no_content(self.detail_file(link_id), url)
+        if self._is_movie(link_id):
             return AmazonMovieImporter(self.session, self.plugin, self._file_cache)
         return AmazonSeriesImporter(self.session, self.plugin, self._file_cache)
 
@@ -58,20 +37,5 @@ class Amazon(AmazonShared, AbstractPlugin, register=True):
         return AmazonSeriesImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
-    def _url_title_key(self, url: str) -> str:
-        domain_regex = self._domains_regex()
-        if match := re.match(domain_regex + SHARE_URL_REGEX, url):
-            return self.title_key_from_share_key(
-                match.group("title_key"),
-            )
-        if match := re.match(domain_regex + PRIME_VIDEO_URL_REGEX, url):
-            return match.group("title_key")
-        if match := re.match(domain_regex + AMAZON_URL_REGEX, url):
-            return match.group("title_key")
-
-        msg = f"Invalid {self.plugin_name()} URL: {url}"
-        raise InvalidURLError(msg)
-
-    # TODO: Validate
-    def _is_movie(self, title_key: str) -> bool:
-        return self.detail_file(title_key).entity_type() == "Movie"
+    def _is_movie(self, link_id: str) -> bool:
+        return self.detail_file(link_id).entity_type() == "Movie"

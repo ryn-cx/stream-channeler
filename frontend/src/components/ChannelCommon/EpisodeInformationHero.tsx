@@ -71,8 +71,6 @@ function heroFacts(
     // account of it, so it is left out where the website's row is what was
     // opened.
     preferSource ? null : data.tmdb ? "Linked to TMDB" : "Not linked to TMDB",
-    // Where the website itself files the episode, which is a different answer
-    // to the one above it as often as not, and the reason somebody opened this.
     preferSource || !data.tmdb
       ? null
       : [data.source.label, ...placement(data.source)].join(" · "),

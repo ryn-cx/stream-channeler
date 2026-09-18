@@ -35,9 +35,6 @@ class Roku(RokuShared, AbstractPlugin, register=False):
     # TODO: Validate
     @override
     def _media_importer_from_url(self, url: str) -> RokuImporter:
-        # Every kind of content is answered at the same address, so
-        # the content has to be read before it is known which of them
-        # this one is.
         content_file = self.content_file(self._url_content_key(url))
         self.raise_invalid_url_if_no_content(content_file, url)
         content = content_file.parsed()

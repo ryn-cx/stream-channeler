@@ -73,7 +73,6 @@ def _reject_taken_email_or_username(
     username: str | None,
     user_id: uuid.UUID | None = None,
 ) -> None:
-    """Refuse an address or name another `User` already answers to."""
     if email:
         existing = get_user_by_email(session=session, email=email)
         if existing and existing.id != user_id:

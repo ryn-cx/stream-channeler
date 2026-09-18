@@ -111,12 +111,6 @@ def watched_dates_by_tmdb_record_id(
     user_id: uuid.UUID,
     tmdb_record_ids: Collection[uuid.UUID],
 ) -> dict[uuid.UUID, list[datetime]]:
-    """Return the `User`'s watch dates for each of `tmdb_record_ids`.
-
-    Every link to the episode answers for it, so a date recorded against one
-    website's link is a date the episode was watched on wherever it is asked
-    about.
-    """
     if not tmdb_record_ids:
         return {}
     watched_episode = aliased(Episode)

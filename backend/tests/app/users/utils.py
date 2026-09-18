@@ -14,9 +14,6 @@ from app.users.schemas import UserCreate, UserUpdate
 from app.users.service import accounts, lookup
 from tests.app.helpers.utils import random_email, random_lower_string
 
-# Every test user answers to this password. Hashing is the single most expensive
-# thing a test does - about 45ms a user - and nothing here depends on two users
-# having different passwords, so the hash is computed once and shared.
 TEST_PASSWORD = "test-password"  # noqa: S105 - Not a credential, the fixed password every test user has.
 
 

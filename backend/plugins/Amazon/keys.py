@@ -5,13 +5,12 @@ from __future__ import annotations
 
 import re
 
-from plugins.Amazon.constants import TITLE_KEY_REGEX
+from plugins.Amazon.constants import LINK_ID_REGEX
 
 
 # TODO: Validate
-def title_key_from_location(location: str) -> str | None:
-    # Where the id sits in the address a share link points at.
-    found = re.search(rf"/(?:dp|gp/video/detail)/({TITLE_KEY_REGEX})", location)
+def link_id_from_location(location: str) -> str | None:
+    found = re.search(rf"/(?:dp|gp/video/detail)/({LINK_ID_REGEX})", location)
     if found is None:
         return None
     return found[1]

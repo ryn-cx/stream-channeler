@@ -19,10 +19,7 @@ from app.tmdb_media.keys import watch_identifier
 from app.utils.update_at import staggered_monthly_update_at
 from app.watch_providers.models import WatchProvider
 from plugins.Amazon.constants import (
-    AMAZON_URL_REGEX,
-    PRIME_VIDEO_URL_REGEX,
     PURCHASE_SOURCE_SUFFIX,
-    SHARE_URL_REGEX,
 )
 from plugins.Amazon.shared import AmazonShared
 from plugins.Amazon.utils import AmazonSeason, detail_url, parse_date
@@ -40,46 +37,15 @@ if TYPE_CHECKING:
 # TODO: Validate
 class AmazonImporter(AmazonShared, BaseImporter, ABC):
     # TODO: Validate
-    @classmethod
-    @override
-    def _url_regexes(cls) -> tuple[str, ...]:
-        return (
-            # Must be listed first: a share link's path is also a detail path, and
-            # only this one carries the id in the query rather than the path.
-            SHARE_URL_REGEX,
-            PRIME_VIDEO_URL_REGEX,
-            AMAZON_URL_REGEX,
-        )
-
-    # TODO: Validate
     @override
     def parse_url(self, url: str) -> ParsedURL:
-        domain_regex = self._domains_regex()
-        title_key: str | None
-        if match := re.match(domain_regex + SHARE_URL_REGEX, url):
-            # Amazon answers a share link by pointing at the page its own ids key,
-            # so the id is read off where the link lands rather than out of the link.
-            title_key = self.title_key_from_share_key(
-                match.group("title_key"),
-            )
-        elif (match := re.match(domain_regex + PRIME_VIDEO_URL_REGEX, url)) or (
-            match := re.match(domain_regex + AMAZON_URL_REGEX, url)
-        ):
-            title_key = match.group("title_key")
-        else:
-            title_key = None
-
-        if title_key is None:
-            msg = f"Invalid {self.plugin_name()} URL: {url}"
-            raise InvalidURLError(msg)
-
-        detail_file = self.detail_file(title_key)
+        detail_file = self.detail_file(self.link_id_from_url(url))
         self.raise_invalid_url_if_no_content(detail_file, url)
         if message := detail_file.unavailable_message():
             msg = f"{message}: {url}"
             raise InvalidURLError(msg)
 
-        return ParsedURL(self.title_key_from_title_key(title_key))
+        return ParsedURL(detail_file.title_key())
 
     # TODO: Validate
     @override  # Writes the title into every source it can be watched through.
@@ -102,7 +68,7 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
 
     # TODO: Validate
     def _title_url(self, title_key: str) -> str:
-        return detail_url(self.detail_file(title_key).compact_key())
+        return detail_url(self.detail_file(title_key).link_id())
 
     # TODO: Validate
     @override
@@ -138,10 +104,6 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
         return [season.key for season in self._season_entries(title_key)]
 
     # TODO: Validate
-    def title_key_from_title_key(self, title_key: str) -> str:
-        return self.detail_file(title_key).title_key()
-
-    # TODO: Validate
     def _season_available(self, season_key: str) -> bool:
         return self.detail_file(season_key).unavailable_message() is None
 
@@ -150,7 +112,7 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
         page = self.detail_file(title_key)
         seasons = page.seasons() or [
             AmazonSeason(
-                key=page.compact_key(),
+                key=page.link_id(),
                 name=page.title(),
                 season_number=page.season_number() or 1,
             ),
@@ -180,8 +142,8 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
     # TODO: Validate
     def _related_urls(self, title_key: str) -> list[str]:
         return [
-            detail_url(compact_key)
-            for compact_key in self.detail_file(title_key).related_prime_keys()
+            detail_url(link_id)
+            for link_id in self.detail_file(title_key).related_link_ids()
         ]
 
     # TODO: Validate
@@ -343,7 +305,7 @@ class AmazonSeriesImporter(AmazonImporter):
                     watch_identifier=watch_identifier(self.plugin_name(), item.key),
                     name=item.title,
                     episode_number=item.episode_number,
-                    url=detail_url(item.compact_key),
+                    url=detail_url(item.link_id),
                     description=item.synopsis,
                     image_url=item.image_url,
                     thumbnail_url=item.image_url,

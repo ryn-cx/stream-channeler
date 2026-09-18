@@ -138,15 +138,6 @@ def list_unmatched_episodes(
     session: Session,
     params: UnmatchedReadOptions,
 ) -> UnmatchedEpisodesPublic:
-    """Sorted, filtered and paged by the database rather than in the browser. There
-    are far more of these than a page titles, so ordering a page of them would
-    order only the ones already fetched: sorting by name would answer with the
-    first names of whichever rows came back, not the first names there are.
-
-    Always server-side, unlike the hybrid tables. The closest TMDB episode is
-    worked out by comparing names in Python, which is worth doing for the twenty
-    rows being shown and not for every row there is.
-    """
     base = _unmatched_base(
         linked_titles_only=params.linked_titles_only,
         in_user_channels_only=params.in_user_channels_only,

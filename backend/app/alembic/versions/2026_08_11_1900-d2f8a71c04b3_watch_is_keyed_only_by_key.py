@@ -68,8 +68,6 @@ def downgrade():
         ["id"],
         ondelete="SET NULL",
     )
-    # One row per key, since the pointer cannot say what carrying a key twice
-    # said; the lowest id answers for it, as the forward dedupe chose.
     op.execute(
         """
         UPDATE watch SET canonical_episode_id = resolved.id

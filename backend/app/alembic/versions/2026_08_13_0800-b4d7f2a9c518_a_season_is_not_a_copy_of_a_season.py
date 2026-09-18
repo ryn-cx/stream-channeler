@@ -1,19 +1,5 @@
 """a season is not a copy of a season
 
-Nothing ever wrote `season.canonical_season_id`, so the column that was meant to
-say which season a copy stood for said nothing at all. The season an episode
-belongs to is its canonical episode's answer where it has one, and its own
-website's answer where it has not, so the pointer has no work left to do and goes.
-
-A channel's season filter names that same season, which is a canonical row for a
-linked episode and a website's own row for an unlinked one, so the column is
-renamed to say what it now holds. The rows it already carries name canonical
-seasons and stay true under the new rule.
-
-The three sorting indexes were narrowed to the rows that pointed at nothing,
-which was every season once the pointer was never written; they are rebuilt over
-the whole table so the narrowing is not carrying a rule that no longer exists.
-
 Revision ID: b4d7f2a9c518
 Revises: f5b8d2a7c391
 Create Date: 2026-08-13 08:00:00.000000

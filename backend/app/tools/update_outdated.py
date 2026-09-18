@@ -107,10 +107,6 @@ def _channel_season_exists(
             copy_title_link,
             col(copy_title_link.title_id) == col(copy_title.id),
         )
-        # A listing that is linked to nothing is the title itself and answers for
-        # itself, the same way an episode standing for nothing is the episode, so
-        # a channel naming it names it by its own id and the last fallback is what
-        # reaches those rows.
         .join(
             ChannelTitle,
             col(ChannelTitle.tmdb_title_id)
@@ -280,13 +276,6 @@ def _title_key(item: MediaMixin[Any]) -> str | None:
 def _grouped_by_title[ItemT: MediaMixin[Any]](
     items: Sequence[ItemT],
 ) -> list[list[ItemT]]:
-    """Gather `items` into runs of one title, in the order the titles first appear.
-
-    A plugin reads a title's files once and answers every item of that title out of
-    what it read, so the items of one title are handed to one view of the plugin
-    rather than to one view each. Ordering is only permuted within a title, never
-    across them, so the oldest title is still updated first.
-    """
     groups: list[list[ItemT]] = []
     group_by_title_key: dict[str, list[ItemT]] = {}
     for item in items:
@@ -336,8 +325,6 @@ def _process_outdated_items(
     plugin_record = Plugin.get_one(session, plugin_key)
     progress = tqdm(total=len(outdated_items), unit=media_type_name)
     for group in _grouped_by_title(outdated_items):
-        # One view of the plugin per title, so what it read for the title answers
-        # every item of it and is let go when the title is done with.
         plugin_instance = plugin_class(session, plugin_record)
         for item in group:
             log_msg = f"[{plugin_key}] Updating {media_type_name}: {item.key}"

@@ -163,13 +163,6 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
     # TODO: Validate
     @override
     def _preload_and_download_files(self, title: Title | str) -> None:
-        """Read the channel before the files that depend on what it is.
-
-        Which files describe a channel is not the same for a Topic channel as for
-        any other, and only the channel says which it is, so it is read before
-        anything asks. Every video of every season is asked for in one batch
-        rather than one at a time, since the API answers for fifty at once.
-        """
         title_key: str
         title_update_at: datetime | None
         season_update_ats: dict[str, datetime | None]

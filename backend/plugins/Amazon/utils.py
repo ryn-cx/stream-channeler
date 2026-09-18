@@ -42,7 +42,7 @@ class AmazonEpisode:
     """One episode of a season, as the season's episode list gives it."""
 
     key: str
-    compact_key: str
+    link_id: str
     title: str
     episode_number: int | None
     synopsis: str | None
@@ -57,8 +57,8 @@ def build_url(path: str) -> str:
 
 
 # TODO: Validate
-def detail_url(compact_key: str) -> str:
-    return build_url(f"detail/{compact_key}")
+def detail_url(link_id: str) -> str:
+    return build_url(f"detail/{link_id}")
 
 
 # TODO: Validate
@@ -97,9 +97,9 @@ def entity_benefit_id(entity: dict[str, Any]) -> str | None:
 
 
 # TODO: Validate
-def compact_key_from_link(link: str) -> str:
+def link_id_from_href(href: str) -> str:
     """Return the id a link to a title carries, which is how its URL names it."""
-    return link.split("?", 1)[0].rsplit("/", 1)[-1]
+    return href.split("?", 1)[0].rsplit("/", 1)[-1]
 
 
 # TODO: Validate
@@ -152,14 +152,14 @@ def channel_name(label: str) -> str:
 
 # TODO: Validate
 def episode_from_detail(
-    title_id: str,
+    episode_key: str,
     item: dict[str, Any],
-    compact_key: str,
+    link_id: str,
 ) -> AmazonEpisode:
     """Return an episode read off the page of the season it belongs to."""
     return AmazonEpisode(
-        key=title_id,
-        compact_key=compact_key,
+        key=episode_key,
+        link_id=link_id,
         title=item["title"],
         episode_number=item.get("episodeNumber"),
         synopsis=item["synopsis"],
@@ -183,7 +183,7 @@ def episode_from_widget(episode: WidgetEpisode) -> AmazonEpisode:
     detail = episode.detail
     return AmazonEpisode(
         key=episode.title_id,
-        compact_key=episode.self.compact_gti,  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
+        link_id=episode.self.compact_gti,  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute]
         title=detail.title,
         episode_number=detail.episode_number,
         synopsis=detail.synopsis,

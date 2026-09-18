@@ -1,11 +1,4 @@
 # TODO: Validate
-"""What a channel's episode read comes back with.
-
-The episodes themselves are chosen by `EpisodeQueryBuilder`, which is tested in
-`test_episode_sorting`. What is here is the rest of the answer: the seasons,
-titles, sources and plugins each episode is served alongside, so the caller never
-has to ask after them one by one.
-"""
 
 from sqlmodel import Session
 

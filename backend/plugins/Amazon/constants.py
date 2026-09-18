@@ -8,24 +8,24 @@ PRIME_BENEFIT_ID = "Prime"
 
 # A plain ASIN is 10 characters, but a link written by Prime Video itself uses a
 # longer id of its own.
-TITLE_KEY_REGEX = r"[A-Z0-9]{10,}"
+LINK_ID_REGEX = r"[A-Z0-9]{10,}"
 
 PURCHASE_SOURCE_SUFFIX = "Purchase"
 
 # https://watch.amazon.com/detail?gti=amzn1.dv.gti.92ad2133-d35e-1cb1-5d8e-f7b122a68228
 # The id Amazon writes into a share link, which names the title in a
 # different id space to the one its own pages are keyed by.
-SHARE_URL_REGEX = r"\/detail\?gti=(?P<title_key>amzn1\.dv\.gti\.[0-9a-f-]+)"
+SHARE_URL_REGEX = r"\/detail\?gti=(?P<link_id>amzn1\.dv\.gti\.[0-9a-f-]+)"
 # https://www.primevideo.com/detail/0GTKUFQSFLP1YVFDMW9IR56I90
 # The region a link was written in is the region of whoever wrote it, and the
 # title is the same title whichever region asked for it.
 PRIME_VIDEO_URL_REGEX = (
-    rf"(?:\/region\/[a-z]{{2}})?\/detail\/(?P<title_key>{TITLE_KEY_REGEX})"
+    rf"(?:\/region\/[a-z]{{2}})?\/detail\/(?P<link_id>{LINK_ID_REGEX})"
 )
 # https://www.amazon.com/gp/video/detail/B0D9MYVLNM
 # The title slug Amazon puts in front of /dp/ is decorative, only the id
 # after it matters.
 AMAZON_URL_REGEX = (
     r"(?:\/[^\/]+)?\/(?:dp|gp\/video\/detail)\/"
-    rf"(?P<title_key>{TITLE_KEY_REGEX})"
+    rf"(?P<link_id>{LINK_ID_REGEX})"
 )

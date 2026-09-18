@@ -119,12 +119,6 @@ def stored_file_path(file: BaseFile[Any]) -> Path:
 
 # TODO: Validate
 def _exists(path: Path) -> bool:
-    """Report whether `path` is stored, counting one it could not be as not stored.
-
-    A key the file system will not take was never stored under it, and asking
-    about such a path raises rather than answering on some systems, so the
-    question is answered here instead of at the call.
-    """
     try:
         return path.exists()
     except OSError:

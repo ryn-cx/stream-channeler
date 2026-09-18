@@ -20,9 +20,6 @@ UNAUTHORIZED = status.HTTP_401_UNAUTHORIZED
 FORBIDDEN = status.HTTP_403_FORBIDDEN
 NOT_FOUND = status.HTTP_404_NOT_FOUND
 
-# What a route answers when it turns a request away. A route that lets the
-# request through can answer anything else, including a validation error over a
-# body the API test did not bother to fill in.
 REFUSALS = {UNAUTHORIZED, FORBIDDEN}
 
 
@@ -60,7 +57,6 @@ def assert_allowed(  # noqa: PLR0913 - One argument per part of a request.
     body: Any = None,  # noqa: ANN401 - Whatever the route's body model is.
     params: dict[str, Any] | None = None,
 ) -> Response:
-    """Assert the route let the request through, whatever it then answered."""
     response = request(client, method, path, headers, body, params)
     assert response.status_code not in REFUSALS, response.text
     return response
@@ -102,6 +98,5 @@ def assert_not_found(  # noqa: PLR0913 - One argument per part of a request.
     body: Any = None,  # noqa: ANN401 - Whatever the route's body model is.
     params: dict[str, Any] | None = None,
 ) -> None:
-    """Assert the route answers that the record an id names does not exist."""
     response = request(client, method, path, headers, body, params)
     assert response.status_code == NOT_FOUND, response.text

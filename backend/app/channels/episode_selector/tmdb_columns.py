@@ -100,14 +100,6 @@ class TmdbColumns:
 
     # TODO: Validate
     def episode_season_id(self) -> ColumnElement[Any]:
-        """Return the canonical season the episode belongs to.
-
-        Which season an episode is in is the canonical answer rather than the
-        website's, since a website can file an episode under a season the
-        canonical hierarchy does not, which is what puts a site's finale in
-        another site's specials. An episode with no canonical row is in the season
-        its own website filed it under, there being no other record of it.
-        """
         return season_id()
 
     # TODO: Validate

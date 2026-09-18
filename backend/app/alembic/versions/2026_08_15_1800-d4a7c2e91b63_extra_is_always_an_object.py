@@ -36,11 +36,6 @@ depends_on = None
 
 _TABLES = ("episode", "file", "plugin", "season", "show", "source")
 
-# Anything already an object is kept, and anything else is wrapped rather than
-# guessed at. Written as a function with its own exception block because
-# Postgres has no cast that answers "not valid JSON" with anything but an error,
-# and one row of something unreadable would otherwise take the whole migration
-# down.
 _READER = """
 CREATE FUNCTION _extra_to_jsonb(value text) RETURNS jsonb AS $$
 BEGIN

@@ -194,9 +194,6 @@ export function ManageTitlesTabs({
   const titleCount = titlesData?.total ?? 0
   const pageCount = Math.max(1, Math.ceil(titleCount / CHANNEL_TITLE_PAGE))
 
-  // A search that leaves fewer pages than the one being read pulls the listing
-  // back to the last page it has. Only what the server has answered with counts,
-  // since a page still being fetched knows no total to be past the end of.
   useEffect(() => {
     if (titlesData && pageIndex >= pageCount) setPageIndex(pageCount - 1)
   }, [titlesData, pageIndex, pageCount])

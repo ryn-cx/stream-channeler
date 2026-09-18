@@ -349,9 +349,6 @@ def _whitelist_media(
         for episode in season.active_children
     ]
     _preload_episode_links(session, site_seasons + tmdb_seasons, all_episodes)
-    # Which season an episode belongs to is the canonical episode's answer, since
-    # a site can file an episode under a season the canonical hierarchy does not,
-    # which is what puts a site's finale in another site's specials.
     episode_seasons = season_ids_by_episode(session, all_episodes)
     # Where a website files two titles under one listing it carries another title's
     # episodes as well. What a channel offers is the title's own episodes, so a

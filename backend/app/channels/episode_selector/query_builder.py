@@ -516,9 +516,6 @@ class EpisodeQueryBuilder:
             .select_from(Episode)
             .join(Season, col(Episode.season_id) == col(Season.id))
             .join(Title, col(Season.title_id) == col(Title.id))
-            # A listing stands for every episode it was linked to, so one that
-            # runs two episodes together is read once under each of them: the
-            # for two of them answers for both.
             .outerjoin(
                 TMDB_EPISODE_LINK,
                 links_of(Episode, TMDB_EPISODE_LINK),
@@ -549,10 +546,6 @@ class EpisodeQueryBuilder:
                     is_not_linked(Episode),
                 ),
             )
-            # where the media is watched, so it is its own title and answers for
-            # itself when neither the episode nor a link has an answer. TMDB's own
-            # rows are titles that are watched nowhere and are left out by
-            # `_filter_metadata_plugins` rather than here.
             .join(
                 ChannelTitle,
                 and_(

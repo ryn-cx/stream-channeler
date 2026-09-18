@@ -21,7 +21,7 @@ from deforestation.detail_widgets.models import DetailWidgetsModel
 from deforestation.exceptions import RedirectedError, TitleNotFoundError
 
 from plugins.Amazon.constants import PRIME_BENEFIT_ID
-from plugins.Amazon.keys import title_key_from_location
+from plugins.Amazon.keys import link_id_from_location
 from plugins.Amazon.utils import (
     AmazonChannel,
     AmazonEpisode,
@@ -29,10 +29,10 @@ from plugins.Amazon.utils import (
     card_channel_logo,
     card_channel_name,
     channel_name,
-    compact_key_from_link,
     entity_benefit_id,
     episode_from_detail,
     episode_from_widget,
+    link_id_from_href,
     pick_raw_image,
     widget_episode_available,
 )
@@ -58,14 +58,6 @@ def deforestation() -> Deforestation:
 
 # TODO: Validate
 class ShareLinkRedirect(TextFile):
-    """Where a share link points.
-
-    Amazon writes a share link with an id of its own that none of Prime Video's
-    pages are keyed by, and answers it by pointing at the page that is. What it
-    pointed at is stored so the id can be read off it, and so that reading it
-    again is not another round trip.
-    """
-
     # TODO: Validate
     @override
     def _download_file(self) -> str | None:
@@ -89,8 +81,6 @@ class ShareLinkRedirect(TextFile):
                 ),
             },
             follow_redirects=False,
-            # How long the redirect a share link answers with is waited
-            # for.
             timeout=30,
         )
         return response.headers.get("location")
@@ -101,7 +91,7 @@ class ShareLinkRedirect(TextFile):
         return self.record_content
 
     # TODO: Validate
-    def title_key(self) -> str:
+    def link_id(self) -> str:
         """Return the id of the title this share link names.
 
         A share link carries an id of Amazon's own that none of Prime Video's
@@ -110,14 +100,14 @@ class ShareLinkRedirect(TextFile):
         """
         self.download_if_outdated()
         location = self.location() or ""
-        landing_key = title_key_from_location(location)
-        if landing_key is None:
+        landing_link_id = link_id_from_location(location)
+        if landing_link_id is None:
             msg = (
                 f"Amazon share link {self.unique_identifier} points at no title: "
                 f"{location!r}"
             )
             raise InvalidURLError(msg)
-        return landing_key
+        return landing_link_id
 
 
 # TODO: Validate
@@ -140,11 +130,10 @@ class Detail(APIClientFile[dict[str, Any]]):
     """
 
     # TODO: Validate
-    def __init__(self, session: Session, plugin: Plugin, detail_key: str) -> None:
-        self.detail_key = detail_key
+    def __init__(self, session: Session, plugin: Plugin, link_id: str) -> None:
         self.session = session
         self.plugin = plugin
-        super().__init__(session, plugin, detail_key)
+        super().__init__(session, plugin, link_id)
 
     # TODO: Validate
     @override
@@ -168,12 +157,12 @@ class Detail(APIClientFile[dict[str, Any]]):
     @override
     def _download_file(self) -> str:
         try:
-            return self._endpoint().download(self.detail_key)
+            return self._endpoint().download(self.unique_identifier)
         except RedirectedError as error:
-            landing_key = title_key_from_location(error.location)
-            if landing_key is None:
+            landing_link_id = link_id_from_location(error.location)
+            if landing_link_id is None:
                 raise
-            return self._endpoint().download(landing_key)
+            return self._endpoint().download(landing_link_id)
 
     # TODO: Validate
     @override
@@ -206,7 +195,7 @@ class Detail(APIClientFile[dict[str, Any]]):
         return state
 
     # TODO: Validate
-    def page_key(self) -> str:
+    def page_id(self) -> str:
         """Return the id of the title the page settled on.
 
         The id a URL carries is not always the id of the title it opens, since a title
@@ -215,14 +204,14 @@ class Detail(APIClientFile[dict[str, Any]]):
         return str(self._atf_state()["pageTitleId"])
 
     # TODO: Validate
-    def compact_key(self) -> str:
+    def link_id(self) -> str:
         """Return the id of this title that a link to it is written with."""
-        return str(self._atf_state()["self"][self.page_key()]["compactGTI"])
+        return str(self._atf_state()["self"][self.page_id()]["compactGTI"])
 
     # TODO: Validate
     def _header(self) -> dict[str, Any]:
         header: dict[str, Any] = self._atf_state()["detail"]["headerDetail"][
-            self.page_key()
+            self.page_id()
         ]
         return header
 
@@ -288,11 +277,11 @@ class Detail(APIClientFile[dict[str, Any]]):
                 # Keyed by the id its own page is addressed by rather than by
                 # the id the listing names it with, so that a season is the same
                 # season whichever way in it was found.
-                key=compact_key_from_link(entry["seasonLink"]),
+                key=link_id_from_href(entry["seasonLink"]),
                 name=entry["displayName"],
                 season_number=entry["sequenceNumber"],
             )
-            for entry in self._atf_state()["seasons"].get(self.page_key(), [])
+            for entry in self._atf_state()["seasons"].get(self.page_id(), [])
         ]
 
     # TODO: Validate
@@ -322,7 +311,7 @@ class Detail(APIClientFile[dict[str, Any]]):
         if not self.record_content:
             return []
         return [
-            EpisodeList(self.session, self.plugin, self.detail_key, index)
+            EpisodeList(self.session, self.plugin, self.unique_identifier, index)
             for index, page in enumerate(self._episode_page_entries())
             if not page["isSelected"]
         ]
@@ -336,12 +325,12 @@ class Detail(APIClientFile[dict[str, Any]]):
 
         state = self._btf_state()
         details = state["detail"]["detail"]
-        compact_keys = state["self"]
+        link_ids = state["self"]
         return [
             episode_from_detail(
                 title_id,
                 details[title_id],
-                compact_keys[title_id]["compactGTI"],
+                link_ids[title_id]["compactGTI"],
             )
             for title_id in card_title_ids
             if self._episode_available(title_id)
@@ -359,7 +348,12 @@ class Detail(APIClientFile[dict[str, Any]]):
             if entry["isSelected"]:
                 episodes += self._page_episodes()
             else:
-                page = EpisodeList(self.session, self.plugin, self.detail_key, index)
+                page = EpisodeList(
+                    self.session,
+                    self.plugin,
+                    self.unique_identifier,
+                    index,
+                )
                 episodes += page.episodes()
         return episodes
 
@@ -407,7 +401,7 @@ class Detail(APIClientFile[dict[str, Any]]):
 
     # TODO: Validate
     def _offer_actions(self) -> list[dict[str, Any]]:
-        action = self._atf_state()["action"]["atf"].get(self.page_key())
+        action = self._atf_state()["action"]["atf"].get(self.page_id())
         return [action] if action else []
 
     # TODO: Validate
@@ -443,18 +437,18 @@ class Detail(APIClientFile[dict[str, Any]]):
         return list(channels.values())
 
     # TODO: Validate
-    def related_prime_keys(self) -> list[str]:
+    def related_link_ids(self) -> list[str]:
         containers = self._btf_state().get("containers") or {}
-        keys: list[str] = []
-        for container in containers.get(self.page_key()) or []:
+        link_ids: list[str] = []
+        for container in containers.get(self.page_id()) or []:
             if container.get("title") != "Customers also watched":
                 continue
             for entity in container.get("entities") or []:
                 link = (entity.get("link") or {}).get("url")
                 if not link or entity_benefit_id(entity) != PRIME_BENEFIT_ID:
                     continue
-                keys.append(compact_key_from_link(link))
-        return list(dict.fromkeys(keys))
+                link_ids.append(link_id_from_href(link))
+        return list(dict.fromkeys(link_ids))
 
     # TODO: Validate
     def included_with_prime(self) -> bool:
@@ -488,7 +482,7 @@ class Detail(APIClientFile[dict[str, Any]]):
         """
         seasons = self.seasons()
         if not seasons:
-            return self.compact_key()
+            return self.link_id()
         return min(seasons, key=lambda season: season.season_number).key
 
     # TODO: Validate

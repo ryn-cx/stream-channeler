@@ -197,12 +197,6 @@ class Episode(BaseEpisode, ChildMediaMixin[Season, Never], table=True):
     # TODO: Validate
     @property
     def sole_tmdb_episode(self) -> Episode | None:
-        """The episode this stands for, where it stands for exactly one.
-
-        A row that runs two episodes together stands for each of them as much as
-        for any other, so there is no answer to give a caller with room for one
-        and it is told there is none rather than handed whichever came first.
-        """
         tmdb_episodes = self.tmdb_episodes
         if len(tmdb_episodes) != 1:
             return None

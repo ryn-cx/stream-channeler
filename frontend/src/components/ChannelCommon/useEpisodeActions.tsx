@@ -243,11 +243,6 @@ export function useEpisodeActions({
 
   const dialogs = (
     <>
-      {/*
-        The episode rather than the channel's row of it. A card already reads as
-        the episode, so opening the row behind it would answer with a different
-        account of the thing that was clicked.
-      */}
       {showInformation && (
         <EditEpisodeById
           episodeId={episode.tmdb_episode_id ?? episode.id}

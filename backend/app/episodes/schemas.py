@@ -149,10 +149,6 @@ class TmdbEpisodeRecord(EpisodeRecord):
 class EpisodeInformationSide(EpisodeRecord):
     label: str
     url: str | None
-    # How far into its own title this side puts the episode, which is a question
-    # each side answers for itself: a website numbering a title straight through
-    # and TMDB numbering it by season disagree here as readily as they do on the
-    # name.
     absolute_number: int | None
 
 

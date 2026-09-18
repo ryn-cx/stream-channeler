@@ -1,16 +1,5 @@
 """a show is keyed the way a season is
 
-A show was keyed on `id` alone when canonical and non-canonical rows were moved
-into one table, on the reading that a canonical row had no source to be keyed
-with. That reading is gone: every row was given a source shortly after, and the
-pair has been a unique constraint over all of them since.
-
-What the reading left behind is a show that no longer answers to the identity map
-the way a `Season` or an `Episode` does, so `Show.get_from_memory` had to carry an
-index of its own to find a row by the source and key naming it. The key moves back
-onto that pair, `id` keeps a unique constraint so what points at it still can, and
-the lookups every level shares work on a show again.
-
 Revision ID: e9d4b7c25f13
 Revises: d8b3c15f7a26
 Create Date: 2026-08-15 10:00:00.000000

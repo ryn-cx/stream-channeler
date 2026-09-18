@@ -177,12 +177,6 @@ def dump_episode_extra(
 
 # TODO: Validate
 def parse_extra(extra: dict[str, Any] | None) -> TmdbTitleExtra:
-    """Return what `extra` says, or an empty answer where it says nothing.
-
-    Anything that is not of this shape is read as saying nothing rather than
-    raising, since `extra` is shared with whatever else a plugin keeps there and
-    a row written before this existed is a row to be read, not a failure.
-    """
     if not extra:
         return TmdbTitleExtra()
     try:

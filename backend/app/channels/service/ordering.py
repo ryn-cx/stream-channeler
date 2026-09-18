@@ -126,14 +126,6 @@ def _episode_sort_key(
     episode: Episode | WhitelistEpisodeOutput | _SeasonEpisodeRow,
     order: float | None = None,
 ) -> tuple[float, str]:
-    """Order an episode by where the episode sits, then by its own identifier.
-
-    `order` is where the canonical row puts it, which is what the row is labelled
-    with; where there is none, the website's own order stands in. A row nothing
-    ordered sits after the ones something did, and the identifier settles the
-    rest, so a page boundary falls in the same place on every request rather than
-    wherever the database happened to answer in.
-    """
     if order is None:
         order = _UNORDERED if episode.sort_order is None else float(episode.sort_order)
     return order, str(episode.id)

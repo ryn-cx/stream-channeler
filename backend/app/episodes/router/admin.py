@@ -73,10 +73,6 @@ episodes_router = APIRouter(
 )
 
 
-# Every column the canonical list is sorted and filtered by that an `Episode` does not
-# answer to under the name it is served as. `tmdb_season_id` is among them now that
-# an episode hangs off its season by `season_id` like any non-canonical row: without it
-# here the column is silently unsortable.
 TMDB_EPISODE_EXTRA_COLUMNS: dict[str, Any] = {
     "tmdb_season_id": Episode.season_id,
     "tmdb_season_name": Season.name,

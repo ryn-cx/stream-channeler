@@ -48,7 +48,6 @@ def _detached_watches(session: Session) -> list[Watch]:
 
 # TODO: Validate
 def _named_episodes(watch_identifiers: set[str]) -> Any:  # noqa: ANN401 - A subquery of the episodes the watches name.
-    """Return each named episode paired with the episode it answers to."""
     named_link = tmdb_episode_link()
     return (
         select(
@@ -115,7 +114,10 @@ def _preferred_episode(
     """
     episode, _ = min(
         candidates,
-        key=lambda candidate: (config.priority_from(candidate[1]), str(candidate[0].id)),
+        key=lambda candidate: (
+            config.priority_from(candidate[1]),
+            str(candidate[0].id),
+        ),
     )
     return episode
 
@@ -155,8 +157,7 @@ def _report_unresolvable(session: Session, watch_identifiers: set[str]) -> None:
             .join(tmdb_link, links_of(Episode, tmdb_link))
             .join(
                 named,
-                col(tmdb_link.tmdb_episode_id)
-                == named.c.tmdb_episode_id,
+                col(tmdb_link.tmdb_episode_id) == named.c.tmdb_episode_id,
             )
             .where(is_linked(Episode)),
         ).all(),

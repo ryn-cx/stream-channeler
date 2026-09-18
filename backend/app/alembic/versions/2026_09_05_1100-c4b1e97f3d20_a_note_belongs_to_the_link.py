@@ -1,12 +1,6 @@
 # TODO: Validate
 """a note belongs to the link
 
-`Episode.canonical_episode_note` said why an episode stood for what it stood
-for, which is a question each link answers for itself: a row standing for two
-episodes was matched to each of them for its own reason and had one column to
-say both in. The note moves onto `EpisodeCanonicalEpisode`, written against
-every link the episode carried.
-
 Revision ID: c4b1e97f3d20
 Revises: a2e8d47c9b13
 Create Date: 2026-09-05 11:00:00.000000

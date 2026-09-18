@@ -15,11 +15,6 @@ down_revision = "e62f4c8d31ab"
 branch_labels = None
 depends_on = None
 
-# Every lookup by identifier wants the live record, and `deleted_at` holds
-# nothing for nearly every row, so answering both halves out of the two plain
-# indexes means reading every live row of the table for each lookup. The TMDB
-# fallback join in the episode read does exactly that lookup once per candidate
-# episode, which is what made it the slowest part of reading a channel.
 _TABLES = {
     "episode": "episode_identifier",
     "season": "season_identifier",

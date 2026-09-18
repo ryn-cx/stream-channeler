@@ -210,14 +210,6 @@ class UnvalidatedLinkedTitleOutput(BaseModel):
 
 # TODO: Validate
 class UnvalidatedTitleOutput(TitleListPublic):
-    """A `Title` whose canonical titles no `User` has validated.
-
-    Both kinds of row are listed. A row linked to a title is here so the link can
-    be confirmed or taken off, and a row that is its own record is here so that
-    TMDB having no counterpart for it can be confirmed as well, which is the same
-    decision made about a different answer.
-    """
-
     linked_titles: list[UnvalidatedLinkedTitleOutput]
     episode_count: int
     created_at: datetime

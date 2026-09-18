@@ -1,15 +1,5 @@
 """watch providers are one file
 
-A TMDB watch providers file used to be keyed by the day it was downloaded -
-`TV Series/Watch Providers/1399/2026-09-01.json` - so a title collected one file
-per download and the newest was read against the one before it. A title now keeps
-a single file, `TV Series/Watch Providers/1399.json`, downloaded with the rest of
-its files when the title or season is updated.
-
-The newest file of each title and season is kept and renamed; the older ones are
-dropped. They were only ever read to answer what had changed since, which is no
-longer asked.
-
 Revision ID: c4a9e1b73f28
 Revises: b7f3c05a26d9
 Create Date: 2026-09-12 12:00:00.000000
