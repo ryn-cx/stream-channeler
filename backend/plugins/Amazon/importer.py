@@ -5,9 +5,10 @@ from __future__ import annotations
 
 import re
 from abc import ABC
-from datetime import timedelta
+from datetime import time, timedelta
 from typing import TYPE_CHECKING, Any, override
 
+from deforestation.detail.models import Season as ParsedSeason
 from sqlalchemy import func
 from sqlmodel import col, select
 
@@ -16,19 +17,19 @@ from app.seasons.models import Season
 from app.sources.models import Source
 from app.titles.models import Title
 from app.tmdb_media.keys import watch_identifier
+from app.utils import tz_datetime
 from app.utils.update_at import staggered_monthly_update_at
 from app.watch_providers.models import WatchProvider
-from plugins.Amazon.constants import (
-    PURCHASE_SOURCE_SUFFIX,
-)
 from plugins.Amazon.shared import AmazonShared
-from plugins.Amazon.utils import AmazonSeason, detail_url, parse_date
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
 from plugins.utils.base_plugin.url import ParsedURL
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+
+    from deforestation.detail.models import Episode as ParsedEpisode
+    from deforestation.detail_widgets.models import Episode as WidgetEpisode
 
     from plugins.utils.abstract_plugin import URLImportResult
     from plugins.utils.base_plugin.files import BaseFile
@@ -41,11 +42,11 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
     def parse_url(self, url: str) -> ParsedURL:
         detail_file = self.detail_file(self.link_id_from_url(url))
         self.raise_invalid_url_if_no_content(detail_file, url)
-        if message := detail_file.unavailable_message():
+        if message := detail_file.parsed().unavailable_message:
             msg = f"{message}: {url}"
             raise InvalidURLError(msg)
 
-        return ParsedURL(detail_file.title_key())
+        return ParsedURL(detail_file.parsed().title_key)
 
     # TODO: Validate
     @override  # Writes the title into every source it can be watched through.
@@ -68,7 +69,7 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
 
     # TODO: Validate
     def _title_url(self, title_key: str) -> str:
-        return detail_url(self.detail_file(title_key).link_id())
+        return self.detail_file(title_key).parsed().url
 
     # TODO: Validate
     @override
@@ -105,16 +106,18 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
 
     # TODO: Validate
     def _season_available(self, season_key: str) -> bool:
-        return self.detail_file(season_key).unavailable_message() is None
+        return self.detail_file(season_key).parsed().unavailable_message is None
 
     # TODO: Validate
-    def _season_entries(self, title_key: str) -> list[AmazonSeason]:
-        page = self.detail_file(title_key)
-        seasons = page.seasons() or [
-            AmazonSeason(
-                key=page.link_id(),
-                name=page.title(),
-                season_number=page.season_number() or 1,
+    def _season_entries(self, title_key: str) -> list[ParsedSeason]:
+        parsed = self.detail_file(title_key).parsed()
+        seasons = parsed.seasons or [
+            ParsedSeason(
+                key=parsed.link_id,
+                name=parsed.title,
+                season_number=parsed.season_number or 1,
+                url=parsed.url,
+                is_selected=True,
             ),
         ]
         season_pages = [self.detail_file(season.key) for season in seasons]
@@ -129,22 +132,18 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
             msg = "Title.url is not set."
             raise AttributeError(msg)
 
-        page = self.detail_file(title.key)
+        parsed = self.detail_file(title.key).parsed()
         channel_keys: list[str] = ["All Titles"]
-        if page.purchasable():
-            channel_keys.append(PURCHASE_SOURCE_SUFFIX)
-        channel_keys.extend(page.genres())
+        if parsed.purchasable:
+            channel_keys.append("Purchase")
+        channel_keys.extend(parsed.genres)
 
         for channel_key in dict.fromkeys(channel_keys):
             self.add_new_urls_to_channel(channel_key, [title.url])
-        self.add_new_urls_to_channel("All Titles", self._related_urls(title.key))
-
-    # TODO: Validate
-    def _related_urls(self, title_key: str) -> list[str]:
-        return [
-            detail_url(link_id)
-            for link_id in self.detail_file(title_key).related_link_ids()
-        ]
+        self.add_new_urls_to_channel(
+            "All Titles",
+            list(self.detail_file(title.key).other_title_urls_on_this_page()),
+        )
 
     # TODO: Validate
     def title_sources(self, title_key: str) -> list[Source]:
@@ -155,20 +154,20 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
         the title is found however the user can watch it. Only a title included
         with Prime belongs to Prime Video itself.
         """
-        detail_file = self.detail_file(title_key)
+        parsed = self.detail_file(title_key).parsed()
         sources = [
             self._upsert_extra_source(
                 f"{channel.name} on Amazon",
                 self._channel_favicon_url(channel.name),
             )
-            for channel in detail_file.channels()
+            for channel in parsed.channels
         ]
-        if detail_file.included_with_prime():
+        if parsed.included_with_prime:
             sources.append(self.source)
-        if detail_file.purchasable():
+        if parsed.purchasable:
             sources.append(
                 self._upsert_extra_source(
-                    f"{PURCHASE_SOURCE_SUFFIX} on Amazon",
+                    "Purchase on Amazon",
                     self.favicon_url(),
                 ),
             )
@@ -211,6 +210,24 @@ class AmazonImporter(AmazonShared, BaseImporter, ABC):
 # TODO: Validate
 class AmazonSeriesImporter(AmazonImporter):
     # TODO: Validate
+    def _season_episodes(self, season_key: str) -> list[ParsedEpisode | WidgetEpisode]:
+        parsed = self.detail_file(season_key).parsed()
+        pages = parsed.episode_pages
+        listed = [episode for episode in parsed.episodes if episode.is_available]
+        if not pages:
+            return list(listed)
+
+        episodes: list[ParsedEpisode | WidgetEpisode] = []
+        for index, page in enumerate(pages):
+            if page.is_selected:
+                episodes += listed
+            else:
+                episode_list = self.detail_widgets_file(season_key, index)
+                episode_list.download_if_outdated()
+                episodes += episode_list.episodes()
+        return episodes
+
+    # TODO: Validate
     @override
     def _episode_keys_from_season_files(
         self,
@@ -222,7 +239,7 @@ class AmazonSeriesImporter(AmazonImporter):
         return [
             episode.key
             for season_key in season_keys
-            for episode in self.detail_file(season_key).episodes()
+            for episode in self._season_episodes(season_key)
         ]
 
     # TODO: Validate
@@ -234,26 +251,26 @@ class AmazonSeriesImporter(AmazonImporter):
         *,
         force: bool = False,
     ) -> Title:
-        page = self.detail_file(title_key)
+        parsed = self.detail_file(title_key).parsed()
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=title_key,
-                name=page.series_title(),
-                description=page.synopsis(),
+                name=parsed.parent_title or parsed.title,
+                description=parsed.synopsis,
                 media_type="Series",
-                url=self._title_url(title_key),
-                image_url=page.image_url(),
-                thumbnail_url=page.image_url(),
-                year=page.release_year(),
+                url=parsed.url,
+                image_url=parsed.image_url,
+                thumbnail_url=parsed.image_url,
+                year=parsed.release_year,
                 data_timestamp=max(data_timestamps),
                 source_id=source.id,
             ).upsert(source, title)
             title.set_update_at(
                 min(data_timestamps) + timedelta(days=7),
             )
-            title.set_genres(page.genres())
+            title.set_genres(parsed.genres)
 
         self._upsert_seasons(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
@@ -272,7 +289,7 @@ class AmazonSeriesImporter(AmazonImporter):
                     name=season_entry.name,
                     season_number=season_entry.season_number,
                     sort_order=sort_order,
-                    url=detail_url(season_key),
+                    url=season_entry.url,
                     data_timestamp=self._season_files_data_timestamp(
                         season_key,
                         title.key,
@@ -292,7 +309,7 @@ class AmazonSeriesImporter(AmazonImporter):
         *,
         force: bool = False,
     ) -> None:
-        for sort_order, item in enumerate(self.detail_file(season.key).episodes()):
+        for sort_order, item in enumerate(self._season_episodes(season.key)):
             episode = Episode.get_from_memory(self.session, season, item.key)
             if self._episode_is_outdated(
                 episode,
@@ -305,12 +322,16 @@ class AmazonSeriesImporter(AmazonImporter):
                     watch_identifier=watch_identifier(self.plugin_name(), item.key),
                     name=item.title,
                     episode_number=item.episode_number,
-                    url=detail_url(item.link_id),
+                    url=item.url,
                     description=item.synopsis,
                     image_url=item.image_url,
                     thumbnail_url=item.image_url,
                     duration=item.duration,
-                    air_date=parse_date(item.release_date),
+                    air_date=(
+                        tz_datetime.combine(item.release_date, time.min)
+                        if item.release_date
+                        else None
+                    ),
                     sort_order=sort_order,
                     data_timestamp=self._episode_files_data_timestamp(
                         item.key,
@@ -345,26 +366,26 @@ class AmazonMovieImporter(AmazonImporter):
         *,
         force: bool = False,
     ) -> Title:
-        page = self.detail_file(title_key)
+        parsed = self.detail_file(title_key).parsed()
         title = Title.get_from_memory(self.session, source, title_key)
         if self._title_is_outdated(title, force=force):
             data_timestamps = self._title_files_data_timestamps(title_key)
             title = Title(
                 key=title_key,
-                name=page.title(),
-                description=page.synopsis(),
+                name=parsed.title,
+                description=parsed.synopsis,
                 media_type="Movie",
-                url=self._title_url(title_key),
-                image_url=page.image_url(),
-                thumbnail_url=page.image_url(),
-                year=page.release_year(),
+                url=parsed.url,
+                image_url=parsed.image_url,
+                thumbnail_url=parsed.image_url,
+                year=parsed.release_year,
                 data_timestamp=max(data_timestamps),
                 source_id=source.id,
             ).upsert(source, title)
             title.set_update_at(
                 staggered_monthly_update_at(title_key, min(data_timestamps)),
             )
-            title.set_genres(page.genres())
+            title.set_genres(parsed.genres)
 
         self._upsert_season(title, force=force)
         self._soft_delete_missing_seasons_and_episodes(title_key)
@@ -403,19 +424,23 @@ class AmazonMovieImporter(AmazonImporter):
             title_key,
             force=force,
         ):
-            page = self.detail_file(title_key)
+            parsed = self.detail_file(title_key).parsed()
             episode = Episode(
                 key=title_key,
                 watch_identifier=watch_identifier(self.plugin_name(), title_key),
-                name=page.title(),
-                description=page.synopsis(),
-                url=self._title_url(title_key),
-                image_url=page.image_url(),
-                thumbnail_url=page.image_url(),
-                duration=page.duration(),
+                name=parsed.title,
+                description=parsed.synopsis,
+                url=parsed.url,
+                image_url=parsed.image_url,
+                thumbnail_url=parsed.image_url,
+                duration=parsed.duration,
                 episode_number=0,
                 sort_order=0,
-                air_date=parse_date(page.release_date()),
+                air_date=(
+                    tz_datetime.combine(parsed.release_date, time.min)
+                    if parsed.release_date
+                    else None
+                ),
                 data_timestamp=self._episode_files_data_timestamp(
                     title_key,
                     season.key,

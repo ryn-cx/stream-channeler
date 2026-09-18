@@ -333,8 +333,6 @@ def _whitelist_media(
     if not titles and not tmdb_titles:
         raise HTTPException(status_code=404, detail="Title was not found on channel")
 
-    # Every season and episode under those rows is walked below, which is a query
-    # a season unless they are asked for together up front.
     session.exec(
         select(Title)
         .where(col(Title.id).in_([title.id for title in [*titles, *tmdb_titles]]))
@@ -507,9 +505,6 @@ def channel_whitelist_episodes_output(
         ),
     )[offset : offset + limit]
 
-    # Only the page being served is asked after: the links a row carries and the
-    # reading of it as the media are both work per episode, and a season of a
-    # thousand is not a season anybody reads at once.
     page_tmdb_record_ids = {row.tmdb_episode_id for row in page_rows}
     link_rows = [row for row in rows if row.tmdb_episode_id in page_tmdb_record_ids]
     episodes = _episodes_by_id(session, [row.id for row in link_rows])

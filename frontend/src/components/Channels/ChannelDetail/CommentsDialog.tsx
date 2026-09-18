@@ -83,9 +83,6 @@ interface CommentNodeProps {
   preloaded?: boolean
 }
 
-// A top level comment titles on its own until its thread is asked for, and the thread
-// request returns every descendant nested, so one click reveals the whole tree. Replies
-// rendered from that response already carry their own children and never refetch.
 // TODO: Validate
 function CommentNode({
   comment,

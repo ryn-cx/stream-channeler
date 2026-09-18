@@ -65,7 +65,7 @@ def _channel_inclusion_clause(
 # TODO: Validate
 def _channel_season_exists(
     season: Any,  # noqa: ANN401 - A `Season` alias, or `Season` itself when correlated.
-    outer: Any,  # noqa: ANN401 - The model the clause is asked about.
+    outer: Any,  # noqa: ANN401
     condition: Callable[[Any], ColumnElement[bool]] | None = None,
 ) -> ColumnElement[bool]:
     copy_episode = aliased(Episode)

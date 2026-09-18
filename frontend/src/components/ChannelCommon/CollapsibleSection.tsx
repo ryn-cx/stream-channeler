@@ -11,12 +11,6 @@ interface CollapsibleSectionProps {
 }
 
 // TODO: Validate
-/**
- * A section that stays out of the way until it is asked for.
- *
- * The field-by-field comparison is there to be checked rather than read, so it
- * is closed until someone goes looking for it.
- */
 export function CollapsibleSection({
   title,
   children,

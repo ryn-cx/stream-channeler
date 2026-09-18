@@ -415,7 +415,6 @@ def _create_channel_title(  # noqa: PLR0913 - The channel title needs every leve
     season_ids: set[UUID],
     tmdb_episode_ids: set[UUID],
 ) -> ChannelTitle:
-    """Put the title on the channel, with the filters the result asked for."""
     channel_title = ChannelTitle(
         channel_id=channel.id,
         tmdb_title_id=tmdb_title_id,

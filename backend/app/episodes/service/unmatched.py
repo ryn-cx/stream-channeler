@@ -55,8 +55,6 @@ from app.tmdb_media.filters import is_linked, is_not_linked
 # sorted by on its own row - the title it is under, the source that carries it - has no
 # column of `Episode` to be read off.
 _UNMATCHED_COLUMNS: dict[str, Any] = {
-    # The combined column reads as the title it is under first, so that is what
-    # sorting or filtering it is asking about.
     "summary": Title.name,
     "title_name": Title.name,
     "title_year": Title.year,

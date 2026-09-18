@@ -119,7 +119,6 @@ def test_an_episode_says_which_channel_it_came_from(
 def test_a_channel_reads_the_same_for_a_visitor(
     session_scoped_session: Session,
 ) -> None:
-    """Who is asking changes what is watched, not which episodes are on offer."""
     owner = create_random_user(session_scoped_session)
     channel = channel_with_episodes(session_scoped_session, owner)
 

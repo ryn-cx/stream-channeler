@@ -264,8 +264,6 @@ export function PluginResultCard({
           {result.year && ` (${result.year})`}
         </>
       }
-      // A result carries the id its own plugin issued, so opening the details
-      // asks that plugin about it rather than matching it against another.
       onClick={onSelect ? () => onSelect(result) : undefined}
       footer={
         <>
@@ -639,7 +637,6 @@ export function TitleSearch({
   })
   const pluginResults = activeSearch ? (searchPage?.results ?? null) : null
 
-  // A result the plugin gave no id for is one nothing can be asked about.
   // TODO: Validate
   const openResult = useCallback(
     (result: PluginSearchResult) => {
@@ -669,8 +666,6 @@ export function TitleSearch({
     setSelectedResult(null)
 
     try {
-      // Ask the backend whether any plugin accepts the input as an importable
-      // URL. If so, skip search and queue it directly.
       const match = await PluginsService.matchUrl({ url: trimmed })
       if (match.matched) {
         addUrlMutation.mutate(trimmed, {

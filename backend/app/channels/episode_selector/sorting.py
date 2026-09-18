@@ -78,7 +78,6 @@ class SortExpressionBuilder:
         expr: ColumnElement[Any],
         sort_key: SortKeyInput,
     ) -> UnaryExpression[Any] | ColumnElement[Any]:
-        """Point `expr` the way `sort_key` asks, and place its nulls."""
         directed: UnaryExpression[Any] | ColumnElement[Any] = (
             desc(expr) if sort_key.direction == "descending" else expr
         )
@@ -120,8 +119,6 @@ class SortExpressionBuilder:
 
         if sort_key.model == "channel":
             channel_expr = self._channel_expr()
-            # Shuffling the channels themselves keeps every episode of one of them
-            # together, which is what a random sort on a channel is asking for.
             return self.random_hash(channel_expr) if field == "random" else channel_expr
         if field == "random":
             # The media a non-canonical row is of rather than the non-canonical row, so
@@ -162,7 +159,6 @@ class SortExpressionBuilder:
         field: str,
         model_class: type[Any],
     ) -> ColumnElement[Any]:
-        """Return the column `field` names, ordering 0 last when it asks for that."""
         base_field = field.removesuffix(ZERO_LAST_SUFFIX)
         column = self._fallbacks.column(model, base_field, model_class)
         if base_field == field:

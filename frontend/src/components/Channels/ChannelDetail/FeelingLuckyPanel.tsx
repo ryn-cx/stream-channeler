@@ -60,7 +60,6 @@ export function FeelingLuckyPanel({ channelId }: { channelId: string }) {
   const unmatched = outcomes.filter((outcome) => outcome.result === null)
   const approved = matched.filter((outcome) => outcome.approved)
 
-  // A result the plugin gave no id for is one nothing can be asked about.
   // TODO: Validate
   const openTitle = (result: PluginSearchResult) => {
     if (!result.media_identifier) {
@@ -100,8 +99,6 @@ export function FeelingLuckyPanel({ channelId }: { channelId: string }) {
     setOutcomes([])
 
     const found: LuckyOutcome[] = []
-    // Searched one at a time so a plugin is not asked for every title at once,
-    // and so the list fills in as it goes rather than all at the end.
     for (const title of titles) {
       try {
         const page = await PluginsService.inAppSearch({

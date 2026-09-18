@@ -107,9 +107,6 @@ def _selected_title_ids(
     return [result.episode.season.title.id for result in builder.get_episodes()]
 
 
-# A row that is the episode itself wins over a row linked to it whatever the
-# `User` asked for, so the highest-ranked site is not the one served. The
-# collapsing works; which of the two survives does not follow the preferences.
 # TODO: Validate
 @pytest.mark.xfail(
     strict=True,

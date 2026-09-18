@@ -57,12 +57,6 @@ interface SeasonEpisodesProps {
 }
 
 // TODO: Validate
-/**
- * The episodes of one season, read a page at a time as the season is expanded.
- *
- * A title's whole catalogue is far more than the filter page ever titles at
- * once, so a season's episodes are asked for only when somebody opens it.
- */
 // TODO: Validate
 export function SeasonEpisodes({
   channelId,

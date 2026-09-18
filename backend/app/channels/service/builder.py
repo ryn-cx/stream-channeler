@@ -67,7 +67,6 @@ def similar_title_urls(
 
 # TODO: Validate
 def buildable_plugins(session: Session, title: Title) -> list[ChannelBuildPlugin]:
-    """Return the plugins that can be asked what is similar to a title."""
     plugins: dict[str, ChannelBuildPlugin] = {}
     for tmdb_title in _tmdb_titles(session, title):
         for linked_title in _titles_to_ask(tmdb_title):

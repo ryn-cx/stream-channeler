@@ -1,14 +1,4 @@
 # TODO: Validate
-"""Narrowing a channel's episodes down to a handful of its titles.
-
-A channel that asks for a number of titles keeps every episode of the titles that
-come first in the order already chosen and drops the rest, so the counts thin the
-line-up without disturbing how it is sorted.
-
-A title here is the canonical title rather than one website's row for it, so a
-title two websites carry counts once, and a row that mixes titles counts as each of
-the canonical titles its episodes belong to.
-"""
 
 from collections import defaultdict
 from uuid import UUID
@@ -33,13 +23,6 @@ def selected_title_ids(
     episodes: list[Episode],
     channel_options: ChannelOptions,
 ) -> set[UUID] | None:
-    """Return the titles the counts leave room for, or None where they leave every one.
-
-    A title counts as started once the `User` has watched anything of it, which is
-    what lets a channel ask for a few titles already under way alongside a few it
-    has never touched. Without a `User` there is no such thing as started, so the
-    counts do nothing.
-    """
     total = channel_options.total_titles_count
     started_count = channel_options.started_titles_count
     new_count = channel_options.new_titles_count

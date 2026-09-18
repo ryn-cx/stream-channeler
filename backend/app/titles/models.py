@@ -146,12 +146,6 @@ class Title(BaseTitle, ChildMediaMixin[Source, "Season"], table=True):
     # TODO: Validate
     @property
     def tmdb_title_ids(self) -> list[uuid.UUID]:
-        """The id of every canonical title this stands for.
-
-        Read off the links rather than off the titles they point at, since the id
-        is a column of the link itself and reading the titles to ask them their
-        own ids is a query per link for something already in hand.
-        """
         return [link.tmdb_title_id for link in self.tmdb_title_links]
 
     # TODO: Validate
@@ -352,16 +346,6 @@ class BaseTitleTmdbTitle(SQLModel):
 
 # TODO: Validate
 class TitleTmdbTitle(BaseTitleTmdbTitle, TimestampIdAndHashMixin, table=True):
-    """Model representing one of the canonical titles a `Title` stands for.
-
-    A website's row stands for one canonical title in the ordinary case and for
-    several where the website mixes them, and there is nothing on the row that
-    tells the two apart, so which ones it stands for is stored rather than
-    inferred. This is the whole of that record: every canonical title a row stands
-    for has a row here and none of them is held anywhere else, so a query asking
-    which rows stand for a canonical title asks one table and no other.
-    """
-
     __table_args__ = (
         # Each canonical title is linked to a non-canonical row at most once; the leading
         # column also serves lookups of a row's canonical titles and cascade deletion

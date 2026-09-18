@@ -57,14 +57,6 @@ interface TmdbEpisodeRowProps {
 }
 
 // TODO: Validate
-/**
- * One tmdb episode, as both the linked list and the choices read it.
- *
- * The two lists are the same question asked twice - which episode is this one -
- * so a row already linked reads exactly as the row that would have linked it,
- * and the numbering, the names and the pages on TMDB sit in the same places in
- * both.
- */
 export function TmdbEpisodeRow({
   record,
   absoluteNumber,

@@ -34,14 +34,6 @@ interface EpisodeTmdbLinkMenuProps {
 }
 
 // TODO: Validate
-/**
- * Which of the title's own episodes are on this TMDB episode already.
- *
- * A choice being spoken for is the reason it is worth passing over, so which
- * episode spoke for it is the next thing anybody asks - most often because that
- * one is the mistake, not this one. It is asked for rather than shown outright,
- * since a list under every used choice would bury the ones going spare.
- */
 function UsedByDetails({ choice }: { choice: TmdbEpisodeChoice }) {
   const [isOpen, setIsOpen] = useState(false)
   // Carries a default on the server, so the generated type has it as optional.
@@ -123,13 +115,6 @@ export function EpisodeTmdbLinkMenu(props: EpisodeTmdbLinkMenuProps) {
 }
 
 // TODO: Validate
-/**
- * The choices themselves, mounted only once the menu is opened.
- *
- * Every episode of every linked title is read to build the list, which is far
- * more than an episode's own page is worth costing, so nothing is asked for
- * until somebody goes looking.
- */
 export function TmdbLinkPicker({
   episodeId,
   seasonNumber,
@@ -141,8 +126,6 @@ export function TmdbLinkPicker({
   const queryClient = useQueryClient()
   const reread = useRereadTmdbMatches()
   const [order, setOrder] = useState<ChoiceOrder>("sequential")
-  // The episodes still going spare are what a title is usually missing, so they
-  // are what is offered until the whole title is asked for.
   const [showUsed, setShowUsed] = useState(false)
   const [nameDraft, setNameDraft] = useState("")
   const [urlDraft, setUrlDraft] = useState("")

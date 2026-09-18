@@ -335,10 +335,6 @@ class MusicPlaylist(SingleArgEndpointFile[MusicModel]):
 #     def season_numbers(self) -> list[int]:
 #         return sorted(self.episode_keys_by_season())
 
-#     # A season is chosen from the same menu a playlist is sorted from, so what tells
-#     # the two apart is that a season says which season it is, and it says so in the
-#     # address a person would read it at rather than in the endpoint browse is asked
-#     # by.
 #     # TODO: Validate
 #     def _open_season(self, page: ShowsModel) -> int | None:
 #         for tab in page.contents.two_column_browse_results_renderer.tabs:

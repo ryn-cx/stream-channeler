@@ -244,7 +244,6 @@ def get_channel_build_plugins(
     channel: EditableChannel,  # noqa: ARG001 - Checks the user may edit the channel.
     title: ExistingTitle,
 ) -> list[ChannelBuildPlugin]:
-    """Read the plugins that can be asked what is similar to a title."""
     return builder.buildable_plugins(session, title)
 
 

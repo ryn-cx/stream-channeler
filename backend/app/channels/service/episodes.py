@@ -139,13 +139,6 @@ def _listed_season_title_ids(
     titles: Sequence[Title],
     tmdb_titles: Sequence[Title],
 ) -> dict[uuid.UUID, list[uuid.UUID]]:
-    """Map each season to the websites' rows carrying it.
-
-    Which seasons a title has is a question about seasons rather than about
-    episodes, so it is asked of the database as one: the rows come back a season
-    apiece instead of an episode apiece, and a title of thirty thousand episodes
-    costs what a title of thirty does.
-    """
     title_order = {
         title.id: index for index, title in enumerate([*titles, *tmdb_titles])
     }

@@ -54,8 +54,7 @@ class Sentinel:
         repr: str | None = None,  # noqa: A002
         module_name: str | None = None,
     ):
-        name = str(name)
-        repr = str(repr) if repr else f"<{name.split('.')[-1]}>"  # noqa: A001
+        repr = repr or f"<{name.split('.')[-1]}>"  # noqa: A001
         if not module_name:
             parent_frame = _get_parent_frame()
             module_name = (

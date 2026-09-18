@@ -172,12 +172,6 @@ class Episode(BaseEpisode, ChildMediaMixin[Season, Never], table=True):
     # TODO: Validate
     @property
     def tmdb_episode_ids(self) -> list[uuid.UUID]:
-        """The id of every episode this stands for.
-
-        Read off the links rather than off the episodes they point at, since the
-        id is a column of the link itself and reading the episodes to ask them
-        their own ids is a query per link for something already in hand.
-        """
         return [link.tmdb_episode_id for link in self.tmdb_episode_links]
 
     # TODO: Validate
@@ -328,16 +322,6 @@ class EpisodeTmdbEpisode(
     TimestampIdAndHashMixin,
     table=True,
 ):
-    """Model representing one of the episodes an `Episode` stands for.
-
-    A website's row stands for one episode in the ordinary case and for several
-    where the website ran them together, and there is nothing on the row that
-    tells the two apart, so which ones it stands for is stored rather than
-    inferred. This is the whole of that record: every episode a row stands for
-    has a row here and none of them is held anywhere else, so a query asking
-    which rows stand for an episode asks one table and no other.
-    """
-
     __table_args__ = (
         # Each episode is linked to a non-canonical row at most once; the leading column
         # also serves lookups of a row's episodes and cascade deletion with it.

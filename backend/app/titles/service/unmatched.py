@@ -1,16 +1,6 @@
 # TODO: Validate
 
 
-"""The services TMDB says carry a title that nothing here carries.
-
-TMDB names every service a title streams on. An import reads that list and asks
-of each name whether a plugin already carries the title, whether a plugin
-carries the service but not this title, or whether no plugin carries the service
-at all. The first needs nobody; the other two are written down here, so the
-titles waiting on a source URL are a table to be worked through rather than
-something to be noticed by hand.
-"""
-
 import uuid
 from typing import Any
 

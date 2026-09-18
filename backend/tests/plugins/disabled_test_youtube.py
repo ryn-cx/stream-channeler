@@ -40,11 +40,6 @@ class YouTubeValidator(PluginValidator[YouTube]):
     # TODO: Validate
     @override
     def _initialize_extra_files(self, session: Session) -> None:
-        """Store the feed each season's update reads for new videos.
-
-        Nothing asks for it while a URL is being imported, so it is the one file
-        an update needs that recording the import does not leave behind.
-        """
         plugin = self.plugin_class(session)
         for source in self.select_plugin_with_children(session).sources:
             for title in source.titles:
@@ -106,9 +101,6 @@ class PlaylistValidator(YouTubeValidator):
     urls = ("youtube.com/playlist?list={playlist_key}",)
 
 
-# A playlist a channel made, which is a season of that channel rather than a
-# listing of its own. This is the same playlist the channel test reaches through
-# the channel, asked for the other way around.
 # TODO: Validate
 class TestChannelPlaylist(StandardTests[YouTube], PlaylistValidator):
     playlist_key = "PLuhl9TnQPDCnWIhy_KSbtFwXVQnNvgfSh"
@@ -123,16 +115,11 @@ class TestMusicAlbumPlaylist(StandardTests[YouTube], PlaylistValidator):
     playlist_key = "OLAK5uy_mKcftf5tOvVhq-CsutohYLKrB1l8PqCG8"
 
 
-# The playlist a title is published as, which is what browse lists a title under
-# and is not the key the title's page is served at, so the URL names the title only
-# by way of the listing it asks for.
 # TODO: Validate
 class TestTitlePlaylistURL(StandardTests[YouTube], PlaylistValidator):
     playlist_key = "TVSHX2-tv9KBHSAWLsDbH3h9vNzwxEAyyqXMw"
 
 
-# A channel's uploads playlist, which is a season of that channel rather than a
-# listing of its own, so the URL is the channel's asked for the long way around.
 # TODO: Validate
 class TestChannelUploadsPlaylistURL(
     StandardTests[YouTube],

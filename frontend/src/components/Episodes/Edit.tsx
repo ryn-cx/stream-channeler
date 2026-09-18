@@ -47,11 +47,6 @@ const EditTitleOfEpisode = ({ titleId }: { titleId: string }) => {
 }
 
 interface EpisodeInformationContentProps {
-  /**
-   * The row being read. Only the id is asked for, since a reader who may not
-   * edit is never served the row's own columns and there is nothing to fill a
-   * form with.
-   */
   episode: Pick<EditableEpisodeFields, "id"> & Partial<EditableEpisodeFields>
   /** Whether the episode is wanted yet, so a collapsed reading fetches nothing. */
   enabled: boolean
@@ -110,11 +105,6 @@ export function EpisodeInformationContent({
         />
       ) : null}
 
-      {/*
-              A tmdb episode is asked the question the other way around: it
-              stands for nothing itself, and what is worth reading on it is the
-              website rows that came to it.
-            */}
       {isTmdbEpisode ? (
         <LinkedEpisodeLinks episodeId={episode.id} enabled={enabled} />
       ) : (

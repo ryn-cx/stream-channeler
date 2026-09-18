@@ -85,8 +85,6 @@ class TMDBImporter(TMDBShared, BaseImporter, ABC):
         title is the half of this that changes, and the file it is read from is
         downloaded with the rest of the title's either way.
         """
-        # Imported here because the service reaches every plugin to ask which of
-        # them carries a provider, and this is one of them.
         from app.titles.service.unmatched import (  # noqa: PLC0415
             record_unmatched_providers,
         )
@@ -302,8 +300,6 @@ class TMDBSeries(TMDBImporter):
         *,
         force: bool = False,
     ) -> None:
-        # Whichever order the title is read in, seasons and episodes come back
-        # the same shape, so nothing below asks which it was.
         for source in self.chosen_seasons(title_key):
             season = Season.get_from_memory(self.session, title, source.key)
             if self._season_is_outdated(season, title_key, force=force):

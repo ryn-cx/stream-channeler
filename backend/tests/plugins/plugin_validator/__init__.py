@@ -356,14 +356,7 @@ class PluginValidator[PluginT: AbstractPlugin](DatabaseMixin[PluginT]):
         self._import_url(session)
 
     # TODO: Validate
-    def _initialize_extra_files(self, session: Session) -> None:
-        """Store the files that only an update reaches for.
-
-        A test's data is recorded by importing a URL, which never asks for the
-        files a plugin only reads when checking an existing record for changes.
-        Left unstored, those are what an update test has to reach the network
-        for, which it is not allowed to do.
-        """
+    def _initialize_extra_files(self, session: Session) -> None: ...
 
     # TODO: Validate
     @pytest.mark.enable_socket

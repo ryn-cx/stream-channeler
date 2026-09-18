@@ -72,13 +72,13 @@ class NetflixImporter(NetflixShared, BaseImporter, ABC):
     def _title_channel_keys(self, title_data: DetailModalModel) -> list[str]:
         channel_keys = [
             mood_tag.display_name
-            for mood_tag in title_data.mood_tags or []
+            for mood_tag in title_data.mood_tags
             if mood_tag.display_name
         ]
         channel_keys.extend(self._genre_names(title_data))
         channel_keys.extend(
             membership.title
-            for membership in title_data.title_group_memberships or []
+            for membership in title_data.title_group_memberships
             if membership.title
         )
         return list(dict.fromkeys(channel_keys))
@@ -91,11 +91,11 @@ class NetflixImporter(NetflixShared, BaseImporter, ABC):
         urls_by_channel_key: dict[str, dict[str, None]] = {
             "All Titles": {
                 self.title_url(str(similar.video_id)): None
-                for similar in title_data.similars or []
+                for similar in title_data.similars
                 if similar.video_id
             },
         }
-        for membership in title_data.title_group_memberships or []:
+        for membership in title_data.title_group_memberships:
             for sibling in membership.siblings or []:
                 video_id = sibling.video_id
                 if not video_id:

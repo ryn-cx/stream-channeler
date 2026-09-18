@@ -89,9 +89,9 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
     # TODO: Validate
     def _get_episode_number(
         self,
-        episode_key: str,  # noqa: ARG002 - Matches how every other file is asked for.
-        season_key: str,  # noqa: ARG002 - Matches how every other file is asked for.
-        title_key: str,  # noqa: ARG002 - Matches how every other file is asked for.
+        episode_key: str,  # noqa: ARG002
+        season_key: str,  # noqa: ARG002
+        title_key: str,  # noqa: ARG002
     ) -> int | None:
         return None
 
@@ -108,18 +108,6 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
 
     # TODO: Validate
     def _playlist_is_missing(self, title: Title, playlist_key: str) -> bool:
-        # A URL for a whole title asks for every season it has, so nothing is missing
-        # as long as it has been imported with seasons.
-        # if is_title_key(playlist_key) and not is_title_season_key(playlist_key):
-        #     return not title.active_children
-
-        # A URL for a Topic channel asks for every release the musician has, which
-        # is the whole title, so nothing is missing once it has been imported with
-        # seasons.
-        # if playlist_key == title.key and is_topic_channel(
-        #     self.channel_by_channel_id_file(title.key),
-        # ):
-        #     return not title.active_children
 
         # If the playlist being checked is the channel uploads playlist it should only
         # be considered missing if the channel has at least one upload.

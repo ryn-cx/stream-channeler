@@ -20,15 +20,6 @@ from plugins.TMDB.utils import TMDBSeasonInfo
 
 # TODO: Validate
 class TMDBShared(TMDBSearch):
-    """Reads TMDB into records of TMDB's own.
-
-    A season and an episode are keyed by their own TMDB ids, which is what
-    names them wherever they are spoken about, while the API is asked for them
-    by the numbering they have within the title. The files already downloaded
-    are what turn one into the other, so the numbering is read back rather
-    than carried around in the key.
-    """
-
     # TODO: Validate
     @classmethod
     @override

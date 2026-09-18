@@ -43,12 +43,6 @@ def _is_title_key(key: str) -> bool:
 
 # TODO: Validate
 def _belongs_to_a_channel(season: Season) -> bool:
-    """Report whether a season is the uploads of, or a playlist of, a channel.
-
-    A title that is a single video and a title read off a title page are titles
-    without a channel behind them, and neither has a feed for the run to ask
-    what was added, so neither is what this update is for.
-    """
     title_key = season.title.key
     return (
         not is_video_key(title_key)
@@ -86,11 +80,6 @@ def _outdated_title_seasons(session: Session) -> list[Season]:
 def _seasons_with_new_videos(
     plugin: YouTube, seasons: Sequence[Season]
 ) -> list[Season]:
-    """Read every season's feed and return the ones that gained videos.
-
-    Every feed is read before anything is updated so the videos they turned up
-    can be asked for in one request rather than one per season.
-    """
     changed: list[Season] = []
     for season in seasons:
         playlist_feed = plugin.playlist_feed_file(season.key)

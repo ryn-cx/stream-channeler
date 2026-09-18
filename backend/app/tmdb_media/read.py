@@ -22,7 +22,6 @@ def tmdb_list_response[ResponseT: BaseModel](  # noqa: PLR0913
     current_user: User,
     extra_columns: dict[str, Any] | None = None,
 ) -> ResponseT:
-    """Return a page of canonical rows, sorted and filtered as asked for."""
     model = base.column_descriptions[0]["entity"]
     rows, total_count, filtered_count, is_server_side = get_read_results(
         session,

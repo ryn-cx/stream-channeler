@@ -47,6 +47,7 @@ def bypass_file_updates() -> Generator[None]:
 class BaseFile[T](ABC):
     custom_class_key: str | None = None
 
+    # TODO: Validate
     def __init__(
         self,
         session: Session,
@@ -55,8 +56,8 @@ class BaseFile[T](ABC):
     ) -> None:
         """Initialize the file."""
         self.unique_identifier = unique_identifier
-        self.__session = session
-        self.__plugin = plugin
+        self._session = session
+        self._plugin = plugin
         self._cached_parsed: T | None = None
         self.__database_record: File | None | Sentinel = _UNLOADED
         """The database record, None (no record exists), or a Sentinel (the database
@@ -66,6 +67,7 @@ class BaseFile[T](ABC):
         file names then all of the files are preloaded from the database so there is no
         way to initialize the class with the database record already loaded."""
 
+    # TODO: Validate
     @property
     def _database_record(self) -> File | None:
         # When downloading a file to validate the URL download_if_outdated will be
@@ -73,8 +75,8 @@ class BaseFile[T](ABC):
         # niche situation.
         if isinstance(self.__database_record, Sentinel):
             self.__database_record = File.get(
-                self.__session,
-                self.__plugin,
+                self._session,
+                self._plugin,
                 self.file_key(),
             )
         return self.__database_record
@@ -150,8 +152,9 @@ class BaseFile[T](ABC):
             f"{self._identifier_suffix()}"
         )
 
+    # TODO: Validate
     def log_id(self) -> str:
-        return f"{self.__plugin.key} - {self.file_key()}"
+        return f"{self._plugin.key} - {self.file_key()}"
 
     @classmethod
     def file_to_unique_identifier(cls, file: File) -> str:
@@ -171,11 +174,12 @@ class BaseFile[T](ABC):
         This is a file extension like .json, .xml, .html, etc.
         """
 
+    # TODO: Validate
     @contextmanager
     def _log_download(self, identifier: str) -> Generator[None]:
         """Context manager that logs downloads."""
         class_name = type(self).class_key()
-        plugin_key = self.__plugin.key
+        plugin_key = self._plugin.key
         action = "updated" if self._database_record else "initial"
         # This log is useful when a download fails.
         logger.info(f"Downloading {action} {plugin_key} {class_name} ({identifier})")
@@ -227,6 +231,7 @@ class BaseFile[T](ABC):
         """Set the frequency that the file should be updated."""
         return None
 
+    # TODO: Validate
     def write(self, content: str | None, status: str | None = None) -> None:
         """Write the content and status to the database."""
         record = File(
@@ -234,12 +239,12 @@ class BaseFile[T](ABC):
             content=content,
             data_timestamp=tz_datetime.now(),
             status=status,
-            plugin_id=self.__plugin.id,
-        ).upsert(self.__plugin, self._database_record)
+            plugin_id=self._plugin.id,
+        ).upsert(self._plugin, self._database_record)
         record.set_update_at(self._next_update_at())
         self._database_record = record
         self._cached_parsed = None
-        self.__session.flush()
+        self._session.flush()
 
     @abstractmethod
     def _parse(self, content: str) -> T:

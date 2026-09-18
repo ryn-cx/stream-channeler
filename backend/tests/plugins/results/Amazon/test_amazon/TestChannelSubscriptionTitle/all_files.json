@@ -1,7 +1,19 @@
 [
   {
     "plugin_key": "Amazon",
+    "key": "Detail/0RTZ57DQ6PBHH29UN5JS7U7CW4.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B071LMP18J.json"
+  },
+  {
+    "plugin_key": "Amazon",
     "key": "Detail/B09ML1QV1S.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CNDDPQ8F.json"
   },
   {
     "plugin_key": "Amazon",
@@ -9,7 +21,43 @@
   },
   {
     "plugin_key": "Amazon",
+    "key": "Detail/B0DNSX4HJG.json"
+  },
+  {
+    "plugin_key": "Amazon",
     "key": "Detail/B0DTLHZBHL.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0F74L6JH8.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0F7HF2X8K.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0FQ1MCFKJ.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0FQDHBC4Z.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0FQXH2QNX.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0FSDHZ298.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0GZHXDRBN.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0H5TN2HH1.json"
   },
   {
     "plugin_key": "Amazon",
@@ -18,5 +66,13 @@
   {
     "plugin_key": "Amazon",
     "key": "Detail/B0H8N9812R.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0H8Q7NP6Q.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0HBTNNX5Y.json"
   }
 ]

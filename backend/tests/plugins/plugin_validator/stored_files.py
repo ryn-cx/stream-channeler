@@ -395,15 +395,6 @@ def _serve_before_grouping(
 # TODO: Validate
 @contextmanager
 def check_episodes_before_grouped_download() -> Generator[None]:
-    """Reach for each episode on its own before a plugin downloads them as a group.
-
-    A plugin that fetches a season's episodes in one request goes around
-    `download_if_outdated`, which is what serves a file out of the store, so a
-    whole group is downloaded again when a single episode of it is missing.
-    Asking for each episode first leaves the group download only the episodes
-    that really are missing, and the run that records a test's data downloads
-    the one new video rather than the season it belongs to.
-    """
     with ExitStack() as stack:
         for plugin_class in _grouped_download_overrides():
             stack.enter_context(

@@ -920,7 +920,6 @@ class EpisodeQueryBuilder:
         self,
         query: Select[tuple[Episode, UUID]],
     ) -> Select[tuple[UUID, UUID]]:
-        """Collapse an episode's non-canonical rows when nothing asked for an order."""
         if not self._holds_copied_titles:
             return query.with_only_columns(  # type: ignore[return-value]
                 col(Episode.id).label("id"),

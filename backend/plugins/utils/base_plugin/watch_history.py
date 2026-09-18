@@ -127,10 +127,6 @@ class BaseWatchHistoryMixin(AbstractPlugin, ABC):
                 skipped_watches.append(entry.import_result)
                 continue
 
-            # A watch is recorded against the link that played it and carries
-            # that link's own identifier. Whether the episode has already been
-            # watched is asked of every link to it, so importing one website's
-            # history does not re-record what another website already recorded.
             watched_dates = watched_dates_by_episode.setdefault(
                 tmdb_record_id_of(episode),
                 [],

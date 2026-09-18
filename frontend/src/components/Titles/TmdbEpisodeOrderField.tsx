@@ -50,7 +50,6 @@ interface TmdbEpisodeOrderFieldProps {
   titleId: string
   value: string
   onChange: (groupId: string) => void
-  /** Only asked for while the form is open, since it reads a downloaded file. */
   enabled: boolean
 }
 

@@ -29,7 +29,6 @@ const SEARCH_MINIMUM_LENGTH = 2
 interface TmdbTitleFieldProps {
   titleId: string
   tmdbTitleIds: string[]
-  /** Only asked for while the form is open, since each is a query of its own. */
   enabled: boolean
 }
 
@@ -168,9 +167,6 @@ export function TmdbTitleField({
   })
 
   const linkedIds = new Set(tmdbTitleIds)
-  // A listing short enough to be sent whole comes back unfiltered and unpaged,
-  // so the name is matched here as well as asked for above, and only then cut
-  // down to what the box holds.
   const wanted = search.trim().toLowerCase()
   const offered = (results?.data ?? [])
     .filter(

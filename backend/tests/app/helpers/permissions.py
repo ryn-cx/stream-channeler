@@ -1,10 +1,4 @@
 # TODO: Validate
-"""Helpers for the API tests.
-
-An API test asks one question: does this route let the right people through and
-turn the wrong ones away. What the route then does with the request is the
-service's own, and is tested against the service directly.
-"""
 
 from typing import Any, Literal
 

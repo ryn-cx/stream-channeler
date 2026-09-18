@@ -230,8 +230,6 @@ export function WhitelistManager({
     })
   }
 
-  // Clicking an episode toggles it; removing is immediate, adding first asks for the
-  // optional expiry via a popup.
   // TODO: Validate
   const handleEpisodeClick = (
     episode: WhitelistEpisodeOutput,

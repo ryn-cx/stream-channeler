@@ -8,13 +8,6 @@ interface ClampedContentProps {
 }
 
 // TODO: Validate
-/**
- * Content held to four lines until it is asked for in full.
- *
- * A description runs as long as the site that wrote it cared to, which is what
- * leaves a record's own line taller than everything around it. The button is
- * only there when there is more to read.
- */
 export function ClampedContent({
   children,
   className,

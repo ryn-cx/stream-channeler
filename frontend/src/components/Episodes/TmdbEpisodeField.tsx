@@ -17,7 +17,6 @@ import { handleError } from "@/utils"
 interface TmdbEpisodeListProps {
   episodeId: string
   tmdbEpisodeIds: string[]
-  /** Only asked for while the window is open, since each is a query of its own. */
   enabled: boolean
   /** Whether the rows carry the control that takes one off. */
   editable?: boolean

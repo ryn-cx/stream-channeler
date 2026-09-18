@@ -36,8 +36,6 @@ def source_access_condition() -> ColumnElement[bool]:
     nothing means every website, which is what a channel that was never told
     about websites at all wants.
     """
-    # Aliased so the outer join to `ChannelSourceFilter` is not what this reads;
-    # it asks whether the `ChannelTitle` names any website at all.
     any_source_filter = aliased(ChannelSourceFilter)
     has_source_filters = (
         select(literal_column("1"))
