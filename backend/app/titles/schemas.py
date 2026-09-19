@@ -250,3 +250,11 @@ class UnmatchedTitleReadOptions(ReadOptions):
 # TODO: Validate
 class UnmatchedTitleImport(BaseModel):
     url: str = Field(min_length=1)
+
+
+# TODO: Validate
+class AutomaticLinkGroupOutput(BaseModel):
+    id: uuid.UUID
+    key: str
+    plugin_key: str
+    title_count: int

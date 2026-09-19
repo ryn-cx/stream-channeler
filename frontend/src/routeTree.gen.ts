@@ -33,6 +33,7 @@ import { Route as LayoutTitlesRouteImport } from './routes/_layout/titles'
 import { Route as LayoutWatchesRouteImport } from './routes/_layout/watches'
 import { Route as LayoutAdminV2IndexRouteImport } from './routes/_layout/admin-v2.index'
 import { Route as LayoutAdminV2AutomaticChannelsRouteImport } from './routes/_layout/admin-v2.automatic-channels'
+import { Route as LayoutAdminV2AutomaticLinksRouteImport } from './routes/_layout/admin-v2.automatic-links'
 import { Route as LayoutAdminV2LinkEpisodeRouteImport } from './routes/_layout/admin-v2.link-episode'
 import { Route as LayoutAdminV2LinkTitleRouteImport } from './routes/_layout/admin-v2.link-title'
 import { Route as LayoutAdminIndexRouteImport } from './routes/_layout/admin.index'
@@ -181,6 +182,12 @@ const LayoutAdminV2AutomaticChannelsRoute =
   LayoutAdminV2AutomaticChannelsRouteImport.update({
     id: '/automatic-channels',
     path: '/automatic-channels',
+    getParentRoute: () => LayoutAdminV2Route,
+  } as any)
+const LayoutAdminV2AutomaticLinksRoute =
+  LayoutAdminV2AutomaticLinksRouteImport.update({
+    id: '/automatic-links',
+    path: '/automatic-links',
     getParentRoute: () => LayoutAdminV2Route,
   } as any)
 const LayoutAdminV2LinkEpisodeRoute =
@@ -367,6 +374,7 @@ export interface FileRoutesByFullPath {
   '/titles': typeof LayoutTitlesRoute
   '/watches': typeof LayoutWatchesRoute
   '/admin-v2/automatic-channels': typeof LayoutAdminV2AutomaticChannelsRoute
+  '/admin-v2/automatic-links': typeof LayoutAdminV2AutomaticLinksRoute
   '/admin-v2/link-episode': typeof LayoutAdminV2LinkEpisodeRoute
   '/admin-v2/link-title': typeof LayoutAdminV2LinkTitleRoute
   '/admin/channel-queues': typeof LayoutAdminChannelQueuesRoute
@@ -418,6 +426,7 @@ export interface FileRoutesByTo {
   '/watches': typeof LayoutWatchesRoute
   '/': typeof LayoutIndexRoute
   '/admin-v2/automatic-channels': typeof LayoutAdminV2AutomaticChannelsRoute
+  '/admin-v2/automatic-links': typeof LayoutAdminV2AutomaticLinksRoute
   '/admin-v2/link-episode': typeof LayoutAdminV2LinkEpisodeRoute
   '/admin-v2/link-title': typeof LayoutAdminV2LinkTitleRoute
   '/admin/channel-queues': typeof LayoutAdminChannelQueuesRoute
@@ -474,6 +483,7 @@ export interface FileRoutesById {
   '/_layout/watches': typeof LayoutWatchesRoute
   '/_layout/': typeof LayoutIndexRoute
   '/_layout/admin-v2/automatic-channels': typeof LayoutAdminV2AutomaticChannelsRoute
+  '/_layout/admin-v2/automatic-links': typeof LayoutAdminV2AutomaticLinksRoute
   '/_layout/admin-v2/link-episode': typeof LayoutAdminV2LinkEpisodeRoute
   '/_layout/admin-v2/link-title': typeof LayoutAdminV2LinkTitleRoute
   '/_layout/admin/channel-queues': typeof LayoutAdminChannelQueuesRoute
@@ -530,6 +540,7 @@ export interface FileRouteTypes {
     | '/titles'
     | '/watches'
     | '/admin-v2/automatic-channels'
+    | '/admin-v2/automatic-links'
     | '/admin-v2/link-episode'
     | '/admin-v2/link-title'
     | '/admin/channel-queues'
@@ -581,6 +592,7 @@ export interface FileRouteTypes {
     | '/watches'
     | '/'
     | '/admin-v2/automatic-channels'
+    | '/admin-v2/automatic-links'
     | '/admin-v2/link-episode'
     | '/admin-v2/link-title'
     | '/admin/channel-queues'
@@ -636,6 +648,7 @@ export interface FileRouteTypes {
     | '/_layout/watches'
     | '/_layout/'
     | '/_layout/admin-v2/automatic-channels'
+    | '/_layout/admin-v2/automatic-links'
     | '/_layout/admin-v2/link-episode'
     | '/_layout/admin-v2/link-title'
     | '/_layout/admin/channel-queues'
@@ -844,6 +857,13 @@ declare module '@tanstack/react-router' {
       path: '/automatic-channels'
       fullPath: '/admin-v2/automatic-channels'
       preLoaderRoute: typeof LayoutAdminV2AutomaticChannelsRouteImport
+      parentRoute: typeof LayoutAdminV2Route
+    }
+    '/_layout/admin-v2/automatic-links': {
+      id: '/_layout/admin-v2/automatic-links'
+      path: '/automatic-links'
+      fullPath: '/admin-v2/automatic-links'
+      preLoaderRoute: typeof LayoutAdminV2AutomaticLinksRouteImport
       parentRoute: typeof LayoutAdminV2Route
     }
     '/_layout/admin-v2/link-episode': {
@@ -1091,6 +1111,7 @@ const LayoutAdminRouteWithChildren = LayoutAdminRoute._addFileChildren(
 
 interface LayoutAdminV2RouteChildren {
   LayoutAdminV2AutomaticChannelsRoute: typeof LayoutAdminV2AutomaticChannelsRoute
+  LayoutAdminV2AutomaticLinksRoute: typeof LayoutAdminV2AutomaticLinksRoute
   LayoutAdminV2LinkEpisodeRoute: typeof LayoutAdminV2LinkEpisodeRoute
   LayoutAdminV2LinkTitleRoute: typeof LayoutAdminV2LinkTitleRoute
   LayoutAdminV2IndexRoute: typeof LayoutAdminV2IndexRoute
@@ -1098,6 +1119,7 @@ interface LayoutAdminV2RouteChildren {
 
 const LayoutAdminV2RouteChildren: LayoutAdminV2RouteChildren = {
   LayoutAdminV2AutomaticChannelsRoute: LayoutAdminV2AutomaticChannelsRoute,
+  LayoutAdminV2AutomaticLinksRoute: LayoutAdminV2AutomaticLinksRoute,
   LayoutAdminV2LinkEpisodeRoute: LayoutAdminV2LinkEpisodeRoute,
   LayoutAdminV2LinkTitleRoute: LayoutAdminV2LinkTitleRoute,
   LayoutAdminV2IndexRoute: LayoutAdminV2IndexRoute,

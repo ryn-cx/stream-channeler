@@ -47,6 +47,31 @@ export const AutomaticChannelUserOutputSchema = {
     title: 'AutomaticChannelUserOutput'
 } as const;
 
+export const AutomaticLinkGroupOutputSchema = {
+    properties: {
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        key: {
+            type: 'string',
+            title: 'Key'
+        },
+        plugin_key: {
+            type: 'string',
+            title: 'Plugin Key'
+        },
+        title_count: {
+            type: 'integer',
+            title: 'Title Count'
+        }
+    },
+    type: 'object',
+    required: ['id', 'key', 'plugin_key', 'title_count'],
+    title: 'AutomaticLinkGroupOutput'
+} as const;
+
 export const BlacklistEpisodeInputSchema = {
     properties: {
         title_id: {
@@ -7884,13 +7909,7 @@ export const UnvalidatedTitleOutputSchema = {
     },
     type: 'object',
     required: ['key', 'source_id', 'id', 'plugin_name', 'source_key', 'plugin_id', 'linked_titles', 'episode_count', 'created_at'],
-    title: 'UnvalidatedTitleOutput',
-    description: `A \`Title\` whose canonical titles no \`User\` has validated.
-
-Both kinds of row are listed. A row linked to a title is here so the link can
-be confirmed or taken off, and a row that is its own record is here so that
-TMDB having no counterpart for it can be confirmed as well, which is the same
-decision made about a different answer.`
+    title: 'UnvalidatedTitleOutput'
 } as const;
 
 export const UpdatePasswordSchema = {

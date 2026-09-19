@@ -1,10 +1,14 @@
 # TODO: Validate
 from __future__ import annotations
 
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from plugins.Crunchyroll.base_files import CrunchyrollBaseFiles
 from plugins.Crunchyroll.constants import MUSIC_SOURCE, VIDEO_SOURCE
+
+if TYPE_CHECKING:
+    from app.titles.models import Title
+    from plugins.utils.abstract_plugin import TMDBLookupInfo
 
 
 # TODO: Validate
@@ -32,3 +36,14 @@ class CrunchyrollShared(CrunchyrollBaseFiles):
     @override
     def _source_keys(cls) -> tuple[str, ...]:
         return (VIDEO_SOURCE, MUSIC_SOURCE)
+
+    # TODO: Validate
+    @override
+    def tmdb_lookup_info(self, title: Title) -> list[TMDBLookupInfo]:
+        # Do not use the year for Crunchyroll because it's so often incorrect. It's fine
+        # to leave it in the database as a reference but using it for lookups keeps
+        # returning the wrong results.
+        return [
+            lookup_info._replace(year=None)
+            for lookup_info in super().tmdb_lookup_info(title)
+        ]
