@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from datetime import datetime
 
 
+# TODO: Validate
 class BaseInitializeMixin(BaseFileAccessMixin, AbstractPlugin, ABC):
     """Creates the database records a plugin needs before it can be used."""
 
@@ -52,15 +53,14 @@ class BaseInitializeMixin(BaseFileAccessMixin, AbstractPlugin, ABC):
         else:
             self._download_if_outdated(source_files)
             data_timestamp = self._source_files_data_timestamp()
-        source = Source(
+        return Source(
             key=source_key,
             favicon_url=self.favicon_url(),
             link_to_tmdb=self._link_to_tmdb(),
             data_timestamp=data_timestamp,
             plugin_id=self.plugin.id,
+            update_at=self._next_source_update_at(),
         ).upsert(self.plugin, existing_source)
-        source.set_update_at(self._next_source_update_at())
-        return source
 
     def _next_source_update_at(self) -> datetime | None:
         return None

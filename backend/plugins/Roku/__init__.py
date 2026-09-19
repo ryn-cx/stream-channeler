@@ -9,6 +9,7 @@ from plugins.Roku.importer import RokuImporter, RokuMovieImporter, RokuSeriesImp
 from plugins.Roku.shared import RokuShared
 from plugins.Roku.utils import is_movie
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
+from plugins.utils.base_plugin.media_type import MediaType
 
 if TYPE_CHECKING:
     from app.titles.models import Title
@@ -52,6 +53,6 @@ class Roku(RokuShared, AbstractPlugin, register=False):
         if not title.media_type:
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
-        if title.media_type == "Movie":
+        if title.media_type == MediaType.movie:
             return RokuMovieImporter(self.session, self.plugin, self._file_cache)
         return RokuSeriesImporter(self.session, self.plugin, self._file_cache)

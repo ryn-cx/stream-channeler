@@ -17,7 +17,7 @@ from plugins.utils.base_plugin.files import (
     MultipleArgEndpointFile,
     SingleArgEndpointFile,
 )
-from plugins.utils.get_around_client import get_around_client
+from plugins.utils.proxy_client import proxy_client
 
 if TYPE_CHECKING:
     from sqlmodel import Session
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 # TODO: Validate
 @cache
 def minbo() -> MinBO:
-    return MinBO(get_around_client=get_around_client())
+    return MinBO(get_around_client=proxy_client())
 
 
 # TODO: Validate

@@ -22,6 +22,8 @@ from plugins.utils.abstract_plugin import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
+
     from app.titles.models import Title
 
 
@@ -69,7 +71,7 @@ class TMDB(TMDBShared, AbstractPlugin, register=True):
 
     # TODO: Validate
     @override
-    def similar_title_urls(self, title: Title) -> list[str]:
+    def similar_title_urls(self, title: Title) -> Collection[str]:
         media_type, tmdb_media_id = get_media_type_and_tmdb_id(title.key)
         recommendations_file: MoviesRecommendations | TVSeriesRecommendations
         if media_type == TMDBMediaType.movie:

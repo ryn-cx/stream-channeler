@@ -8,7 +8,6 @@ dependencies = [
   "alembic<2.0.0,>=1.12.1",
   "beautifulsoup4>=4.14.3",
   "chirashi",
-  "deforestation",
   "diving-board",
   "email-validator<3.0.0.0,>=2.1.0.post1",
   "emails>=1.1.2,<2.0",
@@ -48,6 +47,7 @@ dependencies = [
   "wholoo",
   "yt-dlapi",
   "sortedcontainers>=2.4.0",
+  "deforestation",
 ]
 
 [dependency-groups]
@@ -127,7 +127,6 @@ error-on-warning = true
 [tool.uv.sources]
 diving-board = { git = "https://github.com/ryn-cx/diving-board" }
 chirashi = { git = "https://github.com/ryn-cx/chirashi" }
-deforestation = { git = "https://github.com/ryn-cx/deforestation" }
 naphki = { git = "https://github.com/ryn-cx/naphki" }
 not-yt-dlapi = { git = "https://github.com/ryn-cx/not-yt-dlapi" }
 yt-dlapi = { git = "https://github.com/ryn-cx/yt-dlapi" }
@@ -143,6 +142,7 @@ pools-closed = { git = "https://github.com/ryn-cx/pools-closed" }
 notaplanet = { git = "https://github.com/ryn-cx/notaplanet" }
 just-scrape = { git = "https://github.com/ryn-cx/just-scrape" }
 wampi = { git = "https://github.com/ryn-cx/wampi" }
+deforestation = { git = "https://github.com/ryn-cx/deforestation" }
 
 [tool.fastapi]
 entrypoint = "app.main:app"

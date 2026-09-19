@@ -15,13 +15,13 @@ from sqlmodel import Session
 
 from app.plugins.models import Plugin
 from plugins.utils.base_plugin.files import MultipleArgEndpointFile
-from plugins.utils.get_around_client import get_around_client
+from plugins.utils.proxy_client import proxy_client
 
 
 # TODO: Validate
 @cache
 def kneeminus() -> KneeMinus:
-    return KneeMinus(get_around_client=get_around_client())
+    return KneeMinus(get_around_client=proxy_client())
 
 
 # TODO: Validate

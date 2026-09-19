@@ -5,6 +5,7 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, Any, override
 
 from app.titles.models import Title
+from plugins.utils.base_plugin.media_type import MediaType
 from plugins.YouTube.constants import LINKS_SOURCE_KEY
 from plugins.YouTube.user_importer import YouTubeUserImporter
 from plugins.YouTube.utils import (
@@ -56,40 +57,34 @@ class YouTubePlaylistImporter(YouTubeUserImporter):
         self,
         source: Source,
         title_key: str,
-        *,
-        force: bool = False,
     ) -> Title:
         playlist_item = get_first_item(
             self.playlist_info_file(title_key).parsed().items,
         )
         source = self.links_source
 
-        title = Title.get_from_memory(self.session, source, title_key)
-        if self._title_is_outdated(title, force=force):
-            data_timestamps = self._title_files_data_timestamps(title_key)
-            title = Title(
-                key=title_key,
-                name=playlist_item.snippet.title,
-                description=playlist_item.snippet.description.replace("\x00", ""),
-                url=playlist_url(title_key),
-                media_type="Series",
-                image_url=image_url(playlist_item.snippet.thumbnails),
-                thumbnail_url=thumbnail_url(playlist_item.snippet.thumbnails),
-                data_timestamp=max(data_timestamps),
-                source_id=source.id,
-            ).upsert(source, title)
-            title.set_update_at(
-                min(data_timestamps) + timedelta(hours=6),
-            )
+        existing_title = Title.get_from_memory(self.session, source, title_key)
+        data_timestamp = self._title_files_data_timestamp(title_key)
+        upserted_title = Title(
+            key=title_key,
+            name=playlist_item.snippet.title,
+            description=playlist_item.snippet.description.replace("\x00", ""),
+            url=playlist_url(title_key),
+            media_type=MediaType.series,
+            image_url=image_url(playlist_item.snippet.thumbnails),
+            thumbnail_url=thumbnail_url(playlist_item.snippet.thumbnails),
+            data_timestamp=data_timestamp,
+            source_id=source.id,
+            update_at=data_timestamp + timedelta(hours=6),
+        ).upsert(source, existing_title)
 
         self._upsert_playlist_season(
-            title=title,
+            title=upserted_title,
             title_key=title_key,
             season_key=title_key,
             name=playlist_item.snippet.title,
             playlist=playlist_item,
-            force=force,
         )
         self._soft_delete_missing_seasons_and_episodes(title_key)
 
-        return title
+        return upserted_title

@@ -240,7 +240,7 @@ def _old_reread_in_new_order(session: Session, title: Title) -> None:
     from plugins.TMDB import TMDB  # noqa: PLC0415
 
     logger.info(f"Rereading title in a new order: {title.name or title.key}")
-    TMDB(session).update_title(title, force=True)
+    TMDB(session).update_title(title)
 
 
 # TODO: Validate

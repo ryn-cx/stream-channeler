@@ -9,7 +9,6 @@ from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.titles.models import Title
 from app.tmdb_media.keys import watch_identifier
-from app.utils.update_at import staggered_monthly_update_at
 from plugins.AdultSwim.constants import EPISODE_URL_REGEX, TITLE_URL_REGEX
 from plugins.AdultSwim.shared import AdultSwimShared
 from plugins.AdultSwim.utils import (
@@ -24,6 +23,7 @@ from plugins.AdultSwim.utils import (
 )
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
+from plugins.utils.base_plugin.media_type import MediaType
 from plugins.utils.base_plugin.url import ParsedURL
 
 if TYPE_CHECKING:
@@ -112,41 +112,35 @@ class AdultSwim(
         self,
         source: Source,
         title_key: str,
-        *,
-        force: bool = False,
     ) -> Title:
         title_data = self.title_file(title_key).parsed()
         metadata = title_data.metadata
         hero = title_data.hero
-        title = Title.get_from_memory(self.session, source, title_key)
-        if self._title_is_outdated(title, force=force):
-            title = Title(
-                key=title_key,
-                name=title_data.title,
-                description=metadata.description if metadata else None,
-                media_type="Series",
-                url=title_url(title_key),
-                image_url=hero.image_url,
-                thumbnail_url=metadata.thumbnail if metadata else None,
-                data_timestamp=self._title_files_data_timestamp(title_key),
-                source_id=source.id,
-            ).upsert(source, title)
-            title.set_update_at(
-                staggered_monthly_update_at(
-                    title_key,
-                    min(self._title_files_data_timestamps(title_key)),
-                ),
-            )
+        existing_title = Title.get_from_memory(self.session, source, title_key)
+        upserted_title = Title(
+            key=title_key,
+            name=title_data.title,
+            description=metadata.description if metadata else None,
+            media_type=MediaType.series,
+            url=title_url(title_key),
+            image_url=hero.image_url,
+            thumbnail_url=metadata.thumbnail if metadata else None,
+            data_timestamp=self._title_files_data_timestamp(title_key),
+            source_id=source.id,
+        ).upsert(
+            source,
+            existing_title,
+        )
 
         self._upsert_seasons(
-            title,
+            upserted_title,
             title_data,
             source_key=source.key,
-            force=force,
         )
-        self._soft_delete_missing(title, title_data, source_key=source.key)
+        self._soft_delete_missing(upserted_title, title_data, source_key=source.key)
 
-        return title
+        self._set_title_update_at(upserted_title)
+        return upserted_title
 
     # TODO: Validate
     def _soft_delete_missing(
@@ -175,39 +169,31 @@ class AdultSwim(
         title_data: ShowModel,
         *,
         source_key: str,
-        force: bool = False,
     ) -> None:
         for sort_order, season_data in enumerate(title_data.seasons):
             key = season_key(season_data)
-            season = Season.get_from_memory(self.session, title, key)
-            if self._season_is_outdated(season, title.key, force=force):
-                season = Season(
-                    key=key,
-                    name=season_name(season_data),
-                    season_number=(
-                        2147483647
-                        if is_clip_season(season_data)
-                        else season_data.number
-                    ),
-                    sort_order=(
-                        2147483647 if is_clip_season(season_data) else sort_order
-                    ),
-                    data_timestamp=self._season_files_data_timestamp(
-                        key,
-                        title.key,
-                    ),
-                    title_id=title.id,
-                ).upsert(title, season)
-                season.set_update_at(None)
+            existing_season = Season.get_from_memory(self.session, title, key)
+            upserted_season = Season(
+                key=key,
+                name=season_name(season_data),
+                season_number=(
+                    2147483647 if is_clip_season(season_data) else season_data.number
+                ),
+                sort_order=(2147483647 if is_clip_season(season_data) else sort_order),
+                data_timestamp=self._season_files_data_timestamp(
+                    key,
+                    title.key,
+                ),
+                title_id=title.id,
+            ).upsert(title, existing_season)
 
             self._upsert_episodes(
-                season,
+                upserted_season,
                 title.key,
                 season_data,
                 source_key=source_key,
-                force=force,
             )
-            self._set_season_update_at_based_on_last_episode(season)
+            self._set_season_update_at(upserted_season)
 
     # TODO: Validate
     def _upsert_episodes(
@@ -217,40 +203,36 @@ class AdultSwim(
         season_data: SeasonData,
         *,
         source_key: str,
-        force: bool = False,
     ) -> None:
         episodes_data = source_episodes(season_data, source_key)
         for sort_order, episode_data in enumerate(episodes_data):
-            episode = Episode.get_from_memory(self.session, season, episode_data.id)
-            if self._episode_is_outdated(
-                episode,
-                season.key,
-                title_key,
-                force=force,
-            ):
-                episode = Episode(
-                    key=episode_data.id,
-                    watch_identifier=watch_identifier(
-                        self.plugin_name(),
-                        episode_data.id,
-                    ),
-                    name=episode_data.title,
-                    description=episode_data.description,
-                    url=episode_url(
-                        episode_data.collection_slug,
-                        episode_data.slug,
-                    ),
-                    image_url=episode_data.poster,
-                    thumbnail_url=episode_data.poster,
-                    air_date=episode_air_date(episode_data),
-                    duration=int(episode_data.duration),
-                    episode_number=episode_data.episode_number,
-                    sort_order=sort_order,
-                    data_timestamp=self._episode_files_data_timestamp(
-                        episode_data.id,
-                        season.key,
-                        title_key,
-                    ),
-                    season_id=season.id,
-                ).upsert(season, episode)
-                episode.set_update_at(None)
+            existing_episode = Episode.get_from_memory(
+                self.session,
+                season,
+                episode_data.id,
+            )
+            Episode(
+                key=episode_data.id,
+                watch_identifier=watch_identifier(
+                    self.plugin_name(),
+                    episode_data.id,
+                ),
+                name=episode_data.title,
+                description=episode_data.description,
+                url=episode_url(
+                    episode_data.collection_slug,
+                    episode_data.slug,
+                ),
+                image_url=episode_data.poster,
+                thumbnail_url=episode_data.poster,
+                air_date=episode_air_date(episode_data),
+                duration=int(episode_data.duration),
+                episode_number=episode_data.episode_number,
+                sort_order=sort_order,
+                data_timestamp=self._episode_files_data_timestamp(
+                    episode_data.id,
+                    season.key,
+                    title_key,
+                ),
+                season_id=season.id,
+            ).upsert(season, existing_episode)

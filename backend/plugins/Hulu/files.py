@@ -36,12 +36,13 @@ from plugins.utils.base_plugin.files import (
     NoArgsEndpointFile,
     SingleArgEndpointFile,
 )
-from plugins.utils.get_around_client import get_around_client
+from plugins.utils.proxy_client import proxy_client
 
 
+# TODO: Validate
 @cache
 def wholoo() -> Wholoo:
-    return Wholoo(get_around_client=get_around_client(proxy=True))
+    return Wholoo(get_around_client=proxy_client())
 
 
 # TODO: Update the model name in wholoo to match this.

@@ -96,4 +96,4 @@
 #         *,
 #         force: bool = False,
 #     ) -> None:
-#         self._upsert_episodes_in_file_order(season, title_key, force=force)
+#         self._upsert_episodes_in_file_order(season, title_key)

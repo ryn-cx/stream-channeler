@@ -22,7 +22,7 @@ from plugins.utils.base_plugin.files import (
     SingleArgEndpointFile,
 )
 from plugins.utils.constants import INCOMPLETE_STATUS
-from plugins.utils.get_around_client import get_around_client
+from plugins.utils.proxy_client import proxy_client
 
 if TYPE_CHECKING:
     from naphki.video_episodes.models import Item
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 # TODO: Validate
 @cache
 def naphki() -> Naphki:
-    return Naphki(get_around_client=get_around_client())
+    return Naphki(get_around_client=proxy_client())
 
 
 # TODO: Validate

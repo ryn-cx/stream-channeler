@@ -2,27 +2,23 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
-from plugins.Amazon.importer import (
-    AmazonImporter,
-    AmazonMovieImporter,
-    AmazonSeriesImporter,
-)
-from plugins.Amazon.shared import AmazonShared
+from plugins.Amazon.movie_importer import AmazonMovieImporter
+from plugins.Amazon.series_importer import AmazonSeriesImporter
+from plugins.Amazon.shared import AmazonImporter, AmazonShared
 from plugins.utils.abstract_plugin import AbstractPlugin
+from plugins.utils.base_plugin.media_type import MediaType
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
+
     from app.titles.models import Title
 
 
 class Amazon(AmazonShared, AbstractPlugin, register=True):
-    # TODO: Validate
     @override
-    def similar_title_urls(self, title: Title) -> list[str]:
-        return list(
-            self.detail_file(title.key).other_title_urls_on_this_page(
-                "Customers also watched",
-            ),
-        )
+    def similar_title_urls(self, title: Title) -> Collection[str]:
+        detail_file = self.detail_file(title.key)
+        return detail_file.other_title_urls_on_this_page("Customers also watched")
 
     @override
     def _media_importer_from_url(self, url: str) -> AmazonImporter:
@@ -38,6 +34,6 @@ class Amazon(AmazonShared, AbstractPlugin, register=True):
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
 
-        if title.media_type == "Movie":
+        if title.media_type == MediaType.movie:
             return AmazonMovieImporter(self.session, self.plugin, self._file_cache)
         return AmazonSeriesImporter(self.session, self.plugin, self._file_cache)

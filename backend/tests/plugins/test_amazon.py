@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 
 from plugins.Amazon import Amazon
 from tests.plugins.plugin_validator import (
+    InvalidURLValidator,
     PluginValidator,
     StandardTests,
 )
@@ -14,7 +15,7 @@ class AmazonValidator(PluginValidator[Amazon]):
 
 
 # TODO: Validate
-class TestChannelSubscriptionTitle(StandardTests[Amazon], AmazonValidator):
+class TestPrimeSeries(StandardTests[Amazon], AmazonValidator):
     import_time = datetime(2026, 9, 11, tzinfo=UTC)
     title_key = "B0H8N888NW"
     urls = (
@@ -34,3 +35,41 @@ class TestMovie(StandardTests[Amazon], AmazonValidator):
         "/detail/{title_key}",
         "https://www.primevideo.com/detail/{title_key}?_ssoLoop=1",
     )
+
+
+# TODO: Validate
+class TestDeletedMovie(StandardTests[Amazon], AmazonValidator):
+    import_time = datetime(2026, 9, 18, tzinfo=UTC)
+    title_key = "B07X35M73T"
+    urls = ("/gp/video/detail/{title_key}",)
+
+
+# TODO: Validate
+class TestDeletedSeason(StandardTests[Amazon], AmazonValidator):
+    import_time = datetime(2026, 9, 18, tzinfo=UTC)
+    title_key = "0FKBFKZS1VKKD0L8H8CMEEQWC4"
+    urls = (
+        "/detail/{title_key}",
+        "https://www.primevideo.com/detail/{title_key}?ref_=atv_dp_season_select_s1",
+    )
+
+
+# TODO: Validate
+class TestMovieCollection(StandardTests[Amazon], AmazonValidator):
+    import_time = datetime(2026, 9, 18, tzinfo=UTC)
+    title_key = "B003QSLW0K"
+    urls = ("https://www.amazon.com/gp/video/detail/{title_key}",)
+
+
+# TODO: Validate
+class TestSeriesollection(StandardTests[Amazon], AmazonValidator):
+    import_time = datetime(2026, 9, 18, tzinfo=UTC)
+    title_key = "B09ML1QV1S"
+    urls = ("https://www.amazon.com/gp/video/detail/{title_key}",)
+
+
+# TODO: Validate
+class TestDeletedSeries(StandardTests[Amazon], AmazonValidator):
+    import_time = datetime(2026, 9, 18, tzinfo=UTC)
+    title_key = "0TVN8DVKCYBGQSSIDNFSE525A6"
+    urls = ("https://www.primevideo.com/detail/{title_key}",)

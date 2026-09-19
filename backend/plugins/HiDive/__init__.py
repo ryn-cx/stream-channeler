@@ -11,7 +11,6 @@ from diving_board.content_grid import (
 from loguru import logger
 
 from plugins.HiDive.constants import (
-    MOVIE_MEDIA_TYPE,
     MOVIE_URL_REGEX,
     SEASON_SERIES_URL_REGEX,
     SEASON_URL_REGEX,
@@ -22,9 +21,10 @@ from plugins.HiDive.movie_importer import HiDiveMovieImporter
 from plugins.HiDive.series_importer import HiDiveSeriesImporter
 from plugins.HiDive.shared import HiDiveShared
 from plugins.utils.abstract_plugin import AbstractPlugin
+from plugins.utils.base_plugin.media_type import MediaType
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Collection, Sequence
 
     from diving_board.content_grid import models as content_grid_models
     from diving_board.schedule import models as schedule_models
@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from app.titles.models import Title
 
 
+# TODO: Validate
 class HiDive(HiDiveShared, AbstractPlugin, register=True):
     @override
     def create_initial_channel_records(self) -> None:
@@ -78,6 +79,7 @@ class HiDive(HiDiveShared, AbstractPlugin, register=True):
             return HiDiveSeriesImporter(self.session, self.plugin, self._file_cache)
         return HiDiveMovieImporter(self.session, self.plugin, self._file_cache)
 
+    # TODO: Validate
     @override
     def _media_importer_from_title(
         self,
@@ -86,15 +88,15 @@ class HiDive(HiDiveShared, AbstractPlugin, register=True):
         if not title.media_type:  # Should be impossible
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
-        if title.media_type == "Movie":
+        if title.media_type == MediaType.movie:
             return HiDiveMovieImporter(self.session, self.plugin, self._file_cache)
         return HiDiveSeriesImporter(self.session, self.plugin, self._file_cache)
 
     # TODO: Validate
     @override
-    def similar_title_urls(self, title: Title) -> list[str]:
+    def similar_title_urls(self, title: Title) -> Collection[str]:
         elements: Sequence[series_models.Element | vod_models.Element]
-        if title.media_type == MOVIE_MEDIA_TYPE:
+        if title.media_type == MediaType.movie:
             elements = self.vod_file(title.key).parsed().elements
         else:
             elements = self.series_file(title.key).parsed().elements

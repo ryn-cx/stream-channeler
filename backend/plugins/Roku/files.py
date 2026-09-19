@@ -17,13 +17,13 @@ from nana.content.models import ContentModel
 from nana.exceptions import ContentNotFoundError
 
 from plugins.utils.base_plugin.files import SingleArgEndpointFile
-from plugins.utils.get_around_client import get_around_client
+from plugins.utils.proxy_client import proxy_client
 
 
 # TODO: Validate
 @cache
 def nana() -> Nana:
-    return Nana(get_around_client=get_around_client())
+    return Nana(get_around_client=proxy_client())
 
 
 # TODO: Validate

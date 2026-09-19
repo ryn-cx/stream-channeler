@@ -253,7 +253,7 @@ class Title(BaseTitle, ChildMediaMixin[Source, "Season"], table=True):
         return [genre.name for genre in self.genres]
 
     # TODO: Validate
-    def set_genres(self, names: Iterable[str]) -> None:
+    def upsert_genres(self, names: Iterable[str]) -> None:
         wanted = list(dict.fromkeys(name.strip() for name in names if name.strip()))
         stored = {genre.name: genre for genre in self.genres}
         for name in wanted:

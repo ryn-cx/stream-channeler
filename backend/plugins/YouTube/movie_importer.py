@@ -62,7 +62,7 @@
 #         source = self.paid_or_free_source(title_key)
 
 #         title = Title.get_from_memory(self.session, source, title_key)
-#         if self._title_is_outdated(title, force=force):
+#         if self._title_is_outdated(title):
 #             data_timestamps = self._title_files_data_timestamps(title_key)
 #             title = Title(
 #                 key=title_key,
@@ -82,7 +82,7 @@
 #             ).upsert(source, title)
 #             title.set_update_at(None)
 
-#         self._upsert_season(title, title_key, force=force)
+#         self._upsert_season(title, title_key)
 #         self._soft_delete_missing_seasons_and_episodes(title_key)
 
 #         return title
@@ -96,7 +96,7 @@
 #         force: bool = False,
 #     ) -> None:
 #         season = Season.get_from_memory(self.session, title, title_key)
-#         if self._season_is_outdated(season, title_key, force=force):
+#         if self._season_is_outdated(season, title_key):
 #             video_item = get_first_item(self.videos_file(title_key).parsed().items)
 #             data_timestamps = self._season_files_data_timestamps(title_key, title_key)
 #             season = Season(
@@ -108,4 +108,4 @@
 #                 title_id=title.id,
 #             ).upsert(title, season)
 #             season.set_update_at(min(data_timestamps))
-#         self._upsert_episodes(season, title_key, force=force)
+#         self._upsert_episodes(season, title_key)

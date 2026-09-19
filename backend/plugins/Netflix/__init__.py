@@ -11,8 +11,11 @@ from plugins.Netflix.importer import (
 )
 from plugins.Netflix.shared import NetflixShared
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
+from plugins.utils.base_plugin.media_type import MediaType
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
+
     from app.titles.models import Title
 
 
@@ -39,7 +42,7 @@ class Netflix(NetflixShared, AbstractPlugin, register=True):
 
     # TODO: Validate
     @override
-    def similar_title_urls(self, title: Title) -> list[str]:
+    def similar_title_urls(self, title: Title) -> Collection[str]:
         similar_file = self.similar_file(title.key)
         # TODO: This is temporary until all files are downloaded
         similar_file.download_if_outdated()
@@ -48,12 +51,13 @@ class Netflix(NetflixShared, AbstractPlugin, register=True):
             for similar in similar_file.parsed().similar_videos
         ]
 
+    # TODO: Validate
     @override
     def _media_importer_from_title(self, title: Title) -> NetflixImporter:
         if not title.media_type:  # Should be impossible.
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
 
-        if title.media_type == "Movie":
+        if title.media_type == MediaType.movie:
             return NetflixMovieImporter(self.session, self.plugin, self._file_cache)
         return NetflixSeriesImporter(self.session, self.plugin, self._file_cache)

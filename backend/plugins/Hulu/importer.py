@@ -9,7 +9,6 @@ from app.episodes.models import Episode
 from app.seasons.models import Season
 from app.titles.models import Title
 from app.tmdb_media.keys import watch_identifier
-from app.utils.update_at import staggered_monthly_update_at
 from plugins.Hulu.constants import (
     MOVIE_URL_REGEX,
     RECOMMENDATIONS_TOPIC,
@@ -37,6 +36,7 @@ from plugins.Hulu.utils import (
 )
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
+from plugins.utils.base_plugin.media_type import MediaType
 from plugins.utils.base_plugin.url import ParsedURL
 
 if TYPE_CHECKING:
@@ -77,7 +77,7 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
 
     # TODO: Validate
     @abstractmethod
-    def _upsert_title_seasons(self, title: Title, *, force: bool = False) -> None: ...
+    def _upsert_title_seasons(self, title: Title) -> None: ...
 
     # TODO: Validate
     @override
@@ -113,91 +113,79 @@ class HuluImporter(HuluShared, BaseImporter, ABC):
         self,
         source: Source,
         title_key: str,
-        *,
-        force: bool = False,
     ) -> Title:
-        title = Title.get_from_memory(self.session, source, title_key)
-        if self._title_is_outdated(title, force=force):
-            title = self._title_record(source, title_key).upsert(source, title)
-            title.set_update_at(
-                staggered_monthly_update_at(
-                    title_key,
-                    min(self._title_files_data_timestamps(title_key)),
-                ),
-            )
-            title.set_genres(
-                self._title_files(title_key)[0].details().entity.genre_names,
-            )
+        existing_title = Title.get_from_memory(self.session, source, title_key)
+        upserted_title = self._title_record(source, title_key).upsert(
+            source,
+            existing_title,
+        )
+        upserted_title.upsert_genres(
+            self._title_files(title_key)[0].details().entity.genre_names,
+        )
 
-        self._upsert_title_seasons(title, force=force)
-        self._upsert_collection_seasons(title, force=force)
+        self._upsert_title_seasons(upserted_title)
+        self._upsert_collection_seasons(upserted_title)
         self._soft_delete_missing_seasons_and_episodes(title_key)
-        self.add_title_to_plugin_channels(title)
+        self.add_title_to_plugin_channels(upserted_title)
+        self._set_title_update_at(upserted_title)
 
-        return title
+        return upserted_title
 
     # TODO: Validate
-    def _upsert_collection_seasons(self, title: Title, *, force: bool = False) -> None:
+    def _upsert_collection_seasons(self, title: Title) -> None:
         for component in watch_components(self._title_components(title.key)):
             season_key = collection_season_key(title.key, component.id)
-            season = Season.get_from_memory(self.session, title, season_key)
-            if self._season_is_outdated(season, title.key, force=force):
-                season = Season(
-                    key=season_key,
-                    name=component.name,
-                    season_number=0,
-                    sort_order=2147483647,
-                    data_timestamp=self._season_files_data_timestamp(
-                        season_key,
-                        title.key,
-                    ),
-                    title_id=title.id,
-                ).upsert(title, season)
-                season.set_update_at(None)
+            existing_season = Season.get_from_memory(self.session, title, season_key)
+            upserted_season = Season(
+                key=season_key,
+                name=component.name,
+                season_number=0,
+                sort_order=2147483647,
+                data_timestamp=self._season_files_data_timestamp(
+                    season_key,
+                    title.key,
+                ),
+                title_id=title.id,
+            ).upsert(title, existing_season)
 
-            self._upsert_collection_episodes(season, title.key, force=force)
+            self._upsert_collection_episodes(upserted_season, title.key)
 
     # TODO: Validate
     def _upsert_collection_episodes(
         self,
         season: Season,
         title_key: str,
-        *,
-        force: bool = False,
     ) -> None:
         for sort_order, item in enumerate(
             self._collection_items(season.key, title_key),
         ):
             episode_key = str(item.id)
-            episode = Episode.get_from_memory(self.session, season, episode_key)
-            if self._episode_is_outdated(
-                episode,
-                season.key,
-                title_key,
-                force=force,
-            ):
-                hero_artwork = item.artwork.video_horizontal_hero
-                hero_path = hero_artwork.path if hero_artwork else None
-                episode = Episode(
-                    key=episode_key,
-                    watch_identifier=watch_identifier(self.plugin_name(), episode_key),
-                    name=item.name,
-                    description=item.description,
-                    url=episode_url(episode_key),
-                    image_url=image_url(hero_path),
-                    thumbnail_url=thumbnail_url(hero_path),
-                    duration=item.bundle.duration if item.bundle else None,
-                    air_date=item.premiere_date,
-                    episode_number=sort_order + 1,
-                    sort_order=sort_order,
-                    data_timestamp=self._episode_files_data_timestamp(
-                        episode_key,
-                        season.key,
-                        title_key,
-                    ),
-                    season_id=season.id,
-                ).upsert(season, episode)
-                episode.set_update_at(None)
+            existing_episode = Episode.get_from_memory(
+                self.session,
+                season,
+                episode_key,
+            )
+            hero_artwork = item.artwork.video_horizontal_hero
+            hero_path = hero_artwork.path if hero_artwork else None
+            Episode(
+                key=episode_key,
+                watch_identifier=watch_identifier(self.plugin_name(), episode_key),
+                name=item.name,
+                description=item.description,
+                url=episode_url(episode_key),
+                image_url=image_url(hero_path),
+                thumbnail_url=thumbnail_url(hero_path),
+                duration=item.bundle.duration if item.bundle else None,
+                air_date=item.premiere_date,
+                episode_number=sort_order + 1,
+                sort_order=sort_order,
+                data_timestamp=self._episode_files_data_timestamp(
+                    episode_key,
+                    season.key,
+                    title_key,
+                ),
+                season_id=season.id,
+            ).upsert(season, existing_episode)
 
     # TODO: Validate
     def _collection_season_keys(self, title_key: str) -> list[str]:
@@ -356,7 +344,7 @@ class HuluSeriesImporter(HuluImporter):
             year=entity.premiere_date.year if entity.premiere_date else None,
             # TODO: There are mini series or documentary labels as well that could
             # be intermixed here?
-            media_type=self._media_type_name(),
+            media_type=MediaType.series,
             url=self.title_url(title_key),
             image_url=image_url(parsed_series.artwork.program_tile.path),
             thumbnail_url=thumbnail_url(parsed_series.artwork.program_tile.path),
@@ -366,69 +354,65 @@ class HuluSeriesImporter(HuluImporter):
 
     # TODO: Validate
     @override
-    def _upsert_title_seasons(self, title: Title, *, force: bool = False) -> None:
+    def _upsert_title_seasons(self, title: Title) -> None:
         for sort_order, season_number in enumerate(
             season_numbers(self.series_file(title.key).parsed()),
         ):
             season_key = build_season_key(title.key, season_number)
-            season = Season.get_from_memory(self.session, title, season_key)
-            if self._season_is_outdated(season, title.key, force=force):
-                season = Season(
-                    key=season_key,
-                    name=(
-                        self.season_file(title.key, season_number)
-                        .parsed()
-                        .series_grouping_metadata.grouping_name
-                    ),
-                    season_number=season_number,
-                    sort_order=sort_order,
-                    data_timestamp=self._season_files_data_timestamp(
-                        season_key,
-                        title.key,
-                    ),
-                    title_id=title.id,
-                ).upsert(title, season)
-                season.set_update_at(None)
+            existing_season = Season.get_from_memory(self.session, title, season_key)
+            upserted_season = Season(
+                key=season_key,
+                name=(
+                    self.season_file(title.key, season_number)
+                    .parsed()
+                    .series_grouping_metadata.grouping_name
+                ),
+                season_number=season_number,
+                sort_order=sort_order,
+                data_timestamp=self._season_files_data_timestamp(
+                    season_key,
+                    title.key,
+                ),
+                title_id=title.id,
+            ).upsert(title, existing_season)
 
-            self._upsert_episodes(season, force=force)
-            self._set_season_update_at_based_on_last_episode(season)
+            self._upsert_episodes(upserted_season)
+            self._set_season_update_at(upserted_season)
 
     # TODO: Validate
-    def _upsert_episodes(self, season: Season, *, force: bool = False) -> None:
+    def _upsert_episodes(self, season: Season) -> None:
         title_key, season_number = split_season_key(season.key)
         items = season_items(self.season_file(title_key, season_number).parsed())
         for sort_order, item in enumerate(items):
             episode_key = str(item.id)
-            episode = Episode.get_from_memory(self.session, season, episode_key)
+            existing_episode = Episode.get_from_memory(
+                self.session,
+                season,
+                episode_key,
+            )
 
-            if self._episode_is_outdated(
-                episode,
-                season.key,
-                title_key,
-                force=force,
-            ):
-                hero_artwork = item.artwork.video_horizontal_hero
-                hero_path = hero_artwork.path if hero_artwork else None
-                episode = Episode(
-                    key=episode_key,
-                    watch_identifier=watch_identifier(self.plugin_name(), episode_key),
-                    name=item.name,
-                    episode_number=int(item.number),
-                    url=episode_url(episode_key),
-                    description=item.description,
-                    image_url=image_url(hero_path),
-                    thumbnail_url=thumbnail_url(hero_path),
-                    duration=item.duration,
-                    air_date=item.premiere_date,
-                    sort_order=sort_order,
-                    data_timestamp=self._episode_files_data_timestamp(
-                        episode_key,
-                        season.key,
-                        title_key,
-                    ),
-                    season_id=season.id,
-                ).upsert(season, episode)
-                episode.set_update_at(episode.air_date)
+            hero_artwork = item.artwork.video_horizontal_hero
+            hero_path = hero_artwork.path if hero_artwork else None
+            Episode(
+                key=episode_key,
+                watch_identifier=watch_identifier(self.plugin_name(), episode_key),
+                name=item.name,
+                episode_number=int(item.number),
+                url=episode_url(episode_key),
+                description=item.description,
+                image_url=image_url(hero_path),
+                thumbnail_url=thumbnail_url(hero_path),
+                duration=item.duration,
+                air_date=item.premiere_date,
+                sort_order=sort_order,
+                data_timestamp=self._episode_files_data_timestamp(
+                    episode_key,
+                    season.key,
+                    title_key,
+                ),
+                season_id=season.id,
+                update_at=item.premiere_date,
+            ).upsert(season, existing_episode)
 
 
 # TODO: Validate
@@ -527,57 +511,48 @@ class HuluMovieImporter(HuluImporter):
             thumbnail_url=thumbnail_url(
                 parsed_movie.entity.artwork.program_tile.path,
             ),
-            media_type="Movie",
+            media_type=MediaType.movie,
             data_timestamp=self._title_files_data_timestamp(title_key),
             source_id=source.id,
         )
 
     # TODO: Validate
     @override
-    def _upsert_title_seasons(self, title: Title, *, force: bool = False) -> None:
-        season = Season.get_from_memory(self.session, title, title.key)
-        if self._season_is_outdated(season, title.key, force=force):
-            season = Season(
-                key=title.key,
-                season_number=0,
-                sort_order=0,
-                data_timestamp=self._season_files_data_timestamp(title.key, title.key),
-                title_id=title.id,
-            ).upsert(title, season)
-            # Movies should be updated from update_show.
-            season.set_update_at(None)
+    def _upsert_title_seasons(self, title: Title) -> None:
+        existing_season = Season.get_from_memory(self.session, title, title.key)
+        upserted_season = Season(
+            key=title.key,
+            season_number=0,
+            sort_order=0,
+            data_timestamp=self._season_files_data_timestamp(title.key, title.key),
+            title_id=title.id,
+        ).upsert(title, existing_season)
+        # Movies should be updated from update_show.
 
-        self._upsert_episode(season, force=force)
+        self._upsert_episode(upserted_season)
 
     # TODO: Validate
-    def _upsert_episode(self, season: Season, *, force: bool = False) -> None:
+    def _upsert_episode(self, season: Season) -> None:
         parsed_movie = self.movie_file(season.key).details()
-        episode = Episode.get_from_memory(self.session, season, season.key)
-        if self._episode_is_outdated(
-            episode,
-            season.key,
-            season.key,
-            force=force,
-        ):
-            episode = Episode(
-                key=season.key,
-                watch_identifier=watch_identifier(self.plugin_name(), season.key),
-                name=parsed_movie.entity.name,
-                description=parsed_movie.entity.description,
-                url=episode_url(season.key),
-                image_url=image_url(parsed_movie.entity.artwork.program_tile.path),
-                thumbnail_url=thumbnail_url(
-                    parsed_movie.entity.artwork.program_tile.path,
-                ),
-                duration=parsed_movie.entity.duration,
-                episode_number=0,
-                sort_order=0,
-                data_timestamp=self._episode_files_data_timestamp(
-                    season.key,
-                    season.key,
-                    season.key,
-                ),
-                season_id=season.id,
-            ).upsert(season, episode)
-            # Movies should be updated from update_show.
-            episode.set_update_at(None)
+        existing_episode = Episode.get_from_memory(self.session, season, season.key)
+        Episode(
+            key=season.key,
+            watch_identifier=watch_identifier(self.plugin_name(), season.key),
+            name=parsed_movie.entity.name,
+            description=parsed_movie.entity.description,
+            url=episode_url(season.key),
+            image_url=image_url(parsed_movie.entity.artwork.program_tile.path),
+            thumbnail_url=thumbnail_url(
+                parsed_movie.entity.artwork.program_tile.path,
+            ),
+            duration=parsed_movie.entity.duration,
+            episode_number=0,
+            sort_order=0,
+            data_timestamp=self._episode_files_data_timestamp(
+                season.key,
+                season.key,
+                season.key,
+            ),
+            season_id=season.id,
+        ).upsert(season, existing_episode)
+        # Movies should be updated from update_show.

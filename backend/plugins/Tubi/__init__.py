@@ -8,6 +8,7 @@ from plugins.Tubi.constants import EPISODE_URL_REGEX, MOVIE_URL_REGEX, SERIES_UR
 from plugins.Tubi.importer import TubiImporter, TubiMovieImporter, TubiSeriesImporter
 from plugins.Tubi.shared import TubiShared
 from plugins.utils.abstract_plugin import AbstractPlugin
+from plugins.utils.base_plugin.media_type import MediaType
 
 if TYPE_CHECKING:
     from app.titles.models import Title
@@ -36,6 +37,6 @@ class Tubi(TubiShared, AbstractPlugin, register=False):
         if not title.media_type:
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
-        if title.media_type == "Movie":
+        if title.media_type == MediaType.movie:
             return TubiMovieImporter(self.session, self.plugin, self._file_cache)
         return TubiSeriesImporter(self.session, self.plugin, self._file_cache)

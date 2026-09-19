@@ -3,7 +3,7 @@
 
 import time
 from collections.abc import Callable, Sequence
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from loguru import logger
@@ -36,6 +36,7 @@ from app.users.models import User
 from app.users.plugin_user import is_plugin_user
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin
+from plugins.utils.constants import OUTDATED_STATUS
 from plugins.utils.manage_plugins import (
     import_plugins,
     plugins,
@@ -240,24 +241,33 @@ MEDIA_CLASSES_IN_ORDER: tuple[MediaClass, ...] = (
 
 
 # TODO: Validate
+def _in_channel_condition(media_class: MediaClass) -> ColumnElement[bool] | None:
+    if media_class is Plugin:
+        return _plugin_has_season_in_channel_exists() | (
+            _plugin_holds_no_media_exists() & _any_channel_holds_a_title_exists()
+        )
+    if media_class is Source:
+        return _source_has_season_in_channel_exists()
+    if media_class is Title:
+        return _title_has_season_in_channel_exists()
+    if media_class in (Season, Episode):
+        return _season_in_channel_exists()
+    return None
+
+
+# TODO: Validate
 def _restrict_to_media_in_channel[ResultT](
     statement: SelectOfScalar[ResultT],
     media_class: MediaClass,
 ) -> SelectOfScalar[ResultT]:
-    # Skip items that have no Season included in any channel anywhere below them
-    # in the Plugin -> Source -> Title -> Season tree, so unused media is not updated.
-    if media_class is Plugin:
-        return statement.where(
-            _plugin_has_season_in_channel_exists()
-            | (_plugin_holds_no_media_exists() & _any_channel_holds_a_title_exists()),
-        )
-    if media_class is Source:
-        return statement.where(_source_has_season_in_channel_exists())
-    if media_class is Title:
-        return statement.where(_title_has_season_in_channel_exists())
-    if media_class in (Season, Episode):
-        return statement.where(_season_in_channel_exists())
-    return statement
+    condition = _in_channel_condition(media_class)
+    if condition is None:
+        return statement
+    return statement.where(
+        condition
+        | (col(media_class.status) == OUTDATED_STATUS)
+        | (col(media_class.update_at) < tz_datetime.now() - timedelta(days=365)),
+    )
 
 
 # TODO: Validate
@@ -306,7 +316,6 @@ def _process_outdated_items(
         .where(
             col(media_class.update_at).is_not(None),
             col(media_class.update_at) < tz_datetime.now(),
-            col(media_class.deleted_at).is_(None),
         )
         .order_by(col(media_class.update_at).asc())
     )
@@ -337,6 +346,9 @@ def _process_outdated_items(
                     update(item, item.update_at)
                 else:
                     update(item)
+
+                if item.status == OUTDATED_STATUS:
+                    item.status = None
 
                 log_msg = (
                     f"[{plugin_key}] Successfully updated {media_type_name}: {item.key}"
@@ -420,7 +432,6 @@ def _next_update_at(session: Session) -> datetime | None:
             _restrict_to_media_in_channel(
                 media_class.select_with_plugin().where(
                     col(media_class.update_at) > tz_datetime.now(),
-                    col(media_class.deleted_at).is_(None),
                     col(Plugin.key).not_in(specialized_keys),
                 ),
                 media_class,

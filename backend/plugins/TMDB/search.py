@@ -26,6 +26,7 @@ from plugins.TMDB.utils import (
     thumbnail_url,
     tmdb_url,
 )
+from plugins.utils.base_plugin.media_type import MediaType
 
 
 # TODO: Validate
@@ -165,8 +166,8 @@ class TMDBSearch(TMDBBaseFiles):
 
     # A multi search also returns people, who cannot be added to a channel.
     _SEARCH_MEDIA_TYPES: ClassVar = {
-        "movie": "Movie",
-        "tv": "Series",
+        "movie": MediaType.movie,
+        "tv": MediaType.series,
     }
 
     # TODO: Validate

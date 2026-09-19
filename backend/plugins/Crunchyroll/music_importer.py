@@ -12,7 +12,6 @@ from app.sources.models import Source
 from app.titles.models import Title
 from app.tmdb_media.keys import watch_identifier
 from app.utils import tz_datetime
-from app.utils.update_at import staggered_monthly_update_at
 from plugins.Crunchyroll.constants import (
     ARTIST_URL_REGEX,
     CONCERT_URL_REGEX,
@@ -29,6 +28,7 @@ from plugins.Crunchyroll.utils import (
 )
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
+from plugins.utils.base_plugin.media_type import MediaType
 from plugins.utils.base_plugin.url import ParsedURL
 
 if TYPE_CHECKING:
@@ -160,58 +160,53 @@ class CrunchyrollMusicUpsert(CrunchyrollMusicChannels, ABC):
         self,
         source: Source,
         title_key: str,
-        *,
-        force: bool = False,
     ) -> Title:
-        title = Title.get_from_memory(self.session, source, title_key)
-        if self._title_is_outdated(title, force=force):
-            artist_data = self.artist_file(title_key).parsed()
-            title = Title(
-                key=title_key,
-                name=artist_data.name,
-                description=artist_data.description,
-                media_type="Music",
-                url=self.title_url(title_key),
-                image_url=largest_image(artist_data.images.poster_wide),
-                thumbnail_url=nearest_thumbnail(artist_data.images.poster_wide),
-                data_timestamp=self._title_files_data_timestamp(title_key),
-                tmdb_title_validated_at=tz_datetime.now(),
-                source_id=source.id,
-            ).upsert(source, title)
-            title.set_update_at(
-                staggered_monthly_update_at(
-                    title_key,
-                    min(self._title_files_data_timestamps(title_key)),
-                ),
-            )
-            title.set_genres(genre.display_value for genre in artist_data.genres)
+        existing_title = Title.get_from_memory(self.session, source, title_key)
+        artist_data = self.artist_file(title_key).parsed()
+        upserted_title = Title(
+            key=title_key,
+            name=artist_data.name,
+            description=artist_data.description,
+            media_type=MediaType.music,
+            url=self.title_url(title_key),
+            image_url=largest_image(artist_data.images.poster_wide),
+            thumbnail_url=nearest_thumbnail(artist_data.images.poster_wide),
+            data_timestamp=self._title_files_data_timestamp(title_key),
+            tmdb_title_validated_at=tz_datetime.now(),
+            source_id=source.id,
+        ).upsert(
+            source,
+            existing_title,
+        )
+        upserted_title.upsert_genres(
+            genre.display_value for genre in artist_data.genres
+        )
 
-        self._upsert_seasons(title, force=force)
+        self._upsert_seasons(upserted_title)
         self._soft_delete_missing_seasons_and_episodes(title_key)
-        self.add_title_to_plugin_channels(title)
+        self.add_title_to_plugin_channels(upserted_title)
 
-        return title
+        self._set_title_update_at(upserted_title)
+        return upserted_title
 
     # TODO: Validate
-    def _upsert_seasons(self, title: Title, *, force: bool = False) -> None:
+    def _upsert_seasons(self, title: Title) -> None:
         seasons: list[Season] = []
         for category in CrunchyrollMusicCategory:
-            season = Season.get_from_memory(self.session, title, category)
-            if self._season_is_outdated(season, title.key, force=force):
-                season = Season(
-                    key=category,
-                    name=MUSIC_CATEGORY_NAMES[category],
-                    data_timestamp=self._season_files_data_timestamp(
-                        category,
-                        title.key,
-                    ),
-                    title_id=title.id,
-                ).upsert(title, season)
-                # All updates are set by update_source.
-                season.set_update_at(None)
+            existing_season = Season.get_from_memory(self.session, title, category)
+            upserted_season = Season(
+                key=category,
+                name=MUSIC_CATEGORY_NAMES[category],
+                data_timestamp=self._season_files_data_timestamp(
+                    category,
+                    title.key,
+                ),
+                title_id=title.id,
+            ).upsert(title, existing_season)
+            # All updates are set by update_source.
 
-            self._upsert_episodes(season, title.key, category, force=force)
-            seasons.append(season)
+            self._upsert_episodes(upserted_season, title.key, category)
+            seasons.append(upserted_season)
 
     # TODO: Validate
     def _upsert_episodes(
@@ -219,8 +214,6 @@ class CrunchyrollMusicUpsert(CrunchyrollMusicChannels, ABC):
         season: Season,
         title_key: str,
         category: CrunchyrollMusicCategory,
-        *,
-        force: bool = False,
     ) -> None:
         listing: Sequence[ConcertListingDatum | MusicVideoListingDatum] = (
             self.season_file(title_key, category).parsed().data
@@ -229,33 +222,30 @@ class CrunchyrollMusicUpsert(CrunchyrollMusicChannels, ABC):
         # reversed to number them the way they were released.
         for sort_order, datum in enumerate(reversed(listing)):
             episode_key = datum.id
-            episode = Episode.get_from_memory(self.session, season, episode_key)
-            if self._episode_is_outdated(
-                episode,
-                season.key,
-                title_key,
-                force=force,
-            ):
-                details = self.concert_or_music_video_file(episode_key).parsed()
-                episode = Episode(
-                    key=episode_key,
-                    watch_identifier=watch_identifier(self.plugin_name(), episode_key),
-                    name=details.title,
-                    description=details.description,
-                    url=self.episode_url(category, episode_key),
-                    image_url=largest_image(details.images.thumbnail),
-                    thumbnail_url=nearest_thumbnail(details.images.thumbnail),
-                    duration=details.duration_ms // 1000,
-                    sort_order=sort_order,
-                    air_date=details.original_release,
-                    data_timestamp=self._episode_files_data_timestamp(
-                        episode_key,
-                        season.key,
-                        title_key,
-                    ),
-                    season_id=season.id,
-                ).upsert(season, episode)
-                episode.set_update_at(None)
+            existing_episode = Episode.get_from_memory(
+                self.session,
+                season,
+                episode_key,
+            )
+            details = self.concert_or_music_video_file(episode_key).parsed()
+            Episode(
+                key=episode_key,
+                watch_identifier=watch_identifier(self.plugin_name(), episode_key),
+                name=details.title,
+                description=details.description,
+                url=self.episode_url(category, episode_key),
+                image_url=largest_image(details.images.thumbnail),
+                thumbnail_url=nearest_thumbnail(details.images.thumbnail),
+                duration=details.duration_ms // 1000,
+                sort_order=sort_order,
+                air_date=details.original_release,
+                data_timestamp=self._episode_files_data_timestamp(
+                    episode_key,
+                    season.key,
+                    title_key,
+                ),
+                season_id=season.id,
+            ).upsert(season, existing_episode)
 
 
 # TODO: Validate
@@ -264,7 +254,7 @@ class CrunchyrollMusicImporter(CrunchyrollMusicUpsert):
     @override
     def _next_source_update_at(self) -> datetime:
         # Music isn't that important to be up to date so weekly checks are adequate.
-        return min(self._source_files_data_timestamps()) + timedelta(days=7)
+        return self._source_files_data_timestamp() + timedelta(days=7)
 
     # TODO: Validate
     @classmethod
@@ -335,6 +325,6 @@ class CrunchyrollMusicImporter(CrunchyrollMusicUpsert):
         self._mark_mismatched_titles_as_outdated(
             self.source_name(),
             new_title_keys,
-            self._source_files_data_timestamps(),
+            self._source_files_data_timestamp(),
         )
         self.upsert_source(self.source_name())

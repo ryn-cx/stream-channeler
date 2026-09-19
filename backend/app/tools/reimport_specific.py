@@ -28,7 +28,7 @@ def reimport_single_title(session: Session, title_id: uuid.UUID) -> None:
     logger.info(f"Reimporting {title.name or title.key} from {title.source.plugin.key}")
     with bypass_file_updates():
         plugin_instance = plugin_class(session, title.source.plugin)
-        plugin_instance.update_title(title, force=True)
+        plugin_instance.update_title(title)
     session.commit()
 
 

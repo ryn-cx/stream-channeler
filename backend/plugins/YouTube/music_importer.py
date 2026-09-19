@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Any, override
 from app.seasons.models import Season
 from app.titles.models import Title
 from app.utils import tz_datetime
-from app.utils.update_at import staggered_monthly_update_at
 from plugins.utils.abstract_plugin import InvalidURLError
+from plugins.utils.base_plugin.media_type import MediaType
 from plugins.YouTube.constants import MUSIC_SOURCE_KEY
 from plugins.YouTube.importer import YouTubeImporter
 from plugins.YouTube.utils import (
@@ -92,10 +92,8 @@ class YouTubeMusicImporter(YouTubeImporter):
         self,
         season: Season,
         title_key: str,
-        *,
-        force: bool = False,
     ) -> None:
-        self._upsert_episodes_in_file_order(season, title_key, force=force)
+        self._upsert_episodes_in_file_order(season, title_key)
 
     # TODO: Validate
     @override
@@ -161,31 +159,27 @@ class YouTubeMusicImporter(YouTubeImporter):
         self,
         source: Source,
         title_key: str,
-        *,
-        force: bool = False,
     ) -> Title:
         source = self.music_source
 
-        title = Title.get_from_memory(self.session, source, title_key)
-        if self._title_is_outdated(title, force=force):
-            data_timestamps = self._title_files_data_timestamps(title_key)
-            title = Title(
-                key=title_key,
-                name=title_key,
-                url=None,
-                media_type="YouTube Artist",
-                data_timestamp=max(data_timestamps),
-                update_at=tz_datetime.max(),
-                tmdb_title_validated_at=tz_datetime.now(),
-                source_id=source.id,
-            ).upsert(source, title)
-            title.set_update_at(None)
+        existing_title = Title.get_from_memory(self.session, source, title_key)
+        data_timestamp = self._title_files_data_timestamp(title_key)
+        upserted_title = Title(
+            key=title_key,
+            name=title_key,
+            url=None,
+            media_type=MediaType.youtube_artist,
+            data_timestamp=data_timestamp,
+            update_at=tz_datetime.max(),
+            tmdb_title_validated_at=tz_datetime.now(),
+            source_id=source.id,
+        ).upsert(source, existing_title)
 
         for album_key in self._album_keys(title_key):
-            self._upsert_album_season(title, album_key, title_key, force=force)
+            self._upsert_album_season(upserted_title, album_key, title_key)
         self._soft_delete_missing_seasons_and_episodes(title_key)
 
-        return title
+        return upserted_title
 
     # TODO: Validate
     def _upsert_album_season(
@@ -193,26 +187,24 @@ class YouTubeMusicImporter(YouTubeImporter):
         title: Title,
         album_key: str,
         title_key: str,
-        *,
-        force: bool = False,
     ) -> None:
-        season = Season.get_from_memory(self.session, title, album_key)
-        if self._season_is_outdated(season, title_key, force=force):
-            album_file = self.music_playlist_file(album_key)
-            data_timestamps = self._season_files_data_timestamps(album_key, title_key)
-            season = Season(
-                key=album_key,
-                name=album_file.title(),
-                url=playlist_url(album_key),
-                image_url=album_file.image_url(),
-                thumbnail_url=album_file.image_url(),
-                data_timestamp=max(data_timestamps),
-                title_id=title.id,
-            ).upsert(title, season)
-            season.set_update_at(
-                staggered_monthly_update_at(album_key, min(data_timestamps)),
-            )
-        self._upsert_episodes(season, title_key, force=force)
+        existing_season = Season.get_from_memory(self.session, title, album_key)
+        album_file = self.music_playlist_file(album_key)
+        data_timestamp = self._season_files_data_timestamp(album_key, title_key)
+        upserted_season = Season(
+            key=album_key,
+            name=album_file.title(),
+            url=playlist_url(album_key),
+            image_url=album_file.image_url(),
+            thumbnail_url=album_file.image_url(),
+            data_timestamp=data_timestamp,
+            title_id=title.id,
+            update_at=self._staggered_monthly_update_at(album_key, data_timestamp),
+        ).upsert(
+            title,
+            existing_season,
+        )
+        self._upsert_episodes(upserted_season, title_key)
 
 
 # from __future__ import annotations
@@ -286,8 +278,7 @@ class YouTubeMusicImporter(YouTubeImporter):
 #                 season_key,
 #                 title_key,
 #                 music_playlist.title(),
-#                 force=force,
-#             )
+#     #             )
 
 #     # TODO: Validate
 #     def _upsert_season_music(
@@ -300,7 +291,7 @@ class YouTubeMusicImporter(YouTubeImporter):
 #         force: bool = False,
 #     ) -> None:
 #         season = Season.get_from_memory(self.session, title, season_key)
-#         if self._season_is_outdated(season, title_key, force=force):
+#         if self._season_is_outdated(season, title_key):
 #             music_playlist = self.music_playlist_file(season_key)
 #             data_timestamps = self._season_files_data_timestamps(season_key, title_key)
 #             season = Season(
@@ -315,7 +306,7 @@ class YouTubeMusicImporter(YouTubeImporter):
 #             season.set_update_at(
 #                 min(data_timestamps) + timedelta(days=365),
 #             )
-#         self._upsert_episodes(season, title_key, force=force)
+#         self._upsert_episodes(season, title_key)
 
 #     # TODO: Validate
 #     @staticmethod
@@ -362,7 +353,7 @@ class YouTubeMusicImporter(YouTubeImporter):
 #         *,
 #         force: bool = False,
 #     ) -> None:
-#         self._upsert_episodes_in_file_order(season, title_key, force=force)
+#         self._upsert_episodes_in_file_order(season, title_key)
 
 
 # # TODO: Validate
@@ -390,7 +381,7 @@ class YouTubeMusicImporter(YouTubeImporter):
 #         source = self.source
 
 #         title = Title.get_from_memory(self.session, source, title_key)
-#         if self._title_is_outdated(title, force=force):
+#         if self._title_is_outdated(title):
 #             data_timestamps = self._title_files_data_timestamps(title_key)
 #             title = Title(
 #                 key=title_key,
@@ -411,8 +402,7 @@ class YouTubeMusicImporter(YouTubeImporter):
 #             title_key,
 #             title_key,
 #             self._music_name(music_playlist),
-#             force=force,
-#         )
+# #         )
 #         self._soft_delete_missing_seasons_and_episodes(title_key)
 
 #         return title
@@ -458,7 +448,7 @@ class YouTubeMusicImporter(YouTubeImporter):
 #         source = self.source
 
 #         title = Title.get_from_memory(self.session, source, title_key)
-#         if self._title_is_outdated(title, force=force):
+#         if self._title_is_outdated(title):
 #             channel_item = get_first_item(
 #                 self.channel_by_channel_id_file(title_key).parsed().items,
 #             )
@@ -484,8 +474,7 @@ class YouTubeMusicImporter(YouTubeImporter):
 #                 season_key,
 #                 title_key,
 #                 music_playlist.title(),
-#                 force=force,
-#             )
+#     #             )
 #         self._soft_delete_missing_seasons_and_episodes(title_key)
 
 #         return title

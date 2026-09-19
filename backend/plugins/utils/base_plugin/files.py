@@ -44,6 +44,7 @@ def bypass_file_updates() -> Generator[None]:
         _file_updates_bypassed.reset(token)
 
 
+# TODO: Validate
 class BaseFile[T](ABC):
     custom_class_key: str | None = None
 
@@ -240,8 +241,8 @@ class BaseFile[T](ABC):
             data_timestamp=tz_datetime.now(),
             status=status,
             plugin_id=self._plugin.id,
+            update_at=self._next_update_at(),
         ).upsert(self._plugin, self._database_record)
-        record.set_update_at(self._next_update_at())
         self._database_record = record
         self._cached_parsed = None
         self._session.flush()

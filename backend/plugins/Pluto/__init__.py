@@ -12,6 +12,7 @@ from plugins.Pluto.importer import (
 )
 from plugins.Pluto.shared import PlutoShared
 from plugins.utils.abstract_plugin import AbstractPlugin
+from plugins.utils.base_plugin.media_type import MediaType
 
 if TYPE_CHECKING:
     from app.titles.models import Title
@@ -38,6 +39,6 @@ class Pluto(PlutoShared, AbstractPlugin, register=False):
         if not title.media_type:
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
-        if title.media_type == "Movie":
+        if title.media_type == MediaType.movie:
             return PlutoMovieImporter(self.session, self.plugin, self._file_cache)
         return PlutoSeriesImporter(self.session, self.plugin, self._file_cache)

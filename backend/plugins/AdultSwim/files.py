@@ -14,13 +14,13 @@ from pools_closed.shows import Shows as TitlesEndpoint
 from pools_closed.shows.models import ShowsModel
 
 from plugins.utils.base_plugin.files import NoArgsEndpointFile, SingleArgEndpointFile
-from plugins.utils.get_around_client import get_around_client
+from plugins.utils.proxy_client import proxy_client
 
 
 # TODO: Validate
 @cache
 def pools_closed() -> PoolsClosed:
-    return PoolsClosed(get_around_client=get_around_client())
+    return PoolsClosed(get_around_client=proxy_client())
 
 
 # TODO: Validate

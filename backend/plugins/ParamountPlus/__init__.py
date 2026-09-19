@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, override
 
-from app.utils.update_at import staggered_monthly_update_at
 from plugins.ParamountPlus.constants import MOVIE_URL_REGEX, TITLE_URL_REGEX
 from plugins.ParamountPlus.importer import (
     ParamountPlusImporter,
@@ -12,14 +11,17 @@ from plugins.ParamountPlus.importer import (
 )
 from plugins.ParamountPlus.shared import ParamountPlusShared
 from plugins.utils.abstract_plugin import AbstractPlugin
+from plugins.utils.base_plugin.media_type import MediaType
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
     from datetime import datetime
 
     from app.sources.models import Source
     from app.titles.models import Title
 
 
+# TODO: Validate
 class ParamountPlus(ParamountPlusShared, AbstractPlugin, register=True):
     @classmethod
     @override
@@ -39,9 +41,9 @@ class ParamountPlus(ParamountPlusShared, AbstractPlugin, register=True):
     # TODO: Validate
     @override
     def _next_source_update_at(self) -> datetime:
-        return staggered_monthly_update_at(
+        return self._staggered_monthly_update_at(
             self.source_name(),
-            min(self._source_files_data_timestamps()),
+            self._source_files_data_timestamp(),
         )
 
     # TODO: Validate
@@ -51,16 +53,18 @@ class ParamountPlus(ParamountPlusShared, AbstractPlugin, register=True):
         self.create_initial_channel_records()
         self.upsert_source(source.key)
 
+    # TODO: Validate
     @override
-    def similar_title_urls(self, title: Title) -> list[str]:
+    def similar_title_urls(self, title: Title) -> Collection[str]:
         return self._media_importer_from_title(title).similar_title_urls(title)
 
+    # TODO: Validate
     @override
     def _media_importer_from_title(self, title: Title) -> ParamountPlusImporter:
         if not title.media_type:  # Should be impossible
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
-        if title.media_type == "Movie":
+        if title.media_type == MediaType.movie:
             return ParamountPlusMovieImporter(
                 self.session,
                 self.plugin,

@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from plugins.utils.base_plugin.url import ParsedURL
 
 
+# TODO: Validate
 class BaseImporter(BasePlugin, ABC):
     # TODO: Validate
     def validate_url(self, url: str) -> None:  # noqa: ARG002
@@ -26,13 +27,14 @@ class BaseImporter(BasePlugin, ABC):
         msg = f"{self.plugin_name()} does not implement get_media_info"
         raise NotImplementedError(msg)
 
+    # TODO: Validate
     @override
-    def update_title(self, title: Title, *, force: bool = False) -> None:
+    def update_title(self, title: Title) -> None:
         preloaded_title = self._preload_title(
             title.key,
             source_key=title.source.key,
         ).one()
-        self._update_and_upsert_title(preloaded_title, force=force)
+        self._update_and_upsert_title(preloaded_title)
 
     @override
     def update_season(self, season: Season) -> None:
@@ -44,11 +46,10 @@ class BaseImporter(BasePlugin, ABC):
         preloaded_episode = self._preload_episode(episode.id, preload_source=True).one()
         self._update_and_upsert_title(preloaded_episode.season.title)
 
+    # TODO: Validate
     def _update_and_upsert_title(
         self,
         title: Title,
-        *,
-        force: bool = False,
     ) -> None:
         """Update all files then upsert the title.
 
@@ -57,7 +58,7 @@ class BaseImporter(BasePlugin, ABC):
         Episode files are updated using Episode.update_at and the File.update_at values.
         """
         self._preload_and_download_files(title)
-        self._upsert_title(title.source, title.key, force=force)
+        self._upsert_title(title.source, title.key)
 
     def import_url(self, url: str) -> list[URLImportResult]:
         media_info = self.parse_url(url)

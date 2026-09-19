@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, override
 
 from app.titles.models import Title
 from app.utils import tz_datetime
+from plugins.utils.base_plugin.media_type import MediaType
 
 # from plugins.YouTube.music_importer import YouTubeMusicSeasons
 from plugins.YouTube.user_importer import YouTubeUserImporter
@@ -121,9 +122,9 @@ class YouTubeChannelImporter(
     #     force: bool = False,
     # ) -> None:
     #     if is_an_album(season.key):
-    #         self._upsert_episodes_in_file_order(season, title_key, force=force)
+    #         self._upsert_episodes_in_file_order(season, title_key)
     #         return
-    #     self._upsert_episodes_from_playlist_items(season, title_key, force=force)
+    #     self._upsert_episodes_from_playlist_items(season, title_key)
 
     # TODO: Validate
     @override
@@ -131,53 +132,45 @@ class YouTubeChannelImporter(
         self,
         source: Source,
         title_key: str,
-        *,
-        force: bool = False,
     ) -> Title:
-        title = Title.get_from_memory(self.session, source, title_key)
-        if self._title_is_outdated(title, force=force):
-            channel_file = self.channel_by_channel_id_file(title_key)
-            channel_item = get_first_item(channel_file.parsed().items)
-            title = Title(
-                key=channel_item.id,
-                name=channel_item.snippet.title,
-                url=channel_url(channel_item.id),
-                media_type="YouTube Channel",
-                # Updating every 30 days is reasonable because this is only used for
-                # checking for new playlists and changes to the channel information.
-                update_at=channel_file.record_data_timestamp + timedelta(days=365),
-                data_timestamp=self._title_files_data_timestamp(title_key),
-                tmdb_title_validated_at=tz_datetime.now(),
-                source_id=source.id,
-                image_url=image_url(channel_item.snippet.thumbnails),
-                thumbnail_url=thumbnail_url(channel_item.snippet.thumbnails),
-            ).upsert(source, title)
-            title.set_update_at(None)
+        existing_title = Title.get_from_memory(self.session, source, title_key)
+        channel_file = self.channel_by_channel_id_file(title_key)
+        channel_item = get_first_item(channel_file.parsed().items)
+        upserted_title = Title(
+            key=channel_item.id,
+            name=channel_item.snippet.title,
+            url=channel_url(channel_item.id),
+            media_type=MediaType.youtube_channel,
+            # Updating every 30 days is reasonable because this is only used for
+            # checking for new playlists and changes to the channel information.
+            update_at=channel_file.record_data_timestamp + timedelta(days=365),
+            data_timestamp=self._title_files_data_timestamp(title_key),
+            tmdb_title_validated_at=tz_datetime.now(),
+            source_id=source.id,
+            image_url=image_url(channel_item.snippet.thumbnails),
+            thumbnail_url=thumbnail_url(channel_item.snippet.thumbnails),
+        ).upsert(source, existing_title)
 
-        self._upsert_seasons(title, title_key, force=force)
+        self._upsert_seasons(upserted_title, title_key)
         self._soft_delete_missing_seasons_and_episodes(title_key)
 
-        return title
+        return upserted_title
 
     # TODO: Validate
     def _upsert_seasons(
         self,
         title: Title,
         title_key: str,
-        *,
-        force: bool = False,
     ) -> None:
-        self._upsert_season_uploads(title, title_key, force=force)
-        self._upsert_seasons_playlist(title, title_key, force=force)
-        # self._upsert_seasons_album(title, title_key, force=force)
+        self._upsert_season_uploads(title, title_key)
+        self._upsert_seasons_playlist(title, title_key)
+        # self._upsert_seasons_album(title, title_key)
 
     # TODO: Validate
     def _upsert_season_uploads(
         self,
         title: Title,
         title_key: str,
-        *,
-        force: bool = False,
     ) -> None:
         channel_item = get_first_item(
             self.channel_by_channel_id_file(title_key).parsed().items,
@@ -191,7 +184,6 @@ class YouTubeChannelImporter(
             season_key=uploads_key,
             name=f"Uploads from {title.name}",
             playlist=channel_item,
-            force=force,
         )
 
     # TODO: Validate
@@ -199,8 +191,6 @@ class YouTubeChannelImporter(
         self,
         title: Title,
         title_key: str,
-        *,
-        force: bool = False,
     ) -> None:
         channel_playlists_file = self.channel_playlists_file(title_key)
         if not channel_playlists_file.record_content:
@@ -219,5 +209,4 @@ class YouTubeChannelImporter(
                     season_key=season_key,
                     name=playlist.snippet.title,
                     playlist=playlist,
-                    force=force,
                 )

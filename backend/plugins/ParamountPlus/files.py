@@ -35,7 +35,7 @@ from plugins.utils.base_plugin.files import (
     NoArgsEndpointFile,
     SingleArgEndpointFile,
 )
-from plugins.utils.get_around_client import get_around_client
+from plugins.utils.proxy_client import proxy_client
 
 if TYPE_CHECKING:
     from sqlmodel import Session
@@ -46,7 +46,7 @@ if TYPE_CHECKING:
 # TODO: Validate
 @cache
 def trivial_minus() -> TrivialMinus:
-    return TrivialMinus(get_around_client=get_around_client())
+    return TrivialMinus(get_around_client=proxy_client())
 
 
 # TODO: Validate

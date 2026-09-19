@@ -17,13 +17,13 @@ from plugins.utils.base_plugin.files import (
     MultipleArgEndpointFile,
     SingleArgEndpointFile,
 )
-from plugins.utils.get_around_client import get_around_client
+from plugins.utils.proxy_client import proxy_client
 
 
 # TODO: Validate
 @cache
 def notaplanet() -> NotAPlanet:
-    return NotAPlanet(get_around_client=get_around_client())
+    return NotAPlanet(get_around_client=proxy_client())
 
 
 # TODO: Validate

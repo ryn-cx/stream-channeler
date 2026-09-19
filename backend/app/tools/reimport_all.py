@@ -55,7 +55,7 @@ def _reimport_worker(
                 session,
                 plugin_records[plugin_key],
             )
-            plugin_instance.update_title(title, force=True)
+            plugin_instance.update_title(title)
             session.commit()
 
             with progress_lock:

@@ -18,6 +18,7 @@ from plugins.utils.base_plugin.files import (
 from plugins.utils.constants import INCOMPLETE_STATUS
 
 
+# TODO: Validate
 class BaseFileAccessMixin(AbstractPlugin, ABC):
     session: Session
     plugin: Plugin
@@ -258,59 +259,32 @@ class BaseFileAccessMixin(AbstractPlugin, ABC):
         error-prone than explicitly raising an error."""
         raise NotImplementedError
 
-    def _title_files_data_timestamps(self, title_key: str) -> list[datetime]:
-        """Return the data timestamp from each of the title's files."""
-        return [file.record_data_timestamp for file in self._title_files(title_key)]
-
-    def _season_files_data_timestamps(
-        self,
-        season_key: str,
-        title_key: str,
-    ) -> list[datetime]:
-        """Return the data timestamp from each of the season's files."""
-        files = self._season_files(season_key, title_key)
-        return [file.record_data_timestamp for file in files]
-
-    def _episode_files_data_timestamps(
-        self,
-        episode_key: str,
-        season_key: str,
-        title_key: str,
-    ) -> list[datetime]:
-        """Return the data timestamp from each of the episode's files."""
-        files = self._episode_files(episode_key, season_key, title_key)
-        return [file.record_data_timestamp for file in files]
-
-    def _source_files_data_timestamps(self) -> list[datetime]:
-        """Return the data timestamp from each of the source's files."""
-        return [file.record_data_timestamp for file in self._source_files()]
-
     def _plugin_files_data_timestamps(self) -> list[datetime]:
         """Return the data timestamp from each of the plugin's files."""
         return [file.record_data_timestamp for file in self._plugin_files()]
 
+    # TODO: Validate
     def _title_files_data_timestamp(self, title_key: str) -> datetime:
-        """Return the newest data timestamp from the title's files."""
-        return max(self._title_files_data_timestamps(title_key))
+        return min(file.record_data_timestamp for file in self._title_files(title_key))
 
+    # TODO: Validate
     def _season_files_data_timestamp(self, season_key: str, title_key: str) -> datetime:
-        """Return the newest data timestamp from the season's files."""
-        return max(self._season_files_data_timestamps(season_key, title_key))
+        files = self._season_files(season_key, title_key)
+        return min(file.record_data_timestamp for file in files)
 
+    # TODO: Validate
     def _episode_files_data_timestamp(
         self,
         episode_key: str,
         season_key: str,
         title_key: str,
     ) -> datetime:
-        """Return the newest data timestamp from the episode's files."""
-        return max(
-            self._episode_files_data_timestamps(episode_key, season_key, title_key),
-        )
+        files = self._episode_files(episode_key, season_key, title_key)
+        return min(file.record_data_timestamp for file in files)
 
+    # TODO: Validate
     def _source_files_data_timestamp(self) -> datetime:
-        """Return the newest data timestamp from the source's files."""
-        return max(self._source_files_data_timestamps())
+        return min(file.record_data_timestamp for file in self._source_files())
 
     def _season_keys_from_title_files(self, title_key: str) -> list[str]:
         """Return the season keys from the title's files."""

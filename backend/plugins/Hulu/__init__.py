@@ -12,8 +12,10 @@ from plugins.Hulu.constants import (
 from plugins.Hulu.importer import HuluImporter, HuluMovieImporter, HuluSeriesImporter
 from plugins.Hulu.shared import HuluShared
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
+from plugins.utils.base_plugin.media_type import MediaType
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
     from datetime import datetime
 
     from app.titles.models import Title
@@ -27,8 +29,8 @@ class Hulu(
 ):
     # TODO: Validate
     @override
-    def similar_title_urls(self, title: Title) -> list[str]:
-        if title.media_type == "Movie":
+    def similar_title_urls(self, title: Title) -> Collection[str]:
+        if title.media_type == MediaType.movie:
             return []
         return [
             HuluSeriesImporter.title_url(str(item.id))
@@ -69,12 +71,13 @@ class Hulu(
         msg = f"Invalid {self.plugin_name()} URL: {url}"
         raise InvalidURLError(msg)
 
+    # TODO: Validate
     @override
     def _media_importer_from_title(self, title: Title) -> HuluImporter:
         if not title.media_type:  #  Should be impossible.
             msg = "Title.media_type is not set."
             raise AttributeError(msg)
 
-        if title.media_type == "Movie":
+        if title.media_type == MediaType.movie:
             return HuluMovieImporter(self.session, self.plugin, self._file_cache)
         return HuluSeriesImporter(self.session, self.plugin, self._file_cache)

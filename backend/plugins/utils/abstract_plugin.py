@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import inspect
 from abc import ABC, abstractmethod
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from datetime import timedelta
 from functools import cache
 from pathlib import Path
@@ -224,7 +224,7 @@ class AbstractPlugin(ABC):
         source.update_at = None
 
     # TODO: Validate
-    def update_title(self, title: Title, *, force: bool = False) -> None:  # noqa: ARG002 - `force` is used by overrides.
+    def update_title(self, title: Title) -> None:
         """Update an existing title in the database.
 
         Called when `Title.update_at > datetime.now()`.
@@ -234,7 +234,6 @@ class AbstractPlugin(ABC):
 
         Args:
             title: The `Title` to update.
-            force: When True, re-upsert every record even if its data is unchanged.
 
         """
         title.update_at = None
@@ -244,7 +243,7 @@ class AbstractPlugin(ABC):
         return
 
     # TODO: Validate
-    def similar_title_urls(self, title: Title) -> list[str]:  # noqa: ARG002
+    def similar_title_urls(self, title: Title) -> Collection[str]:  # noqa: ARG002
         return []
 
     # TODO: Validate

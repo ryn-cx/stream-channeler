@@ -78,8 +78,6 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
         self,
         season: Season,
         title_key: str,
-        *,
-        force: bool = False,
     ) -> None: ...
 
     # TODO: Validate
@@ -239,12 +237,10 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
         self,
         season: Season,
         title_key: str,
-        *,
-        force: bool = False,
     ) -> None:
         episode_keys = self._season_episode_keys_from_file(season.key)
         for position, episode_key in enumerate(episode_keys):
-            self._upsert_episode(season, title_key, episode_key, position, force=force)
+            self._upsert_episode(season, title_key, episode_key, position)
 
     # TODO: Validate
     def _upsert_episode(
@@ -253,42 +249,38 @@ class YouTubeImporter(YouTubeShared, BaseImporter, ABC):
         title_key: str,
         episode_key: str,
         sort_order: int | None,
-        *,
-        force: bool = False,
     ) -> None:
-        episode = Episode.get_from_memory(self.session, season, episode_key)
-        if self._episode_is_outdated(episode, season.key, title_key, force=force):
-            video_item = self.videos_file(episode_key).parsed().items[0]
-            video_snippet = video_item.snippet
+        existing_episode = Episode.get_from_memory(self.session, season, episode_key)
+        video_item = self.videos_file(episode_key).parsed().items[0]
+        video_snippet = video_item.snippet
 
-            duration = None
-            # TODO: Can this actually be None, type hints might be outdated here.
-            if video_duration := video_item.content_details.duration:
-                duration = int(video_duration.total_seconds())
+        duration = None
+        # TODO: Can this actually be None, type hints might be outdated here.
+        if video_duration := video_item.content_details.duration:
+            duration = int(video_duration.total_seconds())
 
-            episode = Episode(
-                key=video_item.id,
-                watch_identifier=watch_identifier(self.plugin_name(), video_item.id),
-                name=video_snippet.title,
-                url=video_url(video_item.id),
-                # A YouTube video with a null character in the description once caused
-                # importing to hang so it needs to be stripped out.
-                description=video_snippet.description.replace("\x00", ""),
-                air_date=video_snippet.published_at,
-                duration=duration,
-                image_url=image_url(video_snippet.thumbnails),
-                thumbnail_url=thumbnail_url(video_snippet.thumbnails),
-                sort_order=sort_order,
-                episode_number=self._get_episode_number(
-                    episode_key,
-                    season.key,
-                    title_key,
-                ),
-                data_timestamp=self._episode_files_data_timestamp(
-                    episode_key,
-                    season.key,
-                    title_key,
-                ),
-                season_id=season.id,
-            ).upsert(season, episode)
-            episode.set_update_at(None)
+        Episode(
+            key=video_item.id,
+            watch_identifier=watch_identifier(self.plugin_name(), video_item.id),
+            name=video_snippet.title,
+            url=video_url(video_item.id),
+            # A YouTube video with a null character in the description once caused
+            # importing to hang so it needs to be stripped out.
+            description=video_snippet.description.replace("\x00", ""),
+            air_date=video_snippet.published_at,
+            duration=duration,
+            image_url=image_url(video_snippet.thumbnails),
+            thumbnail_url=thumbnail_url(video_snippet.thumbnails),
+            sort_order=sort_order,
+            episode_number=self._get_episode_number(
+                episode_key,
+                season.key,
+                title_key,
+            ),
+            data_timestamp=self._episode_files_data_timestamp(
+                episode_key,
+                season.key,
+                title_key,
+            ),
+            season_id=season.id,
+        ).upsert(season, existing_episode)

@@ -57,8 +57,6 @@ class StreamChannelerShared(StreamChannelerWatchHistoryMixin, BasePlugin):
         self,
         source: Source,
         title_key: str,
-        *,
-        force: bool = False,
     ) -> Title:
         msg = "StreamChanneler does not support upserting titles"
         raise NotImplementedError(msg)

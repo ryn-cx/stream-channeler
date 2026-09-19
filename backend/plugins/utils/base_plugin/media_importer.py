@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from plugins.utils.base_plugin.importer import BaseImporter
 
 
+# TODO: Validate
 class BaseMediaImporterMixin(BaseURLMixin, AbstractPlugin, ABC):
     plugin: Plugin
 
@@ -23,9 +24,10 @@ class BaseMediaImporterMixin(BaseURLMixin, AbstractPlugin, ABC):
         media_importer.validate_url(url)
         return media_importer.import_url(url)
 
+    # TODO: Validate
     @override
-    def update_title(self, title: Title, *, force: bool = False) -> None:
-        self._media_importer(title).update_title(title, force=force)
+    def update_title(self, title: Title) -> None:
+        self._media_importer(title).update_title(title)
 
     @override
     def update_season(self, season: Season) -> None:

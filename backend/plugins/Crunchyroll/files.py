@@ -48,13 +48,13 @@ from plugins.utils.base_plugin.files import (
     SingleArgEndpointFile,
 )
 from plugins.utils.constants import INCOMPLETE_STATUS
-from plugins.utils.get_around_client import get_around_client
+from plugins.utils.proxy_client import proxy_client
 
 
 # TODO: Validate
 @cache
 def chirashi() -> Chirashi:
-    return Chirashi(get_around_client=get_around_client())
+    return Chirashi(get_around_client=proxy_client())
 
 
 # TODO: Validate

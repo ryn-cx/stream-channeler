@@ -242,9 +242,6 @@ class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):
         # preserved.
         # created_at: set by the database.
         # modified_at: set by the database.
-        # Fields the caller never passed: a record built to say three things about
-        # a title says nothing about the rest, and the defaults SQLModel filled in
-        # are not an account of them to write over what is stored.
         unset_keys = set(type(self).model_fields) - self.model_fields_set
         protected_keys = (
             protected_keys
@@ -464,12 +461,16 @@ class ChildMediaMixin(MediaMixin[ChildT], ABC, Generic[ParentT, ChildT]):  # noq
                 record is provided.
 
         """
-        if protected_keys is None:
-            protected_keys = set()
+        protected_keys = set(protected_keys or ()) | {"update_at"}
         if existing_record:
             if existing_record.deleted_at is not None:
                 existing_record.soft_undelete()
-            return self._update_existing(existing_record, protected_keys)
+            updated_record = self._update_existing(existing_record, protected_keys)
+            updated_record.set_update_at(self.update_at)
+            return updated_record
         # self will always be a child of parent
         parent.add_child(self)  # type: ignore[arg-type]
+        update_at = self.update_at
+        self.update_at = None
+        self.set_update_at(update_at)
         return self

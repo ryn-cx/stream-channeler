@@ -9,11 +9,11 @@ from app.episodes.models import Episode
 from app.seasons.models import Season as SeasonModel
 from app.titles.models import Title
 from app.tmdb_media.keys import watch_identifier
-from app.utils.update_at import staggered_monthly_update_at
-from plugins.HiDive.constants import MOVIE_MEDIA_TYPE, MOVIE_URL_REGEX
+from plugins.HiDive.constants import MOVIE_URL_REGEX
 from plugins.HiDive.shared import HiDiveShared
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.importer import BaseImporter
+from plugins.utils.base_plugin.media_type import MediaType
 from plugins.utils.base_plugin.url import ParsedURL
 
 if TYPE_CHECKING:
@@ -94,101 +94,89 @@ class HiDiveMovieUpsert(HiDiveMovieChannels, ABC):
         self,
         source: Source,
         title_key: str,
-        *,
-        force: bool = False,
     ) -> Title:
-        title = Title.get_from_memory(self.session, source, title_key)
-        if self._title_is_outdated(title, force=force):
-            hero = self.vod_hero(self.vod_file(title_key).parsed())
-            premiere = self.release_date(hero)
-            title = Title(
-                key=title_key,
-                name=self.movie_title(hero),
-                description=self.movie_description(hero),
-                year=premiere.year if premiere else None,
-                url=self.title_url(title_key),
-                image_url=self.hero_image_url(hero),
-                thumbnail_url=self.hero_image_url(hero),
-                media_type=MOVIE_MEDIA_TYPE,
-                data_timestamp=self._title_files_data_timestamp(title_key),
-                source_id=source.id,
-            ).upsert(source, title)
-            title.set_update_at(
-                staggered_monthly_update_at(
-                    title_key,
-                    min(self._title_files_data_timestamps(title_key)),
-                ),
-            )
+        existing_title = Title.get_from_memory(self.session, source, title_key)
+        hero = self.vod_hero(self.vod_file(title_key).parsed())
+        premiere = self.release_date(hero)
+        upserted_title = Title(
+            key=title_key,
+            name=self.movie_title(hero),
+            description=self.movie_description(hero),
+            year=premiere.year if premiere else None,
+            url=self.title_url(title_key),
+            image_url=self.hero_image_url(hero),
+            thumbnail_url=self.hero_image_url(hero),
+            media_type=MediaType.movie,
+            data_timestamp=self._title_files_data_timestamp(title_key),
+            source_id=source.id,
+        ).upsert(
+            source,
+            existing_title,
+        )
 
-        self._upsert_seasons(title, force=force)
+        self._upsert_seasons(upserted_title)
         self._soft_delete_missing_seasons_and_episodes(title_key)
-        self.add_title_to_plugin_channels(title)
+        self.add_title_to_plugin_channels(upserted_title)
 
-        return title
+        self._set_title_update_at(upserted_title)
+        return upserted_title
 
     # TODO: Validate
-    def _upsert_seasons(self, title: Title, *, force: bool = False) -> None:
+    def _upsert_seasons(self, title: Title) -> None:
         for sort_order, season_key in enumerate(
             self._season_keys_from_title_files(title.key),
         ):
             hero = self.vod_hero(self.vod_file(title.key).parsed())
 
-            season = SeasonModel.get_from_memory(self.session, title, season_key)
-            if self._season_is_outdated(season, title.key, force=force):
-                season = SeasonModel(
-                    key=season_key,
-                    name=self.movie_title(hero),
-                    season_number=0,
-                    sort_order=sort_order,
-                    url=self.title_url(title.key),
-                    image_url=self.hero_image_url(hero),
-                    thumbnail_url=self.hero_image_url(hero),
-                    data_timestamp=self._season_files_data_timestamp(
-                        season_key,
-                        title.key,
-                    ),
-                    title_id=title.id,
-                ).upsert(title, season)
-                season.set_update_at(None)
+            existing_season = SeasonModel.get_from_memory(
+                self.session,
+                title,
+                season_key,
+            )
+            upserted_season = SeasonModel(
+                key=season_key,
+                name=self.movie_title(hero),
+                season_number=0,
+                sort_order=sort_order,
+                url=self.title_url(title.key),
+                image_url=self.hero_image_url(hero),
+                thumbnail_url=self.hero_image_url(hero),
+                data_timestamp=self._season_files_data_timestamp(
+                    season_key,
+                    title.key,
+                ),
+                title_id=title.id,
+            ).upsert(title, existing_season)
 
-            self._upsert_episode(season, title.key, force=force)
+            self._upsert_episode(upserted_season, title.key)
 
     # TODO: Validate
     def _upsert_episode(
         self,
         season: SeasonModel,
         title_key: str,
-        *,
-        force: bool = False,
     ) -> None:
-        episode = Episode.get_from_memory(self.session, season, title_key)
-        if self._episode_is_outdated(
-            episode,
-            season.key,
-            title_key,
-            force=force,
-        ):
-            hero = self.vod_hero(self.vod_file(title_key).parsed())
-            episode = Episode(
-                key=title_key,
-                watch_identifier=watch_identifier(self.plugin_name(), title_key),
-                name=self.movie_title(hero),
-                description=self.movie_description(hero),
-                url=self.episode_url(title_key),
-                image_url=self.hero_image_url(hero),
-                thumbnail_url=self.hero_image_url(hero),
-                episode_number=0,
-                sort_order=0,
-                duration=self.movie_duration(hero),
-                air_date=self.release_date(hero),
-                data_timestamp=self._episode_files_data_timestamp(
-                    title_key,
-                    season.key,
-                    title_key,
-                ),
-                season_id=season.id,
-            ).upsert(season, episode)
-            episode.set_update_at(None)
+        existing_episode = Episode.get_from_memory(self.session, season, title_key)
+        hero = self.vod_hero(self.vod_file(title_key).parsed())
+        Episode(
+            key=title_key,
+            watch_identifier=watch_identifier(self.plugin_name(), title_key),
+            name=self.movie_title(hero),
+            description=self.movie_description(hero),
+            url=self.episode_url(title_key),
+            image_url=self.hero_image_url(hero),
+            thumbnail_url=self.hero_image_url(hero),
+            episode_number=0,
+            sort_order=0,
+            duration=self.movie_duration(hero),
+            air_date=self.release_date(hero),
+            data_timestamp=self._episode_files_data_timestamp(
+                title_key,
+                season.key,
+                title_key,
+            ),
+            season_id=season.id,
+        ).upsert(season, existing_episode)
 
     # TODO: Validate
     @classmethod

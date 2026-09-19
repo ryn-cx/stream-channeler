@@ -59,37 +59,32 @@ class YouTubeUserImporter(YouTubeImporter):
         self,
         season: Season,
         title_key: str,
-        *,
-        force: bool = False,
     ) -> None:
-        self._upsert_episodes_from_playlist_items(season, title_key, force=force)
+        self._upsert_episodes_from_playlist_items(season, title_key)
 
     # TODO: Validate
-    def _upsert_playlist_season(  # noqa: PLR0913
+    def _upsert_playlist_season(
         self,
         title: Title,
         title_key: str,
         season_key: str,
         name: str,
         playlist: ChannelItem | PlaylistsItem,
-        *,
-        force: bool = False,
     ) -> None:
-        season = Season.get_from_memory(self.session, title, season_key)
-        if self._season_is_outdated(season, title_key, force=force):
-            data_timestamp = self._season_files_data_timestamp(season_key, title_key)
-            season = Season(
-                key=season_key,
-                name=name,
-                url=playlist_url(season_key),
-                image_url=image_url(playlist.snippet.thumbnails),
-                thumbnail_url=thumbnail_url(playlist.snippet.thumbnails),
-                data_timestamp=data_timestamp,
-                title_id=title.id,
-            ).upsert(title, season)
-            season.set_update_at(data_timestamp + timedelta(hours=6))
-        self._create_missing_season_feed(season)
-        self._upsert_episodes(season, title_key, force=force)
+        existing_season = Season.get_from_memory(self.session, title, season_key)
+        data_timestamp = self._season_files_data_timestamp(season_key, title_key)
+        upserted_season = Season(
+            key=season_key,
+            name=name,
+            url=playlist_url(season_key),
+            image_url=image_url(playlist.snippet.thumbnails),
+            thumbnail_url=thumbnail_url(playlist.snippet.thumbnails),
+            data_timestamp=data_timestamp,
+            title_id=title.id,
+            update_at=data_timestamp + timedelta(hours=6),
+        ).upsert(title, existing_season)
+        self._create_missing_season_feed(upserted_season)
+        self._upsert_episodes(upserted_season, title_key)
 
     # TODO: Validate
     def _create_missing_season_feed(self, season: Season) -> None:
@@ -104,8 +99,6 @@ class YouTubeUserImporter(YouTubeImporter):
         self,
         season: Season,
         title_key: str,
-        *,
-        force: bool = False,
     ) -> None:
         seen: set[str] = set()
         for item in self.playlist_items_file(season.key).items():
@@ -117,6 +110,5 @@ class YouTubeUserImporter(YouTubeImporter):
                 title_key,
                 episode_key,
                 len(seen),
-                force=force,
             )
             seen.add(episode_key)

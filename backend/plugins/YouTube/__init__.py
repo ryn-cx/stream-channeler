@@ -15,6 +15,7 @@ from app.channels.models import URLStatus
 from app.seasons.models import Season
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import AbstractPlugin
+from plugins.utils.base_plugin.media_type import MediaType
 from plugins.YouTube.importer import YouTubeImporter
 from plugins.YouTube.music_importer import YouTubeMusicImporter
 from plugins.YouTube.shared import YouTubeShared
@@ -28,6 +29,7 @@ if TYPE_CHECKING:
     from app.titles.models import Title
 
 
+# TODO: Validate
 class YouTube(
     YouTubeURLParserMixin,
     YouTubeShared,
@@ -43,7 +45,7 @@ class YouTube(
     # TODO: Validate
     @override
     def _media_importer_from_title(self, title: Title) -> YouTubeImporter:
-        if title.media_type == "YouTube Artist":
+        if title.media_type == MediaType.youtube_artist:
             return YouTubeMusicImporter(self.session, self.plugin, self._file_cache)
         return self.media_importer_from_title_key(title.key)
 

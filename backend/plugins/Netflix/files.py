@@ -34,15 +34,13 @@ from meshfilm.preview_modal_episode_selector_season_episodes.models import (
 from plugins.utils.base_plugin.files import (
     IntegerArgEndpointFile,
 )
-from plugins.utils.get_around_client import get_around_client
+from plugins.utils.proxy_client import proxy_client
 
 
 # TODO: Validate
 @cache
 def meshfilm() -> Meshfilm:
-    # Netflix needs to use the proxy because get-around sometimes routes to an IP in
-    # another country which causes incorrect results.
-    return Meshfilm(get_around_client=get_around_client(proxy=True))
+    return Meshfilm(get_around_client=proxy_client())
 
 
 # TODO: Validate

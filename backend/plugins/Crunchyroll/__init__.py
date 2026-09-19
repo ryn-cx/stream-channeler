@@ -21,6 +21,7 @@ from plugins.Crunchyroll.watch_history import CrunchyrollWatchHistoryMixin
 from plugins.utils.abstract_plugin import AbstractPlugin
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
     from datetime import datetime
 
     from app.titles.models import Title
@@ -98,7 +99,7 @@ class Crunchyroll(
 
     # TODO: Validate
     @override
-    def similar_title_urls(self, title: Title) -> list[str]:
+    def similar_title_urls(self, title: Title) -> Collection[str]:
         return self._media_importer_from_title(title).similar_title_urls(title)
 
     @override

@@ -22,7 +22,7 @@ from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 
 if TYPE_CHECKING:
     import uuid
-    from collections.abc import Iterable, Sequence
+    from collections.abc import Collection, Iterable, Sequence
 
     from app.plugins.models import Plugin
 
@@ -119,7 +119,7 @@ class BaseChannelMixin(AbstractPlugin, ABC):
     def add_new_urls_to_channel(
         self,
         channel_key: str,
-        urls: Sequence[str],
+        urls: Collection[str],
     ) -> None:
         if not urls:
             return
@@ -137,7 +137,11 @@ class BaseChannelMixin(AbstractPlugin, ABC):
             )
 
     # TODO: Validate
-    def _urls_not_on_channel(self, channel: Channel, urls: Sequence[str]) -> list[str]:
+    def _urls_not_on_channel(
+        self,
+        channel: Channel,
+        urls: Collection[str],
+    ) -> list[str]:
         if not urls:
             return []
         titles_by_url = self._titles_by_url(
@@ -174,7 +178,12 @@ class BaseChannelMixin(AbstractPlugin, ABC):
             for tmdb_title_id in (title.tmdb_title_ids or [title.id])
         }
 
-    def _urls_not_in_queue(self, channel: Channel, urls: Sequence[str]) -> list[str]:
+    # TODO: Validate
+    def _urls_not_in_queue(
+        self,
+        channel: Channel,
+        urls: Collection[str],
+    ) -> list[str]:
         """Return the URLs that are not currently in the channel's import queue."""
         queued_urls = set(
             self.session.exec(
