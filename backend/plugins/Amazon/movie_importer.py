@@ -41,6 +41,7 @@ class AmazonMovieFiles(AmazonShared, ABC):
 
 
 class AmazonMovieUpsert(AmazonMovieFiles, AmazonImporter, ABC):
+    # TODO: Validate
     @override
     def _upsert_title(self, source: Source, title_key: str) -> Title:
         detail_file = self.detail_file(title_key).parsed()
@@ -52,8 +53,10 @@ class AmazonMovieUpsert(AmazonMovieFiles, AmazonImporter, ABC):
             description=detail_file.synopsis,
             media_type=MediaType.movie,
             url=detail_file.url,
-            image_url=detail_file.image_url,
-            thumbnail_url=detail_file.image_url,
+            image_url=detail_file.images.covershot,
+            thumbnail_url=detail_file.images.covershot_thumbnail,
+            poster_url=detail_file.images.packshot,
+            poster_thumbnail_url=detail_file.images.packshot_thumbnail,
             year=detail_file.release_year,
             data_timestamp=data_timestamp,
             source_id=source.id,
@@ -86,6 +89,7 @@ class AmazonMovieUpsert(AmazonMovieFiles, AmazonImporter, ABC):
         self._upsert_episode(upserted_season, title.key)
         self._set_season_update_at(upserted_season)
 
+    # TODO: Validate
     def _upsert_episode(
         self,
         season: Season,
@@ -99,8 +103,8 @@ class AmazonMovieUpsert(AmazonMovieFiles, AmazonImporter, ABC):
             name=parsed.title,
             description=parsed.synopsis,
             url=parsed.url,
-            image_url=parsed.image_url,
-            thumbnail_url=parsed.image_url,
+            image_url=parsed.images.covershot,
+            thumbnail_url=parsed.images.covershot_thumbnail,
             duration=parsed.duration,
             episode_number=0,
             sort_order=0,

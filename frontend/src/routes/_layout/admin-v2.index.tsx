@@ -1,6 +1,6 @@
 // TODO: Validate
 import { createFileRoute, Link } from "@tanstack/react-router"
-import { Bot, Link2, Link2Off, Tv } from "lucide-react"
+import { Bot, Link2, Tv } from "lucide-react"
 import { PageHeader } from "@/components/Common/PageHeader"
 import {
   Card,
@@ -50,21 +50,6 @@ function AdminV2Index() {
               <CardDescription>
                 Every title TMDB holds that no website's row stands for, with
                 the address of a page carrying it to be given by hand.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </Link>
-        <Link to="/admin-v2/automatic-links" className="block">
-          <Card className="h-full transition-colors hover:border-primary">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Link2Off className="size-5" />
-                Reset Automatic Links
-              </CardTitle>
-              <CardDescription>
-                Titles whose every TMDB link was made automatically and never
-                verified, counted by plugin or by source, with a way to drop
-                those links so they are matched again.
               </CardDescription>
             </CardHeader>
           </Card>

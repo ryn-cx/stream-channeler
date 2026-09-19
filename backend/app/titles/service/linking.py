@@ -10,11 +10,9 @@ from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
 from loguru import logger
-from sqlalchemy import func
 from sqlalchemy.orm import aliased, selectinload
 from sqlalchemy.orm.attributes import instance_state, set_committed_value
-from sqlmodel import Session, col, delete, or_, select, update
-from sqlmodel.sql.expression import SelectOfScalar
+from sqlmodel import Session, col, delete, or_, select
 
 from app.channels.models import ChannelTitle
 from app.episodes.linking import EpisodeLinkerV2
@@ -25,12 +23,8 @@ from app.episodes.models import (
     is_manual_note,
 )
 from app.plugins.identifiers import TMDB_PLUGIN_KEY
-from app.plugins.models import Plugin
-from app.schemas import Message
 from app.seasons.models import Season
-from app.sources.models import Source
 from app.titles.models import Title, TitleTmdbTitle
-from app.titles.schemas import AutomaticLinkGroupOutput
 from app.tmdb_media.filters import is_not_linked
 from app.utils import tz_datetime
 from plugins.utils.manage_plugins import plugins
@@ -642,180 +636,3 @@ def relink_title(session: Session, title: Title) -> None:
 
     _old_unlink_episodes_from_dropped_tmdb_titles(session, title)
     _old_relink_episode(session, title)
-
-
-# TODO: Validate
-def automatically_linked_titles() -> SelectOfScalar[uuid.UUID]:
-    any_link = select(TitleTmdbTitle.title_id).where(
-        col(TitleTmdbTitle.title_id) == col(Title.id),
-    )
-    manual_link = any_link.where(col(TitleTmdbTitle.manual_tmdb_link).is_(True))
-    hand_settled_episode = (
-        select(col(EpisodeTmdbEpisode.episode_id))
-        .join(Episode, col(Episode.id) == col(EpisodeTmdbEpisode.episode_id))
-        .join(Season, col(Season.id) == col(Episode.season_id))
-        .where(
-            col(Season.title_id) == col(Title.id),
-            or_(
-                col(EpisodeTmdbEpisode.manual_tmdb_link).is_(True),
-                col(Episode.tmdb_episode_validated_at).is_not(None),
-            ),
-        )
-    )
-    return (
-        select(col(Title.id))
-        .join(Source, col(Source.id) == col(Title.source_id))
-        .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
-        .where(
-            col(Title.deleted_at).is_(None),
-            col(Title.tmdb_title_validated_at).is_(None),
-            Plugin.key != TMDB_PLUGIN_KEY,
-            any_link.exists(),
-            ~manual_link.exists(),
-            ~hand_settled_episode.exists(),
-        )
-    )
-
-
-# TODO: Validate
-def _move_channel_titles_off_dropped_links(
-    session: Session,
-    title_ids: Sequence[uuid.UUID],
-) -> None:
-    rows = session.exec(
-        select(ChannelTitle.channel_id, TitleTmdbTitle.title_id)
-        .join(
-            TitleTmdbTitle,
-            col(TitleTmdbTitle.tmdb_title_id) == col(ChannelTitle.tmdb_title_id),
-        )
-        .where(col(TitleTmdbTitle.title_id).in_(title_ids)),
-    ).all()
-    if not rows:
-        return
-
-    existing = set(
-        session.exec(
-            select(ChannelTitle.channel_id, ChannelTitle.tmdb_title_id).where(
-                col(ChannelTitle.tmdb_title_id).in_({title_id for _, title_id in rows}),
-            ),
-        ).all(),
-    )
-    for channel_id, title_id in dict.fromkeys(rows):
-        if (channel_id, title_id) in existing:
-            continue
-        existing.add((channel_id, title_id))
-        session.add(
-            ChannelTitle(
-                channel_id=channel_id,
-                tmdb_title_id=title_id,
-                is_whitelist=False,
-                is_blacklist_only=False,
-            ),
-        )
-    session.flush()
-
-
-# TODO: Validate
-def _unlink_episodes_of_titles(
-    session: Session,
-    title_ids: Sequence[uuid.UUID],
-) -> None:
-    episode_ids = (
-        select(col(Episode.id))
-        .join(Season, col(Season.id) == col(Episode.season_id))
-        .where(col(Season.title_id).in_(title_ids))
-    )
-    verified_episode_ids = select(col(Episode.id)).where(
-        col(Episode.id).in_(episode_ids),
-        col(Episode.tmdb_episode_validated_at).is_not(None),
-    )
-    session.exec(
-        delete(EpisodeTmdbEpisode)
-        .where(
-            col(EpisodeTmdbEpisode.episode_id).in_(episode_ids),
-            col(EpisodeTmdbEpisode.manual_tmdb_link).is_(False),
-            col(EpisodeTmdbEpisode.episode_id).not_in(verified_episode_ids),
-        )
-        .execution_options(synchronize_session=False),
-    )
-
-
-# TODO: Validate
-def reset_automatic_title_links(
-    session: Session,
-    title_ids: Sequence[uuid.UUID],
-) -> int:
-    """Drop every automatic link these titles hold so they are linked again."""
-    if not title_ids:
-        return 0
-
-    _move_channel_titles_off_dropped_links(session, title_ids)
-    _unlink_episodes_of_titles(session, title_ids)
-    session.exec(
-        delete(TitleTmdbTitle)
-        .where(col(TitleTmdbTitle.title_id).in_(title_ids))
-        .execution_options(synchronize_session=False),
-    )
-    session.exec(
-        update(Title)
-        .where(col(Title.id).in_(title_ids))
-        .values(link_status=None)
-        .execution_options(synchronize_session=False),
-    )
-    session.commit()
-    return len(title_ids)
-
-
-# TODO: Validate
-def automatic_link_groups(
-    session: Session,
-    *,
-    by_source: bool,
-) -> list[AutomaticLinkGroupOutput]:
-    """Count the titles waiting to be linked again, per plugin or per source."""
-    grouped_id = col(Source.id) if by_source else col(Plugin.id)
-    grouped_key = col(Source.key) if by_source else col(Plugin.key)
-    rows = session.exec(
-        select(
-            grouped_id,
-            grouped_key,
-            col(Plugin.key),
-            func.count(col(Title.id)),
-        )
-        .join(Source, col(Source.id) == col(Title.source_id))
-        .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
-        .where(col(Title.id).in_(automatically_linked_titles()))
-        .group_by(grouped_id, grouped_key, col(Plugin.key))
-        .order_by(func.count(col(Title.id)).desc()),
-    ).all()
-    return [
-        AutomaticLinkGroupOutput(
-            id=group_id,
-            key=group_key,
-            plugin_key=plugin_key,
-            title_count=title_count,
-        )
-        for group_id, group_key, plugin_key, title_count in rows
-    ]
-
-
-# TODO: Validate
-def reset_automatic_link_group(
-    session: Session,
-    group_id: uuid.UUID,
-    *,
-    by_source: bool,
-) -> Message:
-    """Drop the automatic links of every title in one plugin or source."""
-    grouped_id = col(Source.id) if by_source else col(Plugin.id)
-    title_ids = session.exec(
-        select(col(Title.id))
-        .join(Source, col(Source.id) == col(Title.source_id))
-        .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
-        .where(
-            col(Title.id).in_(automatically_linked_titles()),
-            grouped_id == group_id,
-        ),
-    ).all()
-    reset_automatic_title_links(session, title_ids)
-    return Message(message=f"Reset {len(title_ids)} titles")

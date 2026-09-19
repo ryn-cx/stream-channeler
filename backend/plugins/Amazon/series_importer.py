@@ -46,6 +46,7 @@ class AmazonSeriesFiles(AmazonShared, ABC):
 
 
 class AmazonSeriesUpsert(AmazonSeriesFiles, AmazonImporter, ABC):
+    # TODO: Validate
     @override
     def _upsert_title(self, source: Source, title_key: str) -> Title:
         detail_file = self.detail_file(title_key).parsed()
@@ -57,8 +58,10 @@ class AmazonSeriesUpsert(AmazonSeriesFiles, AmazonImporter, ABC):
             description=detail_file.synopsis,
             media_type=MediaType.series,
             url=detail_file.url,
-            image_url=detail_file.image_url,
-            thumbnail_url=detail_file.image_url,
+            image_url=detail_file.images.covershot,
+            thumbnail_url=detail_file.images.covershot_thumbnail,
+            poster_url=detail_file.images.packshot,
+            poster_thumbnail_url=detail_file.images.packshot_thumbnail,
             year=detail_file.release_year,
             data_timestamp=data_timestamp,
             source_id=source.id,
@@ -104,6 +107,7 @@ class AmazonSeriesUpsert(AmazonSeriesFiles, AmazonImporter, ABC):
             self._upsert_episodes(source, upserted_season, title.key)
             self._set_season_update_at(upserted_season)
 
+    # TODO: Validate
     def _upsert_episodes(
         self,
         source: Source,
@@ -120,8 +124,8 @@ class AmazonSeriesUpsert(AmazonSeriesFiles, AmazonImporter, ABC):
                 episode_number=item.episode_number,
                 url=item.url,
                 description=item.synopsis,
-                image_url=item.image_url,
-                thumbnail_url=item.image_url,
+                image_url=item.images.covershot,
+                thumbnail_url=item.images.covershot_thumbnail,
                 duration=item.duration,
                 # TODO: Is the None check needed?
                 air_date=(

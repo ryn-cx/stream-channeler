@@ -47,31 +47,6 @@ export const AutomaticChannelUserOutputSchema = {
     title: 'AutomaticChannelUserOutput'
 } as const;
 
-export const AutomaticLinkGroupOutputSchema = {
-    properties: {
-        id: {
-            type: 'string',
-            format: 'uuid',
-            title: 'Id'
-        },
-        key: {
-            type: 'string',
-            title: 'Key'
-        },
-        plugin_key: {
-            type: 'string',
-            title: 'Plugin Key'
-        },
-        title_count: {
-            type: 'integer',
-            title: 'Title Count'
-        }
-    },
-    type: 'object',
-    required: ['id', 'key', 'plugin_key', 'title_count'],
-    title: 'AutomaticLinkGroupOutput'
-} as const;
-
 export const BlacklistEpisodeInputSchema = {
     properties: {
         title_id: {

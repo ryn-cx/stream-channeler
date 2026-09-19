@@ -9,13 +9,6 @@ export type AutomaticChannelUserOutput = {
     can_create_channels: boolean;
 };
 
-export type AutomaticLinkGroupOutput = {
-    id: string;
-    key: string;
-    plugin_key: string;
-    title_count: number;
-};
-
 export type BlacklistEpisodeInput = {
     title_id: string;
     episode_id: string;
@@ -3415,19 +3408,6 @@ export type TitlesGetTitleTmdbEpisodeGroupsData = {
 };
 
 export type TitlesGetTitleTmdbEpisodeGroupsResponse = (Array<TmdbEpisodeGroupOption>);
-
-export type TitlesAdminGetAutomaticLinkGroupsData = {
-    bySource?: boolean;
-};
-
-export type TitlesAdminGetAutomaticLinkGroupsResponse = (Array<AutomaticLinkGroupOutput>);
-
-export type TitlesAdminResetAutomaticLinkGroupData = {
-    bySource?: boolean;
-    groupId: string;
-};
-
-export type TitlesAdminResetAutomaticLinkGroupResponse = (Message);
 
 export type TmdbEpisodesGetTmdbEpisodeByIdData = {
     tmdbEpisodeId: string;

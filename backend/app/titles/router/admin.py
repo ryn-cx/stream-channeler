@@ -1,7 +1,6 @@
 # TODO: Validate
 
 
-import uuid
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query
@@ -25,7 +24,6 @@ from app.titles.dependencies import (
 )
 from app.titles.models import Title
 from app.titles.schemas import (
-    AutomaticLinkGroupOutput,
     TitleImportUrlInput,
     TitleListPublic,
     TitlePublic,
@@ -41,14 +39,12 @@ from app.titles.schemas import (
     UnvalidatedTitleOutput,
 )
 from app.titles.service.linking import (
-    automatic_link_groups,
     old_import_linked_title_from_url,
     old_link_title_to_tmdb_title,
     old_link_title_to_tmdb_title_from_url,
     old_make_title_unlinked,
     old_relink_title,
     old_unlink_title_from_tmdb_title,
-    reset_automatic_link_group,
 )
 from app.titles.service.service import (
     _title_output,
@@ -326,29 +322,6 @@ def admin_delete_unmatched_title(
     unmatched_title: ExistingUnmatchedTitle,
 ) -> Message:
     return delete_unmatched_title(session, unmatched_title)
-
-
-# TODO: Validate
-@titles_router.get("/automatic-links")
-def admin_get_automatic_link_groups(
-    session: SessionDep,
-    *,
-    by_source: bool = False,
-) -> list[AutomaticLinkGroupOutput]:
-    """Count the titles whose every TMDB link is automatic and unverified."""
-    return automatic_link_groups(session, by_source=by_source)
-
-
-# TODO: Validate
-@titles_router.post("/automatic-links/{group_id}/reset")
-def admin_reset_automatic_link_group(
-    session: SessionDep,
-    group_id: uuid.UUID,
-    *,
-    by_source: bool = False,
-) -> Message:
-    """Drop every automatic link one plugin or source holds so they link again."""
-    return reset_automatic_link_group(session, group_id, by_source=by_source)
 
 
 router = APIRouter()
