@@ -73,3 +73,23 @@ class TestDeletedSeries(StandardTests[Amazon], AmazonValidator):
     import_time = datetime(2026, 9, 18, tzinfo=UTC)
     title_key = "0TVN8DVKCYBGQSSIDNFSE525A6"
     urls = ("https://www.primevideo.com/detail/{title_key}",)
+
+
+# TODO: Validate
+class TestFreeMovie(StandardTests[Amazon], AmazonValidator):
+    """Test a movie that is free on Amazon.
+
+    This is not the same as a movie that is included with Prime."""
+
+    import_time = datetime(2026, 9, 18, tzinfo=UTC)
+
+    title_key = "0K04DMLEJSTE354379LLPZ9ZAN"
+    urls = ("https://www.primevideo.com/detail/{title_key}",)
+
+
+# TODO: Validate
+class TestMixedSeasonAvailibility(StandardTests[Amazon], AmazonValidator):
+    """Test a season that has mixed source availability."""
+    import_time = datetime(2026, 9, 18, tzinfo=UTC)
+    title_key = "B0D24SZSHG"
+    urls = ("https://www.amazon.com/gp/video/detail/{title_key}",)

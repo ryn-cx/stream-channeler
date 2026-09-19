@@ -17,6 +17,8 @@ from plugins.utils.base_plugin.media_type import MediaType
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from deforestation.detail.models import Episode as ParsedEpisode
+
 
 class AmazonSeriesFiles(AmazonShared, ABC):
     @override
@@ -63,7 +65,7 @@ class AmazonSeriesUpsert(AmazonSeriesFiles, AmazonImporter, ABC):
         ).upsert(source, existing_title)
         upserted_title.upsert_genres(detail_file.genres)
 
-        self._upsert_seasons(upserted_title)
+        self._upsert_seasons(source, upserted_title)
         self._soft_delete_missing_seasons_and_episodes(title_key)
         self.add_title_to_plugin_channels(upserted_title)
         self.add_other_titles_on_page_to_channels(upserted_title)
@@ -73,6 +75,7 @@ class AmazonSeriesUpsert(AmazonSeriesFiles, AmazonImporter, ABC):
         # Manage deleted series
         if not (
             detail_file.included_with_prime
+            or detail_file.free_with_ads
             or detail_file.purchasable
             or detail_file.channels
         ):
@@ -80,7 +83,7 @@ class AmazonSeriesUpsert(AmazonSeriesFiles, AmazonImporter, ABC):
 
         return upserted_title
 
-    def _upsert_seasons(self, title: Title) -> None:
+    def _upsert_seasons(self, source: Source, title: Title) -> None:
         seasons = self.detail_file(title.key).parsed().seasons
         for sort_order, season_entry in enumerate(seasons):
             season_key = season_entry.key
@@ -98,17 +101,12 @@ class AmazonSeriesUpsert(AmazonSeriesFiles, AmazonImporter, ABC):
                 title_id=title.id,
             ).upsert(title, existing_season)
 
-            self._upsert_episodes(upserted_season, title.key)
+            self._upsert_episodes(source, upserted_season, title.key)
             self._set_season_update_at(upserted_season)
-
-            # Some seasons are listed on Amazon but not available to stream. These
-            # entries are imported into the database so the information is available for
-            # later updates.
-            if self.detail_file(season_key).parsed().unavailable_message is not None:
-                upserted_season.soft_delete()
 
     def _upsert_episodes(
         self,
+        source: Source,
         season: Season,
         title_key: str,
     ) -> None:
@@ -140,8 +138,22 @@ class AmazonSeriesUpsert(AmazonSeriesFiles, AmazonImporter, ABC):
                 season_id=season.id,
             ).upsert(season, existing_episode)
 
-            if not item.is_available:
+            if not self._episode_available_on_source(source, title_key, item):
                 upserted_episode.soft_delete()
+
+    # TODO: Validate
+    def _episode_available_on_source(
+        self,
+        source: Source,
+        title_key: str,
+        item: ParsedEpisode,
+    ) -> bool:
+        if source.key == "Purchase on Amazon":
+            return item.purchasable
+        if source.key == "Unavailable on Amazon":
+            return not item.subscription_ids and not item.purchasable
+
+        return self._subscription_id(source, title_key) in item.subscription_ids
 
 
 class AmazonSeriesImporter(AmazonSeriesUpsert):

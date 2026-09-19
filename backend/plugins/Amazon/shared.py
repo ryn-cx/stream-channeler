@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from abc import ABC
+from functools import cached_property
 from typing import TYPE_CHECKING, Any, override
 
 from sqlalchemy import func
@@ -11,6 +12,7 @@ from sqlmodel import col, select
 
 from app.sources.models import Source
 from app.titles.models import Title
+from app.users.service.accounts import get_or_create_automatic_channel_user
 from app.utils import tz_datetime
 from app.watch_providers.models import WatchProvider
 from plugins.Amazon.constants import (
@@ -27,6 +29,7 @@ from plugins.utils.base_plugin.url import ParsedURL
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from app.users.models import User
     from plugins.utils.abstract_plugin import URLImportResult
 
 
@@ -38,10 +41,42 @@ class AmazonShared(BasePlugin):
 
     @classmethod
     @override
+    def source_name(cls) -> str:
+        raise NotImplementedError
+
+    @property
+    @override
+    def source(self) -> Source:
+        raise NotImplementedError
+
+    @cached_property
+    @override
+    def automatic_channel_user(self) -> User:
+        return get_or_create_automatic_channel_user(self.session, self.plugin_name())
+
+    @override
+    def _channel_name(self, topic_prefix: str) -> str:
+        return f"{topic_prefix} on {self.plugin_name()}"
+
+    @override
+    def _channel_description(self, topic_prefix: str) -> str:
+        return (
+            f"All {topic_prefix.removeprefix('All ')} titles on {self.plugin_name()}."
+            "\n\nThis is an automatically generated channel based on the titles that "
+            "have been imported by all of Stream Channeler's users."
+        )
+
+    @classmethod
+    @override
     def name_on_tmdb(cls) -> tuple[str, ...]:
         # This is just the names that do not fall under the "XXX Amazon Channel" format,
         # those names are checked in matches_tmdb_provider.
-        return ("Amazon Prime Video", "Amazon Video", "Prime Video")
+        return (
+            "Amazon Prime Video",
+            "Amazon Prime Video Free with Ads",
+            "Amazon Prime Video with Ads",
+            "Amazon Video",
+        )
 
     @classmethod
     @override
@@ -51,7 +86,12 @@ class AmazonShared(BasePlugin):
     @classmethod
     @override
     def _source_keys(cls) -> tuple[str, ...]:
-        return (cls.source_name(), "Purchase on Amazon", "Unavailable on Amazon")
+        return (
+            "Amazon Prime",
+            "Free on Amazon",
+            "Purchase on Amazon",
+            "Unavailable on Amazon",
+        )
 
     @classmethod
     @override
@@ -63,7 +103,7 @@ class AmazonShared(BasePlugin):
     def matches_tmdb_provider(cls, provider_name: str) -> bool:
         if super().matches_tmdb_provider(provider_name):
             return True
-        return provider_name.endswith("Amazon Channel")
+        return provider_name.casefold().endswith("amazon channel")
 
     @classmethod
     @override
@@ -149,6 +189,7 @@ class AmazonImporterUpsert(AmazonImporterChannels, ABC):
             update_at=self._next_source_update_at(),
         ).upsert(self.plugin, None)
 
+    # TODO: Validate
     def title_sources(self, title_key: str) -> list[Source]:
         """Return every `Source` a `Title` belongs to."""
         parsed = self.detail_file(title_key).parsed()
@@ -157,11 +198,30 @@ class AmazonImporterUpsert(AmazonImporterChannels, ABC):
             for channel in parsed.channels
         ]
         if parsed.included_with_prime:
-            sources.append(self.source)
+            sources.append(self._sources["Amazon Prime"])
+        if parsed.free_with_ads:
+            sources.append(self._sources["Free on Amazon"])
         if parsed.purchasable:
             sources.append(self._sources["Purchase on Amazon"])
         # Unwatchable titles are added
         return sources or [self._sources["Unavailable on Amazon"]]
+
+    # TODO: Validate
+    def _subscription_id(self, source: Source, title_key: str) -> str | None:
+        # freewithads are the awful names Amazon uses internally for subscription
+        # identification.
+        if source.key == "Amazon Prime":
+            return "Prime"
+        if source.key == "Free on Amazon":
+            return "freewithads"
+        return next(
+            (
+                channel.subscription_id
+                for channel in self.detail_file(title_key).parsed().channels
+                if f"{channel.name} on Amazon" == source.key
+            ),
+            None,
+        )
 
     # TODO: This is a mess
     def _source_favicon_url(self, source_key: str) -> str:
