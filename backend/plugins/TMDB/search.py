@@ -1,6 +1,7 @@
 # TODO: Validate
 from __future__ import annotations
 
+import re
 from datetime import date
 from typing import ClassVar, Literal, overload
 
@@ -140,11 +141,22 @@ class TMDBSearch(TMDBBaseFiles):
 
         If no initial match is found, the search is repeated without the year because
         the year is not always reliable."""
-        search_file = self._fetch_search_file(media_type, query, year)
-        search_file.download_if_outdated()
-        if search_file.parsed().results or not year:
-            return search_file
-        return self._fetch_search_file(media_type, query, None)
+        attempts: list[tuple[str, int | None]] = [(query, year), (query, None)]
+        without_parentheses = re.sub(r"\s*\([^()]*\)", "", query).strip()
+        if without_parentheses:
+            attempts += [(without_parentheses, year), (without_parentheses, None)]
+        attempts = list(dict.fromkeys(attempts))
+
+        search_file = self._fetch_search_file(media_type, *attempts[0])
+        for attempt_query, attempt_year in attempts[1:]:
+            if search_file.parsed().results:
+                return search_file
+            search_file = self._fetch_search_file(
+                media_type,
+                attempt_query,
+                attempt_year,
+            )
+        return search_file
 
     # TODO: Validate
     def _fetch_search_file(
