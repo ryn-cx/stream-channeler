@@ -5,6 +5,7 @@ import { useState } from "react"
 import {
   EpisodeInformationHero,
   episodeInformationQueryKey,
+  primarySide,
   useEpisodeInformation,
 } from "@/components/ChannelCommon/EpisodeInformationHero"
 import { EpisodeUserUrlSection } from "@/components/ChannelCommon/EpisodeUserUrlSection"
@@ -17,14 +18,12 @@ import { TMDB_EPISODE_ORDER_PLUGIN } from "@/components/Titles/TmdbEpisodeOrderF
 import {
   Dialog,
   DialogBody,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
 import useAuth from "@/hooks/useAuth"
 import { useTitle } from "@/hooks/useEntities"
 import type { EpisodeTableData } from "./columns"
-import { EpisodeDatabaseDetails } from "./EpisodeDatabaseDetails"
 import { LinkedEpisodeLinks } from "./LinkedEpisodeLinks"
 import { TmdbEpisodeControls, TmdbEpisodeList } from "./TmdbEpisodeField"
 
@@ -119,31 +118,28 @@ export function EpisodeInformationContent({
         />
       )}
 
-      {isAdmin ? (
+      {isAdmin && !isTmdbEpisode ? (
         <AdminZone>
-          {!isTmdbEpisode ? (
-            <TmdbEpisodeControls
-              episodeId={episode.id}
-              seasonNumber={null}
-              episodeNumber={episode.episode_number ?? null}
-              tmdbEpisodeValidatedAt={tmdbEpisodeValidatedAt}
-              tmdbEpisodeNote={tmdbEpisodeNote}
-              hasLinks={tmdbEpisodeIds.length > 0}
-              enabled={enabled}
-              onVerified={() => {
-                setTmdbEpisodeValidatedAt(new Date().toISOString().slice(0, 16))
-                setTmdbEpisodeNote(VERIFIED_NOTE)
-              }}
-              onLinksChanged={(linked) => {
-                setTmdbEpisodeIds(linked.tmdb_episode_ids ?? [])
-                setTmdbEpisodeValidatedAt(
-                  linked.tmdb_episode_validated_at?.slice(0, 16) ?? "",
-                )
-                setTmdbEpisodeNote(linked.tmdb_episode_note ?? "")
-              }}
-            />
-          ) : null}
-          <EpisodeDatabaseDetails episodeId={episode.id} enabled={enabled} />
+          <TmdbEpisodeControls
+            episodeId={episode.id}
+            seasonNumber={null}
+            episodeNumber={episode.episode_number ?? null}
+            tmdbEpisodeValidatedAt={tmdbEpisodeValidatedAt}
+            tmdbEpisodeNote={tmdbEpisodeNote}
+            hasLinks={tmdbEpisodeIds.length > 0}
+            enabled={enabled}
+            onVerified={() => {
+              setTmdbEpisodeValidatedAt(new Date().toISOString().slice(0, 16))
+              setTmdbEpisodeNote(VERIFIED_NOTE)
+            }}
+            onLinksChanged={(linked) => {
+              setTmdbEpisodeIds(linked.tmdb_episode_ids ?? [])
+              setTmdbEpisodeValidatedAt(
+                linked.tmdb_episode_validated_at?.slice(0, 16) ?? "",
+              )
+              setTmdbEpisodeNote(linked.tmdb_episode_note ?? "")
+            }}
+          />
         </AdminZone>
       ) : null}
 
@@ -171,6 +167,19 @@ const EditEpisode = ({ episode, open, onOpenChange }: EditEpisodeProps) => {
   const [isOpenHere, setIsOpenHere] = useState(false)
   const isOpen = open ?? isOpenHere
   const setIsOpen = onOpenChange ?? setIsOpenHere
+  const { data } = useEpisodeInformation(episode.id, isOpen)
+  const side = data ? primarySide(data, true) : null
+  const heading = [
+    side?.label,
+    side?.title.name,
+    side?.season.name ??
+      (side?.season.season_number != null
+        ? `Season ${side.season.season_number}`
+        : null),
+    "Episode Information",
+  ]
+    .filter(Boolean)
+    .join(" - ")
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -181,16 +190,12 @@ const EditEpisode = ({ episode, open, onOpenChange }: EditEpisodeProps) => {
           onClick={() => setIsOpen(true)}
         />
       ) : null}
-      <ModalContent size="3xl" className="overflow-y-hidden">
+      <ModalContent size="3xl" autoHeight aria-describedby={undefined}>
         <DialogHeader>
-          <DialogTitle>Episode Information</DialogTitle>
-          <DialogDescription>
-            What the website and TMDB each say about this episode, and which
-            episodes the row stands for.
-          </DialogDescription>
+          <DialogTitle>{heading}</DialogTitle>
         </DialogHeader>
 
-        <DialogBody className="max-h-none min-h-0 flex-1">
+        <DialogBody className="max-h-none flex-none overflow-visible">
           <div className="py-4">
             <EpisodeInformationContent episode={episode} enabled={isOpen} />
           </div>

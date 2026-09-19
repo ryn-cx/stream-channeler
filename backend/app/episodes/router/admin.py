@@ -19,7 +19,6 @@ from app.episodes.dependencies import (
 from app.episodes.models import Episode
 from app.episodes.schemas import (
     DuplicatedTmdbEpisodeOutput,
-    EpisodeDatabaseOutput,
     EpisodeListOutput,
     EpisodeOutput,
     EpisodesPublic,
@@ -33,7 +32,6 @@ from app.episodes.schemas import (
     UnmatchedEpisodesPublic,
     UnmatchedReadOptions,
 )
-from app.episodes.service.database_rows import episode_database_rows
 from app.episodes.service.duplicates import get_duplicated_tmdb_episodes
 from app.episodes.service.information import _select_with_tmdb_season_and_title
 from app.episodes.service.tmdb_choices import list_tmdb_episode_choices
@@ -169,16 +167,6 @@ def admin_mark_episodes_absent_from_tmdb(
         EpisodeOutput.model_validate(episode)
         for episode in mark_episodes_absent_from_tmdb(session, episode_ids)
     ]
-
-
-# TODO: Validate
-@episodes_router.get(
-    "/{episode_id}/database",  # noqa: FAST003 - Used by ExistingEpisode.
-)
-def admin_get_episode_database_rows(
-    episode: ExistingEpisode,
-) -> EpisodeDatabaseOutput:
-    return episode_database_rows(episode)
 
 
 # TODO: Validate

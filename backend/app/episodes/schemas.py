@@ -91,6 +91,9 @@ class EpisodeListOutput(EpisodeOutput):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)  # type: ignore[assignment]
 
     season_name: str | None = Field(validation_alias=AliasPath("season", "name"))
+    season_number: int | None = Field(
+        validation_alias=AliasPath("season", "season_number"),
+    )
     title_id: uuid.UUID = Field(validation_alias=AliasPath("season", "title_id"))
     title_name: str | None = Field(
         validation_alias=AliasPath("season", "title", "name"),
@@ -100,6 +103,9 @@ class EpisodeListOutput(EpisodeOutput):
     )
     source_key: str = Field(
         validation_alias=AliasPath("season", "title", "source", "key"),
+    )
+    source_favicon_url: str | None = Field(
+        validation_alias=AliasPath("season", "title", "source", "favicon_url"),
     )
     plugin_id: uuid.UUID = Field(
         validation_alias=AliasPath("season", "title", "source", "plugin_id"),

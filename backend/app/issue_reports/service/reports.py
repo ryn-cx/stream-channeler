@@ -47,7 +47,7 @@ def episode_issue_report(
     """Build a report on an `Episode`, on behalf of `user` when there is one."""
     return EpisodeIssueReport(
         report=report_input.report,
-        user_id=user.id if user else None,
+        user_id=None if report_input.anonymous or user is None else user.id,
         episode_id=episode_id,
     )
 
@@ -61,7 +61,7 @@ def season_issue_report(
     """Build a report on a `Season`, on behalf of `user` when there is one."""
     return SeasonIssueReport(
         report=report_input.report,
-        user_id=user.id if user else None,
+        user_id=None if report_input.anonymous or user is None else user.id,
         season_id=season_id,
     )
 
@@ -75,7 +75,7 @@ def title_issue_report(
     """Build a report on a `Title`, on behalf of `user` when there is one."""
     return TitleIssueReport(
         report=report_input.report,
-        user_id=user.id if user else None,
+        user_id=None if report_input.anonymous or user is None else user.id,
         title_id=title_id,
     )
 

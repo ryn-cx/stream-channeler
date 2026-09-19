@@ -18,8 +18,12 @@ declare module "winbox/src/js/winbox.js" {
   // TODO: Validate
   export default class WinBox {
     constructor(options: WinBoxOptions)
+    dom: HTMLElement | null
+    body: HTMLElement | null
     close(force?: boolean): void
     setTitle(title: string): this
     focus(): this
+    resize(width?: string | number, height?: string | number): this
+    move(x?: string | number, y?: string | number): this
   }
 }

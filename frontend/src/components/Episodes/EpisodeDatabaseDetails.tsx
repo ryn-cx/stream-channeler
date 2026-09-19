@@ -96,7 +96,7 @@ export function EpisodeDatabaseDetails({
 }) {
   const { data, isLoading, error } = useQuery({
     queryKey: ["episode-database", episodeId],
-    queryFn: () => EpisodesService.adminGetEpisodeDatabaseRows({ episodeId }),
+    queryFn: () => EpisodesService.getEpisodeDatabaseRows({ episodeId }),
     enabled,
   })
   const [openSeasonId, setOpenSeasonId] = useState<string | null>(null)

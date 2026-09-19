@@ -22,6 +22,7 @@ class IssueReportCreate(BaseModel):
     """Schema for leaving an `IssueReport` on a record."""
 
     report: str = Field(min_length=1)
+    anonymous: bool = False
 
 
 # TODO: Validate

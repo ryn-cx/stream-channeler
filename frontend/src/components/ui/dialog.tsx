@@ -121,6 +121,7 @@ type DialogContentProps = React.ComponentProps<"div"> & {
   showCloseButton?: boolean
   width?: string
   height?: string
+  autoHeight?: boolean
 }
 
 // TODO: Validate
@@ -129,6 +130,7 @@ function DialogContent({
   children,
   width,
   height,
+  autoHeight,
 }: DialogContentProps) {
   const { open, setOpen, title } = useDialogContext()
 
@@ -139,6 +141,7 @@ function DialogContent({
       onClose={() => setOpen(false)}
       width={width}
       height={height}
+      autoHeight={autoHeight}
       className={cn("flex flex-col gap-4 p-6", className)}
     >
       {children}

@@ -5,6 +5,7 @@ import { useState } from "react"
 import type { IssueReportOutput } from "@/client"
 import { IssueReportsService } from "@/client"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import useAuth from "@/hooks/useAuth"
@@ -22,20 +23,14 @@ export type IssueReportTarget = "episode" | "season" | "title"
  * being paired with the wrong one. Said in the words somebody watching would use
  * rather than in the ones the database uses.
  */
-const TARGET_WORDING: Record<
-  IssueReportTarget,
-  { noun: string; placeholder: string }
-> = {
+const TARGET_WORDING: Record<IssueReportTarget, { placeholder: string }> = {
   title: {
-    noun: "title",
     placeholder: "This title is also on another website…",
   },
   season: {
-    noun: "season",
     placeholder: "This season has the wrong episodes in it…",
   },
   episode: {
-    noun: "episode",
     placeholder: "This is paired with the wrong episode…",
   },
 }
@@ -53,8 +48,9 @@ function createReport(
   target: IssueReportTarget,
   mediaId: string,
   report: string,
+  anonymous: boolean,
 ) {
-  const requestBody = { report }
+  const requestBody = { report, anonymous }
   if (target === "episode") {
     return IssueReportsService.createEpisodeIssueReport({
       episodeId: mediaId,
@@ -117,6 +113,7 @@ export function IssueReportsSection({
   informationQueryKey,
 }: IssueReportsSectionProps) {
   const [draft, setDraft] = useState("")
+  const [anonymous, setAnonymous] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState("")
   const { user } = useAuth()
@@ -131,10 +128,11 @@ export function IssueReportsSection({
   }
 
   const createMutation = useMutation({
-    mutationFn: () => createReport(target, mediaId, draft),
+    mutationFn: () => createReport(target, mediaId, draft, anonymous),
     onSuccess: () => {
       showSuccessToast("Issue reported")
       setDraft("")
+      setAnonymous(false)
       invalidate()
     },
     onError: (error: unknown) => handleError.call(showErrorToast, error as any),
@@ -169,7 +167,7 @@ export function IssueReportsSection({
 
       {reports.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Nothing has been reported against this {wording.noun} yet.
+          Nothing has been reported yet.
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
@@ -240,26 +238,39 @@ export function IssueReportsSection({
         </ul>
       )}
 
-      {user && (
-        <div className="flex flex-col gap-2">
-          <Label htmlFor={`issue-report-${mediaId}`}>Report an issue</Label>
-          <Textarea
-            id={`issue-report-${mediaId}`}
-            rows={3}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            placeholder={wording.placeholder}
-          />
-          <Button
-            className="self-start"
-            disabled={draft.trim().length === 0 || createMutation.isPending}
-            onClick={() => createMutation.mutate()}
-          >
-            <Flag />
-            Report Issue
-          </Button>
-        </div>
-      )}
+      <div className="flex flex-col gap-2">
+        <Label htmlFor={`issue-report-${mediaId}`}>Report an issue</Label>
+        <Textarea
+          id={`issue-report-${mediaId}`}
+          rows={3}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder={wording.placeholder}
+        />
+        {user ? (
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id={`issue-report-anonymous-${mediaId}`}
+              checked={anonymous}
+              onCheckedChange={(checked) => setAnonymous(checked === true)}
+            />
+            <Label
+              htmlFor={`issue-report-anonymous-${mediaId}`}
+              className="font-normal"
+            >
+              Report anonymously
+            </Label>
+          </div>
+        ) : null}
+        <Button
+          className="self-start"
+          disabled={draft.trim().length === 0 || createMutation.isPending}
+          onClick={() => createMutation.mutate()}
+        >
+          <Flag />
+          Report Issue
+        </Button>
+      </div>
     </div>
   )
 }

@@ -2784,6 +2784,17 @@ export const EpisodeListOutputSchema = {
             ],
             title: 'Season Name'
         },
+        season_number: {
+            anyOf: [
+                {
+                    type: 'integer'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Season Number'
+        },
         title_id: {
             type: 'string',
             format: 'uuid',
@@ -2809,6 +2820,17 @@ export const EpisodeListOutputSchema = {
             type: 'string',
             title: 'Source Key'
         },
+        source_favicon_url: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Source Favicon Url'
+        },
         plugin_id: {
             type: 'string',
             format: 'uuid',
@@ -2827,7 +2849,7 @@ export const EpisodeListOutputSchema = {
         }
     },
     type: 'object',
-    required: ['key', 'id', 'season_id', 'modified_at', 'season_name', 'title_id', 'title_name', 'source_id', 'source_key', 'plugin_id', 'plugin_name'],
+    required: ['key', 'id', 'season_id', 'modified_at', 'season_name', 'season_number', 'title_id', 'title_name', 'source_id', 'source_key', 'source_favicon_url', 'plugin_id', 'plugin_name'],
     title: 'EpisodeListOutput',
     description: 'Schema for returning a list of `Episode`s, with parent information.'
 } as const;
@@ -4099,6 +4121,11 @@ export const IssueReportCreateSchema = {
             type: 'string',
             minLength: 1,
             title: 'Report'
+        },
+        anonymous: {
+            type: 'boolean',
+            title: 'Anonymous',
+            default: false
         }
     },
     type: 'object',

@@ -167,12 +167,15 @@ def assign_best_matches(
 
 # TODO: Validate
 def episode_name(episode: EpisodeRecord) -> str:
-    return re.sub(
+    name = re.sub(
         r"\((?:sub|dub)\)",
         "",
         episode.name or "",
         flags=re.IGNORECASE,
     ).strip()
+    if re.fullmatch(r"Episode \d+", name):
+        return ""
+    return name
 
 
 # TODO: Validate

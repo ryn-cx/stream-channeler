@@ -82,9 +82,18 @@ function heroFacts(
 // TODO: Validate
 function sideLinks(side: EpisodeInformationSide) {
   return [
-    { label: `${side.label} episode`, href: side.episode.url },
-    { label: `${side.label} season`, href: side.season.url },
-    { label: `${side.label} title`, href: side.title.url },
+    {
+      label: `${side.label} episode`,
+      href: side.episode.url ?? side.episode.tmdb_url,
+    },
+    {
+      label: `${side.label} season`,
+      href: side.season.url ?? side.season.tmdb_url,
+    },
+    {
+      label: `${side.label} title`,
+      href: side.title.url ?? side.title.tmdb_url,
+    },
   ]
 }
 

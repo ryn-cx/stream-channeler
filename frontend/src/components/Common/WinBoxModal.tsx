@@ -21,6 +21,7 @@ interface WinBoxModalProps {
   onClose: () => void
   width?: string
   height?: string
+  autoHeight?: boolean
   className?: string
   children: ReactNode
 }
@@ -32,6 +33,7 @@ export function WinBoxModal({
   onClose,
   width = "70%",
   height = "80%",
+  autoHeight = false,
   className,
   children,
 }: WinBoxModalProps) {
@@ -39,6 +41,7 @@ export function WinBoxModal({
   const onCloseRef = useRef(onClose)
   const titleRef = useRef(title)
   const winBoxRef = useRef<WinBox | null>(null)
+  const contentRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     onCloseRef.current = onClose
@@ -87,13 +90,45 @@ export function WinBoxModal({
     }
   }, [open, width, height])
 
+  useEffect(() => {
+    const content = contentRef.current
+    if (!autoHeight || !mount || !content) {
+      return
+    }
+    // TODO: Validate
+    const fit = () => {
+      const winBox = winBoxRef.current
+      if (!winBox?.dom || !winBox.body) {
+        return
+      }
+      const chrome = winBox.dom.offsetHeight - winBox.body.clientHeight
+      const wanted = Math.min(
+        content.offsetHeight + chrome,
+        Math.round(window.innerHeight * 0.9),
+      )
+      if (Math.abs(wanted - winBox.dom.offsetHeight) < 2) {
+        return
+      }
+      winBox.resize(winBox.dom.offsetWidth, wanted).move("center", "center")
+    }
+    const observer = new ResizeObserver(fit)
+    observer.observe(content)
+    window.addEventListener("resize", fit)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener("resize", fit)
+    }
+  }, [autoHeight, mount])
+
   if (!mount) {
     return null
   }
   return createPortal(
     <div
+      ref={contentRef}
       className={cn(
-        "h-full overflow-y-auto bg-background text-foreground",
+        autoHeight ? "h-max" : "h-full overflow-y-auto",
+        "bg-background text-foreground",
         className,
       )}
     >

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from abc import ABC
-from datetime import time
 from typing import TYPE_CHECKING, Any, override
 
 from app.episodes.models import Episode
@@ -112,7 +111,7 @@ class AmazonMovieUpsert(AmazonMovieFiles, AmazonImporter, ABC):
             sort_order=0,
             # TODO: Is the None check needed?
             air_date=(
-                tz_datetime.combine(parsed.release_date, time.min)
+                tz_datetime.fromisoformat(str(parsed.release_date))
                 if parsed.release_date
                 else None
             ),

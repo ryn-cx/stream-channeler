@@ -589,10 +589,12 @@ export type EpisodeListOutput = {
     tmdb_id?: (number | null);
     tmdb_url?: (string | null);
     season_name: (string | null);
+    season_number: (number | null);
     title_id: string;
     title_name: (string | null);
     source_id: string;
     source_key: string;
+    source_favicon_url: (string | null);
     plugin_id: string;
     plugin_name: (string | null);
 };
@@ -834,6 +836,7 @@ export type HTTPValidationError = {
  */
 export type IssueReportCreate = {
     report: string;
+    anonymous?: boolean;
 };
 
 /**
@@ -2948,6 +2951,12 @@ export type EpisodesGetLinkedEpisodesData = {
 
 export type EpisodesGetLinkedEpisodesResponse = (Array<EpisodeListOutput>);
 
+export type EpisodesGetEpisodeDatabaseRowsData = {
+    episodeId: string;
+};
+
+export type EpisodesGetEpisodeDatabaseRowsResponse = (EpisodeDatabaseOutput);
+
 export type EpisodesGetEpisodesData = {
     filterOptions?: string;
     limit?: number;
@@ -2991,12 +3000,6 @@ export type EpisodesAdminMarkEpisodesAbsentFromTmdbData = {
 };
 
 export type EpisodesAdminMarkEpisodesAbsentFromTmdbResponse = (Array<EpisodeOutput>);
-
-export type EpisodesAdminGetEpisodeDatabaseRowsData = {
-    episodeId: string;
-};
-
-export type EpisodesAdminGetEpisodeDatabaseRowsResponse = (EpisodeDatabaseOutput);
 
 export type EpisodesAdminGetTmdbEpisodeChoicesData = {
     episodeId: string;

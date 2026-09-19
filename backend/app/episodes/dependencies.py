@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException
 from sqlmodel import col, select
 
-from app.auth.dependencies import SessionDep, SuperUser
+from app.auth.dependencies import SessionDep
 from app.episodes.models import Episode
 from app.media.service.records import existing_record
 from app.tmdb_media.filters import is_not_linked
@@ -18,7 +18,6 @@ ExistingEpisode = Annotated[Episode, Depends(existing_record(Episode, "episode_i
 # TODO: Validate
 def get_tmdb_episode(
     session: SessionDep,
-    _admin: SuperUser,
     tmdb_episode_id: uuid.UUID,
 ) -> Episode:
     tmdb_episode = session.exec(

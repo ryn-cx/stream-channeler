@@ -43,3 +43,8 @@ class TestDeletedSeries(StandardTests[Crunchyroll], CrunchyrollValidator):
     parse_url_response = "GRVN31D5Y"
     title_slug = "encouragement-of-climb"
 
+
+# TODO: Validate
+class TestWeirdSeasonName(StandardTests[Crunchyroll], CrunchyrollValidator):
+    parse_url_response = "G6E58N5VY"
+    title_slug = "hinako-note"
