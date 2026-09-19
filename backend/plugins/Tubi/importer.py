@@ -153,6 +153,8 @@ class TubiSeriesImporter(TubiImporter):
             url=series_url(title_key),
             image_url=first_image(content.backgrounds),
             thumbnail_url=first_image(content.backgrounds),
+            poster_url=first_image(content.posterarts),
+            poster_thumbnail_url=first_image(content.posterarts),
             data_timestamp=data_timestamp,
             source_id=source.id,
             update_at=data_timestamp + timedelta(days=7),
@@ -278,6 +280,8 @@ class TubiMovieImporter(TubiImporter):
             url=movie_url(title_key),
             image_url=first_image(content.backgrounds),
             thumbnail_url=first_image(content.backgrounds),
+            poster_url=first_image(content.posterarts),
+            poster_thumbnail_url=first_image(content.posterarts),
             data_timestamp=data_timestamp,
             source_id=source.id,
         ).upsert(

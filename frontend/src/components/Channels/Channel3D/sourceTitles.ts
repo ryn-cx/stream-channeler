@@ -9,8 +9,11 @@ const shrinkArtwork = (url: string | null) =>
   ) ?? null
 
 // TODO: Validate
-export const fetchSourceTitles = async (sourceId: string) => {
-  const page = await VideoStoreService.getStoreTitles({ sourceId })
+export const fetchSourceTitles = async (
+  sourceId: string,
+  metadata: "tmdb" | "source",
+) => {
+  const page = await VideoStoreService.getStoreTitles({ sourceId, metadata })
   return page.titles.map((title) => ({
     id: title.id,
     name: title.name || "Untitled",
@@ -22,10 +25,7 @@ export const fetchSourceTitles = async (sourceId: string) => {
     languages: title.languages,
     imageUrl: shrinkArtwork(title.thumbnail_url),
     isPoster: title.is_poster,
-    genres: title.genres.map((genre) => ({
-      source: genre.plugin_name,
-      name: genre.name,
-    })),
+    genres: title.genres,
     episodeCount: title.episode_count,
     seasonCount: title.season_count,
   }))

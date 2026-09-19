@@ -2135,14 +2135,6 @@ export type ValidationError = {
 };
 
 /**
- * Schema for returning one genre and the website it was filed under by.
- */
-export type VideoStoreGenreOutput = {
-    plugin_name: string;
-    name: string;
-};
-
-/**
  * Schema for returning one language titles can be filtered by.
  */
 export type VideoStoreLanguageOutput = {
@@ -2201,7 +2193,7 @@ export type VideoStoreTitleOutput = {
     languages: Array<(string)>;
     thumbnail_url: (string | null);
     is_poster: boolean;
-    genres: Array<VideoStoreGenreOutput>;
+    genres: Array<(string)>;
     season_count: number;
     episode_count: number;
 };
@@ -3554,6 +3546,7 @@ export type UtilsTestEmailResponse = (Message);
 export type VideoStoreGetStoreSourcesResponse = (Array<VideoStoreSourceOutput>);
 
 export type VideoStoreGetStoreTitlesData = {
+    metadata?: 'tmdb' | 'source';
     sourceId: string;
 };
 
@@ -3579,6 +3572,7 @@ export type VideoStoreGetProviderTitlesData = {
 export type VideoStoreGetProviderTitlesResponse = (VideoStoreTitlesOutput);
 
 export type VideoStoreGetTitleDetailData = {
+    metadata?: 'tmdb' | 'source';
     titleId: string;
 };
 

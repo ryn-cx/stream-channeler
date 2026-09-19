@@ -57,6 +57,8 @@ class AmazonMovieUpsert(AmazonMovieFiles, AmazonImporter, ABC):
             thumbnail_url=detail_file.images.covershot_thumbnail,
             poster_url=detail_file.images.packshot,
             poster_thumbnail_url=detail_file.images.packshot_thumbnail,
+            score=detail_file.amazon_rating,
+            popularity=detail_file.amazon_rating_count,
             year=detail_file.release_year,
             data_timestamp=data_timestamp,
             source_id=source.id,

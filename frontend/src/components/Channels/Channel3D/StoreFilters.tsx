@@ -22,7 +22,6 @@ export type StoreFilters = {
   unknownOriginalLanguage: boolean
   languages: string[] | null
   unknownLanguage: boolean
-  genreSources: string[] | null
   unknownGenre: boolean
 }
 
@@ -46,11 +45,6 @@ export const storeBounds = (titles: StoreTitle[]) => {
         .filter((mediaType) => mediaType !== null),
     ),
   ].sort((left, right) => left.localeCompare(right))
-  const genreSources = [
-    ...new Set(
-      titles.flatMap((title) => title.genres).map((genre) => genre.source),
-    ),
-  ].sort((left, right) => left.localeCompare(right))
   return {
     yearFrom: years.length > 0 ? Math.min(...years) : 0,
     yearTo: years.length > 0 ? Math.max(...years) : 0,
@@ -61,7 +55,6 @@ export const storeBounds = (titles: StoreTitle[]) => {
     popularityTo:
       popularity.length > 0 ? Math.ceil(Math.max(...popularity)) : 0,
     mediaTypes,
-    genreSources,
   }
 }
 
@@ -84,18 +77,12 @@ export const defaultFilters = (titles: StoreTitle[]): StoreFilters => {
     unknownOriginalLanguage: true,
     languages: null,
     unknownLanguage: true,
-    genreSources: bounds.genreSources.includes("TMDB")
-      ? ["TMDB"]
-      : bounds.genreSources,
     unknownGenre: true,
   }
 }
 
 // TODO: Validate
 export const applyFilters = (titles: StoreTitle[], filters: StoreFilters) => {
-  const chosenSources =
-    filters.genreSources === null ? null : new Set(filters.genreSources)
-
   return titles.flatMap((title) => {
     if (title.year === null) {
       if (!filters.unknownYear) return []
@@ -145,14 +132,8 @@ export const applyFilters = (titles: StoreTitle[], filters: StoreFilters) => {
       return []
     }
 
-    const genres =
-      chosenSources === null
-        ? title.genres
-        : title.genres.filter((genre) => chosenSources.has(genre.source))
-    if (genres.length === 0) {
-      return filters.unknownGenre ? [{ ...title, genres }] : []
-    }
-    return [{ ...title, genres }]
+    if (title.genres.length === 0 && !filters.unknownGenre) return []
+    return [title]
   })
 }
 
@@ -286,12 +267,7 @@ export const filterSummary = (
       filters.languages ?? [],
       filters.unknownLanguage,
     ),
-    chosen(
-      "Genres",
-      filters.genreSources,
-      bounds.genreSources,
-      filters.unknownGenre,
-    ),
+    filters.unknownGenre ? "Genres: any" : "Genres: any known",
   ]
 }
 
@@ -336,49 +312,6 @@ const LanguageSection = ({
     </div>
     <Toggle
       label={unknownLabel}
-      checked={unknownChecked}
-      onChange={onUnknownChange}
-    />
-  </div>
-)
-
-// TODO: Validate
-const GenreSection = ({
-  options,
-  selected,
-  unknownChecked,
-  onSelectedChange,
-  onUnknownChange,
-}: {
-  options: string[]
-  selected: string[] | null
-  unknownChecked: boolean
-  onSelectedChange: (selected: string[]) => void
-  onUnknownChange: (checked: boolean) => void
-}) => (
-  <div className="mt-4 flex flex-col gap-2">
-    <span className="text-xs font-medium uppercase tracking-wide text-white/50">
-      Genres from
-    </span>
-    <div className="flex max-h-40 flex-col gap-2 overflow-y-auto pr-1">
-      {options.map((source) => (
-        <Toggle
-          key={source}
-          label={source}
-          checked={selected === null || selected.includes(source)}
-          onChange={(checked) => {
-            const current = selected ?? options
-            onSelectedChange(
-              checked
-                ? [...current, source]
-                : current.filter((entry) => entry !== source),
-            )
-          }}
-        />
-      ))}
-    </div>
-    <Toggle
-      label="Include titles with no genre"
       checked={unknownChecked}
       onChange={onUnknownChange}
     />
@@ -484,6 +417,8 @@ export function StoreFilterPanel({
   onLoadFilterDefault,
   audioPlaying,
   onAudioPlaying,
+  metadata,
+  onMetadata,
 }: {
   titles: StoreTitle[]
   filters: StoreFilters
@@ -500,6 +435,8 @@ export function StoreFilterPanel({
   onLoadFilterDefault: () => void
   audioPlaying: boolean
   onAudioPlaying: (playing: boolean) => void
+  metadata: "tmdb" | "source"
+  onMetadata?: (metadata: "tmdb" | "source") => void
 }) {
   const [draft, setDraft] = useState(filters)
   const [tab, setTab] = useState<"filters" | "design" | "audio">("filters")
@@ -740,6 +677,24 @@ export function StoreFilterPanel({
 
         {tab === "filters" && (
           <>
+            {onMetadata && (
+              <div className="mt-4 flex flex-col gap-2">
+                <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+                  Data
+                </span>
+                <Choices
+                  options={["TMDB", "Website"]}
+                  value={metadata === "source" ? 1 : 0}
+                  onChange={(index) =>
+                    onMetadata(index === 1 ? "source" : "tmdb")
+                  }
+                />
+                <p className="text-[11px] text-white/40">
+                  Where the names, years, artwork and blurbs come from.
+                </p>
+              </div>
+            )}
+
             <div className="mt-4 flex flex-col gap-2">
               <span className="text-xs font-medium uppercase tracking-wide text-white/50">
                 Year
@@ -877,17 +832,18 @@ export function StoreFilterPanel({
               }
             />
 
-            <GenreSection
-              options={bounds.genreSources}
-              selected={draft.genreSources}
-              unknownChecked={draft.unknownGenre}
-              onSelectedChange={(selected) =>
-                setDraft({ ...draft, genreSources: selected })
-              }
-              onUnknownChange={(checked) =>
-                setDraft({ ...draft, unknownGenre: checked })
-              }
-            />
+            <div className="mt-4 flex flex-col gap-2">
+              <span className="text-xs font-medium uppercase tracking-wide text-white/50">
+                Genres
+              </span>
+              <Toggle
+                label="Include titles with no genre"
+                checked={draft.unknownGenre}
+                onChange={(checked) =>
+                  setDraft({ ...draft, unknownGenre: checked })
+                }
+              />
+            </div>
 
             <div className="mt-4 flex items-center gap-2 text-xs">
               <button

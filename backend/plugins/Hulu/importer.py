@@ -337,6 +337,7 @@ class HuluSeriesImporter(HuluImporter):
     def _title_record(self, source: Source, title_key: str) -> Title:
         parsed_series = self.series_file(title_key).parsed()
         entity = parsed_series.details.entity
+        vertical_tile = parsed_series.artwork.program_vertical_tile
         return Title(
             key=title_key,
             name=parsed_series.name,
@@ -348,6 +349,10 @@ class HuluSeriesImporter(HuluImporter):
             url=self.title_url(title_key),
             image_url=image_url(parsed_series.artwork.program_tile.path),
             thumbnail_url=thumbnail_url(parsed_series.artwork.program_tile.path),
+            poster_url=image_url(vertical_tile.path if vertical_tile else None),
+            poster_thumbnail_url=thumbnail_url(
+                vertical_tile.path if vertical_tile else None,
+            ),
             data_timestamp=self._title_files_data_timestamp(title_key),
             source_id=source.id,
         )
@@ -501,6 +506,7 @@ class HuluMovieImporter(HuluImporter):
     @override
     def _title_record(self, source: Source, title_key: str) -> Title:
         parsed_movie = self.movie_file(title_key).details()
+        vertical_tile = parsed_movie.entity.artwork.program_vertical_tile
         return Title(
             key=title_key,
             name=parsed_movie.entity.name,
@@ -510,6 +516,10 @@ class HuluMovieImporter(HuluImporter):
             image_url=image_url(parsed_movie.entity.artwork.program_tile.path),
             thumbnail_url=thumbnail_url(
                 parsed_movie.entity.artwork.program_tile.path,
+            ),
+            poster_url=image_url(vertical_tile.path if vertical_tile else None),
+            poster_thumbnail_url=thumbnail_url(
+                vertical_tile.path if vertical_tile else None,
             ),
             media_type=MediaType.movie,
             data_timestamp=self._title_files_data_timestamp(title_key),

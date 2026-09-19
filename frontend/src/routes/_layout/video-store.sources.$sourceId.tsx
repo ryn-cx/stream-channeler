@@ -7,8 +7,14 @@ import { VideoStoreService } from "@/client"
 import { StoreScreen } from "@/components/Channels/Channel3D/StoreScreen"
 import { fetchSourceTitles } from "@/components/Channels/Channel3D/sourceTitles"
 
+type SourceStoreSearch = { metadata?: "tmdb" | "source" }
+
 export const Route = createFileRoute("/_layout/video-store/sources/$sourceId")({
   component: SourceStore,
+  // TODO: Validate
+  validateSearch: (search: Record<string, unknown>): SourceStoreSearch => ({
+    metadata: search.metadata === "source" ? "source" : undefined,
+  }),
   head: () => ({
     meta: [{ title: "Video Store - Stream Channeler" }],
   }),
@@ -17,6 +23,9 @@ export const Route = createFileRoute("/_layout/video-store/sources/$sourceId")({
 // TODO: Validate
 function SourceStore() {
   const { sourceId } = Route.useParams()
+  const { metadata } = Route.useSearch()
+  const navigate = Route.useNavigate()
+  const activeMetadata = metadata ?? "tmdb"
 
   const { data: sources } = useQuery({
     queryKey: ["video-store-sources"],
@@ -25,7 +34,10 @@ function SourceStore() {
   })
   const source = sources?.find((entry) => entry.id === sourceId)
 
-  const fetchStock = useCallback(() => fetchSourceTitles(sourceId), [sourceId])
+  const fetchStock = useCallback(
+    () => fetchSourceTitles(sourceId, activeMetadata),
+    [sourceId, activeMetadata],
+  )
 
   return (
     <StoreScreen
@@ -33,6 +45,13 @@ function SourceStore() {
       storeName={source?.key || "Video Store"}
       fetchStock={fetchStock}
       emptyMessage="This source has nothing on the shelves right now."
+      metadata={activeMetadata}
+      onMetadata={(next) =>
+        navigate({
+          search: { metadata: next === "source" ? next : undefined },
+          replace: true,
+        })
+      }
       back={
         <Link
           to="/video-store"

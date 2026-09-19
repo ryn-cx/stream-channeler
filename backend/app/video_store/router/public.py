@@ -2,9 +2,9 @@
 """Video store router."""
 
 import uuid
-from typing import Annotated
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Path, Query
+from fastapi import APIRouter, Path, Query, Response
 
 from app.auth.dependencies import SessionDep
 from app.sources.dependencies import ExistingSource
@@ -40,9 +40,10 @@ def get_store_sources(
 def get_store_titles(
     session: SessionDep,
     source: ExistingSource,
+    metadata: Annotated[Literal["tmdb", "source"], Query()] = "tmdb",
 ) -> VideoStoreTitlesOutput:
     """Read every title a `Source` carries."""
-    return service.store_titles(session, source)
+    return service.store_titles(session, source, metadata)
 
 
 # TODO: Validate
@@ -100,9 +101,21 @@ title_router = APIRouter(prefix="/video-store", tags=["video-store"])
 def get_title_detail(
     session: SessionDep,
     title: ExistingTitle,
+    metadata: Annotated[Literal["tmdb", "source"], Query()] = "tmdb",
 ) -> VideoStoreTitleDetailOutput:
     """Read everything the case viewer shows for one shelved title."""
-    return service.title_detail(session, title)
+    return service.title_detail(session, title, metadata)
+
+
+# FAST003 - Parameter is used by ExistingTitle.
+# TODO: Validate
+@title_router.get("/titles/{title_id}/image")  # noqa: FAST003
+async def get_title_image(
+    session: SessionDep,
+    title: ExistingTitle,
+    url: Annotated[str, Query()],
+) -> Response:
+    return await service.title_image(session, title, url)
 
 
 router = APIRouter()

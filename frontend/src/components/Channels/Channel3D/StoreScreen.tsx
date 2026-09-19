@@ -89,12 +89,16 @@ export function StoreScreen({
   fetchStock,
   emptyMessage,
   back,
+  metadata = "tmdb",
+  onMetadata,
 }: {
   storeKey: string
   storeName: string
   fetchStock: () => Promise<StoreStock>
   emptyMessage: string
   back: React.ReactNode
+  metadata?: "tmdb" | "source"
+  onMetadata?: (metadata: "tmdb" | "source") => void
 }) {
   const [stock, setStock] = useState<StoreStock | null>(null)
   const [filters, setFilters] = useState<StoreFilters | null>(null)
@@ -116,12 +120,16 @@ export function StoreScreen({
     null,
   )
   const fetchRef = useRef(fetchStock)
+  const stockedKey = useRef<string | null>(null)
 
   fetchRef.current = fetchStock
 
   useEffect(() => {
     let cancelled = false
-    setStock(null)
+    if (stockedKey.current !== storeKey) {
+      stockedKey.current = storeKey
+      setStock(null)
+    }
 
     // TODO: Validate
     const stockShelves = async () => {
@@ -200,6 +208,7 @@ export function StoreScreen({
           titles={shelved}
           slotCount={slotCount}
           storeName={storeName}
+          metadata={metadata}
           paused={inspecting !== null || filtersOpen || channelAction !== null}
           onStore={setStore}
           onFilters={() => setFiltersOpen(true)}
@@ -264,6 +273,8 @@ export function StoreScreen({
           }}
           audioPlaying={audioPlaying}
           onAudioPlaying={setAudioPlaying}
+          metadata={metadata}
+          onMetadata={onMetadata}
         />
       )}
 
@@ -287,6 +298,7 @@ export function StoreScreen({
         <CaseViewer
           title={inspecting}
           vhs={vhs}
+          metadata={metadata}
           onClose={() => setInspecting(null)}
           atCounter={counter.some((entry) => entry.id === inspecting.id)}
           onTakeToCounter={() => {

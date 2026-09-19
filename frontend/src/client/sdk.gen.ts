@@ -3604,6 +3604,7 @@ export class VideoStoreService {
      * Read every title a `Source` carries.
      * @param data The data for the request.
      * @param data.sourceId
+     * @param data.metadata
      * @returns VideoStoreTitlesOutput Successful Response
      * @throws ApiError
      */
@@ -3613,6 +3614,9 @@ export class VideoStoreService {
             url: '/api/v1/video-store/sources/{source_id}/titles',
             path: {
                 source_id: data.sourceId
+            },
+            query: {
+                metadata: data.metadata
             },
             errors: {
                 422: 'Validation Error'
@@ -3710,6 +3714,7 @@ export class VideoStoreService {
      * Read everything the case viewer shows for one shelved title.
      * @param data The data for the request.
      * @param data.titleId
+     * @param data.metadata
      * @returns VideoStoreTitleDetailOutput Successful Response
      * @throws ApiError
      */
@@ -3719,6 +3724,9 @@ export class VideoStoreService {
             url: '/api/v1/video-store/titles/{title_id}',
             path: {
                 title_id: data.titleId
+            },
+            query: {
+                metadata: data.metadata
             },
             errors: {
                 422: 'Validation Error'

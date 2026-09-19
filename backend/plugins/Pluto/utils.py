@@ -8,7 +8,23 @@ from typing import TYPE_CHECKING
 from plugins.Pluto.constants import LOCALE
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from notaplanet.items.models import Cover as ItemCover
+    from notaplanet.seasons.models import Cover as SeasonCover
     from notaplanet.seasons.models import Episode, Season, SeasonsModel
+
+
+# TODO: Validate
+def _cover_ratio(cover: ItemCover | SeasonCover) -> float:
+    width, _, height = cover.aspect_ratio.partition(":")
+    return float(width) / float(height)
+
+
+# TODO: Validate
+def poster_url(covers: Sequence[ItemCover | SeasonCover]) -> str | None:
+    portrait = [cover for cover in covers if _cover_ratio(cover) < 1]
+    return min(portrait, key=_cover_ratio).url if portrait else None
 
 
 # TODO: Validate

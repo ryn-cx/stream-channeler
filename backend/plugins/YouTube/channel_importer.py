@@ -149,6 +149,7 @@ class YouTubeChannelImporter(
             source_id=source.id,
             image_url=image_url(channel_item.snippet.thumbnails),
             thumbnail_url=thumbnail_url(channel_item.snippet.thumbnails),
+            popularity=float(channel_item.statistics.subscriber_count),
         ).upsert(source, existing_title)
 
         self._upsert_seasons(upserted_title, title_key)

@@ -45,6 +45,7 @@ const loadImage = (url: string | null) =>
 export function CaseViewer({
   title,
   vhs,
+  metadata,
   atCounter,
   onClose,
   onTakeToCounter,
@@ -52,6 +53,7 @@ export function CaseViewer({
 }: {
   title: StoreTitle
   vhs: boolean
+  metadata: "tmdb" | "source"
   atCounter: boolean
   onClose: () => void
   onTakeToCounter: () => void
@@ -133,7 +135,7 @@ export function CaseViewer({
 
     // TODO: Validate
     const paint = async () => {
-      const detail = await fetchTitleDetail(title.id)
+      const detail = await fetchTitleDetail(title.id, metadata)
       if (disposed) return
       setLinks(detail.links)
       const [cover, backdrop] = await Promise.all([
@@ -280,7 +282,7 @@ export function CaseViewer({
       renderer.dispose()
       renderer.domElement.remove()
     }
-  }, [title, vhs])
+  }, [title, vhs, metadata])
 
   useEffect(() => {
     // TODO: Validate

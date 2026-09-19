@@ -25,6 +25,8 @@ from plugins.Crunchyroll.utils import (
     episode_thumbnail,
     is_movie,
     title_image,
+    title_poster,
+    title_poster_thumbnail,
     title_thumbnail,
 )
 from plugins.utils.abstract_plugin import InvalidURLError
@@ -197,6 +199,8 @@ class CrunchyrollAnimeUpsert(CrunchyrollAnimeChannels, ABC):
             url=self.title_url(series_data.id),
             image_url=title_image(series_data.images),
             thumbnail_url=title_thumbnail(series_data.images),
+            poster_url=title_poster(series_data.images),
+            poster_thumbnail_url=title_poster_thumbnail(series_data.images),
             year=series_data.series_launch_year,
             data_timestamp=self._title_files_data_timestamp(title_key),
             source_id=source.id,

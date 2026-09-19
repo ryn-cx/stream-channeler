@@ -236,15 +236,18 @@ export class VideoStore {
   readonly touch = isTouchDevice()
   private caseGeometry = buildCaseGeometry()
   private resizeObserver: ResizeObserver
+  private metadata: "tmdb" | "source"
 
   // TODO: Validate
   constructor(
     container: HTMLElement,
     slotCount: number,
     storeName: string,
+    metadata: "tmdb" | "source",
     callbacks: VideoStoreCallbacks,
   ) {
     this.container = container
+    this.metadata = metadata
     this.callbacks = callbacks
 
     this.renderer = new WebGPURenderer({ antialias: true })
@@ -1499,7 +1502,7 @@ export class VideoStore {
 
   // TODO: Validate
   private async paintPoster(poster: THREE.Mesh, title: StoreTitle) {
-    const detail = await fetchTitleDetail(title.id)
+    const detail = await fetchTitleDetail(title.id, this.metadata)
     if (this.disposed) return
     const source = detail.poster_url ?? title.imageUrl
     if (!source) return

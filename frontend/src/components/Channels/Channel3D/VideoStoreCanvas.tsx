@@ -9,6 +9,7 @@ export function VideoStoreCanvas({
   titles,
   slotCount,
   storeName,
+  metadata,
   paused,
   onStore,
   onFilters,
@@ -18,6 +19,7 @@ export function VideoStoreCanvas({
   titles: StoreTitle[]
   slotCount: number
   storeName: string
+  metadata: "tmdb" | "source"
   paused: boolean
   onStore?: (store: VideoStore | null) => void
   onFilters: () => void
@@ -44,7 +46,7 @@ export function VideoStoreCanvas({
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
-    const created = new VideoStore(container, slotCount, storeName, {
+    const created = new VideoStore(container, slotCount, storeName, metadata, {
       onFocus: setFocused,
       onActivate: (title) => activateRef.current(title),
       onFilters: () => filtersRef.current(),
@@ -62,7 +64,7 @@ export function VideoStoreCanvas({
       storeRef.current?.(null)
       created.dispose()
     }
-  }, [slotCount, storeName])
+  }, [slotCount, storeName, metadata])
 
   useEffect(() => {
     store?.addTitles(titles)

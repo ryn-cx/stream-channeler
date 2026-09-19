@@ -3,7 +3,10 @@
 
 import uuid
 from collections.abc import Sequence
+from typing import Literal
 
+import httpx
+from fastapi import HTTPException, Response
 from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, distinct, func, select
 
@@ -24,7 +27,6 @@ from app.titles.models import (
 )
 from app.users.models import User
 from app.video_store.schemas import (
-    VideoStoreGenreOutput,
     VideoStoreLanguageOutput,
     VideoStoreRegionOutput,
     VideoStoreSourceOutput,
@@ -138,21 +140,18 @@ def _title_stats(
 def _title_genres(
     session: Session,
     title_ids: list[uuid.UUID],
-) -> dict[uuid.UUID, list[tuple[str, str]]]:
+) -> dict[uuid.UUID, list[str]]:
     if not title_ids:
         return {}
 
     rows = session.exec(
-        select(TitleGenre.title_id, Plugin.key, TitleGenre.name)
-        .join(Title, col(Title.id) == col(TitleGenre.title_id))
-        .join(Source, col(Source.id) == col(Title.source_id))
-        .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
+        select(TitleGenre.title_id, TitleGenre.name)
         .where(col(TitleGenre.title_id).in_(title_ids))
-        .order_by(col(Plugin.key), col(TitleGenre.name)),
+        .order_by(col(TitleGenre.name)),
     ).all()
-    genres: dict[uuid.UUID, list[tuple[str, str]]] = {}
-    for title_id, plugin_key, name in rows:
-        genres.setdefault(title_id, []).append((plugin_key, name))
+    genres: dict[uuid.UUID, list[str]] = {}
+    for title_id, name in rows:
+        genres.setdefault(title_id, []).append(name)
     return genres
 
 
@@ -247,65 +246,43 @@ def _sibling_title_ids(
 def _shelve_titles(
     session: Session,
     titles: Sequence[Title],
+    metadata: Literal["tmdb", "source"] = "tmdb",
 ) -> list[VideoStoreTitleOutput]:
     title_ids = [title.id for title in titles]
     linked_titles = _linked_titles(session, title_ids)
     stats = _title_stats(session, title_ids)
     tmdb_ids = [linked.id for linked in linked_titles.values()]
-    siblings = _sibling_title_ids(session, tmdb_ids)
-    related_ids = [
-        *title_ids,
-        *tmdb_ids,
-        *{sibling for group in siblings.values() for sibling in group},
-    ]
+    related_ids = [*title_ids, *tmdb_ids]
     genres = _title_genres(session, related_ids)
     languages = _title_languages(session, related_ids)
 
     shelved: list[VideoStoreTitleOutput] = []
     for title in titles:
         linked_title = linked_titles.get(title.id) or title
+        primary, secondary = (
+            (linked_title, title) if metadata == "tmdb" else (title, linked_title)
+        )
         season_count, episode_count = stats.get(title.id, (0, 0))
-        poster = linked_title.poster_thumbnail_url or title.poster_thumbnail_url
+        poster = primary.poster_thumbnail_url or secondary.poster_thumbnail_url
         shelved.append(
             VideoStoreTitleOutput(
                 id=title.id,
-                name=linked_title.name or title.name,
-                year=linked_title.year or title.year,
-                score=(
-                    linked_title.score
-                    if linked_title.score is not None
-                    else title.score
-                ),
-                popularity=(
-                    linked_title.popularity
-                    if linked_title.popularity is not None
-                    else title.popularity
-                ),
-                media_type=linked_title.media_type or title.media_type,
+                name=primary.name or secondary.name,
+                year=primary.year or secondary.year,
+                score=primary.score,
+                popularity=primary.popularity,
+                media_type=primary.media_type or secondary.media_type,
                 original_language=(
-                    linked_title.original_language or title.original_language
+                    primary.original_language or secondary.original_language
                 ),
                 languages=(
-                    languages.get(linked_title.id) or languages.get(title.id) or []
+                    languages.get(primary.id) or languages.get(secondary.id) or []
                 ),
                 thumbnail_url=(
-                    poster or linked_title.thumbnail_url or title.thumbnail_url
+                    poster or primary.thumbnail_url or secondary.thumbnail_url
                 ),
                 is_poster=poster is not None,
-                genres=[
-                    VideoStoreGenreOutput(plugin_name=plugin_name, name=name)
-                    for plugin_name, name in sorted(
-                        {
-                            genre
-                            for related in (
-                                title.id,
-                                linked_title.id,
-                                *siblings.get(linked_title.id, []),
-                            )
-                            for genre in genres.get(related, [])
-                        },
-                    )
-                ],
+                genres=genres.get(primary.id, []),
                 season_count=season_count,
                 episode_count=episode_count,
             ),
@@ -345,33 +322,40 @@ def _watch_links(
 
 
 # TODO: Validate
-def title_detail(session: Session, title: Title) -> VideoStoreTitleDetailOutput:
+def title_detail(
+    session: Session,
+    title: Title,
+    metadata: Literal["tmdb", "source"] = "tmdb",
+) -> VideoStoreTitleDetailOutput:
     """Read everything the case viewer shows for one shelved title."""
     linked_title = _linked_titles(session, [title.id]).get(title.id) or title
+    primary, secondary = (
+        (linked_title, title) if metadata == "tmdb" else (title, linked_title)
+    )
     spoken = session.exec(
         select(TitleSpokenLanguage.code, TitleSpokenLanguage.name)
         .where(col(TitleSpokenLanguage.title_id).in_([title.id, linked_title.id]))
         .order_by(col(TitleSpokenLanguage.name)),
     ).all()
     names = dict(spoken)
-    original_code = linked_title.original_language or title.original_language
+    original_code = primary.original_language or secondary.original_language
     return VideoStoreTitleDetailOutput(
         id=title.id,
-        name=linked_title.name or title.name,
-        year=linked_title.year or title.year,
+        name=primary.name or secondary.name,
+        year=primary.year or secondary.year,
         poster_url=(
-            linked_title.poster_url
-            or title.poster_url
-            or linked_title.image_url
-            or title.image_url
+            primary.poster_url
+            or secondary.poster_url
+            or primary.image_url
+            or secondary.image_url
         ),
         image_url=(
-            linked_title.image_url
-            or title.image_url
-            or linked_title.thumbnail_url
-            or title.thumbnail_url
+            primary.image_url
+            or secondary.image_url
+            or primary.thumbnail_url
+            or secondary.thumbnail_url
         ),
-        description=linked_title.description or title.description,
+        description=primary.description or secondary.description,
         original_language=(
             names.get(original_code, original_code) if original_code else None
         ),
@@ -392,7 +376,41 @@ def title_detail(session: Session, title: Title) -> VideoStoreTitleDetailOutput:
 
 
 # TODO: Validate
-def store_titles(session: Session, source: Source) -> VideoStoreTitlesOutput:
+async def title_image(session: Session, title: Title, url: str) -> Response:
+    linked_title = _linked_titles(session, [title.id]).get(title.id)
+    rows = [title] if linked_title is None else [title, linked_title]
+    served = {
+        image
+        for row in rows
+        for image in (
+            row.image_url,
+            row.thumbnail_url,
+            row.poster_url,
+            row.poster_thumbnail_url,
+        )
+        if image is not None
+    }
+    if url not in served:
+        raise HTTPException(status_code=404, detail="Title carries no such image")
+
+    async with httpx.AsyncClient(follow_redirects=True, timeout=20) as client:
+        upstream = await client.get(url, headers={"referer": url})
+    if upstream.status_code != httpx.codes.OK:
+        raise HTTPException(status_code=502, detail="Website would not serve the image")
+
+    return Response(
+        content=upstream.content,
+        media_type=upstream.headers.get("content-type", "image/jpeg"),
+        headers={"cache-control": "public, max-age=86400"},
+    )
+
+
+# TODO: Validate
+def store_titles(
+    session: Session,
+    source: Source,
+    metadata: Literal["tmdb", "source"] = "tmdb",
+) -> VideoStoreTitlesOutput:
     """Read every title a `Source` carries, in shelf order."""
     listed = [
         col(Title.source_id) == source.id,
@@ -403,7 +421,7 @@ def store_titles(session: Session, source: Source) -> VideoStoreTitlesOutput:
     ).all()
 
     return VideoStoreTitlesOutput(
-        titles=_shelve_titles(session, titles),
+        titles=_shelve_titles(session, titles, metadata),
     )
 
 

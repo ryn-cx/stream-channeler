@@ -1,12 +1,6 @@
 // TODO: Validate
 import * as THREE from "three"
 
-export type StoreGenre = {
-  source: string
-  name: string
-}
-
-// TODO: Validate
 export type StoreTitle = {
   id: string
   name: string
@@ -18,7 +12,7 @@ export type StoreTitle = {
   languages: string[]
   imageUrl: string | null
   isPoster: boolean
-  genres: StoreGenre[]
+  genres: string[]
   episodeCount: number
   seasonCount: number
 }
@@ -37,9 +31,7 @@ export const genreHue = (genre: string) => hashHue(genre)
 
 // TODO: Validate
 export const shelfGenres = (title: StoreTitle) =>
-  [...new Set(title.genres.map((genre) => genre.name))].sort((left, right) =>
-    left.localeCompare(right),
-  )
+  [...new Set(title.genres)].sort((left, right) => left.localeCompare(right))
 
 // TODO: Validate
 export const isMovie = (title: StoreTitle) => title.mediaType === "Movie"

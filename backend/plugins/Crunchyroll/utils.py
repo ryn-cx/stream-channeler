@@ -93,6 +93,22 @@ def title_thumbnail(images: SeriesImages) -> str | None:
 
 
 # TODO: Validate
+def title_poster(images: SeriesImages) -> str | None:
+    tall = images.poster_tall
+    if tall and tall[0]:
+        return max(tall[0], key=lambda image: image.width).source
+    return None
+
+
+# TODO: Validate
+def title_poster_thumbnail(images: SeriesImages) -> str | None:
+    tall = images.poster_tall
+    if tall and tall[0]:
+        return nearest_thumbnail(tall[0])
+    return None
+
+
+# TODO: Validate
 def episode_image(images: EpisodeImages) -> str | None:
     """Return the largest thumbnail an episode has, where it has one at all.
 

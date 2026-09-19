@@ -8233,23 +8233,6 @@ export const ValidationErrorSchema = {
     title: 'ValidationError'
 } as const;
 
-export const VideoStoreGenreOutputSchema = {
-    properties: {
-        plugin_name: {
-            type: 'string',
-            title: 'Plugin Name'
-        },
-        name: {
-            type: 'string',
-            title: 'Name'
-        }
-    },
-    type: 'object',
-    required: ['plugin_name', 'name'],
-    title: 'VideoStoreGenreOutput',
-    description: 'Schema for returning one genre and the website it was filed under by.'
-} as const;
-
 export const VideoStoreLanguageOutputSchema = {
     properties: {
         code: {
@@ -8545,7 +8528,7 @@ export const VideoStoreTitleOutputSchema = {
         },
         genres: {
             items: {
-                '$ref': '#/components/schemas/VideoStoreGenreOutput'
+                type: 'string'
             },
             type: 'array',
             title: 'Genres'

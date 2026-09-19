@@ -22,10 +22,7 @@ export const fetchChannelStoreTitles = async (channelId: string) => {
     languages: title.languages,
     imageUrl: shrinkArtwork(title.thumbnail_url),
     isPoster: title.is_poster,
-    genres: title.genres.map((genre) => ({
-      source: genre.plugin_name,
-      name: genre.name,
-    })),
+    genres: title.genres,
     episodeCount: title.episode_count,
     seasonCount: title.season_count,
   }))
