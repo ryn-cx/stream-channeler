@@ -4,9 +4,10 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, override
 
-from plugins.Tubi.constants import EPISODE_URL_REGEX, MOVIE_URL_REGEX, SERIES_URL_REGEX
-from plugins.Tubi.importer import TubiImporter, TubiMovieImporter, TubiSeriesImporter
-from plugins.Tubi.shared import TubiShared
+from plugins.Tubi.constants import MOVIE_URL_REGEX
+from plugins.Tubi.movie_importer import TubiMovieImporter
+from plugins.Tubi.series_importer import TubiSeriesImporter
+from plugins.Tubi.shared import TubiImporter, TubiShared
 from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.base_plugin.media_type import MediaType
 
@@ -18,12 +19,6 @@ if TYPE_CHECKING:
 class Tubi(TubiShared, AbstractPlugin, register=False):
     VIDEO_STORE_SCORE = False
     VIDEO_STORE_POPULARITY = False
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _url_regexes(cls) -> tuple[str, ...]:
-        return (MOVIE_URL_REGEX, SERIES_URL_REGEX, EPISODE_URL_REGEX)
 
     # TODO: Validate
     @override

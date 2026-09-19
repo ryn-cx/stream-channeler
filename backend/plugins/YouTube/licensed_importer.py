@@ -5,7 +5,7 @@
 
 # from plugins.YouTube.constants import FREE_SOURCE_KEY, PAID_SOURCE_KEY
 # from plugins.YouTube.importer import YouTubeImporter
-# from plugins.YouTube.utils import (
+# from plugins.YouTube.shared import (
 #     is_channel_key,
 #     is_free_movies_channel,
 #     is_title_key,

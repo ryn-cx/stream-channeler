@@ -7,16 +7,16 @@ from typing import TYPE_CHECKING, Any, override
 from app.titles.models import Title
 from app.utils import tz_datetime
 from plugins.utils.base_plugin.media_type import MediaType
-
-# from plugins.YouTube.music_importer import YouTubeMusicSeasons
-from plugins.YouTube.user_importer import YouTubeUserImporter
-from plugins.YouTube.utils import (
+from plugins.YouTube.shared import (
     channel_uploads_playlist_key,
     channel_url,
     get_first_item,
     image_url,
     thumbnail_url,
 )
+
+# from plugins.YouTube.music_importer import YouTubeMusicSeasons
+from plugins.YouTube.user_importer import YouTubeUserImporter
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

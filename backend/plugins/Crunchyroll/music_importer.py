@@ -20,8 +20,8 @@ from plugins.Crunchyroll.constants import (
     CrunchyrollMusicCategory,
 )
 from plugins.Crunchyroll.files import BrowseMusic
-from plugins.Crunchyroll.shared import CrunchyrollShared
-from plugins.Crunchyroll.utils import (
+from plugins.Crunchyroll.shared import (
+    CrunchyrollShared,
     build_url,
     largest_image,
     nearest_thumbnail,

@@ -18,11 +18,11 @@ from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.base_plugin.media_type import MediaType
 from plugins.YouTube.importer import YouTubeImporter
 from plugins.YouTube.music_importer import YouTubeMusicImporter
-from plugins.YouTube.shared import YouTubeShared
-from plugins.YouTube.url_parser import YouTubeURLParserMixin
-from plugins.YouTube.utils import (
+from plugins.YouTube.shared import (
+    YouTubeShared,
     is_quota_error,
 )
+from plugins.YouTube.url_parser import YouTubeURLParserMixin
 
 if TYPE_CHECKING:
     from app.channels.models import ChannelQueue

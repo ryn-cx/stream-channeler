@@ -4,13 +4,10 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, override
 
-from plugins.HBOMax.constants import MOVIE_URL_REGEX, TITLE_URL_REGEX
-from plugins.HBOMax.importer import (
-    HBOMaxImporter,
-    HBOMaxMovieImporter,
-    HBOMaxSeriesImporter,
-)
-from plugins.HBOMax.shared import HBOMaxShared
+from plugins.HBOMax.constants import MOVIE_URL_REGEX
+from plugins.HBOMax.movie_importer import HBOMaxMovieImporter
+from plugins.HBOMax.series_importer import HBOMaxSeriesImporter
+from plugins.HBOMax.shared import HBOMaxImporter, HBOMaxShared
 from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.base_plugin.media_type import MediaType
 
@@ -24,12 +21,6 @@ if TYPE_CHECKING:
 class HBOMax(HBOMaxShared, AbstractPlugin, register=True):
     VIDEO_STORE_SCORE = False
     VIDEO_STORE_POPULARITY = False
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _url_regexes(cls) -> tuple[str, ...]:
-        return (MOVIE_URL_REGEX, TITLE_URL_REGEX)
 
     # TODO: Validate
     @override

@@ -4,8 +4,18 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Protocol, override
 
-from plugins.HiDive.base_files import HiDiveBaseFiles
+from app.files.models import File
+from app.utils import tz_datetime
 from plugins.HiDive.constants import RELEASE_DATE_PREFIX
+from plugins.HiDive.files import (
+    ContentGrid,
+    Schedule,
+    Search,
+    Season,
+    Series,
+    Vod,
+)
+from plugins.utils.base_plugin.base import BasePlugin
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -21,7 +31,51 @@ class HiDiveElement(Protocol):
 
 
 # TODO: Validate
-class HiDiveShared(HiDiveBaseFiles):
+class HiDiveShared(BasePlugin):
+    # TODO: Validate
+    def season_file(self, season_key: str | int) -> Season:
+        return self._cached_file(Season, str(season_key))
+
+    # TODO: Validate
+    def vod_file(self, vod_key: str | int) -> Vod:
+        return self._cached_file(Vod, str(vod_key))
+
+    # TODO: Validate
+    def content_grid_file(self, grid_view_config_id: str) -> ContentGrid:
+        return self._cached_file(ContentGrid, grid_view_config_id)
+
+    # TODO: Validate
+    def search_file(self, query: str) -> Search:
+        return self._cached_file(Search, query)
+
+    # TODO: Validate
+    def series_file(self, series_key: str | int) -> Series:
+        return self._cached_file(Series, str(series_key))
+
+    # TODO: Validate
+    def schedule_file(self, input_date: datetime | File) -> Schedule:
+        """Return a cached Schedule for the given datetime or existing File."""
+        if isinstance(input_date, File):
+            return self._cached_file(
+                Schedule,
+                Schedule.file_to_unique_identifier(input_date),
+            )
+        return self._cached_file(Schedule, input_date.isoformat())
+
+    # TODO: Validate
+    def get_latest_schedule_file(self) -> Schedule | None:
+        """Return the latest schedule file, or None if none exists."""
+        if file := self.latest_file_record(Schedule):
+            return self.schedule_file(file)
+        return None
+
+    # TODO: Validate
+    @override
+    def _source_files(self) -> Sequence[Schedule]:
+        if file := self.get_latest_schedule_file():
+            return [file]
+        return [self.schedule_file(tz_datetime.now())]
+
     # TODO: Validate
     @classmethod
     @override

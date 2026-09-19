@@ -4,12 +4,9 @@ import re
 from typing import TYPE_CHECKING, override
 
 from plugins.Netflix.constants import TITLE_URL_REGEX
-from plugins.Netflix.importer import (
-    NetflixImporter,
-    NetflixMovieImporter,
-    NetflixSeriesImporter,
-)
-from plugins.Netflix.shared import NetflixShared
+from plugins.Netflix.movie_importer import NetflixMovieImporter
+from plugins.Netflix.series_importer import NetflixSeriesImporter
+from plugins.Netflix.shared import NetflixImporter, NetflixShared
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.media_type import MediaType
 
@@ -23,11 +20,6 @@ if TYPE_CHECKING:
 class Netflix(NetflixShared, AbstractPlugin, register=True):
     VIDEO_STORE_SCORE = False
     VIDEO_STORE_POPULARITY = False
-
-    @classmethod
-    @override
-    def _url_regexes(cls) -> tuple[str, ...]:
-        return (TITLE_URL_REGEX,)
 
     @override
     def _media_importer_from_url(self, url: str) -> NetflixImporter:

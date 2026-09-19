@@ -5,11 +5,11 @@ from __future__ import annotations
 from typing import override
 
 from plugins.TMDB.constants import MOVIE_URL_REGEX, TV_URL_REGEX
-from plugins.TMDB.shared import TMDBShared
+from plugins.TMDB.shared import TMDBSearch
 
 
 # TODO: Validate
-class TMDBLinking(TMDBShared):
+class TMDBLinking(TMDBSearch):
     # TODO: Validate
     @classmethod
     @override

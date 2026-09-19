@@ -10,7 +10,7 @@ from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.media_type import MediaType
 from plugins.YouTube.constants import MUSIC_SOURCE_KEY
 from plugins.YouTube.importer import YouTubeImporter
-from plugins.YouTube.utils import (
+from plugins.YouTube.shared import (
     batch_download_missing_videos,
     playlist_url,
 )
@@ -215,7 +215,7 @@ class YouTubeMusicImporter(YouTubeImporter):
 # from app.seasons.models import Season
 # from app.titles.models import Title
 # from plugins.YouTube.importer import YouTubeImporter
-# from plugins.YouTube.utils import (
+# from plugins.YouTube.shared import (
 #     channel_url,
 #     get_first_item,
 #     image_url,

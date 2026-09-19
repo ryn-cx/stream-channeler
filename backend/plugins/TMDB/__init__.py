@@ -11,9 +11,9 @@ from app.tmdb_media.tmdb import (
 )
 from plugins.TMDB.constants import MOVIE_URL_REGEX, TV_URL_REGEX
 from plugins.TMDB.files import MoviesRecommendations, TVSeriesRecommendations
-from plugins.TMDB.importer import TMDBImporter, TMDBMovie, TMDBSeries
-from plugins.TMDB.shared import TMDBShared
-from plugins.TMDB.utils import tmdb_url
+from plugins.TMDB.movie_importer import TMDBMovie
+from plugins.TMDB.series_importer import TMDBSeries
+from plugins.TMDB.shared import TMDBImporter, TMDBSearch, tmdb_url
 from plugins.utils.abstract_plugin import (
     AbstractPlugin,
     InvalidURLError,
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 
 # TODO: Validate
-class TMDB(TMDBShared, AbstractPlugin, register=True):
+class TMDB(TMDBSearch, AbstractPlugin, register=True):
     # TODO: Validate
     @classmethod
     @override

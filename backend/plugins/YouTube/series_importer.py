@@ -7,7 +7,7 @@
 # from app.seasons.models import Season
 # from app.titles.models import Title
 # from plugins.YouTube.licensed_importer import YouTubeLicensedMediaImporter
-# from plugins.YouTube.utils import (
+# from plugins.YouTube.shared import (
 #     split_title_season_key,
 #     title_season_key,
 #     title_season_numbers_from_file,

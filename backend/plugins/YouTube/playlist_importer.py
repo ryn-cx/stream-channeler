@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING, Any, override
 from app.titles.models import Title
 from plugins.utils.base_plugin.media_type import MediaType
 from plugins.YouTube.constants import LINKS_SOURCE_KEY
-from plugins.YouTube.user_importer import YouTubeUserImporter
-from plugins.YouTube.utils import (
+from plugins.YouTube.shared import (
     get_first_item,
     image_url,
     playlist_url,
     thumbnail_url,
 )
+from plugins.YouTube.user_importer import YouTubeUserImporter
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

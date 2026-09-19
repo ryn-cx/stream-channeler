@@ -1,14 +1,12 @@
 # TODO: Validate
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING, override
 
-from plugins.Roku.constants import DETAILS_URL_REGEX, WATCH_URL_REGEX
-from plugins.Roku.importer import RokuImporter, RokuMovieImporter, RokuSeriesImporter
-from plugins.Roku.shared import RokuShared
-from plugins.Roku.utils import is_movie
-from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
+from plugins.Roku.movie_importer import RokuMovieImporter
+from plugins.Roku.series_importer import RokuSeriesImporter
+from plugins.Roku.shared import RokuImporter, RokuShared, is_movie
+from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.base_plugin.media_type import MediaType
 
 if TYPE_CHECKING:
@@ -19,22 +17,6 @@ if TYPE_CHECKING:
 class Roku(RokuShared, AbstractPlugin, register=False):
     VIDEO_STORE_SCORE = False
     VIDEO_STORE_POPULARITY = False
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _url_regexes(cls) -> tuple[str, ...]:
-        return (DETAILS_URL_REGEX, WATCH_URL_REGEX)
-
-    # TODO: Validate
-    def _url_content_key(self, url: str) -> str:
-        domain_regex = self._domains_regex()
-        for url_regex in self._url_regexes():
-            if match := re.match(domain_regex + url_regex, url):
-                return match.group(1)
-
-        msg = f"Invalid {self.plugin_name()} URL: {url}"
-        raise InvalidURLError(msg)
 
     # TODO: Validate
     @override

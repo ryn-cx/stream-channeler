@@ -17,8 +17,8 @@ from app.tmdb_media.keys import watch_identifier
 from app.utils import tz_datetime
 from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
 from plugins.utils.base_plugin.importer import BaseImporter
-from plugins.YouTube.shared import YouTubeShared
-from plugins.YouTube.utils import (
+from plugins.YouTube.shared import (
+    YouTubeShared,
     batch_download_missing_videos,
     channel_uploads_playlist_key,
     get_first_item,

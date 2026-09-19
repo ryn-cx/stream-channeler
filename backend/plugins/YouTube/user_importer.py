@@ -13,7 +13,7 @@ from not_yt_dlapi.exceptions import (
 from app.seasons.models import Season
 from app.utils import tz_datetime
 from plugins.YouTube.importer import YouTubeImporter
-from plugins.YouTube.utils import (
+from plugins.YouTube.shared import (
     image_url,
     playlist_url,
     thumbnail_url,

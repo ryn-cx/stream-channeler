@@ -18,8 +18,8 @@ from plugins.Crunchyroll.constants import (
     SERIES_URL_REGEX,
 )
 from plugins.Crunchyroll.files import BrowseSeries
-from plugins.Crunchyroll.shared import CrunchyrollShared
-from plugins.Crunchyroll.utils import (
+from plugins.Crunchyroll.shared import (
+    CrunchyrollShared,
     build_url,
     episode_image,
     episode_thumbnail,

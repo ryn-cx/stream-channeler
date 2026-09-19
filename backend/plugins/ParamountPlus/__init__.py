@@ -3,13 +3,10 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, override
 
-from plugins.ParamountPlus.constants import MOVIE_URL_REGEX, TITLE_URL_REGEX
-from plugins.ParamountPlus.importer import (
-    ParamountPlusImporter,
-    ParamountPlusMovieImporter,
-    ParamountPlusSeriesImporter,
-)
-from plugins.ParamountPlus.shared import ParamountPlusShared
+from plugins.ParamountPlus.constants import MOVIE_URL_REGEX
+from plugins.ParamountPlus.movie_importer import ParamountPlusMovieImporter
+from plugins.ParamountPlus.series_importer import ParamountPlusSeriesImporter
+from plugins.ParamountPlus.shared import ParamountPlusImporter, ParamountPlusShared
 from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.base_plugin.media_type import MediaType
 
@@ -25,11 +22,6 @@ if TYPE_CHECKING:
 class ParamountPlus(ParamountPlusShared, AbstractPlugin, register=True):
     VIDEO_STORE_SCORE = False
     VIDEO_STORE_POPULARITY = False
-
-    @classmethod
-    @override
-    def _url_regexes(cls) -> tuple[str, ...]:
-        return (MOVIE_URL_REGEX, TITLE_URL_REGEX)
 
     @override
     def _media_importer_from_url(self, url: str) -> ParamountPlusImporter:

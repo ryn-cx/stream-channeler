@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any, NamedTuple, override
 
 from plugins.utils.abstract_plugin import InvalidURLError
 from plugins.utils.base_plugin.url import ParsedURL
-from plugins.YouTube.base_files import YouTubeBaseFiles
 from plugins.YouTube.channel_importer import YouTubeChannelImporter
 from plugins.YouTube.files import ChannelByHandle, ChannelByUsername
 
@@ -15,7 +14,8 @@ from plugins.YouTube.music_importer import YouTubeMusicImporter
 from plugins.YouTube.playlist_importer import YouTubePlaylistImporter
 
 # from plugins.YouTube.series_importer import YouTubeTVShowImporter
-from plugins.YouTube.utils import (
+from plugins.YouTube.shared import (
+    YouTubeShared,
     channel_key_from_uploads_playlist_key,
     channel_uploads_playlist_key,
     get_first_item,
@@ -57,7 +57,7 @@ class YouTubeParsedURL(NamedTuple):
 
 
 # TODO: Validate
-class YouTubeURLParserMixin(YouTubeBaseFiles):
+class YouTubeURLParserMixin(YouTubeShared):
     # TODO: Validate
     @override
     def _media_importer_from_url(self, url: str) -> YouTubeImporter:

@@ -1,18 +1,16 @@
 # TODO: Validate
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING, override
 
-from plugins.DisneyPlus.constants import ENTITY_URL_REGEX
-from plugins.DisneyPlus.importer import (
+from plugins.DisneyPlus.movie_importer import DisneyPlusMovieImporter
+from plugins.DisneyPlus.series_importer import DisneyPlusSeriesImporter
+from plugins.DisneyPlus.shared import (
     DisneyPlusImporter,
-    DisneyPlusMovieImporter,
-    DisneyPlusSeriesImporter,
+    DisneyPlusShared,
+    is_movie,
 )
-from plugins.DisneyPlus.shared import DisneyPlusShared
-from plugins.DisneyPlus.utils import is_movie
-from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
+from plugins.utils.abstract_plugin import AbstractPlugin
 from plugins.utils.base_plugin.media_type import MediaType
 
 if TYPE_CHECKING:
@@ -23,19 +21,6 @@ if TYPE_CHECKING:
 class DisneyPlus(DisneyPlusShared, AbstractPlugin, register=False):
     VIDEO_STORE_SCORE = False
     VIDEO_STORE_POPULARITY = False
-
-    # TODO: Validate
-    @classmethod
-    @override
-    def _url_regexes(cls) -> tuple[str, ...]:
-        return (ENTITY_URL_REGEX,)
-
-    # TODO: Validate
-    def _url_title_key(self, url: str) -> str:
-        if not (match := re.match(self._domains_regex() + ENTITY_URL_REGEX, url)):
-            msg = f"Invalid {self.plugin_name()} URL: {url}"
-            raise InvalidURLError(msg)
-        return match.group("title_key")
 
     # TODO: Validate
     @override

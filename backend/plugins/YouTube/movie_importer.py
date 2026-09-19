@@ -7,7 +7,7 @@
 # from app.seasons.models import Season
 # from app.titles.models import Title
 # from plugins.YouTube.licensed_importer import YouTubeLicensedMediaImporter
-# from plugins.YouTube.utils import (
+# from plugins.YouTube.shared import (
 #     get_first_item,
 #     image_url,
 #     thumbnail_url,

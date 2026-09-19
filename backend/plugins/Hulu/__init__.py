@@ -9,8 +9,9 @@ from plugins.Hulu.constants import (
     SERIES_URL_REGEX,
     VIDEO_URL_REGEX,
 )
-from plugins.Hulu.importer import HuluImporter, HuluMovieImporter, HuluSeriesImporter
-from plugins.Hulu.shared import HuluShared
+from plugins.Hulu.movie_importer import HuluMovieImporter
+from plugins.Hulu.series_importer import HuluSeriesImporter
+from plugins.Hulu.shared import HuluImporter, HuluShared
 from plugins.utils.abstract_plugin import AbstractPlugin, InvalidURLError
 from plugins.utils.base_plugin.media_type import MediaType
 
@@ -46,11 +47,6 @@ class Hulu(
     @override
     def _next_plugin_update_at(self) -> datetime:
         return max(self._plugin_files_data_timestamps()) + timedelta(days=7)
-
-    @classmethod
-    @override
-    def _url_regexes(cls) -> tuple[str, ...]:
-        return (SERIES_URL_REGEX, MOVIE_URL_REGEX, VIDEO_URL_REGEX)
 
     @override
     def _media_importer_from_url(self, url: str) -> HuluImporter:
