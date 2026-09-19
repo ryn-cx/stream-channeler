@@ -720,7 +720,7 @@ wheels = [
 [[package]]
 name = "get-around"
 version = "0.1.0"
-source = { git = "https://github.com/ryn-cx/get-around#0a78e2b98e3e6e938ae56c6713cfbb8de380b16a" }
+source = { git = "https://github.com/ryn-cx/get-around#25727e4e7cbc9f62149da4b389a7859e948e2028" }
 dependencies = [
     { name = "httpx" },
     { name = "keyring" },
