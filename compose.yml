@@ -36,7 +36,7 @@ services:
     # Pinned: with `latest`, any re-pull of the image recreates the container,
     # and every cloudflared process that starts registers as a new connector
     # (a new "replica") on the tunnel.
-    image: cloudflare/cloudflared:2026.8.3
+    image: cloudflare/cloudflared:2026.9.1
     restart: always
     profiles:
       - cloudflare
