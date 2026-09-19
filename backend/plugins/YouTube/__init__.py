@@ -36,6 +36,8 @@ class YouTube(
     AbstractPlugin,
     register=True,
 ):
+    VIDEO_STORE_SCORE = False
+
     # TODO: Validate
     @classmethod
     @override

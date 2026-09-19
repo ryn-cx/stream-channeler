@@ -43,6 +43,9 @@ class AdultSwim(
     AbstractPlugin,
     register=True,
 ):
+    VIDEO_STORE_SCORE = False
+    VIDEO_STORE_POPULARITY = False
+
     # TODO: Validate
     @override
     def _next_plugin_update_at(self) -> datetime:

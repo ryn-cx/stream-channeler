@@ -21,8 +21,8 @@ from app.sources.models import Source
 # TODO: Validate
 @dataclass(frozen=True)
 class PluginSelection:
-    plugin_key: str | None = None
-    source_key: str | None = None
+    plugin_keys: tuple[str, ...] = ()
+    source_keys: tuple[str, ...] = ()
 
 
 # TODO: Validate
@@ -33,14 +33,16 @@ def add_selection_arguments(
 ) -> None:
     parser.add_argument(
         "--plugin",
+        nargs="+",
         default=None,
-        help="Only act on records from the plugin with this key.",
+        help="Only act on records from the plugins with these keys.",
     )
     if include_source:
         parser.add_argument(
             "--source",
+            nargs="+",
             default=None,
-            help="Only act on records from the source with this key.",
+            help="Only act on records from the sources with these keys.",
         )
 
 
@@ -53,8 +55,8 @@ def parse_selection(
     parser = ArgumentParser(description=description)
     add_selection_arguments(parser, include_source=include_source)
     arguments = parser.parse_args()
-    source_key = arguments.source if include_source else None
-    return PluginSelection(arguments.plugin, source_key)
+    source_keys = arguments.source if include_source else None
+    return PluginSelection(tuple(arguments.plugin or ()), tuple(source_keys or ()))
 
 
 # TODO: Validate
@@ -65,10 +67,10 @@ def selection_clauses(selection: PluginSelection) -> list[ColumnElement[bool]]:
     run that named no plugin covering everything.
     """
     clauses: list[ColumnElement[bool]] = []
-    if selection.plugin_key is not None:
-        clauses.append(col(Plugin.key) == selection.plugin_key)
-    if selection.source_key is not None:
-        clauses.append(col(Source.key) == selection.source_key)
+    if selection.plugin_keys:
+        clauses.append(col(Plugin.key).in_(selection.plugin_keys))
+    if selection.source_keys:
+        clauses.append(col(Source.key).in_(selection.source_keys))
     return clauses
 
 
@@ -76,11 +78,11 @@ def selection_clauses(selection: PluginSelection) -> list[ColumnElement[bool]]:
 def selection_description(selection: PluginSelection) -> str:
     """Return what the run covers, for the line a tool logs when it starts."""
     named = [
-        f"{label} {key}"
-        for label, key in (
-            ("plugin", selection.plugin_key),
-            ("source", selection.source_key),
+        f"{label}{'s' if len(keys) > 1 else ''} {', '.join(keys)}"
+        for label, keys in (
+            ("plugin", selection.plugin_keys),
+            ("source", selection.source_keys),
         )
-        if key is not None
+        if keys
     ]
     return " and ".join(named) if named else "every plugin"

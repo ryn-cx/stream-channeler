@@ -6,4 +6,6 @@ from plugins.utils.abstract_plugin import AbstractPlugin
 
 
 # TODO: Validate
-class StreamChanneler(StreamChannelerShared, AbstractPlugin, register=True): ...
+class StreamChanneler(StreamChannelerShared, AbstractPlugin, register=True):
+    VIDEO_STORE_SCORE = False
+    VIDEO_STORE_POPULARITY = False

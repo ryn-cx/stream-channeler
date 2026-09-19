@@ -34,6 +34,10 @@ class Crunchyroll(
     AbstractPlugin,
     register=True,
 ):
+    VIDEO_STORE_IMAGES = False
+    VIDEO_STORE_SCORE = False
+    VIDEO_STORE_POPULARITY = False
+
     @override
     def create_initial_source_records(self) -> None:
         # CrunchyrollAnimeImporter and CrunchyrollMusicImporter need to be initialized

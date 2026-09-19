@@ -9,8 +9,8 @@
 
 [CmdletBinding()]
 param(
-    [string]$Plugin,
-    [string]$Source
+    [string[]]$Plugin,
+    [string[]]$Source
 )
 
 $ErrorActionPreference = "Stop"

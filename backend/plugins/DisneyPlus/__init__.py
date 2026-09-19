@@ -21,6 +21,9 @@ if TYPE_CHECKING:
 
 # TODO: Validate
 class DisneyPlus(DisneyPlusShared, AbstractPlugin, register=False):
+    VIDEO_STORE_SCORE = False
+    VIDEO_STORE_POPULARITY = False
+
     # TODO: Validate
     @classmethod
     @override

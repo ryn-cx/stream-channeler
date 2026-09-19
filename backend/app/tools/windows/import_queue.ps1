@@ -17,7 +17,7 @@
 [CmdletBinding()]
 param(
     [int]$IntervalSeconds = 60,
-    [string]$Plugin
+    [string[]]$Plugin
 )
 
 $ErrorActionPreference = "Stop"

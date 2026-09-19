@@ -20,6 +20,9 @@ if TYPE_CHECKING:
 
 # TODO: Validate
 class Pluto(PlutoShared, AbstractPlugin, register=False):
+    VIDEO_STORE_SCORE = False
+    VIDEO_STORE_POPULARITY = False
+
     # TODO: Validate
     @classmethod
     @override

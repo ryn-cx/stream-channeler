@@ -146,6 +146,9 @@ class NHKWorldUpsert(NHKWorldChannels, ABC):
 
 # TODO: Validate
 class NHKWorld(NHKWorldUpsert, AbstractPlugin, register=True):
+    VIDEO_STORE_SCORE = False
+    VIDEO_STORE_POPULARITY = False
+
     # TODO: Add support for single episodes
     # TODO: Don't hardcode the favicon URL
     # TODO: Validate

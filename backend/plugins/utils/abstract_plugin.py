@@ -60,6 +60,10 @@ class AbstractPlugin(ABC):
     @abstractmethod
     def favicon_url(cls) -> str | None: ...
 
+    VIDEO_STORE_IMAGES: bool = True
+    VIDEO_STORE_SCORE: bool = True
+    VIDEO_STORE_POPULARITY: bool = True
+
     # TODO: Validate
     @classmethod
     def specialized_updater(cls) -> bool:

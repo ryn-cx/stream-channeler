@@ -22,6 +22,9 @@ if TYPE_CHECKING:
 
 # TODO: Validate
 class HBOMax(HBOMaxShared, AbstractPlugin, register=True):
+    VIDEO_STORE_SCORE = False
+    VIDEO_STORE_POPULARITY = False
+
     # TODO: Validate
     @classmethod
     @override

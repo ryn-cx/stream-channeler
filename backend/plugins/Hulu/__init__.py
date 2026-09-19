@@ -27,6 +27,9 @@ class Hulu(
     AbstractPlugin,
     register=True,
 ):
+    VIDEO_STORE_SCORE = False
+    VIDEO_STORE_POPULARITY = False
+
     # TODO: Validate
     @override
     def similar_title_urls(self, title: Title) -> Collection[str]:

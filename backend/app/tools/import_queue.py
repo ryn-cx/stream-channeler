@@ -100,7 +100,7 @@ def import_queue(
 # TODO: Validate
 def _get_plugin(
     url: str,
-    plugin_key: str | None = None,
+    plugin_keys: Collection[str] = (),
 ) -> type[AbstractPlugin] | None:
     # `sorted_plugins` rather than the registry itself, which is only filled in
     # once something has imported the plugins. Nothing here can count on that
@@ -110,7 +110,7 @@ def _get_plugin(
         # A plugin that imports no URL carries no pattern to match one against.
         if not plugin_class.implements("validate_and_import_url"):
             continue
-        if plugin_key is not None and plugin_class.plugin_name() != plugin_key:
+        if plugin_keys and plugin_class.plugin_name() not in plugin_keys:
             continue
         if plugin_class.is_valid_url_format(url):
             return plugin_class
@@ -146,14 +146,14 @@ def _group_pending_urls_by_plugin(
             col(ChannelQueue.created_at).asc(),
         ),
     ).all()
-    plugin_key = (selection or PluginSelection()).plugin_key
+    plugin_keys = (selection or PluginSelection()).plugin_keys
     for item in pending:
-        if plugin_class := _get_plugin(item.url, plugin_key):
+        if plugin_class := _get_plugin(item.url, plugin_keys):
             if by_plugin and by_plugin[-1][0] is plugin_class:
                 by_plugin[-1][1].append(item)
             else:
                 by_plugin.append((plugin_class, [item]))
-        elif plugin_key is None and item.status == URLStatus.PENDING:
+        elif not plugin_keys and item.status == URLStatus.PENDING:
             logger.warning(f"No valid plugin found for URL: {item.url}")
             item.status = URLStatus.FAILED
             item.note = "No valid plugin found."

@@ -4,7 +4,7 @@
 import uuid
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Path, Query, Response
+from fastapi import APIRouter, Path, Query
 
 from app.auth.dependencies import SessionDep
 from app.sources.dependencies import ExistingSource
@@ -105,17 +105,6 @@ def get_title_detail(
 ) -> VideoStoreTitleDetailOutput:
     """Read everything the case viewer shows for one shelved title."""
     return service.title_detail(session, title, metadata)
-
-
-# FAST003 - Parameter is used by ExistingTitle.
-# TODO: Validate
-@title_router.get("/titles/{title_id}/image")  # noqa: FAST003
-async def get_title_image(
-    session: SessionDep,
-    title: ExistingTitle,
-    url: Annotated[str, Query()],
-) -> Response:
-    return await service.title_image(session, title, url)
 
 
 router = APIRouter()

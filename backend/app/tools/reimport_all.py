@@ -7,7 +7,7 @@ from threading import Lock
 from typing import Any
 
 from loguru import logger
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 from tqdm import tqdm
 
 from app.database import engine, load_models
@@ -72,7 +72,8 @@ def reimport_all_titles(selection: PluginSelection | None = None) -> None:
             .select_from(Title)
             .join(Source)
             .join(Plugin)
-            .where(*selection_clauses(selection)),
+            .where(*selection_clauses(selection))
+            .order_by(col(Title.modified_at)),
         ).all()
 
     pending: queue.SimpleQueue[tuple[uuid.UUID, str, str | None, str]] = (

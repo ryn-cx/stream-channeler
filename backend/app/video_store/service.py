@@ -5,8 +5,6 @@ import uuid
 from collections.abc import Sequence
 from typing import Literal
 
-import httpx
-from fastapi import HTTPException, Response
 from sqlalchemy.orm import aliased
 from sqlmodel import Session, col, distinct, func, select
 
@@ -37,6 +35,8 @@ from app.video_store.schemas import (
     VideoStoreWatchProviderOutput,
 )
 from app.watch_providers.models import WatchProvider
+from plugins.utils.abstract_plugin import AbstractPlugin
+from plugins.utils.manage_plugins import sorted_plugins
 
 STORE_TITLE_PAGE = 200
 
@@ -243,6 +243,28 @@ def _sibling_title_ids(
 
 
 # TODO: Validate
+def _row_plugins(
+    session: Session,
+    title_ids: list[uuid.UUID],
+) -> dict[uuid.UUID, type[AbstractPlugin]]:
+    if not title_ids:
+        return {}
+
+    classes = {plugin.plugin_name(): plugin for plugin in sorted_plugins()}
+    rows = session.exec(
+        select(Title.id, Plugin.key)
+        .join(Source, col(Source.id) == col(Title.source_id))
+        .join(Plugin, col(Plugin.id) == col(Source.plugin_id))
+        .where(col(Title.id).in_(title_ids)),
+    ).all()
+    return {
+        title_id: classes[plugin_key]
+        for title_id, plugin_key in rows
+        if plugin_key in classes
+    }
+
+
+# TODO: Validate
 def _shelve_titles(
     session: Session,
     titles: Sequence[Title],
@@ -255,6 +277,7 @@ def _shelve_titles(
     related_ids = [*title_ids, *tmdb_ids]
     genres = _title_genres(session, related_ids)
     languages = _title_languages(session, related_ids)
+    plugins = _row_plugins(session, related_ids)
 
     shelved: list[VideoStoreTitleOutput] = []
     for title in titles:
@@ -262,15 +285,38 @@ def _shelve_titles(
         primary, secondary = (
             (linked_title, title) if metadata == "tmdb" else (title, linked_title)
         )
+        ordered = (primary, secondary)
+        artwork = [
+            row
+            for row in ordered
+            if plugins.get(row.id, AbstractPlugin).VIDEO_STORE_IMAGES
+        ]
+        scored = [
+            row
+            for row in ordered
+            if plugins.get(row.id, AbstractPlugin).VIDEO_STORE_SCORE
+        ]
+        ranked = [
+            row
+            for row in ordered
+            if plugins.get(row.id, AbstractPlugin).VIDEO_STORE_POPULARITY
+        ]
         season_count, episode_count = stats.get(title.id, (0, 0))
-        poster = primary.poster_thumbnail_url or secondary.poster_thumbnail_url
+        poster = next(
+            (row.poster_thumbnail_url for row in artwork if row.poster_thumbnail_url),
+            None,
+        )
+        thumbnail = next(
+            (row.thumbnail_url for row in artwork if row.thumbnail_url),
+            None,
+        )
         shelved.append(
             VideoStoreTitleOutput(
                 id=title.id,
                 name=primary.name or secondary.name,
                 year=primary.year or secondary.year,
-                score=primary.score,
-                popularity=primary.popularity,
+                score=scored[0].score if scored else None,
+                popularity=ranked[0].popularity if ranked else None,
                 media_type=primary.media_type or secondary.media_type,
                 original_language=(
                     primary.original_language or secondary.original_language
@@ -278,9 +324,7 @@ def _shelve_titles(
                 languages=(
                     languages.get(primary.id) or languages.get(secondary.id) or []
                 ),
-                thumbnail_url=(
-                    poster or primary.thumbnail_url or secondary.thumbnail_url
-                ),
+                thumbnail_url=poster or thumbnail,
                 is_poster=poster is not None,
                 genres=genres.get(primary.id, []),
                 season_count=season_count,
@@ -332,6 +376,12 @@ def title_detail(
     primary, secondary = (
         (linked_title, title) if metadata == "tmdb" else (title, linked_title)
     )
+    plugins = _row_plugins(session, [title.id, linked_title.id])
+    artwork = [
+        row
+        for row in (primary, secondary)
+        if plugins.get(row.id, AbstractPlugin).VIDEO_STORE_IMAGES
+    ]
     spoken = session.exec(
         select(TitleSpokenLanguage.code, TitleSpokenLanguage.name)
         .where(col(TitleSpokenLanguage.title_id).in_([title.id, linked_title.id]))
@@ -344,16 +394,12 @@ def title_detail(
         name=primary.name or secondary.name,
         year=primary.year or secondary.year,
         poster_url=(
-            primary.poster_url
-            or secondary.poster_url
-            or primary.image_url
-            or secondary.image_url
+            next((row.poster_url for row in artwork if row.poster_url), None)
+            or next((row.image_url for row in artwork if row.image_url), None)
         ),
         image_url=(
-            primary.image_url
-            or secondary.image_url
-            or primary.thumbnail_url
-            or secondary.thumbnail_url
+            next((row.image_url for row in artwork if row.image_url), None)
+            or next((row.thumbnail_url for row in artwork if row.thumbnail_url), None)
         ),
         description=primary.description or secondary.description,
         original_language=(
@@ -372,36 +418,6 @@ def title_detail(
                 ),
             ],
         ),
-    )
-
-
-# TODO: Validate
-async def title_image(session: Session, title: Title, url: str) -> Response:
-    linked_title = _linked_titles(session, [title.id]).get(title.id)
-    rows = [title] if linked_title is None else [title, linked_title]
-    served = {
-        image
-        for row in rows
-        for image in (
-            row.image_url,
-            row.thumbnail_url,
-            row.poster_url,
-            row.poster_thumbnail_url,
-        )
-        if image is not None
-    }
-    if url not in served:
-        raise HTTPException(status_code=404, detail="Title carries no such image")
-
-    async with httpx.AsyncClient(follow_redirects=True, timeout=20) as client:
-        upstream = await client.get(url, headers={"referer": url})
-    if upstream.status_code != httpx.codes.OK:
-        raise HTTPException(status_code=502, detail="Website would not serve the image")
-
-    return Response(
-        content=upstream.content,
-        media_type=upstream.headers.get("content-type", "image/jpeg"),
-        headers={"cache-control": "public, max-age=86400"},
     )
 
 

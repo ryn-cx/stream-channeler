@@ -38,6 +38,9 @@ if TYPE_CHECKING:
 
 # TODO: Validate
 class HiDive(HiDiveShared, AbstractPlugin, register=True):
+    VIDEO_STORE_SCORE = False
+    VIDEO_STORE_POPULARITY = False
+
     @override
     def create_initial_channel_records(self) -> None:
         title_urls: list[str] = []
