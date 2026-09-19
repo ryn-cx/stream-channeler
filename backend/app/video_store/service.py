@@ -59,6 +59,7 @@ def store_sources(session: Session) -> list[VideoStoreSourceOutput]:
         .join(Title, col(Title.source_id) == col(Source.id))
         .where(
             Plugin.key != TMDB_PLUGIN_KEY,
+            col(Plugin.deleted_at).is_(None),
             col(Source.deleted_at).is_(None),
             col(Title.deleted_at).is_(None),
         )
