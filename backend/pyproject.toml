@@ -11,7 +11,7 @@ dependencies = [
   "diving-board",
   "email-validator<3.0.0.0,>=2.1.0.post1",
   "emails>=1.1.2,<2.0",
-  "fastapi[standard]<0.129.0,>=0.128.0",
+  "fastapi[standard]>=0.141.1,<0.142.0",
   "httpx<1.0.0,>=0.25.1",
   "jinja2<4.0.0,>=3.1.4",
   "kneeminus",
