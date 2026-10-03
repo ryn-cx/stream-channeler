@@ -1,6 +1,8 @@
+// TODO: Validate
 import { AxiosError } from "axios"
 import type { ApiError } from "./client"
 
+// TODO: Validate
 function extractErrorMessage(err: ApiError): string {
   if (err instanceof AxiosError) {
     return err.message
@@ -13,6 +15,7 @@ function extractErrorMessage(err: ApiError): string {
   return errDetail || "Something went wrong."
 }
 
+// TODO: Validate
 export const handleError = function (
   this: (msg: string) => void,
   err: ApiError,
@@ -21,6 +24,7 @@ export const handleError = function (
   this(errorMessage)
 }
 
+// TODO: Validate
 export const getInitials = (name: string): string => {
   return name
     .split(" ")

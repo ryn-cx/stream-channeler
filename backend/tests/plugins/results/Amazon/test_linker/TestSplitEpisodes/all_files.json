@@ -1,0 +1,194 @@
+[
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/0HV1F820S9I36TNRPPM3CQYYF5.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B07WTNK8S3.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0B6DZXTH6.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CBPM3KD1.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CGL6V4CF.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CGPVJ5D7.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CGYT8G51.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CH6KTZYH.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CH7K325K.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CH8S6RKV.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CH8ZFXQQ.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CH9YT32S.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CHFD43NP.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CHFF772W.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CHJJ8Y4L.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CHJP54PQ.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CHMHDVH8.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CJCLXBGP.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CJMQF31S.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CJSDWHQ3.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CPPM2NKC.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0D3DSD1GJ.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0DH2BK74V.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0DJDP4SQK.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0DJR2LCKT.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0DNNYX47S.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0F2476BNH.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0F3GS3F21.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0F53S7BTJ.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0FSKZZQP2.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0FX1TVB1M.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0GGTPR5Z2.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0GJ5HPKYS.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0GN2QNYFW.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0GTFTSKKM.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0GV8S5J7H.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0H31BRJLV.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0HFDJ2TYX.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "Search/TV/Polar Bear Cafe/2012.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/5fcef7fda5743d0042088cec.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/5fcf01ae590086003efc9155.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/6319f6b4d9554b007ac3764c.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/45856/1.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/45856/1.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Details/45856.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Episode Groups/45856.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Images/45856.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Watch Providers/45856.json"
+  }
+]

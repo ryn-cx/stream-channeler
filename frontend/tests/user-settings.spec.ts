@@ -1,3 +1,4 @@
+// TODO: Validate
 import { expect, test } from "@playwright/test"
 import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
 import { createUser } from "./utils/privateApi.ts"
@@ -51,7 +52,7 @@ test.describe("Edit user profile", () => {
     ).toBeVisible()
   })
 
-  test("Edit user email with an invalid email shows error", async ({
+  test("Edit user email with an invalid email titles error", async ({
     page,
   }) => {
     await page.getByRole("button", { name: "Edit" }).click()
@@ -98,11 +99,11 @@ test.describe("Cancel edit actions", () => {
     await page.goto("/settings")
     await page.getByRole("tab", { name: "My profile" }).click()
     await page.getByRole("button", { name: "Edit" }).click()
-    await page.getByLabel("Full name").fill("Test User")
+    await page.getByLabel("Username").fill("Test User")
     await page.getByRole("button", { name: "Cancel" }).first().click()
 
     await expect(
-      page.locator("form").getByText(user.full_name as string, { exact: true }),
+      page.locator("form").getByText(user.username as string, { exact: true }),
     ).toBeVisible()
   })
 

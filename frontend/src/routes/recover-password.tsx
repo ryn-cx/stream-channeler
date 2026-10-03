@@ -1,3 +1,4 @@
+// TODO: Validate
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation } from "@tanstack/react-query"
 import {
@@ -10,15 +11,8 @@ import { z } from "zod"
 
 import { LoginService } from "@/client"
 import { AuthLayout } from "@/components/Common/AuthLayout"
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
+import { FormTextField } from "@/components/Common/FormTextField"
+import { Form } from "@/components/ui/form"
 import { LoadingButton } from "@/components/ui/loading-button"
 import { isLoggedIn } from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
@@ -42,12 +36,13 @@ export const Route = createFileRoute("/recover-password")({
   head: () => ({
     meta: [
       {
-        title: "Recover Password - FastAPI Template",
+        title: "Recover Password - Stream Channeler",
       },
     ],
   }),
 })
 
+// TODO: Validate
 function RecoverPassword() {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -57,6 +52,7 @@ function RecoverPassword() {
   })
   const { showSuccessToast, showErrorToast } = useCustomToast()
 
+  // TODO: Validate
   const recoverPassword = async (data: FormData) => {
     await LoginService.recoverPassword({
       email: data.email,
@@ -72,6 +68,7 @@ function RecoverPassword() {
     onError: handleError.bind(showErrorToast),
   })
 
+  // TODO: Validate
   const onSubmit = async (data: FormData) => {
     if (mutation.isPending) return
     mutation.mutate(data)
@@ -89,23 +86,13 @@ function RecoverPassword() {
           </div>
 
           <div className="grid gap-4">
-            <FormField
+            <FormTextField
               control={form.control}
               name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      data-testid="email-input"
-                      placeholder="user@example.com"
-                      type="email"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              label="Email"
+              data-testid="email-input"
+              placeholder="user@example.com"
+              type="email"
             />
 
             <LoadingButton

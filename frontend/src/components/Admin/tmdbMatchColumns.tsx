@@ -1,0 +1,851 @@
+// TODO: Validate
+import { Link } from "@tanstack/react-router"
+import type { ColumnDef } from "@tanstack/react-table"
+import { Pencil, SquareArrowOutUpRight } from "lucide-react"
+import type { ReactNode } from "react"
+
+import type { UnmatchedEpisodeOutput } from "@/client"
+import { ClampedContent } from "@/components/ChannelCommon/ClampedContent"
+import { formatDuration } from "@/components/ChannelCommon/formatters"
+import { TooltipIconButton } from "@/components/Common/TooltipIconButton"
+import { EditEpisodeById } from "@/components/Episodes/EditEpisodeById"
+import { EditTitleById } from "@/components/Titles/EditTitleById"
+import { buttonVariants } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+import { TmdbMatchActions, TmdbMatchConfirmButton } from "./TmdbMatchActions"
+import { useOpenEpisodeEditor } from "./tmdbMatchEditing"
+import {
+  type Numbered,
+  type NumberingAgreement,
+  numberingAgreement,
+} from "./tmdbNumbering"
+
+/**
+ * A row of the table, which is a served record with the id the table keys rows
+ * by beside it. The record names its episode, its season and its title as three
+ * records rather than as one flattened row, so the id a table row needs is not
+ * one of its own fields.
+ */
+export type TmdbMatchRow = UnmatchedEpisodeOutput & { id: string }
+
+// TODO: Validate
+/** Key each served record by its episode, which is what a row of the table is. */
+export function asTmdbMatchRows<RecordT extends UnmatchedEpisodeOutput>(
+  records: RecordT[],
+): (RecordT & { id: string })[] {
+  return records.map((record) => ({ ...record, id: record.episode.id }))
+}
+
+// TODO: Validate
+/**
+ * A cell whose text runs onto another line rather than widening the table.
+ *
+ * A table cell holds its text on one line, which is what pushes a table of
+ * names past the width of the window. A cell given a width to stay under wraps
+ * inside it instead, and a name too long to break at a space is broken anyway.
+ */
+function WrappingCell({
+  className,
+  children,
+}: {
+  className?: string
+  children: ReactNode
+}) {
+  return (
+    <div className={cn("whitespace-normal wrap-break-word", className)}>
+      {children}
+    </div>
+  )
+}
+
+// TODO: Validate
+const NOTHING_TO_AGREE_WITH: Numbered = {
+  season_number: null,
+  episode_number: null,
+  absolute_number: null,
+}
+
+/** As much of one side of a row as the summary column reads. */
+export interface Summarised extends Numbered {
+  source_key: string
+  plugin_name: string | null
+  title_name: string | null
+  title_year: number | null
+  title_url: string | null
+  season_name: string | null
+  season_url: string | null
+  name: string | null
+  description: string | null
+  duration: number | null
+  air_date: string | null
+  url: string | null
+  /** The rows themselves, for the pages this site holds them on. */
+  source_id: string | null
+  title_id: string
+  season_id: string
+}
+
+// TODO: Validate
+function durationAndReleaseLabel(record: Summarised): string | null {
+  const parts = [
+    formatDuration(record.duration),
+    record.air_date ? new Date(record.air_date).toLocaleDateString() : null,
+  ].filter((part) => part !== null)
+  return parts.length === 0 ? null : parts.join(" · ")
+}
+
+// TODO: Validate
+function titleLabel(record: Summarised): string {
+  return `${record.title_name ?? "Unnamed"} (${record.title_year ?? "Unknown"})`
+}
+
+// TODO: Validate
+function seasonLabel(record: Summarised): string {
+  const number = `Season ${record.season_number ?? "?"}`
+  return record.season_name ? `${number} (${record.season_name})` : number
+}
+
+// TODO: Validate
+export function ExternalLinkButton({
+  url,
+  label,
+}: {
+  url: string | null | undefined
+  label: string
+}) {
+  if (!url) return null
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={label}
+      aria-label={label}
+      className={cn(
+        buttonVariants({ variant: "outline", size: "icon-sm" }),
+        "bg-muted dark:bg-muted/50",
+      )}
+    >
+      <SquareArrowOutUpRight />
+    </a>
+  )
+}
+
+// TODO: Validate
+function EpisodeEditButton({ episode }: { episode: TmdbMatchRow }) {
+  const openEditor = useOpenEpisodeEditor()
+  if (!openEditor) return null
+  return (
+    <TooltipIconButton
+      label="Edit this episode"
+      icon={<Pencil />}
+      size="icon-sm"
+      onClick={() => openEditor(episode)}
+    />
+  )
+}
+
+// TODO: Validate
+/**
+ * One side of a row, read as the title, the season and the episode within it.
+ *
+ * Everything that says which episode this is, in the order somebody checking a
+ * match reads it: the title first, since a wrong match is most often a match to
+ * another title altogether, then the season, then the episode. Each line opens
+ * the page it names, so a row can be checked against the site it came from
+ * without leaving the table to find it.
+ *
+ * A number the other side agrees with is picked out, since two sides rarely
+ * number an episode the same way and a number they share is the strongest thing
+ * on the row for saying the match is right.
+ */
+export function MatchSummary({
+  record,
+  counterpart,
+  note,
+  action,
+  editEpisode,
+  isTmdbSide,
+  guaranteed,
+}: {
+  record: Summarised
+  counterpart?: Numbered | null
+  note?: ReactNode
+  action?: ReactNode
+  editEpisode?: ReactNode
+  isTmdbSide?: boolean
+  guaranteed?: keyof NumberingAgreement
+}) {
+  const agreed = numberingAgreement(
+    record,
+    counterpart ?? NOTHING_TO_AGREE_WITH,
+  )
+  const agreement = {
+    season: agreed.season && guaranteed !== "seasonAndEpisode",
+    seasonAndEpisode:
+      agreed.seasonAndEpisode && guaranteed !== "seasonAndEpisode",
+    absolute: agreed.absolute && guaranteed !== "absolute",
+  }
+  const agreeingNumber =
+    isTmdbSide === true
+      ? "text-emerald-600 dark:text-emerald-400"
+      : "text-muted-foreground"
+
+  return (
+    <WrappingCell className="max-w-72">
+      {action}
+      {/*
+        Named even on the TMDB side, where it says TMDB twice and tells nobody
+        anything, because the two columns are read across rather than down and a
+        line one of them is missing puts everything below it out of step.
+      */}
+      <span className="block text-xs text-muted-foreground">
+        {record.source_id ? (
+          <Link
+            to="/titles"
+            search={{ source_id: record.source_id }}
+            className="hover:underline"
+          >
+            {record.source_key}
+            {record.plugin_name ? ` · ${record.plugin_name}` : ""}
+          </Link>
+        ) : (
+          <>
+            {record.source_key}
+            {record.plugin_name ? ` · ${record.plugin_name}` : ""}
+          </>
+        )}
+      </span>
+      <span className="flex flex-wrap items-center gap-1 font-medium">
+        <Link
+          to="/seasons"
+          search={{ title_id: record.title_id }}
+          className="min-w-0 hover:underline"
+        >
+          {titleLabel(record)}
+        </Link>
+        <EditTitleById titleId={record.title_id} />
+        <ExternalLinkButton
+          url={record.title_url}
+          label="Open this title on the site it came from"
+        />
+      </span>
+      <span className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+        <Link
+          to="/episodes"
+          search={{ season_id: record.season_id }}
+          className={cn(
+            "min-w-0 hover:underline",
+            agreement.season && agreeingNumber,
+          )}
+        >
+          {seasonLabel(record)}
+        </Link>
+        <ExternalLinkButton
+          url={record.season_url}
+          label="Open this season on the site it came from"
+        />
+      </span>
+      <span className="flex flex-wrap items-center gap-1 text-xs">
+        <span className="min-w-0">
+          <span className="tabular-nums">
+            <span
+              className={
+                agreement.seasonAndEpisode
+                  ? agreeingNumber
+                  : "text-muted-foreground"
+              }
+            >
+              Episode {record.episode_number ?? "?"}
+            </span>
+            {record.absolute_number === null ? null : (
+              <span
+                className={
+                  agreement.absolute ? agreeingNumber : "text-muted-foreground"
+                }
+              >
+                {" "}
+                (Absolute {record.absolute_number})
+              </span>
+            )}
+          </span>{" "}
+          {record.name || "Untitled"}
+        </span>
+        {editEpisode}
+        <ExternalLinkButton
+          url={record.url}
+          label="Open this episode on the site it came from"
+        />
+      </span>
+      {durationAndReleaseLabel(record) ? (
+        <span className="block text-xs tabular-nums text-muted-foreground">
+          {durationAndReleaseLabel(record)}
+        </span>
+      ) : null}
+      {record.description ? (
+        <ClampedContent lines={5} className="text-xs text-muted-foreground">
+          {record.description}
+        </ClampedContent>
+      ) : null}
+      {note}
+    </WrappingCell>
+  )
+}
+
+// TODO: Validate
+/**
+ * Which of the listing's other episodes already point at this TMDB episode.
+ *
+ * A suggestion another episode of the same listing has already been settled on
+ * is one to doubt, since two episodes of one listing are rarely the same TMDB
+ * episode, and the one already using it is named so the pair can be compared
+ * rather than only counted.
+ */
+function AlreadyUsedNote({
+  match,
+}: {
+  match: NonNullable<TmdbMatchRow["season_episode_match"]>
+}) {
+  if (!match.already_used || !match.used_by?.length) {
+    return null
+  }
+  return (
+    <span className="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-destructive">
+      Already used by
+      {match.used_by.map((used) => (
+        <span key={used.episode.id} className="inline-flex items-center gap-1">
+          {[
+            used.season.season_number == null
+              ? null
+              : `S${used.season.season_number}E${used.episode.episode_number ?? "?"}`,
+            used.episode.name,
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          <EditEpisodeById episodeId={used.episode.id} />
+        </span>
+      ))}
+    </span>
+  )
+}
+
+// TODO: Validate
+/** The TMDB side of a row, in the shape the summary reads. */
+function choiceSummarised(
+  match: TmdbMatchRow["season_episode_match"],
+): Summarised | null {
+  if (!match) return null
+  return {
+    source_key: match.source.key,
+    plugin_name: match.source.plugin_name ?? null,
+    source_id: null,
+    title_id: match.title.id,
+    season_id: match.season.id,
+    title_name: match.title.name ?? null,
+    title_year: match.title.year ?? null,
+    title_url: match.title.tmdb_url ?? null,
+    season_name: match.season.name ?? null,
+    season_url: match.season.tmdb_url ?? null,
+    season_number: match.season.season_number ?? null,
+    episode_number: match.episode.episode_number ?? null,
+    absolute_number: match.absolute_number ?? null,
+    name: match.episode.name ?? null,
+    description: match.episode.description ?? null,
+    duration: match.episode.duration ?? null,
+    air_date: match.episode.air_date ?? null,
+    url: match.episode.tmdb_url ?? null,
+  }
+}
+
+// TODO: Validate
+function episodeSummarised(row: UnmatchedEpisodeOutput): Summarised {
+  return {
+    source_key: row.source.key,
+    plugin_name: row.source.plugin_name ?? null,
+    source_id: row.source.id,
+    title_id: row.title.id,
+    season_id: row.season.id,
+    title_name: row.title.name ?? null,
+    title_year: row.title.year ?? null,
+    title_url: row.title.url ?? null,
+    season_name: row.season.name ?? null,
+    season_url: row.season.url ?? null,
+    season_number: row.season.season_number ?? null,
+    episode_number: row.episode.episode_number ?? null,
+    absolute_number: row.absolute_number ?? null,
+    name: row.episode.name ?? null,
+    description: row.episode.description ?? null,
+    duration: row.episode.duration ?? null,
+    air_date: row.episode.air_date ?? null,
+    url: row.episode.url ?? null,
+  }
+}
+
+// TODO: Validate
+export const tmdbMatchColumns: ColumnDef<TmdbMatchRow>[] = [
+  {
+    id: "summary",
+    accessorFn: (row) => row.title.name ?? "Unnamed",
+    header: "Combined Episode",
+    meta: { cellClassName: "align-top" },
+    cell: ({ row }) => (
+      <MatchSummary
+        record={episodeSummarised(row.original)}
+        editEpisode={<EpisodeEditButton episode={row.original} />}
+      />
+    ),
+  },
+  {
+    id: "number_match_summary",
+    accessorFn: (row) => row.season_episode_match?.title.name ?? "No match",
+    header: "Episode Number → Episode Number",
+    meta: { serverBacked: false, cellClassName: "align-top" },
+    cell: ({ row }) => {
+      const seasonEpisodeMatch = row.original.season_episode_match
+      const match = choiceSummarised(seasonEpisodeMatch)
+      if (!seasonEpisodeMatch || !match) {
+        return (
+          <WrappingCell className="max-w-72 text-muted-foreground">
+            No match
+          </WrappingCell>
+        )
+      }
+      return (
+        <MatchSummary
+          record={match}
+          counterpart={episodeSummarised(row.original)}
+          note={<AlreadyUsedNote match={seasonEpisodeMatch} />}
+          editEpisode={
+            <EditEpisodeById
+              episodeId={seasonEpisodeMatch.episode.id}
+              label="Edit this TMDB episode"
+            />
+          }
+          isTmdbSide
+          guaranteed="seasonAndEpisode"
+          action={
+            <TmdbMatchConfirmButton
+              episodeId={row.original.episode.id}
+              match={seasonEpisodeMatch}
+              kind="season_episode"
+            />
+          }
+        />
+      )
+    },
+  },
+  {
+    id: "absolute_match_summary",
+    accessorFn: (row) => row.absolute_number_match?.title.name ?? "No match",
+    header: "Absolute Number → Absolute Number",
+    meta: { serverBacked: false, cellClassName: "align-top" },
+    cell: ({ row }) => {
+      const absoluteMatch = row.original.absolute_number_match
+      const match = choiceSummarised(absoluteMatch)
+      if (!absoluteMatch || !match) {
+        return (
+          <WrappingCell className="max-w-72 text-muted-foreground">
+            No match
+          </WrappingCell>
+        )
+      }
+      return (
+        <MatchSummary
+          record={match}
+          counterpart={episodeSummarised(row.original)}
+          note={<AlreadyUsedNote match={absoluteMatch} />}
+          editEpisode={
+            <EditEpisodeById
+              episodeId={absoluteMatch.episode.id}
+              label="Edit this TMDB episode"
+            />
+          }
+          isTmdbSide
+          guaranteed="absolute"
+          action={
+            <TmdbMatchConfirmButton
+              episodeId={row.original.episode.id}
+              match={absoluteMatch}
+              kind="absolute"
+            />
+          }
+        />
+      )
+    },
+  },
+  {
+    id: "episode_absolute_match_summary",
+    accessorFn: (row) =>
+      row.episode_number_absolute_match?.title.name ?? "No match",
+    header: "Episode Number → Absolute Number",
+    meta: { serverBacked: false, cellClassName: "align-top" },
+    cell: ({ row }) => {
+      const episodeAbsoluteMatch = row.original.episode_number_absolute_match
+      const match = choiceSummarised(episodeAbsoluteMatch)
+      if (!episodeAbsoluteMatch || !match) {
+        return (
+          <WrappingCell className="max-w-72 text-muted-foreground">
+            No match
+          </WrappingCell>
+        )
+      }
+      return (
+        <MatchSummary
+          record={match}
+          counterpart={episodeSummarised(row.original)}
+          note={<AlreadyUsedNote match={episodeAbsoluteMatch} />}
+          editEpisode={
+            <EditEpisodeById
+              episodeId={episodeAbsoluteMatch.episode.id}
+              label="Edit this TMDB episode"
+            />
+          }
+          isTmdbSide
+          action={
+            <TmdbMatchConfirmButton
+              episodeId={row.original.episode.id}
+              match={episodeAbsoluteMatch}
+              kind="episode_absolute"
+            />
+          }
+        />
+      )
+    },
+  },
+  {
+    id: "description_embedding_match_summary",
+    accessorFn: (row) =>
+      row.description_embedding_matches?.[0]?.title.name ?? "No match",
+    header: "Description → Description (embedding)",
+    meta: { serverBacked: false, cellClassName: "align-top" },
+    cell: ({ row }) => {
+      const found = row.original.description_embedding_matches ?? []
+      if (found.length === 0) {
+        return (
+          <WrappingCell className="max-w-72 text-muted-foreground">
+            No match
+          </WrappingCell>
+        )
+      }
+      return (
+        <div className="space-y-3">
+          {found.map((textMatch) => {
+            const match = choiceSummarised(textMatch)
+            if (!match) return null
+            return (
+              <MatchSummary
+                key={textMatch.episode.id}
+                record={match}
+                counterpart={episodeSummarised(row.original)}
+                note={<AlreadyUsedNote match={textMatch} />}
+                editEpisode={
+                  <EditEpisodeById
+                    episodeId={textMatch.episode.id}
+                    label="Edit this TMDB episode"
+                  />
+                }
+                isTmdbSide
+                action={
+                  <TmdbMatchConfirmButton
+                    episodeId={row.original.episode.id}
+                    match={textMatch}
+                    kind="description_embedding"
+                    selectable
+                  />
+                }
+              />
+            )
+          })}
+        </div>
+      )
+    },
+  },
+  {
+    id: "description_tfidf_match_summary",
+    accessorFn: (row) =>
+      row.description_tfidf_matches?.[0]?.title.name ?? "No match",
+    header: "Description → Description (tf-idf)",
+    meta: { serverBacked: false, cellClassName: "align-top" },
+    cell: ({ row }) => {
+      const found = row.original.description_tfidf_matches ?? []
+      if (found.length === 0) {
+        return (
+          <WrappingCell className="max-w-72 text-muted-foreground">
+            No match
+          </WrappingCell>
+        )
+      }
+      return (
+        <div className="space-y-3">
+          {found.map((textMatch) => {
+            const match = choiceSummarised(textMatch)
+            if (!match) return null
+            return (
+              <MatchSummary
+                key={textMatch.episode.id}
+                record={match}
+                counterpart={episodeSummarised(row.original)}
+                note={<AlreadyUsedNote match={textMatch} />}
+                editEpisode={
+                  <EditEpisodeById
+                    episodeId={textMatch.episode.id}
+                    label="Edit this TMDB episode"
+                  />
+                }
+                isTmdbSide
+                action={
+                  <TmdbMatchConfirmButton
+                    episodeId={row.original.episode.id}
+                    match={textMatch}
+                    kind="description_tfidf"
+                    selectable
+                  />
+                }
+              />
+            )
+          })}
+        </div>
+      )
+    },
+  },
+  {
+    id: "title_embedding_match_summary",
+    accessorFn: (row) =>
+      row.title_embedding_matches?.[0]?.title.name ?? "No match",
+    header: "Title → Title (embedding)",
+    meta: { serverBacked: false, cellClassName: "align-top" },
+    cell: ({ row }) => {
+      const found = row.original.title_embedding_matches ?? []
+      if (found.length === 0) {
+        return (
+          <WrappingCell className="max-w-72 text-muted-foreground">
+            No match
+          </WrappingCell>
+        )
+      }
+      return (
+        <div className="space-y-3">
+          {found.map((textMatch) => {
+            const match = choiceSummarised(textMatch)
+            if (!match) return null
+            return (
+              <MatchSummary
+                key={textMatch.episode.id}
+                record={match}
+                counterpart={episodeSummarised(row.original)}
+                note={<AlreadyUsedNote match={textMatch} />}
+                editEpisode={
+                  <EditEpisodeById
+                    episodeId={textMatch.episode.id}
+                    label="Edit this TMDB episode"
+                  />
+                }
+                isTmdbSide
+                action={
+                  <TmdbMatchConfirmButton
+                    episodeId={row.original.episode.id}
+                    match={textMatch}
+                    kind="title_embedding"
+                    selectable
+                  />
+                }
+              />
+            )
+          })}
+        </div>
+      )
+    },
+  },
+  {
+    id: "title_tfidf_match_summary",
+    accessorFn: (row) => row.title_tfidf_matches?.[0]?.title.name ?? "No match",
+    header: "Title → Title (tf-idf)",
+    meta: { serverBacked: false, cellClassName: "align-top" },
+    cell: ({ row }) => {
+      const found = row.original.title_tfidf_matches ?? []
+      if (found.length === 0) {
+        return (
+          <WrappingCell className="max-w-72 text-muted-foreground">
+            No match
+          </WrappingCell>
+        )
+      }
+      return (
+        <div className="space-y-3">
+          {found.map((textMatch) => {
+            const match = choiceSummarised(textMatch)
+            if (!match) return null
+            return (
+              <MatchSummary
+                key={textMatch.episode.id}
+                record={match}
+                counterpart={episodeSummarised(row.original)}
+                note={<AlreadyUsedNote match={textMatch} />}
+                editEpisode={
+                  <EditEpisodeById
+                    episodeId={textMatch.episode.id}
+                    label="Edit this TMDB episode"
+                  />
+                }
+                isTmdbSide
+                action={
+                  <TmdbMatchConfirmButton
+                    episodeId={row.original.episode.id}
+                    match={textMatch}
+                    kind="title_tfidf"
+                    selectable
+                  />
+                }
+              />
+            )
+          })}
+        </div>
+      )
+    },
+  },
+  {
+    id: "title_name",
+    accessorFn: (row) => row.title.name ?? "Unnamed",
+    header: "Title",
+    cell: ({ row }) => (
+      <WrappingCell className="max-w-48">
+        <Link
+          to="/seasons"
+          search={{ title_id: row.original.title.id }}
+          className="hover:underline"
+        >
+          {row.original.title.name ?? "Unnamed"}
+        </Link>
+      </WrappingCell>
+    ),
+  },
+  {
+    id: "title_year",
+    accessorFn: (row) => row.title.year ?? "",
+    header: "Year",
+    cell: ({ row }) => (
+      <span className="tabular-nums">{row.original.title.year ?? ""}</span>
+    ),
+  },
+  {
+    id: "source_key",
+    accessorFn: (row) => row.source.key,
+    header: "Source",
+    meta: { filterVariant: "select" },
+    filterFn: "equalsString",
+    cell: ({ row }) => (
+      <WrappingCell className="max-w-32">
+        <Link
+          to="/titles"
+          search={{ source_id: row.original.source.id }}
+          className="hover:underline"
+        >
+          {row.original.source.key}
+        </Link>
+      </WrappingCell>
+    ),
+  },
+  {
+    id: "season_name",
+    accessorFn: (row) => row.season.name ?? "",
+    header: "Season",
+    cell: ({ row }) => (
+      <WrappingCell className="max-w-40">
+        <Link
+          to="/episodes"
+          search={{ season_id: row.original.season.id }}
+          className="hover:underline"
+        >
+          {row.original.season.name ?? "Unnamed"}
+        </Link>
+      </WrappingCell>
+    ),
+  },
+  {
+    id: "season_number",
+    accessorFn: (row) => row.season.season_number ?? "",
+    header: "Season #",
+    cell: ({ row }) => (
+      <span className="tabular-nums">
+        {row.original.season.season_number ?? ""}
+      </span>
+    ),
+  },
+  {
+    id: "episode_number",
+    accessorFn: (row) => row.episode.episode_number ?? "",
+    header: "Episode #",
+    cell: ({ row }) => (
+      <span className="tabular-nums">
+        {row.original.episode.episode_number ?? ""}
+      </span>
+    ),
+  },
+  {
+    id: "absolute_number",
+    accessorFn: (row) => row.absolute_number ?? "",
+    header: "Absolute Number",
+    meta: { serverBacked: false },
+    cell: ({ row }) => (
+      <span className="tabular-nums">{row.original.absolute_number ?? ""}</span>
+    ),
+  },
+  {
+    id: "episode_name",
+    accessorFn: (row) => row.episode.name || "Untitled",
+    header: "Episode name",
+    cell: ({ row }) => (
+      <WrappingCell className="max-w-64">
+        <span className="font-medium">
+          {row.original.episode.name || "Untitled"}
+        </span>
+        {row.original.episode.url ? (
+          <a
+            href={row.original.episode.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-0.5 block text-xs text-muted-foreground underline"
+          >
+            Source
+          </a>
+        ) : null}
+      </WrappingCell>
+    ),
+  },
+  {
+    id: "identifier_note",
+    accessorFn: (row) => row.episode.tmdb_episode_note ?? "",
+    header: "Note",
+    cell: ({ row }) => (
+      <WrappingCell className="max-w-48 text-xs text-muted-foreground">
+        {row.original.episode.tmdb_episode_note ?? ""}
+      </WrappingCell>
+    ),
+  },
+  {
+    id: "actions",
+    header: "Actions",
+    meta: { cellClassName: "align-top" },
+    enableSorting: false,
+    enableColumnFilter: false,
+    cell: ({ row }) => <TmdbMatchActions episode={row.original} />,
+  },
+]
+
+/**
+ * The split columns start hidden, since the two summaries cover what they say.
+ *
+ * Every value has a column of its own so it can be sorted and filtered on, but
+ * showing all of them at once is a table nobody can read across. The summaries
+ * are what the page opens as, and a column is turned on when there is a reason
+ * to sort by that one value.
+ */
+export const TMDB_MATCH_DEFAULT_VISIBILITY = {
+  title_name: false,
+  title_year: false,
+  season_name: false,
+  season_number: false,
+  episode_number: false,
+  absolute_number: false,
+  episode_name: false,
+}

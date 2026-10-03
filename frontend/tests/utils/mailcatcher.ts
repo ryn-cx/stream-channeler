@@ -1,3 +1,4 @@
+// TODO: Validate
 import type { APIRequestContext } from "@playwright/test"
 
 type Email = {
@@ -6,6 +7,7 @@ type Email = {
   subject: string
 }
 
+// TODO: Validate
 async function findEmail({
   request,
   filter,
@@ -30,6 +32,7 @@ async function findEmail({
   return null
 }
 
+// TODO: Validate
 export function findLastEmail({
   request,
   filter,
@@ -46,6 +49,7 @@ export function findLastEmail({
     ),
   )
 
+  // TODO: Validate
   const checkEmails = async () => {
     while (true) {
       const emailData = await findEmail({ request, filter })

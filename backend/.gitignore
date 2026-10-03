@@ -1,3 +1,5 @@
+/tests/plugins/test_files/
+
 __pycache__
 app.egg-info
 *.pyc
@@ -6,3 +8,6 @@ app.egg-info
 htmlcov
 .cache
 .venv
+/tests/plugins/results/**/stats/
+/tests/plugins/results/**/_files/
+/data/

@@ -1,0 +1,172 @@
+// TODO: Validate
+import { createFileRoute, Link } from "@tanstack/react-router"
+import {
+  Clapperboard,
+  Flag,
+  FolderSync,
+  Layers,
+  ListOrdered,
+  Radio,
+  ShieldCheck,
+  Tv,
+  Users,
+} from "lucide-react"
+import { RelinkWatchesButton } from "@/components/Admin/RelinkWatchesButton"
+import { PageHeader } from "@/components/Common/PageHeader"
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+
+export const Route = createFileRoute("/_layout/admin/")({
+  component: AdminIndex,
+  head: () => ({
+    meta: [
+      {
+        title: "Admin - Stream Channeler",
+      },
+    ],
+  }),
+})
+
+// TODO: Validate
+function AdminIndex() {
+  return (
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Admin">
+        <RelinkWatchesButton />
+      </PageHeader>
+      <div className="grid grid-cols-1 gap-4 px-[4%] sm:grid-cols-2">
+        <Link to="/admin/channels" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Radio className="size-5" />
+                Channels
+              </CardTitle>
+              <CardDescription>
+                View, approve, and edit every channel on the site, or filter to
+                a single user's channels.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/channel-queues" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ListOrdered className="size-5" />
+                Channel Queues
+              </CardTitle>
+              <CardDescription>
+                View and edit every channel's import queue, or filter to a
+                single user's queues.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/reports" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Flag className="size-5" />
+                All Issue Reports
+              </CardTitle>
+              <CardDescription>
+                Every issue reported against an episode, season or title, newest
+                first.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/episode-reports" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clapperboard className="size-5" />
+                Episode Issue Reports
+              </CardTitle>
+              <CardDescription>
+                Each reported episode once, with how many issues were reported
+                against it and what they say.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/season-reports" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Layers className="size-5" />
+                Season Issue Reports
+              </CardTitle>
+              <CardDescription>
+                Each reported season once, with how many issues were reported
+                against it and what they say.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/title-reports" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Tv className="size-5" />
+                Title Issue Reports
+              </CardTitle>
+              <CardDescription>
+                Each reported title once, with how many issues were reported
+                against it and what they say.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/unvalidated-titles" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShieldCheck className="size-5" />
+                Unvalidated Titles
+              </CardTitle>
+              <CardDescription>
+                Every title whose tmdb titles nobody has validated. A row linked
+                to a title is here so the link can be confirmed, and one that is
+                its own record is here so that TMDB having no counterpart for it
+                can be confirmed too.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/manage-files" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FolderSync className="size-5" />
+                Manage Files
+              </CardTitle>
+              <CardDescription>
+                Export the list of files this database holds, dump the files
+                another database is missing, and import a dump back in.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link to="/admin/users" className="block">
+          <Card className="h-full transition-colors hover:border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="size-5" />
+                Users
+              </CardTitle>
+              <CardDescription>
+                Manage all user accounts, including roles and access.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+      </div>
+    </div>
+  )
+}

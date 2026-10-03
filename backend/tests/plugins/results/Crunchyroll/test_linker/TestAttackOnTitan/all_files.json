@@ -1,0 +1,166 @@
+[
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "BrowseMusic/artists.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "BrowseSeries.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Catalogue/alphabetical.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Categories/GR751KNZY.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/G69PC2WV0.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/G6JQC1E10.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GR9PXM286.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GRG5GZZ3R.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GY3VC2P34.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GYE58GMXR.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Seasons/GR751KNZY.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Series/GR751KNZY.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SimilarTo/GR751KNZY.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "Movies/Details/1333100.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "Movies/Watch Providers/1333100.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "Search/TV/Attack on Titan.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/5fd0acbc798c940040c180b0.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/5fd0ad18691cd5003d1ca648.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/61dc75fc12197e0041bbe70b.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/61dc7c554da3d400192ee3ff.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/63469b5dd34eb3007e7bce8a.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/635d204e0c3ec80090b46bb6.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/645589ac5b4fed0185ce7d2b.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/650d9fa693db92011bb85cd2.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/66cd15ff5b846d32524101ec.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/679e20df02a74dc73f952672.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/685382dd5c6142bc005d88fa.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/69cf79f6453a8d0f020b9000.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/1429/0.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/1429/1.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/1429/2.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/1429/3.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/1429/4.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/1429/0.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/1429/1.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/1429/2.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/1429/3.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/1429/4.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Details/1429.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Episode Groups/1429.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Watch Providers/1429.json"
+  }
+]

@@ -1,69 +1,78 @@
+# TODO: Validate
 [project]
 name = "app"
 version = "0.1.0"
 description = ""
 requires-python = ">=3.14,<4.0"
 dependencies = [
-    "fastapi[standard]>=0.138.1,<1.0.0",
-    "python-multipart<1.0.0,>=0.0.27",
-    "email-validator<3.0.0.0,>=2.1.0.post1",
-    "tenacity<10.0.0,>=8.2.3",
-    "pydantic>2.0",
-    "emails>=1.1.2,<2.0",
-    "jinja2<4.0.0,>=3.1.4",
-    "alembic<2.0.0,>=1.12.1",
-    "httpx<1.0.0,>=0.25.1",
-    "psycopg[binary]<4.0.0,>=3.1.13",
-    "sqlmodel>=0.0.39,<1.0.0",
-    "pydantic-settings<3.0.0,>=2.2.1",
-    "sentry-sdk[fastapi]>=2.0.0,<3.0.0",
-    "pyjwt<3.0.0,>=2.13.0",
-    "pwdlib[argon2,bcrypt]>=0.3.0",
+  "alembic<2.0.0,>=1.12.1",
+  "beautifulsoup4>=4.14.3",
+  "chirashi",
+  "diving-board",
+  "email-validator<3.0.0.0,>=2.1.0.post1",
+  "emails>=1.1.2,<2.0",
+  "fastapi[standard]<0.129.0,>=0.128.0",
+  "httpx<1.0.0,>=0.25.1",
+  "jinja2<4.0.0,>=3.1.4",
+  "kneeminus",
+  "loguru>=0.7.3",
+  "lxml>=5.0.0",
+  "meshfilm",
+  "minbo",
+  "model2vec>=0.9.0",
+  "nana",
+  "numpy>=2.0",
+  "naphki",
+  "not-yt-dlapi",
+  "notaplanet",
+  "pigeon",
+  "plugi",
+  "pools-closed",
+  "psycopg[binary]<4.0.0,>=3.1.13",
+  "pwdlib[argon2,bcrypt]>=0.3.0",
+  "pydantic>=2.11",
+  "pydantic-settings<3.0.0,>=2.2.1",
+  "pyinstrument>=5.1.2",
+  "pyjwt<3.0.0,>=2.13.0",
+  "python-multipart<1.0.0,>=0.0.27",
+  "rapidfuzz>=3.14.5",
+  "sentry-sdk[fastapi]>=2.0.0,<3.0.0",
+  "sqlmodel>=0.0.39,<1.0.0",
+  "tenacity<10.0.0,>=8.2.3",
+  "thefuzz>=0.22.1",
+  "tminidb",
+  "tqdm>=4.67.0",
+  "trivial-minus",
+  "wampi",
+  "wholoo",
+  "yt-dlapi",
+  "sortedcontainers>=2.4.0",
+  "deforestation",
+  "i-am-the-db",
 ]
 
 [dependency-groups]
 dev = [
-    "pytest<10.0.0,>=7.4.3",
-    "mypy<3.0.0,>=1.8.0",
-    "ty>=0.0.25",
-    "ruff<1.0.0,>=0.2.2",
-    "coverage<8.0.0,>=7.4.3",
+  "coverage<8.0.0,>=7.4.3",
+  "mypy<3.0.0,>=1.8.0",
+  "prek>=0.2.24,<1.0.0",
+  "pytest<10.0.0,>=7.4.3",
+  "pytest-socket>=0.7.0",
+  "pytest-split>=0.11.0",
+  "ruff<1.0.0,>=0.2.2",
+  "sortedcontainers-stubs>=2.4.3",
+  "ty>=0.0.25",
+  "types-tqdm>=4.67.0",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.mypy]
-strict = true
-exclude = ["venv", ".venv", "alembic"]
-
-[tool.ruff]
-target-version = "py314"
-exclude = ["alembic"]
-
-[tool.ruff.lint]
-select = [
-    "E",  # pycodestyle errors
-    "W",  # pycodestyle warnings
-    "F",  # pyflakes
-    "I",  # isort
-    "B",  # flake8-bugbear
-    "C4",  # flake8-comprehensions
-    "UP",  # pyupgrade
-    "ARG001", # unused arguments in functions
-    "T201",   # print statements are not allowed
-]
-ignore = [
-    "E501",  # line too long, handled by black
-    "B008",  # do not perform function calls in argument defaults
-    "W191",  # indentation contains tabs
-    "B904",  # Allow raising exceptions without from e, for HTTPException
-]
-
-[tool.ruff.lint.pyupgrade]
-# Preserve types, even if a file imports `from __future__ import annotations`.
-keep-runtime-typing = true
+[tool.pytest.ini_options]
+# Block network access for plugin tests.
+addopts = "--disable-socket --allow-hosts=127.0.0.1,::1,localhost -s"
+norecursedirs = ["old_mess", "_files", ".*", "build", "dist", "*.egg", "node_modules", "venv", ".venv"]
 
 [tool.coverage.run]
 source = ["app"]
@@ -76,8 +85,66 @@ sort = "-Cover"
 [tool.coverage.html]
 show_contexts = true
 
+[tool.mypy]
+strict = true
+exclude = ["venv", ".venv", "alembic"]
+
+[tool.ruff]
+target-version = "py314"
+exclude = ["alembic"]
+
+[tool.ruff.lint]
+select = ["ALL", "D400", "D401", "D404"]
+ignore = [
+  # Ignores from the original template
+  "E501",  # line too long, handled by black
+  "B008",  # do not perform function calls in argument defaults
+  "W191",  # indentation contains tabs
+  "B904",  # Allow raising exceptions without from e, for HTTPException
+
+  # Additional ignores.
+  # Too many false positives.
+  "TC001",
+  "TC002",
+  "TC003",
+
+  # Allow all TODO comments
+  "TD",
+  "FIX002",
+
+  "D",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]  # Asserts allowed in tests.
+
+[tool.ruff.lint.pyupgrade]
+# Preserve types, even if a file imports `from __future__ import annotations`.
+keep-runtime-typing = true
+
 [tool.ty.terminal]
 error-on-warning = true
+
+[tool.uv.sources]
+diving-board = { git = "https://github.com/ryn-cx/diving-board" }
+chirashi = { git = "https://github.com/ryn-cx/chirashi" }
+naphki = { git = "https://github.com/ryn-cx/naphki" }
+not-yt-dlapi = { git = "https://github.com/ryn-cx/not-yt-dlapi" }
+yt-dlapi = { git = "https://github.com/ryn-cx/yt-dlapi" }
+meshfilm = { git = "https://github.com/ryn-cx/meshfilm" }
+tminidb = { git = "https://github.com/ryn-cx/tminidb" }
+wholoo = { git = "https://github.com/ryn-cx/wholoo" }
+minbo = { git = "https://github.com/ryn-cx/minbo" }
+kneeminus = { git = "https://github.com/ryn-cx/knee-minus" }
+trivial-minus = { git = "https://github.com/ryn-cx/trivial-minus" }
+nana = { git = "https://github.com/ryn-cx/nana" }
+plugi = { git = "https://github.com/ryn-cx/plugi" }
+pools-closed = { git = "https://github.com/ryn-cx/pools-closed" }
+pigeon = { git = "https://github.com/ryn-cx/pigeon" }
+notaplanet = { git = "https://github.com/ryn-cx/notaplanet" }
+wampi = { git = "https://github.com/ryn-cx/wampi" }
+deforestation = { git = "https://github.com/ryn-cx/deforestation" }
+i-am-the-db = { git = "https://github.com/ryn-cx/i-am-the-db" }
 
 [tool.fastapi]
 entrypoint = "app.main:app"

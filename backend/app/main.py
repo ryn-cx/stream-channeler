@@ -1,24 +1,81 @@
+# TODO: Validate
+"""Stream Channeler application."""
+
+from collections.abc import AsyncGenerator, Awaitable, Callable
+from contextlib import asynccontextmanager
+from importlib import import_module
+
 import sentry_sdk
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.routing import APIRoute
+from loguru import logger
 from starlette.middleware.cors import CORSMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
 
-from app.api.main import api_router
-from app.core.config import settings
+from app.channels.service.home import warm_home_guide
+from app.config import settings
+from app.constants import APP_PATH
+from app.database import load_models
+from app.episodes.service.names.vectors import preload_model
+from app.log import configure_logging
+from app.watches.exceptions import (
+    WatchAlreadyExistsError,
+    handle_watch_already_exists,
+)
+from plugins.utils.manage_plugins import initialize_plugins
+
+configure_logging()
+
+# A model is only reachable by name from another model's relationship once it has
+# been imported, and a router can map a model as it is imported, so every model is
+# loaded before the first router is.
+load_models()
 
 
-def custom_generate_unique_id(route: APIRoute) -> str:
+# TODO: Make this a private function upstream.
+# TODO: Validate
+def _custom_generate_unique_id(route: APIRoute) -> str:
     return f"{route.tags[0]}-{route.name}"
 
 
 if settings.SENTRY_DSN and settings.ENVIRONMENT != "local":
     sentry_sdk.init(dsn=str(settings.SENTRY_DSN), enable_tracing=True)
 
+
+# TODO: Validate
+@asynccontextmanager
+async def _lifespan(_app: FastAPI) -> AsyncGenerator[None]:
+    preload_model()
+    initialize_plugins()
+    if settings.ENVIRONMENT != "local":
+        warm_home_guide()
+    yield
+
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
-    generate_unique_id_function=custom_generate_unique_id,
+    generate_unique_id_function=_custom_generate_unique_id,
+    lifespan=_lifespan,
 )
+
+app.add_exception_handler(WatchAlreadyExistsError, handle_watch_already_exists)
+
+
+# TODO: Validate
+@app.middleware("http")
+async def _log_requests(
+    request: Request,
+    call_next: Callable[[Request], Awaitable[Response]],
+) -> Response:
+    response = await call_next(request)
+    logger.bind(source="request").info(
+        f"{request.method} {request.url.path} {response.status_code}",
+    )
+    return response
+
 
 # Set all CORS enabled origins
 if settings.all_cors_origins:
@@ -29,5 +86,27 @@ if settings.all_cors_origins:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+# TODO: Enable this upstream.
+app.add_middleware(GZipMiddleware)
+
+
+# TODO: Implement this improved function upstream.
+# TODO: Validate
+def automatically_import_routers() -> APIRouter:
+    api_router = APIRouter()
+    for router_file in sorted(APP_PATH.glob("*/router/__init__.py")):
+        module_name = router_file.parent.parent.name
+
+        if module_name == "private" and settings.ENVIRONMENT != "local":
+            continue
+
+        router = import_module(f"app.{module_name}.router").router
+        api_router.include_router(router)
+
+    return api_router
+
+
+api_router = automatically_import_routers()
 
 app.include_router(api_router, prefix=settings.API_V1_STR)

@@ -1,3 +1,4 @@
+// TODO: Validate
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
   createFileRoute,
@@ -9,6 +10,7 @@ import { z } from "zod"
 
 import type { Body_login_login_access_token as AccessToken } from "@/client"
 import { AuthLayout } from "@/components/Common/AuthLayout"
+import { FormTextField } from "@/components/Common/FormTextField"
 import {
   Form,
   FormControl,
@@ -17,13 +19,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import { PasswordInput } from "@/components/ui/password-input"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 
 const formSchema = z.object({
-  username: z.email(),
+  username: z.email({ message: "Invalid email address" }),
   password: z
     .string()
     .min(1, { message: "Password is required" })
@@ -44,12 +45,13 @@ export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
       {
-        title: "Log In - FastAPI Template",
+        title: "Log In - Stream Channeler",
       },
     ],
   }),
 })
 
+// TODO: Validate
 function Login() {
   const { loginMutation } = useAuth()
   const form = useForm<FormData>({
@@ -62,6 +64,7 @@ function Login() {
     },
   })
 
+  // TODO: Validate
   const onSubmit = (data: FormData) => {
     if (loginMutation.isPending) return
     loginMutation.mutate(data)
@@ -79,23 +82,13 @@ function Login() {
           </div>
 
           <div className="grid gap-4">
-            <FormField
+            <FormTextField
               control={form.control}
               name="username"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      data-testid="email-input"
-                      placeholder="user@example.com"
-                      type="email"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage className="text-xs" />
-                </FormItem>
-              )}
+              label="Email"
+              data-testid="email-input"
+              placeholder="user@example.com"
+              type="email"
             />
 
             <FormField

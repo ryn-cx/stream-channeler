@@ -1,3 +1,4 @@
+// TODO: Validate
 "use client"
 
 import * as React from "react"
@@ -6,28 +7,33 @@ import { XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
+// TODO: Validate
 function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
 }
 
+// TODO: Validate
 function SheetTrigger({
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Trigger>) {
   return <SheetPrimitive.Trigger data-slot="sheet-trigger" {...props} />
 }
 
+// TODO: Validate
 function SheetClose({
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Close>) {
   return <SheetPrimitive.Close data-slot="sheet-close" {...props} />
 }
 
+// TODO: Validate
 function SheetPortal({
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Portal>) {
   return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />
 }
 
+// TODO: Validate
 function SheetOverlay({
   className,
   ...props
@@ -44,6 +50,7 @@ function SheetOverlay({
   )
 }
 
+// TODO: Validate
 function SheetContent({
   className,
   children,
@@ -81,6 +88,7 @@ function SheetContent({
   )
 }
 
+// TODO: Validate
 function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -91,6 +99,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
+// TODO: Validate
 function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
@@ -101,6 +110,7 @@ function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
+// TODO: Validate
 function SheetTitle({
   className,
   ...props
@@ -114,6 +124,7 @@ function SheetTitle({
   )
 }
 
+// TODO: Validate
 function SheetDescription({
   className,
   ...props

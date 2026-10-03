@@ -1,133 +1,501 @@
+# TODO: Validate
+"""Shared models."""
+
 import uuid
-from datetime import UTC, datetime
+from abc import ABC, abstractmethod
+from collections.abc import Iterable, Sequence
+from datetime import datetime
+from enum import StrEnum
+from functools import partial
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Self, TypeVar
 
-from pydantic import EmailStr
-from sqlalchemy import DateTime
-from sqlmodel import Field, Relationship, SQLModel
+from loguru import logger
+from sqlalchemy import inspect, util
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm.attributes import flag_modified
+from sqlmodel import DateTime, Field, Index, Session, SQLModel
+from sqlmodel.sql.expression import SelectOfScalar
 
+from app.utils import tz_datetime
 
-def get_datetime_utc() -> datetime:
-    return datetime.now(UTC)
+if TYPE_CHECKING:
+    from sqlalchemy.orm._typing import OrmExecuteOptionsParameter
+    from sqlalchemy.orm.interfaces import ORMOption
+    from sqlalchemy.sql.elements import TextClause
+    from sqlalchemy.sql.selectable import ForUpdateParameter
 
-
-# Shared properties
-class UserBase(SQLModel):
-    email: EmailStr = Field(unique=True, index=True, max_length=255)
-    is_active: bool = True
-    is_superuser: bool = False
-    full_name: str | None = Field(default=None, max_length=255)
-
-
-# Properties to receive via API on creation
-class UserCreate(UserBase):
-    password: str = Field(min_length=8, max_length=128)
-
-
-class UserRegister(SQLModel):
-    email: EmailStr = Field(max_length=255)
-    password: str = Field(min_length=8, max_length=128)
-    full_name: str | None = Field(default=None, max_length=255)
-
-
-# Properties to receive via API on update, all are optional
-class UserUpdate(SQLModel):
-    email: EmailStr | None = Field(default=None, max_length=255)
-    is_active: bool | None = None
-    is_superuser: bool | None = None
-    full_name: str | None = Field(default=None, max_length=255)
-    password: str | None = Field(default=None, min_length=8, max_length=128)
+    from app.channel_orders.models import ChannelOrder
+    from app.channels.models import Channel
+    from app.episodes.models import Episode
+    from app.files.models import File
+    from app.plugins.models import Plugin
+    from app.seasons.models import Season
+    from app.sources.models import Source
+    from app.titles.models import Title
+    from app.users.models import User
 
 
-class UserUpdateMe(SQLModel):
-    full_name: str | None = Field(default=None, max_length=255)
-    email: EmailStr | None = Field(default=None, max_length=255)
+# This is a partial function because it reduces the number of locations that need to
+# have a "# type: ignore[call-overload]" comment. Ignoring this error is acceptable
+# because the official example for implementing a DateTime field also ignore the error:
+# https://github.com/fastapi/full-stack-fastapi-template/blob/master/backend/app/models.py
+DateTimeField = partial(Field, sa_type=DateTime(timezone=True))  # type: ignore[call-overload]
 
 
-class UpdatePassword(SQLModel):
-    current_password: str = Field(min_length=8, max_length=128)
-    new_password: str = Field(min_length=8, max_length=128)
+# A sortable field ending in this is the same sort with the number 0 pushed past
+# every other number instead of ahead of them, which is where a season or episode
+# numbered 0 belongs when it is the specials rather than the first of the run.
+ZERO_LAST_SUFFIX = "_zero_last"
 
 
-# Database model, database table inferred from class name
-class User(UserBase, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    hashed_password: str
-    created_at: datetime | None = Field(
-        default_factory=get_datetime_utc,
-        sa_type=DateTime(timezone=True),  # type: ignore
+# TODO: Validate
+def sortable_field_indexes(
+    model_name: str,
+    direct_sortable_fields: Iterable[str],
+    already_indexed: Iterable[str] = (),
+    where: TextClause | None = None,
+) -> tuple[Index, ...]:
+    skipped = {"id", *already_indexed}
+    return tuple(
+        Index(f"{model_name}-{field}-index", field, postgresql_where=where)
+        for field in direct_sortable_fields
+        if field not in skipped
     )
-    items: list[Item] = Relationship(back_populates="owner", cascade_delete=True)
 
 
-# Properties to return via API, id is always required
-class UserPublic(UserBase):
-    id: uuid.UUID
-    created_at: datetime | None = None
+# TODO: Validate
+class Visibility(StrEnum):
+    public = "public"
+    unlisted = "unlisted"
+    private = "private"
 
 
-class UsersPublic(SQLModel):
-    data: list[UserPublic]
-    count: int
+# TODO: Validate
+class RootRecordMixin(ABC):
+    """Mixin for any model that a `User` can own.
+
+    Subclasses must implement `root_record`.
+    """
+
+    # TODO: Validate
+    @abstractmethod
+    def _root_record(self, session: Session) -> Channel | ChannelOrder:
+        """Return the root record directly owned by the `User`."""
+
+    # TODO: Validate
+    def owner_id(self, session: Session) -> uuid.UUID:
+        """Return the `id` of the `User` who owns this record."""
+        return self._root_record(session).user_id
+
+    # TODO: Validate
+    def is_publically_readable(self, session: Session) -> bool:
+        """Return true if this record's `visibility` is `public` or `unlisted`."""
+        return self._root_record(session).visibility in (
+            Visibility.public,
+            Visibility.unlisted,
+        )
+
+    # TODO: Validate
+    def is_readable(self, session: Session, user: User | None) -> bool:
+        """Return whether `user` can read this record.
+
+        Returns true if any of the following are true:
+        - The record's `visibility` is `public` or `unlisted`.
+        - The `user` is the owner of the record or a superuser.
+        """
+        if self.is_publically_readable(session):
+            return True
+        return user is not None and (
+            user.id == self.owner_id(session) or user.is_superuser
+        )
 
 
-# Shared properties
-class ItemBase(SQLModel):
-    title: str = Field(min_length=1, max_length=255)
-    description: str | None = Field(default=None, max_length=255)
+# TODO: Validate
+class TimestampIdAndHashMixin(SQLModel):
+    """Mixin that adds `id`, `created_at`, and `modified_at` fields to a model.
 
+    Fields: `id`, `created_at`, and `modified_at`.
+    """
 
-# Properties to receive on item creation
-class ItemCreate(ItemBase):
-    pass
+    # id is a uuid so the name id makes it easier to differentiate between the id field
+    # and the key field.
+    id: uuid.UUID = Field(unique=True, default_factory=uuid.uuid4)
 
-
-# Properties to receive on item update
-class ItemUpdate(SQLModel):
-    title: str | None = Field(default=None, min_length=1, max_length=255)
-    description: str | None = Field(default=None, max_length=255)
-
-
-# Database model, database table inferred from class name
-class Item(ItemBase, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime | None = Field(
-        default_factory=get_datetime_utc,
-        sa_type=DateTime(timezone=True),  # type: ignore
+    created_at: datetime = DateTimeField(default_factory=tz_datetime.current_time)
+    modified_at: datetime = DateTimeField(
+        sa_column_kwargs={"onupdate": tz_datetime.current_time},
+        default_factory=tz_datetime.current_time,
     )
-    owner_id: uuid.UUID = Field(
-        foreign_key="user.id", nullable=False, ondelete="CASCADE"
+
+    # TODO: Validate
+    def __hash__(self) -> int:
+        """Return a hash representation of the record based on the `id`."""
+        cached = self.__dict__.get("_record_hash")
+        if cached is None:
+            cached = hash(self.id)
+            self.__dict__["_record_hash"] = cached
+        return cached
+
+    # TODO: Validate
+    def __eq__(self, other: object) -> bool:
+        """Two records are equal when they share the same `id`."""
+        return isinstance(other, TimestampIdAndHashMixin) and self.id == other.id
+
+
+# TODO: Validate
+class BaseMediaMixin(SQLModel):
+    # key is a surrogate key so the name key makes it easier to differentiate between
+    # the key field and the id field.
+    key: str = Field(min_length=1)
+    data_timestamp: datetime | None = DateTimeField(default=None)
+    update_at: datetime | None = DateTimeField(default=None)
+    deleted_at: datetime | None = DateTimeField(default=None)
+    status: str | None = Field(default=None)
+
+    # Allows plugins to store custom information beyond the database's structure.
+    # Always an object, so a plugin keeping two things here does not have to
+    # decide what the one it stored first now means, and so what is stored can be
+    # read back by the database rather than only by whoever wrote it. `sa_type`
+    # rather than `sa_column` because a mixin's field is built once per model and
+    # a single `Column` cannot belong to six tables.
+    extra: dict[str, Any] = Field(
+        default_factory=dict,
+        sa_type=JSONB,
+        nullable=False,
     )
-    owner: User | None = Relationship(back_populates="items")
 
 
-# Properties to return via API, id is always required
-class ItemPublic(ItemBase):
-    id: uuid.UUID
-    owner_id: uuid.UUID
-    created_at: datetime | None = None
+ChildT = TypeVar("ChildT", bound="Plugin | Source | Title | Season | Episode | File")
+ParentT = TypeVar("ParentT", bound="Plugin | Source | Title | Season")
 
 
-class ItemsPublic(SQLModel):
-    data: list[ItemPublic]
-    count: int
+# TODO: Validate
+class MediaMixin(TimestampIdAndHashMixin, BaseMediaMixin, ABC, Generic[ChildT]):  # noqa: UP046
+    LINKED_FLAG_FIELD: ClassVar[str | None] = None
+
+    upserted_at: datetime = DateTimeField(default_factory=tz_datetime.current_time)
+
+    # TODO: Validate
+    @property
+    @abstractmethod
+    def children(self) -> list[ChildT]:
+        """Return the direct children of the record.
+
+        - `Plugin` -> `Source | Files`
+        - `Source` -> `Title`
+        - `Title` -> `Season`
+        - `Season` -> `Episode`
+        - `Episode` -> `[]`
+        """
+
+    # TODO: Validate
+    @property
+    def active_children(self) -> list[ChildT]:
+        """Return the direct children of the record that are not deleted.
+
+        - `Plugin` -> `Source | Files`
+        - `Source` -> `Title`
+        - `Title` -> `Season`
+        - `Season` -> `Episode`
+        - `Episode` -> `[]`
+        """
+        return [child for child in self.children if child.deleted_at is None]
+
+    # TODO: Validate
+    @classmethod
+    @abstractmethod
+    def select_with_plugin(cls) -> SelectOfScalar[Any]:
+        """Return a select joined to `Plugin`."""
+
+    # TODO: Validate
+    def set_update_at(self, new_update_at_value: datetime | None) -> None:
+        """Set `update_at` based its current value and `new_update_at_value`."""
+        oldest_data_timestamp = self.data_timestamp
+
+        # If the existing update_at is older than data_timestamp the update has
+        # been completed and update_at can be cleared.
+        if (
+            self.update_at
+            and oldest_data_timestamp
+            and self.update_at < oldest_data_timestamp
+        ):
+            self.update_at = None
+
+        if not new_update_at_value:
+            return
+
+        # If the existing data_timestamp is newer than the new update_at value update_at
+        # can be ignored because the data is already up to date.
+        if oldest_data_timestamp and oldest_data_timestamp >= new_update_at_value:
+            return
+
+        # If the new update_at is before the existing update_at the existing update_at
+        # should be replaced so the updates occur as soon as possible.
+        if self.update_at is None or new_update_at_value < self.update_at:
+            self.update_at = new_update_at_value
+
+    # TODO: Validate
+    def add_child(self, child: ChildT) -> None:
+        """Add a child to the record."""
+        self.children.append(child)
+
+    # TODO: Validate
+    def _update_existing(self, existing_record: Self, protected_keys: set[str]) -> Self:
+        # id:  automatically generated when making a model, but that value should
+        # only be used for new entries. When upserting the original id should be
+        # preserved.
+        # created_at: set by the database.
+        unset_keys = set(type(self).model_fields) - self.model_fields_set
+        protected_keys = (
+            protected_keys
+            | unset_keys
+            | {
+                "id",
+                "created_at",
+                "modified_at",
+                "upserted_at",
+            }
+        )
+        dumped = self.model_dump(exclude=protected_keys)
+        existing_record.sqlmodel_update(dumped)
+        existing_state = inspect(existing_record)
+        if any(
+            existing_state.attrs[field].history.has_changes()
+            for field in dumped
+            if field in existing_state.attrs
+        ):
+            existing_record.modified_at = tz_datetime.now()
+        flag_modified(existing_record, "modified_at")
+        existing_record.upserted_at = tz_datetime.now()
+        return existing_record
+
+    # TODO: Validate
+    def soft_delete(
+        self,
+        timestamp: datetime | None = None,
+        *,
+        recursive: bool = True,
+    ) -> None:
+        """Soft delete the record.
+
+        If the record is already deleted, the existing `deleted_at` value will be
+        kept.
+
+        Args:
+            timestamp: The timestamp to set for `deleted_at`. If `None`, the current
+                time will be used.
+            recursive: Whether to also soft delete all children of the record.
+
+        """
+        if self.deleted_at is None:
+            self.deleted_at = timestamp or tz_datetime.now()
+
+        if recursive:
+            for child in self.children:
+                child.soft_delete(timestamp)
+
+    # TODO: Validate
+    def soft_undelete(self, *, recursive: bool = True) -> None:
+        """Soft undelete the record.
+
+        If the record is not deleted `soft_undelete` does nothing.
+
+        Args:
+            recursive: Whether to also soft undelete all children of the record.
+
+        """
+        self.deleted_at = None
+        if recursive:
+            for child in self.children:
+                child.soft_undelete()
+
+    # TODO: Validate
+    def soft_delete_missing_children(self, found_keys: Iterable[str]) -> None:
+        """Soft delete children whose keys are not in `found_keys`."""
+        found_keys = set(found_keys)
+        for child in self.children:
+            if child.key not in found_keys:
+                child.soft_delete()
 
 
-# Generic message
-class Message(SQLModel):
-    message: str
+# TODO: Validate
+class ChildMediaMixin(MediaMixin[ChildT], ABC, Generic[ParentT, ChildT]):  # noqa: UP046
+    # them is the parent is not something the columns say.
+    PARENT_ID_FIELD: ClassVar[str]
 
+    # TODO: Validate
+    @property
+    @abstractmethod
+    def parent(self) -> ParentT:
+        """Return the parent of the record.
 
-# JSON payload containing access token
-class Token(SQLModel):
-    access_token: str
-    token_type: str = "bearer"
+        - `Source` -> `Plugin`
+        - `Title` -> `Source`
+        - `Season` -> `Title`
+        - `Episode` -> `Season`
+        """
 
+    # TODO: Validate
+    @classmethod
+    def parent_id_field(cls) -> str:
+        """Return the name of the parent id column."""
+        return cls.PARENT_ID_FIELD
 
-# Contents of JWT token
-class TokenPayload(SQLModel):
-    sub: str | None = None
+    # TODO: Consider implementing a recursive version of this so only one upsert needs
+    # to be called when upserting a tree of records.
 
+    # TODO: Validate
+    @classmethod
+    def get(  # noqa: PLR0913 - Copied from wrapped function
+        cls,
+        session: Session,
+        parent: ParentT,
+        key: str,
+        *,
+        options: Sequence[ORMOption] | None = None,
+        populate_existing: bool = False,
+        with_for_update: ForUpdateParameter = None,
+        identity_token: Any | None = None,  # noqa: ANN401 - Copied from wrapped function
+        execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
+        bind_arguments: dict[str, Any] | None = None,
+    ) -> Self | None:
+        """Get a record by its `parent` and `key` if it exists.
 
-class NewPassword(SQLModel):
-    token: str
-    new_password: str = Field(min_length=8, max_length=128)
+        This is a wrapper around `db.get` for easier use with composite primary keys.
+
+        Returns:
+            The record if found, else `None`.
+
+        """
+        return session.get(
+            cls,
+            (parent.id, key),
+            options=options,
+            populate_existing=populate_existing,
+            with_for_update=with_for_update,
+            identity_token=identity_token,
+            execution_options=execution_options,
+            bind_arguments=bind_arguments,
+        )
+
+    # TODO: Validate
+    @classmethod
+    def get_one(  # noqa: PLR0913 - Copied from wrapped function
+        cls,
+        session: Session,
+        parent: ParentT,
+        key: str,
+        *,
+        options: Sequence[ORMOption] | None = None,
+        populate_existing: bool = False,
+        with_for_update: ForUpdateParameter = None,
+        identity_token: Any | None = None,  # noqa: ANN401 - Copied from wrapped function
+        execution_options: OrmExecuteOptionsParameter = util.EMPTY_DICT,
+        bind_arguments: dict[str, Any] | None = None,
+    ) -> Self:
+        """Get a record by its `parent` and `key`, raising if not found.
+
+        This is a wrapper around `db.get_one` for easier use with composite primary
+        keys.
+
+        Returns:
+            The record.
+
+        Raises:
+            NoResultFound: If no matching record is found.
+
+        """
+        return session.get_one(
+            cls,
+            (parent.id, key),
+            options=options,
+            populate_existing=populate_existing,
+            with_for_update=with_for_update,
+            identity_token=identity_token,
+            execution_options=execution_options,
+            bind_arguments=bind_arguments,
+        )
+
+    # TODO: Validate
+    @classmethod
+    def get_from_memory(
+        cls,
+        session: Session,
+        parent: ParentT,
+        key: str,
+    ) -> Self | None:
+        if record := session.identity_map.get((cls, (parent.id, key), None)):
+            return record
+
+        if parent in session.new:
+            return next(
+                (
+                    child
+                    for child in parent.children
+                    if isinstance(child, cls) and child.key == key
+                ),
+                None,
+            )
+
+        if (record := session.get(cls, (parent.id, key))) is not None:
+            logger.error(
+                f"{cls.__name__} {parent.id}/{key} was not in the session but"
+                f" exists in the database. It was loaded from the database to avoid"
+                f" inserting a duplicate, but whatever preloaded it has lost its"
+                f" reference and every other record it preloaded is at risk too.",
+            )
+        return record
+
+    # TODO: Validate
+    @classmethod
+    def get_one_from_memory(
+        cls,
+        session: Session,
+        parent: ParentT,
+        key: str,
+    ) -> Self:
+        """Get a record by its `parent` and `key` from the session, raising if not found.
+
+        This is a direct lookup in `db.identity_map` and does not query the database.
+
+        Returns:
+            The record.
+
+        Raises:
+            KeyError: If no matching record is found in the identity map.
+
+        """
+        return session.identity_map[(cls, (parent.id, key), None)]
+
+    # TODO: Consider implementing a recursive version of this so only one upsert needs
+    # to be called when upserting a tree of records.
+    # TODO: Validate
+    def upsert(
+        self,
+        parent: ParentT,
+        existing_record: Self | None,
+        protected_keys: set[str] | None = None,
+    ) -> Self:
+        """Upsert the record.
+
+        Args:
+            parent: The parent record to upsert onto.
+            existing_record: The existing record to update, or `None` if no existing
+                record exists.
+            protected_keys: A set of keys to exclude from updates when an existing
+                record is provided.
+
+        """
+        protected_keys = set(protected_keys or ()) | {"update_at"}
+        if existing_record:
+            if existing_record.deleted_at is not None:
+                existing_record.soft_undelete()
+            updated_record = self._update_existing(existing_record, protected_keys)
+            updated_record.set_update_at(self.update_at)
+            return updated_record
+        # self will always be a child of parent
+        parent.add_child(self)  # type: ignore[arg-type]
+        update_at = self.update_at
+        self.update_at = None
+        self.set_update_at(update_at)
+        return self

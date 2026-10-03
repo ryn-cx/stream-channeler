@@ -1,0 +1,7 @@
+{
+  "linker": {
+    "execution_time": 21.535055000334978,
+    "peak_memory_bytes": 213973632,
+    "sql_statements": 601
+  }
+}

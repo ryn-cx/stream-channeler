@@ -1,0 +1,578 @@
+{
+  "plugin": [
+    {
+      "key": "Crunchyroll",
+      "data_timestamp": null,
+      "update_at": null,
+      "deleted_at": null,
+      "status": "Incomplete",
+      "extra": {},
+      "id": "Crunchyroll",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "version": null,
+      "hidden": false,
+      "sources": [
+        {
+          "key": "Crunchyroll",
+          "data_timestamp": "2026-01-01T00:00:00+00:00",
+          "update_at": null,
+          "deleted_at": null,
+          "status": null,
+          "extra": {},
+          "id": "Crunchyroll",
+          "created_at": "2026-01-01T00:00:00+00:00",
+          "modified_at": "2026-01-01T00:00:00+00:00",
+          "link_to_tmdb": true,
+          "favicon_url": "https://crunchyroll.com/build/assets/img/favicons/favicon-v2-96x96.png",
+          "image_url": null,
+          "plugin_id": "Crunchyroll",
+          "titles": [
+            {
+              "key": "G1XHJVWD3",
+              "data_timestamp": "2026-01-01T00:00:00+00:00",
+              "update_at": "2026-03-02T00:00:00+00:00",
+              "deleted_at": null,
+              "status": null,
+              "extra": {},
+              "id": "G1XHJVWD3",
+              "created_at": "2026-01-01T00:00:00+00:00",
+              "modified_at": "2026-01-01T00:00:00+00:00",
+              "name": "Mobile Suit Gundam Narrative",
+              "media_type": "Movie",
+              "description": "One year has passed since the contents of Laplace's Box were revealed to the world at the end of the conflict called the \"Laplace Incident.\" Despite the revelation of the Universal Century Charter that acknowledges the existence and rights of Newtypes, the framework of the world has not been greatly altered.",
+              "url": "https://crunchyroll.com/series/G1XHJVWD3",
+              "image_url": "https://www.crunchyroll.com/imgsrv/display/thumbnail/1920x1080/catalog/crunchyroll/6a6485067ccb84c7bb7bf501cfe75c86.png",
+              "thumbnail_url": "https://www.crunchyroll.com/imgsrv/display/thumbnail/600x338/catalog/crunchyroll/6a6485067ccb84c7bb7bf501cfe75c86.png",
+              "poster_url": "https://www.crunchyroll.com/imgsrv/display/thumbnail/1560x2340/catalog/crunchyroll/01aceffc88f27c91930cd679938d29fd.png",
+              "poster_thumbnail_url": "https://www.crunchyroll.com/imgsrv/display/thumbnail/480x720/catalog/crunchyroll/01aceffc88f27c91930cd679938d29fd.png",
+              "year": 2018,
+              "score": null,
+              "popularity": null,
+              "original_language": null,
+              "tmdb_title_validated_at": null,
+              "link_status": null,
+              "is_linked": false,
+              "source_id": "Crunchyroll",
+              "seasons": [
+                {
+                  "key": "GS00109873JAJP",
+                  "data_timestamp": "2026-01-01T00:00:00+00:00",
+                  "update_at": "2026-08-08T00:00:00+00:00",
+                  "deleted_at": null,
+                  "status": null,
+                  "extra": {},
+                  "id": "GS00109873JAJP",
+                  "created_at": "2026-01-01T00:00:00+00:00",
+                  "modified_at": "2026-01-01T00:00:00+00:00",
+                  "name": "Mobile Suit Gundam Narrative",
+                  "url": null,
+                  "season_number": 0,
+                  "image_url": null,
+                  "thumbnail_url": null,
+                  "sort_order": 0,
+                  "title_id": "G1XHJVWD3",
+                  "episodes": [
+                    {
+                      "key": "G14U4M9D3",
+                      "data_timestamp": "2026-01-01T00:00:00+00:00",
+                      "update_at": null,
+                      "deleted_at": null,
+                      "status": null,
+                      "extra": {},
+                      "id": "G14U4M9D3",
+                      "created_at": "2026-01-01T00:00:00+00:00",
+                      "modified_at": "2026-01-01T00:00:00+00:00",
+                      "url": "https://crunchyroll.com/watch/G14U4M9D3",
+                      "name": "Mobile Suit Gundam Narrative",
+                      "description": "One year has passed since the contents of Laplace's Box were revealed to the world at the end of the conflict called the \"Laplace Incident.\" Despite the revelation of the Universal Century Charter that acknowledges the existence and rights of Newtypes, the framework of the world has not been greatly altered.",
+                      "image_url": "https://www.crunchyroll.com/imgsrv/display/thumbnail/1920x1080/catalog/crunchyroll/ba3491e08fd47426341bdb86a1801610.png",
+                      "thumbnail_url": "https://www.crunchyroll.com/imgsrv/display/thumbnail/600x338/catalog/crunchyroll/ba3491e08fd47426341bdb86a1801610.png",
+                      "air_date": "2018-11-30T00:00:00+00:00",
+                      "episode_number": 1,
+                      "duration": 5333,
+                      "sort_order": 0,
+                      "tmdb_episode_validated_at": null,
+                      "tmdb_note": null,
+                      "ignored_at": null,
+                      "is_linked": false,
+                      "watch_identifier": "Crunchyroll G14U4M9D3",
+                      "season_id": "GS00109873JAJP"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "Custom Media",
+      "data_timestamp": null,
+      "update_at": null,
+      "deleted_at": null,
+      "status": null,
+      "extra": {},
+      "id": "Custom Media",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "version": null,
+      "hidden": false,
+      "sources": []
+    }
+  ],
+  "watchprovider": [],
+  "channel": [
+    {
+      "id": "Action on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "name": "Action on Crunchyroll",
+      "channel_number": null,
+      "visibility": "public",
+      "default_order": null,
+      "description": "All Action titles on Crunchyroll.\n\nThis is an automatically generated channel based on the titles that have been imported by all of Stream Channeler's users.",
+      "anonymous": false,
+      "score": -1,
+      "user_id": "Crunchyroll",
+      "update_at": "2026-01-02T00:00:00+00:00"
+    },
+    {
+      "id": "Drama on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "name": "Drama on Crunchyroll",
+      "channel_number": null,
+      "visibility": "public",
+      "default_order": null,
+      "description": "All Drama titles on Crunchyroll.\n\nThis is an automatically generated channel based on the titles that have been imported by all of Stream Channeler's users.",
+      "anonymous": false,
+      "score": -1,
+      "user_id": "Crunchyroll",
+      "update_at": "2026-01-02T00:00:00+00:00"
+    },
+    {
+      "id": "Sci-Fi on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "name": "Sci-Fi on Crunchyroll",
+      "channel_number": null,
+      "visibility": "public",
+      "default_order": null,
+      "description": "All Sci-Fi titles on Crunchyroll.\n\nThis is an automatically generated channel based on the titles that have been imported by all of Stream Channeler's users.",
+      "anonymous": false,
+      "score": -1,
+      "user_id": "Crunchyroll",
+      "update_at": "2026-01-02T00:00:00+00:00"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "name": "All Titles on Crunchyroll",
+      "channel_number": null,
+      "visibility": "public",
+      "default_order": null,
+      "description": "All Titles titles on Crunchyroll.\n\nThis is an automatically generated channel based on the titles that have been imported by all of Stream Channeler's users.",
+      "anonymous": false,
+      "score": -1,
+      "user_id": "Crunchyroll",
+      "update_at": "2026-01-02T00:00:00+00:00"
+    }
+  ],
+  "channelorder": [],
+  "usersourcepreference": [],
+  "channelcombinedchannel": [],
+  "channelfavorite": [],
+  "channelorderfavorite": [],
+  "channelqueue": [
+    {
+      "id": "Action on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "url": "https://crunchyroll.com/series/G1XHJVWD3",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "Action on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "url": "https://crunchyroll.com/series/G1XHJVWD3",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "url": "https://crunchyroll.com/series/G6MGP9W76",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000001+00:00",
+      "modified_at": "2026-01-01T00:00:00.000001+00:00",
+      "url": "https://crunchyroll.com/series/G0XHWM435",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000002+00:00",
+      "modified_at": "2026-01-01T00:00:00.000002+00:00",
+      "url": "https://crunchyroll.com/series/GXJHM3P5W",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000003+00:00",
+      "modified_at": "2026-01-01T00:00:00.000003+00:00",
+      "url": "https://crunchyroll.com/series/GKEH2G9XV",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000004+00:00",
+      "modified_at": "2026-01-01T00:00:00.000004+00:00",
+      "url": "https://crunchyroll.com/series/G63VP3PMY",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000005+00:00",
+      "modified_at": "2026-01-01T00:00:00.000005+00:00",
+      "url": "https://crunchyroll.com/series/G6MGQ0976",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000006+00:00",
+      "modified_at": "2026-01-01T00:00:00.000006+00:00",
+      "url": "https://crunchyroll.com/series/GYQ4QK446",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000007+00:00",
+      "modified_at": "2026-01-01T00:00:00.000007+00:00",
+      "url": "https://crunchyroll.com/series/GJ0H7QG5M",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000008+00:00",
+      "modified_at": "2026-01-01T00:00:00.000008+00:00",
+      "url": "https://crunchyroll.com/series/G60X0KVGR",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000009+00:00",
+      "modified_at": "2026-01-01T00:00:00.000009+00:00",
+      "url": "https://crunchyroll.com/series/G6JQ8XWXR",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000010+00:00",
+      "modified_at": "2026-01-01T00:00:00.000010+00:00",
+      "url": "https://crunchyroll.com/series/GYWEQQD2Y",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000011+00:00",
+      "modified_at": "2026-01-01T00:00:00.000011+00:00",
+      "url": "https://crunchyroll.com/series/G63VZZDEY",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000012+00:00",
+      "modified_at": "2026-01-01T00:00:00.000012+00:00",
+      "url": "https://crunchyroll.com/series/GY8V5PQ8Y",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000013+00:00",
+      "modified_at": "2026-01-01T00:00:00.000013+00:00",
+      "url": "https://crunchyroll.com/series/G6Q40NG1R",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000014+00:00",
+      "modified_at": "2026-01-01T00:00:00.000014+00:00",
+      "url": "https://crunchyroll.com/series/GY9VDNJ0R",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000015+00:00",
+      "modified_at": "2026-01-01T00:00:00.000015+00:00",
+      "url": "https://crunchyroll.com/series/G9VHN9W0V",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000016+00:00",
+      "modified_at": "2026-01-01T00:00:00.000016+00:00",
+      "url": "https://crunchyroll.com/series/GJ0H7QXE2",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000017+00:00",
+      "modified_at": "2026-01-01T00:00:00.000017+00:00",
+      "url": "https://crunchyroll.com/series/GRP8DNZ1R",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000018+00:00",
+      "modified_at": "2026-01-01T00:00:00.000018+00:00",
+      "url": "https://crunchyroll.com/series/G65V4P4K6",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000019+00:00",
+      "modified_at": "2026-01-01T00:00:00.000019+00:00",
+      "url": "https://crunchyroll.com/series/GYWE82VMY",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000020+00:00",
+      "modified_at": "2026-01-01T00:00:00.000020+00:00",
+      "url": "https://crunchyroll.com/series/G8DHV78ZM",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000021+00:00",
+      "modified_at": "2026-01-01T00:00:00.000021+00:00",
+      "url": "https://crunchyroll.com/series/GG5H5XQ7D",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000022+00:00",
+      "modified_at": "2026-01-01T00:00:00.000022+00:00",
+      "url": "https://crunchyroll.com/series/GEXH3WKNN",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000023+00:00",
+      "modified_at": "2026-01-01T00:00:00.000023+00:00",
+      "url": "https://crunchyroll.com/series/GXJHM3G47",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000024+00:00",
+      "modified_at": "2026-01-01T00:00:00.000024+00:00",
+      "url": "https://crunchyroll.com/series/G24H1NWKE",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000025+00:00",
+      "modified_at": "2026-01-01T00:00:00.000025+00:00",
+      "url": "https://crunchyroll.com/series/GRW4DXNEY",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000026+00:00",
+      "modified_at": "2026-01-01T00:00:00.000026+00:00",
+      "url": "https://crunchyroll.com/series/GG5H5XQG5",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000027+00:00",
+      "modified_at": "2026-01-01T00:00:00.000027+00:00",
+      "url": "https://crunchyroll.com/series/GY8VDPKGY",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000028+00:00",
+      "modified_at": "2026-01-01T00:00:00.000028+00:00",
+      "url": "https://crunchyroll.com/series/GEXH3WKDP",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000029+00:00",
+      "modified_at": "2026-01-01T00:00:00.000029+00:00",
+      "url": "https://crunchyroll.com/series/GP5HJ84P7",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "Drama on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "url": "https://crunchyroll.com/series/G1XHJVWD3",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "Drama on Crunchyroll"
+    },
+    {
+      "id": "Sci-Fi on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "url": "https://crunchyroll.com/series/G1XHJVWD3",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "Sci-Fi on Crunchyroll"
+    }
+  ],
+  "comment": [],
+  "channeltitle": [],
+  "commentnotification": [],
+  "titlegenre": [
+    {
+      "id": "Action",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "title_id": "G1XHJVWD3",
+      "name": "Action"
+    },
+    {
+      "id": "Drama",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "title_id": "G1XHJVWD3",
+      "name": "Drama"
+    },
+    {
+      "id": "Sci-Fi",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "title_id": "G1XHJVWD3",
+      "name": "Sci-Fi"
+    }
+  ],
+  "titleissuereport": [],
+  "titlespokenlanguage": [],
+  "titletmdbtitle": [],
+  "titlewatchprovider": [],
+  "unmatchedtitle": [],
+  "channelseasonfilter": [],
+  "channelsourcefilter": [],
+  "seasonissuereport": [],
+  "channelepisodefilter": [],
+  "channelepisodesourcefilter": [],
+  "channelsavedepisodeorder": [],
+  "episodeissuereport": [],
+  "episodetmdbepisode": [],
+  "episodetmdbtitle": [
+    {
+      "episode_id": "G14U4M9D3",
+      "tmdb_title_id": "G1XHJVWD3"
+    }
+  ],
+  "userepisodeurl": [],
+  "watch": []
+}

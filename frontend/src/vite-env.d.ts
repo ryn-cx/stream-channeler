@@ -1,3 +1,4 @@
+// TODO: Validate
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {

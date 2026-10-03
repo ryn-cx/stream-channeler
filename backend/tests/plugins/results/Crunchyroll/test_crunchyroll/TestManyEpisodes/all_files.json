@@ -1,0 +1,126 @@
+[
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "BrowseMusic/artists.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "BrowseSeries.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Catalogue/alphabetical.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Categories/GRMG8ZQZR.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/G63VWN2WY.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/G65VCD972.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/G6GGZMGP6.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/G6K5CN0QE.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/G6P8CX41K.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/G6WE8NE26.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/G6X0MWV7Y.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GR0X5QW7Y.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GR5VCDQJQ.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GRQ4CZK4J.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GRVNC25QX.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GRVNM78ZY.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GS00376439JAJP.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GS00380777JAJP.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GY3VWX3MR.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GY75N3546.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GY8VCP845.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GY8VCPXXM.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GYGGVE07Y.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GYMG8J7WY.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GYP8CXGMD.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GYP8PM4KY.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GYWEM933Y.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GYZXCMZN0.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Seasons/GRMG8ZQZR.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Series/GRMG8ZQZR.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SimilarTo/GRMG8ZQZR.json"
+  }
+]

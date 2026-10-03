@@ -1,0 +1,66 @@
+# TODO: Validate
+
+from dataclasses import dataclass
+
+from sqlmodel import Session
+
+from app.sources.service.lookup import OTHER_SOURCE_KEY
+from app.users.models import User
+from app.users.service.preferences import (
+    effective_source_preferences,
+    stored_preferences,
+)
+
+
+# TODO: Validate
+@dataclass
+class SourceDedupConfig:
+    """Resolved priority and enabled state used while selecting episodes."""
+
+    priority: dict[str, int]
+    other_priority: int
+    disabled_keys: set[str]
+    enabled_keys: set[str]
+    other_enabled: bool
+
+    # TODO: Validate
+    def priority_from(self, source_key: str | None) -> int:
+        """Return the priority of a source key, falling back to `Other`."""
+        if source_key is None:
+            return self.other_priority
+        return self.priority.get(source_key, self.other_priority)
+
+
+# TODO: Validate
+def source_dedup_config(
+    session: Session,
+    user: User | None,
+) -> SourceDedupConfig:
+    """Resolve a user's effective preferences into priorities and enabled sets."""
+    stored = stored_preferences(user.source_preferences) if user else []
+    preferences = effective_source_preferences(session, stored)
+    priority = {
+        preference.source_key: index for index, preference in enumerate(preferences)
+    }
+    disabled_keys = {
+        preference.source_key
+        for preference in preferences
+        if not preference.enabled and preference.source_key != OTHER_SOURCE_KEY
+    }
+    enabled_keys = {
+        preference.source_key
+        for preference in preferences
+        if preference.enabled and preference.source_key != OTHER_SOURCE_KEY
+    }
+    other_enabled = next(
+        preference.enabled
+        for preference in preferences
+        if preference.source_key == OTHER_SOURCE_KEY
+    )
+    return SourceDedupConfig(
+        priority=priority,
+        other_priority=priority[OTHER_SOURCE_KEY],
+        disabled_keys=disabled_keys,
+        enabled_keys=enabled_keys,
+        other_enabled=other_enabled,
+    )

@@ -1,0 +1,133 @@
+# TODO: Validate
+"""Whether a channel takes a given row for an episode.
+
+A `ChannelTitle` stands for a canonical title rather than one website's row, and the
+source, season and episode filters hanging off it are what narrow that down to
+the rows and episodes the channel actually offers. These read the filter rows
+the query already outer-joined, so they only make sense against a query built by
+`EpisodeQueryBuilder`.
+"""
+
+from collections.abc import Collection
+from datetime import datetime
+from uuid import UUID
+
+from sqlalchemy import case, literal_column
+from sqlalchemy.orm import aliased
+from sqlalchemy.sql.expression import ColumnElement
+from sqlmodel import and_, col, or_, select
+
+from app.channels.episode_selector.tmdb_entities import episode_id
+from app.channels.models import (
+    ChannelEpisodeFilter,
+    ChannelEpisodeSourceFilter,
+    ChannelOrderGroupFilter,
+    ChannelSeasonFilter,
+    ChannelSourceFilter,
+    ChannelTitle,
+)
+
+
+# TODO: Validate
+def source_access_condition() -> ColumnElement[bool]:
+    """Whether this website's row for the title is one the channel takes.
+
+    A `ChannelTitle` covers every website the title is on, so a `User` who
+    wants only some of them says so with `ChannelSourceFilter` entries. Saying
+    nothing means every website, which is what a channel that was never told
+    about websites at all wants.
+    """
+    any_source_filter = aliased(ChannelSourceFilter)
+    has_source_filters = (
+        select(literal_column("1"))
+        .select_from(any_source_filter)
+        .where(col(any_source_filter.channel_title_id) == col(ChannelTitle.id))
+        .correlate(ChannelTitle)
+        .exists()
+    )
+    matched = col(ChannelSourceFilter.title_id).is_not(None)
+    return or_(
+        and_(
+            col(ChannelTitle.is_whitelist).is_(True),
+            or_(~has_source_filters, matched),
+        ),
+        and_(col(ChannelTitle.is_whitelist).is_(False), ~matched),
+    )
+
+
+# TODO: Validate
+def _either_but_not_both(
+    first: ColumnElement[bool],
+    second: ColumnElement[bool],
+) -> ColumnElement[bool]:
+    return or_(and_(first, ~second), and_(~first, second))
+
+
+# TODO: Validate
+def marked_by_filters_condition() -> ColumnElement[bool]:
+    """Whether the filters name this website's link to this episode.
+
+    An episode entry inverts what the season entry decided, which is what makes
+    one episode an exception to a whitelisted or blacklisted season, and an
+    episode source entry inverts that again for the one website it names, which
+    is what leaves an episode taken from one site and left on another.
+
+    A channel reading the title in an episode order of TMDB's is shown that order's
+    groups rather than the title's seasons, so a group entry is what stands for a
+    season there and the season entries are no part of what it reads.
+    """
+    return _either_but_not_both(
+        _either_but_not_both(
+            case(
+                (
+                    col(ChannelTitle.tmdb_episode_order_id).is_not(None),
+                    col(ChannelOrderGroupFilter.tmdb_episode_order_group_id).is_not(
+                        None,
+                    ),
+                ),
+                else_=col(ChannelSeasonFilter.season_id).is_not(None),
+            ),
+            col(ChannelEpisodeFilter.tmdb_episode_id).is_not(None),
+        ),
+        col(ChannelEpisodeSourceFilter.tmdb_episode_id).is_not(None),
+    )
+
+
+# TODO: Validate
+def channel_access_condition() -> ColumnElement[bool]:
+    """Whether the channel offers this episode, after every filter on it."""
+    marked = marked_by_filters_condition()
+    return and_(
+        source_access_condition(),
+        or_(
+            and_(col(ChannelTitle.is_whitelist).is_(True), marked),
+            and_(col(ChannelTitle.is_whitelist).is_(False), ~marked),
+        ),
+    )
+
+
+# TODO: Validate
+def blacklisted_on_channels_condition(
+    channel_ids: Collection[UUID],
+    now: datetime,
+) -> ColumnElement[bool]:
+    filter_only_title = aliased(ChannelTitle)
+    filter_only_filter = aliased(ChannelEpisodeFilter)
+    return (
+        select(filter_only_filter.tmdb_episode_id)
+        .select_from(filter_only_filter)
+        .join(
+            filter_only_title,
+            col(filter_only_filter.channel_title_id) == filter_only_title.id,
+        )
+        .where(
+            col(filter_only_title.is_blacklist_only).is_(True),
+            col(filter_only_title.channel_id).in_(channel_ids),
+            col(filter_only_filter.tmdb_episode_id) == episode_id(),
+            or_(
+                col(filter_only_filter.expires_at).is_(None),
+                col(filter_only_filter.expires_at) > now,
+            ),
+        )
+        .exists()
+    )

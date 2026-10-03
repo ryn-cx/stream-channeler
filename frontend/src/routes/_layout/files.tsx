@@ -1,0 +1,52 @@
+// TODO: Validate
+import { createFileRoute } from "@tanstack/react-router"
+import { FileText } from "lucide-react"
+
+import { FilesService } from "@/client"
+import {
+  MediaListPage,
+  serializeTableQuery,
+  validateMediaSearch,
+} from "@/components/Common/DataTable"
+import AddFile from "@/components/Files/Add"
+import { type FileTableData, fileColumns } from "@/components/Files/columns"
+import { requireSuperuser } from "@/hooks/useAuth"
+
+export const Route = createFileRoute("/_layout/files")({
+  component: AllFilesPage,
+  beforeLoad: requireSuperuser,
+  validateSearch: validateMediaSearch,
+  head: () => ({
+    meta: [{ title: "Files - Stream Channeler" }],
+  }),
+})
+
+// TODO: Validate
+function AllFilesPage() {
+  const { plugin_id } = Route.useSearch()
+
+  return (
+    <MediaListPage<FileTableData>
+      title="Files"
+      path="/files"
+      columns={fileColumns}
+      columnVisibilityKey="files-column-visibility"
+      defaultHidden={{ plugin_id: false, id: false }}
+      emptyIcon={FileText}
+      headerActions={plugin_id ? <AddFile pluginId={plugin_id} /> : undefined}
+      fetchTable={async (params) => {
+        const result = await FilesService.getFiles({
+          offset: params.offset,
+          limit: params.limit,
+          ...serializeTableQuery(params, fileColumns),
+        })
+        return {
+          data: result.data,
+          total_count: result.total_count,
+          filtered_count: result.filtered_count,
+          is_server_side: result.is_server_side,
+        }
+      }}
+    />
+  )
+}

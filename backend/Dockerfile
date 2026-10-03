@@ -1,3 +1,4 @@
+# TODO: Validate
 FROM python:3.14
 
 ENV PYTHONUNBUFFERED=1
@@ -32,6 +33,8 @@ COPY ./backend/scripts /app/backend/scripts
 COPY ./backend/pyproject.toml ./backend/alembic.ini /app/backend/
 
 COPY ./backend/app /app/backend/app
+
+COPY ./backend/plugins /app/backend/plugins
 
 # Sync the project
 # Ref: https://docs.astral.sh/uv/guides/integration/docker/#intermediate-layers

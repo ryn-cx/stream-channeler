@@ -1,0 +1,89 @@
+# TODO: Validate
+"""Files schemas."""
+
+import uuid
+from datetime import datetime
+from typing import Any
+
+from pydantic import AliasPath, BaseModel, ConfigDict, Field
+
+from app.files.models import BaseFile, File
+from app.models import BaseMediaMixin, DateTimeField
+from app.plugins.models import Plugin
+from app.schemas import (
+    BaseCreateWithParentAndKey,
+    BaseUpdateWithKey,
+    make_model_with_all_fields_optional,
+)
+
+
+# TODO: Validate
+class FileCreate(BaseCreateWithParentAndKey[File, Plugin], BaseFile):
+    """Schema for creating a `File`."""
+
+
+# TODO: Validate
+class FileUpdate(
+    make_model_with_all_fields_optional(BaseFile),
+    BaseUpdateWithKey[File],
+):
+    """Schema for updating a `File`."""
+
+
+# TODO: Validate
+class FilePublic(BaseFile):
+    """Schema for returning a `File`."""
+
+    plugin_id: uuid.UUID
+    id: uuid.UUID
+
+
+# TODO: Consider reworking this into seperate models for each parent.
+# TODO: Validate
+class FileListPublic(BaseMediaMixin):
+    """Schema for returning a list of `File`s, excluding `content`.
+
+    `content` is excluded to reduce the response size.
+    """
+
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)  # type: ignore[assignment]
+
+    # data_timestamp is a required field for files.
+    data_timestamp: datetime = DateTimeField()  # pyright: ignore[reportIncompatibleVariableOverride]
+    plugin_id: uuid.UUID
+    id: uuid.UUID
+    plugin_name: str | None = Field(validation_alias=AliasPath("plugin", "key"))
+
+
+# TODO: Validate
+class FilesPublic(BaseModel):
+    """Schema for returning a paginated list of `File`s."""
+
+    data: list[FileListPublic]
+    total_count: int
+    filtered_count: int
+    is_server_side: bool
+
+
+# TODO: Validate
+class FileManifestEntry(BaseModel):
+    plugin_key: str
+    key: str
+
+
+# TODO: Validate
+class FileExport(BaseModel):
+    plugin_key: str
+    key: str
+    data_timestamp: datetime
+    content: str | None = None
+    update_at: datetime | None = None
+    deleted_at: datetime | None = None
+    status: str | None = None
+    extra: dict[str, Any] | None = None
+
+
+# TODO: Validate
+class FileImportResult(BaseModel):
+    imported: int
+    skipped: int

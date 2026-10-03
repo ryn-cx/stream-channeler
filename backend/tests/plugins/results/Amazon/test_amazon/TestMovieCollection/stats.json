@@ -1,0 +1,47 @@
+{
+  "deleted_episode_update_title": {
+    "execution_time": 0.7766635003499687,
+    "peak_memory_bytes": 6980654,
+    "sql_statements": 45
+  },
+  "deleted_season": {
+    "execution_time": 0.5426561003550887,
+    "peak_memory_bytes": 7921447,
+    "sql_statements": 48
+  },
+  "deleted_season_with_episode": {
+    "execution_time": 0.5413128002546728,
+    "peak_memory_bytes": 11132127,
+    "sql_statements": 47
+  },
+  "import_existing_url": {
+    "execution_time": 0.3217290001921356,
+    "peak_memory_bytes": 4431058,
+    "sql_statements": 43
+  },
+  "import_url": {
+    "execution_time": 3.7991864001378417,
+    "peak_memory_bytes": 50604053,
+    "sql_statements": 310
+  },
+  "import_url_variants": {
+    "execution_time": 3.4491153000853956,
+    "peak_memory_bytes": 46446582,
+    "sql_statements": 310
+  },
+  "update_episode": {
+    "execution_time": 0.5752238999120891,
+    "peak_memory_bytes": 8862184,
+    "sql_statements": 58
+  },
+  "update_season": {
+    "execution_time": 0.5267906999215484,
+    "peak_memory_bytes": 8029277,
+    "sql_statements": 57
+  },
+  "update_title": {
+    "execution_time": 0.6288096001371741,
+    "peak_memory_bytes": 9399027,
+    "sql_statements": 58
+  }
+}

@@ -1,5 +1,6 @@
+// TODO: Validate
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useNavigate } from "@tanstack/react-router"
+import { redirect, useNavigate } from "@tanstack/react-router"
 
 import {
   type Body_login_login_access_token as AccessToken,
@@ -11,10 +12,23 @@ import {
 import { handleError } from "@/utils"
 import useCustomToast from "./useCustomToast"
 
+// TODO: Validate
 const isLoggedIn = () => {
   return localStorage.getItem("access_token") !== null
 }
 
+// TODO: Validate
+const requireSuperuser = async () => {
+  if (!isLoggedIn()) {
+    throw redirect({ to: "/" })
+  }
+  const user = await UsersService.readUserMe()
+  if (!user.is_superuser) {
+    throw redirect({ to: "/" })
+  }
+}
+
+// TODO: Validate
 const useAuth = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -26,24 +40,28 @@ const useAuth = () => {
     enabled: isLoggedIn(),
   })
 
-  const signUpMutation = useMutation({
-    mutationFn: (data: UserRegister) =>
-      UsersService.registerUser({ requestBody: data }),
-    onSuccess: () => {
-      navigate({ to: "/login" })
-    },
-    onError: handleError.bind(showErrorToast),
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] })
-    },
-  })
-
+  // TODO: Validate
   const login = async (data: AccessToken) => {
     const response = await LoginService.loginAccessToken({
       formData: data,
     })
     localStorage.setItem("access_token", response.access_token)
   }
+
+  const signUpMutation = useMutation({
+    mutationFn: async (data: UserRegister) => {
+      await UsersService.registerUser({ requestBody: data })
+      await login({ username: data.email, password: data.password })
+    },
+    onSuccess: () => {
+      navigate({ to: "/dashboard" })
+    },
+    onError: handleError.bind(showErrorToast),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] })
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] })
+    },
+  })
 
   const loginMutation = useMutation({
     mutationFn: login,
@@ -53,8 +71,11 @@ const useAuth = () => {
     onError: handleError.bind(showErrorToast),
   })
 
+  // TODO: Validate
   const logout = () => {
     localStorage.removeItem("access_token")
+    localStorage.removeItem("REACT_QUERY_OFFLINE_CACHE")
+    queryClient.clear()
     navigate({ to: "/login" })
   }
 
@@ -66,5 +87,5 @@ const useAuth = () => {
   }
 }
 
-export { isLoggedIn }
+export { isLoggedIn, requireSuperuser }
 export default useAuth

@@ -1,0 +1,31 @@
+# TODO: Validate
+"""Choosing which episodes a channel offers, and in what order.
+
+`query_builder` is the entry point; the rest are the pieces it reads a channel
+through:
+
+- `visibility` - whether a channel takes a given row for an episode
+- `watch_filters` - what the `User` has watched
+- `source_dedup` - which website's row for an episode stands for it
+- `tmdb_columns` - reading the canonical row from inside the query
+- `sorting` - turning a sort key into the expression it orders by
+- `title_counts` - narrowing the result down to a handful of titles
+"""
+
+from app.channels.episode_selector.query_builder import (
+    EpisodeQueryBuilder,
+    EpisodeResult,
+)
+from app.channels.episode_selector.source_dedup import (
+    SourceDedupConfig,
+    source_dedup_config,
+)
+from app.channels.episode_selector.user_urls import apply_user_episode_urls
+
+__all__ = [
+    "EpisodeQueryBuilder",
+    "EpisodeResult",
+    "SourceDedupConfig",
+    "apply_user_episode_urls",
+    "source_dedup_config",
+]

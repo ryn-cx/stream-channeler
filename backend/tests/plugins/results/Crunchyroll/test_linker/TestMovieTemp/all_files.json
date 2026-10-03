@@ -1,0 +1,46 @@
+[
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "BrowseMusic/artists.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "BrowseSeries.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Catalogue/alphabetical.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Categories/G1XHJVWD3.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GS00109873JAJP.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Seasons/G1XHJVWD3.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Series/G1XHJVWD3.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SimilarTo/G1XHJVWD3.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "Movies/Details/553610.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "Movies/Watch Providers/553610.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "Search/Movie/Mobile Suit Gundam Narrative.json"
+  }
+]

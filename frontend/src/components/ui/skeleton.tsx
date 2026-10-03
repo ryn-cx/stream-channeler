@@ -1,5 +1,7 @@
+// TODO: Validate
 import { cn } from "@/lib/utils"
 
+// TODO: Validate
 function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div

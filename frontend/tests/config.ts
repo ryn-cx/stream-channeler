@@ -1,3 +1,4 @@
+// TODO: Validate
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import dotenv from "dotenv"
@@ -7,6 +8,7 @@ const __dirname = path.dirname(__filename)
 
 dotenv.config({ path: path.join(__dirname, "../../.env") })
 
+// TODO: Validate
 function getEnvVar(name: string): string {
   const value = process.env[name]
   if (!value) {

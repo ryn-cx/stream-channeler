@@ -1,3 +1,4 @@
+// TODO: Validate
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -36,6 +37,7 @@ const buttonVariants = cva(
   }
 )
 
+// TODO: Validate
 function Button({
   className,
   variant,

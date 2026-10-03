@@ -1,0 +1,71 @@
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING, override
+
+from plugins.utils.abstract_plugin import AbstractPlugin, URLImportResult
+
+if TYPE_CHECKING:
+    from app.episodes.models import Episode
+    from app.plugins.models import Plugin
+    from app.seasons.models import Season
+    from app.titles.models import Title
+    from plugins.utils.base_plugin.upserter import BaseUpserter
+
+
+# TODO: Validate
+class BaseMediaImporterMixin(AbstractPlugin, ABC):
+    plugin: Plugin
+
+    @override
+    def validate_and_import_url(self, url: str) -> list[URLImportResult]:
+        media_importer = self._media_importer(url)
+        media_importer.validate_url(url)
+        return media_importer.import_url(url)
+
+    # TODO: Validate
+    @override
+    def update_title(self, title: Title) -> None:
+        self._media_importer(title).update_title(title)
+
+    # TODO: Validate
+    @override
+    def update_season(self, season: Season) -> None:
+        self._media_importer(season.title).update_season(season)
+
+    # TODO: Validate
+    @override
+    def update_episode(self, episode: Episode) -> None:
+        self._media_importer(episode.season.title).update_episode(episode)
+
+    @override
+    def on_update_title_failure(self, title: Title, error: Exception) -> None:
+        self._media_importer(title).on_update_failure(title, error)
+
+    @override
+    def on_update_season_failure(self, season: Season, error: Exception) -> None:
+        self._media_importer(season.title).on_update_failure(season, error)
+
+    @override
+    def on_update_episode_failure(self, episode: Episode, error: Exception) -> None:
+        self._media_importer(episode.season.title).on_update_failure(episode, error)
+
+    # TODO: Validate
+    @override
+    def add_title_to_plugin_channels(self, title: Title) -> None:
+        self._media_importer_from_title(title).add_title_to_plugin_channels(title)
+
+    # TODO: Validate
+    def _media_importer(self, url_or_title: str | Title) -> BaseUpserter:
+        """Return the appropriate media importer based on the url or title."""
+        if isinstance(url_or_title, str):
+            return self._media_importer_from_url(url_or_title)
+        return self._media_importer_from_title(url_or_title)
+
+    # TODO: Validate
+    @abstractmethod
+    def _media_importer_from_url(self, url: str) -> BaseUpserter: ...
+
+    # TODO: Validate
+    @abstractmethod
+    def _media_importer_from_title(self, title: Title) -> BaseUpserter: ...

@@ -1,0 +1,27 @@
+{
+  "linker": {
+    "execution_time": 71.71505710016936,
+    "peak_memory_bytes": 687348218,
+    "slower_than_best": {
+      "execution_time": {
+        "best": 26.928824999835342,
+        "current": 71.71505710016936,
+        "increase": 44.78623210033402,
+        "increase_percent": 166.3133541868532
+      },
+      "peak_memory_bytes": {
+        "best": 245834647,
+        "current": 687348218,
+        "increase": 441513571,
+        "increase_percent": 179.5977810239254
+      },
+      "sql_statements": {
+        "best": 602,
+        "current": 641,
+        "increase": 39,
+        "increase_percent": 6.4784053156146175
+      }
+    },
+    "sql_statements": 641
+  }
+}

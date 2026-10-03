@@ -1,0 +1,186 @@
+// TODO: Validate
+import type { BaseEpisodeWithDetails } from "@/components/ChannelCommon/EpisodeCard"
+import { Favicon } from "@/components/Common/Favicon"
+
+/** Props shared by all card overlay components. */
+export type CardOverlayProps = { episode: BaseEpisodeWithDetails }
+
+// TODO: Validate
+/** Wrapper that adds negative top margin to tighten the gap between the image and the text. */
+export function CardTextArea({ children }: { children: React.ReactNode }) {
+  return <div className="-mt-6">{children}</div>
+}
+
+// TODO: Validate
+/**
+ * Displays the favicon + title name on the left and a list of detail strings on the right.
+ * Null values in `details` are filtered out.
+ */
+// TODO: Validate
+export function CardSourceRow({
+  episode,
+  details,
+}: {
+  episode: BaseEpisodeWithDetails
+  details: (string | null)[]
+}) {
+  return (
+    <div className="flex">
+      {/* This div contains the favicon and source name */}
+      {/* flex - Make this a 2 column display */}
+      {/* items-center - Vertically center the text so it is not butted up against the image */}
+      {/* gap-2 - Small gap between the favicon and the source name */}
+      {/* flex-1 - Make the favicon and source name take up as much space as possible so the date and duration will be as far right as possible */}
+      {/* min-w-0 - Make sure all columns are always visible. Without this the title name can push the date and duration off of the card */}
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        {episode.source.favicon_url && (
+          <Favicon
+            src={episode.source.favicon_url}
+            label={episode.source.key}
+            className="size-6"
+          />
+        )}
+        <span className="font-bold text-base truncate group-hover:whitespace-normal group-hover:overflow-visible">
+          {episode.title.name}
+        </span>
+      </div>
+      {/* This div contains the date and duration */}
+      {/* flex/flex-col - Make this a column based display  */}
+      {/* items-end - Right justify the text */}{" "}
+      <div className="flex flex-col items-end">
+        {details
+          .filter((d): d is string => d !== null)
+          .map((detail) => (
+            <span key={detail} className="text-xs text-muted-foreground">
+              {detail}
+            </span>
+          ))}
+      </div>
+    </div>
+  )
+}
+
+// TODO: Validate
+export function CardNameRow({
+  iconUrl,
+  iconAlt,
+  name,
+  details,
+}: {
+  iconUrl?: string | null
+  iconAlt: string
+  name: React.ReactNode
+  details: (string | null)[]
+}) {
+  return (
+    <div className="flex">
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        {iconUrl && (
+          <img
+            referrerPolicy="no-referrer"
+            src={iconUrl}
+            alt={iconAlt}
+            className="size-6"
+          />
+        )}
+        <span className="font-bold text-base truncate group-hover:whitespace-normal group-hover:overflow-visible">
+          {name}
+        </span>
+      </div>
+      <div className="flex flex-col items-end">
+        {details
+          .filter((detail): detail is string => detail !== null)
+          .map((detail) => (
+            <span key={detail} className="text-xs text-muted-foreground">
+              {detail}
+            </span>
+          ))}
+      </div>
+    </div>
+  )
+}
+
+// TODO: Validate
+export function CardSourceSection({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+      <hr className="my-1 border-border" />
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      {children}
+    </div>
+  )
+}
+
+// TODO: Validate
+export function CardEpisodeBlock({
+  iconUrl,
+  iconAlt,
+  name,
+  details,
+  lines,
+}: {
+  iconUrl?: string | null
+  iconAlt: string
+  name: React.ReactNode
+  details: (string | null)[]
+  lines: CardMetaLine[]
+}) {
+  return (
+    <div>
+      <CardNameRow
+        iconUrl={iconUrl}
+        iconAlt={iconAlt}
+        name={name}
+        details={details}
+      />
+      <CardMetaLines lines={lines} />
+    </div>
+  )
+}
+
+/** A single line of metadata with an optional label and a value. */
+type CardMetaLine = {
+  label?: string
+  value: React.ReactNode
+  /** Optional className applied to the value span (e.g. "font-bold"). */
+  valueClassName?: string
+}
+
+// TODO: Validate
+/**
+ * Displays one or more lines of secondary metadata (season/episode labels, playlist names, etc.).
+ * Text truncates on small cards and expands on hover.
+ * If label is provided, renders as `label: value`. Otherwise just `value`.
+ */
+export function CardMetaLines({ lines }: { lines: CardMetaLine[] }) {
+  const baseClass =
+    // group-hover:whitespace-normal - Expand card to show all of the text when it is hovered over.
+    // group-hover:overflow-visible - Expand text when the card is hovered over.
+    "text-sm text-muted-foreground truncate group-hover:whitespace-normal group-hover:overflow-visible"
+
+  return (
+    // flex/flex-col - Make this a column based display
+    <div className="flex flex-col">
+      {lines
+        .filter((line) => line.value != null)
+        .map((line, index) => (
+          <span key={line.label ?? index} className={baseClass}>
+            {line.label ? (
+              <>
+                {line.label}{" "}
+                <span className={line.valueClassName}>{line.value}</span>
+              </>
+            ) : (
+              <span className={line.valueClassName}>{line.value}</span>
+            )}
+          </span>
+        ))}
+    </div>
+  )
+}

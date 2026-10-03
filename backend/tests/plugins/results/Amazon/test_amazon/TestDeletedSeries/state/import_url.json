@@ -1,0 +1,237 @@
+{
+  "plugin": [
+    {
+      "key": "Amazon",
+      "data_timestamp": null,
+      "update_at": null,
+      "deleted_at": null,
+      "status": "Incomplete",
+      "extra": {},
+      "id": "Amazon",
+      "created_at": "2026-09-18T00:00:00+00:00",
+      "modified_at": "2026-09-18T00:00:00+00:00",
+      "version": null,
+      "sources": [
+        {
+          "key": "Amazon",
+          "data_timestamp": "2026-09-18T00:00:00+00:00",
+          "update_at": null,
+          "deleted_at": null,
+          "status": null,
+          "extra": {},
+          "id": "Amazon",
+          "created_at": "2026-09-18T00:00:00+00:00",
+          "modified_at": "2026-09-18T00:00:00+00:00",
+          "link_to_tmdb": true,
+          "favicon_url": "https://www.primevideo.com/favicon.ico",
+          "image_url": null,
+          "plugin_id": "Amazon",
+          "titles": [
+            {
+              "key": "B0DH2YS214",
+              "data_timestamp": "2026-09-18T00:00:00+00:00",
+              "update_at": "2027-09-04T00:00:00+00:00",
+              "deleted_at": null,
+              "status": null,
+              "extra": {},
+              "id": "B0DH2YS214",
+              "created_at": "2026-09-18T00:00:00+00:00",
+              "modified_at": "2026-09-18T00:00:00+00:00",
+              "name": "The Bachelor Japan",
+              "media_type": "Series",
+              "description": "After its initial broadcast in 2002, \"The Bachelor\" instantly became the United States' most beloved television program. As the Bachelor, one man must choose a partner from among a select group of women. Drama ensues for all involved. This season, the Bachelor goes out with 25 women to find his one true love.",
+              "url": "https://www.primevideo.com/detail/0TVN8DVKCYBGQSSIDNFSE525A6",
+              "image_url": "https://m.media-amazon.com/images/S/pv-target-images/3806f2e1296bbbb91f4730405deeda273337a59f8a01dc7df3ab14b239516560.jpg",
+              "thumbnail_url": "https://m.media-amazon.com/images/S/pv-target-images/3806f2e1296bbbb91f4730405deeda273337a59f8a01dc7df3ab14b239516560.jpg",
+              "poster_url": null,
+              "poster_thumbnail_url": null,
+              "year": 2018,
+              "score": null,
+              "popularity": null,
+              "original_language": null,
+              "tmdb_title_validated_at": null,
+              "link_status": null,
+              "is_linked": false,
+              "source_id": "Amazon",
+              "seasons": [
+                {
+                  "key": "B0DH2YS214",
+                  "data_timestamp": "2026-09-18T00:00:00+00:00",
+                  "update_at": "2027-09-04T00:00:00+00:00",
+                  "deleted_at": null,
+                  "status": null,
+                  "extra": {},
+                  "id": "B0DH2YS214",
+                  "created_at": "2026-09-18T00:00:00+00:00",
+                  "modified_at": "2026-09-18T00:00:00+00:00",
+                  "name": "Season 1",
+                  "url": "https://www.primevideo.com/detail/B0DH2YS214",
+                  "season_number": 1,
+                  "image_url": null,
+                  "thumbnail_url": null,
+                  "sort_order": 0,
+                  "title_id": "B0DH2YS214",
+                  "episodes": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "Custom Media",
+      "data_timestamp": null,
+      "update_at": null,
+      "deleted_at": null,
+      "status": null,
+      "extra": {},
+      "id": "Custom Media",
+      "created_at": "2026-09-18T00:00:00+00:00",
+      "modified_at": "2026-09-18T00:00:00+00:00",
+      "version": null,
+      "sources": []
+    }
+  ],
+  "watchprovider": [],
+  "channel": [
+    {
+      "id": "Amazon Studios on Amazon",
+      "created_at": "2026-09-18T00:00:00+00:00",
+      "modified_at": "2026-09-18T00:00:00+00:00",
+      "name": "Amazon Studios on Amazon",
+      "channel_number": null,
+      "visibility": "public",
+      "default_order": null,
+      "description": "All Amazon Studios titles on Amazon.\n\nThis is an automatically generated channel based on the titles that have been imported by all of Stream Channeler's users.",
+      "anonymous": false,
+      "score": -1,
+      "user_id": "Amazon",
+      "update_at": "2026-09-19T00:00:00+00:00"
+    },
+    {
+      "id": "International on Amazon",
+      "created_at": "2026-09-18T00:00:00+00:00",
+      "modified_at": "2026-09-18T00:00:00+00:00",
+      "name": "International on Amazon",
+      "channel_number": null,
+      "visibility": "public",
+      "default_order": null,
+      "description": "All International titles on Amazon.\n\nThis is an automatically generated channel based on the titles that have been imported by all of Stream Channeler's users.",
+      "anonymous": false,
+      "score": -1,
+      "user_id": "Amazon",
+      "update_at": "2026-09-19T00:00:00+00:00"
+    },
+    {
+      "id": "All Titles on Amazon",
+      "created_at": "2026-09-18T00:00:00+00:00",
+      "modified_at": "2026-09-18T00:00:00+00:00",
+      "name": "All Titles on Amazon",
+      "channel_number": null,
+      "visibility": "public",
+      "default_order": null,
+      "description": "All Titles titles on Amazon.\n\nThis is an automatically generated channel based on the titles that have been imported by all of Stream Channeler's users.",
+      "anonymous": false,
+      "score": -1,
+      "user_id": "Amazon",
+      "update_at": "2026-09-19T00:00:00+00:00"
+    },
+    {
+      "id": "Unscripted on Amazon",
+      "created_at": "2026-09-18T00:00:00+00:00",
+      "modified_at": "2026-09-18T00:00:00+00:00",
+      "name": "Unscripted on Amazon",
+      "channel_number": null,
+      "visibility": "public",
+      "default_order": null,
+      "description": "All Unscripted titles on Amazon.\n\nThis is an automatically generated channel based on the titles that have been imported by all of Stream Channeler's users.",
+      "anonymous": false,
+      "score": -1,
+      "user_id": "Amazon",
+      "update_at": "2026-09-19T00:00:00+00:00"
+    }
+  ],
+  "channelorder": [],
+  "usersourcepreference": [],
+  "channelcombinedchannel": [],
+  "channelfavorite": [],
+  "channelorderfavorite": [],
+  "channelqueue": [
+    {
+      "id": "All Titles on Amazon",
+      "created_at": "2026-09-18T00:00:00+00:00",
+      "modified_at": "2026-09-18T00:00:00+00:00",
+      "url": "https://www.primevideo.com/detail/0TVN8DVKCYBGQSSIDNFSE525A6",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Amazon"
+    },
+    {
+      "id": "Amazon Studios on Amazon",
+      "created_at": "2026-09-18T00:00:00+00:00",
+      "modified_at": "2026-09-18T00:00:00+00:00",
+      "url": "https://www.primevideo.com/detail/0TVN8DVKCYBGQSSIDNFSE525A6",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "Amazon Studios on Amazon"
+    },
+    {
+      "id": "International on Amazon",
+      "created_at": "2026-09-18T00:00:00+00:00",
+      "modified_at": "2026-09-18T00:00:00+00:00",
+      "url": "https://www.primevideo.com/detail/0TVN8DVKCYBGQSSIDNFSE525A6",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "International on Amazon"
+    },
+    {
+      "id": "Unscripted on Amazon",
+      "created_at": "2026-09-18T00:00:00+00:00",
+      "modified_at": "2026-09-18T00:00:00+00:00",
+      "url": "https://www.primevideo.com/detail/0TVN8DVKCYBGQSSIDNFSE525A6",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "Unscripted on Amazon"
+    }
+  ],
+  "comment": [],
+  "channeltitle": [],
+  "commentnotification": [],
+  "titlegenre": [
+    {
+      "id": "International",
+      "created_at": "2026-09-18T00:00:00+00:00",
+      "modified_at": "2026-09-18T00:00:00+00:00",
+      "title_id": "B0DH2YS214",
+      "name": "International"
+    },
+    {
+      "id": "Unscripted",
+      "created_at": "2026-09-18T00:00:00+00:00",
+      "modified_at": "2026-09-18T00:00:00+00:00",
+      "title_id": "B0DH2YS214",
+      "name": "Unscripted"
+    }
+  ],
+  "titleissuereport": [],
+  "titlespokenlanguage": [],
+  "titletmdbtitle": [],
+  "titlewatchprovider": [],
+  "unmatchedtitle": [],
+  "channelseasonfilter": [],
+  "channelsourcefilter": [],
+  "seasonissuereport": [],
+  "channelepisodefilter": [],
+  "channelepisodesourcefilter": [],
+  "channelsavedepisodeorder": [],
+  "episodeissuereport": [],
+  "episodetmdbepisode": [],
+  "episodetmdbtitle": [],
+  "userepisodeurl": [],
+  "watch": []
+}

@@ -1,0 +1,336 @@
+# TODO: Validate
+"""Reading a YouTube address and writing what it names into the database."""
+
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+from datetime import timedelta
+from typing import TYPE_CHECKING, Any, override
+
+from loguru import logger
+from not_yt_dlapi.exceptions import (
+    ChannelFeedNotFoundError,
+    PlaylistFeedNotFoundError,
+    PlaylistNotFoundError,
+)
+
+from app.episodes.models import Episode
+from app.media.media_type import TMDBMediaType
+from app.seasons.models import Season
+from app.titles.models import Title
+from app.tmdb_media.keys import watch_identifier
+from app.utils import tz_datetime
+from plugins.utils.abstract_plugin import InvalidURLError, TMDBLookupInfo
+from plugins.utils.base_plugin.upserter import BaseUpserter
+from plugins.YouTube.shared import (
+    YouTubeShared,
+    is_an_album,
+    is_video_key,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+    from datetime import datetime
+
+    from plugins.utils.abstract_plugin import URLImportResult
+    from plugins.utils.base_plugin.files import BaseFile
+    from plugins.utils.base_plugin.url import ParsedURL
+    from plugins.YouTube.url_parser import YouTubeParsedURL
+
+
+# TODO: Validate
+class YouTubeImporter(YouTubeShared, BaseUpserter, ABC):
+    parsed_url: YouTubeParsedURL | None = None
+
+    # TODO: Validate
+    @override
+    def update_season(self, season: Season) -> None:
+        playlist_feed = self.playlist_feed_file(season.key)
+
+        # PlaylistFeed is not a required file because sometimes it will return 404
+        # errors for hours at a time so an initial file may need to be downloaded here.
+        if playlist_feed.does_not_exist():
+            playlist_feed.download_if_outdated()
+            return
+
+        old_feed_video_ids = playlist_feed.video_ids()
+        playlist_feed.download_if_outdated(season.update_at)
+        season.update_at = playlist_feed.record_data_timestamp + timedelta(days=1)
+
+        if new_video_ids := playlist_feed.video_ids() - old_feed_video_ids:
+            logger.info(
+                "Found {} new videos in season {}: {}",
+                len(new_video_ids),
+                season.name or season.key,
+                ", ".join(sorted(new_video_ids)),
+            )
+            super().update_season(season)
+
+    # TODO: Validate
+    def playlist_season_episode_keys(self, season: Season) -> list[str]:
+        return self._episode_keys_from_season_files(season.key, season.title.key)
+
+    # TODO: Validate
+    def update_playlist_season(self, season: Season) -> None:
+        episode_keys = self.playlist_season_episode_keys(season)
+        self._upsert_episodes(season, season.title.key)
+        season.soft_delete_missing_children(episode_keys)
+
+    # TODO: Validate
+    @override
+    def on_update_failure(
+        self,
+        record: Title | Season | Episode,
+        error: Exception,
+    ) -> None:
+        if isinstance(
+            error,
+            ChannelFeedNotFoundError
+            | PlaylistFeedNotFoundError
+            | PlaylistNotFoundError,
+        ):
+            record.update_at = tz_datetime.now() + timedelta(hours=1)
+            return
+        if self.is_quota_error(error):
+            record.update_at = tz_datetime.now() + timedelta(hours=24)
+            return
+        super().on_update_failure(record, error)
+
+    # TODO: Validate
+    @abstractmethod
+    def _season_episode_keys_from_file(self, season_key: str) -> list[str]:
+        """Return the episode keys held by a single season."""
+
+    # TODO: Validate
+    @abstractmethod
+    def _upsert_episodes(
+        self,
+        season: Season,
+        title_key: str,
+    ) -> None: ...
+
+    # TODO: Validate
+    def tmdb_media_type(self, title_key: str) -> TMDBMediaType:
+        return TMDBMediaType.movie if is_video_key(title_key) else TMDBMediaType.tv
+
+    # TODO: Validate
+    def _get_episode_number(
+        self,
+        episode_key: str,  # noqa: ARG002
+        season_key: str,  # noqa: ARG002
+        title_key: str,  # noqa: ARG002
+    ) -> int | None:
+        return None
+
+    # TODO: Validate
+    @classmethod
+    def video_url(cls, video_key: str) -> str:
+        return cls.build_url(f"watch?v={video_key}")
+
+    # TODO: Validate
+    @classmethod
+    def playlist_url(cls, playlist_key: str) -> str:
+        return cls.build_url(f"playlist?list={playlist_key}")
+
+    # # TODO: Validate
+    # TODO: Validate
+    @classmethod
+    def is_channel_key(cls, key: str) -> bool:
+        return not (
+            is_video_key(key)
+            # or is_title_key(key)
+            or is_an_album(key)
+            or cls.is_user_playlist(key)
+        )
+
+    # TODO: Validate
+    @staticmethod
+    def image_url(thumbnails: Any) -> str | None:  # noqa: ANN401 - TODO: Add a specific type for thumbnails
+        # It sounds wrong but standard is a higher resolution than high.
+        for quality in ("maxres", "standard", "high", "medium", "default"):
+            if thumb := getattr(thumbnails, quality, None):
+                url: str = thumb.url
+                return url
+        return None
+
+    # TODO: Validate
+    @staticmethod
+    def thumbnail_url(thumbnails: Any) -> str | None:  # noqa: ANN401 - TODO: Add a specific type for thumbnails
+        for quality in ("standard", "high", "medium", "default", "maxres"):
+            if thumb := getattr(thumbnails, quality, None):
+                url: str = thumb.url
+                return url
+        return None
+
+    # TODO: Validate
+    def _playlist_is_missing(self, title: Title, playlist_key: str) -> bool:
+
+        # If the playlist being checked is the channel uploads playlist it should only
+        # be considered missing if the channel has at least one upload.
+        if playlist_key == self.channel_uploads_playlist_key(title.key):
+            channel_by_channel_id = self.channel_by_channel_id_file(title.key)
+            channel_item = self.get_first_item(channel_by_channel_id.parsed().items)
+            if int(channel_item.statistics.video_count) == 0:
+                return False
+        return not Season.get_from_memory(self.session, title, playlist_key)
+
+    # TODO: Validate
+    @override
+    def _episode_files(
+        self,
+        episode_key: str,
+        season_key: str,
+        title_key: str,
+    ) -> Sequence[BaseFile[Any]]:
+        # Required to detect changes to the episode.
+        return [self.videos_file(episode_key)]
+
+    # TODO: Validate
+    @override
+    def _episode_keys_from_season_files(
+        self,
+        season_keys: str | list[str],
+        title_key: str,
+    ) -> list[str]:
+        if isinstance(season_keys, str):
+            season_keys = [season_keys]
+        seen: set[str] = set()
+        video_keys: list[str] = []
+        for season_key in season_keys:
+            for video_key in self._season_episode_keys_from_file(season_key):
+                if video_key in seen:
+                    continue
+                seen.add(video_key)
+                video_keys.append(video_key)
+        return video_keys
+
+    # TODO: Validate
+    @override
+    def _preload_and_download_files(self, title: Title | str) -> None:
+        title_key: str
+        title_update_at: datetime | None
+        season_update_ats: dict[str, datetime | None]
+        if isinstance(title, str):
+            title_key = title
+            title_update_at = None
+            season_update_ats = {}
+        else:
+            title_key = title.key
+            title_update_at = title.update_at
+            self._preload_title(title.id, preload_episodes=True).all()
+            season_update_ats = {
+                season.key: season.update_at for season in title.seasons
+            }
+
+        if self.is_channel_key(title_key):
+            self.channel_by_channel_id_file(title_key).download_if_outdated(
+                title_update_at,
+            )
+
+        self._download_if_outdated(self._title_files(title_key), title_update_at)
+        season_keys = self._season_keys_from_title_files(title_key)
+        for season_key in season_keys:
+            self._download_if_outdated(
+                self._season_files(season_key, title_key),
+                season_update_ats.get(season_key),
+            )
+        self.batch_download_missing_videos(
+            [
+                self.videos_file(video_key)
+                for video_key in self._episode_keys_from_season_files(
+                    season_keys,
+                    title_key,
+                )
+            ],
+        )
+
+    # TODO: Validate
+    @override
+    def parse_url(self, url: str) -> ParsedURL:
+        return self._parsed_url(url).media_info()
+
+    # TODO: Validate
+    def _parsed_url(self, url: str) -> YouTubeParsedURL:
+        if self.parsed_url is None:
+            msg = f"Ask {self.plugin_name()} for the importer of {url} first."
+            raise InvalidURLError(msg)
+        return self.parsed_url
+
+    # A YouTube title is always imported for a specific playlist.
+    # TODO: Validate
+    @override
+    def import_url(self, url: str) -> list[URLImportResult]:
+        parsed = self._parsed_url(url)
+        media_info = parsed.media_info()
+        title_key = media_info.title_key
+        existing_title = self._preload_title(
+            title_key,
+            preload_episodes=True,
+        ).one_or_none()
+
+        if not existing_title:
+            self._preload_and_download_files(title_key)
+            existing_title = self._upsert_title(self.source, title_key)
+            self.add_title_to_channels(existing_title)
+
+        # If a channel is imported but a new playlist is added and that playlist is the
+        # URL being imported this will update the channel information to include that
+        # playlist.
+        elif self._playlist_is_missing(existing_title, parsed.playlist_key):
+            self._download_if_outdated(
+                self._title_files(title_key),
+                tz_datetime.now(),
+            )
+            existing_title = self._upsert_title(self.source, title_key)
+            self.add_title_to_channels(existing_title)
+
+        return self._import_results(existing_title, media_info)
+
+    # TODO: Validate
+    def tmdb_lookup_info(self, title: Title) -> list[TMDBLookupInfo]:
+        if not title.name:
+            return []
+        return [TMDBLookupInfo(title.name, self.tmdb_media_type(title.key), None)]
+
+    # TODO: Validate
+    def _upsert_episode(
+        self,
+        season: Season,
+        title_key: str,
+        episode_key: str,
+        sort_order: int | None,
+    ) -> None:
+        existing_episode = Episode.get_from_memory(self.session, season, episode_key)
+        video_item = self.videos_file(episode_key).parsed().items[0]
+        video_snippet = video_item.snippet
+
+        duration = None
+        # TODO: Can this actually be None, type hints might be outdated here.
+        if video_duration := video_item.content_details.duration:
+            duration = int(video_duration.total_seconds())
+
+        Episode(
+            key=video_item.id,
+            watch_identifier=watch_identifier(self.plugin_name(), video_item.id),
+            name=video_snippet.title,
+            url=self.video_url(video_item.id),
+            # A YouTube video with a null character in the description once caused
+            # importing to hang so it needs to be stripped out.
+            description=video_snippet.description.replace("\x00", ""),
+            air_date=video_snippet.published_at,
+            duration=duration,
+            image_url=self.image_url(video_snippet.thumbnails),
+            thumbnail_url=self.thumbnail_url(video_snippet.thumbnails),
+            sort_order=sort_order,
+            episode_number=self._get_episode_number(
+                episode_key,
+                season.key,
+                title_key,
+            ),
+            data_timestamp=self._episode_files_data_timestamp(
+                episode_key,
+                season.key,
+                title_key,
+            ),
+            season_id=season.id,
+        ).upsert(season, existing_episode)

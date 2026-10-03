@@ -1,0 +1,194 @@
+[
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "BrowseMusic/artists.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "BrowseSeries.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Catalogue/alphabetical.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Categories/GYQ4MKDZ6.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/G609QG3W6.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/G62PWWX56.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/G69PJMKVY.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GRDQM1D1Y.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GY5VEK7GY.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GY5VEXXDY.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GYNQ1X99Y.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GYQ4MQ496.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Seasons/GYQ4MKDZ6.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Series/GYQ4MKDZ6.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SimilarTo/GYQ4MKDZ6.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "Search/TV/Gintama.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/5f4494b93f8ede0033efe806.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/60299473097c49003fa1532f.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/60398596713ed4004e78a3ad.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/63de411fce5d8200848cca3e.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/684cc46866a4f8201f3fe217.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/57041/0.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/57041/1.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/57041/10.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/57041/11.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/57041/2.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/57041/3.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/57041/4.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/57041/5.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/57041/6.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/57041/7.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/57041/8.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/57041/9.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/57041/0.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/57041/1.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/57041/10.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/57041/11.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/57041/2.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/57041/3.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/57041/4.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/57041/5.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/57041/6.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/57041/7.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/57041/8.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/57041/9.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Details/57041.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Episode Groups/57041.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Watch Providers/57041.json"
+  }
+]

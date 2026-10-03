@@ -1,3 +1,4 @@
+// TODO: Validate
 import { zodResolver } from "@hookform/resolvers/zod"
 import {
   createFileRoute,
@@ -7,6 +8,7 @@ import {
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { AuthLayout } from "@/components/Common/AuthLayout"
+import { FormTextField } from "@/components/Common/FormTextField"
 import {
   Form,
   FormControl,
@@ -15,15 +17,14 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import { PasswordInput } from "@/components/ui/password-input"
 import useAuth, { isLoggedIn } from "@/hooks/useAuth"
 
 const formSchema = z
   .object({
-    email: z.email(),
-    full_name: z.string().min(1, { message: "Full Name is required" }),
+    email: z.email({ message: "Invalid email address" }),
+    username: z.string().min(1, "Username is required"),
     password: z
       .string()
       .min(1, { message: "Password is required" })
@@ -51,12 +52,13 @@ export const Route = createFileRoute("/signup")({
   head: () => ({
     meta: [
       {
-        title: "Sign Up - FastAPI Template",
+        title: "Sign Up - Stream Channeler",
       },
     ],
   }),
 })
 
+// TODO: Validate
 function SignUp() {
   const { signUpMutation } = useAuth()
   const form = useForm<FormData>({
@@ -65,12 +67,13 @@ function SignUp() {
     criteriaMode: "all",
     defaultValues: {
       email: "",
-      full_name: "",
+      username: "",
       password: "",
       confirm_password: "",
     },
   })
 
+  // TODO: Validate
   const onSubmit = (data: FormData) => {
     if (signUpMutation.isPending) return
 
@@ -91,42 +94,22 @@ function SignUp() {
           </div>
 
           <div className="grid gap-4">
-            <FormField
+            <FormTextField
               control={form.control}
-              name="full_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name</FormLabel>
-                  <FormControl>
-                    <Input
-                      data-testid="full-name-input"
-                      placeholder="User"
-                      type="text"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              name="username"
+              label="Username"
+              data-testid="username-input"
+              placeholder="User"
+              type="text"
             />
 
-            <FormField
+            <FormTextField
               control={form.control}
               name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      data-testid="email-input"
-                      placeholder="user@example.com"
-                      type="email"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              label="Email"
+              data-testid="email-input"
+              placeholder="user@example.com"
+              type="email"
             />
 
             <FormField
@@ -185,3 +168,5 @@ function SignUp() {
     </AuthLayout>
   )
 }
+
+export default SignUp

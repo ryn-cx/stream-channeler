@@ -1,0 +1,316 @@
+# TODO: Validate
+"""Turning one of a channel's sort keys into the expression it orders by."""
+
+import operator
+from collections.abc import Callable
+from datetime import timedelta
+from typing import Any
+from uuid import UUID
+
+from sqlalchemy import String, case, literal, literal_column
+from sqlalchemy.sql.expression import ColumnElement, UnaryExpression
+from sqlmodel import and_, col, desc, func
+
+from app.channels.episode_selector.tmdb_columns import TmdbColumns
+from app.channels.episode_selector.tmdb_entities import (
+    TMDB_EPISODE,
+    TMDB_SEASON,
+    episode_id,
+)
+from app.channels.episode_selector.watch_filters import (
+    EPISODE_LAST_WATCHED_SUBQUERY,
+    LAST_WATCHED_COLUMNS,
+)
+from app.channels.models import ChannelSavedEpisodeOrder, ChannelTitle
+from app.channels.schemas import SortKeyInput
+from app.episodes.models import Episode
+from app.models import ZERO_LAST_SUFFIX
+from app.plugins.models import Plugin
+from app.sources.models import Source
+from app.users.models import User
+from app.utils import tz_datetime
+
+# Stands in for 0 in the `_zero_last` sorts, past any season or episode number a
+# website or TMDB issues while still fitting the integer columns it is compared to.
+ZERO_LAST_VALUE = 2**31 - 1
+
+
+# TODO: Validate
+def zero_last(number: ColumnElement[Any]) -> ColumnElement[Any]:
+    """Return `number` with 0 ordered past every other number rather than ahead.
+
+    A season or an episode numbered 0 is the specials rather than the first of the
+    run, so a channel that wants them at the end sorts on this instead. `NULL` is
+    left as it is, which keeps it whatever the sort already made of it.
+    """
+    return case((number == 0, ZERO_LAST_VALUE), else_=number)
+
+
+# TODO: Validate
+class SortExpressionBuilder:
+    """Builds the SQL expression behind each of a channel's sort keys."""
+
+    # TODO: Validate
+    def __init__(
+        self,
+        random_seed: int,
+        user: User | None,
+        fallbacks: TmdbColumns,
+        channel_attribution: dict[UUID, UUID] | None = None,
+        started_titles: set[UUID] | None = None,
+    ) -> None:
+        """Build the sort expressions for one read of one channel."""
+        self._random_seed = random_seed
+        self._user = user
+        self._fallbacks = fallbacks
+        self._channel_attribution = channel_attribution or {}
+        self._started_titles = started_titles or set()
+
+    # TODO: Validate
+    def expression(self, sort_key: SortKeyInput) -> ColumnElement[Any]:
+        """Return the value `sort_key` orders episodes by."""
+        value: ColumnElement[Any]
+        if sort_key.field == "saved_order":
+            value = col(ChannelSavedEpisodeOrder.position)
+        elif sort_key.aggregation and sort_key.model == "episode":
+            value = self._aggregate_episode_expr(sort_key)
+        else:
+            value = self._value_expr(sort_key)
+        if sort_key.comparison is None:
+            return value
+        return self._compared_expr(value, sort_key)
+
+    # TODO: Validate
+    @staticmethod
+    def _compared_expr(
+        value: ColumnElement[Any],
+        sort_key: SortKeyInput,
+    ) -> ColumnElement[Any]:
+        if sort_key.comparison == "undefined":
+            return case((value.is_(None), 1), else_=0)
+        threshold = sort_key.comparison_value
+        if Episode.COMPARABLE_FIELDS[sort_key.field] == "date" and isinstance(
+            threshold,
+            float,
+        ):
+            threshold = tz_datetime.now() - timedelta(days=threshold)
+        comparators: dict[str | None, Callable[[Any, Any], Any]] = {
+            "greater_than": operator.gt,
+            "greater_than_or_equal": operator.ge,
+            "equal": operator.eq,
+            "not_equal": operator.ne,
+            "less_than_or_equal": operator.le,
+            "less_than": operator.lt,
+        }
+        return case(
+            (comparators[sort_key.comparison](value, threshold), 1),
+            else_=0,
+        )
+
+    # TODO: Validate
+    @staticmethod
+    def apply_direction(
+        expr: ColumnElement[Any],
+        sort_key: SortKeyInput,
+    ) -> UnaryExpression[Any] | ColumnElement[Any]:
+        directed: UnaryExpression[Any] | ColumnElement[Any] = (
+            desc(expr) if sort_key.direction == "descending" else expr
+        )
+        if sort_key.field in LAST_WATCHED_COLUMNS and sort_key.direction == "ascending":
+            return directed.nulls_first()
+        return directed.nulls_last()
+
+    # TODO: Validate
+    def random_hash(self, expr: ColumnElement[Any]) -> ColumnElement[Any]:
+        return func.hashtext(
+            func.concat(
+                func.cast(expr, String),
+                str(self._random_seed),
+            ),
+        )
+
+    # TODO: Validate
+    def _channel_expr(self) -> ColumnElement[Any]:
+        """Return the channel an episode reads as coming from.
+
+        An episode is held by whichever channel down the chain has the title,
+        which is not the channel it was added through, so the channels combined
+        into this one stand for everything they reach.
+        """
+        source_channel = col(ChannelTitle.channel_id)
+        if not self._channel_attribution:
+            return source_channel
+        return case(
+            *(
+                (source_channel == channel_id, literal(str(added_through)))
+                for channel_id, added_through in self._channel_attribution.items()
+            ),
+            else_=func.cast(source_channel, String),
+        )
+
+    # TODO: Validate
+    def _value_expr(self, sort_key: SortKeyInput) -> ColumnElement[Any]:  # noqa: PLR0911
+        field = sort_key.field
+
+        if sort_key.model == "channel":
+            channel_expr = self._channel_expr()
+            return self.random_hash(channel_expr) if field == "random" else channel_expr
+        if field == "random":
+            # The media a non-canonical row is of rather than the non-canonical row, so
+            # every website's non-canonical row of one episode is shuffled to the same
+            # place and a title stays together however many websites have it.
+            random_ids: dict[str, Any] = {
+                "episode": episode_id(),
+                "season": self._fallbacks.episode_season_id(),
+                "title": self._fallbacks.title_id(),
+                "source": Source.id,
+                "plugin": Plugin.id,
+            }
+            return self.random_hash(random_ids[sort_key.model])
+        if field in {"sequential", "sequential_zero_last"}:
+            return self._sequential_rank(
+                sort_key.model,
+                zero_last_numbers=field.endswith(ZERO_LAST_SUFFIX),
+            )
+        if field == "recently_aired":
+            return self._recently_aired_expr(sort_key)
+        if field in LAST_WATCHED_COLUMNS:
+            return literal_column(
+                f"{EPISODE_LAST_WATCHED_SUBQUERY}.{LAST_WATCHED_COLUMNS[field]}",
+            )
+        if field == "episode_count":
+            return func.count(episode_id()).over(
+                partition_by=self._fallbacks.title_id(),
+            )
+        if field == "started" and sort_key.model == "title":
+            return self._started_title_expr()
+        if field == "key" and sort_key.model == "source" and sort_key.source_keys:
+            return self._chosen_source_expr(sort_key.source_keys)
+
+        return self._stored_column(sort_key.model, field, sort_key.model_class)
+
+    # TODO: Validate
+    @staticmethod
+    def _chosen_source_expr(source_keys: list[str]) -> ColumnElement[Any]:
+        return case(
+            *(
+                (col(Source.key) == source_key, position)
+                for position, source_key in enumerate(source_keys)
+            ),
+            else_=len(source_keys),
+        )
+
+    # TODO: Validate
+    def _stored_column(
+        self,
+        model: str,
+        field: str,
+        model_class: type[Any],
+    ) -> ColumnElement[Any]:
+        base_field = field.removesuffix(ZERO_LAST_SUFFIX)
+        column = self._fallbacks.column(model, base_field, model_class)
+        if base_field == field:
+            return column
+        return zero_last(column)
+
+    # TODO: Validate
+    def _aggregate_episode_expr(
+        self,
+        sort_key: SortKeyInput,
+    ) -> ColumnElement[Any]:
+        if sort_key.field in LAST_WATCHED_COLUMNS:
+            return literal_column(
+                f"{EPISODE_LAST_WATCHED_SUBQUERY}.{LAST_WATCHED_COLUMNS[sort_key.field]}",
+            )
+
+        if sort_key.field == "random":
+            episode_field: ColumnElement[Any] = self.random_hash(
+                self._fallbacks.title_id(),
+            )
+        elif sort_key.field == "recently_aired":
+            episode_field = self._recently_aired_expr(sort_key)
+        elif sort_key.field == "episode_count":
+            episode_field = episode_id()
+        else:
+            episode_field = self._stored_column(
+                "episode",
+                sort_key.field,
+                TMDB_EPISODE,
+            )
+
+        agg_funcs: dict[str, Any] = {
+            "max": func.max,
+            "min": func.min,
+            "avg": func.avg,
+        }
+        agg_func = agg_funcs.get(sort_key.aggregation)  # type: ignore[arg-type]
+        if agg_func is None:
+            msg = f"Unsupported aggregation '{sort_key.aggregation}'"
+            raise ValueError(msg)
+        # Aggregated over the title rather than over one website's non-canonical row of
+        # it, so a channel holding a title twice reads one number for it either way.
+        return agg_func(episode_field).over(partition_by=self._fallbacks.title_id())
+
+    # TODO: Validate
+    def _sequential_rank(
+        self,
+        model: str,
+        *,
+        zero_last_numbers: bool = False,
+    ) -> ColumnElement[Any]:
+
+        # TODO: Validate
+        def numbered(number: ColumnElement[Any]) -> ColumnElement[Any]:
+            return zero_last(number) if zero_last_numbers else number
+
+        if model == "episode":
+            tmdb_number = numbered(self._fallbacks.number("episode"))
+            return func.dense_rank().over(
+                partition_by=self._fallbacks.episode_season_id(),
+                order_by=(
+                    case((tmdb_number.is_(None), 1), else_=0),
+                    tmdb_number,
+                    self._fallbacks.column("episode", "sort_order", TMDB_EPISODE),
+                ),
+            )
+        if model == "season":
+            tmdb_number = numbered(self._fallbacks.number("season"))
+            return func.dense_rank().over(
+                partition_by=self._fallbacks.title_id(),
+                order_by=(
+                    case((tmdb_number.is_(None), 1), else_=0),
+                    tmdb_number,
+                    self._fallbacks.column("season", "sort_order", TMDB_SEASON),
+                ),
+            )
+        msg = f"sequential is not supported for model '{model}'"
+        raise ValueError(msg)
+
+    # TODO: Validate
+    def _recently_aired_expr(self, sort_key: SortKeyInput) -> ColumnElement[Any]:
+        cutoff = sort_key.recently_aired_date or (
+            tz_datetime.now() - timedelta(days=sort_key.days or 7)
+        )
+        air_date = self._fallbacks.column("episode", "air_date", TMDB_EPISODE)
+        return case(
+            (and_(air_date.is_not(None), air_date >= cutoff), 1),
+            else_=0,
+        )
+
+    # TODO: Validate
+    def _started_title_expr(self) -> ColumnElement[Any]:
+        """Whether the `User` has watched anything of the title this episode is of.
+
+        A watch names the non-canonical row that played it, which is read back to the
+        episode that non-canonical row is of, so a title counts as started whichever
+        website it was started on. An episode nothing was minted for it to be linked to
+        hangs off a website's own listing, so the titles it counts towards are the ones
+        that listing is linked to - all of them, since a listing is no more
+        linked to one title than to another.
+        """
+        if not self._user or not self._started_titles:
+            return literal_column("0")
+        return case(
+            (self._fallbacks.title_id().in_(self._started_titles), 1),
+            else_=0,
+        )

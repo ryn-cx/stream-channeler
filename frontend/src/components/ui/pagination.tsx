@@ -1,3 +1,4 @@
+// TODO: Validate
 import * as React from "react"
 import {
   ChevronLeftIcon,
@@ -8,6 +9,7 @@ import {
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
 
+// TODO: Validate
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
   return (
     <nav
@@ -20,6 +22,7 @@ function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
   )
 }
 
+// TODO: Validate
 function PaginationContent({
   className,
   ...props
@@ -33,6 +36,7 @@ function PaginationContent({
   )
 }
 
+// TODO: Validate
 function PaginationItem({ ...props }: React.ComponentProps<"li">) {
   return <li data-slot="pagination-item" {...props} />
 }
@@ -42,6 +46,7 @@ type PaginationLinkProps = {
 } & Pick<React.ComponentProps<typeof Button>, "size"> &
   React.ComponentProps<"a">
 
+// TODO: Validate
 function PaginationLink({
   className,
   isActive,
@@ -65,6 +70,7 @@ function PaginationLink({
   )
 }
 
+// TODO: Validate
 function PaginationPrevious({
   className,
   ...props
@@ -82,6 +88,7 @@ function PaginationPrevious({
   )
 }
 
+// TODO: Validate
 function PaginationNext({
   className,
   ...props
@@ -99,6 +106,7 @@ function PaginationNext({
   )
 }
 
+// TODO: Validate
 function PaginationEllipsis({
   className,
   ...props

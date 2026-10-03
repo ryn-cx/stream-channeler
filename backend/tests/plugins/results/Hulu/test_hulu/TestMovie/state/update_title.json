@@ -1,0 +1,39 @@
+{
+  "plugin": {
+    "Hulu": {
+      "sources": {
+        "Hulu": {
+          "titles": {
+            "34bc6b99-813f-4d5d-bbe7-f3099b45879b": {
+              "data_timestamp": "2026-09-02T00:01:00+00:00",
+              "modified_at": "2026-09-03T00:00:00+00:00",
+              "seasons": {
+                "34bc6b99-813f-4d5d-bbe7-f3099b45879b:collection-242": {
+                  "data_timestamp": "2026-09-02T00:01:00+00:00",
+                  "episodes": {
+                    "be05b819-76fc-404f-8570-4f5f1837bdd2": {
+                      "data_timestamp": "2026-09-02T00:01:00+00:00",
+                      "modified_at": "2026-09-03T00:00:00+00:00"
+                    }
+                  },
+                  "modified_at": "2026-09-03T00:00:00+00:00"
+                },
+                "34bc6b99-813f-4d5d-bbe7-f3099b45879b": {
+                  "data_timestamp": "2026-09-02T00:01:00+00:00",
+                  "episodes": {
+                    "34bc6b99-813f-4d5d-bbe7-f3099b45879b": {
+                      "data_timestamp": "2026-09-02T00:01:00+00:00",
+                      "modified_at": "2026-09-03T00:00:00+00:00"
+                    }
+                  },
+                  "modified_at": "2026-09-03T00:00:00+00:00"
+                }
+              },
+              "update_at": "2027-08-29T00:01:00+00:00"
+            }
+          }
+        }
+      }
+    }
+  }
+}

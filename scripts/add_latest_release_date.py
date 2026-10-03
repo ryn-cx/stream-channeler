@@ -1,3 +1,4 @@
+# TODO: Validate
 """Check release-notes.md and add today's date to the latest release header if missing."""
 
 import re
@@ -8,6 +9,7 @@ RELEASE_NOTES_FILE = "release-notes.md"
 RELEASE_HEADER_PATTERN = re.compile(r"^## (\d+\.\d+\.\d+)\s*(\(.*\))?\s*$")
 
 
+# TODO: Validate
 def main() -> None:
     with open(RELEASE_NOTES_FILE) as f:
         lines = f.readlines()

@@ -1,0 +1,24 @@
+{
+  "plugin": {
+    "Crunchyroll": {
+      "sources": {
+        "Crunchyroll": {
+          "titles": {
+            "GKEH2G7GG": {
+              "seasons": {
+                "GY19CP82D": {
+                  "episodes": {
+                    "GN7UDZ4PW": {
+                      "data_timestamp": "2026-01-01T00:01:00+00:00",
+                      "modified_at": "2026-01-02T00:00:00+00:00"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

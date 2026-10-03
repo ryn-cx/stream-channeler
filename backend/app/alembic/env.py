@@ -1,3 +1,4 @@
+# TODO: Validate
 import os
 from logging.config import fileConfig
 
@@ -19,8 +20,11 @@ fileConfig(config.config_file_name)
 # target_metadata = mymodel.Base.metadata
 # target_metadata = None
 
-from app.models import SQLModel  # noqa
-from app.core.config import settings # noqa
+from sqlmodel import SQLModel
+from app.config import settings # noqa
+from app.database import load_models
+
+load_models()
 
 target_metadata = SQLModel.metadata
 
@@ -30,10 +34,12 @@ target_metadata = SQLModel.metadata
 # ... etc.
 
 
+# TODO: Validate
 def get_url():
     return str(settings.SQLALCHEMY_DATABASE_URI)
 
 
+# TODO: Validate
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
 
@@ -55,6 +61,7 @@ def run_migrations_offline():
         context.run_migrations()
 
 
+# TODO: Validate
 def run_migrations_online():
     """Run migrations in 'online' mode.
 

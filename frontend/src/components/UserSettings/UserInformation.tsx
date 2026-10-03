@@ -1,3 +1,4 @@
+// TODO: Validate
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
@@ -18,16 +19,16 @@ import { Input } from "@/components/ui/input"
 import { LoadingButton } from "@/components/ui/loading-button"
 import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
-import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
 
 const formSchema = z.object({
-  full_name: z.string().max(30).optional(),
+  username: z.string().min(1, "Username is required").max(30),
   email: z.email({ message: "Invalid email address" }),
 })
 
 type FormData = z.infer<typeof formSchema>
 
+// TODO: Validate
 const UserInformation = () => {
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -39,11 +40,12 @@ const UserInformation = () => {
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
-      full_name: currentUser?.full_name ?? undefined,
+      username: currentUser?.username,
       email: currentUser?.email,
     },
   })
 
+  // TODO: Validate
   const toggleEditMode = () => {
     setEditMode(!editMode)
   }
@@ -61,12 +63,13 @@ const UserInformation = () => {
     },
   })
 
+  // TODO: Validate
   const onSubmit = (data: FormData) => {
     const updateData: UserUpdateMe = {}
 
     // only include fields that have changed
-    if (data.full_name !== currentUser?.full_name) {
-      updateData.full_name = data.full_name
+    if (data.username !== currentUser?.username) {
+      updateData.username = data.username
     }
     if (data.email !== currentUser?.email) {
       updateData.email = data.email
@@ -75,13 +78,14 @@ const UserInformation = () => {
     mutation.mutate(updateData)
   }
 
+  // TODO: Validate
   const onCancel = () => {
     form.reset()
     toggleEditMode()
   }
 
   return (
-    <div className="max-w-md">
+    <div>
       <h3 className="text-lg font-semibold py-4">User Information</h3>
       <Form {...form}>
         <form
@@ -90,11 +94,11 @@ const UserInformation = () => {
         >
           <FormField
             control={form.control}
-            name="full_name"
+            name="username"
             render={({ field }) =>
               editMode ? (
                 <FormItem>
-                  <FormLabel>Full name</FormLabel>
+                  <FormLabel>Username</FormLabel>
                   <FormControl>
                     <Input type="text" {...field} />
                   </FormControl>
@@ -102,15 +106,8 @@ const UserInformation = () => {
                 </FormItem>
               ) : (
                 <FormItem>
-                  <FormLabel>Full name</FormLabel>
-                  <p
-                    className={cn(
-                      "py-2 truncate max-w-sm",
-                      !field.value && "text-muted-foreground",
-                    )}
-                  >
-                    {field.value || "N/A"}
-                  </p>
+                  <FormLabel>Username</FormLabel>
+                  <p className="py-2 truncate max-w-sm">{field.value}</p>
                 </FormItem>
               )
             }

@@ -1,3 +1,4 @@
+// TODO: Validate
 import {
   createContext,
   useCallback,
@@ -28,6 +29,7 @@ const initialState: ThemeProviderState = {
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 
+// TODO: Validate
 export function ThemeProvider({
   children,
   defaultTheme = "system",
@@ -75,6 +77,7 @@ export function ThemeProvider({
 
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
 
+    // TODO: Validate
     const handleChange = () => {
       if (theme === "system") {
         updateTheme("system")
@@ -105,6 +108,7 @@ export function ThemeProvider({
   )
 }
 
+// TODO: Validate
 export const useTheme = () => {
   const context = useContext(ThemeProviderContext)
 

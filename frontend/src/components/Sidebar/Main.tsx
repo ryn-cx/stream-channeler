@@ -1,3 +1,4 @@
+// TODO: Validate
 import { Link as RouterLink, useRouterState } from "@tanstack/react-router"
 import type { LucideIcon } from "lucide-react"
 
@@ -20,11 +21,13 @@ interface MainProps {
   items: Item[]
 }
 
+// TODO: Validate
 export function Main({ items }: MainProps) {
   const { isMobile, setOpenMobile } = useSidebar()
   const router = useRouterState()
   const currentPath = router.location.pathname
 
+  // TODO: Validate
   const handleMenuClick = () => {
     if (isMobile) {
       setOpenMobile(false)

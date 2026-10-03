@@ -1,3 +1,4 @@
+// TODO: Validate
 import { expect, test } from "@playwright/test"
 import { firstSuperuser, firstSuperuserPassword } from "./config.ts"
 import { createUser } from "./utils/privateApi"
@@ -28,7 +29,7 @@ test.describe("Admin user management", () => {
     await page.getByRole("button", { name: "Add User" }).click()
 
     await page.getByPlaceholder("Email").fill(email)
-    await page.getByPlaceholder("Full name").fill(fullName)
+    await page.getByPlaceholder("Username").fill(fullName)
     await page.getByPlaceholder("Password").first().fill(password)
     await page.getByPlaceholder("Password").last().fill(password)
 
@@ -85,9 +86,7 @@ test.describe("Admin user management", () => {
     await expect(page.getByRole("dialog")).not.toBeVisible()
 
     const userRow = page.getByRole("row").filter({ hasText: email })
-    await userRow.getByRole("button").click()
-
-    await page.getByRole("menuitem", { name: "Edit User" }).click()
+    await userRow.getByRole("button", { name: "Edit User" }).click()
 
     await page.getByPlaceholder("Full name").fill(updatedName)
     await page.getByRole("button", { name: "Save" }).click()
@@ -113,9 +112,7 @@ test.describe("Admin user management", () => {
     await expect(page.getByRole("dialog")).not.toBeVisible()
 
     const userRow = page.getByRole("row").filter({ hasText: email })
-    await userRow.getByRole("button").click()
-
-    await page.getByRole("menuitem", { name: "Delete User" }).click()
+    await userRow.getByRole("button", { name: "Delete User" }).click()
 
     await page.getByRole("button", { name: "Delete" }).click()
 

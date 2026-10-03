@@ -1,8 +1,10 @@
+// TODO: Validate
 import * as React from "react"
 import * as AvatarPrimitive from "@radix-ui/react-avatar"
 
 import { cn } from "@/lib/utils"
 
+// TODO: Validate
 function Avatar({
   className,
   ...props
@@ -19,6 +21,7 @@ function Avatar({
   )
 }
 
+// TODO: Validate
 function AvatarImage({
   className,
   ...props
@@ -32,6 +35,7 @@ function AvatarImage({
   )
 }
 
+// TODO: Validate
 function AvatarFallback({
   className,
   ...props

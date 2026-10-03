@@ -1,3 +1,4 @@
+// TODO: Validate
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
@@ -38,6 +39,7 @@ const formSchema = z
 
 type FormData = z.infer<typeof formSchema>
 
+// TODO: Validate
 const ChangePassword = () => {
   const { showSuccessToast, showErrorToast } = useCustomToast()
   const form = useForm<FormData>({
@@ -61,12 +63,13 @@ const ChangePassword = () => {
     onError: handleError.bind(showErrorToast),
   })
 
+  // TODO: Validate
   const onSubmit = async (data: FormData) => {
     mutation.mutate(data)
   }
 
   return (
-    <div className="max-w-md">
+    <div>
       <h3 className="text-lg font-semibold py-4">Change Password</h3>
       <Form {...form}>
         <form

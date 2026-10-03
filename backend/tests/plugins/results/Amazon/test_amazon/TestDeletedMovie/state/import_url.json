@@ -1,0 +1,240 @@
+{
+  "plugin": [
+    {
+      "key": "Amazon",
+      "data_timestamp": null,
+      "update_at": null,
+      "deleted_at": null,
+      "status": "Incomplete",
+      "extra": {},
+      "id": "Amazon",
+      "created_at": "2026-09-18T00:00:00+00:00",
+      "modified_at": "2026-09-18T00:00:00+00:00",
+      "version": null,
+      "hidden": false,
+      "sources": [
+        {
+          "key": "Unavailable on Amazon",
+          "data_timestamp": "2026-09-18T00:00:00+00:00",
+          "update_at": null,
+          "deleted_at": null,
+          "status": null,
+          "extra": {},
+          "id": "Unavailable on Amazon",
+          "created_at": "2026-09-18T00:00:00+00:00",
+          "modified_at": "2026-09-18T00:00:00+00:00",
+          "link_to_tmdb": true,
+          "favicon_url": "https://www.primevideo.com/favicon.ico",
+          "image_url": null,
+          "plugin_id": "Amazon",
+          "titles": [
+            {
+              "key": "0IZJ3RRDICENCGHOYWDKK824TO",
+              "data_timestamp": "2026-09-18T00:00:00+00:00",
+              "update_at": "2027-03-02T00:00:00+00:00",
+              "deleted_at": "2026-09-18T00:00:00+00:00",
+              "status": null,
+              "extra": {},
+              "id": "0IZJ3RRDICENCGHOYWDKK824TO",
+              "created_at": "2026-09-18T00:00:00+00:00",
+              "modified_at": "2026-09-18T00:00:00+00:00",
+              "name": "The Hijaz Journey",
+              "media_type": "Movie",
+              "description": "There are many scholars who pilgrimage, what they found in those routes and described what they encountered difficulties and perils and told stories recounted events worthy of generations, be aware of them and remember the grace of Almighty Allah blessed us by facilitating the rituals and ways. (English subtitles)",
+              "url": "https://www.primevideo.com/detail/0IZJ3RRDICENCGHOYWDKK824TO",
+              "image_url": "https://m.media-amazon.com/images/S/pv-target-images/93d9f3eb9df9e909d0e6c0477fe27ca4894c53c6c9eca15f08071207ba3a1363.png",
+              "thumbnail_url": "https://m.media-amazon.com/images/S/pv-target-images/93d9f3eb9df9e909d0e6c0477fe27ca4894c53c6c9eca15f08071207ba3a1363._SX500_FMwebp_.png",
+              "poster_url": "https://m.media-amazon.com/images/S/pv-target-images/584afa4486d2ba4a4aabf2bfc526c24fcdcd4557a6dabe23bd8cfd4e2168f5bc.jpg",
+              "poster_thumbnail_url": "https://m.media-amazon.com/images/S/pv-target-images/584afa4486d2ba4a4aabf2bfc526c24fcdcd4557a6dabe23bd8cfd4e2168f5bc._SX500_FMwebp_.jpg",
+              "year": 2012,
+              "score": null,
+              "popularity": null,
+              "original_language": null,
+              "tmdb_title_validated_at": null,
+              "link_status": null,
+              "is_linked": false,
+              "source_id": "Unavailable on Amazon",
+              "seasons": [
+                {
+                  "key": "0IZJ3RRDICENCGHOYWDKK824TO",
+                  "data_timestamp": "2026-09-18T00:00:00+00:00",
+                  "update_at": "2027-03-02T00:00:00+00:00",
+                  "deleted_at": "2026-09-18T00:00:00+00:00",
+                  "status": null,
+                  "extra": {},
+                  "id": "0IZJ3RRDICENCGHOYWDKK824TO",
+                  "created_at": "2026-09-18T00:00:00+00:00",
+                  "modified_at": "2026-09-18T00:00:00+00:00",
+                  "name": null,
+                  "url": null,
+                  "season_number": 0,
+                  "image_url": null,
+                  "thumbnail_url": null,
+                  "sort_order": 0,
+                  "title_id": "0IZJ3RRDICENCGHOYWDKK824TO",
+                  "episodes": [
+                    {
+                      "key": "0IZJ3RRDICENCGHOYWDKK824TO",
+                      "data_timestamp": "2026-09-18T00:00:00+00:00",
+                      "update_at": null,
+                      "deleted_at": "2026-09-18T00:00:00+00:00",
+                      "status": null,
+                      "extra": {},
+                      "id": "0IZJ3RRDICENCGHOYWDKK824TO",
+                      "created_at": "2026-09-18T00:00:00+00:00",
+                      "modified_at": "2026-09-18T00:00:00+00:00",
+                      "url": "https://www.primevideo.com/detail/0IZJ3RRDICENCGHOYWDKK824TO",
+                      "name": "The Hijaz Journey",
+                      "description": "There are many scholars who pilgrimage, what they found in those routes and described what they encountered difficulties and perils and told stories recounted events worthy of generations, be aware of them and remember the grace of Almighty Allah blessed us by facilitating the rituals and ways. (English subtitles)",
+                      "image_url": "https://m.media-amazon.com/images/S/pv-target-images/93d9f3eb9df9e909d0e6c0477fe27ca4894c53c6c9eca15f08071207ba3a1363.png",
+                      "thumbnail_url": "https://m.media-amazon.com/images/S/pv-target-images/93d9f3eb9df9e909d0e6c0477fe27ca4894c53c6c9eca15f08071207ba3a1363._SX500_FMwebp_.png",
+                      "air_date": "2012-06-30T07:00:00+00:00",
+                      "episode_number": 0,
+                      "duration": 6368,
+                      "sort_order": 0,
+                      "tmdb_episode_validated_at": null,
+                      "tmdb_note": null,
+                      "ignored_at": null,
+                      "is_linked": false,
+                      "watch_identifier": "Amazon 0IZJ3RRDICENCGHOYWDKK824TO",
+                      "season_id": "0IZJ3RRDICENCGHOYWDKK824TO"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "Custom Media",
+      "data_timestamp": null,
+      "update_at": null,
+      "deleted_at": null,
+      "status": null,
+      "extra": {},
+      "id": "Custom Media",
+      "created_at": "2026-09-18T00:00:00+00:00",
+      "modified_at": "2026-09-18T00:00:00+00:00",
+      "version": null,
+      "hidden": false,
+      "sources": []
+    }
+  ],
+  "watchprovider": [],
+  "channel": [
+    {
+      "id": "Documentary on Amazon",
+      "created_at": "2026-09-18T00:00:00+00:00",
+      "modified_at": "2026-09-18T00:00:00+00:00",
+      "name": "Documentary on Amazon",
+      "channel_number": null,
+      "visibility": "public",
+      "default_order": null,
+      "description": "All Documentary titles on Amazon.\n\nThis is an automatically generated channel based on the titles that have been imported by all of Stream Channeler's users.",
+      "anonymous": false,
+      "score": -1,
+      "user_id": "Amazon",
+      "update_at": "2026-09-19T00:00:00+00:00"
+    },
+    {
+      "id": "Live Media on Amazon",
+      "created_at": "2026-09-18T00:00:00+00:00",
+      "modified_at": "2026-09-18T00:00:00+00:00",
+      "name": "Live Media on Amazon",
+      "channel_number": null,
+      "visibility": "public",
+      "default_order": null,
+      "description": "All Live Media titles on Amazon.\n\nThis is an automatically generated channel based on the titles that have been imported by all of Stream Channeler's users.",
+      "anonymous": false,
+      "score": -1,
+      "user_id": "Amazon",
+      "update_at": "2026-09-19T00:00:00+00:00"
+    },
+    {
+      "id": "All Titles on Amazon",
+      "created_at": "2026-09-18T00:00:00+00:00",
+      "modified_at": "2026-09-18T00:00:00+00:00",
+      "name": "All Titles on Amazon",
+      "channel_number": null,
+      "visibility": "public",
+      "default_order": null,
+      "description": "All Titles titles on Amazon.\n\nThis is an automatically generated channel based on the titles that have been imported by all of Stream Channeler's users.",
+      "anonymous": false,
+      "score": -1,
+      "user_id": "Amazon",
+      "update_at": "2026-09-19T00:00:00+00:00"
+    }
+  ],
+  "channelorder": [],
+  "usersourcepreference": [],
+  "channelcombinedchannel": [],
+  "channelfavorite": [],
+  "channelorderfavorite": [],
+  "channelqueue": [
+    {
+      "id": "All Titles on Amazon",
+      "created_at": "2026-09-18T00:00:00+00:00",
+      "modified_at": "2026-09-18T00:00:00+00:00",
+      "url": "https://www.primevideo.com/detail/0IZJ3RRDICENCGHOYWDKK824TO",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Amazon"
+    },
+    {
+      "id": "Documentary on Amazon",
+      "created_at": "2026-09-18T00:00:00+00:00",
+      "modified_at": "2026-09-18T00:00:00+00:00",
+      "url": "https://www.primevideo.com/detail/0IZJ3RRDICENCGHOYWDKK824TO",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "Documentary on Amazon"
+    },
+    {
+      "id": "Live Media on Amazon",
+      "created_at": "2026-09-18T00:00:00+00:00",
+      "modified_at": "2026-09-18T00:00:00+00:00",
+      "url": "https://www.primevideo.com/detail/0IZJ3RRDICENCGHOYWDKK824TO",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "Live Media on Amazon"
+    }
+  ],
+  "comment": [],
+  "channeltitle": [],
+  "commentnotification": [],
+  "titlegenre": [
+    {
+      "id": "Documentary",
+      "created_at": "2026-09-18T00:00:00+00:00",
+      "modified_at": "2026-09-18T00:00:00+00:00",
+      "title_id": "0IZJ3RRDICENCGHOYWDKK824TO",
+      "name": "Documentary"
+    }
+  ],
+  "titleissuereport": [],
+  "titlespokenlanguage": [],
+  "titletmdbtitle": [],
+  "titlewatchprovider": [],
+  "unmatchedtitle": [],
+  "channelseasonfilter": [],
+  "channelsourcefilter": [],
+  "seasonissuereport": [],
+  "channelepisodefilter": [],
+  "channelepisodesourcefilter": [],
+  "channelsavedepisodeorder": [],
+  "episodeissuereport": [],
+  "episodetmdbepisode": [],
+  "episodetmdbtitle": [
+    {
+      "episode_id": "0IZJ3RRDICENCGHOYWDKK824TO",
+      "tmdb_title_id": "0IZJ3RRDICENCGHOYWDKK824TO"
+    }
+  ],
+  "userepisodeurl": [],
+  "watch": []
+}

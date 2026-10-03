@@ -1,0 +1,714 @@
+# TODO: Validate
+import json
+import random
+import uuid
+from datetime import datetime
+from enum import StrEnum
+from typing import ClassVar, Literal
+
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import Field as PydanticField
+from pydantic.alias_generators import to_camel
+from sqlmodel import Field
+
+from app.channels.models import (
+    BaseAdminChannel,
+    BaseChannel,
+    BaseChannelQueue,
+    Channel,
+    URLStatus,
+)
+from app.episodes.models import Episode
+from app.episodes.schemas import EpisodeOutput
+from app.plugins.models import Plugin
+from app.schemas import (
+    BaseInput,
+    BaseUpdateWithoutKey,
+    ReadOptions,
+    RecordScope,
+    ScopedReadOptions,
+    make_model_with_all_fields_optional,
+)
+from app.seasons.models import Season
+from app.seasons.schemas import SeasonOutput
+from app.sources.models import Source
+from app.sources.schemas import SourcePublic
+from app.titles.models import Title
+from app.titles.schemas import ChannelTitleStats, TitleCardDetails, TitlePublic
+
+
+# TODO: Validate
+class MediaOwner(StrEnum):
+    official = "official"
+    others = "others"
+
+
+# TODO: Validate
+class AdminReadOptions(ReadOptions):
+    owner: MediaOwner
+
+
+# TODO: Validate
+class AutomaticChannelUserOutput(BaseModel):
+    id: uuid.UUID
+    username: str | None
+    email: str
+    channel_count: int
+    plugin_key: str | None
+    can_create_channels: bool
+
+
+# TODO: Validate
+class ChannelCreate(BaseInput, BaseChannel):
+    """Schema for creating a `Channel`."""
+
+
+# TODO: Validate
+class ChannelAdminCreate(BaseInput, BaseAdminChannel):
+    """Schema for creating a `Channel` as an admin."""
+
+
+# TODO: Validate
+class ChannelUpdate(
+    make_model_with_all_fields_optional(BaseChannel),
+    BaseUpdateWithoutKey[Channel],
+):
+    """Schema for updating a `Channel`."""
+
+
+# TODO: Validate
+class ChannelOutput(BaseChannel):
+    """Schema for returning a `Channel`.
+
+    `user_id` and `username` are redacted on anonymous `Channel`s unless the viewer
+    owns the record or is an admin.
+    """
+
+    id: uuid.UUID
+    user_id: uuid.UUID | None
+    username: str | None = None
+    score: int
+
+
+# TODO: Validate
+class ChannelListOutput(BaseChannel):
+    """Schema for returning a `Channel` alongside its owner.
+
+    `user_id` and `username` are redacted on anonymous `Channel`s unless the viewer
+    owns the record or is an admin. `score` is not a secret, so one row shape serves
+    every scope and every viewer.
+    """
+
+    id: uuid.UUID
+    user_id: uuid.UUID | None
+    username: str | None
+    score: int
+    favorite_count: int = 0
+    # The viewer's private overrides, only populated in the `favorites` scope. Each
+    # is `None` when unset; the frontend falls back to the shared field above.
+    custom_name: str | None = None
+    custom_channel_number: float | None = None
+    channel_number: float | None = PydanticField(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
+
+
+# TODO: Validate
+class ChannelFavoriteUpdate(BaseInput):
+    """Schema for a `User`'s private customization of a favorited `Channel`."""
+
+    name: str | None = Field(default=None)
+    channel_number: float | None = Field(default=None)
+
+
+# TODO: Validate
+class ChannelPublicListOutput(BaseModel):
+    """Schema for returning a page of publicly listed `Channel`s."""
+
+    data: list[ChannelListOutput]
+    count: int
+
+
+# TODO: Validate
+class ChannelTitleMembership(BaseModel):
+    id: uuid.UUID
+    name: str | None
+    channel_number: float | None
+    # title, so it reads as false: adding is what turns that row into one the
+    # channel has.
+    has_title: bool
+
+
+# TODO: Validate
+class ChannelsPublic(BaseModel):
+    """Schema for returning a page of `Channel`s."""
+
+    data: list[ChannelListOutput]
+    total_count: int
+    filtered_count: int
+    is_server_side: bool
+
+
+# TODO: Validate
+class ChannelReadOptions(ScopedReadOptions):
+    """Read options for the `Channel` list.
+
+    Defaults to `owned` rather than `ScopedReadOptions`'s `all`, so an unscoped read
+    returns the `User`'s own `Channel`s instead of demanding admin rights.
+    """
+
+    scope: RecordScope = RecordScope.owned
+    title_id: uuid.UUID | None = None
+
+
+# TODO: Validate
+class ChannelAdminUpdate(
+    make_model_with_all_fields_optional(BaseAdminChannel),
+    BaseInput,
+):
+    """Schema for an admin updating any field on a `Channel`.
+
+    Every field an admin creates a `Channel` with can be changed afterwards,
+    which includes the `User` it belongs to and its `score`.
+    """
+
+
+# TODO: Validate
+class CombinedChannelOutput(BaseModel):
+    """Schema for returning a channel combined into another channel."""
+
+    id: uuid.UUID
+    name: str | None
+
+
+# TODO: Validate
+class CombinedChannelInput(BaseInput):
+    """Schema for combining a channel into another channel."""
+
+    id: uuid.UUID
+
+
+# TODO: Validate
+class ChannelQueueOutput(BaseChannelQueue):
+    id: uuid.UUID
+    channel_id: uuid.UUID
+
+
+# TODO: Validate
+class ChannelQueueSort(StrEnum):
+    url = "url"
+    status = "status"
+    created_at = "created_at"
+
+
+# TODO: Validate
+class ChannelQueuePage(BaseModel):
+    data: list[ChannelQueueOutput] = Field(default_factory=list)
+    total: int = Field(default=0)
+    pending_count: int = Field(default=0)
+
+
+# TODO: Validate
+class ChannelQueueAdminOutput(ChannelQueueOutput):
+    """Schema for returning a queue entry to an admin, with channel and owner info."""
+
+    created_at: datetime
+    channel_name: str | None
+    channel_number: float | None
+    user_id: uuid.UUID | None
+    username: str | None
+
+
+# TODO: Validate
+class ChannelQueueAdminUpdate(BaseInput):
+    """Schema for an admin updating a `Channel`'s queue entry."""
+
+    status: URLStatus | None = Field(default=None)
+    note: str | None = Field(default=None)
+    import_at: datetime | None = Field(default=None)
+
+
+# TODO: Validate
+class ChannelQueueAdminReadOptions(ReadOptions):
+    owner: MediaOwner | None = None
+
+
+# TODO: Validate
+class ChannelQueuesAdminPublic(BaseModel):
+    data: list[ChannelQueueAdminOutput]
+    total_count: int
+    filtered_count: int
+    is_server_side: bool
+
+
+# TODO: Validate
+class ChannelOrderInput(BaseInput):
+    """Schema for setting the custom episode order of a `Channel`."""
+
+    episode_ids: list[uuid.UUID] = Field(default_factory=list)
+
+
+# TODO: Validate
+class EpisodeWithDetails(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    season_id: uuid.UUID
+    url: str | None = Field(default=None)
+    name: str | None = Field(default=None)
+    description: str | None = Field(default=None, exclude=True)
+    image_url: str | None = Field(default=None)
+    thumbnail_url: str | None = Field(default=None)
+    air_date: datetime | None = Field(default=None)
+    episode_number: int | None = Field(default=None)
+    duration: int | None = Field(default=None)
+    tmdb_episode_id: uuid.UUID | None = Field(default=None)
+    watch_date: datetime | None = Field(default=None)
+    completed: bool | None = Field(default=None)
+    episode_watch_id: uuid.UUID | None = Field(default=None)
+    # The episode's page on themoviedb.org, when it is linked to one.
+    tmdb_url: str | None = Field(default=None)
+    channel_id: uuid.UUID
+    # All in-scope member channels this episode belongs to. The first is `channel_id`
+    # (the primary/base channel). Used by the blacklist UI to offer each as a target.
+    channel_ids: list[uuid.UUID] = Field(default_factory=list)
+    # How TMDB numbers and names the episode and the season it is in, which is not
+    # always how the website does. `None` when it is not linked to TMDB.
+    tmdb_season_number: int | None = Field(default=None)
+    tmdb_season_name: str | None = Field(default=None)
+    tmdb_episode_number: int | None = Field(default=None)
+    tmdb_title_name: str | None = Field(default=None)
+    source_name: str | None = Field(default=None)
+    source_air_date: datetime | None = Field(default=None)
+    source_duration: int | None = Field(default=None)
+    source_episode_number: int | None = Field(default=None)
+    source_season_number: int | None = Field(default=None)
+    source_season_name: str | None = Field(default=None)
+    source_title_name: str | None = Field(default=None)
+    source_id: uuid.UUID | None = Field(default=None)
+
+
+# TODO: Validate
+class ChannelEpisodeSeason(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    title_id: uuid.UUID
+    name: str | None = Field(default=None)
+    season_number: int | None = Field(default=None)
+    url: str | None = Field(default=None)
+
+
+# TODO: Validate
+class ChannelEpisodeTitle(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    source_id: uuid.UUID
+    name: str | None = Field(default=None)
+    media_type: str | None = Field(default=None)
+    url: str | None = Field(default=None)
+
+
+# TODO: Validate
+class ChannelEpisodeSource(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    plugin_id: uuid.UUID
+    key: str
+    favicon_url: str | None = Field(default=None)
+
+
+# TODO: Validate
+class ChannelEpisodePlugin(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    key: str
+    name: str | None = Field(default=None)
+
+
+# TODO: Validate
+class ChannelEpisodesOutput(BaseModel):
+    episodes: list[EpisodeWithDetails]
+    seasons: dict[uuid.UUID, ChannelEpisodeSeason]
+    titles: dict[uuid.UUID, ChannelEpisodeTitle]
+    sources: dict[uuid.UUID, ChannelEpisodeSource]
+    plugins: dict[uuid.UUID, ChannelEpisodePlugin]
+
+
+# TODO: Validate
+class HomeGuideEpisode(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    season_id: uuid.UUID
+    url: str | None = None
+    name: str | None = None
+    thumbnail_url: str | None = None
+    episode_number: int | None = None
+    duration: int | None = None
+    tmdb_episode_id: uuid.UUID | None = None
+    tmdb_season_number: int | None = None
+    tmdb_episode_number: int | None = None
+
+
+# TODO: Validate
+class HomeGuideSeason(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    title_id: uuid.UUID
+    season_number: int | None = None
+    url: str | None = None
+
+
+# TODO: Validate
+class HomeGuideTitle(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    source_id: uuid.UUID
+    name: str | None = None
+    media_type: str | None = None
+    url: str | None = None
+
+
+# TODO: Validate
+class HomeGuidePlugin(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    name: str | None = None
+
+
+# TODO: Validate
+class HomeGuideChannel(BaseModel):
+    id: uuid.UUID
+    name: str | None = None
+    default_order: str | None = None
+    episode_ids: list[uuid.UUID]
+    member_channel_ids: dict[uuid.UUID, list[uuid.UUID]]
+
+
+# TODO: Validate
+class HomeGuideOutput(BaseModel):
+    channels: list[HomeGuideChannel]
+    episodes: dict[uuid.UUID, HomeGuideEpisode]
+    seasons: dict[uuid.UUID, HomeGuideSeason]
+    titles: dict[uuid.UUID, HomeGuideTitle]
+    sources: dict[uuid.UUID, ChannelEpisodeSource]
+    plugins: dict[uuid.UUID, HomeGuidePlugin]
+    total_count: int
+
+
+# TODO: Validate
+class ChannelTitleGroup(BaseModel):
+    """The regular titles contributed by one channel within a combined channel."""
+
+    channel_id: uuid.UUID
+    channel_name: str | None
+    titles: list[TitlePublic] = Field(default_factory=list)
+
+
+# TODO: Validate
+class TitleCardsOutput(BaseModel):
+    titles: list[TitlePublic] = Field(default_factory=list)
+    sources: dict[uuid.UUID, SourcePublic] = Field(default_factory=dict)
+    # The canonical title behind each row, keyed by `tmdb_title_id`. It has
+    # the title's own name, which is what a title is read under rather than the name
+    # any one website gave its row for it.
+    tmdb_titles: dict[uuid.UUID, TitlePublic] = Field(default_factory=dict)
+    # The source each canonical title was written by, keyed by `tmdb_title_id`.
+    # Kept apart from `sources` because that is where a title can be watched and
+    # this is who wrote it down, which is never a website that has it.
+    tmdb_sources: dict[uuid.UUID, SourcePublic] = Field(default_factory=dict)
+    stats: dict[uuid.UUID, ChannelTitleStats] = Field(default_factory=dict)
+    details: dict[uuid.UUID, TitleCardDetails] = Field(default_factory=dict)
+    total: int = Field(default=0)
+
+
+# TODO: Validate
+class ChannelTitlesOutput(TitleCardsOutput):
+    # Titles that don't belong to the channel but have blacklist/whitelist entries for
+    # episodes pulled in from other channels.
+    filter_only_titles: list[TitlePublic] = Field(default_factory=list)
+    # The regular titles grouped by the channel they come from, with the channel this
+    # endpoint was called on first and combined channels after it, sorted by name.
+    groups: list[ChannelTitleGroup] = Field(default_factory=list)
+
+
+# TODO: Validate
+class WhitelistEntryInput(BaseInput):
+    id: uuid.UUID
+    marked: bool
+    # Only meaningful for episode entries; ignored for seasons. `None` = never expires.
+    expires_at: datetime | None = Field(default=None)
+
+
+# TODO: Validate
+class BlacklistEpisodeInput(BaseInput):
+    title_id: uuid.UUID
+    episode_id: uuid.UUID
+    expires_at: datetime | None = Field(default=None)
+
+
+# TODO: Validate
+class WhitelistEpisodeSourceEntryInput(BaseInput):
+    """An entry naming an episode on one website rather than on all of them."""
+
+    # The website's own row for the episode, whose canonical episode is what the
+    # entry ends up naming.
+    episode_id: uuid.UUID
+    # The website's row for the title, which is what narrows the entry to one site.
+    title_id: uuid.UUID
+    marked: bool
+    # `None` = never expires.
+    expires_at: datetime | None = Field(default=None)
+
+
+# TODO: Validate
+class ChannelEpisodeOrderInput(BaseInput):
+    tmdb_episode_order_id: uuid.UUID | None = Field(default=None)
+
+
+# TODO: Validate
+class ChannelEpisodeOrderOption(BaseModel):
+    id: uuid.UUID
+    tmdb_group_id: str
+    name: str | None
+    description: str | None
+    group_count: int | None
+    episode_count: int | None
+    type: int | None
+
+
+# TODO: Validate
+class ChannelEpisodeOrderOutput(BaseModel):
+    tmdb_episode_order_id: uuid.UUID | None
+    orders: list[ChannelEpisodeOrderOption]
+
+
+# TODO: Validate
+class WhitelistTitleInput(BaseInput):
+    is_whitelist: bool | None = Field(default=None)
+    # Each entry's `id` is the `Title` id of one website's row for the title.
+    sources: list[WhitelistEntryInput] = Field(default_factory=list)
+    seasons: list[WhitelistEntryInput] = Field(default_factory=list)
+    episodes: list[WhitelistEntryInput] = Field(default_factory=list)
+    episode_sources: list[WhitelistEpisodeSourceEntryInput] = Field(
+        default_factory=list,
+    )
+
+
+# TODO: Validate
+class WhitelistSourceOutput(BaseModel):
+    """One website's row for the title, and whether it is filtered."""
+
+    title_id: uuid.UUID
+    source_id: uuid.UUID
+    source_key: str
+    favicon_url: str | None
+    # The row itself, so a site that has the title under more than one row can
+    # name each of them, and so one can be edited without being fetched again.
+    title: TitlePublic
+    filtered: bool
+    # TMDB is where the media is catalogued rather than a website it can be
+    # watched on, so a row names it for the seasons it has a record of and never
+    # for an episode.
+    is_tmdb: bool = Field(default=False)
+
+
+# TODO: Validate
+class WhitelistSeasonOutput(SeasonOutput):
+    filtered: bool
+    # The `Title` ids of the websites' rows that have this season.
+    title_ids: list[uuid.UUID]
+
+
+# TODO: Validate
+class WhitelistEpisodeLinkOutput(EpisodeOutput):
+    """One website's row for an episode, and whether it is filtered on its own.
+
+    The row's own columns come with it, since this is the website's account of
+    the episode and the one thing an admin editing it edits. `episode_id` names
+    the same row as `id` and is kept as what the filters are keyed by.
+    """
+
+    title_id: uuid.UUID
+    episode_id: uuid.UUID
+    # Whether an entry names this episode on this website alone, which is the
+    # exception to whatever the season and episode entries decided.
+    filtered: bool
+    expires_at: datetime | None = Field(default=None)
+
+
+# TODO: Validate
+class WhitelistEpisodeOutput(EpisodeOutput):
+    # What a filter names, which is the episode itself where the row is one, so
+    # every row served here has one however it was stored.
+    tmdb_episode_id: uuid.UUID
+    filtered: bool
+    expires_at: datetime | None = Field(default=None)
+    # The `Title` ids of the websites' rows that have this episode.
+    title_ids: list[uuid.UUID]
+    # Each website's row on its own, so one website's account of the episode can
+    # be read, and filtered, rather than only the row they were folded into.
+    links: list[WhitelistEpisodeLinkOutput]
+    # How TMDB numbers and names the episode and the season it is in, which is not
+    # always how the website does. `None` when it is not linked to TMDB.
+    tmdb_season_number: int | None = Field(default=None)
+    tmdb_season_name: str | None = Field(default=None)
+    tmdb_episode_number: int | None = Field(default=None)
+
+
+# TODO: Validate
+class WhitelistTitleOutput(TitlePublic):
+    """The title's sites and seasons, which is what the filter page opens on.
+
+    The episodes are read a season at a time as each is expanded rather than all
+    at once, since a title of a thousand episodes is a page nobody waits for and
+    all but the one season being looked at is read for nothing.
+    """
+
+    is_whitelist: bool
+    sources: list[WhitelistSourceOutput]
+    seasons: list[WhitelistSeasonOutput]
+
+
+# TODO: Validate
+class WhitelistEpisodesOutput(BaseModel):
+    episodes: list[WhitelistEpisodeOutput]
+    total_count: int
+
+
+# TODO: Validate
+class SortOptionOutput(BaseModel):
+    label: str
+    model: Literal["episode", "season", "title", "source", "plugin", "channel"]
+    field: str
+    value_type: Literal["number", "date"] | None = None
+
+
+# TODO: Validate
+class SortKeyInput(BaseInput):
+    model_config = ConfigDict(
+        validate_by_name=True,
+        extra="forbid",
+        alias_generator=to_camel,
+    )  # type: ignore[reportAssignmentType]
+
+    MODEL_MAP: ClassVar[
+        dict[
+            str,
+            type[Episode | Season | Title | Source | Plugin | Channel],
+        ]
+    ] = {
+        "episode": Episode,
+        "season": Season,
+        "title": Title,
+        "source": Source,
+        "plugin": Plugin,
+        # An episode reads as coming from the channel it was added through, which
+        # is a channel of its own rather than one of the media models.
+        "channel": Channel,
+    }
+
+    model: Literal["episode", "season", "title", "source", "plugin", "channel"]
+    field: str
+    direction: Literal["ascending", "descending"]
+    order: Literal["sequential", "interleave", "randomize"] = Field()
+    aggregation: Literal["max", "min", "avg"] | None = Field(default=None)
+    days: int | None = Field(default=None)
+    recently_aired_date: datetime | None = Field(default=None)
+    fuzziness: int | None = Field(default=None, ge=0)
+    source_keys: list[str] | None = Field(default=None)
+    comparison: (
+        Literal[
+            "greater_than",
+            "greater_than_or_equal",
+            "equal",
+            "not_equal",
+            "less_than_or_equal",
+            "less_than",
+            "undefined",
+        ]
+        | None
+    ) = Field(default=None)
+    comparison_value: float | datetime | None = Field(default=None)
+
+    # TODO: Validate
+    @property
+    def model_class(
+        self,
+    ) -> type[Episode | Season | Title | Source | Plugin | Channel]:
+        return self.MODEL_MAP[self.model]
+
+    # TODO: Validate
+    @model_validator(mode="after")
+    def validate_and_resolve(self) -> SortKeyInput:
+        if self.comparison is not None:
+            self._validate_comparison()
+        if self.field == "random" or self.field in self.model_class.SORTABLE_FIELDS:
+            return self
+
+        msg = f"Invalid field '{self.field}' for model '{self.model}'"
+        raise ValueError(msg)
+
+    # TODO: Validate
+    def _validate_comparison(self) -> None:
+        if self.model != "episode" or self.field not in Episode.COMPARABLE_FIELDS:
+            msg = f"'{self.model}.{self.field}' cannot be compared to a value"
+            raise ValueError(msg)
+        if self.comparison != "undefined" and self.comparison_value is None:
+            msg = f"Comparison '{self.comparison}' needs a value to compare to"
+            raise ValueError(msg)
+        if Episode.COMPARABLE_FIELDS[self.field] == "number" and isinstance(
+            self.comparison_value,
+            datetime,
+        ):
+            msg = f"'{self.field}' is a number and cannot be compared to a date"
+            raise ValueError(msg)
+
+
+# TODO: Validate
+class ChannelOptions(BaseInput):
+    model_config = ConfigDict(
+        validate_by_name=True,
+        extra="forbid",
+        alias_generator=to_camel,
+    )  # type: ignore[reportAssignmentType]
+
+    sort_by: list[SortKeyInput] = Field(default_factory=list, max_length=10)
+
+    # TODO: Validate
+    @field_validator("sort_by", mode="before")
+    @classmethod
+    def _load_sort_keys(cls, value: object) -> object:
+        return [
+            SortKeyInput.model_validate(
+                json.loads(item) if isinstance(item, str) else item,
+            )
+            for item in value  # type: ignore[attr-defined]
+        ]
+
+    order_preset_id: uuid.UUID | None = Field(default=None)
+    source_ids: list[uuid.UUID] = Field(default_factory=list)
+    source_ids_is_blacklist: bool = Field(default=False)
+    random_seed: int = Field(default_factory=lambda: random.randint(0, 2**31))  # noqa: S311 - TODO: Confirm non-cryptographic random is acceptable
+    hide_watched: bool = Field(default=False)
+    hide_unwatched: bool = Field(default=False)
+    hide_partially_watched: bool = Field(default=False)
+    maximum_watch_date_absolute: datetime | None = Field(default=None)
+    minimum_air_date_absolute: datetime | None = Field(default=None)
+    maximum_air_date_absolute: datetime | None = Field(default=None)
+    maximum_watch_date_relative: int | None = Field(default=None)
+    minimum_air_date_relative: int | None = Field(default=None)
+    maximum_air_date_relative: int | None = Field(default=None)
+    total_titles_count: int | None = Field(default=None, ge=0)
+    started_titles_count: int | None = Field(default=None, ge=0)
+    new_titles_count: int | None = Field(default=None, ge=0)
+    minimum_duration: int | None = Field(default=None)
+    maximum_duration: int | None = Field(default=None)
+    limit: int | None = Field(default=1000, ge=1, le=1000)
+
+
+# TODO: Validate
+class ChannelBuildPlugin(BaseModel):
+    key: str
+    favicon_url: str | None = None

@@ -1,0 +1,132 @@
+# TODO: Validate
+"""The files NHK World is read out of."""
+
+from __future__ import annotations
+
+import json
+from datetime import datetime
+from functools import cache
+from typing import TYPE_CHECKING, override
+
+from naphki import Naphki
+from naphki.exceptions import ProgramNotFoundError
+from naphki.video_episodes import VideoEpisodes as VideoEpisodesEndpoint
+from naphki.video_episodes.models import VideoEpisodesModel
+from naphki.video_program import VideoProgram as VideoProgramEndpoint
+from naphki.video_program.models import VideoProgramModel
+from naphki.video_programs import VideoPrograms as VideoProgramsEndpoint
+from naphki.video_programs.models import VideoProgramsModel
+
+from app.utils import tz_datetime
+from plugins.utils.base_plugin.files import (
+    PagedEndpointFile,
+    SingleArgEndpointFile,
+)
+from plugins.utils.constants import INCOMPLETE_STATUS, ROLLING_CHANGES_UPDATE_INTERVAL
+from plugins.utils.proxy_client import proxy_client
+
+if TYPE_CHECKING:
+    from naphki.video_episodes.models import Item
+    from naphki.video_programs.models import Item as ProgramItem
+    from sqlmodel import Session
+
+    from app.plugins.models import Plugin
+
+
+# TODO: Validate
+@cache
+def naphki() -> Naphki:
+    return Naphki(get_around_client=proxy_client())
+
+
+# TODO: Validate
+class VideoProgram(SingleArgEndpointFile[VideoProgramModel]):
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> VideoProgramEndpoint:
+        return naphki().video_program
+
+    # Occurs when a user puts in an invalid URL.
+    # TODO: Validate
+    @override
+    def _is_acceptable_error(self, error: Exception) -> bool:
+        return isinstance(error, ProgramNotFoundError)
+
+
+# TODO: Validate
+class VideoEpisodes(PagedEndpointFile[VideoEpisodesModel]):
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> VideoEpisodesEndpoint:  # type: ignore[override]
+        return naphki().video_episodes
+
+    # TODO: Validate
+    @override
+    def _download_file(self) -> str:
+        return json.dumps(
+            self._endpoint().download_until_datetime(self.unique_identifier),
+        )
+
+    # TODO: Validate
+    def items(self) -> list[Item]:
+        return [item for page in self.parsed() for item in page.items]
+
+
+# TODO: Validate
+class NewVideoEpisodes(PagedEndpointFile[VideoEpisodesModel]):
+    archive_old_versions = True
+    keep_until_imported = True
+
+    # TODO: Validate
+    @override
+    def _initial_status_after_downloading(self) -> str:
+        return INCOMPLETE_STATUS
+
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> VideoEpisodesEndpoint:  # type: ignore[override]
+        return naphki().video_episodes
+
+    # TODO: Validate
+    @override
+    def _next_update_at(self) -> datetime:
+        return tz_datetime.now() + ROLLING_CHANGES_UPDATE_INTERVAL
+
+    # TODO: Validate
+    @override
+    def _download_file(self) -> str:
+        end_datetime: datetime
+        if self.exists():
+            end_datetime = self.record_data_timestamp
+        else:
+            end_datetime = tz_datetime.now()
+        return json.dumps(
+            self._endpoint().download_until_datetime(end_datetime=end_datetime),
+        )
+
+    # TODO: Validate
+    def items(self) -> list[Item]:
+        return [item for page in self.parsed() for item in page.items]
+
+
+# TODO: Validate
+class VideoPrograms(PagedEndpointFile[VideoProgramsModel]):
+    unique_identifier = "VideoPrograms"
+
+    # TODO: Validate
+    def __init__(self, session: Session, plugin: Plugin) -> None:
+        super().__init__(session, plugin, self.unique_identifier)
+
+    # TODO: Validate
+    @override
+    def _endpoint(self) -> VideoProgramsEndpoint:  # type: ignore[override]
+        return naphki().video_programs
+
+    # TODO: Validate
+    @override
+    def _download_file(self) -> str:
+        return json.dumps(self._endpoint().download_all(unclosed=False))
+
+    # TODO: Validate
+    def items(self) -> list[ProgramItem]:
+        return [item for page in self.parsed() for item in page.items]

@@ -1,0 +1,256 @@
+{
+  "episodetmdbtitle": {
+    "removed": [],
+    "added": [
+      {
+        "episode_id": "plugin-validator-alt-fake-episode",
+        "tmdb_title_id": "B09ML1QV1S"
+      },
+      {
+        "episode_id": "plugin-validator-alt-fake-episode",
+        "tmdb_title_id": "B09ML1QV1S"
+      },
+      {
+        "episode_id": "plugin-validator-alt-fake-episode",
+        "tmdb_title_id": "B09ML1QV1S"
+      }
+    ]
+  },
+  "plugin": {
+    "Amazon": {
+      "sources": {
+        "Amazon Prime": {
+          "titles": {
+            "B09ML1QV1S": {
+              "seasons": {
+                "plugin-validator-alt-fake-season": {
+                  "key": "plugin-validator-alt-fake-season",
+                  "data_timestamp": "2026-09-12T00:00:00+00:00",
+                  "update_at": null,
+                  "deleted_at": "2026-09-12T00:00:00+00:00",
+                  "status": null,
+                  "extra": {},
+                  "id": "plugin-validator-alt-fake-season",
+                  "created_at": "2026-09-12T00:00:00+00:00",
+                  "modified_at": "2026-09-12T00:00:00+00:00",
+                  "name": "Plugin Validator Alt Fake Season",
+                  "url": "https://example.com/fake-season",
+                  "season_number": 9999,
+                  "image_url": null,
+                  "thumbnail_url": null,
+                  "sort_order": 9999,
+                  "title_id": "B09ML1QV1S",
+                  "episodes": [
+                    {
+                      "key": "plugin-validator-alt-fake-episode",
+                      "data_timestamp": "2026-09-12T00:00:00+00:00",
+                      "update_at": null,
+                      "deleted_at": "2026-09-12T00:00:00+00:00",
+                      "status": null,
+                      "extra": {},
+                      "id": "plugin-validator-alt-fake-episode",
+                      "created_at": "2026-09-12T00:00:00+00:00",
+                      "modified_at": "2026-09-12T00:00:00+00:00",
+                      "url": "https://example.com/fake-episode",
+                      "name": "Plugin Validator Alt Fake Episode",
+                      "description": null,
+                      "image_url": null,
+                      "thumbnail_url": null,
+                      "air_date": null,
+                      "episode_number": 9999,
+                      "duration": 1,
+                      "sort_order": 9999,
+                      "tmdb_episode_validated_at": null,
+                      "tmdb_note": null,
+                      "is_linked": false,
+                      "watch_identifier": "Amazon plugin-validator-alt-fake-episode",
+                      "season_id": "plugin-validator-alt-fake-season"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "Free on Amazon": {
+          "titles": {
+            "B09ML1QV1S": {
+              "seasons": {
+                "B0H8N9812R": {
+                  "episodes": {
+                    "B0H8R1SD13": {
+                      "deleted_at": "2026-09-12T00:00:00+00:00",
+                      "modified_at": "2026-09-12T00:00:00+00:00"
+                    },
+                    "B0HB4FGFXS": {
+                      "deleted_at": "2026-09-12T00:00:00+00:00",
+                      "modified_at": "2026-09-12T00:00:00+00:00"
+                    },
+                    "B0H9C9BY6P": {
+                      "deleted_at": "2026-09-12T00:00:00+00:00",
+                      "modified_at": "2026-09-12T00:00:00+00:00"
+                    },
+                    "B0H96Q4ZRV": {
+                      "deleted_at": "2026-09-12T00:00:00+00:00",
+                      "modified_at": "2026-09-12T00:00:00+00:00"
+                    },
+                    "B0H8NFWCSH": {
+                      "deleted_at": "2026-09-12T00:00:00+00:00",
+                      "modified_at": "2026-09-12T00:00:00+00:00"
+                    },
+                    "B0H9PJ976Z": {
+                      "deleted_at": "2026-09-12T00:00:00+00:00",
+                      "modified_at": "2026-09-12T00:00:00+00:00"
+                    },
+                    "B0HBBLH8KG": {
+                      "deleted_at": "2026-09-12T00:00:00+00:00",
+                      "modified_at": "2026-09-12T00:00:00+00:00"
+                    },
+                    "B0H9SVN3TV": {
+                      "deleted_at": "2026-09-12T00:00:00+00:00",
+                      "modified_at": "2026-09-12T00:00:00+00:00"
+                    }
+                  }
+                },
+                "plugin-validator-alt-fake-season": {
+                  "key": "plugin-validator-alt-fake-season",
+                  "data_timestamp": "2026-09-12T00:00:00+00:00",
+                  "update_at": null,
+                  "deleted_at": "2026-09-12T00:00:00+00:00",
+                  "status": null,
+                  "extra": {},
+                  "id": "plugin-validator-alt-fake-season",
+                  "created_at": "2026-09-12T00:00:00+00:00",
+                  "modified_at": "2026-09-12T00:00:00+00:00",
+                  "name": "Plugin Validator Alt Fake Season",
+                  "url": "https://example.com/fake-season",
+                  "season_number": 9999,
+                  "image_url": null,
+                  "thumbnail_url": null,
+                  "sort_order": 9999,
+                  "title_id": "B09ML1QV1S",
+                  "episodes": [
+                    {
+                      "key": "plugin-validator-alt-fake-episode",
+                      "data_timestamp": "2026-09-12T00:00:00+00:00",
+                      "update_at": null,
+                      "deleted_at": "2026-09-12T00:00:00+00:00",
+                      "status": null,
+                      "extra": {},
+                      "id": "plugin-validator-alt-fake-episode",
+                      "created_at": "2026-09-12T00:00:00+00:00",
+                      "modified_at": "2026-09-12T00:00:00+00:00",
+                      "url": "https://example.com/fake-episode",
+                      "name": "Plugin Validator Alt Fake Episode",
+                      "description": null,
+                      "image_url": null,
+                      "thumbnail_url": null,
+                      "air_date": null,
+                      "episode_number": 9999,
+                      "duration": 1,
+                      "sort_order": 9999,
+                      "tmdb_episode_validated_at": null,
+                      "tmdb_note": null,
+                      "is_linked": false,
+                      "watch_identifier": "Amazon plugin-validator-alt-fake-episode",
+                      "season_id": "plugin-validator-alt-fake-season"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "Purchase on Amazon": {
+          "titles": {
+            "B09ML1QV1S": {
+              "seasons": {
+                "B0H8N9812R": {
+                  "episodes": {
+                    "B0H8R1SD13": {
+                      "deleted_at": "2026-09-12T00:00:00+00:00",
+                      "modified_at": "2026-09-12T00:00:00+00:00"
+                    },
+                    "B0HB4FGFXS": {
+                      "deleted_at": "2026-09-12T00:00:00+00:00",
+                      "modified_at": "2026-09-12T00:00:00+00:00"
+                    },
+                    "B0H9C9BY6P": {
+                      "deleted_at": "2026-09-12T00:00:00+00:00",
+                      "modified_at": "2026-09-12T00:00:00+00:00"
+                    },
+                    "B0H96Q4ZRV": {
+                      "deleted_at": "2026-09-12T00:00:00+00:00",
+                      "modified_at": "2026-09-12T00:00:00+00:00"
+                    },
+                    "B0H8NFWCSH": {
+                      "deleted_at": "2026-09-12T00:00:00+00:00",
+                      "modified_at": "2026-09-12T00:00:00+00:00"
+                    },
+                    "B0H9PJ976Z": {
+                      "deleted_at": "2026-09-12T00:00:00+00:00",
+                      "modified_at": "2026-09-12T00:00:00+00:00"
+                    },
+                    "B0HBBLH8KG": {
+                      "deleted_at": "2026-09-12T00:00:00+00:00",
+                      "modified_at": "2026-09-12T00:00:00+00:00"
+                    },
+                    "B0H9SVN3TV": {
+                      "deleted_at": "2026-09-12T00:00:00+00:00",
+                      "modified_at": "2026-09-12T00:00:00+00:00"
+                    }
+                  }
+                },
+                "plugin-validator-alt-fake-season": {
+                  "key": "plugin-validator-alt-fake-season",
+                  "data_timestamp": "2026-09-12T00:00:00+00:00",
+                  "update_at": null,
+                  "deleted_at": "2026-09-12T00:00:00+00:00",
+                  "status": null,
+                  "extra": {},
+                  "id": "plugin-validator-alt-fake-season",
+                  "created_at": "2026-09-12T00:00:00+00:00",
+                  "modified_at": "2026-09-12T00:00:00+00:00",
+                  "name": "Plugin Validator Alt Fake Season",
+                  "url": "https://example.com/fake-season",
+                  "season_number": 9999,
+                  "image_url": null,
+                  "thumbnail_url": null,
+                  "sort_order": 9999,
+                  "title_id": "B09ML1QV1S",
+                  "episodes": [
+                    {
+                      "key": "plugin-validator-alt-fake-episode",
+                      "data_timestamp": "2026-09-12T00:00:00+00:00",
+                      "update_at": null,
+                      "deleted_at": "2026-09-12T00:00:00+00:00",
+                      "status": null,
+                      "extra": {},
+                      "id": "plugin-validator-alt-fake-episode",
+                      "created_at": "2026-09-12T00:00:00+00:00",
+                      "modified_at": "2026-09-12T00:00:00+00:00",
+                      "url": "https://example.com/fake-episode",
+                      "name": "Plugin Validator Alt Fake Episode",
+                      "description": null,
+                      "image_url": null,
+                      "thumbnail_url": null,
+                      "air_date": null,
+                      "episode_number": 9999,
+                      "duration": 1,
+                      "sort_order": 9999,
+                      "tmdb_episode_validated_at": null,
+                      "tmdb_note": null,
+                      "is_linked": false,
+                      "watch_identifier": "Amazon plugin-validator-alt-fake-episode",
+                      "season_id": "plugin-validator-alt-fake-season"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

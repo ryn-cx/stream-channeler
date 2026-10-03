@@ -1,0 +1,334 @@
+[
+  {
+    "plugin_key": "Hulu",
+    "key": "Season/f5d4278b-6acb-4a63-a7a2-eab91de2611e/1.json"
+  },
+  {
+    "plugin_key": "Hulu",
+    "key": "Season/f5d4278b-6acb-4a63-a7a2-eab91de2611e/10.json"
+  },
+  {
+    "plugin_key": "Hulu",
+    "key": "Season/f5d4278b-6acb-4a63-a7a2-eab91de2611e/11.json"
+  },
+  {
+    "plugin_key": "Hulu",
+    "key": "Season/f5d4278b-6acb-4a63-a7a2-eab91de2611e/2.json"
+  },
+  {
+    "plugin_key": "Hulu",
+    "key": "Season/f5d4278b-6acb-4a63-a7a2-eab91de2611e/3.json"
+  },
+  {
+    "plugin_key": "Hulu",
+    "key": "Season/f5d4278b-6acb-4a63-a7a2-eab91de2611e/4.json"
+  },
+  {
+    "plugin_key": "Hulu",
+    "key": "Season/f5d4278b-6acb-4a63-a7a2-eab91de2611e/5.json"
+  },
+  {
+    "plugin_key": "Hulu",
+    "key": "Season/f5d4278b-6acb-4a63-a7a2-eab91de2611e/6.json"
+  },
+  {
+    "plugin_key": "Hulu",
+    "key": "Season/f5d4278b-6acb-4a63-a7a2-eab91de2611e/7.json"
+  },
+  {
+    "plugin_key": "Hulu",
+    "key": "Season/f5d4278b-6acb-4a63-a7a2-eab91de2611e/8.json"
+  },
+  {
+    "plugin_key": "Hulu",
+    "key": "Season/f5d4278b-6acb-4a63-a7a2-eab91de2611e/9.json"
+  },
+  {
+    "plugin_key": "Hulu",
+    "key": "Series/f5d4278b-6acb-4a63-a7a2-eab91de2611e.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "Search/TV/One Piece/1999.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/5ad0df1cc3a36825ac00c087.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/5ad0f096c3a36825a300e78b.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/5ae1bc83c3a36876a700ce68.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/5cf6582b9251416aebbbbc38.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/5f1573a33852020036d50619.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/5f1573c81c6aa700377f841f.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/60671140ebb99d002ad9e426.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/608f58fe38469a0059bddbdf.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/62f98314175051007c594bdf.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/64eab6c2c613ce00c9f2756f.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/6510dd9d344a8e096e6d7987.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/656d41730859b400ff7609b7.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/656d4f0e88055100e3704732.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/66dc7c1de3fd0a602ae4127e.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/6717069a7dc7c6f27d51109d.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/684de5c5d1d0dbe543b0de56.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/69c8f0ec2105099db6528f2e.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/6a0ba6db72b02f968033a9d1.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/0.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/1.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/10.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/11.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/12.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/13.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/14.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/15.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/16.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/17.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/18.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/19.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/2.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/20.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/21.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/22.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/23.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/3.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/4.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/5.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/6.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/7.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/8.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/37854/9.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/0.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/1.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/10.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/11.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/12.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/13.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/14.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/15.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/16.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/17.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/18.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/19.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/2.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/20.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/21.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/22.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/23.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/3.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/4.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/5.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/6.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/7.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/8.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/37854/9.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Details/37854.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Episode Groups/37854.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Images/37854.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Watch Providers/37854.json"
+  }
+]

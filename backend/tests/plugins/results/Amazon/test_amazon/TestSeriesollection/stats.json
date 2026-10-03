@@ -1,0 +1,17 @@
+{
+  "deleted_episode_update_title": {
+    "execution_time": 15.58955050026998,
+    "peak_memory_bytes": 223810443,
+    "sql_statements": 1554
+  },
+  "deleted_season": {
+    "execution_time": 15.861641100142151,
+    "peak_memory_bytes": 219562054,
+    "sql_statements": 1563
+  },
+  "deleted_season_with_episode": {
+    "execution_time": 17.03379699960351,
+    "peak_memory_bytes": 236045089,
+    "sql_statements": 1558
+  }
+}

@@ -1,0 +1,267 @@
+// TODO: Validate
+import { useMutation } from "@tanstack/react-query"
+import {
+  ArrowRightLeft,
+  Blend,
+  CircleSlash,
+  Combine,
+  EyeOff,
+  Hash,
+  Link,
+  ListOrdered,
+  ListTree,
+  Sparkles,
+  Type,
+} from "lucide-react"
+
+import { EpisodesService } from "@/client"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import useCustomToast from "@/hooks/useCustomToast"
+import { handleError } from "@/utils"
+import { useTmdbChoiceSelection } from "./tmdbChoiceSelection"
+import type { TmdbMatchRow } from "./tmdbMatchColumns"
+import { useOpenEpisodeEditor } from "./tmdbMatchEditing"
+import {
+  SETTLE_TMDB_MATCH_MUTATION_KEY,
+  type SettleTmdbMatchVariables,
+  useRereadTmdbMatches,
+} from "./tmdbMatchesQuery"
+import { useTmdbMatchSelection } from "./tmdbMatchSelection"
+
+// TODO: Validate
+/**
+ * Take the suggestion one of the TMDB columns is offering.
+ *
+ * Beneath the suggestion rather than in the actions column, because the two
+ * suggestions are two different episodes and a button away from the episode it
+ * links to says nothing about which one it takes. They are the same episode
+ * often enough that most rows are settled either way, and where they differ it
+ * is the summary above the button that says which to trust.
+ */
+export function TmdbMatchConfirmButton({
+  episodeId,
+  match,
+  kind,
+  selectable,
+}: {
+  episodeId: string
+  match: NonNullable<TmdbMatchRow["season_episode_match"]>
+  selectable?: boolean
+  kind:
+    | "season_episode"
+    | "absolute"
+    | "episode_absolute"
+    | "description_embedding"
+    | "description_tfidf"
+    | "title_embedding"
+    | "title_tfidf"
+}) {
+  const { showSuccessToast, showErrorToast } = useCustomToast()
+  const reread = useRereadTmdbMatches()
+  const choices = useTmdbChoiceSelection()
+
+  const confirmMutation = useMutation({
+    mutationKey: SETTLE_TMDB_MATCH_MUTATION_KEY,
+    mutationFn: ({ episodeIds }: SettleTmdbMatchVariables) =>
+      EpisodesService.adminLinkEpisodeToTmdb({
+        episodeId: episodeIds[0],
+        tmdbEpisodeId: match.episode.id,
+      }),
+    onSuccess: () =>
+      showSuccessToast(
+        `Linked to ${match.episode.name ?? "the suggested episode"}`,
+      ),
+    onError: (error: unknown) =>
+      handleError.call(
+        showErrorToast,
+        error as Parameters<typeof handleError>[0],
+      ),
+    onSettled: reread,
+  })
+
+  const icons = {
+    season_episode: Hash,
+    absolute: ListOrdered,
+    episode_absolute: ArrowRightLeft,
+    description_embedding: Sparkles,
+    description_tfidf: Blend,
+    title_embedding: Type,
+    title_tfidf: Combine,
+  }
+  const labels = {
+    season_episode: "Number Match",
+    absolute: "Absolute Match",
+    episode_absolute: "Episode as Absolute Match",
+    description_embedding: "Description Match",
+    description_tfidf: "TF-IDF Description Match",
+    title_embedding: "Title Match",
+    title_tfidf: "TF-IDF Title Match",
+  }
+  const Icon = icons[kind]
+  const label = labels[kind]
+  const matchColor = `oklch(0.6 0.15 ${25 + match.similarity * 120})`
+
+  return (
+    <span className="mb-1 flex items-center gap-2">
+      {selectable && choices ? (
+        <Checkbox
+          checked={choices.isSelected(episodeId, match.episode.id)}
+          title="Add this episode to the ones Link Multiple links"
+          onClick={() => choices.toggle(episodeId, match.episode.id)}
+        />
+      ) : null}
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={confirmMutation.isPending}
+        title={`Link to ${match.episode.name ?? `the episode this ${label} offers`}`}
+        onClick={() => confirmMutation.mutate({ episodeIds: [episodeId] })}
+        style={{ color: matchColor, borderColor: matchColor }}
+      >
+        <Icon className="h-4 w-4" />
+        {label}
+      </Button>
+      <span
+        className="text-xs font-medium tabular-nums"
+        style={{ color: matchColor }}
+      >
+        {Math.round(match.similarity * 100)}%
+      </span>
+    </span>
+  )
+}
+
+// TODO: Validate
+/**
+ * Settle one row by going and choosing, or by saying there is nothing to choose.
+ *
+ * Choosing opens the same picker an episode's own page has, so the one
+ * place that knows how to offer TMDB episodes and link one is the place doing
+ * it here too. Taking one of the two suggestions is done from the column
+ * offering it instead, by `TmdbMatchConfirmButton`.
+ *
+ * A settled episode is no longer waiting on anybody, so the row leaves the table
+ * as soon as any way of settling it succeeds.
+ */
+export function TmdbMatchActions({ episode }: { episode: TmdbMatchRow }) {
+  const { showSuccessToast, showErrorToast } = useCustomToast()
+  const reread = useRereadTmdbMatches()
+  const openEditor = useOpenEpisodeEditor()
+  const selection = useTmdbMatchSelection()
+  const choices = useTmdbChoiceSelection()
+  const selectedChoiceIds = choices?.selectedFor(episode.episode.id) ?? []
+
+  const linkMultipleMutation = useMutation({
+    mutationKey: SETTLE_TMDB_MATCH_MUTATION_KEY,
+    mutationFn: ({ episodeIds }: SettleTmdbMatchVariables) =>
+      EpisodesService.adminLinkEpisodesToTmdb({
+        requestBody: selectedChoiceIds.map((tmdbEpisodeId) => ({
+          episode_id: episodeIds[0],
+          tmdb_episode_id: tmdbEpisodeId,
+        })),
+      }),
+    onSuccess: () => {
+      choices?.clear(episode.episode.id)
+      showSuccessToast(`Linked ${selectedChoiceIds.length} TMDB episodes`)
+    },
+    onError: (error: unknown) =>
+      handleError.call(
+        showErrorToast,
+        error as Parameters<typeof handleError>[0],
+      ),
+    onSettled: reread,
+  })
+
+  const ignoreMutation = useMutation({
+    mutationKey: SETTLE_TMDB_MATCH_MUTATION_KEY,
+    mutationFn: ({ episodeIds }: SettleTmdbMatchVariables) =>
+      EpisodesService.adminIgnoreEpisode({ episodeId: episodeIds[0] }),
+    onSuccess: () => showSuccessToast("Ignored"),
+    onError: (error: unknown) =>
+      handleError.call(
+        showErrorToast,
+        error as Parameters<typeof handleError>[0],
+      ),
+    onSettled: reread,
+  })
+
+  const absentMutation = useMutation({
+    mutationKey: SETTLE_TMDB_MATCH_MUTATION_KEY,
+    mutationFn: ({ episodeIds }: SettleTmdbMatchVariables) =>
+      EpisodesService.adminMarkEpisodeAbsentFromTmdb({
+        episodeId: episodeIds[0],
+      }),
+    onSuccess: () => showSuccessToast("Marked as not on TMDB"),
+    onError: (error: unknown) =>
+      handleError.call(
+        showErrorToast,
+        error as Parameters<typeof handleError>[0],
+      ),
+    onSettled: reread,
+  })
+
+  return (
+    <div className="flex flex-col items-stretch gap-1">
+      {selection ? (
+        <Checkbox
+          checked={selection.isSelected(episode.episode.id)}
+          title="Select this row, or hold shift to select up to it"
+          onClick={(event) =>
+            selection.toggle(episode.episode.id, event.shiftKey)
+          }
+        />
+      ) : null}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => openEditor?.(episode)}
+        title="Choose a TMDB episode"
+      >
+        <ListTree className="h-4 w-4" />
+        Pick
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={absentMutation.isPending}
+        title="Settle this as an episode TMDB has no record of"
+        onClick={() =>
+          absentMutation.mutate({ episodeIds: [episode.episode.id] })
+        }
+      >
+        <CircleSlash className="h-4 w-4" />
+        Not on TMDB
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={ignoreMutation.isPending}
+        title="Keep this episode out of every listing but the Custom Media tables"
+        onClick={() =>
+          ignoreMutation.mutate({ episodeIds: [episode.episode.id] })
+        }
+      >
+        <EyeOff className="h-4 w-4" />
+        Ignore
+      </Button>
+      {choices ? (
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={
+            selectedChoiceIds.length === 0 || linkMultipleMutation.isPending
+          }
+          title="Link every checked match to this episode"
+          onClick={() =>
+            linkMultipleMutation.mutate({ episodeIds: [episode.episode.id] })
+          }
+        >
+          <Link className="h-4 w-4" />
+          Link Multiple
+          {selectedChoiceIds.length ? ` (${selectedChoiceIds.length})` : ""}
+        </Button>
+      ) : null}
+    </div>
+  )
+}

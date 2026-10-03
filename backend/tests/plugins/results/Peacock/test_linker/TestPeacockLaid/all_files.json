@@ -1,0 +1,42 @@
+[
+  {
+    "plugin_key": "Peacock",
+    "key": "CollectionFile/movies/a-z.json"
+  },
+  {
+    "plugin_key": "Peacock",
+    "key": "CollectionFile/tv/tv-shows-a-z.json"
+  },
+  {
+    "plugin_key": "Peacock",
+    "key": "ShowFile/8568714747501460112.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "Search/TV/query=Laid, first_air_date_year=2024.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/246575/1.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/246575/1.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Details/246575.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Episode Groups/246575.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Keywords/246575.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Watch Providers/246575.json"
+  }
+]

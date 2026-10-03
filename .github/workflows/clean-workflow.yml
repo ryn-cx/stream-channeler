@@ -1,0 +1,20 @@
+# TODO: Validate
+name: Clean workflow runs
+
+on:
+  schedule:
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  clean:
+    name: Clean workflow runs
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Delete old workflow runs
+        uses: igorjs/gh-actions-clean-workflow@b910eb365da5e592d865ddd8a72d01cbd720b3b1

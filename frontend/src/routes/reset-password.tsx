@@ -1,3 +1,4 @@
+// TODO: Validate
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation } from "@tanstack/react-query"
 import {
@@ -60,12 +61,13 @@ export const Route = createFileRoute("/reset-password")({
   head: () => ({
     meta: [
       {
-        title: "Reset Password - FastAPI Template",
+        title: "Reset Password - Stream Channeler",
       },
     ],
   }),
 })
 
+// TODO: Validate
 function ResetPassword() {
   const { token } = Route.useSearch()
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -92,6 +94,7 @@ function ResetPassword() {
     onError: handleError.bind(showErrorToast),
   })
 
+  // TODO: Validate
   const onSubmit = (data: FormData) => {
     mutation.mutate({ new_password: data.new_password, token })
   }

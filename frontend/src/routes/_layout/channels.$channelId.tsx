@@ -1,0 +1,655 @@
+// TODO: Validate
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
+import { createFileRoute, Link, redirect } from "@tanstack/react-router"
+import type { VisibilityState } from "@tanstack/react-table"
+import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
+import {
+  Columns,
+  EllipsisVertical,
+  Filter,
+  Info,
+  LayoutGrid,
+  Loader2,
+  MessageSquare,
+  MonitorCog,
+  Store,
+  Table as TableIcon,
+} from "lucide-react"
+import { Suspense, useEffect, useMemo, useState } from "react"
+import { getChannelEpisodes } from "@/api/channels"
+import {
+  ChannelOrdersService,
+  ChannelsService,
+  type SortKeyInput,
+} from "@/client"
+import { EditOrderButton } from "@/components/ChannelCommon/EditOrderButton"
+import { HeroBillboard } from "@/components/ChannelCommon/HeroBillboard"
+import { LastWatchedBadge } from "@/components/ChannelCommon/LastWatchedBadge"
+import { useEpisodeActions } from "@/components/ChannelCommon/useEpisodeActions"
+import { ChannelCreatedBy } from "@/components/Channels/ChannelCreatedBy"
+import { ManageTitlesButton } from "@/components/Channels/ChannelDetail/AddUrlsToQueueButton"
+import { ChannelDescription } from "@/components/Channels/ChannelDetail/ChannelDescription"
+import { CommentsDialog } from "@/components/Channels/ChannelDetail/CommentsDialog"
+import {
+  columns,
+  type EpisodeWithDetails,
+} from "@/components/Channels/ChannelDetail/columns"
+import { EpisodeCards } from "@/components/Channels/ChannelDetail/EpisodeCards"
+import { EpisodeFilters } from "@/components/Channels/ChannelDetail/EpisodeFilters"
+import { SaveOrderButton } from "@/components/Channels/ChannelDetail/SaveOrderButton"
+import {
+  ChannelDetailsButton,
+  ChannelDetailsWinBox,
+} from "@/components/Channels/ChannelList/ChannelDetailsButton"
+import EditChannel from "@/components/Channels/ChannelList/EditChannel"
+import {
+  readChannelDetails,
+  writeChannelDetails,
+} from "@/components/Channels/ChannelList/episodePreviewCache"
+import { FavoriteChannel } from "@/components/Channels/ChannelList/FavoriteChannel"
+import { ChannelNumber } from "@/components/Channels/ChannelNumber"
+import { ColumnVisibilityButton } from "@/components/Common/ColumnVisibilityButton"
+import { DataTable } from "@/components/Common/DataTable"
+import { VariantTrigger } from "@/components/Common/VariantTrigger"
+import PendingChannelDetails from "@/components/Pending/PendingChannelDetails"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Skeleton } from "@/components/ui/skeleton"
+import useAuth from "@/hooks/useAuth"
+import { useMarkWatched } from "@/hooks/useMarkEpisodeWatched"
+import { usePersistedState } from "@/hooks/usePersistedState"
+import { parseOrderConfig } from "@/lib/channelOrder"
+import type { WatchFilters } from "@/lib/watchFilters"
+import { getSeedForThisLoad } from "@/randomSeed"
+
+// TODO: Validate
+function getChannelQueryOptions(channelId: string) {
+  const cached = readChannelDetails(channelId)
+  return {
+    queryFn: async () => {
+      const channel = await ChannelsService.getChannel({ channelId })
+      writeChannelDetails(channel)
+      return channel
+    },
+    queryKey: ["channels", channelId],
+    initialData: cached,
+    initialDataUpdatedAt: cached ? 0 : undefined,
+    refetchOnWindowFocus: false,
+  }
+}
+
+type ChannelSearchParams = {
+  hideWatched?: boolean
+  hideUnwatched?: boolean
+  hidePartiallyWatched?: boolean
+  sortBy?: Array<SortKeyInput>
+  orderPresetId?: string
+  maximumWatchDateAbsolute?: string
+  maximumWatchDateRelative?: number
+  totalTitlesCount?: number
+  startedTitlesCount?: number
+  newTitlesCount?: number
+  minimumAirDateAbsolute?: string
+  minimumAirDateRelative?: number
+  maximumAirDateAbsolute?: string
+  maximumAirDateRelative?: number
+  minimumDuration?: number
+  maximumDuration?: number
+  limit?: number
+  sourceIds?: string[]
+  sourceIdsIsBlacklist?: boolean
+  randomSeed?: number
+}
+
+const PAGE_CACHE_MILLISECONDS = 5 * 60 * 1000
+
+export const Route = createFileRoute("/_layout/channels/$channelId")({
+  component: ChannelDetail,
+  // TODO: Validate
+  beforeLoad: async ({ params, search }) => {
+    if (search.orderPresetId?.endsWith("/3d")) {
+      throw redirect({ to: "/video-store/channels/$channelId", params })
+    }
+    // Check if the user can access this channel
+    try {
+      await ChannelsService.getChannel({ channelId: params.channelId })
+    } catch (error: any) {
+      // If 401 or 403, user doesn't have access to this channel
+      if (error?.status === 401 || error?.status === 403) {
+        throw redirect({ to: "/" })
+      }
+      // Re-throw other errors (404, network errors, etc.)
+      throw error
+    }
+  },
+  // TODO: Validate
+  validateSearch: (search: Record<string, unknown>): ChannelSearchParams => {
+    return {
+      hideWatched: search.hideWatched as boolean | undefined,
+      hideUnwatched: search.hideUnwatched as boolean | undefined,
+      hidePartiallyWatched: search.hidePartiallyWatched as boolean | undefined,
+      sortBy: search.sortBy as ChannelSearchParams["sortBy"],
+      orderPresetId: search.orderPresetId as string | undefined,
+      maximumWatchDateAbsolute: search.maximumWatchDateAbsolute as
+        | string
+        | undefined,
+      maximumWatchDateRelative: search.maximumWatchDateRelative as
+        | number
+        | undefined,
+      totalTitlesCount: search.totalTitlesCount as number | undefined,
+      startedTitlesCount: search.startedTitlesCount as number | undefined,
+      newTitlesCount: search.newTitlesCount as number | undefined,
+      minimumAirDateAbsolute: search.minimumAirDateAbsolute as
+        | string
+        | undefined,
+      minimumAirDateRelative: search.minimumAirDateRelative as
+        | number
+        | undefined,
+      maximumAirDateAbsolute: search.maximumAirDateAbsolute as
+        | string
+        | undefined,
+      maximumAirDateRelative: search.maximumAirDateRelative as
+        | number
+        | undefined,
+      minimumDuration: search.minimumDuration as number | undefined,
+      maximumDuration: search.maximumDuration as number | undefined,
+      limit: search.limit as number | undefined,
+      sourceIds: search.sourceIds as string[] | undefined,
+      sourceIdsIsBlacklist: search.sourceIdsIsBlacklist as boolean | undefined,
+      randomSeed: search.randomSeed as number | undefined,
+    }
+  },
+  head: () => ({
+    meta: [
+      {
+        title: "Channel - Stream Channeler",
+      },
+    ],
+  }),
+})
+
+// TODO: Validate
+function getEpisodesQueryOptions(
+  channelId: string,
+  searchParams: ChannelSearchParams,
+) {
+  return {
+    queryFn: async () =>
+      await getChannelEpisodes({
+        channelId,
+        ...searchParams,
+      }),
+    queryKey: ["episodes", channelId, searchParams],
+    refetchOnWindowFocus: false,
+    staleTime: PAGE_CACHE_MILLISECONDS,
+    placeholderData: (previousData: any) => previousData,
+  }
+}
+
+type ViewMode = "table" | "cards"
+
+// TODO: Validate
+/** Wraps the billboard so the episode action hook only runs when there is a
+ * hero episode to act on. */
+function HeroWithActions({
+  episode,
+  channelId,
+  watchFilters,
+  ...heroProps
+}: {
+  episode: EpisodeWithDetails
+  channelId: string
+  watchFilters?: WatchFilters
+  onPlay: () => void
+  onSkip: () => void
+  onBack: () => void
+  hasNext: boolean
+  hasPrev: boolean
+}) {
+  const { menuItems, dialogs } = useEpisodeActions({
+    episode,
+    channelId,
+    watchFilters,
+  })
+
+  return (
+    <>
+      <HeroBillboard
+        episode={episode}
+        menuItems={menuItems}
+        topLeftBadge={
+          episode.watch_date ? <LastWatchedBadge episode={episode} /> : null
+        }
+        {...heroProps}
+      />
+      {dialogs}
+    </>
+  )
+}
+
+// TODO: Validate
+function ChannelDetailContent({ channelId }: { channelId: string }) {
+  const { user } = useAuth()
+  const channelOptions = useMemo(
+    () => getChannelQueryOptions(channelId),
+    [channelId],
+  )
+  const { data: channel } = useSuspenseQuery(channelOptions)
+
+  useEffect(() => {
+    document.title = `${channel.name} - Stream Channeler`
+  }, [channel.name])
+
+  const search = Route.useSearch()
+  const routeFullPath = Route.fullPath
+  const fallbackRandomSeed = useMemo(
+    () => getSeedForThisLoad(channelId),
+    [channelId],
+  )
+  const episodesSearch: ChannelSearchParams = {
+    ...search,
+    randomSeed: search.randomSeed ?? fallbackRandomSeed,
+  }
+  const {
+    data: episodesData,
+    isPlaceholderData,
+    isFetching: isFetchingEpisodes,
+  } = useQuery(getEpisodesQueryOptions(channelId, episodesSearch))
+  const isRefreshingEpisodes = isFetchingEpisodes && episodesData !== undefined
+  const episodesSearchKey = JSON.stringify(episodesSearch)
+
+  // A referenced preset holds the options the backend actually applies, and the URL
+  // only has its id, so the preset has to be read back for the dialog to show it.
+  const { data: orderPreset } = useQuery({
+    queryKey: ["channel-orders", search.orderPresetId],
+    queryFn: () =>
+      ChannelOrdersService.getChannelOrder({
+        channelOrderId: search.orderPresetId as string,
+      }),
+    enabled: search.orderPresetId !== undefined,
+    refetchOnWindowFocus: false,
+  })
+
+  // `_resolve_order_preset` overrides the channel's options with every option the
+  // preset stored, so the preset wins here the same way it does on the backend.
+  const filterParams: ChannelSearchParams = orderPreset
+    ? {
+        ...search,
+        ...(parseOrderConfig(
+          orderPreset.config,
+        ) as Partial<ChannelSearchParams>),
+      }
+    : search
+
+  const watchedMutation = useMarkWatched(channelId, filterParams)
+
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+    id: false,
+    plugin: false,
+  })
+  const [viewMode, setViewMode] = usePersistedState<ViewMode>(
+    "channel-detail-view",
+    "cards",
+  )
+  const [editOrderFlag, setEditOrderFlag] = usePersistedState<"on" | "off">(
+    `channel-detail-edit-order:${channelId}`,
+    "off",
+  )
+  const editOrder = editOrderFlag === "on"
+  // TODO: Validate
+  const setEditOrder = (next: boolean) => setEditOrderFlag(next ? "on" : "off")
+
+  const episodesWithDetails: EpisodeWithDetails[] = (
+    episodesData?.episodes ?? []
+  ).map((episode) => {
+    const season = episodesData!.seasons[episode.season_id]
+    const title = episodesData!.titles[season.title_id]
+    const source =
+      episodesData!.sources[episode.source_id ?? title.source_id] ??
+      episodesData!.sources[title.source_id]
+    const plugin = episodesData!.plugins[source.plugin_id]
+    return { ...episode, season, title, source, plugin }
+  })
+
+  // From: https://tanstack.com/table/v8/docs/framework/react/examples/column-visibility
+  const table = useReactTable({
+    data: episodesWithDetails,
+    columns,
+    state: {
+      columnVisibility,
+    },
+    onColumnVisibilityChange: setColumnVisibility,
+    getCoreRowModel: getCoreRowModel(),
+  })
+
+  const isOwner = user?.id === channel.user_id
+  const canEdit = isOwner || Boolean(user?.is_superuser)
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const [columnsOpen, setColumnsOpen] = useState(false)
+  const [manageTitlesOpen, setManageTitlesOpen] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [commentsOpen, setCommentsOpen] = useState(false)
+  const showHero = viewMode === "cards" && episodesWithDetails.length > 0
+  const [heroIndex, setHeroIndex] = useState(0)
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: start on the first episode of whatever was asked for
+  useEffect(() => {
+    setHeroIndex(0)
+  }, [episodesSearchKey])
+
+  const heroEpisode = episodesWithDetails[heroIndex] ?? episodesWithDetails[0]
+  const hasNextHero = heroIndex < episodesWithDetails.length - 1
+  const hasPrevHero = heroIndex > 0
+
+  return (
+    <div className="flex flex-col">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-2 px-[4%] py-4">
+        {user && <FavoriteChannel channelId={channel.id} />}
+
+        {isOwner && (
+          <ChannelNumber
+            channelNumber={channel.channel_number}
+            className="text-2xl font-bold tracking-tight"
+          />
+        )}
+
+        <div className="mr-2">
+          <h1 className="text-2xl font-bold tracking-tight">
+            {channel.name}
+            {isRefreshingEpisodes && (
+              <Loader2
+                className="ml-2 inline size-5 animate-spin align-text-bottom text-muted-foreground"
+                aria-label="Checking for newer episodes"
+              />
+            )}
+          </h1>
+          <ChannelCreatedBy channel={channel} className="text-xs" />
+        </div>
+
+        <ChannelDescription channel={channel} />
+
+        {canEdit && <EditChannel channel={channel} />}
+
+        {/* Smaller screens: Use a hamburger menu */}
+        <div className="xl:hidden">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <EllipsisVertical className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              {viewMode === "cards" ? (
+                <DropdownMenuItem onClick={() => setViewMode("table")}>
+                  <TableIcon className="mr-2 size-4" />
+                  Table View
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={() => setViewMode("cards")}>
+                  <LayoutGrid className="mr-2 size-4" />
+                  Card View
+                </DropdownMenuItem>
+              )}
+
+              {viewMode === "table" && (
+                <>
+                  <DropdownMenuSeparator />
+                  <VariantTrigger
+                    variant="menu"
+                    icon={Columns}
+                    label="Columns"
+                    onSelect={() => setColumnsOpen(true)}
+                  />
+                </>
+              )}
+
+              <DropdownMenuSeparator />
+              {canEdit ? (
+                <VariantTrigger
+                  variant="menu"
+                  icon={MonitorCog}
+                  label="Manage titles"
+                  onSelect={() => setManageTitlesOpen(true)}
+                />
+              ) : (
+                <VariantTrigger
+                  variant="menu"
+                  icon={Info}
+                  label="Details"
+                  onSelect={() => setDetailsOpen(true)}
+                />
+              )}
+              <DropdownMenuSeparator />
+
+              <VariantTrigger
+                variant="menu"
+                icon={Filter}
+                label="Filters"
+                onSelect={() => setFiltersOpen(true)}
+              />
+
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link
+                  to="/video-store/channels/$channelId"
+                  params={{ channelId }}
+                >
+                  <Store className="mr-2 size-4" />
+                  Video Store
+                </Link>
+              </DropdownMenuItem>
+
+              {viewMode === "cards" && (
+                <EditOrderButton
+                  editOrder={editOrder}
+                  onToggle={() => setEditOrder(!editOrder)}
+                  variant="menu"
+                />
+              )}
+
+              {canEdit && viewMode === "cards" && editOrder && (
+                <SaveOrderButton
+                  channelId={channelId}
+                  episodes={episodesData?.episodes ?? []}
+                  variant="menu"
+                />
+              )}
+
+              <DropdownMenuSeparator />
+              <VariantTrigger
+                variant="menu"
+                icon={MessageSquare}
+                label="Comments"
+                onSelect={() => setCommentsOpen(true)}
+              />
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        <ChannelDetailsWinBox
+          channel={channel}
+          open={detailsOpen}
+          onClose={() => setDetailsOpen(false)}
+        />
+
+        <ColumnVisibilityButton
+          table={table}
+          open={columnsOpen}
+          onOpenChange={setColumnsOpen}
+          hideTrigger
+        />
+
+        <ManageTitlesButton
+          channelId={channelId}
+          channelName={channel?.name}
+          combinedChannels={{ isLoggedIn: !!user }}
+          open={manageTitlesOpen}
+          onOpenChange={setManageTitlesOpen}
+          hideTrigger
+        />
+
+        <EpisodeFilters
+          key={orderPreset?.id ?? "channel"}
+          filterParams={filterParams}
+          routeFullPath={routeFullPath}
+          channelId={channelId}
+          randomSeed={filterParams.randomSeed}
+          canSaveDefault={canEdit}
+          open={filtersOpen}
+          onOpenChange={setFiltersOpen}
+          hideTrigger
+        />
+
+        <CommentsDialog
+          channelId={channelId}
+          channelName={channel?.name}
+          open={commentsOpen}
+          onOpenChange={setCommentsOpen}
+          hideTrigger
+        />
+
+        {/* Larger screens: Title all buttons */}
+        <div className="hidden xl:flex flex-wrap gap-2">
+          {viewMode === "cards" ? (
+            <Button
+              variant="outline"
+              onClick={() => setViewMode("table")}
+              title="Switch to table view"
+            >
+              <TableIcon />
+              Table
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={() => setViewMode("cards")}
+              title="Switch to card view"
+            >
+              <LayoutGrid />
+              Cards
+            </Button>
+          )}
+          {canEdit ? (
+            <ManageTitlesButton
+              channelId={channelId}
+              channelName={channel?.name}
+              combinedChannels={{ isLoggedIn: !!user }}
+            />
+          ) : (
+            <ChannelDetailsButton channel={channel} variant="button" />
+          )}
+          <EpisodeFilters
+            key={orderPreset?.id ?? "channel"}
+            filterParams={filterParams}
+            routeFullPath={routeFullPath}
+            channelId={channelId}
+            randomSeed={filterParams.randomSeed}
+            canSaveDefault={canEdit}
+          />
+          {viewMode === "cards" && (
+            <EditOrderButton
+              editOrder={editOrder}
+              onToggle={() => setEditOrder(!editOrder)}
+            />
+          )}
+          {canEdit && viewMode === "cards" && editOrder && (
+            <SaveOrderButton
+              channelId={channelId}
+              episodes={episodesData?.episodes ?? []}
+            />
+          )}
+          {viewMode === "table" && <ColumnVisibilityButton table={table} />}
+          <CommentsDialog channelId={channelId} channelName={channel?.name} />
+          <Button variant="outline" asChild title="Walk this channel's shelves">
+            <Link to="/video-store/channels/$channelId" params={{ channelId }}>
+              <Store />
+              Video Store
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      {/* Hero billboard - inset to line up with the card grid below it */}
+      {showHero && heroEpisode && (
+        <div className="px-[4%] pb-4">
+          <div className="overflow-hidden rounded-lg">
+            <HeroWithActions
+              episode={heroEpisode}
+              channelId={channelId}
+              watchFilters={filterParams}
+              onPlay={() => {
+                watchedMutation.mutate(heroEpisode.id)
+                if (heroEpisode.url) {
+                  window.open(heroEpisode.url, "_blank", "noopener,noreferrer")
+                }
+                if (hasNextHero) setHeroIndex(heroIndex + 1)
+              }}
+              onSkip={() => {
+                if (hasNextHero) setHeroIndex(heroIndex + 1)
+              }}
+              onBack={() => {
+                if (hasPrevHero) setHeroIndex(heroIndex - 1)
+              }}
+              hasNext={hasNextHero}
+              hasPrev={hasPrevHero}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Content */}
+      <div
+        className={`px-[4%] transition-opacity duration-200 ${isPlaceholderData ? "opacity-60" : ""}`}
+      >
+        {!episodesData ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="flex flex-col gap-2">
+                <Skeleton className="w-full aspect-video rounded-sm" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            ))}
+          </div>
+        ) : viewMode === "table" ? (
+          <DataTable
+            columns={columns}
+            data={episodesWithDetails}
+            columnVisibility={columnVisibility}
+            onColumnVisibilityChange={setColumnVisibility}
+          />
+        ) : (
+          <EpisodeCards
+            episodes={episodesWithDetails}
+            channelId={channelId}
+            watchFilters={filterParams}
+            editOrder={editOrder}
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+// TODO: Validate
+function ChannelDetail() {
+  const { channelId } = Route.useParams()
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scroll to top when channel changes
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [channelId])
+
+  return (
+    <Suspense fallback={<PendingChannelDetails />}>
+      <ChannelDetailContent channelId={channelId} />
+    </Suspense>
+  )
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "plugin_key": "Adult Swim",
+    "key": "TitlePage/ballmastrz-9009.json"
+  },
+  {
+    "plugin_key": "Adult Swim",
+    "key": "TitlesPage/Titles.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "Search/TV/Ballmastrz: 9009.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/78672/1.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/78672/2.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/78672/1.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/78672/2.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Details/78672.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Episode Groups/78672.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Watch Providers/78672.json"
+  }
+]

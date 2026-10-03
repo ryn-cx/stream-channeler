@@ -1,13 +1,5 @@
-import { EllipsisVertical } from "lucide-react"
-import { useState } from "react"
-
+// TODO: Validate
 import type { UserPublic } from "@/client"
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import useAuth from "@/hooks/useAuth"
 import DeleteUser from "./DeleteUser"
 import EditUser from "./EditUser"
@@ -16,8 +8,8 @@ interface UserActionsMenuProps {
   user: UserPublic
 }
 
+// TODO: Validate
 export const UserActionsMenu = ({ user }: UserActionsMenuProps) => {
-  const [open, setOpen] = useState(false)
   const { user: currentUser } = useAuth()
 
   if (user.id === currentUser?.id) {
@@ -25,16 +17,9 @@ export const UserActionsMenu = ({ user }: UserActionsMenuProps) => {
   }
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <EllipsisVertical />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <EditUser user={user} onSuccess={() => setOpen(false)} />
-        <DeleteUser id={user.id} onSuccess={() => setOpen(false)} />
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="flex items-center justify-end gap-1">
+      <EditUser user={user} />
+      <DeleteUser id={user.id} />
+    </div>
   )
 }

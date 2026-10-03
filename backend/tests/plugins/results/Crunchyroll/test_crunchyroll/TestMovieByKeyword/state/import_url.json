@@ -1,0 +1,577 @@
+{
+  "plugin": [
+    {
+      "key": "Crunchyroll",
+      "data_timestamp": null,
+      "update_at": null,
+      "deleted_at": null,
+      "status": "Incomplete",
+      "extra": {},
+      "id": "Crunchyroll",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "version": null,
+      "hidden": false,
+      "sources": [
+        {
+          "key": "Crunchyroll",
+          "data_timestamp": "2026-01-01T00:00:00+00:00",
+          "update_at": "2026-01-02T00:00:00+00:00",
+          "deleted_at": null,
+          "status": null,
+          "extra": {},
+          "id": "Crunchyroll",
+          "created_at": "2026-01-01T00:00:00+00:00",
+          "modified_at": "2026-01-01T00:00:00+00:00",
+          "link_to_tmdb": true,
+          "favicon_url": "https://crunchyroll.com/build/assets/img/favicons/favicon-v2-96x96.png",
+          "image_url": null,
+          "plugin_id": "Crunchyroll",
+          "titles": [
+            {
+              "key": "GKEH2G7GG",
+              "data_timestamp": "2026-01-01T00:00:00+00:00",
+              "update_at": "2026-05-06T00:00:00+00:00",
+              "deleted_at": null,
+              "status": null,
+              "extra": {},
+              "id": "GKEH2G7GG",
+              "created_at": "2026-01-01T00:00:00+00:00",
+              "modified_at": "2026-01-01T00:00:00+00:00",
+              "name": "Hells",
+              "media_type": "Series",
+              "description": "Rinne Amagane's new school is really something else. The other girls are ghoulish, the teachers are terrifying, and the headmaster is Hellvis, a demon in tight pants with a craving for rock 'n' roll. There's just one problem: Rinne's not actually supposed to be here! Sanzu River Academy is nestled in the heart of Destinyland, and while it might sound like fun, it's literally Hell. And to get to Hell, Rinne had to have died--except, she never did.",
+              "url": "https://crunchyroll.com/series/GKEH2G7GG",
+              "image_url": "https://www.crunchyroll.com/imgsrv/display/thumbnail/1920x1080/catalog/crunchyroll/acbcba4c2ebacd763e511acc5c49dd39.jpg",
+              "thumbnail_url": "https://www.crunchyroll.com/imgsrv/display/thumbnail/600x338/catalog/crunchyroll/acbcba4c2ebacd763e511acc5c49dd39.jpg",
+              "poster_url": "https://www.crunchyroll.com/imgsrv/display/thumbnail/1560x2340/catalog/crunchyroll/060b56ca155dbb8f4c74c4cf74ac8876.jpg",
+              "poster_thumbnail_url": "https://www.crunchyroll.com/imgsrv/display/thumbnail/480x720/catalog/crunchyroll/060b56ca155dbb8f4c74c4cf74ac8876.jpg",
+              "year": 2021,
+              "score": null,
+              "popularity": null,
+              "original_language": null,
+              "tmdb_title_validated_at": null,
+              "link_status": null,
+              "is_linked": false,
+              "source_id": "Crunchyroll",
+              "seasons": [
+                {
+                  "key": "GY19CP82D",
+                  "data_timestamp": "2026-01-01T00:00:00+00:00",
+                  "update_at": "2026-05-10T00:00:00+00:00",
+                  "deleted_at": null,
+                  "status": null,
+                  "extra": {},
+                  "id": "GY19CP82D",
+                  "created_at": "2026-01-01T00:00:00+00:00",
+                  "modified_at": "2026-01-01T00:00:00+00:00",
+                  "name": "Hells",
+                  "url": null,
+                  "season_number": 1,
+                  "image_url": null,
+                  "thumbnail_url": null,
+                  "sort_order": 0,
+                  "title_id": "GKEH2G7GG",
+                  "episodes": [
+                    {
+                      "key": "GN7UDZ4PW",
+                      "data_timestamp": "2026-01-01T00:00:00+00:00",
+                      "update_at": null,
+                      "deleted_at": null,
+                      "status": null,
+                      "extra": {},
+                      "id": "GN7UDZ4PW",
+                      "created_at": "2026-01-01T00:00:00+00:00",
+                      "modified_at": "2026-01-01T00:00:00+00:00",
+                      "url": "https://crunchyroll.com/watch/GN7UDZ4PW",
+                      "name": "Hells (Dub)",
+                      "description": "Rinne Amagane's new school is really something else. The other girls are ghoulish, the teachers are terrifying, and the headmaster is Hellvis, a demon in tight pants with a craving for rock 'n' roll. There's just one problem: Rinne's not actually supposed to be here! Sanzu River Academy is nestled in the heart of Destinyland, and while it might sound like fun, it's literally Hell. And to get to Hell, Rinne had to have died--except, she never did. When Rinne meets others like her, living people in a world of the dead, she learns that Hellvis is more than just a hip-swaying schoolmaster, he's also the reason Hell has turned upside down! And that's just the start of the story, which stretches back all the way to the very first humans on Earth. Don't worry, though. So long as you have spirit, anything is possible!",
+                      "image_url": "https://www.crunchyroll.com/imgsrv/display/thumbnail/1920x1080/catalog/crunchyroll/95caac935936ca1bda78f1241f81a57e.jpg",
+                      "thumbnail_url": "https://www.crunchyroll.com/imgsrv/display/thumbnail/600x338/catalog/crunchyroll/95caac935936ca1bda78f1241f81a57e.jpg",
+                      "air_date": "2021-02-23T17:00:00+00:00",
+                      "episode_number": null,
+                      "duration": 7071,
+                      "sort_order": 0,
+                      "tmdb_episode_validated_at": null,
+                      "tmdb_note": null,
+                      "is_linked": false,
+                      "watch_identifier": "Crunchyroll GN7UDZ4PW",
+                      "season_id": "GY19CP82D"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "Custom Media",
+      "data_timestamp": null,
+      "update_at": null,
+      "deleted_at": null,
+      "status": null,
+      "extra": {},
+      "id": "Custom Media",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "version": null,
+      "hidden": false,
+      "sources": []
+    }
+  ],
+  "watchprovider": [],
+  "channel": [
+    {
+      "id": "Comedy on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "name": "Comedy on Crunchyroll",
+      "channel_number": null,
+      "visibility": "public",
+      "default_order": null,
+      "description": "All Comedy titles on Crunchyroll.\n\nThis is an automatically generated channel based on the titles that have been imported by all of Stream Channeler's users.",
+      "anonymous": false,
+      "score": -1,
+      "user_id": "Crunchyroll",
+      "update_at": "2026-01-02T00:00:00+00:00"
+    },
+    {
+      "id": "Fantasy on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "name": "Fantasy on Crunchyroll",
+      "channel_number": null,
+      "visibility": "public",
+      "default_order": null,
+      "description": "All Fantasy titles on Crunchyroll.\n\nThis is an automatically generated channel based on the titles that have been imported by all of Stream Channeler's users.",
+      "anonymous": false,
+      "score": -1,
+      "user_id": "Crunchyroll",
+      "update_at": "2026-01-02T00:00:00+00:00"
+    },
+    {
+      "id": "Supernatural on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "name": "Supernatural on Crunchyroll",
+      "channel_number": null,
+      "visibility": "public",
+      "default_order": null,
+      "description": "All Supernatural titles on Crunchyroll.\n\nThis is an automatically generated channel based on the titles that have been imported by all of Stream Channeler's users.",
+      "anonymous": false,
+      "score": -1,
+      "user_id": "Crunchyroll",
+      "update_at": "2026-01-02T00:00:00+00:00"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "name": "All Titles on Crunchyroll",
+      "channel_number": null,
+      "visibility": "public",
+      "default_order": null,
+      "description": "All Titles titles on Crunchyroll.\n\nThis is an automatically generated channel based on the titles that have been imported by all of Stream Channeler's users.",
+      "anonymous": false,
+      "score": -1,
+      "user_id": "Crunchyroll",
+      "update_at": "2026-01-02T00:00:00+00:00"
+    }
+  ],
+  "channelorder": [],
+  "usersourcepreference": [],
+  "channelcombinedchannel": [],
+  "channelfavorite": [],
+  "channelorderfavorite": [],
+  "channelqueue": [
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "url": "https://crunchyroll.com/series/GKEH2G7GG",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "url": "https://crunchyroll.com/series/GZJH3D8Z1",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000001+00:00",
+      "modified_at": "2026-01-01T00:00:00.000001+00:00",
+      "url": "https://crunchyroll.com/series/GYGGXP7EY",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000002+00:00",
+      "modified_at": "2026-01-01T00:00:00.000002+00:00",
+      "url": "https://crunchyroll.com/series/G6NQ3DZX6",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000003+00:00",
+      "modified_at": "2026-01-01T00:00:00.000003+00:00",
+      "url": "https://crunchyroll.com/series/G6ZXZXZ4R",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000004+00:00",
+      "modified_at": "2026-01-01T00:00:00.000004+00:00",
+      "url": "https://crunchyroll.com/series/GQWH0MD5X",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000005+00:00",
+      "modified_at": "2026-01-01T00:00:00.000005+00:00",
+      "url": "https://crunchyroll.com/series/G63KKJVW6",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000006+00:00",
+      "modified_at": "2026-01-01T00:00:00.000006+00:00",
+      "url": "https://crunchyroll.com/series/G8DHV78ZM",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000007+00:00",
+      "modified_at": "2026-01-01T00:00:00.000007+00:00",
+      "url": "https://crunchyroll.com/series/GMEHME8J9",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000008+00:00",
+      "modified_at": "2026-01-01T00:00:00.000008+00:00",
+      "url": "https://crunchyroll.com/series/GMEHMENP7",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000009+00:00",
+      "modified_at": "2026-01-01T00:00:00.000009+00:00",
+      "url": "https://crunchyroll.com/series/G3KHEV09J",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000010+00:00",
+      "modified_at": "2026-01-01T00:00:00.000010+00:00",
+      "url": "https://crunchyroll.com/series/G69XGJXJR",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000011+00:00",
+      "modified_at": "2026-01-01T00:00:00.000011+00:00",
+      "url": "https://crunchyroll.com/series/G24H1NWKE",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000012+00:00",
+      "modified_at": "2026-01-01T00:00:00.000012+00:00",
+      "url": "https://crunchyroll.com/series/G6QWGNN76",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000013+00:00",
+      "modified_at": "2026-01-01T00:00:00.000013+00:00",
+      "url": "https://crunchyroll.com/series/GRK5VPPW6",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000014+00:00",
+      "modified_at": "2026-01-01T00:00:00.000014+00:00",
+      "url": "https://crunchyroll.com/series/GMEHME7VW",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000015+00:00",
+      "modified_at": "2026-01-01T00:00:00.000015+00:00",
+      "url": "https://crunchyroll.com/series/GG5H5XQG5",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000016+00:00",
+      "modified_at": "2026-01-01T00:00:00.000016+00:00",
+      "url": "https://crunchyroll.com/series/GYZXDQQ36",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000017+00:00",
+      "modified_at": "2026-01-01T00:00:00.000017+00:00",
+      "url": "https://crunchyroll.com/series/G65P457K6",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000018+00:00",
+      "modified_at": "2026-01-01T00:00:00.000018+00:00",
+      "url": "https://crunchyroll.com/series/GXJHM3GX8",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000019+00:00",
+      "modified_at": "2026-01-01T00:00:00.000019+00:00",
+      "url": "https://crunchyroll.com/series/GR3KV03WR",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000020+00:00",
+      "modified_at": "2026-01-01T00:00:00.000020+00:00",
+      "url": "https://crunchyroll.com/series/GYW4EJZ26",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000021+00:00",
+      "modified_at": "2026-01-01T00:00:00.000021+00:00",
+      "url": "https://crunchyroll.com/series/GP5HJ84P7",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000022+00:00",
+      "modified_at": "2026-01-01T00:00:00.000022+00:00",
+      "url": "https://crunchyroll.com/series/GRE51QMX6",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000023+00:00",
+      "modified_at": "2026-01-01T00:00:00.000023+00:00",
+      "url": "https://crunchyroll.com/series/G3KHEV04J",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000024+00:00",
+      "modified_at": "2026-01-01T00:00:00.000024+00:00",
+      "url": "https://crunchyroll.com/series/GYX0DW78R",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000025+00:00",
+      "modified_at": "2026-01-01T00:00:00.000025+00:00",
+      "url": "https://crunchyroll.com/series/GMEHME849",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000026+00:00",
+      "modified_at": "2026-01-01T00:00:00.000026+00:00",
+      "url": "https://crunchyroll.com/series/GY75279J6",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000027+00:00",
+      "modified_at": "2026-01-01T00:00:00.000027+00:00",
+      "url": "https://crunchyroll.com/series/GMEHME72W",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000028+00:00",
+      "modified_at": "2026-01-01T00:00:00.000028+00:00",
+      "url": "https://crunchyroll.com/series/GVDHX859Q",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "All Titles on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00.000029+00:00",
+      "modified_at": "2026-01-01T00:00:00.000029+00:00",
+      "url": "https://crunchyroll.com/series/GY5VZ21KY",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "All Titles on Crunchyroll"
+    },
+    {
+      "id": "Comedy on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "url": "https://crunchyroll.com/series/GKEH2G7GG",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "Comedy on Crunchyroll"
+    },
+    {
+      "id": "Fantasy on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "url": "https://crunchyroll.com/series/GKEH2G7GG",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "Fantasy on Crunchyroll"
+    },
+    {
+      "id": "Supernatural on Crunchyroll",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "url": "https://crunchyroll.com/series/GKEH2G7GG",
+      "status": "Pending",
+      "note": null,
+      "import_at": null,
+      "channel_id": "Supernatural on Crunchyroll"
+    }
+  ],
+  "comment": [],
+  "channeltitle": [],
+  "commentnotification": [],
+  "titlegenre": [
+    {
+      "id": "Comedy",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "title_id": "GKEH2G7GG",
+      "name": "Comedy"
+    },
+    {
+      "id": "Fantasy",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "title_id": "GKEH2G7GG",
+      "name": "Fantasy"
+    },
+    {
+      "id": "Supernatural",
+      "created_at": "2026-01-01T00:00:00+00:00",
+      "modified_at": "2026-01-01T00:00:00+00:00",
+      "title_id": "GKEH2G7GG",
+      "name": "Supernatural"
+    }
+  ],
+  "titleissuereport": [],
+  "titlespokenlanguage": [],
+  "titletmdbtitle": [],
+  "titlewatchprovider": [],
+  "unmatchedtitle": [],
+  "channelseasonfilter": [],
+  "channelsourcefilter": [],
+  "seasonissuereport": [],
+  "channelepisodefilter": [],
+  "channelepisodesourcefilter": [],
+  "channelsavedepisodeorder": [],
+  "episodeissuereport": [],
+  "episodetmdbepisode": [],
+  "episodetmdbtitle": [
+    {
+      "episode_id": "GN7UDZ4PW",
+      "tmdb_title_id": "GKEH2G7GG"
+    }
+  ],
+  "userepisodeurl": [],
+  "watch": []
+}

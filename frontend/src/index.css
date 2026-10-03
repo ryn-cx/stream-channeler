@@ -1,3 +1,4 @@
+/* TODO: Validate */
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -42,6 +43,7 @@
 }
 
 :root {
+  color-scheme: light;
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -77,6 +79,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -121,4 +124,36 @@
   [role="button"] {
     cursor: pointer;
   }
+}
+
+/* TODO: Validate (Below this comment) */
+/* Hide scrollbar for horizontal scroll rows */
+.scrollbar-hide {
+  scrollbar-width: none;
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.winbox .wb-body {
+  contain: layout style;
+  will-change: auto;
+  background: var(--background);
+}
+
+.winbox-auto-height [data-slot="dialog-body"] {
+  flex: none;
+  max-height: none;
+  overflow: visible;
+}
+
+.winbox {
+  box-shadow:
+    0 0 0 2px var(--primary),
+    0 14px 28px rgb(0 0 0 / 0.35),
+    0 10px 10px rgb(0 0 0 / 0.3);
 }

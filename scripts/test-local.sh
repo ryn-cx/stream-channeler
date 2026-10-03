@@ -1,4 +1,5 @@
 #! /usr/bin/env bash
+# TODO: Validate
 
 # Exit in case of error
 set -e

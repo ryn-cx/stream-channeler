@@ -1,0 +1,130 @@
+[
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/0G9UKNOYX3HCEAQEZ4UGEQJ02K.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0BX2F8DJS.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CGQ7DCNS.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CH1MM3FF.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CH7JXFDM.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CH9BS77S.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CHG1HXYS.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CHNFQGS9.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CKNP3TKB.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0CWG9HPJ1.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0D1Y3QLNW.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0DH3B2PDT.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0DH5DFNDG.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0DHHZL27T.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0DNDJMSGX.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0F2MR6X2H.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0F4Y5WR38.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0FCB4MF3R.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0FP87QNXD.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0FSRY3SXK.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0FW4TLCJ7.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0GGTPR5Z2.json"
+  },
+  {
+    "plugin_key": "Amazon",
+    "key": "Detail/B0H2ZX8XTG.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "Search/TV/Lycoris Recoil/2022.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/67ffe4f983c6e567c7d95184.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/154494/0.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/154494/1.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/154494/0.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/154494/1.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Details/154494.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Episode Groups/154494.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Watch Providers/154494.json"
+  }
+]

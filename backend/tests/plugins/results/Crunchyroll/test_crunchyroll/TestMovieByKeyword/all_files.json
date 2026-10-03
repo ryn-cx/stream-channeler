@@ -1,0 +1,30 @@
+[
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "BrowseMusic/artists.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "BrowseSeries/2025-12-31T16:00:00-08:00.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Categories/GKEH2G7GG.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GY19CP82D.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Seasons/GKEH2G7GG.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Series/GKEH2G7GG.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SimilarTo/GKEH2G7GG.json"
+  }
+]

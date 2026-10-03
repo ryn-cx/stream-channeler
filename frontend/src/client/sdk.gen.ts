@@ -3,24 +3,1054 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { ChannelOrdersCreateChannelOrderData, ChannelOrdersCreateChannelOrderResponse, ChannelOrdersGetChannelOrdersData, ChannelOrdersGetChannelOrdersResponse, ChannelOrdersGetFavoriteChannelOrderIdsResponse, ChannelOrdersFavoriteChannelOrderData, ChannelOrdersFavoriteChannelOrderResponse, ChannelOrdersUnfavoriteChannelOrderData, ChannelOrdersUnfavoriteChannelOrderResponse, ChannelOrdersCopyChannelOrderData, ChannelOrdersCopyChannelOrderResponse, ChannelOrdersUpdateChannelOrderData, ChannelOrdersUpdateChannelOrderResponse, ChannelOrdersDeleteChannelOrderData, ChannelOrdersDeleteChannelOrderResponse, ChannelOrdersGetChannelOrderData, ChannelOrdersGetChannelOrderResponse, ChannelOrdersGetFeaturedChannelOrdersResponse, ChannelOrdersAdminUpdateChannelOrderData, ChannelOrdersAdminUpdateChannelOrderResponse, ChannelsCreateChannelData, ChannelsCreateChannelResponse, ChannelsGetChannelsData, ChannelsGetChannelsResponse, ChannelsUpdateChannelData, ChannelsUpdateChannelResponse, ChannelsDeleteChannelData, ChannelsDeleteChannelResponse, ChannelsGetChannelData, ChannelsGetChannelResponse, ChannelsBulkImportQueueUrlsData, ChannelsBulkImportQueueUrlsResponse, ChannelsGetFavoriteChannelIdsResponse, ChannelsFavoriteChannelData, ChannelsFavoriteChannelResponse, ChannelsUpdateFavoriteChannelData, ChannelsUpdateFavoriteChannelResponse, ChannelsUnfavoriteChannelData, ChannelsUnfavoriteChannelResponse, ChannelsUpdateChannelCombinedChannelsData, ChannelsUpdateChannelCombinedChannelsResponse, ChannelsGetChannelCombinedChannelsData, ChannelsGetChannelCombinedChannelsResponse, ChannelsGetChannelWhitelistFilteredEpisodesData, ChannelsGetChannelWhitelistFilteredEpisodesResponse, ChannelsGetChannelEpisodeOrderData, ChannelsGetChannelEpisodeOrderResponse, ChannelsUpdateChannelEpisodeOrderData, ChannelsUpdateChannelEpisodeOrderResponse, ChannelsUpdateChannelWhitelistData, ChannelsUpdateChannelWhitelistResponse, ChannelsGetChannelWhitelistData, ChannelsGetChannelWhitelistResponse, ChannelsBlacklistChannelEpisodeData, ChannelsBlacklistChannelEpisodeResponse, ChannelsUpdateChannelDefaultOrderData, ChannelsUpdateChannelDefaultOrderResponse, ChannelsUpdateChannelOrderData, ChannelsUpdateChannelOrderResponse, ChannelsGetChannelsForTitleData, ChannelsGetChannelsForTitleResponse, ChannelsAddChannelTitleData, ChannelsAddChannelTitleResponse, ChannelsGetChannelBuildPluginsData, ChannelsGetChannelBuildPluginsResponse, ChannelsBuildChannelFromTitleData, ChannelsBuildChannelFromTitleResponse, ChannelsDeleteChannelTitleData, ChannelsDeleteChannelTitleResponse, ChannelsGetChannelQueueData, ChannelsGetChannelQueueResponse, ChannelsCreateChannelQueueUrlsData, ChannelsCreateChannelQueueUrlsResponse, ChannelsRetryChannelQueueUrlData, ChannelsRetryChannelQueueUrlResponse, ChannelsRetryFailedChannelQueueUrlsData, ChannelsRetryFailedChannelQueueUrlsResponse, ChannelsDeleteChannelQueueUrlData, ChannelsDeleteChannelQueueUrlResponse, ChannelsClearChannelCompletedQueueData, ChannelsClearChannelCompletedQueueResponse, ChannelsGetSortOptionsResponse, ChannelsGetSortSourceKeysResponse, ChannelsGetHomeGuideResponse, ChannelsGetChannelEpisodesData, ChannelsGetChannelEpisodesResponse, ChannelsGetChannelStoreTitlesData, ChannelsGetChannelStoreTitlesResponse, ChannelsGetChannelTitlesData, ChannelsGetChannelTitlesResponse, ChannelsGetChannelSourcesData, ChannelsGetChannelSourcesResponse, ChannelsGetChannelWhitelistEpisodesData, ChannelsGetChannelWhitelistEpisodesResponse, ChannelsAdminCreateChannelData, ChannelsAdminCreateChannelResponse, ChannelsAdminUpdateChannelData, ChannelsAdminUpdateChannelResponse, ChannelsGetAutomaticChannelUsersResponse, ChannelsCreateAllAutomaticChannelsResponse, ChannelsDeleteAllAutomaticChannelsResponse, ChannelsClearAllAutomaticChannelsResponse, ChannelsClearAutomaticChannelsData, ChannelsClearAutomaticChannelsResponse, ChannelsDeleteAutomaticChannelsData, ChannelsDeleteAutomaticChannelsResponse, ChannelsCreateAutomaticChannelsData, ChannelsCreateAutomaticChannelsResponse, ChannelsGetAllChannelQueuesData, ChannelsGetAllChannelQueuesResponse, ChannelsAdminUpdateChannelQueueData, ChannelsAdminUpdateChannelQueueResponse, ChannelsAdminDeleteChannelQueueData, ChannelsAdminDeleteChannelQueueResponse, CommentsReadMyChannelCommentsData, CommentsReadMyChannelCommentsResponse, CommentsReadUnreadCommentCountResponse, CommentsMarkCommentsReadData, CommentsMarkCommentsReadResponse, CommentsUpdateChannelCommentData, CommentsUpdateChannelCommentResponse, CommentsDeleteChannelCommentData, CommentsDeleteChannelCommentResponse, CommentsCreateChannelCommentData, CommentsCreateChannelCommentResponse, CommentsReadChannelCommentsData, CommentsReadChannelCommentsResponse, CommentsReadCommentRepliesData, CommentsReadCommentRepliesResponse, EpisodesSetEpisodeUserUrlData, EpisodesSetEpisodeUserUrlResponse, EpisodesDeleteEpisodeUserUrlData, EpisodesDeleteEpisodeUserUrlResponse, EpisodesGetEpisodeInformationData, EpisodesGetEpisodeInformationResponse, EpisodesGetLinkedEpisodesData, EpisodesGetLinkedEpisodesResponse, EpisodesGetEpisodeDatabaseRowsData, EpisodesGetEpisodeDatabaseRowsResponse, EpisodesGetEpisodesData, EpisodesGetEpisodesResponse, EpisodesAdminGetUnmatchedEpisodesData, EpisodesAdminGetUnmatchedEpisodesResponse, EpisodesAdminGetEpisodeLinkHistoryData, EpisodesAdminGetEpisodeLinkHistoryResponse, EpisodesAdminLinkEpisodesToTmdbData, EpisodesAdminLinkEpisodesToTmdbResponse, EpisodesAdminMarkEpisodesAbsentFromTmdbData, EpisodesAdminMarkEpisodesAbsentFromTmdbResponse, EpisodesAdminIgnoreEpisodesData, EpisodesAdminIgnoreEpisodesResponse, EpisodesAdminGetTmdbEpisodeChoicesData, EpisodesAdminGetTmdbEpisodeChoicesResponse, EpisodesAdminLinkEpisodeByTmdbUrlData, EpisodesAdminLinkEpisodeByTmdbUrlResponse, EpisodesAdminLinkEpisodeToTmdbData, EpisodesAdminLinkEpisodeToTmdbResponse, EpisodesAdminUnlinkEpisodeFromTmdbEpisodeData, EpisodesAdminUnlinkEpisodeFromTmdbEpisodeResponse, EpisodesAdminQuickUnlinkEpisodeData, EpisodesAdminQuickUnlinkEpisodeResponse, EpisodesAdminUnlinkEpisodeFromTmdbData, EpisodesAdminUnlinkEpisodeFromTmdbResponse, EpisodesAdminMarkEpisodeAbsentFromTmdbData, EpisodesAdminMarkEpisodeAbsentFromTmdbResponse, EpisodesAdminIgnoreEpisodeData, EpisodesAdminIgnoreEpisodeResponse, EpisodesAdminUnignoreEpisodeData, EpisodesAdminUnignoreEpisodeResponse, EpisodesAdminVerifyTmdbLinkData, EpisodesAdminVerifyTmdbLinkResponse, EpisodesGetEpisodeData, EpisodesGetEpisodeResponse, EpisodesUpdateEpisodeData, EpisodesUpdateEpisodeResponse, FilesGetFilesData, FilesGetFilesResponse, FilesGetFileManifestResponse, FilesDumpMissingFilesData, FilesDumpMissingFilesResponse, FilesImportFilesData, FilesImportFilesResponse, FilesGetFileData, FilesGetFileResponse, FilesUpdateFileData, FilesUpdateFileResponse, FilesDeleteFileData, FilesDeleteFileResponse, FilesCreateFileData, FilesCreateFileResponse, ImagesGetTitleImageData, ImagesGetTitleImageResponse, ImagesGetSeasonImageData, ImagesGetSeasonImageResponse, ImagesGetEpisodeImageData, ImagesGetEpisodeImageResponse, IssueReportsUpdateEpisodeIssueReportData, IssueReportsUpdateEpisodeIssueReportResponse, IssueReportsDeleteEpisodeIssueReportData, IssueReportsDeleteEpisodeIssueReportResponse, IssueReportsUpdateSeasonIssueReportData, IssueReportsUpdateSeasonIssueReportResponse, IssueReportsDeleteSeasonIssueReportData, IssueReportsDeleteSeasonIssueReportResponse, IssueReportsUpdateTitleIssueReportData, IssueReportsUpdateTitleIssueReportResponse, IssueReportsDeleteTitleIssueReportData, IssueReportsDeleteTitleIssueReportResponse, IssueReportsGetEpisodeIssueReportsData, IssueReportsGetEpisodeIssueReportsResponse, IssueReportsCreateEpisodeIssueReportData, IssueReportsCreateEpisodeIssueReportResponse, IssueReportsGetSeasonIssueReportsData, IssueReportsGetSeasonIssueReportsResponse, IssueReportsCreateSeasonIssueReportData, IssueReportsCreateSeasonIssueReportResponse, IssueReportsGetTitleIssueReportsData, IssueReportsGetTitleIssueReportsResponse, IssueReportsCreateTitleIssueReportData, IssueReportsCreateTitleIssueReportResponse, IssueReportsGetIssueReportsData, IssueReportsGetIssueReportsResponse, IssueReportsResolveTitleReportData, IssueReportsResolveTitleReportResponse, LoginTestTokenResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PluginsImportWatchHistoryInformationResponse, PluginsImportUrlInformationResponse, PluginsMatchUrlData, PluginsMatchUrlResponse, PluginsInAppSearchData, PluginsInAppSearchResponse, PluginsSearchWatchProvidersData, PluginsSearchWatchProvidersResponse, PluginsMediaInfoData, PluginsMediaInfoResponse, PluginsSupportInformationResponse, PluginsGetPluginsData, PluginsGetPluginsResponse, PluginsGetPluginData, PluginsGetPluginResponse, PrivateCreateUserData, PrivateCreateUserResponse, SeasonsGetSeasonInformationData, SeasonsGetSeasonInformationResponse, SeasonsGetSeasonEpisodesData, SeasonsGetSeasonEpisodesResponse, SeasonsGetSeasonsData, SeasonsGetSeasonsResponse, SeasonsGetSeasonData, SeasonsGetSeasonResponse, SourcesGetSourcesData, SourcesGetSourcesResponse, SourcesGetSourceData, SourcesGetSourceResponse, TitlesGetTitleInformationData, TitlesGetTitleInformationResponse, TitlesGetTitleSeasonsData, TitlesGetTitleSeasonsResponse, TitlesGetLinkedTitlesData, TitlesGetLinkedTitlesResponse, TitlesGetTitlesData, TitlesGetTitlesResponse, TitlesAdminGetUnvalidatedTitlesData, TitlesAdminGetUnvalidatedTitlesResponse, TitlesAdminGetTitleLinkHistoryData, TitlesAdminGetTitleLinkHistoryResponse, TitlesAdminGetMismatchedTitlesData, TitlesAdminGetMismatchedTitlesResponse, TitlesAdminGetUnlinkedTitlesData, TitlesAdminGetUnlinkedTitlesResponse, TitlesGetTitleData, TitlesGetTitleResponse, TitlesUpdateTitleData, TitlesUpdateTitleResponse, TitlesAdminLinkTitleToTmdbData, TitlesAdminLinkTitleToTmdbResponse, TitlesAdminUnlinkTitleFromTmdbData, TitlesAdminUnlinkTitleFromTmdbResponse, TitlesAdminLinkTitleByTmdbUrlData, TitlesAdminLinkTitleByTmdbUrlResponse, TitlesAdminLinkLinkedTitleByUrlData, TitlesAdminLinkLinkedTitleByUrlResponse, TitlesAdminValidateTitleData, TitlesAdminValidateTitleResponse, TitlesAdminMarkTitleAbsentFromTmdbData, TitlesAdminMarkTitleAbsentFromTmdbResponse, TitlesAdminUnmarkTitleAbsentFromTmdbData, TitlesAdminUnmarkTitleAbsentFromTmdbResponse, TitlesAdminRelinkTitleEpisodesData, TitlesAdminRelinkTitleEpisodesResponse, TitlesAdminForceUpdateTitleData, TitlesAdminForceUpdateTitleResponse, TitlesGetTitleTmdbEpisodeGroupsData, TitlesGetTitleTmdbEpisodeGroupsResponse, TmdbEpisodesGetTmdbEpisodeByIdData, TmdbEpisodesGetTmdbEpisodeByIdResponse, TmdbEpisodesGetTmdbEpisodesData, TmdbEpisodesGetTmdbEpisodesResponse, TmdbTitlesGetTmdbTitleByIdData, TmdbTitlesGetTmdbTitleByIdResponse, TmdbTitlesGetTmdbTitlesData, TmdbTitlesGetTmdbTitlesResponse, UnmatchedTitlesAdminGetUnmatchedTitlesData, UnmatchedTitlesAdminGetUnmatchedTitlesResponse, UnmatchedTitlesAdminImportUnmatchedTitleData, UnmatchedTitlesAdminImportUnmatchedTitleResponse, UnmatchedTitlesAdminIgnoreUnmatchedTitleData, UnmatchedTitlesAdminIgnoreUnmatchedTitleResponse, UnmatchedTitlesAdminUnignoreUnmatchedTitleData, UnmatchedTitlesAdminUnignoreUnmatchedTitleResponse, UnmatchedTitlesAdminDeleteUnmatchedTitleData, UnmatchedTitlesAdminDeleteUnmatchedTitleResponse, UserActionsAdminGetUserActionsData, UserActionsAdminGetUserActionsResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersReadSourcePreferencesResponse, UsersUpdateSourcePreferencesData, UsersUpdateSourcePreferencesResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersGetUserPublicChannelsData, UsersGetUserPublicChannelsResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersAdminListUserChannelsData, UsersAdminListUserChannelsResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsHealthCheckResponse, UtilsTestEmailData, UtilsTestEmailResponse, VideoStoreGetStoreSourcesResponse, VideoStoreGetStoreTitlesData, VideoStoreGetStoreTitlesResponse, VideoStoreGetSourceTitleCardsData, VideoStoreGetSourceTitleCardsResponse, VideoStoreGetSourceTitleCardFacetsData, VideoStoreGetSourceTitleCardFacetsResponse, VideoStoreGetStoreRegionsResponse, VideoStoreGetOriginalLanguagesResponse, VideoStoreGetSpokenLanguagesResponse, VideoStoreGetStoreWatchProvidersData, VideoStoreGetStoreWatchProvidersResponse, VideoStoreGetProviderTitlesData, VideoStoreGetProviderTitlesResponse, VideoStoreGetProviderTitleCardsData, VideoStoreGetProviderTitleCardsResponse, VideoStoreGetProviderTitleCardFacetsData, VideoStoreGetProviderTitleCardFacetsResponse, VideoStoreGetTitleDetailData, VideoStoreGetTitleDetailResponse, VideoStoreGetTitleMatchesData, VideoStoreGetTitleMatchesResponse, WatchesGetWatchesData, WatchesGetWatchesResponse, WatchesUpdateWatchData, WatchesUpdateWatchResponse, WatchesDeleteWatchData, WatchesDeleteWatchResponse, WatchesImportWatchHistoryData, WatchesImportWatchHistoryResponse, WatchesExportWatchHistoryResponse, WatchesCreateWatchData, WatchesCreateWatchResponse, WatchesGetEpisodeWatchesData, WatchesGetEpisodeWatchesResponse, WatchesAdminRelinkWatchesResponse } from './types.gen';
 
-export class ItemsService {
+export class ChannelOrdersService {
     /**
-     * Read Items
-     * Retrieve items.
+     * Create Channel Order
+     * Create a `ChannelOrder` owned by the `User`.
      * @param data The data for the request.
-     * @param data.skip
-     * @param data.limit
-     * @returns ItemsPublic Successful Response
+     * @param data.requestBody
+     * @returns ChannelOrderOutput Successful Response
      * @throws ApiError
      */
-    public static readItems(data: ItemsReadItemsData = {}): CancelablePromise<ItemsReadItemsResponse> {
+    public static createChannelOrder(data: ChannelOrdersCreateChannelOrderData): CancelablePromise<ChannelOrdersCreateChannelOrderResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/channel-orders',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Channel Orders
+     * Get `ChannelOrder`s.
+     * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @param data.scope
+     * @param data.randomSeed
+     * @returns ChannelOrdersPublic Successful Response
+     * @throws ApiError
+     */
+    public static getChannelOrders(data: ChannelOrdersGetChannelOrdersData = {}): CancelablePromise<ChannelOrdersGetChannelOrdersResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/items/',
+            url: '/api/v1/channel-orders',
             query: {
-                skip: data.skip,
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit,
+                scope: data.scope,
+                random_seed: data.randomSeed
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Favorite Channel Order Ids
+     * List the ids of the `ChannelOrder`s the current `User` has favorited.
+     * @returns string Successful Response
+     * @throws ApiError
+     */
+    public static getFavoriteChannelOrderIds(): CancelablePromise<ChannelOrdersGetFavoriteChannelOrderIdsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channel-orders/favorite-ids'
+        });
+    }
+    
+    /**
+     * Favorite Channel Order
+     * Favorite a `ChannelOrder` if it's readable by the `User`.
+     * @param data The data for the request.
+     * @param data.channelOrderId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static favoriteChannelOrder(data: ChannelOrdersFavoriteChannelOrderData): CancelablePromise<ChannelOrdersFavoriteChannelOrderResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/channel-orders/{channel_order_id}/favorite',
+            path: {
+                channel_order_id: data.channelOrderId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Unfavorite Channel Order
+     * Remove a `ChannelOrder` from the `User`'s favorites.
+     * @param data The data for the request.
+     * @param data.channelOrderId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static unfavoriteChannelOrder(data: ChannelOrdersUnfavoriteChannelOrderData): CancelablePromise<ChannelOrdersUnfavoriteChannelOrderResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/channel-orders/{channel_order_id}/favorite',
+            path: {
+                channel_order_id: data.channelOrderId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Copy Channel Order
+     * Copy a readable `ChannelOrder` into the current `User`'s account.
+     * @param data The data for the request.
+     * @param data.channelOrderId
+     * @param data.requestBody
+     * @returns ChannelOrderOutput Successful Response
+     * @throws ApiError
+     */
+    public static copyChannelOrder(data: ChannelOrdersCopyChannelOrderData): CancelablePromise<ChannelOrdersCopyChannelOrderResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/channel-orders/{channel_order_id}/copy',
+            path: {
+                channel_order_id: data.channelOrderId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Channel Order
+     * Update and return a `ChannelOrder` if it's editable by the `User`.
+     * @param data The data for the request.
+     * @param data.channelOrderId
+     * @param data.requestBody
+     * @returns ChannelOrderOutput Successful Response
+     * @throws ApiError
+     */
+    public static updateChannelOrder(data: ChannelOrdersUpdateChannelOrderData): CancelablePromise<ChannelOrdersUpdateChannelOrderResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/channel-orders/{channel_order_id}',
+            path: {
+                channel_order_id: data.channelOrderId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Channel Order
+     * Delete a `ChannelOrder` if it's editable by the `User`.
+     * @param data The data for the request.
+     * @param data.channelOrderId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteChannelOrder(data: ChannelOrdersDeleteChannelOrderData): CancelablePromise<ChannelOrdersDeleteChannelOrderResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/channel-orders/{channel_order_id}',
+            path: {
+                channel_order_id: data.channelOrderId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Channel Order
+     * Return a `ChannelOrder` if it's readable by the `User`.
+     * @param data The data for the request.
+     * @param data.channelOrderId
+     * @returns ChannelOrderOutput Successful Response
+     * @throws ApiError
+     */
+    public static getChannelOrder(data: ChannelOrdersGetChannelOrderData): CancelablePromise<ChannelOrdersGetChannelOrderResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channel-orders/{channel_order_id}',
+            path: {
+                channel_order_id: data.channelOrderId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Featured Channel Orders
+     * List public `ChannelOrder`s with a positive score for onboarding.
+     * @returns ChannelOrderListOutput Successful Response
+     * @throws ApiError
+     */
+    public static getFeaturedChannelOrders(): CancelablePromise<ChannelOrdersGetFeaturedChannelOrdersResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channel-orders/featured'
+        });
+    }
+    
+    /**
+     * Admin Update Channel Order
+     * Update any field on any `ChannelOrder` as an admin, including `score`.
+     * @param data The data for the request.
+     * @param data.channelOrderId
+     * @param data.requestBody
+     * @returns ChannelOrderListOutput Successful Response
+     * @throws ApiError
+     */
+    public static adminUpdateChannelOrder(data: ChannelOrdersAdminUpdateChannelOrderData): CancelablePromise<ChannelOrdersAdminUpdateChannelOrderResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/admin/channel-orders/{channel_order_id}',
+            path: {
+                channel_order_id: data.channelOrderId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class ChannelsService {
+    /**
+     * Create Channel
+     * Create a `Channel` owned by the `User`.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ChannelOutput Successful Response
+     * @throws ApiError
+     */
+    public static createChannel(data: ChannelsCreateChannelData): CancelablePromise<ChannelsCreateChannelResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/channels',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Channels
+     * Get `Channel`s.
+     * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @param data.scope
+     * @param data.randomSeed
+     * @param data.titleId
+     * @returns ChannelsPublic Successful Response
+     * @throws ApiError
+     */
+    public static getChannels(data: ChannelsGetChannelsData = {}): CancelablePromise<ChannelsGetChannelsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels',
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit,
+                scope: data.scope,
+                random_seed: data.randomSeed,
+                title_id: data.titleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Channel
+     * Update and return a `Channel` if it's editable by the `User`.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @param data.requestBody
+     * @returns ChannelOutput Successful Response
+     * @throws ApiError
+     */
+    public static updateChannel(data: ChannelsUpdateChannelData): CancelablePromise<ChannelsUpdateChannelResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/channels/{channel_id}',
+            path: {
+                channel_id: data.channelId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Channel
+     * Delete a `Channel` if it's editable by the `User`.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteChannel(data: ChannelsDeleteChannelData): CancelablePromise<ChannelsDeleteChannelResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/channels/{channel_id}',
+            path: {
+                channel_id: data.channelId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Channel
+     * Get a `Channel` if it's readable by the `User`.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @returns ChannelOutput Successful Response
+     * @throws ApiError
+     */
+    public static getChannel(data: ChannelsGetChannelData): CancelablePromise<ChannelsGetChannelResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/{channel_id}',
+            path: {
+                channel_id: data.channelId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Bulk Import Queue Urls
+     * Add URLs to multiple channels' import queues at once.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static bulkImportQueueUrls(data: ChannelsBulkImportQueueUrlsData): CancelablePromise<ChannelsBulkImportQueueUrlsResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/channels/bulk-import-queue',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Favorite Channel Ids
+     * List the ids of the `Channel`s the current `User` has favorited.
+     * @returns string Successful Response
+     * @throws ApiError
+     */
+    public static getFavoriteChannelIds(): CancelablePromise<ChannelsGetFavoriteChannelIdsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/favorite-ids'
+        });
+    }
+    
+    /**
+     * Favorite Channel
+     * Favorite a `Channel` if it's readable by the `User`.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static favoriteChannel(data: ChannelsFavoriteChannelData): CancelablePromise<ChannelsFavoriteChannelResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/channels/{channel_id}/favorite',
+            path: {
+                channel_id: data.channelId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Favorite Channel
+     * Set the `User`'s private name/number for a favorited `Channel`.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @param data.requestBody
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static updateFavoriteChannel(data: ChannelsUpdateFavoriteChannelData): CancelablePromise<ChannelsUpdateFavoriteChannelResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/channels/{channel_id}/favorite',
+            path: {
+                channel_id: data.channelId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Unfavorite Channel
+     * Remove a `Channel` from the `User`'s favorites.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static unfavoriteChannel(data: ChannelsUnfavoriteChannelData): CancelablePromise<ChannelsUnfavoriteChannelResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/channels/{channel_id}/favorite',
+            path: {
+                channel_id: data.channelId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Channel Combined Channels
+     * Replace a `Channel`'s `CombinedChannel`s.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @param data.requestBody
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static updateChannelCombinedChannels(data: ChannelsUpdateChannelCombinedChannelsData): CancelablePromise<ChannelsUpdateChannelCombinedChannelsResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/channels/{channel_id}/combined-channels',
+            path: {
+                channel_id: data.channelId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Channel Combined Channels
+     * Return a `Channel`'s `CombinedChannel`s.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @returns CombinedChannelOutput Successful Response
+     * @throws ApiError
+     */
+    public static getChannelCombinedChannels(data: ChannelsGetChannelCombinedChannelsData): CancelablePromise<ChannelsGetChannelCombinedChannelsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/{channel_id}/combined-channels',
+            path: {
+                channel_id: data.channelId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Channel Whitelist Filtered Episodes
+     * Read the episodes of a title that an entry names, whatever season they are in.
+     * @param data The data for the request.
+     * @param data.tmdbTitleId
+     * @param data.channelId
+     * @returns WhitelistEpisodeOutput Successful Response
+     * @throws ApiError
+     */
+    public static getChannelWhitelistFilteredEpisodes(data: ChannelsGetChannelWhitelistFilteredEpisodesData): CancelablePromise<ChannelsGetChannelWhitelistFilteredEpisodesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/{channel_id}/whitelist/{tmdb_title_id}/filtered-episodes',
+            path: {
+                tmdb_title_id: data.tmdbTitleId,
+                channel_id: data.channelId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Channel Episode Order
+     * Read the episode order a channel reads a title in, and what it could read.
+     * @param data The data for the request.
+     * @param data.tmdbTitleId
+     * @param data.channelId
+     * @returns ChannelEpisodeOrderOutput Successful Response
+     * @throws ApiError
+     */
+    public static getChannelEpisodeOrder(data: ChannelsGetChannelEpisodeOrderData): CancelablePromise<ChannelsGetChannelEpisodeOrderResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/{channel_id}/titles/{tmdb_title_id}/episode-order',
+            path: {
+                tmdb_title_id: data.tmdbTitleId,
+                channel_id: data.channelId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Channel Episode Order
+     * Set the episode order a channel reads a title in, or none for TMDB's own.
+     * @param data The data for the request.
+     * @param data.tmdbTitleId
+     * @param data.channelId
+     * @param data.requestBody
+     * @returns ChannelEpisodeOrderOutput Successful Response
+     * @throws ApiError
+     */
+    public static updateChannelEpisodeOrder(data: ChannelsUpdateChannelEpisodeOrderData): CancelablePromise<ChannelsUpdateChannelEpisodeOrderResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/channels/{channel_id}/titles/{tmdb_title_id}/episode-order',
+            path: {
+                tmdb_title_id: data.tmdbTitleId,
+                channel_id: data.channelId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Channel Whitelist
+     * Update the whitelist/blacklist for a title in a channel.
+     * @param data The data for the request.
+     * @param data.tmdbTitleId
+     * @param data.channelId
+     * @param data.requestBody
+     * @returns WhitelistTitleOutput Successful Response
+     * @throws ApiError
+     */
+    public static updateChannelWhitelist(data: ChannelsUpdateChannelWhitelistData): CancelablePromise<ChannelsUpdateChannelWhitelistResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/channels/{channel_id}/whitelist/{tmdb_title_id}',
+            path: {
+                tmdb_title_id: data.tmdbTitleId,
+                channel_id: data.channelId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Channel Whitelist
+     * Read the sites and seasons of a title's filters in a channel.
+     * @param data The data for the request.
+     * @param data.tmdbTitleId
+     * @param data.channelId
+     * @returns WhitelistTitleOutput Successful Response
+     * @throws ApiError
+     */
+    public static getChannelWhitelist(data: ChannelsGetChannelWhitelistData): CancelablePromise<ChannelsGetChannelWhitelistResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/{channel_id}/whitelist/{tmdb_title_id}',
+            path: {
+                tmdb_title_id: data.tmdbTitleId,
+                channel_id: data.channelId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Blacklist Channel Episode
+     * Blacklist a single episode for a `Channel`.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @param data.requestBody
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static blacklistChannelEpisode(data: ChannelsBlacklistChannelEpisodeData): CancelablePromise<ChannelsBlacklistChannelEpisodeResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/channels/{channel_id}/blacklist-episode',
+            path: {
+                channel_id: data.channelId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Channel Default Order
+     * Update the default sort order for a `Channel`.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @param data.requestBody
+     * @returns ChannelOutput Successful Response
+     * @throws ApiError
+     */
+    public static updateChannelDefaultOrder(data: ChannelsUpdateChannelDefaultOrderData): CancelablePromise<ChannelsUpdateChannelDefaultOrderResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/channels/{channel_id}/default-order',
+            path: {
+                channel_id: data.channelId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Channel Order
+     * Set the custom episode order for a `Channel`.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @param data.requestBody
+     * @returns ChannelOutput Successful Response
+     * @throws ApiError
+     */
+    public static updateChannelOrder(data: ChannelsUpdateChannelOrderData): CancelablePromise<ChannelsUpdateChannelOrderResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/channels/{channel_id}/order',
+            path: {
+                channel_id: data.channelId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Channels For Title
+     * @param data The data for the request.
+     * @param data.titleId
+     * @returns ChannelTitleMembership Successful Response
+     * @throws ApiError
+     */
+    public static getChannelsForTitle(data: ChannelsGetChannelsForTitleData): CancelablePromise<ChannelsGetChannelsForTitleResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/for-title/{title_id}',
+            path: {
+                title_id: data.titleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Add Channel Title
+     * Put a title, on every website it is on, onto a `Channel`.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @param data.titleId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static addChannelTitle(data: ChannelsAddChannelTitleData): CancelablePromise<ChannelsAddChannelTitleResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/channels/{channel_id}/add-title/{title_id}',
+            path: {
+                channel_id: data.channelId,
+                title_id: data.titleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Channel Build Plugins
+     * @param data The data for the request.
+     * @param data.channelId
+     * @param data.titleId
+     * @returns ChannelBuildPlugin Successful Response
+     * @throws ApiError
+     */
+    public static getChannelBuildPlugins(data: ChannelsGetChannelBuildPluginsData): CancelablePromise<ChannelsGetChannelBuildPluginsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/{channel_id}/build-from-title/{title_id}/plugins',
+            path: {
+                channel_id: data.channelId,
+                title_id: data.titleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Build Channel From Title
+     * @param data The data for the request.
+     * @param data.channelId
+     * @param data.titleId
+     * @param data.requestBody
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static buildChannelFromTitle(data: ChannelsBuildChannelFromTitleData): CancelablePromise<ChannelsBuildChannelFromTitleResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/channels/{channel_id}/build-from-title/{title_id}',
+            path: {
+                channel_id: data.channelId,
+                title_id: data.titleId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Channel Title
+     * Remove a title, on every website it is on, from a `Channel`.
+     * @param data The data for the request.
+     * @param data.tmdbTitleId
+     * @param data.channelId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteChannelTitle(data: ChannelsDeleteChannelTitleData): CancelablePromise<ChannelsDeleteChannelTitleResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/channels/{channel_id}/remove-title/{tmdb_title_id}',
+            path: {
+                tmdb_title_id: data.tmdbTitleId,
+                channel_id: data.channelId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Channel Queue
+     * Read the URLs in a channel's import queue.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @param data.offset
+     * @param data.limit
+     * @param data.query
+     * @param data.sortBy
+     * @param data.descending
+     * @returns ChannelQueuePage Successful Response
+     * @throws ApiError
+     */
+    public static getChannelQueue(data: ChannelsGetChannelQueueData): CancelablePromise<ChannelsGetChannelQueueResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/{channel_id}/import-queue',
+            path: {
+                channel_id: data.channelId
+            },
+            query: {
+                offset: data.offset,
+                limit: data.limit,
+                query: data.query,
+                sort_by: data.sortBy,
+                descending: data.descending
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Channel Queue Urls
+     * Add URLs to a channel's import queue.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @param data.requestBody
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static createChannelQueueUrls(data: ChannelsCreateChannelQueueUrlsData): CancelablePromise<ChannelsCreateChannelQueueUrlsResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/channels/{channel_id}/import-queue',
+            path: {
+                channel_id: data.channelId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Retry Channel Queue Url
+     * Put one URL back into a channel's import queue to be imported again.
+     * @param data The data for the request.
+     * @param data.urlId
+     * @param data.channelId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static retryChannelQueueUrl(data: ChannelsRetryChannelQueueUrlData): CancelablePromise<ChannelsRetryChannelQueueUrlResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/channels/{channel_id}/import-queue/{url_id}/retry',
+            path: {
+                url_id: data.urlId,
+                channel_id: data.channelId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Retry Failed Channel Queue Urls
+     * Put every URL a channel's queue gave up on back into it.
+     *
+     * Admin-only, unlike the retry beside it: one press starts as many imports as
+     * the queue has failures, which is a load on every website they are read from
+     * rather than a load here.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static retryFailedChannelQueueUrls(data: ChannelsRetryFailedChannelQueueUrlsData): CancelablePromise<ChannelsRetryFailedChannelQueueUrlsResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/channels/{channel_id}/import-queue/retry-failed',
+            path: {
+                channel_id: data.channelId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Channel Queue Url
+     * Delete url from a channel's import queue.
+     * @param data The data for the request.
+     * @param data.urlId
+     * @param data.channelId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteChannelQueueUrl(data: ChannelsDeleteChannelQueueUrlData): CancelablePromise<ChannelsDeleteChannelQueueUrlResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/channels/{channel_id}/import-queue/{url_id}',
+            path: {
+                url_id: data.urlId,
+                channel_id: data.channelId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Clear Channel Completed Queue
+     * Clear a channel's import queue.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static clearChannelCompletedQueue(data: ChannelsClearChannelCompletedQueueData): CancelablePromise<ChannelsClearChannelCompletedQueueResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/channels/{channel_id}/clear-completed-import-queue',
+            path: {
+                channel_id: data.channelId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Sort Options
+     * Return every sort option a `Channel` can be ordered by.
+     * @returns SortOptionOutput Successful Response
+     * @throws ApiError
+     */
+    public static getSortOptions(): CancelablePromise<ChannelsGetSortOptionsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/sort-options'
+        });
+    }
+    
+    /**
+     * Get Sort Source Keys
+     * @returns string Successful Response
+     * @throws ApiError
+     */
+    public static getSortSourceKeys(): CancelablePromise<ChannelsGetSortSourceKeysResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/sort-options/sources'
+        });
+    }
+    
+    /**
+     * Get Home Guide
+     * @returns HomeGuideOutput Successful Response
+     * @throws ApiError
+     */
+    public static getHomeGuide(): CancelablePromise<ChannelsGetHomeGuideResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/home'
+        });
+    }
+    
+    /**
+     * Get Channel Episodes
+     * Read the episodes for a channel.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @param data.sortBy
+     * @param data.orderPresetId
+     * @param data.sourceIds
+     * @param data.sourceIdsIsBlacklist
+     * @param data.randomSeed
+     * @param data.hideWatched
+     * @param data.hideUnwatched
+     * @param data.hidePartiallyWatched
+     * @param data.maximumWatchDateAbsolute
+     * @param data.minimumAirDateAbsolute
+     * @param data.maximumAirDateAbsolute
+     * @param data.maximumWatchDateRelative
+     * @param data.minimumAirDateRelative
+     * @param data.maximumAirDateRelative
+     * @param data.totalTitlesCount
+     * @param data.startedTitlesCount
+     * @param data.newTitlesCount
+     * @param data.minimumDuration
+     * @param data.maximumDuration
+     * @param data.limit
+     * @returns ChannelEpisodesOutput Successful Response
+     * @throws ApiError
+     */
+    public static getChannelEpisodes(data: ChannelsGetChannelEpisodesData): CancelablePromise<ChannelsGetChannelEpisodesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/{channel_id}/episodes',
+            path: {
+                channel_id: data.channelId
+            },
+            query: {
+                sortBy: data.sortBy,
+                orderPresetId: data.orderPresetId,
+                sourceIds: data.sourceIds,
+                sourceIdsIsBlacklist: data.sourceIdsIsBlacklist,
+                randomSeed: data.randomSeed,
+                hideWatched: data.hideWatched,
+                hideUnwatched: data.hideUnwatched,
+                hidePartiallyWatched: data.hidePartiallyWatched,
+                maximumWatchDateAbsolute: data.maximumWatchDateAbsolute,
+                minimumAirDateAbsolute: data.minimumAirDateAbsolute,
+                maximumAirDateAbsolute: data.maximumAirDateAbsolute,
+                maximumWatchDateRelative: data.maximumWatchDateRelative,
+                minimumAirDateRelative: data.minimumAirDateRelative,
+                maximumAirDateRelative: data.maximumAirDateRelative,
+                totalTitlesCount: data.totalTitlesCount,
+                startedTitlesCount: data.startedTitlesCount,
+                newTitlesCount: data.newTitlesCount,
+                minimumDuration: data.minimumDuration,
+                maximumDuration: data.maximumDuration,
                 limit: data.limit
             },
             errors: {
@@ -30,39 +1060,19 @@ export class ItemsService {
     }
     
     /**
-     * Create Item
-     * Create new item.
+     * Get Channel Store Titles
+     * Read every title a channel shelves in the video store.
      * @param data The data for the request.
-     * @param data.requestBody
-     * @returns ItemPublic Successful Response
+     * @param data.channelId
+     * @returns VideoStoreTitlesOutput Successful Response
      * @throws ApiError
      */
-    public static createItem(data: ItemsCreateItemData): CancelablePromise<ItemsCreateItemResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/items/',
-            body: data.requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Read Item
-     * Get item by ID.
-     * @param data The data for the request.
-     * @param data.id
-     * @returns ItemPublic Successful Response
-     * @throws ApiError
-     */
-    public static readItem(data: ItemsReadItemData): CancelablePromise<ItemsReadItemResponse> {
+    public static getChannelStoreTitles(data: ChannelsGetChannelStoreTitlesData): CancelablePromise<ChannelsGetChannelStoreTitlesResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/items/{id}',
+            url: '/api/v1/channels/{channel_id}/store-titles',
             path: {
-                id: data.id
+                channel_id: data.channelId
             },
             errors: {
                 422: 'Validation Error'
@@ -71,20 +1081,121 @@ export class ItemsService {
     }
     
     /**
-     * Update Item
-     * Update an item.
+     * Get Channel Titles
+     * Read all titles for a channel, including those from its child channels.
      * @param data The data for the request.
-     * @param data.id
-     * @param data.requestBody
-     * @returns ItemPublic Successful Response
+     * @param data.channelId
+     * @param data.offset
+     * @param data.limit
+     * @param data.query
+     * @returns ChannelTitlesOutput Successful Response
      * @throws ApiError
      */
-    public static updateItem(data: ItemsUpdateItemData): CancelablePromise<ItemsUpdateItemResponse> {
+    public static getChannelTitles(data: ChannelsGetChannelTitlesData): CancelablePromise<ChannelsGetChannelTitlesResponse> {
         return __request(OpenAPI, {
-            method: 'PUT',
-            url: '/api/v1/items/{id}',
+            method: 'GET',
+            url: '/api/v1/channels/{channel_id}/titles',
             path: {
-                id: data.id
+                channel_id: data.channelId
+            },
+            query: {
+                offset: data.offset,
+                limit: data.limit,
+                query: data.query
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Channel Sources
+     * Read all unique sources for a channel.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @returns SourcePublic Successful Response
+     * @throws ApiError
+     */
+    public static getChannelSources(data: ChannelsGetChannelSourcesData): CancelablePromise<ChannelsGetChannelSourcesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/{channel_id}/sources',
+            path: {
+                channel_id: data.channelId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Channel Whitelist Episodes
+     * Read one page of a season's episodes, as the filter page expands it.
+     * @param data The data for the request.
+     * @param data.seasonId
+     * @param data.tmdbTitleId
+     * @param data.channelId
+     * @param data.offset
+     * @param data.limit
+     * @returns WhitelistEpisodesOutput Successful Response
+     * @throws ApiError
+     */
+    public static getChannelWhitelistEpisodes(data: ChannelsGetChannelWhitelistEpisodesData): CancelablePromise<ChannelsGetChannelWhitelistEpisodesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/{channel_id}/whitelist/{tmdb_title_id}/seasons/{season_id}/episodes',
+            path: {
+                season_id: data.seasonId,
+                tmdb_title_id: data.tmdbTitleId,
+                channel_id: data.channelId
+            },
+            query: {
+                offset: data.offset,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Create Channel
+     * Create a `Channel` owned by any `User`, with its `score`, as an admin.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns ChannelOutput Successful Response
+     * @throws ApiError
+     */
+    public static adminCreateChannel(data: ChannelsAdminCreateChannelData): CancelablePromise<ChannelsAdminCreateChannelResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin/channels',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Update Channel
+     * Update any field on any `Channel` as an admin, including `score`.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @param data.requestBody
+     * @returns ChannelListOutput Successful Response
+     * @throws ApiError
+     */
+    public static adminUpdateChannel(data: ChannelsAdminUpdateChannelData): CancelablePromise<ChannelsAdminUpdateChannelResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/admin/channels/{channel_id}',
+            path: {
+                channel_id: data.channelId
             },
             body: data.requestBody,
             mediaType: 'application/json',
@@ -95,20 +1206,1440 @@ export class ItemsService {
     }
     
     /**
-     * Delete Item
-     * Delete an item.
-     * @param data The data for the request.
-     * @param data.id
+     * Get Automatic Channel Users
+     * @returns AutomaticChannelUserOutput Successful Response
+     * @throws ApiError
+     */
+    public static getAutomaticChannelUsers(): CancelablePromise<ChannelsGetAutomaticChannelUsersResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/admin/channels/automatic-users'
+        });
+    }
+    
+    /**
+     * Create All Automatic Channels
      * @returns Message Successful Response
      * @throws ApiError
      */
-    public static deleteItem(data: ItemsDeleteItemData): CancelablePromise<ItemsDeleteItemResponse> {
+    public static createAllAutomaticChannels(): CancelablePromise<ChannelsCreateAllAutomaticChannelsResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin/channels/automatic-users/channels'
+        });
+    }
+    
+    /**
+     * Delete All Automatic Channels
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteAllAutomaticChannels(): CancelablePromise<ChannelsDeleteAllAutomaticChannelsResponse> {
         return __request(OpenAPI, {
             method: 'DELETE',
-            url: '/api/v1/items/{id}',
+            url: '/api/v1/admin/channels/automatic-users/channels'
+        });
+    }
+    
+    /**
+     * Clear All Automatic Channels
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static clearAllAutomaticChannels(): CancelablePromise<ChannelsClearAllAutomaticChannelsResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin/channels/automatic-users/channels/clear'
+        });
+    }
+    
+    /**
+     * Clear Automatic Channels
+     * Empty every `Channel` an automatic channel `User` owns.
+     * @param data The data for the request.
+     * @param data.userId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static clearAutomaticChannels(data: ChannelsClearAutomaticChannelsData): CancelablePromise<ChannelsClearAutomaticChannelsResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin/channels/automatic-users/{user_id}/channels/clear',
             path: {
-                id: data.id
+                user_id: data.userId
             },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Automatic Channels
+     * @param data The data for the request.
+     * @param data.userId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteAutomaticChannels(data: ChannelsDeleteAutomaticChannelsData): CancelablePromise<ChannelsDeleteAutomaticChannelsResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/admin/channels/automatic-users/{user_id}/channels',
+            path: {
+                user_id: data.userId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Automatic Channels
+     * @param data The data for the request.
+     * @param data.userId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static createAutomaticChannels(data: ChannelsCreateAutomaticChannelsData): CancelablePromise<ChannelsCreateAutomaticChannelsResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin/channels/automatic-users/{user_id}/channels',
+            path: {
+                user_id: data.userId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get All Channel Queues
+     * List every `Channel`'s import queue entries, scoped by owner.
+     * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @param data.owner
+     * @returns ChannelQueuesAdminPublic Successful Response
+     * @throws ApiError
+     */
+    public static getAllChannelQueues(data: ChannelsGetAllChannelQueuesData = {}): CancelablePromise<ChannelsGetAllChannelQueuesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/admin/channels/queue',
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit,
+                owner: data.owner
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Update Channel Queue
+     * Update a `Channel`'s queue entry as an admin.
+     * @param data The data for the request.
+     * @param data.queueId
+     * @param data.requestBody
+     * @returns ChannelQueueAdminOutput Successful Response
+     * @throws ApiError
+     */
+    public static adminUpdateChannelQueue(data: ChannelsAdminUpdateChannelQueueData): CancelablePromise<ChannelsAdminUpdateChannelQueueResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/admin/channels/queue/{queue_id}',
+            path: {
+                queue_id: data.queueId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Delete Channel Queue
+     * Delete a `Channel`'s queue entry as an admin.
+     * @param data The data for the request.
+     * @param data.queueId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static adminDeleteChannelQueue(data: ChannelsAdminDeleteChannelQueueData): CancelablePromise<ChannelsAdminDeleteChannelQueueResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/admin/channels/queue/{queue_id}',
+            path: {
+                queue_id: data.queueId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class CommentsService {
+    /**
+     * Read My Channel Comments
+     * Get one page of the `Comment`s on the `User`'s `Channel`s, or on all of them.
+     * @param data The data for the request.
+     * @param data.offset
+     * @param data.limit
+     * @param data.scope
+     * @param data.unreadOnly
+     * @returns ChannelCommentsListOutput Successful Response
+     * @throws ApiError
+     */
+    public static readMyChannelComments(data: CommentsReadMyChannelCommentsData = {}): CancelablePromise<CommentsReadMyChannelCommentsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/comments/mine',
+            query: {
+                offset: data.offset,
+                limit: data.limit,
+                scope: data.scope,
+                unread_only: data.unreadOnly
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Unread Comment Count
+     * Get how many comment notifications the `User` has not read.
+     * @returns number Successful Response
+     * @throws ApiError
+     */
+    public static readUnreadCommentCount(): CancelablePromise<CommentsReadUnreadCommentCountResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/comments/unread-count'
+        });
+    }
+    
+    /**
+     * Mark Comments Read
+     * Mark one comment notification read, or every unread one when omitted.
+     * @param data The data for the request.
+     * @param data.commentId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static markCommentsRead(data: CommentsMarkCommentsReadData = {}): CancelablePromise<CommentsMarkCommentsReadResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/comments/read',
+            query: {
+                comment_id: data.commentId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Channel Comment
+     * Update a `Comment` written by the `User`.
+     * @param data The data for the request.
+     * @param data.commentId
+     * @param data.requestBody
+     * @returns CommentOutput Successful Response
+     * @throws ApiError
+     */
+    public static updateChannelComment(data: CommentsUpdateChannelCommentData): CancelablePromise<CommentsUpdateChannelCommentResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/comments/{comment_id}',
+            path: {
+                comment_id: data.commentId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Channel Comment
+     * Delete a `Comment` written by the `User` and every reply to it.
+     * @param data The data for the request.
+     * @param data.commentId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteChannelComment(data: CommentsDeleteChannelCommentData): CancelablePromise<CommentsDeleteChannelCommentResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/comments/{comment_id}',
+            path: {
+                comment_id: data.commentId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Channel Comment
+     * Leave a `Comment` on a `Channel` the `User` can read.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @param data.requestBody
+     * @returns CommentOutput Successful Response
+     * @throws ApiError
+     */
+    public static createChannelComment(data: CommentsCreateChannelCommentData): CancelablePromise<CommentsCreateChannelCommentResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/channels/{channel_id}/comments',
+            path: {
+                channel_id: data.channelId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Channel Comments
+     * Get one page of the top level `Comment`s on a `Channel`.
+     * @param data The data for the request.
+     * @param data.channelId
+     * @param data.offset
+     * @param data.limit
+     * @returns CommentsListOutput Successful Response
+     * @throws ApiError
+     */
+    public static readChannelComments(data: CommentsReadChannelCommentsData): CancelablePromise<CommentsReadChannelCommentsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/channels/{channel_id}/comments',
+            path: {
+                channel_id: data.channelId
+            },
+            query: {
+                offset: data.offset,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Comment Replies
+     * Get the whole thread below a `Comment`, nested by parent.
+     * @param data The data for the request.
+     * @param data.commentId
+     * @returns CommentsListOutput Successful Response
+     * @throws ApiError
+     */
+    public static readCommentReplies(data: CommentsReadCommentRepliesData): CancelablePromise<CommentsReadCommentRepliesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/comments/{comment_id}/replies',
+            path: {
+                comment_id: data.commentId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class EpisodesService {
+    /**
+     * Set Episode User Url
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @param data.requestBody
+     * @returns UserEpisodeUrlOutput Successful Response
+     * @throws ApiError
+     */
+    public static setEpisodeUserUrl(data: EpisodesSetEpisodeUserUrlData): CancelablePromise<EpisodesSetEpisodeUserUrlResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/episodes/{episode_id}/user-url',
+            path: {
+                episode_id: data.episodeId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Episode User Url
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @returns UserEpisodeUrlOutput Successful Response
+     * @throws ApiError
+     */
+    public static deleteEpisodeUserUrl(data: EpisodesDeleteEpisodeUserUrlData): CancelablePromise<EpisodesDeleteEpisodeUserUrlResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/episodes/{episode_id}/user-url',
+            path: {
+                episode_id: data.episodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Episode Information
+     * Return what the website and TMDB each say about an `Episode`.
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @returns EpisodeInformationOutput Successful Response
+     * @throws ApiError
+     */
+    public static getEpisodeInformation(data: EpisodesGetEpisodeInformationData): CancelablePromise<EpisodesGetEpisodeInformationResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/episodes/{episode_id}/information',
+            path: {
+                episode_id: data.episodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Linked Episodes
+     * Get every website's row standing for an `Episode`.
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @returns EpisodeListOutput Successful Response
+     * @throws ApiError
+     */
+    public static getLinkedEpisodes(data: EpisodesGetLinkedEpisodesData): CancelablePromise<EpisodesGetLinkedEpisodesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/episodes/{episode_id}/linked',
+            path: {
+                episode_id: data.episodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Episode Database Rows
+     * Get the stored columns of an `Episode` and of every row it links to.
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @returns EpisodeDatabaseOutput Successful Response
+     * @throws ApiError
+     */
+    public static getEpisodeDatabaseRows(data: EpisodesGetEpisodeDatabaseRowsData): CancelablePromise<EpisodesGetEpisodeDatabaseRowsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/episodes/{episode_id}/database',
+            path: {
+                episode_id: data.episodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Episodes
+     * Get `Episode`s.
+     * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @returns EpisodesPublic Successful Response
+     * @throws ApiError
+     */
+    public static getEpisodes(data: EpisodesGetEpisodesData = {}): CancelablePromise<EpisodesGetEpisodesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/episodes',
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Get Unmatched Episodes
+     * Get a page of the canonical `Episode`s outside TMDB and YouTube.
+     * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @param data.inUserChannelsOnly
+     * @returns UnmatchedEpisodesPublic Successful Response
+     * @throws ApiError
+     */
+    public static adminGetUnmatchedEpisodes(data: EpisodesAdminGetUnmatchedEpisodesData = {}): CancelablePromise<EpisodesAdminGetUnmatchedEpisodesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/episodes/tmdb-matches',
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit,
+                in_user_channels_only: data.inUserChannelsOnly
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Get Episode Link History
+     * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @returns EpisodeLinkHistoryPublic Successful Response
+     * @throws ApiError
+     */
+    public static adminGetEpisodeLinkHistory(data: EpisodesAdminGetEpisodeLinkHistoryData = {}): CancelablePromise<EpisodesAdminGetEpisodeLinkHistoryResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/episodes/link-history',
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Link Episodes To Tmdb
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns EpisodeOutput Successful Response
+     * @throws ApiError
+     */
+    public static adminLinkEpisodesToTmdb(data: EpisodesAdminLinkEpisodesToTmdbData): CancelablePromise<EpisodesAdminLinkEpisodesToTmdbResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/episodes/tmdb-links',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Mark Episodes Absent From Tmdb
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns EpisodeOutput Successful Response
+     * @throws ApiError
+     */
+    public static adminMarkEpisodesAbsentFromTmdb(data: EpisodesAdminMarkEpisodesAbsentFromTmdbData): CancelablePromise<EpisodesAdminMarkEpisodesAbsentFromTmdbResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/episodes/tmdb-absent',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Ignore Episodes
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns EpisodeOutput Successful Response
+     * @throws ApiError
+     */
+    public static adminIgnoreEpisodes(data: EpisodesAdminIgnoreEpisodesData): CancelablePromise<EpisodesAdminIgnoreEpisodesResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/episodes/ignore',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Get Tmdb Episode Choices
+     * Get every TMDB episode an `Episode` could be linked to, in the title's order.
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @param data.name
+     * @param data.limit
+     * @param data.otherTitles
+     * @returns TmdbEpisodeChoice Successful Response
+     * @throws ApiError
+     */
+    public static adminGetTmdbEpisodeChoices(data: EpisodesAdminGetTmdbEpisodeChoicesData): CancelablePromise<EpisodesAdminGetTmdbEpisodeChoicesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/episodes/{episode_id}/tmdb-choices',
+            path: {
+                episode_id: data.episodeId
+            },
+            query: {
+                name: data.name,
+                limit: data.limit,
+                other_titles: data.otherTitles
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Link Episode By Tmdb Url
+     * Point an `Episode` at the TMDB record a themoviedb.org address names.
+     *
+     * Read here rather than in the browser so that the title is imported on the way, which
+     * is what turns the numbering in an episode's address into the record the episode is
+     * pointed at, and so that a title the title was not a non-canonical row of is linked to
+     * it as well.
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @param data.requestBody
+     * @returns EpisodeOutput Successful Response
+     * @throws ApiError
+     */
+    public static adminLinkEpisodeByTmdbUrl(data: EpisodesAdminLinkEpisodeByTmdbUrlData): CancelablePromise<EpisodesAdminLinkEpisodeByTmdbUrlResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/episodes/{episode_id}/tmdb-url',
+            path: {
+                episode_id: data.episodeId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Link Episode To Tmdb
+     * Add the episode an admin chose to what an `Episode` stands for.
+     *
+     * The episode chosen is one already stored, since the choices are read off the
+     * stored rows, so it is named by its own id and there is nothing to read in.
+     *
+     * Added to whatever the row already stands for rather than put in its place,
+     * since a website running two episodes together in one listing is a thing
+     * websites do. Taking one off is `admin_unlink_episode_from_tmdb_episode`.
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @param data.tmdbEpisodeId
+     * @returns EpisodeOutput Successful Response
+     * @throws ApiError
+     */
+    public static adminLinkEpisodeToTmdb(data: EpisodesAdminLinkEpisodeToTmdbData): CancelablePromise<EpisodesAdminLinkEpisodeToTmdbResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/episodes/{episode_id}/tmdb/{tmdb_episode_id}',
+            path: {
+                episode_id: data.episodeId,
+                tmdb_episode_id: data.tmdbEpisodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Unlink Episode From Tmdb Episode
+     * Take one episode off what an `Episode` stands for.
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @param data.tmdbEpisodeId
+     * @returns EpisodeOutput Successful Response
+     * @throws ApiError
+     */
+    public static adminUnlinkEpisodeFromTmdbEpisode(data: EpisodesAdminUnlinkEpisodeFromTmdbEpisodeData): CancelablePromise<EpisodesAdminUnlinkEpisodeFromTmdbEpisodeResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/episodes/{episode_id}/tmdb/{tmdb_episode_id}',
+            path: {
+                episode_id: data.episodeId,
+                tmdb_episode_id: data.tmdbEpisodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Quick Unlink Episode
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @returns EpisodeOutput Successful Response
+     * @throws ApiError
+     */
+    public static adminQuickUnlinkEpisode(data: EpisodesAdminQuickUnlinkEpisodeData): CancelablePromise<EpisodesAdminQuickUnlinkEpisodeResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/episodes/{episode_id}/tmdb-quick-unlink',
+            path: {
+                episode_id: data.episodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Unlink Episode From Tmdb
+     * Take an `Episode` off the TMDB episode it was pointed at.
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @returns EpisodeOutput Successful Response
+     * @throws ApiError
+     */
+    public static adminUnlinkEpisodeFromTmdb(data: EpisodesAdminUnlinkEpisodeFromTmdbData): CancelablePromise<EpisodesAdminUnlinkEpisodeFromTmdbResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/episodes/{episode_id}/tmdb-unlink',
+            path: {
+                episode_id: data.episodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Mark Episode Absent From Tmdb
+     * Mark an `Episode` as one TMDB has no record of, and lock it there.
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @returns EpisodeOutput Successful Response
+     * @throws ApiError
+     */
+    public static adminMarkEpisodeAbsentFromTmdb(data: EpisodesAdminMarkEpisodeAbsentFromTmdbData): CancelablePromise<EpisodesAdminMarkEpisodeAbsentFromTmdbResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/episodes/{episode_id}/tmdb-absent',
+            path: {
+                episode_id: data.episodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Ignore Episode
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @returns EpisodeOutput Successful Response
+     * @throws ApiError
+     */
+    public static adminIgnoreEpisode(data: EpisodesAdminIgnoreEpisodeData): CancelablePromise<EpisodesAdminIgnoreEpisodeResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/episodes/{episode_id}/ignore',
+            path: {
+                episode_id: data.episodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Unignore Episode
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @returns EpisodeOutput Successful Response
+     * @throws ApiError
+     */
+    public static adminUnignoreEpisode(data: EpisodesAdminUnignoreEpisodeData): CancelablePromise<EpisodesAdminUnignoreEpisodeResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/episodes/{episode_id}/unignore',
+            path: {
+                episode_id: data.episodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Verify Tmdb Link
+     * Confirm the canonical links an `Episode` already has, and lock them.
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @returns EpisodeOutput Successful Response
+     * @throws ApiError
+     */
+    public static adminVerifyTmdbLink(data: EpisodesAdminVerifyTmdbLinkData): CancelablePromise<EpisodesAdminVerifyTmdbLinkResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/episodes/{episode_id}/verify-tmdb-link',
+            path: {
+                episode_id: data.episodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Episode
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @returns EpisodeOutput Successful Response
+     * @throws ApiError
+     */
+    public static getEpisode(data: EpisodesGetEpisodeData): CancelablePromise<EpisodesGetEpisodeResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/episodes/{episode_id}',
+            path: {
+                episode_id: data.episodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Episode
+     * Which episode this is linked to is chosen on the TMDB matching screens
+     * rather than written here, so there is nothing to check.
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @param data.requestBody
+     * @returns EpisodeOutput Successful Response
+     * @throws ApiError
+     */
+    public static updateEpisode(data: EpisodesUpdateEpisodeData): CancelablePromise<EpisodesUpdateEpisodeResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/episodes/{episode_id}',
+            path: {
+                episode_id: data.episodeId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class FilesService {
+    /**
+     * Get Files
+     * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @returns FilesPublic Successful Response
+     * @throws ApiError
+     */
+    public static getFiles(data: FilesGetFilesData = {}): CancelablePromise<FilesGetFilesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/admin/files',
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get File Manifest
+     * @returns FileManifestEntry Successful Response
+     * @throws ApiError
+     */
+    public static getFileManifest(): CancelablePromise<FilesGetFileManifestResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/admin/files/manifest'
+        });
+    }
+    
+    /**
+     * Dump Missing Files
+     * @param data The data for the request.
+     * @param data.formData
+     * @returns FileExport Successful Response
+     * @throws ApiError
+     */
+    public static dumpMissingFiles(data: FilesDumpMissingFilesData): CancelablePromise<FilesDumpMissingFilesResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin/files/dump-missing-files',
+            formData: data.formData,
+            mediaType: 'multipart/form-data',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Import Files
+     * @param data The data for the request.
+     * @param data.formData
+     * @returns FileImportResult Successful Response
+     * @throws ApiError
+     */
+    public static importFiles(data: FilesImportFilesData): CancelablePromise<FilesImportFilesResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin/files/import',
+            formData: data.formData,
+            mediaType: 'multipart/form-data',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get File
+     * @param data The data for the request.
+     * @param data.fileId
+     * @returns FilePublic Successful Response
+     * @throws ApiError
+     */
+    public static getFile(data: FilesGetFileData): CancelablePromise<FilesGetFileResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/admin/files/{file_id}',
+            path: {
+                file_id: data.fileId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update File
+     * @param data The data for the request.
+     * @param data.fileId
+     * @param data.requestBody
+     * @returns FilePublic Successful Response
+     * @throws ApiError
+     */
+    public static updateFile(data: FilesUpdateFileData): CancelablePromise<FilesUpdateFileResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/admin/files/{file_id}',
+            path: {
+                file_id: data.fileId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete File
+     * @param data The data for the request.
+     * @param data.fileId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteFile(data: FilesDeleteFileData): CancelablePromise<FilesDeleteFileResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/admin/files/{file_id}',
+            path: {
+                file_id: data.fileId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create File
+     * @param data The data for the request.
+     * @param data.pluginId
+     * @param data.requestBody
+     * @returns FilePublic Successful Response
+     * @throws ApiError
+     */
+    public static createFile(data: FilesCreateFileData): CancelablePromise<FilesCreateFileResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin/plugins/{plugin_id}/files',
+            path: {
+                plugin_id: data.pluginId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class ImagesService {
+    /**
+     * Get Title Image
+     * @param data The data for the request.
+     * @param data.field
+     * @param data.titleId
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static getTitleImage(data: ImagesGetTitleImageData): CancelablePromise<ImagesGetTitleImageResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/images/titles/{title_id}/{field}/{file_name}',
+            path: {
+                field: data.field,
+                title_id: data.titleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Season Image
+     * @param data The data for the request.
+     * @param data.field
+     * @param data.seasonId
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static getSeasonImage(data: ImagesGetSeasonImageData): CancelablePromise<ImagesGetSeasonImageResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/images/seasons/{season_id}/{field}/{file_name}',
+            path: {
+                field: data.field,
+                season_id: data.seasonId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Episode Image
+     * @param data The data for the request.
+     * @param data.field
+     * @param data.episodeId
+     * @returns unknown Successful Response
+     * @throws ApiError
+     */
+    public static getEpisodeImage(data: ImagesGetEpisodeImageData): CancelablePromise<ImagesGetEpisodeImageResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/images/episodes/{episode_id}/{field}/{file_name}',
+            path: {
+                field: data.field,
+                episode_id: data.episodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class IssueReportsService {
+    /**
+     * Update Episode Issue Report
+     * Rewrite an `EpisodeIssueReport` the `User` left.
+     * @param data The data for the request.
+     * @param data.issueReportId
+     * @param data.requestBody
+     * @returns IssueReportOutput Successful Response
+     * @throws ApiError
+     */
+    public static updateEpisodeIssueReport(data: IssueReportsUpdateEpisodeIssueReportData): CancelablePromise<IssueReportsUpdateEpisodeIssueReportResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/episode-issue-reports/{issue_report_id}',
+            path: {
+                issue_report_id: data.issueReportId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Episode Issue Report
+     * Drop an `EpisodeIssueReport` the `User` left.
+     * @param data The data for the request.
+     * @param data.issueReportId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteEpisodeIssueReport(data: IssueReportsDeleteEpisodeIssueReportData): CancelablePromise<IssueReportsDeleteEpisodeIssueReportResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/episode-issue-reports/{issue_report_id}',
+            path: {
+                issue_report_id: data.issueReportId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Season Issue Report
+     * Rewrite a `SeasonIssueReport` the `User` left.
+     * @param data The data for the request.
+     * @param data.issueReportId
+     * @param data.requestBody
+     * @returns IssueReportOutput Successful Response
+     * @throws ApiError
+     */
+    public static updateSeasonIssueReport(data: IssueReportsUpdateSeasonIssueReportData): CancelablePromise<IssueReportsUpdateSeasonIssueReportResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/season-issue-reports/{issue_report_id}',
+            path: {
+                issue_report_id: data.issueReportId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Season Issue Report
+     * Drop a `SeasonIssueReport` the `User` left.
+     * @param data The data for the request.
+     * @param data.issueReportId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteSeasonIssueReport(data: IssueReportsDeleteSeasonIssueReportData): CancelablePromise<IssueReportsDeleteSeasonIssueReportResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/season-issue-reports/{issue_report_id}',
+            path: {
+                issue_report_id: data.issueReportId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Title Issue Report
+     * Rewrite a `TitleIssueReport` the `User` left.
+     * @param data The data for the request.
+     * @param data.issueReportId
+     * @param data.requestBody
+     * @returns IssueReportOutput Successful Response
+     * @throws ApiError
+     */
+    public static updateTitleIssueReport(data: IssueReportsUpdateTitleIssueReportData): CancelablePromise<IssueReportsUpdateTitleIssueReportResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/title-issue-reports/{issue_report_id}',
+            path: {
+                issue_report_id: data.issueReportId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Title Issue Report
+     * Drop a `TitleIssueReport` the `User` left.
+     * @param data The data for the request.
+     * @param data.issueReportId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteTitleIssueReport(data: IssueReportsDeleteTitleIssueReportData): CancelablePromise<IssueReportsDeleteTitleIssueReportResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/title-issue-reports/{issue_report_id}',
+            path: {
+                issue_report_id: data.issueReportId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Episode Issue Reports
+     * Get every `EpisodeIssueReport` left on an `Episode`.
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @returns IssueReportOutput Successful Response
+     * @throws ApiError
+     */
+    public static getEpisodeIssueReports(data: IssueReportsGetEpisodeIssueReportsData): CancelablePromise<IssueReportsGetEpisodeIssueReportsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/episodes/{episode_id}/issue-reports',
+            path: {
+                episode_id: data.episodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Episode Issue Report
+     * Leave an `EpisodeIssueReport` on an `Episode`, with or without an account.
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @param data.requestBody
+     * @returns IssueReportOutput Successful Response
+     * @throws ApiError
+     */
+    public static createEpisodeIssueReport(data: IssueReportsCreateEpisodeIssueReportData): CancelablePromise<IssueReportsCreateEpisodeIssueReportResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/episodes/{episode_id}/issue-reports',
+            path: {
+                episode_id: data.episodeId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Season Issue Reports
+     * Get every `SeasonIssueReport` left on a `Season`.
+     * @param data The data for the request.
+     * @param data.seasonId
+     * @returns IssueReportOutput Successful Response
+     * @throws ApiError
+     */
+    public static getSeasonIssueReports(data: IssueReportsGetSeasonIssueReportsData): CancelablePromise<IssueReportsGetSeasonIssueReportsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/seasons/{season_id}/issue-reports',
+            path: {
+                season_id: data.seasonId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Season Issue Report
+     * Leave a `SeasonIssueReport` on a `Season`, with or without an account.
+     * @param data The data for the request.
+     * @param data.seasonId
+     * @param data.requestBody
+     * @returns IssueReportOutput Successful Response
+     * @throws ApiError
+     */
+    public static createSeasonIssueReport(data: IssueReportsCreateSeasonIssueReportData): CancelablePromise<IssueReportsCreateSeasonIssueReportResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/seasons/{season_id}/issue-reports',
+            path: {
+                season_id: data.seasonId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Title Issue Reports
+     * Get every `TitleIssueReport` left on a `Title`.
+     * @param data The data for the request.
+     * @param data.titleId
+     * @returns IssueReportOutput Successful Response
+     * @throws ApiError
+     */
+    public static getTitleIssueReports(data: IssueReportsGetTitleIssueReportsData): CancelablePromise<IssueReportsGetTitleIssueReportsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/titles/{title_id}/issue-reports',
+            path: {
+                title_id: data.titleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Title Issue Report
+     * Leave a `TitleIssueReport` on a `Title`, with or without an account.
+     * @param data The data for the request.
+     * @param data.titleId
+     * @param data.requestBody
+     * @returns IssueReportOutput Successful Response
+     * @throws ApiError
+     */
+    public static createTitleIssueReport(data: IssueReportsCreateTitleIssueReportData): CancelablePromise<IssueReportsCreateTitleIssueReportResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/titles/{title_id}/issue-reports',
+            path: {
+                title_id: data.titleId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Issue Reports
+     * Get every issue report on the site, newest first.
+     * @param data The data for the request.
+     * @param data.mediaType
+     * @param data.kind
+     * @param data.includeDeleted
+     * @returns IssueReportListOutput Successful Response
+     * @throws ApiError
+     */
+    public static getIssueReports(data: IssueReportsGetIssueReportsData = {}): CancelablePromise<IssueReportsGetIssueReportsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/issue-reports',
+            query: {
+                media_type: data.mediaType,
+                kind: data.kind,
+                include_deleted: data.includeDeleted
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Resolve Title Report
+     * @param data The data for the request.
+     * @param data.issueReportId
+     * @param data.requestBody
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static resolveTitleReport(data: IssueReportsResolveTitleReportData): CancelablePromise<IssueReportsResolveTitleReportResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/issue-reports/titles/{issue_report_id}/resolve',
+            path: {
+                issue_report_id: data.issueReportId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: 'Validation Error'
             }
@@ -118,8 +2649,21 @@ export class ItemsService {
 
 export class LoginService {
     /**
+     * Test Token
+     * Test access token.
+     * @returns UserPublic Successful Response
+     * @throws ApiError
+     */
+    public static testToken(): CancelablePromise<LoginTestTokenResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/login/test-token'
+        });
+    }
+    
+    /**
      * Login Access Token
-     * OAuth2 compatible token login, get an access token for future requests
+     * OAuth2 compatible token login, get an access token for future requests.
      * @param data The data for the request.
      * @param data.formData
      * @returns Token Successful Response
@@ -138,21 +2682,8 @@ export class LoginService {
     }
     
     /**
-     * Test Token
-     * Test access token
-     * @returns UserPublic Successful Response
-     * @throws ApiError
-     */
-    public static testToken(): CancelablePromise<LoginTestTokenResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/login/test-token'
-        });
-    }
-    
-    /**
      * Recover Password
-     * Password Recovery
+     * Password Recovery.
      * @param data The data for the request.
      * @param data.email
      * @returns Message Successful Response
@@ -173,7 +2704,7 @@ export class LoginService {
     
     /**
      * Reset Password
-     * Reset password
+     * Reset password.
      * @param data The data for the request.
      * @param data.requestBody
      * @returns Message Successful Response
@@ -193,7 +2724,7 @@ export class LoginService {
     
     /**
      * Recover Password Html Content
-     * HTML Content for Password Recovery
+     * HTML Content for Password Recovery.
      * @param data The data for the request.
      * @param data.email
      * @returns string Successful Response
@@ -205,6 +2736,179 @@ export class LoginService {
             url: '/api/v1/password-recovery-html-content/{email}',
             path: {
                 email: data.email
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class PluginsService {
+    /**
+     * Import Watch History Information
+     * Return information about all plugins that support importing watch history.
+     * @returns PluginImportWatchHistoryInformation Successful Response
+     * @throws ApiError
+     */
+    public static importWatchHistoryInformation(): CancelablePromise<PluginsImportWatchHistoryInformationResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/import-watch-history-information'
+        });
+    }
+    
+    /**
+     * Import Url Information
+     * Return information about the plugins offered as ways to add by URL.
+     * @returns PluginImportURLInformation Successful Response
+     * @throws ApiError
+     */
+    public static importUrlInformation(): CancelablePromise<PluginsImportUrlInformationResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/import-url-information'
+        });
+    }
+    
+    /**
+     * Match Url
+     * Return whether any plugin can import `url`.
+     * @param data The data for the request.
+     * @param data.url
+     * @returns PluginURLMatch Successful Response
+     * @throws ApiError
+     */
+    public static matchUrl(data: PluginsMatchUrlData): CancelablePromise<PluginsMatchUrlResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/match-url',
+            query: {
+                url: data.url
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * In App Search
+     * `cursor` is the `next_cursor` of an earlier page; omit it for the first one.
+     * @param data The data for the request.
+     * @param data.query
+     * @param data.cursor
+     * @returns PluginSearchResults Successful Response
+     * @throws ApiError
+     */
+    public static inAppSearch(data: PluginsInAppSearchData): CancelablePromise<PluginsInAppSearchResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/in-app-search',
+            query: {
+                query: data.query,
+                cursor: data.cursor
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Search Watch Providers
+     * Return the streaming services each of `media_identifier` can be watched on.
+     * @param data The data for the request.
+     * @param data.mediaIdentifier
+     * @returns SearchWatchProviders Successful Response
+     * @throws ApiError
+     */
+    public static searchWatchProviders(data: PluginsSearchWatchProvidersData): CancelablePromise<PluginsSearchWatchProvidersResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/search-watch-providers',
+            query: {
+                media_identifier: data.mediaIdentifier
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Media Info
+     * Return everything TMDB knows about one of its own search results.
+     * @param data The data for the request.
+     * @param data.mediaIdentifier
+     * @returns TMDBMediaInfo Successful Response
+     * @throws ApiError
+     */
+    public static mediaInfo(data: PluginsMediaInfoData): CancelablePromise<PluginsMediaInfoResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/media-info',
+            query: {
+                media_identifier: data.mediaIdentifier
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Support Information
+     * @returns PluginSupportInformation Successful Response
+     * @throws ApiError
+     */
+    public static supportInformation(): CancelablePromise<PluginsSupportInformationResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/support-information'
+        });
+    }
+    
+    /**
+     * Get Plugins
+     * Get `Plugin`s.
+     * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @returns PluginsPublic Successful Response
+     * @throws ApiError
+     */
+    public static getPlugins(data: PluginsGetPluginsData = {}): CancelablePromise<PluginsGetPluginsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins',
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Plugin
+     * @param data The data for the request.
+     * @param data.pluginId
+     * @returns PluginOutput Successful Response
+     * @throws ApiError
+     */
+    public static getPlugin(data: PluginsGetPluginData): CancelablePromise<PluginsGetPluginResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/plugins/{plugin_id}',
+            path: {
+                plugin_id: data.pluginId
             },
             errors: {
                 422: 'Validation Error'
@@ -235,22 +2939,68 @@ export class PrivateService {
     }
 }
 
-export class UsersService {
+export class SeasonsService {
     /**
-     * Read Users
-     * Retrieve users.
+     * Get Season Information
+     * Return canonical and non-canonical season informtion.
      * @param data The data for the request.
-     * @param data.skip
-     * @param data.limit
-     * @returns UsersPublic Successful Response
+     * @param data.seasonId
+     * @returns SeasonInformationOutput Successful Response
      * @throws ApiError
      */
-    public static readUsers(data: UsersReadUsersData = {}): CancelablePromise<UsersReadUsersResponse> {
+    public static getSeasonInformation(data: SeasonsGetSeasonInformationData): CancelablePromise<SeasonsGetSeasonInformationResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/users/',
+            url: '/api/v1/seasons/{season_id}/information',
+            path: {
+                season_id: data.seasonId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Season Episodes
+     * Return every `Episode` a `Season` holds.
+     * @param data The data for the request.
+     * @param data.seasonId
+     * @returns EpisodeOutput Successful Response
+     * @throws ApiError
+     */
+    public static getSeasonEpisodes(data: SeasonsGetSeasonEpisodesData): CancelablePromise<SeasonsGetSeasonEpisodesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/seasons/{season_id}/episodes',
+            path: {
+                season_id: data.seasonId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Seasons
+     * Get `Season`s.
+     * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @returns SeasonsPublic Successful Response
+     * @throws ApiError
+     */
+    public static getSeasons(data: SeasonsGetSeasonsData = {}): CancelablePromise<SeasonsGetSeasonsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/seasons',
             query: {
-                skip: data.skip,
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
                 limit: data.limit
             },
             errors: {
@@ -260,17 +3010,305 @@ export class UsersService {
     }
     
     /**
-     * Create User
-     * Create new user.
+     * Get Season
      * @param data The data for the request.
-     * @param data.requestBody
-     * @returns UserPublic Successful Response
+     * @param data.seasonId
+     * @returns SeasonOutput Successful Response
      * @throws ApiError
      */
-    public static createUser(data: UsersCreateUserData): CancelablePromise<UsersCreateUserResponse> {
+    public static getSeason(data: SeasonsGetSeasonData): CancelablePromise<SeasonsGetSeasonResponse> {
         return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/users/',
+            method: 'GET',
+            url: '/api/v1/seasons/{season_id}',
+            path: {
+                season_id: data.seasonId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class SourcesService {
+    /**
+     * Get Sources
+     * Get `Source`s.
+     * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @returns SourcesPublic Successful Response
+     * @throws ApiError
+     */
+    public static getSources(data: SourcesGetSourcesData = {}): CancelablePromise<SourcesGetSourcesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/sources',
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Source
+     * @param data The data for the request.
+     * @param data.sourceId
+     * @returns SourcePublic Successful Response
+     * @throws ApiError
+     */
+    public static getSource(data: SourcesGetSourceData): CancelablePromise<SourcesGetSourceResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/sources/{source_id}',
+            path: {
+                source_id: data.sourceId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class TitlesService {
+    /**
+     * Get Title Information
+     * Return what the website and TMDB each say about a `Title`.
+     * @param data The data for the request.
+     * @param data.titleId
+     * @returns TitleInformationOutput Successful Response
+     * @throws ApiError
+     */
+    public static getTitleInformation(data: TitlesGetTitleInformationData): CancelablePromise<TitlesGetTitleInformationResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/titles/{title_id}/information',
+            path: {
+                title_id: data.titleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Title Seasons
+     * Return every `Season` a `Title` holds.
+     * @param data The data for the request.
+     * @param data.titleId
+     * @returns SeasonWithEpisodeCountOutput Successful Response
+     * @throws ApiError
+     */
+    public static getTitleSeasons(data: TitlesGetTitleSeasonsData): CancelablePromise<TitlesGetTitleSeasonsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/titles/{title_id}/seasons',
+            path: {
+                title_id: data.titleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Linked Titles
+     * @param data The data for the request.
+     * @param data.titleId
+     * @returns TitleListPublic Successful Response
+     * @throws ApiError
+     */
+    public static getLinkedTitles(data: TitlesGetLinkedTitlesData): CancelablePromise<TitlesGetLinkedTitlesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/titles/{title_id}/linked',
+            path: {
+                title_id: data.titleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Titles
+     * Get `Title`s.
+     * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @returns TitlesPublic Successful Response
+     * @throws ApiError
+     */
+    public static getTitles(data: TitlesGetTitlesData = {}): CancelablePromise<TitlesGetTitlesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/titles',
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Get Unvalidated Titles
+     * Get every `Title` whose canonical titles no `User` has validated.
+     * @param data The data for the request.
+     * @param data.limit
+     * @returns UnvalidatedTitleOutput Successful Response
+     * @throws ApiError
+     */
+    public static adminGetUnvalidatedTitles(data: TitlesAdminGetUnvalidatedTitlesData = {}): CancelablePromise<TitlesAdminGetUnvalidatedTitlesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/titles/unvalidated',
+            query: {
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Get Title Link History
+     * Get a page of every title linked, ignored or settled as absent by hand.
+     * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @returns TitleLinkHistoryPublic Successful Response
+     * @throws ApiError
+     */
+    public static adminGetTitleLinkHistory(data: TitlesAdminGetTitleLinkHistoryData = {}): CancelablePromise<TitlesAdminGetTitleLinkHistoryResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/titles/link-history',
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Get Mismatched Titles
+     * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @param data.inUserChannelsOnly
+     * @returns MismatchedTitlesPublic Successful Response
+     * @throws ApiError
+     */
+    public static adminGetMismatchedTitles(data: TitlesAdminGetMismatchedTitlesData = {}): CancelablePromise<TitlesAdminGetMismatchedTitlesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/titles/mismatched',
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit,
+                in_user_channels_only: data.inUserChannelsOnly
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Get Unlinked Titles
+     * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @param data.inUserChannelsOnly
+     * @returns UnlinkedTitlesPublic Successful Response
+     * @throws ApiError
+     */
+    public static adminGetUnlinkedTitles(data: TitlesAdminGetUnlinkedTitlesData = {}): CancelablePromise<TitlesAdminGetUnlinkedTitlesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/titles/unlinked',
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit,
+                in_user_channels_only: data.inUserChannelsOnly
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Title
+     * @param data The data for the request.
+     * @param data.titleId
+     * @returns TitlePublic Successful Response
+     * @throws ApiError
+     */
+    public static getTitle(data: TitlesGetTitleData): CancelablePromise<TitlesGetTitleResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/titles/{title_id}',
+            path: {
+                title_id: data.titleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Title
+     * Update a `Title`.
+     * @param data The data for the request.
+     * @param data.titleId
+     * @param data.requestBody
+     * @returns TitlePublic Successful Response
+     * @throws ApiError
+     */
+    public static updateTitle(data: TitlesUpdateTitleData): CancelablePromise<TitlesUpdateTitleResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/titles/{title_id}',
+            path: {
+                title_id: data.titleId
+            },
             body: data.requestBody,
             mediaType: 'application/json',
             errors: {
@@ -279,6 +3317,469 @@ export class UsersService {
         });
     }
     
+    /**
+     * Admin Link Title To Tmdb
+     * @param data The data for the request.
+     * @param data.titleId
+     * @param data.tmdbTitleId
+     * @returns TitlePublic Successful Response
+     * @throws ApiError
+     */
+    public static adminLinkTitleToTmdb(data: TitlesAdminLinkTitleToTmdbData): CancelablePromise<TitlesAdminLinkTitleToTmdbResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/titles/{title_id}/tmdb/{tmdb_title_id}',
+            path: {
+                title_id: data.titleId,
+                tmdb_title_id: data.tmdbTitleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Unlink Title From Tmdb
+     * Take one canonical title off what a `Title` stands for.
+     * @param data The data for the request.
+     * @param data.titleId
+     * @param data.tmdbTitleId
+     * @returns TitlePublic Successful Response
+     * @throws ApiError
+     */
+    public static adminUnlinkTitleFromTmdb(data: TitlesAdminUnlinkTitleFromTmdbData): CancelablePromise<TitlesAdminUnlinkTitleFromTmdbResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/titles/{title_id}/tmdb/{tmdb_title_id}',
+            path: {
+                title_id: data.titleId,
+                tmdb_title_id: data.tmdbTitleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Link Title By Tmdb Url
+     * @param data The data for the request.
+     * @param data.titleId
+     * @param data.requestBody
+     * @returns TitlePublic Successful Response
+     * @throws ApiError
+     */
+    public static adminLinkTitleByTmdbUrl(data: TitlesAdminLinkTitleByTmdbUrlData): CancelablePromise<TitlesAdminLinkTitleByTmdbUrlResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/titles/{title_id}/tmdb-by-url',
+            path: {
+                title_id: data.titleId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Link Linked Title By Url
+     * @param data The data for the request.
+     * @param data.titleId
+     * @param data.requestBody
+     * @returns TitlePublic Successful Response
+     * @throws ApiError
+     */
+    public static adminLinkLinkedTitleByUrl(data: TitlesAdminLinkLinkedTitleByUrlData): CancelablePromise<TitlesAdminLinkLinkedTitleByUrlResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/titles/{title_id}/linked-by-url',
+            path: {
+                title_id: data.titleId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Validate Title
+     * Confirm the canonical titles a `Title` stands for as the right ones.
+     * @param data The data for the request.
+     * @param data.titleId
+     * @returns TitlePublic Successful Response
+     * @throws ApiError
+     */
+    public static adminValidateTitle(data: TitlesAdminValidateTitleData): CancelablePromise<TitlesAdminValidateTitleResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/titles/{title_id}/validate',
+            path: {
+                title_id: data.titleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Mark Title Absent From Tmdb
+     * Settle a `Title` as one TMDB has no record of.
+     * @param data The data for the request.
+     * @param data.titleId
+     * @returns TitlePublic Successful Response
+     * @throws ApiError
+     */
+    public static adminMarkTitleAbsentFromTmdb(data: TitlesAdminMarkTitleAbsentFromTmdbData): CancelablePromise<TitlesAdminMarkTitleAbsentFromTmdbResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/titles/{title_id}/tmdb-absent',
+            path: {
+                title_id: data.titleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Unmark Title Absent From Tmdb
+     * Let a `Title` settled as absent from TMDB be matched again.
+     * @param data The data for the request.
+     * @param data.titleId
+     * @returns TitlePublic Successful Response
+     * @throws ApiError
+     */
+    public static adminUnmarkTitleAbsentFromTmdb(data: TitlesAdminUnmarkTitleAbsentFromTmdbData): CancelablePromise<TitlesAdminUnmarkTitleAbsentFromTmdbResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/titles/{title_id}/tmdb-absent/undo',
+            path: {
+                title_id: data.titleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Relink Title Episodes
+     * Work out every unlocked episode link on a `Title` again from scratch.
+     * @param data The data for the request.
+     * @param data.titleId
+     * @returns TitlePublic Successful Response
+     * @throws ApiError
+     */
+    public static adminRelinkTitleEpisodes(data: TitlesAdminRelinkTitleEpisodesData): CancelablePromise<TitlesAdminRelinkTitleEpisodesResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/titles/{title_id}/relink',
+            path: {
+                title_id: data.titleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Force Update Title
+     * @param data The data for the request.
+     * @param data.titleId
+     * @returns TitlePublic Successful Response
+     * @throws ApiError
+     */
+    public static adminForceUpdateTitle(data: TitlesAdminForceUpdateTitleData): CancelablePromise<TitlesAdminForceUpdateTitleResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/titles/{title_id}/force-update',
+            path: {
+                title_id: data.titleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Title Tmdb Episode Groups
+     * @param data The data for the request.
+     * @param data.titleId
+     * @returns TmdbEpisodeGroupOption Successful Response
+     * @throws ApiError
+     */
+    public static getTitleTmdbEpisodeGroups(data: TitlesGetTitleTmdbEpisodeGroupsData): CancelablePromise<TitlesGetTitleTmdbEpisodeGroupsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/titles/{title_id}/tmdb-episode-groups',
+            path: {
+                title_id: data.titleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class TmdbEpisodesService {
+    /**
+     * Get Tmdb Episode By Id
+     * Get a `Episode`, with the season and title above it.
+     * @param data The data for the request.
+     * @param data.tmdbEpisodeId
+     * @returns TmdbEpisodeRecord Successful Response
+     * @throws ApiError
+     */
+    public static getTmdbEpisodeById(data: TmdbEpisodesGetTmdbEpisodeByIdData): CancelablePromise<TmdbEpisodesGetTmdbEpisodeByIdResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/episodes/tmdb/{tmdb_episode_id}',
+            path: {
+                tmdb_episode_id: data.tmdbEpisodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Tmdb Episodes
+     * Get every `Episode`.
+     * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @returns TmdbEpisodesPublic Successful Response
+     * @throws ApiError
+     */
+    public static getTmdbEpisodes(data: TmdbEpisodesGetTmdbEpisodesData = {}): CancelablePromise<TmdbEpisodesGetTmdbEpisodesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/episodes/tmdb',
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class TmdbTitlesService {
+    /**
+     * Get Tmdb Title By Id
+     * Get a `Title`.
+     * @param data The data for the request.
+     * @param data.tmdbTitleId
+     * @returns TmdbTitleOutput Successful Response
+     * @throws ApiError
+     */
+    public static getTmdbTitleById(data: TmdbTitlesGetTmdbTitleByIdData): CancelablePromise<TmdbTitlesGetTmdbTitleByIdResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/titles/tmdb/{tmdb_title_id}',
+            path: {
+                tmdb_title_id: data.tmdbTitleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Tmdb Titles
+     * Get every `Title`.
+     * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @returns TmdbTitlesPublic Successful Response
+     * @throws ApiError
+     */
+    public static getTmdbTitles(data: TmdbTitlesGetTmdbTitlesData = {}): CancelablePromise<TmdbTitlesGetTmdbTitlesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/titles/tmdb',
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class UnmatchedTitlesService {
+    /**
+     * Admin Get Unmatched Titles
+     * Get a page of the services that offer a title nothing here has.
+     * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @param data.inUserChannelsOnly
+     * @param data.includeIgnored
+     * @param data.supportedOnly
+     * @returns UnmatchedTitlesPublic Successful Response
+     * @throws ApiError
+     */
+    public static adminGetUnmatchedTitles(data: UnmatchedTitlesAdminGetUnmatchedTitlesData = {}): CancelablePromise<UnmatchedTitlesAdminGetUnmatchedTitlesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/unmatched-titles',
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit,
+                in_user_channels_only: data.inUserChannelsOnly,
+                include_ignored: data.includeIgnored,
+                supported_only: data.supportedOnly
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Import Unmatched Title
+     * @param data The data for the request.
+     * @param data.unmatchedTitleId
+     * @param data.requestBody
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static adminImportUnmatchedTitle(data: UnmatchedTitlesAdminImportUnmatchedTitleData): CancelablePromise<UnmatchedTitlesAdminImportUnmatchedTitleResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/unmatched-titles/{unmatched_title_id}/import',
+            path: {
+                unmatched_title_id: data.unmatchedTitleId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Ignore Unmatched Title
+     * @param data The data for the request.
+     * @param data.unmatchedTitleId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static adminIgnoreUnmatchedTitle(data: UnmatchedTitlesAdminIgnoreUnmatchedTitleData): CancelablePromise<UnmatchedTitlesAdminIgnoreUnmatchedTitleResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/unmatched-titles/{unmatched_title_id}/ignore',
+            path: {
+                unmatched_title_id: data.unmatchedTitleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Unignore Unmatched Title
+     * @param data The data for the request.
+     * @param data.unmatchedTitleId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static adminUnignoreUnmatchedTitle(data: UnmatchedTitlesAdminUnignoreUnmatchedTitleData): CancelablePromise<UnmatchedTitlesAdminUnignoreUnmatchedTitleResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/unmatched-titles/{unmatched_title_id}/unignore',
+            path: {
+                unmatched_title_id: data.unmatchedTitleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Delete Unmatched Title
+     * @param data The data for the request.
+     * @param data.unmatchedTitleId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static adminDeleteUnmatchedTitle(data: UnmatchedTitlesAdminDeleteUnmatchedTitleData): CancelablePromise<UnmatchedTitlesAdminDeleteUnmatchedTitleResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/unmatched-titles/{unmatched_title_id}',
+            path: {
+                unmatched_title_id: data.unmatchedTitleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class UserActionsService {
+    /**
+     * Admin Get User Actions
+     * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @returns UserActionsPublic Successful Response
+     * @throws ApiError
+     */
+    public static adminGetUserActions(data: UserActionsAdminGetUserActionsData = {}): CancelablePromise<UserActionsAdminGetUserActionsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/admin/user-actions',
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class UsersService {
     /**
      * Read User Me
      * Get current user.
@@ -346,17 +3847,32 @@ export class UsersService {
     }
     
     /**
-     * Register User
-     * Create new user without the need to be logged in.
-     * @param data The data for the request.
-     * @param data.requestBody
-     * @returns UserPublic Successful Response
+     * Read Source Preferences
+     * Get the current user's source priority and enable/disable preferences.
+     *
+     * Always returns every stored source plus `Other`, in priority order.
+     * @returns SourcePreferenceOutput Successful Response
      * @throws ApiError
      */
-    public static registerUser(data: UsersRegisterUserData): CancelablePromise<UsersRegisterUserResponse> {
+    public static readSourcePreferences(): CancelablePromise<UsersReadSourcePreferencesResponse> {
         return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/users/signup',
+            method: 'GET',
+            url: '/api/v1/users/me/source-preferences'
+        });
+    }
+    
+    /**
+     * Update Source Preferences
+     * Replace the current user's source preferences (priority order + enabled).
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns SourcePreferenceOutput Successful Response
+     * @throws ApiError
+     */
+    public static updateSourcePreferences(data: UsersUpdateSourcePreferencesData): CancelablePromise<UsersUpdateSourcePreferencesResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/users/me/source-preferences',
             body: data.requestBody,
             mediaType: 'application/json',
             errors: {
@@ -387,6 +3903,111 @@ export class UsersService {
     }
     
     /**
+     * Register User
+     * Create new user without the need to be logged in.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns UserPublic Successful Response
+     * @throws ApiError
+     */
+    public static registerUser(data: UsersRegisterUserData): CancelablePromise<UsersRegisterUserResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/users/signup',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get User Public Channels
+     * List a `User`'s public, non-anonymous `Channel`s, highest score first.
+     * @param data The data for the request.
+     * @param data.userId
+     * @returns ChannelPublicListOutput Successful Response
+     * @throws ApiError
+     */
+    public static getUserPublicChannels(data: UsersGetUserPublicChannelsData): CancelablePromise<UsersGetUserPublicChannelsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/users/{user_id}/channels',
+            path: {
+                user_id: data.userId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Users
+     * Retrieve users.
+     * @param data The data for the request.
+     * @param data.skip
+     * @param data.limit
+     * @returns UsersPublic Successful Response
+     * @throws ApiError
+     */
+    public static readUsers(data: UsersReadUsersData = {}): CancelablePromise<UsersReadUsersResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/admin/users',
+            query: {
+                skip: data.skip,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create User
+     * Create new user.
+     * @param data The data for the request.
+     * @param data.requestBody
+     * @returns UserPublic Successful Response
+     * @throws ApiError
+     */
+    public static createUser(data: UsersCreateUserData): CancelablePromise<UsersCreateUserResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/admin/users',
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin List User Channels
+     * List every `Channel` editable by a single `User`.
+     * @param data The data for the request.
+     * @param data.userId
+     * @returns ChannelListOutput Successful Response
+     * @throws ApiError
+     */
+    public static adminListUserChannels(data: UsersAdminListUserChannelsData): CancelablePromise<UsersAdminListUserChannelsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/admin/users/{user_id}/channels',
+            path: {
+                user_id: data.userId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
      * Update User
      * Update a user.
      * @param data The data for the request.
@@ -398,7 +4019,7 @@ export class UsersService {
     public static updateUser(data: UsersUpdateUserData): CancelablePromise<UsersUpdateUserResponse> {
         return __request(OpenAPI, {
             method: 'PATCH',
-            url: '/api/v1/users/{user_id}',
+            url: '/api/v1/admin/users/{user_id}',
             path: {
                 user_id: data.userId
             },
@@ -421,7 +4042,7 @@ export class UsersService {
     public static deleteUser(data: UsersDeleteUserData): CancelablePromise<UsersDeleteUserResponse> {
         return __request(OpenAPI, {
             method: 'DELETE',
-            url: '/api/v1/users/{user_id}',
+            url: '/api/v1/admin/users/{user_id}',
             path: {
                 user_id: data.userId
             },
@@ -434,6 +4055,18 @@ export class UsersService {
 
 export class UtilsService {
     /**
+     * Health Check
+     * @returns boolean Successful Response
+     * @throws ApiError
+     */
+    public static healthCheck(): CancelablePromise<UtilsHealthCheckResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/utils/health-check/'
+        });
+    }
+    
+    /**
      * Test Email
      * Test emails.
      * @param data The data for the request.
@@ -444,7 +4077,7 @@ export class UtilsService {
     public static testEmail(data: UtilsTestEmailData): CancelablePromise<UtilsTestEmailResponse> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/v1/utils/test-email/',
+            url: '/api/v1/admin/utils/test-email/',
             query: {
                 email_to: data.emailTo
             },
@@ -453,16 +4086,505 @@ export class UtilsService {
             }
         });
     }
-    
+}
+
+export class VideoStoreService {
     /**
-     * Health Check
-     * @returns boolean Successful Response
+     * Get Store Sources
+     * Read every `Source` a store can be built from.
+     * @returns VideoStoreSourceOutput Successful Response
      * @throws ApiError
      */
-    public static healthCheck(): CancelablePromise<UtilsHealthCheckResponse> {
+    public static getStoreSources(): CancelablePromise<VideoStoreGetStoreSourcesResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/utils/health-check/'
+            url: '/api/v1/video-store/sources'
+        });
+    }
+    
+    /**
+     * Get Store Titles
+     * Read every title a `Source` has.
+     * @param data The data for the request.
+     * @param data.sourceId
+     * @param data.metadata
+     * @returns VideoStoreTitlesOutput Successful Response
+     * @throws ApiError
+     */
+    public static getStoreTitles(data: VideoStoreGetStoreTitlesData): CancelablePromise<VideoStoreGetStoreTitlesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/video-store/sources/{source_id}/titles',
+            path: {
+                source_id: data.sourceId
+            },
+            query: {
+                metadata: data.metadata
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Source Title Cards
+     * @param data The data for the request.
+     * @param data.sourceId
+     * @param data.offset
+     * @param data.limit
+     * @param data.query
+     * @param data.yearFrom
+     * @param data.yearTo
+     * @param data.tmdbScoreFrom
+     * @param data.tmdbScoreTo
+     * @param data.tmdbPopularityFrom
+     * @param data.tmdbPopularityTo
+     * @param data.imdbScoreFrom
+     * @param data.imdbScoreTo
+     * @param data.imdbPopularityFrom
+     * @param data.imdbPopularityTo
+     * @param data.mediaTypes
+     * @param data.originalLanguages
+     * @param data.spokenLanguages
+     * @param data.genres
+     * @returns TitleCardsOutput Successful Response
+     * @throws ApiError
+     */
+    public static getSourceTitleCards(data: VideoStoreGetSourceTitleCardsData): CancelablePromise<VideoStoreGetSourceTitleCardsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/video-store/sources/{source_id}/title-cards',
+            path: {
+                source_id: data.sourceId
+            },
+            query: {
+                offset: data.offset,
+                limit: data.limit,
+                query: data.query,
+                year_from: data.yearFrom,
+                year_to: data.yearTo,
+                tmdb_score_from: data.tmdbScoreFrom,
+                tmdb_score_to: data.tmdbScoreTo,
+                tmdb_popularity_from: data.tmdbPopularityFrom,
+                tmdb_popularity_to: data.tmdbPopularityTo,
+                imdb_score_from: data.imdbScoreFrom,
+                imdb_score_to: data.imdbScoreTo,
+                imdb_popularity_from: data.imdbPopularityFrom,
+                imdb_popularity_to: data.imdbPopularityTo,
+                media_types: data.mediaTypes,
+                original_languages: data.originalLanguages,
+                spoken_languages: data.spokenLanguages,
+                genres: data.genres
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Source Title Card Facets
+     * @param data The data for the request.
+     * @param data.sourceId
+     * @returns VideoStoreFacetsOutput Successful Response
+     * @throws ApiError
+     */
+    public static getSourceTitleCardFacets(data: VideoStoreGetSourceTitleCardFacetsData): CancelablePromise<VideoStoreGetSourceTitleCardFacetsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/video-store/sources/{source_id}/title-card-facets',
+            path: {
+                source_id: data.sourceId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Store Regions
+     * Read every region a watch provider store can be built for.
+     * @returns VideoStoreRegionOutput Successful Response
+     * @throws ApiError
+     */
+    public static getStoreRegions(): CancelablePromise<VideoStoreGetStoreRegionsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/video-store/regions'
+        });
+    }
+    
+    /**
+     * Get Original Languages
+     * Read every original language a store can be filtered by.
+     * @returns VideoStoreLanguageOutput Successful Response
+     * @throws ApiError
+     */
+    public static getOriginalLanguages(): CancelablePromise<VideoStoreGetOriginalLanguagesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/video-store/original-languages'
+        });
+    }
+    
+    /**
+     * Get Spoken Languages
+     * Read every spoken language a store can be filtered by.
+     * @returns VideoStoreLanguageOutput Successful Response
+     * @throws ApiError
+     */
+    public static getSpokenLanguages(): CancelablePromise<VideoStoreGetSpokenLanguagesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/video-store/spoken-languages'
+        });
+    }
+    
+    /**
+     * Get Store Watch Providers
+     * Read every `WatchProvider` a store can be built from in `region`.
+     * @param data The data for the request.
+     * @param data.region
+     * @returns VideoStoreWatchProviderOutput Successful Response
+     * @throws ApiError
+     */
+    public static getStoreWatchProviders(data: VideoStoreGetStoreWatchProvidersData = {}): CancelablePromise<VideoStoreGetStoreWatchProvidersResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/video-store/watch-providers',
+            query: {
+                region: data.region
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Provider Titles
+     * Read every title a `WatchProvider` offers in `region`.
+     * @param data The data for the request.
+     * @param data.watchProviderId
+     * @param data.region
+     * @returns VideoStoreTitlesOutput Successful Response
+     * @throws ApiError
+     */
+    public static getProviderTitles(data: VideoStoreGetProviderTitlesData): CancelablePromise<VideoStoreGetProviderTitlesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/video-store/watch-providers/{watch_provider_id}/titles',
+            path: {
+                watch_provider_id: data.watchProviderId
+            },
+            query: {
+                region: data.region
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Provider Title Cards
+     * @param data The data for the request.
+     * @param data.watchProviderId
+     * @param data.offset
+     * @param data.limit
+     * @param data.query
+     * @param data.yearFrom
+     * @param data.yearTo
+     * @param data.tmdbScoreFrom
+     * @param data.tmdbScoreTo
+     * @param data.tmdbPopularityFrom
+     * @param data.tmdbPopularityTo
+     * @param data.imdbScoreFrom
+     * @param data.imdbScoreTo
+     * @param data.imdbPopularityFrom
+     * @param data.imdbPopularityTo
+     * @param data.mediaTypes
+     * @param data.originalLanguages
+     * @param data.spokenLanguages
+     * @param data.genres
+     * @param data.region
+     * @returns TitleCardsOutput Successful Response
+     * @throws ApiError
+     */
+    public static getProviderTitleCards(data: VideoStoreGetProviderTitleCardsData): CancelablePromise<VideoStoreGetProviderTitleCardsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/video-store/watch-providers/{watch_provider_id}/title-cards',
+            path: {
+                watch_provider_id: data.watchProviderId
+            },
+            query: {
+                offset: data.offset,
+                limit: data.limit,
+                query: data.query,
+                year_from: data.yearFrom,
+                year_to: data.yearTo,
+                tmdb_score_from: data.tmdbScoreFrom,
+                tmdb_score_to: data.tmdbScoreTo,
+                tmdb_popularity_from: data.tmdbPopularityFrom,
+                tmdb_popularity_to: data.tmdbPopularityTo,
+                imdb_score_from: data.imdbScoreFrom,
+                imdb_score_to: data.imdbScoreTo,
+                imdb_popularity_from: data.imdbPopularityFrom,
+                imdb_popularity_to: data.imdbPopularityTo,
+                media_types: data.mediaTypes,
+                original_languages: data.originalLanguages,
+                spoken_languages: data.spokenLanguages,
+                genres: data.genres,
+                region: data.region
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Provider Title Card Facets
+     * @param data The data for the request.
+     * @param data.watchProviderId
+     * @param data.region
+     * @returns VideoStoreFacetsOutput Successful Response
+     * @throws ApiError
+     */
+    public static getProviderTitleCardFacets(data: VideoStoreGetProviderTitleCardFacetsData): CancelablePromise<VideoStoreGetProviderTitleCardFacetsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/video-store/watch-providers/{watch_provider_id}/title-card-facets',
+            path: {
+                watch_provider_id: data.watchProviderId
+            },
+            query: {
+                region: data.region
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Title Detail
+     * Read everything the case viewer shows for one shelved title.
+     * @param data The data for the request.
+     * @param data.titleId
+     * @param data.metadata
+     * @returns VideoStoreTitleDetailOutput Successful Response
+     * @throws ApiError
+     */
+    public static getTitleDetail(data: VideoStoreGetTitleDetailData): CancelablePromise<VideoStoreGetTitleDetailResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/video-store/titles/{title_id}',
+            path: {
+                title_id: data.titleId
+            },
+            query: {
+                metadata: data.metadata
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Title Matches
+     * Search TMDB with what this title's website was matched on.
+     * @param data The data for the request.
+     * @param data.titleId
+     * @returns PluginSearchResult Successful Response
+     * @throws ApiError
+     */
+    public static getTitleMatches(data: VideoStoreGetTitleMatchesData): CancelablePromise<VideoStoreGetTitleMatchesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/video-store/titles/{title_id}/matches',
+            path: {
+                title_id: data.titleId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class WatchesService {
+    /**
+     * Get Watches
+     * Get all of the `Watch`es for the `User`.
+     * @param data The data for the request.
+     * @param data.sortOptions
+     * @param data.filterOptions
+     * @param data.offset
+     * @param data.limit
+     * @returns WatchesListOutput Successful Response
+     * @throws ApiError
+     */
+    public static getWatches(data: WatchesGetWatchesData = {}): CancelablePromise<WatchesGetWatchesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/watches',
+            query: {
+                sort_options: data.sortOptions,
+                filter_options: data.filterOptions,
+                offset: data.offset,
+                limit: data.limit
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Watch
+     * Update a watch.
+     * @param data The data for the request.
+     * @param data.watchId
+     * @param data.requestBody
+     * @returns WatchOutput Successful Response
+     * @throws ApiError
+     */
+    public static updateWatch(data: WatchesUpdateWatchData): CancelablePromise<WatchesUpdateWatchResponse> {
+        return __request(OpenAPI, {
+            method: 'PATCH',
+            url: '/api/v1/watches/{watch_id}',
+            path: {
+                watch_id: data.watchId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Watch
+     * Delete a watch and all sibling watches by its id.
+     * @param data The data for the request.
+     * @param data.watchId
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteWatch(data: WatchesDeleteWatchData): CancelablePromise<WatchesDeleteWatchResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/watches/{watch_id}',
+            path: {
+                watch_id: data.watchId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Import Watch History
+     * Import watch history from an uploaded file for a specific plugin.
+     * @param data The data for the request.
+     * @param data.pluginKey
+     * @param data.newOnly
+     * @param data.completed
+     * @param data.formData
+     * @returns WatchImportResults Successful Response
+     * @throws ApiError
+     */
+    public static importWatchHistory(data: WatchesImportWatchHistoryData): CancelablePromise<WatchesImportWatchHistoryResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/watches/import',
+            query: {
+                plugin_key: data.pluginKey,
+                new_only: data.newOnly,
+                completed: data.completed
+            },
+            formData: data.formData,
+            mediaType: 'multipart/form-data',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Export Watch History
+     * Export the `User`'s watches as a Stream Channeler watch history.
+     * @returns WatchExportEntry Successful Response
+     * @throws ApiError
+     */
+    public static exportWatchHistory(): CancelablePromise<WatchesExportWatchHistoryResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/watches/export'
+        });
+    }
+    
+    /**
+     * Create Watch
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @param data.requestBody
+     * @returns WatchOutput Successful Response
+     * @throws ApiError
+     */
+    public static createWatch(data: WatchesCreateWatchData): CancelablePromise<WatchesCreateWatchResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/episodes/{episode_id}/watches',
+            path: {
+                episode_id: data.episodeId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Get Episode Watches
+     * Get the `User`'s `Watch`es of the episode a row is of.
+     * @param data The data for the request.
+     * @param data.episodeId
+     * @returns WatchItem Successful Response
+     * @throws ApiError
+     */
+    public static getEpisodeWatches(data: WatchesGetEpisodeWatchesData): CancelablePromise<WatchesGetEpisodeWatchesResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/episodes/{episode_id}/watches',
+            path: {
+                episode_id: data.episodeId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Admin Relink Watches
+     * Point every watch left without an episode back at one.
+     * @returns WatchRelinkResults Successful Response
+     * @throws ApiError
+     */
+    public static adminRelinkWatches(): CancelablePromise<WatchesAdminRelinkWatchesResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/watches/relink'
         });
     }
 }

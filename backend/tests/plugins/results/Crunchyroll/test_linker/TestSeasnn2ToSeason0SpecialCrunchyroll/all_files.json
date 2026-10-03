@@ -1,0 +1,78 @@
+[
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "BrowseMusic/artists.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "BrowseSeries.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Catalogue/alphabetical.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Categories/G1XHJV2X9.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/G6Q4CZ9X9.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SeasonEpisodes/GRGGCVZV0.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Seasons/G1XHJV2X9.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "Series/G1XHJV2X9.json"
+  },
+  {
+    "plugin_key": "Crunchyroll",
+    "key": "SimilarTo/G1XHJV2X9.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "Search/TV/Lycoris Recoil.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Episode Groups/Details/67ffe4f983c6e567c7d95184.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/154494/0.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Details/154494/1.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/154494/0.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Seasons/Watch Providers/154494/1.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Details/154494.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Episode Groups/154494.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Keywords/154494.json"
+  },
+  {
+    "plugin_key": "TMDB",
+    "key": "TV Series/Watch Providers/154494.json"
+  }
+]
